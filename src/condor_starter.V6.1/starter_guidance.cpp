@@ -342,7 +342,8 @@ convertToStagingDirectory(
 	using std::filesystem::perms;
 	std::error_code ec;
 
-	// FIXME: This should all be done as PRIV_USER.
+
+    TemporaryPrivSentry tps(PRIV_USER);
 
 	dprintf( D_ALWAYS, "convertToStagingDirectory(): begin.\n" );
 
@@ -392,11 +393,11 @@ mapContentsOfDirectoryInto(
 	dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): begin.\n" );
 
 
+    TemporaryPrivSentry tps(PRIV_USER);
+
 	// FIXME: Verify that the staging directory conforms to the rules
 	// set out in the function above.  It may be a good idea to re-use
 	// the function above, with a flag for checking-vs-forcing?
-
-	// FIXME: lots of error-checking to do, too.
 
 	if(! std::filesystem::is_directory( location )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
@@ -411,12 +412,21 @@ mapContentsOfDirectoryInto(
 	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
 	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
+	}
+
 	for( const auto & entry : rdi ) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
 		auto relative_path = entry.path().lexically_relative(location);
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
 		if( entry.is_directory() ) {
 			std::filesystem::create_directory( sandbox/relative_path, ec );
+			if( ec.value() != 0 ) {
+				dprintf( D_ALWAYS, "Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				return false;
+			}
 			continue;
 		} else {
 			dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
@@ -426,6 +436,10 @@ mapContentsOfDirectoryInto(
 			std::filesystem::create_hard_link(
 				entry.path(), sandbox/relative_path, ec
 			);
+			if( ec.value() != 0 ) {
+				dprintf( D_ALWAYS, "Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				return false;
+			}
 		}
 	}
 
@@ -441,6 +455,8 @@ Starter::handleJobSetupCommand(
   const ClassAd & guidance,
   std::function<void(const ClassAd & context)> continue_conversation
 ) {
+	using std::filesystem::perms;
+
 	std::string command;
 	if(! guidance.LookupString( ATTR_COMMAND, command )) {
 		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
@@ -520,16 +536,35 @@ Starter::handleJobSetupCommand(
 
 			std::filesystem::path executeDir( s->GetSlotDir() );
 			std::filesystem::path stagingDir = executeDir / "staging";
-			// FIXME: Create as PRIV_CONDOR(?), chown() to the user,
-			// make mode 0700.
-			std::error_code errorCode;
-			std::filesystem::create_directory( stagingDir, errorCode );
-			// The directory really shouldn't already exist, but it's
-			// not an error if it doesn't.
-			if( errorCode ) {
-				// ...
-				dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
-				return false;
+
+			{
+				TemporaryPrivSentry tps(PRIV_CONDOR);
+
+				std::error_code errorCode;
+				std::filesystem::create_directory( stagingDir, errorCode );
+				if( errorCode ) {
+					dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
+					return false;
+				}
+
+				std::filesystem::permissions(
+					stagingDir,
+					perms::owner_read | perms::owner_write | perms::owner_exec,
+					errorCode
+				);
+				if( errorCode ) {
+					dprintf( D_ALWAYS, "Unable to set permissions on staging directory, aborting: %s (%d).\n", errorCode.message().c_str(), errorCode.value() );
+					return false;
+				}
+			}
+			{
+				TemporaryPrivSentry tps(PRIV_ROOT);
+
+				int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+				if( rv != 0 ) {
+					dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
+					return false;
+				}
 			}
 
 			ClassAd ftAd( guidance );

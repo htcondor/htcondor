@@ -1273,7 +1273,6 @@ UniShadow::start_common_input_conversation(
 				break;
 
 			case OnDiskSemaphore::INVALID:
-				// FIXME: As an internal error, I guess we should requeue this?
 				EXCEPT("Something went terribly wrong in cfLock.acquire()." );
 				break;
 
@@ -1443,9 +1442,12 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else if(! this->hasCIFName()) {
 			dprintf( D_ALWAYS, "Unable to determine name for common input files, can't run job!\n" );
-			// FIXME: We don't have a way to communicate internal errors to
-			// the submitter, so for now, just put the job on hold.
-			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			holdJob( "Unable to determine name for common input files, can't run job.", 1003, 4 );
+
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
 		} else {
 			//
 			// Since we're only talking to one starter at a time, we can

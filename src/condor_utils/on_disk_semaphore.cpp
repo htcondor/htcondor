@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "condor_uid.h"
 #include "shortfile.h"
 
 
@@ -18,6 +19,9 @@ OnDiskSemaphore::OnDiskSemaphore( const std::string & k ) : key(k) {
 
     // Make sure that replace_extension() acts like add_extension().
     std::replace( key.begin(), key.end(), '.', '_' );
+
+
+    TemporaryPrivSentry tps(PRIV_CONDOR);
 
     std::error_code ec;
     if(! std::filesystem::create_directories(lock, ec)) {
@@ -43,7 +47,9 @@ OnDiskSemaphore::Status
 OnDiskSemaphore::acquire( std::string & message ) {
     std::error_code ec;
 
-    // FIXME: we should be doing this as PRIV_CONDOR, right?
+
+    TemporaryPrivSentry tps(PRIV_CONDOR);
+
     int fd = open( keyfile.string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0400 );
     if( fd == -1 ) {
         if( errno == EEXIST ) {
@@ -130,6 +136,9 @@ bool
 OnDiskSemaphore::touch() {
     if(! lockholder ) { return false; }
 
+
+    TemporaryPrivSentry tps(PRIV_CONDOR);
+
     int rv = futimens( keyfile_fd, NULL );
     return rv == 0;
 }
@@ -138,6 +147,9 @@ OnDiskSemaphore::touch() {
 bool
 OnDiskSemaphore::ready( const std::string & message ) {
     if(! lockholder) { return false; }
+
+
+    TemporaryPrivSentry tps(PRIV_CONDOR);
 
     std::filesystem::path messagePath = keyfile;
     messagePath.replace_extension( "message" );
@@ -171,6 +183,8 @@ OnDiskSemaphore::release() {
     if(! lockholder) {
         return cleanup();
     } else {
+        TemporaryPrivSentry tps(PRIV_CONDOR);
+
         int count = std::filesystem::hard_link_count( keyfile, ec );
         if( count == 1 ) {
             return cleanup();
@@ -185,6 +199,9 @@ bool
 OnDiskSemaphore::cleanup() {
     std::error_code ec;
     dprintf( D_ALWAYS, "OnDiskSemaphore::cleanup()\n" );
+
+
+    TemporaryPrivSentry tps(PRIV_CONDOR);
 
     if(! lockholder) {
         std::filesystem::remove( hardlink, ec );
