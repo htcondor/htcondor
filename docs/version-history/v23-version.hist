@@ -1,5 +1,9 @@
 *** 23.10.24 bugs
 
+- Fixed bug where :macro:`DAGMAN_MAX_JOBS_IDLE` value was not being respected by DAGMan
+  even if no limit was specified via :tool:`condor_submit_dag`\s ``-maxidle`` option.
+  :jira:`3011`
+
 *** 23.0.24 bugs
 
 - ``condor_watch_q`` will now correctly display the full range of job
@@ -15,7 +19,7 @@
 
 - HTCondor tarballs now contain `Apptainer 1.4.0 <https://github.com/apptainer/apptainer/releases/tag/v1.4.0>`_
 
-- The condor RPM package now requires apptainer-1.4.0.
+- The condor RPM package now requires at least apptainer version 1.3.6.
 
 *** 23.10.23 bugs
 
