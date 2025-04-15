@@ -240,7 +240,9 @@ Hold Reason Codes
     |                                  | held.                               |                          |
     +----------------------------------+-------------------------------------+--------------------------+
 
-    Note for hold codes 12 [TransferOutputError] and 13 [TransferInputError]:
+.. note::
+
+    For hold codes 12 [TransferOutputError] and 13 [TransferInputError]:
     file transfer may invoke file-transfer plug-ins.  If it does, the hold
     subcodes may additionally be 62 (ETIME), if the file-transfer plug-in
     timed out; or the exit code of the plug-in shifted left by eight bits,
