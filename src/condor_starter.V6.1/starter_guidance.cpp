@@ -357,10 +357,19 @@ convertToStagingDirectory(
 		perms::owner_read | perms::owner_exec,
 		ec
 	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "Failed to set permissions on staging directory '%s': %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
+	}
 
 	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
 	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
+	}
+
 	for( const auto & entry : rdi ) {
 		if( entry.is_directory() ) {
 			std::filesystem::permissions(
@@ -368,6 +377,10 @@ convertToStagingDirectory(
 				perms::owner_read | perms::owner_exec,
 				ec
 			);
+			if( ec.value() != 0 ) {
+				dprintf( D_ALWAYS, "Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
+				return false;
+			}
 			continue;
 		}
 		std::filesystem::permissions(
@@ -375,6 +388,10 @@ convertToStagingDirectory(
 			perms::owner_read | perms::group_read | perms::others_read,
 			ec
 		);
+		if( ec.value() != 0 ) {
+			dprintf( D_ALWAYS, "Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
+			return false;
+		}
 	}
 
 
@@ -570,20 +587,21 @@ Starter::handleJobSetupCommand(
 			ClassAd ftAd( guidance );
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
 			// ... blocking, at least for now.
-			s->jic->transferCommonInput( & ftAd );
-			// FIXME: need to check for success/failure..
-			bool result = true;
-
-			// To help reduce silly mistakes, make the staging directory
-			// and its contents suitable for mapping before we actually
-			// do the mapping.  This will need to be synchronized with
-			// our mapping implementation.
-			// FIXME: check for success/failure.
-			convertToStagingDirectory( stagingDir );
+			bool result = s->jic->transferCommonInput( & ftAd );
 
 			if( result ) {
-				// FIXME: check for success/failure here, too.
-				s->jic->setCommonFilesLocation( cifName, stagingDir );
+				// To help reduce silly mistakes, make the staging directory
+				// and its contents suitable for mapping before we actually
+				// do the mapping.  This will need to be synchronized with
+				// our mapping implementation.
+				if( convertToStagingDirectory( stagingDir ) ) {
+					// We'll need to do this, or something like it, at some
+					// point in the future -- probably just telling the
+					// startd about it.  When we do, be sure check if it worked.
+					// s->jic->setCommonFilesLocation( cifName, stagingDir );
+				} else {
+					dprintf( D_ALWAYS, "Failed to convert %s to a staging directory.\n", stagingDir.string().c_str() );
+				}
 			}
 
 			// We could send a generic event notification here, as we did
@@ -610,16 +628,12 @@ Starter::handleJobSetupCommand(
 			}
 
 			std::filesystem::path location(stagingDir);
-			// FIXME: check for success/failure here, too.
 			// s->jic->getCommonFilesLocation( cifName, location );
 
 			dprintf( D_ALWAYS, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
-			mapContentsOfDirectoryInto( location, sandbox );
-
-			// FIXME: need to check for success/failure..
-			bool result = true;
+			bool result = mapContentsOfDirectoryInto( location, sandbox );
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
