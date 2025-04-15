@@ -287,10 +287,10 @@ public:
 			shallow.stringOpts[str::AppendFile] = appendFile;
 			shallow.boolOpts[b::DoSubmit] = true;
 			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
-			shallow.intOpts[i::MaxIdle] = MAX_IDLE_DEFAULT;
-			shallow.intOpts[i::MaxJobs] = 0;
-			shallow.intOpts[i::MaxPre] = 0;
-			shallow.intOpts[i::MaxPost] = 0;
+			shallow.intOpts[i::MaxIdle] = -1;
+			shallow.intOpts[i::MaxJobs] = -1;
+			shallow.intOpts[i::MaxPre] = -1;
+			shallow.intOpts[i::MaxPost] = -1;
 			shallow.intOpts[i::DebugLevel] = DEBUG_UNSET;
 			shallow.intOpts[i::Priority] = 0;
 		} //End Shallow Option Initialization

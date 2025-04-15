@@ -175,22 +175,22 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		args.AppendArg(dagFile);
 	}
 
-	if (options[shallow::i::MaxIdle] != 0) {
+	if (options[shallow::i::MaxIdle] >= 0) {
 		args.AppendArg("-MaxIdle");
 		args.AppendArg(std::to_string(options[shallow::i::MaxIdle]));
 	}
 
-	if (options[shallow::i::MaxJobs] != 0) {
+	if (options[shallow::i::MaxJobs] >= 0) {
 		args.AppendArg("-MaxJobs");
 		args.AppendArg(std::to_string(options[shallow::i::MaxJobs]));
 	}
 
-	if (options[shallow::i::MaxPre] != 0) {
+	if (options[shallow::i::MaxPre] >= 0) {
 		args.AppendArg("-MaxPre");
 		args.AppendArg(std::to_string(options[shallow::i::MaxPre]));
 	}
 
-	if (options[shallow::i::MaxPost] != 0) {
+	if (options[shallow::i::MaxPost] >= 0) {
 		args.AppendArg("-MaxPost");
 		args.AppendArg(std::to_string(options[shallow::i::MaxPost]));
 	}
