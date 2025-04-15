@@ -1180,25 +1180,62 @@ UniShadow::start_common_input_conversation(
 
 				std::string stagingDir;
 				if( success ) {
+					// We'll assume that malformed replies are transients.
 					if(! request.LookupString( "StagingDir", stagingDir ) ) {
-						// FIXME: We can't continue staging common files, so
-						// fail as if input transfer had failed (retry).
+						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common file transfer; aborting job.\n" );
+
+						// Make sure we take care of this.
+						delete this->cfLock;
+						this->cfLock = NULL;
+
+						// Consider replacing this with a call to evictJob().
+						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+						this->jobAd->Assign(ATTR_VACATE_REASON, "Starter sent malformed reply when asked to stage common files." );
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 1);
+						remRes->setExitReason(JOB_SHOULD_REQUEUE);
+						remRes->killStarter(false);
+
+						// We can't "wire up" the CIFs; since the job needs
+						// them, we must abort it.
+						guidance.Clear();
+						guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+						co_return guidance;
 					}
 
 					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
 					if(! this->cfLock->ready( stagingDir )) {
-					    // We failed to tell the jobs waiting on us that we're
-					    // ready.  This job can continue, but the others can't.
-					    //
-					    // We can't just call release(), because that doesn't
-					    // do anything if other jobs are waiting.  Deleting
-					    // the keyfile, however, will select a new lockholder.
-					    delete this->cfLock;
-					    this->cfLock = NULL;
+						// We failed to tell the jobs waiting on us that we're
+						// ready.  This job can continue, but the others can't.
+						//
+						// We can't just call release(), because that doesn't
+						// do anything if other jobs are waiting.  Deleting
+						// the keyfile, however, will select a new lockholder.
+						delete this->cfLock;
+						this->cfLock = NULL;
 					}
 				} else {
-					// FIXME: do exactly what we do for a normal input
-					// transfer failure, if we haven't already (retry).
+					dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): common file transfer failed, aborting job.\n" );
+
+					delete this->cfLock;
+					this->cfLock = NULL;
+
+					const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
+					if( info.try_again ) {
+						// Consider replacing this with a call to evictJob().
+						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
+						remRes->setExitReason(JOB_SHOULD_REQUEUE);
+						remRes->killStarter(false);
+					} else {
+						holdJob( "Failed to transfer common files.", 1003, 3 );
+					}
+
+					guidance.Clear();
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+					co_return guidance;
 				}
 
 				guidance = do_wiring_up(stagingDir, cifName);

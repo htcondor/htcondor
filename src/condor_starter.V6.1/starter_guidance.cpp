@@ -274,7 +274,7 @@ Starter::handleJobEnvironmentCommand(
 				EXCEPT( "Can't register SkipJob DaemonCore timer" );
 			}
 
-			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
+			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of job environment setup failure.\n",
 				s->jic->jobCluster(),
 				s->jic->jobProc()
 			);
@@ -590,6 +590,27 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
 			context.InsertAttr( ATTR_RESULT, result );
 			continue_conversation(context);
+			return true;
+		} else if( command == COMMAND_ABORT ) {
+			dprintf( D_ALWAYS, "Aborting job as guided...\n" );
+			s->deferral_tid = daemonCore->Register_Timer(
+				0, 0,
+				[=](int timerID) -> void { s->SkipJobs(timerID); },
+				"SkipJobs"
+			);
+
+			if( s->deferral_tid < 0 ) {
+				EXCEPT( "Can't register SkipJob DaemonCore timer" );
+			}
+
+			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of job setup failure.\n",
+				s->jic->jobCluster(),
+				s->jic->jobProc()
+			);
+
+			// This should return all the way out of Starter::Init() and
+			// back into the main event loop, which won't have anything to
+			// do except handle the timer we just set, above.
 			return true;
 		} else {
 			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
