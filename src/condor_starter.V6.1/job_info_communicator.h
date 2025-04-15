@@ -88,15 +88,6 @@ public:
 
 	virtual bool transferCommonInput( ClassAd * /* commonAd */ ) { return false; }
 
-	virtual bool setCommonFilesLocation(
-		const std::string & /* cifName */,
-		const std::filesystem::path & /* location */
-	) { return false; }
-	virtual bool getCommonFilesLocation(
-		const std::string & /* cifName */,
-		std::filesystem::path & /* location */
-	) const { return false; }
-
 	void setStdin( const char* path );
 	void setStdout( const char* path );
 	void setStderr( const char* path );

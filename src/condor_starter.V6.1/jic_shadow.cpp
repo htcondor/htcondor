@@ -3666,37 +3666,3 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 	dprintf( D_ALWAYS, "transferCommonInput(): exit\n" );
 	return (rval == 1);
 }
-
-
-//
-// FIXME: this doesn't presently work _at all_ for starter B to find
-// starter A's common files.  Reconsider.  (why is the name stored
-// rather than computed anyway?)
-//
-// Under some future designs, these functions should communicate with
-// the startd, so we'll leave them in place even though they aren't
-// presently useful.
-//
-
-
-bool
-JICShadow::setCommonFilesLocation(
-	const std::string & cifName,
-	const std::filesystem::path & location
-) {
-	cifNameToLocationMap[cifName] = location;
-	return true;
-}
-
-
-bool
-JICShadow::getCommonFilesLocation(
-	const std::string & cifName,
-	std::filesystem::path & location
-) const {
-	if( cifNameToLocationMap.contains(cifName) ) {
-		location = cifNameToLocationMap.find(cifName)->second;
-		return true;
-	}
-	return false;
-}

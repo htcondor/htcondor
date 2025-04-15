@@ -57,14 +57,6 @@ public:
 	void setupJobEnvironment_part2(void);
 
 	virtual bool transferCommonInput( ClassAd * commonAd );
-	virtual bool setCommonFilesLocation(
-		const std::string & cifName,
-		const std::filesystem::path & location
-	);
-	virtual bool getCommonFilesLocation(
-		const std::string & cifName,
-		std::filesystem::path & location
-	) const;
 
 	bool streamInput();
 	bool streamOutput();
