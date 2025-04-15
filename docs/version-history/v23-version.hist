@@ -4,6 +4,10 @@
   ids for each batch grouping.
   :jira:`2992`
 
+- Fixed bug in one of ``condor_upgrade_check``\'s tests that would cause
+  the test to check for incorrect hostname when running inside of a container.
+  :jira:`3014`
+
 *** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
