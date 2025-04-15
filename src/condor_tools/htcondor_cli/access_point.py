@@ -35,7 +35,7 @@ class Status(Verb):
 
         if len(ads) == 0:
             if len(hostnames):
-                raise RuntimeError("Failed to locate specified Access Points information from Collector")
+                raise RuntimeError("Failed to locate specified Access Point(s)")
             else:
                 local_schedd_ad = Path(htcondor2.param["SCHEDD_DAEMON_AD_FILE"])
                 if local_schedd_ad.exists():
