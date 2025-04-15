@@ -676,7 +676,7 @@ Cgroup Based Process Tracking
 
 Linux version 2.6.24 introduced kernel control groups, called cgroups
 at the time, and now called cgroups v1, with the introduction of a 
-second version as of Enterprise Linux 8. This allows  HTCondor to more accurately
+second version as of Enterprise Linux 8. This allows HTCondor to more accurately
 and safely manage jobs composed of sets of processes.  Documentation
 about Linux kernel support for cgroups can be found in the Documentation
 directory in the kernel source code distribution.
