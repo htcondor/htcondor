@@ -71,7 +71,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 		if(! std::filesystem::exists(diagnostic_path)) {
 			diagnosticResultAd.InsertAttr( "Result", "Error - specified path does not exist" );
 		} else {
-		    //
+			//
 			// We need to capture the standard output and error streams.   We
 			// don't want to use pipes, because then we'd have to register
 			// a pipe handler and have it communicate either back here, or
@@ -343,9 +343,9 @@ convertToStagingDirectory(
 	std::error_code ec;
 
 
-    TemporaryPrivSentry tps(PRIV_USER);
+	TemporaryPrivSentry tps(PRIV_USER);
 
-	dprintf( D_ALWAYS, "convertToStagingDirectory(): begin.\n" );
+	dprintf( D_ZKM, "convertToStagingDirectory(): begin.\n" );
 
 	if(! std::filesystem::is_directory( location )) {
 		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' not a directory, aborting.\n", location.string().c_str() );
@@ -395,8 +395,24 @@ convertToStagingDirectory(
 	}
 
 
-	dprintf( D_ALWAYS, "convertToStagingDirectory(): end.\n" );
+	dprintf( D_ZKM, "convertToStagingDirectory(): end.\n" );
 	return true;
+}
+
+
+bool
+check_permissions(
+	const std::filesystem::path & l,
+	const std::filesystem::perms p
+) {
+	std::error_code ec;
+	auto status = std::filesystem::status( l, ec );
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "check_permissions(): status(%s) failed: %s (%d)\n", l.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
+	}
+	auto permissions = status.permissions();
+	return permissions == p;
 }
 
 
@@ -405,26 +421,29 @@ mapContentsOfDirectoryInto(
 	const std::filesystem::path & location,
 	const std::filesystem::path & sandbox
 ) {
+	using std::filesystem::perms;
 	std::error_code ec;
 
-	dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): begin.\n" );
+	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): begin.\n" );
 
 
-    TemporaryPrivSentry tps(PRIV_USER);
+	TemporaryPrivSentry tps(PRIV_USER);
 
-	// FIXME: Verify that the staging directory conforms to the rules
-	// set out in the function above.  It may be a good idea to re-use
-	// the function above, with a flag for checking-vs-forcing?
+	if(! std::filesystem::is_directory( sandbox )) {
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+		return false;
+	}
 
 	if(! std::filesystem::is_directory( location )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
 		return false;
 	}
 
-	if(! std::filesystem::is_directory( sandbox )) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
 		return false;
 	}
+
 
 	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
@@ -439,6 +458,11 @@ mapContentsOfDirectoryInto(
 		auto relative_path = entry.path().lexically_relative(location);
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
 		if( entry.is_directory() ) {
+			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
+				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+
 			std::filesystem::create_directory( sandbox/relative_path, ec );
 			if( ec.value() != 0 ) {
 				dprintf( D_ALWAYS, "Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
@@ -447,6 +471,12 @@ mapContentsOfDirectoryInto(
 			continue;
 		} else {
 			dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
+
+			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
+				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+
 			// If this fails because sandbox/relative_path exists, consider it
 			// a success for purposes of the overall success of the mapping:
 			// the proc-specific input should "beat" the common input.
@@ -461,7 +491,7 @@ mapContentsOfDirectoryInto(
 	}
 
 
-	dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): end.\n" );
+	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): end.\n" );
 	return true;
 }
 
@@ -624,7 +654,7 @@ Starter::handleJobSetupCommand(
 			std::string stagingDir;
 			if(! guidance.LookupString( "StagingDir", stagingDir )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", "StagingDir" );
-			    return false;
+				return false;
 			}
 
 			std::filesystem::path location(stagingDir);
