@@ -105,6 +105,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
 	{"_set_ready_state", & _set_ready_state, METH_VARARGS, NULL},
+	{"_send_generic_payload_command", & _send_generic_payload_command, METH_VARARGS, NULL},
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
 	{"_py_dprintf", &_py_dprintf, METH_VARARGS, NULL},
 
@@ -147,6 +148,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
+	{"_schedd_get_dag_contact_info", &_schedd_get_dag_contact_info, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
