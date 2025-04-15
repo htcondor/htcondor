@@ -706,7 +706,7 @@ it will get very slow, and can slow down the system.  The administrator
 can configure HTCondor not to do so, by setting 
 :macro:`DISABLE_SWAP_FOR_JOB` to false.
 
-HTCondor configures cgroupv2 so that any job can further subdivide the memory
+HTCondor configures cgroup v2 so that any job can further subdivide the memory
 and cpu.  It does so by following the various rules imposed by the kernel.
 The first rule is that Unix processes can only live in the leaf nodes of the
 cgroup tree.  This implies that if a job wants to make a sub-cgroup, it cannot
