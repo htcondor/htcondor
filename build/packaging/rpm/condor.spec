@@ -283,8 +283,18 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Support OSDF client
-Requires: pelican >= 7.14.1
-Requires: pelican-osdf-compat >= 7.14.1
+Requires: pelican >= 7.15.0
+Requires: pelican-osdf-compat >= 7.15.0
+
+# Require tested Apptainer
+%if 0%{?rhel} != 7
+%if 0%{?suse_version}
+# Unfortunately, openSUSE is lagging behind
+Requires: apptainer >= 1.3.6
+%else
+Requires: apptainer >= 1.3.6
+%endif
+%endif
 
 %if 0%{?rhel} != 7
 # Ensure that our bash completions work

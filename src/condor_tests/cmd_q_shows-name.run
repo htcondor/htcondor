@@ -49,20 +49,10 @@ my $collectorport = $condor_instance_local->GetCollectorAddress();
 my $localconfig = $condor_instance_local->GetCondorConfig();
 
 # where am I running
-my $currenthost = `condor_status -af Machine -limit 1`;
-chomp($currenthost);
+my $currenthost = CondorTest::getFqdnHost();
 
 my $primarycollector = $currenthost;
 $primarycollector = $primarycollector . ":" . $collectorport;
-
-#if($iswindows) {
-	#my @nameparts = split /\./, $currenthost;
-	#foreach my $name (@nameparts) {
-		#print "aadr:$name\n";
-	#}
-	#$currenthost = $nameparts[0];
-#}
-
 
 my $sheddoneappend_condor_config = '
 	SHARED_PORT_PORT = 0

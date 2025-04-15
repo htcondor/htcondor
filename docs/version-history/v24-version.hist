@@ -8,7 +8,21 @@
   commands to running a DAGMan process.
   :jira:`2898`
 
+- :tool:`htcondor ap status` will now show the :ad-attr:`RecentDaemonCoreDutyCycle` of
+  each reported Access Point's Schedd.
+  :jira:`3009`
+
 *** 24.8.0 bugs
+
+- Fixed :tool:`condor_watch_q` to output a useful error message and not
+  exit when one of :subcom:`log` files associated with jobs being tracked
+  does not exist.
+  :jira:`2978`
+
+- Removed job attribute ``ToE``.
+  It has been replaced by job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
+  :jira:`2974`
 
 *** 24.0.8 bugs
 
@@ -17,7 +31,7 @@
   a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
   :jira:`2993`
 
-*** 24.7.0 features
+*** 24.7.1 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
   the named HPC system.  If you've recently created or added an annex at a
@@ -119,7 +133,7 @@
   jobs actively transferring input or output files.
   :jira:`2958`
 
-*** 24.7.0 bugs
+*** 24.7.1 bugs
 
 - Fixed bug where DAGMan would output an error message containing garbage
   when dumping failed node information to the debug log.

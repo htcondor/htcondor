@@ -81,6 +81,7 @@ def submit_dag(default_condor, path_to_sleep, check_queue_script, test_dir):
     SUBMIT-DESCRIPTION sleep {{
         executable  = {path_to_sleep}
         arguments   = $(WAIT_T)
+        universe    = local
 
         WAIT_T = 600
 
