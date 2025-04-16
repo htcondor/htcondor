@@ -30,7 +30,11 @@ New Features:
 
 Bugs Fixed:
 
-.. include-history:: bugs 23.0.23
+- The *condor_startd* now checks to see if the START expression of a static slot still
+   evaluates to true before it allows a slot to be claimed. This helps to give an accurate reply
+   to the *condor_schedd* when it tries to claim a slot with a START expression that
+   changes frequently.
+  :jira:`3013`
 
 Version 23.0.22
 ---------------
