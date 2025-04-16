@@ -17,6 +17,12 @@
   does not exist.
   :jira:`2978`
 
+- Add a new config knob, :macro:`STARTER_SETS_HOME_ENV` which defaults to 
+  true.  When true, the job will have the **HOME** environemnt variable
+  set to whatever it is on the system.  When false, HOME will not
+  be set to anything.
+  :jira:`3010`
+
 - Removed job attribute ``ToE``.
   It has been replaced by job attributes :ad-attr:`VacateReason`,
   :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.

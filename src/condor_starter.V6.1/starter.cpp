@@ -3688,6 +3688,22 @@ Starter::PublishToEnv( Env* proc_env )
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
 
+	// Need to set HOME to the job's home directory, not the starter's.
+#ifndef WINDOWS
+	if (param_boolean("STARTER_SETS_HOME_ENV", true)) {
+		uid_t uid = get_user_uid();
+		if (uid == (uid_t) -1) {
+			// Personal. Condor.  Someone to run your jobs. Someone who cares.
+			uid = getuid();
+		}
+		struct passwd *pw = getpwuid(uid);
+		if (pw) {
+			proc_env->SetEnv("HOME", pw->pw_dir);
+		}
+	}
+#endif
+
+
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
 	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(true)));
