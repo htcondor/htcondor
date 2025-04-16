@@ -118,6 +118,12 @@
   the *condor_starter* failed to initialize.
   :jira:`2997`
 
+- The *condor_startd* now checks to see if the START expression of a static slot still
+   evaluates to true before it allows a slot to be claimed. This helps to give an accurate reply
+   to the *condor_schedd* when it tries to claim a slot with a START expression that
+   changes frequently.
+  :jira:`3013`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
