@@ -48,6 +48,7 @@
 #include <filesystem>
 #include "manifest.h"
 #include "tmp_dir.h"
+#include "set_user_priv_from_ad.h"
 
 #include <algorithm>
 
@@ -1396,9 +1397,10 @@ JICShadow::initUserPriv( void )
 
 	std::string owner;
 	if( run_as_owner ) {
-		if( job_ad->LookupString( ATTR_OWNER, owner ) != 1 ) {
-			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-			         ATTR_OWNER );
+		if( job_ad->LookupString( ATTR_OS_USER, owner ) == false &&
+		    job_ad->LookupString( ATTR_OWNER, owner ) == false ) {
+			dprintf( D_ALWAYS, "ERROR: %s and %s not found in JobAd.  Aborting.\n", 
+			         ATTR_OS_USER, ATTR_OWNER );
 			return false;
 		}
 	}
@@ -1431,7 +1433,8 @@ JICShadow::initUserPriv( void )
 			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
-		if( init_user_ids_quiet(owner.c_str()) ) {
+			// TODO init_user_ids_from_ad() doesn't have a quiet option
+		if( init_user_ids_from_ad(*job_ad) ) {
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.c_str() );
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
