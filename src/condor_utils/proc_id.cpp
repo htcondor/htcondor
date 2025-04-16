@@ -252,8 +252,3 @@ size_t hashFunction(const JOB_ID_KEY &key)
 #endif
 }
 
-
-bool operator==( const PROC_ID a, const PROC_ID b)
-{
-	return a.cluster == b.cluster && a.proc == b.proc;
-}
