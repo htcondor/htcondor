@@ -405,6 +405,9 @@ public:
 		/* Get the job ad */
 	const ClassAd * getJobAd() { return job_ad; }
 
+		/* Get optional secrets ad */
+	const ClassAd * getMachineSecetsAd() { return machine_secrets_ad; }
+
 	virtual bool genericRequestGuidance(
 		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
 	) {
@@ -538,6 +541,9 @@ protected:
 
 		// The Machine ClassAd running the job.
 	ClassAd* mach_ad;
+
+		// the machine secrets ad, contains the d-slot splitting claim id.
+	ClassAd* machine_secrets_ad{nullptr};
 
 		/// The universe of the job.
 	int job_universe;

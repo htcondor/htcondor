@@ -293,6 +293,10 @@ private:
 		 */
 	void updateStartd( ClassAd *ad, bool final_update );
 
+		/** Send a command to the startd and get a classad reply
+		*/
+	ClassAd * sendStartdCommmand(int cmd, ClassAd & payload);
+
 		/** Read all the relevent attributes out of the job ad and
 			decide if we need to transfer files.  If so, instantiate a
 			FileTransfer object, start the transfer, and return true.
@@ -318,6 +322,9 @@ private:
 
 		/// Get the job execution overlay classad from the given stream
 	bool receiveExecutionOverlayAd(Stream* stream);
+
+		/// Get the secrets classad from the given stream
+	bool receiveMachineSecretsAd(Stream* stream);
 
 		/** Initialize information about the shadow's version and
 			sinful string from the given ClassAd.  At startup, we just
