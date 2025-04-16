@@ -1552,15 +1552,16 @@ gc_image(const std::string & image) {
 		imageInfos.erase(first, last);
 	}
 
-	dprintf(D_FULLDEBUG, "Found %ld htcondor unique images, limit is %d\n", imageInfos.size(), max_cache_size);
+	dprintf(D_ALWAYS, "Found %ld htcondor unique images, limit is %d\n", imageInfos.size(), max_cache_size);
 
 	max_cache_size--; // As we are about to add one for the next job start
 
 	// If fewer than our limit, our work here is done
-	size_t needed_to_remove = imageInfos.size() - max_cache_size;
-	if (needed_to_remove <= 0) {
-		return true;
+	if (((int)imageInfos.size()) < max_cache_size) {
+		return 0;
 	}
+
+	int needed_to_rm = ((int)imageInfos.size()) - max_cache_size;
 
 	// Sort imageInfo by last access time
 	// lastTagTime is ISO date, so string comparison works
@@ -1569,7 +1570,9 @@ gc_image(const std::string & image) {
 	// In lastTagTime order, remove as many images as we need to get under our limit
 	for (const auto &imageInfo: imageInfos) {
 		// If we've removed our limit, exit
-		if (needed_to_remove <= 0) break;
+		if (needed_to_rm <= 0) {
+			break;
+		}
 
 		CondorError err;
 		int result = DockerAPI::rmi(imageInfo.imageName, err);
@@ -1583,8 +1586,8 @@ gc_image(const std::string & image) {
 					// Arg.  Can't remove real image.  Retag original
 					DockerAPI::tag(realImageName, imageInfo.imageName);
 				} else {
+					needed_to_rm--;
 					dprintf(D_ALWAYS, "Removed image %s from docker image cache to stay under DOCkER_IMAGE_CACHE_SIZE\n", realImageName.c_str());
-					needed_to_remove--;
 				}
 			}
 		}
