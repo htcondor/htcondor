@@ -411,12 +411,7 @@ def check_token_permissions(*args, **kwargs):
     if IS_WINDOWS:
         return True
 
-    p = subprocess.run(["hostname", "-f"], stdout=subprocess.PIPE)
-    hostname = p.stdout.rstrip().decode()
-    if len(hostname) == 0:
-        format_print("Error: Failed to get hostname", newline=True, err=True)
-        return False
-
+    hostname = htcondor.param["FULL_HOSTNAME"]
     format_print(f"Hostname: {hostname}", newline=True, debug=Debug.DEBUGGING)
 
     try:
@@ -870,6 +865,7 @@ def run_checks(args, ignore_list, only_list, daemons):
 
         if not check.test(args):
             num_failed_checks += 1
+            format_print(f"Check {check.name} [{check.tag}] failed", offset=8)
         else:
             format_print("No issue found with check", offset=8, debug=Debug.DETAILED)
 
