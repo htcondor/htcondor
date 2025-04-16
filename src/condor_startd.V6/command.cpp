@@ -1159,7 +1159,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	// by the code in ResState, (which we are all afraid to change - sigh).   see HTCONDOR-3013
 	if (rip->is_static_slot() && !rip->willingToRun(req_classad)) {
 		refuse(stream);
-		ABORT;
+		goto abort;
 	}
 
 	// When a pslot is already claimed, only the schedd that claimed it
