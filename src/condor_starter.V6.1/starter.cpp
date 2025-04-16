@@ -1684,9 +1684,11 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ALWAYS,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
 		return FALSE;
 	}
+
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", hold_code, hold_subcode, hold_reason.c_str());
 
 	int reply = 1;
 	s->encode();
