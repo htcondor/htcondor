@@ -12,9 +12,9 @@
 
 *** 23.10.23 features
 
-- HTCondor tarballs now contain `Pelican 7.15.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.15.0>`_
+- HTCondor tarballs now contain `Pelican 7.15.1 <https://pelicanplatform.org/releases>`_
 
-- The condor package now requires pelican-7.15.0. The weak dependency is no longer used, because dnf would
+- The condor package now requires pelican-7.15.1. The weak dependency is no longer used, because dnf would
   not update to the requested pelican version.
 
 - HTCondor tarballs now contain `Apptainer 1.4.0 <https://github.com/apptainer/apptainer/releases/tag/v1.4.0>`_
