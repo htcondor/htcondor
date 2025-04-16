@@ -920,11 +920,11 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	if (reason_str == nullptr || *reason_str == '\0') {
 		switch(exit_reason) {
 		case JOB_SHOULD_REQUEUE:
-			if (!reason_str || reason_str[0]=='\0') reason_str = "Unspecified job interruption";
+			reason_str = "Unspecified job interruption";
 			reason_code = CONDOR_HOLD_CODE::JobShouldRequeue;
 			break;
 		case JOB_NOT_STARTED:
-			if (!reason_str || reason_str[0]=='\0') reason_str = "Problem preparing job to run";
+			reason_str = "Problem preparing job to run";
 			reason_code = CONDOR_HOLD_CODE::JobNotStarted;
 			break;
 		default:
