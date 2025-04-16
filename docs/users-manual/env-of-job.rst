@@ -125,7 +125,6 @@ executing job that may be useful.
    :index:`HOME environment variable`\ :index:`HOME<pair: HOME; environment variables for jobs>`
    When :macro:`STARTER_SETS_HOME_ENV` is set to true, the default, the job will have
    the HOME environment variable set to the home directory of the user on the system.
-   All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
 -  ``SINGULARITY_CACHEDIR`` ``APPTAINER_CACHEDIR``
    :index:`SINGULARITY_CACHEDIR<pair: SINGULARITY_CACHEDIR; environment variables for jobs>`
    :index:`APPTAINER_CACHEDIR<pair: APPTAINER_CACHEDIR; environment variables for jobs>`
