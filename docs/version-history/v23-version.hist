@@ -4,6 +4,10 @@
   ids for each batch grouping.
   :jira:`2992`
 
+- Fixed a bug that caused the *condor_starter* to crash if a job was
+  vacated during input file transfer.
+  :jira:`3016`
+
 *** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
