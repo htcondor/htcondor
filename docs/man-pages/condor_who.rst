@@ -150,7 +150,7 @@ Options
     Read startd banner formatting information from the given custom print format file.
     see :doc:`/classads/print-formats` for more information about custom print format files.
 
- **-ospool** *file*
+ **-ospool**
     Show ospool glide-in information in the output and banner.  
 
 
