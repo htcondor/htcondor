@@ -3632,3 +3632,40 @@ JICShadow::_remove_files_from_output() {
 		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
 	}
 }
+
+
+bool
+JICShadow::transferCommonInput( ClassAd * setupAd ) {
+	dprintf( D_ALWAYS, "transferCommonInput(): enter\n" );
+	dPrintAd( D_ALWAYS, * setupAd );
+
+	FileTransfer stagingFTO;
+
+	const char * cred_path = getCredPath();
+	if( cred_path ) {
+		stagingFTO.setCredsDir( cred_path );
+	}
+
+	// Should we setRuntimeAds()?
+
+	int rval = stagingFTO.Init( setupAd, false, PRIV_USER );
+	if( rval == 0 ) {
+	    dprintf( D_ALWAYS, "stagingFTO.Init() failed (%d).\n", rval );
+	    return false;
+	}
+
+	stagingFTO.setSecuritySession( m_filetrans_sec_session );
+	stagingFTO.setSyscallSocket( syscall_sock );
+
+	if( shadow_version ) {
+		stagingFTO.setPeerVersion( * shadow_version );
+	}
+
+	// At some point, we might want to make this nonblocking, in which
+	// case determining success or failure in handleJobSetupCommand()
+	// becomes an interesting problem, probably solved with coroutines.
+	rval = stagingFTO.DownloadFiles();
+
+	dprintf( D_ALWAYS, "transferCommonInput(): exit\n" );
+	return (rval == 1);
+}

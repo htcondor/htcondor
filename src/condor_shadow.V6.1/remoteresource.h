@@ -411,9 +411,11 @@ class RemoteResource : public Service {
 	// return true if job should be allowed to write to attribute
 	bool allowRemoteWriteAttributeAccess( const std::string & name );
 
-    void recordActivationExitExecutionTime( time_t when );
+	void recordActivationExitExecutionTime( time_t when );
 
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
+
+	char * starter_version = NULL;
 
  protected:
 

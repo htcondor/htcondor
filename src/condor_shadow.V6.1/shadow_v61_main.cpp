@@ -529,6 +529,11 @@ recycleShadow(int previous_job_exit_reason)
 		new_job_ad = readJobAd();
 	}
 
+	delete Shadow;
+	Shadow = NULL;
+	is_reconnect = false;
+	BaseShadow::myshadow_ptr = NULL;
+
 	if( !new_job_ad ) {
 		dprintf(D_FULLDEBUG,"No new job found to run under this shadow.\n");
 		return false;
@@ -537,11 +542,6 @@ recycleShadow(int previous_job_exit_reason)
 	new_job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
 	new_job_ad->LookupInteger(ATTR_PROC_ID,proc);
 	dprintf(D_ALWAYS,"Switching to new job %d.%d\n",cluster,proc);
-
-	delete Shadow;
-	Shadow = NULL;
-	is_reconnect = false;
-	BaseShadow::myshadow_ptr = NULL;
 
 	startShadow( new_job_ad );
 	return true;
