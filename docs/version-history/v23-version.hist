@@ -10,6 +10,10 @@
   ids for each batch grouping.
   :jira:`2992`
 
+- Fixed bug in one of ``condor_upgrade_check``\'s tests that would cause
+  the test to check for incorrect hostname when running inside of a container.
+  :jira:`3014`
+
 *** 23.10.23 features
 
 - HTCondor tarballs now contain `Pelican 7.15.1 <https://pelicanplatform.org/releases>`_
