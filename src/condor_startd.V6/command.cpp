@@ -1157,6 +1157,15 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		goto abort;
 	}
 
+	// For static slots we need a pre-check to see if the START expression is true for this job.
+	// Otherwise we may end up detecting that it is not true after we have already claimed the slot
+	// Which can result in the claim object and stream being deleted out from under us
+	// by the code in ResState, (which we are all afraid to change - sigh).   see HTCONDOR-3013
+	if (rip->is_static_slot() && !rip->willingToRun(req_classad)) {
+		refuse(stream);
+		ABORT;
+	}
+
 	// When a pslot is already claimed, only the schedd that claimed it
 	// can do new dslot requests.
 	req_classad->LookupString(ATTR_SCHEDD_NAME, schedd_name);
@@ -1170,6 +1179,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 		pslot_already_claimed = true;
 	}
+
 
 	// If we are being claimed to go to work for another CM
 	// check here.
