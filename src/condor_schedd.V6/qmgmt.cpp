@@ -1808,11 +1808,16 @@ void JobQueueUserRec::PopulateFromAd()
 	if (os_user.empty()) {
 		this->LookupString(ATTR_OS_USER, os_user);
 	}
-	if (os_user.empty()) {
-		std::string buf;
+
+	std::string buf;
+	std::string ntdomain;
 #if defined(WIN32)
-		std::string ntdomain;
-		this->LookupString(ATTR_NT_DOMAIN, ntdomain);
+	this->LookupString(ATTR_NT_DOMAIN, ntdomain);
+#endif
+
+	if (os_user.empty()) {
+		// Derive OsUser from User and NTDomain
+#if defined(WIN32)
 		if (!ntdomain.empty()) {
 			os_user = name_of_user(name.c_str(), buf);
 			os_user += '@';
@@ -1821,6 +1826,23 @@ void JobQueueUserRec::PopulateFromAd()
 #else
 		os_user = name_of_user(name.c_str(), buf);
 #endif
+	} else {
+		// Check whether OsUser matches what we would derive from User
+		// and NTDomain
+		std::string derived_user = name_of_user(name.c_str(), buf);
+		if (!ntdomain.empty()) {
+			derived_user += '@';
+			derived_user += ntdomain;
+		}
+		CompareUsersOpt opt;
+#if defined(WIN32)
+		opt = COMPARE_DOMAIN_FULL;
+#else
+		opt = COMPARE_IGNORE_DOMAIN;
+#endif
+		if (!is_same_user(os_user.c_str(), derived_user.c_str(), opt, "~")) {
+			os_user_differs = true;
+		}
 	}
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
 		this->Assign(ATTR_OS_USER, os_user);
@@ -8216,7 +8238,25 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 
 	}
 
-	return dollarDollarExpand(job_id.cluster, job_id.proc, ad, startd_ad, persist_expansions);
+	ClassAd* exp_ad = dollarDollarExpand(job_id.cluster, job_id.proc, ad, startd_ad, persist_expansions);
+
+	// If the startd doesn't know about OsUser and OsUser doesn't match
+	// Owner (and NTDomain on windows), then we'll need to lie about the
+	// value of Owner (and NTDomain).
+	if (exp_ad && startd_ad && job->ownerinfo->OsUserDiffers()) {
+		bool has_os_user = false;
+		startd_ad->LookupBool(ATTR_HAS_OS_USER, has_os_user);
+		if (!has_os_user) {
+			std::string buf;
+			exp_ad->Assign(ATTR_OWNER, name_of_user(job->ownerinfo->OsUser(), buf));
+			const char* ntdomain = domain_of_user(job->ownerinfo->OsUser(), nullptr);
+			if (ntdomain) {
+				exp_ad->Assign(ATTR_NT_DOMAIN, ntdomain);
+			}
+		}
+	}
+
+	return exp_ad;
 }
 
 // We have to define this to prevent the version in qmgmt_stubs from being pulled into the schedd.

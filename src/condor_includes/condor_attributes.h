@@ -288,6 +288,7 @@
 #define ATTR_HAS_JOB_AD  "HasJobAd"
 #define ATTR_HAS_JOB_AD_FROM_FILE  "HasJobAdFromFile"
 #define ATTR_HAS_JOB_DEFERRAL  "HasJobDeferral"
+#define ATTR_HAS_OS_USER  "HasOsUser"
 #define ATTR_HAS_MPI  "HasMPI"
 #define ATTR_HAS_OLD_VANILLA  "HasOldVanilla"
 #define ATTR_HAS_PVM  "HasPVM"
