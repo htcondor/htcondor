@@ -6666,6 +6666,19 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		scheduler.mapPendingOwners();
 	}
 
+	// if we modified UserRecord attributes, we need to do a pass to reflect
+	// those changes into the in-memory data structures
+	if (triggers & catSetUserRec) {
+		for(const auto& it : ad_keys) {
+			JobQueueKey jid(it.c_str());
+			JobQueueBase *bad = nullptr;
+			if ( ! JobQueue->Lookup(jid, bad) || ! bad) continue; // safety
+			if (bad->IsUserRec()) {
+				dynamic_cast<JobQueueUserRec*>(bad)->PopulateFromAd();
+			}
+		}
+	}
+
 	// Now that we've commited for sure, up the TotalJobsCount
 	TotalJobsCount += jobs_added_this_transaction; 
 
