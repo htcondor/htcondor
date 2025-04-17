@@ -2842,27 +2842,27 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			}
 		}
 
-			// If we transferred the executable, make sure it
+			// chmod +x the executable, but only if it is in the scratch dir
 			// has its execute bit set.
-		bool xferExec = true;
-		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
-
 		std::string cmd;
-		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) && xferExec)
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd))
 		{
 				// if we are running as root, the files were downloaded
 				// as PRIV_USER, so switch to that priv level to do chmod
-			priv_state saved_priv = set_priv( PRIV_USER );
+			TemporaryPrivSentry _(PRIV_USER);
 
-			if (chmod(condor_basename(cmd.c_str()), 0755) == -1) {
-				dprintf(D_ALWAYS,
-				        "warning: unable to chmod %s to "
-				            "ensure execute bit is set: %s\n",
-				        condor_basename(cmd.c_str()),
-				        strerror(errno));
+			std::string cmd_basename = condor_basename(cmd.c_str());
+			std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
+				std::filesystem::path::preferred_separator + cmd_basename;
+			if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
+				if (errno != ENOENT) {
+					dprintf(D_ALWAYS,
+							"warning: unable to chmod %s to "
+							"ensure execute bit is set: %s\n",
+							condor_basename(cmd.c_str()),
+							strerror(errno));
+				}
 			}
-
-			set_priv( saved_priv );
 		}
 	}
 
