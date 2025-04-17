@@ -10,6 +10,12 @@
   each reported Access Point's Schedd.
   :jira:`3009`
 
+- The execute point now sets the execute permission bit on
+  the :subcom:`executable` even when it was transfered by a plugin.
+  This is helpful when using pelican or osdf to transfer the
+  job's main executable.
+  :jira:`3020`
+
 *** 24.8.0 bugs
 
 - Fixed :tool:`condor_watch_q` to output a useful error message and not
