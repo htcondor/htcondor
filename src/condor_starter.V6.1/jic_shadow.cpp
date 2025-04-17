@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_version.h"
@@ -2853,7 +2854,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 
 			std::string cmd_basename = condor_basename(cmd.c_str());
 			std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
-				std::filesystem::path::preferred_separator + cmd_basename;
+				DIR_DELIM_CHAR	 + cmd_basename;
 			if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
 				if (errno != ENOENT) {
 					dprintf(D_ALWAYS,
