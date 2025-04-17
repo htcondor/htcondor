@@ -268,6 +268,7 @@ JICShadow::init( void )
 	{
 		receiveMachineAd(m_job_startd_update_sock);
 		receiveExecutionOverlayAd(m_job_startd_update_sock);
+		receiveMachineSecretsAd(m_job_startd_update_sock);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
@@ -1096,6 +1097,36 @@ JICShadow::notifyJobTermination( UserProc *user_proc )
 	}
 
 	return rval;
+}
+
+// send a command with a classad payload and receive a classad payload in reply.
+ClassAd * JICShadow::sendStartdCommmand(int cmd, ClassAd & payload)
+{
+	ASSERT(cmd != 0 && cmd != 1); // cmd 0 is update, and 1 is final update
+	if ( ! m_job_startd_update_sock) {
+		return nullptr;
+	}
+
+	m_job_startd_update_sock->encode();
+	if( !m_job_startd_update_sock->put(cmd) ||
+		!putClassAd(m_job_startd_update_sock, payload) ||
+		!m_job_startd_update_sock->end_of_message() )
+	{
+		dprintf(D_FULLDEBUG,"Failed to send update command %d to startd.\n", cmd);
+		return nullptr;
+	}
+
+	ClassAd * ret = new ClassAd();
+	m_job_startd_update_sock->decode();
+	if( !getClassAd(m_job_startd_update_sock, *ret) ||
+		!m_job_startd_update_sock->end_of_message())
+	{
+		dprintf(D_FULLDEBUG,"Failed to receive reply for command %d to startd.\n", cmd);
+		delete ret;
+		return nullptr;
+	}
+
+	return ret;
 }
 
 void
@@ -3501,7 +3532,7 @@ bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
 	}
 	job_execution_overlay_ad = new ClassAd();
 
-	if (!getClassAd(stream, *job_execution_overlay_ad))
+	if (!getClassAd(stream, *job_execution_overlay_ad) || !stream->end_of_message())
 	{
 		delete job_execution_overlay_ad; job_execution_overlay_ad = nullptr;
 		dprintf(D_ALWAYS, "Received invalid Execution Overlay Ad.  Discarding\n");
@@ -3521,6 +3552,28 @@ bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
 	}
 	return ret_val;
 }
+
+bool JICShadow::receiveMachineSecretsAd(Stream* stream)
+{
+	bool ret_val = true;
+
+	if (machine_secrets_ad) {
+		delete machine_secrets_ad;
+	}
+	machine_secrets_ad = new ClassAd();
+
+	if (!getClassAd(stream, *machine_secrets_ad) || !stream->end_of_message())
+	{
+		delete machine_secrets_ad; machine_secrets_ad = nullptr;
+		dprintf(D_ALWAYS, "Received invalid Machine Private Ad.  Discarding\n");
+		return false;
+	}
+	else if (machine_secrets_ad->size() == 0) {
+		delete machine_secrets_ad; machine_secrets_ad = nullptr;
+	}
+	return ret_val;
+}
+
 
 #if !defined(WINDOWS)
 void

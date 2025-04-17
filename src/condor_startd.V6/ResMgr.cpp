@@ -387,10 +387,9 @@ ClassAd * BrokenItem::new_context_ad() const
 void BrokenItem::publish_resources(ClassAd& ad, const char * prefix) const
 {
 	b_res.Publish(ad, prefix);
-	int broken_sub_id = (1000*1000) + b_id;
 	for (const auto & [tag,quan] : b_res.nfrmap()) {
 		MachAttributes::slotres_assigned_ids_t devids;
-		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, broken_sub_id)) {
+		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, this->sub_id())) {
 			std::string idlist = join(devids, ",");
 			std::string attr = "Assigned" + tag;
 			ad.Assign(attr, idlist);
@@ -1050,6 +1049,9 @@ ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 					return rip;
 				}
 			}
+		} else if (rip->is_split_claim_id(id)) {
+			// d-slots can have split claim ids in the r_claims collection
+			return rip;
 		}
 	}
 	return NULL;
@@ -1443,20 +1445,18 @@ ResMgr::directAttachToSchedd()
 		return;
 	}
 
-	std::vector<Resource*> offer_resources;
-
-	for (auto resource: slots) {
-		if ( resource->state() != unclaimed_state ) {
-			continue;
+	int offer_size = 0;
+	for (auto *rip: slots) {
+		if (rip && rip->state() == unclaimed_state) {
+			++offer_size;
 		}
-		offer_resources.push_back(resource);
 	}
 
-	if ( offer_resources.empty() ) {
+	if ( 0 == offer_size ) {
 		dprintf(D_FULLDEBUG, "No unclaimed slots, nothing to offer to schedd\n");
 		return;
 	}
-	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", (int)offer_resources.size());
+	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", offer_size);
 
 	// Do we need this if we only trigger when updating the collector?
 	compute_dynamic(true);
@@ -1465,68 +1465,27 @@ ResMgr::directAttachToSchedd()
 
 	int timeout = 30;
 	DCSchedd schedd(schedd_name.c_str(), schedd_pool.empty() ? nullptr : schedd_pool.c_str());
-	ReliSock *sock = schedd.reliSock(timeout);
-	if ( ! sock ) {
-		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
-		return;
-	}
-	if (!schedd.startCommand(DIRECT_ATTACH, sock, timeout)) {
-		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n",
-		        schedd_name.c_str());
-		delete sock;
-		return;
-	}
 
-	sock->encode();
-	ClassAd cmd_ad;
-	cmd_ad.InsertAttr(ATTR_NUM_ADS, (long)offer_resources.size());
-	if (!offer_submitter.empty()) {
-		cmd_ad.InsertAttr(ATTR_SUBMITTER, offer_submitter);
-	}
-	if ( !putClassAd(sock, cmd_ad) ) {
-		dprintf(D_FULLDEBUG, "Failed to send GIVE_ADS ad to %s\n",
-		        schedd_name.c_str());
-		delete sock;
-		return;
-	}
+	std::vector<ClassAd> slotads; // collection to hold and delete the slot ads
+	slotads.reserve(offer_size);
+	std::vector< std::pair<std::string, const ClassAd*> > resources; // collection to pass to DCSChedd
+	resources.reserve(offer_size);
 
-	for ( auto slot: offer_resources ) {
-		ClassAd offer_ad;
-		slot->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+	for (auto *rip : slots) {
+		if (rip && rip->state() == unclaimed_state) {
+			ClassAd & offer_ad = slotads.emplace_back();
+			rip->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+
 			// TODO This assumes the resource has no preempting claimids,
 			//   because we're only looking at unclaimed slots.
-		std::string claimid = slot->r_cur->id();
-
-		if ( !sock->put_secret(claimid) ||
-		     !putClassAd(sock, offer_ad) )
-		{
-			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n",
-			        schedd_name.c_str());
-			delete sock;
-			return;
+			resources.emplace_back(rip->r_cur->id(), &offer_ad);
 		}
 	}
 
-	if ( !sock->end_of_message() ) {
-		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n",
-		        schedd_name.c_str());
-	}
-
-	sock->decode();
-	ClassAd reply_ad;
-	if (!getClassAd(sock, reply_ad) || !sock->end_of_message()) {
-		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", schedd_name.c_str());
-		delete sock;
-		return;
-	}
-
-	int reply_code = NOT_OK;
-	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	int reply_code = schedd.offerResources(resources, offer_submitter, timeout);
 	if (reply_code != OK) {
 		dprintf(D_FULLDEBUG, "Schedd returned error\n");
 	}
-
-	delete sock;
 }
 
 bool
@@ -2892,6 +2851,23 @@ ResMgr::compute_resource_conflicts()
 
 	primary_res_in_use.reset();
 	backfill_res_in_use.reset();
+
+	// build a map of state of top level slots and their claimedness
+	// so we can update the NFT map active field.
+	// This is used by has_nft_conflicts in the loop below.
+	std::map<int,bool> claimed_slotids_map;
+	for (Resource * rip : slots) {
+		if ( ! rip) continue;
+		State state = rip->state();
+		bool is_claimed = state == claimed_state || state == preempting_state;
+		if ( ! rip->is_dynamic_slot()) {
+			claimed_slotids_map[rip->r_id] = is_claimed;
+		}
+	}
+	// update the active state in the NFT map for claimed p-slots and static slots
+	if ( ! claimed_slotids_map.empty()) {
+		resmgr->m_attr->set_nft_activity(claimed_slotids_map);
+	}
 
 	// Build up a bag of unclaimed resources
 	// and a list of active backfill slots

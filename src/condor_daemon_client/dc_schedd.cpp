@@ -1748,6 +1748,81 @@ bool DCSchedd::getJobConnectInfo(
 	return result;
 }
 
+int DCSchedd::offerResources(
+	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
+	const std::string & submitter_name,
+	int timeout)
+{
+	if (resources.empty()) {
+		dprintf(D_ERROR, "offerResources : no resources offered.\n");
+		return -1; 
+	}
+
+	if (submitter_name.empty()) {
+		dprintf(D_COMMAND, "offerResources: DIRECT_ATTACH of %d ads to %s\n", (int)resources.size(), this->name());
+	} else {
+		dprintf(D_COMMAND, "offerResources: DIRECT_ATTACH of %d ads to %s for %s\n",
+			(int)resources.size(), this->name(), submitter_name.c_str());
+	}
+
+	ReliSock *sock = reliSock(timeout);
+	if ( ! sock ) {
+		dprintf(D_FULLDEBUG, "Failed to contact schedd for offerResources\n");
+		return -1;
+	}
+	if ( ! startCommand(DIRECT_ATTACH, sock, timeout)) {
+		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n", this->name());
+		delete sock;
+		return -1;
+	}
+
+	sock->encode();
+	ClassAd cmd_ad;
+	cmd_ad.InsertAttr(ATTR_NUM_ADS, (int)resources.size());
+	if ( ! submitter_name.empty()) {
+		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
+	}
+	if ( ! putClassAd(sock, cmd_ad) ) {
+		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());
+		delete sock;
+		return -1;
+	}
+
+	for ( auto &[claimid,offer_ad] : resources ) {
+		if ( !sock->put_secret(claimid) ||
+		     ! putClassAd(sock, *offer_ad) )
+		{
+			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n", this->name());
+			delete sock;
+			return -1;
+		}
+	}
+
+	if ( !sock->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n", this->name());
+	}
+
+	sock->decode();
+	ClassAd reply_ad;
+	if ( ! getClassAd(sock, reply_ad) || !sock->end_of_message()) {
+		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", this->name());
+		delete sock;
+		return -1;
+	}
+
+	int reply_code = NOT_OK;
+	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	if (reply_code != OK) {
+		dprintf(D_FULLDEBUG, "Schedd returned error %d\n", reply_code);
+	} else {
+		dprintf(D_COMMAND, "Schedd returned success\n");
+	}
+	delete sock;
+
+	return reply_code;
+}
+
+
 bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg )
 {
 	int timeout = 300;
