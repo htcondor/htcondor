@@ -251,6 +251,7 @@ public:
 protected:
 	bool        enabled=true;
 	bool        local=false;
+	bool        os_user_differs=false;
 	unsigned char super=JQU_F_PENDING; // config stale on creation
 	std::string name;   // the name used in the schedd's map of OwnerInfo records
 	std::string os_user; // the os account to use for this user
@@ -277,6 +278,7 @@ public:
 	void setPending() { flags |= JQU_F_PENDING; }
 	bool IsEnabled() const { return enabled; }
 	bool IsLocalUser() const { return local; }
+	bool OsUserDiffers() const { return os_user_differs; }
 
 	// The super member has 4 possible values
 	// super == 0 is not super
