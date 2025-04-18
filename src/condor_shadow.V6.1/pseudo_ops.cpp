@@ -1222,7 +1222,8 @@ UniShadow::start_common_input_conversation(
 
 					const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
 					if( info.try_again ) {
-						// Consider replacing this with a call to evictJob().
+						// Consider replacing this with a delayed (zero-second
+						// timer) call to evictJob().
 						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
 						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
