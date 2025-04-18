@@ -11,6 +11,8 @@
 
 #include "condor_uid.h"
 #include "shortfile.h"
+#include <chrono>
+using namespace std::chrono_literals;
 
 
 OnDiskSemaphore::OnDiskSemaphore( const std::string & k ) : key(k) {
@@ -55,6 +57,32 @@ OnDiskSemaphore::acquire( std::string & message ) {
         if( errno == EEXIST ) {
             // We lost the race.
             lockholder = false;
+
+            // Check the lease.  If it's expired, remove the keyfile and
+            // re-run the race.
+            auto then = std::filesystem::last_write_time( keyfile, ec );
+            if( ec.value() != 0 ) {
+                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to read last_write_time(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
+                return OnDiskSemaphore::INVALID;
+            }
+            auto diff = std::chrono::file_clock::now() - then;
+            if( diff >= 300s ) {
+                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): lease expired.\n" );
+
+                std::filesystem::remove( keyfile, ec );
+                if( ec.value() != 0 ) {
+                    dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to remove(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
+                    // We must remove the keyfile for this algorithm to work.
+                    return OnDiskSemaphore::INVALID;
+                }
+
+                // Removing the message file is optional.
+                std::filesystem::path messagePath = keyfile;
+                messagePath.replace_extension( "message" );
+                std::filesystem::remove( messagePath, ec );
+
+                return acquire(message);
+            }
 
             // Create a hardlink to make the kernel handle reference-counting.
             std::string pid = std::to_string( getpid() );
