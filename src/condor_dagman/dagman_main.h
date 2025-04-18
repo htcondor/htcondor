@@ -89,6 +89,7 @@ namespace DagmanConfigOptions {
 		DebugCacheSize,                // Size of debug cache prior to writing messages
 		MetricsVersion,                // DAGMan metrics file version (1 or 2)
 		JobStateTableInterval,         // Seconds delay between outputting Job State Table to debug log (0 disables printing)
+		BatchFailureTolerance,          // Number of job failures (inclusive) that nodes will tolerate before declaring job list failed
 		_SIZE // MUST BE FINAL ITEM
 	};
 
