@@ -1,31 +1,35 @@
-#ifndef JWT_CPP_KAZUHO_PICOJSON_DEFAULTS_H
-#define JWT_CPP_KAZUHO_PICOJSON_DEFAULTS_H
+#ifndef JWT_CPP_NLOHMANN_JSON_DEFAULTS_H
+#define JWT_CPP_NLOHMANN_JSON_DEFAULTS_H
+
+#ifndef JWT_DISABLE_PICOJSON
+#define JWT_DISABLE_PICOJSON
+#endif
 
 #include "traits.h"
 
 namespace jwt {
 	/**
-	 * \brief a class to store a generic [picojson](https://github.com/kazuho/picojson) value as claim
+	 * \brief a class to store a generic [JSON for Modern C++](https://github.com/nlohmann/json) value as claim
 	 *
 	 * This type is the specialization of the \ref basic_claim class which
 	 * uses the standard template types.
 	 */
-	using claim = basic_claim<traits::kazuho_picojson>;
+	using claim = basic_claim<traits::nlohmann_json>;
 
 	/**
 	 * Create a verifier using the default clock
 	 * \return verifier instance
 	 */
-	inline verifier<default_clock, traits::kazuho_picojson> verify() {
-		return verify<default_clock, traits::kazuho_picojson>(default_clock{});
+	inline verifier<default_clock, traits::nlohmann_json> verify() {
+		return verify<default_clock, traits::nlohmann_json>(default_clock{});
 	}
 
 	/**
 	 * Create a builder using the default clock
 	 * \return builder instance to create a new token
 	 */
-	inline builder<default_clock, traits::kazuho_picojson> create() {
-		return builder<default_clock, traits::kazuho_picojson>(default_clock{});
+	inline builder<default_clock, traits::nlohmann_json> create() {
+		return builder<default_clock, traits::nlohmann_json>(default_clock{});
 	}
 
 #ifndef JWT_DISABLE_BASE64
@@ -36,8 +40,8 @@ namespace jwt {
 	 * \throw std::invalid_argument Token is not in correct format
 	 * \throw std::runtime_error Base64 decoding failed or invalid json
 	 */
-	inline decoded_jwt<traits::kazuho_picojson> decode(const std::string& token) {
-		return decoded_jwt<traits::kazuho_picojson>(token);
+	inline decoded_jwt<traits::nlohmann_json> decode(const std::string& token) {
+		return decoded_jwt<traits::nlohmann_json>(token);
 	}
 #endif
 
@@ -53,8 +57,8 @@ namespace jwt {
 	 * \throw std::runtime_error Base64 decoding failed or invalid json
 	 */
 	template<typename Decode>
-	decoded_jwt<traits::kazuho_picojson> decode(const std::string& token, Decode decode) {
-		return decoded_jwt<traits::kazuho_picojson>(token, decode);
+	decoded_jwt<traits::nlohmann_json> decode(const std::string& token, Decode decode) {
+		return decoded_jwt<traits::nlohmann_json>(token, decode);
 	}
 
 	/**
@@ -63,8 +67,8 @@ namespace jwt {
 	 * \return Parsed JWK
 	 * \throw std::runtime_error Token is not in correct format
 	 */
-	inline jwk<traits::kazuho_picojson> parse_jwk(const traits::kazuho_picojson::string_type& token) {
-		return jwk<traits::kazuho_picojson>(token);
+	inline jwk<traits::nlohmann_json> parse_jwk(const traits::nlohmann_json::string_type& token) {
+		return jwk<traits::nlohmann_json>(token);
 	}
 
 	/**
@@ -73,15 +77,15 @@ namespace jwt {
 	 * \return Parsed JWKs
 	 * \throw std::runtime_error Token is not in correct format
 	 */
-	inline jwks<traits::kazuho_picojson> parse_jwks(const traits::kazuho_picojson::string_type& token) {
-		return jwks<traits::kazuho_picojson>(token);
+	inline jwks<traits::nlohmann_json> parse_jwks(const traits::nlohmann_json::string_type& token) {
+		return jwks<traits::nlohmann_json>(token);
 	}
 
 	/**
 	 * This type is the specialization of the \ref verify_ops::verify_context class which
 	 * uses the standard template types.
 	 */
-	using verify_context = verify_ops::verify_context<traits::kazuho_picojson>;
+	using verify_context = verify_ops::verify_context<traits::nlohmann_json>;
 } // namespace jwt
 
-#endif // JWT_CPP_KAZUHO_PICOJSON_DEFAULTS_H
+#endif // JWT_CPP_NLOHMANN_JSON_DEFAULTS_H
