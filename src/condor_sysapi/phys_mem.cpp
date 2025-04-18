@@ -71,6 +71,16 @@ int64_t cgroup_current_memory_limit() {
 				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/memory.max";
 				s = file_size_contents(cgroup_max.c_str());
 			}
+			// If still unknown, look up one directory
+			if (s == 0) {
+				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/../memory.high";
+				s = file_size_contents(cgroup_max.c_str());
+			}
+			// If even still unknown, look up one directory in max
+			if (s == 0) {
+				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/../memory.max";
+				s = file_size_contents(cgroup_max.c_str());
+			}
 			fclose(f);
 			return s;
 		} 

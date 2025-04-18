@@ -9,6 +9,7 @@ import logging
 import pytest
 import os
 
+import htcondor as htcondor2
 from ornithology import *
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,37 @@ def slice_scope_test_job(condor, slice_scope_job_hash):
     )
     return ssj
 
+@action
+def memory_detection_job_hash(test_dir, path_to_python):
+    # A job which runs condor_config_val DETECTED_MEMORY.
+    # This should return the memory limit of the cgroup
+    bin_dir = htcondor2.param["BIN"]
+    return {
+            "shell": f"{bin_dir}/condor_config_val DETECTED_MEMORY",
+            "environment": "CONDOR_CONFIG=/dev/null",
+            "universe": "vanilla",
+            "output": "detected_memory",
+            "error": "error",
+            "log": "detected_memory.log",
+            "keep_claim_idle": "300",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
+
+@action
+def memory_detection_test_job(condor, memory_detection_job_hash):
+    mmj = condor.submit(
+        {**memory_detection_job_hash}, count=1
+    )
+    assert mmj.wait(
+        condition=ClusterState.all_complete,
+        timeout=120,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+    return mmj
+
 # These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
@@ -212,3 +244,10 @@ class TestCgroupOOM:
             assert ultimate.endswith(".scope")
             assert penultimate.endswith(".slice")
         assert True
+
+    def test_cgroup_memory_detection(self, memory_detection_test_job):
+        # When the job exits, detected_memory contains condor's idea of memory
+        memory = 0
+        with open('detected_memory', 'r') as file:
+            memory = int(file.read().rstrip())
+        assert(memory < 200 and memory > 50) # Allow for rounding up to 128 Mb
