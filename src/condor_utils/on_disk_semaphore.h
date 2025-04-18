@@ -1,6 +1,32 @@
 #ifndef   _CONDOR_ON_DISK_SEMAPHORE_H
 #define   _CONDOR_ON_DISK_SEMAPHORE_H
 
+/*
+    `NonfungibleResourceArbitrator`?
+
+    [The constructor's parameter is the name of ths non-fungible resource.]
+
+    This non-blocking class elects a single producer process from one or more
+    consumer processes.  The producer will be told the produce (PREPARE) the
+    resource.  As long as that single producer process neither releases the
+    lock nor fails to update the lease, all consumer processes, including ones
+    that join later, will be told that the resource is UNREADY.  After the
+    producer signals that the resouce is READY, then under the same condition,
+    all consumers will be told that the resource is READY.
+
+    The producer MUST call touch() more frequently than the lease duration
+    throughout its lifetime.  If the producer deallocates this object, a
+    new producer will be elected (and the message erased).
+
+    The producer MUST call ready() when the resource is ready.  The producer
+    supplies information about the particular resource in the associated
+    message, which will be returned to the consumers via acquire().
+
+    The consumer MUST call release() when it is done using the resource.  If
+    the producer calls release(), it will only succeed if no consumer is
+    currently using the resource.
+*/
+
 //
 // This class does five different things:
 // - mutex: only one caller will be asked to PREPARE.

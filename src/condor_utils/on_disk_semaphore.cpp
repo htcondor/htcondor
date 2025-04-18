@@ -56,13 +56,21 @@ OnDiskSemaphore::acquire( std::string & message ) {
             // We lost the race.
             lockholder = false;
 
-            // FIXME: check for lease expiration.
-
             // Create a hardlink to make the kernel handle reference-counting.
             std::string pid = std::to_string( getpid() );
             hardlink = keyfile;
             hardlink.replace_extension( pid );
-            std::filesystem::create_hard_link( keyfile, hardlink, ec );
+            // If this fails because of an error, try to create the hard link
+            // and report that error, instead.
+            if(! std::filesystem::exists( hardlink, ec )) {
+                std::filesystem::create_hard_link( keyfile, hardlink, ec );
+                if( ec.value() != 0 ) {
+                    // If we failed to create the hardlink, the original keyfile
+                    // may be gone, and we may become the new provider.
+                    dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): create_hard_link() failed: %s (%d)\n", ec.message().c_str(), ec.value() );
+                    return acquire(message);
+                }
+            }
 
             // Read the lock file to determine the status.
             fd = open( keyfile.string().c_str(), O_RDONLY );
@@ -127,6 +135,12 @@ OnDiskSemaphore::acquire( std::string & message ) {
         ssize_t w  = write( keyfile_fd, (void*)&status, 1 );
         if( w != 1 ) { return OnDiskSemaphore::INVALID; }
 
+        // We don't need to remove the old message file, if any, but it makes
+        // easier to inspect the on-disk state if we do.
+        std::filesystem::path messagePath = keyfile;
+        messagePath.replace_extension( "message" );
+        std::filesystem::remove( messagePath, ec );
+
         return OnDiskSemaphore::PREPARING;
     }
 }
@@ -183,11 +197,53 @@ OnDiskSemaphore::release() {
     if(! lockholder) {
         return cleanup();
     } else {
+        //
+        // A consumer could of course make a new hardlink between the
+        // refcount check and the actual removal of the keyfile.  Suppose they
+        // do.  The problem isn't that they would believe themselves to
+        // be waiting for the producer -- the lease would expire.  The
+        // problem is that they would see the READY state in the lockfile
+        // and proceed to (fail to) use the resource.
+        //
+        // Instead, rename() the keyfile (.keyfile.<pid>), and _then_ check
+        // the hardlink count.  The consumer could still try to create a
+        // hardlink between these two steps, but it would fail (causing the
+        // consumer to try grabbing the keyfile) because it's path-oriented.
+        //
+        // Once the keyfile is gone, only existing clients have a refcount,
+        // and none of them will ever increment it.  Check the new refcount
+        // and behave appropriately.
+        //
         TemporaryPrivSentry tps(PRIV_CONDOR);
 
-        int count = std::filesystem::hard_link_count( keyfile, ec );
+        std::string pid = std::to_string( getpid() );
+        std::filesystem::path key = keyfile.filename();
+        std::filesystem::path hiddenKeyFile = keyfile;
+        hiddenKeyFile.replace_filename("." + key.string()).replace_extension(pid);
+        if( std::filesystem::exists( keyfile ) ) {
+            std::filesystem::rename( keyfile, hiddenKeyFile, ec );
+            if( ec.value() != 0 ) {
+                dprintf( D_ALWAYS, "OnDiskSemaphore::release(): failed to rename keyfile: %s (%d).\n", ec.message().c_str(), ec.value() );
+                return false;
+            }
+        }
+
+        int count = std::filesystem::hard_link_count( hiddenKeyFile, ec );
+        if( ec.value() != 0 ) {
+            dprintf( D_ALWAYS, "OnDiskSemaphore::release(): hard_link_count() failed: %s (%d)\n", ec.message().c_str(), ec.value() );
+            return false;
+        }
+
         if( count == 1 ) {
-            return cleanup();
+            // A failure to remove the hidden key file won't break anything.
+            std::filesystem::remove( hiddenKeyFile, ec );
+
+            std::filesystem::path messagePath = keyfile;
+            messagePath.replace_extension( "message" );
+            // A failure to remove the message file won't break anything.
+            std::filesystem::remove( messagePath, ec );
+
+            return true;
         } else {
             return false;
         }
@@ -207,6 +263,21 @@ OnDiskSemaphore::cleanup() {
         std::filesystem::remove( hardlink, ec );
         return true;
     } else {
+        //
+        // It doesn't matter which file we remove first; in either case,
+        // there's an order of operations in which a call to acquire()
+        // returns INVALID.
+        //
+        // We could change the state byte to UNREADY first, but that doesn't
+        // help: the producer still needs to exit without waiting for all
+        // consumers to be done.
+        //
+        // This function doesn't have to remove both files: the lease will
+        // eventually kick in and elect a new producer.  However, by
+        // removing these files immediately, we narrow the window of time
+        // in which acquire() could return READY for a resource without a
+        // producer process.
+        //
         std::filesystem::remove( keyfile, ec );
 
         std::filesystem::path messagePath = keyfile;
