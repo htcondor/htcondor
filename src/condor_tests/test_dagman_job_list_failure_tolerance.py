@@ -21,7 +21,9 @@ DAG_CONTENTS = """
 SUBMIT-DESCRIPTION chain @=desc
     executable = {exe}
     arguments  = $(ClusterId) $(ProcId) {tolerance}
-    universe   = local
+    # Possible race condition with local universe may cause
+    # abort event for jobs that have terminated upon DAGMan exit
+    #universe   = local
     priority   = $(ProcId) * -100
 
     getenv     = True
