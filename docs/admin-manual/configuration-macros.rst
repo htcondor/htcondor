@@ -8894,6 +8894,18 @@ General
     failures do not cause this behavior. The job is only put on hold if the node has no
     more declared :dag-cmd:`RETRY` attempts.
 
+:macro-def:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE[DAGMan]`
+    An integer value representing the number of jobs in a single cluster that can fail
+    before DAGMan considers the cluster as failed and removes any remaining jobs. This
+    value is applied to all nodes in the DAG for each execution. The default value is
+    ``0`` meaning no jobs should fail.
+
+    .. warning::
+
+        If the tolerance value is greater than or equal to the total number of jobs in
+        a cluster then DAGMan will consider the cluster as successful even if all jobs
+        fail.
+
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, variables
     parsed in the DAG file :dag-cmd:`VARS` line will be appended to the given Job

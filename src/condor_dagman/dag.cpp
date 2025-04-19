@@ -657,9 +657,11 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 	// same *node* (not job proc).
 
 	if (node) {
-		node->SetProcEvent(event->proc, ABORT_TERM_MASK);
 		_totalJobsCompleted++;
+
+		node->SetProcEvent(event->proc, ABORT_TERM_MASK);
 		node->IncrementJobsAborted();
+		node->JobFailure();
 
 		// This code is here because if a held job is removed, we
 		// don't get a released event for that job.  This may not
@@ -669,36 +671,35 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 
 		DecrementProcCount(node);
 
-		// Only change the node status, error info,
-		// etc., if we haven't already gotten an error
-		// from another job proc in this job cluster
-		if (node->GetStatus() != Node::STATUS_ERROR) {
-			node->TerminateFailure();
+		// Set first failure information
+		if (node->TotalJobsFailed() == 1) {
 			node->SetErrorMsg("HTCondor reported %s event for job proc (%d.%d.%d)",
 			                  event->eventName(), event->cluster, event->proc, event->subproc);
 			node->SetReturnValue(DAG_ERROR_CONDOR_JOB_ABORTED);
-			
-			// It seems like we should be checking _numSubmittedProcs here, but
-			// that breaks a test in Windows. Keep an eye on this in case we
-			// have trouble recovering from aborted jobs using late materialization.
+
+			// Set first exit value for post script
+			if (node->_scriptPost) {
+				node->_scriptPost->_retValJob = node->GetReturnValue();
+			}
+		}
+
+		bool batch_failed = node->CheckBatchFailed(config[conf::i::BatchFailureTolerance]);
+
+		// If we haven't failed yet and we have reached our node job list failure tolerance then fail node
+		if (node->GetStatus() != Node::STATUS_ERROR && batch_failed) {
+			node->TerminateFailure();
+			node->MarkFailed();
+
 			if (node->GetQueuedJobs() > 0) {
-				node->MarkFailed();
 				// once one job proc fails, remove the whole cluster
 				std::string rm_reason;
 				formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) got %s event.",
 				          node->GetNodeName(), event->cluster, event->proc, event->subproc, event->eventName());
 				RemoveBatchJob(node, rm_reason);
 			}
-			if (node->_scriptPost != nullptr) {
-				// let the script know the job's exit status
-				node->_scriptPost->_retValJob = node->GetReturnValue();
-			}
 		}
 
-		//If no post script and not a retry node then set descendants to Futile
-		if (!node->_scriptPost && !node->DoRetry()) { _numNodesFutile += node->SetDescendantsToFutile(*this); }
-
-		ProcessJobProcEnd(node, recovery, true);
+		ProcessJobProcEnd(node, recovery, batch_failed);
 	}
 }
 
@@ -713,11 +714,13 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 
 		const JobTerminatedEvent* termEvent = (const JobTerminatedEvent*) event;
 
-		bool failed = !(termEvent->normal && termEvent->returnValue == 0);
+		bool job_failed = !(termEvent->normal && termEvent->returnValue == 0);
+		bool batch_failed = false;
 
 		node->CountJobExitCode(termEvent->returnValue);
 
-		if (failed) { // job failed or was killed by a signal
+		if (job_failed) { // job failed or was killed by a signal
+			node->JobFailure();
 			if (termEvent->normal) {
 				debug_printf(DEBUG_QUIET, "Node %s job proc (%d.%d.%d) failed with status %d.\n",
 				             node->GetNodeName(), event->cluster, event->proc, event->subproc,
@@ -728,42 +731,41 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 				             termEvent->signalNumber);
 			}
 
-			// Only change the node status, error info, etc.,
-			// if we haven't already gotten an error on this node.
-			if (node->GetStatus() != Node::STATUS_ERROR) {
+			// Set first failure information
+			if (node->TotalJobsFailed() == 1) {
 				if (termEvent->normal) {
 					node->SetErrorMsg("Job proc (%d.%d.%d) failed with status %d",
 					                   termEvent->cluster, termEvent->proc,
 					                   termEvent->subproc, termEvent->returnValue);
 					node->SetReturnValue(termEvent->returnValue);
-					if (node->_scriptPost != nullptr) {
-						// let the script know the job's exit status
-						node->_scriptPost->_retValJob = node->GetReturnValue();
-					}
 				} else {
 					node->SetErrorMsg("Job proc (%d.%d.%d) failed with signal %d",
 					                  termEvent->cluster, termEvent->proc,
 					                  termEvent->subproc, termEvent->signalNumber);
 					node->SetReturnValue(0 - termEvent->signalNumber);
-					if (node->_scriptPost != nullptr) {
-						// let the script know the job's exit status
-						node->_scriptPost->_retValJob = node->GetReturnValue();
-					}
 				}
 
-				node->TerminateFailure();
-				if (node->GetQueuedJobs() > 0) {
-					node->MarkFailed();
-					// once one job proc fails, remove the whole cluster
-					std::string rm_reason;
-					formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) failed with signal %d.",
-					          node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc, termEvent->signalNumber);
-					RemoveBatchJob(node, rm_reason);
+				// Set first exit value for post script
+				if (node->_scriptPost) {
+					node->_scriptPost->_retValJob = node->GetReturnValue();
 				}
 			}
 
-			//If no post script and not retrying the node then set descendants to Futile
-			if (!node->_scriptPost && !node->DoRetry()) { _numNodesFutile += node->SetDescendantsToFutile(*this); }
+			batch_failed = node->CheckBatchFailed(config[conf::i::BatchFailureTolerance]);
+
+			// If we haven't failed yet and we have reached our node job list failure tolerance then fail node
+			if (node->GetStatus() != Node::STATUS_ERROR && batch_failed) {
+				node->TerminateFailure();
+				node->MarkFailed();
+
+				if (node->GetQueuedJobs() > 0) {
+					// once one job proc fails, remove the whole cluster
+					std::string rm_reason;
+					formatstr(rm_reason, "Node Error: DAG node %s (%d.%d.%d) reached failure tolerance after %d failures.",
+					          node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc, node->TotalJobsFailed());
+					RemoveBatchJob(node, rm_reason);
+				}
+			}
 
 		} else { // job succeeded
 			ASSERT(termEvent->returnValue == 0);
@@ -784,7 +786,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 			             node->GetNodeName(), termEvent->cluster, termEvent->proc, termEvent->subproc);
 		}
 
-		ProcessJobProcEnd(node, recovery, failed);
+		ProcessJobProcEnd(node, recovery, batch_failed);
 
 		if (node->_scriptPost == nullptr) {
 			if (CheckForDagAbort(node, "job")) { return; }
@@ -814,9 +816,6 @@ Dag::RemoveBatchJob(Node *node, const std::string& reason) {
 	args.AppendArg("-reason");
 	args.AppendArg(reason);
 
-	std::string display;
-	args.GetArgsStringForDisplay(display);
-	//debug_printf(DEBUG_VERBOSE, "Executing: %s\n", display.c_str());
 	if (dagmanUtils.popen(args) != 0) {
 		// Note: error here can't be fatal because there's a race condition where
 		// you could do a condor_rm on a job that already terminated.  wenger 2006-02-08.
@@ -833,33 +832,37 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT (_isSplice == false);
 
+	// If not late materialization (handled else where) do final node processing
+	// once all jobs have left the queue - Cole Bollig 2025-04-16
 	if (node->AllProcsDone()) {
-		// Log job success or failure if necessary.
-		_jobstateLog.WriteJobSuccessOrFailure(node);
-	}
+		debug_printf(DEBUG_NORMAL, "Node %s job(s) have exited the queue\n", node->GetNodeName());
 
-	// Note: structure here should be cleaned up, but I'm leaving it for
-	// now to make sure parallel universe support is complete for 6.7.17.
-	// wenger 2006-02-15.
-	if (failed && node->_scriptPost == nullptr) {
-		if (node->DoRetry()) {
-			if (node->AllProcsDone()) { RestartNode(node, recovery); }
-		} else if (config[conf::b::HoldFailedJobs]) {
-			node->SetHold(true);
-			// Increase the job's retry max, so it will try again after the
-			// retry count gets increased in the RestartNode() function.
-			// We might want to limit this to avoid livelock.
-			if (node->AllProcsDone()) {
+		// Log node success or failure if necessary.
+		_jobstateLog.WriteJobSuccessOrFailure(node);
+
+		if (node->_scriptPost) { // Run Post script if node has one
+			if (recovery) {
+				node->SetStatus(Node::STATUS_POSTRUN);
+				_postRunNodeCount++;
+			} else {
+				(void)RunPostScript(node, dagOpts[shallow::b::PostRun], 0);
+			}
+		} else if (failed) { // Job list has failed
+			if (node->DoRetry()) { // Can node be retries
+				RestartNode(node, recovery);
+			} else if (config[conf::b::HoldFailedJobs]) { // Resubmit failed job(s) in held state
+				node->SetHold(true);
+				// Increase the job's retry max, so it will try again after the
+				// retry count gets increased in the RestartNode() function.
+				// We might want to limit this to avoid livelock.
 				node->AddRetry();
 				RestartNode(node, recovery);
-			}
-		} else {
-			// no more retries -- node failed
-			if (node->GetRetryMax() > 0) {
-				// add # of retries to error_text
-				node->AppendErrorMsg(" (after %d node retries)", node->GetRetries());
-			}
-			if (node->GetQueuedJobs() == 0) {
+			} else { // no more retries -- node failed
+				if (node->GetRetryMax() > 0) {
+					// add # of retries to error_text
+					node->AppendErrorMsg(" (after %d node retries)", node->GetRetries());
+				}
+
 				if (node->GetType() != NodeType::SERVICE) {
 					_numNodesFailed++;
 					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
@@ -870,29 +873,11 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 				if (_dagStatus == DAG_STATUS_OK) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
-			}
-		}
-		return;
-	}
 
-	// If this is *not* a multi-proc cluster job, and no more procs are
-	// outstanding, start shutting things down now.
-	// Multi-proc cluster jobs get shut down in ProcessClusterRemoveEvent().
-	if (node->AllProcsDone()) {
-		// All procs for this job are done.
-		debug_printf(DEBUG_NORMAL, "Node %s job completed\n", node->GetNodeName());
-
-		// if a POST script is specified for the node, run it
-		if (node->_scriptPost != nullptr) {
-			if (recovery) {
-				node->SetStatus(Node::STATUS_POSTRUN);
-				_postRunNodeCount++;
-			} else {
-				(void)RunPostScript(node, dagOpts[shallow::b::PostRun], 0);
+				// Set descendants to Futile
+				_numNodesFutile += node->SetDescendantsToFutile(*this);
 			}
-		} else if (node->GetStatus() != Node::STATUS_ERROR) {
-			// no POST script was specified, so update DAG with
-			// node's successful completion if the node succeeded.
+		} else if (node->GetStatus() != Node::STATUS_ERROR) { // Terminate node if successful
 			TerminateNode(node, recovery);
 		}
 	}

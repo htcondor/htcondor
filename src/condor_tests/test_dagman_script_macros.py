@@ -5,6 +5,14 @@ from ornithology import *
 import htcondor2 as htcondor
 import os
 
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+    # Each job list contains 4 jobs so tolerate 3 failures and
+    # fail batch on 4th failure to ensure all jobs run but list fails
+    DAGMAN_NODE_JOB_FAILURE_TOLERANCE = 3
+"""
+#endtestreq
+
 @action
 def writeExecutable(test_dir):
     file = test_dir / "exit.sh"
