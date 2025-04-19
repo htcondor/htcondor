@@ -364,6 +364,11 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 						 bool use_file_catalog, bool is_spool)
 {
 	this->ftcb = _ftcb;
+	// This will be false if called from _Init().
+	if(! this->_fix_me_copy_initialized ) {
+		this->_fix_me_copy_ = * _fix_me_;
+		this->_fix_me_copy_initialized = true;
+	}
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -908,7 +913,11 @@ FileTransfer::_Init(
 	bool use_file_catalog /* = true */)
 {
 	this->ftcb = _ftcb;
-	this->_fix_me_copy_ = * _fix_me_;
+	// This should always be true.
+	if(! this->_fix_me_copy_initialized ) {
+		this->_fix_me_copy_ = * _fix_me_;
+		this->_fix_me_copy_initialized = true;
+	}
 
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 
