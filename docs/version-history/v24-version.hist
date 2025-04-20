@@ -2,7 +2,7 @@
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
   the named HPC system.  If you've recently created or added an annex at a
-  particular system, it will re-use that connection; otherwise, you'll have
+  particular system, it will re-use that cached connection; otherwise, you'll have
   to login again, but that connection will then be re-usable by other
   :tool:`htcondor annex` commands.
   :jira:`2809`
