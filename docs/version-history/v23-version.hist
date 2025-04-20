@@ -35,7 +35,7 @@
   :jira:`2917`
 
 - Fixed a bug where daemons wouldn't immediately apply new security policy
-  to incoming commands after a rconfig.
+  to incoming commands after a reconfigure.
   :jira:`2929`
 
 - Fixed a bug where *condor_history* would crash when reading a history file
@@ -51,7 +51,7 @@
 
 - Removed a scary-looking message in the log of the *condor_collector* about
   denying NEGOTIATOR-level authorization when the client wasn't requesting
-  that authorizaiton level.
+  that authorization level.
   :jira:`2964`
 
 - Fixed a bug that caused most updates of collector ads via UDP to be
