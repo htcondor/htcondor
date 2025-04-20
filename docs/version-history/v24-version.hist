@@ -11,7 +11,7 @@
   image from the docker repository.
   :jira:`2870`
 
-- Added the ability for an EP administator to disable access to the network
+- Added the ability for an EP administrator to disable access to the network
   by a job, by setting :macro:`NO_JOB_NETWORKING` to true.
   :jira:`2967`
 
@@ -161,7 +161,7 @@
 
 - The *condor_startd* will now never lose track and leak logical volumes that were failed
   to be cleaned up when using :macro:`STARTD_ENFORCE_DISK_LIMITS`. The *condor_startd*
-  will now periodically retry removal of logical volumes with an exponential backoff.
+  will now periodically retry removal of logical volumes with an exponential back off.
   :jira:`2852`
 
 - The *condor_startd* will now keep dynamic slots that have a :ad-attr:`SlotBrokenReason`
@@ -169,7 +169,7 @@
   to ``Unclaimed``.  A new configuration variable :macro:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS`
   controls this behavior.  It defaults to ``true`` but can be set to ``false`` to preserve
   the old behavior.  This change also adds a new attribute :ad-attr:`BrokenContextAds`
-  to the daemon ad of the *condor_startd*. This attribute has a classad for each broken resource
+  to the daemon ad of the *condor_startd*. This attribute has a ClassAd for each broken resource
   in the startd.  *condor_status* has been enhanced to use this new attribute to display
   more information about the context of broken resources when both ``-startd`` and ``-broken``
   arguments are used.
@@ -194,7 +194,7 @@
 *** 24.5.1 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file
-  `GridmanagerLog.root` after a reconfig.
+  `GridmanagerLog.root` after a reconfiguration.
   :jira:`2846`
 
 - ``htcondor annex shutdown`` now works again.
@@ -224,7 +224,7 @@
 
 - Many small improvements to :tool:`condor_q` ``-analyze`` and ``-better-analyze``
   for pools that use partitionable slots.  As a part of this, the *condor_schedd*
-  was changed to provide match information for the autocluster of
+  was changed to provide match information for the auto-cluster of
   the job being analyzed, which :tool:`condor_q` will report if it is available.
   :jira:`2720`
 
