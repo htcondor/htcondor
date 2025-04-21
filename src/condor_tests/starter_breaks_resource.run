@@ -86,9 +86,16 @@ my $result = SimpleJob::RunCheck(
 	on_reconnectfailed => $on_reconnectfailed,
 	);
 
+# Need to directly query the startd, which means we need to get the address
+my $startdAddressFile = `condor_config_val STARTD_ADDRESS_FILE`;
+chomp( $startdAddressFile );
+open(my $startdAddressFD, $startdAddressFile);
+my $startdAddress = <$startdAddressFD>;
+chomp( $startdAddress);
+
 TLOG("Checking startd broken status\n");
 my @statout = ();
-runCondorTool("condor_status -startd -broken",\@statout,2,{emit_output=>1});
+runCondorTool("condor_status -startd -broken -direct \"${startdAddress}\"",\@statout,2,{emit_output=>1});
 
 my $subid=0;
 my %gpus={};
