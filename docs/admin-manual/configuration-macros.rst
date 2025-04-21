@@ -8953,7 +8953,7 @@ General
     V2 Metrics File (2):
         New metric file using updated terminology (i.e. using the word ``nodes``).
 
-:macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
+:macro-def:`DAGMAN_REPORT_GRAPH_METRICS[DAGMan]`
     A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
     information regarding graph metrics to ``*.metrics`` file. The included graph metrics
     are as follows:
@@ -8963,6 +8963,14 @@ General
     - Number of edges (dependencies)
     - Number of vertices (nodes)
 
+:macro-def:`DAGMAN_DISABLE_PORT[DAGMan]`
+    A boolean that defaults to ``False``. When ``True``, DAGMan will not open up a command
+    port.
+
+    .. warning::
+
+        Disabling the command port will make tools, such as :tool:`htcondor dag halt`
+        that talk directly to a running DAGMan process fail.
 
 :index:`Throttling<single: DAGMan Configuration Sections; Throttling>`
 

@@ -1,5 +1,13 @@
 *** 24.8.0 features
 
+- Added new ``halt`` and ``resume`` verbs to :tool:`htcondor dag` for
+  first class way to halt a DAG.
+  :jira:`2898`
+
+- Added new :class:`htcondor2.DAGMan` class to the python api for sending
+  commands to running a DAGMan process.
+  :jira:`2898`
+
 - Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
   consider a placed job list as failed when job failures occur.
   :jira:`3019`
