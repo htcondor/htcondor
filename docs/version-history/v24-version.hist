@@ -8,6 +8,13 @@
   commands to running a DAGMan process.
   :jira:`2898`
 
+- On Linux, when using dataflow jobs, HTCondor now checks the modification
+  times of dataflow nodes with subsecond accuracy.  Previously, it just
+  used seconds, which means that it might incorrectly not skip a dataflow
+  job that it should have skipped if the output file was written in the
+  same second as the input file.
+  :jira:`3027`
+
 - Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
   consider a placed job list as failed when job failures occur.
   :jira:`3019`
