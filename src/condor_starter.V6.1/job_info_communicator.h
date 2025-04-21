@@ -28,6 +28,8 @@
 #include "condor_holdcodes.h"
 #include "enum_utils.h"
 #include "event_notification.h"
+
+#include <optional>
 #include "guidance.h"
 
 #include <filesystem>

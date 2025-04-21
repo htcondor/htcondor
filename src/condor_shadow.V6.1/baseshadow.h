@@ -32,6 +32,8 @@
 #include "condor_update_style.h"
 #include "file_transfer.h"
 #include "on_disk_semaphore.h"
+
+#include <optional>
 #include "guidance.h"
 
 /* Forward declaration to prevent loops... */

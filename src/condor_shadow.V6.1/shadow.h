@@ -24,8 +24,11 @@
 #include "condor_common.h"
 #include "baseshadow.h"
 #include "remoteresource.h"
-#include "guidance.h"
 #include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+
 
 class ShadowHookMgr;
 

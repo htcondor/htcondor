@@ -3,6 +3,8 @@
 
 #include <string>
 #include "classad/classad.h"
+
+#include <optional>
 #include "guidance.h"
 
 #include "condor_attributes.h"

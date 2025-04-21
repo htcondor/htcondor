@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 #include "baseshadow.h"
@@ -34,6 +33,8 @@
 #include "shortfile.h"
 #include "my_popen.h"
 
+#include <optional>
+#include "guidance.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;

@@ -59,8 +59,11 @@
 #endif
 #include "authentication.h"
 #include "to_string_si_units.h"
-#include "guidance.h"
 #include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+
 
 extern void main_shutdown_fast();
 
