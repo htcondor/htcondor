@@ -1,4 +1,4 @@
-*** 23.0.23 bugs
+*** 23.0.24 bugs
 
 - Fixed inflated memory usage reporting for docker universe jobs on hosts using
   cgroups V2. The reported memory no longer includes the cached memory.
