@@ -47,6 +47,9 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 	if ( commonFTO ) delete commonFTO;
+	if ( producer_keep_alive != -1 ) {
+		daemonCore->Cancel_Timer( producer_keep_alive );
+	}
 	if ( cfLock ) delete cfLock;
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }

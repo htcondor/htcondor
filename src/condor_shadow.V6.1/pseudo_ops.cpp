@@ -413,7 +413,7 @@ static void append_buffer_info( std::string &url, const char *method, char const
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
 		if( filename_remap_find(buffer_list.c_str(),path,buffer_string) ||
-		    filename_remap_find(buffer_list.c_str(),file.c_str(),buffer_string) ) {
+			filename_remap_find(buffer_list.c_str(),file.c_str(),buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			url += "buffer:";
@@ -1099,6 +1099,10 @@ UniShadow::do_common_file_transfer(
 		EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
 	}
 	this->commonFTO->setPeerVersion( this->getStarterVersion() );
+	// This is broken on Windows, but we really want our timer to fire
+	// during the transfer process.  Not clear if the progress function
+	// will always be called often enough to be useful for keeping-alive.
+	this->commonFTO->SetServerShouldBlock( false );
 
 
 	ClassAd guidance;
@@ -1144,7 +1148,7 @@ UniShadow::start_common_input_conversation(
 	//  2. If not:
 	//     (a) If the semaphore's state is READY, go to step 4.
 	//	   (b) Otherwise, check that the semaphore has been touched recently.
-	//         If it hasn't, FIXME.
+	//         If it hasn't, remove the semaphore and back to step 1.
 	//     (c) Start a timer in case the starter never calls us back?
 	//     (d) Ask the starter to wait five minutes and ask again.  When
 	//         it does, repeat this process.
@@ -1172,6 +1176,40 @@ UniShadow::start_common_input_conversation(
 		dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 		switch( status ) {
 			case OnDiskSemaphore::PREPARING: {
+				// Before we start common file transfer, start a timer that
+				// calls this->cfLock->touch() every sixty seconds.
+				this->producer_keep_alive = daemonCore->Register_Timer(
+					0, 60,
+					[this] (int /* timerID */) -> void {
+						dprintf( D_ZKM, "Elected producer touch()ing keyfile.\n" );
+						if(! this->cfLock->touch()) {
+							delete this->cfLock;
+							EXCEPT( "Elected producer touch() failed, aborting.\n" );
+						}
+					},
+					"OnDiskSemaphore producer keep-alive"
+				);
+				if( this->producer_keep_alive == -1 ) {
+					delete this->cfLock;
+					EXCEPT( "Elected producer couldn't register keep-alive, aborting.\n" );
+				}
+
+
+				//
+				// FIXME: The provider process should poll release() once the
+				// job is done until it returns true, then exit.  We don't call
+				// release() from the consumer processes because their release()
+				// and destructor calls are identical; thus, it's better to
+				// have the destructor handle it, rather than miss places
+				// where release() needs to be called and have it magically
+				// work anyway.  This works for shadow reuse because that
+				// explicitly delete the shadow object in recycleShadow().
+				//
+				// The above only applies if the starter asks for guidance
+				// after the job is done and can therefore be instructed
+				// to prolong its life.
+				//
+
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
@@ -1212,7 +1250,6 @@ UniShadow::start_common_input_conversation(
 						// do anything if other jobs are waiting.  Deleting
 						// the keyfile, however, will select a new lockholder.
 						delete this->cfLock;
-						this->cfLock = NULL;
 					}
 				} else {
 					dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): common file transfer failed, aborting job.\n" );
@@ -1242,12 +1279,21 @@ UniShadow::start_common_input_conversation(
 				guidance = do_wiring_up(stagingDir, cifName);
 				request = co_yield guidance;
 
-				// FIXME FIXME FIXME: set a timer here so that the schedd
-				// doesn't exit until release() succeeds.  This will also
-				// mean the starter needs to ask for advice after the job
-				// exits, but the reason for keeping the shadow alive is
-				// to keep the starter alive -- because that keeps the
-				// staged files on disk.
+				//
+				// TODO.
+				//
+				// For maximum efficiency, set a flag so that the shadow
+				// doesn't exit until this->cfLock->release() returns true.
+				// This will require the starter to ask for advice after
+				// the job terminates, because otherwise _it_ will go away,
+				// and the point is to keep it alive.  (The flag will be
+				// checked in the corresponding guidance function.)
+				//
+				// Once the slot-splitting function is available, that
+				// guidance function is where it will be called when the
+				// job is done (and the resulting claim conveyed to the
+				// schedd).
+				//
 
 				guidance.Clear();
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
@@ -1496,7 +1542,10 @@ UniShadow::hasCIFName() {
 const std::string &
 UniShadow::getCIFName() {
 	if(! _cifNameInitialized) {
-		auto cifName = makeCIFName(* this->jobAd);
+		char * startdAddress = NULL;
+		this->remRes->getStartdAddress(startdAddress);
+		auto cifName = makeCIFName(* this->jobAd, startdAddress);
+		free( startdAddress );
 		if( cifName ) { _cifName = * cifName; }
 		_cifNameInitialized = true;
 	}

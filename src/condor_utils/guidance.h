@@ -34,6 +34,9 @@ enum class GuidanceResult : int {
 
 #define ETYPE_DIAGNOSTIC_RESULT "DiagnosticResult"
 
-std::optional<std::string> makeCIFName( const classad::ClassAd & jobAd );
+std::optional<std::string> makeCIFName(
+    const classad::ClassAd & jobAd,
+    const std::string & startdAddress
+);
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

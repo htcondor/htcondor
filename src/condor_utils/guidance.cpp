@@ -23,7 +23,9 @@
 //
 
 std::optional<std::string>
-makeCIFName( const classad::ClassAd & jobAd ) {
+makeCIFName(
+    const classad::ClassAd & jobAd, const std::string & startdAddress
+) {
     std::string globalJobID;
     if(! jobAd.LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
         return std::nullopt;
@@ -36,7 +38,7 @@ makeCIFName( const classad::ClassAd & jobAd ) {
     }
 
     std::string cifName;
-    formatstr( cifName, "%s#%d", sections[0].c_str(), clusterID );
+    formatstr( cifName, "%s#%d_%s", sections[0].c_str(), clusterID, startdAddress.c_str() );
 
     return cifName;
 }

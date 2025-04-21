@@ -223,7 +223,7 @@ class UniShadow : public BaseShadow
 	virtual bool hasCIFName();
 	std::string _cifName;
 	virtual const std::string & getCIFName();
-
+    int producer_keep_alive = -1;
 
  private:
 
