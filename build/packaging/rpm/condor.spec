@@ -1472,6 +1472,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-1
+- HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0
+
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.24-1
 - Fix inflated cgroups v2 memory usage reporting for Docker jobs
 
