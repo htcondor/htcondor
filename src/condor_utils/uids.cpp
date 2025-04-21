@@ -876,7 +876,7 @@ const char* get_condor_username()
 	if (CondorUserName == NULL) {
 		EXCEPT("Out of memory. Aborting.");
 	}
-	snprintf(CondorUserName, length, "%s/%s",szDomainName,szAccountName);
+	snprintf(CondorUserName, length, "%s@%s",szAccountName,szDomainName);
 
 	if ( hProcess )
 		CloseHandle(hProcess);

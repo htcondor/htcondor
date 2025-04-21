@@ -51,7 +51,8 @@ def test_job_hash(test_dir, path_to_python, test_script):
             "universe": "vanilla",
             "output": "output",
             "error": "error",
-            "log": "log",
+            "log": "oom_log",
+            "keep_claim_idle": "300",
             "request_memory": "50m",
             "request_cpus": "1",
             "request_disk": "200m"
@@ -81,7 +82,8 @@ def escaping_job_hash(test_dir, path_to_python, test_script):
             "universe": "vanilla",
             "output": "output",
             "error": "error",
-            "log": "log",
+            "log": "escaped_log",
+            "keep_claim_idle": "300",
             "request_memory": "50m",
             "request_cpus": "1",
             "request_disk": "200m"
@@ -100,8 +102,68 @@ def escaping_test_job(condor, escaping_job_hash):
     )
     return ej
 
+@action
+def isolated_job_hash(test_dir, path_to_python):
+    # A job which cats the content of its own cgroup.procs.  Because we
+    # exec, the shell has gone away, so the cgroup should only
+    # contain the cat process, which verifies that the job is isolated into
+    # its own cgroup.
+    return {
+            "shell": "exec /usr/bin/cat /sys/fs/cgroup$(awk -F: '/^0:/ {print $3}' < /proc/self/cgroup)/cgroup.procs > cgroup.procs",
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "isolated_log",
+            "keep_claim_idle": "300",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
 
-# This test only works if we start in a writeable (delegated)
+
+@action
+def isolated_test_job(condor, isolated_job_hash):
+    ij = condor.submit(
+        {**isolated_job_hash}, count=1
+    )
+    assert ij.wait(
+        condition=ClusterState.all_complete,
+        timeout=120,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+    return ij
+
+@action
+def slice_scope_job_hash(test_dir, path_to_python):
+    # A job which cats the content of /proc/self/cgroup.
+    # This can be interrogated to verify that the job is the right cgroup.  
+    return {
+            "shell": "/usr/bin/cat /proc/self/cgroup > cgroup",
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "slice_scope_log",
+            "keep_claim_idle": "300",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
+
+@action
+def slice_scope_test_job(condor, slice_scope_job_hash):
+    ssj = condor.submit(
+        {**slice_scope_job_hash}, count=1
+    )
+    assert ssj.wait(
+        condition=ClusterState.all_complete,
+        timeout=120,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+    return ssj
+
+# These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
     with open('/proc/self/cgroup') as fd:
@@ -118,13 +180,35 @@ def CgroupIsWriteable():
     return os.access(cgroup_filepath_parent, os.W_OK)
 
 
+@pytest.mark.skipif(not CgroupIsWriteable(), reason="Test was not born in a writeable cgroup v2")
 class TestCgroupOOM:
-    @pytest.mark.skipif(not CgroupIsWriteable(), reason="Test was not born in a writeable cgroup v2")
     def test_cgroup_oom(self, completed_test_job):
         assert completed_test_job.state.all_held()
 
-    @pytest.mark.skipif(not CgroupIsWriteable(), reason="Test was not born in a writeable cgroup v2")
     def test_cgroup_escape(self, escaping_test_job):
+        # When the job exits, pidfile contains the pid of the sleep job
         with open('pidfile', 'r') as file:
             pid = file.read().rstrip()
+        # Check that the pid does not exist in the system anymore -- that it has not escaped.
         assert not os.path.exists("/proc/" + pid)
+
+    def test_cgroup_isolated(self, isolated_test_job):
+        # When the job exits, this is a copy of the cgroup.procs file
+        # from the cgroup of the job
+        cgroup_procs = "cgroup.procs"
+        assert os.path.exists(cgroup_procs)
+        with open(cgroup_procs, 'r') as file:
+            for count, pid in enumerate(file):
+                pass
+        count += 1 # Python has 0-indexing
+        assert count == 1
+
+    def test_cgroup_slice_scope(self, slice_scope_test_job):
+        # When the job exits, cgroup contains the cgroup of the cat job
+        with open('cgroup', 'r') as file:
+            line        = file.read().rstrip()
+            ultimate    = line.split('/')[-1]
+            penultimate = line.split('/')[-2]
+            assert ultimate.endswith(".scope")
+            assert penultimate.endswith(".slice")
+        assert True

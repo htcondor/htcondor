@@ -667,90 +667,19 @@ include
 This configuration variable defaults to ``False``, thus the use of per
 job PID namespaces is disabled by default.
 
-Group ID-Based Process Tracking
-'''''''''''''''''''''''''''''''
-
-One function that HTCondor often must perform is keeping track of all
-processes created by a job. This is done so that HTCondor can provide
-resource usage statistics about jobs, and also so that HTCondor can
-properly clean up any processes that jobs leave behind when they exit.
-
-.. note::
-
-   Group ID based process tracking has generally been replaced by
-   cgroup based tracking, which is more powerful and more general,
-   and requires less setup.  Group ID based process tracking may
-   be removed from HTCondor in the future.
-
-
-In general, tracking process families is difficult to do reliably. By
-default HTCondor uses a combination of process parent-child
-relationships, process groups, and information that HTCondor places in a
-job's environment to track process families on a best-effort basis. This
-usually works well, but it can falter for certain applications or for
-jobs that try to evade detection.
-
-Jobs that run with a user account dedicated for HTCondor's use can be
-reliably tracked, since all HTCondor needs to do is look for all
-processes running using the given account. Administrators must specify
-in HTCondor's configuration what accounts can be considered dedicated
-via the :macro:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
-:ref:`admin-manual/security:user accounts in htcondor on Unix platforms` for
-further details.
-
-Ideally, jobs can be reliably tracked regardless of the user account
-they execute under. This can be accomplished with group ID-based
-tracking. This method of tracking requires that a range of dedicated
-group IDs (GID) be set aside for HTCondor's use. The number of GIDs that
-must be set aside for an execute machine is equal to its number of
-execution slots. GID-based tracking is only available on Linux, and it
-requires that HTCondor daemons run as root.
-
-GID-based tracking works by placing a dedicated GID in the supplementary
-group list of a job's initial process. Since modifying the supplementary
-group ID list requires root privilege, the job will not be able to
-create processes that go unnoticed by HTCondor.
-
-Once a suitable GID range has been set aside for process tracking,
-GID-based tracking can be enabled via the
-:macro:`USE_GID_PROCESS_TRACKING` parameter. The minimum and
-maximum GIDs included in the range are specified with the
-:macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` settings. For
-example, the following would enable GID-based tracking for an execute
-machine with 8 slots.
-
-.. code-block:: text
-
-    USE_GID_PROCESS_TRACKING = True
-    MIN_TRACKING_GID = 750
-    MAX_TRACKING_GID = 757
-
-If the defined range is too small, such that there is not a GID
-available when starting a job, then the *condor_starter* will fail as
-it tries to start the job. An error message will be logged stating that
-there are no more tracking GIDs.
-
-GID-based process tracking requires use of the :tool:`condor_procd`. If
-:macro:`USE_GID_PROCESS_TRACKING` is true, the :tool:`condor_procd` will be used
-regardless of the :macro:`USE_PROCD` setting.
-Changes to :macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` require a full
-restart of HTCondor.
-
 .. _resource_limits_with_cgroups:
 
-Cgroup-Based Process Tracking
+Cgroup Based Process Tracking
 '''''''''''''''''''''''''''''
 
 :index:`cgroup based process tracking`
 
-A new feature in Linux version 2.6.24 allows HTCondor to more accurately
-and safely manage jobs composed of sets of processes. This Linux feature
-is called Control Groups, or cgroups for short, and it is available
-starting with RHEL 6, Debian 6, and related distributions. Documentation
+All Linux versions supported by HTCondor have a kernel feature called
+cgroups.  Enterprise Linux 8 and older have cgroups v1, and all newer
+systems have cgroups v2.  Both allow HTCondor to more accurately
+and safely manage jobs composed of sets of processes.  Documentation
 about Linux kernel support for cgroups can be found in the Documentation
-directory in the kernel source code distribution. Another good reference
-is
-`http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html <http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html>`_
+directory in the kernel source code distribution.
 
 The interface between the kernel cgroup functionality is via a (virtual)
 file system, usually mounted at ``/sys/fs/cgroup``.
@@ -759,16 +688,84 @@ If your Linux distribution uses *systemd*, it will mount the cgroup file
 system, and the only remaining item is to set configuration variable
 :macro:`BASE_CGROUP`, as described below.
 
+Cgroup V2 Support
+'''''''''''''''''
+
+On Linux systems with cgroup v2 support, the *condor_starter* will put
+each job in it's own cgroup, and, by default, set the memory limit
+of the cgroup to the memory provisioned by slot, which is usually
+the amount requested by the job, perhaps rounded up.
+
+This is not something an administrator usually needs to worry about,
+but it does mean that jobs can be monitored with the standard cgroup V2
+tools, like system-cgtop.
+
+By default, HTCondor zeroes out the swap memory limit for the job cgroup,
+because if the job reaches the physical memory limit, and starts paging,
+it will get very slow, and can slow down the system.  The administrator
+can configure HTCondor not to do so, by setting 
+:macro:`DISABLE_SWAP_FOR_JOB` to false.
+
+HTCondor configures cgroup v2 so that any job can further subdivide the memory
+and cpu.  It does so by following the various rules imposed by the kernel.
+The first rule is that Unix processes can only live in the leaf nodes of the
+cgroup tree.  This implies that if a job wants to make a sub-cgroup, it cannot
+simply make a subdirectory of the cgroup it lives in, for then it would live
+in an interior node.  One way to work around this restriction is to create
+a subdirectory, and immediately move the job into that subdirectory. This
+is clunky, and prone to race conditions when the job might be spawning processes
+of its own.  Rather, the starter creates two, nested directories for the job.
+The direct child of the starter's cgroup is the job's "slice".  HTCondor puts
+resource limits on the slice (and implictly on all children of the slice),
+and measures resource usage of the job by measuring the resource of the slice
+(again, and implicitly measuring the sum of the resources of all the child
+subcgroups of that slice).  When it is time to clean up the job, the starter
+removes the slice, and all sub-cgroups thereof.  The starter sets the Unix
+permissions on the slice so that the job can make subdirectories, and thus
+sub-cgroups of the job under the slice, and move processes into those sub-cgroups,
+without violating the kernel's rules about cgroup membership.  However, the
+permissions on the resource limits are set so that the job cannot change them.
+
+The Unix process of the job do not live in the slice, but rather in the
+"scope" cgroup, which is a child of the slice.  This is a leaf node, 
+so the job should never try to make a sub-cgroup of the scope.  This
+naming mimics the naming convention of systemd, but it is HTCondor, not systemd
+which creates and manages this cgroups.
+
+.. mermaid::
+    :caption: Cgroup V2 Organization for jobs
+    :align: center
+
+    flowchart TD
+      starter("`Cgroup 
+                of 
+                condor_starter`")
+      job_scope("`Cgroup
+                  for
+                  job scope`")
+      job_slice("`Cgroup
+                  for
+                  job slice`")
+      starter -->  job_scope
+      job_scope --> job_slice
+      style starter fill:pink
+      style job_scope fill:lightgreen
+      style job_slice fill:lightgreen
+
+In the diagram above, the starter's cgroup is red, as it is not modifiably by 
+the job, but the scope and slice are green to show that they are modifiable.
+
+Cgroup V1 Support
+'''''''''''''''''
+
 When cgroups are correctly configured and running, the virtual file
 system mounted on ``/sys/fs/cgroup`` should have several subdirectories under
 it, and there should an ``htcondor`` subdirectory under the directory
 ``/sys/fs/cgroup/cpu``, ``/sys/fs/cgroup/memory`` and some others.
 
-The *condor_starter* daemon uses cgroups by default on Linux systems to
-accurately track all the processes started by a job, even when
-quickly-exiting parent processes spawn many child processes. As with the
-GID-based tracking, this is only implemented when a :tool:`condor_procd`
-daemon is running.
+The *condor_starter* daemon uses cgroups v1 by default on Linux systems 
+with cgroup v1 support to accurately track all the processes started by a job, 
+even when quickly-exiting parent processes spawn many child processes.
 
 Kernel cgroups are named in a virtual file system hierarchy. HTCondor
 will put each running job on the execute node in a distinct cgroup. The
@@ -783,11 +780,11 @@ useful information about resource usage of this cgroup. See the kernel
 documentation for full details.
 
 Once cgroup-based tracking is configured, usage should be invisible to
-the user and administrator. The :tool:`condor_procd` log, as defined by
-configuration variable :macro:`PROCD_LOG`, will mention that it is using this
+the user and administrator. The StarterLog will mention that it is using this
 method, but no user visible changes should occur, other than the
 impossibility of a quickly-forking process escaping from the control of
-the *condor_starter*, and the more accurate reporting of memory usage.
+the *condor_starter*, the more accurate reporting of memory usage,
+and HTCondor putting jobs on hold that use more memory than they request.
 
 A cgroup-enabled HTCondor will install and handle a per-job (not per-process)
 Linux Out of Memory killer (OOM-Killer).  When a job exceeds the memory
@@ -806,10 +803,7 @@ Limiting Resource Usage Using Cgroups
 :index:`on resource usage with cgroup<single: on resource usage with cgroup; limits>`
 :index:`resource limits<single: resource limits; cgroups>`
 
-While the method described to limit a job's resource usage is portable,
-and it should run on any Linux or BSD or Unix system, it suffers from
-one large flaw. The flaw is that resource limits imposed are per
-process, not per job. An HTCondor job is often composed of many Unix
+An HTCondor job is often composed of many Unix
 processes. If the method of limiting resource usage with a user job
 wrapper is used to impose a 2 Gigabyte memory limit, that limit applies
 to each process in the job individually. If a job created 100 processes,
@@ -831,8 +825,7 @@ distributions such as RHEL 6 and Debian 6. This technique also may
 require editing of system configuration files.
 
 To enable cgroup-based limits, first ensure that cgroup-based tracking
-is enabled, as it is by default on supported systems, as described in
-section  `3.14.13 <#x42-3790003.14.13>`_. Once set, the
+is enabled.  Once set, the
 *condor_starter* will create a cgroup for each job, and set
 attributes in that cgroup to control memory and cpu usage. These
 attributes are the cpu.shares attribute in the cpu controller, and
@@ -847,7 +840,7 @@ By default, this whole size is the detected memory the size, minus
 RESERVED_MEMORY.  Or, if :macro:`MEMORY` is defined, that value is used..
 
 No limits will be set if the value is ``none``. The default is
-``none``. If the hard limit is in force, then the total amount of
+``hard``. If the hard limit is in force, then the total amount of
 physical memory used by the sum of all processes in this job will not be
 allowed to exceed the limit. If the process goes above the hard
 limit, the job will be put on hold.
@@ -1030,10 +1023,11 @@ that are only found in a request ClassAd, such as :ad-attr:`Owner` or
 the :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
-A note of caution is in order when modifying the :macro:`START` expression to
-reference job ClassAd attributes. When using the ``POLICY : Desktop``
-configuration template, the :macro:`IS_OWNER` expression is a function of the
-:macro:`START` expression:
+.. note::
+    Be cautious when modifying the :macro:`START` expression to
+    reference job ClassAd attributes. When using the ``POLICY : Desktop``
+    configuration template, the :macro:`IS_OWNER` expression is a function of the
+    :macro:`START` expression:
 
 .. code-block:: condor-classad-expr
 

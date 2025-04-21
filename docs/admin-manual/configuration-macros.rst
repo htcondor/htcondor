@@ -2490,6 +2490,13 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     :macro:`SLOT<N>_USER`). Therefore, when the job exits, all processes
     running under the same account will be killed.
 
+:macro-def:`STARTER_SETS_HOME_ENV[FileSystem]`
+    A boolean value that defaults to true.  When false, the HOME
+    environment variable is not generally set, though some
+    container runtimes might themselves set it.  When true, 
+    HTCondor will set HOME to the home directory of the user
+    on the EP system.
+
 :macro-def:`FILESYSTEM_DOMAIN[FileSystem]`
     An arbitrary string that is used to decide if the two machines, a
     access point and an execute machine, share a file system. Although
@@ -8886,6 +8893,18 @@ General
     retry a node with its job submitted on hold if any of the nodes jobs fail. Script
     failures do not cause this behavior. The job is only put on hold if the node has no
     more declared :dag-cmd:`RETRY` attempts.
+
+:macro-def:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE[DAGMan]`
+    An integer value representing the number of jobs in a single cluster that can fail
+    before DAGMan considers the cluster as failed and removes any remaining jobs. This
+    value is applied to all nodes in the DAG for each execution. The default value is
+    ``0`` meaning no jobs should fail.
+
+    .. warning::
+
+        If the tolerance value is greater than or equal to the total number of jobs in
+        a cluster then DAGMan will consider the cluster as successful even if all jobs
+        fail.
 
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, variables

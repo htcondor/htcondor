@@ -476,6 +476,7 @@ public:
 	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
 	ResourceFeature	get_feature( void ) { return m_resource_feature; }
 
+	bool is_static_slot() const { return m_resource_feature == STANDARD_SLOT; }
 	bool is_partitionable_slot() const { return m_resource_feature == PARTITIONABLE_SLOT; }
 	bool is_dynamic_slot() const { return m_resource_feature == DYNAMIC_SLOT; }
 	bool is_broken_slot() const { return m_resource_feature == BROKEN_SLOT; }

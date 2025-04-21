@@ -8,9 +8,24 @@
   commands to running a DAGMan process.
   :jira:`2898`
 
+- Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
+  consider a placed job list as failed when job failures occur.
+  :jira:`3019`
+
+- On Linux systems with cgroups enabled, jobs are now put in a ".scope"
+  sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
+  pilot or glidein systems to further subdivide the job's cgroup.
+  :jira:`3008`
+
 - :tool:`htcondor ap status` will now show the :ad-attr:`RecentDaemonCoreDutyCycle` of
   each reported Access Point's Schedd.
   :jira:`3009`
+
+- The execute point now sets the execute permission bit on
+  the :subcom:`executable` even when it was transfered by a plugin.
+  This is helpful when using pelican or osdf to transfer the
+  job's main executable.
+  :jira:`3020`
 
 *** 24.8.0 bugs
 
@@ -18,6 +33,12 @@
   exit when one of :subcom:`log` files associated with jobs being tracked
   does not exist.
   :jira:`2978`
+
+- Add a new config knob, :macro:`STARTER_SETS_HOME_ENV` which defaults to 
+  true.  When true, the job will have the **HOME** environemnt variable
+  set to whatever it is on the system.  When false, HOME will not
+  be set to anything.
+  :jira:`3010`
 
 - Removed job attribute ``ToE``.
   It has been replaced by job attributes :ad-attr:`VacateReason`,
@@ -31,7 +52,7 @@
   a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
   :jira:`2993`
 
-*** 24.7.1 features
+*** 24.7.2 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
   the named HPC system.  If you've recently created or added an annex at a
@@ -133,7 +154,7 @@
   jobs actively transferring input or output files.
   :jira:`2958`
 
-*** 24.7.1 bugs
+*** 24.7.2 bugs
 
 - Fixed bug where DAGMan would output an error message containing garbage
   when dumping failed node information to the debug log.

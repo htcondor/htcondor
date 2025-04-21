@@ -296,6 +296,9 @@ bool Dagman::Config() {
 	config[conf::i::MaxJobHolds] = param_integer("DAGMAN_MAX_JOB_HOLDS", 100, 0, 1'000'000);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", config[conf::i::MaxJobHolds]);
 
+	config[conf::i::BatchFailureTolerance] = param_integer("DAGMAN_NODE_JOB_FAILURE_TOLERANCE", 0, 0, std::numeric_limits<int>::max());
+	debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_JOB_FAILURE_TOLERANCE setting: %d\n", config[conf::i::BatchFailureTolerance]);
+
 	config[conf::i::HoldClaimTime] = param_integer("DAGMAN_HOLD_CLAIM_TIME", 20, 0, 3600);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n", config[conf::i::HoldClaimTime]);
 
