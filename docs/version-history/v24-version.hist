@@ -34,7 +34,7 @@
   be set to anything.
   :jira:`3010`
 
-- Fixed a bug introduced in HTCondor 24.6.0 which would lead to the directory
+- Fixed a bug introduced in HTCondor 24.7.0 which would lead to the directory
   ``0`` (and subdirectories) spuriously being created in the :macro:`SPOOL`
   directory.
   :jira:`3026`
