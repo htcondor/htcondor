@@ -51,12 +51,21 @@ def the_job_handle(the_condor, path_to_sleep, test_dir, the_inputs):
     return ch
 
 
+@action
+def the_spool_dir(the_condor):
+    with the_condor.use_config():
+        return Path(htcondor2.param['SPOOL'])
+
+
 class TestSpoolPreservedRelativePaths:
 
-    def test_job_completion(self, the_job_handle):
+    def test_job_completion(self, the_job_handle, the_spool_dir):
         assert the_job_handle.wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
             timeout=20,
             verbose=True,
         )
+
+        the_zero_dir = the_spool_dir / "0"
+        assert not the_zero_dir.exists()

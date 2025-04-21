@@ -29,6 +29,11 @@
 
 *** 24.8.0 bugs
 
+- Removed job attribute ``ToE``.
+  It has been replaced by job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
+  :jira:`2974`
+
 - Fixed :tool:`condor_watch_q` to output a useful error message and not
   exit when one of :subcom:`log` files associated with jobs being tracked
   does not exist.
@@ -40,10 +45,10 @@
   be set to anything.
   :jira:`3010`
 
-- Removed job attribute ``ToE``.
-  It has been replaced by job attributes :ad-attr:`VacateReason`,
-  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
-  :jira:`2974`
+- Fixed a bug introduced in HTCondor 24.7.0 which would lead to the directory
+  ``0`` (and subdirectories) spuriously being created in the :macro:`SPOOL`
+  directory.
+  :jira:`3026`
 
 *** 24.0.8 bugs
 
