@@ -1,3 +1,9 @@
+condor (23.0.24-1) stable; urgency=medium
+
+  * Fix inflated cgroups v2 memory usage reporting for Docker jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 21 Apr 2025 16:35:00 -0500
+
 condor (23.10.22-1) stable; urgency=high
 
   * Fix for security issue
