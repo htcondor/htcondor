@@ -40,6 +40,10 @@
 
 *** 23.0.23 bugs
 
+- Fixed inflated memory usage reporting for docker universe jobs on hosts using
+  cgroups V2. The reported memory no longer includes the cached memory.
+  :jira:`2961`
+
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
   which didn't exist to a file:// URL would cause HTCondor to report a
   useless (albeit correct) error.
@@ -82,25 +86,6 @@
   larger than ``2GB`` in the default mode (**backwards**).
   :jira:`2933`
 
-- Fixed inflated memory usage reporting for docker universe jobs on hosts using
-  cgroups V2. The reported memory no longer includes the cached memory.
-  :jira:`2961`
-
-*** 23.10.21 features
-
-- HTCondor tarballs now contain `Pelican 7.13.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.13.0>`_
-
-*** 23.10.21 bugs
-
-- Fixed a bug where chirp would not work in container universe jobs
-  using the docker runtime.
-  :jira:`2866`
-
-- Fixed a bug where referencing :attr:`htcondor2.JobEvent.cluster`
-  could crash if processed log event was not associated with job(s)
-  (i.e. had a negative value).
-  :jira:`2881`
-
 - Fixed a bug that caused the ce-audit plugin to fail.
   :jira:`2963`
 
@@ -123,6 +108,21 @@
    to the *condor_schedd* when it tries to claim a slot with a START expression that
    changes frequently.
   :jira:`3013`
+
+*** 23.10.21 features
+
+- HTCondor tarballs now contain `Pelican 7.13.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.13.0>`_
+
+*** 23.10.21 bugs
+
+- Fixed a bug where chirp would not work in container universe jobs
+  using the docker runtime.
+  :jira:`2866`
+
+- Fixed a bug where referencing :attr:`htcondor2.JobEvent.cluster`
+  could crash if processed log event was not associated with job(s)
+  (i.e. had a negative value).
+  :jira:`2881`
 
 *** 23.0.21 bugs
 
