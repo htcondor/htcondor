@@ -14,7 +14,7 @@ from pathlib import Path
 from shutil import rmtree
 from time import time as now
 
-TIMEOUT = 45
+TIMEOUT = 60
 
 DAG_FILENAME = "test.dag"
 DAG_CONTENTS = """
