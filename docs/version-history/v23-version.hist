@@ -8,7 +8,11 @@
   the test to check for incorrect hostname when running inside of a container.
   :jira:`3014`
 
-*** 23.0.23 bugs
+*** 23.0.24 bugs
+
+- Fixed inflated memory usage reporting for docker universe jobs on hosts using
+  cgroups V2. The reported memory no longer includes the cached memory.
+  :jira:`2961`
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
   which didn't exist to a file:// URL would cause HTCondor to report a
@@ -45,23 +49,19 @@
   :jira:`2917`
 
 - Fixed a bug where daemons wouldn't immediately apply new security policy
-  to incoming commands after a rconfig.
+  to incoming commands after a reconfigure.
   :jira:`2929`
 
 - Fixed a bug where *condor_history* would crash when reading a history file
   larger than ``2GB`` in the default mode (**backwards**).
   :jira:`2933`
 
-- Fixed inflated memory usage reporting for docker universe jobs on hosts using
-  cgroups V2. The reported memory no longer includes the cached memory.
-  :jira:`2961`
-
 - Fixed a bug that caused the ce-audit plugin to fail.
   :jira:`2963`
 
 - Removed a scary-looking message in the log of the *condor_collector* about
   denying NEGOTIATOR-level authorization when the client wasn't requesting
-  that authorizaiton level.
+  that authorization level.
   :jira:`2964`
 
 - Fixed a bug that caused most updates of collector ads via UDP to be
