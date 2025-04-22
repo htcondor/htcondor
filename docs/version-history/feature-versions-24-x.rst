@@ -15,11 +15,11 @@ Release Notes:
 
 New Features:
 
-.. include-history:: features 24.8.0 24.0.8 23.10.24 23.0.24
+.. include-history:: features 24.8.0 24.0.8 23.10.25 23.0.25
 
 Bugs Fixed:
 
-.. include-history:: bugs 24.8.0 24.0.8 23.10.24 23.0.24
+.. include-history:: bugs 24.8.0 24.0.8 23.10.25 23.0.25
 
 Version 24.7.3
 --------------
