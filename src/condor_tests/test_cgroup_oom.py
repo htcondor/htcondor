@@ -9,7 +9,7 @@ import logging
 import pytest
 import os
 
-import htcondor as htcondor2
+import htcondor2 as htcondor
 from ornithology import *
 
 logger = logging.getLogger(__name__)
@@ -165,10 +165,10 @@ def slice_scope_test_job(condor, slice_scope_job_hash):
     return ssj
 
 @action
-def memory_detection_job_hash(test_dir, path_to_python):
+def memory_detection_job_hash(test_dir, condor, path_to_python):
     # A job which runs condor_config_val DETECTED_MEMORY.
     # This should return the memory limit of the cgroup
-    bin_dir = htcondor2.param["BIN"]
+    bin_dir = condor.run_command( ['condor_config_val', 'BIN']).stdout
     return {
             "shell": f"{bin_dir}/condor_config_val DETECTED_MEMORY",
             "environment": "CONDOR_CONFIG=/dev/null",
@@ -250,4 +250,4 @@ class TestCgroupOOM:
         memory = 0
         with open('detected_memory', 'r') as file:
             memory = int(file.read().rstrip())
-        assert(memory < 200 and memory > 50) # Allow for rounding up to 128 Mb
+        assert(50 < memory and memory < 200) # Allow for rounding up to 128 Mb
