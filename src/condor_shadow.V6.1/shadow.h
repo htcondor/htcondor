@@ -220,7 +220,7 @@ class UniShadow : public BaseShadow
 	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName);
 
 	FileTransfer * commonFTO = NULL;
-	OnDiskSemaphore * cfLock = NULL;
+	SingleProviderSyndicate * cfLock = NULL;
 
 	bool _cifNameInitialized = false;
 	virtual bool hasCIFName();

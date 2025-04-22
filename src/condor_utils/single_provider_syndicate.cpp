@@ -15,7 +15,30 @@
 using namespace std::chrono_literals;
 
 
-OnDiskSemaphore::OnDiskSemaphore( const std::string & k ) : key(k) {
+/*
+
+    The election of a provider is performed by attempting to open() the
+    "keyfile", a file in $(LOCK) with the same name as the resource, with
+    the O_CREAT | O_EXCL flags; the kernel ensures that only one process
+    succeeds in doing so.
+
+    Workers using a resource use hardlinks to atomically increment and
+    decrement the count of workers using the resource.
+
+    The modification ("last write time") of the keyfile stores the lease
+    timer, and the file itself stores the single-byte (and therefore
+    atomically-updated) status flag.
+
+    The message is stored in a different file; it's updated before the
+    status byte becomes READY and never updated, so atomic updates aren't
+    necessary.
+
+    Some of the individual operations are a little complicated to account
+    for race conditions.
+*/
+
+
+SingleProviderSyndicate::SingleProviderSyndicate( const std::string & k ) : key(k) {
     std::string LOCK = param("LOCK");
     std::filesystem::path lock(LOCK);
 
@@ -31,7 +54,7 @@ OnDiskSemaphore::OnDiskSemaphore( const std::string & k ) : key(k) {
         // return false from create_directories() because the directories
         // already exist.
         if( ec.value() != 0 ) {
-            dprintf( D_ALWAYS, "OnDiskSemaphore(%s): failed to create lock directory '%s': %s (%d)\n", k.c_str(), lock.string().c_str(), ec.message().c_str(), ec.value() );
+            dprintf( D_ALWAYS, "SingleProviderSyndicate(%s): failed to create lock directory '%s': %s (%d)\n", k.c_str(), lock.string().c_str(), ec.message().c_str(), ec.value() );
         }
     }
 
@@ -39,7 +62,7 @@ OnDiskSemaphore::OnDiskSemaphore( const std::string & k ) : key(k) {
 }
 
 
-OnDiskSemaphore::~OnDiskSemaphore() {
+SingleProviderSyndicate::~SingleProviderSyndicate() {
     this->cleanup();
     if( keyfile_fd != -1 ) { close(keyfile_fd); }
 }
@@ -89,8 +112,8 @@ remove_remove_locks( const std::filesystem::path & keyfile ) {
 }
 
 
-OnDiskSemaphore::Status
-OnDiskSemaphore::acquire( std::string & message ) {
+SingleProviderSyndicate::Status
+SingleProviderSyndicate::acquire( std::string & message ) {
     std::error_code ec;
 
 
@@ -106,12 +129,12 @@ OnDiskSemaphore::acquire( std::string & message ) {
             // re-run the race.
             auto then = std::filesystem::last_write_time( keyfile, ec );
             if( ec.value() != 0 ) {
-                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to read last_write_time(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
-                return OnDiskSemaphore::INVALID;
+                dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): failed to read last_write_time(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
+                return SingleProviderSyndicate::INVALID;
             }
             auto diff = std::chrono::file_clock::now() - then;
             if( diff >= 300s ) {
-                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): lease expired.\n" );
+                dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): lease expired.\n" );
 
                 //
                 // We can't just remove and re-create the keyfile, because
@@ -136,9 +159,9 @@ OnDiskSemaphore::acquire( std::string & message ) {
 
                 std::filesystem::remove( keyfile, ec );
                 if( ec.value() != 0 ) {
-                    dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to remove(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
+                    dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): failed to remove(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
                     // We must remove the keyfile for this algorithm to work.
-                    return OnDiskSemaphore::INVALID;
+                    return SingleProviderSyndicate::INVALID;
                 }
 
                 return acquire(message);
@@ -155,7 +178,7 @@ OnDiskSemaphore::acquire( std::string & message ) {
                 if( ec.value() != 0 ) {
                     // If we failed to create the hardlink, the original keyfile
                     // may be gone, and we may become the new provider.
-                    dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): create_hard_link() failed: %s (%d)\n", ec.message().c_str(), ec.value() );
+                    dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): create_hard_link() failed: %s (%d)\n", ec.message().c_str(), ec.value() );
                     return acquire(message);
                 }
             }
@@ -163,8 +186,8 @@ OnDiskSemaphore::acquire( std::string & message ) {
             // Read the lock file to determine the status.
             fd = open( keyfile.string().c_str(), O_RDONLY );
             if( fd == -1 ) {
-                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to open(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
-                return OnDiskSemaphore::INVALID;
+                dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): failed to open(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
+                return SingleProviderSyndicate::INVALID;
             }
 
             char status_byte = '\0';
@@ -174,38 +197,38 @@ OnDiskSemaphore::acquire( std::string & message ) {
                     // We managed to run between the creation of the file
                     // and the immdiately subsequent write of the status
                     // byte.  If we did, the status is clearly UNREADY.
-                    status_byte = OnDiskSemaphore::UNREADY;
+                    status_byte = SingleProviderSyndicate::UNREADY;
                     break;
                 case 1:
                     // We successfully read the status byte.
                     break;
                 default:
-                    dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to read() 1 byte (%zu): %s (%d)\n", bytes_read, strerror(errno), errno );
+                    dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): failed to read() 1 byte (%zu): %s (%d)\n", bytes_read, strerror(errno), errno );
                     close(fd);
-                    return OnDiskSemaphore::INVALID;
+                    return SingleProviderSyndicate::INVALID;
                     break;
             }
 
-            if( OnDiskSemaphore::MIN < status_byte && status_byte < OnDiskSemaphore::MAX ) {
+            if( SingleProviderSyndicate::MIN < status_byte && status_byte < SingleProviderSyndicate::MAX ) {
                 close(fd);
 
-                if( status_byte == OnDiskSemaphore::READY ) {
+                if( status_byte == SingleProviderSyndicate::READY ) {
                     std::filesystem::path messagePath = keyfile;
                     messagePath.replace_extension( "message" );
                     if(! htcondor::readShortFile( messagePath.string(), message )) {
-                        dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): readShortFile() failed to read message file.\n" );
-                        return OnDiskSemaphore::INVALID;
+                        dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): readShortFile() failed to read message file.\n" );
+                        return SingleProviderSyndicate::INVALID;
                     }
                 }
 
-                return OnDiskSemaphore::Status(status_byte);
+                return SingleProviderSyndicate::Status(status_byte);
             } else {
-                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): read invalid lock byte %d\n", (int)status_byte );
-                return OnDiskSemaphore::INVALID;
+                dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): read invalid lock byte %d\n", (int)status_byte );
+                return SingleProviderSyndicate::INVALID;
             }
         } else {
-            dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to open(%s): %s (%d)\n", keyfile.string().c_str(), strerror(errno), errno );
-            return OnDiskSemaphore::INVALID;
+            dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): failed to open(%s): %s (%d)\n", keyfile.string().c_str(), strerror(errno), errno );
+            return SingleProviderSyndicate::INVALID;
         }
     } else {
         // We won the race.
@@ -227,19 +250,19 @@ OnDiskSemaphore::acquire( std::string & message ) {
 
         // The semaphore status is now UNREADY.
         off_t r = lseek( keyfile_fd, 0, SEEK_SET );
-        if( r == -1 ) { return OnDiskSemaphore::INVALID; }
+        if( r == -1 ) { return SingleProviderSyndicate::INVALID; }
 
-        char status = (char)OnDiskSemaphore::UNREADY;
+        char status = (char)SingleProviderSyndicate::UNREADY;
         ssize_t w  = write( keyfile_fd, (void*)&status, 1 );
-        if( w != 1 ) { return OnDiskSemaphore::INVALID; }
+        if( w != 1 ) { return SingleProviderSyndicate::INVALID; }
 
-        return OnDiskSemaphore::PREPARING;
+        return SingleProviderSyndicate::PROVIDER;
     }
 }
 
 
 bool
-OnDiskSemaphore::touch() {
+SingleProviderSyndicate::touch() {
     if(! lockholder ) { return false; }
 
 
@@ -251,7 +274,7 @@ OnDiskSemaphore::touch() {
 
 
 bool
-OnDiskSemaphore::ready( const std::string & message ) {
+SingleProviderSyndicate::ready( const std::string & message ) {
     if(! lockholder) { return false; }
 
 
@@ -260,20 +283,20 @@ OnDiskSemaphore::ready( const std::string & message ) {
     std::filesystem::path messagePath = keyfile;
     messagePath.replace_extension( "message" );
     if(! htcondor::writeShortFile( messagePath.string(), message )) {
-        dprintf( D_ALWAYS, "OnDiskSemaphore::ready(): writeShortFile() failed to write message file.\n" );
+        dprintf( D_ALWAYS, "SingleProviderSyndicate::ready(): writeShortFile() failed to write message file.\n" );
         return false;
     }
 
     off_t r = lseek( keyfile_fd, 0, SEEK_SET );
     if( r == -1 ) {
-        dprintf( D_ALWAYS, "OnDiskSemaphore::ready(): failed to seek() on keyfile.\n" );
+        dprintf( D_ALWAYS, "SingleProviderSyndicate::ready(): failed to seek() on keyfile.\n" );
         return false;
     }
 
-    char status = (char)OnDiskSemaphore::READY;
+    char status = (char)SingleProviderSyndicate::READY;
     ssize_t w  = write( keyfile_fd, (void*)&status, 1 );
     if( w != 1 ) {
-        dprintf( D_ALWAYS, "OnDiskSemaphore::ready(): failed to write() stats byte to keyfile.\n" );
+        dprintf( D_ALWAYS, "SingleProviderSyndicate::ready(): failed to write() stats byte to keyfile.\n" );
         return false;
     }
 
@@ -282,9 +305,9 @@ OnDiskSemaphore::ready( const std::string & message ) {
 
 
 bool
-OnDiskSemaphore::release() {
+SingleProviderSyndicate::release() {
     std::error_code ec;
-    dprintf( D_ALWAYS, "OnDiskSemaphore::release()\n" );
+    dprintf( D_ALWAYS, "SingleProviderSyndicate::release()\n" );
 
     if(! lockholder) {
         return cleanup();
@@ -315,14 +338,14 @@ OnDiskSemaphore::release() {
         if( std::filesystem::exists( keyfile ) ) {
             std::filesystem::rename( keyfile, hiddenKeyFile, ec );
             if( ec.value() != 0 ) {
-                dprintf( D_ALWAYS, "OnDiskSemaphore::release(): failed to rename keyfile: %s (%d).\n", ec.message().c_str(), ec.value() );
+                dprintf( D_ALWAYS, "SingleProviderSyndicate::release(): failed to rename keyfile: %s (%d).\n", ec.message().c_str(), ec.value() );
                 return false;
             }
         }
 
         int count = std::filesystem::hard_link_count( hiddenKeyFile, ec );
         if( ec.value() != 0 ) {
-            dprintf( D_ALWAYS, "OnDiskSemaphore::release(): hard_link_count() failed: %s (%d)\n", ec.message().c_str(), ec.value() );
+            dprintf( D_ALWAYS, "SingleProviderSyndicate::release(): hard_link_count() failed: %s (%d)\n", ec.message().c_str(), ec.value() );
             return false;
         }
 
@@ -344,9 +367,9 @@ OnDiskSemaphore::release() {
 
 
 bool
-OnDiskSemaphore::cleanup() {
+SingleProviderSyndicate::cleanup() {
     std::error_code ec;
-    dprintf( D_ALWAYS, "OnDiskSemaphore::cleanup()\n" );
+    dprintf( D_ALWAYS, "SingleProviderSyndicate::cleanup()\n" );
 
 
     TemporaryPrivSentry tps(PRIV_CONDOR);

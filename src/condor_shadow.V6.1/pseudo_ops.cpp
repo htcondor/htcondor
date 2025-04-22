@@ -1168,7 +1168,7 @@ UniShadow::start_common_input_conversation(
 	//
 
 
-	this->cfLock = new OnDiskSemaphore(cifName);
+	this->cfLock = new SingleProviderSyndicate(cifName);
 
 	bool success;
 	while( true ) {
@@ -1176,7 +1176,7 @@ UniShadow::start_common_input_conversation(
 		auto status = this->cfLock->acquire( message );
 		dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 		switch( status ) {
-			case OnDiskSemaphore::PREPARING: {
+			case SingleProviderSyndicate::PROVIDER: {
 				// Before we start common file transfer, start a timer that
 				// calls this->cfLock->touch() every sixty seconds.
 				this->producer_keep_alive = daemonCore->Register_Timer(
@@ -1188,7 +1188,7 @@ UniShadow::start_common_input_conversation(
 							EXCEPT( "Elected producer touch() failed, aborting.\n" );
 						}
 					},
-					"OnDiskSemaphore producer keep-alive"
+					"SingleProviderSyndicate producer keep-alive"
 				);
 				if( this->producer_keep_alive == -1 ) {
 					delete this->cfLock;
@@ -1314,7 +1314,7 @@ UniShadow::start_common_input_conversation(
 				co_return guidance;
 				}
 
-			case OnDiskSemaphore::UNREADY:
+			case SingleProviderSyndicate::UNREADY:
 				// The common files are being transferred by someone else, so
 				// we should just try again later.
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
@@ -1323,7 +1323,7 @@ UniShadow::start_common_input_conversation(
 				request = co_yield guidance;
 				break;
 
-			case OnDiskSemaphore::READY:
+			case SingleProviderSyndicate::READY:
 				// Map the common files into the sandbox.
 				guidance = do_wiring_up(message, cifName);
 				request = co_yield guidance;
@@ -1347,15 +1347,15 @@ UniShadow::start_common_input_conversation(
 				co_return guidance;
 				break;
 
-			case OnDiskSemaphore::INVALID:
+			case SingleProviderSyndicate::INVALID:
 				EXCEPT("Something went terribly wrong in cfLock.acquire()." );
 				break;
 
-			case OnDiskSemaphore::MIN:
+			case SingleProviderSyndicate::MIN:
 				EXCEPT("Invalid return value (MIN) from cfLock.acquire()." );
 				break;
 
-			case OnDiskSemaphore::MAX:
+			case SingleProviderSyndicate::MAX:
 				EXCEPT("Invalid return value (MAX) from cfLock.acquire()." );
 				break;
 		}
