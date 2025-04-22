@@ -239,8 +239,7 @@ XInterface::ReadUtmp() {
 bool
 XInterface::Connect()
 {
-	dprintf(D_FULLDEBUG, "XInterface::Connect\n");
-
+	dprintf(D_ALWAYS, "Connecting to X server: %s\n", _display_name);
 
 	// First try as whatever user we entered as, with whatever
 	// X credentials we were born with.
