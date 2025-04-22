@@ -1,4 +1,4 @@
-*** 23.10.23 features
+*** 23.10.24 features
 
 - HTCondor tarballs now contain `Pelican 7.15.1 <https://pelicanplatform.org/releases>`_
 
@@ -9,7 +9,7 @@
 
 - The condor RPM package now requires at least apptainer version 1.3.6.
 
-*** 23.10.23 bugs
+*** 23.10.24 bugs
 
 - Fixed a bug that could cause the *condor_starter* to crash
   when running docker universe jobs with custom volume mounts.
@@ -38,7 +38,7 @@
   trailing semicolon.
   :jira:`2910`
 
-*** 23.0.23 bugs
+*** 23.0.24 bugs
 
 - Fixed inflated memory usage reporting for docker universe jobs on hosts using
   cgroups V2. The reported memory no longer includes the cached memory.
