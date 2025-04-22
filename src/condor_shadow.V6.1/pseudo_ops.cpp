@@ -1170,6 +1170,7 @@ UniShadow::start_common_input_conversation(
 
 	this->cfLock = new OnDiskSemaphore(cifName);
 
+	bool success;
 	while( true ) {
 		std::string message;
 		auto status = this->cfLock->acquire( message );
@@ -1213,7 +1214,7 @@ UniShadow::start_common_input_conversation(
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
-				bool success = false;
+				success = false;
 				request.LookupBool( ATTR_RESULT, success );
 
 				std::string stagingDir;
@@ -1279,8 +1280,18 @@ UniShadow::start_common_input_conversation(
 				guidance = do_wiring_up(stagingDir, cifName);
 				request = co_yield guidance;
 
-				// FIXME: Check the new request to see if the starter
-				// failed to map the common files?
+				success = false;
+				request.LookupBool( ATTR_RESULT, success );
+				if(! success) {
+					// Consider replacing this with a delayed (zero-second
+					// timer) call to evictJob().
+					this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+					this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
+					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
+					remRes->setExitReason(JOB_SHOULD_REQUEUE);
+					remRes->killStarter(false);
+				}
 
 				//
 				// TODO.
@@ -1317,10 +1328,21 @@ UniShadow::start_common_input_conversation(
 				guidance = do_wiring_up(message, cifName);
 				request = co_yield guidance;
 
-				// FIXME: Check the new request to see if the starter
-				// failed to map the common files?
+				success = false;
+				request.LookupBool( ATTR_RESULT, success );
+				if(! success) {
+					// Consider replacing this with a delayed (zero-second
+					// timer) call to evictJob().
+					this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+					this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
+					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
+					remRes->setExitReason(JOB_SHOULD_REQUEUE);
+					remRes->killStarter(false);
+				}
 
 				// The common files have already been transferred.
+				guidance.Clear();
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 				co_return guidance;
 				break;
