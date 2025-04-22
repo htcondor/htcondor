@@ -20,6 +20,14 @@ def condor(test_dir):
     with Condor(test_dir / "condor", config={"CREATE_CGROUP_WITHOUT_ROOT": "true"}) as condor:
         yield condor
 
+# Standup a condor with user-space cgroup v2 enabled and job hook
+@standup
+def condor_with_hook(test_dir):
+    with Condor(test_dir / "condor_with_hooks", config={"CREATE_CGROUP_WITHOUT_ROOT": "true",
+                                                        "STARTER_DEFAULT_JOB_HOOK_KEYWORD": "TEST",
+                                                        "TEST_HOOK_PREPARE_JOB": test_dir / "hook_starter_test_prepare.sh"}) as condor_with_hook:
+        yield condor_with_hook
+
 # The actual job will allocate 200 Mb in python, but request 50Mb.
 # The 50Mb might get rounded up to 128, so be careful.
 @action
@@ -41,7 +49,6 @@ def test_script(test_dir, job_script_contents):
     test_script = test_dir / "job_script.py"
     write_file(test_script, job_script_contents)
     return test_script
-
 
 @action
 def test_job_hash(test_dir, path_to_python, test_script):
@@ -163,6 +170,49 @@ def slice_scope_test_job(condor, slice_scope_job_hash):
     )
     return ssj
 
+@action
+def hook_script_contents():
+    return format_script( """
+#!/bin/bash
+echo 'HookStatusCode = 0'
+exit 0
+""")
+
+@action
+def hook_script(test_dir, hook_script_contents):
+    hook_script = test_dir / "hook_starter_test_prepare.sh"
+    write_file(hook_script, hook_script_contents)
+    os.chmod(hook_script, 0o755)
+    return hook_script
+
+@action
+def hook_test_job_hash(test_dir, hook_script, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "vanilla",
+            "output": "output",
+            "error": "error",
+            "log": "hook_log",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
+
+@action
+def hook_test_job(condor_with_hook, hook_test_job_hash):
+    htj = condor_with_hook.submit(
+        {**hook_test_job_hash}, count=1
+    )
+    assert htj.wait(
+        condition=ClusterState.all_held,
+        timeout=120,
+        verbose=True,
+        fail_condition=ClusterState.any_complete,
+    )
+    return htj
+
+
 # These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
@@ -212,3 +262,6 @@ class TestCgroupOOM:
             assert ultimate.endswith(".scope")
             assert penultimate.endswith(".slice")
         assert True
+
+    def test_cgroup_with_hook(self, hook_test_job):
+        assert hook_test_job.state.all_held()
