@@ -21,22 +21,20 @@ Bugs Fixed:
 
 .. include-history:: bugs 23.10.25 23.0.25
 
-Version 23.10.23
+Version 23.10.24
 ----------------
 
 Release Notes:
 
-.. HTCondor version 23.10.23 released on Month Date, 2025.
-
-- HTCondor version 23.10.23 planned release date is April 22, 2025
+- HTCondor version 23.10.24 released on April 22, 2025.
 
 New Features:
 
-.. include-history:: features 23.10.23 23.0.23
+.. include-history:: features 23.10.24 23.0.24
 
 Bugs Fixed:
 
-.. include-history:: bugs 23.10.23 23.0.23
+.. include-history:: bugs 23.10.24 23.0.24
 
 Version 23.10.22
 ----------------
