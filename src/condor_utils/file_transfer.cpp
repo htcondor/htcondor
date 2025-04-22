@@ -364,6 +364,11 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 						 bool use_file_catalog, bool is_spool)
 {
 	this->ftcb = _ftcb;
+	// This will be false if called from _Init().
+	if(! this->_fix_me_copy_initialized ) {
+		this->_fix_me_copy_ = * _fix_me_;
+		this->_fix_me_copy_initialized = true;
+	}
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -778,13 +783,34 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 
+#ifdef LINUX
+static int operator<=>(const struct timespec &lhs, const struct timespec &rhs) {
+	if (lhs.tv_sec < rhs.tv_sec) {
+		return -1;
+	}
+	if (lhs.tv_sec > rhs.tv_sec) {
+		return 1;
+	}
+	if (lhs.tv_nsec == rhs.tv_nsec) {
+		return 0;
+	}
+	if (lhs.tv_nsec < rhs.tv_nsec) {
+		return -1;
+	}
+	return 1;
+}
+#endif
+
 bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
-	time_t newest_input_timestamp = -1;
-	time_t oldest_output_timestamp = -1;
+#ifndef LINUX
 	std::set<time_t> input_timestamps;
 	std::set<time_t> output_timestamps;
+#else
+	std::set<struct timespec> input_timestamps;
+	std::set<struct timespec> output_timestamps;
+#endif
 	std::string executable_file;
 	std::string iwd;
 	std::string input_files;
@@ -811,7 +837,11 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 
 			if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
+#ifndef LINUX
 				input_timestamps.insert( file_stat.st_mtime );
+#else
+				input_timestamps.insert(file_stat.st_mtim);
+#endif
 			}
 		}
 	}
@@ -819,7 +849,11 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	// The executable is an input file for purposes of this analysis.
 	job_ad->LookupString( ATTR_JOB_CMD, executable_file );
 	if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
-		input_timestamps.insert( file_stat.st_mtime );
+#ifndef LINUX
+				input_timestamps.insert( file_stat.st_mtime );
+#else
+				input_timestamps.insert(file_stat.st_mtim);
+#endif
 	} else {
 		// The container universe doesn't need a real executable
 		// to run a job, but we'll worry about supporting that if
@@ -831,7 +865,11 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
 	if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
 		if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
-			input_timestamps.insert( file_stat.st_mtime );
+#ifndef LINUX
+				input_timestamps.insert( file_stat.st_mtime );
+#else
+				input_timestamps.insert(file_stat.st_mtim);
+#endif
 		} else {
 			return false;
 		}
@@ -851,7 +889,11 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 
 		if ( stat( output_filename.c_str(), &file_stat ) == 0 ) {
-			output_timestamps.insert( file_stat.st_mtime );
+#ifndef LINUX
+			output_timestamps.insert(file_stat.st_mtime);
+#else
+			output_timestamps.insert(file_stat.st_mtim);
+#endif
 		}
 		else {
 			// Failure to stat this output file suggests the file doesn't exist.
@@ -862,13 +904,11 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 
 	if ( !input_timestamps.empty() ) {
-		newest_input_timestamp = *input_timestamps.rbegin();
-
 		// If the oldest output file is more recent than the newest input file,
 		// then this is a dataflow job.
 		if ( !output_timestamps.empty() ) {
-			oldest_output_timestamp = *output_timestamps.begin();
-			return oldest_output_timestamp > newest_input_timestamp;
+			// oldest_output > newest_input
+			return *output_timestamps.begin() > *input_timestamps.rbegin();
 		}
 	}
 
@@ -908,7 +948,11 @@ FileTransfer::_Init(
 	bool use_file_catalog /* = true */)
 {
 	this->ftcb = _ftcb;
-	this->_fix_me_copy_ = * _fix_me_;
+	// This should always be true.
+	if(! this->_fix_me_copy_initialized ) {
+		this->_fix_me_copy_ = * _fix_me_;
+		this->_fix_me_copy_initialized = true;
+	}
 
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 

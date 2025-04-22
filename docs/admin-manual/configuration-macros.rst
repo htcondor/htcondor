@@ -8894,6 +8894,18 @@ General
     failures do not cause this behavior. The job is only put on hold if the node has no
     more declared :dag-cmd:`RETRY` attempts.
 
+:macro-def:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE[DAGMan]`
+    An integer value representing the number of jobs in a single cluster that can fail
+    before DAGMan considers the cluster as failed and removes any remaining jobs. This
+    value is applied to all nodes in the DAG for each execution. The default value is
+    ``0`` meaning no jobs should fail.
+
+    .. warning::
+
+        If the tolerance value is greater than or equal to the total number of jobs in
+        a cluster then DAGMan will consider the cluster as successful even if all jobs
+        fail.
+
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, variables
     parsed in the DAG file :dag-cmd:`VARS` line will be appended to the given Job
@@ -8941,7 +8953,7 @@ General
     V2 Metrics File (2):
         New metric file using updated terminology (i.e. using the word ``nodes``).
 
-:macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
+:macro-def:`DAGMAN_REPORT_GRAPH_METRICS[DAGMan]`
     A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
     information regarding graph metrics to ``*.metrics`` file. The included graph metrics
     are as follows:
@@ -8951,6 +8963,14 @@ General
     - Number of edges (dependencies)
     - Number of vertices (nodes)
 
+:macro-def:`DAGMAN_DISABLE_PORT[DAGMan]`
+    A boolean that defaults to ``False``. When ``True``, DAGMan will not open up a command
+    port.
+
+    .. warning::
+
+        Disabling the command port will make tools, such as :tool:`htcondor dag halt`
+        that talk directly to a running DAGMan process fail.
 
 :index:`Throttling<single: DAGMan Configuration Sections; Throttling>`
 

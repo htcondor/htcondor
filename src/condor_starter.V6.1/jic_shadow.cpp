@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_version.h"
@@ -48,6 +49,7 @@
 #include <filesystem>
 #include "manifest.h"
 #include "tmp_dir.h"
+#include "set_user_priv_from_ad.h"
 
 #include <algorithm>
 
@@ -1396,9 +1398,10 @@ JICShadow::initUserPriv( void )
 
 	std::string owner;
 	if( run_as_owner ) {
-		if( job_ad->LookupString( ATTR_OWNER, owner ) != 1 ) {
-			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-			         ATTR_OWNER );
+		if( job_ad->LookupString( ATTR_OS_USER, owner ) == false &&
+		    job_ad->LookupString( ATTR_OWNER, owner ) == false ) {
+			dprintf( D_ALWAYS, "ERROR: %s and %s not found in JobAd.  Aborting.\n", 
+			         ATTR_OS_USER, ATTR_OWNER );
 			return false;
 		}
 	}
@@ -1431,7 +1434,8 @@ JICShadow::initUserPriv( void )
 			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
-		if( init_user_ids_quiet(owner.c_str()) ) {
+			// TODO init_user_ids_from_ad() doesn't have a quiet option
+		if( init_user_ids_from_ad(*job_ad) ) {
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.c_str() );
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
@@ -2839,27 +2843,27 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			}
 		}
 
-			// If we transferred the executable, make sure it
+			// chmod +x the executable, but only if it is in the scratch dir
 			// has its execute bit set.
-		bool xferExec = true;
-		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
-
 		std::string cmd;
-		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) && xferExec)
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd))
 		{
 				// if we are running as root, the files were downloaded
 				// as PRIV_USER, so switch to that priv level to do chmod
-			priv_state saved_priv = set_priv( PRIV_USER );
+			TemporaryPrivSentry _(PRIV_USER);
 
-			if (chmod(condor_basename(cmd.c_str()), 0755) == -1) {
-				dprintf(D_ALWAYS,
-				        "warning: unable to chmod %s to "
-				            "ensure execute bit is set: %s\n",
-				        condor_basename(cmd.c_str()),
-				        strerror(errno));
+			std::string cmd_basename = condor_basename(cmd.c_str());
+			std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
+				DIR_DELIM_CHAR	 + cmd_basename;
+			if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
+				if (errno != ENOENT) {
+					dprintf(D_ALWAYS,
+							"warning: unable to chmod %s to "
+							"ensure execute bit is set: %s\n",
+							condor_basename(cmd.c_str()),
+							strerror(errno));
+				}
 			}
-
-			set_priv( saved_priv );
 		}
 	}
 
