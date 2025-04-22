@@ -1,3 +1,9 @@
+condor (24.0.7-1) stable; urgency=medium
+
+  * With delegated cgroups v2, job out-of-memory no longer affects the pilot
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 21 Apr 2025 17:09:00 -0500
+
 condor (23.10.24-1) stable; urgency=medium
 
   * HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0

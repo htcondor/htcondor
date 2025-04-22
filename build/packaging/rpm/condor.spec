@@ -1479,6 +1479,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-1
+- With delegated cgroups v2, job out-of-memory no longer affects the pilot
+
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-1
 - HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0
 
