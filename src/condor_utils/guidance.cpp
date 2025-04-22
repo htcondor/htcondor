@@ -37,6 +37,24 @@ makeCIFName(
     }
     auto sections = split( globalJobID, "#" );
 
+    // If the submitter gave us a name to use, scope with their name and
+    // the name of the schedd, but use it instead of the cluster ID.
+    std::string userSuppliedName;
+    if( jobAd.LookupString( "CIFName", userSuppliedName ) ) {
+        std::string submitter;
+        if(! jobAd.LookupString( ATTR_USER, submitter )) {
+            return std::nullopt;
+        }
+
+        std::string cifName;
+        formatstr( cifName, "%s@%s-%s_%s",
+            submitter.c_str(), sections[0].c_str(), userSuppliedName.c_str(),
+            startdAddress.c_str()
+        );
+
+        return cifName;
+    }
+
     int clusterID = -1;
     if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
         return std::nullopt;
