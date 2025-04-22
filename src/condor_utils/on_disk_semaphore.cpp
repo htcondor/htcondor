@@ -45,6 +45,50 @@ OnDiskSemaphore::~OnDiskSemaphore() {
 }
 
 
+bool
+take_remove_lock( const std::filesystem::path & keyfile, int depth ) {
+    // Try to grab the remove lock at the indicated depth.
+    std::filesystem::path rmfile = keyfile;
+    std::string d = std::to_string( depth );
+    rmfile.replace_extension( d );
+    int fd = open( rmfile.string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0400 );
+    close( fd );
+    if( fd != -1 ) {
+        return true;
+    }
+
+    // Check to see if the existing remove lock has expired.
+    std::error_code ec;
+    auto then = std::filesystem::last_write_time( rmfile, ec );
+    if( ec.value() != 0 ) {
+        dprintf( D_ALWAYS, "take_remove_lock(): failed to read last_write_time(%s): %s %d\n", rmfile.string().c_str(), strerror(errno), errno );
+        return false;
+    }
+    auto diff = std::chrono::file_clock::now() - then;
+    if( diff >= 300s ) {
+        return take_remove_lock( keyfile, depth + 1 );
+    }
+
+    // Somebody else is removing the keyfile.
+    return false;
+}
+
+
+void
+remove_remove_locks( const std::filesystem::path & keyfile ) {
+    std::filesystem::path rmfile = keyfile;
+
+    for( int depth = 0; ; ++depth ) {
+        std::string d = std::to_string( depth );
+        rmfile.replace_extension( d );
+
+        std::error_code ec;
+        if(! std::filesystem::exists( rmfile, ec )) { return; }
+        std::filesystem::remove( rmfile, ec );
+    }
+}
+
+
 OnDiskSemaphore::Status
 OnDiskSemaphore::acquire( std::string & message ) {
     std::error_code ec;
@@ -69,22 +113,33 @@ OnDiskSemaphore::acquire( std::string & message ) {
             if( diff >= 300s ) {
                 dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): lease expired.\n" );
 
-                // FIXME: does creating a hardlink change the last write time?
+                //
+                // We can't just remove and re-create the keyfile, because
+                // another process could create the keyfile between when we
+                // check the lease and when we remove the keyfile.
+                //
+                // Instead, recursively try to open() keyfile.rm-<k>, where
+                // `k` starts at 0.  If we grab the k'th rm lock, remove
+                // the keyfile, create it, and then remove the 0-to-k'th
+                // rm lockfiles.  If we don't grab the k'th rm lock, and
+                // the lease hasn't expired, re-acquire(); if it has expired,
+                // recursively try to grab the `k+1`th rm lock.
+                //
+                // Thus, we won't remove the keyfile until we hold the
+                // rm-lock, and we won't remove the rm-locks until we've
+                // removed the keyfile _and_ successfully locked the keyfile.
+                //
 
-                // FIXME: What if some other process creates the keyfile
-                // after we've checked the lease but before we remove the
-                // keyfile?
+                if(! take_remove_lock( keyfile, 0 )) {
+                    return acquire( message );
+                }
+
                 std::filesystem::remove( keyfile, ec );
                 if( ec.value() != 0 ) {
                     dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to remove(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );
                     // We must remove the keyfile for this algorithm to work.
                     return OnDiskSemaphore::INVALID;
                 }
-
-                // Removing the message file is optional.
-                std::filesystem::path messagePath = keyfile;
-                messagePath.replace_extension( "message" );
-                std::filesystem::remove( messagePath, ec );
 
                 return acquire(message);
             }
@@ -157,8 +212,18 @@ OnDiskSemaphore::acquire( std::string & message ) {
         keyfile_fd = fd;
         lockholder = true;
 
-        // FIMXE: Consider _also_ making a .pid file here so that we know
-        // which shadow is holding the lock; it doesn't have to be a hardlink.
+        // Remove the old remove locks, if any.  This isn't necessary,
+        // but it leaves the on-disk state less confusing.
+        remove_remove_locks( keyfile );
+
+        // Remove the old message file, if any.  This isn't necessary,
+        // but it leaves the on-disk state less confusing.
+        std::filesystem::path messagePath = keyfile;
+        messagePath.replace_extension( "message" );
+        std::filesystem::remove( messagePath, ec );
+
+        // Consider making a .pid file here so that we know which shadow
+        // is holding the lock; it doesn't have to be a hardlink.
 
         // The semaphore status is now UNREADY.
         off_t r = lseek( keyfile_fd, 0, SEEK_SET );
@@ -167,12 +232,6 @@ OnDiskSemaphore::acquire( std::string & message ) {
         char status = (char)OnDiskSemaphore::UNREADY;
         ssize_t w  = write( keyfile_fd, (void*)&status, 1 );
         if( w != 1 ) { return OnDiskSemaphore::INVALID; }
-
-        // We don't need to remove the old message file, if any, but it makes
-        // easier to inspect the on-disk state if we do.
-        std::filesystem::path messagePath = keyfile;
-        messagePath.replace_extension( "message" );
-        std::filesystem::remove( messagePath, ec );
 
         return OnDiskSemaphore::PREPARING;
     }
