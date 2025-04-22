@@ -31,7 +31,7 @@
 #include <qmgr_job_updater.h>
 #include "condor_update_style.h"
 #include "file_transfer.h"
-#include "on_disk_semaphore.h"
+#include "single_provider_syndicate.h"
 
 #include <optional>
 #include "guidance.h"

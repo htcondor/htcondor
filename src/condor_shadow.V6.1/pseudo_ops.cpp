@@ -43,7 +43,7 @@
 
 #include "condor_base64.h"
 #include "shortfile.h"
-#include "on_disk_semaphore.h"
+#include "single_provider_syndicate.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;

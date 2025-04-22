@@ -75,14 +75,14 @@ iso_dates.cpp
 iso_dates.h
 MyString.cpp
 MyString.h
-on_disk_semaphore.cpp
-on_disk_semaphore.h
 read_user_log.cpp
 read_user_log.h
 read_user_log_state.cpp
 read_user_log_state.h
 setenv.cpp
 setenv.h
+single_provider_syndicate.cpp
+single_provider_syndicate.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp

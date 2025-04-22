@@ -2,7 +2,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 
-#include "on_disk_semaphore.h"
+#include "single_provider_syndicate.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
