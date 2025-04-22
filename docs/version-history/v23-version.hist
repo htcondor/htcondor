@@ -1,4 +1,4 @@
-*** 23.0.24 bugs
+*** 23.0.25 bugs
 
 - ``condor_watch_q`` will now correctly display the full range of job
   ids for each batch grouping.
