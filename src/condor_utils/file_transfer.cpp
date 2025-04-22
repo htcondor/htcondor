@@ -783,7 +783,6 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	return 1;
 }
 
-#ifdef LINUX
 static int operator<=>(const struct timespec &lhs, const struct timespec &rhs) {
 	if (lhs.tv_sec < rhs.tv_sec) {
 		return -1;
@@ -799,17 +798,16 @@ static int operator<=>(const struct timespec &lhs, const struct timespec &rhs) {
 	}
 	return 1;
 }
-#endif
 
 bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
-#ifndef LINUX
-	std::set<time_t> input_timestamps;
-	std::set<time_t> output_timestamps;
-#else
+#if defined(LINUX) || defined(DARWIN)
 	std::set<struct timespec> input_timestamps;
 	std::set<struct timespec> output_timestamps;
+#else
+	std::set<time_t> input_timestamps;
+	std::set<time_t> output_timestamps;
 #endif
 	std::string executable_file;
 	std::string iwd;
@@ -837,10 +835,12 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 			}
 
 			if ( stat( input_filename.c_str(), &file_stat ) == 0 ) {
-#ifndef LINUX
-				input_timestamps.insert( file_stat.st_mtime );
-#else
+#if defined(LINUX)
 				input_timestamps.insert(file_stat.st_mtim);
+#elif defined(DARWIN)
+				input_timestamps.insert(file_stat.st_mtimespec);
+#else
+				input_timestamps.insert( file_stat.st_mtime );
 #endif
 			}
 		}
@@ -849,10 +849,12 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	// The executable is an input file for purposes of this analysis.
 	job_ad->LookupString( ATTR_JOB_CMD, executable_file );
 	if ( stat( executable_file.c_str(), &file_stat ) == 0 ) {
-#ifndef LINUX
-				input_timestamps.insert( file_stat.st_mtime );
+#if defined(LINUX)
+		input_timestamps.insert(file_stat.st_mtim);
+#elif defined(DARWIN)
+		input_timestamps.insert(file_stat.st_mtimespec);
 #else
-				input_timestamps.insert(file_stat.st_mtim);
+		input_timestamps.insert( file_stat.st_mtime );
 #endif
 	} else {
 		// The container universe doesn't need a real executable
@@ -865,10 +867,12 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 	job_ad->LookupString( ATTR_JOB_INPUT, stdin_file );
 	if ( !stdin_file.empty() && stdin_file != "/dev/null" ) {
 		if ( stat( stdin_file.c_str(), &file_stat ) == 0 ) {
-#ifndef LINUX
-				input_timestamps.insert( file_stat.st_mtime );
+#if defined(LINUX)
+			input_timestamps.insert(file_stat.st_mtim);
+#elif defined(DARWIN)
+			input_timestamps.insert(file_stat.st_mtimespec);
 #else
-				input_timestamps.insert(file_stat.st_mtim);
+			input_timestamps.insert( file_stat.st_mtime );
 #endif
 		} else {
 			return false;
@@ -889,10 +893,12 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 		}
 
 		if ( stat( output_filename.c_str(), &file_stat ) == 0 ) {
-#ifndef LINUX
-			output_timestamps.insert(file_stat.st_mtime);
-#else
+#if defined(LINUX)
 			output_timestamps.insert(file_stat.st_mtim);
+#elif defined(DARWIN)
+			output_timestamps.insert(file_stat.st_mtimespec);
+#else
+			output_timestamps.insert(file_stat.st_mtime);
 #endif
 		}
 		else {

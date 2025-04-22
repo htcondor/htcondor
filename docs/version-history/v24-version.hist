@@ -8,7 +8,7 @@
   commands to running a DAGMan process.
   :jira:`2898`
 
-- On Linux, when using dataflow jobs, HTCondor now checks the modification
+- On Linux and macOS, when using dataflow jobs, HTCondor now checks the modification
   times of dataflow nodes with subsecond accuracy.  Previously, it just
   used seconds, which means that it might incorrectly not skip a dataflow
   job that it should have skipped if the output file was written in the
