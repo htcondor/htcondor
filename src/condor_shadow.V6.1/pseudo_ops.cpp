@@ -1147,7 +1147,7 @@ UniShadow::start_common_input_conversation(
 	//     (O_CREAT | O_EXCL).
 	//  2. If not:
 	//     (a) If the semaphore's state is READY, go to step 4.
-	//	   (b) Otherwise, check that the semaphore has been touched recently.
+	//     (b) Otherwise, check that the semaphore has been touched recently.
 	//         If it hasn't, remove the semaphore and back to step 1.
 	//     (c) Start a timer in case the starter never calls us back?
 	//     (d) Ask the starter to wait five minutes and ask again.  When
@@ -1279,6 +1279,9 @@ UniShadow::start_common_input_conversation(
 				guidance = do_wiring_up(stagingDir, cifName);
 				request = co_yield guidance;
 
+				// FIXME: Check the new request to see if the starter
+				// failed to map the common files?
+
 				//
 				// TODO.
 				//
@@ -1313,6 +1316,9 @@ UniShadow::start_common_input_conversation(
 				// Map the common files into the sandbox.
 				guidance = do_wiring_up(message, cifName);
 				request = co_yield guidance;
+
+				// FIXME: Check the new request to see if the starter
+				// failed to map the common files?
 
 				// The common files have already been transferred.
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);

@@ -69,6 +69,11 @@ OnDiskSemaphore::acquire( std::string & message ) {
             if( diff >= 300s ) {
                 dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): lease expired.\n" );
 
+                // FIXME: does creating a hardlink change the last write time?
+
+                // FIXME: What if some other process creates the keyfile
+                // after we've checked the lease but before we remove the
+                // keyfile?
                 std::filesystem::remove( keyfile, ec );
                 if( ec.value() != 0 ) {
                     dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to remove(%s): %s %d\n", keyfile.string().c_str(), strerror(errno), errno );

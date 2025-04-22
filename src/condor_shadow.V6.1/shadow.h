@@ -222,11 +222,11 @@ class UniShadow : public BaseShadow
 	FileTransfer * commonFTO = NULL;
 	OnDiskSemaphore * cfLock = NULL;
 
-    bool _cifNameInitialized = false;
+	bool _cifNameInitialized = false;
 	virtual bool hasCIFName();
 	std::string _cifName;
 	virtual const std::string & getCIFName();
-    int producer_keep_alive = -1;
+	int producer_keep_alive = -1;
 
  private:
 

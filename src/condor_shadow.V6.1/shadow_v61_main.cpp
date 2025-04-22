@@ -529,6 +529,8 @@ recycleShadow(int previous_job_exit_reason)
 		new_job_ad = readJobAd();
 	}
 
+	// Make sure to trigger the cfLock destructor even if we're not
+	// re-using this shadow.
 	delete Shadow;
 	Shadow = NULL;
 	is_reconnect = false;

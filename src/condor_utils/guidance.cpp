@@ -23,6 +23,9 @@
 // worried about cluster ID re-use because of a schedd reinstallation
 // confusing anything.)
 //
+// Arguably, it should be the shadow's responsibility to combine the CIF
+// name with the startd's address to generate the key for shadow IPC.
+//
 
 std::optional<std::string>
 makeCIFName(
