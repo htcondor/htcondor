@@ -184,7 +184,12 @@ def memory_detection_job_hash(test_dir, condor, path_to_python):
             "error": "error",
             "log": "detected_memory.log",
             "keep_claim_idle": "300",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
 
+@action
 def hook_script_contents():
     return format_script( """
 #!/bin/bash
@@ -226,6 +231,7 @@ def memory_detection_test_job(condor, memory_detection_job_hash):
     )
     return mmj
 
+@action
 def hook_test_job(condor_with_hook, hook_test_job_hash):
     htj = condor_with_hook.submit(
         {**hook_test_job_hash}, count=1
