@@ -1524,6 +1524,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.3-1
+- condor_who now works for Glideins
+- Can add arbitrary credentials to be used by the file transfer plugins
+- Fixed WLCG token generation in the local credmon
+- Can limit the number of times that a job can be released
+- EP administrators can enforce no outbound networking for jobs
+- Add ability to use authentication when fetching Docker images
+- condor_watch_q now displays when file transfer is happening
+- To provide more consistency, using swap for jobs is disabled by default
+
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-1
 - With delegated cgroups v2, job out-of-memory no longer affects the pilot
 
