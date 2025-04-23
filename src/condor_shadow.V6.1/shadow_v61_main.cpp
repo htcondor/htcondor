@@ -35,6 +35,20 @@
 
 BaseShadow *Shadow = NULL;
 
+class InvokeTheGlobalDestructor {
+	public:
+		InvokeTheGlobalDestructor(BaseShadow * & bsp) : ptr(bsp) { }
+		~InvokeTheGlobalDestructor() {
+			if( ptr != NULL ) {
+				dprintf( D_ALWAYS, "Calling ~BaseShadow()...\n" );
+				delete ptr;
+			}
+		}
+	private:
+		BaseShadow * & ptr;
+};
+InvokeTheGlobalDestructor itgd(Shadow);
+
 // settings we're given on the command-line
 static const char* schedd_addr = NULL;
 const char* public_schedd_addr = NULL;
