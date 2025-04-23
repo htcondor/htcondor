@@ -1291,6 +1291,10 @@ UniShadow::start_common_input_conversation(
 					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
 					remRes->setExitReason(JOB_SHOULD_REQUEUE);
 					remRes->killStarter(false);
+
+					guidance.Clear();
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+					co_return guidance;
 				}
 
 				//
@@ -1339,6 +1343,10 @@ UniShadow::start_common_input_conversation(
 					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
 					remRes->setExitReason(JOB_SHOULD_REQUEUE);
 					remRes->killStarter(false);
+
+					guidance.Clear();
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+					co_return guidance;
 				}
 
 				// The common files have already been transferred.
