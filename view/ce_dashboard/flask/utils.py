@@ -1,3 +1,8 @@
+import pickle
+import threading
+from urllib.error import HTTPError
+from urllib.request import urlopen
+import json
 from filelock import FileLock
 import hashlib
 import time
@@ -121,3 +126,76 @@ def make_data_response(response_body: str, cached_response: bool, browser_cache_
     # In a custom HTTP header, state if the response is from the cache or not
     response.headers['X-HTCondorView-Cached-Response'] = f"{cached_response}"
     return response
+
+
+institution_db_lock = threading.Lock()
+institution_db = {}
+
+@cache_response_to_disk(file_name="institution_db.bin", seconds_to_cache=60*60)
+def _getInstitutionDBPickle() -> bytes:
+    tries = 0
+    max_tries = 2
+    INSTITUTION_DATABASE_URL = "https://topology-institutions.osg-htc.org/api/institution_ids"
+    while tries < max_tries:
+        try:
+            with urlopen(INSTITUTION_DATABASE_URL) as f:
+                for institution in json.load(f):
+                    institution_id = institution.get("id")
+                    if not institution_id:
+                        continue
+                    institution_id_short = institution_id.split("/")[-1]
+                    institution["id_short"] = institution_id_short
+                    institution_db[institution_id] = institution
+                    institution_db[institution_id_short] = institution
+
+                    # OSG_INSTITUTION_IDS mistakenly had the ROR IDs before ~2024-11-07,
+                    # so we map those too (as long as they don't conflict with OSG IDs)
+                    ror_id_short = (institution.get("ror_id") or "").split("/")[-1]
+                    if ror_id_short and ror_id_short not in institution_db:
+                        institution_db[ror_id_short] = institution
+                print("INFO: Loaded institution database with %d entries" % len(institution_db))
+        except HTTPError:
+            time.sleep(2**tries)
+            tries += 1
+            if tries == max_tries and len(institution_db) == 0:
+                raise
+        else:
+            break
+
+    # Pickle institution_db into a binary string
+    binary_data = pickle.dumps(institution_db)
+    return binary_data
+
+def getOrganizationFromInstitutionID(institution_id: str, default: str) -> str:
+    """
+    Returns the organization name from the institution ID.
+
+    Args:
+        institution_id (str): The institution ID.
+
+    Returns:
+        str: The organization name.
+    """
+
+    if institution_id == "Unknown":
+        return default
+
+    with institution_db_lock:
+        global institution_db
+        if institution_id in institution_db:
+            return institution_db[institution_id].get("name", default)
+        else:
+            # If the institution ID is not found, reload the database
+            # and try again. This is a fallback mechanism to ensure that the
+            # institution database is up to date.
+            institution_db = {}
+            buffer, _ = _getInstitutionDBPickle()
+            institution_db.update(pickle.loads(buffer))
+            if institution_id in institution_db:
+                return institution_db[institution_id].get("name", default)
+            else:
+                # If still not found, return the default value
+                # and log a warning message.
+                print(f"WARNING: Institution ID {institution_id} not found in database.")   
+
+    return default
