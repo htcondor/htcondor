@@ -136,9 +136,9 @@ def completed_cif_jobs(the_big_condor, path_to_sleep, test_dir, cif_jobs_script)
         "transfer_executable":      True,
         "should_transfer_files":    True,
 
-        "log":                      "cif_job.log",
+        "log":                      "cif_job.log.$(CLUSTER)",
         "output":                   "cif_job.output.$(CLUSTER).$(PROCESS)",
-        "error":                    "cif_job.error",
+        "error":                    "cif_job.error.$(CLUSTER).$(PROCESS)",
 
         "request_cpus":             1,
         "request_memory":           1,
