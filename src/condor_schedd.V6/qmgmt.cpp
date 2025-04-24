@@ -4719,9 +4719,18 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if (attr_id == idATTR_OWNER)
 	{
 		// User and Owner can't be set in ordinary job ads. Force those into
-		// the cluster ad.
-		if (cluster_id > 0 && proc_id >= 0) {
-			return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
+		// the cluster ad if proc_id==0 (handle old c-gahp and job router)
+		// and reject otherwise.
+		if (cluster_id > 0) {
+			if (proc_id == 0) {
+				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
+			} else {
+				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
+					"Owner is being set in a proc ad\n");
+				if (err) err->pushf("QMGMT", EACCES, "Owner set in proc ad");
+				errno = EACCES;
+				return -1;
+			}
 		}
 
 		const char* sock_owner = Q_SOCK ? Q_SOCK->getOwner() : "";
@@ -4946,9 +4955,18 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	else if (attr_id == idATTR_USER) {
 
 		// User and Owner can't be set in ordinary job ads. Force those into
-		// the cluster ad.
-		if (cluster_id > 0 && proc_id >= 0) {
-			return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
+		// the cluster ad if proc_id==0 (handle old c-gahp and job router)
+		// and reject otherwise.
+		if (cluster_id > 0) {
+			if (proc_id == 0) {
+				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
+			} else {
+				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
+					"User is being set in a proc ad\n");
+				if (err) err->pushf("QMGMT", EACCES, "User set in proc ad");
+				errno = EACCES;
+				return -1;
+			}
 		}
 
 		const char * sock_user = EffectiveUserName(Q_SOCK);
@@ -6672,6 +6690,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		for(const auto& it : ad_keys) {
 			JobQueueKey jid(it.c_str());
 			JobQueueBase *bad = nullptr;
+			if (jid.cluster != 0 || jid.proc <= 0) continue; // not a userrec
 			if ( ! JobQueue->Lookup(jid, bad) || ! bad) continue; // safety
 			if (bad->IsUserRec()) {
 				dynamic_cast<JobQueueUserRec*>(bad)->PopulateFromAd();
