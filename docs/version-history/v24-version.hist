@@ -46,6 +46,11 @@
   does not exist.
   :jira:`2978`
 
+- Fixed a bug where :meth:`htcondor2.enable_debug()` would cause the
+  Python interpreter to exit if the debug log were configured incorrectly.
+  :jira:`3004`
+
+
 - Add a new config knob, :macro:`STARTER_SETS_HOME_ENV` which defaults to 
   true.  When true, the job will have the **HOME** environemnt variable
   set to whatever it is on the system.  When false, HOME will not
