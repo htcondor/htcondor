@@ -50,6 +50,11 @@
 #include "largestOpenFD.h"
 #endif 
 
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -889,6 +894,26 @@ int daemon::RealStart( )
 	//
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 60);
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// We don't want to move this existing master from whatever cgroup it was in.
+		// We put each daemon spawn child of the master in a separate cgroup. We assume
+		// that on any system, there is exactly one master per CONDOR_CONFIG environment
+		// variable, though there may be many masters in any one cgroup (e.g. when 
+		// running the test suite).
+		std::string confstr = getenv("CONDOR_CONFIG") ? getenv("CONDOR_CONFIG") : "/etc/condor/condor_config";
+		std::ranges::replace(confstr, '/', '_');
+
+		std::string daemon_name = name_in_config_file;
+		daemon_name += "_for_";
+		// We assume that there can only be one daemon with a given daemon_name per master per config
+		// something like STARTD_FOR_<config_file>
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(daemon_name + confstr);
+		fi.cgroup = cgroup.c_str();
+	}
+
+#endif
 
 	int jobopts = 0;
 	// give the family session to all daemons, not just those that get command ports

@@ -38,6 +38,11 @@
 #include "shared_port_endpoint.h"
 #include "exit.h"
 
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
+
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 
 ClassAd* Starter::s_ad = nullptr; // starter capabilities ad, (not the job ad!)
@@ -1013,6 +1018,19 @@ int Starter::execDCStarter(
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
+
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// Put each starter into a well-named cgroup.  we assume that the startd
+		// is in its own cgroup, so we just need a unique name per startd
+
+		std::string starter_name = std::string("STARTER_") + claim->rip()->r_name;
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(starter_name);
+		fi.cgroup = cgroup.c_str();
+	}
+
+#endif
 
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
