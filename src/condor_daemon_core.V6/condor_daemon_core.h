@@ -1992,6 +1992,7 @@ class DaemonCore : public Service
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() const { return m_use_clone_to_create_processes; }
 #else
+	bool m_use_clone_to_create_processes {false};
 	bool UseCloneToCreateProcesses() { return false; }
 #endif
 
