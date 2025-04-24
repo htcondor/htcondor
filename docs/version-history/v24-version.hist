@@ -28,6 +28,11 @@
   each reported Access Point's Schedd.
   :jira:`3009`
 
+- Improved logging on the EP when a slot cannot be claimed because the :ad-attr:`START`
+  expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements`
+  expression will be written to the ``StartLog``.
+  :jira:`3033`
+
 - The execute point now sets the execute permission bit on
   the :subcom:`executable` even when it was transfered by a plugin.
   This is helpful when using pelican or osdf to transfer the

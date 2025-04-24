@@ -3109,7 +3109,7 @@ ResMgr::cancelDraining(std::string request_id,bool reconfig,std::string &error_m
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/) const
+ResMgr::isSlotDraining(const Resource * /*rip*/) const
 {
 	// NOTE: passed in rip will be NULL when building the daemon ad
 	return draining;
@@ -3122,7 +3122,7 @@ ResMgr::gracefulDrainingTimeRemaining()
 }
 
 time_t
-ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
+ResMgr::gracefulDrainingTimeRemaining(const Resource * /*rip*/)
 {
 	if( !draining || !draining_is_graceful ) {
 		return 0;
@@ -3153,7 +3153,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 }
 
 bool
-ResMgr::drainingIsComplete(Resource * /*rip*/)
+ResMgr::drainingIsComplete(const Resource * /*rip*/) const
 {
 	if( !draining ) {
 		return false;
