@@ -11,6 +11,7 @@ from ornithology import (
     ClusterState,
     format_script,
     write_file,
+    JobStatus,
 )
 
 import os
@@ -329,17 +330,29 @@ def completed_multi_jobs(the_multi_condor, test_dir, multi_job_script):
         fail_condition=ClusterState.any_terminal
     )
 
-    # Release the other four jobs.
-    jobIDs = [ f"{job_handle_a.clusterid}.{x}" for x in range(2,4) ]
-    the_multi_condor.act( htcondor2.JobAction.Release, jobIDs )
-    jobIDs = [ f"{job_handle_b.clusterid}.{x}" for x in range(2,4) ]
-    the_multi_condor.act( htcondor2.JobAction.Release, jobIDs )
-
     # Touch the kill files on the first four jobs, causing them to finish.
     for i in range(0,2):
         (test_dir / f"kill-multi-{job_handle_a.clusterid}.{i}").touch(exist_ok=True)
     for i in range(0,2):
         (test_dir / f"kill-multi-{job_handle_b.clusterid}.{i}").touch(exist_ok=True)
+
+    # Wait for the first four jobs to finish.
+    # Due to a bug in Ornithology, jobs submitted on hold but not yet
+    # released are considered IDLE, which is... not helpful.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=lambda s: s.all_status(JobStatus.IDLE, JobStatus.COMPLETED),
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=lambda s: s.all_status(JobStatus.IDLE, JobStatus.COMPLETED),
+    )
+
+    # Release the other four jobs.
+    jobIDs = [ f"{job_handle_a.clusterid}.{x}" for x in range(2,4) ]
+    the_multi_condor.act( htcondor2.JobAction.Release, jobIDs )
+    jobIDs = [ f"{job_handle_b.clusterid}.{x}" for x in range(2,4) ]
+    the_multi_condor.act( htcondor2.JobAction.Release, jobIDs )
 
     # Wait for the last four jobs to start.
     assert job_handle_a.wait(
