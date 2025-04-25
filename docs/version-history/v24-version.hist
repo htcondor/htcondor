@@ -34,6 +34,10 @@
   job's main executable.
   :jira:`3020`
 
+- The directory for :macro:`LOCAL_UNIV_EXECUTE` is no longer made
+  world-writable.
+  :jira:`3036`
+
 *** 24.8.0 bugs
 
 - Removed job attribute ``ToE``.
