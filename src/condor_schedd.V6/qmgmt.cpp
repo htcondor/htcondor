@@ -4724,7 +4724,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if (cluster_id > 0) {
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
-			} else {
+			} else if (proc_id > 0) {
 				dprintf(D_FULLDEBUG, "SetAttribute: Ignoring setting of Owner in proc ad\n");
 				return 0;
 			}
@@ -4957,7 +4957,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if (cluster_id > 0) {
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
-			} else {
+			} else if (proc_id > 0) {
 				dprintf(D_FULLDEBUG, "SetAttribute: Ignoring setting of User in proc ad\n");
 				return 0;
 			}
