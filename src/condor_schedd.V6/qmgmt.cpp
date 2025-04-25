@@ -4720,16 +4720,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	{
 		// User and Owner can't be set in ordinary job ads. Force those into
 		// the cluster ad if proc_id==0 (handle old c-gahp and job router)
-		// and reject otherwise.
+		// and ignore otherwise.
 		if (cluster_id > 0) {
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
 			} else {
-				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
-					"Owner is being set in a proc ad\n");
-				if (err) err->pushf("QMGMT", EACCES, "Owner set in proc ad");
-				errno = EACCES;
-				return -1;
+				dprintf(D_FULLDEBUG, "SetAttribute: Ignoring setting of Owner in proc ad\n");
+				return 0;
 			}
 		}
 
@@ -4956,16 +4953,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// User and Owner can't be set in ordinary job ads. Force those into
 		// the cluster ad if proc_id==0 (handle old c-gahp and job router)
-		// and reject otherwise.
+		// and ignore otherwise.
 		if (cluster_id > 0) {
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
 			} else {
-				dprintf(D_ALWAYS, "ERROR SetAttribute violation: "
-					"User is being set in a proc ad\n");
-				if (err) err->pushf("QMGMT", EACCES, "User set in proc ad");
-				errno = EACCES;
-				return -1;
+				dprintf(D_FULLDEBUG, "SetAttribute: Ignoring setting of User in proc ad\n");
+				return 0;
 			}
 		}
 
@@ -6690,7 +6684,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		for(const auto& it : ad_keys) {
 			JobQueueKey jid(it.c_str());
 			JobQueueBase *bad = nullptr;
-			if (jid.cluster != 0 || jid.proc <= 0) continue; // not a userrec
+			if (JobQueueBase::TypeOfJid(jid) != JobQueueBase::entry_type_userrec) continue;
 			if ( ! JobQueue->Lookup(jid, bad) || ! bad) continue; // safety
 			if (bad->IsUserRec()) {
 				dynamic_cast<JobQueueUserRec*>(bad)->PopulateFromAd();
