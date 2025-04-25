@@ -27,6 +27,12 @@ devices depending on which libraries the tool locates during execution.
 The detected GPU devices reflect what GPU's HTCondor jobs will find on
 the host machine for execution.
 
+The *condor_startd* runs this tool automatically at startup to detect
+GPUs.  If the startd is not advertising GPUs as expected, an administrator
+can run this tool manually to help debug the problem -- if a manual run
+of *condor_gpu_discovery* does not show the expected GPUs, then the
+startd will probably not show them either.
+
 Options
 -------
 
@@ -111,7 +117,7 @@ Options
     This option suppresses the ``DetectedGpus`` attribute so that the
     output is suitable for use with *condor_startd* cron. Combine this
     option with the **-dynamic** option to periodically refresh the
-    dynamic Gpu information such as temperature. For example, to refresh
+    dynamic GPU information such as temperature. For example, to refresh
     GPU temperatures every 5 minutes
 
     .. code-block:: condor-config
