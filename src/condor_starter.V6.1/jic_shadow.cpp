@@ -786,6 +786,9 @@ JICShadow::transferOutputMopUp(void)
 void
 JICShadow::allJobsGone( void )
 {
+	if (filetrans) {
+		filetrans->abortActiveTransfer();
+	}
 	if ( shadow_version && shadow_version->built_since_version(8,7,8) ) {
 		dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
 		starter->StarterExit( starter->GetShutdownExitCode() );
