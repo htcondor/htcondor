@@ -1992,7 +1992,7 @@ class DaemonCore : public Service
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() const { return m_use_clone_to_create_processes; }
 #else
-	bool m_use_clone_to_create_processes {false};
+	// If we don't have clone(), this is always false no matter what knobs might be set
 	bool UseCloneToCreateProcesses() { return false; }
 #endif
 

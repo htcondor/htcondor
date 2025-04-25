@@ -8458,7 +8458,7 @@ int DaemonCore::Create_Process(
 	// we need to record that happened, so we can use the cgroup For
 	// monitoring, cleanup, etc. But if we are using clone, then
 	// we don't want to do this, because we are sharing memory.
-	if (family_info && m_proc_family && family_info->cgroup && !m_use_clone_to_create_processes) {
+	if (family_info && m_proc_family && family_info->cgroup && !UseCloneToCreateProcesses()) {
 		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
 	}
 #endif
