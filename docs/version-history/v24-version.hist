@@ -19,7 +19,7 @@
   consider a placed job list as failed when job failures occur.
   :jira:`3019`
 
-- On Linux systems, added support to put ech condor daemon in its
+- On Linux systems, added support to put each condor daemon in its
   own cgroup with the knob :macro:`CGROUP_ALL_DAEMONS`
   :jira:`3032`
 
