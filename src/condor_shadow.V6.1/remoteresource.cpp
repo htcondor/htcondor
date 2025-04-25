@@ -172,6 +172,8 @@ bool
 RemoteResource::activateClaim( int starterVersion )
 {
 	int reply;
+	ClassAd replyAd;
+	std::string anabuf;
 	const int max_retries = 20;
 	const int retry_delay = 1;
 	int num_retries = 0;
@@ -192,7 +194,7 @@ RemoteResource::activateClaim( int starterVersion )
 		// we'll eventually return out of this loop...
 	while( 1 ) {
 		reply = dc_startd->activateClaim( jobAd, starterVersion,
-										  &claim_sock );
+										  &claim_sock, &replyAd );
 		switch( reply ) {
 		case OK:
 			dprintf( D_ALWAYS,
@@ -249,6 +251,9 @@ RemoteResource::activateClaim( int starterVersion )
 			dprintf( D_ALWAYS,
 			         "Request to run on %s %s was REFUSED\n",
 			         machineName ? machineName:"", dc_startd->addr() );
+			if (replyAd.LookupString("Analyze", anabuf) && ! anabuf.empty()) {
+				dprintf(D_ERROR, "activateClaim failure analysis:\n%s\n", anabuf.c_str());
+			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;

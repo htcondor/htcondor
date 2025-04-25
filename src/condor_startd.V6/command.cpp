@@ -1652,6 +1652,8 @@ activate_claim( Resource* rip, Stream* stream )
 	ClassAd	*req_classad = requestAd.get(), *mach_classad = rip->r_classad;
 	int starter = MAX_STARTERS;
 	pid_t starter_pid = 0;
+	bool send_failure_ad = false;
+	const char * ATTR_send_failure_ad = "_condor_send_activation_failure_ad";
 
 	Sock* sock = (Sock*)stream;
 	std::string shadow_addr_buf = sock->peer_addr().to_ip_string();
@@ -1695,6 +1697,13 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
+
+	// if request has a flags that control the reply, look them up and then
+	// delete them from the request ad
+	if (req_classad->Lookup(ATTR_send_failure_ad)) {
+		req_classad->LookupBool(ATTR_send_failure_ad, send_failure_ad);
+		req_classad->Delete(ATTR_send_failure_ad);
+	}
 
 		// Now, ask the ResMgr to recompute so we have totally
 		// up-to-date values for everything in our classad.
@@ -1749,7 +1758,13 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->analyze_match(anabuf, req_classad, true, false);
 		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
 
-		refuse( stream );
+		if (send_failure_ad) {
+			ClassAd replyAd;
+			replyAd.Assign("Analyze", anabuf);
+			refuse(stream, &replyAd);
+		} else {
+			refuse(stream);
+		}
 		goto abort;
 	}
 

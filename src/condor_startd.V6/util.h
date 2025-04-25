@@ -33,7 +33,7 @@ bool	check_execute_dir_perms(const char* exec_path, bool abort_on_error);
 void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );
-bool	refuse( Stream* );
+bool	refuse( Stream*, ClassAd* replyAd = nullptr );
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  const char* prefix = NULL );
 bool	caRevertToParent(ClassAd* target, const char * attr);

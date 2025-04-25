@@ -34,6 +34,9 @@
   job's main executable.
   :jira:`3020`
 
+- Improve diagnostics in the shadow when it fails to activate a claim.
+  :jira:`3035`
+
 *** 24.8.0 bugs
 
 - Removed job attribute ``ToE``.
