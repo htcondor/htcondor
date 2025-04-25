@@ -95,6 +95,10 @@
 #include "classad_collection.h"
 #include "../condor_sysapi/sysapi.h"
 
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
 #endif
@@ -10217,6 +10221,21 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	if (IsLocalUniverse(srec)) {
 		fip = &fi;
 		fi.max_snapshot_interval = 15;
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// We put each local universe starter into it's own cgroup named by
+		// the job id, assuming that is unique under each schedd.
+
+		std::string cgroup_name = "STARTER_for_local_";
+		cgroup_name += std::to_string(job_id->cluster);
+		cgroup_name += '_';
+		cgroup_name += std::to_string(job_id->proc);
+
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+		fi.cgroup = cgroup.c_str();
+	}
+#endif
 	}
 	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
@@ -10560,6 +10579,23 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
+
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// We put each scheduler universe job into it's own cgroup named by
+		// the job id, assuming that is unique under each schedd.
+
+		std::string cgroup_name = "sched_uni_job_";
+		cgroup_name += std::to_string(job_id->cluster);
+		cgroup_name += '_';
+		cgroup_name += std::to_string(job_id->proc);
+
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+		fi.cgroup = cgroup.c_str();
+	}
+#endif
+
 
 	is_executable = false;
 
