@@ -749,19 +749,25 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		usage.sys_cpu_time  = 0;
 	}
 
-	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
+	// Counting of the procs.  "cgroup.procs" only contains the processes
+	// in tihs exact cgroup, not the children.  So we need to count recursively
 
-	FILE *f = fopen(cgroup_procs.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
-		return false;
+	int processes_in_cgroup = 0; // total from here on down
+	for (const auto& dir: getTree(cgroup_name)) {
+		stdfs::path cgroup_procs   = dir / "cgroup.procs";
+
+		FILE *f = fopen(cgroup_procs.c_str(), "r");
+		if (!f) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
+			continue;
+		}
+		char pidstr[64]; // Far beyond max size of a pid
+		while (fscanf(f, "%s\n", pidstr) == 1) {
+			processes_in_cgroup++;
+		}
+		fclose(f);
 	}
-	char pidstr[64]; // Far beyond max size of a pid
-	usage.num_procs = 0;
-	while (fscanf(f, "%s\n", pidstr) == 1) {
-		usage.num_procs++;
-	}
-	fclose(f);
+	usage.num_procs = processes_in_cgroup;
 
 	// Memory reading follows.
 
@@ -773,7 +779,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	stdfs::path memory_peak    = leaf / "memory.peak";
 	stdfs::path memory_stat    = leaf / "memory.stat";
 
-	f = fopen(memory_stat.c_str(), "r");
+	FILE *f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
