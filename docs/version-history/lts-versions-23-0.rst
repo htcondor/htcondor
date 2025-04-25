@@ -20,9 +20,9 @@ Version 23.0.25
 
 Release Notes:
 
-.. HTCondor version 23.0.25 released on Month Date, 2025.
+.. HTCondor version 23.0.25 released on May 20, 2025.
 
-- HTCondor version 23.0.25 planned release date is Month Date, 2025
+- HTCondor version 23.0.25 planned release date is May 20, 2025
 
 New Features:
 
