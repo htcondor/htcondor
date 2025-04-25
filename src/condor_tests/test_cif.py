@@ -16,11 +16,26 @@ from ornithology import (
 
 import os
 from pathlib import Path
+import shutil
 
 import htcondor2
 
 
+def try_shutil_chown( * p, ** v ):
+    try:
+        shutil.chown( * p, ** v )
+    except PermissionError:
+        pass
+
+
 # ---- test_one_cif_job -------------------------------------------------------
+
+@action
+def user_dir(test_dir):
+    the_user_dir = test_dir / "user"
+    the_user_dir.mkdir(exist_ok=True)
+    try_shutil_chown( the_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
+    return the_user_dir
 
 
 @action
@@ -33,6 +48,8 @@ def the_condor(test_dir, the_lock_dir):
     local_dir = test_dir / "condor"
 
     with Condor(
+        submit_user='tlmiller',
+        condor_user='condor',
         local_dir=local_dir,
         config={
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
@@ -43,11 +60,11 @@ def the_condor(test_dir, the_lock_dir):
 
 
 @action
-def completed_cif_job(the_condor, path_to_sleep, test_dir):
-    os.chdir(test_dir.as_posix())
-    (test_dir / "input1.txt").write_text("input A\n")
-    (test_dir / "input2.txt").write_text("II input\n");
-    (test_dir / "input3.txt").write_text("input line 3\n" );
+def completed_cif_job(the_condor, path_to_sleep, user_dir):
+    os.chdir(user_dir.as_posix())
+    (user_dir / "input1.txt").write_text("input A\n")
+    (user_dir / "input2.txt").write_text("II input\n");
+    (user_dir / "input3.txt").write_text("input line 3\n" );
 
     job_description = {
         "universe":                 "vanilla",
@@ -95,6 +112,8 @@ def the_big_condor(test_dir, the_big_lock_dir):
     local_dir = test_dir / "big-condor"
 
     with Condor(
+        submit_user='tlmiller',
+        condor_user='condor',
         local_dir=local_dir,
         config={
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
@@ -130,17 +149,17 @@ def cif_jobs_script(test_dir):
 
 
 @action
-def completed_cif_jobs(the_big_condor, test_dir, cif_jobs_script):
-    os.chdir(test_dir.as_posix())
-    (test_dir / "big_input1.txt").write_text("input A\n")
-    (test_dir / "big_input2.txt").write_text("II input\n");
-    (test_dir / "big_input3.txt").write_text("input line 3\n" );
+def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
+    os.chdir(user_dir.as_posix())
+    (user_dir / "big_input1.txt").write_text("input A\n")
+    (user_dir / "big_input2.txt").write_text("II input\n");
+    (user_dir / "big_input3.txt").write_text("input line 3\n" );
 
     job_description = {
         "universe":                 "vanilla",
 
         "executable":               cif_jobs_script.as_posix(),
-        "arguments":                (test_dir / "kill-many-$(ClusterID).$(ProcID)").as_posix(),
+        "arguments":                (user_dir / "kill-many-$(ClusterID).$(ProcID)").as_posix(),
         "transfer_executable":      True,
         "should_transfer_files":    True,
 
@@ -181,7 +200,7 @@ def completed_cif_jobs(the_big_condor, test_dir, cif_jobs_script):
 
     # Touch the kill files on the first four jobs, causing them to finish.
     for i in range(0,4):
-        (test_dir / f"kill-many-{job_handle.clusterid}.{i}").touch(exist_ok=True)
+        (user_dir / f"kill-many-{job_handle.clusterid}.{i}").touch(exist_ok=True)
 
     # Wait for the last four jobs to start.
     assert job_handle.wait(
@@ -191,7 +210,7 @@ def completed_cif_jobs(the_big_condor, test_dir, cif_jobs_script):
 
     # Touch the kill files on the last four jobs, causing them to finish.
     for i in range(4,8):
-        (test_dir / f"kill-many-{job_handle.clusterid}.{i}").touch(exist_ok=True)
+        (user_dir / f"kill-many-{job_handle.clusterid}.{i}").touch(exist_ok=True)
 
     # Wait for the last four jobs to finish.
     assert job_handle.wait(
@@ -215,6 +234,8 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
     local_dir = test_dir / "multi-condor"
 
     with Condor(
+        submit_user='tlmiller',
+        condor_user='condor',
         local_dir=local_dir,
         config={
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
@@ -251,18 +272,18 @@ def multi_job_script(test_dir):
 
 
 @action
-def completed_multi_jobs(the_multi_condor, test_dir, multi_job_script):
-    os.chdir(test_dir.as_posix())
+def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
+    os.chdir(user_dir.as_posix())
 
     #
     # In this test, we're validating that different CIFs stay different.
     #
 
-    (test_dir / "multi_input1.txt").write_text("input A\n")
-    (test_dir / "multi_input2.txt").write_text("II input\n");
-    (test_dir / "multi_input3.txt").write_text("input line 3\n" );
+    (user_dir / "multi_input1.txt").write_text("input A\n")
+    (user_dir / "multi_input2.txt").write_text("II input\n");
+    (user_dir / "multi_input3.txt").write_text("input line 3\n" );
 
-    kill_file = (test_dir / "kill-multi-$(ClusterID).$(ProcID)").as_posix()
+    kill_file = (user_dir / "kill-multi-$(ClusterID).$(ProcID)").as_posix()
     job_description_a = {
         "universe":                 "vanilla",
 
@@ -287,9 +308,9 @@ def completed_multi_jobs(the_multi_condor, test_dir, multi_job_script):
     }
 
 
-    (test_dir / "multi_input4.txt").write_text("-- input A\n")
-    (test_dir / "multi_input5.txt").write_text("-- II input\n");
-    (test_dir / "multi_input6.txt").write_text("-- input line 3\n" );
+    (user_dir / "multi_input4.txt").write_text("-- input A\n")
+    (user_dir / "multi_input5.txt").write_text("-- II input\n");
+    (user_dir / "multi_input6.txt").write_text("-- input line 3\n" );
 
     job_description_b = { ** job_description_a,
         "arguments":
@@ -332,9 +353,9 @@ def completed_multi_jobs(the_multi_condor, test_dir, multi_job_script):
 
     # Touch the kill files on the first four jobs, causing them to finish.
     for i in range(0,2):
-        (test_dir / f"kill-multi-{job_handle_a.clusterid}.{i}").touch(exist_ok=True)
+        (user_dir / f"kill-multi-{job_handle_a.clusterid}.{i}").touch(exist_ok=True)
     for i in range(0,2):
-        (test_dir / f"kill-multi-{job_handle_b.clusterid}.{i}").touch(exist_ok=True)
+        (user_dir / f"kill-multi-{job_handle_b.clusterid}.{i}").touch(exist_ok=True)
 
     # Wait for the first four jobs to finish.
     # Due to a bug in Ornithology, jobs submitted on hold but not yet
@@ -366,9 +387,9 @@ def completed_multi_jobs(the_multi_condor, test_dir, multi_job_script):
 
     # Touch the kill files on the last four jobs, causing them to finish.
     for i in range(2,4):
-        (test_dir / f"kill-multi-{job_handle_a.clusterid}.{i}").touch(exist_ok=True)
+        (user_dir / f"kill-multi-{job_handle_a.clusterid}.{i}").touch(exist_ok=True)
     for i in range(2,4):
-        (test_dir / f"kill-multi-{job_handle_b.clusterid}.{i}").touch(exist_ok=True)
+        (user_dir / f"kill-multi-{job_handle_b.clusterid}.{i}").touch(exist_ok=True)
 
     # Wait for the last four jobs to finish.
     assert job_handle_a.wait(
