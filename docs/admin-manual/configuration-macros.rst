@@ -2977,7 +2977,7 @@ probably will not want to change them for any reason.
 
 :macro-def:`CGROUP_ALL_DAEMONS[MASTER]`
     A boolean that default to false.  When true, each daemon will
-    be put into it's own cgroup. This knob requires a restart to take
+    be put into its own cgroup. This knob requires a restart to take
     effect.
 
 :macro-def:`DISCARD_SESSION_KEYRING_ON_STARTUP[MASTER]`
