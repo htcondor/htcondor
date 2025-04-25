@@ -1023,7 +1023,7 @@ int Starter::execDCStarter(
 	std::string cgroup;
 	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
 		// Put each starter into a well-named cgroup.  we assume that the startd
-		// is in its own cgroup, so we just need a unique name per startd
+		// is in its own cgroup, so we just need a unique name per starter
 
 		std::string starter_name = std::string("STARTER_") + claim->rip()->r_name;
 		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(starter_name);
