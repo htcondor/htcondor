@@ -304,7 +304,7 @@ EOF
 
                 # Install our repository key.
                 $sh_c "${apt_get} update"
-                $sh_c "${apt_get} install -y gnupg"
+                $sh_c "${apt_get} install -y curl gnupg"
                 $sh_c "mkdir -p /etc/apt/keyrings"
                 $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/htcondor.asc"
 
