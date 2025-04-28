@@ -315,7 +315,7 @@ EOF
                 $sh_c "${apt_get} update"
                 $sh_c "${apt_get} install -y gnupg"
                 $sh_c "mkdir -p /etc/apt/keyrings"
-                $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key"
+                $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/htcondor.asc"
 
                 # Our repository redirects to https even if you try to
                 # avoid it, and Debian 9 doesn't come with this by default.
@@ -323,8 +323,7 @@ EOF
 
                 # Add our repository.
                 HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
-                $sh_c "echo \"deb [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${ID}/${CHANNEL_DIR} ${VERSION_CODENAME} main\" > ${HTCONDOR_LIST}"
-                $sh_c "echo \"deb-src [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${ID}/${CHANNEL_DIR} ${VERSION_CODENAME} main\" >> ${HTCONDOR_LIST}"
+                $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/${ID}/htcondor-${CHANNEL_DIR}-${VERSION_CODENAME}.list -o ${HTCONDOR_LIST}"
 
                 echo -e "\n# Updating package lists"
                 $sh_c "${apt_get} update"
@@ -685,9 +684,6 @@ while [ $# -gt 0 ]; do
                 feature|current|latest|developer)
                     CHANNEL="feature"
                     ;;
-                *-rc)
-                    CHANNEL=$2
-                    ;;
                 *)
                     echo "Illegal option $2 for --channel"
                     echo "Run $0 --help for usage"
@@ -725,8 +721,8 @@ done
 # want to surprise other lts-channel users with new features.
 if [ "${CHANNEL}" = "lts" ]; then
     CHANNEL_DIR=24.0
-else
-    CHANNEL_DIR=$CHANNEL
+elif [ "${CHANNEL}" = "feature" ]; then
+    CHANNEL_DIR=24.x
 fi
 
 # wrapped up in functions so that we have some protection against only getting
