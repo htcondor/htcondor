@@ -204,7 +204,7 @@ StartdCronJobMgr::JobExited( const CronJob &job )
 {
 	bool status = CronJobMgr::JobExited( job );
 	if ( m_shutting_down &&  IsAllIdle() ) {
-		startd_check_free();
+		startd_exit_if_idle();
 	}
 	if ( bench_job_mgr ) {
 		bench_job_mgr->ScheduleAllJobs();

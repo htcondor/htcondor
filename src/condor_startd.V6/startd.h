@@ -105,6 +105,8 @@ extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or
 extern  BuildSlotFailureMode slot_config_failmode;
 extern  bool	continue_to_advertise_broken_dslots;
 extern  bool	enable_claimable_partitionable_slots;
+extern  bool	want_job_networking_is_a_resource_request; // set by NO_JOB_NETWORKING in the starter
+
 
 // Extra attrs for slot ads
 extern	std::vector<std::string> startd_job_attrs;
@@ -180,7 +182,7 @@ extern StartdEventLog ep_eventlog;
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 // Check to see if we're all free
-void	startd_check_free(int tid = -1);
+void	startd_exit_if_idle(int tid = -1);
 // so we can call this to reconfig on command
 void	main_config();
 

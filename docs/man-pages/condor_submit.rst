@@ -462,6 +462,14 @@ BASIC COMMANDS
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
 
+ :subcom-def:`shell` = <shell command to run>
+    On Unix systems, instead of specifing *executable* and *args*, the
+    shell command can give a full shell command to be run under /bin/sh,
+    including shell special characters like pipes and redirects. Note that
+    if any executables run by this shell need to be transferred to the job,
+    HTCondor will not automatically add those to the transfer_input list,
+    you will manually need to add those programs.
+
  :subcom-def:`batch_name` = <batch_name>
     Set the batch name for this submit. The batch name is displayed by
     *condor_q* **-batch**. It is intended for use by users to give
@@ -2696,6 +2704,11 @@ ADVANCED COMMANDS
     Used to specify the shared file system directory to be used for file
     system authentication when submitting to a remote scheduler. Should
     be a path to a preexisting directory.
+
+ :subcom-def:`want_job_networking` = <True | False>
+   If **false** then the job may be matched to a machine where the job
+   has no access to the networking.  This may allow the job to run in
+   more places than it otherwise would. Default is true.
 
  :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the

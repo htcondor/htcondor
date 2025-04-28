@@ -65,6 +65,7 @@ env.cpp
 env.h
 except.cpp
 file_lock.cpp
+FileTransferControlBlock.cpp
 filename_tools.cpp
 get_random_num.cpp
 HashTable.cpp
@@ -85,7 +86,6 @@ strcasestr.cpp
 strupr.cpp
 subsystem_info.cpp
 subsystem_info.h
-ToE.cpp
 user_log_header.cpp
 user_log_header.h
 utc_time.cpp
@@ -455,7 +455,6 @@ time_offset.cpp
 time_offset.h
 tmp_dir.cpp
 tmp_dir.h
-ToE.h
 token_cache.h
 tokener.cpp
 tokener.h
@@ -643,6 +642,10 @@ condor_shared_lib(condor_utils
 	$<TARGET_OBJECTS:condor_utils_objects>
 	$<TARGET_OBJECTS:condor_extra_objects>
 )
+if (WINDOWS)
+	target_link_libraries(condor_utils PUBLIC "${CONDOR_WIN_LIBS}")
+endif()
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
         if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)

@@ -887,7 +887,7 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 		m_expected_subject = jti;
 	}
 	if (jwt.has_payload_claim("cap")) {
-		capability = jwt.get_payload_claim("cap").as_bool();
+		capability = jwt.get_payload_claim("cap").as_boolean();
 	}
 	if( capability || ! jwt.has_subject() ) {
 		dprintf(D_SECURITY|D_VERBOSE, "JWT is a capability or has no subject, looking up in database\n");
@@ -1081,31 +1081,18 @@ Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt<jwt::traits::kazuho_pi
 		return false;
 	}
 	classad::ClassAd ad;
-	auto claims = jwt.get_payload_claims();
+	auto claims = jwt.get_payload_json();
 	for (const auto &pair : claims) {
 		bool inserted = true;
 		const auto &claim = pair.second;
-		switch (claim.get_type()) {
-		//case jwt::json::type::null:
-		//	inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
-		//	break;
-		case jwt::json::type::boolean:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
-			break;
-		case jwt::json::type::integer:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
-			break;
-		case jwt::json::type::number:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
-			break;
-		case jwt::json::type::string:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
-			break;
-		// TODO: these are not currently supported
-		case jwt::json::type::array: // fallthrough
-		case jwt::json::type::object: // fallthrough
-		default:
-			break;
+		if (claim.is<bool>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<bool>());
+		} else if (claim.is<int64_t>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<int64_t>());
+		} else if (claim.is<double>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<double>());
+		} else if (claim.is<std::string>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<std::string>());
 		}
 
 			// If, somehow, we can't build the ad, be paranoid,

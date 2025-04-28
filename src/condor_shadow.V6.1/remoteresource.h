@@ -343,7 +343,7 @@ class RemoteResource : public Service {
 		/** Return true if we received a job_exit syscall from the
 			starter, false if not.
 		*/
-	bool gotJobExit() const { return m_got_job_exit; };
+	bool gotJobDone() const { return m_got_job_done; };
 
 		/** If the job on this resource exited with a signal, return
 			the signal.  If not, return -1. */
@@ -541,7 +541,7 @@ private:
 
 	bool already_killed_graceful;
 	bool already_killed_fast;
-	bool m_got_job_exit;
+	bool m_got_job_done; // set by the mis-named job_exit syscall, it means the starter is about to exit
 
 	bool m_wait_on_kill_failure;
 
@@ -553,8 +553,13 @@ private:
 	void attemptShutdownTimeout( int timerID = -1 );
 	void attemptShutdown();
 	int transferStatusUpdateCallback(FileTransfer *transobject);
+
+	bool doneInitFileTransfer {false};
 };
 
+// Refactored out of initFileTransfer() so we have a chance of checking
+// the input files we'll actually be sending.
+void modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd );
 
 #endif
 

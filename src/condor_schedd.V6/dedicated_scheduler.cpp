@@ -1582,7 +1582,7 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( int cluster : *idle_clusters) {
 		int proc = 0;
 		owner_str = "";
-		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
+		GetAttributeString( cluster, proc, ATTR_USER, owner_str );
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
 				 proc, owner_str.c_str() );
 	}
@@ -1991,7 +1991,7 @@ DedicatedScheduler::spawnJobs( )
 
 			// add job to run queue, though the shadow pid is still 0,
 			// since there's not really a shadow just yet.
-		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1 );
+		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1, nullptr );
 
 		srec->is_reconnect = allocation->is_reconnect;
 

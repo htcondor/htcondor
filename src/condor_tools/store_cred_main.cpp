@@ -707,6 +707,10 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 					err = true;
 				}
 			}
+			if (cred_type == STORE_CRED_USER_OAUTH && opts->service == nullptr) {
+				fprintf(stderr, "ERROR: add-oauth command requires a service name\n");
+				err = true;
+			}
 			// when storing Krb credentials, we want to wait for the credmon to process
 			if ((cred_type == STORE_CRED_USER_KRB) && ! no_wait) {
 				opts->mode |= STORE_CRED_WAIT_FOR_CREDMON;

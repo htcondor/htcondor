@@ -881,6 +881,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					m_sock->setTriedAuthentication(tried_authentication);
 					m_sock->setSessionID(session->id());
+					m_sock->setPolicyAd(*m_policy);
 				}
 
 				// If the cached policy doesn't have a version, then
@@ -1542,11 +1543,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			std::string authz_policy;
 			bool can_attempt = true;
 			bool has_capability = false;
-			if (m_policy) {
-				if (m_policy->EvaluateAttrString("TokenCapabilities", authz_policy)) {
+			const ClassAd* policy_ad = m_policy ? m_policy : m_sock->getPolicyAd();
+			if (policy_ad) {
+				if (policy_ad->EvaluateAttrString("TokenCapabilities", authz_policy)) {
 					has_capability = true;
 				} else {
-					m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
+					policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
 				}
 			}
 			if (!authz_policy.empty()) {

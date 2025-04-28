@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from htcondor import dags
+from htcondor2 import dags
 
 
 def test_dag_contains_child(dag):

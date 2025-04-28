@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,47 +17,79 @@
  *
  ***************************************************************/
 
-// dagman_commands.C
-
 #include "condor_common.h"
 #include "dagman_main.h"
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
-#include "submit_utils.h"
 
-bool
-PauseDag(Dagman &dm)
-{
-	if( dm.paused == true ) {
-			// maybe this should be a warning rather than an error,
-			// but it probably indicates that the caller doesn't know
-			// what the h*** is going on, so I'd rather catch it here
-		debug_printf( DEBUG_NORMAL, "ERROR: PauseDag() called on an "
-					  "already-paused DAG\n" );
-		return false;
+static void
+command_halt(const ClassAd& request, Dagman& dm) {
+	bool pause = false;
+
+	if (request.LookupBool("IsPause", pause) && pause) {
+		debug_printf(DEBUG_NORMAL, dm.paused ? "DAG Pause: Already-paused DAG\n" : "DAG Pause: Freezing all work...\n");
+		dm.paused = true;
+	} else if (dm.dag->IsHalted()) {
+		debug_printf(DEBUG_NORMAL,  "DAGMan is already halted\n");
+	} else {
+		debug_printf(DEBUG_NORMAL, "Halting DAGMan progess...\n");
+		dm.dag->Halt();
+		dm.update_ad = true;
 	}
-	debug_printf( DEBUG_NORMAL, "DAGMan event-processing paused...\n" );
-	dm.paused = true;
-	return true;
+
+	std::string reason;
+	if (request.LookupString("HaltReason", reason)) {
+		debug_printf(DEBUG_NORMAL, "%s reason: %s\n", pause ? "Pause" : "Halt", reason.c_str());
+	}
+}
+
+static void
+command_resume(Dagman& dm) {
+	// Resume clear both pause and halt (in case both have been set for some reason)
+	if (dm.paused) {
+		debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
+		dm.paused = false;
+	}
+
+	if (dm.dag->IsHalted()) {
+		debug_printf(DEBUG_NORMAL, "Resuming DAG progress...\n");
+		dm.dag->UnHalt();
+		dm.update_ad = true;
+	}
 }
 
 bool
-ResumeDag(Dagman &dm)
-{
-	if( dm.paused != true ) {
-		debug_printf( DEBUG_NORMAL, "ERROR: ResumeDag() called on an "
-					  "un-paused DAG\n" );
+handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
+	int cmd = 0;
+	if ( ! request.LookupInteger("DagCommand", cmd)) {
+		response.InsertAttr(ATTR_ERROR_STRING, "No DAG command provided in request");
 		return false;
 	}
-		// TODO: if/when we have a DAG sanity-checking routine, this
-		// might be a good place to call it; for now, it's the
-		// responsibility of the user modifying the DAG (and to some
-		// degree, the dag modification routines) to make sure they
-		// get everything right...
-	debug_printf( DEBUG_NORMAL, "DAGMan event-processing resuming...\n" );
-	dm.paused = false;
-	return true;
+
+	std::string error;
+
+	if (cmd <= (int)DAG_GENERIC_CMD::MIN || cmd >= (int)DAG_GENERIC_CMD::MAX) {
+		formatstr(error, "Unknown DAG command (%d) provided", cmd);
+	} else {
+		switch (static_cast<DAG_GENERIC_CMD>(cmd)) {
+			case DAG_GENERIC_CMD::HALT:
+				command_halt(request, dm);
+				break;
+			case DAG_GENERIC_CMD::RESUME:
+				command_resume(dm);
+				break;
+			default:
+				formatstr(error, "DAG command (%d) not implemented", cmd);
+				break;
+		}
+	}
+
+	if ( ! error.empty()) {
+		response.InsertAttr(ATTR_ERROR_STRING, error);
+	}
+
+	return error.empty();
 }
 
 Node*

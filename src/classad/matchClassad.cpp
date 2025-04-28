@@ -240,7 +240,7 @@ ClassAd *MatchClassAd::
 RemoveLeftAd( )
 {
 	ClassAd *ad = lad;
-	Remove( "LEFT" );
+	std::ignore = Remove( "LEFT" );
 	if( lad ) {
 		lad->SetParentScope( ladParent );
 		if ( _useOldClassAdSemantics && rad ) {
@@ -258,7 +258,7 @@ ClassAd *MatchClassAd::
 RemoveRightAd( )
 {
 	ClassAd	*ad = rad;
-	Remove( "RIGHT" );
+	std::ignore = Remove( "RIGHT" );
 	if( rad ) {
 		rad->SetParentScope( radParent );
 		if ( _useOldClassAdSemantics && lad ) {

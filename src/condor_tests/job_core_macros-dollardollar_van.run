@@ -66,15 +66,15 @@ $success = sub
 	foreach my $item ( @lines )
 	{
 		#CondorTest::debug("ARG -$item-\n",1);
-		if($item =~ /^(.*\..*)$/) {
+		if($item =~ /^MACHINE:(.*)$/) {
 			print "MACHINE:$1\n";
 			$statusmachines = $1;
-		} elsif($item =~ /^(\/be\/here\/now).*$/) {
+		} elsif($item =~ /^WONTBE:(\/be\/here\/now).*$/) {
 			print "WONTBE:$1\n";
 			$wontbe = $1;
 			# last arg quit looking for these three things
 			last;
-		} elsif($item =~ /^(\d+)$/) {
+		} elsif($item =~ /^MEMORY:(\d+)$/) {
 			$statusmemory = $1;
 			print "MEMORY:$statusmemory\n";
 		}
@@ -149,7 +149,7 @@ $success = sub
 				RegisterResult(0,"test_name", $testname);
 			}
 		}
-		elsif( $name =~ /^\s*MACHINE\s+=\s+(.*\..*)\s*$/ )
+		elsif( $name =~ /^\s*MACHINE\s+=\s+(.*)\s*$/ )
 		{
 			if( $1 eq $machinename) {
 				$envmachinefound = 1;

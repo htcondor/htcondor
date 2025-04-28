@@ -256,6 +256,8 @@ public:
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
 
+	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
+
 private:
 
     void _remove_files_from_output();

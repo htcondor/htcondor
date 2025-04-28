@@ -234,7 +234,7 @@ ResState::eval_policy( void )
 				// This allows startd policies to put jobs on hold during
 				// draining.
 				if( 1 == rip->eval_preempt() ) {
-					rip->preemptIsTrue();
+					rip->setPreemptIsTrue();
 				}
 
 				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
@@ -261,7 +261,7 @@ ResState::eval_policy( void )
 				// irreversible retirement
 				// TLM: STATE TRANSITION #12
 				// TLM: STATE TRANSITION #16
-				rip->preemptIsTrue();
+				rip->setPreemptIsTrue();
 				rip->setBadputCausedByPreemption();
 				return rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
 			}

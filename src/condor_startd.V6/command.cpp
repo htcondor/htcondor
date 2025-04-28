@@ -25,7 +25,6 @@
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
-#include "ToE.h"
 
 #include <map>
 using std::map;
@@ -33,7 +32,7 @@ using std::map;
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
-static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
+static int deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done);
 
 int
 command_handler(int cmd, Stream* stream )
@@ -57,18 +56,20 @@ command_handler(int cmd, Stream* stream )
 		break;
 	case DEACTIVATE_CLAIM:
 	case DEACTIVATE_CLAIM_FORCIBLY:
-		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
+	case DEACTIVATE_CLAIM_JOB_DONE:
+		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM,cmd == DEACTIVATE_CLAIM_JOB_DONE);
 		break;
 	}
 	return rval;
 }
 
 int
-deactivate_claim(Stream *stream, Resource *rip, bool graceful)
+deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done)
 {
 	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, rip);
 	ep_event.Ad().Assign("Force", !graceful);
 	ep_event.Ad().Assign("Success", false); // assume failure
+	if (job_done) ep_event.Ad().Assign("JobDone", true);
 
 	static int failureMode = -1;
 	if( failureMode == -1 ) {
@@ -80,7 +81,29 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 	}
 
 	int rval = 0;
-	bool claim_is_closing = rip->curClaimIsClosing();
+
+	// are factors external to the claim telling us to close the claim?
+	bool claim_is_closing = rip->hasPreemptingClaim()
+		|| rip->activity() == retiring_act
+		|| rip->state() == preempting_state
+		|| rip->isDraining();
+
+	// check the claim itself to see if it will permit reactivation
+	// we may want to re-revaluate CLAIM_WORKLIFE here, give it a last chance to object
+	if ( ! claim_is_closing && rip->r_cur) {
+		if ( ! rip->r_cur->mayReactivate() || rip->claimWorklifeExpired()) {
+			claim_is_closing = true;
+		}
+	}
+	if (claim_is_closing) ep_event.Ad().Assign("Closing", true);
+
+	if (job_done) {
+		if (rip->deactivate_claim_job_done(stream, claim_is_closing)) {
+			// starter is still unreaped, so we want to wait for it to reap.
+			// before we reply to the deactivate
+			return KEEP_STREAM;
+		}
+	}
 
 		// send response to shadow before killing starter to avoid a
 		// 3-way deadlock (under windows) where startd blocks trying to
@@ -99,33 +122,10 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 		claim_is_closing = false;
 	}
 
-	if( rip->r_cur ) {
-		struct timeval when;
-		// This ClassAd gets delete()d by toe when toe goes out of scope,
-		// because Insert() transfers ownership.
-		classad::ClassAd * tag = new classad::ClassAd();
-		condor_gettimestamp( when );
-		tag->InsertAttr( "Who", stream->peer_description() );
-		if( graceful ) {
-			tag->InsertAttr( "HowCode", ToE::DeactivateClaim );
-			tag->InsertAttr( "How", ToE::strings[ToE::DeactivateClaim] );
-		} else {
-			tag->InsertAttr( "HowCode", ToE::DeactivateClaimForcibly );
-			tag->InsertAttr( "How", ToE::strings[ToE::DeactivateClaimForcibly] );
-		}
-		tag->InsertAttr( "When", (long long)when.tv_sec );
-
-		classad::ClassAd toe;
-		toe.Insert(ATTR_JOB_TOE, tag );
-
-		std::string jobAdFileName;
-		formatstr( jobAdFileName, "%s/dir_%d/.job.ad", rip->r_cur->executeDir(), rip->r_cur->starterPID() );
-		ToE::writeTag( & toe, jobAdFileName );
-
+	if( rip->r_cur && ! job_done) {
 		if(graceful) {
 			rval = rip->deactivate_claim();
-		}
-		else {
+		} else {
 			rval = rip->deactivate_claim_forcibly();
 		}
 	}
@@ -1133,6 +1133,15 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		goto abort;
 	}
 
+	// For static slots we need a pre-check to see if the START expression is true for this job.
+	// Otherwise we may end up detecting that it is not true after we have already claimed the slot
+	// Which can result in the claim object and stream being deleted out from under us
+	// by the code in ResState, (which we are all afraid to change - sigh).   see HTCONDOR-3013
+	if (rip->is_static_slot() && !rip->willingToRun(req_classad)) {
+		refuse(stream);
+		goto abort;
+	}
+
 	// When a pslot is already claimed, only the schedd that claimed it
 	// can do new dslot requests.
 	req_classad->LookupString(ATTR_SCHEDD_NAME, schedd_name);
@@ -1146,6 +1155,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 		pslot_already_claimed = true;
 	}
+
 
 	// If we are being claimed to go to work for another CM
 	// check here.

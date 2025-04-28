@@ -301,15 +301,6 @@ bool render_owner (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 	if ( ! ad->LookupString(ATTR_OWNER, out))
 		return false;
 
-#ifdef NO_DEPRECATE_NICE_USER
-	int niceUser;
-	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-		char tmp[sizeof(NiceUserName)+2];
-		strcpy(tmp, NiceUserName);
-		strcat(tmp, ".");
-		out.insert(0, tmp);
-	}
-#endif
 	return true;
 }
 

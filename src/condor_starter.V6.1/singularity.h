@@ -44,6 +44,7 @@ public:
 			classad::ClassAd &jobAd,
 			std::string &exec,
 			ArgList &args,
+			const std::string &slot_dir,
 			const std::string &job_iwd,
 			const std::string &execute_dir,
 			Env &env,

@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 198> makeCommandTable() {
+std::array<std::pair<int, const char *>, 201> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -121,8 +121,8 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 
 //#define AVAILABILITY		(SCHED_VERS+12)		/* Not used */
 //		{AVAILABILITY, "AVAILABILITY"},
-//#define NUM_FRGN_JOBS		(SCHED_VERS+13)		/* Not used */
-//		{NUM_FRGN_JOBS, "NUM_FRGN_JOBS"},
+#define DEACTIVATE_CLAIM_JOB_DONE		(SCHED_VERS+13)		/* formerly NUM_FRGN_JOBS */
+		{DEACTIVATE_CLAIM_JOB_DONE, "DEACTIVATE_CLAIM_JOB_DONE"},
 //#define STARTD_INFO			(SCHED_VERS+14)		/* Not used */
 //		{STARTD_INFO, "STARTD_INFO"},
 //#define SCHEDD_INFO			(SCHED_VERS+15)		/* Not used */
@@ -386,13 +386,15 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 		{RESET_USERREC, "RESET_USERREC"},
 #define DELETE_USERREC    (SCHED_VERS+149)
 		{DELETE_USERREC, "DELETE_USERREC"},
-#define PLACEMENT_USER_LOGIN    (SCHED_VERS+150)
+#define GET_CONTACT_INFO  (SCHED_VERS+150) // Ask Schedd for child daemons contact information (addr and secret) Note: Used for DAGMan
+		{GET_CONTACT_INFO, "GET_CONTACT_INFO"},
+#define PLACEMENT_USER_LOGIN    (SCHED_VERS+151)
 		{PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN"},
-#define PLACEMENT_QUERY_USERS    (SCHED_VERS+151)
+#define PLACEMENT_QUERY_USERS    (SCHED_VERS+152)
 		{PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS"},
-#define PLACEMENT_QUERY_TOKENS    (SCHED_VERS+152)
+#define PLACEMENT_QUERY_TOKENS    (SCHED_VERS+153)
 		{PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS"},
-#define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+153)
+#define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+154)
 		{PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
@@ -616,6 +618,11 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 		{FILETRANS_UPLOAD,"FILETRANS_UPLOAD"},
 #define FILETRANS_DOWNLOAD (FILETRANSFER_BASE+1)
 		{FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD"},
+
+// Commands for DAGMan
+#define DAGMAN_BASE 61500
+#define DAGMAN_GENERIC (DAGMAN_BASE+0)
+		{DAGMAN_GENERIC, "DAGMAN_GENERIC"}, // Generic send payload ad with more details and return result ad
 
 
 /*

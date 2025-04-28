@@ -206,6 +206,9 @@ Requires: cryptsetup
 
 Requires: /usr/sbin/sendmail
 
+# Docker credential processing uses json query
+Requires: jq
+
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
@@ -277,13 +280,19 @@ Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 %endif
 Requires: rsync
-Requires: condor-upgrade-checks
 
 # Support OSDF client
-%if 0%{?rhel} == 7
-Requires: pelican-osdf-compat >= 7.1.4
+Requires: pelican >= 7.15.1
+Requires: pelican-osdf-compat >= 7.15.1
+
+# Require tested Apptainer
+%if 0%{?rhel} != 7
+%if 0%{?suse_version}
+# Unfortunately, openSUSE is lagging behind
+Requires: apptainer >= 1.3.6
 %else
-Recommends: pelican-osdf-compat >= 7.1.4
+Requires: apptainer >= 1.3.6
+%endif
 %endif
 
 %if 0%{?rhel} != 7
@@ -323,6 +332,7 @@ Provides: blahp = %{version}-%{release}
 Obsoletes: blahp < 9.5.0
 %endif
 
+%if 0%{?rhel} <= 9
 # externals package discontinued as of 10.8.0
 Obsoletes: %{name}-externals < 10.8.0
 Provides: %{name}-externals = %{version}-%{release}
@@ -346,6 +356,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+
+# upgrade-checks package discontinued as of 24.8.0
+Obsoletes: %{name}-upgrade-checks < 24.8.0
+Provides: %{name}-upgrade-checks = %{version}-%{release}
+%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -625,18 +640,6 @@ on a non-EC2 image.
 if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
-
-#######################
-%package upgrade-checks
-Summary: Script to check for manual interventions needed to upgrade
-Group: Applications/System
-
-%description upgrade-checks
-Examines the current HTCondor installation and recommends changes to ensure
-a smooth upgrade to a subsequent HTCondor version.
-
-%files upgrade-checks
-%_bindir/condor_upgrade_check
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -978,6 +981,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/cleanup_locally_mounted_checkpoint
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
+%_libexecdir/condor/check-url
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
@@ -1202,6 +1206,7 @@ rm -rf %{buildroot}
 %_bindir/condor_ssh_start
 %_bindir/condor_test_token
 %_bindir/condor_manifest
+%_bindir/condor_upgrade_check
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1210,6 +1215,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_docker_pat_producer
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_ft-gahp
@@ -1514,6 +1520,44 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.3-1
+- condor_who now works for Glideins
+- Can add arbitrary credentials to be used by the file transfer plugins
+- Fixed WLCG token generation in the local credmon
+- Can limit the number of times that a job can be released
+- EP administrators can enforce no outbound networking for jobs
+- Add ability to use authentication when fetching Docker images
+- condor_watch_q now displays when file transfer is happening
+- To provide more consistency, using swap for jobs is disabled by default
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-1
+- With delegated cgroups v2, job out-of-memory no longer affects the pilot
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-1
+- HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.24-1
+- Fix inflated cgroups v2 memory usage reporting for Docker jobs
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.6.1-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.6-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 20 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.2-1
+- Disable broken slot code by default
+
 * Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.1-1
 - Can now configure APs to acquire credentials for jobs in multiple ways
 - HTCondor marks slots as broken when the slot resources cannot be released

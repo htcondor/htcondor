@@ -38,7 +38,7 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
     add_executable( ${_CNDR_TARGET} ${_SRCS})
 
 	# always link in the condor_version.o for CondorVersion to parse
-    condor_set_link_libs( ${_CNDR_TARGET} "condor_version_obj;${_LINK_LIBS}")
+	target_link_libraries(${_CNDR_TARGET} PRIVATE "condor_version_obj;${_LINK_LIBS}")
 	add_dependencies(${_CNDR_TARGET} condor_version_obj)
 
     set(${_CNDR_TARGET}_loc ${_INSTALL_LOC})

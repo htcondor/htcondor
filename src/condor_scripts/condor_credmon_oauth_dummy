@@ -37,7 +37,7 @@ import sys
 import time
 import signal
 import htcondor2 as htcondor
-from classad import parseAds
+from classad2 import parseAds
 from datetime import datetime
 from pathlib import Path
 from traceback import format_exc

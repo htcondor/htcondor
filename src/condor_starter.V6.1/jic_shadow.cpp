@@ -19,7 +19,9 @@
 
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
 #include "condor_version.h"
 
 #include "starter.h"
@@ -46,6 +48,8 @@
 #include "zkm_base64.h"
 #include <filesystem>
 #include "manifest.h"
+#include "tmp_dir.h"
+#include "set_user_priv_from_ad.h"
 
 #include <algorithm>
 
@@ -322,6 +326,22 @@ JICShadow::init( void )
 				 "to run this job as, aborting\n" );
 		return false;
 	}
+
+#ifndef WINDOWS
+	{
+		uid_t uid = get_user_uid();
+		
+		if (uid == (uid_t)-1) {
+			// the personal condor case
+			uid = getuid();
+		}
+
+		struct passwd *user_info  = getpwuid(uid);
+		if (user_info != nullptr) {
+			job_ad->Assign(ATTR_JOB_OS_HOME_DIR, user_info->pw_dir);
+		}
+	}
+#endif
 
 		// Now that we have the user_priv, we can make the temp
 		// execute dir
@@ -647,15 +667,14 @@ JICShadow::transferOutput( bool &transient_failure )
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
+				updateShadowWithPluginResults("Output");
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+			updateShadowWithPluginResults("Output");
 		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
-
-
-		updateShadowWithPluginResults("Output");
 
 
 		const char *stats = m_ft_info.tcp_stats.c_str();
@@ -767,6 +786,9 @@ JICShadow::transferOutputMopUp(void)
 void
 JICShadow::allJobsGone( void )
 {
+	if (filetrans) {
+		filetrans->abortActiveTransfer();
+	}
 	if ( shadow_version && shadow_version->built_since_version(8,7,8) ) {
 		dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
 		starter->StarterExit( starter->GetShutdownExitCode() );
@@ -1098,6 +1120,14 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 			double recvd = bytesReceived()/(1024*1024.0);
 			dprintf(D_ZKM, "final_update ad %d Transfer MB sent=%.6f recvd=%.6f\n", will_update, sent, recvd);
 		}
+	} else {
+		// Send the effect scratch dir path to starter, we already sent it to the shadow in the starter ad
+		// and we *don't* want to send it to the shadow to be incorporated into the job ad.
+		// TODO figure out a way to only send this once? maybe we should have an initial_update as well as a final update?
+		const char * sandbox_dir = starter->GetWorkingDir(false);
+		if (sandbox_dir && sandbox_dir[0]) {
+			ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
+		}
 	}
 
 	// update the startd's copy of the job ClassAd
@@ -1371,9 +1401,10 @@ JICShadow::initUserPriv( void )
 
 	std::string owner;
 	if( run_as_owner ) {
-		if( job_ad->LookupString( ATTR_OWNER, owner ) != 1 ) {
-			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-			         ATTR_OWNER );
+		if( job_ad->LookupString( ATTR_OS_USER, owner ) == false &&
+		    job_ad->LookupString( ATTR_OWNER, owner ) == false ) {
+			dprintf( D_ALWAYS, "ERROR: %s and %s not found in JobAd.  Aborting.\n", 
+			         ATTR_OS_USER, ATTR_OWNER );
 			return false;
 		}
 	}
@@ -1406,7 +1437,8 @@ JICShadow::initUserPriv( void )
 			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
 			// possible this call will fail.  We don't want to fill up
 			// the logs with scary and misleading error messages.
-		if( init_user_ids_quiet(owner.c_str()) ) {
+			// TODO init_user_ids_from_ad() doesn't have a quiet option
+		if( init_user_ids_from_ad(*job_ad) ) {
 			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 			         owner.c_str() );
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
@@ -2119,6 +2151,11 @@ JICShadow::getDelayedUpdate( const std::string &name )
 	return expr;
 }
 
+int 
+JICShadow::fetch_docker_creds(const ClassAd &query, ClassAd &creds) {
+	return REMOTE_CONDOR_get_docker_creds(query, creds);
+}
+
 bool
 JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// Construct the list of attributes to pull from the slot's update ad.
@@ -2164,7 +2201,15 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	bool published = false;
 	if(! m_job_update_attrs.empty()) {
 
-		std::string updateAdPath = ".update.ad";
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/%s",
+			starter->GetWorkingDir(0), ".update.ad"
+		);
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			formatstr( updateAdPath, "%s/%s",
+				starter->GetWorkingDir(0), "../htcondor/.update.ad"
+			);
+		}
 		FILE * updateAdFile = NULL;
 		{
 			TemporaryPrivSentry p( PRIV_USER );
@@ -2801,27 +2846,27 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			}
 		}
 
-			// If we transferred the executable, make sure it
+			// chmod +x the executable, but only if it is in the scratch dir
 			// has its execute bit set.
-		bool xferExec = true;
-		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
-
 		std::string cmd;
-		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) && xferExec)
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd))
 		{
 				// if we are running as root, the files were downloaded
 				// as PRIV_USER, so switch to that priv level to do chmod
-			priv_state saved_priv = set_priv( PRIV_USER );
+			TemporaryPrivSentry _(PRIV_USER);
 
-			if (chmod(condor_basename(cmd.c_str()), 0755) == -1) {
-				dprintf(D_ALWAYS,
-				        "warning: unable to chmod %s to "
-				            "ensure execute bit is set: %s\n",
-				        condor_basename(cmd.c_str()),
-				        strerror(errno));
+			std::string cmd_basename = condor_basename(cmd.c_str());
+			std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
+				DIR_DELIM_CHAR	 + cmd_basename;
+			if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
+				if (errno != ENOENT) {
+					dprintf(D_ALWAYS,
+							"warning: unable to chmod %s to "
+							"ensure execute bit is set: %s\n",
+							condor_basename(cmd.c_str()),
+							strerror(errno));
+				}
 			}
-
-			set_priv( saved_priv );
 		}
 	}
 
@@ -3510,7 +3555,6 @@ print_directory( FILE * f, DIR * d, const char * prefix ) {
 void
 JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 
-	// Assumes we're in the root of the sandbox.
 	FILE * file = starter->OpenManifestFile(filename, add_to_output);
 	if( file == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
@@ -3518,7 +3562,26 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 		return;
 	}
 
-	// Assumes we're in the root of the sandbox.
+    // The execute directory is now owned by the user and mode 0700 by default.
+	TemporaryPrivSentry sentry(PRIV_USER);
+	if ( get_priv_state() != PRIV_USER ) {
+		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
+		return;
+	}
+
+	// The starter's CWD should only ever temporarily not be the job
+	// sandbox directory, and this code shouldn't ever be called in
+	// the middle of any of those temporaries, but as long as we're
+	// copying from OpenManifestFile(), let's do everything right.
+	std::string errMsg;
+	TmpDir tmpDir;
+	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(0),errMsg)) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
+			filename, starter->GetWorkingDir(0));
+		fclose(file);
+		return;
+	}
+
 	DIR * dir = opendir(".");
 	if( dir == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",

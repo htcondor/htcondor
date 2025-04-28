@@ -174,6 +174,14 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 		}
 		return false;
 	}
+
+	// for backward compatibility, add missing Request<Attr> attributes to the job
+	// if the slot type is STATIC, since static slots now check WithinResourceLimits
+	if (rip->get_feature() == Resource::ResourceFeature::STANDARD_SLOT) {
+		if ( ! job_ad->Lookup(ATTR_REQUEST_CPUS)) { job_ad->Assign(ATTR_REQUEST_CPUS, 1); }
+		if ( ! job_ad->Lookup(ATTR_REQUEST_MEMORY)) { job_ad->Assign(ATTR_REQUEST_MEMORY, 1); }
+		if ( ! job_ad->Lookup(ATTR_REQUEST_DISK)) { job_ad->Assign(ATTR_REQUEST_DISK, 1); }
+	}
 	
 	bool willing = true;
 	if(rip->state() == preempting_state) {

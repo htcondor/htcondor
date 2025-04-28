@@ -48,7 +48,7 @@ AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
 }
 
 AttributeReference::
-AttributeReference(const AttributeReference &ref)
+AttributeReference(const AttributeReference &ref) : ExprTree()
 {
     CopyFrom(ref);
     return;

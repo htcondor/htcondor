@@ -76,13 +76,13 @@ There are three types of slots: Partitionable, Dynamic, and Static.
 
 Partitionable Slots
 '''''''''''''''''''
-:index:`Slot Types<single; Slot Type; Partionable>`
+:index:`Slot Types<single; Slot Type; Partitionable>`
 
 By default, each EP starts out with one partitionable slot, which represents
 all the detected resources on the machine.  Attributes like :ad-attr:`Memory`,
 :ad-attr:`Disk` and :ad-attr:`Cpus` describe how much is available.  However, no jobs run
-directly in Partionable slots.  Rather, partitionable slots serve as a parent
-for Dynamic slots.  Partionable slots have the attribute :ad-attr:`SlotType` set to
+directly in Partitionable slots.  Rather, partitionable slots serve as a parent
+for Dynamic slots.  Partitionable slots have the attribute :ad-attr:`SlotType` set to
 ``Partitionable``, and ``PartionableSlot`` set to ``True``, and are sometimes
 called p-slots for convenience.  p-slots are named slotN@startd_name, where N
 is usually 1.  Although possible, it is rare to have multiple p-slots on one
@@ -96,7 +96,7 @@ Dynamic slots actually run jobs.  They are created dynamically, from the
 resources of their parent Partitionable Slot.  For example, assume a
 partitionable slot on a machine has 3 cpu cores, 10 Gb of Memory, and 100 Gb of
 disk. Then, when a job which is allocated 1 cpu core, 2 Gb of Memory and 20 Gb
-of disk is started under that partitionable slot, the partionable slot is left
+of disk is started under that partitionable slot, the partitionable slot is left
 with 2 cores, 8 Gb of memory and 80 Gb of disk.  A new dynamic slot is created
 with the allocated resources.  When the job exits, if the AP has another job
 that fits in the dynamic slot (or d-slot), the AP can reuse the d-slot for
@@ -521,8 +521,8 @@ as discussed in
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
 
-Preemption of Partionable Slots
-"""""""""""""""""""""""""""""""
+Preemption of Partitionable Slots
+"""""""""""""""""""""""""""""""""
 
 .. warning::
    Partionable slot preemption is an experimental feature, and may not
@@ -644,7 +644,7 @@ Read about per job PID namespaces
 The needed isolation of jobs from the same user that execute on the same
 machine as each other is already provided by the implementation of slot
 users as described in
-:ref:`admin-manual/security:user accounts in htcondor on unix platforms`. This
+:ref:`admin-manual/security:user accounts in htcondor on Unix platforms`. This
 is the recommended way to implement the prevention of interference between more
 than one job submitted by a single user. However, the use of a shared
 file system by slot users presents issues in the ownership of files
@@ -667,90 +667,19 @@ include
 This configuration variable defaults to ``False``, thus the use of per
 job PID namespaces is disabled by default.
 
-Group ID-Based Process Tracking
-'''''''''''''''''''''''''''''''
-
-One function that HTCondor often must perform is keeping track of all
-processes created by a job. This is done so that HTCondor can provide
-resource usage statistics about jobs, and also so that HTCondor can
-properly clean up any processes that jobs leave behind when they exit.
-
-.. note::
-
-   Group ID based process tracking has generally been replaced by
-   cgroup based tracking, which is more powerful and more general,
-   and requires less setup.  Group ID based process tracking may
-   be removed from HTCondor in the future.
-
-
-In general, tracking process families is difficult to do reliably. By
-default HTCondor uses a combination of process parent-child
-relationships, process groups, and information that HTCondor places in a
-job's environment to track process families on a best-effort basis. This
-usually works well, but it can falter for certain applications or for
-jobs that try to evade detection.
-
-Jobs that run with a user account dedicated for HTCondor's use can be
-reliably tracked, since all HTCondor needs to do is look for all
-processes running using the given account. Administrators must specify
-in HTCondor's configuration what accounts can be considered dedicated
-via the :macro:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
-:ref:`admin-manual/security:user accounts in htcondor on unix platforms` for
-further details.
-
-Ideally, jobs can be reliably tracked regardless of the user account
-they execute under. This can be accomplished with group ID-based
-tracking. This method of tracking requires that a range of dedicated
-group IDs (GID) be set aside for HTCondor's use. The number of GIDs that
-must be set aside for an execute machine is equal to its number of
-execution slots. GID-based tracking is only available on Linux, and it
-requires that HTCondor daemons run as root.
-
-GID-based tracking works by placing a dedicated GID in the supplementary
-group list of a job's initial process. Since modifying the supplementary
-group ID list requires root privilege, the job will not be able to
-create processes that go unnoticed by HTCondor.
-
-Once a suitable GID range has been set aside for process tracking,
-GID-based tracking can be enabled via the
-:macro:`USE_GID_PROCESS_TRACKING` parameter. The minimum and
-maximum GIDs included in the range are specified with the
-:macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` settings. For
-example, the following would enable GID-based tracking for an execute
-machine with 8 slots.
-
-.. code-block:: text
-
-    USE_GID_PROCESS_TRACKING = True
-    MIN_TRACKING_GID = 750
-    MAX_TRACKING_GID = 757
-
-If the defined range is too small, such that there is not a GID
-available when starting a job, then the *condor_starter* will fail as
-it tries to start the job. An error message will be logged stating that
-there are no more tracking GIDs.
-
-GID-based process tracking requires use of the :tool:`condor_procd`. If
-:macro:`USE_GID_PROCESS_TRACKING` is true, the :tool:`condor_procd` will be used
-regardless of the :macro:`USE_PROCD` setting.
-Changes to :macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` require a full
-restart of HTCondor.
-
 .. _resource_limits_with_cgroups:
 
-Cgroup-Based Process Tracking
+Cgroup Based Process Tracking
 '''''''''''''''''''''''''''''
 
 :index:`cgroup based process tracking`
 
-A new feature in Linux version 2.6.24 allows HTCondor to more accurately
-and safely manage jobs composed of sets of processes. This Linux feature
-is called Control Groups, or cgroups for short, and it is available
-starting with RHEL 6, Debian 6, and related distributions. Documentation
+All Linux versions supported by HTCondor have a kernel feature called
+cgroups.  Enterprise Linux 8 and older have cgroups v1, and all newer
+systems have cgroups v2.  Both allow HTCondor to more accurately
+and safely manage jobs composed of sets of processes.  Documentation
 about Linux kernel support for cgroups can be found in the Documentation
-directory in the kernel source code distribution. Another good reference
-is
-`http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html <http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html>`_
+directory in the kernel source code distribution.
 
 The interface between the kernel cgroup functionality is via a (virtual)
 file system, usually mounted at ``/sys/fs/cgroup``.
@@ -759,16 +688,84 @@ If your Linux distribution uses *systemd*, it will mount the cgroup file
 system, and the only remaining item is to set configuration variable
 :macro:`BASE_CGROUP`, as described below.
 
+Cgroup V2 Support
+'''''''''''''''''
+
+On Linux systems with cgroup v2 support, the *condor_starter* will put
+each job in it's own cgroup, and, by default, set the memory limit
+of the cgroup to the memory provisioned by slot, which is usually
+the amount requested by the job, perhaps rounded up.
+
+This is not something an administrator usually needs to worry about,
+but it does mean that jobs can be monitored with the standard cgroup V2
+tools, like system-cgtop.
+
+By default, HTCondor zeroes out the swap memory limit for the job cgroup,
+because if the job reaches the physical memory limit, and starts paging,
+it will get very slow, and can slow down the system.  The administrator
+can configure HTCondor not to do so, by setting 
+:macro:`DISABLE_SWAP_FOR_JOB` to false.
+
+HTCondor configures cgroup v2 so that any job can further subdivide the memory
+and cpu.  It does so by following the various rules imposed by the kernel.
+The first rule is that Unix processes can only live in the leaf nodes of the
+cgroup tree.  This implies that if a job wants to make a sub-cgroup, it cannot
+simply make a subdirectory of the cgroup it lives in, for then it would live
+in an interior node.  One way to work around this restriction is to create
+a subdirectory, and immediately move the job into that subdirectory. This
+is clunky, and prone to race conditions when the job might be spawning processes
+of its own.  Rather, the starter creates two, nested directories for the job.
+The direct child of the starter's cgroup is the job's "slice".  HTCondor puts
+resource limits on the slice (and implictly on all children of the slice),
+and measures resource usage of the job by measuring the resource of the slice
+(again, and implicitly measuring the sum of the resources of all the child
+subcgroups of that slice).  When it is time to clean up the job, the starter
+removes the slice, and all sub-cgroups thereof.  The starter sets the Unix
+permissions on the slice so that the job can make subdirectories, and thus
+sub-cgroups of the job under the slice, and move processes into those sub-cgroups,
+without violating the kernel's rules about cgroup membership.  However, the
+permissions on the resource limits are set so that the job cannot change them.
+
+The Unix process of the job do not live in the slice, but rather in the
+"scope" cgroup, which is a child of the slice.  This is a leaf node, 
+so the job should never try to make a sub-cgroup of the scope.  This
+naming mimics the naming convention of systemd, but it is HTCondor, not systemd
+which creates and manages this cgroups.
+
+.. mermaid::
+    :caption: Cgroup V2 Organization for jobs
+    :align: center
+
+    flowchart TD
+      starter("`Cgroup 
+                of 
+                condor_starter`")
+      job_scope("`Cgroup
+                  for
+                  job scope`")
+      job_slice("`Cgroup
+                  for
+                  job slice`")
+      starter -->  job_scope
+      job_scope --> job_slice
+      style starter fill:pink
+      style job_scope fill:lightgreen
+      style job_slice fill:lightgreen
+
+In the diagram above, the starter's cgroup is red, as it is not modifiably by 
+the job, but the scope and slice are green to show that they are modifiable.
+
+Cgroup V1 Support
+'''''''''''''''''
+
 When cgroups are correctly configured and running, the virtual file
 system mounted on ``/sys/fs/cgroup`` should have several subdirectories under
 it, and there should an ``htcondor`` subdirectory under the directory
 ``/sys/fs/cgroup/cpu``, ``/sys/fs/cgroup/memory`` and some others.
 
-The *condor_starter* daemon uses cgroups by default on Linux systems to
-accurately track all the processes started by a job, even when
-quickly-exiting parent processes spawn many child processes. As with the
-GID-based tracking, this is only implemented when a :tool:`condor_procd`
-daemon is running.
+The *condor_starter* daemon uses cgroups v1 by default on Linux systems 
+with cgroup v1 support to accurately track all the processes started by a job, 
+even when quickly-exiting parent processes spawn many child processes.
 
 Kernel cgroups are named in a virtual file system hierarchy. HTCondor
 will put each running job on the execute node in a distinct cgroup. The
@@ -783,11 +780,11 @@ useful information about resource usage of this cgroup. See the kernel
 documentation for full details.
 
 Once cgroup-based tracking is configured, usage should be invisible to
-the user and administrator. The :tool:`condor_procd` log, as defined by
-configuration variable :macro:`PROCD_LOG`, will mention that it is using this
+the user and administrator. The StarterLog will mention that it is using this
 method, but no user visible changes should occur, other than the
 impossibility of a quickly-forking process escaping from the control of
-the *condor_starter*, and the more accurate reporting of memory usage.
+the *condor_starter*, the more accurate reporting of memory usage,
+and HTCondor putting jobs on hold that use more memory than they request.
 
 A cgroup-enabled HTCondor will install and handle a per-job (not per-process)
 Linux Out of Memory killer (OOM-Killer).  When a job exceeds the memory
@@ -806,10 +803,7 @@ Limiting Resource Usage Using Cgroups
 :index:`on resource usage with cgroup<single: on resource usage with cgroup; limits>`
 :index:`resource limits<single: resource limits; cgroups>`
 
-While the method described to limit a job's resource usage is portable,
-and it should run on any Linux or BSD or Unix system, it suffers from
-one large flaw. The flaw is that resource limits imposed are per
-process, not per job. An HTCondor job is often composed of many Unix
+An HTCondor job is often composed of many Unix
 processes. If the method of limiting resource usage with a user job
 wrapper is used to impose a 2 Gigabyte memory limit, that limit applies
 to each process in the job individually. If a job created 100 processes,
@@ -831,8 +825,7 @@ distributions such as RHEL 6 and Debian 6. This technique also may
 require editing of system configuration files.
 
 To enable cgroup-based limits, first ensure that cgroup-based tracking
-is enabled, as it is by default on supported systems, as described in
-section  `3.14.13 <#x42-3790003.14.13>`_. Once set, the
+is enabled.  Once set, the
 *condor_starter* will create a cgroup for each job, and set
 attributes in that cgroup to control memory and cpu usage. These
 attributes are the cpu.shares attribute in the cpu controller, and
@@ -847,7 +840,7 @@ By default, this whole size is the detected memory the size, minus
 RESERVED_MEMORY.  Or, if :macro:`MEMORY` is defined, that value is used..
 
 No limits will be set if the value is ``none``. The default is
-``none``. If the hard limit is in force, then the total amount of
+``hard``. If the hard limit is in force, then the total amount of
 physical memory used by the sum of all processes in this job will not be
 allowed to exceed the limit. If the process goes above the hard
 limit, the job will be put on hold.
@@ -866,7 +859,7 @@ that HTCondor measures virtual memory in kbytes, and physical memory in
 megabytes. To prevent jobs with high memory usage from thrashing and
 excessive paging, and force HTCondor to put them on hold instead, you
 can tell condor that a job should never use swap, by setting
-:macro:`DISABLE_SWAP_FOR_JOB` to true (the default is false).
+:macro:`DISABLE_SWAP_FOR_JOB` to true (the default is true).
 
 In addition to memory, the *condor_starter* can also control the total
 amount of CPU used by all processes within a job. To do this, it writes
@@ -1030,10 +1023,11 @@ that are only found in a request ClassAd, such as :ad-attr:`Owner` or
 the :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
-A note of caution is in order when modifying the :macro:`START` expression to
-reference job ClassAd attributes. When using the ``POLICY : Desktop``
-configuration template, the :macro:`IS_OWNER` expression is a function of the
-:macro:`START` expression:
+.. note::
+    Be cautious when modifying the :macro:`START` expression to
+    reference job ClassAd attributes. When using the ``POLICY : Desktop``
+    configuration template, the :macro:`IS_OWNER` expression is a function of the
+    :macro:`START` expression:
 
 .. code-block:: condor-classad-expr
 
@@ -3178,7 +3172,7 @@ Adding custom static attributes with STARTD_ATTRS
    this properly for the type of this expression.  In particular, strings
    are quoted with double-quotes, numeric and boolean values are not quoted,
    and neither are expressions.  Not quoting a value that should be a string
-   results in it be treated as an expression, which likely will evalute to
+   results in it be treated as an expression, which likely will evaluate to
    undefined, and lead to unexpected outcomes. However, expressions
    can be useful when used properly.  Examples of each type:
 
@@ -3539,7 +3533,7 @@ container. If an administrator wants to bind mount a directory only for
 some jobs, perhaps only those submitted by some trusted user, the
 setting :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
 class ad expression, evaluated in the context of the job ad and the
-machine ad. Only when it evaluted to TRUE, is the volume mounted.
+machine ad. Only when it evaluated to TRUE, is the volume mounted.
 Extending the above example,
 
 .. code-block:: condor-config
@@ -3602,16 +3596,11 @@ Enterprise Linux machine.
         HasDocker = true
         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
-By default, HTCondor will keep the 8 most recently used Docker images on the
-local machine. This number may be controlled with the configuration variable
-:macro:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the number of images,
-and the corresponding disk space, used by Docker.
-
 By default, Docker containers will be run with all rootly capabilities dropped,
 and with setuid and setgid binaries disabled, for security reasons. If you need
 to run containers with root privilege, you may set the configuration parameter
 :macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evaluates to false.
-This expression is evaluted in the context of the machine ad (my) and the job
+This expression is evaluated in the context of the machine ad (my) and the job
 ad (target).
 
 Docker support an enormous number of command line options when creating
@@ -3668,6 +3657,29 @@ memory limit:
 
     
 Note: :ad-attr:`Memory` is in MB, thus it needs to be scaled to bytes.
+
+Docker Image Management
+'''''''''''''''''''''''
+
+A Docker container must be run from a Docker image stored in the local docker image cache.
+HTCondor will automatically fetch the required image if it is not already in the local
+image cache of the Execution point when the job starts.  HTCondor will not remove this
+image from the cache when the job leaves the EP, in order to re-use the image and not
+require a remote fetch from some Docker hub the next time a job with this image runs
+on the same Execution Point.  However, in order to not fill up the local disk that holds
+the image cache, it will periodically delete older docker images in a least-recently-used
+method, trying to keep :macro:`DOCKER_IMAGE_CACHE_SIZE` images available.  The default
+value is 8.  HTCondor will only remove images from the docker cache that HTCondor
+has placed there.  To keep track of which images it owns, as of HTCondor 24.7,
+it tags every image in the cache with an tag name that begins with "htcondor.org".
+While this may look like there are twice the images in the cache, these tags act like
+hard links, and do not consume additional space.
+
+.. note::
+
+    HTCondor will not share
+    docker images across users, because some images may be protected, and HTCondor cannot
+    prove that one user should have access to another user's image.
 
 Apptainer and Singularity Support
 '''''''''''''''''''''''''''''''''

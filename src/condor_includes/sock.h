@@ -393,6 +393,7 @@ public:
 	void setAuthenticatedName(char const *auth_name);
 	const char *getAuthenticatedName() const;
 
+	bool hasAuthorizationBoundingSet() const;
 	bool isAuthorizationInBoundingSet(const std::string &) const;
 
 	void setCryptoMethodUsed(char const *crypto_method);
@@ -683,6 +684,8 @@ private:
 	   connection attempt.
 	 **/
 	void cancel_connect();
+
+	void computeAuthorizationBoundingSet() const;
 };
 
 void dprintf ( int flags, const Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);

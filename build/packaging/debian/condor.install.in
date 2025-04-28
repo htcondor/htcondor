@@ -63,6 +63,7 @@ usr/bin/condor_diagnostics
 usr/bin/condor_transfer_data
 usr/bin/condor_transform_ads
 usr/bin/condor_update_machine_ad
+usr/bin/condor_upgrade_check
 usr/bin/condor_userlog
 usr/bin/condor_userlog_job_counter
 usr/bin/condor_userprio
@@ -84,6 +85,7 @@ usr/libexec/condor/adstash
 usr/libexec/condor/annex
 usr/libexec/condor/box_plugin.py
 usr/libexec/condor/ce-audit.so
+usr/libexec/condor/check-url
 usr/libexec/condor/cleanup_locally_mounted_checkpoint
 usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
@@ -140,6 +142,7 @@ usr/sbin/condor_credd
 usr/sbin/condor_credmon_krb
 usr/sbin/condor_credmon_oauth
 usr/sbin/condor_credmon_vault
+usr/sbin/condor_docker_pat_producer
 usr/sbin/condor_fetchlog
 usr/sbin/condor_ft-gahp
 usr/sbin/condor_gridmanager

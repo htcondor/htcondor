@@ -228,6 +228,13 @@ Node::SetProcEvent(int proc, int event) {
 }
 
 //---------------------------------------------------------------------------
+bool
+Node::CheckBatchFailed(int tolerance) {
+	// TODO: Add per node overrides
+	return totalJobsFailed > tolerance;
+}
+
+//---------------------------------------------------------------------------
 void
 Node::PrintProcIsIdle() {
 	int proc = 0;

@@ -24,6 +24,10 @@ if ( CONDOR_BUILD_SHARED_LIBS )
 	set_target_properties( chirp_client_shared PROPERTIES OUTPUT_NAME chirp_client )
 endif()
 
+if (WINDOWS)
+	target_link_libraries(chirp_client ${CONDOR_WIN_LIBS})    
+endif(WINDOWS)
+
 condor_exe( condor_chirp "condor_chirp.cpp;${SAFE_OPEN_SRC}" ${C_LIBEXEC}
 "chirp_client" OFF )
 

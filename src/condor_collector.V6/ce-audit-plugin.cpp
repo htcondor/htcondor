@@ -36,6 +36,8 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
     if(! ad.LookupInteger("SlotID", integerSlotID)) { return; }
     formatstr(slotID, "%d", integerSlotID);
 
+    int errcode;
+    int erroffset;
     std::string matchRE;
     std::string indexName = name;
     ad.LookupString("GLIDEIN_MASTER_NAME", indexName);
@@ -45,7 +47,7 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
     } else {
         // names of form "slotN@" stop that name and all "slotN_M@" names
         Regex re;
-        bool success = re.compile( "^(slot[0-9]*)@.*'", nullptr, nullptr);
+        bool success = re.compile( "^(slot[0-9]*)@.*'", &errcode, &erroffset);
         if (!success) {
             EXCEPT("Programmer error:  unable to compile regexp: ^(slot[0-9]*)@.*");
         }
@@ -71,7 +73,7 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
                        std::back_inserter(stopJobs) );
         } else {
             Regex re;
-            bool success = re.compile(matchRE.c_str(), nullptr, nullptr);
+            bool success = re.compile(matchRE.c_str(), &errcode, &erroffset);
             if (!success) {
                 dprintf(D_AUDIT, "Unable to compile regexp: %s", matchRE.c_str());
             } else {

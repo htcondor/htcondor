@@ -29,7 +29,7 @@ if (LINUX AND WITH_LIBVIRT)
   )
 
   condor_exe( condor_vm-gahp "${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
-  target_link_libraries(condor_vm-gahp LIBVIRT::LIBVIRT)
+  target_link_libraries(condor_vm-gahp PRIVATE LIBVIRT::LIBVIRT)
 
 
    install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

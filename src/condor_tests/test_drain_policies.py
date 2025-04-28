@@ -29,6 +29,7 @@ from ornithology import (
 @config
 def condor_config():
     config = {
+        "NUM_CPUS": 2,
         "STARTD_DEBUG": "D_SUB_SECOND D_FULLDEBUG D_JOB",
         "MAXJOBRETIREMENTTIME": 300,
         "DISABLE_SWAP_FOR_JOB": True,

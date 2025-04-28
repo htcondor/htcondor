@@ -70,6 +70,9 @@ bool continue_to_advertise_broken_dslots = false;
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
 
+// set by NO_JOB_NETWORKING  on startup (indirectly from the Starter capabilities)
+bool want_job_networking_is_a_resource_request = false;
+
 // String Lists
 std::vector<std::string> startd_job_attrs;
 std::vector<std::string> startd_slot_attrs;
@@ -226,14 +229,20 @@ main_init( int, char* argv[] )
 	Starter::config();
 
 	ClassAd tmp_classad;
-	std::string starter_ability_list;
 	Starter::publish(&tmp_classad);
-	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
-	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
+	bool hasVM = false;
+	if (tmp_classad.LookupBool(ATTR_HAS_VM, hasVM) && hasVM) {
 		// Now starter has codes for vm universe.
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server
 		resmgr->m_vmuniverse_mgr.checkVMUniverse( false );
+	}
+
+	// if Starter has job networking disabled, we need to treat WantJobNetworking as a resource request
+	// this causes a clause to be added to WithinResourceLimits
+	bool has_job_networking = true;
+	if (tmp_classad.LookupBool(ATTR_HAS_JOB_NETWORKING, has_job_networking) && ! has_job_networking) {
+		want_job_networking_is_a_resource_request = true;
 	}
 
 		// Read in global parameters from the config file.
@@ -276,6 +285,8 @@ main_init( int, char* argv[] )
 
 	DockerAPI::pruneContainers();
 
+	DockerAPI::removeImagesInImageFile();
+
 		// Compute all attributes
 	resmgr->compute_static();
 
@@ -310,15 +321,19 @@ main_init( int, char* argv[] )
 		// make sense when we're in the claimed state.  So, we can
 		// handle them all with a common handler.  For all of them,
 		// you need DAEMON permission.
-	daemonCore->Register_Command( ALIVE, "ALIVE", 
-								  command_handler,
-								  "command_handler", DAEMON ); 
-	daemonCore->Register_Command( DEACTIVATE_CLAIM,
-								  "DEACTIVATE_CLAIM",  
+	daemonCore->Register_Command( ALIVE, "ALIVE",
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
-								  "DEACTIVATE_CLAIM_FORCIBLY", 
+	daemonCore->Register_Command( DEACTIVATE_CLAIM,
+								  "DEACTIVATE_CLAIM",
+								  command_handler,
+								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY,
+								  "DEACTIVATE_CLAIM_FORCIBLY",
+								  command_handler,
+								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_JOB_DONE,
+								  "DEACTIVATE_CLAIM_JOB_DONE",
 								  command_handler,
 								  "command_handler", DAEMON );
 
@@ -855,7 +870,7 @@ main_shutdown_fast()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free();
+	startd_exit_if_idle();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -869,8 +884,8 @@ main_shutdown_fast()
 	resmgr->killAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
-								startd_check_free,
-								 "startd_check_free" );
+								startd_exit_if_idle,
+								 "startd_exit_if_idle" );
 }
 
 
@@ -890,7 +905,7 @@ main_shutdown_graceful()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free();
+	startd_exit_if_idle();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -904,8 +919,8 @@ main_shutdown_graceful()
 	resmgr->releaseAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
-								startd_check_free,
-								 "startd_check_free" );
+								startd_exit_if_idle,
+								 "startd_exit_if_idle" );
 }
 
 
@@ -945,7 +960,7 @@ int
 shutdown_reaper(int pid, int status)
 {
 	reaper(pid,status);
-	startd_check_free();
+	startd_exit_if_idle();
 	return TRUE;
 }
 
@@ -957,9 +972,9 @@ do_cleanup(int,int,const char*)
 
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
-			// If the machine is already free, we can exit right away.
-		startd_check_free();		
-			// Otherwise, quickly kill all the active starters.
+		// If the machine is already free, we can exit right away.
+		startd_exit_if_idle();
+		// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
 		resmgr->vacate_all(fast, "Startd EXCEPT", CONDOR_HOLD_CODE::StartdException, 0);
 		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
@@ -970,8 +985,8 @@ do_cleanup(int,int,const char*)
 
 
 void
-startd_check_free(int /* tid */)
-{	
+startd_exit_if_idle(int /* tid */)
+{
 	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
 		return;
 	}
@@ -985,7 +1000,7 @@ startd_check_free(int /* tid */)
 	//   RELEASE_CLAIM for those before shutting down.
 	//   Today, those messages would fail, as the schedd doesn't keep
 	//   track of claimed pslots. We expect this to change in the future.
-	if( ! resmgr->hasAnyClaim() ) {
+	if( ! resmgr->hasAnyActiveClaim(true) ) {
 		startd_exit();
 	}
 	return;

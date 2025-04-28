@@ -411,6 +411,9 @@ public:
 		return false;
 	}
 
+	virtual int fetch_docker_creds(const ClassAd &/*query*/, ClassAd &/*creds*/) {
+		return -1;
+	}
 
 protected:
 

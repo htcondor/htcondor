@@ -135,7 +135,7 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
 		expr->SetParentScope( parent );
 		ad = mad.GetLeftAd();
 		if (ad != NULL) {
-			ad->Remove(ATTR_REQUIREMENTS);
+			std::ignore = ad->Remove(ATTR_REQUIREMENTS);
 		}
 	}
 	return( true );

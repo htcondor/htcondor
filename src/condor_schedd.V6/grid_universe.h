@@ -24,6 +24,9 @@
 #include <map>
 #include <string>
 
+class GridUserIdentity;
+class JobQueueUserRec;
+
 class GridUniverseLogic : public Service
 {
 	public:
@@ -31,21 +34,17 @@ class GridUniverseLogic : public Service
 		GridUniverseLogic();
 		~GridUniverseLogic();
 
-		static void JobCountUpdate(const char* user, const char* osname,
-				const char* attr_value, const char* attr_name, int cluster, 
-				int proc, int num_globus_jobs, int num_globus_unmanaged_jobs);
+		static void JobCountUpdate(const GridUserIdentity& userident,
+				const char* attr_name,
+				int num_globus_jobs, int num_globus_unmanaged_jobs);
 
-		static void JobRemoved(const char* user, const char* osname,
-			   	const char* attr_value, const char* attr_name, int cluster, 
-				int proc);
+		static void JobRemoved(const GridUserIdentity& userident,
+				const char* attr_name);
 
-		static void JobAdded(const char* user, const char* osname,
-			   	const char* attr_value, const char* attr_name, int cluster, 
-				int proc);
+		static void JobAdded(const GridUserIdentity& userident,
+				const char* attr_name);
 
-		static int FindGManagerPid(const char* user,
-							const char* attr_value,
-							int cluster, int proc);
+		static int FindGManagerPid(const GridUserIdentity& userident);
 		static void reconfig() { signal_all(SIGHUP); }
 		static void shutdown_graceful() { signal_all(SIGTERM); }
 		static void shutdown_fast() { signal_all(SIGQUIT); }
@@ -57,21 +56,19 @@ class GridUniverseLogic : public Service
 		static const int job_removed_delay;
 
 		struct gman_node_t {
-			int pid;
-			int add_timer_id;
-			int remove_timer_id;
-			char user[200];
-			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {user[0] = '\0';};
+			const JobQueueUserRec* ownerinfo{nullptr};
+			int pid{0};
+			int add_timer_id{-1};
+			int remove_timer_id{-1};
+			char user[200]{""};
 		};
 
-		static gman_node_t* lookupGmanByOwner(const char* user,
-							const char* attr_value, int cluster, int proc);
+		static gman_node_t* lookupGmanByOwner(const char* user, const char* attr_value);
 
 		static int GManagerReaper(int pid, int exit_status);
 
-		static gman_node_t* StartOrFindGManager(const char* user,
-				const char* osname, const char* attr_value,  const char* attr_name,
-				int cluster, int proc);
+		static gman_node_t* StartOrFindGManager(const GridUserIdentity& userident,
+				const char* attr_name);
 
 		// SendAddSignal and SendRemoveSignal are DC Timer Event handlers
 		static void SendAddSignal(int tid);

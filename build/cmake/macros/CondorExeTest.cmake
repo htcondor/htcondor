@@ -39,7 +39,7 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 		endif ( WINDOWS )
 
 		add_dependencies(${LOCAL_${_CNDR_TARGET}} condor_version_obj)
-		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS};condor_version_obj" )
+		target_link_libraries(${LOCAL_${_CNDR_TARGET}} PRIVATE "${_LINK_LIBS};condor_version_obj" )
 
 		if ( APPLE )
 			add_custom_command( TARGET ${LOCAL_${_CNDR_TARGET}}
