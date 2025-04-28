@@ -97,11 +97,11 @@ Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
           slurm-client
-Conflicts: htcondor
+Conflicts: htcondor,
            condor-upgrade-checks
-Breaks: htcondor
+Breaks: htcondor,
         condor-upgrade-checks
-Replaces: htcondor
+Replaces: htcondor,
           condor-upgrade-checks
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
