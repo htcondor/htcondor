@@ -33,10 +33,10 @@ usage() {
                                      the same NAME share a filesystem.
 
     Installation options, specify only one:
-    --minicondor            : Install a complete stand-alone HTCondor.  [default]
-    --cm NAME: Install as the central manager (CM) role.
-    --ap NAME: Install as the access point (AP) role.
-    --ep NAME: Install as the execution point (EP) role.
+    --minicondor: Install a complete stand-alone HTCondor.  [default]
+    --cm NAME   : Install as the central manager (CM) role.
+    --ap NAME   : Install as the access point (AP) role.
+    --ep NAME   : Install as the execution point (EP) role.
          The NAME of central manager's machine must be a DNS name resolvable
          on all the machines in the pool, or an IP address.
 EOF
@@ -45,15 +45,6 @@ EOF
 
 command_exists() {
     command -v "$@" > /dev/null 2>&1
-}
-
-install_config_file() {
-    # Install a config file by either copying it from examples dir, or if
-    # that does not exist, curl it.  Hopefully we do not need to curl it.
-    if [ -r "/usr/share/condor/get_configs/$@" ]; then
-        cp "/usr/share/condor/get_configs/$@" /etc/condor/config.d/.
-        chmod 644 "/etc/condor/config.d/$@"
-    fi
 }
 
 is_download() {
@@ -80,7 +71,7 @@ is_darwin() {
 # Check if this is a forked Linux distro
 check_forked() {
 
-    if [ $ID = 'linuxmint' ]; then
+    if [ "$ID" = 'linuxmint' ]; then
         ID='ubuntu'
         VERSION_CODENAME=$UBUNTU_CODENAME
     fi
@@ -117,7 +108,7 @@ get_distribution() {
         #     opensuse-leap 15
         #
 
-        read ID VERSION_ID VERSION_CODENAME <<< $DISTRIBUTION
+        read -r ID VERSION_ID VERSION_CODENAME <<< "$DISTRIBUTION"
         return
     fi
 
@@ -279,7 +270,7 @@ EOF
         if [[ ! $PASSWORD ]]; then
             if ! is_dry_run; then
                 echo -n "Enter a pool password: "
-                read PASSWORD
+                read -r PASSWORD
             else
                 PASSWORD="NONE"
                 echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
@@ -324,6 +315,9 @@ EOF
                 # Add our repository.
                 HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
                 $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/${ID}/htcondor-${CHANNEL_DIR}-${VERSION_CODENAME}.list -o ${HTCONDOR_LIST}"
+                if [ "${REPO_SUFFIX}" ]; then
+                    sed -i "/$REPO_SUFFIX/s/^#//" ${HTCONDOR_LIST}
+                fi
 
                 echo -e "\n# Updating package lists"
                 $sh_c "${apt_get} update"
@@ -596,7 +590,7 @@ do_download() {
     TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
     echo "Downloading to condor.tar.gz..."
-    curl -fSL ${TARBALL_URL} -o condor.tar.gz
+    curl -fSL "${TARBALL_URL}" -o condor.tar.gz
 }
 
 # Set global defaults
@@ -640,7 +634,7 @@ while [ $# -gt 0 ]; do
         --minicondor)
             unset ROLE
             ;;
-        --central-manager)
+        --cm|--central-manager)
             ROLE="central manager"
             CONDOR_HOST=$2
             if [[ ! $CONDOR_HOST ]]; then
@@ -649,7 +643,7 @@ while [ $# -gt 0 ]; do
             fi
             shift
             ;;
-        --submit)
+        --ap|--submit)
             ROLE="submit"
             CONDOR_HOST=$2
             if [[ ! $CONDOR_HOST ]]; then
@@ -658,7 +652,7 @@ while [ $# -gt 0 ]; do
             fi
             shift
             ;;
-        --execute)
+        --ep|--execute)
             ROLE="execute"
             CONDOR_HOST=$2
             if [[ ! $CONDOR_HOST ]]; then
@@ -667,10 +661,10 @@ while [ $# -gt 0 ]; do
             fi
             shift
             ;;
-        --yum-repo)
+        --repo-suffix)
             REPO_SUFFIX=$2
             if [[ ! $REPO_SUFFIX ]]; then
-                echo "--yum-repo requires a repo-suffix as an argument"
+                echo "--repo-suffix requires a repo-suffix as an argument"
                 exit 1
             fi
             YUM_REPO=--enablerepo=htcondor-${REPO_SUFFIX}
