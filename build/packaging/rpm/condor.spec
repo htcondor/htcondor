@@ -280,7 +280,6 @@ Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 %endif
 Requires: rsync
-Requires: condor-upgrade-checks
 
 # Support OSDF client
 Requires: pelican >= 7.15.1
@@ -333,6 +332,7 @@ Provides: blahp = %{version}-%{release}
 Obsoletes: blahp < 9.5.0
 %endif
 
+%if 0%{?rhel} <= 9
 # externals package discontinued as of 10.8.0
 Obsoletes: %{name}-externals < 10.8.0
 Provides: %{name}-externals = %{version}-%{release}
@@ -356,6 +356,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+
+# upgrade-checks package discontinued as of 24.8.0
+Obsoletes: %{name}-upgrade-checks < 24.8.0
+Provides: %{name}-upgrade-checks = %{version}-%{release}
+%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -635,18 +640,6 @@ on a non-EC2 image.
 if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
-
-#######################
-%package upgrade-checks
-Summary: Script to check for manual interventions needed to upgrade
-Group: Applications/System
-
-%description upgrade-checks
-Examines the current HTCondor installation and recommends changes to ensure
-a smooth upgrade to a subsequent HTCondor version.
-
-%files upgrade-checks
-%_bindir/condor_upgrade_check
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -1212,6 +1205,7 @@ rm -rf %{buildroot}
 %_bindir/condor_ssh_start
 %_bindir/condor_test_token
 %_bindir/condor_manifest
+%_bindir/condor_upgrade_check
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
