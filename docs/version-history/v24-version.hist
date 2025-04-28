@@ -38,6 +38,10 @@
   world-writable.
   :jira:`3036`
 
+- Augment the `libvirt_simple_script.awk` script to provide needed
+  UEFI boot information for ARM virtual machines.
+  :jira:`3006`
+
 - The :tool:`condor_upgrade_check` script has been folded into the main condor package.
  :jira:`2995`
 
