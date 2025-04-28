@@ -36,6 +36,7 @@ struct UserMapEntry
 {
 	std::string ap_id;
 	std::string authz;
+	time_t exp{0};
 };
 
 // The key of the m_authz map is the auth-level name as used in the token
@@ -263,13 +264,14 @@ bool PlacementDaemon::ReadUserMapFile()
 
 	std::string line;
 	std::vector<std::string> items;
+	time_t exp = 0;
 	while (readLine(line, map_fp)) {
 		trim(line);
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}
 		items = split(line, " \t\n");
-		if (items.size() != 3) {
+		if (items.size() < 3 || items.size() > 4) {
 			dprintf(D_ERROR, "Ignoring malformed map line: %s\n", line.c_str());
 			continue;
 		}
@@ -280,8 +282,12 @@ bool PlacementDaemon::ReadUserMapFile()
 		if (items[1].find('@') == std::string::npos) {
 			items[1] += "@" + uid_domain;
 		}
+		exp = 0;
+		if (items.size() == 4) {
+			exp = std::stoll(items[3]);
+		}
 
-		m_users[items[0]] = UserMapEntry{items[1], items[2]};
+		m_users[items[0]] = UserMapEntry{items[1], items[2], exp};
 	}
 
 	fclose(map_fp);
@@ -408,6 +414,19 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	}
 	authz_list = join(bounding_set, ",");
 
+	lifetime = param_integer("PLACEMENTD_TOKEN_DURATION", 24*60*60);
+	if (user_it->second.exp > 0) {
+		if (user_it->second.exp <= time(nullptr)) {
+			dprintf(D_FULLDEBUG, "User mapping is expired\n");
+			result_ad.Assign(ATTR_ERROR_STRING, "User mapping is expired");
+			result_ad.Assign(ATTR_ERROR_CODE, 6);
+			goto send_reply;
+		}
+		if (user_it->second.exp - time(nullptr) < lifetime) {
+			lifetime = user_it->second.exp - time(nullptr);
+		}
+	}
+
 	dprintf(D_FULLDEBUG,"JEF Creating IDToken\n");
 	// Create an IDToken for this user
 	key_name = htcondor::get_token_signing_key(err);
@@ -416,7 +435,6 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, err.code());
 		goto send_reply;
 	}
-	lifetime = param_integer("PLACEMENTD_TOKEN_DURATION", 24*60*60);
 	if (!Condor_Auth_Passwd::generate_token(token_identity, key_name, bounding_set, lifetime, true, token, rsock->getUniqueId(), &err)) {
 		result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
 		result_ad.Assign(ATTR_ERROR_CODE, err.code());
@@ -481,16 +499,17 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	struct reply_rec {
 		std::string sub;
 		std::string authz;
-		time_t exp;
+		time_t token_exp;
+		time_t mapping_exp;
 	};
 
 	std::map<std::string, reply_rec> reply_users;
 	if (username.empty()) {
 		for (const auto& [name, entry]: m_users) {
-			reply_users[name] = {entry.ap_id, entry.authz, 0};
+			reply_users[name] = {entry.ap_id, entry.authz, 0, entry.exp};
 		}
 	} else if (m_users.find(username) != m_users.end()) {
-		reply_users[username] = {m_users[username].ap_id, m_users[username].authz, 0};
+		reply_users[username] = {m_users[username].ap_id, m_users[username].authz, 0, m_users[username].exp};
 	}
 
 	std::string stmt_str;
@@ -513,10 +532,10 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		const char* rec_sub = (const char*)sqlite3_column_text(stmt, 2);
 		auto reply_it = reply_users.find(rec_user);
 		if (reply_it == reply_users.end()) {
-			reply_users[rec_user].exp = rec_exp;
+			reply_users[rec_user].token_exp = rec_exp;
 			reply_users[rec_user].sub = rec_sub;
-		} else if (rec_exp > reply_it->second.exp) {
-			reply_it->second.exp = rec_exp;
+		} else if (rec_exp > reply_it->second.token_exp) {
+			reply_it->second.token_exp = rec_exp;
 			reply_it->second.sub = rec_sub;
 		}
 	}
@@ -534,7 +553,8 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		user_ad.Clear();
 		user_ad.Assign("UserName", username);
 		user_ad.Assign("ApUserId", rec.sub);
-		user_ad.Assign("TokenExpiration", rec.exp);
+		user_ad.Assign("TokenExpiration", rec.token_exp);
+		user_ad.Assign("MappingExpration", rec.mapping_exp);
 		if (!rec.authz.empty()) {
 			user_ad.Assign("Authorizations", rec.authz);
 		}
