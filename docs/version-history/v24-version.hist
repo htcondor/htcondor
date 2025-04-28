@@ -42,6 +42,9 @@
   UEFI boot information for ARM virtual machines.
   :jira:`3006`
 
+- The :tool:`condor_upgrade_check` script has been folded into the main condor package.
+ :jira:`2995`
+
 *** 24.8.0 bugs
 
 - Removed job attribute ``ToE``.
