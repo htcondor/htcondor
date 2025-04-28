@@ -919,6 +919,10 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 	}
 
 	// Setup the policy ad
+	if (capability && !param_boolean("SEC_ACCEPT_CAPABILITY_TOKENS", false)) {
+		dprintf(D_SECURITY, "Treating capability as plain token due to configuration\n");
+		capability = false;
+	}
 	if (capability) {
 		m_policy_ad.InsertAttr("TokenCapabilities", join(authz, ","));
 	} else if (!authz.empty()) {
