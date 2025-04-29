@@ -221,6 +221,8 @@ class UniShadow : public BaseShadow
 
 	FileTransfer * commonFTO = NULL;
 	SingleProviderSyndicate * cfLock = NULL;
+	bool resume_job_setup = false;
+
 
 	bool _cifNameInitialized = false;
 	virtual bool hasCIFName();

@@ -242,6 +242,11 @@ Starter::handleJobEnvironmentCommand(
 			// This schedules a zero-second timer.
 			s->jobWaitUntilExecuteTime();
 			return true;
+		} else if( command == COMMAND_JOB_SETUP ) {
+			ClassAd context;
+			context.InsertAttr( ATTR_JOB_ENVIRONMENT_READY, true );
+			requestGuidanceSetupJobEnvironment(s, context);
+			return true;
 		} else if( command == COMMAND_RETRY_TRANSFER ) {
 			dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
 			// This schedules a zero-second timer.

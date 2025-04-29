@@ -19,6 +19,7 @@ enum class GuidanceResult : int {
 #define ATTR_REQUEST_TYPE           "RequestType"
 #define ATTR_EVENT_TYPE             "EventType"
 #define ATTR_RETRY_DELAY            "RetryDelay"
+#define ATTR_JOB_ENVIRONMENT_READY  "JobEnvironmentReady"
 
 #define COMMAND_RUN_DIAGNOSTIC      "RunDiagnostic"
 #define COMMAND_RETRY_TRANSFER      "RetryTransfer"
@@ -28,6 +29,7 @@ enum class GuidanceResult : int {
 #define COMMAND_RETRY_REQUEST       "RetryReqest"
 #define COMMAND_STAGE_COMMON_FILES  "StageCommonFiles"
 #define COMMAND_MAP_COMMON_FILES    "MapCommonFiles"
+#define COMMAND_JOB_SETUP           "DoJobSetup"
 
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 

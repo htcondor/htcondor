@@ -1317,15 +1317,32 @@ UniShadow::start_common_input_conversation(
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 				co_return guidance;
 				}
-
-			case SingleProviderSyndicate::UNREADY:
-				// The common files are being transferred by someone else, so
-				// we should just try again later.
-				guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
-				guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
-				// guidance.InsertAttr(ATTR_CONTEXT_AD, context);
-				request = co_yield guidance;
 				break;
+
+			case SingleProviderSyndicate::UNREADY: {
+				// The common files are being transferred by someone else.
+				//
+				// We'd like to do input transfer while we wait.  Rather
+				// than duplicate all that code -- and its error handling --
+				// let's just have the starter call us back after input
+				// file transfer -- which it knows how to do -- and do
+				// whatever waiting remains then.
+				//
+				// We can therefore only send COMMAND_CARRY_ON if we're
+				// sure the starter has already set up the job environment.
+
+				bool job_environment_ready = false;
+				request.LookupBool( ATTR_JOB_ENVIRONMENT_READY, job_environment_ready );
+				if(! job_environment_ready) {
+					this->resume_job_setup = true;
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+					co_return guidance;
+				} else {
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+					guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+					request = co_yield guidance;
+				}
+				} break;
 
 			case SingleProviderSyndicate::READY:
 				// Map the common files into the sandbox.
@@ -1349,7 +1366,6 @@ UniShadow::start_common_input_conversation(
 					co_return guidance;
 				}
 
-				// The common files have already been transferred.
 				guidance.Clear();
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 				co_return guidance;
@@ -1464,7 +1480,11 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			} else if( current.xfer_status == XFER_STATUS_DONE
 			 && current.success == true
 			) {
-				guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
+				if(! this->resume_job_setup) {
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
+				} else {
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_JOB_SETUP);
+				}
 			} else if (
 				current.xfer_status == XFER_STATUS_DONE
 			 && current.success == false
