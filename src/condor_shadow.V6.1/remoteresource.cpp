@@ -840,6 +840,15 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// save (most of) the incoming starter ad for later
 	if (starterAd) { starterAd->Clear(); }
 	else { starterAd = new ClassAd(); }
+
+	// Patch up the incorrect name -- the starter doesn't know the startd
+	// name, but we do
+	char *startd_name = nullptr;
+	getStartdName(startd_name); // really the slot name...
+	if (startd_name != nullptr) {
+		ad->Assign(ATTR_NAME, startd_name);
+	}
+
 	starterAd->Update(*ad);
 
 	if( ad->LookupString(ATTR_STARTER_IP_ADDR, buf) ) {
@@ -899,6 +908,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = FALSE (not specified)\n",
 				 ATTR_HAS_RECONNECT );
 	}
+
 }
 
 void
