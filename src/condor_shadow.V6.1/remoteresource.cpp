@@ -847,6 +847,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	getStartdName(startd_name); // really the slot name...
 	if (startd_name != nullptr) {
 		ad->Assign(ATTR_NAME, startd_name);
+		free(startd_name);
 	}
 
 	starterAd->Update(*ad);
