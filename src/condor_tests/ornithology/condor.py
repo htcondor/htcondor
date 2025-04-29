@@ -70,12 +70,16 @@ def try_os_setegid(egid):
         os.setegid(egid)
     except PermissionError:
         pass
+    except KeyError:
+        pass
 
 
 def try_os_seteuid(euid):
     try:
         os.seteuid(euid)
     except PermissionError:
+        pass
+    except KeyError:
         pass
 
 
