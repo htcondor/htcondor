@@ -45,6 +45,10 @@
 - The :tool:`condor_upgrade_check` script has been folded into the main condor package.
   :jira:`2995`
 
+- :tool:`condor_status` will now accept ``-totals`` (previously just ``-total``) to better
+  match other tools with the similar option.
+  :jira:`3044`
+
 *** 24.8.0 bugs
 
 - Removed job attribute ``ToE``.
