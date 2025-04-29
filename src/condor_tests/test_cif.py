@@ -24,8 +24,10 @@ import htcondor2
 def try_shutil_chown( * p, ** v ):
     try:
         shutil.chown( * p, ** v )
-    except PermissionError:
-        pass
+    except PermissionError as pe:
+        logger.debug(pe)
+    except LookupError as le:
+        logger.debug(le)
 
 
 # ---- test_one_cif_job -------------------------------------------------------
