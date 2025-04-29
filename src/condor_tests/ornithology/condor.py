@@ -65,18 +65,22 @@ DEFAULT_PARAMS = {
 }
 
 
-def try_os_setegid(egid):
+def try_os_setegid(number=None, name=None):
     try:
-        os.setegid(egid)
+        if number is None:
+            number = getgrnam(name).gr_gid
+        os.setegid(number)
     except PermissionError:
         pass
     except KeyError:
         pass
 
 
-def try_os_seteuid(euid):
+def try_os_seteuid(number=None, name=None):
     try:
-        os.seteuid(euid)
+        if number is None:
+            number = getpwnam(name).pw_uid
+        os.seteuid(number)
     except PermissionError:
         pass
     except KeyError:
@@ -733,15 +737,15 @@ class Condor:
         if self.submit_user:
             euid = os.geteuid()
             egid = os.getegid()
-            try_os_setegid( getgrnam(self.submit_user).gr_gid )
-            try_os_seteuid( getpwnam(self.submit_user).pw_uid )
+            try_os_setegid( name=self.submit_user )
+            try_os_seteuid( name=self.submit_user )
         with self.use_config():
             schedd = self.get_local_schedd()
             result = schedd.submit(sub, count=count, itemdata=itemdata)
             logger.debug("Got submit result:\n{}".format(result))
         if self.submit_user:
-            try_os_setegid( egid )
-            try_os_seteuid( euid )
+            try_os_setegid( number=egid )
+            try_os_seteuid( number=euid )
 
         return handles.ClusterHandle(self, result)
 
