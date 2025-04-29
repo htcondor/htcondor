@@ -708,3 +708,31 @@ def unique_doc_id(doc):
     with the same RecordTime
     """
     return f"{doc['GlobalJobId']}#{doc['RecordTime']}"
+
+
+def required_attrs():
+    """
+    Return a set of required attrs for schedd/startd ads.
+    """
+    attrs = {
+        "AccountingGroup",
+        "AcctGroup",
+        "AcctGroupUser",
+        "ClusterId",
+        "CompletionDate",
+        "EnteredCurrentStatus",
+        "EpochWriteDate",
+        "GlobalJobId",
+        "JobStatus",
+        "JobUniverse",
+        "LastRemoteHost",
+        "LastRemotePool",
+        "MyType",
+        "Owner",
+        "ProcId",
+        "RemoteHost",
+        "RemotePool",
+        "RemoteWallClockTime",
+        "User",
+    }
+    return attrs

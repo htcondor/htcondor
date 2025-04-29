@@ -45,6 +45,8 @@ def get_default_config(name="ADSTASH"):
         "startd_history_max_ads": 10000,
         "schedd_history_timeout": 2 * 60,
         "startd_history_timeout": 2 * 60,
+        "schedd_history_projection": set(),
+        "startd_history_projection": set(),
         "interface": "null",
         "se_host": "localhost:9200",
         "se_use_https": False,
@@ -79,6 +81,8 @@ def get_htcondor_config(name="ADSTASH"):
         "startd_history_max_ads": p.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
         "schedd_history_timeout": p.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
         "startd_history_timeout": p.get(f"{name}_STARTD_HISTORY_TIMEOUT"),
+        "schedd_history_projection": p.get(f"{name}_SCHEDD_HISTORY_PROJECTION"),
+        "startd_history_projection": p.get(f"{name}_STARTD_HISTORY_PROJECTION"),
         "interface": p.get(f"{name}_INTERFACE"),
         "se_host": p.get(f"{name}_ES_HOST", p.get(f"{name}_SE_HOST")),
         "se_url_prefix": p.get(f"{name}_SE_URL_PREFIX"),
@@ -146,6 +150,8 @@ def get_environment_config(name="ADSTASH"):
         "startd_history_max_ads": env.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
         "schedd_history_timeout": env.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
         "startd_history_timeout": env.get(f"{name}_STARTD_HISTORY_TIMEOUT"),
+        "schedd_history_projection": env.get(f"{name}_SCHEDD_HISTORY_PROJECTION"),
+        "startd_history_projection": env.get(f"{name}_STARTD_HISTORY_PROJECTION"),
         "interface": env.get(f"{name}_INTERFACE"),
         "se_host": env.get(f"{name}_SE_HOST", env.get(f"{name}_ES_HOST")),
         "se_url_prefix": env.get(f"{name}_SE_URL_PREFIX"),
@@ -476,6 +482,24 @@ def get_config(argv=None):
             "[default: %(default)s]"
         ),
     )
+    history_group.add_argument(
+        "--schedd_history_projection",
+        type=str,
+        metavar="ATTRIBUTES",
+        help=(
+            "Fetch only these attributes (comma-separated) from the Schedd history "
+            "[default: fetch all attributes]"
+        ),
+    )
+    history_group.add_argument(
+        "--startd_history_projection",
+        type=str,
+        metavar="ATTRIBUTES",
+        help=(
+            "Fetch only these attributes (comma-separated) from the Startd history "
+            "[default: fetch all attributes]"
+        ),
+    )
 
     se_group = parser.add_argument_group(
         title = "Search engine (Elasticsearch, OpenSearch, etc.) interface options",
@@ -560,6 +584,11 @@ def get_config(argv=None):
     args = parser.parse_args(remaining_argv)
     args_dict = vars(args)
     args_dict['process_name'] = process_name
+
+    if args.schedd_history_projection:
+        args.schedd_history_projection = set(args.schedd_history_projection.strip().split(","))
+    if args.startd_history_projection:
+        args.startd_history_projection = set(args.startd_history_projection.strip().split(","))
 
     # Check for deprecated args
     for arg in remaining_argv:
