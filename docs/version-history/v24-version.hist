@@ -49,6 +49,10 @@
   match other tools with the similar option.
   :jira:`3044`
 
+- :tool:`condor_adstash` can now be configured to fetch a custom projection of attributes
+  for job (epoch) ClassAds.
+  :jira:`2680`
+
 *** 24.8.0 bugs
 
 - Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
