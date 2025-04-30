@@ -4,6 +4,10 @@
   first class way to halt a DAG.
   :jira:`2898`
 
+- The ``SlotName`` field in the job event log is now correct in the
+  case where a *condor_startd* has a non-default name.
+  :jira:`3047`
+
 - Added new :class:`htcondor2.DAGMan` class to the python api for sending
   commands to running a DAGMan process.
   :jira:`2898`

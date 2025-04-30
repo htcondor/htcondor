@@ -1237,9 +1237,8 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
 
-	std::string slotName = starter->getMySlotName();
-	slotName += '@';
-	slotName += get_local_fqdn();
+	std::string slotName;
+	mach_ad->LookupString( ATTR_NAME, slotName );
 	ad->Assign( ATTR_NAME, slotName );
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
