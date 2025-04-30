@@ -586,9 +586,9 @@ def get_config(argv=None):
     args_dict['process_name'] = process_name
 
     if args.schedd_history_projection:
-        args.schedd_history_projection = set(args.schedd_history_projection.strip().split(","))
+        args.schedd_history_projection = set(re.split(r"[\s,]+", args.schedd_history_projection.strip()))
     if args.startd_history_projection:
-        args.startd_history_projection = set(args.startd_history_projection.strip().split(","))
+        args.startd_history_projection = set(re.split(r"[\s,]+", args.startd_history_projection.strip()))
 
     # Check for deprecated args
     for arg in remaining_argv:
