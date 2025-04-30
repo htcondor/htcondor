@@ -330,14 +330,14 @@ ResState::eval_policy( void )
 			change( preempting_state );
 			return TRUE; // XXX: change TRUE
 		}
-		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
-				// START evaluates to False, so return to the owner
-				// state.  In this case, we don't need to worry about
-				// START locally evaluating to FALSE due to undefined
-				// job attributes and well-placed meta-operators, b/c
-				// we're in the claimed state, so we'll have a job ad
-				// to evaluate against.
-			dprintf( D_ALWAYS, "State change: START is false\n" );
+		if( (r_act == idle_act) && (rip->eval_is_owner()) ) {
+				// Be warned: we may not have a job ad here, so we don't
+				// want to just look at the START expression, as it could
+				// eval to False even if it could match a job (due to use
+				// of meta-operators or defaults for job ad values).
+				// So we explicitly wanna look at IS_OWNER here instead
+				// of START.
+			dprintf( D_ALWAYS, "State change: IS_OWNER is true\n" );
 			// TLM: STATE TRANSITION #10
 			change( preempting_state );
 			return TRUE; // XXX: change TRUE
