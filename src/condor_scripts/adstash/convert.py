@@ -22,6 +22,21 @@ from functools import lru_cache
 import classad2 as classad
 
 
+# Attributes to be used in all projections to condor_history
+REQUIRED_ATTRS = {
+    "ClusterId",
+    "CompletionDate",
+    "EnteredCurrentStatus",
+    "EpochWriteDate",
+    "GlobalJobId",
+    "JobStatus",
+    "JobUniverse",
+    "LastRemoteHost",
+    "MyType",
+    "ProcId",
+    "RemoteHost",
+}
+
 # TEXT_ATTRS should only contain attrs that we want full text search on,
 # otherwise strings are stored as keywords.
 TEXT_ATTRS = {} or set()
@@ -708,31 +723,3 @@ def unique_doc_id(doc):
     with the same RecordTime
     """
     return f"{doc['GlobalJobId']}#{doc['RecordTime']}"
-
-
-def required_attrs():
-    """
-    Return a set of required attrs for schedd/startd ads.
-    """
-    attrs = {
-        "AccountingGroup",
-        "AcctGroup",
-        "AcctGroupUser",
-        "ClusterId",
-        "CompletionDate",
-        "EnteredCurrentStatus",
-        "EpochWriteDate",
-        "GlobalJobId",
-        "JobStatus",
-        "JobUniverse",
-        "LastRemoteHost",
-        "LastRemotePool",
-        "MyType",
-        "Owner",
-        "ProcId",
-        "RemoteHost",
-        "RemotePool",
-        "RemoteWallClockTime",
-        "User",
-    }
-    return attrs

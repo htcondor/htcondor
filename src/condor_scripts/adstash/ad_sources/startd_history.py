@@ -20,7 +20,7 @@ import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
-from adstash.convert import to_json, unique_doc_id, required_attrs
+from adstash.convert import to_json, unique_doc_id, REQUIRED_ATTRS
 
 
 class StartdHistorySource(GenericAdSource):
@@ -28,7 +28,7 @@ class StartdHistorySource(GenericAdSource):
 
     def fetch_ads(self, startd_ad, max_ads=10000, projection=set()):
         if projection:  # If user has defined a projection, make sure it contains required attrs
-            projection = projection | required_attrs()
+            projection = projection | REQUIRED_ATTRS
 
         history_kwargs = {}
         if max_ads > 0:
