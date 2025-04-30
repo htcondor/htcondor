@@ -543,6 +543,9 @@ class FileTransfer final: public Service {
 
 	const PluginResultList & getPluginResultList();
 
+	// called to construct the catalog of files in a direcotry
+	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
+
   protected:
 
 	ClassAd _fix_me_copy_;
@@ -734,9 +737,6 @@ class FileTransfer final: public Service {
 
 	// Read full string from pipe to prevent forked child from getting stuck on blocked Write()
 	bool PipeReadFullString(std::string& buf, const int nBytes);
-
-	// called to construct the catalog of files in a direcotry
-	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
 
 	// called to lookup the catalog entry of file
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);

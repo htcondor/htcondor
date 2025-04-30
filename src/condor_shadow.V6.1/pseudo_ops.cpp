@@ -1214,6 +1214,9 @@ UniShadow::start_common_input_conversation(
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
+				// See the RTYPE_JOB_ENVIRONMENT code for what we should
+				// double-check here.
+
 				success = false;
 				request.LookupBool( ATTR_RESULT, success );
 
@@ -1483,6 +1486,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				if(! this->resume_job_setup) {
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
 				} else {
+					this->resume_job_setup = false;
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_JOB_SETUP);
 				}
 			} else if (

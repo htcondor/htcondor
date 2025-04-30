@@ -57,6 +57,7 @@ public:
 	void setupJobEnvironment_part2(void);
 
 	virtual bool transferCommonInput( ClassAd * commonAd );
+	virtual void resetInputFileCatalog();
 
 	bool streamInput();
 	bool streamOutput();

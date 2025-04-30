@@ -3669,3 +3669,9 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 	dprintf( D_ALWAYS, "transferCommonInput(): exit\n" );
 	return (rval == 1);
 }
+
+
+void
+JICShadow::resetInputFileCatalog() {
+    filetrans->BuildFileCatalog();
+}

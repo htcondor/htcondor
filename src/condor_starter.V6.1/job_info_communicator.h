@@ -89,6 +89,7 @@ public:
 		//const char * message=nullptr, int hold_code=0, int hold_subcode=0);
 
 	virtual bool transferCommonInput( ClassAd * /* commonAd */ ) { return false; }
+	virtual void resetInputFileCatalog() { }
 
 	void setStdin( const char* path );
 	void setStdout( const char* path );

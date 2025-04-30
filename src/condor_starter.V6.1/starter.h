@@ -377,6 +377,9 @@ protected:
 
 	bool recorded_job_exit_status{false};
 	int job_exit_status;
+
+	bool just_the_setup_commands {false};
+
 private:
 
 		// // // // // // // //

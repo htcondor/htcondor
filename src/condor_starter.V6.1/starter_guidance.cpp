@@ -245,7 +245,15 @@ Starter::handleJobEnvironmentCommand(
 		} else if( command == COMMAND_JOB_SETUP ) {
 			ClassAd context;
 			context.InsertAttr( ATTR_JOB_ENVIRONMENT_READY, true );
+			s->just_the_setup_commands = true;
 			requestGuidanceSetupJobEnvironment(s, context);
+			s->just_the_setup_commands = false;
+
+			// Before we do anything else, reset the file catalog of the
+			// object that we'll be using for output transfer.
+			s->jic->resetInputFileCatalog();
+
+			continue_conversation();
 			return true;
 		} else if( command == COMMAND_RETRY_TRANSFER ) {
 			dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
@@ -720,6 +728,8 @@ Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & contex
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
+
+    if( s->just_the_setup_commands ) { return; }
 
 	// Carry on.
 	s->jic->setupJobEnvironment();

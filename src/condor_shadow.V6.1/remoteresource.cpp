@@ -1367,7 +1367,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 
 	std::string PluginResultList = "PluginResultList";
-	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
+	std::array< std::string, 4 > prefixes( { "Common", "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
 		classad::ClassAd c;
 
