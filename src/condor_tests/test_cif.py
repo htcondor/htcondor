@@ -48,6 +48,9 @@ def the_lock_dir(test_dir):
 @action
 def the_condor(test_dir, the_lock_dir):
     local_dir = test_dir / "condor"
+    cred_dir = local_dir / "cred.d"
+    # I don't think Ornithology knows about this one yet.
+    cred_dir.mkdir(parents=True, exist_ok=True)
 
     with Condor(
         submit_user='tlmiller',
@@ -56,6 +59,8 @@ def the_condor(test_dir, the_lock_dir):
         config={
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "LOCK":             the_lock_dir.as_posix(),
+            "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
+            "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
         },
     ) as the_condor:
         yield the_condor
@@ -68,10 +73,20 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     (user_dir / "input2.txt").write_text("II input\n");
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
+    # Make sure that credential propogation works, too.
+    credential_path = user_dir / "the_credential"
+    credential_path.write_text("fake credential information")
+    cp = the_condor.run_command(
+        ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
+        timeout=5,
+        echo=True,
+    )
+    assert cp.returncode == 0
+
     job_description = {
         "universe":                 "vanilla",
 
-        "shell":                    "cat input1.txt input2.txt input3.txt; sleep 5",
+        "shell":                    "cat ${_CONDOR_CREDS}/the_credential.use 1>&2; cat input1.txt input2.txt input3.txt; sleep 5",
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
@@ -84,6 +99,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
 
         "MY.CommonInputFiles":      '"input1.txt, input2.txt"',
         "transfer_input_files":     "input3.txt",
+        "use_oauth_services":       "the_credential",
 
         "leave_in_queue":           True,
     }
@@ -418,6 +434,15 @@ def output_is_as_expected(completed_cif_job, the_expected_output):
         assert text == the_expected_output
 
 
+def error_is_as_expected(completed_cif_job, the_expected_error):
+    ads = completed_cif_job.query( projection=['Err'] )
+
+    for ad in ads:
+        err = Path(ad['Err'])
+        text = err.read_text()
+        assert text == the_expected_error
+
+
 def count_shadow_log_lines(the_condor, the_phrase):
     shadow_log = the_condor.shadow_log.open()
     lines = list(filter(
@@ -462,6 +487,9 @@ class TestCIF:
         )
         shadow_log_is_as_expected(the_condor, 1)
         lock_dir_is_clean(the_lock_dir)
+        error_is_as_expected(
+            completed_cif_job, "fake credential information"
+        )
 
 
     def test_many_cif_jobs(self, the_big_lock_dir, the_big_condor, completed_cif_jobs):
