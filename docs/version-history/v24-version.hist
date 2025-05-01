@@ -42,6 +42,9 @@
   job's main executable.
   :jira:`3020`
 
+- Improve diagnostics in the shadow when it fails to activate a claim.
+  :jira:`3035`
+
 - The directory for :macro:`LOCAL_UNIV_EXECUTE` is no longer made
   world-writable.
   :jira:`3036`
