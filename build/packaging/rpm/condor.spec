@@ -276,12 +276,11 @@ Requires: condor-upgrade-checks
 %if 0%{?rhel} != 7
 %if 0%{?suse_version}
 # Require tested Apptainer
-# Unfortunately, openSUSE is lagging behind
+# Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 # Require tested Pelican packages
-# Unfortunately, the pelican package is not installable on openSUSE
-#     Pelican has a hard dependency on glibc-common,
-#     which does not exist in openSUSE leap 15
+# Unfortunately, Pelican 7.15.0+ is not installable on openSUSE Leap 15
+Requires: pelican >= 7.14.1
 %else
 # Require tested Apptainer
 # Hold back apptainer until version 1.4.1 is released
