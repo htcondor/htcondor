@@ -15,30 +15,30 @@ set -e
 
 usage() {
     cat <<-EOF
-    Specify only one of the following:
-    --dist      : Display detected operating system and exit
-    -h, --help  : Display this message and exit
-    --download  : Download the tarball for a user-level installation and exit.
-    --dry-run   : Do not install, just print commands [default]
-    --no-dry-run: Issue all the commands neeed to install HTCondor
+Specify only one of the following:
+--dist      : Display detected operating system and exit
+-h, --help  : Display this message and exit
+--download  : Download the tarball for a user-level installation and exit.
+--dry-run   : Do not install, just print commands [default]
+--no-dry-run: Issue all the commands neeed to install HTCondor
 
-    Installation options:
-    --channel NAME: Specify version channel to install; NAME can be
-        feature: Most recent release with new features [default]
-        lts    : Most recent release with only bug-fixes
-    --password: Set the password used to secure the pool.  Use only if
-                nobody else can log into the machine.  Otherwise specify
-                in the environment (GET_HTCONDOR_PASSWORD) or interactively.
-    --shared-filesystem-domain NAME: Specifies that machines installed with
-                                     the same NAME share a filesystem.
+Installation options:
+--channel NAME: Specify version channel to install; NAME can be
+       feature: Most recent release with new features [default]
+       lts    : Most recent release with only bug-fixes
+--password: Set the password used to secure the pool.  Use only if
+            nobody else can log into the machine.  Otherwise specify
+            in the environment (GET_HTCONDOR_PASSWORD) or interactively.
+--shared-filesystem-domain NAME: Specifies that machines installed with
+                                 the same NAME share a filesystem.
 
-    Installation options, specify only one:
-    --minicondor: Install a complete stand-alone HTCondor.  [default]
-    --cm NAME   : Install as the central manager (CM) role.
-    --ap NAME   : Install as the access point (AP) role.
-    --ep NAME   : Install as the execution point (EP) role.
-         The NAME of central manager's machine must be a DNS name resolvable
-         on all the machines in the pool, or an IP address.
+Installation options, specify only one:
+--minicondor: Install a complete stand-alone HTCondor.  [default]
+--cm NAME   : Install as the central manager (CM) role.
+--ap NAME   : Install as the access point (AP) role.
+--ep NAME   : Install as the execution point (EP) role.
+     The NAME of central manager's machine must be a DNS name resolvable
+     on all the machines in the pool, or an IP address.
 EOF
     exit 0
 }
@@ -61,9 +61,9 @@ is_display_dist() {
 
 is_darwin() {
     case "$(uname -s)" in
-    *darwin* ) true ;;
-    *Darwin* ) true ;;
-    * ) false;;
+        *darwin* ) true ;;
+        *Darwin* ) true ;;
+        * ) false;;
     esac
 }
 
@@ -72,13 +72,19 @@ is_darwin() {
 check_forked() {
 
     if [ "$ID" = 'linuxmint' ]; then
+        # Linux Mint is an Ubuntu fork
         ID='ubuntu'
         VERSION_CODENAME=$UBUNTU_CODENAME
+        case $VERSION_CODENAME
+            'focal') VERSION_ID=20.04;;
+            'jammy') VERSION_ID=22.04;;
+            'noble') VERSION_ID=24.04;;
+        esac
     fi
 
     if is_display_dist; then
         cat <<-EOF
-        You're using '$ID' version '$VERSION_ID' codename '$VERSION_CODENAME'.
+You're using '$ID' version '$VERSION_ID' codename '$VERSION_CODENAME'.
 EOF
         exit 0
     fi
@@ -114,9 +120,10 @@ get_distribution() {
 
     # Every system that we officially support has /etc/os-release
     . /etc/os-release
-    VERSION_ID=${VERSION_ID%%.*}
 
     check_forked
+
+    VERSION_ID=${VERSION_ID%%.*}
 
     if [[ $SHOW_DISTRIBUTION ]]; then
         echo "${ID} ${VERSION_ID} ${VERSION_CODENAME}"
@@ -203,24 +210,24 @@ do_install() {
             sh_c='su -c'
         else
             cat >&2 <<-'EOF'
-            Error: this installer needs the ability to run commands as root.
-            We are unable to find either "sudo" or "su" available to make this happen.
+Error: this installer needs the ability to run commands as root.
+We are unable to find either "sudo" or "su" available to make this happen.
 EOF
             exit 1
         fi
     fi
 
     case $ID in
-    scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
-        repo_cmd="dnf --assumeyes"
-        case $ID in
-        centos|scientific)
-            repo_cmd="yum --assumeyes"
-            ;;
-        suse|opensuse-leap)
-            repo_cmd="zypper --non-interactive"
-            ;;
-        esac
+        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+            repo_cmd="dnf --assumeyes"
+            case $ID in
+                centos|scientific)
+                    repo_cmd="yum --assumeyes"
+                    ;;
+                suse|opensuse-leap)
+                    repo_cmd="zypper --non-interactive"
+                    ;;
+            esac
     esac
     #
     # Check for a previous installation.  The instructions below remove
@@ -231,9 +238,9 @@ EOF
     #
     if [ -f "/etc/condor/condor_config" ]; then
         cat >&2 <<-'EOF'
-            Error: HTCondor appears to have been installed previously on this system.
+Error: HTCondor appears to have been installed previously on this system.
 
-            You may update the existing install, or remove and then re-install.
+You may update the existing install, or remove and then re-install.
 EOF
         case $ID in
         ubuntu|debian)
@@ -243,8 +250,8 @@ EOF
             fi
 
             cat >&2 <<-EOF
-                To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
-                To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
+To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
+To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 EOF
             ;;
         scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
@@ -254,8 +261,8 @@ EOF
             fi
 
             cat >&2 <<-EOF
-                To update: $sh_c "${repo_cmd} update ${PACKAGE}"
-                To remove: $sh_c "${repo_cmd} remove ${PACKAGE} && rm -fr /etc/condor"
+To update: $sh_c "${repo_cmd} update ${PACKAGE}"
+To remove: $sh_c "${repo_cmd} remove ${PACKAGE} && rm -fr /etc/condor"
 EOF
             ;;
         esac
@@ -450,35 +457,34 @@ EOF
 
     if [[ $SHARED_FS_DOMAIN ]]; then
         DOMAIN_CONFIG=$(cat <<-EOF
+# HTCondor assumes that any two machines with the same value
+# for this variable have the same shared filesystems.  Shared
+# filesystems tend not to scale as well as you would like, but
+# they do make it simpler to explain how a job accesses its file.
+FILESYSTEM_DOMAIN = ${SHARED_FS_DOMAIN}
 
-            # HTCondor assumes that any two machines with the same value
-            # for this variable have the same shared filesystems.  Shared
-            # filesystems tend not to scale as well as you would like, but
-            # they do make it simpler to explain how a job accesses its file.
-            FILESYSTEM_DOMAIN = ${SHARED_FS_DOMAIN}
+# If your jobs are accessing a shared filesystem, they probably
+# need to be run as the user who submitted them (as opposed to
+# user nobody or a local user which only runs batch jobs).  This
+# variable must be set to the same thing on the submit machine
+# and on the execute machine to do this.
+UID_DOMAIN = ${SHARED_FS_DOMAIN}
 
-            # If your jobs are accessing a shared filesystem, they probably
-            # need to be run as the user who submitted them (as opposed to
-            # user nobody or a local user which only runs batch jobs).  This
-            # variable must be set to the same thing on the submit machine
-            # and on the execute machine to do this.
-            UID_DOMAIN = ${SHARED_FS_DOMAIN}
+# The UID_DOMAIN must normally be a suffix of the fully-qualified
+# DNS name of the submit machine (as determined by a reverse
+# lookup of the IP address used to contact the execute machine).
+# Setting this variable relaxes that requirement, which is safe
+# to do for this configuration because only submit machines you
+# trust can contact your execute machines.
+TRUST_UID_DOMAIN = TRUE
 
-            # The UID_DOMAIN must normally be a suffix of the fully-qualified
-            # DNS name of the submit machine (as determined by a reverse
-            # lookup of the IP address used to contact the execute machine).
-            # Setting this variable relaxes that requirement, which is safe
-            # to do for this configuration because only submit machines you
-            # trust can contact your execute machines.
-            TRUST_UID_DOMAIN = TRUE
-
-            # Normally, before running a job as a particular user (that is,
-            # not as user nobody), HTCondor checks to make sure that user
-            # is in the password file.  Not all methods for sharing UIDs
-            # across machines store every user in every password file (for
-            # example, LDAP does not).  Setting this this variable relaxes
-            # this requirement.
-            SOFT_UID_DOMAIN = TRUE
+# Normally, before running a job as a particular user (that is,
+# not as user nobody), HTCondor checks to make sure that user
+# is in the password file.  Not all methods for sharing UIDs
+# across machines store every user in every password file (for
+# example, LDAP does not).  Setting this this variable relaxes
+# this requirement.
+SOFT_UID_DOMAIN = TRUE
 
 EOF
         )
