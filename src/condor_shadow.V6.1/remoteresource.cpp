@@ -845,6 +845,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// save (most of) the incoming starter ad for later
 	if (starterAd) { starterAd->Clear(); }
 	else { starterAd = new ClassAd(); }
+
 	starterAd->Update(*ad);
 
 	if( ad->LookupString(ATTR_STARTER_IP_ADDR, buf) ) {
@@ -904,6 +905,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = FALSE (not specified)\n",
 				 ATTR_HAS_RECONNECT );
 	}
+
 }
 
 void

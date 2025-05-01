@@ -2975,6 +2975,11 @@ probably will not want to change them for any reason.
     descendants of processes it creates. This can cause problems when
     HTCondor is run under another job execution system.
 
+:macro-def:`CGROUP_ALL_DAEMONS[MASTER]`
+    A boolean that default to false.  When true, each daemon will
+    be put into its own cgroup. This knob requires a restart to take
+    effect.
+
 :macro-def:`DISCARD_SESSION_KEYRING_ON_STARTUP[MASTER]`
     A boolean value that defaults to ``True``. When ``True``, the
     :tool:`condor_master` daemon will replace the kernel session keyring it

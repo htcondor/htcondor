@@ -1219,6 +1219,7 @@ void usage(FILE* out, const char * argv0)
 		"    -diagnostic       Show detection diagnostic information\n"
 		"    -nvcuda           Use nvcuda libraries for -diagnostic detection\n"
 		"    -cudart           Use cudart libraries for -diagnostic detection\n"
+		"    -dirty-environment Don't cleanse environment of variables that effect GPU discovery\n"
 		"\n"
 	);
 }

@@ -1121,47 +1121,58 @@ HTCondorViewRanged.prototype.change_view = function () {
     const now = new Date(Date.now());
     const start = new Date(Date.now());
 	let changeUrl = false;
-    if (duration === "day") {
-		changeUrl = true;
-        start.setTime(start.getTime() - 1000 * 60 * 60 * 24);
-        options.date_start = start;
-        options.date_end = now;
-        // $("#" + this.id_range).hide();
+    // Pull the value for query parameter "r" from options.data_url
+    // and set it to the current_duration variable.
+    let current_duration = this.options.data_url.split("?").slice(1).find(param => param.startsWith("r="));
+    if (current_duration) {
+        current_duration = current_duration.split("=")[1];
     }
-    else if (duration === "week") {
-		changeUrl = true;
-        start.setTime(start.getTime() - 1000 * 60 * 60 * 24 * 7);
-        options.date_start = start;
-        options.date_end = now;
-        // $("#" + this.id_range).hide();
-    }
-    else if (duration === "month") {
-		changeUrl = true;
-        start.setTime(start.getTime() - 1000 * 60 * 60 * 24 * 31);
-        options.date_start = start;
-        options.date_end = now;
-        // $("#" + this.id_range).hide();
-    }
-/** Custom Date picker left out for now 
-    else if (duration === "custom") {
-        $("#" + this.id_range).show();
-        options.date_start = Date.parseDateTime(
-            $("#" + this.id_start_date).val(),
-            $("#" + this.id_start_time).val());
-        options.date_end = Date.parseDateTime(
-            $("#" + this.id_end_date).val(),
-            $("#" + this.id_end_time).val());
-        console.log(options.date_start, options.date_end);
-        if (!options.date_start || (!options.date_end)) {
-            //console.log("unparsable");
-            return;
+    // If the current_duration is not equal to the selected duration,
+    // set changeUrl to true.
+    if (current_duration !== duration) {
+        if (duration === "day") {
+            changeUrl = true;
+            start.setTime(start.getTime() - 1000 * 60 * 60 * 24);
+            options.date_start = start;
+            options.date_end = now;
+            // $("#" + this.id_range).hide();
         }
-        if (options.date_start.getTime() > options.date_end.getTime()) {
-            //console.log("Backward range");
-            return;
+        else if (duration === "week") {
+            changeUrl = true;
+            start.setTime(start.getTime() - 1000 * 60 * 60 * 24 * 7);
+            options.date_start = start;
+            options.date_end = now;
+            // $("#" + this.id_range).hide();
         }
+        else if (duration === "month") {
+            changeUrl = true;
+            start.setTime(start.getTime() - 1000 * 60 * 60 * 24 * 31);
+            options.date_start = start;
+            options.date_end = now;
+            // $("#" + this.id_range).hide();
+        }
+        /** 
+        Custom Date picker left out for now 
+        else if (duration === "custom") {
+            $("#" + this.id_range).show();
+            options.date_start = Date.parseDateTime(
+                $("#" + this.id_start_date).val(),
+                $("#" + this.id_start_time).val());
+            options.date_end = Date.parseDateTime(
+                $("#" + this.id_end_date).val(),
+                $("#" + this.id_end_time).val());
+            console.log(options.date_start, options.date_end);
+            if (!options.date_start || (!options.date_end)) {
+                //console.log("unparsable");
+                return;
+            }
+            if (options.date_start.getTime() > options.date_end.getTime()) {
+                //console.log("Backward range");
+                return;
+            }
+        }
+        **/
     }
-**/
 
 	// Update URL to encode the date range until the URL, so when
 	// the user switches pages, their date range selection is remembered

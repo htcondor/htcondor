@@ -4,6 +4,10 @@
   first class way to halt a DAG.
   :jira:`2898`
 
+- The ``SlotName`` field in the job event log is now correct in the
+  case where a *condor_startd* has a non-default name.
+  :jira:`3047`
+
 - Added new :class:`htcondor2.DAGMan` class to the python api for sending
   commands to running a DAGMan process.
   :jira:`2898`
@@ -18,6 +22,10 @@
 - Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
   consider a placed job list as failed when job failures occur.
   :jira:`3019`
+
+- On Linux systems, added support to put each condor daemon in its
+  own cgroup with the knob :macro:`CGROUP_ALL_DAEMONS`
+  :jira:`3032`
 
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
   sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
@@ -37,7 +45,35 @@
 - Improve diagnostics in the shadow when it fails to activate a claim.
   :jira:`3035`
 
+- The directory for :macro:`LOCAL_UNIV_EXECUTE` is no longer made
+  world-writable.
+  :jira:`3036`
+
+- Augment the `libvirt_simple_script.awk` script to provide needed
+  UEFI boot information for ARM virtual machines.
+  :jira:`3006`
+
+- The :tool:`condor_upgrade_check` script has been folded into the main condor package.
+  :jira:`2995`
+
+- :tool:`condor_status` will now accept ``-totals`` (previously just ``-total``) to better
+  match other tools with the similar option.
+  :jira:`3044`
+
+- :tool:`condor_adstash` can now be configured to fetch a custom projection of attributes
+  for job (epoch) ClassAds.
+  :jira:`2680`
+
 *** 24.8.0 bugs
+
+- Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
+  The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
+  to go back to the central manager) is a critical scalability feature in HTCSS, especially
+  when running large numbers of short-running jobs.  The bug fixed here was introduced in 
+  HTCondor version 24.5.1, so if you are running HTCondor v24.5.x, v24.6.x, or v24.7.x,
+  and run large numbers of short jobs, please consider upgrading.  See the JIRA ticket
+  for addtional workarounds if you cannot upgrade.
+  :jira:`3045`
 
 - Removed job attribute ``ToE``.
   It has been replaced by job attributes :ad-attr:`VacateReason`,

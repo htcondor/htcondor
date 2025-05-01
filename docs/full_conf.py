@@ -82,7 +82,15 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
         'display_version': False
 }
- 
+
+# Enable Github edits
+html_context = {
+    "display_github": True,
+    "github_user": "htcondor",
+    "github_repo": "htcondor",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []

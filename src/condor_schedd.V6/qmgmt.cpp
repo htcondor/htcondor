@@ -1808,11 +1808,16 @@ void JobQueueUserRec::PopulateFromAd()
 	if (os_user.empty()) {
 		this->LookupString(ATTR_OS_USER, os_user);
 	}
-	if (os_user.empty()) {
-		std::string buf;
+
+	std::string buf;
+	std::string ntdomain;
 #if defined(WIN32)
-		std::string ntdomain;
-		this->LookupString(ATTR_NT_DOMAIN, ntdomain);
+	this->LookupString(ATTR_NT_DOMAIN, ntdomain);
+#endif
+
+	if (os_user.empty()) {
+		// Derive OsUser from User and NTDomain
+#if defined(WIN32)
 		if (!ntdomain.empty()) {
 			os_user = name_of_user(name.c_str(), buf);
 			os_user += '@';
@@ -1821,6 +1826,23 @@ void JobQueueUserRec::PopulateFromAd()
 #else
 		os_user = name_of_user(name.c_str(), buf);
 #endif
+	} else {
+		// Check whether OsUser matches what we would derive from User
+		// and NTDomain
+		std::string derived_user = name_of_user(name.c_str(), buf);
+		if (!ntdomain.empty()) {
+			derived_user += '@';
+			derived_user += ntdomain;
+		}
+		CompareUsersOpt opt;
+#if defined(WIN32)
+		opt = COMPARE_DOMAIN_FULL;
+#else
+		opt = COMPARE_IGNORE_DOMAIN;
+#endif
+		if (!is_same_user(os_user.c_str(), derived_user.c_str(), opt, "~")) {
+			os_user_differs = true;
+		}
 	}
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
 		this->Assign(ATTR_OS_USER, os_user);
@@ -1869,36 +1891,16 @@ void JobQueueJob::PopulateFromAd()
 #endif
 }
 
-// stuff we will need if we have to update the UID domain of the USER attribute as we load
-struct ownerinfo_init_state {
-	const char * prior_uid_domain;
-	const char * uid_domain;
-	bool update_uid_domain;
-};
-
 // helper function for InitJobQueue
 // sets the ownerinfo field in the JobQueueJob header
 // valid for use on JobQueueJob, JobQueueCluster and JobQueueJobSet ads
 static bool
 InitOwnerinfo(
 	JobQueueBase * bad,
-	std::string & owner,
-	const struct ownerinfo_init_state & is)
+	std::string & owner)
 {
-	// fetch the actual value of Owner or User from the ad
-	// and if the update_uid_domain flag is passed, fixup the domain of the User as requested
-	if (bad->LookupString(ATTR_USER, owner)) {
-		YourStringNoCase domain(domain_of_user(owner.c_str(),nullptr));
-		if (is.update_uid_domain && (domain == is.prior_uid_domain)) {
-			size_t at_sign = owner.find_last_of('@');
-			if (at_sign != std::string::npos) {
-				owner.erase(at_sign+1);
-				owner += is.uid_domain;
-				bad->Assign(ATTR_USER, owner);
-				JobQueueDirty = true;
-			}
-		}
-	} else {
+	// fetch the actual value of User from the ad
+	if (!bad->LookupString(ATTR_USER, owner)) {
 		owner.clear();
 	}
 
@@ -1936,10 +1938,9 @@ InitOwnerinfo(
 static bool
 InitJobsetAd(
 	JobQueueJobSet * jobset,
-	std::string & owner,
-	const struct ownerinfo_init_state & is)
+	std::string & owner)
 {
-	if ( ! InitOwnerinfo(jobset, owner, is))
+	if ( ! InitOwnerinfo(jobset, owner))
 		return false;
 
 	if (scheduler.jobSets) {
@@ -1956,13 +1957,12 @@ static bool
 InitClusterAd (
 	JobQueueCluster * cad,
 	std::string & owner,
-	const struct ownerinfo_init_state & is,
 	std::vector<unsigned int> & jobset_ids,
 	std::unordered_map<std::string, unsigned int> & needed_sets)
 {
 	std::string name1, name2;
 
-	if ( ! InitOwnerinfo(cad, owner, is))
+	if ( ! InitOwnerinfo(cad, owner))
 		return false;
 
 	cad->PopulateFromAd();
@@ -1984,7 +1984,7 @@ InitClusterAd (
 			// we might end up looking at the jobset ad before we iterate it, so make sure the ownerinfo is set
 			if ( ! jobset->ownerinfo) {
 				std::string owner2;
-				InitJobsetAd(jobset, owner2, is);
+				InitJobsetAd(jobset, owner2);
 				jobset_ids.push_back(jobset->Jobset());
 			}
 
@@ -2129,29 +2129,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	std::string correct_scheduler;
 	std::string buffer;
 	std::string name1;
-
-	// setup stuff we will need if we have to update the UID domain of the USER attribute as we load
-	auto_free_ptr prior_uid_domain(param("PRIOR_UID_DOMAIN"));
-	struct ownerinfo_init_state ownerinfo_is{};
-	ownerinfo_is.prior_uid_domain = prior_uid_domain;
-	ownerinfo_is.uid_domain = scheduler.uidDomain();
-	ownerinfo_is.update_uid_domain = false;
-	if (prior_uid_domain && ownerinfo_is.uid_domain && MATCH != strcasecmp(ownerinfo_is.uid_domain, prior_uid_domain)) {
-		ownerinfo_is.update_uid_domain = true;
-	}
+	std::string oldUidDomain;
 
 	if (!JobQueue->Lookup(HeaderKey, bad)) {
 		// we failed to find header ad, so create one
 		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE);
 		CreatedAd = true;
 	} else {
-		std::string oldUidDomain;
 		bad->LookupString(ATTR_UID_DOMAIN, oldUidDomain);
-		if (oldUidDomain != scheduler.uidDomain()) {
-			JobQueue->SetAttribute(HeaderKey, ATTR_UID_DOMAIN, QuoteAdStringValue(scheduler.uidDomain(), buffer));
-			// when upgrading Schedds to 23.x oldUidDomain will be empty here.
-			// TODO: set effective PRIOR_UID_DOMAIN value here?
-		}
 	}
 
 	if (CreatedAd ||
@@ -2166,6 +2151,33 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
         dprintf(D_ALWAYS, "Stored cluster id %d exceeds configured max %d.  Flagging for reset.\n", stored_cluster_num, cluster_maximum_val);
         stored_cluster_num = 0;
     }
+
+	// If our uid domain has changed, then rewrite all User attributes that
+	// contain the old value to have the new value.
+	if (strcasecmp(oldUidDomain.c_str(), scheduler.uidDomain()) != MATCH) {
+
+		JobQueue->BeginTransaction();
+		JobQueue->StartIterateAllClassAds();
+		while (JobQueue->Iterate(key, bad)) {
+			if (bad->IsHeader()) { continue; }
+			if (!bad->LookupString(ATTR_USER, user)) { continue; }
+
+			if (strcasecmp(domain_of_user(user.c_str(), ""), oldUidDomain.c_str()) == MATCH) {
+				size_t at_sign = user.find_last_of('@');
+				if (at_sign != std::string::npos) {
+					user.erase(at_sign+1);
+					user += scheduler.uidDomain();
+					JobQueue->SetAttribute(key, ATTR_USER, QuoteAdStringValue(user.c_str(), buffer));
+				}
+			}
+		}
+		JobQueue->SetAttribute(HeaderKey, ATTR_UID_DOMAIN, QuoteAdStringValue(scheduler.uidDomain(), buffer));
+		JobQueue->CommitNondurableTransaction();
+
+	} else if (oldUidDomain.empty()) {
+
+		JobQueue->SetAttribute(HeaderKey, ATTR_UID_DOMAIN, QuoteAdStringValue(scheduler.uidDomain(), buffer));
+	}
 
 		// Figure out what the correct ATTR_SCHEDULER is for any
 		// dedicated jobs in this queue.  Since it'll be the same for
@@ -2214,7 +2226,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			// we init jobset ads the first time we need them, which might be *before* we iterate them
 			// so we use a null ownerinfo pointer as a signal that we havent handled this ad yet
 			if ( ! sad->ownerinfo) {
-				InitJobsetAd(sad, owner, ownerinfo_is);
+				InitJobsetAd(sad, owner);
 				jobset_ids.push_back(sad->Jobset());
 			}
 			continue; // done with this jobset ad for the first pass
@@ -2223,7 +2235,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		if (bad->IsCluster()) {
 			auto * cad = dynamic_cast<JobQueueCluster*>(bad);
 			if ( ! cad->ownerinfo) {
-				InitClusterAd(cad, owner, ownerinfo_is, jobset_ids, needed_sets);
+				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
 			continue;  // done with this cluster ad for the first pass
 		}
@@ -2255,7 +2267,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			clusterad = GetClusterAd(cluster_num);
 			if (clusterad) {
 				if ( ! clusterad->ownerinfo) {
-					InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+					InitClusterAd(clusterad, owner, jobset_ids, needed_sets);
 
 					// backward compat hack.  Older versions of grid universe and job router don't populate the cluster ad
 					// so if we failed to get ownerinfo, copy attributes from the proc ad and try again
@@ -2266,7 +2278,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 						if ( ! clusterad->LookupString(ATTR_OWNER, buffer) && ad->LookupString(ATTR_OWNER, buffer)) {
 							clusterad->Assign(ATTR_OWNER, buffer);
 						}
-						InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+						InitClusterAd(clusterad, owner, jobset_ids, needed_sets);
 					}
 				}
 				clusterad->AttachJob(ad);
@@ -4700,6 +4712,18 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// first, make certain ATTR_OWNER can only be set to who they really are.
 	if (attr_id == idATTR_OWNER)
 	{
+		// User and Owner can't be set in ordinary job ads. Force those into
+		// the cluster ad if proc_id==0 (handle old c-gahp and job router)
+		// and ignore otherwise.
+		if (cluster_id > 0) {
+			if (proc_id == 0) {
+				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
+			} else if (proc_id > 0) {
+				dprintf(D_FULLDEBUG, "SetAttribute: Ignoring setting of Owner in proc ad\n");
+				return 0;
+			}
+		}
+
 		const char* sock_owner = Q_SOCK ? Q_SOCK->getOwner() : "";
 		if( !sock_owner ) {
 			sock_owner = "";
@@ -4920,6 +4944,18 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	}
 	else if (attr_id == idATTR_USER) {
+
+		// User and Owner can't be set in ordinary job ads. Force those into
+		// the cluster ad if proc_id==0 (handle old c-gahp and job router)
+		// and ignore otherwise.
+		if (cluster_id > 0) {
+			if (proc_id == 0) {
+				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
+			} else if (proc_id > 0) {
+				dprintf(D_FULLDEBUG, "SetAttribute: Ignoring setting of User in proc ad\n");
+				return 0;
+			}
+		}
 
 		const char * sock_user = EffectiveUserName(Q_SOCK);
 
@@ -6538,7 +6574,6 @@ CommitTransactionAndLive( SetAttributeFlags_t flags,
 int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 	std::list<std::string> new_ad_keys;
-	struct ownerinfo_init_state ownerinfo_is = { nullptr, nullptr, false };
 	std::string owner;
 	
 		// get a list of all new ads being created in this transaction
@@ -6637,18 +6672,15 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 		scheduler.mapPendingOwners();
 	}
 
-	// if we modified "User" or "owner" attributes, but not as part of making new ads
-	// we need to do a pass to fixup the ownerinfo pointer on the modified jobs and jobsets
-	if (new_ad_keys.empty() && (triggers & (catSetOwner|catSetUserRec))) {
-		bool set_owner = (triggers & catSetOwner) != 0;
-		bool edit_user = (triggers & catSetUserRec) != 0;
+	// if we modified UserRecord attributes, we need to do a pass to reflect
+	// those changes into the in-memory data structures
+	if (triggers & catSetUserRec) {
 		for(const auto& it : ad_keys) {
 			JobQueueKey jid(it.c_str());
 			JobQueueBase *bad = nullptr;
+			if (JobQueueBase::TypeOfJid(jid) != JobQueueBase::entry_type_userrec) continue;
 			if ( ! JobQueue->Lookup(jid, bad) || ! bad) continue; // safety
-			if (bad->IsCluster() || bad->IsJob() || bad->IsJobSet()) {
-				if (set_owner) { InitOwnerinfo(bad, owner, ownerinfo_is); }
-			} else if (bad->IsUserRec() && edit_user) {
+			if (bad->IsUserRec()) {
 				dynamic_cast<JobQueueUserRec*>(bad)->PopulateFromAd();
 			}
 		}
@@ -6664,7 +6696,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 	for (auto id : new_jobset_ids) {
 		JobQueueJobSet * jobset = GetJobSetAd(id);
 		if (jobset) {
-			InitJobsetAd(jobset, owner, ownerinfo_is);
+			InitJobsetAd(jobset, owner);
 		}
 	}
 
@@ -6698,7 +6730,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// does not have a User attribute. which can happen with older gridmanager or
 					// job router submits.  They put the User attribute into the proc ad
 					if ( ! clusterad->ownerinfo) {
-						InitOwnerinfo(clusterad, owner, ownerinfo_is);
+						InitOwnerinfo(clusterad, owner);
 					}
 					clusterad->PopulateFromAd();
 
@@ -6792,7 +6824,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				clusterad = GetClusterAd(job_id.cluster);
 				if (clusterad && ! clusterad->ownerinfo) {
 					// in case we haven't seen the new cluster yet in this loop, init the cluster ownerinfo now
-					InitOwnerinfo(clusterad, owner, ownerinfo_is);
+					InitOwnerinfo(clusterad, owner);
 				}
 			}
 			if (clusterad && JobQueue->Lookup(job_id, procad))
@@ -6809,20 +6841,6 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// increment the 'recently added' job count for this owner
 				if (clusterad->ownerinfo) {
 					procad->ownerinfo = clusterad->ownerinfo;
-					scheduler.incrementRecentlyAdded(procad->ownerinfo);
-				} else {
-					// HACK! 
-					// we get here only when the Cluster ad does not have an Owner or User attribute
-					// older versions of the job router and gridmanager submit this way, so fix things up
-					// minimally here, a restart of the schedd will fix things fully
-					if ( ! InitOwnerinfo(procad, owner, ownerinfo_is) && Q_SOCK) {
-						// last ditch effort, just use the socket owner as the job owner
-						const char * user = EffectiveUserName(Q_SOCK);
-						procad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(user));
-					}
-					ASSERT(procad->ownerinfo);
-					clusterad->ownerinfo = procad->ownerinfo;
-					clusterad->Assign(ATTR_USER, procad->ownerinfo->Name());
 					scheduler.incrementRecentlyAdded(procad->ownerinfo);
 				}
 
@@ -8240,7 +8258,25 @@ ClassAd* GetExpandedJobAd(const PROC_ID& job_id, bool persist_expansions)
 
 	}
 
-	return dollarDollarExpand(job_id.cluster, job_id.proc, ad, startd_ad, persist_expansions);
+	ClassAd* exp_ad = dollarDollarExpand(job_id.cluster, job_id.proc, ad, startd_ad, persist_expansions);
+
+	// If the startd doesn't know about OsUser and OsUser doesn't match
+	// Owner (and NTDomain on windows), then we'll need to lie about the
+	// value of Owner (and NTDomain).
+	if (exp_ad && startd_ad && job->ownerinfo->OsUserDiffers()) {
+		bool has_os_user = false;
+		startd_ad->LookupBool(ATTR_HAS_OS_USER, has_os_user);
+		if (!has_os_user) {
+			std::string buf;
+			exp_ad->Assign(ATTR_OWNER, name_of_user(job->ownerinfo->OsUser(), buf));
+			const char* ntdomain = domain_of_user(job->ownerinfo->OsUser(), nullptr);
+			if (ntdomain) {
+				exp_ad->Assign(ATTR_NT_DOMAIN, ntdomain);
+			}
+		}
+	}
+
+	return exp_ad;
 }
 
 // We have to define this to prevent the version in qmgmt_stubs from being pulled into the schedd.
