@@ -58,6 +58,11 @@
   trailing semicolon.
   :jira:`2910`
 
+- Fixed some bugs with parallel universe jobs that can cause the
+  ``condor_schedd`` to crash.
+  :jira:`3049`
+
+
 *** 23.0.24 bugs
 
 - Fixed inflated memory usage reporting for docker universe jobs on hosts using
