@@ -76,9 +76,9 @@ check_forked() {
         ID='ubuntu'
         VERSION_CODENAME=$UBUNTU_CODENAME
         case $VERSION_CODENAME in
-            'focal') VERSION_ID=20.04;;
-            'jammy') VERSION_ID=22.04;;
-            'noble') VERSION_ID=24.04;;
+            focal) VERSION_ID=20.04;;
+            jammy) VERSION_ID=22.04;;
+            noble) VERSION_ID=24.04;;
         esac
     fi
 
