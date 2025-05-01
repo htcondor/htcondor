@@ -279,17 +279,22 @@ Requires: systemd-libs
 Requires: rsync
 Requires: condor-upgrade-checks
 
-# Support OSDF client
-Requires: pelican >= 7.15.1
-Requires: pelican-osdf-compat >= 7.15.1
-
-# Require tested Apptainer
+# Dependencies on HTCondor tested packages (Apptainer and Pelican)
 %if 0%{?rhel} != 7
 %if 0%{?suse_version}
-# Unfortunately, openSUSE is lagging behind
+# Require tested Apptainer
+# Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
+# Require tested Pelican packages
+# Unfortunately, Pelican 7.15.0+ is not installable on openSUSE Leap 15
+Requires: pelican >= 7.14.1
 %else
+# Require tested Apptainer
+# Hold back apptainer until version 1.4.1 is released
 Requires: apptainer >= 1.3.6
+# Require tested Pelican packages
+Requires: pelican >= 7.15.1
+Requires: pelican-osdf-compat >= 7.15.1
 %endif
 %endif
 
