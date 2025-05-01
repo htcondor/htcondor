@@ -468,6 +468,11 @@ def shadow_log_is_as_expected(the_condor, count):
     )
     assert keyfile_touches == count
 
+    job_evictions = count_shadow_log_lines(
+        the_condor, "is being evicted from"
+    )
+    assert job_evictions == 0
+
 
 def lock_dir_is_clean(the_lock_dir):
     files = list(the_lock_dir.iterdir())
