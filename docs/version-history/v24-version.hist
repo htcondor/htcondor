@@ -23,6 +23,10 @@
   consider a placed job list as failed when job failures occur.
   :jira:`3019`
 
+- On Linux systems, added support to put each condor daemon in its
+  own cgroup with the knob :macro:`CGROUP_ALL_DAEMONS`
+  :jira:`3032`
+
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
   sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
   pilot or glidein systems to further subdivide the job's cgroup.

@@ -217,45 +217,6 @@ static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
 		cgroup_controller_is_writeable("", relative_cgroup);
 }
 
-static std::string current_parent_cgroup() {
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	std::string cgroup;
-
-	int fd = open("/proc/self/cgroup", O_RDONLY);
-	if (fd < 0) {
-		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
-		return cgroup; // empty cgroup is invalid
-	}
-
-	char buf[1024];
-	int r = read(fd, buf, sizeof(buf)-1);
-	if (r < 0) {
-		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
-		close(fd);
-		return cgroup;
-	}
-	buf[r] = '\0';
-	cgroup = buf;
-	close(fd);
-
-	if (cgroup.starts_with("0::")) {
-		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
-	} else {
-		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
-		cgroup = "";
-	}
-
-	size_t lastSlash = cgroup.rfind('/');
-	if (lastSlash == std::string::npos) {
-		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
-		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
-		cgroup = "";
-	} else {
-		cgroup.erase(lastSlash); // Remove trailing slash
-	}
-	return cgroup;
-}
-
 static bool hasCgroupV2() {
 	struct stat statbuf{};
 	// Should be readable by everyone
@@ -356,15 +317,9 @@ VanillaProc::StartJob()
 	// For v2, let's put the job into the current cgroup hierarchy
 	// Because of the "no process in interior cgroups" rule, this means
 	// we create a new child of our parent. (a sibling, if you will).
-	if (hasCgroupV2()) {
-		std::string current = current_parent_cgroup();
-		cgroup_base = current + '/' + cgroup_base;
 
-		// remove leading / from cgroup_name. cgroupv2 code hates that
-		if (cgroup_base.starts_with('/')) {
-			cgroup_base = cgroup_base.substr(1, cgroup_base.size() - 1);
-		}
-		replace_str(cgroup_base, "//", "/");
+	if (hasCgroupV2()) {
+		cgroup_base = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_base);
 	}
 
 	if (create_cgroup && cgroup_is_writeable(cgroup_base)) {
@@ -380,7 +335,7 @@ VanillaProc::StartJob()
 		formatstr(cgroup_uniq, "%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		replace_str(cgroup_uniq, dir_delim, "_");
-		formatstr(cgroup_str, "%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
+		formatstr(cgroup_str, "%s%c%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.c_str());
 		cgroup_str += this->CgroupSuffix();
 		
