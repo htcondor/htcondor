@@ -62,6 +62,8 @@ public:
 	void update_collector(int);
 	void invalidate_ad();
 
+	void timer_read_mapfiles(int);
+
 	int command_user_login(int, Stream* stream);
 	int command_query_users(int, Stream* stream);
 	int command_query_tokens(int, Stream* stream);
@@ -71,6 +73,7 @@ public:
 	ClassAd m_daemon_ad;
 	int m_update_collector_tid{-1};
 	int m_update_collector_interval{300};
+	int m_read_mapfiles_tid{-1};
 
 	std::map<std::string, UserMapEntry> m_users;
 	std::map<std::string, AuthzMapEntry> m_authz;
@@ -97,7 +100,7 @@ PlacementDaemon::Init()
 {
 	std::string uid_domain;
 
-	if (!param(uid_domain, "PLACEMENT_UID_DOMAIN")) {
+	if (!param(uid_domain, "PLACEMENTD_UID_DOMAIN")) {
 		param(uid_domain, "UID_DOMAIN");
 	}
 
@@ -117,6 +120,10 @@ PlacementDaemon::Init()
 	// set timer to periodically advertise ourself to the collector
 	m_update_collector_tid = daemonCore->Register_Timer(0, m_update_collector_interval,
 				(TimerHandlercpp)&PlacementDaemon::update_collector, "update_collector", this);
+
+	m_read_mapfiles_tid = daemonCore->Register_Timer(0, 300,
+			(TimerHandlercpp)&PlacementDaemon::timer_read_mapfiles,
+			"timer_read_mapfiles", this);
 
 	Config();
 
@@ -168,17 +175,15 @@ PlacementDaemon::Config()
 		EXCEPT("No TOKENS_DATABASE specified!");
 	}
 
-	if (param(m_mapFile, "PLACEMENTD_MAPFILE")) {
-		ReadUserMapFile();
-	} else {
+	if (!param(m_mapFile, "PLACEMENTD_MAPFILE")) {
 		m_mapFile.clear();
 	}
 
-	if (param(m_authzMapFile, "PLACEMENTD_AUTHORIZATIONS_MAPFILE")) {
-		ReadAuthzMapFile();
-	} else {
+	if (!param(m_authzMapFile, "PLACEMENTD_AUTHORIZATIONS_MAPFILE")) {
 		m_authzMapFile.clear();
 	}
+
+	daemonCore->Reset_Timer(m_read_mapfiles_tid, 0, 300);
 }
 
 void
@@ -250,7 +255,7 @@ main(int argc, char **argv)
 bool PlacementDaemon::ReadUserMapFile()
 {
 	std::string uid_domain;
-	if (!param(uid_domain, "PLACEMENT_UID_DOMAIN")) {
+	if (!param(uid_domain, "PLACEMENTD_UID_DOMAIN")) {
 		param(uid_domain, "UID_DOMAIN");
 	}
 
@@ -322,6 +327,17 @@ bool PlacementDaemon::ReadAuthzMapFile()
 
 	fclose(map_fp);
 	return true;
+}
+
+void PlacementDaemon::timer_read_mapfiles(int)
+{
+	if (!m_mapFile.empty()) {
+		ReadUserMapFile();
+	}
+
+	if (!m_authzMapFile.empty()) {
+		ReadAuthzMapFile();
+	}
 }
 
 int PlacementDaemon::command_user_login(int cmd, Stream* stream)
