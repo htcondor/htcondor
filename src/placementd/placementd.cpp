@@ -419,7 +419,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 			goto send_reply;
 		}
 		auto req_authz = split(requester_it->second.authz);
-		if (!contains(req_authz, "INSTRUCTOR")) {
+		if (!contains_anycase(req_authz, "INSTRUCTOR")) {
 			dprintf(D_FULLDEBUG, "Requester %s doesn't have INSTRUCTOR\n", requester.c_str());
 			result_ad.Assign(ATTR_ERROR_STRING, "Requester not authorized as INSTRUCTOR");
 			result_ad.Assign(ATTR_ERROR_CODE, 8);
@@ -437,7 +437,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 
 	full_authz_list = split(user_it->second.authz);
 	for (const auto& one_authz: StringTokenIterator(authz_list)) {
-		if (contains(full_authz_list, one_authz)) {
+		if (contains_anycase(full_authz_list, one_authz)) {
 			bounding_set.emplace_back(one_authz);
 		} else {
 			bad_authz = one_authz;
@@ -751,7 +751,7 @@ int PlacementDaemon::command_query_authorizations(int cmd, Stream* stream)
 	}
 
 	for (const auto& [authz_name, authz_entry]: m_authz) {
-		if (user_it != m_users.end() && !contains(user_authz, authz_name)) {
+		if (user_it != m_users.end() && !contains_anycase(user_authz, authz_name)) {
 			continue;
 		}
 		reply_ad.Clear();
