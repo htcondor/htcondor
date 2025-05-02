@@ -1477,6 +1477,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
+- Use pelican 7.14.1 on openSUSE
+
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-1
 - HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0
 
