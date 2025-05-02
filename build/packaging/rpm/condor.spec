@@ -280,8 +280,13 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Support OSDF client
+%if 0%{?suse_version}
+Requires: pelican >= 7.14.1
+Requires: pelican-osdf-compat >= 7.14.1
+%else
 Requires: pelican >= 7.15.1
 Requires: pelican-osdf-compat >= 7.15.1
+%endif
 
 # Require tested Apptainer
 %if 0%{?rhel} != 7
@@ -1479,6 +1484,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-2
+- Use pelican 7.14.1 on openSUSE
+
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
+- Use pelican 7.14.1 on openSUSE
+
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-1
 - With delegated cgroups v2, job out-of-memory no longer affects the pilot
 
