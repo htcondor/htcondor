@@ -2,6 +2,8 @@
 
 *** 24.9.0 bugs
 
+*** 24.0.9 bugs
+
 *** 24.8.0 features
 
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
