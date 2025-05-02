@@ -1529,6 +1529,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.0-2
+- Use pelican 7.14.1 on openSUSE
+
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-2
+- Use pelican 7.14.1 on openSUSE
+
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
+- Use pelican 7.14.1 on openSUSE
+
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.3-1
 - condor_who now works for Glideins
 - Can add arbitrary credentials to be used by the file transfer plugins
