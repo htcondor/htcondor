@@ -4,47 +4,50 @@
 
 *** 24.8.0 features
 
-- Added new ``halt`` and ``resume`` verbs to :tool:`htcondor dag` for
-  first class way to halt a DAG.
-  :jira:`2898`
-
-- The ``SlotName`` field in the job event log is now correct in the
-  case where a *condor_startd* has a non-default name.
-  :jira:`3047`
-
-- Added new :class:`htcondor2.DAGMan` class to the python api for sending
-  commands to running a DAGMan process.
-  :jira:`2898`
-
-- On Linux and macOS, when using dataflow jobs, HTCondor now checks the modification
-  times of dataflow nodes with subsecond accuracy.  Previously, it just
-  used seconds, which means that it might incorrectly not skip a dataflow
-  job that it should have skipped if the output file was written in the
-  same second as the input file.
-  :jira:`3027`
-
-- Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
-  consider a placed job list as failed when job failures occur.
-  :jira:`3019`
-
-- On Linux systems, added support to put each condor daemon in its
-  own cgroup with the knob :macro:`CGROUP_ALL_DAEMONS`
-  :jira:`3032`
-
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
   sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
   pilot or glidein systems to further subdivide the job's cgroup.
   :jira:`3008`
 
-- :tool:`htcondor ap status` will now show the :ad-attr:`RecentDaemonCoreDutyCycle` of
-  each reported Access Point's Schedd.
-  :jira:`3009`
+- On Linux systems, added support to put each condor daemon in its
+  own cgroup with the knob :macro:`CGROUP_ALL_DAEMONS`
+  :jira:`3032`
 
 - The execute point now sets the execute permission bit on
-  the :subcom:`executable` even when it was transfered by a plugin.
+  the :subcom:`executable` even when it was transferred by a plugin.
   This is helpful when using pelican or osdf to transfer the
   job's main executable.
   :jira:`3020`
+
+- Add a new configuration knob, :macro:`STARTER_SETS_HOME_ENV` which defaults to 
+  true.  When true, the job will have the **HOME** environment variable
+  set to whatever it is on the system.  When false, HOME will not
+  be set to anything.
+  :jira:`3010`
+
+- Added new ``halt`` and ``resume`` verbs to :tool:`htcondor dag` for
+  first class way to halt a DAG.
+  :jira:`2898`
+
+- Added new :class:`htcondor2.DAGMan` class to the python API for sending
+  commands to running a DAGMan process.
+  :jira:`2898`
+
+- Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
+  consider a placed job list as failed when job failures occur.
+  :jira:`3019`
+
+- :tool:`htcondor ap status` will now show the :ad-attr:`RecentDaemonCoreDutyCycle` of
+  each reported Access Point's *condor_schedd*.
+  :jira:`3009`
+
+- :tool:`condor_adstash` can now be configured to fetch a custom projection of attributes
+  for job (epoch) ClassAds.
+  :jira:`2680`
+
+- :tool:`condor_status` will now accept ``-totals`` (previously just ``-total``) to better
+  match other tools with the similar option.
+  :jira:`3044`
 
 - Improve diagnostics in the shadow when it fails to activate a claim.
   :jira:`3035`
@@ -60,14 +63,6 @@
 - The :tool:`condor_upgrade_check` script has been folded into the main condor package.
   :jira:`2995`
 
-- :tool:`condor_status` will now accept ``-totals`` (previously just ``-total``) to better
-  match other tools with the similar option.
-  :jira:`3044`
-
-- :tool:`condor_adstash` can now be configured to fetch a custom projection of attributes
-  for job (epoch) ClassAds.
-  :jira:`2680`
-
 *** 24.8.0 bugs
 
 - Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
@@ -79,26 +74,33 @@
   for addtional workarounds if you cannot upgrade.
   :jira:`3045`
 
-- Removed job attribute ``ToE``.
-  It has been replaced by job attributes :ad-attr:`VacateReason`,
-  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
-  :jira:`2974`
+- On Linux and macOS, when using dataflow jobs, HTCondor now checks the modification
+  times of dataflow nodes with subsecond accuracy.  Previously, it just
+  used seconds, which means that it might incorrectly not skip a dataflow
+  job that it should have skipped if the output file was written in the
+  same second as the input file.
+  :jira:`3027`
 
 - Fixed :tool:`condor_watch_q` to output a useful error message and not
   exit when one of :subcom:`log` files associated with jobs being tracked
   does not exist.
   :jira:`2978`
 
+- Removed job attribute ``ToE``.
+  It has been replaced by job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
+  :jira:`2974`
+
+- The ``SlotName`` field in the job event log is now correct in the
+  case where a *condor_startd* has a non-default name.
+  :jira:`3047`
+
 - Fixed a bug where :meth:`htcondor2.enable_debug()` would cause the
-  Python interpreter to exit if the debug log were configured incorrectly.
+  Python interpreter to exit if the debug log was configured incorrectly.
   :jira:`3004`
 
-
-- Add a new config knob, :macro:`STARTER_SETS_HOME_ENV` which defaults to 
-  true.  When true, the job will have the **HOME** environemnt variable
-  set to whatever it is on the system.  When false, HOME will not
-  be set to anything.
-  :jira:`3010`
+- Removed some memory leaks from version 2 of the Python bindings.
+  :jira:`2981`
 
 - Fixed a bug introduced in HTCondor 24.7.0 which would lead to the directory
   ``0`` (and subdirectories) spuriously being created in the :macro:`SPOOL`
