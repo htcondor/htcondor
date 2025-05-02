@@ -1,3 +1,7 @@
+*** 24.9.0 features
+
+*** 24.9.0 bugs
+
 *** 24.8.0 features
 
 - Added new ``halt`` and ``resume`` verbs to :tool:`htcondor dag` for
