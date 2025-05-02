@@ -47,6 +47,9 @@ class ResourceRequestCluster {
 
 		// returns the auto cluster id for this cluster
 	int getAutoClusterId() const { return m_auto_cluster_id; }
+
+	const std::list<PROC_ID> & jobIDs() { return m_job_ids; }
+
  private:
 
 	int m_auto_cluster_id;
