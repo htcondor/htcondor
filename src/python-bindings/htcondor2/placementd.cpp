@@ -1,11 +1,12 @@
 static PyObject *
 _placement_user_login(PyObject *, PyObject * args) {
-	// _placement_user_login(addr, username, authorizations)
+	// _placement_user_login(addr, username, authorizations, requester)
 
 	const char * addr = nullptr;
 	const char * username = nullptr;
 	const char * authz = nullptr;
-	if (! PyArg_ParseTuple(args, "sss", & addr, & username, & authz)) {
+	const char * requester = nullptr;
+	if (! PyArg_ParseTuple(args, "sssz", & addr, & username, & authz, & requester)) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	}
@@ -22,6 +23,9 @@ _placement_user_login(PyObject *, PyObject * args) {
 	ClassAd cmd_ad;
 	cmd_ad.Assign("UserName", username);
 	cmd_ad.Assign("Authorizations", authz);
+	if (requester) {
+		cmd_ad.Assign("Requester", requester);
+	}
 
 	if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
 		PyErr_SetString( PyExc_HTCondorException, "Failed to send request to PlacementD");

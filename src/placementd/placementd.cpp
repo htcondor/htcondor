@@ -132,7 +132,7 @@ PlacementDaemon::Init()
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to open database file %s: %s\n", m_databaseFile.c_str(), sqlite3_errmsg(m_db));
 	}
-	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (foreign_id TEXT, ap_id TEXT, authz TEXT, token_jti TEXT, token_exp INTEGER)", nullptr, nullptr, &db_err_msg);
+	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (requester_id TEXT, foreign_id TEXT, ap_id TEXT, authz TEXT, token_jti TEXT, token_exp INTEGER)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to create db table: %s\n", db_err_msg);
 	}
@@ -368,6 +368,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	ClassAd result_ad;
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
+	std::string requester;
 	std::string authz_list; // authz requested for this token
 	std::vector<std::string> full_authz_list; // all authz from the mapfile
 	std::string bad_authz;
@@ -396,6 +397,10 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 	cmd_ad.LookupString("Authorizations", authz_list);
+	cmd_ad.LookupString("Requester", requester);
+	if (requester.empty()) {
+		requester = user_name;
+	}
 
 	user_it = m_users.find(user_name);
 	if (user_it == m_users.end()) {
@@ -403,6 +408,29 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_STRING, "User not authorized");
 		result_ad.Assign(ATTR_ERROR_CODE, 3);
 		goto send_reply;
+	}
+
+	if (requester != user_name) {
+		auto requester_it = m_users.find(requester);
+		if (requester_it == m_users.end()) {
+			dprintf(D_FULLDEBUG, "Requester %s is unknown\n", requester.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, "Requester not known");
+			result_ad.Assign(ATTR_ERROR_CODE, 7);
+			goto send_reply;
+		}
+		auto req_authz = split(requester_it->second.authz);
+		if (!contains(req_authz, "INSTRUCTOR")) {
+			dprintf(D_FULLDEBUG, "Requester %s doesn't have INSTRUCTOR\n", requester.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, "Requester not authorized as INSTRUCTOR");
+			result_ad.Assign(ATTR_ERROR_CODE, 8);
+			goto send_reply;
+		}
+		if (requester_it->second.exp > 0 && requester_it->second.exp < time(nullptr)) {
+			dprintf(D_FULLDEBUG, "Requester %s mapping is expired\n", requester.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, "Requester mapping is expired");
+			result_ad.Assign(ATTR_ERROR_CODE, 9);
+			goto send_reply;
+		}
 	}
 
 	token_identity = user_it->second.ap_id;
@@ -464,7 +492,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
 	}
 
-	formatstr(stmt_str, "INSERT INTO placementd_tokens (foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', %lld);", user_name.c_str(), token_identity.c_str(), authz_list.c_str(), token_jti.c_str(), token_exp);
+	formatstr(stmt_str, "INSERT INTO placementd_tokens (requester_id, foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', '%s', %lld);", requester.c_str(), user_name.c_str(), token_identity.c_str(), authz_list.c_str(), token_jti.c_str(), token_exp);
 	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
@@ -640,7 +668,7 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 			formatstr_cat(where_str, "token_exp >= %lld", (long long)time(nullptr));
 		}
 	}
-	formatstr(stmt_str, "SELECT foreign_id, ap_id, authz, token_jti, token_exp FROM placementd_tokens %s;", where_str.c_str());
+	formatstr(stmt_str, "SELECT requester_id, foreign_id, ap_id, authz, token_jti, token_exp FROM placementd_tokens %s;", where_str.c_str());
 
 	sqlite3_stmt* stmt = nullptr;
 	int rc = sqlite3_prepare_v2(m_db, stmt_str.c_str(), -1, &stmt, nullptr);
@@ -652,11 +680,12 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		token_ad.Clear();
-		token_ad.Assign("UserName", (const char*)sqlite3_column_text(stmt, 0));
-		token_ad.Assign("ApUserId", (const char*)sqlite3_column_text(stmt, 1));
-		token_ad.Assign("Authorizations", (const char*)sqlite3_column_text(stmt, 2));
-		token_ad.Assign("TokenId", (const char*)sqlite3_column_text(stmt, 3));
-		token_ad.Assign("TokenExpiration", sqlite3_column_int(stmt, 4));
+		token_ad.Assign("Requester", (const char*)sqlite3_column_text(stmt, 0));
+		token_ad.Assign("UserName", (const char*)sqlite3_column_text(stmt, 1));
+		token_ad.Assign("ApUserId", (const char*)sqlite3_column_text(stmt, 2));
+		token_ad.Assign("Authorizations", (const char*)sqlite3_column_text(stmt, 3));
+		token_ad.Assign("TokenId", (const char*)sqlite3_column_text(stmt, 4));
+		token_ad.Assign("TokenExpiration", sqlite3_column_int(stmt, 5));
 		if (!putClassAd(stream, token_ad)) {
 			dprintf(D_ALWAYS, "Error sending token ad for %s command\n", cmd_name);
 			sqlite3_finalize(stmt);

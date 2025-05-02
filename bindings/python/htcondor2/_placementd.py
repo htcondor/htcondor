@@ -43,16 +43,19 @@ class Placementd():
     def userLogin(self,
         username : str,
         authorizations : str,
+        requester : str = None,
     ) -> classad.ClassAd:
         """
         Request a user placement token.
 
-        :param username:  Foreign dentifier of the user.
+        :param username:  Foreign identifier of the user who'll use the token.
         :param authorizations:  What authorizations token should grant.
+        :param requester:  Foreign identifier of user making the request.
+            :py:obj:`None` means the same value as username.
 
         :return:  A ClassAd with the token and additional information.
         """
-        return _placement_user_login(self._addr, username, authorizations)
+        return _placement_user_login(self._addr, username, authorizations, requester)
 
     def queryUsers(self,
         username : str = None,
