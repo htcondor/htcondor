@@ -283,8 +283,13 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Support OSDF client
+%if 0%{?suse_version}
+Requires: pelican >= 7.14.1
+Requires: pelican-osdf-compat >= 7.14.1
+%else
 Requires: pelican >= 7.15.1
 Requires: pelican-osdf-compat >= 7.15.1
+%endif
 
 # Require tested Apptainer
 %if 0%{?rhel} != 7
