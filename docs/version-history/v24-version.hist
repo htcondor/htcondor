@@ -70,15 +70,6 @@
 
 *** 24.8.0 bugs
 
-- Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
-  The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
-  to go back to the central manager) is a critical scalability feature in HTCSS, especially
-  when running large numbers of short-running jobs.  The bug fixed here was introduced in 
-  HTCondor version 24.5.1, so if you are running HTCondor v24.5.x, v24.6.x, or v24.7.x,
-  and run large numbers of short jobs, please consider upgrading.  See the JIRA ticket
-  for addtional workarounds if you cannot upgrade.
-  :jira:`3045`
-
 - Removed job attribute ``ToE``.
   It has been replaced by job attributes :ad-attr:`VacateReason`,
   :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
@@ -88,6 +79,9 @@
   exit when one of :subcom:`log` files associated with jobs being tracked
   does not exist.
   :jira:`2978`
+
+- Removed some memory leaks from version 2 of the Python bindings.
+  :jira:`2981`
 
 - Fixed a bug where :meth:`htcondor2.enable_debug()` would cause the
   Python interpreter to exit if the debug log were configured incorrectly.
@@ -104,6 +98,15 @@
   ``0`` (and subdirectories) spuriously being created in the :macro:`SPOOL`
   directory.
   :jira:`3026`
+
+- Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
+  The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
+  to go back to the central manager) is a critical scalability feature in HTCSS, especially
+  when running large numbers of short-running jobs.  The bug fixed here was introduced in 
+  HTCondor version 24.5.1, so if you are running HTCondor v24.5.x, v24.6.x, or v24.7.x,
+  and run large numbers of short jobs, please consider upgrading.  See the JIRA ticket
+  for addtional workarounds if you cannot upgrade.
+  :jira:`3045`
 
 *** 24.0.8 bugs
 
