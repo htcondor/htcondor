@@ -1415,10 +1415,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// ColeB pointed out that this might be nice to have.
 			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
 			// This sets the value in the header.
-			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
 			c.Delete( "TransferClass" );
 			std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
-			writeJobEpochFile( jobAd, starterAd, "STARTER" );
+			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 
