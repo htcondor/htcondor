@@ -156,6 +156,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SLOT1_2_USER":     "sorcy",
             "SLOT1_3_USER":     "kittie",
             "SLOT1_4_USER":     "jrandom",
+            "STARTER_NESTED_SCRATCH":   False,
         },
     ) as the_condor:
         yield the_condor
@@ -278,6 +279,7 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
+            "STARTER_NESTED_SCRATCH":   True,
         },
     ) as the_condor:
         yield the_condor
