@@ -371,7 +371,7 @@ convertToStagingDirectory(
 		ec
 	);
 	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "Failed to set permissions on staging directory '%s': %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions on staging directory '%s': %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
 		return false;
 	}
 
@@ -379,7 +379,7 @@ convertToStagingDirectory(
 		location, {}, ec
 	);
 	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
 		return false;
 	}
 
@@ -440,8 +440,6 @@ mapContentsOfDirectoryInto(
 	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): begin.\n" );
 
 
-	TemporaryPrivSentry tps(PRIV_USER);
-
 	if(! std::filesystem::is_directory( sandbox )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
 		return false;
@@ -458,11 +456,17 @@ mapContentsOfDirectoryInto(
 	}
 
 
+	// We must be root (or the user the common files were transferred by) to
+	// traverse into the staging directory, which includes listing its
+	// contents, checking the permissions on its files, and creating hardlinks
+	// to its files.
+	TemporaryPrivSentry tps(PRIV_ROOT);
+
 	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
 	);
 	if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
 		return false;
 	}
 
@@ -476,11 +480,22 @@ mapContentsOfDirectoryInto(
 				return false;
 			}
 
-			std::filesystem::create_directory( sandbox/relative_path, ec );
+			auto dir = sandbox / relative_path;
+			std::filesystem::create_directory( dir, ec );
 			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
+
+			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
+			if( rv != 0 ) {
+				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
+				return false;
+			}
+
+
+			// FIXME: Recurse, dummy!
+
 			continue;
 		} else {
 			dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
@@ -490,14 +505,21 @@ mapContentsOfDirectoryInto(
 				return false;
 			}
 
-			// If this fails because sandbox/relative_path exists, consider it
-			// a success for purposes of the overall success of the mapping:
-			// the proc-specific input should "beat" the common input.
+			// If this file already exists, it must have been written
+			// there by (the proc-specific) input file transfer.  Since that
+			// _should_ win, semantically, at some point we'll have to fix
+			// this to ignore E_EXISTS.
 			std::filesystem::create_hard_link(
 				entry.path(), sandbox/relative_path, ec
 			);
 			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
+				return false;
+			}
+
+			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
+			if( rv != 0 ) {
+				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input file hardlink, aborting: %s (%d)\n", strerror(errno), errno );
 				return false;
 			}
 		}
