@@ -360,7 +360,7 @@ convertToStagingDirectory(
 
 	dprintf( D_ZKM, "convertToStagingDirectory(): begin.\n" );
 
-	if(! std::filesystem::is_directory( location )) {
+	if(! std::filesystem::is_directory( location, ec )) {
 		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' not a directory, aborting.\n", location.string().c_str() );
 		return false;
 	}
@@ -439,13 +439,19 @@ mapContentsOfDirectoryInto(
 
 	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): begin.\n" );
 
+	// We must be root (or the user the common files were transferred by) to
+	// traverse into the staging directory, which includes listing its
+	// contents, checking the permissions on its files, creating hardlinks
+	// to its files, or even seeing if the directory exists all (if we're
+	// not running in STARTER_NESTED_SCRATCH mode).
+	TemporaryPrivSentry tps(PRIV_ROOT);
 
-	if(! std::filesystem::is_directory( sandbox )) {
+	if(! std::filesystem::is_directory( sandbox, ec )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
 		return false;
 	}
 
-	if(! std::filesystem::is_directory( location )) {
+	if(! std::filesystem::is_directory( location, ec )) {
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
 		return false;
 	}
@@ -454,13 +460,6 @@ mapContentsOfDirectoryInto(
 		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
 		return false;
 	}
-
-
-	// We must be root (or the user the common files were transferred by) to
-	// traverse into the staging directory, which includes listing its
-	// contents, checking the permissions on its files, and creating hardlinks
-	// to its files.
-	TemporaryPrivSentry tps(PRIV_ROOT);
 
 	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
@@ -618,9 +617,12 @@ Starter::handleJobSetupCommand(
 
 			std::filesystem::path executeDir( s->GetSlotDir() );
 			std::filesystem::path stagingDir = executeDir / "staging";
-
 			{
-				TemporaryPrivSentry tps(PRIV_CONDOR);
+				// We could check STARTER_NESTED_SCRATCH to see if we needed
+				// to create this directory as PRIV_CONDOR instead of PRIV_USER,
+				// but since we'd need to escalate to root to chown afterwards
+				// anyway, let's not duplicate code for now.
+				TemporaryPrivSentry tps(PRIV_ROOT);
 
 				std::error_code errorCode;
 				std::filesystem::create_directory( stagingDir, errorCode );
@@ -638,9 +640,6 @@ Starter::handleJobSetupCommand(
 					dprintf( D_ALWAYS, "Unable to set permissions on staging directory, aborting: %s (%d).\n", errorCode.message().c_str(), errorCode.value() );
 					return false;
 				}
-			}
-			{
-				TemporaryPrivSentry tps(PRIV_ROOT);
 
 				int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
@@ -648,6 +647,7 @@ Starter::handleJobSetupCommand(
 					return false;
 				}
 			}
+
 
 			ClassAd ftAd( guidance );
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
