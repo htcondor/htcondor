@@ -74,12 +74,14 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
     # Make sure that credential propogation works, too.
+    # FIXME: this needs to be done as the submitter.
     credential_path = user_dir / "the_credential"
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
         timeout=5,
         echo=True,
+        as_user='tlmiller',
     )
     assert cp.returncode == 0
 
@@ -137,6 +139,11 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
+            "STARTER_ALLOW_RUNAS_OWNER":    False,
+            "SLOT1_1_USER":     "glump",
+            "SLOT1_2_USER":     "sorcy",
+            "SLOT1_3_USER":     "kittie",
+            "SLOT1_4_USER":     "jrandom",
         },
     ) as the_condor:
         yield the_condor

@@ -29,6 +29,10 @@ import sys
 
 from pwd import getpwnam
 from grp import getgrnam
+from .try_os_set import (
+    try_os_setegid,
+    try_os_seteuid,
+)
 
 import htcondor2 as htcondor
 
@@ -63,28 +67,6 @@ DEFAULT_PARAMS = {
     "STARTER_LIST": "STARTER",  # no standard universe starter
     "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
 }
-
-
-def try_os_setegid(number=None, name=None):
-    try:
-        if number is None:
-            number = getgrnam(name).gr_gid
-        os.setegid(number)
-    except PermissionError:
-        pass
-    except KeyError:
-        pass
-
-
-def try_os_seteuid(number=None, name=None):
-    try:
-        if number is None:
-            number = getpwnam(name).pw_uid
-        os.seteuid(number)
-    except PermissionError:
-        pass
-    except KeyError:
-        pass
 
 
 def master_is_not_alive(self):
