@@ -69,8 +69,20 @@ def the_condor(test_dir, the_lock_dir):
 @action
 def completed_cif_job(the_condor, path_to_sleep, user_dir):
     os.chdir(user_dir.as_posix())
-    (user_dir / "input1.txt").write_text("input A\n")
-    (user_dir / "input2.txt").write_text("II input\n");
+
+    d = user_dir / "d"
+    d.mkdir()
+    (d / "input1.txt").write_text("input")
+    (d / "input4.txt").write_text(" A\n")
+
+    e = user_dir / "d" / "e"
+    e.mkdir()
+    (e / "input2.txt").write_text("II")
+
+    f = user_dir / "d" / "f"
+    f.mkdir()
+    (f / "input5.txt").write_text(" input\n")
+
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
     # Make sure that credential propogation works, too.
@@ -88,7 +100,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     job_description = {
         "universe":                 "vanilla",
 
-        "shell":                    "cat ${_CONDOR_CREDS}/the_credential.use 1>&2; cat input1.txt input2.txt input3.txt; sleep 5",
+        "shell":                    "cat ${_CONDOR_CREDS}/the_credential.use 1>&2; cat d/input1.txt d/input4.txt d/e/input2.txt d/f/input5.txt input3.txt; sleep 5",
         "transfer_executable":      False,
         "should_transfer_files":    True,
 
@@ -99,7 +111,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"input1.txt, input2.txt"',
+        "MY.CommonInputFiles":      '"d"',
         "transfer_input_files":     "input3.txt",
         "use_oauth_services":       "the_credential",
 
