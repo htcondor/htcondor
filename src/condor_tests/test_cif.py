@@ -57,6 +57,7 @@ def the_condor(test_dir, the_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
@@ -148,6 +149,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
@@ -276,6 +278,7 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
