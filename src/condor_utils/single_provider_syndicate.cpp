@@ -4,6 +4,43 @@
 
 #include "single_provider_syndicate.h"
 
+#ifdef    WINDOWS
+
+SingleProviderSyndicate::SingleProviderSyndicate( const std::string & k ) : key(k) {
+}
+
+
+SingleProviderSyndicate::~SingleProviderSyndicate() {
+}
+
+
+SingleProviderSyndicate::Status
+SingleProviderSyndicate::acquire( std::string & message ) {
+    return SingleProviderSyndicate::INVALID;
+}
+
+
+bool
+SingleProviderSyndicate::touch() {
+    return false;
+}
+
+
+bool
+SingleProviderSyndicate::ready( const std::string & message ) {
+    return false;
+}
+
+
+bool
+SingleProviderSyndicate::release() {
+    return false;
+}
+
+
+#else /* Linux and Mac */
+
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -402,3 +439,6 @@ SingleProviderSyndicate::cleanup() {
 
     return true;
 }
+
+
+#endif /* WINDOWS */

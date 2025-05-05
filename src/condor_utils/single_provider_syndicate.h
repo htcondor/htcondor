@@ -65,14 +65,17 @@ class SingleProviderSyndicate {
 
     protected:
 
-        bool   cleanup();
-
         std::string             key;
         std::filesystem::path   keyfile;
         std::filesystem::path   hardlink;
 
+#ifdef    WINDOWS
+#else
+        bool   cleanup();
+
         int                     keyfile_fd = -1;
         bool                    lockholder = false;
+#endif /* WINDOWS */
 };
 
 #endif /* _CONDOR_SINGLE_PROVIDER_SYNDICATE_H */
