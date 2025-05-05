@@ -5680,7 +5680,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
