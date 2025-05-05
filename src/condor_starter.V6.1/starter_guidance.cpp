@@ -30,6 +30,7 @@
 #include "dc_coroutines.h"
 #include "condor_mkstemp.h"
 #include "condor_base64.h"
+#include "condor_uid.h"
 
 #include "jic_shadow.h"
 
@@ -429,6 +430,25 @@ check_permissions(
 }
 
 
+#ifdef    WINDOWS
+
+// The Windows implementation will almost certainly require changes to
+// convertToStagingDirectory() as well.
+//
+// Build fix only.
+
+bool
+mapContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+}
+
+
+#else
+
+
 bool
 mapContentsOfDirectoryInto(
 	const std::filesystem::path & location,
@@ -461,6 +481,7 @@ mapContentsOfDirectoryInto(
 		return false;
 	}
 
+	// To be clear: this recurses into subdirectories for us.
 	std::filesystem::recursive_directory_iterator rdi(
 		location, {}, ec
 	);
@@ -491,9 +512,6 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
 				return false;
 			}
-
-
-			// FIXME: Recurse, dummy!
 
 			continue;
 		} else {
@@ -528,6 +546,9 @@ mapContentsOfDirectoryInto(
 	dprintf( D_ZKM, "mapContentsOfDirectoryInto(): end.\n" );
 	return true;
 }
+
+
+#endif /* WINDOWS */
 
 
 bool
@@ -641,11 +662,21 @@ Starter::handleJobSetupCommand(
 					return false;
 				}
 
+#ifdef    WINDOWS
+
+				// Likely, everything in this TemporaryPrivSentry block needs
+				// to be different for Windows, suggesting that this block may
+				// be better refactored as a function.
+				//
+				// Build fix only.
+
+#else
 				int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
 					dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
 					return false;
 				}
+#endif /* WINDOWS */
 			}
 
 
