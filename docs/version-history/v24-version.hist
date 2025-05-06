@@ -1,5 +1,10 @@
 *** 24.9.0 features
 
+- Some errors on the EP that occurred after the AP had released the
+  corresponding claim could cause a slot to remain claimed until the job lease
+  timeout had expired.  This change should reduce incidents of this behavior.
+  :jira:`3401`
+
 *** 24.9.0 bugs
 
 *** 24.0.9 bugs
