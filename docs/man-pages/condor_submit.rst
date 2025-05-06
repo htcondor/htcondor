@@ -2716,9 +2716,9 @@ ADVANCED COMMANDS
     execute machines. On Unix platforms, this defaults to ``True``, and
     on Windows platforms, it defaults to ``False``. May not be used with
     **load_profile**.
-    See the HTCondor manual Platform-Specific Information chapter for
-    administrative details on configuring Windows to support this
-    option.
+    See the :doc:`../platform-specific/microsoft-windows`-specific
+    documentation for administrative details to support this option on
+    that platform.
 
  :subcom-def:`stack_size` = <size in bytes>
     This command applies only to Linux platforms.

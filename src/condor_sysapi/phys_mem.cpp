@@ -24,9 +24,24 @@
 #include "sysapi_externs.h"
  
 #if defined(LINUX)
+#include "stl_string_utils.h"	
 #include <cstdio>
 #include <algorithm>
 
+
+static std::string
+file_to_string(const std::string &path) {
+	std::string contents;
+	FILE *f = fopen(path.c_str(), "r");
+	if (f) {
+		char buf[128];
+		while (fgets(buf, sizeof(buf) - 1,f)) {
+			contents += buf;
+		}
+		fclose(f);
+	} 
+	return contents;
+}
 
 // Assuming a cgroup-style file with an integer
 // or a string that we don't care about in it,
@@ -51,27 +66,36 @@ int64_t file_size_contents(const char *filename) {
 int64_t cgroup_current_memory_limit() {
 	// Note all these files should be readable
 	// by self without boosting privileges.
-	FILE *f = safe_fopen_wrapper_follow("/proc/self/cgroup", "r");
-	if (f == nullptr) {
+	std::string proc_self_cgroup = file_to_string("/proc/self/cgroup");
+	if (proc_self_cgroup.empty()) {
 		return 0;
 	}
 
-	char line[512];
-	while (fgets(line, 511, f) != nullptr) {
-		std::string l = line;
+	std::vector<std::string> lines = split(proc_self_cgroup, "\n");
+
+	for (const std::string &l: lines) {
 		size_t first_colon = l.find_first_of(':');
 		size_t second_colon = l.find_first_of(':', first_colon + 1);
 		if (first_colon == (second_colon - 1)) {
 			// cgroup v2
 			int64_t s = 0;
-			std::string cgroup = l.substr(second_colon + 1, l.size() - second_colon - 2);
+			std::string cgroup = l.substr(second_colon + 1, l.size() - second_colon - 1);
 			std::string cgroup_hi = std::string("/sys/fs/cgroup/") + cgroup + "/memory.high";
 			s = file_size_contents(cgroup_hi.c_str());
 			if (s == 0) {
 				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/memory.max";
 				s = file_size_contents(cgroup_max.c_str());
 			}
-			fclose(f);
+			// If still unknown, look up one directory
+			if (s == 0) {
+				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/../memory.high";
+				s = file_size_contents(cgroup_max.c_str());
+			}
+			// If even still unknown, look up one directory in max
+			if (s == 0) {
+				std::string cgroup_max = std::string("/sys/fs/cgroup/") + cgroup + "/../memory.max";
+				s = file_size_contents(cgroup_max.c_str());
+			}
 			return s;
 		} 
 
@@ -79,14 +103,12 @@ int64_t cgroup_current_memory_limit() {
 		// cgroup v1
 		if (controller == "memory") {
 			int64_t s = 0;
-			std::string cgroup = l.substr(second_colon + 1, l.size() - second_colon - 2);
+			std::string cgroup = l.substr(second_colon + 1, l.size() - second_colon - 1);
 			std::string cgroup_limit = std::string("/sys/fs/cgroup/memory/") + cgroup + "/memory.limit_in_bytes";
 			s = file_size_contents(cgroup_limit.c_str());
-			fclose(f);
 			return s;
 		}
 	}
-	fclose(f);
 	return 0;
 }
 

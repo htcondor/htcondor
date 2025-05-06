@@ -385,7 +385,7 @@ BaseShadow::shutDown(int reason, const char* reason_str, int reason_code, int re
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
-		writeJobEpochFile(getJobAd());
+		writeAdToEpoch(getJobAd());
 		if( !waitingToUpdateSchedd() ) {
 			shadow_user_policy.checkAtExit();
 				// WARNING: 'this' may have been deleted by the time we get here!!!
@@ -612,7 +612,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 {
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
-	writeJobEpochFile(getJobAd());
+	writeAdToEpoch(getJobAd());
 
 	// Doing this neither prevents scary network-level error messages in
 	// the starter log, nor actually works: if the shadow doesn't exit
@@ -920,11 +920,11 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	if (reason_str == nullptr || *reason_str == '\0') {
 		switch(exit_reason) {
 		case JOB_SHOULD_REQUEUE:
-			if (!reason_str) reason_str = "Unspecified job interruption";
+			reason_str = "Unspecified job interruption";
 			reason_code = CONDOR_HOLD_CODE::JobShouldRequeue;
 			break;
 		case JOB_NOT_STARTED:
-			if (!reason_str) reason_str = "Problem preparing job to run";
+			reason_str = "Problem preparing job to run";
 			reason_code = CONDOR_HOLD_CODE::JobNotStarted;
 			break;
 		default:
@@ -959,7 +959,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
-	writeJobEpochFile(getJobAd());
+	writeAdToEpoch(getJobAd());
 
 	if (exit_reason != JOB_RECONNECT_FAILED) {
 		// cleanup this shadow (kill starters, etc)
@@ -1153,8 +1153,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.core_file = corefile;
 		}
 
-		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
-		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1210,8 +1208,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	setEventUsageAd(*jobAd, &event.pusageAd);
 
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
-	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

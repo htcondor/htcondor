@@ -110,7 +110,7 @@ public:
 		        if the startd is busy and wants us to try back later.
 		*/
 	int activateClaim( ClassAd* job_ad, int starter_version, 
-					   ReliSock** claim_sock_ptr );
+					   ReliSock** claim_sock_ptr, ClassAd * replyAd /*= nullptr*/ );
 
 		/** Before activating a claim, attempt to delegate the user proxy
 			(if there is one). We used do this from the shadow if

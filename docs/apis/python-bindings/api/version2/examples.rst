@@ -152,7 +152,7 @@ which releases itself from certain hold conditions.
 Using :class:`htcondor2.FileTransferEventType`
 ----------------------------------------------
 
-All :class:`htcondor.JobEvent` objects have a ``type`` property; for
+All :class:`htcondor2.JobEvent` objects have a ``type`` property; for
 file transfer events, the value is
 :py:data:`htcondor2.JobEventType.FILE_TRANSFER`.  File transfer events
 also have their own type (:py:data:`htcondor2.FileTransferEventType`),

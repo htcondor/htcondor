@@ -36,10 +36,6 @@
 #include <string>
 #include <chrono>
 
-namespace ToE {
-    class Tag;
-}
-
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
 	black box pointer and never needs to know the size of the actual
@@ -794,13 +790,9 @@ class JobAbortedEvent : public ULogEvent
 
 	const char* getReason(void) const { return reason.c_str(); }
 
-	void setToeTag( classad::ClassAd * toeTag );
-
 	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
 private:
 	std::string reason;
-public:
-	ToE::Tag * toeTag;
 };
 
 
@@ -1001,13 +993,6 @@ class TerminatedEvent : public ULogEvent
 	double total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
-
-	// Subclasses wishing to be more efficient can override this to store
-	// the values in the toeTag that they care about in member variables.
-	// This method just makes a copy of toeTag (if it's not NULL).
-	virtual void setToeTag( classad::ClassAd * toeTag );
-
-	classad::ClassAd * toeTag;
 
 	std::string core_file;
 
@@ -2301,12 +2286,8 @@ class DataflowJobSkippedEvent : public ULogEvent
 	const char* getReason(void) const { return reason.c_str(); }
 	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
 
-	void setToeTag( classad::ClassAd * toeTag );
-
 private:
 	std::string reason;
-public:
-	ToE::Tag * toeTag;
 };
 
 

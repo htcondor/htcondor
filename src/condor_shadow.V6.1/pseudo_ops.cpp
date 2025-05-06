@@ -1470,7 +1470,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				// I would like to do is go back into the event loop and re-
 				// check after a few seconds, but the syscall socket code is
 				// _very_ synchronous.  Instead, since we'll want to have
-				// this command for other purposes later, ask the stater to
+				// this command for other purposes later, ask the starter to
 				// call us back in a few seconds.
 				//
 				// Because we're now checking the live copy of the FTO status

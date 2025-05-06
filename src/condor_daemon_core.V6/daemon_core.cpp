@@ -95,6 +95,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "exit.h"
 #include "largestOpenFD.h"
 
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
 #include <algorithm>
 
 #include "systemd_manager.h"
@@ -5676,7 +5680,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -6952,6 +6956,7 @@ int DaemonCore::Create_Process(
 	int errorpipe[2];
 	std::string executable_fullpath_buf;
 	char const *executable_fullpath = executable;
+	std::string cgroup_name;
 #endif
 
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
@@ -7033,6 +7038,26 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
 		goto wrapup;
 	}
+
+
+#ifdef LINUX
+		// Most callers of Create_Process should give us a meaningful
+		// cgroup name, but if they don't, we still want to put
+		// this process with a FamilyInfo into a cgroup
+		if (family_info && family_info->cgroup == nullptr) {
+			if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+				static int cgroup_counter = 0;
+
+				std::string config = getenv("CONDOR_CONFIG") ? getenv("CONDOR_CONFIG") : "/etc/condor_condor_config";
+				replace_str(config, "/", "_");
+
+				cgroup_name = get_mySubSystem()->getName() + config + std::to_string(cgroup_counter++);
+				cgroup_name = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+
+				family_info->cgroup = cgroup_name.c_str();
+			}
+		}
+#endif
 
 	// if this is the first time Create_Process is being called with a
 	// non-NULL family_info argument, create the ProcFamilyInterface object
@@ -8431,8 +8456,9 @@ int DaemonCore::Create_Process(
 	// A bit of a hack.  If there's a cgroup, we've set that upon
 	// in the child process, to avoid any races.  But here in the parent
 	// we need to record that happened, so we can use the cgroup For
-	// monitoring, cleanup, etc.
-	if (family_info && m_proc_family && family_info->cgroup) {
+	// monitoring, cleanup, etc. But if we are using clone, then
+	// we don't want to do this, because we are sharing memory.
+	if (family_info && m_proc_family && family_info->cgroup && !UseCloneToCreateProcesses()) {
 		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
 	}
 #endif

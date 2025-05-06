@@ -3,5 +3,5 @@
 
 .. currentmodule:: htcondor2
 
-.. autoclass:: JobEvent
+.. autoclass:: JobEvent()
    :members:

@@ -1,94 +1,37 @@
 *condor_gpu_discovery*
-========================
+======================
 
-Output GPU-related ClassAd attributes
-:index:`condor_gpu_discovery<single: condor_gpu_discovery; HTCondor commands>`\ :index:`condor_gpu_discovery command`
+Display detected GPU related information in ClassAd format.
+
+:index:`condor_gpu_discovery<double: condor_gpu_discovery; HTCondor commands>`
 
 Synopsis
 --------
 
 **condor_gpu_discovery** **-help**
 
-**condor_gpu_discovery** [**<options>** ]
+**condor_gpu_discovery** [**-properties**] [**-extra**] [**-dynamic**]
+[**-not-nested** | **-nested**] [**-prefix** *string*] [**-tag** *string*]
+[**-mixed**] [**-short-uuid** | **-uuid**] [**-by-index**] [**-cuda**]
+[**-hip**] [**-opencl**] [**-simulate:D[,N[,D2,N2,...]]**] [**-config**]
+[**-repeat** *[N]*] [**-divide** *[N]*] [**-packed**] [**-cron**]
+[**-verbose**] [**-diagnostic**] [**-nvcuda**] [**-cudart**]
+[**-dirty-environment**]
 
 Description
 -----------
 
-*condor_gpu_discovery* outputs ClassAd attributes corresponding to a
-host's GPU capabilities. It can presently report CUDA, HIP and OpenCL
-devices; which type(s) of device(s) it reports is determined by which
-libraries, if any, it can find when it runs; this reflects what GPU jobs
-will find on that host when they run. (Note that some HTCondor
-configuration settings may cause the environment to differ between jobs
-and the HTCondor daemons in ways that change library discovery.)
+Display capabilities of GPU's discovered on the host machine in ClassAd
+format. This tool currently can discover ``CUDA``, ``HIP``, and ``OpenCL``
+devices depending on which libraries the tool locates during execution.
+The detected GPU devices reflect what GPU's HTCondor jobs will find on
+the host machine for execution.
 
-This tool is not available for MAC OS platforms.
-
-The ``-cuda``, ``-hip`` and ``-opencl`` arguments control which libraries
-are used for discovering GPUs. If any of these libraries report GPUs,
-then detection will stop at that library unless more then one
-of the above command line arguments is used. If none if these arguments is used,
-*condor_gpu_discovery* will first try to detect GPU devices using
-the NVidia driver library, then the HIP 6 library, and
-finally the OpenCL library. Because OpenCL devices do not have unique
-identifiers, if the ``-opencl`` argument is
-used along with either ``-hip`` or ``-cuda``, OpenCL devices will
-be reported only if they are the only type of device reported.
-
-If ``CUDA_VISIBLE_DEVICES`` or ``GPU_DEVICE_ORDINAL`` is set in the
-environment when *condor_gpu_discovery* is run, it will report only
-NVidia devices present in those lists.  If ``HIP_VISIBLE_DEVICES``
-or ``ROCR_VISIBLE_DEVICES`` is set in the environment, it will report
-only HIP devices present in those lists.
-
-With no command line options, the single ClassAd attribute
-``DetectedGPUs`` is printed. If the value is 0, no GPUs were detected.
-If one or more GPUS were detected, the value is a string, presented as a
-comma and space separated list of the GPUs discovered, where each is
-given a name further used as the *prefix string* in other attribute
-names. Where there is more than one GPU of a particular type, the
-*prefix string* includes an GPU id value identifying the device; these
-can be integer values that monotonically increase from 0 when the ``-by-index``
-option is used or globally unique identifiers when the ``-short-uuid`` or
-``-uuid`` argument is used.
-
-For example, a discovery of two GPUs with ``-by-index`` may
-output
-
-.. code-block:: condor-classad
-
-    DetectedGPUs="CUDA0, CUDA1"
-
-Further command line options use ``"CUDA"`` either with or without one
-of the integer values 0 or 1 as the name of the device properties ad 
-for ``-nested`` properties, or as the *prefix string* in attribute names when ``-not-nested``
-properties are chosen.
-
-For machines with more than one GPU device, it is recommended that you
-also use the ``-short-uuid`` or ``-uuid`` option.  The uuid value assigned by
-NVIDA to each GPU is unique, so  using this option provides stable device
-identifiers for your devices. The ``-short-uuid`` option uses only part of the
-uuid, but it is highly likely to still be unique for devices on a single machine.
-As of HTCondor 9.0 ``-short-uuid`` is the default.
-When ``-short-uuid`` is used, discovery of two GPUs may look like this
-
-.. code-block:: condor-classad
-
-    DetectedGPUs="GPU-ddc1c098, GPU-9dc7c6d6"
-
-Any NVIDIA runtime library later than 9.0 will accept the above identifiers in the
-``CUDA_VISIBLE_DEVICES`` environment variable.
-
-If the NVML libary is available, and a multi-instance GPU (MIG) -capable
-device is present, has MIG enabled, and has created compute instances
-for each MIG instance, *condor_gpu_discovery* will report those instance
-as distinct devices.  Their names will be in the long UUID form unless
-the ``-short-uuid`` option is used, because they can not be enumerated
-via CUDA.  MIG instances don't have some of the properties reported by
-the ``-properties``, ``-extra``, and ``-dynamic`` options; these properties
-will be omitted.  If MIG is enabled on any GPU in the system, some properties
-become unavailable for every GPU in the system; `condor_gpu_discovery`
-will report what it can.
+The *condor_startd* runs this tool automatically at startup to detect
+GPUs.  If the startd is not advertising GPUs as expected, an administrator
+can run this tool manually to help debug the problem -- if a manual run
+of *condor_gpu_discovery* does not show the expected GPUs, then the
+startd will probably not show them either.
 
 Options
 -------
@@ -96,58 +39,39 @@ Options
  **-help**
     Print usage information and exit.
  **-properties**
-    In addition to the ``DetectedGPUs`` attribute, display some of the
-    attributes of the GPUs. Each of these attributes will be in a nested
-    ClassAd (``-nested``) or have a *prefix string* at the beginning of its name (``-not-nested``).
-    The displayed CUDA attributes
-    are ``Capability``, ``DeviceName``, ``DriverVersion``,
-    ``ECCEnabled``, ``GlobalMemoryMb``, and ``RuntimeVersion``. The
-    displayed Open CL attributes are ``DeviceName``, ``ECCEnabled``,
-    ``OpenCLVersion``, and ``GlobalMemoryMb``.
+    Display GPU property information in addition to ``DetectedGPUs``
+    either as nested ClassAds or prefixed with the *prefix string*. See
+    table 1.1.
  **-nested**
-    Default. Display properties that are common to all GPUs in a ``Common`` nested ClassAd,
-	and properties that are not common to all in a nested ClassAd using the GPUid
-	as the ClassAd name.  Use the ``-not-nested`` argument to disable nested ClassAds and
-	return to the older behavior of using a *prefix string* for individual property attributes.
+    Display properties common to all GPUs in a ``Common`` nested ClassAd. All properties
+    unique to a GPU device will be put in a nested ClassAd whose attribute name is the GPUid.
+    This is the default behavior.
  **-not-nested**
-    Display properties that are common to all GPUs using a ``CUDA`` or ``OCL`` as
-	the attribute prefix, and properties that are not common to all using a GPUid
-	prefix.  Versions of *condor_gpu_discovery* prior to 9.11.0 support only this mode.
+    Display properties that are common to all GPUs as an attribute prefixed with
+    ``CUDA`` or ``OCL``. All properties unique to a GPU device will be an attribute
+    prefixed with the GPUid.
  **-extra**
-    Display more attributes of the GPUs. Each of these attributes
-    will be added to a nested property ClassAd (``-nested``) or
-    have a *prefix string* at the beginning of its name (``-not-nested``).
-    The additional CUDA attributes are ``ClockMhz``, ``ComputeUnits``, and
-    ``CoresPerCU``. The additional Open CL attributes are ``ClockMhz``
-    and ``ComputeUnits``.
+    Display extra attributes about the GPUs either as nested ClassAds or
+    prefixed with the *prefix string*. See table 1.2.
  **-dynamic**
     Display attributes of NVIDIA devices that change values as the GPU
-    is working. Each of these attributes
-    will be added to the the nested property ClassAd (``-nested``) or
-    have a *prefix string* at the beginning of its name (``-not-nested``).
-    These are ``FanSpeedPct``,
-    ``BoardTempC``, ``DieTempC``, ``EccErrorsSingleBit``, and
-    ``EccErrorsDoubleBit``.
+    is working either as nested ClassAds or prefixed by the *prefix string*.
+    See table 1.3.
  **-mixed**
     When displaying attribute values, assume that the machine has a
     heterogeneous set of GPUs, so always include the integer value in
     the *prefix string*.
  **-device** *<N>*
     Display properties only for GPU device *<N>*, where *<N>* is the
-    integer value defined for the *prefix string*. This option may be
-    specified more than once; additional *<N>* are listed along with the
-    first. This option adds to the devices(s) specified by the
-    environment variables ``CUDA_VISIBLE_DEVICES`` and
-    ``GPU_DEVICE_ORDINAL``, if any.
+    integer value defined for the *prefix string*. Multiple devices
+    can be specified by using this option more than once. This option
+    adds to the devices(s) specified by the environment variables
+    ``CUDA_VISIBLE_DEVICES`` and ``GPU_DEVICE_ORDINAL``, if any.
  **-tag** *string*
-    Set the resource tag portion of the intended machine ClassAd
-    attribute ``Detected<ResourceTag>`` to be *string*. If this option
-    is not specified, the resource tag is ``"GPUs"``, resulting in
-    attribute name ``DetectedGPUs``.
- **-prefix** *str*
-    When naming ``-not-nested`` attributes, use *str* as the *prefix string*. When this
-    option is not specified, the *prefix string* is either ``CUDA`` or
-    ``OCL`` unless ``-uuid`` or ``-short-uuid`` is also used.
+    Redefine ``DetectedGPUs`` attribute name to use the specified *string*
+    instead of ``"GPUs"`` resulting in ``Detected<ResourceTag>``.
+ **-prefix** *string*
+    Specify *prefix string* to use as prefix for attribute naming.
  **-by-index**
     Use the prefix and device index as the device identifier.
  **-short-uuid**
@@ -158,49 +82,10 @@ Options
     or drained.
  **-uuid**
     Use the full NVIDIA uuid as the device identifier rather than the device index.
- **-simulate:[D,N[,D2,...]]**
+ **-simulate:D[,N[,D2,N2,...]]**
     For testing purposes, assume that N devices of type D were detected,
-    And N2 devices of type D2, etc.
-    No discovery software is invoked. D can be a value from 0 to 6 which
-    selects a simulated a GPU from the following table.
-
-    .. list-table:: Simulated GPUs
-        :widths: 2 35 10 14
-        :header-rows: 1
-
-        * - 
-          - DeviceName
-          - Capability
-          - GlobalMemoryMB
-        * - 0
-          - GeForce GT 330
-          - 1.2
-          - 1024
-        * - 1
-          - GeForce GTX 480
-          - 2.0
-          - 1536
-        * - 2
-          - Tesla V100-PCIE-16GB
-          - 7.0
-          -	24220
-        * - 3
-          - TITAN RTX
-          - 7.5
-          - 24220
-        * - 4
-          - A100-SXM4-40GB
-          - 8.0
-          - 40536
-        * - 5
-          - NVIDIA A100-SXM4-40GB MIG 3g.20gb
-          - 8.0
-          - 20096
-        * - 6
-          - NVIDIA A100-SXM4-40GB MIG 1g.5gb
-          - 8.0
-          - 4864
-
+    No discovery software is invoked. See table 2.1 for available GPU devices
+    to simulate.
  **-cuda**
     Use CUDA detection and do not use OpenCL for detection even if no GPUs detected.
  **-hip**
@@ -211,14 +96,14 @@ Options
     Output in the syntax of HTCondor configuration, instead of ClassAd
     language. An additional attribute is produced ``NUM_DETECTED_GPUs``
     which is set to the number of GPUs detected.
- **-repeat** [*N*]
+ **-repeat** *[N]*
     Repeat listed GPUs *N* (default 2) times.  This results in a list
     that looks like ``CUDA0, CUDA1, CUDA0, CUDA1``.
 
     If used with **-divide**, the last one on the command-line wins,
     but you must specify ``2`` if you want it; the default value only
     applies to the first flag.
- **-divide** [*N*]
+ **-divide** *[N]*
     Like **-repeat**, except also divide the attribute ``GlobalMemoryMb``
     by *N*.  This may help you avoid overcommitting your GPU's memory.
 
@@ -232,7 +117,7 @@ Options
     This option suppresses the ``DetectedGpus`` attribute so that the
     output is suitable for use with *condor_startd* cron. Combine this
     option with the **-dynamic** option to periodically refresh the
-    dynamic Gpu information such as temperature. For example, to refresh
+    dynamic GPU information such as temperature. For example, to refresh
     GPU temperatures every 5 minutes
 
     .. code-block:: condor-config
@@ -243,15 +128,252 @@ Options
     For interactive use of the tool, output extra information to show
     detection while in progress.
  **-diagnostic**
-    For interative use of the tool. Show diagnostic information, to aid in tool development.
+    For interactive use of the tool. Show diagnostic information, to aid in tool development.
  **-nvcuda**
     For diagnostic only, use CUDA driver library rather than the CUDA run time. 
  **-cudart**
     For diagnostic only, use CUDA runtime rather than the CUDA driver library.
+ **-dirty-environment**
+    Don't cleanse environment of library specific environment variables that effect
+    GPU discovery (``CUDA_VISIBLE_DEVICES``, ``HIP_VISIBLE_DEVICES``, etc.).
+
+General Remarks
+---------------
+
+By default this tool will detect GPU devices by using the supported libraries
+in the following order:
+
+    1. NVidia driver library
+    2. HIP 6 library
+    3. OpenCL library
+
+If specified via the command line, this tool will only detect GPU devices
+of specified supported libraries (``-cuda``, ``-hip``, and ``-opencl``).
+
+.. note::
+
+    Because OpenCL devices do not have unique identifiers, if the ``-opencl``
+    argument is used along with either ``-hip`` or ``-cuda``, OpenCL devices
+    will be reported only if they are the only type of device reported.
+
+The list of detected GPU devices will only be contain devices present
+in library specific environment variables is set and the tool is called
+with **-dirty-environment**:
+
+    - NVidia: ``CUDA_VISIBLE_DEVICES`` or ``GPU_DEVICE_ORDINAL``
+    - HIP: ``HIP_VISIBLE_DEVICES`` or ``ROCR_VISIBLE_DEVICES``
+
+Multi-Instance GPU (MIG)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This tool will report each MIG instance as a distinct device if the
+following conditions are met:
+
+    1. The NVML library is available.
+    2. A MIG capable device is present.
+    3. MIG is enabled.
+    4. Compute instances have been created.
+
+If ``-short-uuid`` flag is not used then the MIG device name will be
+in the long UUID form. This is because the devices can not be enumerated
+via CUDA.
+
+Properties reported by the ``-properties``, ``-extra``, and ``-dynamic``
+options that are not present in MIG instances will be omitted from the
+output.
+
+If MIG is enabled on any GPU in the system, some properties become unavailable
+for every GPU in the system; `condor_gpu_discovery` will report what it can.
+
+ClassAd Output
+~~~~~~~~~~~~~~
+
+This command will always produce the ``DetectedGPUs`` attribute.
+If no GPUs were detected, the value is ``0``. Otherwise, the value
+will be comma separated list of discovered GPU's. These names will be
+used as prefixes for other ClassAd attributes associated with the respective
+GPU device.
+
+By default the GPU device name will be the short uuid (first 8 characters).
+This is highly likely to provide unique device names. In the event this is
+not true, using ``-uuid`` for the full unique UUID value will provided fully
+stable device identifiers.
+
+Any NVIDIA runtime library later than 9.0 will accept the above identifiers in the
+``CUDA_VISIBLE_DEVICES`` environment variable.
+
+.. code-block:: condor-classad
+    :caption: Example default DetectedGPUs
+
+    DetectedGPUs="GPU-ddc1c098, GPU-9dc7c6d6"
+
+Tables
+~~~~~~
+
+.. list-table:: Table 1.1 Property Attributes (**-properties**)
+    :widths: 25 25
+    :header-rows: 1
+
+    * - CUDA
+      - OpenCL
+    * - DeviceName
+      - DeviceName
+    * - ECCEnabled
+      - ECCEnabled
+    * - GlobalMemoryMb
+      - GlobalMemoryMb
+    * - DriverVersion
+      - OpenCLVersion
+    * - RuntimeVersion
+      -
+    * - Capability
+      -
+
+.. list-table:: Table 1.2 Extra Attributes (**-extra**)
+    :widths: 25 25
+    :header-rows: 1
+
+    * - CUDA
+      - OpenCL
+    * - ClockMhz
+      - ClockMhz
+    * - ComputeUnits
+      - ComputeUnits
+    * - CoresPerCU
+      -
+
+.. list-table:: Table 1.3 Dynamic Attributes (**-dynamic**)
+    :widths: 25 25
+    :header-rows: 0
+
+    * - BoardTempC
+      - DieTempC
+    * - EccErrorSingleBit
+      - EccErrorDoubleBit
+    * - FanSpeedPct
+      -
+
+.. list-table:: Table 2.1 Simulated GPUs
+    :widths: 2 35 10 14
+    :header-rows: 1
+
+    * - **D**
+      - DeviceName
+      - Capability
+      - GlobalMemoryMB
+    * - 0
+      - GeForce GT 330
+      - 1.2
+      - 1024
+    * - 1
+      - GeForce GTX 480
+      - 2.0
+      - 1536
+    * - 2
+      - Tesla V100-PCIE-16GB
+      - 7.0
+      - 24220
+    * - 3
+      - TITAN RTX
+      - 7.5
+      - 24220
+    * - 4
+      - A100-SXM4-40GB
+      - 8.0
+      - 40536
+    * - 5
+      - NVIDIA A100-SXM4-40GB MIG 3g.20gb
+      - 8.0
+      - 20096
+    * - 6
+      - NVIDIA A100-SXM4-40GB MIG 1g.5gb
+      - 8.0
+      - 4864
 
 Exit Status
 -----------
 
-*condor_gpu_discovery* will exit with a status value of 0 (zero) upon
-success, and it will exit with the value 1 (one) upon failure.
+0  -  Success
 
+1  -  Failure has occurred
+
+Examples
+--------
+
+Detect available GPUs
+
+.. code:: console
+
+    $ condor_gpu_discovery
+
+Display properties about detected GPUs
+
+.. code:: console
+
+    $ condor_gpu_discovery -properties
+
+Display dynamic attributes of detected GPUs
+
+.. code:: console
+
+    $ condor_gpu_discovery -dynamic
+
+Display non-nested properties about detected GPUs
+
+.. code:: console
+
+    $ condor_gpu_discovery -not-nested -properties
+
+Rename detected GPU attribute name with tag ``TestGPUs``
+
+.. code:: console
+
+    $ condor_gpu_discovery -tag TestGPUs
+
+Use custom name prefix for non-nested properties of detected GPUs
+
+.. code:: console
+
+    $ condor_gpu_discovery -extra -not-nested -prefix Discovered
+
+Discover GPU devices using only the CUDA library
+
+.. code:: console
+
+    $ condor_gpu_discovery -cuda
+
+Report each detected GPU device five times
+
+.. code:: console
+
+    $ condor_gpu_discovery -repeat 5
+
+Report each detected GPU device five times while splitting the original
+memory equally between each repeated device
+
+.. code:: console
+
+    $ condor_gpu_discovery -divide 5
+
+Use long UUID for all detected GPU devices
+
+.. code:: console
+
+    $ condor_gpu_discovery -uuid
+
+Simulate discovery of one ``GeForce GT 330``, three ``GeForce GTX 480``,
+and one ``TITAN RTX`` device
+
+.. code:: console
+
+    $ condor_gpu_discovery -simulate:0,1,1,3,3,1
+
+See Also
+--------
+
+None.
+
+Availability
+------------
+
+Linux, Windows

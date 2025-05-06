@@ -35,6 +35,7 @@
 #include "nullfile.h"
 #include "basename.h"
 #include "secure_file.h"
+#include "set_user_priv_from_ad.h"
 
 extern class Starter *starter;
 
@@ -302,8 +303,6 @@ JICLocal::registerStarterInfo( void )
 bool
 JICLocal::initUserPriv( void )
 {
-	bool rval = false;
-
 #ifdef WIN32
 		/*
 		  If we're on windoze, and this is anything but a local
@@ -326,58 +325,13 @@ JICLocal::initUserPriv( void )
 		return true;
 	}
 
-	char* owner = NULL;
-	if( job_ad->LookupString( ATTR_OWNER, &owner ) != 1 ) {
-		dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-				 ATTR_OWNER );
+	if (!init_user_ids_from_ad(*job_ad)) {
+		dprintf(D_ERROR, "Failed to intialize user_priv, aborting.\n");
 		return false;
 	}
 
-#ifdef WIN32
-		// we only care about or expect to find this attribute if
-		// we're on windoze...
-	char* domain = NULL;
-	if( job_ad->LookupString( ATTR_NT_DOMAIN, &domain ) != 1 ) {
-		dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-				 ATTR_NT_DOMAIN );
-		return false;
-	}
-
-	if( ! init_user_ids(owner,domain) ) { 
-		dprintf( D_ALWAYS,
-				 "ERROR: Bad or missing credential for user \"%s@%s\"\n",
-				 owner, domain );
-	} else {  
-		rval = true;
-		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s@%s\"\n", 
-				 owner, domain );
-	}
-	if( domain ) {
-		free( domain );
-		domain = NULL;
-	}
-
-#else /* UNIX */
-
-	if( ! init_user_ids_quiet(owner) ) { 
-		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
-				 "passwd database for a local job\n", owner ); 
-	} else {
-		rval = true;
-		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
-				 owner );
-	}
-
-#endif
-
-		// deallocate owner string so we don't leak memory.
-	free( owner );
-	owner = NULL;
-
-	if( rval ) {
-		user_priv_is_initialized = true;
-	}
-	return rval;
+	user_priv_is_initialized = true;
+	return true;
 }
 
 

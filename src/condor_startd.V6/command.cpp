@@ -25,7 +25,6 @@
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
-#include "ToE.h"
 
 #include <map>
 using std::map;
@@ -124,29 +123,6 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done)
 	}
 
 	if( rip->r_cur && ! job_done) {
-		struct timeval when;
-		// This ClassAd gets delete()d by toe when toe goes out of scope,
-		// because Insert() transfers ownership.
-		classad::ClassAd * tag = new classad::ClassAd();
-		condor_gettimestamp( when );
-		tag->InsertAttr( "Who", stream->peer_description() );
-		if( graceful ) {
-			tag->InsertAttr( "HowCode", ToE::DeactivateClaim );
-			tag->InsertAttr( "How", ToE::strings[ToE::DeactivateClaim] );
-		} else {
-			tag->InsertAttr( "HowCode", ToE::DeactivateClaimForcibly );
-			tag->InsertAttr( "How", ToE::strings[ToE::DeactivateClaimForcibly] );
-		}
-		tag->InsertAttr( "When", (long long)when.tv_sec );
-
-		classad::ClassAd toe;
-		toe.Insert(ATTR_JOB_TOE, tag );
-
-		// TODO: fix this to use correct way of getting sandbox dir
-		std::string jobAdFileName;
-		formatstr( jobAdFileName, "%s/dir_%d/.job.ad", rip->r_cur->executeDir(), rip->r_cur->starterPID() );
-		ToE::writeTag( & toe, jobAdFileName );
-
 		if(graceful) {
 			rval = rip->deactivate_claim();
 		} else {
@@ -1157,6 +1133,15 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		goto abort;
 	}
 
+	// For static slots we need a pre-check to see if the START expression is true for this job.
+	// Otherwise we may end up detecting that it is not true after we have already claimed the slot
+	// Which can result in the claim object and stream being deleted out from under us
+	// by the code in ResState, (which we are all afraid to change - sigh).   see HTCONDOR-3013
+	if (rip->is_static_slot() && !rip->willingToRun(req_classad)) {
+		refuse(stream);
+		goto abort;
+	}
+
 	// When a pslot is already claimed, only the schedd that claimed it
 	// can do new dslot requests.
 	req_classad->LookupString(ATTR_SCHEDD_NAME, schedd_name);
@@ -1170,6 +1155,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 		pslot_already_claimed = true;
 	}
+
 
 	// If we are being claimed to go to work for another CM
 	// check here.
@@ -1666,6 +1652,8 @@ activate_claim( Resource* rip, Stream* stream )
 	ClassAd	*req_classad = requestAd.get(), *mach_classad = rip->r_classad;
 	int starter = MAX_STARTERS;
 	pid_t starter_pid = 0;
+	bool send_failure_ad = false;
+	const char * ATTR_send_failure_ad = "_condor_send_activation_failure_ad";
 
 	Sock* sock = (Sock*)stream;
 	std::string shadow_addr_buf = sock->peer_addr().to_ip_string();
@@ -1709,6 +1697,13 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
+
+	// if request has a flags that control the reply, look them up and then
+	// delete them from the request ad
+	if (req_classad->Lookup(ATTR_send_failure_ad)) {
+		req_classad->LookupBool(ATTR_send_failure_ad, send_failure_ad);
+		req_classad->Delete(ATTR_send_failure_ad);
+	}
 
 		// Now, ask the ResMgr to recompute so we have totally
 		// up-to-date values for everything in our classad.
@@ -1763,7 +1758,13 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->analyze_match(anabuf, req_classad, true, false);
 		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
 
-		refuse( stream );
+		if (send_failure_ad) {
+			ClassAd replyAd;
+			replyAd.Assign("Analyze", anabuf);
+			refuse(stream, &replyAd);
+		} else {
+			refuse(stream);
+		}
 		goto abort;
 	}
 

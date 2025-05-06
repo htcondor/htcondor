@@ -54,6 +54,7 @@ static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
 }
 
+//
 // given a relative cgroup name, send a signal
 // to every process in exactly that cgroup (but 
 // not sub-cgroups thereof)
@@ -199,7 +200,7 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	
-	// Remove all the subcgroups, bottom up
+	// Remove all the sub-cgroups, bottom up
 	for (const auto& dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
 		if ((r < 0) && (errno != ENOENT)) {
@@ -209,6 +210,9 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	return true;
 }
 
+// Given a cgroup name from the root of the cgroup down to the new one
+// not including /sys/fs/cgroup, make all needed interior and leaf 
+// cgroups, but do not yet enable delegation
 static bool makeCgroup(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
@@ -230,31 +234,54 @@ static bool makeCgroup(const std::string &cgroup_name) {
 		stdfs::path controller_filename = interior / "cgroup.subtree_control";
 		int fd = open(controller_filename.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
-			// TODO: write these individually
-			const char *child_controllers = "+cpu +io +memory +pids";
-			int r = write(fd, child_controllers, strlen(child_controllers));
+			const char *required_child_controllers = "+memory +pids";
+			const char *cpu_child_controller       = "+cpu";
+			const char *io_child_controller        = "+io";
+			// We can't work without these two controllers
+			int r = write(fd, required_child_controllers, strlen(required_child_controllers));
 			if (r < 0) {
 				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup error writing to %s: %s\n", controller_filename.c_str(), strerror(errno));
+			}
+			// These two are nice to have, through
+			r = write(fd, cpu_child_controller, strlen(cpu_child_controller));
+			if (r < 0) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup warning writing +cpu to %s: %s\n", controller_filename.c_str(), strerror(errno));
+			}
+			r = write(fd, io_child_controller, strlen(io_child_controller));
+			if (r < 0) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup warning writing +io to %s: %s\n", controller_filename.c_str(), strerror(errno));
 			}
 			close(fd);
 		}
 		return interior;
 	};
 
-	// cdr down the path, making all the interior nodes, skipping the last (leaf) one
-	std::accumulate(cgroup_relative_to_root_dir.begin(), --cgroup_relative_to_root_dir.end(),
+	// cdr down the path, making all the interior nodes
+	std::accumulate(cgroup_relative_to_root_dir.begin(), cgroup_relative_to_root_dir.end(),
 			cgroup_root_dir, interior_dir_maker);
 
 	// Now the leaf cgroup
 	stdfs::path leaf = cgroup_root_dir / cgroup_relative_to_root_dir;
+	// scope cgroup is subdir with same basename, but with .scope extention instead of ".slice"
+	stdfs::path basename = leaf.filename();
+	stdfs::path scope = leaf / basename.replace_extension(".scope");
 
-	bool can_make_cgroup_dir = mkdir_and_parents_if_needed(leaf.c_str(), 0755, 0755, PRIV_ROOT);
+	bool can_make_cgroup_dir = mkdir_and_parents_if_needed(scope.c_str(), 0755, 0755, PRIV_ROOT);
 	if (!can_make_cgroup_dir) {
 		dprintf(D_ALWAYS, "Cannot mkdir %s, failing to use cgroups\n", leaf.c_str());
 		return false;
 	}
 
 	return true;
+}
+
+// Daemon Core calls this right before exit.  The assumption is when the destructor
+// is caled, we are on our way out, we won't be calling any reapers that would
+// also clean up the cgroups.
+ProcFamilyDirectCgroupV2::~ProcFamilyDirectCgroupV2() {
+	for (const auto &[_, name]: cgroup_map) {
+		trimCgroupTree(name);
+	}
 }
 
 // mkdir the cgroup, and all required interior cgroups.  Note that the leaf
@@ -276,7 +303,9 @@ ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
 	// Move pid to the leaf of the newly-created tree
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf = cgroup_root_dir / cgroup_name;
-	stdfs::path procs_filename = leaf / "cgroup.procs";
+	stdfs::path basename = leaf.filename();
+	stdfs::path scope = leaf / basename.replace_extension(".scope");
+	stdfs::path procs_filename = scope / "cgroup.procs";
 
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 	if (fd >= 0) {
@@ -387,11 +416,11 @@ ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
 		dprintf(D_ALWAYS, "Error enabling per-cgroup oom killing: %d (%s)\n", errno, strerror(errno));
 	}
 
-	// Enable delgation.  That is, allow processes in this cgroup to make sub-cgroups within this one.
+	// Enable delegation.  That is, allow processes in this cgroup to make sub-cgroups within this one.
 	// So, e.g. if the job is a glidein, the glidein can create sub-cgroups for each of its slots, and
 	// divide up the memory, etc. resources here and apply limits.
 	// Delegation requires three things.
-	// 1.) cgroup directory writeable (unix permission-wise) by the user
+	// 1.) cgroup directory writable (unix permission-wise) by the user
 	// 2.) cgroup.procs file writeable by the user (so they can move processes out of the interior
 	//                  node and into the leaf.  Cgroupv2 requires all processes to live in the leaf nodes.
 	// 3.) cgroup.subtree_control
@@ -601,9 +630,18 @@ ProcFamilyDirectCgroupV2::install_bpf_gpu_filter(const std::string &cgroup_name)
 #endif
 	return true;	
 }
+
+// The cgroup names the rest of condor passes in to use do not follow the cgroup v2
+// convention of ending in ".slice" for the internal cgroup.  This function tacks 
+// that on.
+static
+std::string canonicalize_cgroup(const std::string &input_cgroup) {
+	return input_cgroup + ".slice";
+}
+
 void 
 ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
-	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
+	auto [it, success] = cgroup_map.emplace(pid, canonicalize_cgroup(cgroup_name));
 	if (!success) {
 		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
@@ -614,7 +652,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	ASSERT(fi->cgroup);
 
-	std::string cgroup_name = fi->cgroup;
+	std::string cgroup_name = canonicalize_cgroup(fi->cgroup);
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
 	this->cgroup_memory_limit_low = fi->cgroup_memory_limit_low;
 	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
@@ -686,6 +724,9 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		return true;
 	}
 
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
 	const std::string cgroup_name = cgroup_map[pid];
 
 	// Initialize the ones we don't set to -1 to mean "don't know".
@@ -718,19 +759,25 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		usage.sys_cpu_time  = 0;
 	}
 
-	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
+	// Counting of the procs.  "cgroup.procs" only contains the processes
+	// in tihs exact cgroup, not the children.  So we need to count recursively
 
-	FILE *f = fopen(cgroup_procs.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
-		return false;
+	int processes_in_cgroup = 0; // total from here on down
+	for (const auto& dir: getTree(cgroup_name)) {
+		stdfs::path cgroup_procs   = dir / "cgroup.procs";
+
+		FILE *f = fopen(cgroup_procs.c_str(), "r");
+		if (!f) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
+			continue;
+		}
+		char pidstr[64]; // Far beyond max size of a pid
+		while (fscanf(f, "%s\n", pidstr) == 1) {
+			processes_in_cgroup++;
+		}
+		fclose(f);
 	}
-	char pidstr[64]; // Far beyond max size of a pid
-	usage.num_procs = 0;
-	while (fscanf(f, "%s\n", pidstr) == 1) {
-		usage.num_procs++;
-	}
-	fclose(f);
+	usage.num_procs = processes_in_cgroup;
 
 	// Memory reading follows.
 
@@ -742,7 +789,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	stdfs::path memory_peak    = leaf / "memory.peak";
 	stdfs::path memory_stat    = leaf / "memory.stat";
 
-	f = fopen(memory_stat.c_str(), "r");
+	FILE *f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
@@ -868,6 +915,9 @@ ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 	bool
 ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 {
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::suspend for pid %u for root pid %u in cgroup %s\n", 
@@ -967,8 +1017,9 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 	if (fi->cgroup) {
 		// Hopefully, if we can make the cgroup, we will be able to use it
 		// in the child process
-		success = makeCgroup(fi->cgroup);
-		get_user_sys_cpu(fi->cgroup, starting_user_usec, starting_sys_usec);
+		std::string cgroup_str = canonicalize_cgroup(fi->cgroup);
+		success = makeCgroup(cgroup_str);
+		get_user_sys_cpu(cgroup_str, starting_user_usec, starting_sys_usec);
 	}
 
 	return success;
@@ -999,6 +1050,7 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 
 	trimCgroupTree(cgroup_name);
 
+	cgroup_map.erase(pid);
 	return true;
 }
 
@@ -1108,6 +1160,19 @@ static std::string current_parent_cgroup() {
 		cgroup.erase(lastSlash); // Remove trailing slash
 	}
 	return cgroup;
+}
+
+std::string 
+ProcFamilyDirectCgroupV2::make_full_cgroup_name(const std::string &cgroup_name) {
+		std::string current = current_parent_cgroup();
+		std::string full_cgroup_name = current + '/' + cgroup_name;
+
+		// remove leading / from cgroup_name. cgroupv2 code hates that
+		if (full_cgroup_name.starts_with('/')) {
+			full_cgroup_name = full_cgroup_name.substr(1, full_cgroup_name.size() - 1);
+		}
+		replace_str(full_cgroup_name, "//", "/");
+		return full_cgroup_name;
 }
 
 bool 

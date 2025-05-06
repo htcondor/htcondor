@@ -280,20 +280,24 @@ Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 %endif
 Requires: rsync
-Requires: condor-upgrade-checks
 
-# Support OSDF client
+# Require tested Pelican packages
+%if 0%{?suse_version}
+# Hold back pelican on openSUSE until version 7.16.1 is released
 Requires: pelican >= 7.14.1
 Requires: pelican-osdf-compat >= 7.14.1
+%else
+Requires: pelican >= 7.15.1
+Requires: pelican-osdf-compat >= 7.15.1
+%endif
 
 # Require tested Apptainer
-%if 0%{?rhel} != 7
 %if 0%{?suse_version}
-# Unfortunately, openSUSE is lagging behind
+# Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.0
-%endif
+# Hold back apptainer until version 1.4.1 is released
+Requires: apptainer >= 1.3.6
 %endif
 
 %if 0%{?rhel} != 7
@@ -333,6 +337,7 @@ Provides: blahp = %{version}-%{release}
 Obsoletes: blahp < 9.5.0
 %endif
 
+%if 0%{?rhel} <= 9
 # externals package discontinued as of 10.8.0
 Obsoletes: %{name}-externals < 10.8.0
 Provides: %{name}-externals = %{version}-%{release}
@@ -356,6 +361,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+
+# upgrade-checks package discontinued as of 24.8.0
+Obsoletes: %{name}-upgrade-checks < 24.8.0
+Provides: %{name}-upgrade-checks = %{version}-%{release}
+%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -635,18 +645,6 @@ on a non-EC2 image.
 if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
-
-#######################
-%package upgrade-checks
-Summary: Script to check for manual interventions needed to upgrade
-Group: Applications/System
-
-%description upgrade-checks
-Examines the current HTCondor installation and recommends changes to ensure
-a smooth upgrade to a subsequent HTCondor version.
-
-%files upgrade-checks
-%_bindir/condor_upgrade_check
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -1212,6 +1210,7 @@ rm -rf %{buildroot}
 %_bindir/condor_ssh_start
 %_bindir/condor_test_token
 %_bindir/condor_manifest
+%_bindir/condor_upgrade_check
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1524,6 +1523,34 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.0-2
+- Use pelican 7.14.1 on openSUSE
+
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-2
+- Use pelican 7.14.1 on openSUSE
+
+* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
+- Use pelican 7.14.1 on openSUSE
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.3-1
+- condor_who now works for Glideins
+- Can add arbitrary credentials to be used by the file transfer plugins
+- Fixed WLCG token generation in the local credmon
+- Can limit the number of times that a job can be released
+- EP administrators can enforce no outbound networking for jobs
+- Add ability to use authentication when fetching Docker images
+- condor_watch_q now displays when file transfer is happening
+- To provide more consistency, using swap for jobs is disabled by default
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-1
+- With delegated cgroups v2, job out-of-memory no longer affects the pilot
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-1
+- HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0
+
+* Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.24-1
+- Fix inflated cgroups v2 memory usage reporting for Docker jobs
+
 * Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.6.1-1
 - Fix for security issue
 - https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html

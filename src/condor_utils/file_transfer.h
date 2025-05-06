@@ -548,6 +548,7 @@ class FileTransfer final: public Service {
 
   protected:
 
+    bool _fix_me_copy_initialized = false;
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
 

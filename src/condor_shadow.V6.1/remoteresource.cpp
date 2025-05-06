@@ -174,6 +174,8 @@ bool
 RemoteResource::activateClaim( int starterVersion )
 {
 	int reply;
+	ClassAd replyAd;
+	std::string anabuf;
 	const int max_retries = 20;
 	const int retry_delay = 1;
 	int num_retries = 0;
@@ -194,7 +196,7 @@ RemoteResource::activateClaim( int starterVersion )
 		// we'll eventually return out of this loop...
 	while( 1 ) {
 		reply = dc_startd->activateClaim( jobAd, starterVersion,
-										  &claim_sock );
+										  &claim_sock, &replyAd );
 		switch( reply ) {
 		case OK:
 			dprintf( D_ALWAYS,
@@ -251,6 +253,9 @@ RemoteResource::activateClaim( int starterVersion )
 			dprintf( D_ALWAYS,
 			         "Request to run on %s %s was REFUSED\n",
 			         machineName ? machineName:"", dc_startd->addr() );
+			if (replyAd.LookupString("Analyze", anabuf) && ! anabuf.empty()) {
+				dprintf(D_ERROR, "activateClaim failure analysis:\n%s\n", anabuf.c_str());
+			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -842,6 +847,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// save (most of) the incoming starter ad for later
 	if (starterAd) { starterAd->Clear(); }
 	else { starterAd = new ClassAd(); }
+
 	starterAd->Update(*ad);
 
 	if( ad->LookupString(ATTR_STARTER_IP_ADDR, buf) ) {
@@ -900,6 +906,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = FALSE (not specified)\n",
 				 ATTR_HAS_RECONNECT );
 	}
+
 }
 
 void
@@ -1263,14 +1270,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
 	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup(ATTR_JOB_TOE));
-	if( toeTag ) {
-		CopyAttribute(ATTR_JOB_TOE, *jobAd, *update_ad );
-
-		// Required to actually update the schedd's copy.  (sigh)
-		shadow->watchJobAttr(ATTR_JOB_TOE);
-	}
-
     // You MUST NOT use CopyAttribute() here, because the starter doesn't
     // send this on every update: CopyAttribute() deletes the target's
     // attribute if it doesn't exist in the source, which means the schedd
@@ -1417,10 +1416,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// ColeB pointed out that this might be nice to have.
 			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
 			// This sets the value in the header.
-			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
 			c.Delete( "TransferClass" );
 			std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
-			writeJobEpochFile( jobAd, starterAd, "STARTER" );
+			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 

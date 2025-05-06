@@ -42,7 +42,7 @@ TEST_CASES = {
         "Aborting job as guided...",
     ),
     "RetryTransfer": (
-        '{ [ Command = "RetryTransfer"; ], [ Command = "CarryOn"; ] }',
+        '{ [ Command = "RetryTransfer"; ], [ Command = "RetryRequest"; RetryDelay = 5; ], [ Command = "CarryOn"; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
@@ -74,7 +74,7 @@ TEST_CASES = {
         "Aborting job as guided...",
     ),
     "RetryTransfer w/ Extra": (
-        '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "CarryOn"; Extraneous = True; ] }',
+        '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "RetryRequest"; RetryDelay = 5; Extraneous = False; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),

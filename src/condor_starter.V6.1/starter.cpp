@@ -1691,9 +1691,11 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ALWAYS,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
 		return FALSE;
 	}
+
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", hold_code, hold_subcode, hold_reason.c_str());
 
 	int reply = 1;
 	s->encode();
@@ -3694,6 +3696,22 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, 
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
+
+	// Need to set HOME to the job's home directory, not the starter's.
+#ifndef WINDOWS
+	if (param_boolean("STARTER_SETS_HOME_ENV", true)) {
+		uid_t uid = get_user_uid();
+		if (uid == (uid_t) -1) {
+			// Personal. Condor.  Someone to run your jobs. Someone who cares.
+			uid = getuid();
+		}
+		struct passwd *pw = getpwuid(uid);
+		if (pw) {
+			proc_env->SetEnv("HOME", pw->pw_dir);
+		}
+	}
+#endif
+
 
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
