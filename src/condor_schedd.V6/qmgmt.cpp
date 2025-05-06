@@ -9445,7 +9445,15 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 	time_t cool_down = 0;
 	job->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
 	if (cool_down >= time(nullptr)) {
-		PrioRecMinCoolDownTime = MIN(PrioRecMinCoolDownTime, cool_down);
+		if (PrioRecMinCoolDownTime == 0) {
+			// This is the first job we have found in cool down.
+			// Set the cool down time to the expiration time of this job.
+			PrioRecMinCoolDownTime = cool_down;
+		} else {
+			// This is not the first job we have found in cool down.
+			// Set the cool down time to the minimum of the two.
+			PrioRecMinCoolDownTime = MIN(PrioRecMinCoolDownTime, cool_down);
+		}
 		reason = "not runnable (in cool-down)";
 		return false;
 	}
