@@ -264,6 +264,7 @@ class match_rec
 
 	bool m_startd_sends_alives;
 	bool m_claim_pslot;
+	int  m_multi_slot{0}; // when > 1, make a multi-d-slot split request
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
 	time_t idle_timer_deadline; // if the above is nonzero, abstime to hold claim
