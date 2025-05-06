@@ -161,6 +161,36 @@ Unimplemented Classes
 :class:`htcondor.Token` was only used by ``SecMan``, it has also
 been removed.
 
+In many cases, you can replace ``SecMan`` by setting the appropriate HTCondor
+configuration values.  For example, the following does a remote submit using
+the IDTOKEN stored in the ``/home/myuser/tokens`` directory.
+
+.. code:: Python
+
+    import htcondor2
+
+    # The default value is ~/.condor/tokens.d, so you can skip this
+    # if the token you want to use is on disk there.  Note that on-
+    # disk tokens must be readable only by the owner.
+    htcondor2.param["SEC_TOKEN_DIRECTORY"] = "/home/myuser/tokens"
+
+    coll = htcondor2.Collector("cm.pool.tld")
+    hostname_job = htcondor2.Submit({
+        "executable": "/bin/hostname",  # the program to run on the execute node
+        "output": "hostname.out",       # anything the job prints to standard output will end up in this file
+        "error": "hostname.err",        # anything the job prints to standard error will end up in this file
+        "log": "hostname.log",          # this file will contain a record of what happened to the job
+        "request_cpus": "1",            # how many CPU cores we want
+        "request_memory": "128MB",      # how much memory we want
+        "request_disk": "128MB",        # how much disk space we want
+        "transfer_input_files": "hello.txt",
+        })
+
+    sad = coll.locate(htcondor2.DaemonType.Schedd, "remote-schedd.pool.tld")
+    schedd = htcondor2.Schedd(sad)
+    res = schedd.submit(hostname_job, spool=True)
+    schedd.spool(res)
+
 :class:`htcondor.TokenRequest` is not presently implemented.
 
 .. rubric:: Classes or methods only in Version 1:

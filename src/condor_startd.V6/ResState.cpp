@@ -381,15 +381,16 @@ ResState::eval_policy(State & _state, Activity & _act, const Resource * rip, std
 			_state = preempting_state;
 			return xa_preclaim;
 		}
-		if( (_act == idle_act) && (rip->eval_start() == 0) ) {
-				// START evaluates to False, so return to the owner
-				// state.  In this case, we don't need to worry about
-				// START locally evaluating to FALSE due to undefined
-				// job attributes and well-placed meta-operators, b/c
-				// we're in the claimed state, so we'll have a job ad
-				// to evaluate against.
+		if( (_act == idle_act) && (rip->eval_is_owner()) ) {
+				// Be warned: we may not have a job ad here, so we don't
+				// want to just look at the START expression, as it could
+				// eval to False even if it could match a job (due to use
+				// of meta-operators or defaults for job ad values).
+				// So we explicitly wanna look at IS_OWNER here instead
+				// of checking to see if START is false. We used to think
+				// the two were equivalent, but with meta-operators they may not be
 				// TLM: STATE TRANSITION #10
-			reason = "START is false";
+			reason = "IS_OWNER is true";
 			_state = preempting_state;
 			return xa_false_start;
 		}

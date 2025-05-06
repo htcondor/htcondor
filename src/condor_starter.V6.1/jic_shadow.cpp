@@ -786,6 +786,9 @@ JICShadow::transferOutputMopUp(void)
 void
 JICShadow::allJobsGone( void )
 {
+	if (filetrans) {
+		filetrans->abortActiveTransfer();
+	}
 	if ( shadow_version && shadow_version->built_since_version(8,7,8) ) {
 		dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
 		starter->StarterExit( starter->GetShutdownExitCode() );
@@ -1234,9 +1237,8 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
 
-	std::string slotName = starter->getMySlotName();
-	slotName += '@';
-	slotName += get_local_fqdn();
+	std::string slotName;
+	mach_ad->LookupString( ATTR_NAME, slotName );
 	ad->Assign( ATTR_NAME, slotName );
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );

@@ -143,25 +143,25 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
 *	and print ad to a buffer to write to various files
 */
 static bool
-extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classad::ClassAd * other_ad, const char * banner_name){
+extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classad::ClassAd * other_ad, const char * banner_name, const classad::References* filter){
 	//Get various information needed for writing epoch file and banner
 	std::string owner, missingAttrs;
 
-	if (!job_ad->LookupInteger("ClusterId", info.jid.cluster)) {
+	if (!job_ad->LookupInteger(ATTR_CLUSTER_ID, info.jid.cluster)) {
 		info.jid.cluster = -1;
-		missingAttrs += "ClusterId";
+		missingAttrs += ATTR_CLUSTER_ID;
 	}
-	if (!job_ad->LookupInteger("ProcId", info.jid.proc)) {
+	if (!job_ad->LookupInteger(ATTR_PROC_ID, info.jid.proc)) {
 		info.jid.cluster = -1;
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
-		missingAttrs += "ProcId";
+		missingAttrs += ATTR_PROC_ID;
 	}
-	if (!job_ad->LookupInteger("NumShadowStarts", info.runId)) {
+	if (!job_ad->LookupInteger(ATTR_NUM_SHADOW_STARTS, info.runId)) {
 		//TODO: Replace Using NumShadowStarts with a better counter for epoch
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
-		missingAttrs += "NumShadowStarts";
+		missingAttrs += ATTR_NUM_SHADOW_STARTS;
 	}
-	if (!job_ad->LookupString("Owner", owner)) {
+	if (!job_ad->LookupString(ATTR_OWNER, owner)) {
 		owner = "?";
 	}
 
@@ -176,15 +176,15 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 
 	if(other_ad == NULL) {
 		other_ad = job_ad;
-		sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
+		sPrintAd(info.buffer, *other_ad, filter, nullptr);
 	} else {
 		const classad::ClassAd * new_ad =
 			copyEpochJobAttrs( job_ad, other_ad, banner_name );
 		if( new_ad != NULL ) {
-			sPrintAd(info.buffer,*new_ad,nullptr,nullptr);
+			sPrintAd(info.buffer, *new_ad, filter, nullptr);
 			delete new_ad;
 		} else {
-			sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
+			sPrintAd(info.buffer, *other_ad, filter, nullptr);
 		}
 	}
 
@@ -273,8 +273,8 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 *		1. Full Aggregate (Like history file)
 *		2. File per cluster.proc in a specified directory
 */
-void
-writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other_ad, const char * banner_name) {
+static void
+writeJobEpochFile(const classad::ClassAd* job_ad, const char* banner_name, const classad::References* filter, const classad::ClassAd* other_ad) {
 	//If not initialized then call init function
 	if (!epochHistoryIsInitialized) { initJobEpochHistoryFiles(); }
 	// If not specified to write epoch files then return
@@ -287,7 +287,7 @@ writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other
 	}
 
 	EpochAdInfo info;
-	if (extractEpochInfo(job_ad, info, other_ad, banner_name)) {
+	if (extractEpochInfo(job_ad, info, other_ad, banner_name, filter)) {
 		//For every ad recording location check/try to write.
 		if (efi.EpochHistoryFilename.ptr()) {
 			info.file_path = efi.EpochHistoryFilename.ptr();
@@ -305,4 +305,17 @@ writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other
 	}
 }
 
+void
+writeAdToEpoch(const classad::ClassAd *ad, const char* banner_name) {
+	writeJobEpochFile(ad, banner_name, nullptr, nullptr);
+}
 
+void
+writeAdProjectionToEpoch(const classad::ClassAd *ad, const classad::References* filter, const char* banner_name) {
+	writeJobEpochFile(ad, banner_name, filter, nullptr);
+}
+
+void
+writeAdWithContextToEpoch(const classad::ClassAd *ad, const classad::ClassAd *job_ad, const char* banner_name) {
+	writeJobEpochFile(job_ad, banner_name, nullptr, ad);
+}

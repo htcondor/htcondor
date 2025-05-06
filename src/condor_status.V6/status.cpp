@@ -2545,7 +2545,7 @@ usage (const char * opts)
 		"\t-limit <n>\t\tDisplay no more than <n> classads.\n"
 		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
-		"\t-total\t\t\tDisplay totals only\n"
+		"\t-totals\t\t\tDisplay totals only\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
 		"\t\t\t\tTruncates to console width or <width> argument if specified.\n"
@@ -3073,7 +3073,7 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "ckptsrvr", 2)) {
 			mainPP.setMode (SDO_CkptSvr, i, argv[i]);
 		} else
-		if (is_dash_arg_prefix (argv[i], "total", 1)) {
+		if (is_dash_arg_prefix (argv[i], "totals", 1)) {
 			mainPP.wantOnlyTotals = true;
 			mainPP.pmHeadFoot = (printmask_headerfooter_t)(HF_NOTITLE | HF_NOHEADER);
 			explicit_format = true;

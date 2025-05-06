@@ -1,3 +1,7 @@
+*** 23.10.26 bugs
+
+*** 23.0.26 bugs
+
 *** 23.10.25 bugs
 
 - Fixed bug where :macro:`DAGMAN_MAX_JOBS_IDLE` value was not being respected by DAGMan
@@ -5,6 +9,14 @@
   :jira:`3011`
 
 *** 23.0.25 bugs
+
+- Fixed some bugs with parallel universe jobs that can cause the
+  ``condor_schedd`` to crash.
+  :jira:`3049`
+
+- Fixed a bug that caused the *condor_starter* to crash if a job was
+  vacated during input file transfer.
+  :jira:`3016`
 
 - ``condor_watch_q`` will now correctly display the full range of job
   ids for each batch grouping.
@@ -53,6 +65,11 @@
 - Fixed a bug with :subcom:`transfer_output_remaps` when given an erroneous 
   trailing semicolon.
   :jira:`2910`
+
+- Fixed some bugs with parallel universe jobs that can cause the
+  ``condor_schedd`` to crash.
+  :jira:`3049`
+
 
 *** 23.0.24 bugs
 

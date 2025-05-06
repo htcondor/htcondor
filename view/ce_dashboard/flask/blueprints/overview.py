@@ -3,7 +3,7 @@ import csv
 import urllib.request
 import functools
 import xml.etree.ElementTree as ET
-from utils import cache_response_to_disk, make_data_response
+from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 import time
 
 #######################
@@ -40,9 +40,12 @@ def _get_projects_tree(hour_counter: int) -> ET.Element:
     return ET.fromstring(result_string)
 
 # Cache the hash for one hours using the same hour_counter trick as above.
-# Cache is maxsize 2, so that we can cache both for field = "FieldOfScience"
-# and field = "Organization". 
-@functools.lru_cache(maxsize=2)
+# Cache is maxsize 3, so that we can cache for field = "FieldOfScience"
+# and field = "Organization" and field = "InstitutionID".
+# The cache is invalidated after one hour by using the hour_counter parameter.
+# The function is called with the current hour as the parameter, and the result
+# is cached for that hour. When the hour changes, the cache is invalidated and a new result is generated.
+@functools.lru_cache(maxsize=3)
 def _get_project_fos_hash(hour_counter: int, field: str):
     def safe_elem_text(elem: ET.Element) -> str:
         try:
@@ -65,7 +68,11 @@ def _get_project_fos_hash(hour_counter: int, field: str):
 
 def organization_from_project(project_name: str):
     hour_counter = int(time.time() / 3600)
-    return _get_project_fos_hash(hour_counter,"Organization").get(project_name, "Unknown").replace(',',' -')
+    organizationName =  _get_project_fos_hash(hour_counter,"Organization").get(project_name, "Unknown").replace(',',' -')
+    institutionId =  _get_project_fos_hash(hour_counter,"InstitutionID").get(project_name, "Unknown").replace(',',' -')
+    # We want to get the organization name from the institution ID, as this is the 'new' way to do it.
+    # However, if there is not a valid institution ID, we will fallback to the organization name.
+    return getOrganizationFromInstitutionID(institutionId,organizationName)
 
 
 def field_of_science_from_project(project_name: str):
@@ -83,7 +90,7 @@ def get_data_from_ganglia():
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
     r = request.args.get('r','day')
 
-    # Grab data as a raw csv from ganglia, which was stashed there by the condor_gandliad
+    # Grab data as a raw csv from ganglia, which was stashed there by the condor_gangliad
     import pandas as pd
     # If host is not fully qualified, add the default domain
     if not host.endswith('.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']):

@@ -22,6 +22,8 @@ Synopsis
 [**-\-ad_file** *PATH*]
 [**-\-schedd_history_max_ads** *NUM_ADS*] [**-\-startd_history_max_ads** *NUM_ADS*]
 [**-\-schedd_history_timeout** *SECONDS*] [**-\-startd_history_timeout** *SECONDS*]
+[**-\-schedd_history_projection** *ATTRIBUTES*]
+[**-\-startd_history_projection** *ATTRIBUTES*]
 [**-\-se_host** *HOST[:PORT]*] [**-\-se_url_prefix** *PREFIX*]
 [**-\-se_username** *USERNAME*] [**-\-se_use_https** ] [**-\-se_timeout** SECONDS]
 [**-\-se_bunch_size** *NUM_DOCS*] [**-\-es_index_name** *INDEX_NAME*]
@@ -113,6 +115,10 @@ Options for HTCondor daemon (Schedd, Startd, etc.) history sources
     Abort if reading from a *condor_schedd* takes more than this many seconds
  **-\-startd_history_timeout** *SECONDS*
     Abort if reading from a *condor_startd* takes more than this many seconds
+ **-\-schedd_history_projection** *ATTRIBUTES*
+    Fetch only these attributes (comma-separated) from the Schedd history
+ **-\-startd_history_projection** *ATTRIBUTES*
+    Fetch only these attributes (comma-separated) from the Startd history
 
 Search engine (Elasticsearch, OpenSearch, etc.) interface options
 -----------------------------------------------------------------

@@ -95,6 +95,10 @@
 #include "classad_collection.h"
 #include "../condor_sysapi/sysapi.h"
 
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
 #endif
@@ -10217,6 +10221,21 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	if (IsLocalUniverse(srec)) {
 		fip = &fi;
 		fi.max_snapshot_interval = 15;
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// We put each local universe starter into it's own cgroup named by
+		// the job id, assuming that is unique under each schedd.
+
+		std::string cgroup_name = "STARTER_for_local_";
+		cgroup_name += std::to_string(job_id->cluster);
+		cgroup_name += '_';
+		cgroup_name += std::to_string(job_id->proc);
+
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+		fi.cgroup = cgroup.c_str();
+	}
+#endif
 	}
 	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
@@ -10442,8 +10461,8 @@ Scheduler::initLocalStarterDir( void )
 #ifdef WIN32
 	mode_t desired_mode = _S_IREAD | _S_IWRITE;
 #else
-		// We want execute to be world-writable w/ the sticky bit set.  
-	mode_t desired_mode = (0777 | S_ISVTX);
+		// We want execute to be world-accessible but writable only by condor
+	mode_t desired_mode = 0755;
 #endif
 
 	std::string dir_name;
@@ -10480,7 +10499,7 @@ Scheduler::initLocalStarterDir( void )
 			// since we only do this once...
 		dprintf( D_FULLDEBUG, "initLocalStarterDir(): %s does not exist, "
 				 "calling mkdir()\n", dir_name.c_str() );
-		if( mkdir(dir_name.c_str(), 0777) < 0 ) {
+		if( mkdir(dir_name.c_str(), 0755) < 0 ) {
 			dprintf( D_ALWAYS, "initLocalStarterDir(): mkdir(%s) failed: "
 					 "%s (errno %d)\n", dir_name.c_str(), strerror(errno),
 					 errno );
@@ -10488,7 +10507,7 @@ Scheduler::initLocalStarterDir( void )
 				// and root squashing, etc...
 			return;
 		}
-		mode = 0777;
+		mode = 0755;
 	} else {
 		mode = sb.st_mode;
 		if( first_time ) {
@@ -10560,6 +10579,23 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
+
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// We put each scheduler universe job into it's own cgroup named by
+		// the job id, assuming that is unique under each schedd.
+
+		std::string cgroup_name = "sched_uni_job_";
+		cgroup_name += std::to_string(job_id->cluster);
+		cgroup_name += '_';
+		cgroup_name += std::to_string(job_id->proc);
+
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+		fi.cgroup = cgroup.c_str();
+	}
+#endif
+
 
 	is_executable = false;
 
@@ -13508,7 +13544,7 @@ Scheduler::Init()
 
 		// Decide the directory we should use for the execute
 		// directory for local universe starters.  Create it if it
-		// doesn't exist, fix the permissions (1777 on UNIX), and, if
+		// doesn't exist, fix the permissions (0755 on UNIX), and, if
 		// it's the first time we've hit this method (on startup, not
 		// reconfig), we remove any subdirectories that might have
 		// been left due to starter crashes, etc.

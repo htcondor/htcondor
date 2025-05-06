@@ -166,7 +166,7 @@ Options
     replaced by the number of the sort. ``CondorStatusSortKey<N>`` gives
     the result of evaluating the sort expression that is numbered
     ``<N>``.
- **-total**
+ **-totals**
     (Display option) Display totals only.
  **-xml**
     (Display option) Display entire ClassAds, in XML format. The XML

@@ -11,7 +11,7 @@ from dataclasses import dataclass, fields, astuple
 from math import floor
 import time
 import threading
-from utils import cache_response_to_disk, make_data_response
+from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 # from . import overview  # Import the overview module
 
 ##########################################
@@ -192,8 +192,11 @@ def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
     resource_info_by_fqdn = {}
 
     for resourcegroup in tree.findall("./ResourceGroup"):
-        # resourcegroup_name = elem_text(resourcegroup, "./GroupName")
-        facility_name = elem_text(resourcegroup, "./Facility/Name")
+        # We want to use the institution ID to get the organization name, as this is the new way to do it.
+        # If the institution ID is not found, we will fallback to the old facility name.
+        old_facility_name = elem_text(resourcegroup, "./Facility/Name")
+        institution_id = elem_text(resourcegroup, "./Facility/InstitutionID")
+        facility_name = getOrganizationFromInstitutionID(institution_id, old_facility_name)
         site_name = elem_text(resourcegroup, "./Site/Name")
         for resource in resourcegroup.findall("./Resources/Resource"):
             fqdn = elem_text(resource, "./FQDN")

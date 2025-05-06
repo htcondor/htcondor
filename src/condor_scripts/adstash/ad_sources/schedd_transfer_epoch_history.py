@@ -114,7 +114,10 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         super().__init__(*args, **kwargs)
 
 
-    def fetch_ads(self, schedd_ad, max_ads=10000):
+    def fetch_ads(self, schedd_ad, max_ads=10000, projection=set()):
+        if projection:
+            logging.warning(f"Custom projections are ignored for transfer history ads")
+
         history_kwargs = {}
         if max_ads > 0:
             history_kwargs["match"] = max_ads

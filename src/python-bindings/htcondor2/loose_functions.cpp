@@ -91,6 +91,7 @@ _enable_debug( PyObject *, PyObject * ) {
 static PyObject *
 _enable_log( PyObject *, PyObject * ) {
 	dprintf_make_thread_safe();
+	dprintf_config_ContinueOnFailure(1);
 	dprintf_config(get_mySubSystem()->getName());
 
 	Py_RETURN_NONE;

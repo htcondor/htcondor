@@ -54,6 +54,7 @@ static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
 }
 
+//
 // given a relative cgroup name, send a signal
 // to every process in exactly that cgroup (but 
 // not sub-cgroups thereof)
@@ -272,6 +273,15 @@ static bool makeCgroup(const std::string &cgroup_name) {
 	}
 
 	return true;
+}
+
+// Daemon Core calls this right before exit.  The assumption is when the destructor
+// is caled, we are on our way out, we won't be calling any reapers that would
+// also clean up the cgroups.
+ProcFamilyDirectCgroupV2::~ProcFamilyDirectCgroupV2() {
+	for (const auto &[_, name]: cgroup_map) {
+		trimCgroupTree(name);
+	}
 }
 
 // mkdir the cgroup, and all required interior cgroups.  Note that the leaf
@@ -749,19 +759,25 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		usage.sys_cpu_time  = 0;
 	}
 
-	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
+	// Counting of the procs.  "cgroup.procs" only contains the processes
+	// in tihs exact cgroup, not the children.  So we need to count recursively
 
-	FILE *f = fopen(cgroup_procs.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
-		return false;
+	int processes_in_cgroup = 0; // total from here on down
+	for (const auto& dir: getTree(cgroup_name)) {
+		stdfs::path cgroup_procs   = dir / "cgroup.procs";
+
+		FILE *f = fopen(cgroup_procs.c_str(), "r");
+		if (!f) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
+			continue;
+		}
+		char pidstr[64]; // Far beyond max size of a pid
+		while (fscanf(f, "%s\n", pidstr) == 1) {
+			processes_in_cgroup++;
+		}
+		fclose(f);
 	}
-	char pidstr[64]; // Far beyond max size of a pid
-	usage.num_procs = 0;
-	while (fscanf(f, "%s\n", pidstr) == 1) {
-		usage.num_procs++;
-	}
-	fclose(f);
+	usage.num_procs = processes_in_cgroup;
 
 	// Memory reading follows.
 
@@ -773,7 +789,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	stdfs::path memory_peak    = leaf / "memory.peak";
 	stdfs::path memory_stat    = leaf / "memory.stat";
 
-	f = fopen(memory_stat.c_str(), "r");
+	FILE *f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
@@ -1144,6 +1160,19 @@ static std::string current_parent_cgroup() {
 		cgroup.erase(lastSlash); // Remove trailing slash
 	}
 	return cgroup;
+}
+
+std::string 
+ProcFamilyDirectCgroupV2::make_full_cgroup_name(const std::string &cgroup_name) {
+		std::string current = current_parent_cgroup();
+		std::string full_cgroup_name = current + '/' + cgroup_name;
+
+		// remove leading / from cgroup_name. cgroupv2 code hates that
+		if (full_cgroup_name.starts_with('/')) {
+			full_cgroup_name = full_cgroup_name.substr(1, full_cgroup_name.size() - 1);
+		}
+		replace_str(full_cgroup_name, "//", "/");
+		return full_cgroup_name;
 }
 
 bool 
