@@ -2,6 +2,11 @@
 
 *** 24.9.0 bugs
 
+- Fixed an issue where a job may take an additional 20 minutes to be scheduled to run after leaving cool-down mode.
+  See configuration knob :macro:`SYSTEM_ON_VACATE_COOL_DOWN` for more information about job cool-down mode.
+  :jira:`3059`
+
+
 *** 24.8.0 features
 
 - Added new ``halt`` and ``resume`` verbs to :tool:`htcondor dag` for
