@@ -27,8 +27,6 @@ import textwrap
 import os
 import sys
 
-from pwd import getpwnam
-from grp import getgrnam
 from .try_os_set import (
     try_os_setegid,
     try_os_seteuid,
@@ -254,9 +252,17 @@ class Condor:
         }
 
         if self.condor_user:
-            uid = getpwnam(self.condor_user).pw_uid
-            gid = getgrnam(self.condor_user).gr_gid
-            base_config["CONDOR_IDS"] = f"{uid}.{gid}"
+            try:
+                from pwd import getpwnam
+                from grp import getgrnam
+
+                uid = getpwnam(self.condor_user).pw_uid
+                gid = getgrnam(self.condor_user).gr_gid
+                base_config["CONDOR_IDS"] = f"{uid}.{gid}"
+            except ModuleNotFoundError:
+                # This should arguably be a setup error if this process
+                # has user-switching privileges.
+                pass
 
         # The need to do this is arguably a HTCondor bug.
         global unique_identifier
