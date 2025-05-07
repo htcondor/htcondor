@@ -1399,11 +1399,11 @@ debug_close_file(struct DebugFileInfo* it)
 	if( debug_file_ptr ) {
 		if (debug_file_ptr) {
 			int close_result = fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
+			(*it).debugFP = nullptr;
 			if (close_result < 0) {
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 			}
-			(*it).debugFP = NULL;
 		}
 	}
 }
@@ -1423,11 +1423,11 @@ debug_close_all_files()
 		if(!debug_file_ptr)
 			continue;
 		int close_result = fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
+		(*it).debugFP = nullptr;
 		if (close_result < 0) {
 			DebugUnlockBroken = 1;
 			_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 		}
-		(*it).debugFP = NULL;
 	}
 }
 
@@ -1865,6 +1865,7 @@ bool dprintf_retry_errno( int value )
 #endif
 }
 
+#ifdef PSILORD_WHAT_WERE_YOU_THINKING
 /* This function calls fclose(), soaking up EINTRs up to maxRetries times.
    The motivation for this function is Gnats PR 937 (DAGMan crashes if
    straced).  Psilord investigated this and found that, because LIGO
@@ -1899,6 +1900,39 @@ fclose_wrapper( FILE *stream, int maxRetries )
 
 	return result;
 }
+#else
+
+// Recent manual pages now tell use to NEVER retry close, or fclose
+// even on error.  From the close man page:
+
+//  Dealing with error returns from close()
+//       Retrying the close() after a failure return is the wrong thing  to  do,
+//       since this may cause a reused file descriptor from another thread to be
+//       closed.  This can occur because the Linux kernel  always  releases  the
+//       file descriptor early in the close operation, freeing it for reuse; the
+//       steps that may return an error, such as flushing data to the filesystem
+//       or device, occur only later in the close operation.
+//
+//The EINTR error is a somewhat special case.  Regarding the EINTR error,
+//       POSIX.1-2008 says:
+//
+//              If close() is interrupted by a signal that is to be  caught,  it
+//              shall  return -1 with errno set to EINTR and the state of fildes
+//              is unspecified.
+//
+//       This permits the behavior that occurs on Linux and many other implemen‐
+//       tations,  where,  as with other errors that may be reported by close(),
+//       the file descriptor is guaranteed to be closed.
+
+// SO, let's never retry close or fclose, even on EINTR.  We have seen Retrying
+// the fclose to cause glibc to assert with a double free error, which hides
+// our ability to report dprintf problem to our parent.
+int
+fclose_wrapper( FILE *stream, int /*maxRetries*/ )
+{
+	return fclose(stream);
+}
+#endif
 
 void
 _condor_save_dprintf_line( int flags, const char* fmt, ... )
