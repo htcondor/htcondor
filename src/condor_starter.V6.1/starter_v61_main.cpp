@@ -95,9 +95,20 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
-    printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
-    printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
+	printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
+	printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 	printf( "%s = True\n", ATTR_HAS_OS_USER );
+
+	// Include HasCommonFilesTransfer has an integer (version number)
+	// that therefore always also evaluates to boolean true.
+	int cftValue = 0;
+#if defined(LINUX) || defined(DARWIN)
+	// We don't test on BSD, so don't claim the hardlink code works there.
+	cftValue = 1;
+#endif
+	if( cftValue != 0 ) {
+		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, cftValue );
+	}
 
 	if (param_boolean("NO_JOB_NETWORKING", false)) {
 		printf("%s = False\n", ATTR_HAS_JOB_NETWORKING);
