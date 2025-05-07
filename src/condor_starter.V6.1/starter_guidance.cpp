@@ -34,6 +34,7 @@
 
 #include "jic_shadow.h"
 
+
 #define SEND_REPLY_AND_CONTINUE_CONVERSATION \
 	int ignored = -1; \
 	jic->notifyGenericEvent( diagnosticResultAd, ignored ); \
@@ -771,6 +772,7 @@ Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & contex
 	ClassAd guidance;
 	ClassAd request(context);
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
+	request.InsertAttr(ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {

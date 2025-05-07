@@ -51,6 +51,7 @@ Starter *starter = &StarterObj;
 extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
 
+
 // this appears at the bottom of this file:
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 static char* dprintf_header = NULL;
@@ -101,13 +102,8 @@ printClassAd( void )
 
 	// Include HasCommonFilesTransfer has an integer (version number)
 	// that therefore always also evaluates to boolean true.
-	int cftValue = 0;
-#if defined(LINUX) || defined(DARWIN)
-	// We don't test on BSD, so don't claim the hardlink code works there.
-	cftValue = 1;
-#endif
-	if( cftValue != 0 ) {
-		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, cftValue );
+	if( CFT_VERSION != 0 ) {
+		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
 	}
 
 	if (param_boolean("NO_JOB_NETWORKING", false)) {

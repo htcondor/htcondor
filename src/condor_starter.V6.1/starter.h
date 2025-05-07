@@ -26,6 +26,14 @@
 #include "execute_dir_monitor.h"
 #include "exit.h"
 
+#if defined(LINUX) || defined(DARWIN)
+    // We don't test on BSD, so don't claim the hardlink code works there.
+    #define CFT_VERSION 1
+#else
+    #define CFT_VERSION 0
+#endif
+
+
 #if defined(LINUX)
 #include "../condor_startd.V6/VolumeManager.h"
 #endif
