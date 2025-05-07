@@ -1582,7 +1582,7 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( int cluster : *idle_clusters) {
 		int proc = 0;
 		owner_str = "";
-		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
+		GetAttributeString( cluster, proc, ATTR_USER, owner_str );
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
 				 proc, owner_str.c_str() );
 	}
@@ -1991,7 +1991,7 @@ DedicatedScheduler::spawnJobs( )
 
 			// add job to run queue, though the shadow pid is still 0,
 			// since there's not really a shadow just yet.
-		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1 );
+		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1, nullptr );
 
 		srec->is_reconnect = allocation->is_reconnect;
 
@@ -2275,7 +2275,7 @@ DedicatedScheduler::computeSchedule( )
 			nprocs++;
 		}	
 			
-		if (give_up) {
+		if (give_up || jobs->size() == 0) {
 			continue;
 		}
 
@@ -4060,8 +4060,8 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			// 2.) add to all_matches, and all_matches_by_name
 			// 3.) Call createAllocations to do the rest  
 
-		char *remote_hosts = nullptr;
-		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
+		std::string remote_hosts;
+		GetAttributeString(id.cluster, id.proc, ATTR_REMOTE_HOSTS, remote_hosts);
 
 		std::string claims;
 		GetPrivateAttributeString(id.cluster, id.proc, ATTR_CLAIM_IDS, claims);
@@ -4156,7 +4156,6 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			free(sinful);
 			sinful = nullptr;
 		}
-		free(remote_hosts);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any

@@ -112,6 +112,14 @@ class ClassAd(MutableMapping):
         return _classad_to_string(self._handle)
 
 
+    # This tells the pickle module to reconstruct ClassAd objects by
+    # calling the constructor (that is, `__init__()`) with the given
+    # tuple of arguments, intead of its default method, which tries
+    # to pickle the handle, which is never going to work.
+    def __reduce__(self):
+        return (ClassAd, (repr(self),))
+
+
     def eval(self, attr : str):
         """
         Evaluate the attribute named by *attr* in the context of this ClassAd.

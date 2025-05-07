@@ -881,6 +881,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					m_sock->setTriedAuthentication(tried_authentication);
 					m_sock->setSessionID(session->id());
+					m_sock->setPolicyAd(*m_policy);
 				}
 
 				// If the cached policy doesn't have a version, then
@@ -1472,22 +1473,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					return CommandProtocolFinished;
 				}
 
-				// well, they didn't authenticate, turn on encryption,
-				// or turn on integrity.  check to see if any of those
-				// were required.
+				// Well, they didn't authenticate. See if that was required.
+				// Also, if security negotiation is required, see if they
+				// have a security session.
 
 				if (  (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_NEGOTIATION)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION)
-					   == SecMan::SEC_REQ_REQUIRED)
+					   == SecMan::SEC_REQ_REQUIRED && m_sock->getSessionID().empty())
 				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION_NEW)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_ENCRYPTION)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_INTEGRITY)
 					   == SecMan::SEC_REQ_REQUIRED) ) {
 
-					// yep, they were.  deny.
+					// yep, negotiation or authentication was required and
+					// they didn't do it.  deny.
 
 					dprintf(D_ALWAYS,
 						"DaemonCore: PERMISSION DENIED for %d (%s) via %s%s%s from host %s (access level %s)\n",
@@ -1546,7 +1542,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
-			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			const ClassAd* policy_ad = m_policy ? m_policy : m_sock->getPolicyAd();
+			if (policy_ad && policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());

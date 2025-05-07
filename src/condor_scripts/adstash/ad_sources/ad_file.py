@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-import classad
+import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource

@@ -21,17 +21,17 @@
 #include "condor_common.h"
 #include <string.h>
 #include <errno.h>
-#include "condor_event.h"
-#include "write_user_log.h"
 #include "condor_string.h"
 #include "condor_classad.h"
+#include "condor_event.h"
+#include "write_user_log.h"
 #include "iso_dates.h"
 #include "condor_attributes.h"
 #include "classad_merge.h"
 
+#include "write_eventlog.h" // for the EPLogEvent structure and utility functions
 #include "misc_utils.h"
 #include "utc_time.h"
-#include "ToE.h"
 
 //added by Ameet
 #include "condor_environ.h"
@@ -120,6 +120,24 @@ const char ULogEventNumberNames[][41] = {
 	"ULOG_FILE_COMPLETE",			// File transfer has completed successfully
 	"ULOG_FILE_USED",				// File in reuse dir utilized
 	"ULOG_FILE_REMOVED",			// File in reuse dir removed.
+	"ULOG_DATAFLOW_JOB_SKIPPED",	// Dataflow job skipped
+};
+
+// event names for events between ULOG_EP_FIRST and ULOG_EP_LAST
+// the EPLogEvent structure is in ep_eventlog.h because it has a classad and condor_event.h can't use them by value...
+const char * const ULogEPEventNumberNames[] = {
+	"ULOG_EP_STARTUP",
+	"ULOG_EP_READY",
+	"ULOG_EP_RECONFIG",
+	"ULOG_EP_SHUTDOWN",
+	"ULOG_EP_REQUEST_CLAIM",
+	"ULOG_EP_RELEASE_CLAIM",
+	"ULOG_EP_ACTIVATE_CLAIM",
+	"ULOG_EP_DEACTIVATE_CLAIM",
+	"ULOG_EP_VACATE_CLAIM",
+	"ULOG_EP_DRAIN",
+	"ULOG_EP_RESOURCE_BREAK",
+	"ULOG_EP_FUTURE_EVENT"
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -130,6 +148,21 @@ const char * const ULogEventOutcomeNames[] = {
   "ULOG_UNK_ERROR"
 };
 
+// MyType names of defined events between ULOG_EP_FIRST and ULOG_EP_LAST
+static const char * const EPEventTypeNames[] = {
+	"EPStartupEvent",
+	"EPReadyEvent",
+	"EPReconfigEvent",
+	"EPShutdownEvent",
+	"RequestClaimEvent",
+	"ReleaseClaimEvent",
+	"ActivateClaimEvent",
+	"DeactivateClaimEvent",
+	"VacateClaimEvent",
+	"DrainEvent",
+	"ResourceBreakEvent",
+	"EPFutureEvent"
+};
 
 ULogEvent *
 instantiateEvent (ClassAd *ad)
@@ -268,11 +301,15 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		return new DataflowJobSkippedEvent;
 
+	default:
+		if ((int)event >= ULOG_EP_FIRST && (int)event <= ULOG_EP_FUTURE_EVENT) {
+			return new EPLogEvent((ULogEPEventNumber)event);
+		}
+		// fall through
 	case ULOG_GLOBUS_SUBMIT:
 	case ULOG_GLOBUS_SUBMIT_FAILED:
 	case ULOG_GLOBUS_RESOURCE_DOWN:
 	case ULOG_GLOBUS_RESOURCE_UP:
-	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
 		return new FutureEvent(event);
 	}
@@ -370,13 +407,17 @@ void setEventUsageAd(const ClassAd& jobAd, ClassAd ** ppusageAd)
 }
 
 
+void ULogEvent::reset_event_time()
+{
+	eventclock = condor_gettimestamp(event_usec);
+}
+
 ULogEvent::ULogEvent(void)
 {
 	eventNumber = (ULogEventNumber) - 1;
 	cluster = proc = subproc = -1;
-	eventclock = condor_gettimestamp(event_usec);
+	reset_event_time();
 }
-
 
 ULogEvent::~ULogEvent (void)
 {
@@ -459,6 +500,12 @@ const char * getULogEventNumberName(ULogEventNumber number)
 	}
 	if (number < (int)COUNTOF(ULogEventNumberNames)) {
 		return ULogEventNumberNames[number];
+	} else if (number >= (int)ULOG_EP_FIRST) {
+		int ep_off = number - (int)ULOG_EP_FIRST;
+		if (ep_off < (int)COUNTOF(ULogEPEventNumberNames)) {
+			return ULogEPEventNumberNames[ep_off];
+		}
+
 	}
 	return "ULOG_FUTURE_EVENT";
 }
@@ -796,14 +843,25 @@ ULogEvent::toClassAd(bool event_time_utc)
 {
 	ClassAd* myad = new ClassAd;
 
+	if ( ! toClassAd(*myad, event_time_utc)) {
+		delete myad;
+		myad = nullptr;
+	}
+	return myad;
+}
+
+ClassAd*
+ULogEvent::toClassAd(ClassAd &ad, bool event_time_utc) const
+{
+	ClassAd * myad = &ad;
+
 	if( eventNumber >= 0 ) {
 		if ( !myad->InsertAttr("EventTypeNumber", eventNumber) ) {
-			delete myad;
 			return NULL;
 		}
 	}
 
-	switch( (ULogEventNumber) eventNumber )
+	switch ((int)eventNumber)
 	{
 	  case ULOG_SUBMIT:
 		SetMyTypeName(*myad, "SubmitEvent");
@@ -916,6 +974,22 @@ ULogEvent::toClassAd(bool event_time_utc)
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		SetMyTypeName(*myad, "DataflowJobSkippedEvent");
 		break;
+		// ULOG_EP_FIRST to ULOG_EP_LAST
+	case ULOG_EP_STARTUP:
+	case ULOG_EP_READY:
+	case ULOG_EP_RECONFIG:
+	case ULOG_EP_SHUTDOWN:
+	case ULOG_EP_REQUEST_CLAIM:
+	case ULOG_EP_RELEASE_CLAIM:
+	case ULOG_EP_ACTIVATE_CLAIM:
+	case ULOG_EP_DEACTIVATE_CLAIM:
+	case ULOG_EP_VACATE_CLAIM:
+	case ULOG_EP_DRAIN:
+	case ULOG_EP_RESOURCE_BREAK:
+	case ULOG_EP_FUTURE_EVENT:
+		SetMyTypeName(*myad, EPEventTypeNames[eventNumber-ULOG_EP_FIRST]);
+		break;
+
 	case ULOG_GLOBUS_SUBMIT:
 	case ULOG_GLOBUS_SUBMIT_FAILED:
 	case ULOG_GLOBUS_RESOURCE_UP:
@@ -938,27 +1012,34 @@ ULogEvent::toClassAd(bool event_time_utc)
 	time_to_iso8601(str, eventTime, ISO8601_ExtendedFormat,
 		ISO8601_DateAndTime, event_time_utc, sub_sec, sub_digits);
 	if ( !myad->InsertAttr("EventTime", str) ) {
-		delete myad;
 		return NULL;
+	}
+
+	if (eventNumber >= ULOG_EP_FIRST) {
+		// we borrow cluster and proc members to hold slotid and dslot id
+		if (cluster > 0 && ! myad->InsertAttr("SlotId", cluster)) {
+			return nullptr;
+		}
+		if (proc > 0 && ! myad->InsertAttr("DSlotId", proc)) {
+			return nullptr;
+		}
+		return myad;
 	}
 
 	if( cluster >= 0 ) {
 		if( !myad->InsertAttr("Cluster", cluster) ) {
-			delete myad;
 			return NULL;
 		}
 	}
 
 	if( proc >= 0 ) {
 		if( !myad->InsertAttr("Proc", proc) ) {
-			delete myad;
 			return NULL;
 		}
 	}
 
 	if( subproc >= 0 ) {
 		if( !myad->InsertAttr("Subproc", subproc) ) {
-			delete myad;
 			return NULL;
 		}
 	}
@@ -985,9 +1066,14 @@ ULogEvent::initFromClassAd(ClassAd* ad)
 			eventclock = mktime(&eventTime);
 		}
 	}
-	ad->LookupInteger("Cluster", cluster);
-	ad->LookupInteger("Proc", proc);
-	ad->LookupInteger("Subproc", subproc);
+	if (en >= ULOG_EP_FIRST && en <= ULOG_EP_LAST) {
+		ad->LookupInteger("SlotId", cluster);
+		ad->LookupInteger("DSlotId", proc);
+	} else {
+		ad->LookupInteger("Cluster", cluster);
+		ad->LookupInteger("Proc", proc);
+		ad->LookupInteger("Subproc", subproc);
+	}
 }
 
 
@@ -1313,6 +1399,87 @@ void FutureEvent::setPayload(const char * payload_text)
 	payload = payload_text;
 }
 
+// ----- the EPLogEvent class, shared by all defined events from ULOG_EP_FIRST to ULOG_EP_LAST
+
+bool
+EPLogEvent::formatBody( std::string &out )
+{
+	out += head;
+	out += "\n";
+	formatAd(out, payload, "  ", nullptr, false);
+	return true;
+}
+
+int
+EPLogEvent::readEvent (ULogFile& file, bool & got_sync_line)
+{
+	// read lines until we see "...\n" or "...\r\n"
+	// lines in the payload must be valid long form key=value pairs
+
+	bool athead = true;
+	std::string line;
+	while (readLine(line, file, false)) {
+		if (line[0] == '.' && (line == "...\n" || line == "...\r\n")) {
+			got_sync_line = true;
+			break;
+		}
+		else if (athead) {
+			chomp(line);
+			head = line;
+			athead = false;
+		} else {
+			chomp(line);
+			payload.Insert(line);
+		}
+	}
+	return 1;
+}
+
+ClassAd*
+EPLogEvent::toClassAd(bool event_time_utc)
+{
+	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
+	if( !myad ) return NULL;
+
+	myad->Update(payload);
+	myad->Assign("EventHead", head);
+	return myad;
+}
+
+void
+EPLogEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if ( ! ad->LookupString("EventHead", head)) { head.clear(); }
+
+	// Get the list of attributes that remain after we remove the known ones.
+	classad::References attrs;
+	sGetAdAttrs(attrs, *ad);
+	attrs.erase(ATTR_MY_TYPE);
+	attrs.erase("EventTypeNumber");
+	attrs.erase("SlotId");
+	attrs.erase("DSlotId");
+	// attrs.erase("Subproc");
+	attrs.erase("EventTime");
+	attrs.erase("EventHead");
+	attrs.erase("EventPayloadLines");
+
+	// now clear the payload and copy the remaining attributes
+	payload.Clear();
+	for (auto & attr : attrs) {
+		ExprTree * expr = ad->Lookup(attr);
+		if ( ! expr) continue;
+		ExprTree * cpy = expr->Copy();
+		if (cpy) { payload.Insert(attr, cpy); }
+	}
+}
+
+void EPLogEvent::setHead(std::string_view head_text)
+{
+	head = head_text;
+	chomp(head);
+}
 
 
 // ----- the SubmitEvent class
@@ -2386,27 +2553,13 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 
 
 // ----- JobAbortedEvent class
-JobAbortedEvent::JobAbortedEvent (void) : toeTag(NULL)
+JobAbortedEvent::JobAbortedEvent (void)
 {
 	eventNumber = ULOG_JOB_ABORTED;
 }
 
 JobAbortedEvent::~JobAbortedEvent(void)
 {
-	if( toeTag ) {
-		delete toeTag;
-	}
-}
-
-void
-JobAbortedEvent::setToeTag( classad::ClassAd * tt ) {
-	if(! tt) { return; }
-	if( toeTag ) { delete toeTag; }
-	toeTag = new ToE::Tag();
-	if(! ToE::decode( tt, * toeTag )) {
-		delete toeTag;
-		toeTag = NULL;
-	}
 }
 
 bool
@@ -2418,11 +2571,6 @@ JobAbortedEvent::formatBody( std::string &out )
 	}
 	if( !reason.empty() ) {
 		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
-			return false;
-		}
-	}
-	if( toeTag ) {
-		if(! toeTag->writeToString( out )) {
 			return false;
 		}
 	}
@@ -2454,14 +2602,8 @@ JobAbortedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 			}
 		}
 
-		if( replace_str(line, "\tJob terminated by ", "") ) {
-			if( toeTag != NULL ) { delete toeTag; }
-			toeTag = new ToE::Tag();
-			if(! toeTag->readFromString( line )) {
-				return 0;
-			}
-		} else {
-			return 0;
+		if( starts_with(line, "\tJob terminated by ") ) {
+			// This is the old ToE tag
 		}
 	}
 
@@ -2481,20 +2623,6 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
-	if( toeTag ) {
-		classad::ClassAd * tt = new classad::ClassAd();
-		if(! ToE::encode( * toeTag, tt )) {
-			delete tt;
-			delete myad;
-			return NULL;
-		}
-		if(! myad->Insert(ATTR_JOB_TOE, tt )) {
-			delete tt;
-			delete myad;
-			return NULL;
-		}
-	}
-
 	return myad;
 }
 
@@ -2506,12 +2634,10 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 	if( !ad ) return;
 
 	ad->LookupString("Reason", reason);
-
-	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }
 
 // ----- TerminatedEvent baseclass
-TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
+TerminatedEvent::TerminatedEvent(void)
 {
 	normal = false;
 	returnValue = signalNumber = -1;
@@ -2526,15 +2652,6 @@ TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 TerminatedEvent::~TerminatedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
-	if( toeTag ) { delete toeTag; }
-}
-
-void
-TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
-	if( tt ) {
-		if( toeTag ) { delete toeTag; }
-		toeTag = new classad::ClassAd( * tt );
-	}
 }
 
 bool
@@ -2811,28 +2928,6 @@ JobTerminatedEvent::formatBody( std::string &out )
 		return false;
 	}
 	bool rv = TerminatedEvent::formatBody( out, "Job" );
-	if( rv && toeTag != NULL ) {
-		ToE::Tag tag;
-		if( ToE::decode( toeTag, tag ) ) {
-			if( tag.howCode == 0 ) {
-				// There is no signal 0, so this combination means we read
-				// an old tag with no exit information.
-				if( tag.exitBySignal && tag.signalOrExitCode == 0 ) {
-					if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
-						return false;
-					}
-				} else {
-					// Both 'signal' and 'exit-code' must not contain spaces
-					// because of the way that sscanf() works.
-					if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s with %s %d.\n", tag.when.c_str(), tag.exitBySignal ? "signal" : "exit-code", tag.signalOrExitCode ) < 0 ) {
-						return false;
-					}
-				}
-			} else {
-				rv = tag.writeToString( out );
-			}
-		}
-	}
 	return rv;
 }
 
@@ -2856,48 +2951,8 @@ JobTerminatedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 				return 0;
 			}
 		}
-		if( replace_str(line, "\tJob terminated of its own accord at ", "") ) {
-			if( toeTag != NULL ) {
-				delete toeTag;
-			}
-			toeTag = new classad::ClassAd();
-
-			toeTag->InsertAttr( "Who", ToE::itself );
-			toeTag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
-			toeTag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
-
-			// This code gets more complicated if we don't assume UTC i/o.
-			struct tm eventTime;
-			iso8601_to_time( line.c_str(), & eventTime, NULL, NULL );
-			toeTag->InsertAttr( "When", timegm(&eventTime) );
-
-			char type[16];
-			int signalOrExitCode;
-			size_t offset = line.find(" with ");
-			if( offset != std::string::npos ) {
-				if( 2 == sscanf( line.c_str() + offset, " with %15s %d", type, & signalOrExitCode )) {
-					if( strcmp( type, "signal" ) == 0 ) {
-						toeTag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, true );
-						toeTag->InsertAttr( ATTR_ON_EXIT_SIGNAL, signalOrExitCode );
-					} else if( strcmp( type, "exit-code" ) == 0 ) {
-						toeTag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, false );
-						toeTag->InsertAttr( ATTR_ON_EXIT_CODE, signalOrExitCode );
-					}
-				}
-			}
-		} else if( replace_str(line, "\tJob terminated by ", "") ) {
-			ToE::Tag tag;
-			if(! tag.readFromString( line )) {
-				return 0;
-			}
-
-			if(toeTag != NULL) {
-				delete toeTag;
-			}
-			toeTag = new ClassAd();
-			ToE::encode( tag, toeTag );
-		} else {
-			return 0;
+		if( starts_with(line, "\tJob terminated") ) {
+			// This is the old ToE tag
 		}
 	}
 
@@ -2984,14 +3039,6 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
-	if( toeTag ) {
-	    classad::ExprTree * tt = toeTag->Copy();
-		if(! myad->Insert(ATTR_JOB_TOE, tt)) {
-			delete myad;
-			return NULL;
-		}
-	}
-
 	return myad;
 }
 
@@ -3032,12 +3079,6 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
 	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
 	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
-
-	if( toeTag ) { delete toeTag; }
-
-	ExprTree * fail = ad->Lookup(ATTR_JOB_TOE);
-	classad::ClassAd * ca = dynamic_cast<classad::ClassAd *>( fail );
-	if( ca ) { toeTag = new classad::ClassAd( * ca ); }
 }
 
 JobImageSizeEvent::JobImageSizeEvent(void)
@@ -6497,27 +6538,13 @@ FileRemovedEvent::readEvent(ULogFile& fp, bool &got_sync_line) {
 }
 
 // ----- DataflowJobSkippedEvent class
-DataflowJobSkippedEvent::DataflowJobSkippedEvent (void) : toeTag(NULL)
+DataflowJobSkippedEvent::DataflowJobSkippedEvent (void)
 {
 	eventNumber = ULOG_DATAFLOW_JOB_SKIPPED;
 }
 
 DataflowJobSkippedEvent::~DataflowJobSkippedEvent(void)
 {
-	if( toeTag ) {
-		delete toeTag;
-	}
-}
-
-void
-DataflowJobSkippedEvent::setToeTag( classad::ClassAd * tt ) {
-	if(! tt) { return; }
-	if( toeTag ) { delete toeTag; }
-	toeTag = new ToE::Tag();
-	if(! ToE::decode( tt, * toeTag )) {
-		delete toeTag;
-		toeTag = NULL;
-	}
 }
 
 bool
@@ -6529,11 +6556,6 @@ DataflowJobSkippedEvent::formatBody( std::string &out )
 	}
 	if( !reason.empty() ) {
 		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
-			return false;
-		}
-	}
-	if( toeTag ) {
-		if(! toeTag->writeToString( out )) {
 			return false;
 		}
 	}
@@ -6565,14 +6587,8 @@ DataflowJobSkippedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 			}
 		}
 
-		if( replace_str(line, "\tJob terminated by ", "") ) {
-			if( toeTag != NULL ) { delete toeTag; }
-			toeTag = new ToE::Tag();
-			if(! toeTag->readFromString( line )) {
-				return 0;
-			}
-		} else {
-			return 0;
+		if( starts_with(line, "\tJob terminated by ") ) {
+			// This is the old ToE tag
 		}
 	}
 
@@ -6592,20 +6608,6 @@ DataflowJobSkippedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
-	if( toeTag ) {
-		classad::ClassAd * tt = new classad::ClassAd();
-		if(! ToE::encode( * toeTag, tt )) {
-			delete tt;
-			delete myad;
-			return NULL;
-		}
-		if(! myad->Insert(ATTR_JOB_TOE, tt )) {
-			delete tt;
-			delete myad;
-			return NULL;
-		}
-	}
-
 	return myad;
 }
 
@@ -6617,6 +6619,4 @@ DataflowJobSkippedEvent::initFromClassAd(ClassAd* ad)
 	if( !ad ) return;
 
 	ad->LookupString("Reason", reason);
-
-	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }

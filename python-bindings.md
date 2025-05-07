@@ -17,7 +17,7 @@
   It is intended that there be a corresponding `htcondor3` module.
 
 - The `htcondor2` and `classad2` modules should be drop-in replacements
-  for their predecessors: `import htcondor as htcondor` and
+  for their predecessors: `import htcondor2 as htcondor` and
   `import classad2 as classad`.  For various reasons, including necessary
   deprecations, that's not 100% true.  For this reason, the version of
   the test suite that runs using those two modules is kept in a separate

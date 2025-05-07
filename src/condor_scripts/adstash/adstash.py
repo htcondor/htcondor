@@ -313,7 +313,7 @@ def schedd_history_processor(src, schedd_ad, ckpt_queue, iface, metadata, args, 
     metadata["condor_history_host_machine"] = schedd_ad.get("Machine", "UNKNOWN")
     metadata["condor_history_host_name"] = schedd_ad.get("Name", "UNKNOWN")
     try:
-        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
+        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads, projection=args.schedd_history_projection)
     except Exception as e:
         logging.error(f"Could not fetch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
         return
@@ -329,8 +329,13 @@ def schedd_history_processor(src, schedd_ad, ckpt_queue, iface, metadata, args, 
 
 
 def startd_history_processor(src, startd_ad, ckpt_queue, iface, metadata, args, src_kwargs):
+    metadata["condor_history_runtime"] = int(time.time())
+    metadata["condor_history_host_version"] = startd_ad.get("CondorVersion", "UNKNOWN")
+    metadata["condor_history_host_platform"] = startd_ad.get("CondorPlatform", "UNKNOWN")
+    metadata["condor_history_host_machine"] = startd_ad.get("Machine", "UNKNOWN")
+    metadata["condor_history_host_name"] = startd_ad.get("Name", "UNKNOWN")
     try:
-        ads = src.fetch_ads(startd_ad, max_ads=args.startd_history_max_ads)
+        ads = src.fetch_ads(startd_ad, max_ads=args.startd_history_max_ads, projection=args.startd_history_projection)
     except Exception as e:
         logging.error(f"Could not fetch ads from {startd_ad['Machine']}: {e.__class__.__name__}: {str(e)}")
         return
@@ -352,7 +357,7 @@ def schedd_job_epoch_history_processor(src, schedd_ad, ckpt_queue, iface, metada
     metadata["condor_history_host_machine"] = schedd_ad.get("Machine", "UNKNOWN")
     metadata["condor_history_host_name"] = schedd_ad.get("Name", "UNKNOWN")
     try:
-        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
+        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads, projection=args.schedd_history_projection)
     except Exception as e:
         logging.error(f"Could not fetch job epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
         return
@@ -374,7 +379,7 @@ def schedd_transfer_epoch_history_processor(src, schedd_ad, ckpt_queue, iface, m
     metadata["condor_history_host_machine"] = schedd_ad.get("Machine", "UNKNOWN")
     metadata["condor_history_host_name"] = schedd_ad.get("Name", "UNKNOWN")
     try:
-        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads)
+        ads = src.fetch_ads(schedd_ad, max_ads=args.schedd_history_max_ads, projection=args.schedd_history_projection)
     except Exception as e:
         logging.exception(f"Could not fetch transfer epoch ads from {schedd_ad['Name']}: {e.__class__.__name__}: {str(e)}")
         return

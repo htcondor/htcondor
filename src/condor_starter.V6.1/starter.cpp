@@ -19,9 +19,11 @@
 
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "starter.h"
+#include "condor_uid.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "docker_proc.h"
@@ -161,8 +163,15 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		WorkingDir = Execute;
 		m_workingDirExists = true;
 	} else {
-		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
-				 (long)daemonCore->getpid() );
+		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+				(long)daemonCore->getpid() );
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
+			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
+		} else {
+			WorkingDir = SlotDir;
+			JobHomeDir = SlotDir;
+		}
 	}
 
 		//
@@ -279,6 +288,10 @@ void
 Starter::StarterExit( int code )
 {
 	code = FinalCleanup(code);
+	if (job_requests_broken_exit && code == STARTER_EXIT_NORMAL){
+		code = STARTER_EXIT_BROKEN_BY_REQUEST;
+		dprintf(D_STATUS, "Job requested a broken exit code, setting code to %d\n", code);
+	}
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
@@ -1673,9 +1686,11 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ALWAYS,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
 		return FALSE;
 	}
+
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", hold_code, hold_subcode, hold_reason.c_str());
 
 	int reply = 1;
 	s->encode();
@@ -1860,6 +1875,57 @@ Starter::createTempExecuteDir( void )
 			dir_perms = 0755;
 		free(who);
 
+		if (WorkingDir != SlotDir) {
+			// If we have a nested working dir
+			if (mkdir(SlotDir.c_str(), 0755) < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						SlotDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+			// The "htcondor" subdir is always owned by condor, mode 0755
+			std::string condor_dir = SlotDir + DIR_DELIM_CHAR + "htcondor";
+			if (mkdir(condor_dir.c_str(), 0755) < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						condor_dir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+
+			// The user dir (almost home dir) is owned by user, 0700
+			int r = mkdir(JobHomeDir.c_str(), 0700);
+
+			if (r < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						JobHomeDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+
+#if !defined(WIN32)
+			{
+				// Made it as condor, now chown it to user
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				r = chown(JobHomeDir.c_str(),get_user_uid(), get_user_gid());
+			}
+
+			if (r < 0) {
+				dprintf( D_ERROR,
+						"couldn't chown dir %s: %s\n",
+						JobHomeDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+#endif
+		}
+
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
 			dprintf( D_ERROR,
 			         "couldn't create dir %s: %s\n",
@@ -1888,6 +1954,7 @@ Starter::createTempExecuteDir( void )
 		// some of these Win32 calls might not like
 		// them.
 		canonicalize_dir_delimiters(WorkingDir);
+		canonicalize_dir_delimiters(JobHomeDir);
 
 		perm dirperm;
 		const char * nobody_login = get_user_loginname();
@@ -1898,6 +1965,15 @@ Starter::createTempExecuteDir( void )
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
 			return false;
+		}
+
+		if (JobHomeDir != WorkingDir) {
+			bool ret_val = dirperm.set_acls( JobHomeDir.c_str() );
+			if ( !ret_val ) {
+				dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON USER DIRECTORY\n");
+				set_priv( priv );
+				return false;
+			}
 		}
 	
 		// if the admin or the user wants the execute directory encrypted,
@@ -2015,10 +2091,10 @@ Starter::createTempExecuteDir( void )
 		has_encrypted_working_dir = m_lv_handle->IsEncrypted();
 	} else {
 		// Linux && no LVM
-		dirMonitor = new ManualExecDirMonitor(WorkingDir);
+		dirMonitor = new ManualExecDirMonitor(SlotDir);
 	}
 #else /* Non-Linux OS*/
-	dirMonitor = new ManualExecDirMonitor(WorkingDir);
+	dirMonitor = new ManualExecDirMonitor(SlotDir);
 #endif // LINUX
 
 	if ( ! dirMonitor || ! dirMonitor->IsValid()) {
@@ -2084,7 +2160,7 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
-		[=, this](int /* timerID */) -> void {
+		[this](int /* timerID */) -> void {
 			Starter::requestGuidanceJobEnvironmentUnready(this);
 		},
 		"ask AP what to do"
@@ -2108,7 +2184,7 @@ Starter::jobEnvironmentReady( void )
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
-		[=, this](int /* timerID */) -> void {
+		[this](int /* timerID */) -> void {
 		    Starter::requestGuidanceJobEnvironmentReady(this);
 		},
 		"ask AP what to do"
@@ -3255,7 +3331,7 @@ Starter::publishPostScriptUpdateAd( ClassAd* ad )
 }
 
 FILE *
-Starter::OpenManifestFile( const char * filename )
+Starter::OpenManifestFile( const char * filename, bool add_to_output )
 {
 	// We should be passed in a filename that is a relavtive path
 	ASSERT(filename != NULL);
@@ -3306,7 +3382,7 @@ Starter::OpenManifestFile( const char * filename )
 			filename, dirname.c_str(), errno, strerror(errno));
 		return NULL;
 	}
-	jic->addToOutputFiles( dirname.c_str() );
+	if( add_to_output ) { jic->addToOutputFiles( dirname.c_str() ); }
 	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
 	FILE * file = fopen( f.c_str(), "w" );
@@ -3495,18 +3571,23 @@ Starter::PublishToEnv( Env* proc_env )
 		proc_env->SetEnv( env_name.c_str(), output_ad );
 	}
 	
+		// starter pid for use mainly by condor_who
+		// CONDOR not _CONDOR so we don't pollute the config of the child
+	std::string starter_pid = std::to_string( daemonCore->getpid() );
+	proc_env->SetEnv("CONDOR_STARTER_PID", starter_pid);
+
 		// job scratch space
 	env_name = base;
 	env_name += "SCRATCH_DIR";
 	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
 
-	    // Apptainer/Singlarity scratch dir
+		// Apptainer/Singlarity scratch dir
 	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
 	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
+
 		// slot identifier
 	env_name = base;
 	env_name += "SLOT";
-	
 	proc_env->SetEnv(env_name, getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
@@ -3610,6 +3691,22 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, 
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
+
+	// Need to set HOME to the job's home directory, not the starter's.
+#ifndef WINDOWS
+	if (param_boolean("STARTER_SETS_HOME_ENV", true)) {
+		uid_t uid = get_user_uid();
+		if (uid == (uid_t) -1) {
+			// Personal. Condor.  Someone to run your jobs. Someone who cares.
+			uid = getuid();
+		}
+		struct passwd *pw = getpwuid(uid);
+		if (pw) {
+			proc_env->SetEnv("HOME", pw->pw_dir);
+		}
+	}
+#endif
+
 
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
@@ -3936,7 +4033,7 @@ Starter::removeTempExecuteDir(int& exit_code)
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
-			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", true);
+			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", false);
 			if (mark_broken && exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
 				if (exit_code != STARTER_EXIT_NORMAL) {
 					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",

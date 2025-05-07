@@ -91,10 +91,11 @@ public:
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
+			@param got_job_done do we believe that the job is done? (i.e. got the job_exit syscall)
 			@param claim_is_closing startd indicates if not accepting more jobs
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful = true, bool *claim_is_closing=NULL );
+	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing);
 
 		/** Try to activate the claim on this started with the given
 			job ClassAd and version of the starter we want to use. 
@@ -109,7 +110,7 @@ public:
 		        if the startd is busy and wants us to try back later.
 		*/
 	int activateClaim( ClassAd* job_ad, int starter_version, 
-					   ReliSock** claim_sock_ptr );
+					   ReliSock** claim_sock_ptr, ClassAd * replyAd /*= nullptr*/ );
 
 		/** Before activating a claim, attempt to delegate the user proxy
 			(if there is one). We used do this from the shadow if

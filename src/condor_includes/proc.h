@@ -36,11 +36,8 @@ bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend);
 typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
-	bool operator<(const PROC_ID& cp) const {
-		int diff = this->cluster - cp.cluster;
-		if ( ! diff) diff = this->proc - cp.proc;
-		return diff < 0;
-	}
+	auto operator<=>(const PROC_ID& cp) const = default; // C++20 spaceship operator
+
 	bool set(const char * job_id_str) {
 		if ( ! job_id_str) { cluster =  proc = 0; return false; }
 		return StrIsProcId(job_id_str, this->cluster, this->proc, NULL);
@@ -103,7 +100,6 @@ typedef struct PROC_ID {
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );
 
-bool operator==( const PROC_ID a, const PROC_ID b);
 size_t hashFuncPROC_ID( const PROC_ID & );
 size_t hashFunction(const PROC_ID &);
 
@@ -141,17 +137,8 @@ inline bool StrToProcIdFixMe(const char * str, PROC_ID& jid) {
 typedef struct JOB_ID_KEY {
 	int		cluster;
 	int		proc;
-	// a LessThan operator suitable for inserting into a sorted map or set
-	bool operator<(const JOB_ID_KEY& cp) const {
-		int diff = this->cluster - cp.cluster;
-		if ( ! diff) diff = this->proc - cp.proc;
-		return diff < 0;
-	}
-	bool operator<(const PROC_ID& cp) const {
-		int diff = this->cluster - cp.cluster;
-		if ( ! diff) diff = this->proc - cp.proc;
-		return diff < 0;
-	}
+	auto operator<=>(const JOB_ID_KEY& jik) const = default; // C++20 spaceship operator
+
 	JOB_ID_KEY operator+(int i) const { return {cluster, proc + i}; }
 	JOB_ID_KEY operator-(int i) const { return {cluster, proc - i}; }
 	JOB_ID_KEY &operator++() { ++proc; return *this; }
@@ -170,7 +157,6 @@ typedef struct JOB_ID_KEY {
 	static size_t hash(const JOB_ID_KEY &) noexcept;
 } JOB_ID_KEY;
 
-inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
 size_t hashFunction(const JOB_ID_KEY &);
 
 // Macros used to indicate how a job was submitted to htcondor

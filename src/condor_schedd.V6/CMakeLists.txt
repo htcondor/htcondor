@@ -32,7 +32,6 @@ autocluster.cpp
 checkpoint_cleanup.cpp
 dedicated_scheduler.cpp
 grid_universe.cpp
-ickpt_share.cpp
 jobsets.cpp
 job_transforms.cpp
 pccc.cpp

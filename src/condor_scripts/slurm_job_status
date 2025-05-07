@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import htcondor
+import htcondor2 as htcondor
 import os
 import re
 import sys

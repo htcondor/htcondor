@@ -1,5 +1,14 @@
 #!/usr/bin/env pytest
 
+#Configuration for personal condor. The test is sensitive to slot re-use
+# so we want the startd to have enough slots to start all jobs at once
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+    NUM_CPUS = 20
+    CLAIM_WORKLIFE = 0
+"""
+#endtestreq
+
 import pytest
 from ornithology import *
 import classad2
@@ -809,7 +818,7 @@ def test_check_details(test_info):
 @action
 def wait_for_job(test_job_handle, test_wait_condition):
     """Wait for test job based on specified wait condition"""
-    assert test_job_handle.wait(condition=test_wait_condition, timeout=30)
+    assert test_job_handle.wait(condition=test_wait_condition, timeout=300)
     return test_job_handle
 
 #--------------------------------------------------------------------------

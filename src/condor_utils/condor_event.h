@@ -36,10 +36,6 @@
 #include <string>
 #include <chrono>
 
-namespace ToE {
-    class Tag;
-}
-
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
 	black box pointer and never needs to know the size of the actual
@@ -145,6 +141,26 @@ enum ULogEventNumber {
 	/** Data reused               */ ULOG_FILE_USED					= 44,
 	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
 	/** Dataflow job skipped      */ ULOG_DATAFLOW_JOB_SKIPPED		= 46,
+
+	// Debugging events in the Startd/Starter
+	ULOG_EP_FIRST = 100,
+	ULOG_EP_LAST =  199,
+};
+
+enum ULogEPEventNumber {
+	ULOG_EP_STARTUP          = ULOG_EP_FIRST + 0,
+	ULOG_EP_READY            = ULOG_EP_FIRST + 1,
+	ULOG_EP_RECONFIG         = ULOG_EP_FIRST + 2,
+	ULOG_EP_SHUTDOWN         = ULOG_EP_FIRST + 3,
+	ULOG_EP_REQUEST_CLAIM    = ULOG_EP_FIRST + 4,
+	ULOG_EP_RELEASE_CLAIM    = ULOG_EP_FIRST + 5,
+	ULOG_EP_ACTIVATE_CLAIM   = ULOG_EP_FIRST + 6,
+	ULOG_EP_DEACTIVATE_CLAIM = ULOG_EP_FIRST + 7,
+	ULOG_EP_VACATE_CLAIM     = ULOG_EP_FIRST + 8,
+	ULOG_EP_DRAIN            = ULOG_EP_FIRST + 9,
+	ULOG_EP_RESOURCE_BREAK   = ULOG_EP_FIRST + 10,
+	// when you add an event, also update ULogEPEventNumberNames, EPEventTypeNames,
+	ULOG_EP_FUTURE_EVENT
 };
 
 //----------------------------------------------------------------------------
@@ -164,6 +180,7 @@ enum ULogEventOutcome
 
 /// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];
 extern const char * const ULogEventOutcomeNames[];
+extern const  char SynchDelimiter[];
 
 //----------------------------------------------------------------------------
 /** Framework for a single User Log Event object.  This class is an abstract
@@ -235,6 +252,9 @@ class ULogEvent {
 
 		// returns a pointer to the current event name char[], or NULL
 	const char* eventName(void) const;
+
+		// helper function that sets ULogEvent fields into the given classad
+	ClassAd* toClassAd(ClassAd& ad, bool event_time_utc) const;
 
 	/** Return a ClassAd representation of this ULogEvent. This is implemented
 		differently in each of the known (by John Bethencourt as of 6/5/02)
@@ -360,6 +380,8 @@ class ULogEvent {
 
 	// set a string member that converting \n to | and \r to space
 	void set_reason_member(std::string & reason_out, const std::string & reason_in);
+
+	void reset_event_time();
 
   private:
     /// The time this event occurred as a UNIX timestamp
@@ -768,13 +790,9 @@ class JobAbortedEvent : public ULogEvent
 
 	const char* getReason(void) const { return reason.c_str(); }
 
-	void setToeTag( classad::ClassAd * toeTag );
-
 	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
 private:
 	std::string reason;
-public:
-	ToE::Tag * toeTag;
 };
 
 
@@ -975,13 +993,6 @@ class TerminatedEvent : public ULogEvent
 	double total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
-
-	// Subclasses wishing to be more efficient can override this to store
-	// the values in the toeTag that they care about in member variables.
-	// This method just makes a copy of toeTag (if it's not NULL).
-	virtual void setToeTag( classad::ClassAd * toeTag );
-
-	classad::ClassAd * toeTag;
 
 	std::string core_file;
 
@@ -2275,12 +2286,8 @@ class DataflowJobSkippedEvent : public ULogEvent
 	const char* getReason(void) const { return reason.c_str(); }
 	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
 
-	void setToeTag( classad::ClassAd * toeTag );
-
 private:
 	std::string reason;
-public:
-	ToE::Tag * toeTag;
 };
 
 

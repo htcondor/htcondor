@@ -27,6 +27,7 @@
 #include "proc.h"
 #include "condor_uid.h"
 #include "basename.h"
+#include "set_user_priv_from_ad.h"
 
 char *
 gen_ckpt_name( char const *directory, int cluster, int proc, int subproc )
@@ -253,21 +254,23 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 
 	ASSERT( desired_priv_state == PRIV_USER );
 
-#ifndef WIN32
+	TemporaryPrivSentry sentry;
 
-	std::string owner;
-	job_ad->EvaluateAttrString( ATTR_OWNER, owner );
-
-	uid_t src_uid = get_condor_uid();
-	uid_t dst_uid;
-	gid_t dst_gid;
-	passwd_cache* p_cache = pcache();
-	if( !p_cache->get_user_ids(owner.c_str(), dst_uid, dst_gid) ) {
-		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
+	if (!user_ids_are_inited()) {
+		if (!init_user_ids_from_ad(*job_ad)) {
+			std::string owner;
+			job_ad->LookupString(ATTR_USER, owner);
+			dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
 				 "user %s. Cannot chown %s to user.\n",
 				 cluster, proc, owner.c_str(), spool_path );
-		return false;
+			return false;
+		}
 	}
+
+#ifndef WIN32
+	uid_t src_uid = get_condor_uid();
+	uid_t dst_uid = get_user_uid();
+	gid_t dst_gid = get_user_gid();
 
 	if( (spool_path_uid != dst_uid) && 
 		!recursive_chown(spool_path,src_uid,dst_uid,dst_gid,true) )
@@ -279,11 +282,8 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 
 #else	/* WIN32 */
 
-	std::string owner;
-	job_ad->EvaluateAttrString(ATTR_OWNER, owner);
-
-	std::string nt_domain;
-	job_ad->EvaluateAttrString(ATTR_NT_DOMAIN, nt_domain);
+	std::string owner = get_user_loginname();
+	std::string nt_domain = get_user_domainname();
 
 	if(!recursive_chown(spool_path, owner.c_str(), nt_domain.c_str()))
 	{
@@ -575,27 +575,29 @@ SpooledJobFiles::chownSpoolDirectoryToCondor(classad::ClassAd const *job_ad)
 	uid_t dst_uid = get_condor_uid();
 	gid_t dst_gid = get_condor_gid();
 
-	std::string jobOwner;
-	job_ad->EvaluateAttrString( ATTR_OWNER, jobOwner );
+	TemporaryPrivSentry sentry;
 
-	passwd_cache* p_cache = pcache();
-	if( p_cache->get_user_uid( jobOwner.c_str(), src_uid ) ) {
-		if( ! recursive_chown(sandbox.c_str(), src_uid,
-							  dst_uid, dst_gid, true) )
-		{
-			dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
-					 "%d to %d.%d.  User may run into permissions "
-					 "problems when fetching sandbox.\n", 
-					 cluster, proc, sandbox.c_str(),
-					 src_uid, dst_uid, dst_gid );
-			result = false;
-		}
-	} else {
-		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
+	if (!user_ids_are_inited()) {
+		if (!init_user_ids_from_ad(*job_ad)) {
+			std::string jobOwner;
+			job_ad->LookupString(ATTR_USER, jobOwner);
+			dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID "
 				 "for user %s.  Cannot chown \"%s\".  User may "
 				 "run into permissions problems when fetching "
 				 "job sandbox.\n", cluster, proc, jobOwner.c_str(),
 				 sandbox.c_str() );
+			return false;
+		}
+	}
+	src_uid = get_user_uid();
+
+	if( ! recursive_chown(sandbox.c_str(), src_uid, dst_uid, dst_gid, true) )
+	{
+		dprintf( D_FULLDEBUG, "(%d.%d) Failed to chown %s from "
+				 "%d to %d.%d.  User may run into permissions "
+				 "problems when fetching sandbox.\n",
+				 cluster, proc, sandbox.c_str(),
+				 src_uid, dst_uid, dst_gid );
 		result = false;
 	}
 

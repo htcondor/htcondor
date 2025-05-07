@@ -1,7 +1,5 @@
 Job Universe Numbers
-====================
-
-Table B.3: Job Universe Numbers (job attribute JobUniverse)
+''''''''''''''''''''
 
 +--------+----------------------------+
 | Number | Job Universe               |

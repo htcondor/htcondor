@@ -378,6 +378,10 @@ Stopping a DAG
 Pause/Restart
     A DAG can temporarily be stopped by using :tool:`condor_hold` on the DAGMan
     proper job. To restart the DAG simply use :tool:`condor_release`.
+Halt/Resume
+    A DAG can be informed to not start new work by using :tool:`htcondor dag halt`
+    on the DAGMan proper job. To resume new work in the DAG simply use
+    :tool:`htcondor dag resume`.
 Remove
     To remove a DAG simply use :tool:`condor_rm` on the DAGMan proper job.
 

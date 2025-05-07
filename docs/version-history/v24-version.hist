@@ -1,13 +1,277 @@
-*** 24.6.0 features
+*** 24.9.0 features
 
-*** 24.6.0 bugs
+*** 24.9.0 bugs
 
-*** 24.5.0 features
+*** 24.0.9 bugs
+
+*** 24.8.0 features
+
+- On Linux systems with cgroups enabled, jobs are now put in a ".scope"
+  sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
+  pilot or glidein systems to further subdivide the job's cgroup.
+  :jira:`3008`
+
+- On Linux systems, added support to put each condor daemon in its
+  own cgroup with the knob :macro:`CGROUP_ALL_DAEMONS`
+  :jira:`3032`
+
+- The execute point now sets the execute permission bit on
+  the :subcom:`executable` even when it was transferred by a plugin.
+  This is helpful when using pelican or osdf to transfer the
+  job's main executable.
+  :jira:`3020`
+
+- Add a new configuration knob, :macro:`STARTER_SETS_HOME_ENV` which defaults to 
+  true.  When true, the job will have the **HOME** environment variable
+  set to whatever it is on the system.  When false, HOME will not
+  be set to anything.
+  :jira:`3010`
+
+- Added new ``halt`` and ``resume`` verbs to :tool:`htcondor dag` for
+  first class way to halt a DAG.
+  :jira:`2898`
+
+- Added new :class:`htcondor2.DAGMan` class to the python API for sending
+  commands to running a DAGMan process.
+  :jira:`2898`
+
+- Added :macro:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE` to inform DAGMan when to
+  consider a placed job list as failed when job failures occur.
+  :jira:`3019`
+
+- :tool:`htcondor ap status` will now show the :ad-attr:`RecentDaemonCoreDutyCycle` of
+  each reported Access Point's *condor_schedd*.
+  :jira:`3009`
+
+- :tool:`condor_adstash` can now be configured to fetch a custom projection of attributes
+  for job (epoch) ClassAds.
+  :jira:`2680`
+
+- :tool:`condor_status` will now accept ``-totals`` (previously just ``-total``) to better
+  match other tools with the similar option.
+  :jira:`3044`
+
+- Improve diagnostics in the shadow when it fails to activate a claim.
+  :jira:`3035`
+
+- The directory for :macro:`LOCAL_UNIV_EXECUTE` is no longer made
+  world-writable.
+  :jira:`3036`
+
+- Augment the `libvirt_simple_script.awk` script to provide needed
+  UEFI boot information for ARM virtual machines.
+  :jira:`3006`
+
+- The :tool:`condor_upgrade_check` script has been folded into the main condor package.
+  :jira:`2995`
+
+*** 24.8.0 bugs
+
+- Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
+  The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
+  to go back to the central manager) is a critical scalability feature in HTCSS, especially
+  when running large numbers of short-running jobs.  The bug fixed here was introduced in 
+  HTCondor version 24.5.1, so if you are running HTCondor v24.5.x, v24.6.x, or v24.7.x,
+  and run large numbers of short jobs, please consider upgrading.  See the JIRA ticket
+  for addtional workarounds if you cannot upgrade.
+  :jira:`3045`
+
+- On Linux and macOS, when using dataflow jobs, HTCondor now checks the modification
+  times of dataflow nodes with subsecond accuracy.  Previously, it just
+  used seconds, which means that it might incorrectly not skip a dataflow
+  job that it should have skipped if the output file was written in the
+  same second as the input file.
+  :jira:`3027`
+
+- Fixed :tool:`condor_watch_q` to output a useful error message and not
+  exit when one of :subcom:`log` files associated with jobs being tracked
+  does not exist.
+  :jira:`2978`
+
+- Removed job attribute ``ToE``.
+  It has been replaced by job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
+  :jira:`2974`
+
+- The ``SlotName`` field in the job event log is now correct in the
+  case where a *condor_startd* has a non-default name.
+  :jira:`3047`
+
+- Fixed a bug where :meth:`htcondor2.enable_debug()` would cause the
+  Python interpreter to exit if the debug log was configured incorrectly.
+  :jira:`3004`
+
+- Removed some memory leaks from version 2 of the Python bindings.
+  :jira:`2981`
+
+- Fixed a bug introduced in HTCondor 24.7.0 which would lead to the directory
+  ``0`` (and subdirectories) spuriously being created in the :macro:`SPOOL`
+  directory.
+  :jira:`3026`
+
+*** 24.0.8 bugs
+
+- The :class:`htcondor2.Credd` initializer now properly raised
+  a :class:`TypeError` if the location argument isn't
+  a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
+  :jira:`2993`
+
+*** 24.7.3 features
+
+- Improved the ability of :tool:`condor_who` to query *condor_startd* processes when
+  *condor_who* is running as root or as the same user as the Startd, and added
+  formatting options for use when the *condor_startd* is running as a job on
+  another batch system.
+  :jira:`2927`
+
+- :tool:`htcondor credential add oauth2` can now be used to store tokens that can
+  be used by jobs via :subcom:`use_oauth_services`. The user is responsible for
+  updating tokens that can expire.
+  :jira:`2803`
+
+- Added :ad-attr:`OSHomeDir` to starter's copy of the job ad.
+  :jira:`2972`
+
+- Add :macro:`SYSTEM_MAX_RELEASES` which implements an upper bound on the number
+  of times any job can be released by a user or periodic expression.
+  :jira:`2926`
+
+- Added the ability for an EP administrator to disable access to the network
+  by a job, by setting :macro:`NO_JOB_NETWORKING` to true.
+  :jira:`2967`
+
+- Added the ability for a docker universe job to fetch an authenticated
+  image from the docker repository.
+  :jira:`2870`
+
+- Improved :tool:`condor_watch_q` to display information about the number of
+  jobs actively transferring input or output files.
+  :jira:`2958`
+
+- The default value for :macro:`DISABLE_SWAP_FOR_JOB` has been changed to
+  ``True``.  This provides a more predictable and uniform user experience
+  for jobs running on different EPs.
+  :jira:`2960`
+
+- Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
+  the named HPC system.  If you've recently created or added an annex at a
+  particular system, it will re-use that cached connection; otherwise, you'll have
+  to login again, but that connection will then be re-usable by other
+  :tool:`htcondor annex` commands.
+  :jira:`2809`
+
+- Updated :tool:`htcondor annex` to work with Expanse's new requirements for its
+  ``gpu`` and ``gpu-shared`` queues.
+  :jira:`2634`
+
+- Enhanced :tool:`htcondor job status` to also show the time to transfer the
+  job input sandbox.
+  :jira:`2959`
+
+- Jobs that use :subcom:`concurrency_limits` can now re-use claims in
+  the schedd.
+  :jira:`2937`
+
+- Added :subcom:`shell` for Linux systems.
+  :jira:`2918`
+
+- :macro:`START_VANILLA_UNIVERSE` expressions may now refer to attributes
+  in the schedd add using the prefix ``SCHEDD``.
+  :jira:`2919`
+
+- Hold messages generated by failure to transfer output now include how many
+  files failed to transfer.
+  :jira:`2903`
+
+- Added ``-transfer-history`` flag to :tool:`condor_history` to query historical
+  Input, Output, and Checkpoint transfer ClassAds stored in the :macro:`JOB_EPOCH_HISTORY`
+  files.
+  :jira:`2878`
+
+- Improved the parsing and handling of syntax errors in the
+  :subcom:`transfer_output_remaps` submit command.
+  :jira:`2920`
+
+- DAGMan :dag-cmd:`SERVICE` nodes will no longer be removed automatically when
+  a DAG contains a :dag-cmd:`FINAL` node and :tool:`condor_rm` is used on the
+  DAGMan scheduler job.
+  :jira:`2938`
+
+- The list of files generated by the :subcom:`manifest` submit command now
+  recursively includes subdirectories.
+  :jira:`2903`
+
+- Added new option ``-extract`` to :tool:`condor_history` to copy historical
+  ClassAd entries that match a provided constraint to a specified file.
+  :jira:`2923`
+
+- EPs using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
+  will now advertise :ad-attr:`HasVM` = ``False`` due to VM universe jobs being
+  incompatible with mount namespaces.
+  :jira:`2945`
+
+- Added support for running Docker universe on ARM hosts
+  :jira:`2906`
+
+- The **CLAIMTOBE** authentication protocol now fully qualified user names
+  with the system's ``$(UID_DOMAIN)``.  To revert to the former semantics,
+  set :macro:`SEC_CLAIMTOBE_INCLUDE_DOMAIN` to false.
+  :jira:`2915`
+
+*** 24.7.3 bugs
+
+- Fixed a bug in the local issuer credential monitor that prevented the issuance of tokens
+  using the WLCG profile.
+  :jira:`2954`
+
+- Fixed bug where DAGMan would output an error message containing garbage
+  when dumping failed node information to the debug log.
+  :jira:`2899`
+
+- Fixed a bug where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would mark a
+  slot as ``broken`` when the *condor_starter* fails to remove the ephemeral logical
+  volume but the *condor_startd* successfully removes the LV.
+  :jira:`2953`
+
+- Fixed a bug in the Vault credential monitor that kept credentials from being fetched
+  if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
+  :jira:`2912`
+
+- Fixed a bug in the local issuer credential monitor that kept credentials from being
+  issued if :macro:`LOCAL_CREDMON_TOKEN_VERSION` (or named variant) was not set.
+  :jira:`2965`
+
+*** 24.0.7 features
+
+- The *condor_startd* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
+  to the idle resources of the partitionable slot, and then to the dynamic slots.
+  Machines that have only a single partitionable slot will now have the same behavior under
+  a :macro:`use policy:DESKTOP` as they did in version 23.10.18 and 24.0.1.
+  :jira:`2901`
+
+*** 24.0.7 bugs
+
+- When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
+  has an out of memory condition when only the sub-job has hit an oom.
+  :jira:`2944`
+
+*** 24.5.2 bugs
+
+- The default value for :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS` has been
+  changed to 'False'. When 'True', the EP was erroneously marking slots as
+  broken.
+  :jira:`2946`
+
+*** 24.5.1 features
 
 - The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`
   which represent the most recent modification time, in seconds since the epoch
   of a job which uses file transfer.
   :jira:`2837`
+
+- The *condor_startd*, when running on a machine with Nvidia gpus, now advertises
+  Nvidia driver version.
+  :jira:`2856`
 
 - Increased the default width of :tool:`condor_qusers` output when redirected to a
   file or piped to another command to prevent truncation.
@@ -15,7 +279,7 @@
 
 - The *condor_startd* will now never lose track and leak logical volumes that were failed
   to be cleaned up when using :macro:`STARTD_ENFORCE_DISK_LIMITS`. The *condor_startd*
-  will now periodically retry removal of logical volumes with an exponential backoff.
+  will now periodically retry removal of logical volumes with an exponential back off.
   :jira:`2852`
 
 - The *condor_startd* will now keep dynamic slots that have a :ad-attr:`SlotBrokenReason`
@@ -23,7 +287,7 @@
   to ``Unclaimed``.  A new configuration variable :macro:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS`
   controls this behavior.  It defaults to ``true`` but can be set to ``false`` to preserve
   the old behavior.  This change also adds a new attribute :ad-attr:`BrokenContextAds`
-  to the daemon ad of the *condor_startd*. This attribute has a classad for each broken resource
+  to the daemon ad of the *condor_startd*. This attribute has a ClassAd for each broken resource
   in the startd.  *condor_status* has been enhanced to use this new attribute to display
   more information about the context of broken resources when both ``-startd`` and ``-broken``
   arguments are used.
@@ -35,11 +299,6 @@
   so that the original size of the slot can be computed.
   :jira:`2865`
 
-- Added new configuration option :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` to allow
-  administrators to enable/disable failure of cleaning up LV's in the *condor_starter*
-  to result in a broken slot.
-  :jira:`2850`
-
 - Daemons will now more quickly discover with a non-responsive
   *condor_collector* has recovered and resume advertising to it.
   :jira:`2605`
@@ -50,10 +309,10 @@
   CREDMON-related parameters in their configuration files.
   :jira:`2851`
 
-*** 24.5.0 bugs
+*** 24.5.1 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file
-  `GridmanagerLog.root` after a reconfig.
+  `GridmanagerLog.root` after a reconfiguration.
   :jira:`2846`
 
 - ``htcondor annex shutdown`` now works again.
@@ -64,10 +323,6 @@
   :jira:`2872`
 
 *** 24.0.5 bugs
-
-- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
-  ``FROM TABLE`` queue statements.
-  :jira:`2830`
 
 *** 24.4.0 features
 
@@ -87,7 +342,7 @@
 
 - Many small improvements to :tool:`condor_q` ``-analyze`` and ``-better-analyze``
   for pools that use partitionable slots.  As a part of this, the *condor_schedd*
-  was changed to provide match information for the autocluster of
+  was changed to provide match information for the auto-cluster of
   the job being analyzed, which :tool:`condor_q` will report if it is available.
   :jira:`2720`
 

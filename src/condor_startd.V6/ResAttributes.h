@@ -280,6 +280,10 @@ public:
 	bool         ComputeDevProps(ClassAd & ad, const std::string & tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
+	// return WithinResourceLimits, these also calculates it on the first call
+	const char * withinLimitsExpression(); // regular WithinResourceLimits
+	const char * consumptionLimitsExpression(); // consumption policy variant
+
 private:
 
 		// Dynamic info
@@ -308,6 +312,7 @@ private:
 	double			m_num_real_cpus;
 	int				m_phys_mem;
 	bool			m_always_recompute_disk; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
+	bool			m_no_job_networking_aware{false}; // include expressions for NO_JOB_NETWORKING
 	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
 	slotres_map_t   m_machres_map;
 	slotres_nft_map_t m_machres_nft_map;
@@ -322,6 +327,9 @@ private:
 	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
 	double init_machine_resource_from_script(const char * tag, const char * script_cmd);
 	ClassAd         m_machres_attr;
+
+	std::string		m_within_limits_expr_str;       // Expression for WithinResourceLimits
+	std::string		m_consumption_limits_expr_str;  // Expression for consumption policy WithinResourceLimits
 
 	char*			m_arch;
 	char*			m_opsys;
@@ -551,15 +559,15 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
-	bool empty() {return (cpus<=0) && !disk && !mem && resmap.empty();}
+	bool empty() const {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
-	bool underrun(std::string * names);
-	bool excess(std::string * names);
+	bool underrun(std::string * names) const;
+	bool excess(std::string * names) const;
 	void clear_underrun(); // reset only the underrun values
 	void clear_excess();   // reset only the excess values
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
-	const MachAttributes::slotres_map_t & nfrmap() { return resmap; }
+	const MachAttributes::slotres_map_t & nfrmap() const { return resmap; }
 
 protected:
 	double     cpus{0};

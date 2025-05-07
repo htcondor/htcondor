@@ -363,6 +363,7 @@ class ClassAd : public ExprTree
 				the attribute could not be found.
 			@see Delete
 		*/
+		[[nodiscard]]
 		ExprTree *Remove( const std::string &attrName );
 
 		/** Similar to DeepDelete, but the expression is returned rather than 

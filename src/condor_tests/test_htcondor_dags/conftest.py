@@ -18,7 +18,7 @@ import pytest
 
 from pathlib import Path
 
-from htcondor import dags
+from htcondor2 import dags
 
 
 @pytest.fixture(scope="function")

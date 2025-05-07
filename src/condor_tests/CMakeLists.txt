@@ -108,6 +108,13 @@ if (BUILD_TESTING)
         OFF
     )
 
+    condor_exe( test_std_pipe_handlerd
+        "test_std_pipe_handler.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
 	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
 
     condor_exe( test_dc_std_functiond
@@ -157,7 +164,7 @@ if (BUILD_TESTING)
 	else( WINDOWS )
 		add_dependencies(x_complete_params.exe utils_genparams)
 	endif( WINDOWS)
-	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
+	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS}")
 
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -235,7 +242,7 @@ endif ()
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "quick;ctest")
-	if (WITH_PYTHON_BINDINGS)
+	if (WITH_PYTHON_BINDINGS_V2)
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "quick;ctest")
 
@@ -276,6 +283,8 @@ endif ()
 			# The dependencies here are a lie, but the immediately preceding
 			# lines make me sad.
 			condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_std_pipe_handler "Test Register_Pipe(std::function)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_std_pipe_handlerd")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -296,17 +305,22 @@ endif ()
 			condor_pl_test(test_condor_run "Test condor_run outputs submission warnings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_dagman_service_nodes "Test the DAGMan service nodes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_service_nodes "Test the DAGMan service nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_service_nodes_lifetime "Test lifetime of DAGMan service nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_negotiator_slot_const "Test NEGOTIATOR_SLOT_CONSTRAINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_io_ft_error_reporting "Verify that input failures are reported if a failure output transfer fails" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 if(LINUX)
 			condor_pl_test(test_ssh_sftp "Verify that condor_ssh_to_job can launch sftp" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_cgroup_oom "Verify that a job exceeding memory request is OOM held if cgroup v2 is available" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 endif()
-
+if(LINUX OR WINDOWS)
+			# The curl library behaves differently on Mac.
+			condor_pl_test(test_curl_structured_error "Test curl plugin generating structured error data" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+endif()
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_version "Test that the Python htcondor bindings have correct version info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -317,8 +331,6 @@ endif()
 			condor_pl_test(test_auth_protocol_token "Test TOKEN authentication" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_json_toe_when "Test JSON ToE's when" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_allowed_job_duration "test allowed_job_duration" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_jobsets "Test jobsets" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -344,8 +356,12 @@ endif()
 			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_shell_submit "Test DAGMan inline description with shell submit" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
+			condor_pl_test(test_dagman_job_list_failure_tolerance "Test DAGMan tolerance for job list failures" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_fto_pipe_read_full "Test FTO pipe fully reads pipe from forked child" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dag_halt "Test DAGMan halt commands" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_multiple_schemes "Test that multiple URL scheme results are reported properly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_input_file_check "Test the input checker" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -410,6 +426,8 @@ endif()
         		condor_pl_test(test_starter_guidance "Test starter guidance" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
         		condor_pl_test(test_guidance_commands "Test guidance commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_queue_from_table "Test QUEUE FROM TABLE" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_spool_preserved_relative_paths "Test using preserve_relative_paths and spooled jobs." "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_max_releases "Test Max Releases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 
@@ -712,6 +730,7 @@ endif()
 	condor_pl_test(job_basic_kill "kill test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;src/condor_tests/x_catchallsignals.pl")
 	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(broken_startd "startd BrokenSlots test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(starter_breaks_resource "starter exit breaks resource" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_slash_transfer "dir contents to top sandbox" "quick;ctest" CTEST DEPENDS "src/condor_tests/slashtransfer.pl;src/condor_tests/slashxfer")
 	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
@@ -948,8 +967,6 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
 	condor_pl_test(lib_ccb_startd "Test of execute daemons using CCB." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(job_router_basic "Basic test of JobRouter routing." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_router_xform "Test of JobRouter transforms." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "quick;ctest" CTEST)
 	condor_pl_test(job_partitionable_basic_van "Test basic partitionable slot capability" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")

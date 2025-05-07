@@ -27,7 +27,7 @@ $testname = "job_ligo_x86-64-chkpttst";
 
 my $tarball = "x_job_ligo_x86-64-chkpttst.tar.gz";
 my $fetch_prog;
-my $fetch_url = "https://parrot.cs.wisc.edu/externals-private/$tarball";
+my $fetch_url = "https://htcss-downloads.chtc.wisc.edu/externals-private/$tarball";
 if ( $^O eq "darwin" ) {
 	$fetch_prog = "curl -O";
 } else {

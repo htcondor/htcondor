@@ -192,7 +192,7 @@ any jobs are held:
 
 .. code-block:: bash
 
-    condor_watch_q -exit all,done,0 -exit any,held,1
+    $ condor_watch_q -exit all,done,0 -exit any,held,1
 
 See Also
 --------

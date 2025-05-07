@@ -48,6 +48,7 @@ public:
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
 	int		has_pending_update() const { return s_job_update_sock ? s_job_update_sock->bytes_available_to_read() : -1; }
+	void	handle_pending_updates() { if (s_job_update_sock) receiveJobClassAdUpdate(s_job_update_sock); }
 	bool	signal(int);
 	bool	killfamily();
 	void	exited(Claim *, int status);
@@ -86,6 +87,10 @@ public:
 	
 	static void	publish( ClassAd* ad );
 
+	// Verify certain Starter broken codes that may not be true post Startd cleanup
+	// Return True for still broken and False for no longer (i.e. we cleaned up successfully)
+	int VerifyBrokenResources(int status);
+
 #if HAVE_BOINC
 	bool	isBOINC( void ) const { return s_is_boinc; };
 	void	setIsBOINC( bool is_boinc ) { s_is_boinc = is_boinc; };
@@ -99,6 +104,7 @@ public:
 
 	void holdJobCallback(DCMsgCallback *cb);
 
+	static ClassAd *starterAd() { return s_ad;}
 private:
 
 		// methods
@@ -160,5 +166,6 @@ private:
 
 // living (or unreaped) starters live in a global data structure and can be looked up by PID.
 Starter *findStarterByPid(pid_t pid);
+size_t numLivingStarters();
 
 #endif /* _CONDOR_STARTD_STARTER_H */

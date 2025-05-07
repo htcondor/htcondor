@@ -79,29 +79,30 @@ Depends: adduser,
          libmunge2,
          net-tools,
          cryptsetup,
+#if defined(UW_BUILD)
+         pelican (>= 7.15.1),
+         pelican-osdf-compat (>= 7.15.1),
+#endif
          libjs-bootstrap,
          libjs-jquery,
+         jq,
          ${lib:Depends},
-         condor-upgrade-checks,
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
          ${shlibs:Depends}
 Recommends: bash-completion,
-#if defined(UW_BUILD)
-            pelican-osdf-compat (>= 7.1.4),
-#endif
             openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
           slurm-client
-Conflicts: htcondor (<< ${binary:Version}),
-           libclassad16
-Breaks: htcondor (<< ${binary:Version}),
-        libclassad16
-Replaces: htcondor (<< ${binary:Version}),
-          libclassad16
+Conflicts: htcondor,
+           condor-upgrade-checks
+Breaks: htcondor,
+        condor-upgrade-checks
+Replaces: htcondor,
+          condor-upgrade-checks
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -125,12 +126,9 @@ Architecture: any
 Section: libdevel
 Depends: ${misc:Depends},
          ${shlibs:Depends}
-Conflicts: htcondor-dev (<< ${binary:Version}),
-           libclassad-dev
-Breaks: htcondor-dev (<< ${binary:Version}),
-        libclassad-dev
-Replaces: htcondor-dev (<< ${binary:Version}),
-          libclassad-dev
+Conflicts: htcondor-dev
+Breaks: htcondor-dev
+Replaces: htcondor-dev
 Description: distributed workload management system - development files
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -152,9 +150,9 @@ Package: condor-doc
 Architecture: all
 Section: doc
 Depends: ${misc:Depends}
-Conflicts: htcondor-doc (<< ${binary:Version})
-Breaks: htcondor-doc (<< ${binary:Version})
-Replaces: htcondor-doc (<< ${binary:Version})
+Conflicts: htcondor-doc
+Breaks: htcondor-doc
+Replaces: htcondor-doc
 Description: distributed workload management system - documentation
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -177,9 +175,9 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
-Conflicts: minihtcondor (<< ${binary:Version})
-Breaks: minihtcondor (<< ${binary:Version})
-Replaces: minihtcondor (<< ${binary:Version})
+Conflicts: minihtcondor
+Breaks: minihtcondor
+Replaces: minihtcondor
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -247,9 +245,9 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
-Conflicts: htcondor-annex-ec2 (<< ${binary:Version})
-Breaks: htcondor-annex-ec2 (<< ${binary:Version})
-Replaces: htcondor-annex-ec2 (<< ${binary:Version})
+Conflicts: htcondor-annex-ec2
+Breaks: htcondor-annex-ec2
+Replaces: htcondor-annex-ec2
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -267,41 +265,15 @@ Description: distributed workload management system - single node configuration
  This package provides configuration and script to make an EC2 image
  annex-compatible.  Do NOT install on a non-EC2 image.
 
-Package: condor-upgrade-checks
-Architecture: all
-Section: science
-Depends: python3,
-         pcre2-utils,
-         ${misc:Depends}
-Conflicts: htcondor-upgrade-checks (<< ${binary:Version})
-Breaks: htcondor-upgrade-checks (<< ${binary:Version})
-Replaces: htcondor-upgrade-checks (<< ${binary:Version})
-Description: distributed workload management system - single node configuration
- Like other full-featured batch systems, HTCondor provides a job queueing
- mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to HTCondor;
- HTCondor places them into a queue. It chooses when and where to run the jobs
- based upon a policy, carefully monitors their progress, and ultimately
- informs the user upon completion.
- .
- Unlike more traditional batch queueing systems, HTCondor can also effectively
- harness wasted CPU power from otherwise idle desktop workstations. HTCondor
- does not require a shared file system across machines - if no shared file
- system is available, HTCondor can transfer the job's data files on behalf of
- the user.
- .
- Examines the current HTCondor installation and recommends changes to ensure
- a smooth upgrade to a subsequent HTCondor version.
-
 #if defined(UW_BUILD)
 Package: condor-tarball
 Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends}
-Conflicts: htcondor-tarball (<< ${binary:Version})
-Breaks: htcondor-tarball (<< ${binary:Version})
-Replaces: htcondor-tarball (<< ${binary:Version})
+Conflicts: htcondor-tarball
+Breaks: htcondor-tarball
+Replaces: htcondor-tarball
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -375,9 +347,9 @@ Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
-Conflicts: htcondor-test (<< ${binary:Version})
-Breaks: htcondor-test (<< ${binary:Version})
-Replaces: htcondor-test (<< ${binary:Version})
+Conflicts: htcondor-test
+Breaks: htcondor-test
+Replaces: htcondor-test
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -398,71 +370,4 @@ Description: distributed workload management system - single node configuration
 #else
  This package provides a few miscellaneous test scripts.
 #endif
-
-Package: htcondor
-Architecture: any
-Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-
-Package: htcondor-dev
-Architecture: any
-Depends: condor-dev (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-
-Package: htcondor-doc
-Architecture: all
-Section: doc
-Depends: condor-doc (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-
-Package: minihtcondor
-Architecture: any
-Depends: minicondor (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-
-Package: htcondor-annex-ec2
-Architecture: any
-Depends: condor-annex-ec2 (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-
-Package: htcondor-upgrade-checks
-Architecture: all
-Depends: condor-upgrade-checks (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-
-#if defined(UW_BUILD)
-Package: htcondor-tarball
-Architecture: any
-Depends: condor-tarball (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-#endif
-
-Package: htcondor-test
-Architecture: any
-Depends: condor-test (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
 

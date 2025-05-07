@@ -19,7 +19,7 @@ import time
 
 import logging
 
-import htcondor
+import htcondor2 as htcondor
 
 (exe, local_job_id, attribute_name, attribute_value, collector_name) = sys.argv
 

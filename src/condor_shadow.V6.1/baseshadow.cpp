@@ -40,6 +40,8 @@
 #include <math.h>
 #include "job_ad_instance_recording.h"
 #include "../condor_sysapi/sysapi.h"
+
+#include "set_user_priv_from_ad.h"
 #include <algorithm>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -111,13 +113,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	m_xfer_queue_contact_info = xfer_queue_contact_info ? xfer_queue_contact_info : "";
 
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		if ( !jobAd->LookupString(ATTR_USER, user_owner)) {
-			EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_USER);
-		}
-	} else
-	if ( !jobAd->LookupString(ATTR_OWNER, user_owner)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
+	if ( !jobAd->LookupString(ATTR_USER, user_owner)) {
+		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_USER);
 	}
 	owner = name_of_user(user_owner.c_str(), ownerbuf);
 
@@ -180,8 +177,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	// Calling init_user_ids() while in user priv causes badness.
 	// Make sure we're in another priv state.
 	set_condor_priv();
-	if ( !init_user_ids(owner, domain.c_str())) {
-		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n", owner);
+	if ( !init_user_ids_from_ad(*jobAd)) {
+		dprintf(D_ALWAYS, "init_user_ids_from_ad() failed as user %s\n", owner);
 		// uids.C will EXCEPT when we set_user_priv() now
 		// so there's not much we can do at this point
 		
@@ -388,7 +385,7 @@ BaseShadow::shutDown(int reason, const char* reason_str, int reason_code, int re
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
-		writeJobEpochFile(getJobAd());
+		writeAdToEpoch(getJobAd());
 		if( !waitingToUpdateSchedd() ) {
 			shadow_user_policy.checkAtExit();
 				// WARNING: 'this' may have been deleted by the time we get here!!!
@@ -615,7 +612,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 {
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
-	writeJobEpochFile(getJobAd());
+	writeAdToEpoch(getJobAd());
 
 	// Doing this neither prevents scary network-level error messages in
 	// the starter log, nor actually works: if the shadow doesn't exit
@@ -923,11 +920,11 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	if (reason_str == nullptr || *reason_str == '\0') {
 		switch(exit_reason) {
 		case JOB_SHOULD_REQUEUE:
-			if (!reason_str) reason_str = "Unspecified job interruption";
+			reason_str = "Unspecified job interruption";
 			reason_code = CONDOR_HOLD_CODE::JobShouldRequeue;
 			break;
 		case JOB_NOT_STARTED:
-			if (!reason_str) reason_str = "Problem preparing job to run";
+			reason_str = "Problem preparing job to run";
 			reason_code = CONDOR_HOLD_CODE::JobNotStarted;
 			break;
 		default:
@@ -962,7 +959,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
-	writeJobEpochFile(getJobAd());
+	writeAdToEpoch(getJobAd());
 
 	if (exit_reason != JOB_RECONNECT_FAILED) {
 		// cleanup this shadow (kill starters, etc)
@@ -1156,8 +1153,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.core_file = corefile;
 		}
 
-		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
-		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1213,8 +1208,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	setEventUsageAd(*jobAd, &event.pusageAd);
 
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
-	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

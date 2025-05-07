@@ -263,6 +263,8 @@ public:
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
 
+	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
+
 private:
 
 	int handleFileTransferCommand( Stream * s );
@@ -271,7 +273,7 @@ private:
 
 	void updateShadowWithPluginResults( const char * which );
 
-	void recordSandboxContents( const char * filename );
+	void recordSandboxContents( const char * filename, bool add_to_output = true );
 
 		// // // // // // // // // // // //
 		// Private helper methods

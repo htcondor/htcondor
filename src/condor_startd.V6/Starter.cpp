@@ -36,6 +36,12 @@
 #include "classad_helpers.h"
 #include "ipv6_hostname.h"
 #include "shared_port_endpoint.h"
+#include "exit.h"
+
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 
@@ -55,8 +61,9 @@ Starter *findStarterByPid(pid_t pid)
 	return NULL;
 }
 
-
-
+size_t numLivingStarters() {
+	return living_starters.size();
+}
 
 Starter::Starter()
 	: s_orphaned_jobad(NULL)
@@ -776,31 +783,43 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	ClassAd update_ad;
 	int final_update = 0;
 
-	s_last_update_time = time(NULL);
+	// process all pending messages in the update socket
+	// this is a Register_Socket callback, but we also call this in the reaper
+	// so it's possible that the number of updates available will be 0
+	int pending_bytes = stream->bytes_available_to_read();
+	while (pending_bytes > 0) {
 
-		// It is expected that we will get here when the stream is closed.
-		// Unfortunately, log noise will be generated when we try to read
-		// from it.
+		time_t msg_time = time(NULL);
 
-	stream->decode();
-	stream->timeout(10);
-	if( !stream->get( final_update) ||
-		!getClassAd( stream, update_ad ) ||
-		!stream->end_of_message() )
-	{
-		dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
-		final_update = 1;
-	}
-	else {
+		stream->decode();
+		stream->timeout(10);
+		int update_cmd = 0;
+		if ( ! stream->get(update_cmd) ||
+		     ! getClassAd(stream, update_ad) ||
+		     ! stream->end_of_message())
+		{
+			dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
+			final_update = 1;
+			break;
+		}
+		pending_bytes = stream->bytes_available_to_read();
+
+		if (update_cmd == 1) {
+			final_update = 1;
+		} else if (update_cmd > 1) {
+			// TODO: handle non-update commands sent on the update socket here...
+			continue;
+		}
+
+		s_last_update_time = msg_time;
+
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
 		} else if (final_update) {
-			int pending = stream->bytes_available_to_read();
-			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending);
+			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending_bytes);
 		} else if (s_in_teardown_with_pending_updates) {
-			int pending = stream->bytes_available_to_read();
-			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending);
+			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending_bytes);
 		} else {
 			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
@@ -999,6 +1018,19 @@ int Starter::execDCStarter(
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
+
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// Put each starter into a well-named cgroup.  we assume that the startd
+		// is in its own cgroup, so we just need a unique name per starter
+
+		std::string starter_name = std::string("STARTER_") + claim->rip()->r_name;
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(starter_name);
+		fi.cgroup = cgroup.c_str();
+	}
+
+#endif
 
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
@@ -1383,4 +1415,28 @@ Starter::holdJobCallback(DCMsgCallback *cb)
 			killHard(s_hold_hard_timeout);
 		}
 	}
+}
+
+int
+Starter::VerifyBrokenResources(int status) {
+	bool broken = true;
+
+	switch (status) {
+		case STARTER_EXIT_IMMORTAL_LVM:
+			// Starter failed to cleanup LV. Check if we succeeded
+			{ // STARTER_EXIT_IMMORTAL_LVM Scope Start
+				auto * volman = resmgr->getVolumeManager();
+				if ( ! s_lv_name.empty() && volman && volman->is_enabled()) {
+					if (volman->CountLVDevices(s_lv_name) == 0) {
+						broken = false;
+					}
+				}
+			} // STARTER_EXIT_IMMORTAL_LVM Scope End
+			break;
+		default:
+			// Not a broken status that final cleanup could have changed
+			break;
+	}
+
+	return broken;
 }

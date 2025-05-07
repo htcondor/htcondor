@@ -236,6 +236,7 @@ void convert_escapes_json(string &text, bool &validStr, bool &quotedExpr)
 					case 'a': case 'b': case 'c':
 					case 'd': case 'e': case 'f':
 						ch2 -= 32;
+						[[fallthrough]];
 					case 'A': case 'B': case 'C':
 					case 'D': case 'E': case 'F':
 						number += ch2 +10 - 'A';

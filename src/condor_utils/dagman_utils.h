@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -288,10 +288,10 @@ public:
 			shallow.stringOpts[str::AppendFile] = appendFile;
 			shallow.boolOpts[b::DoSubmit] = true;
 			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
-			shallow.intOpts[i::MaxIdle] = MAX_IDLE_DEFAULT;
-			shallow.intOpts[i::MaxJobs] = 0;
-			shallow.intOpts[i::MaxPre] = 0;
-			shallow.intOpts[i::MaxPost] = 0;
+			shallow.intOpts[i::MaxIdle] = -1;
+			shallow.intOpts[i::MaxJobs] = -1;
+			shallow.intOpts[i::MaxPre] = -1;
+			shallow.intOpts[i::MaxPost] = -1;
 			shallow.intOpts[i::DebugLevel] = DEBUG_UNSET;
 			shallow.intOpts[i::Priority] = 0;
 		} //End Shallow Option Initialization
@@ -380,9 +380,9 @@ public:
 	DagmanUtils() = default;
 
 	// Print normal message to designated stream
-	void print_msg(const char* fmt, ...) const;
+	void print_msg(const char* fmt, ...) const CHECK_PRINTF_FORMAT(2,3);
 	// Print error message to designated stream
-	void print_error(const char* fmt, ...) const;
+	void print_error(const char* fmt, ...) const CHECK_PRINTF_FORMAT(2,3);
 
 	bool writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines) const;
 

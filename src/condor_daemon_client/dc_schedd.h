@@ -34,7 +34,8 @@ typedef enum {
 	AR_NOT_FOUND,
 	AR_BAD_STATUS,
 	AR_ALREADY_DONE,
-	AR_PERMISSION_DENIED
+	AR_PERMISSION_DENIED,
+	AR_LIMIT_EXCEEDED
 } action_result_t;
 
 
@@ -283,17 +284,20 @@ public:
 	    @param ids or constraint What jobs to act on
 	    @param export_dir what directory to export the jobs to. <export_dir>/job_queue.log will be the exported log
 	    @param new_spool_dir what value to use when rewriting paths into the SPOOL directory
+	    @return ClassAd owned by the caller.
 	*/
 	ClassAd* exportJobs( const std::vector<std::string>& ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
 	    @param import_dir directory containing the exported job_queue.log and job files to be imported
+	    @return ClassAd owned by the caller.
 	*/
 	ClassAd* importExportedJobResults(const char * import_dir, CondorError * errstack);
 
 	/** unexport jobs that were previously exported via exportJobs().
 	    @param ids or constraint What jobs to act on
+	    @return ClassAd owned by the caller.
 	*/
 	ClassAd* unexportJobs( const std::vector<std::string>& ids, CondorError * errstack);
 	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);
@@ -474,6 +478,19 @@ public:
 		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
+	/** Get DAGMan contact information (Address and secret)
+		This creates a request ClassAd to send to the Schedd as
+		part of the GET_CONTACT_INFO command for a DAGMan job.
+		The response ClassAd returned by the Schedd is passed
+		back to the caller of this function.
+		@param cluster the ClusterId of DAGMan job that caller wants
+		       to contact
+		@return ClassAd pointer owned by the caller or nullptr on failure.
+	*/
+	ClassAd * getDAGManContact(
+		int cluster,
+		CondorError& errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -580,6 +597,7 @@ public:
 	int numBadStatus( void ) const { return ar_bad_status; };
 	int numAlreadyDone( void ) const { return ar_already_done; };
 	int numPermissionDenied( void ) const { return ar_permission_denied; };
+	int numLimitExceeded( void ) const { return ar_limit_exceeded; };
 
 		/** Return the result code for the given job.
 			@param job_id The job you care about
@@ -611,6 +629,7 @@ private:
 	int ar_bad_status;
 	int ar_already_done;
 	int ar_permission_denied;
+	int ar_limit_exceeded;
 
 		// I can't be copied (yet)
 	JobActionResults( const JobActionResults & );

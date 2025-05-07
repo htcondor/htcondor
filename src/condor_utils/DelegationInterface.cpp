@@ -40,6 +40,14 @@
 
 #include "DelegationInterface.h"
 
+#ifndef X509_REQ_VERSION_1
+#define X509_REQ_VERSION_1 0
+#endif
+
+#ifndef X509_VERSION_3
+#define X509_VERSION_3 2
+#endif
+
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 
 #define X509_getm_notAfter X509_get_notAfter
@@ -357,8 +365,7 @@ X509_REQ* X509Credential::Request() {
   const EVP_MD *digest = EVP_sha256();
   req = X509_REQ_new();
   if(req) {
-    //if(X509_REQ_set_version(req,0L)) {
-    if(X509_REQ_set_version(req,2L)) {
+    if(X509_REQ_set_version(req,X509_REQ_VERSION_1)) {
       if(X509_REQ_set_pubkey(req,key_)) {
         if(X509_REQ_sign(req,key_,digest)) {
           res = true;
@@ -666,7 +673,7 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   if (!X509_set_serialNumber(cert,sno)) goto err;
   proxy_cn=std::to_string(ASN1_INTEGER_get(sno));
   ASN1_INTEGER_free(sno); sno=NULL;
-  X509_set_version(cert,2L);
+  X509_set_version(cert,X509_VERSION_3);
 
   /*
    Proxy certificates do not need KeyUsage extension. But

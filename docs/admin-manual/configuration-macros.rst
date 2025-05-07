@@ -2490,6 +2490,13 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     :macro:`SLOT<N>_USER`). Therefore, when the job exits, all processes
     running under the same account will be killed.
 
+:macro-def:`STARTER_SETS_HOME_ENV[FileSystem]`
+    A boolean value that defaults to true.  When false, the HOME
+    environment variable is not generally set, though some
+    container runtimes might themselves set it.  When true, 
+    HTCondor will set HOME to the home directory of the user
+    on the EP system.
+
 :macro-def:`FILESYSTEM_DOMAIN[FileSystem]`
     An arbitrary string that is used to decide if the two machines, a
     access point and an execute machine, share a file system. Although
@@ -2968,6 +2975,11 @@ probably will not want to change them for any reason.
     descendants of processes it creates. This can cause problems when
     HTCondor is run under another job execution system.
 
+:macro-def:`CGROUP_ALL_DAEMONS[MASTER]`
+    A boolean that default to false.  When true, each daemon will
+    be put into its own cgroup. This knob requires a restart to take
+    effect.
+
 :macro-def:`DISCARD_SESSION_KEYRING_ON_STARTUP[MASTER]`
     A boolean value that defaults to ``True``. When ``True``, the
     :tool:`condor_master` daemon will replace the kernel session keyring it
@@ -3428,7 +3440,7 @@ section.
     Details about slot configuration errors are always reported in the StartLog.
 
 :macro-def:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS[STARTD]`
-    A boolean value that defaults to true.  When true, if a job exits and leaves behind an
+    A boolean value that defaults to false.  When true, if a job exits and leaves behind an
     unkillable process, the startd will mark that slot as broken, and not reassign the
     resources in that slot to subsequent jobs.
 
@@ -3688,6 +3700,15 @@ section.
     to make /dev/shm on Linux private to each job.  When private, the
     starter removes any files from the private /dev/shm at job exit time.
 
+:macro-def:`STARTD_RECOMPUTE_DISK[STARTD]`
+    A boolean value that defaults to false.  When false, the startd will
+    compute the free disk space on the partition where :macro:`EXECUTE`
+    is mounted once at startup, and assume that only HTCondor jobs use
+    space in that partition, and use that value to advertise the 
+    :ad-attr:`Disk` attribute.  When true, the startd will periodically
+    recalculate this value, which can cause inconsistencies when using
+    partitionable slots.
+
 The following macros control if the *condor_startd* daemon should create a
 custom filesystem for the job's scratch directory. This allows HTCondor to
 prevent the job from using more scratch space than provisioned.
@@ -3764,9 +3785,15 @@ prevent the job from using more scratch space than provisioned.
         Docker Universe jobs are not compatible with mount namespaces.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
-    A boolean value that defaults to ``True``. When ``True`` EP slots
+    A boolean value that defaults to ``False``. When ``True`` EP slots
     will be marked as broken if the associated ephemeral logical volume
     is failed to be cleaned up.
+
+:macro-def:`NO_JOB_NETWORKING[STARTD]`
+    Either ``True`` or ``False``. When ``True``, disables access to the 
+    network by a job.  Only jobs that opt into such machines will 
+    match and run on such a machine. Defaults to ``False``.
+
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
@@ -3974,7 +4001,7 @@ needs.
 
 :macro-def:`STARTD_DETECT_GPUS[STARTD]`
     The arguments passed to :tool:`condor_gpu_discovery` to detect GPUs when
-    the configuration does not have a GPUs resource explicity configured
+    the configuration does not have a GPUs resource explicitly configured
     via ``MACHINE_RESOURCE_GPUS`` or  ``MACHINE_RESOURCE_INVENTORY_GPUS``.
     Use of the configuration template ``use FEATURE : GPUs`` will set
     ``MACHINE_RESOURCE_INVENTORY_GPUS`` and that will cause this configuration variable
@@ -4605,7 +4632,9 @@ These macros control the *condor_schedd*.
     when matching a job with a slot in addition to the ``Requirements``
     expression of the job and the slot ClassAds.  The expression can
     refer to job attributes by using the prefix ``JOB``, slot attributes
-    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
+    by using the prefix ``SLOT``, job owner attributes by using the
+    prefix ``OWNER``, and attributes from the schedd ad by using the
+    prefix ``SCHEDD``.
 
     The following example prevents jobs owned by a user from starting when
     that user has more than 25 held jobs
@@ -5226,8 +5255,8 @@ These macros control the *condor_schedd*.
     machines this schedd should flock to.  The default value
     is empty.  For flocking to work, each of these central
     managers should also define :macro:`FLOCK_FROM` with the
-    name of this schedd in that list.  This paramaeter
-    explicilty sets :macro:`FLOCK_NEGOTIATOR_HOSTS` and 
+    name of this schedd in that list.  This parameter
+    explicitly sets :macro:`FLOCK_NEGOTIATOR_HOSTS` and 
     :macro:`FLOCK_COLLECTOR_HOSTS` so that you usually
     just need to set :macro:`FLOCK_TO` and no others to make
     flocking work.
@@ -5475,6 +5504,12 @@ These macros control the *condor_schedd*.
     specified, is 2,000,000 seconds (effectively never).  If this
     feature is desired, we recommend setting it to some small multiple
     of the negotiation cycle, say, 1200 seconds, or 20 minutes.
+
+:macro-def:`SYSTEM_MAX_RELEASES[SCHEDD]`
+    An integer which defaults to -1 (unlimited). When set to a positive
+    integer, no job will be allowed to be released more than this
+    number of times from the held state.  Does not apply to
+    :macro:`QUEUE_SUPER_USERS`.
 
 .. _GRACEFULLY_REMOVE_JOBS:
 
@@ -6237,7 +6272,7 @@ These settings affect the *condor_starter*.
     TF_NUM_THREADS.
 
 :macro-def:`STARTER_FILE_XFER_STALL_TIMEOUT`
-    This value defaults to 3600 (seconds).  It controlls the amount of
+    This value defaults to 3600 (seconds).  It controls the amount of
     time a file transfer can stall before the starter evicts the job.
     A stall can happen when the sandbox is on an NFS server that it down,
     or the network has broken.
@@ -6384,7 +6419,7 @@ These settings affect the *condor_starter*.
     system polls for resource usage.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
-    A boolean that defaults to false.  When true, and cgroups are in effect, the
+    A boolean that defaults to true.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.
     This will prevent the job from using any swap space.  If it needs more memory than
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
@@ -6700,7 +6735,7 @@ These settings affect the *condor_starter*.
     images must have a /bin/sh in them, and this is used to launch
     the job proper after dropping a file indicating that the shell wrapper
     has successfully run inside the container.  When HTCondor sees this file
-    exists, it knows the container runtime has successfully launced the image.
+    exists, it knows the container runtime has successfully launched the image.
     If the job exits without this file, HTCondor assumes there is some problem 
     with the runtime, and retries the job.
 
@@ -8130,7 +8165,7 @@ condor_procd Configuration File Macros
     Defaults to false.  When true, on a Linux cgroup v2 system, a
     condor system without root privilege (such as a glidein)
     will attempt to create cgroups for jobs.  The condor_master
-    must have been started under a writeable cgroup for this to work.
+    must have been started under a writable cgroup for this to work.
 
 condor_credd Configuration File Macros
 ---------------------------------------
@@ -8864,6 +8899,18 @@ General
     failures do not cause this behavior. The job is only put on hold if the node has no
     more declared :dag-cmd:`RETRY` attempts.
 
+:macro-def:`DAGMAN_NODE_JOB_FAILURE_TOLERANCE[DAGMan]`
+    An integer value representing the number of jobs in a single cluster that can fail
+    before DAGMan considers the cluster as failed and removes any remaining jobs. This
+    value is applied to all nodes in the DAG for each execution. The default value is
+    ``0`` meaning no jobs should fail.
+
+    .. warning::
+
+        If the tolerance value is greater than or equal to the total number of jobs in
+        a cluster then DAGMan will consider the cluster as successful even if all jobs
+        fail.
+
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS[DAGMan]`
     A boolean value that defaults to ``False``. When ``True``, variables
     parsed in the DAG file :dag-cmd:`VARS` line will be appended to the given Job
@@ -8911,7 +8958,7 @@ General
     V2 Metrics File (2):
         New metric file using updated terminology (i.e. using the word ``nodes``).
 
-:macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
+:macro-def:`DAGMAN_REPORT_GRAPH_METRICS[DAGMan]`
     A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
     information regarding graph metrics to ``*.metrics`` file. The included graph metrics
     are as follows:
@@ -8921,6 +8968,14 @@ General
     - Number of edges (dependencies)
     - Number of vertices (nodes)
 
+:macro-def:`DAGMAN_DISABLE_PORT[DAGMan]`
+    A boolean that defaults to ``False``. When ``True``, DAGMan will not open up a command
+    port.
+
+    .. warning::
+
+        Disabling the command port will make tools, such as :tool:`htcondor dag halt`
+        that talk directly to a running DAGMan process fail.
 
 :index:`Throttling<single: DAGMan Configuration Sections; Throttling>`
 
@@ -9986,8 +10041,8 @@ macros are described in the :doc:`/admin-manual/security` section.
     **condor_collector** and its security configuration.
 
 :macro-def:`KERBEROS_MAP_FILE[SECURITY]`
-    A path to a file that contains ' = ' seperated keys and values,
-    one per line.  The key is the kerberos realm, and the value
+    A path to a file that contains ' = ' separated keys and values,
+    one per line.  The key is the Kerberos realm, and the value
     is the HTCondor uid domain.
 
 :macro-def:`KERBEROS_SERVER_KEYTAB[SECURITY]`
@@ -10079,6 +10134,15 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_SCITOKENS_PLUGIN_<name>_MAPPING[SECURITY]`
     For each plugin above with <name>, this parameter specifies the mapped
     identity if the plugin accepts the token.
+
+:macro-def:`SEC_CLAIMTOBE_USER`
+    A string value that names the user when CLAIMTOBE authentication 
+    is in play.  If undefined (the default), the current
+    operating system username is used.
+
+:macro-def:`SEC_CLAIMTOBE_INCLUDE_DOMAIN`
+    A boolean value that defaults to true.  When true, append the
+    $(UID_DOMAIN) to the claim-to-be username.
 
 :macro-def:`LEGACY_ALLOW_SEMANTICS[SECURITY]`
     A boolean parameter that defaults to ``False``.

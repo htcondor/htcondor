@@ -93,6 +93,9 @@ endif()
 # docker build -t htcondor_docker_test .
 # docker save htcondor_docker_test > htcondor_docker_test
 
+# and repeat the process with an exit_37 built on an arm machine..
+# and name the file htcondor_docker_test_arm
+
 # At startup we run singularity with a sandbox dir of $(LIBEXEC)/singularity_test_sandbox
 # and run this small program to verify that it exits with code 37
 if (LINUX)
@@ -106,13 +109,19 @@ if (LINUX)
 
 	# Address Sanitizer can't deal with statically linked exes
 	if (WITH_ADDRESS_SANITIZER)
-		set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=address")
+		target_compile_options(exit_37 PUBLIC -fno-sanitize=address)
+		set_target_properties( exit_37 PROPERTIES STATIC_LIBRARY_OPTIONS "-fno-sanitize=address")
 		set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=address")
+		target_compile_options(get_user_ns PUBLIC -fno-sanitize=address)
+		set_target_properties( get_user_ns PROPERTIES STATIC_LIBRARY_OPTIONSLINK_FLAGS "-fno-sanitize=address")
+		set_target_properties( get_user_ns PROPERTIES LINK_FLAGS "-fno-sanitize=address")
 	endif()
 
 	if (WITH_UB_SANITIZER)
 		set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
-		set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( exit_37 PROPERTIES STATIC_LINK_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( get_user_ns PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( get_user_ns PROPERTIES STATIC_LINK_FLAGS "-fno-sanitize=undefined")
 	endif()
 
 
@@ -135,6 +144,7 @@ endif()
 if (LINUX)
 	install ( FILES condor_container_launcher.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
+	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test_arm DESTINATION ${C_LIBEXEC} )
 	if ("${SYS_ARCH}" STREQUAL "AARCH64" OR "${SYS_ARCH}" STREQUAL "PPC64LE" OR "${SYS_ARCH}" STREQUAL "X86_64")
 		install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif.${SYS_ARCH} RENAME exit_37.sif DESTINATION ${C_LIBEXEC})
 	endif()

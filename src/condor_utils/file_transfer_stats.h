@@ -17,49 +17,49 @@
  *
  ***************************************************************/
 
- #ifndef __FILETRANSFER_STATS_H__
- #define __FILETRANSFER_STATS_H__
- 
- #include "condor_classad.h"
- #include "hashkey.h"
- #include "generic_stats.h"
- 
- class FileTransferStats
- {
-	 public:
-		FileTransferStats();
-		~FileTransferStats();
+#ifndef __FILETRANSFER_STATS_H__
+#define __FILETRANSFER_STATS_H__
 
-		bool TransferSuccess;
-		
-		double ConnectionTimeSeconds;
-		int LibcurlReturnCode;
-		time_t TransferEndTime;
-		time_t TransferStartTime;
-		
-		long long TransferFileBytes;
-		long TransferHTTPStatusCode;
-		long long TransferTotalBytes;
-		long TransferTries;
-		
-		std::string HttpCacheHitOrMiss;
-		std::string HttpCacheHost;
-		std::string TransferError;
-		std::string TransferFileName;
-		std::string TransferHostName;
-		std::string TransferLocalMachineName;
-		std::string TransferProtocol;
-		std::string TransferType;
-		std::string TransferUrl;
-		
-		StatisticsPool Pool;
+#include "condor_classad.h"
+#include "hashkey.h"
+#include "generic_stats.h"
+#include "classad/classad.h"
 
-		
-		void Init();
-		void Publish(classad::ClassAd & ad) const;
-		 
-	 private:
-		
- };
+class FileTransferStats
+{
+    public:
+        FileTransferStats();
+        ~FileTransferStats();
 
- #endif
+        void Init();
+        void Publish(classad::ClassAd & ad) const;
+
+
+        bool TransferSuccess;
+
+        double ConnectionTimeSeconds;
+        int LibcurlReturnCode;
+        time_t TransferEndTime;
+        time_t TransferStartTime;
+
+        long long TransferFileBytes;
+        long TransferHTTPStatusCode;
+        long long TransferTotalBytes;
+        long TransferTries;
+
+        std::string HttpCacheHitOrMiss;
+        std::string HttpCacheHost;
+        std::string TransferError;
+        std::string TransferFileName;
+        std::string TransferHostName;
+        std::string TransferLocalMachineName;
+        std::string TransferProtocol;
+        std::string TransferType;
+        std::string TransferUrl;
+
+        StatisticsPool Pool;
+
+        std::vector<ClassAd> TransferErrorData;
+};
+
+#endif

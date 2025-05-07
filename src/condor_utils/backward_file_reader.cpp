@@ -21,6 +21,21 @@
 #include "condor_debug.h"
 #include "backward_file_reader.h"
 
+static int64_t ftell_64b(FILE* f) {
+#ifdef WIN32
+	return _ftelli64(f);
+#else
+	return (int64_t)ftello(f);
+#endif
+}
+
+static int fseek_64b(FILE* f, int64_t offset, int origin) {
+#ifdef WIN32
+	return _fseeki64(f, offset, origin);
+#else
+	return fseeko(f, (off_t)offset, origin);
+#endif
+}
 
 BackwardFileReader::BWReaderBuffer::BWReaderBuffer(int cb/*=0*/, char * input /* = NULL*/)
 	: data(input)
@@ -59,12 +74,12 @@ bool BackwardFileReader::BWReaderBuffer::reserve(int cb)
 	return false;
 }
 
-int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int cb)
+int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, int64_t offset, int cb)
 {
 	if ( ! reserve(((cb + 16) & ~15) + 16))
 		return 0;
 
-	int ret = fseek(file, offset, SEEK_SET);
+	int ret = fseek_64b(file, offset, SEEK_SET);
 	if (ret < 0) {
 		error = ferror(file);
 		return 0;
@@ -88,7 +103,7 @@ int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int 
 	// so we only get back the unique bytes
 	at_eof = feof(file);
 	if (text_mode && ! at_eof) {
-		off_t end_offset = ftell(file);
+		int64_t end_offset = ftell_64b(file);
 		int extra = (int)(end_offset - (offset + ret));
 		ret -= extra;
 	}
@@ -143,9 +158,9 @@ bool BackwardFileReader::PrevLine(std::string & str)
 	if (AtBOF())
 		return false;
 
-	const int cbBack = 512;
+	const int64_t cbBack = 512;
 	while (true) {
-		int off = cbPos > cbBack ? cbPos - cbBack : 0;
+		int64_t off = cbPos > cbBack ? cbPos - cbBack : 0;
 		int cbToRead = (int)(cbPos - off);
 
 		// we want to read in cbBack chunks at cbBack aligment, of course
@@ -187,8 +202,8 @@ bool BackwardFileReader::OpenFile(int fd, const char * open_options)
 		error = errno;
 	} else {
 		// seek to the end of the file.
-		fseek(file, 0, SEEK_END);
-		cbFile = cbPos = ftell(file);
+		fseek_64b(file, 0, SEEK_END);
+		cbFile = cbPos = ftell_64b(file);
 		error = 0;
 		buf.SetTextMode( ! strchr(open_options,'b'));
 	}

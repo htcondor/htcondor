@@ -56,13 +56,13 @@ protected:
 
 		/* returns number of characters read. or 0 on error use LastError & AtEOF methods to know which.
 		*/
-		int fread_at(FILE * file, off_t offset, int cb);
+		int fread_at(FILE * file, int64_t offset, int cb);
 	};
 
 	int error;	 // holds value of errno if there was a failure.
 	FILE * file; // file we are reading from.
 	filesize_t cbFile; // size of the file we are reading from
-	off_t      cbPos;  // location in the file that the buffer was read from.
+	int64_t     cbPos;  // location in the file that the buffer was read from.
 	BWReaderBuffer buf; // buffer to help with backward reading.
 
 public:

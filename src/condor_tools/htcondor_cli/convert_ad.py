@@ -1,4 +1,4 @@
-from htcondor._utils.ansi import Color, colorize, stylize, AnsiOptions
+from htcondor2._utils.ansi import Color, colorize, stylize, AnsiOptions
 from time import time
 from math import log
 
@@ -116,3 +116,10 @@ def ads_to_daemon_status(ads: list):
         info = _ad_to_daemon_status(ad)
         if info is not None:
             yield info
+
+# Same as normal conversion but returns each associated ClassAd
+def echo_ads_to_daemon_status(ads: list):
+    for ad in ads:
+        info = _ad_to_daemon_status(ad)
+        if info is not None:
+            yield (info[0], info[1], ad)

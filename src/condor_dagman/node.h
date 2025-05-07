@@ -254,6 +254,12 @@ public:
 	void IncrementJobsAborted() { numJobsAborted++; }
 	// Get number of job procs that got abort event
 	int JobsAborted() const { return numJobsAborted; }
+	// Increment count of job failures
+	void JobFailure() { totalJobsFailed++; }
+	// Get total number of failed jobs (terminate failure + abort)
+	int TotalJobsFailed() const { return totalJobsFailed; }
+	// Check if the # job failures have passed tolerance
+	bool CheckBatchFailed(int tolerance);
 	// Count each job proc exit code
 	void CountJobExitCode(int code) {
 		if (exitCodeCounts.contains(code)) {
@@ -362,17 +368,17 @@ public:
 	int GetDfsOrder() const { return _dfsOrder; }
 
 	// Set specific node error message
-	void SetErrorMsg(const char* fmt, ...) {
+	void SetErrorMsg(const char* fmt, ...) CHECK_PRINTF_FORMAT(2,3) {
 		va_list args;
 		va_start(args, fmt);
-		formatstr(error_text, fmt, args);
+		vformatstr(error_text, fmt, args);
 		va_end(args);
 	}
 	// Append to node specific error message
-	void AppendErrorMsg(const char* fmt, ...) {
+	void AppendErrorMsg(const char* fmt, ...) CHECK_PRINTF_FORMAT(2,3) {
 		va_list args;
 		va_start(args, fmt);
-		formatstr_cat(error_text, fmt, args);
+		vformatstr_cat(error_text, fmt, args);
 		va_end(args);
 	}
 	// Return node specific error message
@@ -382,6 +388,7 @@ public:
 	void ResetInfo() {
 		numJobsSubmitted = 0;
 		numJobsAborted = 0;
+		totalJobsFailed = 0;
 		isSuccessful = true;
 		readFirstProc = false;
 		is_factory = false;
@@ -456,6 +463,7 @@ private:
 	int _jobProcsOnHold{0}; // Number of tracked job procs currently in hold state
 	int numJobsAborted{0}; // Number of jobs with abort events
 	int _timesHeld{0}; // Total number of times jobs in the job list went on hold
+	int totalJobsFailed{0}; // Count of jobs that failed (terminate failure or abort)
 
 	int retval{-1}; // Nodes return code
 

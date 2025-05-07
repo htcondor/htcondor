@@ -131,7 +131,7 @@ _collector_query( PyObject *, PyObject * args ) {
 				PyErr_SetString( PyExc_HTCondorException, "Unable to determine collector host." );
 				return NULL;
 
-			// In version 1, we believe these errors were impossible.
+			// In version 1, we believed these errors were impossible.
 			case Q_PARSE_ERROR:
 			case Q_MEMORY_ERROR:
 			case Q_INVALID_CATEGORY:

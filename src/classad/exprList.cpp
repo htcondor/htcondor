@@ -44,7 +44,7 @@ ExprList(const vector<ExprTree*>& exprs)
 }
 
 ExprList::
-ExprList(const ExprList &other_list)
+ExprList(const ExprList &other_list): ExprTree()
 {
     CopyFrom(other_list);
     return;
@@ -234,17 +234,17 @@ erase(iterator f, iterator l)
 }
 
 bool ExprList::
-_Evaluate (EvalState &, Value &val) const
+_Evaluate (EvalState & /*unused*/, Value &val) const
 {
-	val.SetListValue ((ExprList *)this);
+	val.SetListValue(const_cast<ExprList *>((const ExprList *)this));
 	return( true );
 }
 
 bool ExprList::
 _Evaluate( EvalState &, Value &val, ExprTree *&sig ) const
 {
-	val.SetListValue((ExprList* )this);
-	return( ( sig = Copy( ) ) );
+	val.SetListValue(const_cast<ExprList *>((const ExprList* )this));
+	return (sig = Copy());
 }
 
 bool ExprList::
@@ -328,6 +328,13 @@ ExprList::GetValueAt(int location, Value& val, EvalState *es)  const {
 	currentState->depth_remaining++;
 
 	return true;
+}
+
+void ExprList::
+removeAll( vector<ExprTree*> &exprs )
+{
+	exprs = exprList;
+	exprList.clear();
 }
 
 } // classad

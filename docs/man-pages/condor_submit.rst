@@ -462,6 +462,14 @@ BASIC COMMANDS
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
 
+ :subcom-def:`shell` = <shell command to run>
+    On Unix systems, instead of specifing *executable* and *args*, the
+    shell command can give a full shell command to be run under /bin/sh,
+    including shell special characters like pipes and redirects. Note that
+    if any executables run by this shell need to be transferred to the job,
+    HTCondor will not automatically add those to the transfer_input list,
+    you will manually need to add those programs.
+
  :subcom-def:`batch_name` = <batch_name>
     Set the batch name for this submit. The batch name is displayed by
     *condor_q* **-batch**. It is intended for use by users to give
@@ -2599,7 +2607,7 @@ ADVANCED COMMANDS
     For vanilla and Docker -universe jobs (and others that use the shadow),
     specifies if HTCondor (the starter) should produce a "manifest", which
     is directory containing three files: the list of files and directories
-    at the top level of the sandbox when file transfer in completes
+    in the sandbox when file transfer in completes
     (``in``), the same when file transfer out begins (``out``), and a dump
     of the environment set for the job (:ad-attr:`Environment`).
 
@@ -2697,15 +2705,20 @@ ADVANCED COMMANDS
     system authentication when submitting to a remote scheduler. Should
     be a path to a preexisting directory.
 
+ :subcom-def:`want_job_networking` = <True | False>
+   If **false** then the job may be matched to a machine where the job
+   has no access to the networking.  This may allow the job to run in
+   more places than it otherwise would. Default is true.
+
  :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the
     submitter, if supported by the joint configuration of the submit and
     execute machines. On Unix platforms, this defaults to ``True``, and
     on Windows platforms, it defaults to ``False``. May not be used with
     **load_profile**.
-    See the HTCondor manual Platform-Specific Information chapter for
-    administrative details on configuring Windows to support this
-    option.
+    See the :doc:`../platform-specific/microsoft-windows`-specific
+    documentation for administrative details to support this option on
+    that platform.
 
  :subcom-def:`stack_size` = <size in bytes>
     This command applies only to Linux platforms.

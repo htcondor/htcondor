@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 import htcondor2
-from htcondor import (
+from htcondor2 import (
     JobEventType,
 )
 
@@ -42,7 +42,7 @@ TEST_CASES = {
         "Aborting job as guided...",
     ),
     "RetryTransfer": (
-        '{ [ Command = "RetryTransfer"; ], [ Command = "CarryOn"; ] }',
+        '{ [ Command = "RetryTransfer"; ], [ Command = "RetryRequest"; RetryDelay = 5; ], [ Command = "CarryOn"; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
@@ -74,7 +74,7 @@ TEST_CASES = {
         "Aborting job as guided...",
     ),
     "RetryTransfer w/ Extra": (
-        '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "CarryOn"; Extraneous = True; ] }',
+        '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "RetryRequest"; RetryDelay = 5; Extraneous = False; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
@@ -100,6 +100,7 @@ def the_condor(test_dir, path_to_shadow_wrapper):
         config={
             "SHADOW":                       path_to_shadow_wrapper.as_posix(),
             "SHADOW_DEBUG":                 "D_FULLDEBUG",
+            "STARTD_ENVIRONMENT":           ";http_proxy=;https_proxy=",
 
             # For simplicity, so that each test job gets its own starter log.
             "STARTER_LOG_NAME_APPEND":      "JobID",

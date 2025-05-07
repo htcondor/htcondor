@@ -33,10 +33,10 @@ import contextlib
 import shutil
 import struct
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
-from htcondor._utils.ansi import Color, colorize, is_capable
+from htcondor2._utils.ansi import Color, colorize, is_capable
 
 IS_WINDOWS = os.name == "nt"
 
@@ -877,7 +877,7 @@ class JobStateTracker:
             try:
                 reader = htcondor.JobEventLog(log).events(0)
                 self.event_readers[log] = reader
-            except (OSError, IOError) as e:
+            except Exception as e:
                 if defer and log.endswith(".nodes.log"):
                     deferred_logs[log] = defer
                     continue
@@ -916,7 +916,17 @@ class JobStateTracker:
                 if self.since is not None and event.cluster < self.since:
                     continue
 
-                new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
+                if event.type == htcondor.JobEventType.FILE_TRANSFER:
+                    new_status = None
+                    msg = str(event).lower()
+                    if "started" in msg:
+                        if "input" in msg:
+                            new_status = JobStatus.TRANSFERRING_INPUT
+                        elif "output" in msg:
+                            new_status = JobStatus.TRANSFERRING_OUTPUT
+                else:
+                    new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
+
                 if new_status is None:
                     continue
 
@@ -1029,6 +1039,18 @@ def strip_empty_columns(rows_by_key):
     return headers, rows_by_key
 
 
+class JobId():
+    def __init__(self, cluster: int, proc: int) -> None:
+        self.cluster = cluster
+        self.proc = proc
+
+    def __str__(self) -> str:
+        return f"{self.cluster}.{self.proc}"
+
+    def __lt__(self, other) -> bool:
+        return (self.cluster, self.proc) < (other.cluster, other.proc)
+
+
 def row_data_from_job_state(clusters, expected_total_jobs=None):
     """Construct the data for a single row."""
     if expected_total_jobs is None:
@@ -1043,16 +1065,16 @@ def row_data_from_job_state(clusters, expected_total_jobs=None):
             row_data[job_state] += 1
 
             if job_state in ACTIVE_STATES:
-                active_job_ids.append("{}.{}".format(cluster.cluster_id, proc_id))
+                active_job_ids.append(JobId(cluster.cluster_id, proc_id))
 
     row_data[TOTAL] = max(expected_total_jobs, sum(row_data.values()))
-    active_job_ids.sort(key=lambda jobid: jobid.split("."))
+    active_job_ids.sort()
 
     if len(active_job_ids) > 2:
         active_job_ids = [active_job_ids[0], active_job_ids[-1]]
-        row_data[ACTIVE_JOBS] = " ... ".join(active_job_ids)
+        row_data[ACTIVE_JOBS] = " ... ".join(str(id) for id in active_job_ids)
     else:
-        row_data[ACTIVE_JOBS] = ", ".join(active_job_ids)
+        row_data[ACTIVE_JOBS] = ", ".join(str(id) for id in active_job_ids)
 
     return row_data
 
@@ -1142,7 +1164,8 @@ class JobStatus(enum.Enum):
     IDLE = "IDLE"
     RUNNING = "RUN"
     COMPLETED = "DONE"
-    TRANSFERRING_OUTPUT = "TRANSFERRING_OUTPUT"
+    TRANSFERRING_INPUT = "INPUT"
+    TRANSFERRING_OUTPUT = "OUTPUT"
     SUSPENDED = "SUSPENDED"
 
     def __str__(self):
@@ -1155,6 +1178,7 @@ class JobStatus(enum.Enum):
             cls.HELD,
             cls.SUSPENDED,
             cls.IDLE,
+            cls.TRANSFERRING_INPUT,
             cls.RUNNING,
             cls.TRANSFERRING_OUTPUT,
             cls.COMPLETED,
@@ -1163,6 +1187,7 @@ class JobStatus(enum.Enum):
 
 ACTIVE_STATES = {
     JobStatus.IDLE,
+    JobStatus.TRANSFERRING_INPUT,
     JobStatus.RUNNING,
     JobStatus.TRANSFERRING_OUTPUT,
     JobStatus.HELD,
@@ -1189,6 +1214,8 @@ for k in JobStatus:
 
 HEADERS = list(JobStatus.ordered()) + [TOTAL, ACTIVE_JOBS]
 
+# NOTE: TRANSFERRING_(IN/OUT)PUT are handle specially in process_events()
+#       due to all transfers sharing a single job event type (#40)
 JOB_EVENT_STATUS_TRANSITIONS = {
     htcondor.JobEventType.SUBMIT: JobStatus.IDLE,
     htcondor.JobEventType.JOB_EVICTED: JobStatus.IDLE,
@@ -1273,18 +1300,22 @@ def strip_ansi(string):
 
 
 PROGRESS_BAR_CHARS_AND_COLORS = {
-    JobStatus.COMPLETED: (Color.GREEN, "#"),
-    JobStatus.RUNNING: (Color.CYAN, "="),
     JobStatus.IDLE: (Color.BRIGHT_YELLOW, "-"),
+    JobStatus.TRANSFERRING_INPUT: (Color.CYAN, ">"),
+    JobStatus.RUNNING: (Color.CYAN, "="),
+    JobStatus.TRANSFERRING_OUTPUT: (Color.CYAN, ">"),
+    JobStatus.COMPLETED: (Color.GREEN, "#"),
     JobStatus.HELD: (Color.RED, "!"),
     JobStatus.SUSPENDED: (Color.RED, "!"),
     JobStatus.REMOVED: (Color.RED, "!"),
 }
 
 PROGRESS_BAR_ORDER = (
-    JobStatus.COMPLETED,
-    JobStatus.RUNNING,
     JobStatus.IDLE,
+    JobStatus.TRANSFERRING_INPUT,
+    JobStatus.RUNNING,
+    JobStatus.TRANSFERRING_OUTPUT,
+    JobStatus.COMPLETED,
     JobStatus.HELD,
     JobStatus.SUSPENDED,
     JobStatus.REMOVED,
@@ -1296,15 +1327,8 @@ def make_progress_bar(totals, width=None, color=True):
     num_total = float(totals[TOTAL])
 
     fractions = [
-        safe_divide(n, num_total)
-        for n in (
-            totals.get(JobStatus.COMPLETED),
-            totals.get(JobStatus.RUNNING),
-            totals.get(JobStatus.IDLE),
-            totals.get(JobStatus.HELD),
-            totals.get(JobStatus.SUSPENDED),
-            totals.get(JobStatus.REMOVED),
-        )
+        safe_divide(totals.get(status), num_total)
+        for status in PROGRESS_BAR_ORDER
     ]
 
     bar_section_lengths = [int(width * f) for f in fractions]
@@ -1339,11 +1363,26 @@ SUMMARY_STATES = [
     JobStatus.COMPLETED,
     JobStatus.REMOVED,
     JobStatus.IDLE,
-    JobStatus.RUNNING,
+    # Running jobs include jobs doing transfers
+    [
+        JobStatus.TRANSFERRING_INPUT,
+        JobStatus.RUNNING,
+        JobStatus.TRANSFERRING_OUTPUT,
+    ],
     JobStatus.HELD,
     JobStatus.SUSPENDED,
 ]
 SUMMARY_MESSAGES = ["completed", "removed", "idle", "running", "held", "suspended"]
+
+# Calculate summary states totals: Either 1 state or tuple of states
+def calc_multi_state_total(totals, states) -> int:
+    if isinstance(states, list):
+        return sum([totals[status] for status in states])
+    elif isinstance(states, JobStatus):
+        return totals[states]
+    else:
+        # Developer error
+        raise RuntimeError("Invalid states variable type (expected JobStatus or tuple[JobStatus])")
 
 
 def make_summary_with_totals(totals, width=None):
@@ -1355,9 +1394,9 @@ def make_summary_with_totals(totals, width=None):
         summary = "Total: {} jobs; {}".format(
             totals[TOTAL],
             ", ".join(
-                "{} {}".format(totals[status], msg[:strip])
+                "{} {}".format(calc_multi_state_total(totals, status), msg[:strip])
                 for status, msg in zip(SUMMARY_STATES, SUMMARY_MESSAGES)
-                if totals[status] > 0
+                if calc_multi_state_total(totals, status) > 0
             ),
         )
 
@@ -1370,7 +1409,7 @@ def make_summary_with_totals(totals, width=None):
 def make_summary_with_percentages(totals, width=None):
     num_total = totals[TOTAL]
     percentages = [
-        round(100.0 * safe_divide(totals[s], num_total)) for s in SUMMARY_STATES
+        round(100.0 * safe_divide(calc_multi_state_total(totals, s), num_total)) for s in SUMMARY_STATES
     ]
 
     summary = "Total: {} jobs; {}".format(

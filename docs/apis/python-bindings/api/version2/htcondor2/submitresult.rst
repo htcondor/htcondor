@@ -3,5 +3,5 @@
 
 .. currentmodule:: htcondor2
 
-.. autoclass:: SubmitResult
+.. autoclass:: SubmitResult()
    :members:

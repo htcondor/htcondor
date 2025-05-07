@@ -17,6 +17,7 @@
  *
  ***************************************************************/
 
+#define CONDOR_get_docker_creds -85
 #define CONDOR_dprintf_stats -84
 #define CONDOR_getwd_special -83
 #define CONDOR_job_termination -82

@@ -1379,7 +1379,7 @@ bool evaluate_expr(
 
     classad.Insert("internal___", tree);
     success = classad.EvaluateAttr("internal___", value);
-    classad.Remove("internal___");
+	std::ignore  = classad.Remove("internal___");
     return success;
 }
 

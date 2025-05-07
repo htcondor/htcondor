@@ -1,6 +1,8 @@
 import sys
 import enum
 
+# The values in this file must match those in the enum SubsystemType
+# in src/condor_utils/subsystem_info.h
 
 class SubsystemType(enum.IntEnum):
     """

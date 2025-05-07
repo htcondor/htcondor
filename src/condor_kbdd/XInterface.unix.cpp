@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -35,6 +35,7 @@
 #endif
 
 #include <setjmp.h>
+#include <filesystem>
 
 #if defined(LINUX)
 	static const char *UtmpName = "/var/run/utmp";
@@ -116,7 +117,61 @@ XInterface::TryUser(const char *user)
 	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", passwd_entry->pw_name );
 	return true;
 }
-	
+
+// Newer display managers have moved the location of the .Xauthority
+// file from $HOME into $XDG_RUNTIME_DIR/xauth_<some_nonce>
+bool
+XInterface::TryUserXDG(const char *user)
+{
+	static char env[1024];
+	static bool need_uninit = false;
+	passwd *passwd_entry;
+	std::string xauth_filename_str; 
+
+	passwd_entry = getpwnam(user);
+	if(passwd_entry == NULL) {
+		// We couldn't find the current user in the passwd file?
+		dprintf( D_FULLDEBUG, 
+				"Current user cannot be found in passwd file.\n" );
+		return false;
+	} else {
+		std::string xdg_runtime_dir_str;
+
+		// find the first file named .xauth_<something> in XDG_RUNTIME_DIR
+		formatstr(xdg_runtime_dir_str, "/var/run/user/%d/", passwd_entry->pw_uid);
+		std::filesystem::path xdg_runtime_dir {xdg_runtime_dir_str};
+		for (const auto &entry: std::filesystem::directory_iterator(xdg_runtime_dir)) {
+			if (entry.path().filename().string().starts_with("xauth_")) {
+				dprintf(D_FULLDEBUG, "Trying xauth file %s\n", entry.path().string().c_str());
+				xauth_filename_str = entry.path().string();
+				break;
+			}
+		}
+		sprintf(env, "XAUTHORITY=%s", xauth_filename_str.c_str());
+		if(putenv(env) != 0) {
+			EXCEPT("Putenv failed!.");
+		}
+	}
+
+	if ( need_uninit ) {
+		uninit_user_ids();
+		need_uninit = false;
+	} 
+
+	// passing "root" to init_user_ids is fatal
+	if (strcmp(user, "root") == 0) {
+		set_root_priv();
+	} else {
+		if (!init_user_ids( user, NULL )) {
+			dprintf(D_ALWAYS, "init_user_ids failed\n");
+		}
+		set_user_priv();
+		need_uninit = true;
+	}
+
+	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: %s \n", passwd_entry->pw_name, xauth_filename_str.c_str());
+	return true;
+}
 
 XInterface::XInterface(int id)
 {
@@ -223,8 +278,7 @@ XInterface::ReadUtmp() {
 bool
 XInterface::Connect()
 {
-	dprintf(D_FULLDEBUG, "XInterface::Connect\n");
-
+	dprintf(D_ALWAYS, "Connecting to X server: %s\n", _display_name);
 
 	// First try as whatever user we entered as, with whatever
 	// X credentials we were born with.
@@ -277,8 +331,18 @@ XInterface::Connect()
 				FinishConnection();
 				return true;
 			}
-
 		}
+
+		bool xdgfound = TryUserXDG(username);
+		if (xdgfound) {
+			_display = XOpenDisplay(_display_name);		
+
+			if (_display) {
+				FinishConnection();
+				return true;
+			}
+		}
+
 		set_condor_priv();
 		utmpIndex++;
 	}

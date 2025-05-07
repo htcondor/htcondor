@@ -95,14 +95,13 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "exit.h"
 #include "largestOpenFD.h"
 
-#include <algorithm>
-
-#if !defined(CLONE_NEWPID)
-#define CLONE_NEWPID 0x20000000
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
 #endif
 
-#include "systemd_manager.h"
+#include <algorithm>
 
+#include "systemd_manager.h"
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -736,6 +735,16 @@ int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 							handler_descrip, s, handler_type, TRUE) );
 }
 
+
+int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
+				StdPipeHandler handler, const char* handler_descrip,
+				HandlerType handler_type)
+{
+	return( Register_Pipe(pipe_end, pipe_descrip, nullptr,
+							nullptr, handler_descrip, nullptr,
+							handler_type, FALSE, & handler) );
+}
+
 int	DaemonCore::Register_Reaper(const char* reap_descrip, ReaperHandler handler,
 				const char* handler_descrip)
 {
@@ -749,6 +758,14 @@ int	DaemonCore::Register_Reaper(const char* reap_descrip,
 {
 	return( Register_Reaper(-1, reap_descrip, NULL, handlercpp,
 							handler_descrip, s, TRUE) );
+}
+
+int	DaemonCore::Register_Reaper(const char* reap_descrip, StdReaperHandler handler,
+				const char* handler_descrip)
+{
+	return( Register_Reaper(-1, reap_descrip, (ReaperHandler)NULL,
+							(ReaperHandlercpp)NULL, handler_descrip,
+							nullptr, FALSE, & handler) );
 }
 
 int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
@@ -920,7 +937,7 @@ int
 DaemonCore::Register_Command(
     int                 command,
     const char *        command_description,
-    StdFunctionHandler  handler,
+    StdCommandHandler   handler,
     const char *        handler_description,
     DCpermission        permission,
     bool                force_authentication,
@@ -949,7 +966,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 				const char *handler_descrip, Service* s, DCpermission perm,
 				int is_cpp, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm,
-				StdFunctionHandler * handler_f )
+				StdCommandHandler * handler_f )
 {
     if( handler == 0 && handlercpp == 0 && handler_f == NULL ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
@@ -1027,7 +1044,7 @@ int DaemonCore::Cancel_Command( int command )
 			ct.num = 0;
 			ct.handler = nullptr;
 			ct.handlercpp = nullptr;
-			ct.std_handler = StdFunctionHandler();
+			ct.std_handler = StdCommandHandler();
 			free(ct.command_descrip);
 			ct.command_descrip = nullptr;
 			free(ct.handler_descrip);
@@ -2161,7 +2178,8 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				PipeHandler handler, PipeHandlercpp handlercpp,
 				const char *handler_descrip, Service* s,
-				HandlerType handler_type, int is_cpp)
+				HandlerType handler_type, int is_cpp,
+				StdPipeHandler * handler_f)
 {
 	size_t index = pipe_end - PIPE_INDEX_OFFSET;
 	if (pipeHandleTableLookup(index) == FALSE) {
@@ -2201,6 +2219,9 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	pipeTable[i].handler = handler;
 	pipeTable[i].handler_type = handler_type;
 	pipeTable[i].handlercpp = handlercpp;
+	if( handler_f != nullptr ) {
+		pipeTable[i].std_handler = * handler_f;
+	}
 	pipeTable[i].is_cpp = (bool)is_cpp;
 	pipeTable[i].service = s;
 	pipeTable[i].data_ptr = NULL;
@@ -2579,7 +2600,8 @@ DaemonCore::Close_Stdin_Pipe(int pid) {
 
 int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				ReaperHandler handler, ReaperHandlercpp handlercpp,
-				const char *handler_descrip, Service* s, int is_cpp)
+				const char *handler_descrip, Service* s, int is_cpp,
+				StdReaperHandler * handler_f)
 {
     size_t     i;
 
@@ -2630,6 +2652,9 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].num = rid;
 	reapTable[i].handler = handler;
 	reapTable[i].handlercpp = handlercpp;
+	if( handler_f != nullptr ) {
+		reapTable[i].std_handler = * handler_f;
+	}
 	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
 	reapTable[i].data_ptr = nullptr;
@@ -2685,6 +2710,7 @@ int DaemonCore::Cancel_Reaper( int rid )
 	reapTable[idx].num = 0;
 	reapTable[idx].handler = NULL;
 	reapTable[idx].handlercpp = NULL;
+	reapTable[idx].std_handler = StdReaperHandler();
 	reapTable[idx].service = NULL;
 	reapTable[idx].data_ptr = NULL;
 
@@ -2772,7 +2798,7 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 int
 DaemonCore::numRegisteredReapers() {
 	return std::count_if(reapTable.begin(), reapTable.end(),
-			[](const auto &entry) { return entry.handler || entry.handlercpp; });
+			[](const auto &entry) { return entry.handler || entry.handlercpp || entry.std_handler; });
 }
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
@@ -2795,7 +2821,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (size_t i = 0; i < nReap; i++) {
-		if( reapTable[i].handler || reapTable[i].handlercpp ) {
+		if( reapTable[i].handler || reapTable[i].handlercpp || reapTable[i].std_handler ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( reapTable[i].reap_descrip )
@@ -3907,15 +3933,16 @@ void DaemonCore::Driver()
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( pipeTable[i].data_ptr);
 						recheck_status = true;
-						if (pipeTable[i].handler )
+						if (pipeTable[i].handler ) {
 							// a C handler
 							(*(pipeTable[i].handler))(pipe_end);
-						else
-						if ( pipeTable[i].handlercpp )
+						} else if ( pipeTable[i].handlercpp ) {
 							// a C++ handler
 							(pipeTable[i].service->*( pipeTable[i].handlercpp))(pipe_end);
-						else
-						{
+						} else if ( pipeTable[i].std_handler ) {
+							// A std::function handler.
+							pipeTable[i].std_handler( pipe_end );
+						} else {
 							// no handler registered
 							EXCEPT("No pipe handler callback");
 						}
@@ -4398,7 +4425,6 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 	int index = 0;
 	double handler_start_time=0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
-	char const *user = NULL;
 	Sock *sock = (Sock *)stream;
 
 	if ( reqFound ) {
@@ -4435,17 +4461,14 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
-		user = sock ? sock->getFullyQualifiedUser() : nullptr;
-		if( !user ) {
-			user = "";
-		}
+		std::string user = (sock && sock->getFullyQualifiedUser()) ? sock->getFullyQualifiedUser() : "";
 		if (IsDebugLevel(D_COMMAND)) {
 			dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
 					comTable[index].handler_descrip,
 					inServiceCommandSocket_flag,
 					req,
 					comTable[index].command_descrip,
-					user,
+					user.c_str(),
 					stream ? stream->peer_description() : "");
 		}
 		
@@ -4472,7 +4495,7 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		double handler_time = _condor_debug_get_time_double() - handler_start_time;
 		// RecycleShadow has garbage usernames, so don't count them
 		if(strcmp(comTable[index].handler_descrip, "RecycleShadow") != MATCH) {
-			std::string key = std::string(user) + "_" + std::string(comTable[index].handler_descrip);
+			std::string key = user + '_' + std::string(comTable[index].handler_descrip);
 			dc_stats.UserRuntimes[key] += handler_time;
 		}
 		
@@ -5657,7 +5680,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -5953,7 +5976,7 @@ pid_t CreateProcessForkit::clone_safe_getppid() const {
  *     with pthreads.
  */
 
-#define ALLOWED_FLAGS (SIGCHLD | CLONE_NEWPID | CLONE_NEWNS )
+#define ALLOWED_FLAGS (SIGCHLD | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWUSER)
 
 pid_t CreateProcessForkit::fork(int flags) {
 
@@ -5966,13 +5989,13 @@ pid_t CreateProcessForkit::fork(int flags) {
 
     int rw[2]; // Communication pipes for the CLONE_NEWPID case.
 
-    flags |= SIGCHLD; // The only necessary flag.
-    if (flags & CLONE_NEWPID) {
-        flags |= CLONE_NEWNS;
-	if (pipe(rw)) {
-		EXCEPT("UNABLE TO CREATE PIPE.");
+	flags |= SIGCHLD; // The only necessary flag.
+	if (flags & CLONE_NEWPID) {
+		flags |= CLONE_NEWNS;
+		if (pipe(rw)) {
+			EXCEPT("UNABLE TO CREATE PIPE.");
+		}
 	}
-    }
 
 	// fork as root if we have our fancy flags.
     priv_state orig_state = set_priv(PRIV_ROOT);
@@ -6106,12 +6129,51 @@ pid_t CreateProcessForkit::fork_exec() {
 #endif /* HAVE_CLONE */
 
 	int fork_flags = 0;
+#ifdef HAVE_CLONE
 	if (m_family_info) {
 		fork_flags |= m_family_info->want_pid_namespace ? CLONE_NEWPID : 0;
+		fork_flags |= m_family_info->want_net_namespace ? (CLONE_NEWNET) : fork_flags;
+
+		// If we don't have root, NEWNET requires NEWUSER
+        if (!can_switch_ids() && m_family_info->want_net_namespace) {
+			fork_flags |= CLONE_NEWUSER;
+		}
 	}
+	uid_t uid = getuid();
+	gid_t gid = getgid();
+	std::string uid_map;
+	std::string gid_map;
+	if (fork_flags & CLONE_NEWUSER) {
+		if (uid > 0) {
+			formatstr(uid_map, "%d %d 1", uid, uid);
+		}
+		if (gid > 0) {
+			formatstr(gid_map, "%d %d 1", gid, gid);
+		}
+	}
+#endif
 	newpid = this->fork(fork_flags);
 	if( newpid == 0 ) {
 			// in child
+#ifdef HAVE_CLONE
+		if (fork_flags & CLONE_NEWUSER) {
+			int fd = open("/proc/self/uid_map", O_WRONLY);
+			if (fd && (uid_map.size() > 0)) {
+				std::ignore = write(fd, uid_map.c_str(), uid_map.size());
+				close(fd);
+			}
+			fd = open("/proc/self/setgroups", O_WRONLY);
+			if (fd) {
+				std::ignore = write(fd, "deny", 5);
+				close(fd);
+			}
+			fd = open("/proc/self/gid_map", O_WRONLY);
+			if (fd) {
+				std::ignore = write(fd, gid_map.c_str(), gid_map.size());
+				close(fd);
+			}
+		}
+#endif
 		enterCreateProcessChild(this);
 		exec(); // never returns
 	}
@@ -6894,6 +6956,7 @@ int DaemonCore::Create_Process(
 	int errorpipe[2];
 	std::string executable_fullpath_buf;
 	char const *executable_fullpath = executable;
+	std::string cgroup_name;
 #endif
 
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
@@ -6975,6 +7038,26 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
 		goto wrapup;
 	}
+
+
+#ifdef LINUX
+		// Most callers of Create_Process should give us a meaningful
+		// cgroup name, but if they don't, we still want to put
+		// this process with a FamilyInfo into a cgroup
+		if (family_info && family_info->cgroup == nullptr) {
+			if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+				static int cgroup_counter = 0;
+
+				std::string config = getenv("CONDOR_CONFIG") ? getenv("CONDOR_CONFIG") : "/etc/condor_condor_config";
+				replace_str(config, "/", "_");
+
+				cgroup_name = get_mySubSystem()->getName() + config + std::to_string(cgroup_counter++);
+				cgroup_name = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+
+				family_info->cgroup = cgroup_name.c_str();
+			}
+		}
+#endif
 
 	// if this is the first time Create_Process is being called with a
 	// non-NULL family_info argument, create the ProcFamilyInterface object
@@ -8373,8 +8456,9 @@ int DaemonCore::Create_Process(
 	// A bit of a hack.  If there's a cgroup, we've set that upon
 	// in the child process, to avoid any races.  But here in the parent
 	// we need to record that happened, so we can use the cgroup For
-	// monitoring, cleanup, etc.
-	if (family_info && m_proc_family && family_info->cgroup) {
+	// monitoring, cleanup, etc. But if we are using clone, then
+	// we don't want to do this, because we are sharing memory.
+	if (family_info && m_proc_family && family_info->cgroup && !UseCloneToCreateProcesses()) {
 		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
 	}
 #endif
@@ -8888,12 +8972,60 @@ int extractInheritedSocks (
 	return cSocks;
 }
 
+#ifdef WIN32
+static char * redact_condor_inherit(char* redacted_env)
+{
+	if (redacted_env) return redacted_env;
+
+	// save CONDOR_INHERIT and CONDOR_PRIVATE_INHERIT into a malloc'ed buffer formatted as environment
+	std::string redacted, inherit, private_inherit;
+
+	GetEnv(ENV_CONDOR_INHERIT, inherit);
+	GetEnv(ENV_CONDOR_PRIVATE, private_inherit);
+
+	if ( ! inherit.empty()) {
+		redacted += ENV_CONDOR_INHERIT;
+		redacted += "=";
+		redacted += inherit;
+		redacted.push_back(0);
+	}
+	if ( ! private_inherit.empty()) {
+		redacted += ENV_CONDOR_PRIVATE;
+		redacted += "=";
+		redacted += private_inherit;
+		redacted.push_back(0);
+	}
+	if (redacted.empty()) {
+		return redacted_env;
+	}
+
+	redacted.push_back(0); // terminating null
+
+	// copy redacted string to a permanent mallocated buffer
+	int cb = (int)redacted.size();
+	redacted_env = (char*)malloc(cb);
+	memset(redacted_env, 0, cb);
+	memcpy(redacted_env, redacted.data(), redacted.size());
+
+	// publish the pid,size, and address of the redacted buffer in our environment
+	// so that programs that can read our process memory can retrieve the redacted environment
+	redacted.clear();
+	formatstr(redacted, "CONDOR_DCADDR=%d,%d,%llu", getpid(), (int)cb, redacted_env);
+	SetEnv(redacted.c_str());
+
+	return redacted_env;
+}
+#endif
+
 void
 DaemonCore::Inherit( void )
 {
 	int numInheritedSocks = 0;
 	const char *ptmp;
 	static bool already_inherited = false;
+#ifdef WIN32
+	static char * redacted_env = nullptr;
+#endif
 	std::string saved_sinful_string;
 
 	if( already_inherited ) {
@@ -8916,6 +9048,9 @@ DaemonCore::Inherit( void )
 	const char *tmp = GetEnv( envName );
 	if (tmp) {
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
+	#ifdef WIN32
+		redacted_env = redact_condor_inherit(redacted_env);
+	#endif
 		UnsetEnv( envName );
 	} else {
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
@@ -9719,7 +9854,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 void
 DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status)
 {
-		double startTime = _condor_debug_get_time_double(); // for timing reapers
+	double startTime = _condor_debug_get_time_double(); // for timing reapers
 
 	ReapEnt *reaper = NULL;
 
@@ -9733,14 +9868,17 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	}
 
 	if (this->m_proc_family) {
+#ifdef LINUX
+		bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
 		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_oom_killed) {
+		if (was_sigkilled && was_oom_killed) {
 			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
 			exit_status |= DC_STATUS_OOM_KILLED;
 		} 
+#endif
 	}
 
-	if( !reaper || !(reaper->handler || reaper->handlercpp) ) {
+	if( !reaper || !(reaper->handler || reaper->handlercpp || reaper->std_handler) ) {
 			// no registered reaper
 			dprintf(D_DAEMONCORE,
 			"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
@@ -9752,22 +9890,20 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	curr_dataptr = &(reaper->data_ptr);
 
 		// Log a message
-	const char *hdescrip = reaper->handler_descrip;
-	if ( !hdescrip ) {
-		hdescrip = EMPTY_DESCRIP;
-	}
+	std::string hdescrip = reaper->handler_descrip ? reaper->handler_descrip : EMPTY_DESCRIP;
 	dprintf(D_COMMAND,
 		"DaemonCore: %s %lu exited with status %d, invoking reaper "
 		"%d <%s>\n",
-		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip);
+		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip.c_str());
 
 	if ( reaper->handler ) {
 		// a C handler
 		(*(reaper->handler))(pid,exit_status);
-	}
-	else if ( reaper->handlercpp ) {
+	} else if ( reaper->handlercpp ) {
 		// a C++ handler
 		(reaper->service->*(reaper->handlercpp))(pid,exit_status);
+	} else if ( reaper->std_handler ) {
+		reaper->std_handler(pid, exit_status);
 	}
 
 	// Record the runtime of this reaper
