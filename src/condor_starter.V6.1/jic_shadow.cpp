@@ -573,6 +573,9 @@ JICShadow::transferOutput( bool &transient_failure )
 	bool useNullFileTransfer = param_boolean(
 		"STARTER_USES_NULL_FILE_TRANSFER", false
 	);
+	if( param_boolean( "USE_NEW_FILE_TRANSFER", false ) ) {
+	    useNullFileTransfer = true;
+	}
 
 	if( useNullFileTransfer ) {
 		return nullTransferOutput(transient_failure);
