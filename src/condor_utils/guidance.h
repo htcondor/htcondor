@@ -25,10 +25,14 @@ enum class GuidanceResult : int {
 #define COMMAND_CARRY_ON        "CarryOn"
 #define COMMAND_RETRY_REQUEST   "RetryReqest"
 
+#define COMMAND_START_NEW_FILE_TRANSFER     "StartNewFileTransfer"
+
 #define DIAGNOSTIC_SEND_EP_LOGS "send_ep_logs"
 
 #define RTYPE_JOB_ENVIRONMENT   "JobEnvironment"
+#define RTYPE_JOB_SETUP         "JobSetup"
 
 #define ETYPE_DIAGNOSTIC_RESULT "DiagnosticResult"
+
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

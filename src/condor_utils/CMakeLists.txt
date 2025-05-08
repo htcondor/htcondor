@@ -74,6 +74,11 @@ iso_dates.cpp
 iso_dates.h
 MyString.cpp
 MyString.h
+file_transfer_functions.cpp
+file_transfer_functions.h
+file_transfer_commands.cpp
+file_transfer_commands.h
+file_transfer_constants.h
 read_user_log.cpp
 read_user_log.h
 read_user_log_state.cpp
