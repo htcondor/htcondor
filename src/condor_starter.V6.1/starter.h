@@ -377,7 +377,7 @@ private:
 
 		/// Remove the execute/dir_<pid> directory
 		/// Argument exit_code: override Starter exit code with value
-	virtual bool removeTempExecuteDir(int& exit_code);
+	virtual bool removeTempExecuteDir(int& exit_code, const char * move_to);
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
@@ -430,6 +430,7 @@ private:
 	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
 	std::string m_recoveryFile;
+	std::string m_move_working_dir_on_exit; // if non-empty move/rename the WorkingDir to this instead of deleting it
 	bool is_gridshell;
 	bool job_requests_broken_exit{false};
 	bool m_workingDirExists;

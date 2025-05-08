@@ -158,12 +158,16 @@ typedef struct _AttribValue {
 } AttribValue;
 
 //
-class FullSlotId
+class NFROwner
 {
-public: 
-	int id;   // static or partitionable id
-	int dyn_id; // dynamic id
-	FullSlotId(int i, int j=0) : id(i), dyn_id(j) {};
+public:
+	unsigned short int id{0};     // static or partitionable id slot id
+	unsigned short int dyn_id{0}; // dynamic id, dslot_id or broken id
+	unsigned short int group{0};  // if non-zero the resource is shared by a group of slots
+	unsigned short int active:1{0}; // non-zero if resource is owned by an active slot (set only when dyn_id is > 0)
+	NFROwner(int i, int j=0) : id(i), dyn_id(j) {};
+
+	bool empty() { return id == 0 && dyn_id == 0; }
 };
 
 class NonFungibleRes
@@ -171,17 +175,18 @@ class NonFungibleRes
 public:
 	NonFungibleRes(const std::string & _id) : id(_id), owner(0), bkowner(0) {}
 	std::string id;
-	FullSlotId  owner;
-	FullSlotId  bkowner;
+	NFROwner  owner;
+	NFROwner  bkowner;
 
 	// report if resource is "owned" by the given slot
 	// if the given slot matches the primary owner, then return 1
 	// if the given slot matches the backfill owner and the primary owner is not set return 2
+	// if owned by both backfill and an active primary, return 3
 	int is_owned(int slot_id, int sub_id) const {
 		if (owner.id == slot_id && owner.dyn_id == sub_id) return 1;
 		if (bkowner.id == slot_id && bkowner.dyn_id == sub_id) {
-			// TODO: handle the case where the primary owner is a claimed static slot?
-			if (owner.dyn_id > 0) return 3;
+			// if the NFR is backfill owned by the given slot, and *also* by any active slot
+			if (owner.dyn_id > 0 || owner.active) return 3;
 			return 2;
 		}
 		return 0;
@@ -239,7 +244,8 @@ public:
 		}
 	}
 
-	bool has_nft_conflicts(int slotid, int slotsubid);
+	void set_nft_activity(std::map<int,bool> &active_slotids_map);
+	bool has_nft_conflicts(int slotid, int slotsubid) const;
 
 		// Initiate benchmark computations benchmarks on the given resource
 	void start_benchmarks( Resource*, int &count );	
@@ -270,7 +276,7 @@ public:
 	const slotres_map_t& machres() const { return m_machres_map; }
 	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
-	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub, bool backfill);
+	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub, bool backfill, int assign_from_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub, int new_sub=0);
 	bool         DevIdMatches(const NonFungibleType & nft, int ixid, ConstraintHolder & require);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
@@ -444,9 +450,12 @@ public:
 	}
 
 	void attach( Resource* );	// Attach to the given Resource
-	bool bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
-	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id=0); // release non-fungable resource ids
-	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
+	// bind non-fungable resource ids to a slot
+	bool bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail, int donor_sub_id);
+	// release non-fungable resource ids back to parent
+	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id);
+	// check for offline changes for non-fungible resource ids
+	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id);
 
 	void publish_static(ClassAd*, const ResBag * inuse, const ResBag * broken) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA

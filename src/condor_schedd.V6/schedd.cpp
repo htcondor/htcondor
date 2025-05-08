@@ -8365,7 +8365,11 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	PROC_ID jobid;
 	jobid.cluster = jobid.proc = -1;
 
-	dprintf(D_FULLDEBUG, "Got DIRECT_ATTACH from %s\n", rsock->peer_description());
+	bool has_daemon_auth = daemonCore->Verify("DIRECT_ATTACH",
+		DAEMON, rsock->peer_addr(), rsock->getFullyQualifiedUser());
+
+	dprintf(D_FULLDEBUG, "Got DIRECT_ATTACH from %s%s\n",
+		rsock->peer_description(), has_daemon_auth ? " (daemon)" : "");
 
 	if (!getClassAd(rsock, cmd_ad)) {
 		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read command ad\n");
@@ -8395,7 +8399,9 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 			// TODO allow trusted users to match all jobs
 			//   Could use ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS
 		slot_ad.Assign(ATTR_AUTHENTICATED_IDENTITY, slot_user);
-		slot_ad.Assign(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, true);
+		if ( ! has_daemon_auth && ! param_boolean("DISABLE_DIRECT_ATTACH_IDENTITY_CHECK",false)) {
+			slot_ad.Assign(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, true);
+		}
 
 		slot_ad.LookupString(ATTR_NAME, slot_name);
 

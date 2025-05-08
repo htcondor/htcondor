@@ -84,6 +84,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	if( mach_ad ) {
 		delete mach_ad;
 	}
+	if( machine_secrets_ad ) {
+		delete machine_secrets_ad;
+	}
 	if( u_log ) {
 		delete u_log;
 	}

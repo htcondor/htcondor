@@ -19,6 +19,7 @@
 condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( test_user_mapping "test_user_mapping.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+condor_exe( test_offer_resources "test_offer_resources.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
 if( NOT BUILD_DATE )
 	GET_DATE( BUILD_DATE )

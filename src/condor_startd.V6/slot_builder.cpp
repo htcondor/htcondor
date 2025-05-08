@@ -320,7 +320,7 @@ CpuAttributes** buildCpuAttrs(
 
 	for (int i=0; i<num; i++) {
 		bool backfill = backfill_types[cap_array[i]->type_id()];
-		if ( ! cap_array[i]->bind_DevIds(m_attr, i+1, 0, backfill, failmode == BuildSlotFailureMode::Except)) {
+		if ( ! cap_array[i]->bind_DevIds(m_attr, i+1, 0, backfill, failmode == BuildSlotFailureMode::Except, 0)) {
 			// if we get here, bind_DevIds should have marked the slot as broken
 			ASSERT(cap_array[i]->is_broken());
 		}
