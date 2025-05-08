@@ -1815,7 +1815,7 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
+	r_cur->starterVacateJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
 }
 
 int

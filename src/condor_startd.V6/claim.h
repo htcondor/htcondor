@@ -240,7 +240,7 @@ public:
 	bool starterKillFamily();
 	bool starterKillSoft();
 	bool starterKillHard();
-	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
+	void starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft );
 	void starterVacateJob(bool soft);
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );

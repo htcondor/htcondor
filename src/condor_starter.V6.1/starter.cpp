@@ -233,10 +233,10 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  (CommandHandlercpp)&Starter::updateX509Proxy,
 						  "Starter::updateX509Proxy", this, WRITE );
 	daemonCore->
-		Register_Command( STARTER_HOLD_JOB,
-						  "STARTER_HOLD_JOB",
-						  (CommandHandlercpp)&Starter::remoteHoldCommand,
-						  "Starter::remoteHoldCommand", this, DAEMON );
+		Register_Command( STARTER_VACATE_JOB,
+						  "STARTER_VACATE_JOB",
+						  (CommandHandlercpp)&Starter::remoteVacateCommand,
+						  "Starter::remoteVacateCommand", this, DAEMON );
 	daemonCore->
 		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
 						  "CREATE_JOB_OWNER_SEC_SESSION",
@@ -1661,45 +1661,45 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 }
 
 /**
- * Hold Job Command (sent by startd)
- * Unlike the DC signal, this includes a hold reason and hold code.
- * Also unlike the DC signal, this _puts_ the job on hold, rather than
+ * Vacate Job Command (sent by startd)
+ * Unlike the DC signal, this includes a reason string and code.
+ * Also unlike the DC signal, this can _put_ the job on hold, rather than
  * just passively informing the JIC of the hold.
  * 
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
 int 
-Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
+Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 {
-	std::string hold_reason;
-	int hold_code;
-	int hold_subcode;
+	std::string vacate_reason;
+	int vacate_code;
+	int vacate_subcode;
 	int soft;
 
 	s->decode();
-	if( !s->get(hold_reason) ||
-		!s->get(hold_code) ||
-		!s->get(hold_subcode) ||
+	if( !s->get(vacate_reason) ||
+		!s->get(vacate_code) ||
+		!s->get(vacate_subcode) ||
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteVacateCommand()\n", s->peer_description());
 		return FALSE;
 	}
 
-	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", hold_code, hold_subcode, hold_reason.c_str());
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", vacate_code, vacate_subcode, vacate_reason.c_str());
 
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
+		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
-	if (hold_code >= CONDOR_HOLD_CODE::VacateBase) {
-		m_vacateReason = hold_reason;
-		m_vacateCode =hold_code;
-		m_vacateSubcode = hold_subcode;
+	if (vacate_code >= CONDOR_HOLD_CODE::VacateBase) {
+		m_vacateReason = vacate_reason;
+		m_vacateCode = vacate_code;
+		m_vacateSubcode = vacate_subcode;
 		if (soft) {
 			return this->RemoteShutdownGraceful(0);
 		} else {
@@ -1709,7 +1709,7 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 
 		// Put the job on hold on the remote side.
 	if( jic ) {
-		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
+		jic->holdJob(vacate_reason.c_str(), vacate_code, vacate_subcode);
 	}
 
 	if( !soft ) {

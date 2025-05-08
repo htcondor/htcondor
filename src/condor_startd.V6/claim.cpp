@@ -1870,9 +1870,9 @@ Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 	}
 	if( isActive()) {
 		if( graceful ) {
-			starterHoldJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
+			starterVacateJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
 		} else {
-			starterHoldJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
+			starterVacateJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
 		}
 	}
 		// not active, so nothing to do
@@ -1987,7 +1987,7 @@ Claim::starterKillHard( void )
 
 
 void
-Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft )
+Claim::starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft )
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
@@ -1996,7 +1996,7 @@ Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bo
 		#ifdef DONT_HOLD_EXITED_JOBS
 			if (starter->got_final_update()) {
 				// after the starter got the final update, there is no vacate time to honor
-				// and a soft holdJob does nothing, so just change the claim state here.
+				// and a soft vacateJob does nothing, so just change the claim state here.
 				changeState(CLAIM_VACATING);
 				return;
 			}
@@ -2005,11 +2005,11 @@ Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bo
 		} else {
 			timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
 		}
-		if( starter->holdJob(hold_reason,hold_code,hold_subcode,soft,timeout) ) {
+		if( starter->vacateJob(vacate_reason,vacate_code,vacate_subcode,soft,timeout) ) {
 			changeState(soft ? CLAIM_VACATING : CLAIM_KILLING);
 			return;
 		}
-		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");
+		dprintf(D_ALWAYS,"Failed to send vacate message to starter, so evicting job via signal instead.\n");
 	}
 
 	if( soft ) {
@@ -2024,7 +2024,7 @@ void
 Claim::starterVacateJob(bool soft)
 {
 	if (!c_vacate_reason.empty()) {
-		starterHoldJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, soft);
+		starterVacateJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, soft);
 	} else {
 		if (soft) {
 			starterKillSoft();
