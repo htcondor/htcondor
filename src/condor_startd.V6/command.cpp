@@ -932,6 +932,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
 	ClassAd	*req_classad = new ClassAd;
 	int cmd;
+	bool success = false; // overall success of the request_claim
 	double rank = 0;
 	double oldrank = 0;
 	std::string client_addr;
@@ -1374,9 +1375,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process
-	accept_request_claim( claim, secure_claim_id, send_claimed_ad, send_leftovers, &new_dslots );
+	success = accept_request_claim( claim, secure_claim_id, send_claimed_ad, send_leftovers, &new_dslots );
 
-	ep_event.Ad().Assign("Success", true);
+	ep_event.Ad().Assign("Success", success);
 	if (req_classad && ep_eventlog.isEnabled()) {
 		std::string tmp;
 		if (req_classad->LookupString(ATTR_USER, tmp)) {
@@ -1486,8 +1487,13 @@ accept_request_claim(
 	// it will be attached to the first d-slot when we did not claim the p-slot
 	// this second case was the usual one for creating a single d-slot for many years.
 
-	claim->rip()->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 	claim->rip()->change_state( claimed_state );
+	if (claim->rip()->state() != claimed_state) {
+		// remove claim client attrs and request info from the slot ad
+		claim->unpublish(claim->rip()->r_classad);
+		goto abort;
+	}
+	claim->rip()->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 
 	// if an array of d-slots were passed, we want to change them to claimed state also.
 	// The claim passed above may or may not be attached to the first d-slot here

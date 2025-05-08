@@ -32,6 +32,7 @@
 #include "spool_version.h"
 #include "file_transfer.h"
 #include "condor_holdcodes.h"
+#include "job_ad_instance_recording.h"
 
 BaseShadow *Shadow = NULL;
 
@@ -298,6 +299,30 @@ void startShadow( ClassAd *ad )
 	}
 
 	initShadow( ad );
+
+	// Process configuration for writing epoch history start ClassAd (i.e. historical SPAWN ad)
+	classad::References filter;
+	bool do_filter = true;
+	std::string spawn_ad_filter;
+
+	param(spawn_ad_filter, "SPAWN_JOB_ATTRS");
+
+	if (istring_view(spawn_ad_filter.c_str()) == "all") {
+		// Configured to write the full job ad to epoch history at start time
+		do_filter = false;
+	} else {
+		// Base attributes needed for 'SPAWN' ad in epoch history
+		filter.insert(ATTR_CLUSTER_ID);
+		filter.insert(ATTR_PROC_ID);
+		filter.insert(ATTR_NUM_SHADOW_STARTS);
+		filter.insert(ATTR_OWNER);
+		filter.insert(ATTR_SHADOW_BIRTHDATE);
+		// Configured attributes for 'SPAWN' ad in epoch history
+		for (auto &attr : StringTokenIterator(spawn_ad_filter)) { filter.insert(attr); }
+	}
+
+	// Generate Spawn ClassAd to write to epoch history
+	writeAdProjectionToEpoch(ad, (do_filter ? &filter : nullptr), "SPAWN");
 
 	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);

@@ -147,6 +147,13 @@ variables for the GPU runtime to use.
   are set to the names of the GPUs assigned to this job.  The job should NEVER change these,
   but they may be useful for debuggging or logging
 
+- ``_CONDOR_CREDS``
+  :index:`_CONDOR_CREDS<pair: _CONDOR_CREDS; environment variables for jobs>`
+  _CONDOR_CREDS is an environment variable that is set to the path of a directory
+  that contains any transfered tokens or x509 credentials for the job.
+  This directory is create by HTCondor and is unique to the job. If the job
+  uses no credentials, this variable will not be set.
+  
 
 Communicating with the access point via Chirp
 '''''''''''''''''''''''''''''''''''''''''''''
@@ -403,7 +410,7 @@ The entrypoint is replaced by the executable if the submit description file cont
 
       docker_override_entrypoint = True
 
-The default value is ``False`` as it is the behaviour that works well with the majority of the
+The default value is ``False`` as it is the behavior that works well with the majority of the
 docker images.
 
 When the job completes, is held, evicted, or is otherwise removed from

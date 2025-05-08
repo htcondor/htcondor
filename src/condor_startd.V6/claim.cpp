@@ -175,7 +175,8 @@ Claim::~Claim()
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
 	}
-}	
+}
+
 
 void
 Claim::scheddClosedClaim() {
@@ -329,6 +330,41 @@ Claim::publish( ClassAd* cad )
 	publishStateTimes( cad );
 
 }
+
+// remove claim attributes from the given ad but *not* from it's chained parent ad
+void
+Claim::unpublish( ClassAd* cad )
+{
+	static const char * const attrs[]{
+		ATTR_REMOTE_SCHEDD_NAME,
+		ATTR_REMOTE_USER,
+		ATTR_REMOTE_OWNER,
+		ATTR_ACCOUNTING_GROUP,
+		ATTR_CLIENT_MACHINE,
+		ATTR_CONCURRENCY_LIMITS,
+		ATTR_NUM_PIDS,
+		ATTR_REMOTE_GROUP,
+		ATTR_REMOTE_NEGOTIATING_GROUP,
+		ATTR_REMOTE_AUTOREGROUP,
+		ATTR_CGROUP_ENFORCED,
+		ATTR_JOB_ID,
+		ATTR_GLOBAL_JOB_ID,
+		ATTR_JOB_START,
+		ATTR_LAST_PERIODIC_CHECKPOINT,
+		ATTR_IMAGE_SIZE,
+		ATTR_CPUS_USAGE,
+		"WorkingCM",
+		ATTR_WANT_MATCHING,
+	};
+
+	ClassAd * parent = cad->GetChainedParentAd();
+	cad->Unchain();
+	for (auto * attr : attrs) {
+		cad->Delete(attr);
+	}
+	if (parent) cad->ChainToAd(parent);
+}
+
 
 void
 Claim::publishPreemptingClaim( ClassAd* cad )
@@ -668,6 +704,17 @@ Claim::beginClaim( void )
 	changeState( CLAIM_IDLE );
 
 	startLeaseTimer();
+}
+
+void
+Claim::clearClientInfo(void)
+{
+	// we don't delete c_jobad here because a command handler may still be using it.
+
+	c_rank = 0;
+	c_oldrank = 0;
+	delete c_client;
+	c_client = new Client();
 }
 
 /** Copy info about the client and resource request from another claim object.
