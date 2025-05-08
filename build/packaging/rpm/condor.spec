@@ -289,6 +289,7 @@ Requires: pelican >= 7.15.1
 Requires: pelican-osdf-compat >= 7.15.1
 %endif
 
+%if 0%{?rhel} != 7
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
@@ -296,6 +297,7 @@ Requires: apptainer >= 1.3.6
 %else
 # Hold back apptainer until version 1.4.1 is released
 Requires: apptainer >= 1.3.6
+%endif
 %endif
 
 %if 0%{?rhel} != 7
