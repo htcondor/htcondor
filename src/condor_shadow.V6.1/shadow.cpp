@@ -834,7 +834,7 @@ void UniShadow::checkInputFileTransfer() {
 
 	// Tracker for counts of requests for objects per protocol
 	std::map<std::string, size_t> requests;
-	if ( ! paths.empty()) { requests["CEDAR"] = paths.size(); }
+	if (! paths.empty()) { requests["CEDAR"] = paths.size(); }
 
 
 	// ENTRY EXISTS SIZE_IN_BYTES SIZE_IS_KNOWN
@@ -846,7 +846,7 @@ void UniShadow::checkInputFileTransfer() {
 
 	for( const auto & path : paths ) {
 		// Don't stat CEDAR input files if we aren't doing verification
-		if ( ! verify_inputs) { continue; }
+		if (! verify_inputs) { continue; }
 
 		std::error_code errorCode;
 
