@@ -1540,23 +1540,6 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 	} else if( requestType == RTYPE_JOB_SETUP ) {
 		dprintf( D_ZKM, "Received request for guidance about job setup.\n" );
 
-		// This should have been take care of by match-making, but for the
-		// first milestone, that has to be done by hand and might have been
-		// forgotten.  Check the slot ad to make sure the starter has the
-		// CommonFilesTransfer ability.
-		int hasCommonFilesTransfer = 0;
-		request.LookupInteger(
-			ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
-		);
-		if( hasCommonFilesTransfer < 1 ) {
-			// Put the job on hold with a request to add the requirement.
-			holdJob("Please add TARGET.HasCommonFilesTransfer to your requirements expression.", 1003, 5 );
-
-			guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
-			return GuidanceResult::Command;
-		}
-
-
 		// If the AP has decided to stage common input for this job, issue
 		// the corresponding command.
 		//
@@ -1573,6 +1556,23 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
 		} else {
+			// This should have been take care of by match-making, but for the
+			// first milestone, that has to be done by hand and might have been
+			// forgotten.  Check the slot ad to make sure the starter has the
+			// CommonFilesTransfer ability.
+			int hasCommonFilesTransfer = 0;
+			request.LookupInteger(
+				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
+			);
+			if( hasCommonFilesTransfer < 1 ) {
+				// Put the job on hold with a request to add the requirement.
+				holdJob("Please add TARGET.HasCommonFilesTransfer to your requirements expression.", 1003, 5 );
+
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+				return GuidanceResult::Command;
+			}
+
+
 			//
 			// Since we're only talking to one starter at a time, we can
 			// simply record if we've already started this conversation.
