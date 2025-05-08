@@ -456,7 +456,9 @@ DaemonCore::~DaemonCore()
 
 	for (auto &pe: pipeTable) {
 		free( pe.pipe_descrip );
+		pe.pipe_descrip = nullptr;
 		free( pe.handler_descrip );
+		pe.handler_descrip = nullptr;
 	}
 
 	t.CancelAllTimers();
