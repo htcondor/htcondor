@@ -1100,7 +1100,7 @@ JICShadow::notifyJobTermination( UserProc *user_proc )
 }
 
 // send a command with a classad payload and receive a classad payload in reply.
-ClassAd * JICShadow::sendStartdCommmand(int cmd, ClassAd & payload)
+ClassAd * JICShadow::sendStartdCommand(int cmd, ClassAd & payload)
 {
 	ASSERT(cmd != 0 && cmd != 1); // cmd 0 is update, and 1 is final update
 	if ( ! m_job_startd_update_sock) {

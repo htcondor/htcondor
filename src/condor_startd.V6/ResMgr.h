@@ -168,8 +168,6 @@ public:
 
 	// the broken id, converted to a sub_id suitable for use in an NFROwner struct
 	unsigned short int sub_id() const { return (unsigned short int)(0xFFFF - b_id); }
-	// convert back from a NFROwner dyn_id to a b_id
-	static unsigned int id_from_sub_id(unsigned int subid) { return subid - 0xFFFF; }
 
 	// ad holds arbitrary context information that correlates to the brokenness
 	// from job and Client* object of the claim for broken resources and slots

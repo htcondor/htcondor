@@ -295,7 +295,7 @@ private:
 
 		/** Send a command to the startd and get a classad reply
 		*/
-	ClassAd * sendStartdCommmand(int cmd, ClassAd & payload);
+	ClassAd * sendStartdCommand(int cmd, ClassAd & payload);
 
 		/** Read all the relevent attributes out of the job ad and
 			decide if we need to transfer files.  If so, instantiate a
