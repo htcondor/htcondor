@@ -157,6 +157,31 @@ FileTransferFunctions::handleOneCommand(
             );
             break;
 
+        case TransferCommand::Mkdir: {
+            dprintf( D_ALWAYS, "FileTransferFunctions: making directory '%s'.\n", fileName.c_str() );
+
+            // Arguably, this stanza should be moved into a new switch, also on
+            // the command but immediately prior to this one, that does all the
+            // (protocol) reads from the wire.
+            int raw = (int)NULL_FILE_PERMISSIONS;
+            if(! sock->get(raw)) {
+                dprintf( D_ALWAYS, "FileTransferFunctions: failed to get() directory mode, aborting.\n" );
+                return false;
+            }
+            condor_mode_t file_mode = (condor_mode_t)raw;
+
+            // Don't create directories with mode 0000!
+            if( file_mode == NULL_FILE_PERMISSIONS ) {
+                file_mode = (condor_mode_t) 0700;
+            }
+
+            mode_t old_umask = umask(0);
+            // Note the distinct lack of error checking and willingness to
+            // remove a file and replace it with a directory.
+            mkdir(fileName.c_str(), (mode_t)file_mode);
+            umask(old_umask);
+            } break;
+
         default:
             dprintf( D_ALWAYS, "FileTransferFunctions: command %d not recognized\n", static_cast<int>(command) );
             break;
