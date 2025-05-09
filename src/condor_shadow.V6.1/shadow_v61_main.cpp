@@ -41,7 +41,7 @@ class InvokeTheGlobalDestructor {
 		InvokeTheGlobalDestructor(BaseShadow * & bsp) : ptr(bsp) { }
 		~InvokeTheGlobalDestructor() {
 			if( ptr != NULL ) {
-				dprintf( D_ALWAYS, "Calling ~BaseShadow()...\n" );
+				dprintf( D_ZKM, "Calling ~BaseShadow()...\n" );
 				delete ptr;
 			}
 		}

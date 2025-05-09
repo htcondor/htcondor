@@ -392,7 +392,7 @@ convertToStagingDirectory(
 				ec
 			);
 			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
+				dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
 			continue;
@@ -403,7 +403,7 @@ convertToStagingDirectory(
 			ec
 		);
 		if( ec.value() != 0 ) {
-			dprintf( D_ALWAYS, "Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
+			dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
 			return false;
 		}
 	}
@@ -491,9 +491,9 @@ mapContentsOfDirectoryInto(
 	}
 
 	for( const auto & entry : rdi ) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
+		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
 		auto relative_path = entry.path().lexically_relative(location);
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
+		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
@@ -515,7 +515,7 @@ mapContentsOfDirectoryInto(
 
 			continue;
 		} else {
-			dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
+			dprintf( D_ZKM, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
 
 			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
@@ -566,10 +566,10 @@ Starter::handleJobSetupCommand(
 
 		return false;
 	} else {
-		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+		dprintf( D_ZKM, "Received the following guidance: '%s'\n", command.c_str() );
 
 		if( command == COMMAND_CARRY_ON ) {
-			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
+			dprintf( D_ZKM, "Carrying on according to guidance...\n" );
 
 			return false;
 		} else if( command == COMMAND_RETRY_REQUEST ) {
@@ -609,28 +609,28 @@ Starter::handleJobSetupCommand(
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_COMMON_INPUT_FILES );
 				return false;
 			}
-			dprintf( D_ALWAYS, "Will stage common input files '%s'\n", commonInputFiles.c_str() );
+			dprintf( D_ZKM, "Will stage common input files '%s'\n", commonInputFiles.c_str() );
 
 			std::string cifName;
 			if(! guidance.LookupString( ATTR_NAME, cifName )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_NAME );
 				return false;
 			}
-			dprintf( D_ALWAYS, "Will stage common input files as '%s'\n", cifName.c_str() );
+			dprintf( D_ZKM, "Will stage common input files as '%s'\n", cifName.c_str() );
 
 			std::string transferSocket;
 			if(! guidance.LookupString( ATTR_TRANSFER_SOCKET, transferSocket )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_TRANSFER_SOCKET );
 				return false;
 			}
-			dprintf( D_ALWAYS, "Will connect to transfer socket '%s'\n", transferSocket.c_str() );
+			dprintf( D_ZKM, "Will connect to transfer socket '%s'\n", transferSocket.c_str() );
 
 			std:: string transferKey;
 			if(! guidance.LookupString( ATTR_TRANSFER_KEY, transferKey )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_TRANSFER_KEY );
 				return false;
 			}
-			// dprintf( D_ALWAYS, "Will send transfer key '%s'\n", transferKey.c_str() );
+			// dprintf( D_ZKM, "Will send transfer key '%s'\n", transferKey.c_str() );
 
 			//
 			// Construct the new FileTransfer object.
@@ -726,7 +726,7 @@ Starter::handleJobSetupCommand(
 			std::filesystem::path location(stagingDir);
 			// s->jic->getCommonFilesLocation( cifName, location );
 
-			dprintf( D_ALWAYS, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
+			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
 			bool result = mapContentsOfDirectoryInto( location, sandbox );
