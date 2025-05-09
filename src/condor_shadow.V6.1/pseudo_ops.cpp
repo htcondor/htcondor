@@ -1348,6 +1348,11 @@ UniShadow::start_common_input_conversation(
 				} break;
 
 			case SingleProviderSyndicate::READY:
+				// For testing purposes only.
+				// guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+				// guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+				// request = co_yield guidance;
+
 				// Map the common files into the sandbox.
 				guidance = do_wiring_up(message, cifName);
 				request = co_yield guidance;
