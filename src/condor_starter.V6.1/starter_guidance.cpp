@@ -219,6 +219,31 @@ Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 }
 
 
+void
+Starter::requestGuidanceCommandJobSetup(
+	Starter * s, const ClassAd & context,
+	std::function<void(void)> continue_conversation
+) {
+	ClassAd guidance;
+	ClassAd request(context);
+	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
+	request.InsertAttr(ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION);
+
+	GuidanceResult rv = GuidanceResult::Invalid;
+	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
+		if( rv == GuidanceResult::Command ) {
+			auto lambda = [=] (const ClassAd & c) -> void { requestGuidanceCommandJobSetup(s, c, continue_conversation); };
+			if( handleJobSetupCommand( s, guidance, lambda ) ) { return; }
+		} else {
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+		}
+	}
+
+	// Carry on.
+	s->jic->resetInputFileCatalog();
+	continue_conversation();
+}
+
 bool
 Starter::handleJobEnvironmentCommand(
   Starter * s,
@@ -247,15 +272,34 @@ Starter::handleJobEnvironmentCommand(
 		} else if( command == COMMAND_JOB_SETUP ) {
 			ClassAd context;
 			context.InsertAttr( ATTR_JOB_ENVIRONMENT_READY, true );
-			s->just_the_setup_commands = true;
-			requestGuidanceSetupJobEnvironment(s, context);
-			s->just_the_setup_commands = false;
 
-			// Before we do anything else, reset the file catalog of the
-			// object that we'll be using for output transfer.
-			s->jic->resetInputFileCatalog();
+			// We can't just call requestGuidanceSetupJobEnvironment() here,
+			// because it assumes that when handleJobSetupCommand() returns
+			// false (from COMMAND_CARRY_ON), it should call
+			// setupJobEnvironment(), which the starter has already done (and
+			// indeed, may be further up the call chain).  That can be hacked
+			// around, but because of COMMAND_RETRY_REQUEST, this case
+			// must return (back into the event loop) without doing anything
+			// else -- implying that the hack would have to also involve
+			// changing carrying-on to do something else.
+			//
+			// Or we could register a zero-second timer call to a variant of
+			// requestGuidanceSetupJobEnvironment() that does the right thing
+			// (call s->jic->resetInputFileCatalog() and then
+			// continue_conversation() before returning.)
 
-			continue_conversation();
+			daemonCore->Register_Timer(
+				0, 0,
+				[=] (int /* timerID */) -> void {
+					ClassAd context;
+					context.InsertAttr( ATTR_JOB_ENVIRONMENT_READY, true );
+					requestGuidanceCommandJobSetup(
+						s, context, continue_conversation
+					);
+				},
+				"COMMAND_JOB_SETUP"
+			);
+
 			return true;
 		} else if( command == COMMAND_RETRY_TRANSFER ) {
 			dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
@@ -783,8 +827,6 @@ Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & contex
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
-
-    if( s->just_the_setup_commands ) { return; }
 
 	// Carry on.
 	s->jic->setupJobEnvironment();

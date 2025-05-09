@@ -170,11 +170,12 @@ public:
 
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
-	static void requestGuidanceJobEnvironmentReady( Starter * s );
 
+	static void requestGuidanceJobEnvironmentReady( Starter * s );
 	static void requestGuidanceJobEnvironmentUnready( Starter * s );
 
 	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
+	static void requestGuidanceCommandJobSetup( Starter * s, const ClassAd & context, std::function<void(void)> continue_conversation );
 
 		/**
 		 *
@@ -385,8 +386,6 @@ protected:
 
 	bool recorded_job_exit_status{false};
 	int job_exit_status;
-
-	bool just_the_setup_commands {false};
 
 private:
 
