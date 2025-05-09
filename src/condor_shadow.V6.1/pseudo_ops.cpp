@@ -1233,7 +1233,7 @@ UniShadow::start_common_input_conversation(
 						// Consider replacing this with a call to evictJob().
 						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 						this->jobAd->Assign(ATTR_VACATE_REASON, "Starter sent malformed reply when asked to stage common files." );
-						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 1);
 						remRes->setExitReason(JOB_SHOULD_REQUEUE);
 						remRes->killStarter(false);
@@ -1267,12 +1267,12 @@ UniShadow::start_common_input_conversation(
 						// timer) call to evictJob().
 						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
-						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
 						remRes->setExitReason(JOB_SHOULD_REQUEUE);
 						remRes->killStarter(false);
 					} else {
-						holdJob( "Failed to transfer common files.", 1003, 3 );
+						holdJob( "Failed to transfer common files.", CONDOR_HOLD_CODE::JobNotStarted, 3 );
 					}
 
 					guidance.Clear();
@@ -1290,7 +1290,7 @@ UniShadow::start_common_input_conversation(
 					// timer) call to evictJob().
 					this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 					this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
-					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
 					remRes->setExitReason(JOB_SHOULD_REQUEUE);
 					remRes->killStarter(false);
@@ -1359,7 +1359,7 @@ UniShadow::start_common_input_conversation(
 					// timer) call to evictJob().
 					this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 					this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
-					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, 1003);
+					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
 					remRes->setExitReason(JOB_SHOULD_REQUEUE);
 					remRes->killStarter(false);
@@ -1552,7 +1552,9 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			holdJob( "Unable to determine name for common input files, can't run job.", 1003, 4 );
+			holdJob( "Unable to determine name for common input files, can't run job.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
 		} else {
