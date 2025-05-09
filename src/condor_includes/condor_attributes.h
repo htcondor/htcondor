@@ -270,6 +270,7 @@
 #define ATTR_MYPROXY_PASSWORD  "MyProxyPassword"
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
+#define ATTR_HAS_COMMON_FILES_TRANSFER  "HasCommonFilesTransfer"
 #define ATTR_HAS_CONTAINER  "HasContainer"
 #define ATTR_HAS_DOCKER  "HasDocker"
 #define ATTR_HAS_DOCKER_URL  "HasDockerURL"
