@@ -96,7 +96,7 @@ public:
 	virtual ~CanonicalMapEntry();
 	virtual void clear() {};
 	virtual bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon) = 0;
-	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes) const = 0;
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes, size_t &regexps) const = 0;
 
 protected:
 	friend class MapFile;
@@ -113,8 +113,9 @@ public:
 	virtual void dump(FILE * fp) {
 		fprintf(fp, "   REGEX { /<compiled_regex>/%x %s }\n", re_options, canonicalization);
 	}
-	virtual void memory_size(size_t &allocs, size_t &structs, size_t &/*hashes*/) const {
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &/*hashes*/, size_t &regexps) const {
 		++allocs;
+		++regexps;
 		structs += sizeof(*this);
 		if (this->re) { 
 			allocs += 1;
@@ -145,7 +146,7 @@ public:
 		}
 		fprintf(fp, "   } # end HASH\n");
 	}
-	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes) const {
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes, size_t &/*regexps*/) const {
 		allocs++;
 		structs += sizeof(*this);
 		if (this->hm) {
@@ -189,7 +190,7 @@ public:
 			}
 		}
 	}
-	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes) const {
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes, size_t &/*regexps*/) const {
 		++allocs;
 		++structs += sizeof(*this);
 
@@ -257,7 +258,7 @@ int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 		++cAllocs; cbStructs += sizeof(*list); // account for method
 		while (item) {
 			++cEntries; // account for list item
-			item->memory_size(cAllocs, cbStructs, cHash);
+			item->memory_size(cAllocs, cbStructs, cHash, cRegex);
 			item = item->next;
 		}
 	}
