@@ -68,6 +68,7 @@ file_lock.cpp
 FileTransferControlBlock.cpp
 filename_tools.cpp
 get_random_num.cpp
+guidance.cpp
 HashTable.cpp
 HashTable.h
 iso_dates.cpp
@@ -80,6 +81,8 @@ read_user_log_state.cpp
 read_user_log_state.h
 setenv.cpp
 setenv.h
+single_provider_syndicate.cpp
+single_provider_syndicate.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp

@@ -22,6 +22,10 @@ import os
 import subprocess
 import re
 
+from .try_os_set import (
+    try_os_setegid,
+    try_os_seteuid,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -33,6 +37,7 @@ def run_command(
     timeout: int = 60,
     echo: bool = False,
     suppress: bool = False,
+    as_user: str = None,
 ) -> subprocess.CompletedProcess:
     """
     Execute a command.
@@ -62,6 +67,11 @@ def run_command(
 
     logger.debug("About to run command: {}".format(" ".join(args)))
 
+
+    if as_user is not None:
+        egid = try_os_setegid(name=as_user)
+        euid = try_os_seteuid(name=as_user)
+
     p = subprocess.run(
         args,
         timeout=timeout,
@@ -72,6 +82,11 @@ def run_command(
     )
     p.stdout = p.stdout.rstrip()
     p.stderr = p.stderr.rstrip()
+
+    if as_user is not None:
+        try_os_setegid(number=egid)
+        try_os_seteuid(number=euid)
+
 
     msg_lines = ["Ran command: {}".format(" ".join(p.args))]
     if not suppress:

@@ -166,6 +166,8 @@ public:
 
 	static void requestGuidanceJobEnvironmentUnready( Starter * s );
 
+	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
+
 		/**
 		 *
 		 *
@@ -356,6 +358,12 @@ protected:
 		std::function<void(void)> continue_conversation
 	);
 
+	static bool handleJobSetupCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
+	);
+
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
 	// we want to report *after* we finish transfer of FailureFiles
 	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
@@ -369,6 +377,9 @@ protected:
 
 	bool recorded_job_exit_status{false};
 	int job_exit_status;
+
+	bool just_the_setup_commands {false};
+
 private:
 
 		// // // // // // // //

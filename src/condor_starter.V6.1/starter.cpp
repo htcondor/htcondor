@@ -59,8 +59,11 @@
 #endif
 #include "authentication.h"
 #include "to_string_si_units.h"
-#include "guidance.h"
 #include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+
 
 extern void main_shutdown_fast();
 
@@ -272,12 +275,16 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	sysapi_set_resource_limits(jic->getStackSize());
 	set_priv (rl_p);
 
-		// Now, ask our JobInfoCommunicator to setup the environment
-		// where our job is going to execute.  This might include
-		// doing file transfer stuff, who knows.  Whenever the JIC is
-		// done, it'll call our jobEnvironmentReady() method so we can
-		// actually spawn the job.
-	jic->setupJobEnvironment();
+
+	//
+	// Now ask the shadow what to do.  If we carry on, we'll call
+	// jic->setupJobEnvironment(), which will eventually call us
+	// back with jobEnvironmentReady() when it's done, which will
+	// (eventually) spawn the job.
+	//
+	ClassAd context;
+	requestGuidanceSetupJobEnvironment(this, context);
+
 	return true;
 }
 
