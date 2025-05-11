@@ -1563,8 +1563,13 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		} else {
 			// This should have been take care of by match-making, but for the
 			// first milestone, that has to be done by hand and might have been
-			// forgotten.  Check the slot ad to make sure the starter has the
-			// CommonFilesTransfer ability.
+			// forgotten.  I'd like to check the slot ad, but the shadow doesn't
+			// have access to that; instead, the starter will send along the
+			// version number in the request ad.
+			//
+			// This doesn't help if the starter is too old to even ask for
+			// guidance, but there's nothing we can do about that if the
+			// shadow doesn't have access to the slot ad.
 			int hasCommonFilesTransfer = 0;
 			request.LookupInteger(
 				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
