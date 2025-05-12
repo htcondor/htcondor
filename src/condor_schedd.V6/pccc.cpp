@@ -608,6 +608,15 @@ int accounting_single( PROC_ID nowJob ) {
 	pcccWants( nowJob, matchH );
 	pcccWants( nowJob, matchI );
 
+	scheduler.DelMrec(matchA);
+	scheduler.DelMrec(matchB);
+	scheduler.DelMrec(matchC);
+	scheduler.DelMrec(matchD);
+	scheduler.DelMrec(matchE);
+	scheduler.DelMrec(matchF);
+	scheduler.DelMrec(matchG);
+	scheduler.DelMrec(matchH);
+	scheduler.DelMrec(matchI);
 	return 0;
 }
 
@@ -653,6 +662,9 @@ int accounting_multiple( PROC_ID jobA, PROC_ID jobB, PROC_ID jobC ) {
 	pcccGot( jobC, matchC );
 	if(! pcccSatisfied( jobC )) { return __LINE__; }
 
+	scheduler.DelMrec(matchA);
+	scheduler.DelMrec(matchB);
+	scheduler.DelMrec(matchC);
 	return 0;
 }
 
@@ -704,5 +716,9 @@ bool pcccTest() {
 	// structures (and verify that match[A-F] aren't in there).
 
 	dprintf( D_ALWAYS, "pcccTest(): Succeeded.\n" );
+	for (const auto &[procid, callback]: pcccTimerSelfMap) {
+		delete callback;
+	}
+	pcccTimerSelfMap.clear();
 	return true;
 }
