@@ -171,7 +171,7 @@ SingleProviderSyndicate::acquire( std::string & message ) {
             }
             auto diff = std::chrono::file_clock::now() - then;
             if( diff >= 300s ) {
-                dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): lease expired.\n" );
+                dprintf( D_FULLDEBUG, "SingleProviderSyndicate::acquire(): lease expired.\n" );
 
                 //
                 // We can't just remove and re-create the keyfile, because
@@ -344,7 +344,7 @@ SingleProviderSyndicate::ready( const std::string & message ) {
 bool
 SingleProviderSyndicate::release() {
     std::error_code ec;
-    dprintf( D_ALWAYS, "SingleProviderSyndicate::release()\n" );
+    dprintf( D_ZKM, "SingleProviderSyndicate::release()\n" );
 
     if(! lockholder) {
         return cleanup();
@@ -406,7 +406,7 @@ SingleProviderSyndicate::release() {
 bool
 SingleProviderSyndicate::cleanup() {
     std::error_code ec;
-    dprintf( D_ALWAYS, "SingleProviderSyndicate::cleanup()\n" );
+    dprintf( D_ZKM, "SingleProviderSyndicate::cleanup()\n" );
 
 
     TemporaryPrivSentry tps(PRIV_CONDOR);

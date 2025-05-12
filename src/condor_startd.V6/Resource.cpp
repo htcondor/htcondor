@@ -165,16 +165,16 @@ const char * SlotType::type_param(const char * name)
 
 // these override the param call, looking the key up first in the per-slot-type config table
 // and then in the global param table if it is not found.
-char * Resource::param(const char * name) {
+char * Resource::param(const char * name) const {
 	if (r_attr) return SlotType::param(r_attr, name);
-	return param(name);
+	return ::param(name);
 }
-const char * Resource::param(std::string& out, const char * name) {
+const char * Resource::param(std::string& out, const char * name) const {
 	if (r_attr) return SlotType::param(out, r_attr, name);
 	if ( ! ::param(out, name)) return NULL;
 	return out.c_str();
 }
-const char * Resource::param(std::string& out, const char * name, const char * def) {
+const char * Resource::param(std::string& out, const char * name, const char * def) const {
 	const char * val = NULL;
 	if (r_attr) val = SlotType::param(out, r_attr, name);
 	else if (::param(out, name)) val = out.c_str();
@@ -1068,7 +1068,7 @@ Resource::findClaimByGlobalJobId( const char* id )
 
 
 bool
-Resource::claimIsActive( void )
+Resource::claimIsActive( void ) const
 {
 		// for now, just check r_cur.  once we've got multiple
 		// claims, we can walk through our list(s).
@@ -1372,7 +1372,8 @@ Resource::eval_state( void )
 	//PRAGMA_REMIND("tj: revisit this with SlotEval?")
 	resmgr->publishSlotAttrs( r_classad );
 
-	r_state->eval_policy();
+	// evaluate policy expressions and change state appropriately
+	r_state->eval_policy_periodic();
 };
 
 
@@ -1814,11 +1815,11 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
+	r_cur->starterVacateJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
 }
 
 int
-Resource::wants_hold( void )
+Resource::wants_hold( void ) const
 {
 	int want_hold = eval_expr("WANT_HOLD",false,false);
 
@@ -1835,7 +1836,7 @@ Resource::wants_hold( void )
 
 
 int
-Resource::wants_vacate( void )
+Resource::wants_vacate( void ) const
 {
 	bool want_vacate = false;
 	bool unknown = true;
@@ -1900,7 +1901,7 @@ Resource::wants_vacate( void )
 
 
 int
-Resource::wants_suspend( void )
+Resource::wants_suspend( void ) const
 {
 	bool want_suspend;
 	bool unknown = true;
@@ -1931,7 +1932,7 @@ Resource::wants_suspend( void )
 
 
 int
-Resource::wants_pckpt( void )
+Resource::wants_pckpt( void ) const
 {
 	switch( r_cur->universe() ) {
 		case CONDOR_UNIVERSE_VANILLA: {
@@ -1959,26 +1960,26 @@ Resource::wants_pckpt( void )
 	return want_pckpt;
 }
 
-int
-Resource::hasPreemptingClaim()
+bool
+Resource::hasPreemptingClaim() const
 {
-	return (r_pre && r_pre->requestStream());
+	return (r_pre && r_pre->hasRequestStream());
 }
 
-int
-Resource::mayUnretire()
+bool
+Resource::mayUnretire() const
 {
 	if(!isDraining() && r_cur && r_cur->mayUnretire()) {
 		if(!hasPreemptingClaim()) {
 			// preempting claim has gone away
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 bool
-Resource::inRetirement()
+Resource::inRetirement() const
 {
 	return hasPreemptingClaim() || !mayUnretire();
 }
@@ -2010,13 +2011,13 @@ Resource::curClaimIsClosing()
 #endif
 
 bool
-Resource::isDraining()
+Resource::isDraining() const
 {
 	return resmgr->isSlotDraining(this);
 }
 
 bool
-Resource::claimWorklifeExpired()
+Resource::claimWorklifeExpired() const
 {
 	//This function evaulates to true if the claim has been alive
 	//for longer than the CLAIM_WORKLIFE expression dictates.
@@ -2042,7 +2043,7 @@ Resource::claimWorklifeExpired()
 }
 
 time_t
-Resource::evalRetirementRemaining()
+Resource::evalRetirementRemaining() const
 {
 	int MaxJobRetirementTime = 0;
 	int JobMaxJobRetirementTime = 0;
@@ -2096,7 +2097,7 @@ Resource::evalRetirementRemaining()
 }
 
 bool
-Resource::retirementExpired()
+Resource::retirementExpired() const
 {
 	//
 	// GT#6697: Allow job policy to be effective while draining.  Only
@@ -2156,7 +2157,7 @@ Resource::retirementExpired()
 }
 
 time_t
-Resource::evalMaxVacateTime()
+Resource::evalMaxVacateTime() const
 {
 	time_t MaxVacateTime = 0;
 
@@ -2219,7 +2220,7 @@ Resource::evalMaxVacateTime()
 
 // returns -1 on undefined, 0 on false, 1 on true
 int
-Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
+Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla ) const
 {
 	int tmp;
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
@@ -2293,35 +2294,35 @@ Resource::evaluateHibernate( std::string &state_str ) const
 
 
 int
-Resource::eval_kill()
+Resource::eval_kill() const
 {
 	return eval_expr( "KILL", false, true );
 }
 
 
 int
-Resource::eval_preempt( void )
+Resource::eval_preempt( void ) const
 {
 	return eval_expr( "PREEMPT", false, true );
 }
 
 
 int
-Resource::eval_suspend( void )
+Resource::eval_suspend( void ) const
 {
 	return eval_expr( "SUSPEND", false, true );
 }
 
 
 int
-Resource::eval_continue( void )
+Resource::eval_continue( void ) const
 {
 	return (r_suspended_by_command)?false:eval_expr( "CONTINUE", false, true );
 }
 
 
 int
-Resource::eval_is_owner( void )
+Resource::eval_is_owner( void ) const
 {
 	// fatal if undefined, don't check vanilla
 	return eval_expr( ATTR_IS_OWNER, true, false );
@@ -2329,7 +2330,7 @@ Resource::eval_is_owner( void )
 
 
 int
-Resource::eval_start( void )
+Resource::eval_start( void ) const
 {
 	// -1 if undefined, don't check vanilla
 	return eval_expr( "START", false, false );
@@ -2366,7 +2367,7 @@ Resource::eval_cpu_busy( void )
 #if HAVE_BACKFILL
 
 int
-Resource::eval_start_backfill( void )
+Resource::eval_start_backfill( void ) const
 {
 	int rval = 0;
 	rval = eval_expr( "START_BACKFILL", false, false );
@@ -2379,7 +2380,7 @@ Resource::eval_start_backfill( void )
 
 
 int
-Resource::eval_evict_backfill( void )
+Resource::eval_evict_backfill( void ) const
 {
 		// return -1 on undefined (not fatal), don't check vanilla
 	return eval_expr( "EVICT_BACKFILL", false, false );

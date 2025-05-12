@@ -97,9 +97,9 @@ public:
 	~Resource();
 
 		// override param by slot_type
-	char * param(const char * name);
-	const char * param(std::string& out, const char * name);
-	const char * param(std::string& out, const char * name, const char * def);
+	char * param(const char * name) const;
+	const char * param(std::string& out, const char * name) const;
+	const char * param(std::string& out, const char * name, const char * def) const;
 
 		// Public methods that can be called from command handlers
 	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode);	// Gracefully finish job and release claim
@@ -130,7 +130,7 @@ public:
 #endif
 
 		// True if this slot is draining
-	bool isDraining();
+	bool isDraining() const;
 
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
@@ -174,7 +174,7 @@ public:
 	bool	hasOppClaim( void );
 	bool	hasAnyClaim( void );
 	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
-	bool	isSuspendedForCOD( void ) {return r_suspended_for_cod;};
+	bool	isSuspendedForCOD( void ) const {return r_suspended_for_cod;};
 	void	hackLoadForCOD( void );
 
 	void	suspendForCOD( void );
@@ -265,7 +265,7 @@ public:
 		// Return a pointer to the Claim object with the given GlobalJobId
 	Claim*	findClaimByGlobalJobId( const char* id );
 
-	bool	claimIsActive( void ); 
+	bool	claimIsActive( void ) const;
 
 	Claim*	newCODClaim( int lease_duration );
 
@@ -353,16 +353,16 @@ public:
 	int	    benchmarks_finished( void );
 
  		// Helper functions to evaluate resource expressions
-	int     wants_hold( void );         // Default's to FALSE on undefined
-	int		wants_vacate( void );		// EXCEPT's on undefined
-	int		wants_suspend( void );		// EXCEPT's on undefined
-	int		wants_pckpt( void );		// Defaults to FALSE on undefined
-	int		eval_kill( void );			// EXCEPT's on undefined
-	int		eval_preempt( void );		// EXCEPT's on undefined
-	int		eval_suspend( void );		// EXCEPT's on undefined
-	int		eval_continue( void );		// EXCEPT's on undefined
-	int		eval_is_owner( void );		// EXCEPT's on undefined
-	int		eval_start( void );			// returns -1 on undefined
+	int     wants_hold( void ) const;   // Default's to FALSE on undefined
+	int		wants_vacate( void ) const; // EXCEPT's on undefined
+	int		wants_suspend( void ) const;// EXCEPT's on undefined
+	int		wants_pckpt( void ) const;  // Defaults to FALSE on undefined
+	int		eval_kill( void ) const;    // EXCEPT's on undefined
+	int		eval_preempt( void ) const; // EXCEPT's on undefined
+	int		eval_suspend( void ) const; // EXCEPT's on undefined
+	int		eval_continue( void ) const;// EXCEPT's on undefined
+	int		eval_is_owner( void ) const;// EXCEPT's on undefined
+	int		eval_start( void ) const;   // returns -1 on undefined
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
@@ -372,15 +372,15 @@ public:
 	const char * analyze_match(std::string & buf, ClassAd* request_ad, bool slot_requirements, bool job_requirements);
 
 #if HAVE_BACKFILL
-	int		eval_start_backfill( void ); 
-	int		eval_evict_backfill( void ); 
+	int		eval_start_backfill( void ) const;
+	int		eval_evict_backfill( void ) const;
 	bool	start_backfill( void );
 	bool	softkill_backfill( void );
 	bool	hardkill_backfill( void );
 #endif /* HAVE_BACKFILL */
 
 #if HAVE_JOB_HOOKS
-	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
+	bool	isCurrentlyFetching( void ) const { return m_currently_fetching; }
 	void	tryFetchWork( int timerID = -1 );
 	void	createOrUpdateFetchClaim( ClassAd* job_ad, double rank = 0 );
 	bool	spawnFetchedWork( void );
@@ -398,13 +398,13 @@ public:
 	bool	evaluateHibernate( std::string &state ) const;
 #endif /* HAVE_HIBERNATION */
 
-	time_t  evalMaxVacateTime();
-	bool    claimWorklifeExpired();
-	bool    retirementExpired();
-	time_t  evalRetirementRemaining();
-	int		mayUnretire( void );
-	bool    inRetirement( void );
-	int		hasPreemptingClaim( void );
+	time_t  evalMaxVacateTime() const;
+	bool    claimWorklifeExpired() const;
+	bool    retirementExpired() const;
+	time_t  evalRetirementRemaining() const;
+	bool	mayUnretire( void ) const;
+	bool    inRetirement( void ) const;
+	bool	hasPreemptingClaim( void ) const;
 	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
 	void    setPreemptIsTrue();           //records that PREEMPT evaluated to True
 	const ExprTree * getDrainingExpr();
@@ -533,7 +533,7 @@ private:
 	double	r_pre_cod_condor_load = 0.0;
 	void 	startTimerToEndCODLoadHack();
 	void	endCODLoadHack( int timerID = -1 );
-	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
+	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla ) const;
 
 	std::string m_execute_dir;
 	std::string m_execute_partition_id;

@@ -2,7 +2,7 @@ import os
 
 
 def try_os_setegid(number=None, name=None):
-    # This can happen if we're calling this function with is previous result.
+    # This can happen if we're calling this function with its previous result.
     if number is None and name is None:
         return None
 

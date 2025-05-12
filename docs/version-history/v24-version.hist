@@ -1,5 +1,13 @@
 *** 24.9.0 features
 
+- Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
+  :jira:`3024`
+
+- Improved logging on the EP when a slot cannot be claimed because the :ad-attr:`START`
+  expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements`
+  expression will be written to the ``StartLog``.
+  :jira:`3033`
+
 *** 24.9.0 bugs
 
 *** 24.0.9 bugs

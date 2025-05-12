@@ -888,6 +888,7 @@
 #define ATTR_TRANSFER_INPUT_FILES  "TransferInput"
 #define ATTR_TRANSFER_INPUT_REMAPS  "TransferInputRemaps"
 #define ATTR_TRANSFER_INPUT_STATS  "TransferInputStats"
+#define ATTR_TRANSFER_INPUT_OBJECT_COUNTS  "TransferInputFileCounts"
 #define ATTR_TRANSFER_Q_URL_IN_LIST "TransferQueueInputList"
 #define ATTR_TRANSFER_PLUGINS  "TransferPlugins"
 #define ATTR_WANT_TRANSFER_PLUGIN_METHODS  "WantTransferPluginMethods"

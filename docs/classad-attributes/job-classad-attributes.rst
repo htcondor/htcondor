@@ -1771,7 +1771,7 @@ all attributes.
     this attribute. 
 
 :classad-attribute-def:`TransferInputStats`
-    The value of this classad attribute is a nested classad, whose values
+    The value of this ClassAd attribute is a nested ClassAd, whose values
     contain several attributes about HTCondor-managed file transfer.
     These refer to the transfer of the sandbox from the AP submit point
     to the worker node, or the EP.
@@ -1780,12 +1780,20 @@ all attributes.
     built-in file transfer method, or the prefix of the file transfer
     plugin method (such as HTTP).  For each of these types of file transfer
     there is an attribute with that prefix whose body is "FilesCount", 
-    the number of files transfered by that method during the last
+    the number of files transferred by that method during the last
     transfer, and "FilesCountTotal", the sum of FilesCount over all
     execution attempts.  In addition, for container universe jobs, there
     is a sub-attribute ```ContainerDuration```, the number of seconds
-    it took to transfer the container image (if transfered), and
+    it took to transfer the container image (if transferred), and
     ```ContainerDurationTotal```, the sum over all execution attempts.
+
+:classad-attribute-def:`TransferInputFileCounts`
+    A nested ClassAd value containing the count of files/objects to be
+    transferred for input file transfer by protocol/scheme.
+
+    .. code:: condor-classad
+
+        TransferInputFileCounts = [ CEDAR = 10; OSDF = 3; HTTPS = 5; ]
 
 :classad-attribute-def:`TransferOut`
     An attribute utilized only for grid universe jobs. The default value

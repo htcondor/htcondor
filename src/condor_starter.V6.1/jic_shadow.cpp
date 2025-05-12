@@ -3639,8 +3639,8 @@ JICShadow::_remove_files_from_output() {
 
 bool
 JICShadow::transferCommonInput( ClassAd * setupAd ) {
-	dprintf( D_ALWAYS, "transferCommonInput(): enter\n" );
-	dPrintAd( D_ALWAYS, * setupAd );
+	dprintf( D_ZKM, "transferCommonInput(): enter\n" );
+	dPrintAd( D_ZKM, * setupAd );
 
 	FileTransfer stagingFTO;
 
@@ -3653,7 +3653,7 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 
 	int rval = stagingFTO.Init( setupAd, false, PRIV_USER );
 	if( rval == 0 ) {
-	    dprintf( D_ALWAYS, "stagingFTO.Init() failed (%d).\n", rval );
+	    dprintf( D_ALWAYS, "Failed to initialize file-transfer object for common-files transfer (%d).\n", rval );
 	    return false;
 	}
 
@@ -3669,7 +3669,7 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 	// becomes an interesting problem, probably solved with coroutines.
 	rval = stagingFTO.DownloadFiles();
 
-	dprintf( D_ALWAYS, "transferCommonInput(): exit\n" );
+	dprintf( D_ZKM, "transferCommonInput(): exit\n" );
 	return (rval == 1);
 }
 

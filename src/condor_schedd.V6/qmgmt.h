@@ -215,6 +215,11 @@ public:
 		}
 		return entry_type_unknown;
 	}
+	static bool IsJobId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_job; }
+	static bool IsClusterId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_cluster; }
+	static bool IsJobSetId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_jobset; }
+	static bool IsUserRecId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_userrec; }
+
 	void CheckJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
 	bool IsType(char _type) const { return entry_type == _type; }
 	bool IsJob() const { return IsType(entry_type_job); }

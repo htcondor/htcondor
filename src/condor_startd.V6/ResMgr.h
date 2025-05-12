@@ -412,16 +412,16 @@ public:
 	int nextId( void ) { return id_disp->next(); };
 
 		// returns true if specified slot is draining
-	bool isSlotDraining(Resource *rip) const;
+	bool isSlotDraining(const Resource *rip) const;
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
-	time_t gracefulDrainingTimeRemaining(Resource *rip);
+	time_t gracefulDrainingTimeRemaining(const Resource *rip);
 
 	time_t gracefulDrainingTimeRemaining();
 
 		// return true if all slots are in drained state
-	bool drainingIsComplete(Resource *rip);
+	bool drainingIsComplete(const Resource *rip) const;
 
 		// return true if draining was canceled by this function
 	bool considerResumingAfterDraining();

@@ -108,6 +108,7 @@ public:
 	void alive( bool alive_from_schedd = false );	// Process a keep alive for this claim
 
 	void publish( ClassAd* );
+	void unpublish( ClassAd* );
 	void publishPreemptingClaim( ClassAd* ad );
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
@@ -119,7 +120,11 @@ public:
 		/** We finally accepted a claim, so change our state, and if
 			we're opportunistic, start a timer.
 		*/
-	void beginClaim( void );	
+	void beginClaim( void );
+
+		/* We went back to unclaimed, so clear out the client info
+		*/
+	void clearClientInfo(void);
 
 		/** Copy info about the client and resource request from another claim object.
 			Used when claiming multiple slots in a single request_claim call
@@ -185,6 +190,7 @@ public:
 	int			cluster() const		{return c_cluster;};
 	int			proc() const			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
+	bool		hasRequestStream() const {return c_request_stream != nullptr;};
 	Stream*		deactivateStream()	{return c_deactivate_stream;};
 	int			getaliveint() const	{return c_aliveint;};
 	time_t		getLeaseEndtime() const {return c_lease_endtime;};
@@ -234,7 +240,7 @@ public:
 	bool starterKillFamily();
 	bool starterKillSoft();
 	bool starterKillHard();
-	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
+	void starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft );
 	void starterVacateJob(bool soft);
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
