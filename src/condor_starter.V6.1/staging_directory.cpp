@@ -50,11 +50,17 @@ class CopyStagingDirectory : public StagingDirectory {
 // platform or HTCondor configuration; those factors should be added to the
 // parameters here.
 StagingDirectoryFactory::StagingDirectoryFactory() {
-#if       defined(WINDOWS)
-	this->typeToUse = StagingDirectoryType::Copy;
-#else  /* defined(WINDOWS) */
-	this->typeToUse = StagingDirectoryType::Hardlink;
-#endif /* defined(WINDOWS) */
+	std::string configured_type;
+	param( configured_type, "STAGING_DIRECTORY_TYPE" );
+
+	if( configured_type == "COPY" ) {
+		this->typeToUse = StagingDirectoryType::Copy;
+	} else if( configured_type == "HARDLINK" ) {
+		this->typeToUse = StagingDirectoryType::Hardlink;
+	} else {
+		dprintf( D_ALWAYS, "Unknown STAGING_DIRECTORY_TYPE '%s', using COPY.\n", configured_type.c_str() );
+		this->typeToUse = StagingDirectoryType::Copy;
+	}
 }
 
 
@@ -106,11 +112,13 @@ HardlinkStagingDirectory::create() {
 		return false;
 	}
 
+#ifndef   WINDOWS
 	int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
 		return false;
 	}
+#endif /* WINDOWS */
 
 	return true;
 }
@@ -261,11 +269,13 @@ HardlinkStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 				return false;
 			}
 
+#ifndef   WINDOWS
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input directory, aborting: %s (%d)\n", strerror(errno), errno );
 				return false;
 			}
+#endif /* WINDOWS */
 
 			continue;
 		} else {
@@ -288,11 +298,13 @@ HardlinkStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 				return false;
 			}
 
+#ifndef   WINDOWS
 			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Unable change owner of common input file hardlink, aborting: %s (%d)\n", strerror(errno), errno );
 				return false;
 			}
+#endif /* WINDOWS */
 		}
 	}
 
@@ -301,9 +313,52 @@ HardlinkStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 	return true;
 }
 
+//
+// Windows, of course, doesn't have hard links, so it must copy the common
+// files from the staging directory, but it will probably be useful to have
+//     (a) a fall-back for certain weird cases on Linux; and
+// 	   (b) the ability to test the copy implementation on Linux.
+// The rest of this file should therefore compile and run on both OSes.
+//
 
 bool
 CopyStagingDirectory::create() {
+	//
+	// If we're copying files, there's no reason for the staging directory
+	// to have different properties than the slot directory.
+	//
+	TemporaryPrivSentry tps(PRIV_USER);
+
+
+#if defined(LATER)
+	// anyway, let's not duplicate code for now.
+	TemporaryPrivSentry tps(PRIV_ROOT);
+
+	std::error_code errorCode;
+	std::filesystem::create_directory( stagingDir, errorCode );
+	if( errorCode ) {
+		dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
+		return false;
+	}
+
+	std::filesystem::permissions(
+		stagingDir,
+		perms::owner_read | perms::owner_write | perms::owner_exec,
+		errorCode
+	);
+	if( errorCode ) {
+		dprintf( D_ALWAYS, "Unable to set permissions on staging directory, aborting: %s (%d).\n", errorCode.message().c_str(), errorCode.value() );
+		return false;
+	}
+
+	int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
+		return false;
+	}
+#endif
+
+
 	return false;
 }
 
@@ -315,6 +370,6 @@ CopyStagingDirectory::modify() {
 
 
 bool
-CopyStagingDirectory::stage( const std::filesystem::path & s ) {
+CopyStagingDirectory::stage( const std::filesystem::path & /* s */ ) {
 	return false;
 }
