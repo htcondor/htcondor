@@ -168,7 +168,7 @@ HardlinkStagingDirectory::modify() {
 				ec
 			);
 			if( ec.value() != 0 ) {
-				dprintf( D_ALWAYS, "Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
+				dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
 			continue;
@@ -179,7 +179,7 @@ HardlinkStagingDirectory::modify() {
 			ec
 		);
 		if( ec.value() != 0 ) {
-		dprintf( D_ALWAYS, "Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
+		dprintf( D_ALWAYS, "convertToStagingDirectory(): Failed to set permissions(%s): %s (%d)\n", entry.path().string().c_str(), ec.message().c_str(), ec.value() );
 		return false;
 		}
 	}
@@ -245,9 +245,9 @@ HardlinkStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 	}
 
 	for( const auto & entry : rdi ) {
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
+		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
 		auto relative_path = entry.path().lexically_relative(stagingDir);
-		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
+		// dprintf( D_ZKM, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
 		if( entry.is_directory() ) {
 			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", stagingDir.string().c_str() );
@@ -269,7 +269,7 @@ HardlinkStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 
 			continue;
 		} else {
-			dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
+			dprintf( D_ZKM, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
 
 			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", stagingDir.string().c_str() );
