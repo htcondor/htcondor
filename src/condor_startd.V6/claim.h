@@ -288,6 +288,8 @@ public:
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update );
 
+	void receiveUpdateCommand(int cmd, ClassAd &payload_ad, ClassAd &reply_ad);
+
 		// registered callback for premature closure of connection from
 		// schedd requesting this claim
 	int requestClaimSockClosed(Stream *s);

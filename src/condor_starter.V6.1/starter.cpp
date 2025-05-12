@@ -314,7 +314,8 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir(code)) {
+	const char *move_to = m_move_working_dir_on_exit.empty() ? nullptr : m_move_working_dir_on_exit.c_str();
+	if ( ! removeTempExecuteDir(code, move_to)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -352,6 +353,9 @@ Starter::Config()
 			EXCEPT("Execute directory not specified in config file.");
 		}
 	}
+
+	// Testing hack, move the working dir instead of deleting it.
+	param(m_move_working_dir_on_exit, "STARTER_MOVE_WORKING_DIR_ON_EXIT");
 
 #ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
@@ -3552,6 +3556,23 @@ Starter::PublishToEnv( Env* proc_env )
 				}
 			}
 		}
+
+		const ClassAd * msec = jic->getMachineSecetsAd();
+		if (msec) {
+			// give the job access to the split claim id, (if there is one)
+			// we unparse so that the value will have "" and internal "" will be escaped
+			classad::Value val;
+			if (msec->EvaluateAttr(ATTR_SPLIT_CLAIM_ID, val, classad::Value::STRING_VALUE)) {
+				auto_free_ptr envname(param("STARTER_SET_SLOT_SPLIT_CLAIM_IN_JOB_ENV"));
+				if (envname) {
+					std::string split_claim;
+					classad::ClassAdUnParser unparser;
+					unparser.SetOldClassAd(true, true);
+					unparser.Unparse(split_claim, val);
+					proc_env->SetEnv(envname.ptr(), split_claim);
+				}
+			}
+		}
 	}
 
 	// put OAuth creds directory into the environment
@@ -4014,7 +4035,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir(int& exit_code)
+Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -4075,9 +4096,14 @@ Starter::removeTempExecuteDir(int& exit_code)
 			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
 			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
 
-			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
-			if (!execute_dir.Remove_Current_File()) {
-				has_failed = true;
+			if (it->second == "/" && move_to) {
+				dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
+				rename(execute_dir.GetFullPath(), move_to);
+			} else {
+				dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
+				if (!execute_dir.Remove_Current_File()) {
+					has_failed = true;
+				}
 			}
 		}
 	}

@@ -804,10 +804,21 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		}
 		pending_bytes = stream->bytes_available_to_read();
 
+		Claim* claim = resmgr->getClaimByPid(s_pid);
+
 		if (update_cmd == 1) {
 			final_update = 1;
 		} else if (update_cmd > 1) {
-			// TODO: handle non-update commands sent on the update socket here...
+			ClassAd replyAd;
+			if ( ! claim) {
+				dprintf(D_ERROR, "No claim could be found for starter %d sending update command %d\n", s_pid, update_cmd);
+				replyAd.Assign(ATTR_ERROR_STRING, "No Claim");
+			} else {
+				claim->receiveUpdateCommand(update_cmd, update_ad, replyAd);
+			}
+			stream->encode();
+			putClassAd(stream, replyAd);
+			stream->end_of_message();
 			continue;
 		}
 
@@ -838,7 +849,6 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		double fPercentCPU=0.0;
 		bool has_vm_cpu = update_ad.LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
 
-		Claim* claim = resmgr->getClaimByPid(s_pid);
 		if( claim ) {
 			claim->receiveJobClassAdUpdate(update_ad, final_update);
 
