@@ -162,7 +162,9 @@ Selector::fd_select_size()
 		// 1024 (FD_SETSIZE) as a reasonable approximation.
 		_fd_select_size = FD_SETSIZE;
 #else
-		_fd_select_size = getdtablesize();
+		// later on, we malloc 6 * _fd_	select_size bytes for the fd_set.
+		// Let's be sure to not overflow that malloc
+		_fd_select_size = std::min(getdtablesize(), (2 ^ 31 / 8));
 #endif
 	}
 	return _fd_select_size;
