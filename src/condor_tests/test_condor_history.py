@@ -25,6 +25,7 @@
     STARTD_NAME = TEST_STARTD@
     LOCAL_CONFIG_DIR = $(EXECUTE)
     JOB_EPOCH_HISTORY = $(SPOOL)/epoch_history
+    DAEMON_HISTORY = $(SPOOL)/daemon.hist
 """
 #endtestreq
 
@@ -33,6 +34,7 @@ from time import time
 import os
 import sys
 import htcondor2 as htcondor
+import re
 
 
 #Custom class to help build job ads for history files
@@ -568,6 +570,22 @@ Bar=1
     return p
 
 #===============================================================================================
+@action
+def getDaemonHistory(default_condor):
+    # NOTE: This (by default) gets Schedd records from daemon history
+    p = default_condor.run_command(["condor_history", "-daemon"])
+    with default_condor.use_config():
+        hist = htcondor.param.get("DAEMON_HISTORY")
+    return (hist, p)
+
+#===============================================================================================
+@action
+def pyBindGetScheddHist(default_condor):
+    with default_condor.use_config():
+        ads = htcondor.Schedd().personalHistory(match=1, projection=["RecordWriteDate"])
+    return ads
+
+#===============================================================================================
 class TestCondorHistory:
 
     def test_condor_history(self, testName, testInfo, testOutputFile):
@@ -676,3 +694,46 @@ class TestCondorHistory:
         for line in runEmptyBanner.stdout.split("\n"):
             assert line == "2 true" or line == "1 false"
 
+    def test_daemon_history(self, getDaemonHistory):
+        path, cmd = getDaemonHistory
+
+        # Check daemon history file exists
+        assert path is not None
+        assert os.path.exists(path)
+
+        # Assert no errors written
+        assert cmd.stderr == ""
+
+        # Schedd Ad Sample: ' 5/13 09:14     67.11%         832       1903          67       145      13   632.10       4      1      13.05'
+        check = re.compile(r"\s*(\d+)/(\d+) (\d+):(\d+)\s*(\d+).(\d+)%\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)")
+        line_no = 0
+
+        # Check all stdout lines for matching header and regex pattern
+        for line in cmd.stdout.split("\n"):
+            if line_no == 0:
+                headings = line.strip().split()
+                assert headings == [
+                    "TIMESTAMP",
+                    "DUTY_CYCLE",
+                    "RunningJobs",
+                    "IdleJobs",
+                    "HeldJobs",
+                    "Download",
+                    "Waiting",   # download statistic
+                    "WaitingMB", # download statistic
+                    "Upload",
+                    "Waiting",   # upload statistic
+                    "WaitingMB"  # upload statistic
+                ]
+            else:
+                assert check.match(line)
+
+            line_no += 1
+
+    def test_py_schedd_hist(self, pyBindGetScheddHist):
+        assert pyBindGetScheddHist is not None
+        assert len(pyBindGetScheddHist) == 1
+
+        record = pyBindGetScheddHist[0]
+        # Make sure DaemonCore wrote write date attribute to record
+        assert "RecordWriteDate" in record
