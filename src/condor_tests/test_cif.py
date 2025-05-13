@@ -30,25 +30,43 @@ def try_shutil_chown( * p, ** v ):
         logger.debug(le)
 
 
+CONFIG_KNOBS = {
+    "HARDLINKS": {
+        # Not specifying STARTER_NESTED_SCRATCH lets us test it both ways.
+        "STAGING_DIRECTORY_TYPE":    "HARDLINKS",
+    },
+    "COPY": {
+        # The COPY implementation currently doesn't work without this.
+        "STARTER_NESTED_SCRATCH":    False,
+        "STAGING_DIRECTORY_TYPE":    "COPY",
+    },
+}
+
+
+@action(params={name: name for name in CONFIG_KNOBS})
+def test_name(request):
+    return request.param
+
+
 # ---- test_one_cif_job -------------------------------------------------------
 
 @action
-def user_dir(test_dir):
-    the_user_dir = test_dir / "user"
+def user_dir(test_dir, test_name):
+    the_user_dir = test_dir / f"{test_name}.user"
     the_user_dir.mkdir(exist_ok=True)
     try_shutil_chown( the_user_dir.as_posix(), user='tlmiller', group='tlmiller' )
     return the_user_dir
 
 
 @action
-def the_lock_dir(test_dir):
-    return test_dir / "lock.d"
+def the_lock_dir(test_dir, test_name):
+    return test_dir / f"{test_name}.lock.d"
 
 
 @action
-def the_condor(test_dir, the_lock_dir):
-    local_dir = test_dir / "condor"
-    cred_dir = local_dir / "cred.d"
+def the_condor(request, test_dir, the_lock_dir, test_name):
+    local_dir = test_dir / f"{test_name}.condor"
+    cred_dir = local_dir / f"{test_name}.cred.d"
     # I don't think Ornithology knows about this one yet.
     cred_dir.mkdir(parents=True, exist_ok=True)
 
@@ -62,6 +80,7 @@ def the_condor(test_dir, the_lock_dir):
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
+            ** CONFIG_KNOBS[test_name],
         },
     ) as the_condor:
         yield the_condor
@@ -136,13 +155,13 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
 
 
 @action
-def the_big_lock_dir(test_dir):
-    return test_dir / "big.lock.d"
+def the_big_lock_dir(test_dir, test_name):
+    return test_dir / f"{test_name}.big.lock.d"
 
 
 @action
-def the_big_condor(test_dir, the_big_lock_dir):
-    local_dir = test_dir / "big-condor"
+def the_big_condor(test_dir, the_big_lock_dir, test_name):
+    local_dir = test_dir / f"{test_name}.big-condor"
 
     with Condor(
         submit_user='tlmiller',
@@ -159,6 +178,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SLOT1_3_USER":     "kittie",
             "SLOT1_4_USER":     "jrandom",
             "STARTER_NESTED_SCRATCH":   False,
+            ** CONFIG_KNOBS[test_name],
         },
     ) as the_condor:
         yield the_condor
@@ -265,13 +285,13 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
 
 @action
-def the_multi_lock_dir(test_dir):
-    return test_dir / "multi.lock.d"
+def the_multi_lock_dir(test_dir, test_name):
+    return test_dir / f"{test_name}.multi.lock.d"
 
 
 @action
-def the_multi_condor(test_dir, the_multi_lock_dir):
-    local_dir = test_dir / "multi-condor"
+def the_multi_condor(test_dir, the_multi_lock_dir, test_name):
+    local_dir = test_dir / f"{test_name}.multi-condor"
 
     with Condor(
         submit_user='tlmiller',
@@ -283,6 +303,7 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_NESTED_SCRATCH":   True,
+            ** CONFIG_KNOBS[test_name],
         },
     ) as the_condor:
         yield the_condor
