@@ -197,10 +197,12 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		// Specify history source for default Ad type filtering despite specifying files to search
 		if (m_want_startd) {
 			args.AppendArg("-startd");
-		}
-		if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) {
+		} else if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) {
 			args.AppendArg("-epochs");
+		} else if (strcasecmp(state.RecordSrc().c_str(),"DAEMON") == MATCH) {
+			args.AppendArg("-daemon");
 		}
+
 		// End history source specification
 		if (state.m_streamresults) { args.AppendArg("-stream-results"); }
 		if ( ! state.MatchCount().empty()) {
