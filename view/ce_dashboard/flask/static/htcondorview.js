@@ -2604,6 +2604,27 @@ AfterqueryObj.prototype.doQueryBy = function (grid, argval) {
 };
 
 
+AfterqueryObj.prototype.doAddRowIfEmpty = function (ingrid, argval) {
+    AfterqueryObj.log("addRowIfEmpty:", argval);
+    if (!ingrid.data.length) {
+        const newRow = [];
+        const currentDate = this.lastDate===0 ? new Date() : this.lastDate;
+        for (let i = 0; i < ingrid.types.length; i++) {
+            if (ingrid.types[i] === AfterqueryObj.T_NUM) {
+                newRow.push(0);
+            } else if (ingrid.types[i] === AfterqueryObj.T_STRING) {
+                newRow.push(argval);
+            } else if (ingrid.types[i] === AfterqueryObj.T_DATE || ingrid.types[i] === AfterqueryObj.T_DATETIME) {
+                newRow.push(currentDate);
+            } else {
+                newRow.push(null);
+            }
+        }
+        ingrid.data.push(newRow);
+    }
+    return ingrid;
+}
+
 AfterqueryObj.prototype.deltaBy = function (ingrid, keys) {
     let row;
     let rowi;
@@ -3504,6 +3525,11 @@ AfterqueryObj.prototype.addTransforms = function (queue, args) {
                 return that.doPivotBy(g, a);
             }, argval);
         }
+        else if (argkey === "addRowIfEmpty") {
+            transform(function (g, a) {
+                return that.doAddRowIfEmpty(g, a);
+            }, argval);
+        }
         else if (argkey === "filter") {
             transform(function (g, a) {
                 return that.doFilterBy(g, a);
@@ -3617,7 +3643,6 @@ AfterqueryObj.prototype.dyIndexFromX = function (dychart, x) {
     }
     return i;
 };
-
 
 AfterqueryObj.NaNToZeroFormatter = function (dt, col) {
     for (let row = 0; row < dt.getNumberOfRows(); row++) {
@@ -3857,6 +3882,7 @@ AfterqueryObj.prototype.scanGVizChartOptions = function (args, options) {
             || key === "group"
             || key === "limit"
             || key === "filter"
+            || key === "addRowIfEmpty"
             || key === "q"
             || key === "pivot"
             || key === "treegroup"
@@ -4648,5 +4674,3 @@ var HeatGrid = function (el) {
         ctx.putImageData(img, 0, 0);
     };
 };
-
-////////////////////////////////////////////////////////////////////////////////
