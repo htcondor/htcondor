@@ -521,6 +521,23 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     time spent on each client. Setting this option to 0 disables remote
     history access.
 
+:macro-def:`DAEMON_HISTORY[Global]`
+    A path representing a file for any daemons enabled to periodically
+    write ClassAd records into.
+
+    .. note::
+
+        Only the Schedd Daemon is capable of writing into the Daemon
+        history file currently.
+
+:macro-def:`MAX_DAEMON_HISTORY_LOG[Global]`
+    An integer representing the maximum size in bytes the Daemon history
+    can grow before rotating. Defaults to ``20 MB``.
+
+:macro-def:`MAX_DAEMON_HISTORY_ROTATIONS[Global]`
+    An integer representing the maximum number of old rotated Daemon history
+    files to keep around at one time. Default is ``1``.
+
 :macro-def:`MAX_JOB_QUEUE_LOG_ROTATIONS[Global]`
     The *condor_schedd* daemon periodically rotates the job queue
     database file, in order to save disk space. This option controls how
@@ -4957,6 +4974,11 @@ These macros control the *condor_schedd*.
     *condor_schedd* sends a ClassAd update to the *condor_collector*
     and how often the *condor_schedd* daemon evaluates jobs. It is
     defined in terms of seconds and defaults to 300 (every 5 minutes).
+
+:macro-def:`SCHEDD_HISTORY_RECORD_INTERVAL[SCHEDD]`
+    An integer value representing the maximum interval between writing
+    the Schedd's ClassAd to the :macro:`DAEMON_HISTORY` file. This is
+    defined in terms of seconds and defaults to 900 (every 15 minutes).
 
 :macro-def:`ABSENT_SUBMITTER_LIFETIME[SCHEDD]`
     This macro determines the maximum time that the *condor_schedd*

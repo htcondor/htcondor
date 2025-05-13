@@ -3,6 +3,11 @@
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
   :jira:`3024`
 
+- Added new :macro:`DAEMON_HISTORY` file for the Schedd to periodically write
+  historical ClassAd records into. These records can be queried via :tool:`condor_history`
+  using the new **-daemon** option or via :py:meth:`htcondor2.Schedd.personalHistory`.
+  :jira:`3061`
+
 - Improved logging on the EP when a slot cannot be claimed because the :ad-attr:`START`
   expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements`
   expression will be written to the ``StartLog``.
