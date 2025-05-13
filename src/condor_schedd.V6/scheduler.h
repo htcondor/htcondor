@@ -774,6 +774,7 @@ private:
 	Timeslice       PeriodicExprInterval;
 	int             periodicid;
 	int				QueueCleanInterval;
+	int				WriteHistRecordInterval{0};
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				JobStartCount;
@@ -1044,6 +1045,8 @@ private:
 
 		// Command handler for collector token requests.
 	int handle_collector_token_request(int, Stream *s);
+
+	void maybeWriteDaemonHistory(ClassAd* ad);
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.
