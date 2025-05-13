@@ -366,13 +366,34 @@ CopyStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 
 	dprintf( D_ZKM, "CopyStagingDirectory::stage(): begin.\n" );
 
-	TemporaryPrivSentry tps(PRIV_USER);
 
+	{
+		TemporaryPrivSentry tps(PRIV_USER);
 
-	if(! std::filesystem::is_directory( sandbox, ec )) {
-		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
-		return false;
+		if(! std::filesystem::is_directory( sandbox, ec )) {
+			dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+			return false;
+		}
 	}
+
+
+	//
+	// If HTCondor can switch users, than it did so when we created the
+	// staging directory, and our PRIV_USER won't have permission to read
+	// the files therein if slot users are turned on.  (Otherwise, both
+	// starters are nobody, or both starters are running as owner; in the
+	// latter case, because we define commonality as within a cluster, we
+	// know that the other starter's owner is the same as ours.)
+	//
+	// We can't elevate privileges later because the sanity checks could
+	// otherwise fail and we need privilege to read the directory entries.
+	//
+	// FIXME: Discuss making the staging directory and files owned by
+	// PRIV_CONDOR, instead.  Doing the file transfer as PRIV_CONDOR is
+	// probably not a good idea, but we could use modify() to switch
+	// everything over as root?
+	//
+	TemporaryPrivSentry tps(PRIV_ROOT);
 
 	if(! std::filesystem::is_directory( stagingDir, ec )) {
 		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): '%s' not a directory, aborting.\n", stagingDir.string().c_str() );
