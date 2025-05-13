@@ -471,9 +471,27 @@ Starter::handleJobSetupCommand(
 
 			StagingDirectoryFactory sdf;
 			auto staging = sdf.make(stagingDir);
-			if(! staging) { return false; }
+			if(! staging) {
+				dprintf( D_ALWAYS, "Failed to make() staging directory, reporting failure.\n" );
 
-			if(! staging->create()) { return false; }
+				ClassAd context;
+				context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+				context.InsertAttr( ATTR_RESULT, false );
+				continue_conversation(context);
+
+				return true;
+			}
+
+			if(! staging->create()) {
+				dprintf( D_ALWAYS, "Failed to create() staging directory, reporting failure.\n" );
+
+				ClassAd context;
+				context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+				context.InsertAttr( ATTR_RESULT, false );
+				continue_conversation(context);
+
+				return true;
+			}
 
 			//
 			// Transfer the common files to it.
@@ -482,7 +500,12 @@ Starter::handleJobSetupCommand(
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
 			// ... blocking, at least for now.
 			bool result = s->jic->transferCommonInput( & ftAd );
-			if( result ) { staging->modify(); }
+			if( result ) {
+				if(! staging->modify()) {
+					dprintf( D_ALWAYS, "Failed to modify() staging directory, reporting failure.\n" );
+					result = false;
+				}
+			}
 
 			// We could send a generic event notification here, as we did
 			// for diagnostic results, but let's try sending the reply in
