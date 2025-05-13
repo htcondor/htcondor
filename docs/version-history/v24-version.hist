@@ -10,6 +10,11 @@
 
 *** 24.9.0 bugs
 
+- Fixed a bug which could cause unnecessary activation failures if the previous
+  job in the slot failed to transfer its output.  This would manifest as slots
+  being in the claimed/idle state for far longer than necessary.
+  :jira:`3073`
+
 *** 24.0.9 bugs
 
 *** 24.8.0 features
