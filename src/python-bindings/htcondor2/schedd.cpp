@@ -960,6 +960,9 @@ _history_query(PyObject *, PyObject * args) {
         case 2: /* HRS_JOB_EPOCH */
             commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "JOB_EPOCH");
             break;
+        case 3: /* HRS_DAEMON_HIST */
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "DAEMON");
+            break;
         default:
             // This was HTCondorValueError in version 1.
             PyErr_SetString( PyExc_HTCondorException, "unknown history record source" );
