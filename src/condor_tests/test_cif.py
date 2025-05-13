@@ -31,9 +31,9 @@ def try_shutil_chown( * p, ** v ):
 
 
 CONFIG_KNOBS = {
-    "HARDLINKS": {
+    "HARDLINK": {
         # Not specifying STARTER_NESTED_SCRATCH lets us test it both ways.
-        "STAGING_DIRECTORY_TYPE":    "HARDLINKS",
+        "STAGING_DIRECTORY_TYPE":    "HARDLINK",
     },
     "COPY": {
         # The COPY implementation currently doesn't work without this.
