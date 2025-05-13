@@ -323,16 +323,14 @@ HardlinkStagingDirectory::stage( const std::filesystem::path & sandbox ) {
 
 bool
 CopyStagingDirectory::create() {
-	//
-	// If we're copying files, there's no reason for the staging directory
-	// to have different properties than the slot directory.
-	//
-	TemporaryPrivSentry tps(PRIV_USER);
+	using std::filesystem::perms;
 
-
-#if defined(LATER)
-	// anyway, let's not duplicate code for now.
-	TemporaryPrivSentry tps(PRIV_ROOT);
+	//
+	// This won't work if STARTER_UNDER_SCRATCH is set, but GregT needs to
+	// refactor Starter::createTempExecuteDir() to expose its direction-
+	// creation code so others can make sibling directories.
+	//
+	TemporaryPrivSentry user_sentry(PRIV_USER);
 
 	std::error_code errorCode;
 	std::filesystem::create_directory( stagingDir, errorCode );
@@ -351,25 +349,87 @@ CopyStagingDirectory::create() {
 		return false;
 	}
 
-	int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
-	if( rv != 0 ) {
-		dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
-		return false;
-	}
-#endif
-
-
-	return false;
+	return true;
 }
 
 
 bool
 CopyStagingDirectory::modify() {
-	return false;
+	return true;
 }
 
 
 bool
-CopyStagingDirectory::stage( const std::filesystem::path & /* s */ ) {
-	return false;
+CopyStagingDirectory::stage( const std::filesystem::path & sandbox ) {
+	using std::filesystem::perms;
+	std::error_code ec;
+
+	dprintf( D_ZKM, "CopyStagingDirectory::stage(): begin.\n" );
+
+	TemporaryPrivSentry tps(PRIV_USER);
+
+
+	if(! std::filesystem::is_directory( sandbox, ec )) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+		return false;
+	}
+
+	if(! std::filesystem::is_directory( stagingDir, ec )) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): '%s' not a directory, aborting.\n", stagingDir.string().c_str() );
+		return false;
+	}
+
+	// check_permissions() is exact, which may not be what we want here.
+	if(! check_permissions( stagingDir, perms::owner_read | perms::owner_write | perms::owner_exec )) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): '%s' has the wrong permissions, aborting.\n", stagingDir.string().c_str() );
+		return false;
+	}
+
+
+	// To be clear: this recurses into subdirectories for us.
+	std::filesystem::directory_iterator di(
+		stagingDir, {}, ec
+	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", stagingDir.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
+	}
+
+	for( const auto & entry : di ) {
+		// If we want to copy a directory recursively, as opposed to its
+		// contents, the _target_ must include the directory's relative
+		// name.  This doesn't hurt regular files any, so just always do it.
+		auto relative_path = entry.path().lexically_relative(stagingDir);
+		auto target_path = sandbox / relative_path;
+
+		dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): copying %s to %s...\n",
+			entry.path().string().c_str(),
+			target_path.string().c_str()
+		);
+
+		// It's easier to code if we recursively copy from a non-recursive
+		// iterator (because we don't have to track relative paths ourselves).
+		//
+		// If staging happens before uncommon file input transfer, there
+		// won't be any existing files; otherwise, we want to keep the
+		// uncommon files.
+		//
+		// Principle of least astonishment: symlinks in the tree of common
+		// input files should stay that way.
+		std::filesystem::copy( entry.path(), target_path,
+			std::filesystem::copy_options::recursive |
+			std::filesystem::copy_options::skip_existing |
+			std::filesystem::copy_options::copy_symlinks,
+			ec
+		);
+		if( ec.value() != 0 ) {
+			dprintf( D_ALWAYS, "CopyStagingDirectory::stage(): Failed to copy %s to %s: %s (%d)\n", entry.path().string().c_str(), sandbox.string().c_str(), ec.message().c_str(), ec.value() );
+			return false;
+		}
+	}
+
+
+	dprintf( D_ZKM, "CopyStagingDirectory::stage(): end.\n" );
+
+	return true;
 }
