@@ -1410,6 +1410,8 @@ function AfterqueryObj(options) {
 
     this.colormap = {};
     this.next_color = 0;
+
+    this.lastDate = 0;
 }
 
 AfterqueryObj.prototype.elid = function (id) {
@@ -2892,6 +2894,17 @@ AfterqueryObj.prototype.doYSpread = function (grid, argval) {
 
 
 AfterqueryObj.prototype.doLimit = function (ingrid, limit) {
+    if (limit === "lastDate") {
+        if (this.lastDate === 0 && ingrid.data.length > 0) {
+            this.lastDate = ingrid.data[ingrid.data.length - 1][0];
+        }
+        limit = 0;
+        for (const row of ingrid.data) {
+            if (row[0].getTime() === this.lastDate.getTime()) {
+                limit++;
+            }
+        }
+    }
     limit = parseInt(limit);
     if (ingrid.data.length > limit) {
         return {
