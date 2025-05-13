@@ -2,6 +2,10 @@
 
 *** 23.0.26 bugs
 
+- Fixed a bug where the *condor_master* would not start up on systems
+  where ulimit -n was close to 2 ^ 31 file descriptors.
+  :jira:`3079`
+
 - Fixed a bug when dagman's log file was on a full filesystem, dagman
   would not exit with the correct log file full exit code.
   :jira:`3066`
