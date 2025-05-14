@@ -33,8 +33,8 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                             "&filter=active=1\n"
                             "&order=facility_name,name\n"
                             "&intensify=health\n"
-                            "&unselect=description,active,registered,hosted,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name\n"
-                            "&rename=facility_name=facilityName\n"
+                            "&unselect=description,active,registered,hosted,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name,allocationsPastWeek,allocationsPastMonth\n"
+                            "&rename=facility_name=institution\n"
                             "&rename=fqdn=hostName\n"
                             "&make_url=hostName=/overview.html?host=*\n"
                         ) | replace('\n', '') }}",
