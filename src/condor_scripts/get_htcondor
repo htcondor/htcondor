@@ -118,8 +118,10 @@ get_distribution() {
         return
     fi
 
-    # Every system that we officially support has /etc/os-release
-    . /etc/os-release
+    # Every Linux system that we officially support has /etc/os-release
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+    fi
 
     check_forked
 
