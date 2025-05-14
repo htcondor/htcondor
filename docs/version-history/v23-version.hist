@@ -10,6 +10,12 @@
   would not exit with the correct log file full exit code.
   :jira:`3066`
 
+- The submit commands ``kill_sig``, ``remove_kill_sig``, and
+  ``hold_kill_sig`` are now ignored for Windows jobs.
+  These control unix process signals, which are not relevant on
+  Windows.
+  :jira:`3078`
+
 *** 23.10.25 bugs
 
 - Fixed bug where :macro:`DAGMAN_MAX_JOBS_IDLE` value was not being respected by DAGMan
