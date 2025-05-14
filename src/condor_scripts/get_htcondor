@@ -295,9 +295,9 @@ EOF
     fi
 
     if [[ ! $ROLE ]]; then
-        echo -e "\n# Installing mini HTCondor for ${ID^} $VERSION_ID"
+        echo -e "\n# Installing mini HTCondor for $NAME $VERSION_ID"
     else
-        echo -e "\n# Installing HTCondor as ${ROLE} for ${ID^} $VERSION_ID"
+        echo -e "\n# Installing HTCondor as ${ROLE} for $NAME $VERSION_ID"
     fi
 
     # Run install binaries for each distro accordingly
@@ -451,7 +451,7 @@ EOF
                 fi
             fi
             echo
-            echo "Error: Unsupported distribution '$ID'"
+            echo "Error: Unsupported distribution '$NAME'"
             echo
             exit 1
             ;;
@@ -587,7 +587,7 @@ do_download() {
                 OS_VERSION=13
             else
                 echo
-                echo "Error: Unsupported distribution '$ID'"
+                echo "Error: Unsupported distribution '$NAME'"
                 echo
                 exit 1
             fi
