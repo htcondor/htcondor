@@ -118,8 +118,10 @@ get_distribution() {
         return
     fi
 
-    # Every system that we officially support has /etc/os-release
-    . /etc/os-release
+    # Every Linux system that we officially support has /etc/os-release
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+    fi
 
     check_forked
 
@@ -293,9 +295,9 @@ EOF
     fi
 
     if [[ ! $ROLE ]]; then
-        echo -e "\n# Installing mini HTCondor for ${ID^} $VERSION_ID"
+        echo -e "\n# Installing mini HTCondor for $PRETTY_NAME"
     else
-        echo -e "\n# Installing HTCondor as ${ROLE} for ${ID^} $VERSION_ID"
+        echo -e "\n# Installing HTCondor as ${ROLE} for $PRETTY_NAME"
     fi
 
     # Run install binaries for each distro accordingly
@@ -449,7 +451,7 @@ EOF
                 fi
             fi
             echo
-            echo "Error: Unsupported distribution '$ID'"
+            echo "Error: Unsupported distribution '$NAME'"
             echo
             exit 1
             ;;
@@ -585,7 +587,7 @@ do_download() {
                 OS_VERSION=13
             else
                 echo
-                echo "Error: Unsupported distribution '$ID'"
+                echo "Error: Unsupported distribution '$NAME'"
                 echo
                 exit 1
             fi
