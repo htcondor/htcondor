@@ -760,7 +760,7 @@ JICShadow::transferOutputMopUp(void)
 		if(!m_ft_info.success && !m_ft_info.try_again) {
 			ASSERT(m_ft_info.hold_code != 0);
 			// The shadow will immediately cut the connection to the
-			// starter when this is called. 
+			// starter when this is called.
 			notifyStarterError(m_ft_info.error_desc.c_str(), true,
 			                   m_ft_info.hold_code,m_ft_info.hold_subcode);
 			return false;
@@ -1208,10 +1208,23 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 
 	if( critical ) {
 		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Failed to send starter error string to Shadow.\n" );
 			return false;
 		}
+
+		// At this point, we expect the shadow to have already closed up
+		// shop.  Tell the rest of the JICShadow that the syscall socket
+		// is gone...
+		if( syscall_sock ) {
+			if( syscall_sock_registered ) {
+				daemonCore->Cancel_Socket( syscall_sock );
+				syscall_sock_registered = false;
+			}
+			syscall_sock->close();
+		}
+		// ... and to proceed with exiting regardless.
+		fast_exit = true;
 	} else {
 		ClassAd * ad;
 		RemoteErrorEvent event;

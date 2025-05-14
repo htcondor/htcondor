@@ -3186,11 +3186,11 @@ Starter::transferOutput( void )
 		}
 	}
 
-    // Try to transfer output (the failure files) even if we didn't succeed
-    // in job setup (e.g., transfer input files), but just ignore any
-    // output-transfer failures in the case of a setup failure; we can only
-    // really report one thing, and that should be the setup failure,
-    // which happens as a result of calling cleanupJobs().
+	// Try to transfer output (the failure files) even if we didn't succeed
+	// in job setup (e.g., transfer input files), but just ignore any
+	// output-transfer failures in the case of a setup failure; we can only
+	// really report one thing, and that should be the setup failure,
+	// which happens as a result of calling cleanupJobs().
 	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
@@ -3218,25 +3218,16 @@ Starter::transferOutput( void )
 			}
 		}
 
-		jic->transferOutputMopUp();
-
-			/*
-			  there was an error with the JIC in this step.  at this
-			  point, the only possible reason is if we're talking to a
-			  shadow and file transfer failed to send back the files.
-			  in this case, just return to DaemonCore and wait for
-			  other events (like the shadow reconnecting or the startd
-			  deciding the job lease expired and killing us)
-			*/
-		dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
-				 "lease to expire or for a reconnect attempt\n" );
-		return false;
-	}
+		// If we've lost the syscall socket at this point, there's no point
+		// in doing the output transfer mop-up, but the shadow might reconnect.
+		if( /* FIXME */ false ) {
+			dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
+			                 "lease to expire or for a reconnect attempt\n" );
+			return false;
+		}
+ 	}
 
 	jic->transferOutputMopUp();
-
-		// If we're here, the JIC successfully transfered output.
-		// We're ready to move on to the next cleanup stage.
 	return cleanupJobs();
 }
 
