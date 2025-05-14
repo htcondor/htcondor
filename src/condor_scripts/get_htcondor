@@ -295,9 +295,9 @@ EOF
     fi
 
     if [[ ! $ROLE ]]; then
-        echo -e "\n# Installing mini HTCondor for $NAME $VERSION_ID"
+        echo -e "\n# Installing mini HTCondor for $PRETTY_NAME"
     else
-        echo -e "\n# Installing HTCondor as ${ROLE} for $NAME $VERSION_ID"
+        echo -e "\n# Installing HTCondor as ${ROLE} for $PRETTY_NAME"
     fi
 
     # Run install binaries for each distro accordingly
