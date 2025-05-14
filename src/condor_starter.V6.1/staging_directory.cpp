@@ -326,7 +326,7 @@ CopyStagingDirectory::create() {
 	using std::filesystem::perms;
 
 	//
-	// This won't work if STARTER_UNDER_SCRATCH is set, but GregT needs to
+	// This won't work if STARTER_NESTED_SCRATCH is set, but GregT needs to
 	// refactor Starter::createTempExecuteDir() to expose its direction-
 	// creation code so others can make sibling directories.
 	//
