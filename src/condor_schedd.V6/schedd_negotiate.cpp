@@ -160,9 +160,20 @@ ScheddNegotiate::nextJob()
 		m_current_auto_cluster_id = cluster->getAutoClusterId();
 
 		if( !getAutoClusterRejected(m_current_auto_cluster_id) ) {
+
+			bool skip_all = false;
+			const char * because = "";
+
+			int unskippedJobCount = 0;
+			for( PROC_ID jobID : cluster->jobIDs() ) {
+				JobQueueJob * job = GetJobAd(jobID);
+				if(! job) { continue; }
+				if(! scheduler_skipJob(job, NULL, skip_all, because)) {
+					++unskippedJobCount;
+				}
+			}
+
 			while( cluster->popJob(m_current_job_id) ) {
-				const char* because = "";
-				bool skip_all = false;
 				JobQueueJob * job = GetJobAd(m_current_job_id);
 				if ( ! job)
 				{
@@ -203,8 +214,13 @@ ScheddNegotiate::nextJob()
 						m_current_job_ad.LookupInteger(ATTR_JOB_UNIVERSE,universe);
 						// For now, do not use request counts with the dedicated scheduler
 						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
-							// add one to cluster size to cover the current popped job
-							int resource_count = 1+cluster->size();
+							//
+							// Don't ask the negotiator for resources we won't
+							// use because too few of the jobs in the cluster
+							// are idle.
+							//
+							int resource_count = unskippedJobCount;
+
 							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
 							if (resource_count > m_jobs_can_offer && (m_jobs_can_offer > 0))
 							{
