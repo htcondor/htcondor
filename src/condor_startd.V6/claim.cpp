@@ -120,10 +120,12 @@ Claim::~Claim()
 	}
 
 	// The resources assigned to this claim must have been freed by now.
+	// TODO: this should not happen on *every* claim delete
+	// figure the right place to put this - maybe when the Starter object is deleted?
 	if( c_rip != NULL && c_rip->r_classad != NULL ) {
 		resmgr->adlist_unset_monitors( c_rip->r_id, c_rip->r_classad );
-	} else {
-		dprintf( D_ALWAYS, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
+	} else if (c_rip && ! c_rip->is_broken_slot()) { // d-slots are marked as broken just before they are deleted.
+		dprintf( D_BACKTRACE, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
 	}
 
 		// Cancel any daemonCore events associated with this claim

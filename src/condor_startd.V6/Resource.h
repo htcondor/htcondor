@@ -515,6 +515,8 @@ private:
 	// only non-partitionable backfill slots have resource conflicts
 	std::string m_res_conflict;
 
+	std::string m_orig_assigned_gpus; // AssignedGpus at birth, to help debug HTCONDOR-3072
+
 	IdDispenser* m_id_dispenser;
 
 	// bulk updates use a single timer in the ResMgr for updates

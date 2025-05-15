@@ -1302,6 +1302,8 @@ Resource::init_classad()
 	r_classad = new ClassAd();
 	r_classad->ChainToAd(r_config_classad);
 
+	m_orig_assigned_gpus = "*"; // hack to help track HTCONDOR-3072
+
 		// put in slottype overrides of the config_classad
 	this->publish_slot_config_overrides(r_config_classad);
 	this->publish_static(r_config_classad);
@@ -2481,13 +2483,12 @@ void Resource::publish_static(ClassAd* cap)
 	//	dprintf(D_ALWAYS | D_BACKTRACE, "in Resource::publish_static(%p) for %s classad=%p, base=%p\n", cap, r_name, r_classad, r_config_classad);
 	//}
 	if (wrong_internal_ad) {
-		dprintf(D_ALWAYS, "ERROR! updating the wrong internal ad!\n");
+		dprintf(D_ERROR, "ERROR! updating the wrong internal ad!\n");
 	} else {
 		dprintf(D_TEST | D_VERBOSE, "Resource::publish_static, %s ad\n", internal_ad ? "internal" : "external");
 	}
 
 	// Set the correct types on the ClassAd
-	dprintf(D_ZKM | D_VERBOSE, "Resource::publish_static send_daemon_ad=%d\n", enable_single_startd_daemon_ad);
 	if (enable_single_startd_daemon_ad) {
 		cap->Assign(ATTR_HAS_START_DAEMON_AD, true);
 		SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
@@ -2537,6 +2538,18 @@ void Resource::publish_static(ClassAd* cap)
 
 		// Put in cpu-specific attributes that can only change on reconfig
 		resmgr->publish_static_slot_resources(this, cap);
+		// debug code to help track HTCONDOR-3072
+		std::string assigned_gpus;
+		if (m_orig_assigned_gpus == "*") {
+			m_orig_assigned_gpus.clear();
+			cap->LookupString("AssignedGPUs", m_orig_assigned_gpus);
+		} else {
+			cap->LookupString("AssignedGPUs", assigned_gpus);
+			if (assigned_gpus != m_orig_assigned_gpus) {
+				dprintf(D_ERROR | D_BACKTRACE, "%sAssignedGPUs changed from \"%s\" to \"%s\"\n",
+					internal_ad?"Config Ad ":"", m_orig_assigned_gpus.c_str(), assigned_gpus.c_str());
+			}
+		}
 
 		// Put in machine-wide attributes that can only change on reconfig
 		resmgr->m_attr->publish_static(cap);

@@ -1675,6 +1675,7 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 	// the global resource conflicts are determined elsewhere and passed in here
 	// we we add the NFR conflicts and then publish
 	std::string conflict = res_conflict;
+	int dpf_cat = D_STATUS; // TODO: change back to D_ZKM once HTCONDOR-3072 is fixed
 
 	// publish "Available" custom resources and resource properties
 	// for use by the evalInEachContext matchmaking function
@@ -1692,7 +1693,7 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 		for (const auto & nfr : nft.ids) {
 			if (slot_id >= 0) {
 				int ot = nfr.is_owned(slot_id, slot_subid);
-				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d.%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
+				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d_%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
 				if (owntype != ot) {
 					if (slot_subid > 0 && (ot &= ~owntype) == 1) {
 						if (conflict.size() > 1) { conflict += ","; }
@@ -1712,16 +1713,16 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 
 		avail += "}";
 		attr = "Available"; attr += restag;
-		dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d setting %s=%s%s\n",
-			slot_id, slot_subid, slot_is_bk,
+		dprintf(D_ZKM | D_VERBOSE, "publish_dyn %s %d_%d setting %s=%s%s\n",
+			slot_is_bk?"bk":"", slot_id, slot_subid,
 			attr.c_str(), avail.c_str(), tmp.c_str());
 		cp->AssignExpr(attr, avail.c_str());
 
 		// if the number of AvailableXX is less than the value of XX in the ad, reduce the value in the ad
 		int num_in_ad = num_avail;
-		if (cp->LookupInteger(restag, num_in_ad)) {
-			dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d %s=%d was %d\n",
-				slot_id, slot_subid, slot_is_bk,
+		if (cp->LookupInteger(restag, num_in_ad) && num_avail != num_in_ad) {
+			dprintf(dpf_cat, "publish_dyn %s %d_%d %s=%d was %d\n",
+				slot_is_bk?"bk":"", slot_id, slot_subid,
 				restag.c_str(), num_avail, num_in_ad);
 			cp->Assign(restag, num_avail);
 		}
@@ -1731,8 +1732,8 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 	if (slot_is_bk) {
 		if (conflict.size() > 0) {
 			cp->Assign("ResourceConflict", conflict);
-			dprintf(D_ZKM, "publish_dyn %d.%d.%d ResourceConflict=%s\n",
-				slot_id, slot_subid, slot_is_bk,
+			dprintf(dpf_cat, "publish_dyn %s %d_%d ResourceConflict=%s\n",
+				slot_is_bk?"bk":"", slot_id, slot_subid,
 				conflict.c_str());
 		} else {
 			cp->Delete("ResourceConflict");
@@ -2260,6 +2261,9 @@ CpuAttributes::publish_static(
 	const ResBag * inuse, // resources in-use in primary slot
 	const ResBag * brokenRes) const // resources lost to p-slot because a broken slot was deleted
 {
+	//bool internal_ad = rip && (cp == rip->r_config_classad || cp == rip->r_classad);
+	//bool wrong_internal_ad = rip && (cp == rip->r_classad);
+
 		std::string ids;
 		std::string broken_reason;
 		bool broken = is_broken(&broken_reason);
