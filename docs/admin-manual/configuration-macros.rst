@@ -2498,7 +2498,7 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     on the EP system.
 
 :macro-def:`STARTER_NESTED_SCRATCH[FileSystem]`
-    A boolean value that defaults to true.  When true, the job's scratch
+    A boolean value that defaults to true.  When false, the job's scratch
     directory hierarchy is created in the same way as it was previous
     to HTCondor 24.9.  That is, the job's scratch directory is a 
     direct subdirectory of :macro:`EXECUTE` named *dir_<starter_pid>*,
