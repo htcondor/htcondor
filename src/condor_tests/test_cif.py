@@ -499,10 +499,10 @@ def shadow_log_is_as_expected(the_condor, count):
 
 
 def lock_dir_is_clean(the_lock_dir):
-    files = list(the_lock_dir.iterdir())
-    for file in files:
-        assert file.name == "shared_port_ad" or file.name == "InstanceLock"
-    assert len(files) == 2
+    syndicate_dir = the_lock_dir / "syndicate"
+
+    files = list(syndicate_dir.iterdir())
+    assert len(files) == 0
 
 
 # ---- the tests --------------------------------------------------------------

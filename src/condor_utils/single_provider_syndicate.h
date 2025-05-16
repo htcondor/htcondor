@@ -32,7 +32,9 @@
     Each worker MUST call release() when it is done using the resource.  If
     the provider calls release(), it will only succeed if no consumer is
     currently using the resource, allowing the provider to poll to determine
-    if it is safe to deprovision the resource.
+    if it is safe to deprovision the resource.  The provider MUST continue
+    to call touch() more frequently than the lease duration until release()
+    returns true.
 */
 
 #include <string>
