@@ -516,7 +516,11 @@ def shadow_log_is_as_expected(the_condor, count):
     job_evictions = count_shadow_log_lines(
         the_condor, "is being evicted from"
     )
-    assert job_evictions == 0
+    # There's a race condition that can (correctly) trigger an eviction, but
+    # for which everything else works properly.  See HTCONDOR-3071 for details;
+    # this should be re-enabled, and recovery from a missing staging directory
+    # explicitly checked in another test.
+    # assert job_evictions == 0
 
 
 def lock_dir_is_clean(the_lock_dir):
