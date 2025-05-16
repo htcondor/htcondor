@@ -703,6 +703,7 @@ all attributes.
     attributes :ad-attr:`HoldReasonCode`, :ad-attr:`NumHoldsByReason`, and :ad-attr:`HoldReasonSubCode`. 
 
     .. include:: ../codes-other-values/hold-reason-codes.rst
+        :start-line: 3
 
 :classad-attribute-def:`HoldReasonSubCode`
     An integer value that represents further information to go along
@@ -858,6 +859,7 @@ all attributes.
     Integer which indicates the current status of the job.
 
     .. include:: ../codes-other-values/job-status-codes.rst
+        :start-line: 3
 
 :classad-attribute-def:`JobSubmitFile`
     String which names the submit file the job came from,
@@ -908,6 +910,7 @@ all attributes.
     Integer which indicates the job universe.
 
     .. include:: ../codes-other-values/job-universe-numbers.rst
+        :start-line: 3
 
 :classad-attribute-def:`KeepClaimIdle`
     An integer value that represents the number of seconds that the
@@ -1880,6 +1883,7 @@ all attributes.
     Values defined for :ad-attr:`HoldReasonCode` are also valid here
 
     .. include:: ../codes-other-values/vacate-reason-codes.rst
+        :start-line: 3
 
 :classad-attribute-def:`VacateReasonSubCode`
     An integer value that represents further information to go along
