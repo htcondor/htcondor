@@ -7,18 +7,18 @@
 *** 23.0.25 bugs
 
 - Fixed some bugs with parallel universe jobs that can cause the
-  ``condor_schedd`` to crash.
+  *condor_schedd* to crash.
   :jira:`3049`
 
 - Fixed a bug that caused the *condor_starter* to crash if a job was
   vacated during input file transfer.
   :jira:`3016`
 
-- ``condor_watch_q`` will now correctly display the full range of job
+- :tool:`condor_watch_q` will now correctly display the full range of job
   ids for each batch grouping.
   :jira:`2992`
 
-- Fixed bug in one of ``condor_upgrade_check``\'s tests that would cause
+- Fixed bug in one of :tool:`condor_upgrade_check`\'s tests that would cause
   the test to check for incorrect hostname when running inside of a container.
   :jira:`3014`
 
