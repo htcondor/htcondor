@@ -1638,7 +1638,7 @@ check_syndicate_dir() {
 
 	for( const auto & entry : rdi ) {
 		if( entry.is_regular_file() ) {
-			std::string extension = entry.path().extension();
+			std::string extension = entry.path().extension().string();
 
 			if( extension == "" ) {
 				// Keyfile.
@@ -1662,7 +1662,7 @@ check_syndicate_dir() {
 			char * endptr = NULL;
 			strtol( extension.c_str(), & endptr, 10 );
 			if( * endptr == '\0' ) {
-				if( starts_with( entry.path().filename(), "." ) ) {
+				if( starts_with( entry.path().filename().string(), "." ) ) {
 					// Hidden keyfile.
 					if( lease_has_expired(entry.path()) ) {
 						std::filesystem::remove( entry.path(), ec );
