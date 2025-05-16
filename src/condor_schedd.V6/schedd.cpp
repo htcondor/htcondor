@@ -18492,12 +18492,13 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 }
 
 
-// Write Scchedd ClassAd to daemon history?
+// Write Schedd ClassAd to daemon history?
 void
 Scheduler::maybeWriteDaemonHistory(ClassAd* ad) {
 	static time_t prev_write = 0;
-	if (time(nullptr) - prev_write > WriteHistRecordInterval) {
-		time(&prev_write);
+	time_t now = time(nullptr);
+	if (now - prev_write > WriteHistRecordInterval) {
+		prev_write = now;
 		daemonCore->AppendDaemonHistory(ad);
 	}
 }

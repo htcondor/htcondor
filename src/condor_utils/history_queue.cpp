@@ -119,6 +119,14 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 	std::string record_src;
 	queryAd.EvaluateAttrString(ATTR_HISTORY_RECORD_SOURCE, record_src);
 
+	std::string daemon_subsys;
+	queryAd.EvaluateAttrString(ATTR_DAEMON_HISTORY_SUBSYS, daemon_subsys);
+
+	// Remote history does no assumptions for daemon history... expect explicit subsystem
+	if (istring_view("daemon") == record_src.c_str() && daemon_subsys.empty()) {
+		return sendHistoryErrorAd(stream, 6, "Specified daemon history source without subsystem.");
+	}
+
 	std::string ad_type_filter;
 	if ( ! queryAd.EvaluateAttrString(ATTR_HISTORY_AD_TYPE_FILTER, ad_type_filter)) {
 		ad_type_filter.clear();
@@ -140,6 +148,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_searchForwards = searchForwards;
 		state.m_scanLimit = scanLimit;
 		state.m_adTypeFilter = ad_type_filter;
+		state.m_daemonSubsys = daemon_subsys;
 		m_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
@@ -149,6 +158,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_searchForwards = searchForwards;
 		state.m_scanLimit = scanLimit;
 		state.m_adTypeFilter = ad_type_filter;
+		state.m_daemonSubsys = daemon_subsys;
 		return launcher(state);
 	}
 }
@@ -200,7 +210,9 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		} else if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) {
 			args.AppendArg("-epochs");
 		} else if (strcasecmp(state.RecordSrc().c_str(),"DAEMON") == MATCH) {
-			args.AppendArg("-daemon");
+			std::string flag;
+			formatstr(flag, "-daemon:%s", state.m_daemonSubsys.c_str());
+			args.AppendArg(flag);
 		}
 
 		// End history source specification
@@ -242,6 +254,9 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		}
 		if ( ! state.RecordSrc().empty()) {
 			searchKnob = state.RecordSrc() + "_" + searchKnob;
+		}
+		if ( ! state.m_daemonSubsys.empty()) {
+			searchKnob = state.m_daemonSubsys + "_" + searchKnob;
 		}
 		auto_free_ptr searchPath(param(searchKnob.c_str()));
 		if (searchPath) {

@@ -114,7 +114,7 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false, bool read_dir=false);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -139,20 +139,6 @@ const char * const defaultJob_PrintFormat = "SELECT\n"
 "Cmd               AS CMD             WIDTH    0 PRINTAS JOB_DESCRIPTION\n"
 "SUMMARY NONE\n";
 
-const char * defaultJob_PrintAttrs[] = {
-	ATTR_CLUSTER_ID,
-	ATTR_PROC_ID,
-	ATTR_OWNER,
-	ATTR_JOB_STATUS,
-	ATTR_JOB_REMOTE_WALL_CLOCK,
-	ATTR_JOB_REMOTE_USER_CPU,
-	ATTR_JOB_CMD,
-	ATTR_JOB_ARGUMENTS1,
-	ATTR_JOB_ARGUMENTS2,
-	ATTR_Q_DATE,
-	ATTR_COMPLETION_DATE,
-};
-
 const char* const defaultScheddAd_PrintFormat = "SELECT\n"
 "RecordWriteDate  AS 'TIMESTAMP  ' WIDTH -11 PRINTAS QDATE OR ??\n"
 "RecentDaemonCoreDutyCycle?:0 * 100 AS DUTY_CYCLE  PRINTF '%7.2f%%'\n"
@@ -166,20 +152,6 @@ const char* const defaultScheddAd_PrintFormat = "SELECT\n"
 "TransferQueueNumWaitingToUpload    AS    Waiting  PRINTF %7d\n"
 "FileTransferMBWaitingToUpload      AS  WaitingMB  PRINTF %9.2f\n"
 "SUMMARY NONE\n";
-
-const char * defaultScheddAd_PrintAttrs[] = {
-	"RecentDaemonCoreDutyCycle",
-	"RecordWriteDate",
-	"TotalHeldJobs",
-	"TotalIdleJobs",
-	"TotalRunningJobs",
-	"TransferQueueNumDownloading",
-	"TransferQueueNumWaitingToDownload",
-	"FileTransferMBWaitingToDownload",
-	"TransferQueueNumUploading",
-	"TransferQueueNumWaitingToUpload",
-	"FileTransferMBWaitingToUpload",
-};
 
 //------------------------------------------------------------------------
 //Structure to hold info needed for ending search once all matches are found
@@ -327,6 +299,7 @@ main(int argc, const char* argv[])
   const char* searchPath=NULL;
   const char* setRecordSrcFlag=NULL;
   const char * pcolon=NULL;
+  std::string subsys;
   auto_free_ptr matchFileName;
   auto_free_ptr searchDirectory;
 
@@ -556,15 +529,28 @@ main(int argc, const char* argv[])
 		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
 		matchFileName.clear();
-		matchFileName.set(param("DAEMON_HISTORY"));
+
+		// Allow -daemon:<subsys> for future queries
+		if (pcolon) { ++pcolon; }
+
+		// Default to querying Schedd history
+		std::string daemon = (pcolon && *pcolon != '\0') ? pcolon : "schedd";
+		upper_case(daemon);
+
+		std::string knob;
+		formatstr(knob, "%s_DAEMON_HISTORY", daemon.c_str());
+
+		matchFileName.set(param(knob.c_str()));
 		if ( ! matchFileName) {
-			fprintf(stderr, "Error: No daemon history to read.\n");
+			fprintf(stderr, "Error: No daemon history to read: %s undefined\n", knob.c_str());
 			exit(1);
 		}
 
-		// TODO: In the future handle more than Schedd Ads in daemon history
 		filterAdTypes.clear();
-		filterAdTypes.insert("SCHEDD");
+		filterAdTypes.insert(daemon);
+
+		// For remote queries
+		subsys = daemon;
 	}
 	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 2)) {
 		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
@@ -889,7 +875,7 @@ main(int argc, const char* argv[])
       }
   }
   else {
-      readHistoryRemote(constraintExpr, want_startd_history, readFromDir);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir);
   }
   delete constraintExpr;
 
@@ -938,31 +924,24 @@ static int getDisplayWidth() {
 // setup display mask for default output
 static void init_default_custom_format() {
 	const char* fmt = nullptr;
-	const char** attrs = nullptr;
 
 	switch (recordSrc) {
 		case HRS_DAEMON_HIST:
 			fmt = defaultScheddAd_PrintFormat;
-			attrs = defaultScheddAd_PrintAttrs;
 			break;
 		case HRS_SCHEDD_JOB_HIST:
 		case HRS_STARTD_HIST:
 		case HRS_JOB_EPOCH:
 			fmt = defaultJob_PrintFormat;
-			attrs = defaultJob_PrintAttrs;
 			break;
 		case HRS_AUTO:
 			EXCEPT("Developer Error: Initializing default print format with source auto!!");
 			break;
 	}
 
-	if (!fmt || !attrs) {
+	if ( ! fmt) {
 		fprintf(stderr, "Error: Failed to initialize default print format.\n");
 		exit(1);
-	}
-
-	for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
-		projection.emplace(attrs[ii]);
 	}
 
 	std::string constraint; // Needed to call function
@@ -1025,7 +1004,7 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd, bool read_dir)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -1098,6 +1077,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 			case HRS_DAEMON_HIST:
 				if (v.built_since_version(24, 9, 0)) {
 					ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "DAEMON");
+					ad.InsertAttr(ATTR_DAEMON_HISTORY_SUBSYS, subsys);
 				} else {
 					formatstr(err_msg, "The remote daemon version does not support daemon history.");
 				}

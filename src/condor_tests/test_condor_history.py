@@ -25,7 +25,6 @@
     STARTD_NAME = TEST_STARTD@
     LOCAL_CONFIG_DIR = $(EXECUTE)
     JOB_EPOCH_HISTORY = $(SPOOL)/epoch_history
-    DAEMON_HISTORY = $(SPOOL)/daemon.hist
 """
 #endtestreq
 
@@ -151,6 +150,11 @@ TEST_ERROR_CASES = {
         "err": "Unknown -transfer-history extra attribute 'q'",
         "config": {},
     },
+    "fail_unknown_daemon_history" : {
+        "cmd": "condor_history -daemon:foo",
+        "err": "No daemon history to read: FOO_DAEMON_HISTORY undefined",
+        "config": {},
+    }
 }
 #===============================================================================================
 # Reconfig condor to how we want
@@ -575,14 +579,14 @@ def getDaemonHistory(default_condor):
     # NOTE: This (by default) gets Schedd records from daemon history
     p = default_condor.run_command(["condor_history", "-daemon"])
     with default_condor.use_config():
-        hist = htcondor.param.get("DAEMON_HISTORY")
+        hist = htcondor.param.get("SCHEDD_DAEMON_HISTORY")
     return (hist, p)
 
 #===============================================================================================
 @action
 def pyBindGetScheddHist(default_condor):
     with default_condor.use_config():
-        ads = htcondor.Schedd().personalHistory(match=1, projection=["RecordWriteDate"])
+        ads = htcondor.Schedd().daemonHistory(match=1, projection=["RecordWriteDate"])
     return ads
 
 #===============================================================================================

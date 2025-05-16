@@ -3037,7 +3037,9 @@ DaemonCore::reconfig(void) {
 	// Configured with a daemon history file
 	// Note: It is up to actual daemon (not DaemonCore)
 	//       to write ClassAd to history
-	param(m_daemon_history, "DAEMON_HISTORY");
+	std::string subsys_hist_param;
+	formatstr(subsys_hist_param, "%s_DAEMON_HISTORY", get_mySubSystem()->getName());
+	param(m_daemon_history, subsys_hist_param.c_str());
 	if ( ! m_daemon_history.empty()) {
 		m_hist_rotation_info.IsStandardHistory = false;
 		long long maxSize = 0;

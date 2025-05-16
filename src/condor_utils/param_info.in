@@ -3112,10 +3112,10 @@ default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
-[DAEMON_HISTORY]
-default=$(SPOOL)/daemon_history
+[SCHEDD_DAEMON_HISTORY]
+default=$(SPOOL)/schedd_daemon_history
 type=string
-tags=daemon_core
+tags=daemon_core,schedd
 
 [HISTORY_CONTAINS_JOB_ENVIRONMENT]
 default = true

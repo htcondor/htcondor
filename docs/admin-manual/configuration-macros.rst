@@ -521,13 +521,13 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     time spent on each client. Setting this option to 0 disables remote
     history access.
 
-:macro-def:`DAEMON_HISTORY[Global]`
-    A path representing a file for any daemons enabled to periodically
-    write ClassAd records into.
+:macro-def:`<SUBSYS>_DAEMON_HISTORY[Global]`
+    A path representing a file for the daemon specified by :macro:`SUBSYSTEM`
+    to periodically write ClassAd records into.
 
     .. note::
 
-        Only the Schedd Daemon is capable of writing into the Daemon
+        Only the Schedd Daemon is capable of writing into a Daemon
         history file currently.
 
 :macro-def:`MAX_DAEMON_HISTORY_LOG[Global]`
@@ -4977,7 +4977,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`SCHEDD_HISTORY_RECORD_INTERVAL[SCHEDD]`
     An integer value representing the maximum interval between writing
-    the Schedd's ClassAd to the :macro:`DAEMON_HISTORY` file. This is
+    the Schedd's ClassAd to the :macro:`SCHEDD_DAEMON_HISTORY` file. This is
     defined in terms of seconds and defaults to 900 (every 15 minutes).
 
 :macro-def:`ABSENT_SUBMITTER_LIFETIME[SCHEDD]`

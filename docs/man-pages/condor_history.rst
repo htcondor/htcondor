@@ -102,7 +102,7 @@ Options
         format to be specified (i.e. **-long**, **-json**, **-af**, etc.).
 
 **-daemon**
-    Query for ClassAds recorded in the :macro:`DAEMON_HISTORY`
+    Query for ClassAds recorded in the :macro:`<SUBSYS>_DAEMON_HISTORY`
 
     .. note::
 
@@ -234,7 +234,7 @@ single line, and contains the following items:
     The name of the job's executable.
 
 The default information displayed for historical Schedd ClassAds queried from
-the :macro:`DAEMON_HISTORY` are the following:
+the :macro:`SCHEDD_DAEMON_HISTORY` are the following:
 
  TIMESTAMP
     The UNIX timestamp representing exactly when the record was

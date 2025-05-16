@@ -24,6 +24,7 @@ from ._submit import Submit
 from ._submit_result import SubmitResult
 # So that the typehints match version 1.
 from ._query_opt import QueryOpt as QueryOpts
+from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _schedd_query,
@@ -345,8 +346,7 @@ class Schedd():
             If :py:obj:`None`, return all (matching) jobs.
         :return: List of ClassAds.
         """
-        # src(0) = HRS_SCHEDD_JOB_HIST
-        return self._history(0, constraint, projection, match, since)
+        return self._history(HistorySrc.ScheddJob, constraint, projection, match, since)
 
 
     def jobEpochHistory(self,
@@ -381,11 +381,10 @@ class Schedd():
             If :py:obj:`None`, return all (matching) jobs.
         :return: List of ClassAds.
         """
-        # src(2) = HRS_JOB_EPOCH
-        return self._history(2, constraint, projection, match, since, **kwargs)
+        return self._history(HistorySrc.JobEpoch, constraint, projection, match, since, **kwargs)
 
 
-    def personalHistory(self,
+    def daemonHistory(self,
         constraint : Optional[Union[str, classad.ExprTree]] = None,
         projection : List[str] = [],
         match : int = -1,
@@ -393,7 +392,7 @@ class Schedd():
     ) -> List[classad.ClassAd]:
         """
         Query this schedd's historical records from its local
-        `daemon <https://htcondor.readthedocs.io/en/latest/admin-manual/configuration-macros.html#DAEMON_HISTORY>`_
+        `daemon <https://htcondor.readthedocs.io/en/latest/admin-manual/configuration-macros.html#SCHEDD_DAEMON_HISTORY>`_
         history file.
 
         :param constraint:  A query constraint.  Only ClassAds matching this
@@ -410,11 +409,10 @@ class Schedd():
             If :py:obj:`None`, return all (matching) ClassAds.
         :return: List of ClassAds.
         """
-        # src(3) = HRS_DAEMON_HIST
         if since is not None and not isinstance(since, classad.ExprTree):
             raise TypeError("since must be an ExprTree")
 
-        return self._history(3, constraint, projection, match, since, ad_type="SCHEDD")
+        return self._history(HistorySrc.Daemon, constraint, projection, match, since, ad_type="SCHEDD")
 
 
     def submit(self,
