@@ -48,6 +48,10 @@ Machine ClassAd Attributes
     The average number of megabytes transferred from each job from the execution
     sandbox after the job has ended.
 
+:classad-attribute-def:`BrokenContextAds`
+    A nested ClassAd containing details about each broken resource detected on
+    an Execution Point.
+
 :classad-attribute-def:`Microarch`
     On X86_64 Linux machines, this advertises the x86_64 microarchitecture,
     like `x86_64-v2`.  See https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
@@ -978,6 +982,9 @@ Machine ClassAd Attributes
      ``"Drained"``
         This slot is not accepting jobs, because the machine is being
         drained.
+
+:classad-attribute-def:`Start`
+    The ClassAd expression configured by the :macro:`START` option.
 
 :classad-attribute-def:`TargetType`
     Describes what type of ClassAd to match with. Always set to the
