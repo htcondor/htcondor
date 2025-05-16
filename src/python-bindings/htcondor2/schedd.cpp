@@ -960,6 +960,15 @@ _history_query(PyObject *, PyObject * args) {
         case 2: /* HRS_JOB_EPOCH */
             commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "JOB_EPOCH");
             break;
+        case 3: /* HRS_DAEMON_HIST */
+            if(!adFilter || adFilter[0] == '\0') {
+                PyErr_SetString( PyExc_HTCondorException, "missing subsystem for daemon history source" );
+                return NULL;
+            }
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "DAEMON");
+            // Note: adFilter is expected to be just the daemon subsys
+            commandAd.InsertAttr(ATTR_DAEMON_HISTORY_SUBSYS, adFilter);
+            break;
         default:
             // This was HTCondorValueError in version 1.
             PyErr_SetString( PyExc_HTCondorException, "unknown history record source" );

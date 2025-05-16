@@ -1772,6 +1772,8 @@ Scheduler::count_jobs()
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
 
+	maybeWriteDaemonHistory(cad);
+
 	cad->Delete(ATTR_CAPABILITY);
 	cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST);
 
@@ -13373,6 +13375,9 @@ Scheduler::Init()
 
 	InitJobHistoryFile("HISTORY", "PER_JOB_HISTORY_DIR"); // or re-init it, as the case may be
 
+	// How often should Schedd write ClassAd records to daemon_history (default 15 min)
+	WriteHistRecordInterval = param_integer("SCHEDD_HISTORY_RECORD_INTERVAL", 60 * 15, 0);
+
 		//
 		// We keep a copy of the last interval
 		// If it changes, then we need update all the job ad's
@@ -18490,5 +18495,17 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 	}
 
 	return TRUE;
+}
+
+
+// Write Schedd ClassAd to daemon history?
+void
+Scheduler::maybeWriteDaemonHistory(ClassAd* ad) {
+	static time_t prev_write = 0;
+	time_t now = time(nullptr);
+	if (now - prev_write > WriteHistRecordInterval) {
+		prev_write = now;
+		daemonCore->AppendDaemonHistory(ad);
+	}
 }
 

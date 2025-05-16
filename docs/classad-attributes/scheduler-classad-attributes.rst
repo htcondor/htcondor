@@ -871,10 +871,10 @@ once a full time span has accumulated.
     The published user name is actually the file transfer queue name, as
     defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
-:classad-attribute-def:`TransferQueueMBWaitingToDownload`
+:classad-attribute-def:`FileTransferMBWaitingToDownload`
     Number of megabytes of output files waiting to be downloaded.
 
-:classad-attribute-def:`TransferQueueMBWaitingToUpload`
+:classad-attribute-def:`FileTransferMBWaitingToUpload`
     Number of megabytes of input files waiting to be uploaded.
 
 :classad-attribute-def:`TransferQueueDownloadWaitTime`
