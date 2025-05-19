@@ -285,6 +285,8 @@ endif ()
 			condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_std_pipe_handler "Test Register_Pipe(std::function)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_std_pipe_handlerd")
+
+			condor_pl_test(test_job_spec_hack "Test job_spec_hack()" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
