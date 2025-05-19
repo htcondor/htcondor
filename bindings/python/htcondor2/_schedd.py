@@ -69,7 +69,7 @@ def job_spec_hack(
             if re.fullmatch(r'\d+', i):
                 constraints.append(f"(ClusterID == {i})")
             elif re.fullmatch(r'\d+\.\d+', i):
-                (clusterID, procID) = split('.', i)
+                (clusterID, procID) = i.split('.')
                 constraints.append(f"(ClusterID == {clusterID} && ProcID == {procID})")
             else:
                 raise ValueError("All elements of the job_spec list must be strings of the form clusterID[.procID]")

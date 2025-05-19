@@ -12,7 +12,7 @@ from ornithology import (
 CASES = {
     "list_all_clusters": ["1", "2", "3"],
     "list_all_pairs": ["3.0", "3.1", "4.0"],
-    "list_mixed": ["5.0", "6.0", "6.1"],
+    "list_mixed": ["5.0", "6", "6.1"],
 
     "int": 7,
     "exprtree": classad2.ExprTree("ClusterID == 8"),
