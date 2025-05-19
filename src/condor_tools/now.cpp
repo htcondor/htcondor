@@ -58,9 +58,7 @@ int main( int argc, char ** argv ) {
 	++i;
 
 	unsigned vCount = 0;
-	// Windows doesn't want me to have nice things.
-	// PROC_ID vids[ argc - i ];
-	PROC_ID * vids = new PROC_ID[ argc - i ];
+	std::vector<PROC_ID> vids(argc - i);
 	for( ; i != argc; ++i, ++vCount ) {
 		vids[vCount].cluster = strtol( argv[i], & endptr, 10 );
 		if( endptr == argv[i] ) { return usage( argv[0] ); }
@@ -86,11 +84,10 @@ int main( int argc, char ** argv ) {
 
 	ClassAd reply;
 	std::string errorMessage;
-	if(! schedd.reassignSlot( bid, reply, errorMessage, vids, vCount, flags )) {
+	if(! schedd.reassignSlot( bid, reply, errorMessage, vids.data(), vCount, flags )) {
 		fprintf( stderr, "Unable to reassign slot: %s.\n", errorMessage.c_str() );
 		return 1;
 	}
 
-	delete[] vids;
 	return 0;
 }

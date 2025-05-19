@@ -76,8 +76,12 @@ using namespace std::chrono_literals;
 
 
 SingleProviderSyndicate::SingleProviderSyndicate( const std::string & k ) : key(k) {
+    // FIXME: Some damn fools configure this on shared filesystems.  If
+    // CREATE_LOCKS_ON_LOCAL_DISK is set, call FileLock::getTempPath(p)
+    // to get the lock directory instead.
     std::string LOCK = param("LOCK");
     std::filesystem::path lock(LOCK);
+    std::filesystem::path syndicate = lock / "syndicate";
 
     // Make sure that replace_extension() acts like add_extension().
     std::replace( key.begin(), key.end(), '.', '_' );
@@ -86,7 +90,7 @@ SingleProviderSyndicate::SingleProviderSyndicate( const std::string & k ) : key(
     TemporaryPrivSentry tps(PRIV_CONDOR);
 
     std::error_code ec;
-    if(! std::filesystem::create_directories(lock, ec)) {
+    if(! std::filesystem::create_directories(syndicate, ec)) {
         // My reading of the spec is that it is explicitly forbidden to
         // return false from create_directories() because the directories
         // already exist.
@@ -95,7 +99,7 @@ SingleProviderSyndicate::SingleProviderSyndicate( const std::string & k ) : key(
         }
     }
 
-    this->keyfile = lock/key;
+    this->keyfile = syndicate/key;
 }
 
 
@@ -109,7 +113,7 @@ bool
 take_remove_lock( const std::filesystem::path & keyfile, int depth ) {
     // Try to grab the remove lock at the indicated depth.
     std::filesystem::path rmfile = keyfile;
-    std::string d = std::to_string( depth );
+    std::string d = ".rm_" + std::to_string( depth );
     rmfile.replace_extension( d );
     int fd = open( rmfile.string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0400 );
     close( fd );
@@ -357,7 +361,7 @@ SingleProviderSyndicate::release() {
         // problem is that they would see the READY state in the lockfile
         // and proceed to (fail to) use the resource.
         //
-        // Instead, rename() the keyfile (.keyfile.<pid>), and _then_ check
+        // Instead, rename() the keyfile (.<keyfile>.<pid>), and _then_ check
         // the hardlink count.  The consumer could still try to create a
         // hardlink between these two steps, but it would fail (causing the
         // consumer to try grabbing the keyfile) because it's path-oriented.

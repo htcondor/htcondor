@@ -1348,6 +1348,11 @@ UniShadow::start_common_input_conversation(
 				} break;
 
 			case SingleProviderSyndicate::READY:
+				// For testing purposes only.
+				// guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+				// guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+				// request = co_yield guidance;
+
 				// Map the common files into the sandbox.
 				guidance = do_wiring_up(message, cifName);
 				request = co_yield guidance;
@@ -1558,6 +1563,28 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
 		} else {
+			// This should have been take care of by match-making, but for the
+			// first milestone, that has to be done by hand and might have been
+			// forgotten.  I'd like to check the slot ad, but the shadow doesn't
+			// have access to that; instead, the starter will send along the
+			// version number in the request ad.
+			//
+			// This doesn't help if the starter is too old to even ask for
+			// guidance, but there's nothing we can do about that if the
+			// shadow doesn't have access to the slot ad.
+			int hasCommonFilesTransfer = 0;
+			request.LookupInteger(
+				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
+			);
+			if( hasCommonFilesTransfer < 1 ) {
+				// Put the job on hold with a request to add the requirement.
+				holdJob("Please add TARGET.HasCommonFilesTransfer to your requirements expression.", 1003, 5 );
+
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+				return GuidanceResult::Command;
+			}
+
+
 			//
 			// Since we're only talking to one starter at a time, we can
 			// simply record if we've already started this conversation.

@@ -3799,7 +3799,7 @@ prevent the job from using more scratch space than provisioned.
 
     .. note::
 
-        Docker Universe jobs are not compatible with mount namespaces.
+        Docker and VM Universe jobs are not compatible with mount namespaces.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
     A boolean value that defaults to ``False``. When ``True`` EP slots
@@ -8107,8 +8107,7 @@ condor_procd Configuration File Macros
     own. Use of the :tool:`condor_procd` results in improved scalability
     because only one instance of this logic is required. The
     :tool:`condor_procd` is required when using group ID-based process
-    tracking (see :ref:`admin-manual/ep-policy-configuration:group
-    id-based process tracking`.
+    tracking.
     In this case, the :macro:`USE_PROCD` setting will be ignored and a
     :tool:`condor_procd` will always be used. By default, the
     :tool:`condor_master` will start a :tool:`condor_procd` that all other daemons
@@ -8154,29 +8153,24 @@ condor_procd Configuration File Macros
     the :tool:`condor_procd` to reliably track all processes associated with
     a job. When ``True``, values for :macro:`MIN_TRACKING_GID` and
     :macro:`MAX_TRACKING_GID` must also be set, or HTCondor will abort,
-    logging an error message. See :ref:`admin-manual/ep-policy-configuration:group
-    id-based process tracking` for a detailed description.
+    logging an error message.
 
 :macro-def:`MIN_TRACKING_GID[PROCD]`
     An integer value, that together with :macro:`MAX_TRACKING_GID` specify a
     range of GIDs to be assigned on a per slot basis for use by the
-    :tool:`condor_procd` in tracking processes associated with a job. See
-    :ref:`admin-manual/ep-policy-configuration:group id-based
-    process tracking` for a detailed description.
+    :tool:`condor_procd` in tracking processes associated with a job.
 
 :macro-def:`MAX_TRACKING_GID[PROCD]`
     An integer value, that together with :macro:`MIN_TRACKING_GID` specify a
     range of GIDs to be assigned on a per slot basis for use by the
-    :tool:`condor_procd` in tracking processes associated with a job. See
-    :ref:`admin-manual/ep-policy-configuration:group id-based process
-    tracking` for a detailed description.
+    :tool:`condor_procd` in tracking processes associated with a job.
 
 :macro-def:`BASE_CGROUP[PROCD]`
     The path to the directory used as the virtual file system for the
     implementation of Linux kernel cgroups. This variable defaults to
     the string ``htcondor``, and is only used on Linux systems. To
     disable cgroup tracking, define this to an empty string. See
-    :ref:`admin-manual/ep-policy-configuration:cgroup-based process
+    :ref:`admin-manual/ep-policy-configuration:cgroup based process
     tracking` for a description of cgroup-based process tracking.
     An administrator can configure distinct cgroup roots for 
     different slot types within the same startd by prefixing

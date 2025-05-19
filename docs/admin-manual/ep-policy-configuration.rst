@@ -737,15 +737,9 @@ which creates and manages this cgroups.
     :align: center
 
     flowchart TD
-      starter("`Cgroup 
-                of 
-                condor_starter`")
-      job_scope("`Cgroup
-                  for
-                  job scope`")
-      job_slice("`Cgroup
-                  for
-                  job slice`")
+      starter("Cgroup <br> of <br> condor_starter")
+      job_scope("Cgroup <br> for <br> job scope")
+      job_slice("Cgroup <br> for <br> job slice")
       starter -->  job_scope
       job_scope --> job_slice
       style starter fill:pink
@@ -878,6 +872,22 @@ eight slots where running jobs, with each configured for one cpu, the
 cpu usage would be assigned equally to each job, regardless of the
 number of processes or threads in each job.
 
+
+.. sidebar:: LVM Mount Namespace
+
+    By default, the ephemeral filesystem is mounted in a mount namespace
+    making the filesystem private to the job if compatible
+    (see :macro:`LVM_HIDE_MOUNT`). Thus, the contents of the filesystem
+    are not visible to processes outside of the *condor_starters* process
+    tree.
+
+    The ``nsenter`` command can be used to enter this namespace
+    in order inspect the job's sandbox:
+
+    .. code-block:: console
+
+        # nsenter -t <starter-pid> -m <command>
+
 .. _LVM Description:
 
 Per Job Ephemeral Scratch Filesystems
@@ -905,11 +915,7 @@ to handle these errors internally at all places writes occur. Even in included t
 libraries.
 
 .. note::
-    The ephemeral filesystem created for the job is private to that job so the contents of
-    the filesystem are not visible outside the process hierarchy. The nsenter command can
-    be used to enter this namespace in order inspect the job's sandbox.
 
-.. note::
     As this filesystem will never live through a system reboot, it is mounted with mount options
     that optimize for performance, not reliability, and may improve performance for I/O heavy
     jobs.

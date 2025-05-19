@@ -182,7 +182,11 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_parent_claim )
+Resource::Resource (
+	CpuAttributes* cap,
+	int rid,                 // new resource id
+	Resource* _donor,        // resource donor
+	bool _take_donor_claim)  // if creating a d-slot, take the claim id from the _parent
 	: r_state(nullptr)
 	, r_config_classad(nullptr)
 	, r_classad(nullptr)
@@ -216,6 +220,23 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 {
 	std::string tmp;
 
+	// the _donor of resources can be null, or it can be a p-slot or d-slot
+	// if it is a p-slot, then the _donor is also the _parent
+	// it it is a d-slot, then the _donor's parent is the new d-slots parent
+	Resource * _parent = nullptr;
+	if (_donor) {
+		if (_donor->is_partitionable_slot()) { _parent = _donor; }
+		else if (_donor->is_dynamic_slot()) { _parent = _donor->get_parent(); }
+		else {
+			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str);
+			// we can't fail a constructor, so create an unusable slot instead
+			set_feature(BROKEN_SLOT);
+			m_parent = nullptr;
+			r_cur = nullptr;
+			return;
+		}
+	}
+
 		// we need this before we instantiate any Claim objects...
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
 	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
@@ -245,10 +266,15 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	}
 
 	// can't bind until after we get a r_sub_id but must happen before creating the Reqexp
-	if (_parent) {
-		if ( ! r_attr->bind_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot, false)) {
-			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id); // give back the ids that were bound before the failure
-			_parent->m_id_dispenser->insert(r_sub_id); // give back the slot id.
+	if (_donor) {
+		// If we have a parent, we are dynamic
+		set_feature(DYNAMIC_SLOT);
+		set_parent(_parent);
+
+		// TODO: fix for sharing resources between slots
+		if ( ! r_attr->bind_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot, false, _donor->r_sub_id)) {
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, _donor->r_sub_id); // give back the ids that were bound before the failure
+			_parent->m_id_dispenser->insert(r_sub_id); // give back the new slot id.
 
 			// we can't fail a constructor, so indicate the the slot is unusable instead
 			set_feature(BROKEN_SLOT);
@@ -256,10 +282,15 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 			r_cur = nullptr;
 			return;
 		}
+
+		// take resource quantities from the resource donor (normally the parent)
+		// TODO: fix for sharing resources between slots
+		*(_donor->r_attr) -= *(r_attr);
+		resmgr->refresh_classad_resources(_donor);
+		if (_donor != _parent) { resmgr->refresh_classad_resources(_parent); }
+	} else {
+		m_parent = nullptr;
 	}
-	// set_parent will carve resource quantities out of the parent if it is not NULL
-	// this will also set feature to DYNAMIC_SLOT if _parent is non-null
-	set_parent( _parent );
 
 	r_state = new ResState( this );
 	r_cod_mgr = new CODMgr( this );
@@ -278,10 +309,26 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 		}
 	}
 
-	if (_parent && _take_parent_claim) {
-		r_cur = _parent->r_cur;
-		r_cur->setResource(this);
-		_parent->r_cur = new Claim(_parent);
+	if (_donor && _take_donor_claim) {
+		if (_donor != _parent) {
+			// This is the normal case for splitting a d-slot into two d-slots
+			// TODO: pass the claim id in here rather than using the first one?
+			// TODO: this code only works if r_claims always has only a single claim id
+			Resource::claims_t::iterator j(_donor->r_claims.begin());
+			if (j != _donor->r_claims.end()) {
+				r_cur = *j;
+				r_cur->setResource(this);
+				_donor->r_claims.erase(*j);
+				_donor->r_claims.insert(new Claim(_donor));
+			} else {
+				r_cur = new Claim(this);
+			}
+		} else {
+			// this is the normal case for creating a d-slot from a p-slot
+			r_cur = _parent->r_cur;
+			r_cur->setResource(this);
+			_parent->r_cur = new Claim(_parent);
+		}
 	} else {
 		r_cur = new Claim(this);
 	}
@@ -373,6 +420,7 @@ Resource::~Resource()
 		r_classad->Unchain();
 		delete r_classad; r_classad = NULL;
 	}
+	for (auto & claim : r_claims) { delete claim; }
 	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_attr; r_attr = NULL;
@@ -397,19 +445,18 @@ Resource::clear_parent()
 	if( m_parent && !m_currently_fetching ) {
 		if (r_attr->is_broken()) {
 			// we don't give broken d-slot resources back to the parent
-			// we bind the GPUs to an invalid d-slot id
+			// we bind the GPUs to a "broken" d-slot id
 			// the broken_context knows the resource quantities already
 			// we also accumulate the lost fungible resources in the p-slot's r_lost_child_res member
 			auto & brit = resmgr->get_broken_context(this);
-			int broken_sub_id = (1000*1000) + brit.b_id;
-			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, broken_sub_id);
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, brit.sub_id());
 			if ( ! m_parent->r_lost_child_res) {
 				m_parent->r_lost_child_res = new ResBag(*r_attr);
 			} else {
 				*(m_parent->r_lost_child_res) += *r_attr;
 			}
 		} else {
-			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, 0);
 			*(m_parent->r_attr) += *(r_attr);
 		}
 		m_parent->m_id_dispenser->insert( r_sub_id );
@@ -423,17 +470,9 @@ Resource::clear_parent()
 }
 
 void
-Resource::set_parent( Resource* rip )
+Resource::set_parent( Resource* rip)
 {
 	m_parent = rip;
-
-		// If we have a parent, we consume its resources
-	if( m_parent ) {
-		// If we have a parent, we are dynamic
-		set_feature( DYNAMIC_SLOT );
-		*(m_parent->r_attr) -= *(r_attr);
-		resmgr->refresh_classad_resources(m_parent);
-	}
 }
 
 
@@ -1262,6 +1301,8 @@ Resource::init_classad()
 	// this catches all state updates
 	r_classad = new ClassAd();
 	r_classad->ChainToAd(r_config_classad);
+
+	m_orig_assigned_gpus = "*"; // hack to help track HTCONDOR-3072
 
 		// put in slottype overrides of the config_classad
 	this->publish_slot_config_overrides(r_config_classad);
@@ -2442,13 +2483,12 @@ void Resource::publish_static(ClassAd* cap)
 	//	dprintf(D_ALWAYS | D_BACKTRACE, "in Resource::publish_static(%p) for %s classad=%p, base=%p\n", cap, r_name, r_classad, r_config_classad);
 	//}
 	if (wrong_internal_ad) {
-		dprintf(D_ALWAYS, "ERROR! updating the wrong internal ad!\n");
+		dprintf(D_ERROR, "ERROR! updating the wrong internal ad!\n");
 	} else {
 		dprintf(D_TEST | D_VERBOSE, "Resource::publish_static, %s ad\n", internal_ad ? "internal" : "external");
 	}
 
 	// Set the correct types on the ClassAd
-	dprintf(D_ZKM | D_VERBOSE, "Resource::publish_static send_daemon_ad=%d\n", enable_single_startd_daemon_ad);
 	if (enable_single_startd_daemon_ad) {
 		cap->Assign(ATTR_HAS_START_DAEMON_AD, true);
 		SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
@@ -2498,6 +2538,18 @@ void Resource::publish_static(ClassAd* cap)
 
 		// Put in cpu-specific attributes that can only change on reconfig
 		resmgr->publish_static_slot_resources(this, cap);
+		// debug code to help track HTCONDOR-3072
+		std::string assigned_gpus;
+		if (m_orig_assigned_gpus == "*") {
+			m_orig_assigned_gpus.clear();
+			cap->LookupString("AssignedGPUs", m_orig_assigned_gpus);
+		} else {
+			cap->LookupString("AssignedGPUs", assigned_gpus);
+			if (assigned_gpus != m_orig_assigned_gpus) {
+				dprintf(D_ERROR | D_BACKTRACE, "%sAssignedGPUs changed from \"%s\" to \"%s\"\n",
+					internal_ad?"Config Ad ":"", m_orig_assigned_gpus.c_str(), assigned_gpus.c_str());
+			}
+		}
 
 		// Put in machine-wide attributes that can only change on reconfig
 		resmgr->m_attr->publish_static(cap);
@@ -2902,6 +2954,19 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 	}
 }
 
+// matches one of the slot splitting claim ids in r_claims;
+Claim*
+Resource::is_split_claim_id(const char * id)
+{
+	// d-slots can have split claim ids in the r_claims collection
+	for (auto & claim : r_claims) {
+		if (claim->idMatches(id)) {
+			return claim;
+		}
+	}
+	return nullptr;
+}
+
 void
 Resource::publish_private( ClassAd *ad )
 {
@@ -2959,13 +3024,13 @@ Resource::publish_private( ClassAd *ad )
     }
 
 	if (is_partitionable_slot()) {
-		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
+		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, renderDslotClaimIdsList().c_str());
 		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 	}
 }
 
 std::string
-Resource::makeChildClaimIds() {
+Resource::renderDslotClaimIdsList() {
 		std::string attrValue = "{";
 		bool firstTime = true;
 
@@ -3833,7 +3898,7 @@ bool Resource::fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad,
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_claim)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -4086,11 +4151,17 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_parent_claim);
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_donor_claim);
 		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
 			return NULL;
+		}
+
+		// HACK!! give a split claim to the new d-slot
+		// TODO: do this later? make it conditional??
+		if (rip->is_partitionable_slot() && new_rip->r_claims.empty()) {
+			new_rip->r_claims.insert(new Claim(new_rip));
 		}
 
 		// update the standard value for "now" for all of the subsequent slot attributes
@@ -4121,13 +4192,13 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 /*
 Create multiple dynamic slots for a single request ad
 */
-std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_parent_claim)
+std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_donor_claim)
 {
 	std::vector<Resource*> dslots(num_dslots);
 
 	dslots.clear();
 	for (int ix = 0; ix < num_dslots; ++ix) {
-		Resource * dslot = create_dslot(rip, req_classad, take_parent_claim);
+		Resource * dslot = create_dslot(rip, req_classad, take_donor_claim);
 		if ( ! dslot) break;
 		dslots.push_back(dslot);
 	}

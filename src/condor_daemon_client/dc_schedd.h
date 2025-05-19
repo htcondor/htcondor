@@ -343,6 +343,21 @@ public:
 							int &job_status,
 							std::string &hold_reason);
 
+	// offer a set of claim-id,slot-ad pairs for a schedd to match against, submitter_name is optional
+	// returns -1 if the command could not be sent,
+	// otherwise the ActionResult attribute of the reply is returned
+	// which is 1 for success and 0 for error
+	int offerResources(const std::vector< std::pair<std::string, const ClassAd*> > & resources, const std::string & submitter_name, int timeout);
+
+	// offer a single slot to the schedd, optionally for for a given submitter
+	// returns -1 if the command could not be sent,
+	// otherwise the ActionResult attribute of the reply is returned
+	// which is 1 for success and 0 for error
+	int offerResource(const std::string & claim_id, const ClassAd & slot_ad, const std::string & submitter_name, int timeout) {
+		std::vector< std::pair<std::string, const ClassAd*> > resources;
+		resources.emplace_back(claim_id, &slot_ad);
+		return offerResources(resources, submitter_name, timeout);
+	}
 
 		/** Request the schedd to initiate a negoitation cycle.
 			The request is sent via a SafeSock (UDP datagram).

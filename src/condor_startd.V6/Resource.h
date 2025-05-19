@@ -93,7 +93,7 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _parent = NULL, bool take_parent_claim = false);
+	Resource( CpuAttributes*, int id, Resource* _donor = nullptr, bool take_donor_claim = false);
 	~Resource();
 
 		// override param by slot_type
@@ -314,7 +314,7 @@ public:
 	void	publish_slot_config_overrides(ClassAd * cad);
 
 	void	publish_static_resources(ClassAd * cad, const ResBag & inUse) {
-		if (r_backfill_slot && can_create_dslot()) {
+		if (r_backfill_slot && !m_parent) {
 			// deduct in-use resources from the backfill p-slot
 			// if there is more than one backfill p-slot, inuse resources will be overcounted.
 			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
@@ -480,13 +480,15 @@ public:
 	bool is_partitionable_slot() const { return m_resource_feature == PARTITIONABLE_SLOT; }
 	bool is_dynamic_slot() const { return m_resource_feature == DYNAMIC_SLOT; }
 	bool is_broken_slot() const { return m_resource_feature == BROKEN_SLOT; }
-	bool can_create_dslot() const { return is_partitionable_slot(); } // for now, only p-slots are splitable
+	bool can_create_dslot() const { return is_partitionable_slot() || (is_dynamic_slot() && !r_claims.empty()); }
 
-	void set_parent( Resource* rip );
+	void set_parent(Resource* rip);
 	Resource* get_parent() { return m_parent; }
 	void clear_parent(); // disconnect from parent (called on deletion of dynamic slots)
 
-	std::string makeChildClaimIds();
+	Claim* is_split_claim_id(const char * id); // matches one of the slot splitting claim ids in r_claims;
+
+	std::string renderDslotClaimIdsList();
 	void add_dynamic_child(Resource *rip) { m_children.insert(rip); }
 	void remove_dynamic_child(Resource *rip) {m_children.erase(rip); }
 
@@ -497,7 +499,9 @@ public:
 	bool fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad, std::string & require);
 
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
-	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
+	bool has_nft_conflicts(MachAttributes* ma) const {
+		return ma->has_nft_conflicts(r_id, r_sub_id);
+	}
 
 	bool wasAcceptedWhileDraining() const { return r_acceptedWhileDraining; }
 	void setAcceptedWhileDraining() { r_acceptedWhileDraining = isDraining(); }
@@ -510,6 +514,8 @@ private:
 	std::set<Resource *, ResourceLess> m_children;
 	// only non-partitionable backfill slots have resource conflicts
 	std::string m_res_conflict;
+
+	std::string m_orig_assigned_gpus; // AssignedGpus at birth, to help debug HTCONDOR-3072
 
 	IdDispenser* m_id_dispenser;
 

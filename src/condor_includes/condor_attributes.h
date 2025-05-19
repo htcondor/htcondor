@@ -93,6 +93,7 @@
 #define ATTR_CLAIM_END_TIME "ClaimEndTime"
 #define ATTR_CLAIM_ID  "ClaimId"
 #define ATTR_CLAIM_IDS  "ClaimIds"
+#define ATTR_SPLIT_CLAIM_ID "SplitClaimId"
 #define ATTR_PUBLIC_CLAIM_ID  "PublicClaimId"
 #define ATTR_PUBLIC_CLAIM_IDS  "PublicClaimIds"
 //extern const char ATTR_CHILD_REMOVE_CONSTRAINT [];
@@ -186,6 +187,7 @@
 #define ATTR_DISK_USAGE  "DiskUsage"
 #define ATTR_DISK_USAGE_ENFORCED "IsEnforcingDiskUsage"
 #define ATTR_SCRATCH_DIR_FILE_COUNT "ScratchDirFileCount"
+#define ATTR_IS_SPLITTABLE "IsSplittable"
 #define ATTR_DOCKER_CACHED_IMAGE_SIZE "DockerCachedImageSizeMb"
 #define ATTR_DOCKER_IMAGE "DockerImage"
 #define ATTR_DOCKER_NETWORKS "DockerNetworks"
@@ -270,6 +272,7 @@
 #define ATTR_MYPROXY_PASSWORD  "MyProxyPassword"
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
+#define ATTR_HAS_COMMON_FILES_TRANSFER  "HasCommonFilesTransfer"
 #define ATTR_HAS_CONTAINER  "HasContainer"
 #define ATTR_HAS_DOCKER  "HasDocker"
 #define ATTR_HAS_DOCKER_URL  "HasDockerURL"

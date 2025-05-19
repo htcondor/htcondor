@@ -362,6 +362,7 @@ endif()
 			condor_pl_test(test_dag_halt "Test DAGMan halt commands" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_multiple_schemes "Test that multiple URL scheme results are reported properly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_input_file_check "Test the input checker" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_clean_output_failure "Test output transfer failure handling" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -471,6 +472,7 @@ endif()
 
 			# This tests a feature that's presently only expected to work on Linux.
 			condor_pl_test(test_cif "Test common input files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_cif_preen "Test preening CIF leftovers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 		endif()
 	endif()

@@ -120,10 +120,12 @@ Claim::~Claim()
 	}
 
 	// The resources assigned to this claim must have been freed by now.
+	// TODO: this should not happen on *every* claim delete
+	// figure the right place to put this - maybe when the Starter object is deleted?
 	if( c_rip != NULL && c_rip->r_classad != NULL ) {
 		resmgr->adlist_unset_monitors( c_rip->r_id, c_rip->r_classad );
-	} else {
-		dprintf( D_ALWAYS, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
+	} else if (c_rip && ! c_rip->is_broken_slot()) { // d-slots are marked as broken just before they are deleted.
+		dprintf( D_BACKTRACE, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
 	}
 
 		// Cancel any daemonCore events associated with this claim
@@ -323,8 +325,12 @@ Claim::publish( ClassAd* cad )
 		cad->Assign("WorkingCM", c_working_cm);
 	}
 
-	if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
-		cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
+	if (c_rip) {
+		if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
+			cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
+		} else if (c_rip->is_dynamic_slot() && ! c_rip->r_claims.empty()) {
+			cad->Assign(ATTR_IS_SPLITTABLE, true);
+		}
 	}
 
 	publishStateTimes( cad );
@@ -2424,6 +2430,22 @@ Claim::writeMachAdAndOverlay( Stream* stream )
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
 	}
+
+	// now write the secrets ad
+	ClassAd ad;
+	ad.Assign(ATTR_CLAIM_ID, this->id());
+	if (c_rip) {
+		std::string attr;
+		for (auto j : c_rip->r_claims) {
+			ad.Assign(ATTR_SPLIT_CLAIM_ID, j->id());
+			break; // put only the first item in r_claims into the secrets ad
+		}
+	}
+	if (!putClassAd(stream, ad) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine private ClassAd to stream\n");
+		return false;
+	}
+
 	return true;
 }
 
@@ -2641,6 +2663,12 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 			resmgr->startd_stats.bytes_recvd += bytes_recvd;
 		}
 	}
+}
+
+void Claim::receiveUpdateCommand(int cmd, ClassAd &/*payload_ad*/, ClassAd &/*reply_ad*/)
+{
+	ASSERT(cmd != 0 && cmd != 1); // 0 is update, and 1 is final_update
+
 }
 
 bool

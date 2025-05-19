@@ -10,10 +10,18 @@
 
 - Improved logging on the EP when a slot cannot be claimed because the :ad-attr:`START`
   expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements`
+ 
+- Improved logging on the EP when a slot cannot be claimed because the :ad-attr:`Start`
+  expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements[type=Machine]`
   expression will be written to the ``StartLog``.
   :jira:`3033`
 
 *** 24.9.0 bugs
+
+- Fixed a bug which could cause unnecessary activation failures if the previous
+  job in the slot failed to transfer its output.  This would manifest as slots
+  being in the claimed/idle state for far longer than necessary.
+  :jira:`3073`
 
 *** 24.0.9 bugs
 
@@ -247,7 +255,7 @@
   :jira:`2953`
 
 - Fixed a bug in the Vault credential monitor that kept credentials from being fetched
-  if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
+  if VAULT_CREDMON_PROVIDER_NAMES was unset. Introduced in HTCondor 24.3.0.
   :jira:`2912`
 
 - Fixed a bug in the local issuer credential monitor that kept credentials from being
