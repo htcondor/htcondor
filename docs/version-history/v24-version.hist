@@ -15,6 +15,11 @@
   being in the claimed/idle state for far longer than necessary.
   :jira:`3073`
 
+- Fixed a bug in :class:`htcondor2.Schedd` where it didn't work to use a
+  ``job_spec`` parameter to specify a cluster ID as an integer, as a string
+  without a proc ID, or in a list of such strings.
+  :jira:`2979`
+
 *** 24.0.9 bugs
 
 *** 24.8.0 features
