@@ -1134,10 +1134,32 @@ do_wiring_up( const std::string & stagingDir, const std::string & cifName ) {
 }
 
 
+bool
+LookupBoolInContext( const ClassAd & ad, const std::string & attr, bool & value ) {
+	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
+	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
+	if( context ) {
+		return context->LookupBool( attr, value );
+	}
+	return false;
+}
+
+
+bool
+LookupStringInContext( const ClassAd & ad, const std::string & attr, std::string & value ) {
+	ClassAd * context = dynamic_cast<ClassAd *>(ad.Lookup( ATTR_CONTEXT_AD ));
+	if( context ) {
+		return context->LookupString( attr, value );
+	}
+	return false;
+}
+
+
 // The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_common_input_conversation(
-	ClassAd request, std::string commonInputFiles, std::string cifName
+	ClassAd request, std::string commonInputFiles, std::string cifName,
+	bool print_waiting /* = true */
 ) {
 	ClassAd guidance;
 
@@ -1166,7 +1188,6 @@ UniShadow::start_common_input_conversation(
 	//  breakage or figure how to avoid it / tolerate unwritable files during
 	//  normal transfer.
 	//
-
 
 	this->cfLock = new SingleProviderSyndicate(cifName);
 
@@ -1211,6 +1232,7 @@ UniShadow::start_common_input_conversation(
 				// to prolong its life.
 				//
 
+				dprintf( D_ALWAYS, "Starting common file transfer (%s)\n", cifName.c_str() );
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
@@ -1218,12 +1240,13 @@ UniShadow::start_common_input_conversation(
 				// double-check here.
 
 				success = false;
-				request.LookupBool( ATTR_RESULT, success );
+				LookupBoolInContext( request, ATTR_RESULT, success );
+				dprintf( D_ALWAYS, "Finished common file transfer (%s): %s\n", cifName.c_str(), success ? "success" : "failure" );
 
 				std::string stagingDir;
 				if( success ) {
 					// We'll assume that malformed replies are transients.
-					if(! request.LookupString( "StagingDir", stagingDir ) ) {
+					if(! LookupStringInContext( request, "StagingDir", stagingDir )) {
 						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common file transfer; aborting job.\n" );
 
 						// Make sure we take care of this.
@@ -1245,6 +1268,7 @@ UniShadow::start_common_input_conversation(
 						co_return guidance;
 					}
 
+					sleep(10); // for debugging only.
 					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
 					if(! this->cfLock->ready( stagingDir )) {
 						// We failed to tell the jobs waiting on us that we're
@@ -1284,7 +1308,7 @@ UniShadow::start_common_input_conversation(
 				request = co_yield guidance;
 
 				success = false;
-				request.LookupBool( ATTR_RESULT, success );
+				LookupBoolInContext( request, ATTR_RESULT, success );
 				if(! success) {
 					// Consider replacing this with a delayed (zero-second
 					// timer) call to evictJob().
@@ -1335,14 +1359,24 @@ UniShadow::start_common_input_conversation(
 				// sure the starter has already set up the job environment.
 
 				bool job_environment_ready = false;
-				request.LookupBool( ATTR_JOB_ENVIRONMENT_READY, job_environment_ready );
+				LookupBoolInContext(
+					request, ATTR_JOB_ENVIRONMENT_READY, job_environment_ready
+				);
 				if(! job_environment_ready) {
 					this->resume_job_setup = true;
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 					co_return guidance;
 				} else {
+					if( print_waiting ) {
+						print_waiting = false;
+						dprintf( D_ALWAYS, "Waiting for common file transfer (%s)\n", cifName.c_str() );
+					}
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
 					guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+					// It's a little clumsy to send the starter's own context
+					// ad back to it, but it's also easier than preserving it
+					// across invocations over there.
+					CopyAttribute(ATTR_CONTEXT_AD, guidance, request);
 					request = co_yield guidance;
 				}
 				} break;
@@ -1358,7 +1392,7 @@ UniShadow::start_common_input_conversation(
 				request = co_yield guidance;
 
 				success = false;
-				request.LookupBool( ATTR_RESULT, success );
+				LookupBoolInContext( request, ATTR_RESULT, success );
 				if(! success) {
 					// Consider replacing this with a delayed (zero-second
 					// timer) call to evictJob().

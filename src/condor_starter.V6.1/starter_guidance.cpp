@@ -225,9 +225,15 @@ Starter::requestGuidanceCommandJobSetup(
 	std::function<void(void)> continue_conversation
 ) {
 	ClassAd guidance;
-	ClassAd request(context);
+	ClassAd request;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
 	request.InsertAttr(ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION);
+
+	// ClassAds assume they own their attribute's value, so (a) you have
+	// to copy them to avoid changing them and (b) you can't copy them to
+	// locals, because then their destructor will be called twice.  *sigh*
+	ClassAd * my_context = new ClassAd(context);
+	request.Insert(ATTR_CONTEXT_AD, my_context);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
@@ -814,9 +820,15 @@ Starter::handleJobSetupCommand(
 void
 Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context ) {
 	ClassAd guidance;
-	ClassAd request(context);
+	ClassAd request;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
 	request.InsertAttr(ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION);
+
+	// ClassAds assume they own their attribute's value, so (a) you have
+	// to copy them to avoid changing them and (b) you can't copy them to
+	// locals, because then their destructor will be called twice.  *sigh*
+	ClassAd * my_context = new ClassAd(context);
+	request.Insert(ATTR_CONTEXT_AD, my_context);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
