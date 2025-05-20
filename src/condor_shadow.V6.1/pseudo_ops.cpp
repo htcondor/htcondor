@@ -1268,7 +1268,6 @@ UniShadow::start_common_input_conversation(
 						co_return guidance;
 					}
 
-					sleep(10); // for debugging only.
 					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
 					if(! this->cfLock->ready( stagingDir )) {
 						// We failed to tell the jobs waiting on us that we're
