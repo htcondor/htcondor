@@ -103,9 +103,9 @@ class VaultCredmon(AbstractCredentialMonitor):
 
     def __init__(self, *args, **kw):
         if htcondor is not None:
-            if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param:
+            if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param and len(htcondor.param.get('AUTH_SSL_CLIENT_CAFILE', '').strip()) > 0:
                 self.cafile = htcondor.param['AUTH_SSL_CLIENT_CAFILE']
-            if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
+            if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param and len(htcondor.param.get('AUTH_SSL_CLIENT_CADIR', '').strip()) > 0:
                 self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
         self.providers = kw.get("providers", set())
