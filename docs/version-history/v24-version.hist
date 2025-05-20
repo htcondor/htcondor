@@ -20,6 +20,11 @@
   being in the claimed/idle state for far longer than necessary.
   :jira:`3073`
 
+- Fixed a bug in the Vault credential monitor where access tokens were failing
+  to be generated from Vault tokens when :macro:`AUTH_SSL_CLIENT_CAFILE` and/or
+  :macro:`AUTH_SSL_CLIENT_CADIR` were undefined.
+  :jira:`3086`
+
 *** 24.0.9 bugs
 
 *** 24.8.0 features
