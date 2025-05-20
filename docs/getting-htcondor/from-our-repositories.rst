@@ -51,20 +51,17 @@ Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
 
-Debian 11, and 12
-#################
-
 Add our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
+
+Debian 11, and 12
+#################
 
 * Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bullseye main``
 * Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bookworm main``
 
 Ubuntu 22.04 and 24.04
 ######################
-
-Add our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
-with ``apt-key add`` before adding the repositories below.
 
 * Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x jammy main``
 * Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x noble main``
