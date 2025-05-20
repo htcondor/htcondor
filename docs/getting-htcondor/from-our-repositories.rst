@@ -54,7 +54,7 @@ These repositories also include the source packages.
 Debian 11, and 12
 #################
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Add our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
 * Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bullseye main``
@@ -63,7 +63,7 @@ with ``apt-key add`` before adding the repositories below.
 Ubuntu 22.04 and 24.04
 ######################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Add our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
 * Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x jammy main``
