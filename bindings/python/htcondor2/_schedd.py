@@ -61,22 +61,38 @@ def job_spec_hack(
     if isinstance(job_spec, list):
         if not all([isinstance(i, str) for i in job_spec]):
             raise TypeError("All elements of the job_spec list must be strings.")
-        job_spec_string = ", ".join(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        if all([re.fullmatch(r'\d+\.\d+', i) for i in job_spec]):
+            job_spec_string = ", ".join(job_spec)
+            return f_job_ids(addr, job_spec_string, *args)
+
+        constraints = []
+        for i in job_spec:
+            if re.fullmatch(r'\d+', i):
+                constraints.append(f"(ClusterID == {i})")
+            elif re.fullmatch(r'\d+\.\d+', i):
+                (clusterID, procID) = i.split('.')
+                constraints.append(f"(ClusterID == {clusterID} && ProcID == {procID})")
+            else:
+                raise ValueError("All elements of the job_spec list must be strings of the form clusterID[.procID]")
+        job_spec_string = " || ".join(constraints)
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, int):
-        job_spec_string = str(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        job_spec_string = f'ClusterID == {job_spec}'
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, classad.ExprTree):
         job_spec_string = str(job_spec)
         return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, str):
-        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+        if re.fullmatch(r'\d+\.\d+', job_spec):
             return f_job_ids(addr, job_spec, *args)
+        if re.fullmatch(r'\d+', job_spec):
+            job_spec_string = f'ClusterID == {job_spec}'
+            return f_constraint(addr, job_spec_string, *args)
         try:
             job_spec_expr = classad.ExprTree(job_spec)
-            return f_constraint(addr, job_spec, *args);
-        except ValueError:
-            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        except classad.ClassAdException:
+            raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        return f_constraint(addr, job_spec, *args);
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
