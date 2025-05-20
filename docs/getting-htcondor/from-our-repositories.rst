@@ -27,6 +27,9 @@ Binaries are available for x86_64 for all these platforms.
 For Enterprise Linux 8, HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
 For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
+Add our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+with ``rpm --import`` before adding the repositories below.
+
 Repository packages are available for each platform:
 
 * `Amazon Linux 2023 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.amzn2023.noarch.rpm>`_
