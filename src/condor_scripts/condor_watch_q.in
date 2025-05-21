@@ -457,6 +457,8 @@ def watch_q(
 
     row_fmt = (lambda s, r: colorize(s, determine_row_color(r))) if color else None
 
+    specified_clusters = (cluster_ids is not None)
+
     (
         cluster_ids,
         constraint,
@@ -526,6 +528,7 @@ def watch_q(
                     batch_names,
                     dagman_job_cluster_ids,
                     batch_name_to_nodes_total,
+                    specified_clusters,
                 )
                 rows_by_key, totals = make_rows_from_groups(
                     groups, key, batch_name_to_nodes_total
@@ -964,6 +967,7 @@ def group_clusters(
     batch_names,
     dagman_job_cluster_ids,
     dag_nodes_total,
+    specified_clusters,
 ):
     groups = collections.defaultdict(list)
     getter = operator.attrgetter(GROUPBY_AD_KEY_TO_ATTRIBUTE[key])
@@ -979,9 +983,8 @@ def group_clusters(
         if key == BATCH_NAME and dag_batch_name is not None:
             groups[dag_batch_name].append(cluster)
             group_nodes_total[dag_batch_name] = dag_nodes_total.get(dag_batch_name)
-        else:
-            if cluster.cluster_id not in dagman_job_cluster_ids:
-                groups[getter(cluster)].append(cluster)
+        elif specified_clusters or cluster.cluster_id not in dagman_job_cluster_ids:
+            groups[getter(cluster)].append(cluster)
 
     if not dag_nodes_total:
         group_nodes_total = dag_nodes_total
