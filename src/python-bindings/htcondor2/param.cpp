@@ -28,6 +28,11 @@ _param__getitem__( PyObject *, PyObject * args ) {
         case PARAM_TYPE_STRING: {
             std::string value;
             param(value, key);
+            // Pretend that empty keys aren't set.
+            if( value.empty() ) {
+                PyErr_SetString(PyExc_KeyError, key);
+                return NULL;
+            }
             return PyUnicode_FromString(value.c_str());
         } break;
 
