@@ -531,12 +531,10 @@ DedicatedScheduler::initialize( )
 		Register_Reaper( "MPI reaper", 
 						 (ReaperHandlercpp)&DedicatedScheduler::reaper,
 						 "DedicatedScheduler::reaper", this );
-	if( rid <= 0 ) {
-			// This is lame, but Register_Reaper returns FALSE on
-			// failure, even though it seems like reaper id 0 is
-			// valid... who knows.
-		EXCEPT( "Can't register daemonCore reaper!" );
-	}
+		// This is lame, but Register_Reaper returns FALSE on
+		// failure, even though it seems like reaper id 0 is
+		// valid... who knows.
+	ASSERT(rid > 0);
 
 		// Now, register a handler for the special command that the
 		// MPI shadow sends us if it needs to get information about
@@ -808,9 +806,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 		Register_Timer( seconds, 0,
 				(TimerHandlercpp)&DedicatedScheduler::callHandleDedicatedJobs,
 						"callHandleDedicatedJobs", this );
-	if( hdjt_tid == -1 ) {
-		EXCEPT( "Can't register DC timer!" );
-	}
+	ASSERT(hdjt_tid >= 0);
 	dprintf( D_FULLDEBUG, 
 			 "Started timer (%d) to call handleDedicatedJobs() in %d secs\n",
 			 hdjt_tid, seconds );
@@ -3745,9 +3741,7 @@ DedicatedScheduler::checkSanity( int /* timerID */ )
 			sanity_tid = daemonCore->Register_Timer( tmp, 0,
   				         (TimerHandlercpp)&DedicatedScheduler::checkSanity,
 						 "checkSanity", this );
-			if( sanity_tid == -1 ) {
-				EXCEPT( "Can't register DC timer!" );
-			}
+			ASSERT(sanity_tid >= 0);
 		} else {
 				// We've already got a timer.  Whether we got here b/c
 				// the timer went off, or b/c we just called
@@ -3938,10 +3932,7 @@ DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
 	}
-	if( reconnect_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
-	}
+	ASSERT(reconnect_tid >= 0);
 	return true;
 }
 
@@ -4177,10 +4168,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 		reconnect_tid = daemonCore->Register_Timer( 60,
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
-		if( reconnect_tid == -1 ) {
-				// Error registering timer!
-			EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
-		}
+		ASSERT(reconnect_tid >= 0);
 	}
 }	
 
