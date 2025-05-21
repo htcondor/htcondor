@@ -571,6 +571,20 @@ BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_co
 		}
 		formatstr_cat(new_reason_str, ". Details: %s",
 			actual_error.empty() ? orig_reason_str : actual_error.c_str());
+
+		std::string credmon_oauth;
+    if (param(credmon_oauth, "CREDMON_OAUTH") && credmon_oauth.find("condor_credmon_mytoken") != std::string::npos) {
+		  if (err_occurred_at_EP && !transfer_input_error) {
+			  std::string mytoken_reason_str;
+			  formatstr_cat(mytoken_reason_str, "The transfer of your output file(s) failed at the execution point");
+		    if (new_reason_str.find("401") != std::string::npos) {
+				  formatstr_cat(mytoken_reason_str, " because your access token has expired. Please renew it.");
+		    } else if (new_reason_str.find("SSL") != std::string::npos) {
+				  formatstr_cat(mytoken_reason_str, " because your SSL certificate is invalid. Please check it.");
+	      }
+				new_reason_str = mytoken_reason_str;
+		  }
+    }
 	}
 
 	return new_reason_str;
