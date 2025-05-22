@@ -1203,7 +1203,7 @@ UniShadow::start_common_input_conversation(
 				this->producer_keep_alive = daemonCore->Register_Timer(
 					0, 60,
 					[this] (int /* timerID */) -> void {
-						dprintf( D_ZKM, "Elected producer touch()ing keyfile.\n" );
+						dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
 						if(! this->cfLock->touch()) {
 							delete this->cfLock;
 							EXCEPT( "Elected producer touch() failed, aborting.\n" );
@@ -1268,7 +1268,7 @@ UniShadow::start_common_input_conversation(
 						co_return guidance;
 					}
 
-					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
+					dprintf( D_TEST, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
 					if(! this->cfLock->ready( stagingDir )) {
 						// We failed to tell the jobs waiting on us that we're
 						// ready.  This job can continue, but the others can't.
@@ -1322,6 +1322,7 @@ UniShadow::start_common_input_conversation(
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
 					co_return guidance;
 				}
+
 
 				//
 				// TODO.
@@ -1643,7 +1644,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ZKM, "Sending (job setup) guidance with command %s\n", command.c_str());
+		dprintf( D_TEST, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 
