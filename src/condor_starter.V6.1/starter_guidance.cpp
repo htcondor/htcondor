@@ -557,6 +557,7 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
+			dprintf( D_ACCOUNTANT, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
@@ -584,6 +585,7 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
+			dprintf( D_ACCOUNTANT, "Mapped common file '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
@@ -780,6 +782,7 @@ Starter::handleJobSetupCommand(
 			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
+			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
 			bool result = mapContentsOfDirectoryInto( location, sandbox );
 
 			ClassAd context;
