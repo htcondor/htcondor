@@ -57,8 +57,8 @@ def the_condor(test_dir, the_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
-            "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
@@ -149,8 +149,8 @@ def the_big_condor(test_dir, the_big_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
-            "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_ALLOW_RUNAS_OWNER":    False,
@@ -278,8 +278,8 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
-            "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_NESTED_SCRATCH":   True,
