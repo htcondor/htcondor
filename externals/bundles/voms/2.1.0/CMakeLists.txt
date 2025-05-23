@@ -38,7 +38,7 @@ if ( WITH_VOMS )
 			set ( CONFIGURE_ENV export CFLAGS=-I${DARWIN_OPENSSL_INCLUDE} && export CXXFLAGS=-I${DARWIN_OPENSSL_INCLUDE} && export OPENSSL_CFLAGS=-I${DARWIN_OPENSSL_INCLUDE} && export OPENSSL_LIBS="-L${DARWIN_OPENSSL_LIB_DIR} -lssl -lcrypto" )
 		ELSE()
 			set ( VOMS_PATCH patch -N -p2 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl1.1.patch  && patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-openssl3.patch )
-			set ( CONFIGURE_ENV true )
+			set ( CONFIGURE_ENV export CFLAGS=-Wno-implicit-function-declaration\ -Wno-incompatible-pointer-types)
 		ENDIF()
 
 		condor_pre_external( VOMS voms-2.1.0-rc0 "include;lib" "done")
