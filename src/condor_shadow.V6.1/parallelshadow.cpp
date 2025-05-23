@@ -154,9 +154,7 @@ ParallelShadow::spawn( void )
 		Register_Timer( 1, 0,
 						(TimerHandlercpp)&ParallelShadow::getResources,
 						"getResources", this );
-	if( info_tid < 0 ) {
-		EXCEPT( "Can't register DC timer!" );
-	}
+	ASSERT(info_tid >= 0);
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();
 }
