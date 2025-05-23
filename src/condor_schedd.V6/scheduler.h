@@ -225,64 +225,62 @@ constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
 class match_rec
 {
  public:
-    match_rec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
+    match_rec(char const*, char const*, const JOB_ID_KEY & jid, const ClassAd*, char const*, char const* pool,bool is_dedicated);
 	~match_rec();
 
-    char*   		peer; //sinful address of startd
-	std::string        m_description;
+	char * peer{nullptr}; //sinful address of startd
+	char * user{nullptr};
+	char * pool{nullptr}; // negotiator hostname if flocking; else empty
+	shadow_rec * shadowRec{nullptr};
 
 		// cluster of the job we used to obtain the match
-	int				origcluster; 
+	int origcluster{0};
 
 		// if match is currently active, cluster and proc of the
 		// running job associated with this match; otherwise,
 		// cluster==origcluster and proc==-1
 		// NOTE: use SetMrecJobID() to change cluster and proc,
 		// because this updates the index of matches by job id.
-    int     		cluster;
-    int     		proc;
+	int cluster{0};
+	int proc{0};
 
-    int     		status;
-	shadow_rec*		shadowRec;
-	int				num_exceptions;
-	time_t			entered_current_status;
-	ClassAd*		my_match_ad;
-	ClassAd         m_added_attrs;
-	char*			user;
-	bool            is_dedicated; // true if this match belongs to ded. sched.
-	bool			allocated;	// For use by the DedicatedScheduler
-	bool			scheduled;	// For use by the DedicatedScheduler
-	bool			needs_release_claim;
-	bool use_sec_session;
+	int status{0};
+	int num_exceptions{0};
+	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
+	time_t idle_timer_deadline{0}; // if the above is nonzero, abstime to hold claim
+	time_t entered_current_status{0};
+	PROC_ID m_now_job{0,0};
+
+	ClassAd * my_match_ad{nullptr};
+	ClassAd m_added_attrs;
+
+	bool is_dedicated{false}; // true if this match belongs to ded. sched.
+	bool allocated{false}; // For use by the DedicatedScheduler
+	bool scheduled{false}; // For use by the DedicatedScheduler
+	bool needs_release_claim{false};
+	bool use_sec_session{false};
+	bool m_startd_sends_alives{false}; // in practice, actual default is true since 7.5.4
+	bool m_claim_pslot{false};
+	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
+
 	ClaimIdParser claim_id;
-	classy_counted_ptr<DCMsgCallback> claim_requester;
+	classy_counted_ptr<DCMsgCallback> claim_requester{nullptr};
 
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
 		// punched hole
-	std::string*	auth_hole_id;
-
-	bool m_startd_sends_alives;
-	bool m_claim_pslot;
-	int  m_multi_slot{0}; // when > 1, make a multi-d-slot split request
-
-	int keep_while_idle; // number of seconds to hold onto an idle claim
-	time_t idle_timer_deadline; // if the above is nonzero, abstime to hold claim
+	std::string*	auth_hole_id{nullptr};
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
 
+	std::string m_description;
 	void makeDescription();
 	char const *description() const {
 		return m_description.c_str();
 	}
 
-	const std::string & getPool() const {return m_pool;}
-
-	PROC_ID m_now_job;
-
-	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
 class GridUserIdentity {
@@ -503,10 +501,18 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
-    match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
+	match_rec*		AddMrec(
+		const char * claim_id,
+		const char * addr,
+		const JOB_ID_KEY& jid,
+		const ClassAd* matchAd,
+		const char * user,
+		const char * pool,
+		const ClassAd* extraAttrs = nullptr, // extra attrs sent by negotiator
+		match_rec **pre_existing = nullptr);
 	// support for START_VANILLA_UNIVERSE
 	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
-	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::string &pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char * pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
 	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
 	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
 	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
@@ -690,6 +696,12 @@ class Scheduler : public Service
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
 	const OwnerInfo * lookup_owner_const(const char*);
+	// make sure that a job object has a submitter record pointer
+	const SubmitterData * get_submitter(JobQueueJob * job) {
+		SubmitterData * subdat = nullptr;
+		if (job) { get_submitter_and_owner(job, subdat); }
+		return subdat;
+	}
 	void incrementRecentlyAdded(OwnerInfo * ownerinfo);
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
@@ -723,7 +735,7 @@ class Scheduler : public Service
 
 private:
 
-	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
+	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.

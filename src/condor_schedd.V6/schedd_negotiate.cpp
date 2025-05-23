@@ -24,36 +24,7 @@
 #include "schedd_negotiate.h"
 
 
-ResourceRequestCluster::ResourceRequestCluster(int auto_cluster_id):
-	m_auto_cluster_id(auto_cluster_id)
-{
-}
-
-void
-ResourceRequestCluster::addJob(PROC_ID job_id)
-{
-	m_job_ids.push_back( job_id );
-}
-
-bool
-ResourceRequestCluster::popJob(PROC_ID &job_id)
-{
-	if( m_job_ids.empty() ) {
-		return false;
-	}
-	job_id = m_job_ids.front();
-	m_job_ids.pop_front();
-	return true;
-}
-
-ResourceRequestList::~ResourceRequestList()
-{
-	while( !empty() ) {
-		ResourceRequestCluster *cluster = front();
-		pop_front();
-		delete cluster;
-	}
-}
+static int next_negotiate_instance_id = 1;
 
 ScheddNegotiate::ScheddNegotiate
 (
@@ -64,10 +35,6 @@ ScheddNegotiate::ScheddNegotiate
 ):
 	DCMsg(cmd),
 	m_jobs(jobs),
-	m_current_resources_requested(1),
-	m_current_resources_delivered(0),
-	m_jobs_can_offer(-1),
-	m_will_match_claimed_pslots(false),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),
@@ -81,6 +48,7 @@ ScheddNegotiate::ScheddNegotiate
 {
 	m_current_job_id.cluster = -1;
 	m_current_job_id.proc = -1;
+	m_instance = next_negotiate_instance_id++;
 }
 
 ScheddNegotiate::~ScheddNegotiate()
@@ -107,6 +75,9 @@ ScheddNegotiate::negotiate(Sock *sock)
 		// consists of asynchronously reading messages from the
 		// negotiator and sending responses until this round of
 		// negotiation is done.
+	dprintf(D_DYE, "%08x_%06d:%s\tNEGOTIATE\t%s rr=%d\n",
+		sock->getUniqueId(), m_instance,
+		m_owner.c_str(), m_remote_pool.c_str(), m_jobs ? (int)m_jobs->size() : 0);
 
 		// This will eventually call ScheddNegotiate::readMsg().
 	classy_counted_ptr<DCMessenger> messenger = new DCMessenger(sock);
@@ -154,13 +125,17 @@ ScheddNegotiate::nextJob()
 	}
 
 	while( !m_jobs->empty() && m_jobs_can_offer ) {
-		ResourceRequestCluster *cluster = m_jobs->front();
-		ASSERT( cluster );
+		ResourceRequestCluster & cluster = m_jobs->front();
 
-		m_current_auto_cluster_id = cluster->getAutoClusterId();
+		m_current_auto_cluster_id = cluster.getAutoClusterId();
 
 		if( !getAutoClusterRejected(m_current_auto_cluster_id) ) {
-			while( cluster->popJob(m_current_job_id) ) {
+			size_t clusterSize = cluster.size();
+			for (auto & jid : cluster) {
+				--clusterSize; // decrement as we iterate so we know how many jobs remain
+				if (!jid.isJobKey()) continue;
+				m_current_job_id = jid;
+
 				const char* because = "";
 				bool skip_all = false;
 				JobQueueJob * job = GetJobAd(m_current_job_id);
@@ -203,8 +178,8 @@ ScheddNegotiate::nextJob()
 						m_current_job_ad.LookupInteger(ATTR_JOB_UNIVERSE,universe);
 						// For now, do not use request counts with the dedicated scheduler
 						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
-							// add one to cluster size to cover the current popped job
-							int resource_count = 1+cluster->size();
+							// resource_count is the remaining un-iterated jobs plus this one.
+							int resource_count = 1+clusterSize;
 							if (count_max > 0) { resource_count = MIN(resource_count, count_max); }
 							if (resource_count > m_jobs_can_offer && (m_jobs_can_offer > 0))
 							{
@@ -229,7 +204,6 @@ ScheddNegotiate::nextJob()
 		}
 
 		m_jobs->pop_front();
-		delete cluster;
 	}
 	if (!m_jobs_can_offer)
 	{
@@ -389,9 +363,7 @@ ScheddNegotiate::sendResourceRequestList(Sock *sock)
 		// we already sent an ad with a resource_request_count.  So we want
 		// to skip ahead to the next cluster.
 		if ( !m_jobs->empty() ) {
-			ResourceRequestCluster *cluster = m_jobs->front();
 			m_jobs->pop_front();
-			delete cluster;
 		}
 
 		m_num_resource_reqs_sent++;
@@ -428,6 +400,17 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 	if( !sock->put(JOB_INFO) ) {
 		dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 		return false;
+	}
+
+	if (IsDebugCategory(D_DYE)) {
+		std::string details;
+		m_current_job_ad.LookupString(ATTR_OWNER, details);
+		details += " "; details += m_owner;
+		int count = 0, aid = 0;
+		m_current_job_ad.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, count);
+		m_current_job_ad.LookupInteger(ATTR_AUTO_CLUSTER_ID, aid);
+		formatstr_cat(details, " %d |%d|%d.%d|", count, aid, m_current_job_id.cluster, m_current_job_id.proc);
+		dprintf(D_DYE, "\t%s\n", details.c_str());
 	}
 
 		// Tell the negotiator that we understand pslot preemption
@@ -517,6 +500,30 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 {
 		// This is called when readMsg() returns true.
 		// Now carry out the negotiator's request that we just read.
+
+	if (IsDebugCategory(D_DYE)) {
+		std::string details;
+		switch(m_operation) {
+		case REJECTED_WITH_REASON: details = m_reject_reason; break;
+		case SEND_JOB_INFO: {
+			if ( m_jobs && ! m_jobs->empty()) { auto & rr = m_jobs->front(); formatstr(details, "ac=%d", rr.getAutoClusterId()); }
+			} break;
+		case PERMISSION_AND_AD: {
+			m_match_ad.LookupString(ATTR_NAME,details);
+			JOB_ID_KEY jid;
+			m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_CLUSTER, jid.cluster);
+			m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_PROC, jid.proc);
+			formatstr_cat(details, " %d ", m_current_resources_delivered);
+			// TODO: have negotiator send RR id back, not just job id.
+			details += "|?|"; details += (std::string)(jid); details += "|";
+			} break;
+		case END_NEGOTIATE: {
+			if (RRLRequestIsPending()) { details = "<prefetch>"; } else { details = "<end>"; }
+			} break;
+		}
+		dprintf(D_DYE, "%08x_%06d:%s\t%s\t%s\n", sock->getUniqueId(), m_instance,
+			m_owner.c_str(), getCommandStringSafe(m_operation), details.c_str());
+	}
 
 	switch( m_operation ) {
 

@@ -222,6 +222,7 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_updateSchedDInterval,    IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_mark_idle,               IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_get_job_prio,            IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_update_autocluster_id,   IF_VERBOSEPUB);
 
    // timings for the autocluster code
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster,           IF_VERBOSEPUB);

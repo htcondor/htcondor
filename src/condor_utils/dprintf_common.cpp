@@ -59,7 +59,7 @@ const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
 	"D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
 	"D_SYSCALLS", "D_CRON", "D_HOSTNAME", "D_PERF_TRACE", // D_CRON formerly D_CKPT
 	"D_LOAD", "D_25", "D_26", "D_AUDIT", "D_TEST",      // D_25 formerly D_PROC (HAD)  D_26 formerly D_NFS
-	"D_STATS", "D_MATERIALIZE", "D_31",
+	"D_STATS", "D_MATERIALIZE", "D_DYE",
 };
 // these are flags rather than categories
 // "D_EXPR", "D_FULLDEBUG", "D_PID", "D_FDS", "D_CAT", "D_NOHEADER",
