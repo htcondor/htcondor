@@ -639,6 +639,7 @@ Starter::handleJobSetupCommand(
 				"guidance: retry request"
 			);
 
+			dprintf( D_ALWAYS, "FIXME: only print waiting for common files to be ready once.\n" );
 			return true;
 		} else if( command == COMMAND_STAGE_COMMON_FILES ) {
 			// I would like to implement this command in terms of a general

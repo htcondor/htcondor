@@ -112,7 +112,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"d"',
+        "MY.CommonInputFiles":      '"d, null://create-epoch-entry"',
         "transfer_input_files":     "input3.txt",
         "use_oauth_services":       "the_credential",
 
