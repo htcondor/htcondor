@@ -424,6 +424,7 @@ def test_wait(condor, run_jobs):
             assert event.type not in BAD_EVENTS
             if event.type == htcondor.JobEventType.JOB_TERMINATED:
                 jobids.remove(f"{event.cluster}.{event.proc}")
+        sleep(1)
     ads = None
     with condor.use_config():
         ads = htcondor.Schedd().history(constraint=f"ClusterId=={clusterid}", projection=HISTORY_PROJECTION)
