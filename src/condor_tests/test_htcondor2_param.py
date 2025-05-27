@@ -18,4 +18,4 @@ class TestHTCondor2Param:
         assert not "EMPTY" in htcondor2.param
 
         assert not "OOF" in htcondor2.param.keys()
-        assert not "OOF" in htcondor2.param.keys()
+        assert not "OOF" in htcondor2.param
