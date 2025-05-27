@@ -3593,18 +3593,10 @@ int dc_main( int argc, char** argv )
 				get_mySubSystem()->getTypeName() );
 	}
 
-	if ( !dc_main_init ) {
-		EXCEPT( "Programmer error: dc_main_init is NULL!" );
-	}
-	if ( !dc_main_config ) {
-		EXCEPT( "Programmer error: dc_main_config is NULL!" );
-	}
-	if ( !dc_main_shutdown_fast ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_fast is NULL!" );
-	}
-	if ( !dc_main_shutdown_graceful ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_graceful is NULL!" );
-	}
+	ASSERT(dc_main_init);
+	ASSERT(dc_main_config);
+	ASSERT(dc_main_shutdown_fast);
+	ASSERT(dc_main_shutdown_graceful);
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.

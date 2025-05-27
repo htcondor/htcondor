@@ -26,9 +26,7 @@ SocketCache::SocketCache( size_t cSize )
 	cacheSize = cSize;
 	timeStamp = 0;
 	sockCache = new sockEntry[cSize];
-	if( !sockCache ) {
-		EXCEPT( "SocketCache: Out of memory" );
-	}
+	ASSERT(sockCache);
 	for( size_t i = 0; i < cSize; i++ ) {
 		initEntry( &(sockCache[i]) );
 	}
