@@ -1353,8 +1353,8 @@ BaseShadow::checkSwap( void )
 void
 BaseShadow::log_except(const char *msg_str)
 {
-	if ( BaseShadow::myshadow_ptr == NULL ) {
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg_str ? msg_str : "");
+	if (BaseShadow::myshadow_ptr == nullptr || BaseShadow::myshadow_ptr->getJobAd() == nullptr) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object or no job ad): %s\n", msg_str ? msg_str : "");
 		return;
 	}
 
@@ -1378,8 +1378,14 @@ BaseShadow::log_except(const char *msg_str)
 		event.began_execution = TRUE;
 	}
 
+	std::string vacate_str = "Shadow Exception: ";
+	vacate_str += msg_str;
 	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
-	Shadow->updateJobInQueue(U_STATUS);
+	Shadow->getJobAd()->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+	Shadow->getJobAd()->Assign(ATTR_VACATE_REASON, vacate_str);
+	Shadow->getJobAd()->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
+	Shadow->getJobAd()->Assign(ATTR_VACATE_REASON_SUBCODE, 0);
+	Shadow->updateJobInQueue(U_EVICT);
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
 		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", event.getMessage());
