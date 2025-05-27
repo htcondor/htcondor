@@ -216,6 +216,7 @@ void	DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers);
 int		MaterializeJobs(JobQueueCluster * clusterAd, TransactionWatcher & txn, int & retry_delay);
 
 static bool qmgmt_was_initialized = false;
+static bool job_queue_init_done = false;
 static JobQueueType *JobQueue = nullptr;
 static std::set<JOB_ID_KEY> DirtyJobIDs;
 static std::set<JOB_ID_KEY>::iterator DirtyJobIDsItr = DirtyJobIDs.begin();
@@ -2654,6 +2655,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	if( spool_cur_version != SPOOL_CUR_VERSION_SCHEDD_SUPPORTS ) {
 		WriteSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
 	}
+
+	job_queue_init_done = true;
 }
 
 
@@ -3555,7 +3558,11 @@ NewCluster(CondorError* errstack)
 					// create user a user record for a new submitter
 					// the insert_owner_const will make a pending user record
 					// which we then add to the current transaction by calling MakeUserRec
-					urec = scheduler.insert_owner_const(user);
+					urec = scheduler.insert_owner_const(user, errstack);
+					if (urec == nullptr) {
+						errno = ENOSPC;
+						return NEWJOB_ERR_INTERNAL;
+					}
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
 						if (errstack) {
@@ -6365,7 +6372,7 @@ static void AddImplicitJobsets(const std::list<std::string> &new_ad_keys, std::v
 
 
 static int
-AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *)
+AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *errstack)
 {
 	if (new_ad_keys.empty()) { return 0; }
 
@@ -6404,6 +6411,13 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *)
 					JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(euser, qbuf));
 				} else {
 					euser = ubuf.c_str();
+				}
+				if (scheduler.lookup_owner_const(euser) == nullptr) {
+					dprintf(D_ERROR, "No User Record for user %s, aborting transaction\n", euser);
+					if (errstack) {
+						errstack->pushf("SCHEDD", EACCES, "Unknown User %s.", euser);
+					}
+					return -1;
 				}
 				if (no_owner) {
 					const char * owner = name_of_user(euser, obuf);
@@ -9451,6 +9465,9 @@ int GetJobQueuedCount() {
     return job_queued_count;
 }
 
+bool JobQueueInitDone() {
+	return job_queue_init_done;
+}
 
 /**********************************************************************
  * These qmgt function support JobSets - see jobsets.cpp       

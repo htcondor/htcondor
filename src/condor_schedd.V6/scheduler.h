@@ -687,9 +687,15 @@ class Scheduler : public Service
 	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
-	const OwnerInfo * insert_owner_const(const char*);
+	const OwnerInfo * insert_owner_const(const char*, CondorError* errstack=nullptr);
 	const OwnerInfo * lookup_owner_const(const char*);
 	void incrementRecentlyAdded(OwnerInfo * ownerinfo);
+
+	void configGenericOsUsers();
+
+	bool m_useGenericOsUsers{false};
+	std::set<std::string> m_openGenericOsUsers;
+	std::set<std::string> m_claimedGenericOsUsers;
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
@@ -911,7 +917,7 @@ private:
 	int			command_act_on_user_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
-	OwnerInfo     * insert_ownerinfo(const char*);
+	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
 	SubmitterData * insert_submitter(const char*);
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
