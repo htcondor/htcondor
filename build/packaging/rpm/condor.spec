@@ -280,22 +280,18 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
-%if 0%{?suse_version}
-# Hold back pelican on openSUSE until version 7.16.1 is released
-Requires: pelican >= 7.14.1
-Requires: pelican-osdf-compat >= 7.14.1
-%else
-Requires: pelican >= 7.15.1
-Requires: pelican-osdf-compat >= 7.15.1
-%endif
+Requires: pelican >= 7.16.5
+Requires: pelican-osdf-compat >= 7.16.5
 
+%if 0%{?rhel} != 7
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.1 is released
+# Hold back apptainer until version 1.4.2 is released
 Requires: apptainer >= 1.3.6
+%endif
 %endif
 
 %if 0%{?rhel} != 7
