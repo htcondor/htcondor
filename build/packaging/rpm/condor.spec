@@ -1207,6 +1207,7 @@ rm -rf %{buildroot}
 %_bindir/condor_test_token
 %_bindir/condor_manifest
 %_bindir/condor_upgrade_check
+%_bindir/condor_join_pool
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
