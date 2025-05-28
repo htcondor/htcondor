@@ -7,7 +7,7 @@
 from ornithology import *
 import htcondor2 as htcondor
 import os
-from time import time
+import time
 
 
 DAG_FILENAME = "simple.dag"
@@ -84,12 +84,13 @@ class TestChirpToDAGMan:
         # Check that expected chirp message is in expected job log
         info = ""
         with htcondor.JobEventLog("chirp-HAS_LOG.log") as log:
-            begin = time()
+            begin = time.time()
             for event in log.events(stop_after=None):
                 if event.type is htcondor.JobEventType.GENERIC:
                     info = event.get("Info", "")
                     break
-                assert time() - begin < 30
+                assert time.time() - begin < 30
+                time.sleep(1)
         assert info == "In both job & DAGMan logs?"
 
     def test_chirp_in_dag_log(self, run_dag):
@@ -98,7 +99,7 @@ class TestChirpToDAGMan:
         num_chirp_events = 0
         with htcondor.JobEventLog(run_dag) as log:
             num_termination = 0
-            begin = time()
+            begin = time.time()
             for event in log.events(stop_after=None):
                 if event.type is htcondor.JobEventType.GENERIC:
                     info = event.get("Info", "")
@@ -112,7 +113,7 @@ class TestChirpToDAGMan:
                 if num_termination == 2:
                     break
                 # Fail if termination events are missing
-                assert time() - begin < 30
+                assert time.time() - begin < 30
         if len(expected_msgs) != 0:
             print(f"\nError: Missing {expected_msgs} for chirp events in DAGMan log.")
             assert len(expected_msgs) == 0
