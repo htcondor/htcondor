@@ -4885,18 +4885,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				return -1;
 		}
 
-#if !defined(WIN32)
-		uid_t user_uid = 0;
-		if ( can_switch_ids() && !pcache()->get_user_uid( owner, user_uid ) ) {
-			dprintf( D_ALWAYS, "SetAttribute security violation: "
-					 "setting owner to %s, which is not a valid user account\n",
-					 attr_value );
-			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s, which is not a "
-				"valid user account", attr_value);
-			errno = EACCES;
-			return -1;
-		}
-#endif
 		if (query_can_change_only) {
 			return 0;
 		}
@@ -6412,13 +6400,6 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *err
 				} else {
 					euser = ubuf.c_str();
 				}
-				if (scheduler.lookup_owner_const(euser) == nullptr) {
-					dprintf(D_ERROR, "No User Record for user %s, aborting transaction\n", euser);
-					if (errstack) {
-						errstack->pushf("SCHEDD", EACCES, "Unknown User %s.", euser);
-					}
-					return -1;
-				}
 				if (no_owner) {
 					const char * owner = name_of_user(euser, obuf);
 					JobQueue->SetAttribute(jid, ATTR_OWNER, QuoteAdStringValue(owner, qbuf));
@@ -6440,9 +6421,36 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *err
 				// ...
 			std::string ap_user;
 			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
-			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
-			if (ownerinfo && ownerinfo->OsUser()) {
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
+			const JobQueueUserRec *urec = scheduler.lookup_owner_const(ap_user.c_str());
+			if (urec == nullptr) {
+				dprintf(D_ERROR, "No User Record for user %s, aborting transaction\n", ap_user.c_str());
+				if (errstack) {
+					errstack->pushf("SCHEDD", EACCES, "Unknown User %s.", ap_user.c_str());
+				}
+				return -1;
+			}
+
+			const char* os_user = urec->OsUser();
+			if (os_user == nullptr) {
+				dprintf(D_ERROR, "User %s has no OS user, aborting transaction\n", ap_user.c_str());
+				if (errstack) {
+					errstack->pushf("SCHEDD", EACCES, "No OS user for %s.", ap_user.c_str());
+				}
+				return -1;
+			} else {
+#if !defined(WIN32)
+				uid_t user_uid = 0;
+				if ( can_switch_ids() && !pcache()->get_user_uid( os_user, user_uid ) ) {
+					dprintf(D_ERROR, "User %s has OS user %s, which is not a valid OS account, aborting transaction\n",
+					        ap_user.c_str(), os_user);
+					if (errstack) {
+						errstack->pushf("SCHEDD", EACCES, "Setting OsUser to %s, which is not a "
+										"valid OS account", os_user);
+					}
+					return -1;
+				}
+#endif
+				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, os_user);
 			}
 		}
 
