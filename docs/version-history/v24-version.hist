@@ -1,5 +1,10 @@
 *** 24.0.9 bugs
 
+- Fixed a bug introduced in 24.0.7 when running on Linux cgroup v1
+  systems, jobs that were killed by the out-of-memory killer would
+  not properly be put on hold.
+  :jira:`3094`
+
 - The results of ``key in htcondor2.param`` and
   ``key in htcondor2.param.keys()`` now match for keys which are defined to
   have no value.  (Previously, such keys would be returned by ``keys()``.)
