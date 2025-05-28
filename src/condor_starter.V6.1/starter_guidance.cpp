@@ -634,12 +634,18 @@ Starter::handleJobSetupCommand(
 			context_p = dynamic_cast<ClassAd *>(guidance.Lookup( ATTR_CONTEXT_AD ));
 			if( context_p != NULL ) { context.CopyFrom(* context_p); }
 
+			bool first_wait = true;
+			context.LookupBool( "FirstWait", first_wait );
+			if( first_wait ) {
+				context.InsertAttr( "FirstWait", false );
+				dprintf( D_ALWAYS, "Waiting for common files to be transferred.\n" );
+			}
+
 			daemonCore->Register_Timer( retry_delay, 0,
 				[continue_conversation, context](int /* timerID */) -> void { continue_conversation(context); },
 				"guidance: retry request"
 			);
 
-			dprintf( D_ALWAYS, "FIXME: only print waiting for common files to be ready once.\n" );
 			return true;
 		} else if( command == COMMAND_STAGE_COMMON_FILES ) {
 			// I would like to implement this command in terms of a general
@@ -737,7 +743,9 @@ Starter::handleJobSetupCommand(
 			ClassAd ftAd( guidance );
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
 			// ... blocking, at least for now.
+			dprintf( D_ALWAYS, "Starting common files transfer.\n" );
 			bool result = s->jic->transferCommonInput( & ftAd );
+			dprintf( D_ALWAYS, "Finished common files transfer: %s.\n", result ? "success" : "failure" );
 
 			if( result ) {
 				// To help reduce silly mistakes, make the staging directory

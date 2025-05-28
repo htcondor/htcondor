@@ -117,21 +117,26 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
     // For admins to explicitly specify no attributes, these three
     // parameters must NOT be in the param table.
     if(! param_defined_by_config(paramName.c_str())) {
-        if( (strcmp(banner_name, "INPUT" ) == 0) ||
-          (strcmp(banner_name, "OUTPUT" ) == 0) ||
-          (strcmp(banner_name, "CHECKPOINT" ) == 0) ) {
+        if( (strcmp(banner_name, "INPUT") == 0) ||
+          (strcmp(banner_name, "OUTPUT") == 0) ||
+          (strcmp(banner_name, "CHECKPOINT") == 0) ||
+          (strcmp(banner_name, "COMMON") == 0) ) {
             paramName = "TRANSFER_JOB_ATTRS";
         }
     }
 
+    auto * new_ad = new classad::ClassAd();
+    if( other_ad ) { new_ad->CopyFrom(* other_ad); }
+
     std::string attributes;
     param( attributes, paramName.c_str() );
-    if( attributes.empty() ) { return NULL; }
-
-    auto * new_ad = new classad::ClassAd(* other_ad);
-    std::vector<std::string> attributeList = split(attributes);
-    for( const auto & attribute : attributeList ) {
-        CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+    if( attributes.empty() ) {
+    	new_ad->CopyFrom(* job_ad);
+    } else {
+        std::vector<std::string> attributeList = split(attributes);
+        for( const auto & attribute : attributeList ) {
+            CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+        }
     }
 
     return new_ad;
@@ -174,19 +179,21 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 		return false;
 	}
 
-	if(other_ad == NULL) {
-		other_ad = job_ad;
-		sPrintAd(info.buffer, *other_ad, filter, nullptr);
-	} else {
-		const classad::ClassAd * new_ad =
-			copyEpochJobAttrs( job_ad, other_ad, banner_name );
-		if( new_ad != NULL ) {
-			sPrintAd(info.buffer, *new_ad, filter, nullptr);
-			delete new_ad;
-		} else {
-			sPrintAd(info.buffer, *other_ad, filter, nullptr);
-		}
+
+	// The record includes the other ad and (some attributes of) the job ad.
+	ClassAd * record = copyEpochJobAttrs( job_ad, other_ad, banner_name );
+
+	// Duplicate the other banner attributes into the record body.
+	if( record->Lookup( ATTR_RUN_INSTANCE_ID ) == NULL ) {
+		record->InsertAttr( ATTR_RUN_INSTANCE_ID, info.runId );
 	}
+	if( record->Lookup( ATTR_EPOCH_AD_TYPE ) == NULL ) {
+		record->InsertAttr( ATTR_EPOCH_AD_TYPE, banner_name );
+	}
+
+	sPrintAd(info.buffer, * record, filter, nullptr);
+	delete record;
+
 
 	//Buffer contains just the ad at this point
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer

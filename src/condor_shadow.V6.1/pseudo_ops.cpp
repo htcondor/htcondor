@@ -1232,7 +1232,7 @@ UniShadow::start_common_input_conversation(
 				// to prolong its life.
 				//
 
-				dprintf( D_ALWAYS, "Starting common file transfer (%s)\n", cifName.c_str() );
+				dprintf( D_ALWAYS, "Starting common files transfer.\n" );
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
@@ -1241,13 +1241,13 @@ UniShadow::start_common_input_conversation(
 
 				success = false;
 				LookupBoolInContext( request, ATTR_RESULT, success );
-				dprintf( D_ALWAYS, "Finished common file transfer (%s): %s\n", cifName.c_str(), success ? "success" : "failure" );
+				dprintf( D_ALWAYS, "Finished common files transfer: %s.\n", success ? "success" : "failure" );
 
 				std::string stagingDir;
 				if( success ) {
 					// We'll assume that malformed replies are transients.
 					if(! LookupStringInContext( request, "StagingDir", stagingDir )) {
-						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common file transfer; aborting job.\n" );
+						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common files transfer; aborting job.\n" );
 
 						// Make sure we take care of this.
 						delete this->cfLock;
@@ -1369,7 +1369,7 @@ UniShadow::start_common_input_conversation(
 				} else {
 					if( print_waiting ) {
 						print_waiting = false;
-						dprintf( D_ALWAYS, "Waiting for common file transfer (%s)\n", cifName.c_str() );
+						dprintf( D_ALWAYS, "Waiting for common files to be transferred (%s)\n", cifName.c_str() );
 					}
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
 					guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
