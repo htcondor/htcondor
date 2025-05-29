@@ -999,7 +999,7 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 }
 
 bool 
-ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
+ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid, int exit_status) {
 	bool killed = false;
 
 	// Double check that we have an entry
@@ -1044,8 +1044,9 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::checking if pid %d was oom killed... oom_count was %zu\n", pid, oom_count);
 
 	killed = oom_count > 0;
+	bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
 
-	return killed;
+	return killed && was_sigkilled;
 }
 
 // Returns true if cgroup v2 is mounted
