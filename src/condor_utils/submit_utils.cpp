@@ -573,8 +573,13 @@ SubmitHash::SubmitHash()
 
 SubmitHash::~SubmitHash()
 {
-	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
-	SubmitMacroSet.errors = NULL;
+	delete SubmitMacroSet.errors;
+	SubmitMacroSet.errors = nullptr;
+	delete [] SubmitMacroSet.table;
+	SubmitMacroSet.table = nullptr;
+	delete [] SubmitMacroSet.metat;
+	SubmitMacroSet.metat = nullptr;
+	SubmitMacroSet.apool.clear(); // clear the allocation pool, this will free all the strings and objects allocated from it
 
 	delete job; job = nullptr;
 	delete procAd; procAd = nullptr;

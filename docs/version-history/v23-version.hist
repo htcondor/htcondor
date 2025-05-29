@@ -1,5 +1,9 @@
 *** 23.10.26 bugs
 
+- Fixed a memory leak in the *condor_schedd* when late materialization
+  is used.
+  :jira:`3096`
+
 - Fixed a bug where the *condor_master* would not start up on systems
   where ulimit -n was close to 2 ^ 31 file descriptors.
   :jira:`3079`
