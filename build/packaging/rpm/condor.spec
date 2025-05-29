@@ -1473,6 +1473,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+
 * Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.25-1
 - Fix problems where parallel universe jobs could crash the condor_schedd
 - Prevent condor_starter crash when evicting job during input file transfer
