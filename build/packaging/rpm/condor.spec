@@ -1473,8 +1473,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
-- Use pelican 7.14.1 on openSUSE
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.25-1
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
 
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-1
 - HTCondor tarballs now contain Pelican 7.15.1 and Apptainer 1.4.0
