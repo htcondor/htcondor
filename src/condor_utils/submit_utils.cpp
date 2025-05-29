@@ -7292,6 +7292,7 @@ int SubmitHash::SetProtectedURLTransferLists() {
 			if (has_diff_queue_list || clusterInputQueues.size() > 0) {
 				classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
 				if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
+					delete list;
 					push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
 					           ATTR_TRANSFER_Q_URL_IN_LIST);
 					ABORT_AND_RETURN( 1 );
