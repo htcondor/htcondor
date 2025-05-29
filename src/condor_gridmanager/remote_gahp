@@ -219,8 +219,9 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
         SSH_STATUS=$?
     done
 else
-    echo "Unknown remote command (${REMOTE_CMD})" 1>&2
-    SSH_STATUS=1
+    # Run the given command just like we would the blahp.
+    ssh "${SSH_ARGS[@]}" $HOSTNAME_ARG /bin/bash "${BASH_ARGS[@]}" -c "'BLAHPD_LOCATION=$REMOTE_GLITE GLITE_LOCATION=$REMOTE_GLITE $REMOTE_CMD $*'"
+    SSH_STATUS=$?
 fi
 
 exit $SSH_STATUS
