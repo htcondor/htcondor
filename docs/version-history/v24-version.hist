@@ -1,4 +1,4 @@
-*** 24.8.0 features
+*** 24.8.1 features
 
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
   sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
@@ -59,7 +59,7 @@
 - The :tool:`condor_upgrade_check` script has been folded into the main condor package.
   :jira:`2995`
 
-*** 24.8.0 bugs
+*** 24.8.1 bugs
 
 - Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
   The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
