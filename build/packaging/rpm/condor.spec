@@ -280,14 +280,8 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
-%if 0%{?suse_version}
-# Hold back pelican on openSUSE until version 7.16.1 is released
-Requires: pelican >= 7.14.1
-Requires: pelican-osdf-compat >= 7.14.1
-%else
-Requires: pelican >= 7.15.1
-Requires: pelican-osdf-compat >= 7.15.1
-%endif
+Requires: pelican >= 7.16.5
+Requires: pelican-osdf-compat >= 7.16.5
 
 %if 0%{?rhel} != 7
 # Require tested Apptainer
@@ -295,7 +289,7 @@ Requires: pelican-osdf-compat >= 7.15.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.1 is released
+# Hold back apptainer until version 1.4.2 is released
 Requires: apptainer >= 1.3.6
 %endif
 %endif
@@ -1486,11 +1480,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-2
-- Use pelican 7.14.1 on openSUSE
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
 
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
-- Use pelican 7.14.1 on openSUSE
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.25-1
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
 
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-1
 - With delegated cgroups v2, job out-of-memory no longer affects the pilot

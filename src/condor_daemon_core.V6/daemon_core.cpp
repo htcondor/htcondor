@@ -9615,9 +9615,8 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 
 	if (this->m_proc_family) {
 #ifdef LINUX
-		bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
-		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_sigkilled && was_oom_killed) {
+		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid, exit_status);
+		if (was_oom_killed) {
 			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
 			exit_status |= DC_STATUS_OOM_KILLED;
 		} 
