@@ -77,6 +77,7 @@ public:
 		} else {
 			items.emplace_back(id).addJob(jid);
 		}
+		largest_cluster = MAX(largest_cluster, items.back().size());
 	}
 	int currentId() {
 		if (items.empty()) return -1;
@@ -85,10 +86,12 @@ public:
 	bool empty() { return items.empty(); }
 	size_t size() { return items.size(); }
 	ResourceRequestCluster & front() { return items.front(); }
-	void pop_front() { return items.pop_front(); }
+	void pop_front() { items.pop_front(); }
+	void flatten();
 
 protected:
 	std::deque<ResourceRequestCluster> items;
+	size_t largest_cluster{0};
 };
 
 
@@ -241,6 +244,9 @@ class ScheddNegotiate: public DCMsg {
 	void setAutoClusterRejected(int auto_cluster_id);
 
 	bool sendJobInfo(Sock *sock, bool just_sig_attrs=false);
+
+		// negotiator sent SEND_JOB_INFO, so it doesn't want to hear about resource requests lists
+	void notSendingResourceRequests();
 
 	bool sendResourceRequestList(Sock *sock);
 

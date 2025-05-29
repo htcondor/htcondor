@@ -358,25 +358,16 @@ public:
 	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap
 	// it is set by count_jobs() or by scheduler::get_submitter_and_owner()
 	// DO NOT FREE FROM HERE!
-	OwnerInfo * ownerinfo;
-	struct SubmitterData * submitterdata;
+	OwnerInfo * ownerinfo{nullptr};
+	struct SubmitterData * submitterdata{nullptr};
 protected:
-	JobQueueCluster * parent; // job pointer back to the 
+	JobQueueCluster * parent{nullptr}; // job pointer back to the cluster ad
 	qelm qe;
 
 public:
 	JobQueueJob(const JOB_ID_KEY & key)
 		: JobQueueBase(key, (key.proc < 0) ? entry_type_cluster : entry_type_job)
-		//TT , jid(0,0)
-		, universe(0)
-		, status(0) // JOB_STATUS_MIN
-		, run(JobRunnableState::Unset)
-		, dirty_flags(0)
-		, set_id(0)
-		, autocluster_id(0)
-		, ownerinfo(NULL)
-		, submitterdata(NULL)
-		, parent(NULL)
+		//base class initializes jid to 0,0
 	{}
 	virtual ~JobQueueJob() {};
 
@@ -408,23 +399,17 @@ public:
 // structure of job_queue hashtable entries for clusters.
 class JobQueueCluster : public JobQueueJob {
 public:
-	JobFactory * factory; // this will be non-null only for cluster ads, and only when the cluster is doing late materialization
+	JobFactory * factory{nullptr}; // this will be non-null only for cluster ads, and only when the cluster is doing late materialization
 protected:
-	int cluster_size; // number of materialized jobs in this cluster that the schedd is currently tracking.
-	int num_attached; // number of procs attached to this cluster.
-	int num_idle;
-	int num_running;
-	int num_held;
+	int cluster_size{0}; // number of materialized jobs in this cluster that the schedd is currently tracking.
+	int num_attached{0}; // number of procs attached to this cluster.
+	int num_idle{0};
+	int num_running{0};
+	int num_held{0};
 
 public:
 	JobQueueCluster(JOB_ID_KEY & job_id)
 		: JobQueueJob(job_id)
-		, factory(NULL)
-		, cluster_size(0)
-		, num_attached(0)
-		, num_idle(0)
-		, num_running(0)
-		, num_held(0)
 		{
 		}
 	virtual ~JobQueueCluster();
@@ -455,13 +440,13 @@ public:
 
 protected:
 	// 3 bytes needed to align the next int
-	char spareA = 0;
-	char spareB = 0;
-	bool dirty = false;
+	char spareA{0};
+	char spareB{0};
+	bool dirty{false};
 public:
-	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
-	unsigned int member_count = 0;
-	OwnerInfo * ownerinfo = nullptr;
+	garbagePolicyEnum garbagePolicy{garbagePolicyEnum::immediateAfterEmpty};
+	unsigned int member_count{0};
+	OwnerInfo * ownerinfo{nullptr};
 	LiveJobCounters jobStatusAggregates;
 	unsigned int Jobset() const { return (unsigned int)jid.cluster; }
 

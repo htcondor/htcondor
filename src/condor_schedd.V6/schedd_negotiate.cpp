@@ -108,6 +108,36 @@ ScheddNegotiate::getNegotiatorName()
 // this is in qmgmt.cpp...
 extern JobQueueJob* GetJobAd(const PROC_ID& jid);
 
+// flatten/expand the items in the list so that each ResourceRequestCluster
+// holds only a single job.  We do this so that the old negotiator prototol
+// that doesn't understand resource request lists can be fed a single job at a time
+//
+void ResourceRequestList::flatten()
+{
+	if (largest_cluster <= 1) return;
+
+	std::deque<ResourceRequestCluster> tmp;
+	items.swap(tmp);
+
+	largest_cluster = 0;
+	for (auto & cluster : tmp) {
+		int id = cluster.getAutoClusterId();
+		for (auto & jid : cluster) {
+			items.emplace_back(id).addJob(jid);
+			largest_cluster = MAX(largest_cluster, items.back().size());
+		}
+	}
+}
+
+// when the negotiator sends a SEND_JOB_INFO instead of SEND_RESOURCE_REQUEST_LIST
+// then it doesn't want to know about resource request lists, so we re-write
+// the ResourceRequestList items so that each only holds a single job.
+void ScheddNegotiate::notSendingResourceRequests()
+{
+	if ( ! m_jobs || m_jobs->empty()) return;
+	m_jobs->flatten();
+}
+
 bool
 ScheddNegotiate::nextJob()
 {
@@ -576,6 +606,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 	case SEND_JOB_INFO:
 		//dprintf(D_MATCH, "got SEND_JOB_INFO\n");
 		m_num_resource_reqs_sent = 0;  // clear counter of reqs sent this round
+		notSendingResourceRequests();
 		if( !sendJobInfo(sock) ) {
 				// We failed to talk to the negotiator, so close the socket.
 			return MESSAGE_FINISHED;
