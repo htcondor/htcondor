@@ -20,6 +20,14 @@
   Windows.
   :jira:`3078`
 
+*** 23.10.25 features
+
+- HTCondor tarballs now contain `Pelican 7.16.5 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.16.5.
+
+- HTCondor tarballs now contain `Apptainer 1.4.1 <https://github.com/apptainer/apptainer/releases/tag/v1.4.1>`_
+
 *** 23.10.25 bugs
 
 - Fixed bug where :macro:`DAGMAN_MAX_JOBS_IDLE` value was not being respected by DAGMan
