@@ -236,13 +236,33 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         fail_condition=ClusterState.any_terminal
     )
 
-    # Release the other four jobs.
-    jobIDs = [ f"{job_handle.clusterid}.{x}" for x in range(4,8) ]
-    the_big_condor.act( htcondor2.JobAction.Release, jobIDs )
-
     # Touch the kill files on the first four jobs, causing them to finish.
     for i in range(0,4):
         (user_dir / f"kill-many-{job_handle.clusterid}.{i}").touch(exist_ok=True)
+
+    # Wait for them to finish.
+    assert job_handle.wait(
+        timeout=60,
+        condition=lambda self: self.status_exactly(4, JobStatus.COMPLETED),
+        fail_condition=ClusterState.any_held
+    )
+
+    # This test used to overlap releasing some jobs while others were still
+    # running, to make sure that "delayed" concurrent re-use worked properly.
+    # We could stagger the start of either (or both) halves of the jobs,
+    # but we're also using this test to verify obseverability, which means
+    # we need to check for a specific number of times what jobs wait for
+    # common file transfer to happen.  That leads to a race, because we don't
+    # know that the common file transfer has completed by the time wait()
+    # returns (which only knows about shadow start-up).
+    #
+    # Of course, we intend to add common files transfer events to the job
+    # event log later on in this PR, so maybe using those (after checking
+    # them after the fact in test_one_cif_job) would work well.
+
+    # Release the other four jobs.
+    jobIDs = [ f"{job_handle.clusterid}.{x}" for x in range(4,8) ]
+    the_big_condor.act( htcondor2.JobAction.Release, jobIDs )
 
     # Wait for the last four jobs to start.
     assert job_handle.wait(
