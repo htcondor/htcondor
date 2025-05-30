@@ -10,6 +10,11 @@
   Windows.
   :jira:`3078`
 
+- Fixed a bug introduced in HTCondor 23.0.21, 23.10.21, and 24.0.5 that
+  caused the *condor_gridmanager* to fail at startup if
+  macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
+  :jira:`3099`
+
 *** 23.0.25 bugs
 
 - Fixed some bugs with parallel universe jobs that can cause the
