@@ -125,18 +125,22 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
         }
     }
 
-    auto * new_ad = new classad::ClassAd();
-    if( other_ad ) { new_ad->CopyFrom(* other_ad); }
+
+    if(other_ad == NULL) {
+        return new ClassAd(* job_ad);
+    }
 
     std::string attributes;
     param( attributes, paramName.c_str() );
+    ClassAd * new_ad = new ClassAd(* other_ad);
+
     if( attributes.empty() ) {
-    	new_ad->CopyFrom(* job_ad);
-    } else {
-        std::vector<std::string> attributeList = split(attributes);
-        for( const auto & attribute : attributeList ) {
-            CopyAttribute( attribute, * new_ad, attribute, * job_ad );
-        }
+        return new_ad;
+    }
+
+    std::vector<std::string> attributeList = split(attributes);
+    for( const auto & attribute : attributeList ) {
+        CopyAttribute( attribute, * new_ad, attribute, * job_ad );
     }
 
     return new_ad;
