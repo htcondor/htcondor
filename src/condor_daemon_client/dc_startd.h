@@ -87,7 +87,14 @@ public:
 			in the DCStartdMsg object, which may be obtained from the callback
 			object at callback time.
 		*/
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+		struct requestClaimOptions {
+			int num_dslots{1};
+			bool claim_pslot{false};
+			bool send_leftovers{false};
+			// TODO: add resource sharing info here??
+		};
+
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, requestClaimOptions & opts, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?

@@ -166,6 +166,9 @@ public:
 	std::string  b_tag;     // item tag, same as r_slot_id for broken slots
 	std::string  b_reason;  // reason string
 
+	// the broken id, converted to a sub_id suitable for use in an NFROwner struct
+	unsigned short int sub_id() const { return (unsigned short int)(0xFFFF - b_id); }
+
 	// ad holds arbitrary context information that correlates to the brokenness
 	// from job and Client* object of the claim for broken resources and slots
 	std::unique_ptr<ClassAd> b_context{nullptr};
@@ -412,16 +415,16 @@ public:
 	int nextId( void ) { return id_disp->next(); };
 
 		// returns true if specified slot is draining
-	bool isSlotDraining(Resource *rip) const;
+	bool isSlotDraining(const Resource *rip) const;
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
-	time_t gracefulDrainingTimeRemaining(Resource *rip);
+	time_t gracefulDrainingTimeRemaining(const Resource *rip);
 
 	time_t gracefulDrainingTimeRemaining();
 
 		// return true if all slots are in drained state
-	bool drainingIsComplete(Resource *rip);
+	bool drainingIsComplete(const Resource *rip) const;
 
 		// return true if draining was canceled by this function
 	bool considerResumingAfterDraining();

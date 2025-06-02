@@ -87,7 +87,7 @@ BaseShadow::BaseShadow() {
 BaseShadow::~BaseShadow() {
 	myshadow_ptr = NULL;
 	if (jobAd) FreeJobAd(jobAd);
-	if (gjid) free(gjid); 
+	if (gjid) free(gjid);
 	if (scheddAddr) free(scheddAddr);
 	if( job_updater ) delete job_updater;
 	if (m_cleanup_retry_tid != -1) daemonCore->Cancel_Timer(m_cleanup_retry_tid);
@@ -277,6 +277,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	if (wantClaiming) {
 		std::string startdSinful;
 		std::string claimid;
+		DCStartd::requestClaimOptions opts;
 
 			// Pull startd addr and claimid out of the jobad
 		jobAd->LookupString(ATTR_STARTD_IP_ADDR, startdSinful);
@@ -295,7 +296,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 											   "description", 
 											   daemonCore->InfoCommandSinfulString(), 
 											   1200 /*alive interval*/,
-											   false, /* don't claim pslot */
+											   opts, /* don't claim pslot */
 											   20 /* net timeout*/, 
 											   100 /*total timeout*/, 
 											   cb);

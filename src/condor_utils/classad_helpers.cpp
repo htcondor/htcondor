@@ -83,10 +83,15 @@ int cleanStringForUseAsAttr(std::string &str, char chReplace/*=0*/, bool compact
   specifies a signal we want to use.  The signal could either be
   stored as an int, or as a string.  if it's a string, we want to
   translate it into the appropriate signal number for this platform. 
+  This is relevant only on unix. On Windows, we always return SIGTERM,
+  which DaemonCore will map to WM_CLOSE.
 */
 static int
 findSignal( ClassAd* ad, const char* attr_name )
 {
+#if defined(WIN32)
+	return SIGTERM;
+#else
 	if( ! ad ) {
 		return -1;
 	}
@@ -100,6 +105,7 @@ findSignal( ClassAd* ad, const char* attr_name )
 	} else {
 		return -1;
 	}
+#endif
 }
 
 

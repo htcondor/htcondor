@@ -138,33 +138,35 @@ RemoteResource::~RemoteResource()
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
 	}
-	if( proxy_check_tid != -1) {
+	if( proxy_check_tid != -1 && daemonCore) {
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
 	}
 
-	if (no_update_received_tid != -1) {
+	if (no_update_received_tid != -1 && daemonCore) {
 		daemonCore->Cancel_Timer(no_update_received_tid);
 		no_update_received_tid = -1;
 	}
 
 
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( m_claim_session.secSessionId()[0] != '\0' ) {
+		if( m_claim_session.secSessionId()[0] != '\0' && daemonCore ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
 		}
-		if( m_filetrans_session.secSessionId()[0] != '\0' ) {
+		if( m_filetrans_session.secSessionId()[0] != '\0' && daemonCore ) {
 			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
 		}
 	}
 
-	if( m_attempt_shutdown_tid != -1 ) {
+	if( m_attempt_shutdown_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(m_attempt_shutdown_tid);
 		m_attempt_shutdown_tid = -1;
 	}
-	if ( next_reconnect_tid != -1 ) {
+	if ( next_reconnect_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer( next_reconnect_tid );
 	}
+
+	if( starter_version ) { free( starter_version ); }
 }
 
 
@@ -882,7 +884,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
-	char* starter_version=NULL;
+	starter_version = NULL;
 	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
 	}
@@ -891,7 +893,6 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
 		filetrans.setPeerVersion( starter_version );
-		free(starter_version);
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
@@ -1365,7 +1366,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 
 	std::string PluginResultList = "PluginResultList";
-	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
+	std::array< std::string, 4 > prefixes( { "Common", "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
 		classad::ClassAd c;
 

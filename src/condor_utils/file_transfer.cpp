@@ -6144,7 +6144,7 @@ FileTransfer::ExitDoUpload(
 void
 FileTransfer::stopServer()
 {
-	abortActiveTransfer();
+	if (daemonCore) { abortActiveTransfer(); }
 	if (TransKey) {
 		// remove our key from the hash table, (if we are not in post-exit shutdown)
 		if (daemonCore) { TranskeyTable.erase(TransKey); }

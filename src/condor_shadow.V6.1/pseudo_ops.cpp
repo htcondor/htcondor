@@ -43,6 +43,7 @@
 
 #include "condor_base64.h"
 #include "shortfile.h"
+#include "single_provider_syndicate.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -412,7 +413,7 @@ static void append_buffer_info( std::string &url, const char *method, char const
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
 		if( filename_remap_find(buffer_list.c_str(),path,buffer_string) ||
-		    filename_remap_find(buffer_list.c_str(),file.c_str(),buffer_string) ) {
+			filename_remap_find(buffer_list.c_str(),file.c_str(),buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			url += "buffer:";
@@ -639,7 +640,7 @@ pseudo_constrain( const char *expr )
 
 	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
 	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
-	
+
 	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
 	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
 
@@ -1069,6 +1070,332 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 }
 
 
+ClassAd
+UniShadow::do_common_file_transfer(
+	const ClassAd & /* request */,
+	const std::string & commonInputFiles,
+	const std::string & cifName
+) {
+	ClassAd commonAd;
+	CopyAttribute(
+		ATTR_JOB_IWD, commonAd,
+		ATTR_JOB_IWD, * Shadow->getJobAd()
+	);
+	commonAd.InsertAttr( ATTR_TRANSFER_INPUT_FILES, commonInputFiles );
+	// If we neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
+	// job's (non-existent) spool directory to the input list!
+	commonAd.InsertAttr( ATTR_TRANSFER_EXECUTABLE, false );
+
+
+	this->commonFTO = new FileTransfer();
+	if( this->commonFTO == NULL ) {
+		// This is bad, but it's consistent with failing to Init().
+		EXCEPT( "UniShadow::do_common_file_transfer(): new FileTransfer() failed." );
+	}
+	// This sets ATTR_TRANSFER_[SOCKET|KEY] in `commonAd` "for us."
+	int rval = this->commonFTO->Init( & commonAd, false, PRIV_USER, false );
+	if( rval == 0 ) {
+		// This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
+		EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
+	}
+	this->commonFTO->setPeerVersion( this->getStarterVersion() );
+	// This is broken on Windows, but we really want our timer to fire
+	// during the transfer process.  Not clear if the progress function
+	// will always be called often enough to be useful for keeping-alive.
+	this->commonFTO->SetServerShouldBlock( false );
+
+
+	ClassAd guidance;
+	CopyAttribute(
+		ATTR_TRANSFER_SOCKET, guidance,
+		ATTR_TRANSFER_SOCKET, commonAd
+	);
+	CopyAttribute(
+		ATTR_TRANSFER_KEY, guidance,
+		ATTR_TRANSFER_KEY, commonAd
+	);
+
+	guidance.InsertAttr( ATTR_NAME, cifName );
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+	guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
+	return guidance;
+}
+
+
+ClassAd
+do_wiring_up( const std::string & stagingDir, const std::string & cifName ) {
+	ClassAd guidance;
+
+	guidance.InsertAttr( ATTR_NAME, cifName );
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
+	guidance.InsertAttr( "StagingDir", stagingDir );
+
+	return guidance;
+}
+
+
+// The parameters are copies to simplify thinking about this coroutine.
+condor::cr::Piperator<ClassAd, ClassAd>
+UniShadow::start_common_input_conversation(
+	ClassAd request, std::string commonInputFiles, std::string cifName
+) {
+	ClassAd guidance;
+
+	//
+	//  1. Determine if this shadow the first one to want these common files
+	//     on this machine for that submitter: create the semaphore on disk
+	//     (O_CREAT | O_EXCL).
+	//  2. If not:
+	//     (a) If the semaphore's state is READY, go to step 4.
+	//     (b) Otherwise, check that the semaphore has been touched recently.
+	//         If it hasn't, remove the semaphore and back to step 1.
+	//     (c) Start a timer in case the starter never calls us back?
+	//     (d) Ask the starter to wait five minutes and ask again.  When
+	//         it does, repeat this process.
+	//  3. If so, perform common file transfer, touching the semaphore as we
+	//     go, so that step (2) will work.  Initially update the state to
+	//     STAGING, then to READY when the transfer is complete.
+	//  4. Ask the starter to wire up the common files from the previous step
+	//     to the current job's input sandbox.
+	//  5. Ask the starter to carry on.
+	//
+	//  Obviously, it would be more efficient to the regular input transfer
+	//  while waiting for the common file transfer, but we'll optimize that
+	//  later: strictly speaking, files later in the input list overwrite
+	//  files earlier in it, so we'll either have to settle for some semantic
+	//  breakage or figure how to avoid it / tolerate unwritable files during
+	//  normal transfer.
+	//
+
+
+	this->cfLock = new SingleProviderSyndicate(cifName);
+
+	bool success;
+	while( true ) {
+		std::string message;
+		auto status = this->cfLock->acquire( message );
+		dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
+		switch( status ) {
+			case SingleProviderSyndicate::PROVIDER: {
+				// Before we start common file transfer, start a timer that
+				// calls this->cfLock->touch() every sixty seconds.
+				this->producer_keep_alive = daemonCore->Register_Timer(
+					0, 60,
+					[this] (int /* timerID */) -> void {
+						dprintf( D_ZKM, "Elected producer touch()ing keyfile.\n" );
+						if(! this->cfLock->touch()) {
+							delete this->cfLock;
+							EXCEPT( "Elected producer touch() failed, aborting.\n" );
+						}
+					},
+					"SingleProviderSyndicate producer keep-alive"
+				);
+				if( this->producer_keep_alive == -1 ) {
+					delete this->cfLock;
+					EXCEPT( "Elected producer couldn't register keep-alive, aborting.\n" );
+				}
+
+
+				//
+				// FIXME: The provider process should poll release() once the
+				// job is done until it returns true, then exit.  We don't call
+				// release() from the consumer processes because their release()
+				// and destructor calls are identical; thus, it's better to
+				// have the destructor handle it, rather than miss places
+				// where release() needs to be called and have it magically
+				// work anyway.  This works for shadow reuse because that
+				// explicitly delete the shadow object in recycleShadow().
+				//
+				// The above only applies if the starter asks for guidance
+				// after the job is done and can therefore be instructed
+				// to prolong its life.
+				//
+
+				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
+				request = co_yield guidance;
+
+				// See the RTYPE_JOB_ENVIRONMENT code for what we should
+				// double-check here.
+
+				success = false;
+				request.LookupBool( ATTR_RESULT, success );
+
+				std::string stagingDir;
+				if( success ) {
+					// We'll assume that malformed replies are transients.
+					if(! request.LookupString( "StagingDir", stagingDir ) ) {
+						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common file transfer; aborting job.\n" );
+
+						// Make sure we take care of this.
+						delete this->cfLock;
+						this->cfLock = NULL;
+
+						// Consider replacing this with a call to evictJob().
+						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+						this->jobAd->Assign(ATTR_VACATE_REASON, "Starter sent malformed reply when asked to stage common files." );
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
+						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 1);
+						remRes->setExitReason(JOB_SHOULD_REQUEUE);
+						remRes->killStarter(false);
+
+						// We can't "wire up" the CIFs; since the job needs
+						// them, we must abort it.
+						guidance.Clear();
+						guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+						co_return guidance;
+					}
+
+					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
+					if(! this->cfLock->ready( stagingDir )) {
+						// We failed to tell the jobs waiting on us that we're
+						// ready.  This job can continue, but the others can't.
+						//
+						// We can't just call release(), because that doesn't
+						// do anything if other jobs are waiting.  Deleting
+						// the keyfile, however, will select a new lockholder.
+						delete this->cfLock;
+					}
+				} else {
+					dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): common file transfer failed, aborting job.\n" );
+
+					delete this->cfLock;
+					this->cfLock = NULL;
+
+					const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
+					if( info.try_again ) {
+						// Consider replacing this with a delayed (zero-second
+						// timer) call to evictJob().
+						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
+						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
+						remRes->setExitReason(JOB_SHOULD_REQUEUE);
+						remRes->killStarter(false);
+					} else {
+						holdJob( "Failed to transfer common files.", CONDOR_HOLD_CODE::JobNotStarted, 3 );
+					}
+
+					guidance.Clear();
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+					co_return guidance;
+				}
+
+				guidance = do_wiring_up(stagingDir, cifName);
+				request = co_yield guidance;
+
+				success = false;
+				request.LookupBool( ATTR_RESULT, success );
+				if(! success) {
+					// Consider replacing this with a delayed (zero-second
+					// timer) call to evictJob().
+					this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+					this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
+					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
+					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
+					remRes->setExitReason(JOB_SHOULD_REQUEUE);
+					remRes->killStarter(false);
+
+					guidance.Clear();
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+					co_return guidance;
+				}
+
+				//
+				// TODO.
+				//
+				// For maximum efficiency, set a flag so that the shadow
+				// doesn't exit until this->cfLock->release() returns true.
+				// This will require the starter to ask for advice after
+				// the job terminates, because otherwise _it_ will go away,
+				// and the point is to keep it alive.  (The flag will be
+				// checked in the corresponding guidance function.)
+				//
+				// Once the slot-splitting function is available, that
+				// guidance function is where it will be called when the
+				// job is done (and the resulting claim conveyed to the
+				// schedd).
+				//
+
+				guidance.Clear();
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+				co_return guidance;
+				}
+				break;
+
+			case SingleProviderSyndicate::UNREADY: {
+				// The common files are being transferred by someone else.
+				//
+				// We'd like to do input transfer while we wait.  Rather
+				// than duplicate all that code -- and its error handling --
+				// let's just have the starter call us back after input
+				// file transfer -- which it knows how to do -- and do
+				// whatever waiting remains then.
+				//
+				// We can therefore only send COMMAND_CARRY_ON if we're
+				// sure the starter has already set up the job environment.
+
+				bool job_environment_ready = false;
+				request.LookupBool( ATTR_JOB_ENVIRONMENT_READY, job_environment_ready );
+				if(! job_environment_ready) {
+					this->resume_job_setup = true;
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+					co_return guidance;
+				} else {
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+					guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+					request = co_yield guidance;
+				}
+				} break;
+
+			case SingleProviderSyndicate::READY:
+				// For testing purposes only.
+				// guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+				// guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+				// request = co_yield guidance;
+
+				// Map the common files into the sandbox.
+				guidance = do_wiring_up(message, cifName);
+				request = co_yield guidance;
+
+				success = false;
+				request.LookupBool( ATTR_RESULT, success );
+				if(! success) {
+					// Consider replacing this with a delayed (zero-second
+					// timer) call to evictJob().
+					this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+					this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
+					this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
+					this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
+					remRes->setExitReason(JOB_SHOULD_REQUEUE);
+					remRes->killStarter(false);
+
+					guidance.Clear();
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+					co_return guidance;
+				}
+
+				guidance.Clear();
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+				co_return guidance;
+				break;
+
+			case SingleProviderSyndicate::INVALID:
+				EXCEPT("Something went terribly wrong in cfLock.acquire()." );
+				break;
+
+			case SingleProviderSyndicate::MIN:
+				EXCEPT("Invalid return value (MIN) from cfLock.acquire()." );
+				break;
+
+			case SingleProviderSyndicate::MAX:
+				EXCEPT("Invalid return value (MAX) from cfLock.acquire()." );
+				break;
+		}
+	}
+}
+
+
+
 extern bool use_guidance_in_job_ad;
 
 GuidanceResult
@@ -1099,23 +1426,28 @@ send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
 	return GuidanceResult::Command;
 }
 
+
 //
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
 
+
 GuidanceResult
-pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
-	dprintf( D_ALWAYS, "Received request for guidance.\n" );
+BaseShadow::pseudo_request_guidance( const ClassAd & /* request */, ClassAd & guidance ) {
+	dprintf( D_ALWAYS, "Internal error: BaseShadow::pseudo_request_guidance() called.\n" );
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+	return GuidanceResult::Command;
+}
+
+
+GuidanceResult
+UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	dprintf( D_ZKM, "Received request for guidance.\n" );
 
 	if( param_boolean( "GUIDANCE_KEEP_CALM_AND", false ) ) {
 		dprintf( D_ALWAYS, "Keep calm and (always send the command) %s\n", COMMAND_CARRY_ON );
 		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		return GuidanceResult::Command;
-	}
-
-	if( use_guidance_in_job_ad ) {
-		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
-		return send_guidance_from_job_ad( request, guidance );
 	}
 
 	std::string requestType;
@@ -1124,7 +1456,16 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	}
 
 	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
-		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+		dprintf( D_ZKM, "Received request for guidance about the job environment.\n" );
+
+		// There's no reason for this to be exclusive to the job environment
+		// guidance, but to unbreak the test, let's pretend it is.  (The
+		// in-job guidance would have to specify the request type.)
+		if( use_guidance_in_job_ad ) {
+			dprintf( D_TEST, "Using guidance in job ad.\n" );
+			return send_guidance_from_job_ad( request, guidance );
+		}
+
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
 			// This isn't copied into thisRemoteResource->download_transfer_info
 			// until the FTO reaper fires, which might be a a while.
@@ -1143,10 +1484,16 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 				// leave it in.
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
 				guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+				// guidance.InsertAttr(ATTR_CONTEXT_AD, context);
 			} else if( current.xfer_status == XFER_STATUS_DONE
 			 && current.success == true
 			) {
-				guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
+				if(! this->resume_job_setup) {
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
+				} else {
+					this->resume_job_setup = false;
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_JOB_SETUP);
+				}
 			} else if (
 				current.xfer_status == XFER_STATUS_DONE
 			 && current.success == false
@@ -1188,14 +1535,108 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 		} else {
 			// The starter asked for guidance about the job environment, but
 			// we think we're doing output transfer.
-			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		}
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
+		dprintf( D_ZKM, "Sending (job environment) guidance with command %s\n", command.c_str());
+		return GuidanceResult::Command;
+	} else if( requestType == RTYPE_JOB_SETUP ) {
+		dprintf( D_ZKM, "Received request for guidance about job setup.\n" );
+
+		// If the AP has decided to stage common input for this job, issue
+		// the corresponding command.
+		//
+		// For milestone 1, we will just check for a job-ad attribute.
+		std::string commonInputFiles;
+		if(! getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		} else if(! this->hasCIFName()) {
+			dprintf( D_ALWAYS, "Unable to determine name for common input files, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			holdJob( "Unable to determine name for common input files, can't run job.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+		} else {
+			// This should have been take care of by match-making, but for the
+			// first milestone, that has to be done by hand and might have been
+			// forgotten.  I'd like to check the slot ad, but the shadow doesn't
+			// have access to that; instead, the starter will send along the
+			// version number in the request ad.
+			//
+			// This doesn't help if the starter is too old to even ask for
+			// guidance, but there's nothing we can do about that if the
+			// shadow doesn't have access to the slot ad.
+			int hasCommonFilesTransfer = 0;
+			request.LookupInteger(
+				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
+			);
+			if( hasCommonFilesTransfer < 1 ) {
+				// Put the job on hold with a request to add the requirement.
+				holdJob("Please add TARGET.HasCommonFilesTransfer to your requirements expression.", 1003, 5 );
+
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+				return GuidanceResult::Command;
+			}
+
+
+			//
+			// Since we're only talking to one starter at a time, we can
+			// simply record if we've already started this conversation.
+			//
+			static bool in_conversation = false;
+			static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
+
+			if(! in_conversation) {
+				in_conversation = true;
+				the_coroutine = std::move(
+					this->start_common_input_conversation(request, commonInputFiles, this->getCIFName())
+				);
+				guidance = the_coroutine();
+			} else {
+				the_coroutine.set_co_yield_value( request );
+				guidance = the_coroutine();
+			}
+
+			if( the_coroutine.handle.done() ) {
+				in_conversation = false;
+			}
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ZKM, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 
 	return GuidanceResult::UnknownRequest;
+}
+
+
+bool
+UniShadow::hasCIFName() {
+	if(! _cifNameInitialized) {
+		getCIFName();
+		return hasCIFName();
+	}
+	return _cifNameInitialized && (! _cifName.empty());
+}
+
+
+const std::string &
+UniShadow::getCIFName() {
+	if(! _cifNameInitialized) {
+		char * startdAddress = NULL;
+		this->remRes->getStartdAddress(startdAddress);
+		auto cifName = makeCIFName(* this->jobAd, startdAddress);
+		free( startdAddress );
+		if( cifName ) { _cifName = * cifName; }
+		_cifNameInitialized = true;
+	}
+	return _cifName;
 }

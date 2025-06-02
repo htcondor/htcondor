@@ -169,12 +169,12 @@ overview_linkmap = {
 
 @overview_bp.route('/overview.html')
 def overview():
-    # host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
-    # host = 'Univ of Wisconsin'
+    host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
     from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
-    return render_template('overview.html.j2', page_title=facility, ce_facility_name=facility, ce_site_name=site,
-                           ce_description=descrip, linkmap=overview_linkmap)
+    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    title = facility if facility!='Unknown' else host
+    return render_template('overview.html.j2', page_title=title, ce_facility_name=facility, ce_site_name=site,
+                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap)
 
 @overview_bp.route('/data/ce_overview')
 def ce_overview_data():
@@ -184,6 +184,6 @@ def ce_overview_data():
 @overview_bp.route('/error-no-data.html')
 def error_no_data():
     from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
+    facility, site, descrip, health = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
     msg = request.args.get('msg','No data available')
     return render_template('error_no_data.html.j2', page_title=facility, ce_name=site, errMsg=msg, linkmap={})

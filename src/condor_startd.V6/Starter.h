@@ -75,7 +75,7 @@ public:
 	bool	suspend( void );
 	bool	resume( void );
 
-	bool	holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout);
+	bool	vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft,time_t timeout);
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
@@ -102,7 +102,7 @@ public:
 
 	int receiveJobClassAdUpdate( Stream *stream );
 
-	void holdJobCallback(DCMsgCallback *cb);
+	void vacateJobCallback(DCMsgCallback *cb);
 
 	static ClassAd *starterAd() { return s_ad;}
 private:
@@ -142,8 +142,8 @@ private:
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
-	time_t          s_hold_soft_timeout;
-	time_t          s_hold_hard_timeout;
+	time_t          s_vacate_soft_timeout;
+	time_t          s_vacate_hard_timeout;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;
@@ -159,8 +159,8 @@ private:
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
 	std::string     s_lv_name; // LogicalVolume name for use with LVM 
-	DCMsgCallback*  m_hold_job_soft_cb;
-	DCMsgCallback*  m_hold_job_hard_cb;
+	DCMsgCallback*  m_vacate_job_soft_cb;
+	DCMsgCallback*  m_vacate_job_hard_cb;
 	std::string     m_starter_addr;
 };
 

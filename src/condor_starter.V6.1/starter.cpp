@@ -59,8 +59,11 @@
 #endif
 #include "authentication.h"
 #include "to_string_si_units.h"
-#include "guidance.h"
 #include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+
 
 extern void main_shutdown_fast();
 
@@ -233,10 +236,10 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  (CommandHandlercpp)&Starter::updateX509Proxy,
 						  "Starter::updateX509Proxy", this, WRITE );
 	daemonCore->
-		Register_Command( STARTER_HOLD_JOB,
-						  "STARTER_HOLD_JOB",
-						  (CommandHandlercpp)&Starter::remoteHoldCommand,
-						  "Starter::remoteHoldCommand", this, DAEMON );
+		Register_Command( STARTER_VACATE_JOB,
+						  "STARTER_VACATE_JOB",
+						  (CommandHandlercpp)&Starter::remoteVacateCommand,
+						  "Starter::remoteVacateCommand", this, DAEMON );
 	daemonCore->
 		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
 						  "CREATE_JOB_OWNER_SEC_SESSION",
@@ -272,12 +275,16 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	sysapi_set_resource_limits(jic->getStackSize());
 	set_priv (rl_p);
 
-		// Now, ask our JobInfoCommunicator to setup the environment
-		// where our job is going to execute.  This might include
-		// doing file transfer stuff, who knows.  Whenever the JIC is
-		// done, it'll call our jobEnvironmentReady() method so we can
-		// actually spawn the job.
-	jic->setupJobEnvironment();
+
+	//
+	// Now ask the shadow what to do.  If we carry on, we'll call
+	// jic->setupJobEnvironment(), which will eventually call us
+	// back with jobEnvironmentReady() when it's done, which will
+	// (eventually) spawn the job.
+	//
+	ClassAd context;
+	requestGuidanceSetupJobEnvironment(this, context);
+
 	return true;
 }
 
@@ -307,7 +314,8 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir(code)) {
+	const char *move_to = m_move_working_dir_on_exit.empty() ? nullptr : m_move_working_dir_on_exit.c_str();
+	if ( ! removeTempExecuteDir(code, move_to)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -345,6 +353,9 @@ Starter::Config()
 			EXCEPT("Execute directory not specified in config file.");
 		}
 	}
+
+	// Testing hack, move the working dir instead of deleting it.
+	param(m_move_working_dir_on_exit, "STARTER_MOVE_WORKING_DIR_ON_EXIT");
 
 #ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
@@ -1661,45 +1672,45 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 }
 
 /**
- * Hold Job Command (sent by startd)
- * Unlike the DC signal, this includes a hold reason and hold code.
- * Also unlike the DC signal, this _puts_ the job on hold, rather than
+ * Vacate Job Command (sent by startd)
+ * Unlike the DC signal, this includes a reason string and code.
+ * Also unlike the DC signal, this can _put_ the job on hold, rather than
  * just passively informing the JIC of the hold.
  * 
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
 int 
-Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
+Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 {
-	std::string hold_reason;
-	int hold_code;
-	int hold_subcode;
+	std::string vacate_reason;
+	int vacate_code;
+	int vacate_subcode;
 	int soft;
 
 	s->decode();
-	if( !s->get(hold_reason) ||
-		!s->get(hold_code) ||
-		!s->get(hold_subcode) ||
+	if( !s->get(vacate_reason) ||
+		!s->get(vacate_code) ||
+		!s->get(vacate_subcode) ||
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteVacateCommand()\n", s->peer_description());
 		return FALSE;
 	}
 
-	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", hold_code, hold_subcode, hold_reason.c_str());
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", vacate_code, vacate_subcode, vacate_reason.c_str());
 
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
+		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
-	if (hold_code >= CONDOR_HOLD_CODE::VacateBase) {
-		m_vacateReason = hold_reason;
-		m_vacateCode =hold_code;
-		m_vacateSubcode = hold_subcode;
+	if (vacate_code >= CONDOR_HOLD_CODE::VacateBase) {
+		m_vacateReason = vacate_reason;
+		m_vacateCode = vacate_code;
+		m_vacateSubcode = vacate_subcode;
 		if (soft) {
 			return this->RemoteShutdownGraceful(0);
 		} else {
@@ -1709,7 +1720,7 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 
 		// Put the job on hold on the remote side.
 	if( jic ) {
-		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
+		jic->holdJob(vacate_reason.c_str(), vacate_code, vacate_subcode);
 	}
 
 	if( !soft ) {
@@ -3175,11 +3186,11 @@ Starter::transferOutput( void )
 		}
 	}
 
-    // Try to transfer output (the failure files) even if we didn't succeed
-    // in job setup (e.g., transfer input files), but just ignore any
-    // output-transfer failures in the case of a setup failure; we can only
-    // really report one thing, and that should be the setup failure,
-    // which happens as a result of calling cleanupJobs().
+	// Try to transfer output (the failure files) even if we didn't succeed
+	// in job setup (e.g., transfer input files), but just ignore any
+	// output-transfer failures in the case of a setup failure; we can only
+	// really report one thing, and that should be the setup failure,
+	// which happens as a result of calling cleanupJobs().
 	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
@@ -3207,25 +3218,16 @@ Starter::transferOutput( void )
 			}
 		}
 
-		jic->transferOutputMopUp();
-
-			/*
-			  there was an error with the JIC in this step.  at this
-			  point, the only possible reason is if we're talking to a
-			  shadow and file transfer failed to send back the files.
-			  in this case, just return to DaemonCore and wait for
-			  other events (like the shadow reconnecting or the startd
-			  deciding the job lease expired and killing us)
-			*/
-		dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
-				 "lease to expire or for a reconnect attempt\n" );
-		return false;
-	}
+		// If we've lost the syscall socket at this point, there's no point
+		// in doing the output transfer mop-up, but the shadow might reconnect.
+		if( /* FIXME */ false ) {
+			dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
+			                 "lease to expire or for a reconnect attempt\n" );
+			return false;
+		}
+ 	}
 
 	jic->transferOutputMopUp();
-
-		// If we're here, the JIC successfully transfered output.
-		// We're ready to move on to the next cleanup stage.
 	return cleanupJobs();
 }
 
@@ -3542,6 +3544,23 @@ Starter::PublishToEnv( Env* proc_env )
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
+				}
+			}
+		}
+
+		const ClassAd * msec = jic->getMachineSecetsAd();
+		if (msec) {
+			// give the job access to the split claim id, (if there is one)
+			// we unparse so that the value will have "" and internal "" will be escaped
+			classad::Value val;
+			if (msec->EvaluateAttr(ATTR_SPLIT_CLAIM_ID, val, classad::Value::STRING_VALUE)) {
+				auto_free_ptr envname(param("STARTER_SET_SLOT_SPLIT_CLAIM_IN_JOB_ENV"));
+				if (envname) {
+					std::string split_claim;
+					classad::ClassAdUnParser unparser;
+					unparser.SetOldClassAd(true, true);
+					unparser.Unparse(split_claim, val);
+					proc_env->SetEnv(envname.ptr(), split_claim);
 				}
 			}
 		}
@@ -4007,7 +4026,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir(int& exit_code)
+Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -4068,9 +4087,14 @@ Starter::removeTempExecuteDir(int& exit_code)
 			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
 			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
 
-			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
-			if (!execute_dir.Remove_Current_File()) {
-				has_failed = true;
+			if (it->second == "/" && move_to) {
+				dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
+				rename(execute_dir.GetFullPath(), move_to);
+			} else {
+				dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
+				if (!execute_dir.Remove_Current_File()) {
+					has_failed = true;
+				}
 			}
 		}
 	}

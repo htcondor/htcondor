@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 #include "baseshadow.h"
@@ -34,6 +33,8 @@
 #include "shortfile.h"
 #include "my_popen.h"
 
+#include <optional>
+#include "guidance.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -2475,7 +2476,7 @@ case CONDOR_getdir:
 
 		errno = 0;
 		ClassAd guidanceAd;
-		rval = static_cast<int>(pseudo_request_guidance(requestAd, guidanceAd));
+		rval = static_cast<int>(Shadow->pseudo_request_guidance(requestAd, guidanceAd));
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 

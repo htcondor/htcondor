@@ -93,6 +93,7 @@ with _add_dll_dir():
     from ._log_level import LogLevel
     from ._daemon_command import DaemonCommand
     from ._submit_method import SubmitMethod
+    from ._history_src import HistorySrc
 
     # Classes.
     from ._collector import Collector
