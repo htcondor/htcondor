@@ -709,7 +709,7 @@ class TestCondorHistory:
         assert cmd.stderr == ""
 
         # Schedd Ad Sample: ' 5/13 09:14     67.11%         832       1903          67       145      13   632.10       4      1      13.05'
-        check = re.compile(r"\s*(\d+)/(\d+) (\d+):(\d+)\s*(\d+).(\d+)%\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)")
+        check = re.compile(r"\s*(\d+)/(\d+) *(\d+):(\d+)\s*(\d+).(\d+)%\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)")
         line_no = 0
 
         # Check all stdout lines for matching header and regex pattern
