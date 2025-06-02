@@ -4,6 +4,8 @@
 
 - The condor package now requires pelican-7.16.5.
 
+- Pelican 7.16.5 now includes end-to-end integrity checks for clients
+
 - HTCondor tarballs now contain `Apptainer 1.4.1 <https://github.com/apptainer/apptainer/releases/tag/v1.4.1>`_
 
 *** 23.10.25 bugs
