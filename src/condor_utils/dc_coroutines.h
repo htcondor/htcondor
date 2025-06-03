@@ -57,6 +57,7 @@ namespace dc {
 
 			// Is the given PID alive?
 			bool contains( pid_t pid ) const { return pids.contains(pid); }
+			void destroy() { if( the_coroutine ){ the_coroutine.destroy(); } }
 
 
 			//

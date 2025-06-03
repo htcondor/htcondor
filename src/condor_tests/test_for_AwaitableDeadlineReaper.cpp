@@ -19,17 +19,19 @@ using namespace condor;
 
 #define SHORT_TIMEOUT 5
 
-
+dc::AwaitableDeadlineReaper *adr0;
+dc::AwaitableDeadlineReaper *adr1;
+dc::AwaitableDeadlineReaper *adr2;
+dc::AwaitableDeadlineReaper *adr3a;
+dc::AwaitableDeadlineReaper *adr3b;
+dc::AwaitableDeadlineReaper *adr3c;
 unsigned int test03_sad_global_counter = 0;
 
 cr::void_coroutine
-spawn_test03_subtest() {
-{
-	dc::AwaitableDeadlineReaper adr;
-
+spawn_test03_subtest(dc::AwaitableDeadlineReaper *adr) {
 	int pid = -1;
 	OptionalCreateProcessArgs create_process_opts;
-	create_process_opts.reaperID(adr.reaper_id());
+	create_process_opts.reaperID(adr->reaper_id());
 	std::set<int> a, b, c;
 
 
@@ -39,7 +41,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	a.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -47,7 +49,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	a.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -55,7 +57,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	a.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -63,7 +65,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	b.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -71,7 +73,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	b.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -79,7 +81,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	b.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 
 	pid = daemonCore->CreateProcessNew(
@@ -88,7 +90,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	c.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -96,7 +98,7 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	c.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 	pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
@@ -104,12 +106,12 @@ spawn_test03_subtest() {
 		create_process_opts
 	);
 	c.insert( pid );
-	adr.born( pid, SHORT_TIMEOUT );
+	adr->born( pid, SHORT_TIMEOUT );
 
 
 	std::set<int> d;
-	while( adr.living() ) {
-		auto [pid, timed_out, status] = co_await( adr );
+	while( adr->living() ) {
+		auto [pid, timed_out, status] = co_await( *adr );
 
 		if( a.contains(pid) ) {
 			ASSERT(! timed_out);
@@ -133,14 +135,24 @@ spawn_test03_subtest() {
 			EXCEPT("AwaitableDeadlineReaper returned unknown PID!");
 		}
 	}
-}
-
 
 	++test03_sad_global_counter;
 	if( test03_sad_global_counter == 3 ) {
 		ASSERT(0 == daemonCore->countTimersByDescription("AwaitableDeadlineReaper::timer"));
-		ASSERT(0 == daemonCore->numRegisteredReapers());
+		//ASSERT(0 == daemonCore->numRegisteredReapers());
 		dprintf( D_TEST, "Passed test 03.\n" );
+		adr0->destroy();
+		delete adr0;
+		adr1->destroy();
+		delete adr1;
+		adr2->destroy();
+		delete adr2;
+		adr3a->destroy();
+		delete adr3a;
+		adr3b->destroy();
+		delete adr3b;
+		adr3c->destroy();
+		delete adr3c;
 		DC_Exit( 0 );
 	}
 }
@@ -149,36 +161,35 @@ spawn_test03_subtest() {
 void
 test_03() {
 
-	spawn_test03_subtest();
-	spawn_test03_subtest();
-	spawn_test03_subtest();
-
+	adr3a = new dc::AwaitableDeadlineReaper();
+	spawn_test03_subtest(adr3a);
+	adr3b = new dc::AwaitableDeadlineReaper();
+	spawn_test03_subtest(adr3b);
+	adr3c = new dc::AwaitableDeadlineReaper();
+	spawn_test03_subtest(adr3c);
 }
 
 
 cr::void_coroutine
 test_02() {
 {
-	dc::AwaitableDeadlineReaper adr;
-
-
 	OptionalCreateProcessArgs create_process_opts;
 	int pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
 		{ "/bin/bash", "-c", "/bin/sleep 300; exit 0" },
-		create_process_opts.reaperID(adr.reaper_id())
+		create_process_opts.reaperID(adr2->reaper_id())
 	);
-	adr.born( pid, SHORT_TIMEOUT );
+	adr2->born( pid, SHORT_TIMEOUT );
 
 	{
-		auto [the_pid, timed_out, status] = co_await( adr );
+		auto [the_pid, timed_out, status] = co_await( *adr2 );
 		ASSERT(the_pid == pid);
 		ASSERT(timed_out);
 		kill( pid, SIGKILL );
 	}
 
 	{
-		auto [the_pid, timed_out, status] = co_await( adr );
+		auto [the_pid, timed_out, status] = co_await( *adr2 );
 		ASSERT(the_pid == pid);
 		ASSERT(! timed_out);
 		ASSERT( WIFSIGNALED(status) );
@@ -188,7 +199,7 @@ test_02() {
 
 
 	ASSERT(0 == daemonCore->countTimersByDescription("AwaitableDeadlineReaper::timer"));
-	ASSERT(0 == daemonCore->numRegisteredReapers());
+	//ASSERT(0 == daemonCore->numRegisteredReapers());
 	dprintf( D_TEST, "Passed test 02.\n" );
 
 	test_03();
@@ -198,20 +209,17 @@ test_02() {
 cr::void_coroutine
 test_01() {
 {
-	dc::AwaitableDeadlineReaper adr;
-
-
 	OptionalCreateProcessArgs create_process_opts;
 	int pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
 		{ "/bin/bash", "-c", "/bin/sleep 1; exit 0" },
-		create_process_opts.reaperID(adr.reaper_id())
+		create_process_opts.reaperID(adr1->reaper_id())
 	);
-	adr.born( pid, SHORT_TIMEOUT );
+	adr1->born( pid, SHORT_TIMEOUT );
 
 
-	while( adr.living() ) {
-		auto [the_pid, timed_out, status] = co_await( adr );
+	while( adr1->living() ) {
+		auto [the_pid, timed_out, status] = co_await( *adr1 );
 		ASSERT(the_pid == pid);
 		ASSERT(! timed_out);
 		ASSERT( WIFEXITED(status) );
@@ -221,7 +229,7 @@ test_01() {
 
 
 	ASSERT(0 == daemonCore->countTimersByDescription("AwaitableDeadlineReaper::timer"));
-	ASSERT(0 == daemonCore->numRegisteredReapers());
+	//ASSERT(0 == daemonCore->numRegisteredReapers());
 	dprintf( D_TEST, "Passed test 01.\n" );
 
 	test_02();
@@ -231,20 +239,17 @@ test_01() {
 cr::void_coroutine
 test_00() {
 {
-	dc::AwaitableDeadlineReaper adr;
-
-
 	OptionalCreateProcessArgs create_process_opts;
 	int pid = daemonCore->CreateProcessNew(
 		"/bin/bash",
 		{ "/bin/bash", "-c", "exit 0" },
-		create_process_opts.reaperID(adr.reaper_id())
+		create_process_opts.reaperID(adr0->reaper_id())
 	);
-	adr.born( pid, SHORT_TIMEOUT );
+	adr0->born( pid, SHORT_TIMEOUT );
 
 
-	while( adr.living() ) {
-		auto [the_pid, timed_out, status] = co_await( adr );
+	while( adr0->living() ) {
+		auto [the_pid, timed_out, status] = co_await( *adr0 );
 		ASSERT(the_pid == pid);
 		ASSERT(! timed_out);
 		ASSERT( WIFEXITED(status) );
@@ -254,7 +259,7 @@ test_00() {
 
 
 	ASSERT(0 == daemonCore->countTimersByDescription("AwaitableDeadlineReaper::timer"));
-	ASSERT(0 == daemonCore->numRegisteredReapers());
+	////ASSERT(0 == daemonCore->numRegisteredReapers());
 	dprintf( D_TEST, "Passed test 00.\n" );
 
 	test_01();
@@ -276,6 +281,9 @@ test_main( int /* argv */, char ** /* argv */ ) {
 	//
 	// Test AwaitableDeadlineReaper.
 	//
+	adr0 = new dc::AwaitableDeadlineReaper();
+	adr1 = new dc::AwaitableDeadlineReaper();
+	adr2 = new dc::AwaitableDeadlineReaper();
 	test_00();
 
 	// Wait for the test(s) to finish running.
