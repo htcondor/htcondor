@@ -556,9 +556,7 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	if (reason) { event.setDisconnectReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -574,9 +572,7 @@ UniShadow::logReconnectedEvent( void )
 	JobReconnectedEvent event;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -600,9 +596,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	if (reason) { event.setReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {

@@ -51,10 +51,7 @@ ParallelShadow::~ParallelShadow() {
 void 
 ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
-
-    if( ! job_ad ) {
-        EXCEPT( "No job_ad defined!" );
-    }
+	ASSERT(job_ad);
 
         // BaseShadow::baseInit - basic init stuff...
     baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
@@ -955,9 +952,7 @@ ParallelShadow::logDisconnectedEvent( const char* reason )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
@@ -975,9 +970,7 @@ ParallelShadow::logReconnectedEvent( void )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
@@ -1004,9 +997,7 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdName( dc_startd->name() );
 */
 

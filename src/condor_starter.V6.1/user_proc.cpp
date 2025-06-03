@@ -298,7 +298,7 @@ UserProc::getStdFile( std_file_type type,
 		stream_name = "stderr";
 		break;
 	default:
-		EXCEPT("Programmer error in getStdFile, type =%d", type);
+		ASSERT(false);
 	}
 
 		///////////////////////////////////////////////////////

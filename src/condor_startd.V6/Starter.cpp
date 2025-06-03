@@ -762,7 +762,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 
 		case APPEND_SLOT: args.AppendArg(claim->rip()->r_id_str); break;
 		default:
-			EXCEPT("Programmer Error: unexpected append argument %d", append);
+			ASSERT(false);
 		}
 	}
 
