@@ -343,9 +343,7 @@ JICLocal::initJobInfo( void )
 
 	std::string orig_job_iwd;
 
-	if( ! job_ad ) {
-		EXCEPT( "JICLocal::initJobInfo() called with NULL job ad!" );
-	}
+	ASSERT(job_ad);
 
 		// stash the executable name in orig_job_name
 	if( ! job_ad->LookupString(ATTR_JOB_CMD, &orig_job_name) ) {

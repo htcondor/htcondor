@@ -80,11 +80,8 @@ Stream::code( void *& p )
 		case stream_decode:
 			return get( reinterpret_cast<unsigned long &>(p) );
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(char &c) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(char &c)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -110,11 +107,8 @@ Stream::code( char	&c)
 		case stream_decode:
 			return get(c);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(char &c) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(char &c)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -129,11 +123,8 @@ Stream::code( unsigned char	&c)
 		case stream_decode:
 			return get(c);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(unsigned char &c) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(unsigned char &c)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -150,11 +141,8 @@ Stream::code( int		&i)
 		case stream_decode:
 			return get(i);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(int &i) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(int &i)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -171,11 +159,8 @@ Stream::code( unsigned int		&i)
 		case stream_decode:
 			return get(i);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(unsigned int &i) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(unsigned int &i)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -191,11 +176,8 @@ Stream::code( long	&l)
 		case stream_decode:
 			return get(l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(long &l) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(long &l)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -211,11 +193,8 @@ Stream::code( unsigned long	&l)
 		case stream_decode:
 			return get(l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(unsigned long &l) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(unsigned long &l)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -231,11 +210,8 @@ Stream::code(long long &l)
 		case stream_decode:
 			return get(l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(int64_t &l) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(int64_t &l)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -250,11 +226,8 @@ Stream::code(unsigned long long &l)
 		case stream_decode:
 			return get(l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(uint64_t &l) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(uint64_t &l)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -270,11 +243,8 @@ Stream::code( short	&s)
 		case stream_decode:
 			return get(s);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(short &s) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(short &s)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -291,11 +261,8 @@ Stream::code( unsigned short	&s)
 		case stream_decode:
 			return get(s);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(unsigned short &s) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(unsigned short &s)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -312,11 +279,8 @@ Stream::code( float	&f)
 		case stream_decode:
 			return get(f);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(float &f) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(float &f)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -333,11 +297,8 @@ Stream::code( double	&d)
 		case stream_decode:
 			return get(d);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(double &d) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(double &d)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -354,11 +315,8 @@ Stream::code( char	*&s)
 		case stream_decode:
 			return get(s);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(char *&s) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(char *&s)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -381,11 +339,8 @@ Stream::code_nullstr(char *&s)
 		case stream_decode:
 			return get_nullstr(s);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code_nullstr(char *&s) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code_nullstr(char *&s)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -400,11 +355,8 @@ Stream::code( std::string	&s)
 		case stream_decode:
 			return get(s);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(std::string &s) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(std::string &s)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here	*/
@@ -431,11 +383,8 @@ Stream::code_bytes(void *p, int l)
 		case stream_decode:
 			return get_bytes(p, l);
 		case stream_unknown:
-			EXCEPT("ERROR: Stream::code(void *p, int l) has unknown direction!");
-			break;
 		default:
-			EXCEPT("ERROR: Stream::code(void *p, int l)'s _coding is illegal!");
-			break;
+			ASSERT(false);
 	}
 
 	return FALSE;	/* will never get here */

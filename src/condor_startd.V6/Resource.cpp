@@ -978,9 +978,7 @@ Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & jo
 void
 Resource::starterExited( Claim* cur_claim )
 {
-	if( ! cur_claim ) {
-		EXCEPT( "Resource::starterExited() called with no Claim!" );
-	}
+	ASSERT(cur_claim);
 
 	if( cur_claim->type() == CLAIM_COD ) {
  		r_cod_mgr->starterExited( cur_claim );
@@ -3433,9 +3431,7 @@ Resource::startTimerToEndCODLoadHack( void )
 	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0,
 					(TimerHandlercpp)&Resource::endCODLoadHack,
 					"endCODLoadHack", this );
-	if( r_cod_load_hack_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(r_cod_load_hack_tid >= 0);
 }
 
 
