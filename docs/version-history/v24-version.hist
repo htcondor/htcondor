@@ -2,6 +2,10 @@
 
 *** 24.10.0 bugs
 
+- Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
+  OAuth2 credential was a plain user-provided access token.
+  :jira:`3084`
+
 *** 24.9.0 features
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.

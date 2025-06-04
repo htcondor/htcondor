@@ -110,6 +110,8 @@ Options
     action.  If used with the *query-oauth* action, makes sure that
     the same audience was requested in the original credential.
     Requires credentials to be in JSON format.
+ **-P**
+    Indicate that the Oauth2 credential is an access token.
  **-n** *machinename*
     Apply the command on the given machine.
  **-p** *password*
