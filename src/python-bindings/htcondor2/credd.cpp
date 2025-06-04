@@ -83,6 +83,7 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
         if( handle != NULL ) {
             serviceAd->Assign("handle", handle);
         }
+        serviceAd->Assign(ATTR_NEED_REFRESH, false);
     } else if( handle != NULL ) {
         // This was HTCondorValueError in version 1.
         PyErr_SetString( PyExc_ValueError, "invalid service argument" );
