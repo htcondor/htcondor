@@ -2,6 +2,9 @@
 
 *** 24.10.0 bugs
 
+- Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
+  :jira:`3104`
+
 *** 24.9.0 features
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
