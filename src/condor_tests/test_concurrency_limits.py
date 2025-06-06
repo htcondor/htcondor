@@ -351,6 +351,7 @@ def num_busy_slots_history(startd_log_file, limit_exceeded, concurrency_limit):
         increment_condition=lambda msg: "Changing activity: Idle -> Busy" in msg,
         decrement_condition=lambda msg:
             "Changing activity: Busy -> Idle" in msg or
+            "Changing state and activity: Claimed/Busy -> Preempting/Killing" in msg or
             "Changing state and activity: Preempting/Vacating -> Owner/Idle" in msg,
         max_quantity=concurrency_limit["max-running"],
         expected_quantity=concurrency_limit["max-running"],
@@ -400,6 +401,7 @@ class TestConcurrencyLimits:
     def test_never_more_busy_slots_than_limit(
         self, num_busy_slots_history, concurrency_limit
     ):
+        assert min(num_busy_slots_history) >= 0
         assert max(num_busy_slots_history) <= concurrency_limit["max-running"]
 
 

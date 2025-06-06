@@ -456,7 +456,10 @@ command_release_claim(int cmd, Stream* stream )
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
+			// The shadow is either gone and not coming back, or it no
+			// longer cares what the starter has to say; make sure we don't
+			// tie up a slot waiting out the job lease period for a reconnect.
+			rip->kill_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto success_exit;
 		}
 	}
