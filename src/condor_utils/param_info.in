@@ -32,6 +32,11 @@
 ## Metaknobs go at the bottom of this file, after the metaknob banner
 ## metaknob names always start with $ and a category name.
 ##
+[STAGING_DIRECTORY_TYPE]
+default=HARDLINK
+win32_default=COPY
+type=string
+customization=never
 
 [STARTER_DIAGNOSTIC_send_ep_logs]
 default=$(LIBEXEC)/condor_diagnostic_send_ep_logs

@@ -20,7 +20,6 @@ include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 set( starterElements
 starter.cpp
-starter_guidance.cpp
 docker_proc.cpp
 filter.cpp
 find_child_proc.cpp
@@ -45,6 +44,8 @@ script_proc.cpp
 singularity.cpp
 sshd_proc.cpp
 StarterHookMgr.cpp
+staging_directory.cpp
+starter_guidance.cpp
 starter_user_policy.cpp
 starter_util.cpp
 starter_v61_main.cpp
