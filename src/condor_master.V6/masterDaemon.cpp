@@ -812,6 +812,11 @@ int daemon::RealStart( )
 						}
 						break;
 					}
+					if( strcmp( configArg, "-genus" ) == 0 ) {
+					    foundLocalName = true;
+					    setLocalName = false;
+					    break;
+					}
 				}
 				if(! foundLocalName) {
 					args.AppendArg( "-local-name" );
