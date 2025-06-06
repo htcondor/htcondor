@@ -331,6 +331,8 @@ void startShadow( ClassAd *ad )
 		filter.insert(ATTR_NUM_SHADOW_STARTS);
 		filter.insert(ATTR_OWNER);
 		filter.insert(ATTR_SHADOW_BIRTHDATE);
+		filter.insert(ATTR_RUN_INSTANCE_ID);
+		filter.insert(ATTR_EPOCH_AD_TYPE);
 		// Configured attributes for 'SPAWN' ad in epoch history
 		for (auto &attr : StringTokenIterator(spawn_ad_filter)) { filter.insert(attr); }
 	}

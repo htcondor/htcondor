@@ -265,7 +265,7 @@ private:
 
     void _remove_files_from_output();
 
-	void updateShadowWithPluginResults( const char * which );
+	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
 
 	void recordSandboxContents( const char * filename, bool add_to_output = true );
 
