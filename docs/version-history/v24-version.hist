@@ -1,6 +1,6 @@
 *** 24.0.8 bugs
 
-- Fixed a bug introduced in 24.0.7 when running on Linux cgroup v1
+- Fixed a bug introduced in 24.0.7 and 24.7.3 when running on Linux cgroup v1
   systems, jobs that were killed by the out-of-memory killer were
   considered completed instead of being put on hold.
   :jira:`3094`
