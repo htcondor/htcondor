@@ -25,11 +25,18 @@
   macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
   :jira:`3099`
 
+- Fixed a bug in *condor_adstash* that would prevent ads from
+  being ingested to Elasticsearch or OpenSearch when a lookup
+  of indexes did not start with a writable index.
+  :jira:3109
+
 *** 23.10.25 features
 
 - HTCondor tarballs now contain `Pelican 7.16.5 <https://pelicanplatform.org/releases>`_
 
 - The condor package now requires pelican-7.16.5.
+
+- Pelican 7.16.5 now includes end-to-end integrity checks for clients
 
 - HTCondor tarballs now contain `Apptainer 1.4.1 <https://github.com/apptainer/apptainer/releases/tag/v1.4.1>`_
 

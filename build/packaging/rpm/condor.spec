@@ -282,7 +282,11 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: pelican >= 7.16.5
+%if 0%{?rhel} == 7
+Requires: pelican >= 7.16.1
+%else
+Requires: (pelican >= 7.16.5 or pelican-debug >= 7.16.5)
+%endif
 Requires: pelican-osdf-compat >= 7.16.5
 
 %if 0%{?rhel} != 7
