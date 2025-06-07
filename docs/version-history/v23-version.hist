@@ -1,5 +1,7 @@
 *** 23.10.27 bugs
 
+*** 23.0.27 bugs
+
 *** 23.10.26 bugs
 
 - Fixed a memory leak in the *condor_schedd* when late materialization
