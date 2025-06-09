@@ -225,9 +225,15 @@ Starter::requestGuidanceCommandJobSetup(
 	std::function<void(void)> continue_conversation
 ) {
 	ClassAd guidance;
-	ClassAd request(context);
+	ClassAd request;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
 	request.InsertAttr(ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION);
+
+	// ClassAds assume they own their attribute's value, so (a) you have
+	// to copy them to avoid changing them and (b) you can't copy them to
+	// locals, because then their destructor will be called twice.  *sigh*
+	ClassAd * my_context = new ClassAd(context);
+	request.Insert(ATTR_CONTEXT_AD, my_context);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
@@ -551,6 +557,7 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
+			dprintf( D_ACCOUNTANT, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
@@ -578,6 +585,7 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
+			dprintf( D_ACCOUNTANT, "Mapped common file '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
@@ -625,6 +633,13 @@ Starter::handleJobSetupCommand(
 			ClassAd * context_p = NULL;
 			context_p = dynamic_cast<ClassAd *>(guidance.Lookup( ATTR_CONTEXT_AD ));
 			if( context_p != NULL ) { context.CopyFrom(* context_p); }
+
+			bool first_wait = true;
+			context.LookupBool( "FirstWait", first_wait );
+			if( first_wait ) {
+				context.InsertAttr( "FirstWait", false );
+				dprintf( D_ALWAYS, "Waiting for common files to be transferred.\n" );
+			}
 
 			daemonCore->Register_Timer( retry_delay, 0,
 				[continue_conversation, context](int /* timerID */) -> void { continue_conversation(context); },
@@ -728,7 +743,9 @@ Starter::handleJobSetupCommand(
 			ClassAd ftAd( guidance );
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
 			// ... blocking, at least for now.
+			dprintf( D_ALWAYS, "Starting common files transfer.\n" );
 			bool result = s->jic->transferCommonInput( & ftAd );
+			dprintf( D_ALWAYS, "Finished common files transfer: %s.\n", result ? "success" : "failure" );
 
 			if( result ) {
 				// To help reduce silly mistakes, make the staging directory
@@ -774,6 +791,7 @@ Starter::handleJobSetupCommand(
 			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
+			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
 			bool result = mapContentsOfDirectoryInto( location, sandbox );
 
 			ClassAd context;
@@ -814,9 +832,15 @@ Starter::handleJobSetupCommand(
 void
 Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context ) {
 	ClassAd guidance;
-	ClassAd request(context);
+	ClassAd request;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
 	request.InsertAttr(ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION);
+
+	// ClassAds assume they own their attribute's value, so (a) you have
+	// to copy them to avoid changing them and (b) you can't copy them to
+	// locals, because then their destructor will be called twice.  *sigh*
+	ClassAd * my_context = new ClassAd(context);
+	request.Insert(ATTR_CONTEXT_AD, my_context);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {

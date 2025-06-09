@@ -1419,7 +1419,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
 			c.Delete( "TransferClass" );
 			std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
-			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
+			// This is actually the match ad, which is mostly useless.
+			// writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 
