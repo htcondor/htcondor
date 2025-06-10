@@ -1,3 +1,15 @@
+*** 24.10.0 features
+
+*** 24.10.0 bugs
+
+- Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
+  :jira:`3104`
+
+*** 24.0.10 bugs
+
+- Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
+  :jira:`3106`
+
 *** 24.9.0 features
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
@@ -7,7 +19,11 @@
   historical ClassAd records into. These records can be queried via :tool:`condor_history`
   using the new **-daemon** option or via :py:meth:`htcondor2.Schedd.daemonHistory`.
   :jira:`3061`
- 
+
+- :tool:`condor_watch_q` will now display tracking information for DAGMan jobs specified
+  via the **-clusters** option.
+  :jira:`3068`
+
 - Improved logging on the EP when a slot cannot be claimed because the :ad-attr:`Start`
   expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements[type=Machine]`
   expression will be written to the ``StartLog``.
@@ -20,9 +36,24 @@
   being in the claimed/idle state for far longer than necessary.
   :jira:`3073`
 
+- Fixed a bug in the Vault credential monitor where access tokens were failing
+  to be generated from Vault tokens when :macro:`AUTH_SSL_CLIENT_CAFILE` and/or
+  :macro:`AUTH_SSL_CLIENT_CADIR` were undefined.
+  :jira:`3086`
+
+- Fixed a bug in :class:`htcondor2.Schedd` where it didn't work to use a
+  ``job_spec`` parameter to specify a cluster ID as an integer, as a string
+  without a proc ID, or in a list of such strings.
+  :jira:`2979`
+
 *** 24.0.9 bugs
 
-*** 24.8.0 features
+- The results of ``key in htcondor2.param`` and
+  ``key in htcondor2.param.keys()`` now match for keys which are defined to
+  have no value.  (Previously, such keys would be returned by ``keys()``.)
+  :jira:`3085`
+
+*** 24.8.1 features
 
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
   sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
@@ -83,7 +114,7 @@
 - The :tool:`condor_upgrade_check` script has been folded into the main condor package.
   :jira:`2995`
 
-*** 24.8.0 bugs
+*** 24.8.1 bugs
 
 - Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
   The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
@@ -91,11 +122,11 @@
   when running large numbers of short-running jobs.  The bug fixed here was introduced in 
   HTCondor version 24.5.1, so if you are running HTCondor v24.5.x, v24.6.x, or v24.7.x,
   and run large numbers of short jobs, please consider upgrading.  See the JIRA ticket
-  for addtional workarounds if you cannot upgrade.
+  for additional workarounds if you cannot upgrade.
   :jira:`3045`
 
 - On Linux and macOS, when using dataflow jobs, HTCondor now checks the modification
-  times of dataflow nodes with subsecond accuracy.  Previously, it just
+  times of dataflow nodes with sub-second accuracy.  Previously, it just
   used seconds, which means that it might incorrectly not skip a dataflow
   job that it should have skipped if the output file was written in the
   same second as the input file.
@@ -128,6 +159,11 @@
   :jira:`3026`
 
 *** 24.0.8 bugs
+
+- Fixed a bug introduced in 24.0.7 when running on Linux cgroup v1
+  systems, jobs that were killed by the out-of-memory killer were
+  considered completed instead of being put on hold.
+  :jira:`3094`
 
 - The :class:`htcondor2.Credd` initializer now properly raised
   a :class:`TypeError` if the location argument isn't

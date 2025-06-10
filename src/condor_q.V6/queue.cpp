@@ -3266,11 +3266,22 @@ static void reduce_children(child_progress & prog, JobRowOfData * pjr, int & dep
 	}
 }
 
+// for a given number, return how many chars would be needed to print it.
+static char number_width(int num) {
+	char wid = 1;
+	for (int val = 10; val < 999999999; val *= 10) {
+		if (num < val) return wid;
+		++wid;
+	}
+	return wid;
+}
+
 // passed to fnFixupWidthsForProgressFormat
 struct _fixup_progress_width_values {
 	int owner_width;
 	int batch_name_width;
 	int ids_width;
+	char count_widths[5]; // done, active, idle, held, total
 	bool any_held;
 	bool zeros_as_dashes;
 	char alt_kind;
@@ -3293,9 +3304,16 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 		wid = MAX(10, p->batch_name_width);
 		p->batch_name_width = wid; // return the actual width
 		fmt->width = -wid;
-	} else if (index == 6) { // held
-		if ( ! p->any_held && ! global) {
-			fmt->options |= FormatOptionHideMe;
+	} else if (index >= 3 && index < 3+5) { // ixFirstCounterCol = 3;
+		int count_wid = p->count_widths[index-3];
+		char * pf = const_cast<char*>(fmt->printfFmt);
+		if (pf && pf[1] >= '6' && pf[1] <= '9' && count_wid > (pf[1] - '0')) {
+			pf[1] = '0' + count_wid; fmt->width = count_wid;
+		}
+		if (index == 6) { // held
+			if ( ! p->any_held && ! global) {
+				fmt->options |= FormatOptionHideMe;
+			}
 		}
 	}
 	if (p->zeros_as_dashes && (index >= 3 && index <= 7)) {
@@ -3353,22 +3371,27 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		int ixCol = ixFirstCounterCol; // starting column for counters
 		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
 		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+		wids.count_widths[0] = MAX(wids.count_widths[0], number_width(num_done));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
 		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+		wids.count_widths[1] = MAX(wids.count_widths[1], number_width(num_active));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
 		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+		wids.count_widths[2] = MAX(wids.count_widths[2], number_width(num_idle));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
 		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+		wids.count_widths[3] = MAX(wids.count_widths[3], number_width(num_held));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
 		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
+		wids.count_widths[4] = MAX(wids.count_widths[4], number_width(num_total));
 
 		int name_width = 0;
 		jr.getString(ixOwnerCol, name_width);

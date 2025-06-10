@@ -1381,6 +1381,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		if( resultAttr != NULL ) {
 			resultList = dynamic_cast<classad::ExprList *>(resultAttr);
 
+			bool updateAdOwnsResultList = true;
 			if( resultList != nullptr ) {
 				std::vector<ExprTree *> results;
 				std::vector<ExprTree *> invocations;
@@ -1400,6 +1401,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
 
+				updateAdOwnsResultList = false;
 				resultList = new classad::ExprList( results );
 				invocationList = new classad::ExprList( invocations );
 			}
@@ -1418,7 +1420,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// This sets the value in the header.
 			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
 			c.Delete( "TransferClass" );
-			std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
+			if (updateAdOwnsResultList) {
+				std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
+			} else {
+				c.Delete(attributeName);
+			}
 			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}

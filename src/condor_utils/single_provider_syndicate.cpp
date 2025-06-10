@@ -79,7 +79,13 @@ SingleProviderSyndicate::SingleProviderSyndicate( const std::string & k ) : key(
     // FIXME: Some damn fools configure this on shared filesystems.  If
     // CREATE_LOCKS_ON_LOCAL_DISK is set, call FileLock::getTempPath(p)
     // to get the lock directory instead.
-    std::string LOCK = param("LOCK");
+
+    char *LOCK_cstr = param("LOCK");
+    std::string LOCK;
+    if (LOCK_cstr != nullptr) {
+        LOCK = LOCK_cstr;
+        free(LOCK_cstr);
+    }
     std::filesystem::path lock(LOCK);
     std::filesystem::path syndicate = lock / "syndicate";
 
