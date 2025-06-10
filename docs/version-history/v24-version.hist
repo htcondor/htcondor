@@ -7,6 +7,9 @@
 
 *** 24.0.10 bugs
 
+- Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
+  :jira:`3106`
+
 *** 24.9.0 features
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
