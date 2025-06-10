@@ -3307,7 +3307,7 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 	} else if (index >= 3 && index < 3+5) { // ixFirstCounterCol = 3;
 		int count_wid = p->count_widths[index-3];
 		char * pf = const_cast<char*>(fmt->printfFmt);
-		if (pf && pf[1] >= '6' && pf[1] <= '9' && count_wid > 6) {
+		if (pf && pf[1] >= '6' && pf[1] <= '9' && count_wid > (pf[1] - '0')) {
 			pf[1] = '0' + count_wid; fmt->width = count_wid;
 		}
 		if (index == 6) { // held
