@@ -515,7 +515,7 @@ Machine ClassAd Attributes
     An integer value representing the size in bytes of the LVM backing
     Volume Group or Thinpool Logical Volume used to enforce disk limits.
 
-:classad-attribute-def:`NonCondorDiskUsage`
+:classad-attribute-def:`LvmNonCondorDiskUsage`
     An integer representing the total size in bytes utilized by non-HTCondor
     produced logical volumes associated with the LVM backing Volume Group or
     Thinpool Logical Volume. This value is subtracted from the

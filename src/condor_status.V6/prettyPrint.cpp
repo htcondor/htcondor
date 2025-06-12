@@ -950,11 +950,11 @@ void PrettyPrinter::ppSetStartDaemonCols(int, const char * & constr )
 }
 
 const char * const startdUsingLVM_PrintFormat = "SELECT\n"
-ATTR_NAME "                                              AS HOST       WIDTH AUTO\n"
-"LvmBackingStore                                         AS DEVICE     WIDTH AUTO OR ??\n"
-"LvmIsThinProvisioning=?=true ? \"thin \" : \"thick\"    AS PROVISION  WIDTH    9 PRINTF %-9s\n"
-"max({(LvmDetectedDisk?:0 - NonCondorDiskUsage?:0), 0})  AS '    DISK' WIDTH    9 PRINTAS READABLE_BYTES\n"
-"LvmUsingLoopback=?=true ? \" true\" : \"false\"         AS LOOPBACK   WIDTH    8 PRINTF %8s\n"
+ATTR_NAME "                                                   AS HOST       WIDTH AUTO\n"
+ATTR_LVM_BACKING_STORE "                                      AS DEVICE     WIDTH AUTO OR ??\n"
+ATTR_LVM_USE_THIN_PROVISION "=?=true ? \"thin \" : \"thick\"  AS PROVISION  WIDTH    9 PRINTF %-9s\n"
+"max({(LvmDetectedDisk?:0 - LvmNonCondorDiskUsage?:0), 0})    AS '    DISK' WIDTH    9 PRINTAS READABLE_BYTES\n"
+ATTR_LVM_USE_LOOPBACK "=?=true ? \" true\" : \"false\"        AS LOOPBACK   WIDTH    8 PRINTF %8s\n"
 "WHERE " PMODE_STARTD_USING_LVM_CONSTRAINT "\n"
 "SUMMARY NONE\n";
 
@@ -968,10 +968,10 @@ void PrettyPrinter::ppSetStartdLvmCols( int /*width*/, const char * & constr )
 }
 
 const char * const slotLvUsage_PrintFormat = "SELECT\n"
-"Name                                                  AS NAME       WIDTH AUTO\n"
-"LvmIsThinProvisioning=?=true ? \"thin \" : \"thick\"  AS PROVISION  WIDTH    9 PRINTF %-9s\n"
-"Disk?:0 * 1024                                        AS ALLOCATED  WIDTH    9 PRINTAS READABLE_BYTES\n"
-"(DiskUsage?:0 / real(Disk)) * 100                     AS '  USAGE'  WIDTH AUTO PRINTF '%3.2f%%'\n"
+ATTR_NAME "                                                   AS NAME       WIDTH AUTO\n"
+ATTR_LVM_USE_THIN_PROVISION "=?=true ? \"thin \" : \"thick\"  AS PROVISION  WIDTH    9 PRINTF %-9s\n"
+ATTR_DISK "                                                   AS ALLOCATED  WIDTH    9 PRINTAS READABLE_KB\n"
+"(DiskUsage?:0 / real(Disk)) * 100                            AS '  USAGE'  WIDTH AUTO PRINTF '%3.2f%%'\n"
 "WHERE " PMODE_SLOT_LV_USAGE_CONSTRAINT "\n"
 "SUMMARY NONE\n";
 

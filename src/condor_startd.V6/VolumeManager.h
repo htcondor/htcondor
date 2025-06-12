@@ -66,8 +66,12 @@ public:
 
     // Add disk info to ClassAd
     void PublishDiskInfo(ClassAd& ad) {
-        ad.Assign(ATTR_LVM_DETECTED_DISK, (long long)m_total_disk);
-        ad.Assign(ATTR_LVM_NON_CONDOR_USAGE, (long long)m_non_condor_usage);
+        if (m_queried_available_disk) {
+            ad.Assign(ATTR_LVM_DETECTED_DISK, (long long)m_total_disk);
+            if (m_total_disk > 0) {
+                ad.Assign(ATTR_LVM_NON_CONDOR_USAGE, (long long)m_non_condor_usage);
+            }
+        }
     }
 
 #ifdef LINUX
@@ -81,7 +85,10 @@ public:
     inline int GetTimeout() const { return m_cmd_timeout; }
     inline bool IsThin() const { return m_use_thin_provision; }
     inline void AddNonCondorUsage(uint64_t used) { m_non_condor_usage += used; }
-    inline void SetTotalDisk(uint64_t total) { m_total_disk = total; }
+    inline void SetTotalDisk(uint64_t total) {
+        m_total_disk = total;
+        m_queried_available_disk = true;
+    }
 
     class Handle {
     public:
@@ -145,6 +152,7 @@ private:
 #endif // LINUX
     uint64_t m_total_disk{0};
     uint64_t m_non_condor_usage{0};
+    bool m_queried_available_disk{false};
 };
 
 
