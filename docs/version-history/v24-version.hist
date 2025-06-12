@@ -1,9 +1,8 @@
 *** 24.10.0 features
 
-- Execution Points enforcing disk limits with Linux's native Logical Volume
-  Manager will now subtract the size of non-HTCondor produced logical volumes
-  associated with the defined backing Volume Group or Thinpool LV from the
-  advertised available disk.
+- Execution Points enforcing disk limits will now subtract the size of
+  pre-existing logical volumes from the advertised available disk. Any
+  logical volumes associated with HTCondor are not subtracted.
   :jira:`3119`
 
 - Added new ``-lvm`` option to :tool:`condor_status` to view current disk usage

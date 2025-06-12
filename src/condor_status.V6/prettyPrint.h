@@ -204,8 +204,8 @@ class PrettyPrinter {
 #define PMODE_GPUS_COMPACT_CONSTRAINT \
 	"AvailableGPUs isnt undefined && (size(AvailableGPUs) > 0 || (PartitionableSlot && AssignedGPUs isnt undefined))"
 #define PMODE_STARTD_USING_LVM_CONSTRAINT \
-	"IsEnforcingDiskUsage==True"
+	"IsEnforcingDiskUsage"
 #define PMODE_SLOT_LV_USAGE_CONSTRAINT \
-	"IsEnforcingDiskUsage==True && PartitionableSlot=!=True"
+	"IsEnforcingDiskUsage && PartitionableSlot=!=True"
 
 #endif /* _CONDOR_PRETTY_PRINT_H */

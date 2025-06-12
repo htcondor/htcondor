@@ -533,7 +533,7 @@
 #define ATTR_LVM_USE_THIN_PROVISION "LvmIsThinProvisioning"
 #define ATTR_LVM_BACKING_STORE "LvmBackingStore"
 #define ATTR_LVM_DETECTED_DISK "LvmDetectedDisk"
-#define ATTR_LVM_NON_CONDOR_USAGE "LvmNonCondorUsage"
+#define ATTR_LVM_NON_CONDOR_USAGE "NonCondorDiskUsage"
 #define ATTR_MACHINE  "Machine"
 #define ATTR_MACHINE_COUNT  "MachineCount"
 #define ATTR_MICROARCH  "Microarch"

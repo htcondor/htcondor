@@ -66,8 +66,8 @@ public:
 
     // Add disk info to ClassAd
     void PublishDiskInfo(ClassAd& ad) {
-        if (m_total_disk > 0)       { ad.Assign(ATTR_LVM_DETECTED_DISK, (long long)m_total_disk); }
-        if (m_non_condor_usage > 0) { ad.Assign(ATTR_LVM_NON_CONDOR_USAGE, (long long)m_non_condor_usage); }
+        ad.Assign(ATTR_LVM_DETECTED_DISK, (long long)m_total_disk);
+        ad.Assign(ATTR_LVM_NON_CONDOR_USAGE, (long long)m_non_condor_usage);
     }
 
 #ifdef LINUX

@@ -1256,18 +1256,6 @@ main (int argc, char *argv[])
 		mode_constraint = nullptr;
 	}
 
-	// Seperate handling here since above conditional does and OR not AND constraining
-	if (sdo_mode == SDO_StartD_Lvm && ! compactMode) {
-		mode_constraint = PMODE_STARTD_USING_LVM_CONSTRAINT;
-	} else if (sdo_mode == SDO_Slots_LvUsage && ! compactMode) {
-		mode_constraint = PMODE_SLOT_LV_USAGE_CONSTRAINT;
-	}
-	if (mode_constraint) {
-		if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
-		query->addANDConstraint (mode_constraint);
-		mode_constraint = nullptr;
-	}
-
 	if(javaMode) {
 		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_JAVA); }
 		query->addANDConstraint (ATTR_HAS_JAVA);
