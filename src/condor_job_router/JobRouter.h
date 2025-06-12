@@ -243,20 +243,11 @@ private:
 			int hold_code = 0, int sub_code = 0);
 
 
-	void SetRoutingTable(RoutingTable *new_routes, HashTable<std::string, int> & hash_order);
-
-	void ParseRoutingEntries(
-		std::string const &entries,
-		char const *param_name,
-		classad::ClassAd const &router_defaults_ad,
-		bool allow_empty_requirements,
-		HashTable<std::string,int> & hash_order,
-		RoutingTable *new_routes );
+	void SetRoutingTable(RoutingTable *new_routes);
 
 	void ParseRoute(const char * route_text,
 		const char * name,
 		bool allow_empty_requirements,
-		//HashTable<std::string,int> & hash_order,
 		RoutingTable * new_routes);
 
 	// these transforms are applied when a route is chosen, before and after the route is applied

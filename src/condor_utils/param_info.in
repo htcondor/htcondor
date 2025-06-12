@@ -3186,10 +3186,6 @@ tags=JobRouter
 default=false
 type=bool
 
-[JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES]
-default=false
-type=bool
-
 [POLLING_PERIOD]
 default=
 type=string

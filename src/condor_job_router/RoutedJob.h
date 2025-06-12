@@ -103,8 +103,6 @@ class JobRoute {
 	public:
 	char const *Name() {return m_name.c_str();}
 	char const *Source() {return m_source.c_str(); } // where the route was sourced, i.e. CMD, FILE or ROUTE
-	bool FromClassadSyntax() const { return m_route_from_classad; }
-	bool UsePreRouteTransform() const { return m_use_pre_route_transform; }
 	int MaxJobs() const {return m_max_jobs;}
 	int MaxIdleJobs() const {return m_max_idle_jobs;}
 	int CurrentRoutedJobs() const {return m_num_jobs;}
@@ -112,7 +110,6 @@ class JobRoute {
 	char const *GridResource() {return m_grid_resource.c_str();}
 	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
 	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
-	bool UsesPreRouteTransform() const { return m_use_pre_route_transform; }
 	std::string RouteDescription(); // return a terse description of the route as a new classad
 	std::string RouteString() {
 		std::string str;
@@ -136,8 +133,6 @@ class JobRoute {
 
 	bool ParseNext(
 		const std::string & routing_string,
-		int &offset,
-		classad::ClassAd const *router_defaults_ad,
 		bool allow_empty_requirements,
 		const char * config_name,
 		std::string & errmsg);
@@ -174,10 +169,6 @@ class JobRoute {
 	bool EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file);
 	bool EvalSendIDTokens(RoutedJob *job, std::string &idtokens);
 
-		// true if this entry is intended to override an entry with the
-		// same name further up in the routing table definition
-	int OverrideRoutingEntry() const { return m_override_routing_entry; }
-
  private:
 	int m_num_jobs;                // current number of jobs on this route
 	int m_num_running_jobs;        // number of jobs currently running
@@ -190,8 +181,6 @@ class JobRoute {
 	double m_throttle;              // limit new jobs/sec (0 means no throttle)
 
 	MacroStreamXFormSource m_route;
-	bool m_route_from_classad;
-	bool m_use_pre_route_transform;
 
 	// stuff extracted from the route transform:
 	std::string m_name;           // name distinguishing this route from others
@@ -206,11 +195,6 @@ class JobRoute {
 	ConstraintHolder m_UseSharedX509UserProxy;
 	ConstraintHolder m_SharedX509UserProxy;
 	ConstraintHolder m_SendIDTokens;
-
-		// true if this entry is intended to override an entry with the
-		// same name further up in the routing table definition
-	int m_override_routing_entry;
-
 };
 
 
