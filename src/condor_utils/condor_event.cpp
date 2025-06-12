@@ -73,7 +73,7 @@ int ULogFile::read_formatted(const char * fmt, va_list args) {
 }
 */
 
-const char ULogEventNumberNames[][41] = {
+const char ULogEventNumberNames[][47] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -121,6 +121,7 @@ const char ULogEventNumberNames[][41] = {
 	"ULOG_FILE_USED",				// File in reuse dir utilized
 	"ULOG_FILE_REMOVED",			// File in reuse dir removed.
 	"ULOG_DATAFLOW_JOB_SKIPPED",	// Dataflow job skipped
+	"ULLOG_COMMON_FILES",			// Common Files event
 };
 
 // event names for events between ULOG_EP_FIRST and ULOG_EP_LAST
@@ -300,6 +301,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		return new DataflowJobSkippedEvent;
+
+	case ULOG_COMMON_FILES:
+		return new CommonFilesEvent;
 
 	default:
 		if ((int)event >= ULOG_EP_FIRST && (int)event <= ULOG_EP_FUTURE_EVENT) {
@@ -973,6 +977,9 @@ ULogEvent::toClassAd(ClassAd &ad, bool event_time_utc) const
 		break;
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		SetMyTypeName(*myad, "DataflowJobSkippedEvent");
+		break;
+	case ULOG_COMMON_FILES:
+		SetMyTypeName(*myad, "CommonFilesEvent");
 		break;
 		// ULOG_EP_FIRST to ULOG_EP_LAST
 	case ULOG_EP_STARTUP:
@@ -5924,6 +5931,88 @@ FileTransferEvent::initFromClassAd( ClassAd * ad ) {
 	ad->LookupInteger( "QueueingDelay", queueingDelay );
 
 	ad->LookupString( "Host", host );
+}
+
+//
+// CommonFilesEvent
+//
+
+const char * CommonFilesEvent::CommonFilesEventStrings[] = {
+	"NONE",
+	"Entered queue to transfer common files",
+	"Started transferring common files",
+	"Finished transferring common files",
+	"Started waiting for previous job to transfer common files",
+	"Finished waitiing for previous job to transfer common files"
+};
+
+CommonFilesEvent::CommonFilesEvent() : type(CommonFilesEventType::NONE) {
+	eventNumber = ULOG_COMMON_FILES;
+}
+
+int
+CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
+	std::string eventString;
+	if(! read_optional_line( eventString, file, got_sync_line )) {
+		return 0;
+	}
+
+	// NONE is not a legal event in the log.
+	bool foundEventString = false;
+	for( int i = 1; i < CommonFilesEventType::MAX; ++i ) {
+		if( CommonFilesEventStrings[i] == eventString ) {
+			foundEventString = true;
+			type = (CommonFilesEventType)i;
+			break;
+		}
+	}
+	if(! foundEventString) { return 0; }
+
+	return 1;
+}
+
+bool
+CommonFilesEvent::formatBody( std::string & out ) {
+	if( type == CommonFilesEventType::NONE ) {
+		dprintf( D_ALWAYS, "Unspecified type in CommonFilesEvent::formatBody()\n" );
+		return false;
+	}
+
+	if( CommonFilesEventType::NONE < type && type < CommonFilesEventType::MAX ) {
+		if( formatstr_cat( out, "%s\n", CommonFilesEventStrings[type] ) < 0 ) {
+			return false;
+		}
+	} else {
+		dprintf( D_ALWAYS, "Unknown type in CommonFilesEvent::formatBody()\n" );
+		return false;
+	}
+
+	return true;
+}
+
+ClassAd *
+CommonFilesEvent::toClassAd( bool event_time_utc ) {
+	ClassAd * ad = ULogEvent::toClassAd(event_time_utc);
+	if(! ad) { return NULL; }
+
+	if(! ad->InsertAttr("Type", (int)type)) {
+		delete ad;
+		return NULL;
+	}
+
+	return ad;
+}
+
+void
+CommonFilesEvent::initFromClassAd( ClassAd * ad ) {
+	ULogEvent::initFromClassAd( ad );
+
+	// This looks more complicated than necessary.
+	int t = -1;
+	ad->LookupInteger( "Type", t );
+	if( t != -1 ) {
+		type = (CommonFilesEventType)t;
+	}
 }
 
 

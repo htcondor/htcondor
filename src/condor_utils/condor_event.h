@@ -141,6 +141,7 @@ enum ULogEventNumber {
 	/** Data reused               */ ULOG_FILE_USED					= 44,
 	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
 	/** Dataflow job skipped      */ ULOG_DATAFLOW_JOB_SKIPPED		= 46,
+	/** Common Files (in)activity */ ULOG_COMMON_FILES              = 47,
 
 	// Debugging events in the Startd/Starter
 	ULOG_EP_FIRST = 100,
@@ -2109,6 +2110,38 @@ class FileTransferEvent : public ULogEvent {
 		std::string host;
 		time_t queueingDelay;
 		FileTransferEventType type;
+};
+
+
+class CommonFilesEvent : public ULogEvent {
+	public:
+		CommonFilesEvent();
+		// Almost every class in this file is rule-of-three violation?
+		~CommonFilesEvent() = default;
+
+		virtual int readEvent( ULogFile& file, bool & got_sync_line );
+		virtual bool formatBody( std::string & out );
+
+		virtual ClassAd * toClassAd(bool event_time_utc);
+		virtual void initFromClassAd( ClassAd * ad );
+
+		enum CommonFilesEventType {
+			NONE = 0,
+			TRANSFER_QUEUED = 1,
+			TRANSFER_STARTED = 2,
+			TRANSFER_FINISHED = 3,
+			WAIT_STARTED = 4,
+			WAIT_FINISHED = 5,
+			MAX = 6
+		};
+
+		static const char * CommonFilesEventStrings[];
+
+		void setType( CommonFilesEventType cfet ) { type = cfet; }
+		CommonFilesEventType getType() const { return type; }
+
+	protected:
+		CommonFilesEventType type;
 };
 
 
