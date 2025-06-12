@@ -1,5 +1,10 @@
 *** 24.10.0 features
 
+- In the *condor_job_router*, the old ClassAd-based route syntax
+  (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
+  is no longer supported.
+  :jira:`3118`
+
 *** 24.10.0 bugs
 
 *** 24.9.0 features

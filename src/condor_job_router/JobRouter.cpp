@@ -58,7 +58,6 @@ const char JR_ATTR_JOB_SANDBOXED_TEST[] = "JobShouldBeSandboxed";
 const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
 const char JR_ATTR_SEND_IDTOKENS[] = "SendIDTokens";
-const char JR_ATTR_OVERRIDE_ROUTING_ENTRY[] = "OverrideRoutingEntry";
 const char JR_ATTR_TARGET_UNIVERSE[] = "TargetUniverse";
 const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 
@@ -194,85 +193,6 @@ JobRouter::GetInstanceLock() {
 }
 
 
-// load the old style ROUTER_DEFAULTS ad
-static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
-{
-	bool valid_defaults = true;
-	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
-
-	bool using_defaults = param_defined("JOB_ROUTER_DEFAULTS");
-	if (using_defaults) {
-		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is deprecated and will be removed for V24 of HTCondor. New configuration\n");
-		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
-		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n");
-	}
-
-	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", false);
-	if ( ! use_entries && using_defaults) {
-		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
-		return true;
-	}
-
-	auto_free_ptr router_defaults(param("JOB_ROUTER_DEFAULTS"));
-	if (router_defaults) {
-		char * p = router_defaults.ptr();
-		int length = (int)strlen(p);
-		while (isspace(*p)) ++p;
-		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
-		if (*p != '[') {
-			char * tmp = (char *)malloc(length + 4);
-			*tmp = '[';
-			strcpy(tmp + 1, p);
-			strcat(tmp + length, "]");
-			length = (int)strlen(tmp);
-			router_defaults.set(tmp);
-			merge_defaults = false;
-		}
-		classad::ClassAdParser parser;
-		int offset = 0;
-		if ( ! parser.ParseClassAd(router_defaults, router_defaults_ad, offset)) {
-			dprintf(D_ALWAYS|D_ERROR,"JobRouter CONFIGURATION ERROR: Disabling job routing, failed to parse at offset %d in JOB_ROUTER_DEFAULTS classad:\n%s\n",
-				offset, router_defaults.ptr());
-			valid_defaults = false;
-		} else if (merge_defaults && (offset < length)) {
-			// whoh! we appear to have received multiple classads as a hacky way to append to the defaults ad
-			// so go ahead and parse the remaining ads and merge them into the defaults ad.
-			const char * ads = router_defaults;
-			do {
-				// skip trailing whitespace and ] and look for an open [
-				bool parse_err = false;
-				for ( ; offset < length; ++offset) {
-					int ch = ads[offset];
-					if (ch == '[') break;
-					if ( ! isspace(ads[offset]) && ch != ']') {
-						parse_err = true;
-						break;
-					}
-					// TODO: skip comments?
-				}
-
-				if (offset < length && ! parse_err) {
-					classad::ClassAd other_ad;
-					if ( ! parser.ParseClassAd(ads, other_ad, offset)) {
-						parse_err = true;
-					} else {
-						router_defaults_ad.Update(other_ad);
-					}
-				}
-
-				if (parse_err) {
-					valid_defaults = false;
-					dprintf(D_ALWAYS|D_ERROR,
-						"JobRouter CONFIGURATION ERROR: Disabling job routing, failed to parse at offset %d in JOB_ROUTER_DEFAULTS ad : \n%s\n",
-						offset, ads + offset);
-					break;
-				}
-			} while (offset < length);
-		}
-	}
-	return valid_defaults;
-}
-
 void
 JobRouter::config( int /* timerID */ ) {
 	bool allow_empty_requirements = false;
@@ -371,17 +291,6 @@ JobRouter::config( int /* timerID */ ) {
 
 	RoutingTable *new_routes = new RoutingTable();
 
-	// for backward compatibility with 8.8.6, build a name table in the order that 8.8.6 would use.
-	// If JOB_ROUTER_ROUTE_NAMES is not configured, this will be the order that routes are matched
-	HashTable<std::string,int> hash_order(hashFunction);
-
-	classad::ClassAd router_defaults_ad;
-	m_enable_job_routing = initRouterDefaultsAd(router_defaults_ad);
-	if ( ! m_enable_job_routing) {
-		delete new_routes;
-		return;
-	}
-
 	auto_free_ptr route_names(param("JOB_ROUTER_ROUTE_NAMES"));
 	auto_free_ptr routing_file(param("JOB_ROUTER_ENTRIES_FILE"));
 	auto_free_ptr routing_cmd(param("JOB_ROUTER_ENTRIES_CMD"));
@@ -399,102 +308,14 @@ JobRouter::config( int /* timerID */ ) {
 	}
 
 	if (! used_deprecated.empty()) {
-		dprintf(D_ALWAYS, "JobRouter WARNING: %s are deprecated and will be removed for V24 of HTCondor. New configuration\n", used_deprecated.c_str());
+		dprintf(D_ALWAYS, "JobRouter WARNING: %s are no longer supported. New configuration\n", used_deprecated.c_str());
 		dprintf(D_ALWAYS, "                   syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n");
-		dprintf(D_ALWAYS, "             Note: The removal will occur during the lifetime of the HTCondor V23 feature series.\n");
 	}
 
-	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", false);
-	if ( ! use_entries && (routing_file || routing_cmd || routing_entries)) {
+	if(!route_names) {
 		dprintf(D_ALWAYS,
-			"JobRouter WARNING: one or more of JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_FILE or JOB_ROUTER_ENTRIES_CMD are defined "
-			"but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\r\n");
-		routing_file.set(NULL);
-		routing_cmd.set(NULL);
-		routing_entries.set(NULL);
-	}
-
-	bool routing_entries_defined = route_names || routing_file || routing_cmd || routing_entries;
-	if(!routing_entries_defined) {
-		dprintf(D_ALWAYS,
-			"JobRouter WARNING: none of JOB_ROUTER_ROUTE_NAMES, JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_FILE,"
-			" or JOB_ROUTER_ENTRIES_CMD are defined, so job routing will not take place.\n");
+			"JobRouter WARNING: JOB_ROUTER_ROUTE_NAMES is not defined, so job routing will not take place.\n");
 		m_enable_job_routing = false;
-	}
-
-	// the order in which we parse these knobs matters, because name collisions allow for a route to be overridden.
-
-	if (routing_cmd) {
-		ArgList args;
-		std::string error_msg;
-		if ( ! args.AppendArgsV1RawOrV2Quoted(routing_cmd, error_msg)) {
-			EXCEPT("Invalid value specified for JOB_ROUTER_ENTRIES_CMD: %s", error_msg.c_str());
-		}
-
-			// I have tested with want_stderr 0 and 1, but I have not observed
-			// any difference.  I still get stderr mixed into the stdout.
-			// Although this is annoying, it is better than simply throwing
-			// away stderr altogether.  What generally happens is that the
-			// stderr produces a parse error, and we skip to the next
-			// entry.
-		FILE *fp = my_popen(args, "r", MY_POPEN_OPT_WANT_STDERR);
-
-		if( !fp ) {
-			EXCEPT("Failed to run command '%s' specified for JOB_ROUTER_ENTRIES_CMD.", routing_cmd.ptr());
-		}
-		std::string routing_file_str;
-		char buf[200];
-		size_t n;
-		while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
-			buf[n] = '\0';
-			routing_file_str += buf;
-		}
-		n = my_pclose( fp );
-		if( n != 0 ) {
-			EXCEPT("Command '%s' specified for JOB_ROUTER_ENTRIES_CMD returned non-zero status %d",
-				   routing_cmd.ptr(), (int)n);
-		}
-
-		ParseRoutingEntries(
-			routing_file_str,
-			"_CMD",
-			router_defaults_ad,
-			allow_empty_requirements,
-			hash_order,
-			new_routes);
-	}
-
-	if (routing_file) {
-		FILE *fp = safe_fopen_wrapper_follow(routing_file,"r");
-		if( !fp ) {
-			EXCEPT("Failed to open '%s' file specified for JOB_ROUTER_ENTRIES_FILE.", routing_file.ptr());
-		}
-		std::string routing_file_str;
-		char buf[200];
-		size_t n;
-		while( (n=fread(buf,1,sizeof(buf)-1,fp)) > 0 ) {
-			buf[n] = '\0';
-			routing_file_str += buf;
-		}
-		fclose( fp );
-
-		ParseRoutingEntries(
-			routing_file_str,
-			"_FILE",
-			router_defaults_ad,
-			allow_empty_requirements,
-			hash_order,
-			new_routes);
-	}
-
-	if (routing_entries) {
-		ParseRoutingEntries(
-			routing_entries.ptr(),
-			"",
-			router_defaults_ad,
-			allow_empty_requirements,
-			hash_order,
-			new_routes);
 	}
 
 	clear_pre_and_post_xfms();
@@ -574,7 +395,7 @@ JobRouter::config( int /* timerID */ ) {
 		return;
 	}
 
-	SetRoutingTable(new_routes, hash_order);
+	SetRoutingTable(new_routes);
 
 		// Whether to release the source job if the routed job
 		// goes on hold
@@ -865,7 +686,6 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 		fprintf(hf, "GridResource : %s\n", route->GridResource());
 		fprintf(hf, "Requirements : %s\n", route->RouteRequirementsString());
 
-		fprintf(hf, "Route        : %s\n", route->UsesPreRouteTransform() ? "uses Pre/Post-Route Transforms" : "");
 		std::string route_ad_string;
 		if (route->RouteStringPretty(route_ad_string)) {
 			fprintf(hf, "%s", route_ad_string.c_str());
@@ -1140,7 +960,6 @@ void JobRouter::ParseRoute(
 	const char * route_text,
 	const char * name,
 	bool allow_empty_requirements,
-	//HashTable<std::string,int> & hash_order,
 	RoutingTable * new_routes)
 {
 	if ( ! route_text)
@@ -1152,7 +971,6 @@ void JobRouter::ParseRoute(
 	JobRoute * route = new JobRoute(name);
 
 	const char * text = route_text;
-	int offset = 0;
 	auto_free_ptr ad_text; // in case we need to macro expand
 	std::string errmsg;
 
@@ -1165,7 +983,7 @@ void JobRouter::ParseRoute(
 	}
 
 	// parse the route
-	if ( ! route->ParseNext(text, offset, NULL, allow_empty_requirements, name, errmsg)) {
+	if ( ! route->ParseNext(text, allow_empty_requirements, name, errmsg)) {
 		if ( ! errmsg.empty()) {
 			dprintf(D_ALWAYS, "JobRouter CONFIGURATION ERROR: %s\n", errmsg.c_str());
 			dprintf(D_ALWAYS, "Ignoring route entry in JOB_ROUTER_ROUTE_%s\n", name);
@@ -1176,7 +994,6 @@ void JobRouter::ParseRoute(
 	ASSERT(MATCH == strcasecmp(route->Name(), name));
 
 	const char * route_name = route->Name();
-	//int hash_index = hash_order.getNumElements(); // in case we are not replacing
 	auto found = new_routes->find(route_name);
 	if (found != new_routes->end()) {
 		JobRoute* existing_route = found->second;
@@ -1185,113 +1002,13 @@ void JobRouter::ParseRoute(
 		dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING: while parsing JOB_ROUTER_ROUTE_%s found and overwrite a route from %s with the same name\n",
 				name, existing_route->Source());
 
-		// preserve the original hash index if we replace a route
-		//hash_order.lookup(existing_route->Name(), hash_index);
-		//hash_order.remove(existing_route->Name());
 		new_routes->erase(route_name);
 		delete existing_route;
 	}
 
 	(*new_routes)[route->Name()] = route;
-
-	// also insert the name into hash_order hashtable so we know what that order would be
-	//hash_order.insert(route->Name(), hash_index);
 }
 
-
-void
-JobRouter::ParseRoutingEntries(
-	std::string const &routing_string,
-	char const *param_tag,
-	classad::ClassAd const &router_defaults_ad,
-	bool allow_empty_requirements,
-	HashTable<std::string,int> & hash_order,
-	RoutingTable *new_routes )
-{
-
-		// Now parse a list of routing entries.  The expected syntax is
-		// a list of ClassAds, optionally delimited by commas and or
-		// whitespace.
-
-	dprintf(D_FULLDEBUG,"Parsing JOB_ROUTER_ENTRIES%s=%s\n",param_tag,routing_string.c_str());
-
-	// prepare to make a source label indicating the param and index
-	const char *  source_fmt = "entries:%d";
-	if (MATCH == strcmp(param_tag, "_CMD")) { source_fmt = "cmd:%d"; }
-	else if (MATCH == strcmp(param_tag, "_FILE")) { source_fmt = "file:%d"; }
-
-	int source_index = 0;
-	int offset = 0;
-	while(1) {
-		// skip leading whitespace
-		while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
-		if (offset >= (int)routing_string.size()) break;
-
-		std::string source_name;
-		formatstr(source_name, source_fmt, source_index++);
-		JobRoute * route = new JobRoute(source_name.c_str());
-		JobRoute *existing_route = NULL;
-		int this_offset = offset; //save offset before eating an ad.
-		bool ignore_route = false;
-
-		std::string errmsg;
-		if ( ! route->ParseNext(routing_string,offset,&router_defaults_ad,allow_empty_requirements, source_name.c_str(), errmsg)) {
-			if ( ! errmsg.empty()) {
-				dprintf(D_ALWAYS, "JobRouter CONFIGURATION ERROR: %s\n", errmsg.c_str());
-				// HTCONDOR-864, make sure we don't use an out-of-range offset to substr or we will crash
-				std::string err_here;
-				if (this_offset >= (int)routing_string.size()) {
-					err_here = "offset ";
-					err_here += std::to_string(this_offset);
-				} else {
-					int len = (int)routing_string.size() - this_offset;
-					if (len > 79) len = 79;
-					err_here = routing_string.substr(this_offset, len);
-				}
-				dprintf(D_ALWAYS, "Ignoring the malformed route entry in JOB_ROUTER_ENTRIES%s, at offset %d starting here:\n%s\n",
-					param_tag, this_offset, err_here.c_str());
-			}
-			delete route; route = NULL;
-			// prevent an infinite loop of we don't advance the offset
-			if (offset <= this_offset) break;
-			continue;
-		}
-
-		const char * route_name = route->Name();
-		int hash_index = hash_order.getNumElements(); // in case we are not replacing
-		auto found = new_routes->find(route_name);
-		if (found != new_routes->end()) {
-			existing_route = found->second;
-			// Two routes have the same name, we will replace the first instance unless the second one has 
-			// OverrideRoutingEntry=false
-
-			int override_entry = route->OverrideRoutingEntry();
-			if (override_entry < 0) {
-				dprintf(D_ALWAYS,"JobRouter CONFIGURATION WARNING: while parsing JOB_ROUTER_ENTRIES%s two route entries have the same name '%s' so the second one will override the first one; if you have not already explicitly given these routes a name with name=\"blah\", you may want to give them different names.  If you just want to suppress this warning, then define OverrideRoutingEntry=True/False in the second routing entry.\n",
-					param_tag,route_name);
-				override_entry = 1;
-			}
-			if (override_entry > 0) {  // OverrideRoutingEntry=true
-				// preserve the original hash index if we replace a route
-				hash_order.lookup(existing_route->Name(), hash_index);
-				hash_order.remove(existing_route->Name());
-				new_routes->erase(route_name);
-				delete existing_route;
-			}
-			if (override_entry == 0) { // OverrideRoutingEntry=false
-				ignore_route = true;
-			}
-		}
-
-		if ( ignore_route) {
-			delete route; route = NULL;
-		} else {
-			(*new_routes)[route->Name()] = route;
-			// also insert the name into hash_order hashtable so we know what that order would be
-			hash_order.insert(route->Name(), hash_index);
-		}
-	}
-}
 
 JobRoute *
 JobRouter::GetRouteByName(char const *name) {
@@ -1302,7 +1019,7 @@ JobRouter::GetRouteByName(char const *name) {
 	return NULL;
 }
 
-void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,int> & hash_order)
+void JobRouter::SetRoutingTable(RoutingTable *new_routes)
 {
 	// Now we have a set of new routes in new_routes.
 	// Replace our existing routing table with these.
@@ -1336,16 +1053,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 	// build the m_route_order list, containing the names of the routes in the order in which they whould be matched
 	// This is controlled by a knob 
 	auto_free_ptr order(param("JOB_ROUTER_ROUTE_NAMES"));
-	if ( ! order) {
-		dprintf(D_ALWAYS, "Routes will be matched in hashtable order because JOB_ROUTER_ROUTE_NAMES was not configured.\n");
-		// routes in case-sensitive hashtable order for backward compatibility with 8.8.6
-		hash_order.startIterations();
-		std::string name;
-		int declaration_order;
-		while(hash_order.iterate(name, declaration_order)) {
-			m_route_order.push_back(name);
-		}
-	} else {
+	{
 		// routes in specified order
 		std::string tmp; tmp.reserve(200);
 
@@ -3027,10 +2735,7 @@ JobRoute::JobRoute(const char * source) : m_source(source) {
 	m_recent_jobs_routed = 0;
 	m_failure_rate_threshold = 0;
 	m_throttle = 0;
-	m_override_routing_entry = -1;
 	m_target_universe = CONDOR_UNIVERSE_GRID;
-	m_route_from_classad = false;
-	m_use_pre_route_transform = false;
 }
 
 JobRoute::~JobRoute() {
@@ -3160,7 +2865,7 @@ JobRoute::ApplyRoutingJobEdits(
 
 	std::string errmsg;
 	int rval = 0;
-	if (m_use_pre_route_transform && !pre_route.empty()) {
+	if (!pre_route.empty()) {
 		for (MacroStreamXFormSource* xfm: pre_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
@@ -3187,7 +2892,7 @@ JobRoute::ApplyRoutingJobEdits(
 		return false;
 	}
 
-	if (m_use_pre_route_transform && ! post_route.empty()) {
+	if (! post_route.empty()) {
 		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
@@ -3208,56 +2913,27 @@ JobRoute::ApplyRoutingJobEdits(
 bool
 JobRoute::ParseNext(
 	const std::string & routing_string,
-	int &offset,
-	const classad::ClassAd *router_defaults_ad,
 	bool allow_empty_requirements,
 	const char * config_name,
 	std::string & errmsg)
 {
 	errmsg.clear();
 
-	// The caller will pass offset 0 and no router_defaults_ad when parsing a knob from JOB_ROUTER_ROUTE_*
-	// it should always pass a defaults ad (possibly and empty one) when parsing JOB_ROUTER_ENTRIES*
-	// for single route knobs, we require the route name to match the knob tag
-	bool single_route_knob = !router_defaults_ad && (offset == 0);
-	if (single_route_knob) {
-		this->m_route.setName(config_name);
-	}
+	int offset = 0;
+
+	this->m_route.setName(config_name);
 
 	// skip leading whitespace
 	while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
 	if (offset+1 >= (int)routing_string.size()) return false;
 
-	// if the route starts with [ or with a c-style comment it must be an old-syntax classad route
-	if (routing_string[offset] == '[' || (routing_string[offset] == '/' && routing_string[offset+1] == '*')) {
-		// parse as new classad, use an empty defaults ad if none was provided
-		ClassAd dummy;
-		std::vector<std::string> statements;
-		std::string route_name(config_name?config_name:"");
-		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
-		int rval = ConvertClassadJobRouterRouteToXForm(statements, route_name, routing_string, offset, *router_defaults_ad, 0);
-		if (rval < 0 || statements.empty()) {
-			return false;
-		}
-		m_route.setName(route_name.c_str()); // probably unncessary because m_route.open will set this also...
-		m_route_from_classad = true;
-		m_use_pre_route_transform = single_route_knob;
-		std::string  route_str = join(statements,"\n");
-		int route_offset = 0;
-		int nlines = m_route.open(route_str.c_str(), route_offset, errmsg);
-		if (nlines < 0) { // < 0 because routes that don't change the job are permitted
-			return false;
-		}
-	} else {
-		m_route_from_classad = false;
-		m_use_pre_route_transform = true;
-		int nlines = m_route.open(routing_string.c_str(), offset, errmsg);
-		if (nlines < 0) { // < 0 because routes that don't change the job are permitted
-			return false;
-		}
+	int nlines = m_route.open(routing_string.c_str(), offset, errmsg);
+	if (nlines < 0) { // < 0 because routes that don't change the job are permitted
+		return false;
 	}
+
 	// for routes that come from a single knob. (i.e. JOB_ROUTER_ROUTE_FOO) that name *must* be the same as the config name
-	if (single_route_knob && ! m_name.empty() && (YourStringNoCase(config_name) != m_name.c_str())) {
+	if (! m_name.empty() && (YourStringNoCase(config_name) != m_name.c_str())) {
 		dprintf(D_ALWAYS, "WARNING: The Name specified in JOB_ROUTER_ROUTE_%s was \"%s\". using %s instead.", config_name, m_name.c_str(), config_name);
 		m_name = config_name;
 	}
@@ -3327,11 +3003,6 @@ JobRoute::ParseNext(
 			dprintf(D_ALWAYS, "JobRouter CONFIGURATION ERROR: Missing %s in job route.\n",ATTR_REQUIREMENTS);
 			return false;
 		}
-	}
-	bool has_over = false;
-	m_override_routing_entry = mset.local_param_bool(JR_ATTR_OVERRIDE_ROUTING_ENTRY, false, m_route.context(), &has_over);
-	if ( ! has_over) {
-		m_override_routing_entry = -1;
 	}
 
 	return true;
