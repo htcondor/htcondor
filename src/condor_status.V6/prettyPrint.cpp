@@ -949,6 +949,43 @@ void PrettyPrinter::ppSetStartDaemonCols(int, const char * & constr )
 	}
 }
 
+#define PP_LVM_TYPE "LvmIsThinProvisioning=?=True ? \"thin \" : \"thick\""
+#define PP_LVM_LOOPBACK "LvmUsingLoopback=?=True ? \" true\" : \"false\""
+#define PP_LVM_BACKING_DISK "max({(LvmDetectedDisk?:0 - LvmNonCondorUsage?:0), 0})"
+
+const char * const startdUsingLVM_PrintFormat = "SELECT\n"
+ATTR_NAME "           AS HOST       WIDTH AUTO\n"
+"LvmBackingStore      AS DEVICE     WIDTH AUTO OR ??\n"
+PP_LVM_TYPE "         AS PROVISION  WIDTH    9 PRINTF %-9s\n"
+PP_LVM_BACKING_DISK " AS '    DISK' WIDTH    9 PRINTAS READABLE_BYTES\n"
+PP_LVM_LOOPBACK "     AS LOOPBACK   WIDTH    8 PRINTF %8s\n"
+"SUMMARY NONE\n";
+
+void PrettyPrinter::ppSetStartdLvmCols( int /*width*/, const char * & constr )
+{
+	const char * tag = "StartdLvm";
+	const char * fmt = startdUsingLVM_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+}
+
+const char * const slotLvUsage_PrintFormat = "SELECT\n"
+"Name                              AS NAME       WIDTH AUTO\n"
+PP_LVM_TYPE "                      AS PROVISION  WIDTH    9 PRINTF %-9s\n"
+"Disk?:0 * 1024                    AS ALLOCATED  WIDTH    9 PRINTAS READABLE_BYTES\n"
+"(DiskUsage?:0 / real(Disk)) * 100 AS '  USAGE'  WIDTH AUTO PRINTF '%3.2f%%'\n"
+"SUMMARY NONE\n";
+
+void PrettyPrinter::ppSetSlotLvUsageCols( int /*width*/, const char * & constr )
+{
+	const char * tag = "SlotLvUsage";
+	const char * fmt = slotLvUsage_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+}
+
 void PrettyPrinter::ppSetCkptSrvrNormalCols (int width)
 {
 	int name_width = wide_display ? -34 : -28;
@@ -1371,6 +1408,14 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 
 		case PP_GRID_NORMAL:
 		ppSetGridNormalCols(display_width);
+		break;
+
+		case PP_SLOTS_LV_USAGE:
+		ppSetSlotLvUsageCols(display_width, constr);
+		break;
+
+		case PP_STARTD_LVM:
+		ppSetStartdLvmCols(display_width, constr);
 		break;
 
 		case PP_GENERIC_NORMAL:
