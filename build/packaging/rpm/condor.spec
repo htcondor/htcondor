@@ -1480,7 +1480,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
 - Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
   - Pelican 7.16.5 now includes end-to-end integrity checks for clients
