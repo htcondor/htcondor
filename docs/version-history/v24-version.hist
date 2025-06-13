@@ -1,5 +1,10 @@
 *** 24.0.10 bugs
 
+- The plug-in used to handle ``http`` and ``https`` URLs now sets the
+  ``user-agent`` header by default.  URLs which return a 403/Forbidden
+  error when the ``user-agent`` is empty will now function as expected.
+  jira:`3121`
+
 *** 24.0.9 bugs
 
 - The results of ``key in htcondor2.param`` and
