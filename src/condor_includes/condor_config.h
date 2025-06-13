@@ -47,14 +47,14 @@ typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 // use when param metadata is disabled.
 //
 typedef struct macro_item {
-	const char * key;
-	const char * raw_value;
+	const char * key{nullptr};
+	const char * raw_value{nullptr};
 } MACRO_ITEM;
 typedef struct macro_meta {
-	short int    param_id;
-	short int    index;
+	short int    param_id{0};
+	short int    index{0};
 	union {
-	  int        flags; // all of the below flags
+	  int        flags{0}; // all of the below flags
 	  struct {
 	    unsigned matches_default :1;
 	    unsigned inside          :1;
@@ -64,38 +64,42 @@ typedef struct macro_meta {
 	    unsigned checkpointed    :1;
 	  };
 	};
-	short int    source_id;    // index into MACRO_SOURCES table
-	short int    source_line;  // line number for files, param.in entry for internal
-	short int    source_meta_id;   // metaknob id
-	short int    source_meta_off;  // statement offset within metaknob   (i.e. 0 based line number)
-	short int    use_count;
-	short int    ref_count;
+	short int    source_id{0};    // index into MACRO_SOURCES table
+	short int    source_line{0};  // line number for files, param.in entry for internal
+	short int    source_meta_id{0};   // metaknob id
+	short int    source_meta_off{0};  // statement offset within metaknob   (i.e. 0 based line number)
+	short int    use_count{0};
+	short int    ref_count{0};
 } MACRO_META;
 typedef struct macro_defaults {
-	int size;
-	MACRO_DEF_ITEM * table; // points to const table[size] key/default-value pairs
+	int size{0};
+	MACRO_DEF_ITEM * table{nullptr}; // points to const table[size] key/default-value pairs (pointer not owned here)
 	struct META {
-		short int use_count;
-		short int ref_count;
-	} * metat; // optional, points to metat[size] of use counts parallel to table[]
+		short int use_count{0};
+		short int ref_count{0};
+	} * metat{nullptr}; // optional, points to metat[size] of use counts parallel to table[] (pointer is not owned here)
 } MACRO_DEFAULTS;
 // this holds table and tablesize for use passing to the config functions.
 typedef struct macro_set {
-	int       size;
-	int       allocation_size;
-	int       options; // use CONFIG_OPT_xxx flags OR'd together
-	int       sorted;  // number of items in table which are sorted
-	MACRO_ITEM *table;
-	MACRO_META *metat; // optional array of metadata, is parallel to table
+	int       size{0};
+	int       allocation_size{0};
+	int       options{0}; // use CONFIG_OPT_xxx flags OR'd together
+	int       sorted{0};  // number of items in table which are sorted
+	MACRO_ITEM *table{nullptr}; // the macro key=value table (owned here)
+	MACRO_META *metat{nullptr}; // optional array of metadata, is parallel to table (owned here)
 	ALLOCATION_POOL apool;
 	MACRO_SOURCES sources;
-	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
-	CondorError * errors; // optional error stack, if non NULL, use instead of fprintf to stderr
+	MACRO_DEFAULTS * defaults{nullptr}; // optional reference to const defaults table (ptr not owned here)
+	CondorError * errors{nullptr}; // optional error stack, if non NULL, use instead of fprintf to stderr (owned here)
 
 	// fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 	// the preface is printed with fprintf but not with the errors stack.
 	void push_error(FILE * fh, int code, const char* preface, const char* format, ... ) CHECK_PRINTF_FORMAT(5,6);
+	// used in constructor of submit or xform macro set, creates an error stack and sets options
 	void initialize(int opts);
+	void clear(); // clear, but do not free tables
+	void free_all(); // clear and delete tables and reset to an empty macro set.
+	~macro_set() { free_all(); }
 } MACRO_SET;
 
 // Used as the header for a MACRO_SET checkpoint, the actual allocation is larger than this.
@@ -106,18 +110,19 @@ typedef struct macro_set_checkpoint_hdr {
 	int spare;
 } MACRO_SET_CHECKPOINT_HDR;
 
-// this holds context during macro lookup/expansion
+// this holds context during macro lookup/expansion (does not own pointers)
 typedef struct macro_eval_context {
-	const char *localname;
-	const char *subsys;  // default subsys prefix
-	const char *cwd;     // current working directory, used for $F macro expansion
-	char without_default;
-	char use_mask;
-	char also_in_config; // also do lookups in the config hashtable (used by submit)
-	char is_context_ex;
+	const char *localname{nullptr};
+	const char *subsys{nullptr};  // default subsys prefix
+	const char *cwd{nullptr};     // current working directory, used for $F macro expansion
+	char without_default{0};
+	char use_mask{0};
+	char also_in_config{0}; // also do lookups in the config hashtable (used by submit)
+	char is_context_ex{0};
 
 	void init(const char * sub, char mask=2) {
-		memset(this, 0, sizeof(*this));
+		cwd = subsys = localname = nullptr;
+		is_context_ex = also_in_config = use_mask = without_default = 0;
 		this->subsys = sub;
 		this->use_mask = mask;
 	}
@@ -125,12 +130,12 @@ typedef struct macro_eval_context {
 
 typedef struct macro_eval_context_ex : macro_eval_context {
 	// to do lookups of last resort into the given Ad, set these. they are useually null.
-	const char *adname; // name prefix for lookups into the ad
-	const ClassAd * ad; // classad for lookups
+	const char *adname{nullptr}; // name prefix for lookups into the ad
+	const ClassAd * ad{nullptr}; // classad for lookups
 	void init(const char * sub, char mask=2) {
-		memset(this, 0, sizeof(*this));
-		this->subsys = sub;
-		this->use_mask = mask;
+		adname = nullptr;
+		ad = nullptr;
+		macro_eval_context::init(sub, mask);
 		this->is_context_ex = true;
 	}
 } MACRO_EVAL_CONTEXT_EX;

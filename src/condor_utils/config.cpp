@@ -1155,14 +1155,33 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 }
 
 void MACRO_SET::initialize(int opts) {
-	size = 0; allocation_size = 0; sorted = 0;
-	table = NULL; metat = NULL; defaults = NULL;
-
 	options = opts; //CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
-	apool = ALLOCATION_POOL();
-	sources = std::vector<const char*>();
+	delete errors;
 	errors = new CondorError();
 }
+
+void MACRO_SET::free_all() {
+	delete [] table; table = nullptr;
+	delete [] metat; metat = nullptr;
+	size = 0; allocation_size = 0; sorted = 0;
+	delete errors; errors = nullptr;
+	if (apool.contains((const char *)defaults)) { defaults = nullptr; }
+	sources.clear();
+	apool.clear();
+}
+
+// empty out, but do not free macro tables
+void MACRO_SET::clear() {
+	if (table) { memset((void*)table, 0, sizeof(table[0]) * allocation_size); }
+	if (metat) { memset((void*)metat, 0, sizeof(metat[0]) * allocation_size); }
+	if (apool.contains((const char *)defaults)) { defaults = nullptr; } // because we are going to clear the apool
+	if (defaults && defaults->metat) { memset((void*)defaults->metat, 0, sizeof(defaults->metat[0]) * defaults->size); }
+	size = 0;
+	sorted = 0;
+	sources.clear();
+	apool.clear();
+}
+
 
 // fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 // the preface is printed with fprintf but not with the errors stack.
@@ -2219,7 +2238,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 			// transfer existing key/value pairs old allocation to new one.
 			if (set.size > 0) {
 				memcpy(ptab, set.table, sizeof(set.table[0]) * set.size);
-				memset(set.table, 0, sizeof(set.table[0]) * set.size);
+				memset((void*)set.table, 0, sizeof(set.table[0]) * set.size);
 			}
 			delete [] set.table;
 		}
@@ -2230,7 +2249,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 				// transfer existing metadata from old allocation to new one.
 				if (set.size > 0) {
 					memcpy(pmet, set.metat, sizeof(set.metat[0]) * set.size);
-					memset(set.metat, 0, sizeof(set.metat[0]) * set.size);
+					memset((void*)set.metat, 0, sizeof(set.metat[0]) * set.size);
 				}
 				delete [] set.metat;
 			}
@@ -4966,7 +4985,7 @@ MACRO_META * hash_iter_meta(HASHITER& it) {
 	if (hash_iter_done(it)) return NULL;
 	if (it.is_def) {
 		static MACRO_META meta;
-		memset(&meta, 0, sizeof(meta));
+		meta = MACRO_META();
 		meta.inside = true;
 		meta.param_table = true;
 		meta.param_id = it.id;

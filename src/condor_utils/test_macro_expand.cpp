@@ -264,19 +264,7 @@ static void insert_testing_macros(const char * local, const char * subsys)
 
 static void clear_macro_set(MACRO_SET & set)
 {
-	if (set.table) {
-		memset(set.table, 0, sizeof(set.table[0]) * set.allocation_size);
-	}
-	if (set.metat) {
-		memset(set.metat, 0, sizeof(set.metat[0]) * set.allocation_size);
-	}
-	set.size = 0;
-	set.sorted = 0;
-	set.apool.clear();
-	// set.sources.clear();
-	if (set.defaults && set.defaults->metat) {
-		memset(set.defaults->metat, 0, sizeof(set.defaults->metat[0]) * set.defaults->size);
-	}
+	set.clear();
 }
 
 static void dump_macro_set(MACRO_SET & set, std::string & str, const char * prefix) {

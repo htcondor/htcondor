@@ -1976,7 +1976,7 @@ init_global_config_table(int config_options)
 		ConfigMacroSet.options |= CONFIG_OPT_WANT_META;
 		if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->size) {
 			ConfigMacroSet.defaults->metat = new MACRO_DEFAULTS::META[ConfigMacroSet.defaults->size];
-			memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+			memset((void*)ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
 		}
 	}
 
@@ -1987,17 +1987,17 @@ void
 clear_global_config_table()
 {
 	if (ConfigMacroSet.table) {
-		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
+		memset((void*)ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
 	}
 	if (ConfigMacroSet.metat) {
-		memset(ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
+		memset((void*)ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
 	}
 	ConfigMacroSet.size = 0;
 	ConfigMacroSet.sorted = 0;
 	ConfigMacroSet.apool.clear();
 	ConfigMacroSet.sources.clear();
 	if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->metat) {
-		memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+		memset((void*)ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
 	}
 
 	/* don't want to do this here because of reconfig.
