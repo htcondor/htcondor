@@ -1,5 +1,15 @@
 *** 24.10.0 features
 
+- Execution Points enforcing disk limits will now subtract the size of
+  pre-existing logical volumes from the advertised available disk. Any
+  logical volumes associated with HTCondor are not subtracted.
+  :jira:`3119`
+
+- Added new ``-lvm`` option to :tool:`condor_status` to view current disk usage
+  of slots enforcing disk limits. This option can be paired with ``-startd`` to
+  show information about execution points enforcing disk limits.
+  :jira:`3119`
+
 *** 24.10.0 bugs
 
 - Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.

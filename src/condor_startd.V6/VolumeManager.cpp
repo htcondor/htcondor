@@ -33,11 +33,13 @@ struct LVMReportFilter {
 
     LVMReportFilter& AddLV(const std::string& lv) { lv_names.insert(lv); return *this; }
     LVMReportFilter& SkipThinpool() { ignore_thinpool = true; return *this; }
+    LVMReportFilter& QueryNonCondorLVs(bool wclv = false) { want_condor = wclv; return *this; }
 
     std::set<std::string> lv_names{};
     std::string volume_group{};
     std::string thinpool{};
     bool ignore_thinpool{false};
+    bool want_condor{true};
 };
 
 struct LVMReportItem {
@@ -948,6 +950,12 @@ extractReportVal(const std::string& data, std::string& value) { // data: LM2_Opt
 }
 
 static bool
+reportWantLV(const std::string& tags, const bool wantCondorLVs) {
+    bool isCondorLV = (tags.find(CONDOR_LV_TAG) != std::string::npos);
+    return isCondorLV == wantCondorLVs;
+}
+
+static bool
 getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMReportFilter& filter, int timeout, bool query_lvs=true)
 {
     std::string exe = query_lvs ? "lvs" : "vgs";
@@ -1007,7 +1015,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
             if (!extractReportVal(info[0], vg) || vg != filter.volume_group ||
                 !extractReportVal(info[1], item.name) || (!filter.lv_names.empty() && !filter.lv_names.contains(item.name)) ||
                 !extractReportVal(info[2], pool) || (filter.thinpool != item.name && pool != filter.thinpool) || (filter.ignore_thinpool && filter.thinpool == item.name) ||
-                !extractReportVal(info[3], tags) || (filter.thinpool != item.name && tags.find(CONDOR_LV_TAG) == std::string::npos) ||
+                !extractReportVal(info[3], tags) || (filter.thinpool != item.name && !reportWantLV(tags, filter.want_condor)) ||
                 !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data))
             {
                 continue;
@@ -1058,33 +1066,28 @@ getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, u
     return true;
 }
 
-
 bool
 VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
 {
-    if (m_volume_group_name.empty() || (m_use_thin_provision && m_pool_lv_name.empty())) {return false;}
-    return GetPoolSize(*this, used_bytes, total_bytes, err);
-}
-
-
-bool
-VolumeManager::GetPoolSize(const VolumeManager& info, uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
-{
-    bool thin = info.IsThin();
-    std::vector<LVMReportItem> report;
-    LVMReportFilter filter(info.GetVG());
-    if (thin) {
-        filter.thinpool = info.GetPool();
-        filter.AddLV(info.GetPool());
+    if (m_volume_group_name.empty() || (m_use_thin_provision && m_pool_lv_name.empty())) {
+        return false;
     }
 
-    if ( ! getLVMReport(report, err, filter, info.GetTimeout(), thin)) {
+    bool thin = IsThin();
+    std::vector<LVMReportItem> report;
+    LVMReportFilter filter(GetVG());
+    if (thin) {
+        filter.thinpool = GetPool();
+        filter.AddLV(GetPool());
+    }
+
+    if ( ! getLVMReport(report, err, filter, GetTimeout(), thin)) {
         return false;
     }
 
     if (report.size() != 1) {
-        std::string debug_name = info.GetVG();
-        if (thin) { debug_name += "/" + info.GetPool(); }
+        std::string debug_name = GetVG();
+        if (thin) { debug_name += "/" + GetPool(); }
         err.pushf("VolumeManager", 18, "LVM Report for %s returned %zu items instead of just one",
                   debug_name.c_str(), report.size());
         return false;
@@ -1112,6 +1115,36 @@ VolumeManager::GetPoolSize(const VolumeManager& info, uint64_t &used_bytes, uint
             return false;
         }
         used_bytes = total_bytes - vg_bytes_free;
+    }
+
+    // NOTE: We are querying for associated non-condor LVs rather than
+    //       using the used_bytes so that leaked condor LVs don't take
+    //       away from the available bytes.
+
+    SetTotalDisk(total_bytes);
+
+    report.clear();
+    err.clear();
+
+    filter.lv_names.clear();
+    filter.QueryNonCondorLVs().SkipThinpool();
+
+    // NOTE: Failures here make things wonky but aren't critical failures
+    if ( ! getLVMReport(report, err, filter, GetTimeout())) {
+        dprintf(D_STATUS, "Warning: Failed to query non-condor LVs: %s\n",
+                err.getFullText().c_str());
+        err.clear();
+    } else {
+        for (const auto& lv : report) {
+            try {
+                uint64_t used = std::stoll(lv.size);
+                total_bytes = (total_bytes < used) ? 0 : (total_bytes - used);
+                AddNonCondorUsage(used);
+            } catch (...) {
+                dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
+                        lv.size.c_str(), lv.name.c_str());
+            }
+        }
     }
 
     return true;
@@ -1308,6 +1341,10 @@ VolumeManager::AdvertiseInfo(ClassAd* ad){
 
     if ( ! m_loopdev_name.empty()) { ad->Assign(ATTR_LVM_USE_LOOPBACK, true); }
     if (m_use_thin_provision) { ad->Assign(ATTR_LVM_USE_THIN_PROVISION, true); }
+
+    std::string backing_store = m_volume_group_name;
+    if (m_use_thin_provision) { backing_store += "/" + m_pool_lv_name; }
+    ad->Assign(ATTR_LVM_BACKING_STORE, backing_store);
 }
 
 

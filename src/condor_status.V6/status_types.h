@@ -31,10 +31,12 @@ enum ppOption {
     PP_SLOTS_COD,
     PP_SLOTS_GPUS,
     PP_SLOTS_BROKEN,
+    PP_SLOTS_LV_USAGE,
 
     PP_STARTDAEMON,
     PP_STARTD_GPUS,
     PP_STARTD_BROKEN,
+    PP_STARTD_LVM,
 
     PP_SCHEDD_NORMAL,
     PP_SCHEDD_DATA,
@@ -74,10 +76,12 @@ enum {
 	SDO_Slots_Cod,		//  MODE_SLOTS_COD,
 	SDO_Slots_GPUs, 	//  MODE_SLOTS_GPUS,
 	SDO_Slots_Broken, 	//  MODE_SLOTS_BROKEN,
+	SDO_Slots_LvUsage,	//  MODE_SLOTS_LV_USAGE,
 
 	SDO_StartDaemon,    //  MODE_STARTD_DAEMON,
 	SDO_StartD_GPUs,    //  MODE_STARTD_GPUS,
 	SDO_StartD_Broken,  //  MODE_STARTD_BROKEN,
+	SDO_StartD_Lvm,     //  MODE_STARTD_LVM,
 
 	SDO_Schedd,			//  MODE_SCHEDD_NORMAL,
 	SDO_Schedd_Data,	//  MODE_SCHEDD_DATA,
