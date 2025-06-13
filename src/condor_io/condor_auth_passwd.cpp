@@ -1703,13 +1703,9 @@ Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk)
 void
 Condor_Auth_Passwd::init_t_buf(struct msg_t_buf *t) 
 {
-	if (t->a) {
-		free(t->a);
-	}
+	free(t->a);
 	t->a           = nullptr;
-	if (t->b) {
-		free(t->b);
-	}
+	free(t->b);
 	t->b           = nullptr;
 	t->ra          = NULL;
 	t->rb          = NULL;
