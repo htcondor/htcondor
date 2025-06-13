@@ -21,7 +21,7 @@
   :jira:3109
 
 - The plug-in used to handle ``http`` and ``https`` URLs now sets the
-  ``user-agent`` header by default.  URLs which return a 403/Forbidden
+  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  URLs which return a 403/Forbidden
   error when the ``user-agent`` is empty will now function as expected.
   jira:`3121`
 
