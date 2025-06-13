@@ -310,14 +310,7 @@ bool XFormHash::rewind_to_state(MACRO_SET_CHECKPOINT_HDR * chkhdr, bool and_dele
 
 XFormHash::~XFormHash()
 {
-	delete LocalMacroSet.errors;
-	LocalMacroSet.errors = NULL;
-	delete [] LocalMacroSet.table;
-	LocalMacroSet.table = NULL;
-	delete LocalMacroSet.metat;
-	LocalMacroSet.metat = NULL;
-	LocalMacroSet.sources.clear();
-	LocalMacroSet.apool.clear();
+	LocalMacroSet.free_all();
 }
 
 void XFormHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
@@ -495,26 +488,10 @@ void XFormHash::init()
 
 void XFormHash::clear()
 {
-	if (LocalMacroSet.table) {
-		memset(LocalMacroSet.table, 0, sizeof(LocalMacroSet.table[0]) * LocalMacroSet.allocation_size);
-	}
-	if (LocalMacroSet.metat) {
-		memset(LocalMacroSet.metat, 0, sizeof(LocalMacroSet.metat[0]) * LocalMacroSet.allocation_size);
-	}
-	if (LocalMacroSet.defaults && LocalMacroSet.defaults->metat) {
-		memset(LocalMacroSet.defaults->metat, 0, sizeof(LocalMacroSet.defaults->metat[0]) * LocalMacroSet.defaults->size);
-	}
-	LocalMacroSet.size = 0;
-	LocalMacroSet.sorted = 0;
-	LocalMacroSet.apool.clear();
-	if (LocalMacroSet.sources.size() > 3) {
-		LocalMacroSet.sources.resize(3);
-	}
-	if (flavor != ParamTable) {
-		// setup a defaults table for the macro_set. have to re-do this when we clear the apool
-		// if the defaults were allocated from that pool
-		setup_macro_defaults();
-	}
+	LocalMacroSet.clear();
+	// setup default sources and a defaults table for the macro_set.
+	// have to re-do this when we clear the apool
+	setup_macro_defaults();
 }
 
 
