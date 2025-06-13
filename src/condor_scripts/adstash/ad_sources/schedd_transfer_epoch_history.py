@@ -42,6 +42,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
             "ErrorMessage",
             "FailedName",
             "FailureType",
+            "DebugErrorType",
             "GLIDEIN_ResourceName",
             "GLIDEIN_Site",
             "GlobalJobId",
