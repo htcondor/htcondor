@@ -263,7 +263,7 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
         // will 403 without one. (!!)  [https://repo.anaconda.com]
         // ... blowing as ASSERT() here is probably not OK, though.
         r = curl_easy_setopt( _handle, CURLOPT_USERAGENT, "multifile_curl_plugin/" "PLUGIN_VERSION" );
-        if (r != CURL_OK) {
+        if (r != CURLE_OK) {
             fprintf(stderr, "Can't setopt USERAGENT\n");
         }
 
