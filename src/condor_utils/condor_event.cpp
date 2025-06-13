@@ -32,6 +32,7 @@
 #include "write_eventlog.h" // for the EPLogEvent structure and utility functions
 #include "misc_utils.h"
 #include "utc_time.h"
+#include "condor_regex.h"
 
 //added by Ameet
 #include "condor_environ.h"
@@ -5946,7 +5947,7 @@ const char * CommonFilesEvent::CommonFilesEventStrings[] = {
 	"Finished waitiing for previous job to transfer common files"
 };
 
-CommonFilesEvent::CommonFilesEvent() : type(CommonFilesEventType::NONE) {
+CommonFilesEvent::CommonFilesEvent() : type((+CommonFilesEventType::None)._to_string()) {
 	eventNumber = ULOG_COMMON_FILES;
 }
 
@@ -5957,34 +5958,31 @@ CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
 		return 0;
 	}
 
-	// NONE is not a legal event in the log.
-	bool foundEventString = false;
-	for( int i = 1; i < CommonFilesEventType::MAX; ++i ) {
-		if( CommonFilesEventStrings[i] == eventString ) {
-			foundEventString = true;
-			type = (CommonFilesEventType)i;
-			break;
-		}
+	// The last thing on the line must be `CommonFilesEventType(<type>)`.
+	Regex r; int errCode = 0; int errOffset = 0;
+	bool patternOK = r.compile( "CommonFilesEventType\\(([^)]+)\\)$", &errCode, &errOffset );
+	ASSERT( patternOK );
+
+	std::vector<std::string> groups;
+	if(! r.match( eventString, & groups)) {
+		return 0;
 	}
-	if(! foundEventString) { return 0; }
+	type = groups[1];
 
 	return 1;
 }
 
 bool
 CommonFilesEvent::formatBody( std::string & out ) {
-	if( type == CommonFilesEventType::NONE ) {
-		dprintf( D_ALWAYS, "Unspecified type in CommonFilesEvent::formatBody()\n" );
+	if(! formatstr_cat( out, "CommonFilesEventType(%s)\n", type.c_str() )) {
 		return false;
 	}
 
-	if( CommonFilesEventType::NONE < type && type < CommonFilesEventType::MAX ) {
-		if( formatstr_cat( out, "%s\n", CommonFilesEventStrings[type] ) < 0 ) {
+	auto cfet = CommonFilesEventType::_from_string_nocase_nothrow(type.c_str());
+	if( cfet ) {
+		if(! formatstr_cat( out, "\t%s\n", CommonFilesEventStrings[cfet->_to_integral()] )) {
 			return false;
 		}
-	} else {
-		dprintf( D_ALWAYS, "Unknown type in CommonFilesEvent::formatBody()\n" );
-		return false;
 	}
 
 	return true;
@@ -5995,7 +5993,7 @@ CommonFilesEvent::toClassAd( bool event_time_utc ) {
 	ClassAd * ad = ULogEvent::toClassAd(event_time_utc);
 	if(! ad) { return NULL; }
 
-	if(! ad->InsertAttr("Type", (int)type)) {
+	if(! ad->InsertAttr("Type", type)) {
 		delete ad;
 		return NULL;
 	}
@@ -6007,12 +6005,7 @@ void
 CommonFilesEvent::initFromClassAd( ClassAd * ad ) {
 	ULogEvent::initFromClassAd( ad );
 
-	// This looks more complicated than necessary.
-	int t = -1;
-	ad->LookupInteger( "Type", t );
-	if( t != -1 ) {
-		type = (CommonFilesEventType)t;
-	}
+	ad->LookupString( "Type", type );
 }
 
 

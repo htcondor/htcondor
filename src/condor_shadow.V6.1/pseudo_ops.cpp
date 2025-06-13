@@ -35,6 +35,7 @@
 #include "nullfile.h"
 #include "spooled_job_files.h"
 #include "condor_holdcodes.h"
+#include "condor_event.h"
 
 #include <filesystem>
 #include "manifest.h"
@@ -1233,6 +1234,10 @@ UniShadow::start_common_input_conversation(
 				//
 
 				dprintf( D_ALWAYS, "Starting common files transfer.\n" );
+				CommonFilesEvent cfe1;
+				cfe1.setType( CommonFilesEventType::TransferStarted );
+				uLog.writeEvent( & cfe1, jobAd );
+
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
@@ -1241,6 +1246,10 @@ UniShadow::start_common_input_conversation(
 
 				success = false;
 				LookupBoolInContext( request, ATTR_RESULT, success );
+
+				CommonFilesEvent cfe2;
+				cfe2.setType( CommonFilesEventType::TransferFinished );
+				uLog.writeEvent( & cfe2, jobAd );
 				dprintf( D_ALWAYS, "Finished common files transfer: %s.\n", success ? "success" : "failure" );
 
 				std::string stagingDir;
@@ -1370,6 +1379,10 @@ UniShadow::start_common_input_conversation(
 					if( print_waiting ) {
 						print_waiting = false;
 						dprintf( D_ALWAYS, "Waiting for common files to be transferred (%s)\n", cifName.c_str() );
+
+						CommonFilesEvent cfe;
+						cfe.setType( CommonFilesEventType::WaitStarted );
+						uLog.writeEvent( & cfe, jobAd );
 					}
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
 					guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
