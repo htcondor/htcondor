@@ -361,11 +361,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+%endif
 
 # upgrade-checks package discontinued as of 24.8.0
 Obsoletes: %{name}-upgrade-checks < 24.8.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
-%endif
 
 %if 0%{?suse_version}
 %debug_package
