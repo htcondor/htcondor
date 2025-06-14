@@ -1484,6 +1484,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+  - Pelican 7.16.5 now includes end-to-end integrity checks for clients
+- Add Python wheel for Python 3.13, drop Python wheel for Python 3.7
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
+
 * Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
 - Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
