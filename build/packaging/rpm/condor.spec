@@ -361,11 +361,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+%endif
 
 # upgrade-checks package discontinued as of 24.8.0
 Obsoletes: %{name}-upgrade-checks < 24.8.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
-%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -1525,6 +1525,17 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.8.1-1
+- Fix claim re-use, which was broken in HTCondor version 24.5.1
+- Add support for hierarchic and delegatable v2 cgroups
+- Add the ability to put each HTCondor daemon in its own cgroup
+- Always sets the execute bit on the executable regardless of its origin
+- The EP sets the HOME environment variable to match the /etc/passwd entry
+- Add new 'halt' and 'resume' verbs to "htcondor dag"
+- Add htcondor2.DAGMan class to send commands to a running DAG
+- htcondor ap status now reports the AP's RecentDaemonCoreDutyCycle
+- Can configure condor_adstash to fetch a custom projection of attributes
+
 * Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
 - Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
