@@ -265,6 +265,14 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 			fprintf(stderr, "Can't setopt HEADERFUNCTION\n");
 		}
 
+        // We MUST successfully set the USERAGENT, because some URLs
+        // will 403 without one. (!!)  [https://repo.anaconda.com]
+        // ... blowing as ASSERT() here is probably not OK, though.
+        r = curl_easy_setopt( _handle, CURLOPT_USERAGENT, "condor_curl_plugin/" "PLUGIN_VERSION" );
+        if (r != CURLE_OK) {
+            fprintf(stderr, "Can't setopt USERAGENT\n");
+        }
+
         GetToken(cred, token);
     }
     // Libcurl options for FTP
@@ -1045,7 +1053,7 @@ MultiFileCurlPlugin::InitializeStats( std::string request_url ) {
 
 size_t
 MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, void *userdata ) {
-    fprintf(stderr, "[MultiFileCurlPlugin::HeaderCallback] called\n");
+    // fprintf(stderr, "[MultiFileCurlPlugin::HeaderCallback] called\n");
     auto ft_stats = static_cast<FileTransferStats*>(userdata);
 
     // Work around a bug in libcurl; see HTCONDOR-1426.
