@@ -193,8 +193,9 @@ readJobAd( void )
 		if (fp == NULL) {
 			fp = safe_fopen_wrapper_follow( job_ad_file, "r" );
 			if( ! fp ) {
-				EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
-						job_ad_file, strerror(errno), errno );
+				dprintf(D_ERROR, "Failed to open ClassAd file (%s): %s (errno %d)\n",
+				        job_ad_file, strerror(errno), errno);
+				return nullptr;
 			}
 		}
 	}
@@ -216,7 +217,9 @@ readJobAd( void )
 			break;
 		}
         if( ! ad->Insert(line) ) {
-			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.c_str() );
+			dprintf(D_ERROR, "Failed to insert \"%s\" into ClassAd!\n", line.c_str());
+			delete ad;
+			return nullptr;
         }
     }
 
@@ -230,8 +233,10 @@ readJobAd( void )
 	}
 
 	if( ! read_something ) {
-		EXCEPT( "reading ClassAd from (%s): file is empty",
-				is_stdin ? "STDIN" : job_ad_file );
+		dprintf(D_ERROR, "reading ClassAd from (%s): file is empty",
+		        is_stdin ? "STDIN" : job_ad_file);
+		delete ad;
+		return nullptr;
 	}
 	if( IsDebugVerbose(D_JOB) ) {
 		dPrintAd( D_JOB, *ad );

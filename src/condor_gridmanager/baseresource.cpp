@@ -420,10 +420,8 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 		return true;
 	}
 
-	if ( submitsAllowed.size() < jobLimit &&
-		 submitsWanted.size() > 0 ) {
-		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full",resourceName);
-	}
+	// If submitsAllowed is under jobLimit, then submitsWanted must be empty
+	ASSERT(submitsAllowed.size() >= jobLimit || submitsWanted.size() == 0);
 	if ( submitsAllowed.size() < jobLimit ) {
 		submitsAllowed.insert(job);
 		SetJobPollInterval();
@@ -735,9 +733,7 @@ void BaseResource::DoUpdateSharedLease( unsigned& update_delay,
 
 void BaseResource::StartBatchStatusTimer()
 {
-	if(m_batchPollTid != TIMER_UNSET) {
-		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
-	}
+	ASSERT(m_batchPollTid == TIMER_UNSET);
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());
 	m_batchPollTid = daemonCore->Register_Timer( 0,
 		(TimerHandlercpp)&BaseResource::DoBatchStatus,
@@ -755,7 +751,7 @@ BaseResource::BatchStatusResult BaseResource::StartBatchStatus()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	EXCEPT("Internal consistency error: BaseResource::StartBatchStatus() called.");
+	ASSERT(false);
 	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
@@ -765,7 +761,7 @@ BaseResource::BatchStatusResult BaseResource::FinishBatchStatus()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	EXCEPT("Internal consistency error: BaseResource::FinishBatchStatus() called.");
+	ASSERT(false);
 	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
@@ -775,7 +771,7 @@ GahpClient * BaseResource::BatchGahp()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	EXCEPT("Internal consistency error: BaseResource::BatchGahp() called.");
+	ASSERT(false);
 	return 0;
 }
 
@@ -821,7 +817,7 @@ void BaseResource::DoBatchStatus( int /* timerID */ )
 				return;
 
 			default:
-				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
+				ASSERT(false);
 		}
 
 	} else {
@@ -843,7 +839,7 @@ void BaseResource::DoBatchStatus( int /* timerID */ )
 				return;
 
 			default:
-				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
+				ASSERT(false);
 		}
 	}
 }
