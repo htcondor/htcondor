@@ -92,7 +92,7 @@ JobTransforms::initAndReconfig()
 		ASSERT(xfm);
 
 		if ( raw_transform_text[0] == '[' ) {
-			dprintf(D_ERROR, "JOB_TRANSFORM_%s macro appears to be in ClassAd format, which is no longer supported. Ignoring.\n");
+			dprintf(D_ERROR, "JOB_TRANSFORM_%s macro appears to be in ClassAd format, which is no longer supported. Ignoring.\n", name.c_str());
 			continue;
 		}
 
