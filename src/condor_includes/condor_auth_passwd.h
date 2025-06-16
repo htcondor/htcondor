@@ -191,15 +191,15 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 		/// This structure stores the message referred to as T in the book.
 	struct msg_t_buf {
-		char *a;              // The name of the client.
+		char *a {nullptr};              // The name of the client.
 		std::string a_token;  // The text used to derive the keys from the master.
-		char *b;              // The name of the server.
-		unsigned char *ra;    // The random string produced by the client.
-		unsigned char *rb;    // The random string produced by the server.
-		unsigned char *hkt;   // The result of hashing T with K.
-		unsigned int hkt_len; 
-		unsigned char *hk;    // The result of hashing a,rb with K
-		unsigned int hk_len;
+		char *b {nullptr};              // The name of the server.
+		unsigned char *ra {nullptr};    // The random string produced by the client.
+		unsigned char *rb {nullptr};    // The random string produced by the server.
+		unsigned char *hkt {nullptr};   // The result of hashing T with K.
+		unsigned int hkt_len {0}; 
+		unsigned char *hk {nullptr};    // The result of hashing a,rb with K
+		unsigned int hk_len {0};
 	};
 
 		/// This structure stores the shared key and its derivatives.

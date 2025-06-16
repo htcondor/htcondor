@@ -1,4 +1,4 @@
-{% extends "base.html.j2" %}
+{% extends "base.html" %}
 
 {% block style %}
     <style>
@@ -29,7 +29,7 @@
 <div class="col">
 <p style="text-align: center">
 Contribution of compute capacity from the
-{{ ce_facility_name }} cluster named {{ ce_site_name }}.
+{{ ce_facility_name }} entity named {{ ce_site_name }}.
 <br>Description of this Compute Entrypoint (CE): {{ ce_description }}
 </p>
 </div>
@@ -40,8 +40,8 @@ Contribution of compute capacity from the
                     new HTCondorView({
                         dst_id: "table-now",
 						has_fullscreen_link: false,
-						data_url: "/data/ce_overview?r=week",
-						graph_query: "filter=Type=P&order=-Date&limit=lastDate&filter=Cpus>0&group=Date;Date,Project,Field,Organization,Cpus&addRowIfEmpty=None&ceil=Cpus,Cpus&unselect=Cpus&rename=Date=Last Update Time&rename=Project=Projects&rename=Field=Fields&rename=Organization=Organizations&rename=Cpus=Cpus&rename=Date=CE Health&allowHtml=True&set_val=CE Health={{ ce_health }}&intensify=health",
+						data_url: "/data/ce_overview?r=day",
+						graph_query: "filter=Type=P&limit=lastDate&filter=Cpus>0&group=Date;Date,Project,Field,Organization,Cpus&addRowIfEmpty=None&ceil=Cpus,Cpus&unselect=Cpus&rename=Date=Last Update Time&rename=Project=Projects&rename=Field=Fields&rename=Organization=Organizations&rename=Cpus=Cpus&rename=Date=CE Health&allowHtml=True&set_val=CE Health={{ ce_health }}&intensify=health",
                     });
                 </script>
 
@@ -127,7 +127,7 @@ Contribution of compute capacity from the
                         title: "CPU Allocation Percentage by Project",
 						data_url: "/data/ce_overview",
 						graph_query: "filter=Type=P&group=Project;Cpus&filter=Cpus>0&order=-Cpus&chart=pie&tooltip.text=percentage&tooltip.isHtml=false&sliceVisibilityThreshold=0",
-						table_query: "filter=Type=P&group=Project,Field,Organization;avg(Cpus),max(Cpus)&filter=maxCpus>0&order=-avgCpus&ceil=maxCpus,maxCpus&unselect=maxCpus&make_url=Project=https://osg-htc.org/projects.html?project=*",
+						table_query: "filter=Type=P&group=Project,Field,Organization;avg(Cpus),max(Cpus)&filter=maxCpus>0&order=-avgCpus&ceil=maxCpus,maxCpus&unselect=maxCpus&make_url=Project=https://osg-htc.org/services/ospool/projects?project=*",
                     });
                 </script>
             </div>

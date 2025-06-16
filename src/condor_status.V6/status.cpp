@@ -1256,7 +1256,6 @@ main (int argc, char *argv[])
 		mode_constraint = nullptr;
 	}
 
-
 	if(javaMode) {
 		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_JAVA); }
 		query->addANDConstraint (ATTR_HAS_JAVA);
@@ -2927,6 +2926,13 @@ firstPass (int argc, char *argv[])
 			}
 			dash_broken = true;
 		} else
+		if (is_dash_arg_colon_prefix(argv[i], "lvm", &pcolon, 3)) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_LvUsage, i, argv[i]);
+			}
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -2950,6 +2956,8 @@ firstPass (int argc, char *argv[])
 				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_Broken) {
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots_LvUsage) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}

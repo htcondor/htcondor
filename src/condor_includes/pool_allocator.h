@@ -62,9 +62,9 @@ typedef struct _allocation_hunk {
 } ALLOC_HUNK;
 
 typedef struct _allocation_pool {
-	int nHunk;  // index of highest hunk that has free space
-	int cMaxHunks; // number of hunks allocated
-	ALLOC_HUNK * phunks; // this can vary in size.
+	int nHunk{0};  // index of highest hunk that has free space
+	int cMaxHunks{0}; // number of hunks allocated
+	ALLOC_HUNK * phunks{nullptr}; // this can vary in size.
 
 	_allocation_pool(int cMax=0) : nHunk(0), cMaxHunks(cMax), phunks(NULL) {
 		if (cMaxHunks) {
@@ -72,6 +72,7 @@ typedef struct _allocation_pool {
 			if ( ! phunks) cMax = 0;
 		}
 	};
+	~_allocation_pool() { clear(); }
 	int alignment() const { return 1; };
 	int def_first_alloc() const { return 4 * 1024; };
 	// free all pool memory

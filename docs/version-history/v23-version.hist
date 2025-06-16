@@ -1,3 +1,7 @@
+*** 23.10.27 bugs
+
+*** 23.0.27 bugs
+
 *** 23.10.26 bugs
 
 - Fixed a memory leak in the *condor_schedd* when late materialization
@@ -25,11 +29,23 @@
   macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
   :jira:`3099`
 
+- Fixed a bug in *condor_adstash* that would prevent ads from
+  being ingested to Elasticsearch or OpenSearch when a lookup
+  of indexes did not start with a writable index.
+  :jira:3109
+
+- The plug-in used to handle ``http`` and ``https`` URLs now sets the
+  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  URLs which return a 403/Forbidden
+  error when the ``user-agent`` is empty will now function as expected.
+  jira:`3121`
+
 *** 23.10.25 features
 
 - HTCondor tarballs now contain `Pelican 7.16.5 <https://pelicanplatform.org/releases>`_
 
 - The condor package now requires pelican-7.16.5.
+
+- Pelican 7.16.5 now includes end-to-end integrity checks for clients
 
 - HTCondor tarballs now contain `Apptainer 1.4.1 <https://github.com/apptainer/apptainer/releases/tag/v1.4.1>`_
 
