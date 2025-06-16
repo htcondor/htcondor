@@ -10,6 +10,11 @@
   show information about execution points enforcing disk limits.
   :jira:`3119`
 
+- In the *condor_job_router*, the old ClassAd-based route syntax
+  (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
+  is no longer supported.
+  :jira:`3118`
+
 *** 24.10.0 bugs
 
 - Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
