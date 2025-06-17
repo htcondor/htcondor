@@ -1,5 +1,9 @@
+Troubleshooting HTCondor Jobs
+=============================
+
+
 How To Debug an Always Idle Job
-===============================
+-------------------------------
 
 Sometimes, when you submit a job to HTCondor, it sits idle seemingly forever,
 :tool:`condor_q` shows it in the idle state, when you expect it should start running.
@@ -7,7 +11,7 @@ This can be frustrating, but there are tools to give visibility so you can
 debug what is going on.
 
 Jobs that start but are quickly evicted
----------------------------------------
+'''''''''''''''''''''''''''''''''''''''
 
 One possibility is that the job is actually starting, but something goes wrong
 very quickly after it starts, so the Execution Point evicts the job, and the
@@ -56,7 +60,7 @@ Then this flapping is the problem, and you'll need to figure out why.  Perhaps a
 useful, maybe you'll need to ask a system administrator.
 
 Jobs that don't match any Execution Point
------------------------------------------
+'''''''''''''''''''''''''''''''''''''''''
 
 Another common cause of an always-idle job is that the job doesn't match any
 slot in the pool.  Perhaps the memory or disk requested in the submit file is
@@ -118,7 +122,7 @@ this probably isn't the problem, or, it could be that very few machines in your
 pool match your job, and you'll just need to wait until they are available.
 
 Not enough priority
--------------------
+'''''''''''''''''''
 
 Another reason your job isn't running is that other jobs of yours are running,
 but your priority isn't good enough to allow any more of your jobs running.
@@ -129,7 +133,7 @@ give your more important jobs a higher job priority.  The command
 is what HTCondor uses to calculate your fair share.
 
 Systemic problems
------------------
+'''''''''''''''''
 
 The final case is that you have done nothing wrong, but there is some problem
 with the system.  Maybe a network is down, or a system daemon has crashed,
