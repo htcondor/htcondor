@@ -135,7 +135,6 @@ class PrettyPrinter {
 
 	public:
 		AttrListPrintMask           pm;
-		std::vector<const char *>	pm_head;
 		ppOption					ppStyle;
 		ppOption					ppTotalStyle;
 		printmask_headerfooter_t	pmHeadFoot;
