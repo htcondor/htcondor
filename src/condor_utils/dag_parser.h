@@ -24,9 +24,78 @@
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <optional>
 
 #include "dag_commands.h"
 #include "stl_string_utils.h"
+
+//--------------------------------------------------------------------------------------------
+class DagParseError {
+public:
+	DagParseError() = delete;
+	DagParseError(const std::string& src, const uint64_t line_no, const std::string& err) {
+		source = src;
+		line = line_no;
+		error = err;
+	}
+
+	std::string str() const {
+		fmt_msg();
+		return msg;
+	}
+
+	const char* c_str() const {
+		fmt_msg();
+		return msg.c_str();
+	}
+
+	void SetCommand(DAG::CMD cmd) {
+		command = cmd;
+		known_cmd = true;
+	}
+
+	std::pair<DAG::CMD, bool> GetCommand() const {
+		return std::make_pair(command, known_cmd);
+	}
+
+	std::pair<std::string, uint64_t> GetSource() const {
+		return std::make_pair(source, line);
+	}
+
+	std::string GetError() const { return error; }
+
+	// Get example syntax for failed DAG command
+	std::string syntax() const {
+		std::string example_syntax = "Not a valid command";
+		if (known_cmd) {
+			const auto syntax = DAG::COMMAND_SYNTAX.find(command);
+			if (syntax != DAG::COMMAND_SYNTAX.end()) {
+				example_syntax = syntax->second;
+			} else { example_syntax = "No syntax provided."; }
+		}
+		return example_syntax;
+	}
+
+private:
+	void fmt_msg() const {
+		if (msg.empty()) {
+			if (known_cmd) {
+				formatstr(msg, "%s:%llu Failed to parse %s command: %s",
+				          source.c_str(), line, DAG::GET_KEYWORD_STRING(command),
+				          error.c_str());
+			} else {
+				formatstr(msg, "%s:%llu %s", source.c_str(), line, error.c_str());
+			}
+		}
+	}
+
+	std::string source{};        // DAG file this error occurred
+	std::string error{};         // Specific parse error
+	mutable std::string msg{};   // Constructed error message [source:line message]
+	uint64_t line{0};            // Specific line # of failed to parse command
+	DAG::CMD command{};          // Specific command that was failed to be parsed
+	bool known_cmd{false};       // Specifies we actually know which command we failed to parse
+};
 
 //--------------------------------------------------------------------------------------------
 class DagLexer {
@@ -91,6 +160,17 @@ public:
 	DagParser& Ignore(std::set<DAG::CMD> cmds) { filter_ignore.insert(cmds.begin(), cmds.end()); return *this; }
 	DagParser& ClearIgnore() { filter_ignore.clear(); return *this; }
 
+	// Inherit options that effect parsing from other parser
+	DagParser& InheritOptions(const DagParser& other) {
+		if ( ! other.filter_only.empty()) { filter_only = other.filter_only; }
+		if ( ! other.filter_ignore.empty()) { filter_ignore = other.filter_ignore; }
+
+		allow_illegal_chars = other.allow_illegal_chars;
+		copf = other.copf;
+
+		return *this;
+	}
+
 	class iterator {
 	public:
 		using value_type = DagCmd;
@@ -108,7 +188,7 @@ public:
 				if (parser.copf) {
 					if (eof) { return; }
 					next();
-				} else if ( ! eof && parser.err.empty()) {
+				} else if ( ! eof && parser.error().empty()) {
 					parser.err = "Failed to parse next portion of data";
 				}
 				return;
@@ -183,7 +263,7 @@ public:
 
 	bool failed() {
 		bool failed = false;
-		if ( ! err.empty()) {
+		if ( ! err.empty() || ! all_errors.empty()) {
 			failed = (copf && !parse_done) ? !parse_failure : true;
 		} else if ( ! fs.is_open()) {
 			err = "Failed to open file";
@@ -196,20 +276,47 @@ public:
 	}
 
 	std::string GetFile() const { return path.string(); }
+	std::string GetAbsolutePath() const {
+		std::error_code ec;
+		auto absolute = std::filesystem::absolute(path, ec);
+		return ec ? path.string() : absolute.string();
+	}
 
-	// Return last recorded error (first error if not COPF)
-	std::string error() const { return err; }
-	const char* c_error() const { return err.c_str(); }
+	// Return last recorded error as string (first error if not COPF)
+	std::string error() {
+		if (err.empty()) {
+			auto perr = ParseError();
+			if (perr.has_value()) {
+				err = perr.value().str();
+			}
+		}
+		return err;
+	}
+
+	const char* c_error() {
+		if (err.empty()) { std::ignore = error(); }
+		return err.c_str();
+	}
+
+	// Return last recorded error structure (first error if not COPF)
+	std::optional<DagParseError> ParseError() {
+		return all_errors.empty() ? std::nullopt : std::make_optional(all_errors.back());
+	}
 
 	size_t NumErrors() const { return all_errors.size(); }
 
 	// Return reference to vector of all errors that occurred while parsing
-	const std::vector<std::string>& GetErrorList() const { return all_errors; }
+	const std::vector<DagParseError>& GetParseErrorList() const { return all_errors; }
 
-	// Example syntax for the last recorded failed command (first if not COPF)
-	const char* syntax() const { return example_syntax.c_str(); }
 protected:
 	bool next();
+
+	// Parsing configuration options
+	std::set<DAG::CMD> filter_only{};
+	std::set<DAG::CMD> filter_ignore{}; // Takes precendence over filter_only
+
+	bool allow_illegal_chars{false}; // Allow use of illegal Characters in node names
+	bool copf{false}; // Continue parsing even if error occurs
 private:
 	bool get_inline_desc_end(const std::string& desc, std::string& end);
 	std::string parse_inline_desc(std::ifstream& stream, const std::string& end, std::string& error, std::string& endline);
@@ -266,21 +373,15 @@ private:
 	std::filesystem::path path; // File to parse
 	std::ifstream fs; // Input file stream
 
-	std::set<DAG::CMD> filter_only{};
-	std::set<DAG::CMD> filter_ignore{}; // Takes precendence over filter_only
-
-	std::vector<std::string> all_errors{}; // All errors occurred during parsing useful for COPF
-	std::string err{}; // Internal error message holder
-	std::string example_syntax{}; // Example Command Syntax for failed to parse command
+	std::vector<DagParseError> all_errors{}; // All errors occurred during parsing useful for COPF
+	std::string err{}; // Parsers most recent error message (needed for setup errors)
 
 	DagCmd data{}; // Unique pointer of BaseDagCommand
 
-	int line_no{0}; // Current line number
+	uint64_t line_no{0}; // Current line number
 
-	bool allow_illegal_chars{false}; // Allow use of illegal Characters in node names
 	bool parse_failure{false}; // Have is failure a parse failure
 	bool parse_done{false}; // Has parser done (needed for ensuring end sentinel is returned 100% of time)
-	bool copf{false}; // Continue parsing even if error occurs
 };
 
 #endif // DAG_PARSER_H
