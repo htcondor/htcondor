@@ -54,9 +54,16 @@ def fake_refresh_token_file(test_dir):
     return token_file
 
 
+@action
+def plain_token_file(test_dir):
+    token_file = test_dir / "the_plain_token"
+    token_file.write_text("plain-token")
+    return token_file
+
+
 class TestHTCondorCredential:
 
-    def test_credential_get(self, local_dir, the_condor, fake_refresh_token_file):
+    def test_local_issuer_credential(self, local_dir, the_condor, fake_refresh_token_file):
         rv = the_condor.run_command(
             ['htcondor', '-v', 'credential', 'add', 'oauth2',
              str(fake_refresh_token_file),
@@ -81,4 +88,25 @@ class TestHTCondorCredential:
         logger.info(rv.stderr)
 
         use_file = local_dir / "oauth.d" / getuser() / "scitokens.use"
+        assert rv.stdout == use_file.read_text()
+
+    def test_plain_credential(self, local_dir, the_condor, plain_token_file):
+        rv = the_condor.run_command(
+            ['htcondor', '-v', 'credential', 'add', 'oauth2',
+             str(plain_token_file),
+             '--service', 'plain'],
+        )
+        assert rv.returncode == 0
+        logger.info(rv.stdout)
+        logger.info(rv.stderr)
+
+        rv = the_condor.run_command(
+            ['htcondor', '-v', 'credential', 'get', 'oauth2',
+            '--service', 'plain'],
+        )
+        assert rv.returncode == 0
+        logger.info(rv.stdout)
+        logger.info(rv.stderr)
+
+        use_file = local_dir / "oauth.d" / getuser() / "plain.use"
         assert rv.stdout == use_file.read_text()

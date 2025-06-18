@@ -56,8 +56,9 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     Py_ssize_t credential_len = 0;
     const char * service = NULL;
     const char * handle = NULL;
+    int refresh = -1;
     long mode = 0;
-    if(! PyArg_ParseTuple( args, "zzz#lzz", & addr, & user, & credential, & credential_len, & mode, & service, & handle )) {
+    if(! PyArg_ParseTuple( args, "zzz#lzzi", & addr, & user, & credential, & credential_len, & mode, & service, & handle, &refresh )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -82,6 +83,9 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
         serviceAd->Assign("service", service);
         if( handle != NULL ) {
             serviceAd->Assign("handle", handle);
+        }
+        if (refresh >= 0) {
+            serviceAd->Assign(ATTR_NEED_REFRESH, (bool)refresh);
         }
     } else if( handle != NULL ) {
         // This was HTCondorValueError in version 1.
