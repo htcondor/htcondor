@@ -10,6 +10,9 @@
 #include "condor_attributes.h"
 #include "stl_string_utils.h"
 
+#include <openssl/evp.h>
+#include "AWSv4-impl.h"
+
 
 //
 // The EP needs to distinguish between common filesets.  For the moment,
@@ -17,7 +20,7 @@
 // the job's cluster ID and the schedd to which that cluster ID is unique.
 //
 // (The global job ID is proc-specific, and also includes a date that may
-// will not be the same for all procs in some cases, so we can't use that.
+// not be the same for all procs in some cases, so we can't use that.
 // There's no (globally-unique) schedd identifier in the job ad, so we'll
 // just use the first part of the global job ID.  We're not presently
 // worried about cluster ID re-use because of a schedd reinstallation
@@ -60,8 +63,20 @@ makeCIFName(
         return std::nullopt;
     }
 
+
+    // Some startdAddress sinfuls are so long that they exceed the maximum
+    // filename length.  Hash them, instead.
+    unsigned int mdLength = 0;
+    unsigned char messageDigest[EVP_MAX_MD_SIZE];
+    if(! AWSv4Impl::doSha256( startdAddress, messageDigest, & mdLength )) {
+        return std::nullopt;
+    }
+    std::string addressHash;
+    AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, addressHash );
+
     std::string cifName;
-    formatstr( cifName, "%s#%d_%s", sections[0].c_str(), clusterID, startdAddress.c_str() );
+    formatstr( cifName, "%s#%d_%s", sections[0].c_str(), clusterID, addressHash.c_str() );
+
 
     return cifName;
 }
