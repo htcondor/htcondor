@@ -122,7 +122,7 @@ const char ULogEventNumberNames[][47] = {
 	"ULOG_FILE_USED",				// File in reuse dir utilized
 	"ULOG_FILE_REMOVED",			// File in reuse dir removed.
 	"ULOG_DATAFLOW_JOB_SKIPPED",	// Dataflow job skipped
-	"ULLOG_COMMON_FILES",			// Common Files event
+	"ULOG_COMMON_FILES",			// Common Files event
 };
 
 // event names for events between ULOG_EP_FIRST and ULOG_EP_LAST

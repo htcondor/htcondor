@@ -141,8 +141,8 @@ expectedEvents = [
 	# 44: ULOG_FILE_USED,
 	# 45: ULOG_FILE_REMOVED,
 	# 46 : ULOG_DATAFLOW_JOB_SKIPPED,
-    # The default str() conversion of htcondor.CommonFilesEventType.Constant
-    # starts with "CommonFilesEventType.", which is not helpful.
+	# The default str() conversion of htcondor.CommonFilesEventType.Constant
+	# starts with "CommonFilesEventType.", which is not helpful.
 	(47, { "Type": "TransferStarted" } ),
 	(47, { "Type": "TransferFinished" } ),
 	(47, { "Type": "WaitStarted" } ),
