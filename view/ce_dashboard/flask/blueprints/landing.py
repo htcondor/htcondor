@@ -78,6 +78,9 @@ class ResourceInfo:
     version: str = "Unknown"
     allocationsPastWeek: bool = False
     allocationsPastMonth: bool = False
+    glideinsRunning: int = 0
+    glideinsIdle: int = 0
+    glideinsHeld: int = 0
     def __post_init__(self):
         self.hosted = is_hosted_fqdn(self.fqdn)
 
@@ -203,6 +206,10 @@ def ce_info_from_collectors(resource_info_by_fqdn):
             # universe provisioning request, and the routed grid universe.  So
             # for these systems, divide totalRunning by two.
             totalRunning = floor( totalRunning / 2)
+        info.glideinsRunning = totalRunning
+        info.glideinsIdle = totalIdle
+        info.glideinsHeld = totalHeld
+
         status = "Unknown"
         if "Status" in ad:
             status = str( classad.ExprTree('Status').eval(ad) )
@@ -236,7 +243,8 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         
         # If we made it here, things look good!
         info.health="Good"
-        info.healthInfo="Glideins running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
+        #info.healthInfo="Glideins running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
+        info.healthInfo=""
 
 
 def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
@@ -275,7 +283,7 @@ def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
                 facility_name=facility_name,
                 site_name=site_name,
                 description=description,
-                name=name if name else fqdn.split(',')[0],  # use first part of fqdn if no name is given
+                name=name,
                 active=(active == "true"),  # convert string to bool
                 isCCStar=(isCCStar == "true"),  # convert string to bool
             )
@@ -298,9 +306,19 @@ def get_landing_response():
     writer.writerow([field.name for field in fields(ResourceInfo)])
     for ri in resource_info_by_fqdn.values():
         output.write(',\n[')
+        # If the Name is unknown, use the first part of the FQDN
+        if ri.name=="Unknown":
+            ri.name =  ri.fqdn.split('.')[0]
+        # If the FQDN ends with the default domain, remove it
         if ri.fqdn.endswith('.' + default_domain):
-            # If the FQDN ends with the default domain, remove it
             ri.fqdn = ri.fqdn[:-len(default_domain)-1]
+        # Add a URL with the name to point to the Overview page if not in Poor health
+        if ri.health != "Poor":
+            if ri.allocationsPastWeek:
+                ri.name=f"/overview.html?host={ri.fqdn}|{ri.name}"
+            else:
+                # No allocations in the past week, so use the month view
+                ri.name=f"/overview.html?host={ri.fqdn}&r=month|{ri.name}"
         writer.writerow(astuple(ri))
     output.write(']')
     result = output.getvalue()
@@ -373,13 +391,13 @@ def ce_landing_data():
 
 @landing_bp.route('/landing.html')
 def ce_admin_landing_page():
-    return render_template('landing.html.j2',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
+    return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
 
 @landing_bp.route('/home.html')
 @landing_bp.route('/select.html')
 @landing_bp.route('/index.html')
 def ce_user_landing_page():
-    return render_template('home.html.j2',linkmap={},page_title="Available CE Dashboards")
+    return render_template('home.html',linkmap={},page_title="Available CE Dashboards")
 
 @landing_bp.route('/')
 def ce_goto_default_or_user_landing_page():

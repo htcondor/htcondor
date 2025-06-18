@@ -2916,8 +2916,14 @@ AfterqueryObj.prototype.doYSpread = function (grid, argval) {
 
 AfterqueryObj.prototype.doLimit = function (ingrid, limit) {
     if (limit === "lastDate") {
+        // First, order by -Date
+        ingrid = this.orderBy(ingrid, ["-Date"]);
+        // Then, limit to the last date.
+        // If the last date is not set, set it to the first date
+        // in the sorted data. Then count the number of rows
+        // with that date, and use that as the limit.
         if (this.lastDate === 0 && ingrid.data.length > 0) {
-            this.lastDate = ingrid.data[ingrid.data.length - 1][0];
+            this.lastDate = ingrid.data[0][0];
         }
         limit = 0;
         for (const row of ingrid.data) {

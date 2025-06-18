@@ -13,3 +13,11 @@ leak:Perl_safesysmalloc
 leak:Perl_safesyscalloc
 leak:Perl_safesysrealloc
 leak:Perl_set_numeric_standard
+
+#  Python leaks
+leak:AllocNoTrack
+
+# Java
+leak:os::malloc
+leak:os::strdup
+leak:JLI_

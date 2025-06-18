@@ -1256,7 +1256,6 @@ main (int argc, char *argv[])
 		mode_constraint = nullptr;
 	}
 
-
 	if(javaMode) {
 		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_JAVA); }
 		query->addANDConstraint (ATTR_HAS_JAVA);
@@ -1521,10 +1520,6 @@ main (int argc, char *argv[])
 			const char *adtypeName = mainPP.adtypeNameFromPPMode();
 			if (adtypeName) { pmms.select_from = mainPP.adtypeNameFromPPMode(); }
 			pmms.headfoot = mainPP.pmHeadFoot;
-			std::vector<const char *> * pheadings = NULL;
-			if ( ! mainPP.pm.has_headings()) {
-				if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
-			}
 			std::string requirements;
 			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
 				ConstraintHolder constrRaw(strdup(requirements.c_str()));
@@ -1536,7 +1531,7 @@ main (int argc, char *argv[])
 
 			temp.clear();
 			temp.reserve(4096);
-			PrintPrintMask(temp, *pFnTable, mainPP.pm, pheadings, pmms, group_by_keys, NULL);
+			PrintPrintMask(temp, *pFnTable, mainPP.pm, nullptr, pmms, group_by_keys, NULL);
 			fprintf(fout, "%s\n", temp.c_str());
 		}
 
@@ -1557,11 +1552,7 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-		std::vector<const char *> * pheadings = NULL;
-		if ( ! mainPP.pm.has_headings()) {
-			if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
-		}
-		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
+		mainPP.pm.dump(style_text, &GlobalFnTable);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -2927,6 +2918,13 @@ firstPass (int argc, char *argv[])
 			}
 			dash_broken = true;
 		} else
+		if (is_dash_arg_colon_prefix(argv[i], "lvm", &pcolon, 3)) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_LvUsage, i, argv[i]);
+			}
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -2950,6 +2948,8 @@ firstPass (int argc, char *argv[])
 				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_Broken) {
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots_LvUsage) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}
@@ -3202,11 +3202,11 @@ secondPass (int argc, char *argv[])
 				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-				if (fheadings || mainPP.pm_head.size() > 0) { 
+				if (fheadings || mainPP.pm.has_headings()) {
 					const char * hd = fheadings ? argv[i] : "(expr)";
-					wid = 0 - (int)strlen(hd); 
-					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					mainPP.pm_head.emplace_back(hd);
+					wid = 0 - (int)strlen(hd);
+					opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
+					mainPP.pm.set_heading(hd);
 				}
 				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");

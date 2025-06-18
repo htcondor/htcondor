@@ -482,6 +482,7 @@ check_spool_dir()
 		"HISTORY",
 		"JOB_EPOCH_HISTORY",
 		"STARTD_HISTORY",
+		"SCHEDD_DAEMON_HISTORY",
 		"COLLECTOR_PERSISTENT_AD_LOG",
 		"LVM_BACKING_FILE",
 	};
@@ -1608,7 +1609,12 @@ lease_has_expired( const std::filesystem::path & file ) {
 
 void
 check_syndicate_dir() {
-	std::string LOCK = param("LOCK");
+	char *LOCK_str = param("LOCK");
+	std::string LOCK;
+	if (LOCK_str != nullptr) {
+		LOCK = LOCK_str;
+		free(LOCK_str);
+	}
 	std::filesystem::path lock(LOCK);
 	std::filesystem::path syndicate = lock / "syndicate";
 
