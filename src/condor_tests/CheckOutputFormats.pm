@@ -1406,7 +1406,7 @@ sub check_heading {
 },
 		'-nobatch' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)ST(\s+)PRI(\s+)SIZE(\s+)CMD/;},
 		'-run' => sub {return $data{0} =~ /(\s*)ID(\s+)OWNER(\s+)SUBMITTED(\s+)RUN_TIME(\s+)HOST\(S\)/;},
-		'-hold' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+HELD_SINCE\s+HOLD_REASON/;},
+		'-hold' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+HELD_SINCE\s+CODE\/SUB\s+HOLD_REASON/;},
 		'-dag' => sub {return $data{0} =~ /\s*ID\s+OWNER\/NODENAME\s+SUBMITTED\s+RUN_TIME\s+ST\s+PRI\s+SIZE\s+CMD/;},
 		'-io' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+RUNS\s+ST\s+INPUT\s+OUTPUT\s+/;},
 		'-globus' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+STATUS\s+MANAGER\s+HOST\s+EXECUTABLE/;},
@@ -1631,6 +1631,7 @@ if ($command_arg =~ /-dag/ && !($command_arg =~ /-nobatch/)){
 } else { return 0; }
 },
 'HELD_SINCE' => sub {return $_[1] =~ /[0-9]+\/[0-9]+\s+[0-9]+:[0-9]+/;},
+'CODE/SUB' => sub {return $Attr{$_[0]}{HoldReasonCode} eq substr($_[1],0,length($Attr{$_[0]}{HoldReasonCode}));},  # TODO: fix for subcode?
 'HOLD_REASON' => sub {return $_[1] eq substr($Attr{$_[0]}{HoldReason},1, length($Attr{$_[0]}{HoldReason})-2);},
 'SIZE' => sub {
 	if (defined $real_heading && $real_heading ne '-dag'){
