@@ -7289,6 +7289,7 @@ int SubmitHash::SetProtectedURLTransferLists() {
 				for (auto& tree : queue_xfer_lists) {
 					delete tree;
 				}
+				queue_xfer_lists.clear(); // Clear the vector to remove dangling pointers
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string
