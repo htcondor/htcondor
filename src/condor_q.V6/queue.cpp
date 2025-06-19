@@ -804,7 +804,7 @@ parse_analyze_detail(const char * pch, int current_details)
 }
 
 // parse -hold:<code/subcode> option and convert it to a constraint.
-static void add_hold_code_contraint(const char * opts) {
+static void add_hold_code_contsraint(const char * opts) {
 
 	std::string constr;
 
@@ -1472,7 +1472,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			if (pcolon && pcolon[1]) {
-				add_hold_code_contraint(++pcolon);
+				add_hold_code_contsraint(++pcolon);
 			}
 		}
 		else
@@ -1489,7 +1489,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			if (pcolon && pcolon[1]) {
-				add_hold_code_contraint(++pcolon);
+				add_hold_code_contsraint(++pcolon);
 			}
 		}
 		else
@@ -4458,7 +4458,7 @@ const char * const jobHoldCodes_PrintFormat = "SELECT\n"
 ATTR_OWNER               " AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
 ATTR_HOLD_REASON_CODE    " AS CODE   NOSUFFIX PRINTF %4d OR ?\n"
 ATTR_HOLD_REASON_SUBCODE " AS '/SUB' NOPREFIX PRINTF '/%-3d' OR ' '\n"
-ATTR_JOB_STATUS          " AS '   COUNT ' PRINTF %9d OR _\n"
+ATTR_JOB_STATUS          " AS '   COUNT ' PRINTF %9d OR _\n"    // JobStatus is a convenient int attr that is guaranteed to exist.
 ATTR_CLUSTER_ID          " AS OLDEST_JOB_ID PRINTAS JOB_ID\n"
 ATTR_ENTERED_CURRENT_STATUS " AS HELD_SINCE WIDTH 11 PRINTAS QDATE OR ??\n"
 ATTR_HOLD_REASON         " AS HOLD_REASON WIDTH 0\n"
