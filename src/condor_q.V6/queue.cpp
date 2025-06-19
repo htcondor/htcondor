@@ -804,7 +804,7 @@ parse_analyze_detail(const char * pch, int current_details)
 }
 
 // parse -hold:<code/subcode> option and convert it to a constraint.
-static void add_hold_code_contsraint(const char * opts) {
+static void add_hold_code_constraint(const char * opts) {
 
 	std::string constr;
 
@@ -1472,7 +1472,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			if (pcolon && pcolon[1]) {
-				add_hold_code_contsraint(++pcolon);
+				add_hold_code_constraint(++pcolon);
 			}
 		}
 		else
@@ -1489,7 +1489,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			if (pcolon && pcolon[1]) {
-				add_hold_code_contsraint(++pcolon);
+				add_hold_code_constraint(++pcolon);
 			}
 		}
 		else

@@ -15,6 +15,11 @@
   is no longer supported.
   :jira:`3118`
 
+- Improvements to *condor_q* for held jobs. The hold code and subcode are
+  now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
+  displays the first job for each unique hold code and subcode.
+  :jira:`3127`
+
 *** 24.10.0 bugs
 
 - Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
