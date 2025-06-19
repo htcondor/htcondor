@@ -34,33 +34,40 @@ std::optional<std::string>
 makeCIFName(
     const classad::ClassAd & jobAd, const std::string & startdAddress
 ) {
+    std::string cifName;
+
+
     std::string globalJobID;
     if(! jobAd.LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
         return std::nullopt;
     }
     auto sections = split( globalJobID, "#" );
 
-    // If the submitter gave us a name to use, scope with their name and
-    // the name of the schedd, but use it instead of the cluster ID.
+
     std::string userSuppliedName;
     if( jobAd.LookupString( "CIFName", userSuppliedName ) ) {
+        // <submmiter>@<scheddName>-<userSuppliedName>
         std::string submitter;
         if(! jobAd.LookupString( ATTR_USER, submitter )) {
             return std::nullopt;
         }
 
-        std::string cifName;
-        formatstr( cifName, "%s@%s-%s_%s",
-            submitter.c_str(), sections[0].c_str(), userSuppliedName.c_str(),
-            startdAddress.c_str()
+        // This would be better checked at submit time.
+        if( userSuppliedName.length() > 64 ) {
+            return std::nullopt;
+        }
+
+        formatstr( cifName, "%s@%s-%s",
+            submitter.c_str(), sections[0].c_str(), userSuppliedName.c_str()
         );
+    } else {
+        int clusterID = -1;
+        if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
+            return std::nullopt;
+        }
 
-        return cifName;
-    }
-
-    int clusterID = -1;
-    if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
-        return std::nullopt;
+        // <scheddName>#<clusterID>
+        formatstr( cifName, "%s#%d", sections[0].c_str(), clusterID );
     }
 
 
@@ -74,9 +81,8 @@ makeCIFName(
     std::string addressHash;
     AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, addressHash );
 
-    std::string cifName;
-    formatstr( cifName, "%s#%d_%s", sections[0].c_str(), clusterID, addressHash.c_str() );
 
-
-    return cifName;
+    std::string fullCIFName;
+    formatstr( fullCIFName, "%s_%s", cifName.c_str(), addressHash.c_str() );
+    return fullCIFName;
 }
