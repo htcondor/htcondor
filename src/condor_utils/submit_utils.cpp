@@ -7284,6 +7284,11 @@ int SubmitHash::SetProtectedURLTransferLists() {
 					           ATTR_TRANSFER_Q_URL_IN_LIST);
 					ABORT_AND_RETURN( 1 );
 				}
+			} else {
+				// We didn't transfer ownership of the queue_xfer_lists, so delete them
+				for (auto& tree : queue_xfer_lists) {
+					delete tree;
+				}
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string
