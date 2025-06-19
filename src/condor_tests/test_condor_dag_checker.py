@@ -185,12 +185,6 @@ REJECT
                 "DagCommand": "DONE",
             },
             {
-                "Reason": "ALL_NODES can not be used with DONE command",
-                "SourceFile": "VALIDATION_ERRORS.dag",
-                "SourceLine": 9,
-                "DagCommand": "DONE",
-            },
-            {
                 "Reason": "Failed to read splice NO_FILE: Provided file path does not exist",
                 "SourceFile": "VALIDATION_ERRORS.dag",
                 "SourceLine": 11,

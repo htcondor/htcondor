@@ -25,6 +25,7 @@
 #include <vector>
 #include <filesystem>
 #include <system_error>
+#include <functional>
 
 //      EXIT SUCCESS 0     All good
 //      EXIT_FAILURE 1     Invalid DAG (parse failure)
@@ -88,15 +89,15 @@ struct MockDag {
 	}
 
 	struct Node {
-		Node(const std::string& n, const uint i, DAG::CMD t) {
+		Node(const std::string& n, const uint32_t i, DAG::CMD t) {
 			name = n;
 			num = i;
 			type = t;
 		}
 
 		std::string name{};
-		std::set<uint> children{};
-		uint num{0};
+		std::set<uint32_t> children{};
+		uint32_t num{0};
 		DAG::CMD type{DAG::CMD::JOB};
 		bool has_parent{false};
 		bool visited{false};
@@ -115,8 +116,8 @@ struct MockDag {
 	}
 
 	void makeDependencies(const ParentChildCommand* pc, std::vector<DagParseError>& errors) {
-		std::vector<uint> parents;
-		std::vector<uint> children;
+		std::vector<uint32_t> parents;
+		std::vector<uint32_t> children;
 
 		std::string missing_parents;
 		std::string missing_children;
@@ -187,7 +188,6 @@ struct MockDag {
 				nodes.push_back(node);
 			}
 			splice.nodes.clear();
-			splice.commands.clear();
 		}
 	}
 
@@ -204,7 +204,7 @@ struct MockDag {
 	}
 
 	void getStats(ClassAd& stats) {
-		std::map<std::string, uint> node_counts;
+		std::map<std::string, uint32_t> node_counts;
 		size_t num_arcs = 0;
 		bool has_graph_nodes = false;
 
@@ -253,9 +253,9 @@ struct MockDag {
 		}
 
 		if (has_graph_nodes) {
-			uint height = 1;
-			std::vector<uint> widths;
-			std::vector<uint> ancestors;
+			uint32_t height = 1;
+			std::vector<uint32_t> widths;
+			std::vector<uint32_t> ancestors;
 			bool cycle = false;
 			bool found_start_nodes = false;
 
@@ -282,7 +282,7 @@ struct MockDag {
 				}
 			}
 
-			std::erase_if(widths, [](uint n) { return n == 0; });
+			std::erase_if(widths, [](uint32_t n) { return n == 0; });
 
 			std::string not_visited;
 			std::ranges::for_each(nodes, [&not_visited](const auto& node){
@@ -312,7 +312,7 @@ struct MockDag {
 			} else if ( ! widths.empty()) {
 				stats.InsertAttr(DAG_STAT_HEIGHT, (int)height);
 
-				uint max = *(std::ranges::max_element(widths));
+				uint32_t max = *(std::ranges::max_element(widths));
 				stats.InsertAttr(DAG_STAT_WIDTH, (int)max);
 
 				std::string list;
@@ -328,25 +328,24 @@ struct MockDag {
 	inline bool hasFinal() const { return ! final_node.empty(); }
 	inline bool hasProvisioner() const { return ! provisioner.empty(); }
 
-	std::map<std::string, uint> node_name_hash{};
+	std::map<std::string, uint32_t> node_name_hash{};
 	std::vector<Node> nodes{};
 	std::vector<MockDag> splices{};
-	std::vector<DagCmd> commands;
 	std::string scope{};
 
 	std::string final_node{};
 	std::string provisioner{};
 
 	size_t num_splices{0};
-	uint node_index_offset{0};
+	uint32_t node_index_offset{0};
 
 	bool use_join_nodes{true};
 
-	static uint node_index;
-	static uint join_node_index;
+	static uint32_t node_index;
+	static uint32_t join_node_index;
 
 private:
-	bool walkDFS(Node& node, size_t depth, uint& height, std::vector<uint>& widths, std::vector<uint>& ancestors) {
+	bool walkDFS(Node& node, size_t depth, uint32_t& height, std::vector<uint32_t>& widths, std::vector<uint32_t>& ancestors) {
 		if (node.visited) {
 			bool cycle = false;
 			if (std::ranges::find(ancestors, node.num) != ancestors.end()) {
@@ -376,7 +375,7 @@ private:
 		return false;
 	}
 
-	void considerDependency(const ParentChildCommand* pc, const std::string& name, const bool is_parent, std::vector<uint>& list, std::string& missing, std::vector<DagParseError>& errors) {
+	void considerDependency(const ParentChildCommand* pc, const std::string& name, const bool is_parent, std::vector<uint32_t>& list, std::string& missing, std::vector<DagParseError>& errors) {
 		static std::set<DAG::CMD> invalid = {
 			DAG::CMD::FINAL,
 			DAG::CMD::SERVICE,
@@ -413,13 +412,15 @@ private:
 };
 
 
-uint MockDag::node_index = 0;
-uint MockDag::join_node_index = 0;
+uint32_t MockDag::node_index = 0;
+uint32_t MockDag::join_node_index = 0;
 static std::set<std::string> included_files;
 
 
 void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& errors) {
 	static istring_view all_nodes_keyword(DAG::ALL_NODES.c_str());
+
+	std::vector<DagCmd> commands{};
 
 	for (auto cmd : parser) {
 		if (cmd) {
@@ -501,7 +502,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					break;
 				default:
 					// Relinquish pointer ownership to commands vector
-					dag.commands.emplace_back(cmd.release());
+					commands.emplace_back(cmd.release());
 					break;
 			} // End Switch(cmd)
 		} // End if(cmd)
@@ -512,12 +513,12 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 
 	dag.inheritSpliceNodes();
 
-	std::ranges::sort(dag.commands, [](DagCmd& l, DagCmd& r) { return l->GetCommand() < r->GetCommand(); });
+	std::ranges::sort(commands, [](DagCmd& l, DagCmd& r) { return l->GetCommand() < r->GetCommand(); });
 	std::ranges::sort(dag.nodes, {}, &MockDag::Node::num);
 
 	bool has_config = false;
 
-	for (const auto& cmd : dag.commands) {
+	for (const auto& cmd : commands) {
 		DAG::CMD cmd_val = cmd->GetCommand();
 		switch (cmd_val) {
 			case DAG::CMD::SCRIPT:
@@ -852,3 +853,4 @@ int main(int argc, const char** argv) {
 
 	return exit_code;
 }
+
