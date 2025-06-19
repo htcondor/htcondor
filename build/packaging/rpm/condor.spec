@@ -280,7 +280,7 @@ Requires: (pelican >= 7.16.5 or pelican-debug >= 7.16.5)
 %endif
 Requires: pelican-osdf-compat >= 7.16.5
 
-%if 0%{?rhel} != 7
+%if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
