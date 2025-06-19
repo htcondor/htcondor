@@ -27,6 +27,10 @@ Name: condor
 Version: %{condor_version}
 %global version_ %(tr . _ <<< %{version})
 
+%if 0%{x86_64_v2}
+BuildArch: x86_64_v2
+%endif
+
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500

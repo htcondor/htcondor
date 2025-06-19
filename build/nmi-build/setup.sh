@@ -21,7 +21,11 @@ VERSION_CODENAME='none'
 . /etc/os-release
 echo "Building on $NAME $VERSION"
 VERSION_ID=${VERSION_ID%%.*}
-ARCH=$(arch)
+if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+    ARCH='x86_64_v2'
+else
+    ARCH=$(arch)
+fi
 echo "ID=$ID VERSION_ID=$VERSION_ID VERSION_CODENAME=$VERSION_CODENAME ARCH=$ARCH"
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
@@ -124,7 +128,7 @@ if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt-get update
 fi
-if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ]; then
+if [ $ID = 'almalinux' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
