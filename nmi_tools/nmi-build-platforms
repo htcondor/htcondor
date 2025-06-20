@@ -8,9 +8,10 @@ docker://htcondor/nmi-build:ppc64le_AlmaLinux8-24090100
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-24090100
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-24090100
 docker://htcondor/nmi-build:x86_64_AlmaLinux10-24090100
+docker://htcondor/nmi-build:x86_64_v2_AlmaLinux10-24090101
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-24090100
-docker://htcondor/nmi-build:x86_64_Debian11-24090100
-docker://htcondor/nmi-build:x86_64_Debian12-24090100
+docker://htcondor/nmi-build:x86_64_Debian11-24090101
+docker://htcondor/nmi-build:x86_64_Debian12-24090101
 docker://htcondor/nmi-build:x86_64_openSUSE15-24090100
 docker://htcondor/nmi-build:x86_64_Ubuntu22-24090100
 docker://htcondor/nmi-build:x86_64_Ubuntu24-24090100
