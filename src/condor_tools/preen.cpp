@@ -300,13 +300,13 @@ main( int argc, char * argv[] ) {
 	// This is also dumb, but less dangerous than (a) reaching into daemon
 	// core to set a flag and (b) hoping that my command-line arguments and
 	// its command-line arguments don't conflict.
-	char ** dcArgv = (char **)malloc( 5 * sizeof( char * ) );
+	const char ** dcArgv = (const char **)malloc( 5 * sizeof( char * ) );
 	dcArgv[0] = argv[0];
 	// Force daemon core to run in the foreground.
-	dcArgv[1] = strdup( "-f" );
+	dcArgv[1] = "-f";
 	// Disable the daemon core command socket.
-	dcArgv[2] = strdup( "-p" );
-	dcArgv[3] = strdup(  "0" );
+	dcArgv[2] = "-p";
+	dcArgv[3] = "0";
 	dcArgv[4] = NULL;
 
 
@@ -317,15 +317,14 @@ main( int argc, char * argv[] ) {
 		_argv[i] = strdup( argv[i] );
 
 		if( argv[i][0] == '-' && argv[i][1] == 'd' ) {
-		    free(dcArgv[1]);
-		    dcArgv[1] = strdup( "-t" );
+		    dcArgv[1] = "-t";
 		}
 	}
 	_argv[argc] = NULL;
 
 
 	argc = 4;
-	argv = dcArgv;
+	argv = const_cast<char **>(dcArgv);
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;
