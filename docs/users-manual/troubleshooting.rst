@@ -59,8 +59,11 @@ table may not be complete for your system.
 
 .. note::
 
+    
    Older versions of condor_q -hold do not show the Hold Code and Hold Subcode.
    To get these, you should run
+
+   .. code-block:: shell
 
       $ condor_q -hold -f "%d." ClusterId  -format "%d " ProcId -format "%d/" HoldReasonCode -format "%d\n" HoldReasonSubCode
 
