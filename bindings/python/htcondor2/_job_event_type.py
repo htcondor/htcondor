@@ -54,6 +54,7 @@ class JobEventType(enum.IntEnum):
     .. attribute:: FILE_USED
     .. attribute:: FILE_REMOVED
     .. attribute:: DATAFLOW_JOB_SKIPPED
+    .. attribute:: COMMON_FILES
 
     """
 
@@ -104,4 +105,5 @@ class JobEventType(enum.IntEnum):
     FILE_USED               = 44
     FILE_REMOVED            = 45
     DATAFLOW_JOB_SKIPPED    = 46
+    COMMON_FILES            = 47
 
