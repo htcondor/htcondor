@@ -37,7 +37,7 @@ class HiddenSection(Directive):
             text = '\n'.join(self.content)
             node = nodes.container(text)
             self.add_name(node)
-            self.state.nested_parse(self.content, self.content_offset, node)
+            self.state.nested_parse(self.content, self.content_offset, node, match_titles=True)
             info.append(node)
 
         return info
