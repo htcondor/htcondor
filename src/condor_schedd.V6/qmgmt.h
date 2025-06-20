@@ -248,6 +248,8 @@ public:
 		int SchedulerJobsIdle=0;
 		int SchedulerJobsRunning=0;
 		int SchedulerJobsHeld=0;
+		int OCUClaims = 0;
+		int OCUJobsRunning = 0;
 		void clear_counters() { memset(this, 0, sizeof(*this)); }
 	};
 
@@ -379,6 +381,7 @@ public:
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
+	bool IsOCUClaimer() const; // True if this job holds the ocu claim. It is not a real job
 	void DirtyNoopAttr() { run = JobRunnableState::DirtyNoop; }
 #if 0
 	// FUTURE:
@@ -792,6 +795,7 @@ enum class runnable_reason_code : int {
 	IsNoopJob,
 	NotIdle,
 	UniverseNotInService,
+	IsOCUClaimer, // job is an OCU claimer, not a real job
 	InLongCooldown,  // cooldown > 5min
 	InShortCooldown, // cooldown <= 5min
 	AlreadyMatched,
