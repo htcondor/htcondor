@@ -1268,10 +1268,10 @@ const char * appendJobMatchTotalsToBuffer(std::string & out, ClassAd *job, anaCo
 	if ( ! ac.job_matches_slot || ! ac.both_match) {
 		out += "\nWARNING:  Be advised:\n";
 		if ( ! ac.job_matches_slot) {
-			out += "   No machines matched the jobs's constraints\n";
+			out += "   No machines matched the job's constraints\n";
 		} else {
 			out +=
-				"   Job did not match any machines's constraints\n"
+				"   Job did not match any machines' constraints\n"
 				"   To see why, pick a machine that you think should match and add\n"
 				"     -reverse -machine <name>\n"
 				"   to your query.\n";
