@@ -1,4 +1,4 @@
-{% extends "base.html.j2" %}
+{% extends "base.html" %}
 
 {% block style %}
 {% endblock style %}
@@ -10,7 +10,7 @@
 <div class="row">
 <div class="col">
 <p style="text-align: left">
-All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will open a browser tab with the Dashboard for that CE. Clicking on a table column name will sort that column.  If the <i>facilityName</i> is "Unknown", it means this CE has not been entered into the OSG Topology Database. Any health status other than Good likely warrants additional invetigation;  the <i>healthInfo</i> column contains additional information to help understand what is happening.
+All OSG-hosted HCondor CEs appear below.  Clicking on the <i>name</i> will open a browser tab with the Dashboard for that CE. Clicking on a table column name will sort that column.  If the <i>institution</i> is "Unknown", it means this CE has not been entered into the OSG Topology Database. Any health status other than Good likely warrants additional investigation;  the <i>healthInfo</i> column contains additional information to help understand what is happening.
 </p>
 </div>
 </div>
@@ -43,19 +43,16 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                     new HTCondorView({
                         dst_id: "ce-table",
 						data_url: "/data/ce_landing",
-						graph_query: "{{ (
-                            "group=facility_name,name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name\n"
-                            "&rename=fqdn=Hostname\n"
-                            "&filter=hosted=1\n"
-                            "&filter=active=1\n"
-                            "&order=facility_name,name\n"
-                            "&intensify=health\n"
-                            "&unselect=description,active,registered,hosted\n"
-                            "&rename=facility_name=facilityName\n"
-                            "&rename=site_name=siteName\n"
-                            "&rename=Hostname=hostName\n"
-                            "&make_url=hostName=/overview.html?host=*\n"
-                        ) | replace('\n', '') }}"
+                        {% set graph_query %}
+                            group=facility_name,name,hosted,active,health,healthInfo,glideinsRunning,glideinsIdle,glideinsHeld,isCCStar,scheduler,version,startTime;
+                            &filter=hosted=1
+                            &filter=active=1
+                            &unselect=hosted,active
+                            &order=facility_name,name
+                            &intensify=health
+                            &rename=facility_name=institution
+                        {% endset %}
+                        graph_query: "{{ graph_query | replace('\n', '') | replace(' ', '') }}"
                     });
                 </script>
             </div>

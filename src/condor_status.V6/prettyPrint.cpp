@@ -118,43 +118,43 @@ void PrettyPrinter::ppSetColumnFormat(const CustomFormatFn & fmt, const char * p
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, int width, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(label);
+	pm.set_heading(label);
 	ppSetColumnFormat("%v", width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, int width, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(attr);
+	pm.set_heading(attr);
 	ppSetColumnFormat("%v", width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, const char * print, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(label);
+	pm.set_heading(label);
 	ppSetColumnFormat(print, 0, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const char * print, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(attr);
+	pm.set_heading(attr);
 	ppSetColumnFormat(print, 0, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(label);
+	pm.set_heading(label);
 	ppSetColumnFormat(fmt, NULL, width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(attr);
+	pm.set_heading(attr);
 	ppSetColumnFormat(fmt, NULL, width, truncate, alt, attr);
 }
 
 void PrettyPrinter::ppSetColumn(const char * attr, const Lbl & label, const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt)
 {
-	pm_head.emplace_back(label);
+	pm.set_heading(label);
 	ppSetColumnFormat(fmt, print, width, truncate, alt, attr);
 }
 
@@ -167,8 +167,6 @@ void PrettyPrinter::ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszE
 	}
 	if (pm.has_headings()) {
 		pm.display_Headings(file);
-	} else {
-		pm.display_Headings(file, pm_head);
 	}
 	if (pszExtra)
 		printf("%s", pszExtra);
@@ -266,8 +264,7 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 		no_headings = true;
 		newline_after_headings = NULL;
 		if ( ! wantOnlyTotals) {
-			bool fHasHeadings = pm.has_headings() || (pm_head.size() > 0);
-			if (fHasHeadings) {
+			if (pm.has_headings()) {
 				no_headings = (pmHeadFoot & HF_NOHEADER);
 			}
 		}
@@ -462,7 +459,7 @@ void PrettyPrinter::ppSetStartdNormalCols (int width)
 	} else {
 		ppSetColumn(ATTR_MEMORY, Lbl("Mem"), "%4d", false);
 	}
-	pm_head.emplace_back(wide_display ? "ActivityTime" : "  ActvtyTime");
+	pm.set_heading(wide_display ? "ActivityTime" : "  ActvtyTime");
 	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltDash,
 		render_activity_time, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
@@ -949,6 +946,41 @@ void PrettyPrinter::ppSetStartDaemonCols(int, const char * & constr )
 	}
 }
 
+const char * const startdUsingLVM_PrintFormat = "SELECT\n"
+ATTR_NAME "                                                   AS HOST       WIDTH AUTO\n"
+ATTR_LVM_BACKING_STORE "                                      AS DEVICE     WIDTH AUTO OR ??\n"
+ATTR_LVM_USE_THIN_PROVISION "=?=true ? \"thin \" : \"thick\"  AS PROVISION  WIDTH    9 PRINTF %-9s\n"
+"max({(LvmDetectedDisk?:0 - LvmNonCondorDiskUsage?:0), 0})    AS '    DISK' WIDTH    9 PRINTAS READABLE_BYTES\n"
+ATTR_LVM_USE_LOOPBACK "=?=true ? \" true\" : \"false\"        AS LOOPBACK   WIDTH    8 PRINTF %8s\n"
+"WHERE " PMODE_STARTD_USING_LVM_CONSTRAINT "\n"
+"SUMMARY NONE\n";
+
+void PrettyPrinter::ppSetStartdLvmCols( int /*width*/, const char * & constr )
+{
+	const char * tag = "StartdLvm";
+	const char * fmt = startdUsingLVM_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+}
+
+const char * const slotLvUsage_PrintFormat = "SELECT\n"
+ATTR_NAME "                                                   AS NAME       WIDTH AUTO\n"
+ATTR_LVM_USE_THIN_PROVISION "=?=true ? \"thin \" : \"thick\"  AS PROVISION  WIDTH    9 PRINTF %-9s\n"
+ATTR_DISK "                                                   AS ALLOCATED  WIDTH    9 PRINTAS READABLE_KB\n"
+"(DiskUsage?:0 / real(Disk)) * 100                            AS '  USAGE'  WIDTH AUTO PRINTF '%3.2f%%'\n"
+"WHERE " PMODE_SLOT_LV_USAGE_CONSTRAINT "\n"
+"SUMMARY NONE\n";
+
+void PrettyPrinter::ppSetSlotLvUsageCols( int /*width*/, const char * & constr )
+{
+	const char * tag = "SlotLvUsage";
+	const char * fmt = slotLvUsage_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+}
+
 void PrettyPrinter::ppSetCkptSrvrNormalCols (int width)
 {
 	int name_width = wide_display ? -34 : -28;
@@ -1371,6 +1403,14 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 
 		case PP_GRID_NORMAL:
 		ppSetGridNormalCols(display_width);
+		break;
+
+		case PP_SLOTS_LV_USAGE:
+		ppSetSlotLvUsageCols(display_width, constr);
+		break;
+
+		case PP_STARTD_LVM:
+		ppSetStartdLvmCols(display_width, constr);
 		break;
 
 		case PP_GENERIC_NORMAL:

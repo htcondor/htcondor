@@ -11404,7 +11404,7 @@ condor_defrag Configuration File Macros
 
 These configuration variables affect the *condor_defrag* daemon. A
 general discussion of *condor_defrag* may be found in
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/cm-configuration:defragmenting dynamic slots`.
 
 :macro-def:`DEFRAG_NAME[DEFRAG]`
     Used to give an prefix value to the ``Name`` attribute in the

@@ -76,9 +76,73 @@ class ResourceInfo:
     healthInfo: str = "Not reporting; likely not running"
     startTime: str = "Unknown"
     version: str = "Unknown"
+    allocationsPastWeek: bool = False
+    allocationsPastMonth: bool = False
+    glideinsRunning: int = 0
+    glideinsIdle: int = 0
+    glideinsHeld: int = 0
     def __post_init__(self):
         self.hosted = is_hosted_fqdn(self.fqdn)
 
+def returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn):
+    """
+    Add an unregistered CE to the resource info dictionary.
+    """
+    if fqdn not in resource_info_by_fqdn:
+        # The CE is not registered in Topology
+        resource_info = ResourceInfo(
+            fqdn=fqdn,
+            active=True,
+            registered=False
+        )
+        resource_info_by_fqdn[fqdn] = resource_info
+    return resource_info_by_fqdn[fqdn]
+
+def ce_info_from_ganglia(resource_info_by_fqdn):
+    """
+    Given a dictionary of CE info from Topology, augment this with information
+    gleaned from the time series database.
+    """
+    import pandas as pd
+    host = current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
+    r = 'month'
+    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'CpusInUse' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    
+    # Rename 'Timestamp' column to 'Date' for clarity and set it as the index
+    df.rename({'Timestamp':'Date'}, axis='columns', inplace=True)
+    df.set_index('Date', inplace=True)
+    # Convert the index to datetime
+    df.index = pd.to_datetime(df.index)
+    df.index = df.index.tz_localize(None)
+    
+    # The columns are the FQDNs of the CEs.  The values are the number of CPUs in use at that time.
+    # We want a list of the FQDNs that did not use any CPUs at all in the last week, and 
+    # a second list of the FQDNs that did not use any CPUs at all in the last month.
+    from datetime import datetime, timedelta
+
+    # Define the time ranges for the last week and last month
+    one_week_ago = datetime.now() - timedelta(weeks=1)
+    one_month_ago = datetime.now() - timedelta(weeks=4)
+
+    # Filter FQDNs that did not use any CPUs in the last week
+    fqdn_some_cpus_past_week = [
+        fqdn.strip() for fqdn in df.columns
+        if df.loc[df.index >= one_week_ago, fqdn].sum() > 0
+    ]
+    # Set the allocationsPastWeek flag for these FQDNs
+    for fqdn in fqdn_some_cpus_past_week:
+        info = returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn)
+        info.allocationsPastWeek = True
+
+    # Filter FQDNs that did not use any CPUs in the last month
+    fqdn_some_cpus_past_month = [
+        fqdn.strip() for fqdn in df.columns
+        if df.loc[df.index >= one_month_ago, fqdn].sum() > 0
+    ]
+    # Set the allocationsPastMonth flag for these FQDNs
+    for fqdn in fqdn_some_cpus_past_month:
+        info = returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn)
+        info.allocationsPastMonth = True
 
 def ce_info_from_collectors(resource_info_by_fqdn):
     """
@@ -98,16 +162,7 @@ def ce_info_from_collectors(resource_info_by_fqdn):
     htcondor.param["QUERY_TIMEOUT"] = "5"
     for ad in ads:
         fqdn = ad["Name"]
-        #if fqdn in resource_info_by_fqdn and resource_info_by_fqdn[fqdn].hosted:
-        if fqdn not in resource_info_by_fqdn:
-            # The CE is not registered in Topology
-            resource_info = ResourceInfo(
-                fqdn=fqdn,
-                active=True,
-                registered=False
-            )
-            resource_info_by_fqdn[fqdn] = resource_info            
-        info = resource_info_by_fqdn[fqdn]
+        info = returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn)
         info.scheduler = ad.get("OSG_BatchSystems","Unknown")
         info.scheduler = info.scheduler[0].upper() + info.scheduler[1:]  # ensure first letter capitalized
         if info.scheduler == "Condor":
@@ -135,48 +190,61 @@ def ce_info_from_collectors(resource_info_by_fqdn):
                     info.health="Poor"
                     info.healthInfo=hinfo
                     continue
-        # Check for load problems (RecentDaemonCoreDutyCycle and File Transfer load are reflected in Status attr)
-        status = "Unknown"
-        if "Status" in ad:
-            status = str( classad.ExprTree('Status').eval(ad) )
-        if status == "CRITICAL":
-            info.health="Poor"
-            info.healthInfo = "Server load level = " + status
-            continue
-        if status == "WARNING":
-            info.health = "Fair"
-            info.healthInfo = "Server load level = " + status
-            continue
+        
         # Check for too many held jobs, or idle jobs without anything running, etc.
         totalHeld = ad["TotalHeldJobs"]
-        totalRunning  = ad["TotalRunningJobs"]
         totalIdle = ad["TotalIdleJobs"]
+        totalDaysNoStartedJobs = 0
+        if info.allocationsPastWeek == False:
+            totalDaysNoStartedJobs = 7
+        if info.allocationsPastMonth == False:
+            totalDaysNoStartedJobs = 30
+        totalRunning  = ad["TotalRunningJobs"]
         if info.hosted or info.scheduler.casefold() != "Condor".casefold():
             # All CEs that are (a) hosted or (b) in front of any system other than
             # HTCondor will have two running jobs per running glidein: the vanilla
             # universe provisioning request, and the routed grid universe.  So
             # for these systems, divide totalRunning by two.
             totalRunning = floor( totalRunning / 2)
-        if totalHeld > totalRunning and totalRunning > 0:
-            info.health="Fair"       
-            info.healthInfo="More glideins held than running: running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
+        info.glideinsRunning = totalRunning
+        info.glideinsIdle = totalIdle
+        info.glideinsHeld = totalHeld
+
+        status = "Unknown"
+        if "Status" in ad:
+            status = str( classad.ExprTree('Status').eval(ad) )
+
+        # Checks here should be done in the order of severity, from most to least 
+        if totalRunning == 0 and totalIdle == 0 and totalHeld == 0:
+            info.health="Poor"       
+            info.healthInfo="No glideins at all at this CE; maybe factory misconfigured?"
             continue
-        if totalRunning == 0:
-            if totalHeld > 0:
-                info.health="Poor"       
-                info.healthInfo="Found held glideins and none running: running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
-                continue
-            if totalIdle > 0:
-                info.health="Fair"       
-                info.healthInfo="No glideins are running: running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
-                continue
-            if totalIdle == 0:
-                info.health="Fair"       
-                info.healthInfo="No glideins at all at this CE; maybe factory misconfigured?"
-                continue
+        if totalDaysNoStartedJobs > 29:
+            info.health="Poor"       
+            info.healthInfo="No allocated Cpus in the past month"
+            continue
+        if totalDaysNoStartedJobs > 6:
+            info.health="Fair"       
+            info.healthInfo="No allocated Cpus in the past week"
+            continue
+        if totalHeld > totalRunning + totalIdle and totalRunning > 0:
+            info.health="Fair"       
+            info.healthInfo="Many glideins being held: running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
+            continue
+        # Check for load problems (RecentDaemonCoreDutyCycle and File Transfer load are reflected in Status attr)
+        if status == "CRITICAL":
+            info.health="Fair"
+            info.healthInfo = "Server load level = " + status
+            continue
+        if status == "WARNING":
+            info.health = "Fair"
+            info.healthInfo = "Server load level = " + status
+            continue
+        
         # If we made it here, things look good!
         info.health="Good"
-        info.healthInfo="Glideins running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
+        #info.healthInfo="Glideins running=" + str(totalRunning) + " held=" + str(totalHeld) + " idle=" + str(totalIdle)
+        info.healthInfo=""
 
 
 def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
@@ -215,17 +283,20 @@ def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
                 facility_name=facility_name,
                 site_name=site_name,
                 description=description,
-                name=name if name else fqdn.split(',')[0],  # use first part of fqdn if no name is given
+                name=name,
                 active=(active == "true"),  # convert string to bool
                 isCCStar=(isCCStar == "true"),  # convert string to bool
             )
             resource_info_by_fqdn[fqdn] = resource_info
     return resource_info_by_fqdn
 
-@cache_response_to_disk(file_name="info.csv")
+@cache_response_to_disk(file_name="ce_info.csv")
 def get_landing_response():
-    # Gather up CE info from Topology and Collectors
+    # Gather up CE info from Topology
     resource_info_by_fqdn = ce_info_from_topology()
+    # Now gather up CE info from the ganglia time series database
+    ce_info_from_ganglia(resource_info_by_fqdn)
+    # Now gather up CE info from the collectors - currently must be done after all other sources
     ce_info_from_collectors(resource_info_by_fqdn)
     # Output this info as a CSV that htcondorview can use
     default_domain = current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
@@ -235,9 +306,19 @@ def get_landing_response():
     writer.writerow([field.name for field in fields(ResourceInfo)])
     for ri in resource_info_by_fqdn.values():
         output.write(',\n[')
+        # If the Name is unknown, use the first part of the FQDN
+        if ri.name=="Unknown":
+            ri.name =  ri.fqdn.split('.')[0]
+        # If the FQDN ends with the default domain, remove it
         if ri.fqdn.endswith('.' + default_domain):
-            # If the FQDN ends with the default domain, remove it
             ri.fqdn = ri.fqdn[:-len(default_domain)-1]
+        # Add a URL with the name to point to the Overview page if not in Poor health
+        if ri.health != "Poor":
+            if ri.allocationsPastWeek:
+                ri.name=f"/overview.html?host={ri.fqdn}|{ri.name}"
+            else:
+                # No allocations in the past week, so use the month view
+                ri.name=f"/overview.html?host={ri.fqdn}&r=month|{ri.name}"
         writer.writerow(astuple(ri))
     output.write(']')
     result = output.getvalue()
@@ -287,8 +368,8 @@ def get_ce_facility_site_descrip(fqdn: str):
     """
     ce_info = get_ce_info(fqdn)
     if ce_info:
-        return ce_info.facility_name, ce_info.site_name, ce_info.description
-    return "Unknown", "Unknown", "Unknown"
+        return ce_info.facility_name, ce_info.site_name, ce_info.description, ce_info.health
+    return "Unknown", "Unknown", "Unknown", "Poor"
 
 ##########################################
 # Flask routes
@@ -310,13 +391,13 @@ def ce_landing_data():
 
 @landing_bp.route('/landing.html')
 def ce_admin_landing_page():
-    return render_template('landing.html.j2',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
+    return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
 
 @landing_bp.route('/home.html')
 @landing_bp.route('/select.html')
 @landing_bp.route('/index.html')
 def ce_user_landing_page():
-    return render_template('home.html.j2',linkmap={},page_title="Available CE Dashboards")
+    return render_template('home.html',linkmap={},page_title="Available CE Dashboards")
 
 @landing_bp.route('/')
 def ce_goto_default_or_user_landing_page():

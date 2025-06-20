@@ -282,14 +282,12 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-%if 0%{?suse_version}
-# Hold back pelican on openSUSE until version 7.16.1 is released
-Requires: pelican >= 7.14.1
-Requires: pelican-osdf-compat >= 7.14.1
+%if 0%{?rhel} == 7
+Requires: pelican >= 7.16.1
 %else
-Requires: pelican >= 7.15.1
-Requires: pelican-osdf-compat >= 7.15.1
+Requires: (pelican >= 7.16.5 or pelican-debug >= 7.16.5)
 %endif
+Requires: pelican-osdf-compat >= 7.16.5
 
 %if 0%{?rhel} != 7
 # Require tested Apptainer
@@ -297,7 +295,7 @@ Requires: pelican-osdf-compat >= 7.15.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.1 is released
+# Hold back apptainer until version 1.4.2 is released
 Requires: apptainer >= 1.3.6
 %endif
 %endif
@@ -363,11 +361,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+%endif
 
 # upgrade-checks package discontinued as of 24.8.0
 Obsoletes: %{name}-upgrade-checks < 24.8.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
-%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -1213,6 +1211,7 @@ rm -rf %{buildroot}
 %_bindir/condor_test_token
 %_bindir/condor_manifest
 %_bindir/condor_upgrade_check
+%_bindir/condor_join_pool
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1526,14 +1525,35 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.0-2
-- Use pelican 7.14.1 on openSUSE
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.8.1-1
+- Fix claim re-use, which was broken in HTCondor version 24.5.1
+- Add support for hierarchic and delegatable v2 cgroups
+- Add the ability to put each HTCondor daemon in its own cgroup
+- Always sets the execute bit on the executable regardless of its origin
+- The EP sets the HOME environment variable to match the /etc/passwd entry
+- Add new 'halt' and 'resume' verbs to "htcondor dag"
+- Add htcondor2.DAGMan class to send commands to a running DAG
+- htcondor ap status now reports the AP's RecentDaemonCoreDutyCycle
+- Can configure condor_adstash to fetch a custom projection of attributes
 
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-2
-- Use pelican 7.14.1 on openSUSE
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+  - Pelican 7.16.5 now includes end-to-end integrity checks for clients
+- Add Python wheel for Python 3.13, drop Python wheel for Python 3.7
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
 
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
-- Use pelican 7.14.1 on openSUSE
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.25-1
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
 
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.3-1
 - condor_who now works for Glideins

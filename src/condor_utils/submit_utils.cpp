@@ -234,8 +234,9 @@ bool SubmitHash::AssignJobVal(const char * attr, long long val) { return job->As
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
-	typedef struct string_value { const char * psz; int flags; } string_value;
-	struct key_value_pair { const char * key; const string_value * def; };
+	typedef struct nodef_value { const char * psz; int flags; } nodef_value;
+	typedef nodef_value string_value; // string value derives from nodef value but is actually the same structurally
+	struct key_value_pair { const char * key; const nodef_value * def; };
 	struct key_table_pair { const char * key; const key_value_pair * aTable; int cElms; }; // metaknob table
 	typedef struct kvp_value { const char * key; int flags; const key_value_pair * aTable; int cElms; } kvp_value;
 	typedef struct ktp_value { const char * label; int flags; const key_table_pair * aTables; int cTables; } ktp_value;
@@ -573,8 +574,7 @@ SubmitHash::SubmitHash()
 
 SubmitHash::~SubmitHash()
 {
-	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
-	SubmitMacroSet.errors = NULL;
+	SubmitMacroSet.free_all();
 
 	delete job; job = nullptr;
 	delete procAd; procAd = nullptr;
@@ -582,7 +582,6 @@ SubmitHash::~SubmitHash()
 	protectedUrlMap = nullptr; // Submit Hash does not own this object
 
 	// detach but do not delete the cluster ad
-	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
 	clusterAd = nullptr;
 }
 
@@ -1319,19 +1318,7 @@ void SubmitHash::init(int value)
 
 void SubmitHash::clear()
 {
-	if (SubmitMacroSet.table) {
-		memset(SubmitMacroSet.table, 0, sizeof(SubmitMacroSet.table[0]) * SubmitMacroSet.allocation_size);
-	}
-	if (SubmitMacroSet.metat) {
-		memset(SubmitMacroSet.metat, 0, sizeof(SubmitMacroSet.metat[0]) * SubmitMacroSet.allocation_size);
-	}
-	if (SubmitMacroSet.defaults && SubmitMacroSet.defaults->metat) {
-		memset(SubmitMacroSet.defaults->metat, 0, sizeof(SubmitMacroSet.defaults->metat[0]) * SubmitMacroSet.defaults->size);
-	}
-	SubmitMacroSet.size = 0;
-	SubmitMacroSet.sorted = 0;
-	SubmitMacroSet.apool.clear();
-	SubmitMacroSet.sources.clear();
+	SubmitMacroSet.clear();
 	setup_macro_defaults(); // setup a defaults table for the macro_set. have to re-do this because we cleared the apool
 }
 
@@ -7292,10 +7279,17 @@ int SubmitHash::SetProtectedURLTransferLists() {
 			if (has_diff_queue_list || clusterInputQueues.size() > 0) {
 				classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
 				if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
+					delete list;
 					push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
 					           ATTR_TRANSFER_Q_URL_IN_LIST);
 					ABORT_AND_RETURN( 1 );
 				}
+			} else {
+				// We didn't transfer ownership of the queue_xfer_lists, so delete them
+				for (auto& tree : queue_xfer_lists) {
+					delete tree;
+				}
+				queue_xfer_lists.clear(); // Clear the vector to remove dangling pointers
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string

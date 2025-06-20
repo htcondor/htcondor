@@ -68,7 +68,7 @@ enum {
    D_TEST,  // messages with this category are parsed by various tests.
    D_STATS,       // tcp STATS for file transfer, used by the C_GAHP
    D_MATERIALIZE, // materialization of jobs in the schedd
-   D_BUG,   // messages that indicate the daemon is going down.
+   D_DYE,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.
 

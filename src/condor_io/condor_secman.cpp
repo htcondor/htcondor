@@ -1494,8 +1494,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	// was decided on when the key was issued.
 	// otherwise, get our security policy and work it out with the server.
 	if (m_have_session) {
-		MergeClassAds( &m_auth_info, session_entry->policy(), true );
-
+		MergeClassAds( &m_auth_info, session_entry->policy(), true, false);
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
 					session_entry->id().c_str(), m_session_key.c_str());

@@ -429,6 +429,11 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 	publish_static(&ad); // publish stuff we learned from the Starter
 
+	auto volman = getVolumeManager();
+	if (volman && volman->is_enabled()) {
+		volman->PublishDiskInfo(ad);
+	}
+
 	m_attr->publish_static(&ad);
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);

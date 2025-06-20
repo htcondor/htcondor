@@ -89,7 +89,7 @@ public:
 	bool quit(void(*)(void*, int, int),void*) { return false; }; // nothing to do here, only needed when there is a procd
 
 	// Have we seen an oom kill event in this cgroup;
-	bool has_been_oom_killed(pid_t pid);
+	bool has_been_oom_killed(pid_t pid, int exit_status);
 
 	// We don't need these, cgroups just works
 	bool track_family_via_environment(pid_t, PidEnvID&) {return true;}

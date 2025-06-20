@@ -135,14 +135,17 @@ get_distribution() {
 
 do_configure_firewall() {
     if command_exists firewall-cmd; then
-        echo -e "\n# Open port 9618 for use by HTCondor"
-        (
-            if ! is_dry_run; then
-                set -x
-            fi
-            $sh_c "firewall-cmd --zone=public --add-port=9618/tcp --permanent"
-            $sh_c "firewall-cmd --reload"
-        )
+        if firewall-cmd --state > /dev/null 2>&1; then
+            # The firewall is running, let's configure it
+            echo -e "\n# Open port 9618 for use by HTCondor"
+            (
+                if ! is_dry_run; then
+                    set -x
+                fi
+                $sh_c "firewall-cmd --zone=public --add-port=9618/tcp --permanent"
+                $sh_c "firewall-cmd --reload"
+            )
+        fi
     fi
 }
 

@@ -102,18 +102,19 @@
     </nav>
 
 {% macro get_vaxis(resource) -%}
+    {% set vaxis_options = '&vAxis.maxValue=3&vAxis.format=short' %}
     {%- if resource == 'Memory' -%}
-        Gigabytes (GBs, 1K=TB, 1M=PB)
+        Gigabytes (GBs, 1K=TB, 1M=PB){{ vaxis_options }}
     {%- elif resource == 'Cpus' -%}
-        CPU Cores
+        CPU Cores{{ vaxis_options }}
     {%- elif resource == 'Gpus' -%}
-        GPU Devices
+        GPU Devices{{ vaxis_options }}
     {%- elif resource == 'Disk' -%}
-        Gigabytes (GBs, 1K=TB, 1M=PB)
+        Gigabytes (GBs, 1K=TB, 1M=PB){{ vaxis_options }}
     {%- elif resource == 'Bcus' -%}
-        BCUs (1 CPU/4GB Mem/4GB Disk)
+        BCUs (1 CPU/4GB Mem/4GB Disk){{ vaxis_options }}
     {%- else -%}
-        {{ resource }}
+        {{ resource }}{{ vaxis_options }}
     {%- endif -%}
 {%- endmacro %}
 
@@ -128,10 +129,8 @@
 {% block body %}
 {% endblock body %}
 
-
 <!-- vizlog is where errors will go. -->
 <div id="vizlog"></div>
-
 
 </body>
 </html>

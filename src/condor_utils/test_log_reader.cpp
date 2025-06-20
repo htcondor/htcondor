@@ -554,6 +554,7 @@ ReadEvents(Options &opts, int &totalEvents)
 						diff_pos, diff_enum,
 						puniq, pseq,
 						nuniq, nseq );
+				ReadUserLog::UninitFileState( nstate );
 			}
 
 			numEvents++;

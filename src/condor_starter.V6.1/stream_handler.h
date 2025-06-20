@@ -48,7 +48,7 @@ private:
 	off_t           offset;
 	int             flags;
 
-	static std::list< StreamHandler * > handlers;
+	static std::list<std::unique_ptr<StreamHandler>> handlers;
 
 	bool Reconnect();
 	void Disconnect();

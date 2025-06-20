@@ -502,9 +502,25 @@ Machine ClassAd Attributes
     A boolean value that when ``True`` represents a Linux Execution Point
     is using a loop back device to enforce disk limits.
 
+:classad-attribute-def:`LvmBackingStore`
+    A string value containing the name of the backing LVM device a Linux
+    Execution Point is using to enforce disk limits. This will be the
+    ``<Volume Group Name>`` or ``<Volume Group Name>/<Thinpool LV Name>``.
+
 :classad-attribute-def:`LvmIsThinProvisioning`
     A boolean value that when ``True`` represents a Linux Execution Point
     is using thin provisioned logical volumes to enforce disk limits.
+
+:classad-attribute-def:`LvmDetectedDisk`
+    An integer value representing the size in bytes of the LVM backing
+    Volume Group or Thinpool Logical Volume used to enforce disk limits.
+
+:classad-attribute-def:`LvmNonCondorDiskUsage`
+    An integer representing the total size in bytes utilized by non-HTCondor
+    produced logical volumes associated with the LVM backing Volume Group or
+    Thinpool Logical Volume. This value is subtracted from the
+    :ad-attr:`LvmDetectedDisk` to produce the total available disk available
+    to the *condor_startd*.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
