@@ -38,7 +38,7 @@
 #endif // EXPAND_GLOBS
 
 // functions for handling the queue statement
-int queue_connect();
+int queue_connect(SubmitHash &submit_hash);
 
 class SimScheddQ : public AbstractScheddQ {
 public:
