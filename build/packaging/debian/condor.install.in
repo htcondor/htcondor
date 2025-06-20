@@ -12,6 +12,7 @@ usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue
 usr/bin/condor_dagman
+usr/bin/condor_dag_checker
 usr/bin/condor_docker_enter
 usr/bin/condor_drain
 usr/bin/condor_evicted_files

@@ -318,9 +318,9 @@ DagParser::ParseParentChild(DagLexer& details) {
 				error.clear();
 			} else { error = "No children node(s) specified"; }
 		} else if (parsing_children) {
-			cmd->children.emplace_back(token);
+			cmd->children.insert(token);
 		} else {
-			cmd->parents.emplace_back(token);
+			cmd->parents.insert(token);
 		}
 		token = details.next();
 	} while ( ! token.empty());
@@ -772,7 +772,7 @@ DagParser::next() {
 	std::string line;
 
 	while (std::getline(fs, line)) {
-		int command_line_no = ++line_no;
+		uint64_t command_line_no = ++line_no;
 		trim(line);
 		if (skip_line(line)) { continue; }
 
@@ -785,9 +785,9 @@ DagParser::next() {
 		const auto it = DAG::KEYWORD_MAP.find(cmd_str);
 		if (it == DAG::KEYWORD_MAP.end()) {
 			parse_success = false;
-			formatstr(err, "%s:%d '%s' is not a valid DAG command",
-			                GetFile().c_str(), command_line_no, cmd_str.c_str());
-			all_errors.emplace_back(err);
+			std::string error;
+			formatstr(error, "'%s' is not a valid DAG command", cmd_str.c_str());
+			all_errors.emplace_back(GetFile(), command_line_no, error);
 		} else {
 			DAG::CMD cmd = it->second;
 
@@ -801,10 +801,14 @@ DagParser::next() {
 					parse_error = ParseSubmitDesc(fs, details);
 				}
 
+				if (details.failed()) {
+					parse_error = details.error();
+				}
+
 				if ( ! parse_error.empty()) {
-					formatstr(err, "%s:%d Failed to parse %s command: %s",
-					          GetFile().c_str(), command_line_no, cmd_str.c_str(), parse_error.c_str());
-					all_errors.emplace_back(err);
+					auto& ref = all_errors.emplace_back(GetFile(), command_line_no, parse_error);
+					ref.SetCommand(cmd);
+
 					return false;
 				}
 
@@ -942,15 +946,13 @@ DagParser::next() {
 			if ( ! parse_error.empty()) {
 				data.reset(nullptr);
 				parse_success = false;
-				formatstr(err, "%s:%d Failed to parse %s command: %s",
-				          GetFile().c_str(), command_line_no, cmd_str.c_str(), parse_error.c_str());
 
-				all_errors.emplace_back(err);
+				auto& ref = all_errors.emplace_back(GetFile(), command_line_no, parse_error);
+				ref.SetCommand(cmd);
 
-				const auto syntax = DAG::COMMAND_SYNTAX.find(cmd);
-				if (syntax != DAG::COMMAND_SYNTAX.end()) {
-					example_syntax = syntax->second;
-				} else { example_syntax = "No syntax provided"; }
+			} else {
+				// Set source information for this command
+				data->SetSource(GetFile(), command_line_no);
 			}
 		} // End if/else valid DAG command
 

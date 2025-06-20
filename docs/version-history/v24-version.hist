@@ -10,6 +10,9 @@
   show information about execution points enforcing disk limits.
   :jira:`3119`
 
+- Added new :tool:`condor_dag_checker` tool for users to check DAG files
+  for syntactical and logical errors prior to submission.
+
 - In the *condor_job_router*, the old ClassAd-based route syntax
   (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
   is no longer supported.

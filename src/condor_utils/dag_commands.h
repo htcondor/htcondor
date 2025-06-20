@@ -134,23 +134,36 @@ public:
 	virtual ~BaseDagCommand() = default;
 
 	// Print DAG command information
-	virtual void PrintInfo() {
+	virtual void PrintInfo() const {
 		size_t len_pad = strlen(GetCommandStr()) >= 20 ? 0 : (20 - strlen(GetCommandStr()));
 		std::string padding(len_pad, ' ');
 		printf("[%02d] %s%s\n", (int)GetCommand(), padding.c_str(), GetDetails().c_str());
 	}
 
-	virtual std::string GetDetails() {
+	virtual std::string GetDetails() const {
 		std::string details;
 		formatstr(details, "%s > %s", GetCommandStr(), _getDetails().c_str());
 		return details;
 	}
 
-	virtual const char* GetCommandStr() { return DAG::GET_KEYWORD_STRING(GetCommand()); }
+	virtual const char* GetCommandStr() const { return DAG::GET_KEYWORD_STRING(GetCommand()); }
 
 	// Get the commands enum value
-	virtual DAG::CMD GetCommand() = 0;
-	virtual std::string _getDetails() = 0;
+	virtual DAG::CMD GetCommand() const = 0;
+	virtual std::string _getDetails() const = 0;
+
+	virtual void SetSource(const std::string& src, const uint64_t line_no) {
+		source = src;
+		line = line_no;
+	}
+
+	virtual std::pair<std::string, uint64_t> GetSource() const {
+		return std::make_pair(source, line);
+	}
+
+protected:
+	std::string source{};
+	uint64_t line{0};
 };
 
 // Create custom type to represent a unique pointer to BaseDagCommand
@@ -161,8 +174,8 @@ class NodeCommand : public BaseDagCommand {
 public:
 	NodeCommand() = default;
 
-	virtual DAG::CMD GetCommand() = 0;
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const = 0;
+	virtual std::string _getDetails() const {
 		std::string ret;
 		std::string desc = inline_desc.empty() ? "NONE" : inline_desc;
 		std::replace(desc.begin(), desc.end(), '\n', DAG::NEWLINE_RELACEMENT);
@@ -204,7 +217,7 @@ public:
 	JobCommand() = delete;
 	JobCommand(const std::string& n) { name = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::JOB; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::JOB; }
 };
 
 // FINAL Command
@@ -213,7 +226,7 @@ public:
 	FinalCommand() = delete;
 	FinalCommand(const std::string& n) { name = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::FINAL; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::FINAL; }
 };
 
 // SERVICE Command
@@ -222,7 +235,7 @@ public:
 	ServiceCommand() = delete;
 	ServiceCommand(const std::string& n) { name = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SERVICE; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SERVICE; }
 };
 
 // PROVISIONER Command
@@ -231,7 +244,7 @@ public:
 	ProvisionerCommand() = delete;
 	ProvisionerCommand(const std::string& n) { name = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::PROVISIONER; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::PROVISIONER; }
 };
 
 // SUBDAG Command
@@ -240,7 +253,7 @@ public:
 	SubdagCommand() = delete;
 	SubdagCommand(const std::string& n) { name = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SUBDAG; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SUBDAG; }
 };
 
 // SUBMIT-DESCRIPTION Command (Shared inline job submit description)
@@ -249,8 +262,8 @@ public:
 	SubmitDescCommand() = delete;
 	SubmitDescCommand(const std::string& n) : name(n) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SUBMIT_DESCRIPTION; }
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SUBMIT_DESCRIPTION; }
+	virtual std::string _getDetails() const {
 		std::string ret;
 		std::string desc(inline_desc);
 		std::replace(desc.begin(), desc.end(), '\n', DAG::NEWLINE_RELACEMENT);
@@ -275,8 +288,8 @@ public:
 	SpliceCommand() = delete;
 	SpliceCommand(const std::string& n) : name(n) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SPLICE; }
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SPLICE; }
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %s %s", name.c_str(), file.c_str(), dir.c_str());
 		return ret;
@@ -301,8 +314,8 @@ class ParentChildCommand : public BaseDagCommand {
 public:
 	ParentChildCommand() = default;
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::PARENT_CHILD; }
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::PARENT_CHILD; }
+	virtual std::string _getDetails() const {
 		std::string ret = "[ ";
 		for (const auto& p : parents) { ret += p + " "; }
 		ret += "] --> [ ";
@@ -310,8 +323,8 @@ public:
 		return ret + "]";
 	}
 
-	std::vector<std::string> parents{}; // List of parent nodes
-	std::vector<std::string> children{}; // List of child nodes
+	std::set<std::string> parents{}; // List of parent nodes
+	std::set<std::string> children{}; // List of child nodes
 };
 
 // Abstract class to modify some behavior of a node type
@@ -319,8 +332,8 @@ class NodeModifierCommand : public BaseDagCommand {
 public:
 	NodeModifierCommand() = default;
 
-	virtual DAG::CMD GetCommand() = 0;
-	virtual std::string _getDetails() = 0;
+	virtual DAG::CMD GetCommand() const = 0;
+	virtual std::string _getDetails() const = 0;
 
 	virtual std::string GetNodeName() const { return node; };
 protected:
@@ -332,8 +345,8 @@ class ScriptCommand : public NodeModifierCommand {
 public:
 	ScriptCommand() = default;
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SCRIPT; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SCRIPT; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %s '%s' %lld %d %s %s", node.c_str(), DAG::GET_SCRIPT_TYPE_STRING(type),
 		          script.c_str(), (long long)defer_time, defer_status, debug_file.c_str(),
@@ -378,8 +391,8 @@ public:
 	RetryCommand() = delete;
 	RetryCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::RETRY; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::RETRY; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d %d", node.c_str(), max, code);
 		return ret;
@@ -401,8 +414,8 @@ public:
 	AbortDagCommand() = delete;
 	AbortDagCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::ABORT_DAG_ON; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::ABORT_DAG_ON; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d %d", node.c_str(), status, code);
 		return ret;
@@ -424,8 +437,8 @@ public:
 	VarsCommand() = delete;
 	VarsCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::VARS; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::VARS; };
+	virtual std::string _getDetails() const {
 		std::string ret = node;
 		if (when == DAG::VarsPlacement::PREPEND) { ret += " PREPEND"; }
 		else if (when == DAG::VarsPlacement::APPEND) { ret += " APPEND"; }
@@ -451,8 +464,8 @@ public:
 	PriorityCommand() = delete;
 	PriorityCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::PRIORITY; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::PRIORITY; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d", node.c_str(), prio);
 		return ret;
@@ -470,8 +483,8 @@ public:
 	PreSkipCommand() = delete;
 	PreSkipCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::PRE_SKIP; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::PRE_SKIP; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d", node.c_str(), code);
 		return ret;
@@ -489,8 +502,8 @@ public:
 	DoneCommand() = delete;
 	DoneCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::DONE; };
-	virtual std::string _getDetails() { return node; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::DONE; };
+	virtual std::string _getDetails() const { return node; }
 };
 
 // SAVE_POINT_FILE Command
@@ -499,8 +512,8 @@ public:
 	SavePointCommand() = delete;
 	SavePointCommand(const std::string& n) { node = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SAVE_POINT_FILE; };
-	virtual std::string _getDetails() { return node + " " + file; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SAVE_POINT_FILE; };
+	virtual std::string _getDetails() const { return node + " " + file; }
 
 	void SetFilename(const std::string& f) { file = f; }
 	std::string GetFilename() const { return file; }
@@ -514,8 +527,8 @@ public:
 	CategoryCommand() = delete;
 	CategoryCommand(const std::string& n) { name = n; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::CATEGORY; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::CATEGORY; };
+	virtual std::string _getDetails() const {
 		std::string ret = name;
 		for (const auto& n : nodes) { ret += " " + n; }
 		return ret;
@@ -534,8 +547,8 @@ public:
 	MaxJobsCommand() = delete;
 	MaxJobsCommand(const std::string& cat) : category(cat) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::MAXJOBS; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::MAXJOBS; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d", category.c_str(), limit);
 		return ret;
@@ -555,8 +568,8 @@ class FileCommand : public BaseDagCommand {
 public:
 	FileCommand() = default;
 
-	virtual DAG::CMD GetCommand() = 0;
-	virtual std::string _getDetails() = 0;
+	virtual DAG::CMD GetCommand() const = 0;
+	virtual std::string _getDetails() const = 0;
 
 	virtual std::string GetFile() const { return file; };
 protected:
@@ -569,8 +582,8 @@ public:
 	ConfigCommand() = delete;
 	ConfigCommand(const std::string& f) { file = f; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::CONFIG; };
-	virtual std::string _getDetails() { return file; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::CONFIG; };
+	virtual std::string _getDetails() const { return file; }
 };
 
 // INCLUDE Command
@@ -579,8 +592,8 @@ public:
 	IncludeCommand() = delete;
 	IncludeCommand(const std::string& f) { file = f; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::INCLUDE; };
-	virtual std::string _getDetails() { return file; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::INCLUDE; };
+	virtual std::string _getDetails() const { return file; }
 };
 
 // DOT Command
@@ -589,8 +602,8 @@ public:
 	DotCommand() = delete;
 	DotCommand(const std::string& f) { file = f; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::DOT; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::DOT; };
+	virtual std::string _getDetails() const {
 		return file + " " + include + " " + (update ? "T" : "F") + " " + (overwrite ? "T" : "F");
 	}
 
@@ -615,8 +628,8 @@ public:
 	NodeStatusCommand() = delete;
 	NodeStatusCommand(const std::string& f) { file = f; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::NODE_STATUS_FILE; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::NODE_STATUS_FILE; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d %s", file.c_str(), min_update, always_update ? "T" : "F");
 		return ret;
@@ -638,8 +651,8 @@ public:
 	JobStateLogCommand() = delete;
 	JobStateLogCommand(const std::string& f) { file = f; }
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::JOBSTATE_LOG; };
-	virtual std::string _getDetails() { return file; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::JOBSTATE_LOG; };
+	virtual std::string _getDetails() const { return file; }
 };
 
 // REJECT Command
@@ -648,8 +661,8 @@ public:
 	RejectCommand() = delete;
 	RejectCommand(const std::string& f, const int n) : file(f), line_no(n) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::REJECT; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::REJECT; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s:%d", file.c_str(), line_no);
 		return ret;
@@ -668,8 +681,8 @@ public:
 	SetAttrCommand() = delete;
 	SetAttrCommand(const std::string& a) : attr_line(a) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::SET_JOB_ATTR; };
-	virtual std::string _getDetails() { return attr_line; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::SET_JOB_ATTR; };
+	virtual std::string _getDetails() const { return attr_line; }
 
 	std::string GetAttrLine() const { return attr_line; }
 private:
@@ -682,8 +695,8 @@ public:
 	EnvCommand() = delete;
 	EnvCommand(const std::string& v, bool set) : vars(v), is_set(set) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::ENV; };
-	virtual std::string _getDetails() { return (is_set ? "SET " : "GET ") + vars; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::ENV; };
+	virtual std::string _getDetails() const { return (is_set ? "SET " : "GET ") + vars; }
 
 	std::string GetEnvVariables() const { return vars; }
 	bool IsSet() const { return is_set; }
@@ -698,8 +711,8 @@ public:
 	ConnectCommand() = delete;
 	ConnectCommand(const std::string& s1, const std::string& s2) : splice1(s1), splice2(s2) {}
 
-	virtual DAG::CMD GetCommand() { return DAG::CMD::CONNECT; };
-	virtual std::string _getDetails() { return "[" + splice1 + "]--[" + splice2 + "]"; }
+	virtual DAG::CMD GetCommand() const { return DAG::CMD::CONNECT; };
+	virtual std::string _getDetails() const { return "[" + splice1 + "]--[" + splice2 + "]"; }
 
 	std::tuple<std::string, std::string> GetSplices() const { return std::make_tuple(splice1, splice2); }
 private:
@@ -716,8 +729,8 @@ public:
 		cmd = c;
 	}
 
-	virtual DAG::CMD GetCommand() { return cmd; };
-	virtual std::string _getDetails() {
+	virtual DAG::CMD GetCommand() const { return cmd; };
+	virtual std::string _getDetails() const {
 		std::string ret;
 		formatstr(ret, "%s %d %s", node.c_str(), pin, (cmd == DAG::CMD::PIN_IN) ? "IN" : "OUT");
 		return ret;

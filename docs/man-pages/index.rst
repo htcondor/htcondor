@@ -80,6 +80,8 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
            condor_gpu_discovery
            :::link:condor_gpu_discovery
            condor_power_state
+           condor_dag_checker
+           :::link:condor_dag_checker
        Managing Submitters
            condor_userprio
            :::link:condor_userprio
@@ -235,6 +237,7 @@ Other
     classad_eval
     condor_adstash
     condor_annex
+    condor_dag_checker
     condor_rmdir
     condor_ssh_start
     condor_ssl_fingerprint
