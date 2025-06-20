@@ -27,7 +27,7 @@ Name: condor
 Version: %{condor_version}
 %global version_ %(tr . _ <<< %{version})
 
-%if 0%{x86_64_v2}
+%if 0%{?x86_64_v2}
 BuildArch: x86_64_v2
 %endif
 
