@@ -51,7 +51,7 @@ Hold Reason Codes
     | | [TransferOutputError]          | transferring job output files       |                    |                             |
     |                                  | or self-checkpoint files.           |                    |                             |
     +----------------------------------+-------------------------------------+--------------------+-----------------------------+
-    | | 13                             | An error occurred while             | See node           |                             |
+    | | 13                             | An error occurred while             | See note           |                             |
     | | [TransferInputError]           | transferring job input files.       |                    |                             |
     |                                  |                                     |                    |                             |
     +----------------------------------+-------------------------------------+--------------------+-----------------------------+
