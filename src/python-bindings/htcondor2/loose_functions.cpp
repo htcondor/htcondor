@@ -89,6 +89,15 @@ _enable_debug( PyObject *, PyObject * ) {
 
 
 static PyObject *
+_disable_debug( PyObject *, PyObject * ) {
+	dprintf_make_thread_safe();
+	dprintf_deconfig_tool();
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
 _enable_log( PyObject *, PyObject * ) {
 	dprintf_make_thread_safe();
 	dprintf_config_ContinueOnFailure(1);

@@ -1,5 +1,9 @@
 *** 24.10.0 features
 
+- The new Python API now includes `htcondor2.disable_debug()`, which is
+  intended interactive use (after debugging a problem).
+  :jira:`3003`
+
 - Execution Points enforcing disk limits will now subtract the size of
   pre-existing logical volumes from the advertised available disk. Any
   logical volumes associated with HTCondor are not subtracted.

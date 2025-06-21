@@ -165,6 +165,7 @@ int dprintf_config(
 	const char* log2arg = nullptr); // in: number of entries in p_info array on input.
 
 int dprintf_config_tool(const char* subsys, const char * flags, const char * logfile = nullptr);
+int dprintf_deconfig_tool();
 int dprintf_config_tool_on_error(const char * flags);
 
 // parse a string of the form "NNN Unit" where NNN is an integer, and Unit is b, Kb, Mb, Gb, or Tb (size units) or s, m, h, d, or w (time units)
