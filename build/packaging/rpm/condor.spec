@@ -17,8 +17,13 @@
 %define devtoolset 11
 %endif
 
-%if 0%{?rhel} == 8 || 0%{?rhel} == 9
-# Use gcc-toolset 14 for EL8 and EL9
+%if 0%{?rhel} == 8
+# Use gcc-toolset 14 for EL8
+%define gcctoolset 14
+%endif
+
+%if 0%{?rhel} == 9 || 0%{?rhel} == 10
+# Use gcc-toolset 14 for EL9 and EL10
 %define gcctoolset 14
 %endif
 
@@ -666,6 +671,13 @@ export CXX=$(which c++)
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
+%endif
+
+%if 0%{?x86_64_v2}
+export CFLAGS="${CFLAGS} -march=x86-64-v2"
+export CXXFLAGS="${CXXFLAGS} -march=x86-64-v2"
+export FFLAGS="${FFLAGS} -march=x86-64-v2"
+export FCFLAGS="${FCFLAGS} -march=x86-64-v2"
 %endif
 
 # build man files
