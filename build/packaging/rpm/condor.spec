@@ -23,8 +23,8 @@
 %endif
 
 %if 0%{?rhel} == 9 || 0%{?rhel} == 10
-# Use gcc-toolset 14 for EL9 and EL10
-%define gcctoolset 14
+# Use gcc-toolset 15 for EL9 and EL10
+%define gcctoolset 15
 %endif
 
 Summary: HTCondor: High Throughput Computing
