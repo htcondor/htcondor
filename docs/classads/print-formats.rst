@@ -200,6 +200,10 @@ that declares ``GROUP BY``.
         Owner
         ClusterId DESCENDING
 
+.. note::
+
+    The ``GROUP BY`` keyword does not function on all tools such
+    as :tool:`condor_history`.
 
 SUMMARY Line
 ~~~~~~~~~~~~
@@ -285,8 +289,17 @@ The following function names can be used with the ``PRINTAS`` keyword
 to format data. Some functions implicitly use the value of specific
 attributes regardless of the data produced from the evaluated expression.
 
-``ACTIVITY_CODE``
-    Render a two character  code from the :ad-attr:`State` and :ad-attr:`Activity`
+.. warning::
+
+    Some ``PRINTAS`` functions render output internally based on specific
+    attributes found in the ClassAd regardless of the provided ``<expression>``.
+    An ``<expression>`` is still required to specified in the formatting
+    line but can be something that results to ``UNDEFINED`` such as ``Dummy``.
+
+    Functions that behave in this manor are marked with ``⨁``.
+
+``⨁ ACTIVITY_CODE``
+    Render a two character code from the :ad-attr:`State` and :ad-attr:`Activity`
     attributes of the machine ad. For example, this function would return
     ``Ci`` if the :ad-attr:`State` ``Claimed`` and the :ad-attr:`Activity`
     was ``Idle``.
@@ -327,11 +340,11 @@ attributes regardless of the data produced from the evaluated expression.
     Render the given Unix timestamp as an elapsed time since :ad-attr:`MyCurrentTime[type=machine]`
     or :ad-attr:`LastHeardFrom[type=machine]`.
 
-``BATCH_NAME``
+``⨁ BATCH_NAME``
     Render the job batch name either explicitly set by :ad-attr:`JobBatchName` or
     constructed using various other attributes.
 
-``BUFFER_IO_MISC``
+``⨁ BUFFER_IO_MISC``
     Render state of job file transfer based on :ad-attr:`TransferringInput`,
     :ad-attr:`TransferringOutput`, and :ad-attr:`TransferQueued`.
 
@@ -341,12 +354,12 @@ attributes regardless of the data produced from the evaluated expression.
 ``CONDOR_VERSION``
     Render the HTCondor version extracted from given string.
 
-``CPU_UTIL``
+``⨁ CPU_UTIL``
     Renders :ad-attr:`RemoteUserCpu` divided by :ad-attr:`CommittedTime` using the
     ``%.1f`` format specifier. If :ad-attr:`CommittedTime` is ``UNDEFINED``, zero, or
     a negative number then the result is treated as ``UNDEFINED``.
 
-``DAG_OWNER``
+``⨁ DAG_OWNER``
     Render :ad-attr:`DAGNodeName` for jobs that have :ad-attr:`DAGManJobId` defined.
     Otherwise, render :ad-attr:`Owner`.
 
@@ -361,22 +374,22 @@ attributes regardless of the data produced from the evaluated expression.
     Render a given timestamp with :ad-attr:`LastHeardFrom[type=machine]` time subtracted
     as a human readable string ``MM/DD hh:mm``.
 
-``GRID_JOB_ID``
+``⨁ GRID_JOB_ID``
     Render the job id of a grid universe job extracted from :ad-attr:`GridJobId`.
 
-``GRID_RESOURCE``
+``⨁ GRID_RESOURCE``
     Render manager and host for a grid universe job extracted from :ad-attr:`GridResource`.
     For ec2 jobs the host will be the value of :ad-attr:`EC2RemoteVirtualMachineName`.
 
-``GRID_STATUS``
+``⨁ GRID_STATUS``
     Render the :ad-attr:`GridJobStatus` for a grid universe job. If the attribute
     is a string then the value is reported unmodified. Otherwise, if the value is
     an integer, the status is presumed to be an HTCondor :ad-attr:`JobStatus`.
 
-``JOB_COMMAND``
+``⨁ JOB_COMMAND``
     Render the :ad-attr:`Cmd` and :ad-attr:`Arguments` for a job.
 
-``JOB_DESCRIPTION``
+``⨁ JOB_DESCRIPTION``
     Render the job description from :ad-attr:`JobDescription` or ``MATCH_EXP_JobDescription``
     if defined. Otherwise, render like ``JOB_COMMAND`` function.
 
@@ -384,10 +397,10 @@ attributes regardless of the data produced from the evaluated expression.
     Render a provided integer value as a string representing various :ad-attr:`JobMaterializePaused`
     modes.
 
-``JOB_ID``
+``⨁ JOB_ID``
     Render the job id string in the form of ":ad-attr:`ClusterId`\.\ :ad-attr:`ProcId`".
 
-``JOB_STATUS``
+``⨁ JOB_STATUS``
     Render a two character string representation of the current job state base on
     :ad-attr:`JobStatus` and input/output file transfer status.
 
@@ -405,13 +418,13 @@ attributes regardless of the data produced from the evaluated expression.
 ``MEMBER_COUNT``
     Render the number of elements in a provided string list or ClassAd list.
 
-``MEMORY_USAGE``
+``⨁ MEMORY_USAGE``
     Render the :ad-attr:`MemoryUsage` or :ad-attr:`ImageSize` of a job in megabytes.
 
-``OWNER``
+``⨁ OWNER``
     Render the :ad-attr:`Owner` for a job.
 
-``PLATFORM``
+``⨁ PLATFORM``
     Render a compact platform name from the values of :ad-attr:`OpSys`, :ad-attr:`OpSysAndVer`,
     :ad-attr:`OpSysShortName`, and :ad-attr:`Arch`.
 
@@ -430,7 +443,7 @@ attributes regardless of the data produced from the evaluated expression.
     Render the provided number of Mibibytes nicely converted to the appropriate B, KB, MB,
     GB, or TB suffix.
 
-``REMOTE_HOST``
+``⨁ REMOTE_HOST``
     Render the jobs :ad-attr:`RemoteHost` unless the job is running in the grid universe.
     For grid universe jobs, either :ad-attr:`EC2RemoteVirtualMachineName` or :ad-attr:`GridResource`
     will be rendered. For :tool:`condor_q`, scheduler and local universe jobs will render
@@ -441,10 +454,10 @@ attributes regardless of the data produced from the evaluated expression.
 
 .. hidden::
 
-    ``STDU_GOODPUT``
+    ``⨁ STDU_GOODPUT``
         Render a jobs 'goodput' time in seconds.
 
-    ``STDU_MPBS``
+    ``⨁ STDU_MPBS``
         Render a jobs Megabytes per second of 'goodput' for the total bytes of data
         sent and received.
 
@@ -463,7 +476,7 @@ Local to condor_q
 The following ``PRINTAS`` functions are only available for use in custom
 print format tables provided to :tool:`condor_q`
 
-``CPU_TIME``
+``⨁ CPU_TIME``
     Render the jobs :ad-attr:`RemoteUserCpu` if defined and non-zero. Otherwise, this
     function renders either the current shadows lifetime or the sum of the current shadows
     lifetime plus :ad-attr:`RemoteWallClockTime`. The former occurs when :tool:`condor_q`
@@ -477,20 +490,20 @@ Local to condor_who
 The following ``PRINTAS`` functions are only available for use in custom
 print format tables provided to :tool:`condor_who`.
 
-``JOB_DIR``
+``⨁ JOB_DIR``
     Render the associated jobs scratch directory path.
 
-``JOB_DIRCMD``
+``⨁ JOB_DIRCMD``
     Render either the associated jobs scratch directory path if found or
     the jobs executed command.
 
-``JOB_PID``
+``⨁ JOB_PID``
     Render the associated jobs process ID (PID).
 
-``JOB_PROGRAM``
+``⨁ JOB_PROGRAM``
     Render the associated jobs executed command.
 
-``SLOT_ID``
+``⨁ SLOT_ID``
     Render the provided slot ID as a simplified string. ``X`` for static
     slots and ``X_YYY`` for dynamic slots.
 
