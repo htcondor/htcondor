@@ -45,6 +45,7 @@
 #include <string.h>
 #include <math.h>
 #include "dhry.h"
+#include <algorithm>
 /* DO NOT include sysapi.h here */
 
 #include "utc_time.h"
@@ -550,7 +551,9 @@ mips_raw( void )
 	}
 
 	// For faster machines, run with more loops.
-	loops = int(floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST )));
+	loops = (int)
+            std::clamp(0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST),
+                      0.0, (double) std::numeric_limits<int>::max());
 	while( true ) {
 		double t1 = condor_gettimestamp_double( );
 		mips_ = dhry_mips(loops);
