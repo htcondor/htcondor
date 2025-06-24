@@ -690,6 +690,13 @@ export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
+%if 0%{?x86_64_v2}
+export CFLAGS="${CFLAGS} -march=x86-64-v2"
+export CXXFLAGS="${CXXFLAGS} -march=x86-64-v2"
+export FFLAGS="${FFLAGS} -march=x86-64-v2"
+export FCFLAGS="${FCFLAGS} -march=x86-64-v2"
+%endif
+
 # build man files
 %if 0%{?amzn}
 # if this environment variable is set, sphinx-build cannot import markupsafe

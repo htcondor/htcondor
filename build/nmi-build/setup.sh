@@ -194,13 +194,19 @@ else
     $INSTALL ninja-build
 fi
 
+exists() {
+    [ -e "$1" ]
+}
+
 # Make the gcc-toolset compiler the default on AlmaLinux
 if [ $ID = 'almalinux' ]; then
-    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
-    # shellcheck disable=SC2016 # we want this expanded at runtime
-    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
-    # shellcheck disable=SC2016 # we want this expanded at runtime
-    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
+    if exists /opt/rh/gcc-toolset-*/enable; then
+        echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+        # shellcheck disable=SC2016 # we want this expanded at runtime
+        echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+        # shellcheck disable=SC2016 # we want this expanded at runtime
+        echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
+    fi
 fi
 
 # Container users can sudo
