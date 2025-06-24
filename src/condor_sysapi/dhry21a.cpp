@@ -44,8 +44,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "dhry.h"
 #include <algorithm>
+#include "dhry.h"
 /* DO NOT include sysapi.h here */
 
 #include "utc_time.h"
