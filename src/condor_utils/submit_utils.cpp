@@ -3356,9 +3356,12 @@ int SubmitHash::SetNotification()
 	else if( strcasecmp(how, "ERROR") == 0 ) {
 		notification = NOTIFY_ERROR;
 	} 
+	else if( strcasecmp(how, "START") == 0 ) {
+		notification = NOTIFY_START;
+	} 
 	else {
 		push_error(stderr, "Notification must be 'Never', "
-				 "'Always', 'Complete', or 'Error'\n" );
+				 "'Always', 'Complete', 'Start', or 'Error'\n" );
 		ABORT_AND_RETURN( 1 );
 	}
 

@@ -1028,6 +1028,12 @@ BaseShadow::emailRemoveEvent( const char* reason )
 	mailer.sendRemove( jobAd, reason );
 }
 
+void
+BaseShadow::emailStartEvent( ClassAd *jobAd, const char* reason ) 
+{
+	Email mailer;
+	mailer.sendStart( jobAd, reason );
+}
 
 void BaseShadow::initUserLog()
 {
@@ -1571,6 +1577,8 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 			// They want it now, so do an update right here.
 		updateJobInQueue(U_STATUS);
 	}
+
+	emailStartEvent(jobAd, "");
 }
 
 
