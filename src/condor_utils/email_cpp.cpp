@@ -193,6 +193,14 @@ Email::sendRemove( ClassAd* ad, const char* reason)
 void
 Email::sendStart( ClassAd* ad, const char* reason)
 {
+	int notification = NOTIFY_NEVER;
+	ad->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
+	if (notification != NOTIFY_START) {
+		// If the job ad does not request a START notification, we
+		// don't send one.
+		return;
+	}
+
 	std::string full_subject = build_subject_line(ad, reason);
 	fp = email_user_open_id( ad, cluster, proc, full_subject.c_str() );
 	writeJobId( ad );
