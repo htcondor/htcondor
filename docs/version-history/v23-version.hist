@@ -1,5 +1,9 @@
 *** 23.0.27 bugs
 
+- Fixed a bug in ``htcondor job status`` that caused some time
+  information to be displayed incorrectly.
+  :jira:`3112`
+
 *** 23.0.26 bugs
 
 - Fixed a bug when dagman's log file was on a full filesystem, dagman
