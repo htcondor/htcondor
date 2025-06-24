@@ -1,5 +1,10 @@
 *** 23.10.27 bugs
 
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
 *** 23.0.27 bugs
 
 *** 23.10.26 bugs
