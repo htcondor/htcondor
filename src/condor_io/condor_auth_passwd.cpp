@@ -1714,7 +1714,7 @@ Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_
 		return false;
 	}
 
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT)", nullptr, nullptr, &db_err_msg);
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);
 		sqlite3_close(db);
