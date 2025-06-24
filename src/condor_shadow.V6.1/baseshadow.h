@@ -432,6 +432,8 @@ class BaseShadow : public Service
 
 	void emailRemoveEvent( const char* reason );
 
+	void emailStartEvent( ClassAd * ad, const char *reason);
+
 	void logRequeueEvent( const char* reason );
 
 	void removeJobPre( const char* reason );
