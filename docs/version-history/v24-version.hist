@@ -25,6 +25,10 @@
 
 *** 24.10.0 bugs
 
+- Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
+  OAuth2 credential was a plain user-provided access token.
+  :jira:`3084`
+
 - Attempting to send common files to startds whose sinful string is more than
   256 characters will no longer cause a shadow exception.
   :jira:`3128`
