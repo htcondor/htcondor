@@ -5960,7 +5960,7 @@ CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
 
 	// The last thing on the line must be `CommonFilesEventType(<type>)`.
 	Regex r; int errCode = 0; int errOffset = 0;
-	bool patternOK = r.compile( "CommonFilesEventType\\(([^)]+)\\)$", &errCode, &errOffset );
+	bool patternOK = r.compile( "Common files event: (.+)$", &errCode, &errOffset );
 	ASSERT( patternOK );
 
 	std::vector<std::string> groups;
@@ -5974,7 +5974,7 @@ CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
 
 bool
 CommonFilesEvent::formatBody( std::string & out ) {
-	if(! formatstr_cat( out, "CommonFilesEventType(%s)\n", type.c_str() )) {
+	if(! formatstr_cat( out, "Common files event: %s\n", type.c_str() )) {
 		return false;
 	}
 
