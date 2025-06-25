@@ -62,6 +62,13 @@ def the_condor(test_dir, the_lock_dir):
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
+            # Test for long sinful strings.
+            "HOST_ALIAS":       "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz",
         },
     ) as the_condor:
         yield the_condor

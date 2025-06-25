@@ -136,6 +136,7 @@ MAN_PAGES = [
         ('condor_config_val', 1),
         ('condor_continue', 1),
         ('condor_dagman', 1),
+        ('condor_dag_checker', 1),
         ('condor_drain', 1),
         ('condor_evicted_files', 1),
         ('condor_fetchlog', 1),
