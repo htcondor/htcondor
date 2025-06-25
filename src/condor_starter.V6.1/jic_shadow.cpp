@@ -668,11 +668,11 @@ JICShadow::transferOutput( bool &transient_failure )
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
-				updateShadowWithPluginResults("Output");
+				updateShadowWithPluginResults("Output", filetrans);
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
-			updateShadowWithPluginResults("Output");
+			updateShadowWithPluginResults("Output", filetrans);
 		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
@@ -1350,7 +1350,7 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
 
-	updateShadowWithPluginResults("Checkpoint");
+	updateShadowWithPluginResults("Checkpoint", filetrans);
 
 	if( !rval ) {
 		// Failed to transfer.
@@ -2693,9 +2693,9 @@ JICShadow::beginFileTransfer( void )
 
 
 void
-JICShadow::updateShadowWithPluginResults( const char * which ) {
-	if(! filetrans) { return; }
-	if( filetrans->getPluginResultList().size() <= 0 ) { return; }
+JICShadow::updateShadowWithPluginResults( const char * which, FileTransfer * ft ) {
+	if(! ft) { return; }
+	if( ft->getPluginResultList().size() <= 0 ) { return; }
 
 	ClassAd updateAd;
 
@@ -2705,7 +2705,7 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 // or grovelling around in the list.  The former sounds more attractive.
 //
 	classad::ExprList * e = new classad::ExprList();
-	for( const auto & ad : filetrans->getPluginResultList() ) {
+	for( const auto & ad : ft->getPluginResultList() ) {
 		// This requires that plug-ins never generated ads with the
 		// "TransferClass" attribute.  We can enforce that when we
 		// read them off disk, if that becomes necessary.
@@ -2768,7 +2768,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 #endif
 
 	if ( ftrans ) {
-		updateShadowWithPluginResults("Input");
+		updateShadowWithPluginResults("Input", filetrans);
 
 			// Make certain the file transfer succeeded.
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
@@ -3734,6 +3734,29 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 	// case determining success or failure in handleJobSetupCommand()
 	// becomes an interesting problem, probably solved with coroutines.
 	rval = stagingFTO.DownloadFiles();
+
+
+	//
+	// Reporting.
+	//
+
+	// Trigger the epoch entry.
+	updateShadowWithPluginResults("Common", & stagingFTO);
+
+	// Do we still care about this?
+	const std::string & stats = stagingFTO.GetInfo().tcp_stats.c_str();
+	if(! stats.empty()) {
+		std::string full_stats = "(peer stats from starter): ";
+		full_stats += stats;
+
+		// JICShadow::transferInputStatus() ASSERTs here.
+		if(! shadowDisconnected()) {
+			if( shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
+			}
+		}
+	}
+
 
 	dprintf( D_ZKM, "transferCommonInput(): exit\n" );
 	return (rval == 1);

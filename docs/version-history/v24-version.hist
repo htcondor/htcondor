@@ -23,6 +23,11 @@
   displays the first job for each unique hold code and subcode.
   :jira:`3127`
 
+- Improvements to observability of common files transfer, including new entries
+  in the shadow and starter daemon logs; a new CommonFiles event in the
+  job/user event log; and a new transfer entry in the epoch history.
+  :jira:`3052`
+
 *** 24.10.0 bugs
 
 - Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed

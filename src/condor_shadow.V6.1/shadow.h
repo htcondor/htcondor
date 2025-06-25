@@ -217,7 +217,7 @@ class UniShadow : public BaseShadow
 	virtual void logReconnectFailedEvent( const char* reason );
 
 
-	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName);
+	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName, bool print_waiting=true);
 
 	FileTransfer * commonFTO = NULL;
 	SingleProviderSyndicate * cfLock = NULL;
