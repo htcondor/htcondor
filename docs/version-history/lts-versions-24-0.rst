@@ -7,14 +7,31 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 24.0.10
+---------------
+
+Release Notes:
+
+.. HTCondor version 24.0.10 released on Month Date, 2025.
+
+- HTCondor version 24.0.10 planned release date is Month Date, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.10 23.10.27 23.0.27
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.10 23.10.27 23.0.27
+
 Version 24.0.9
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.0.9 released on Month Date, 2025.
+.. HTCondor version 24.0.9 released on June 24, 2025.
 
-- HTCondor version 24.0.9 planned release date is Month Date, 2025.
+- HTCondor version 24.0.9 planned release date is June 24, 2025.
 
 New Features:
 
@@ -29,9 +46,7 @@ Version 24.0.8
 
 Release Notes:
 
-.. HTCondor version 24.0.8 released on May 27, 2025.
-
-- HTCondor version 24.0.8 planned release date is May 27, 2025.
+- HTCondor version 24.0.8 released on June 12, 2025.
 
 New Features:
 

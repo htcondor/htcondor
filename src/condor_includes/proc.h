@@ -64,6 +64,7 @@ typedef struct PROC_ID {
 #define NOTIFY_ALWAYS		1
 #define	NOTIFY_COMPLETE		2
 #define NOTIFY_ERROR		3
+#define NOTIFY_START 		4
 
 #define READER	1
 #define WRITER	2

@@ -531,6 +531,9 @@
 #define ATTR_LOAD_AVG  "LoadAvg"
 #define ATTR_LVM_USE_LOOPBACK "LvmUsingLoopback"
 #define ATTR_LVM_USE_THIN_PROVISION "LvmIsThinProvisioning"
+#define ATTR_LVM_BACKING_STORE "LvmBackingStore"
+#define ATTR_LVM_DETECTED_DISK "LvmDetectedDisk"
+#define ATTR_LVM_NON_CONDOR_USAGE "LvmNonCondorDiskUsage"
 #define ATTR_MACHINE  "Machine"
 #define ATTR_MACHINE_COUNT  "MachineCount"
 #define ATTR_MICROARCH  "Microarch"
@@ -561,6 +564,7 @@
 #define ATTR_NAME  "Name"
 #define ATTR_NICE_USER_deprecated  "NiceUser"
 
+#define ATTR_NEED_REFRESH  "NeedRefresh"
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"

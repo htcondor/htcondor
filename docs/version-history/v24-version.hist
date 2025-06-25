@@ -1,4 +1,47 @@
-*** 24.9.0 features
+*** 24.10.0 features
+
+- Execution Points enforcing disk limits will now subtract the size of
+  pre-existing logical volumes from the advertised available disk. Any
+  logical volumes associated with HTCondor are not subtracted.
+  :jira:`3119`
+
+- Added new ``-lvm`` option to :tool:`condor_status` to view current disk usage
+  of slots enforcing disk limits. This option can be paired with ``-startd`` to
+  show information about execution points enforcing disk limits.
+  :jira:`3119`
+
+- Added new :tool:`condor_dag_checker` tool for users to check DAG files
+  for syntactical and logical errors prior to submission.
+
+- In the *condor_job_router*, the old ClassAd-based route syntax
+  (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
+  is no longer supported.
+  :jira:`3118`
+
+- Improvements to *condor_q* for held jobs. The hold code and subcode are
+  now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
+  displays the first job for each unique hold code and subcode.
+  :jira:`3127`
+
+*** 24.10.0 bugs
+
+- Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
+  OAuth2 credential was a plain user-provided access token.
+  :jira:`3084`
+
+- Attempting to send common files to startds whose sinful string is more than
+  256 characters will no longer cause a shadow exception.
+  :jira:`3128`
+
+- Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
+  :jira:`3104`
+
+- Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
+  :jira:`3106`
+
+*** 24.0.10 bugs
+
+*** 24.9.1 features
 
 - Some errors on the EP that occurred after the AP had released the
   corresponding claim could cause a slot to remain claimed until the job lease
@@ -22,7 +65,7 @@
   expression will be written to the ``StartLog``.
   :jira:`3033`
 
-*** 24.9.0 bugs
+*** 24.9.1 bugs
 
 - Fixed a bug which could cause unnecessary activation failures if the previous
   job in the slot failed to transfer its output.  This would manifest as slots
@@ -153,7 +196,7 @@
 
 *** 24.0.8 bugs
 
-- Fixed a bug introduced in 24.0.7 when running on Linux cgroup v1
+- Fixed a bug introduced in 24.0.7 and 24.7.3 when running on Linux cgroup v1
   systems, jobs that were killed by the out-of-memory killer were
   considered completed instead of being put on hold.
   :jira:`3094`

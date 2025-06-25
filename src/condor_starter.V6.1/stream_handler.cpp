@@ -26,7 +26,7 @@
 
 extern class Starter *starter;
 
-/* static */ std::list< StreamHandler * > StreamHandler::handlers;
+/* static */ std::list<std::unique_ptr<StreamHandler>> StreamHandler::handlers;
 
 StreamHandler::StreamHandler() : is_output(false), job_pipe(-1), handler_pipe(-1), remote_fd(-1), offset(0), flags(0), done(false), connected(0), pending(0)
 {
@@ -109,7 +109,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 
 	done = false;
 	connected = true;
-	handlers.push_back( this );
+	handlers.emplace_back( this );
 
 	return true;
 }
@@ -204,7 +204,7 @@ int StreamHandler::Handler( int  /* fd */)
 				// If close fails, that's OK, we know the bytes are on disk
 			REMOTE_CONDOR_close(remote_fd);
 
-			handlers.remove( this );
+			handlers.remove_if([this](const std::unique_ptr<StreamHandler>& h) { return h.get() == this; });
 		} else if(result<0) {
 			dprintf(D_SYSCALLS,"StreamHandler: %s: unable to read: %s\n",streamname.c_str(),strerror(errno));
 			// Why don't we EXCEPT here?
@@ -241,7 +241,7 @@ int StreamHandler::Handler( int  /* fd */)
 			daemonCore->Cancel_Pipe(handler_pipe);
 			daemonCore->Close_Pipe(handler_pipe);
 			REMOTE_CONDOR_close(remote_fd);
-			handlers.remove( this );
+			handlers.remove_if([this](const std::unique_ptr<StreamHandler>& h) { return h.get() == this; });
 		} else if(result<0) {
 			EXCEPT("StreamHandler: %s: unable to read from %s: %s",streamname.c_str(),filename.c_str(),strerror(errno));
 		}
@@ -257,9 +257,7 @@ int StreamHandler::GetJobPipe() const
 
 /* static */ int
 StreamHandler::ReconnectAll() {
-	std::list< StreamHandler * >::iterator i = handlers.begin();
-	for( ; i != handlers.end(); ++i ) {
-		StreamHandler * handler = * i;
+	for( const auto &handler: handlers ) {
 		if( ! handler->done ) {
 			if( handler->connected ) {
 				// Do NOT call Disconnect().  This reconnect only happens

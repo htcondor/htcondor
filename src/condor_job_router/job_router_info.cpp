@@ -320,9 +320,8 @@ int main(int argc, const char *argv[])
 	}
 	if (! found.empty()) {
 		fprintf(stdout,
-			"\nWARNING: %s are deprecated and will be removed for V24 of HTCondor. New configuration"
-			" syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>."
-			" Note: The removal will occur during the lifetime of the HTCondor V23 feature series\n",
+			"\nWARNING: %s are no longer supported. New configuration"
+			" syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.\n",
 			found.c_str());
 	}
 
