@@ -94,13 +94,7 @@ dprintf_config_tool_on_error(const char * flags)
 
 int
 dprintf_deconfig_tool() {
-	dprintf_output_settings tool_output[1];
-	tool_output[0].choice = 0;
-	tool_output[0].accepts_all = false;
-	tool_output[0].logPath = "2>";
-	tool_output[0].HeaderOpts = 0;
-	tool_output[0].VerboseCats = 0;
-	dprintf_set_outputs(tool_output, 1);
+	dprintf_set_outputs(NULL, 0);
 
 	return 0;
 }
