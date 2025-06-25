@@ -5,6 +5,8 @@
 
 .. autofunction:: enable_debug
 
+.. autofunction:: disable_debug
+
 .. autofunction:: enable_log
 
 .. autofunction:: log
