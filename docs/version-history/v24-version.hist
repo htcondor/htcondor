@@ -1,5 +1,10 @@
 *** 24.10.0 features
 
+- Some errors on the EP that occurred after the AP had released the
+  corresponding claim could cause a slot to remain claimed until the job lease
+  timeout had expired.  This change should reduce incidents of this behavior.
+  :jira:`3028`
+
 - Execution Points enforcing disk limits will now subtract the size of
   pre-existing logical volumes from the advertised available disk. Any
   logical volumes associated with HTCondor are not subtracted.
