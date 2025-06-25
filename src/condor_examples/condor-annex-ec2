@@ -29,6 +29,15 @@
 [ "${NETWORKING}" = "no" ] && exit 1
 
 start() {
+    if [ -e /dev/nvme1n1 ]; then
+        echo -n "Adding local storage: "
+        mkfs.ext4 -E nodiscard -m0 /dev/nvme1n1
+        mount -o discard /dev/nvme1n1 /mnt
+        mkdir /mnt/execute
+        chown condor.condor /mnt/execute
+        echo "EXECUTE = /mnt/execute" >> /etc/condor/config.d/01-execute.config
+    fi
+
     echo -n "Configuring HTCondor to be an EC2 annex: "
 
 (
