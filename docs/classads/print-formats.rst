@@ -296,7 +296,7 @@ attributes regardless of the data produced from the evaluated expression.
     An ``<expression>`` is still required to specified in the formatting
     line but can be something that results to ``UNDEFINED`` such as ``Dummy``.
 
-    Functions that behave in this manor are marked with ``⨁``.
+    Functions that behave in this manner are marked with ``⨁``.
 
 ``⨁ ACTIVITY_CODE``
     Render a two character code from the :ad-attr:`State` and :ad-attr:`Activity`
