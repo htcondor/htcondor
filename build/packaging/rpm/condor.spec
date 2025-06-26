@@ -287,11 +287,11 @@ Requires: rsync
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.16.1
+Requires: pelican >= 7.17.0
 %else
-Requires: (pelican >= 7.16.5 or pelican-debug >= 7.16.5)
+Requires: (pelican >= 7.17.0 or pelican-debug >= 7.17.0)
 %endif
-Requires: pelican-osdf-compat >= 7.16.5
+Requires: pelican-osdf-compat >= 7.17.0
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -1536,6 +1536,27 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.9.2-1
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
+- New job attribute to report number of input files transferred by protocol
+- Optional condor_schedd history log file
+- condor_watch_q can now track DAGMan jobs when using the -clusters option
+- Fix bug that caused claim failure when previous output transfer failed
+- Fix bug where access tokens were not generated from Vault tokens
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.9-1
+- In htcondor2, empty configuration keys are now treated as non-existent
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.26-1
+- Fix memory leak in the condor_schedd when using late materialization
+- Fix condor_master start up when file descriptor ulimit was huge
+- HTCondor tarballs now contain Pelican 7.17.0
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.26-1
+- Fix ingestion of ads into Elasticsearch under very rare circumstances
+- DAGMan better handles being unable to write to a full filesystem
+- 'kill_sig' submit commands are now ignored on the Windows platform
+
 * Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.8.1-1
 - Fix claim re-use, which was broken in HTCondor version 24.5.1
 - Add support for hierarchic and delegatable v2 cgroups

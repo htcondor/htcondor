@@ -1,4 +1,7 @@
-*** 24.9.1 features
+*** 24.9.2 features
+
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
+  :jira:`3090`
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
   :jira:`3024`
@@ -17,7 +20,7 @@
   expression will be written to the ``StartLog``.
   :jira:`3033`
 
-*** 24.9.1 bugs
+*** 24.9.2 bugs
 
 - Fixed a bug which could cause unnecessary activation failures if the previous
   job in the slot failed to transfer its output.  This would manifest as slots

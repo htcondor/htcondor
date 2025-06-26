@@ -1,3 +1,36 @@
+condor (24.9.2-1) stable; urgency=medium
+
+  * Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
+  * New job attribute to report number of input files transferred by protocol
+  * Optional condor_schedd history log file
+  * condor_watch_q can now track DAGMan jobs when using the -clusters option
+  * Fix bug that caused claim failure when previous output transfer failed
+  * Fix bug where access tokens were not generated from Vault tokens
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 10:44:00 -0500
+
+condor (24.0.9-1) stable; urgency=medium
+
+  * In htcondor2, empty configuration keys are now treated as non-existent
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 10:18:00 -0500
+
+condor (23.10.26-1) stable; urgency=medium
+
+  * Fix memory leak in the condor_schedd when using late materialization
+  * Fix condor_master start up when file descriptor ulimit was huge
+  * HTCondor tarballs now contain Pelican 7.17.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 07:08:00 -0500
+
+condor (23.0.26-1) stable; urgency=medium
+
+  * Fix ingestion of ads into Elasticsearch under very rare circumstances
+  * DAGMan better handles being unable to write to a full filesystem
+  * 'kill_sig' submit commands are now ignored on the Windows platform
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 06:59:00 -0500
+
 condor (24.8.1-1) stable; urgency=medium
 
   * Fix claim re-use, which was broken in HTCondor version 24.5.1
