@@ -57,9 +57,6 @@
 
 *** 24.9.2 features
 
-- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
-  :jira:`3090`
-
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
   :jira:`3024`
 
@@ -93,6 +90,11 @@
   ``job_spec`` parameter to specify a cluster ID as an integer, as a string
   without a proc ID, or in a list of such strings.
   :jira:`2979`
+
+*** 24.0.9 features
+
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
+  :jira:`3090`
 
 *** 24.0.9 bugs
 
