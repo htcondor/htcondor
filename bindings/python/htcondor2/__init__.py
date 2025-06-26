@@ -75,6 +75,7 @@ with _add_dll_dir():
     from ._loose_functions import set_ready_state
 
     from .htcondor2_impl import _enable_debug as enable_debug
+    from .htcondor2_impl import _disable_debug as disable_debug
     from .htcondor2_impl import _enable_log as enable_log
     from ._logging import _log as log
 

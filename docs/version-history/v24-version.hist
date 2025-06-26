@@ -1,5 +1,9 @@
 *** 24.10.0 features
 
+- The new Python API now includes `htcondor2.disable_debug()`, which is
+  intended interactive use (after debugging a problem).
+  :jira:`3003`
+
 - Some errors on the EP that occurred after the AP had released the
   corresponding claim could cause a slot to remain claimed until the job lease
   timeout had expired.  This change should reduce incidents of this behavior.
