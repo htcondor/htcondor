@@ -1,3 +1,11 @@
+condor (23.0.26-1) stable; urgency=medium
+
+  * Fix ingestion of ads into Elasticsearch under very rare circumstances
+  * DAGMan better handles being unable to write to a full filesystem
+  * 'kill_sig' submit commands are now ignored on the Windows platform
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 06:59:00 -0500
+
 condor (23.0.25-1) stable; urgency=medium
 
   * Fix problems where parallel universe jobs could crash the condor_schedd
