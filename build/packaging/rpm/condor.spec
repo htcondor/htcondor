@@ -1477,6 +1477,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.26-1
+- Fix ingestion of ads into Elasticsearch under very rare circumstances
+- DAGMan better handles being unable to write to a full filesystem
+- 'kill_sig' submit commands are now ignored on the Windows platform
+
 * Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
 - Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1

@@ -45,6 +45,9 @@ def convert_seconds_to_dhms(seconds):
     """
     Converts a number of seconds to a string in the format "0+00:00:00"
     """
+
+    seconds = int(seconds)
+
     days = seconds // (24*60*60)
     seconds = seconds % (24*60*60)
     hours = seconds // (60*60)
