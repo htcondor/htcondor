@@ -1,6 +1,22 @@
 *** 23.10.27 bugs
 
+- Fixed a bug where the specific vacate reason wasn't reported in the job
+  event log or the job ad when a job was evicted from the EP.
+  The message ``Unspecified job interruption`` and code 1005 were used
+  instead.
+  :jira:`3117`
+
 *** 23.0.27 bugs
+
+- Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
+  that caused some time information to be displayed incorrectly.
+  :jira:`3112`
+
+*** 23.10.26 features
+
+- HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.0.
 
 *** 23.10.26 bugs
 

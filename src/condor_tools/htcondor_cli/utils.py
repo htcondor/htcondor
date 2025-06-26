@@ -44,7 +44,7 @@ def readable_time(seconds, abbrev=False):
             if day_value > 1:
                 day_unit += "s"
             if hour_value > 1:
-                hour_unit += "h"
+                hour_unit += "s"
         return f"{day_value} {day_unit} {hour_value} {hour_unit}"
 
 
