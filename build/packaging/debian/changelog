@@ -1,3 +1,18 @@
+condor (23.10.26-1) stable; urgency=medium
+
+  * Fix memory leak in the condor_schedd when using late materialization
+  * Fix condor_master start up when file descriptor ulimit was huge
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 07:08:00 -0500
+
+condor (23.0.26-1) stable; urgency=medium
+
+  * Fix ingestion of ads into Elasticsearch under very rare circumstances
+  * DAGMan better handles being unable to write to a full filesystem
+  * 'kill_sig' submit commands are now ignored on the Windows platform
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 06:59:00 -0500
+
 condor (23.10.25-1) stable; urgency=medium
 
   * Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
