@@ -1,3 +1,11 @@
+condor (23.10.26-1) stable; urgency=medium
+
+  * Fix memory leak in the condor_schedd when using late materialization
+  * Fix condor_master start up when file descriptor ulimit was huge
+  * HTCondor tarballs now contain Pelican 7.17.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 07:08:00 -0500
+
 condor (23.0.26-1) stable; urgency=medium
 
   * Fix ingestion of ads into Elasticsearch under very rare circumstances
