@@ -27,6 +27,10 @@ Name: condor
 Version: %{condor_version}
 %global version_ %(tr . _ <<< %{version})
 
+%if 0%{?x86_64_v2}
+BuildArch: x86_64_v2
+%endif
+
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
@@ -662,6 +666,13 @@ export CXX=$(which c++)
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
+%endif
+
+%if 0%{?x86_64_v2}
+export CFLAGS="${CFLAGS} -march=x86-64-v2"
+export CXXFLAGS="${CXXFLAGS} -march=x86-64-v2"
+export FFLAGS="${FFLAGS} -march=x86-64-v2"
+export FCFLAGS="${FCFLAGS} -march=x86-64-v2"
 %endif
 
 # build man files
