@@ -1745,6 +1745,14 @@ bool JobQueueJob::IsNoopJob()
 #endif
 }
 
+bool JobQueueJob::IsOCUClaimer() const
+{
+	bool ocu = false;
+	this->LookupBool("IsOCUHolder", ocu);
+	return ocu;
+}
+
+
 void JobQueueBase::CheckJidAndType(const JOB_ID_KEY &key)
 {
 	if (key.cluster != jid.cluster || key.proc != jid.proc) {
@@ -8611,6 +8619,7 @@ static JobRunnableState mapRunnableReasonCode(runnable_reason_code code)
 		JobRunnableState::Noop,        //IsNoopJob,
 		JobRunnableState::NotRunnable, //NotIdle,
 		JobRunnableState::NotRunnable, //UniverseNotInService,
+		JobRunnableState::NotRunnable, //OCUClaimer
 		JobRunnableState::NotRunnable, //InLongCooldown,
 		JobRunnableState::Cooldown,    //InShortCooldown,
 		JobRunnableState::Matched,     //AlreadyMatched,
@@ -9235,6 +9244,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
 
+	bool ocu = false;
+	my_match_ad->LookupBool("OCUClaim", ocu);
+	if (ocu) {
+		match_any_user = true;
+	}
 
 		// Iterate through the most recently constructed list of
 		// jobs, nicely pre-sorted first by submitter, then by job priority
@@ -9394,6 +9408,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 		}	// end of for loop through PrioRec array
 
+		// If we got here and ocu true and match_any_user is false, then
+		// no job from our priority use matched.  Try again for someone else.
+		if (ocu && !match_any_user) {
+			match_any_user = true;
+			continue;
+		}
+
 		if(rebuilt_prio_rec_array) {
 				// We found nothing, and we had a freshly built job list.
 				// Give up.
@@ -9422,6 +9443,11 @@ bool Runnable(JobQueueJob *job, runnable_reason_code & reason)
 	{
 		reason = runnable_reason_code::IsNoopJob;
 		return false;
+	}
+
+	if (job->IsOCUClaimer()) {
+		reason = runnable_reason_code::IsOCUClaimer;
+		return true;
 	}
 
 	if (job->Status() != IDLE) {
@@ -9465,6 +9491,7 @@ const char * getRunnableReason(runnable_reason_code code)
 		"not runnable (IsNoopJob)", //IsNoopJob,
 		"not runnable (not IDLE)", //NotIdle,
 		"not runnable (universe not in service)", //UniverseNotInService,
+		"not runnable (is OCU claimer)", // OCU Claimer,
 		"not runnable (in cool-down > 5min)", //InLongCooldown,
 		"not runnable (in cool-down < 5min)", //InShortCooldown,
 		"not runnable (already matched)", //AlreadyMatched,

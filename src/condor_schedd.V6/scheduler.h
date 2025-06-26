@@ -259,6 +259,9 @@ class match_rec
 	bool scheduled{false}; // For use by the DedicatedScheduler
 	bool needs_release_claim{false};
 	bool use_sec_session{false};
+	bool			is_ocu {false}; // when true, hold forever, hand out to others
+    PROC_ID         ocu_originator;  // procid of the ocu claimer job
+									
 	bool m_startd_sends_alives{false}; // in practice, actual default is true since 7.5.4
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
