@@ -206,6 +206,12 @@ These are all of the events that can show up in a job log file:
   occurs: transfer queued, transfer started, or transfer finished, for
   both the input and output sandboxes.
 
+| **Event Number:** 047
+| **Event Name:** Common Files
+| **Event Description:** This event occurs when a common files event
+  occurs: common files transfer queued, started, or finished; or when
+  waiting for common files to transfer started or finished.
+
 
 Table B.2: Event Codes in a Job Event Log
 
@@ -280,5 +286,5 @@ Table B.2: Event Codes in a Job Event Log
 +-------+---------------------------+---------------------------------------------------+
 | 040   | FILE_TRANSFER             | File transfer                                     |
 +-------+---------------------------+---------------------------------------------------+
-
-
+| 047   | COMMON_FILES              | Common files                                      |
++-------+---------------------------+---------------------------------------------------+

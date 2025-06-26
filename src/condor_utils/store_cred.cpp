@@ -367,8 +367,20 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
-	CredSorter sorter;
-	CredSorter::CredType cred_type = sorter.Sort(service);
+	// Should we write a .top file or a .use file?
+	// First, see if the client tells us
+	// Second, see if it looks like a Vault credential
+	// Finally, see if the service name belongs to a CredMon in config
+	bool use_top_file;
+	if (!ad || !ad->LookupBool(ATTR_NEED_REFRESH, use_top_file)) {
+		std::string credbuf((const char*)cred, (size_t)credlen);
+		if (credbuf.find("\"vault_url\"") != std::string::npos) {
+			use_top_file = true;
+		} else {
+			CredSorter sorter;
+			use_top_file = sorter.Sort(service) != CredSorter::UnknownType;
+		}
+	}
 
 	// if there is a service name and a handle name, concat the two together.
 	// this does mean we don't actually support querying service and/or handle
@@ -432,7 +444,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 				if (rc != SUCCESS) {
 					return rc;
 				}
-			} else if (cred_type != CredSorter::UnknownType) {
+			} else if (use_top_file) {
 				ccfile.clear();
 				return FAILURE_NOT_FOUND;
 			}
@@ -447,7 +459,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 				ccfile.clear();
 				return_ad.Assign(service, cred_stat_buf.st_mtime);
 				return SUCCESS;
-			} else if (cred_type == CredSorter::UnknownType) {
+			} else if (!use_top_file) {
 				ccfile.clear();
 				return FAILURE_NOT_FOUND;
 			} else {
@@ -501,7 +513,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 	size_t clen = credlen;
 
-	if (cred_type == CredSorter::UnknownType) {
+	if (!use_top_file) {
 		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
 	} else {
 

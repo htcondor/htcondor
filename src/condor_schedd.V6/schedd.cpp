@@ -9224,6 +9224,20 @@ Scheduler::StartJob(match_rec *rec)
 	PROC_ID id;
 
 	ASSERT( rec );
+
+	bool is_ocu_holder = false;
+	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
+	if (is_ocu_holder) {
+		// If the "job" is the one which is responsible for holding the OCU 
+		// claim, don't start the job, but set cluster/proc to -1 to indicate
+		// another job could start here.
+		rec->keep_while_idle = std::numeric_limits<int>::max();
+		rec->is_ocu = true;
+		rec->ocu_originator = {rec->cluster, rec->proc};
+		rec->cluster = rec->proc = -1;
+		rec->my_match_ad->Assign("OCUClaim", true);
+	}
+
 	switch(rec->status) {
 	case M_UNCLAIMED:
 		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
@@ -9339,7 +9353,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 		return false;
 	}
 
-	if( new_job_id.proc == -1 ) {
+	if ((new_job_id.proc == -1) && (!mrec->is_ocu)){
 			// no more jobs to run
 		if (mrec->idle_timer_deadline < time(0))  {
 			dprintf(D_ALWAYS,

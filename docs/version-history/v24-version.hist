@@ -4,6 +4,11 @@
   intended interactive use (after debugging a problem).
   :jira:`3003`
 
+- Some errors on the EP that occurred after the AP had released the
+  corresponding claim could cause a slot to remain claimed until the job lease
+  timeout had expired.  This change should reduce incidents of this behavior.
+  :jira:`3028`
+
 - Execution Points enforcing disk limits will now subtract the size of
   pre-existing logical volumes from the advertised available disk. Any
   logical volumes associated with HTCondor are not subtracted.
@@ -13,6 +18,9 @@
   of slots enforcing disk limits. This option can be paired with ``-startd`` to
   show information about execution points enforcing disk limits.
   :jira:`3119`
+
+- Added new :tool:`condor_dag_checker` tool for users to check DAG files
+  for syntactical and logical errors prior to submission.
 
 - In the *condor_job_router*, the old ClassAd-based route syntax
   (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
@@ -24,7 +32,16 @@
   displays the first job for each unique hold code and subcode.
   :jira:`3127`
 
+- Improvements to observability of common files transfer, including new entries
+  in the shadow and starter daemon logs; a new CommonFiles event in the
+  job/user event log; and a new transfer entry in the epoch history.
+  :jira:`3052`
+
 *** 24.10.0 bugs
+
+- Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
+  OAuth2 credential was a plain user-provided access token.
+  :jira:`3084`
 
 - Attempting to send common files to startds whose sinful string is more than
   256 characters will no longer cause a shadow exception.

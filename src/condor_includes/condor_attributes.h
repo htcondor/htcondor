@@ -202,6 +202,7 @@
 #define ATTR_ENTERED_CURRENT_ACTIVITY  "EnteredCurrentActivity"
 #define ATTR_ENTERED_CURRENT_STATE  "EnteredCurrentState"
 #define ATTR_ENTERED_CURRENT_STATUS  "EnteredCurrentStatus"
+#define ATTR_EPOCH_AD_TYPE "EpochAdType"
 #define ATTR_ERROR_STRING  "ErrorString"
 #define ATTR_ERROR_CODE  "ErrorCode"
 #define ATTR_WARNING "Warning"
@@ -564,6 +565,7 @@
 #define ATTR_NAME  "Name"
 #define ATTR_NICE_USER_deprecated  "NiceUser"
 
+#define ATTR_NEED_REFRESH  "NeedRefresh"
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
@@ -1223,6 +1225,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_HOW_FAST  "HowFast"
 #define ATTR_DRAIN_REASON "DrainReason"
 #define ATTR_RESUME_ON_COMPLETION  "ResumeOnCompletion"
+#define ATTR_RUN_INSTANCE_ID "RunInstanceID"
 #define ATTR_DRAINING  "Draining"
 #define ATTR_DRAINING_REQUEST_ID  "DrainingRequestId"
 #define ATTR_DRAINING_DEADLINE "DrainingDeadline"

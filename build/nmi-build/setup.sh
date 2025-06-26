@@ -199,7 +199,7 @@ echo "%$SUDO_GROUP ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$SUDO_GROUP
 
 # Install HTCondor to build and test BaTLab style
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    $INSTALL htcondor libnss-myhostname openssh-server
+    $INSTALL condor libnss-myhostname openssh-server
     # Ensure that gethostbyaddr() returns our hostname
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi

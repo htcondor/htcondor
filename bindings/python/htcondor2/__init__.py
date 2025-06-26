@@ -95,6 +95,7 @@ with _add_dll_dir():
     from ._daemon_command import DaemonCommand
     from ._submit_method import SubmitMethod
     from ._history_src import HistorySrc
+    from ._common_files_event_type import CommonFilesEventType
 
     # Classes.
     from ._collector import Collector

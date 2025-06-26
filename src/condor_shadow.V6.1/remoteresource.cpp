@@ -1425,7 +1425,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			} else {
 				c.Delete(attributeName);
 			}
-			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
+			// This is actually the match ad, which is mostly useless.
+			// writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 
