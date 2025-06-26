@@ -1,3 +1,14 @@
+condor (24.9.2-1) stable; urgency=medium
+
+  * Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
+  * New job attribute to report number of input files transferred by protocol
+  * Optional condor_schedd history log file
+  * condor_watch_q can now track DAGMan jobs when using the -clusters option
+  * Fix bug that caused claim failure when previous output transfer failed
+  * Fix bug where access tokens were not generated from Vault tokens
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 10:44:00 -0500
+
 condor (24.0.9-1) stable; urgency=medium
 
   * In htcondor2, empty configuration keys are now treated as non-existent

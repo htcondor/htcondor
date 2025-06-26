@@ -1538,6 +1538,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.9.2-1
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
+- New job attribute to report number of input files transferred by protocol
+- Optional condor_schedd history log file
+- condor_watch_q can now track DAGMan jobs when using the -clusters option
+- Fix bug that caused claim failure when previous output transfer failed
+- Fix bug where access tokens were not generated from Vault tokens
+
 * Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.9-1
 - In htcondor2, empty configuration keys are now treated as non-existent
 
