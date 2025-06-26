@@ -21,7 +21,13 @@ VERSION_CODENAME='none'
 . /etc/os-release
 echo "Building on $NAME $VERSION"
 VERSION_ID=${VERSION_ID%%.*}
-ARCH=$(arch)
+if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+    ARCH='x86_64_v2'
+    REPO_ARCH='x86_64_v2'
+else
+    ARCH=$(arch)
+    REPO_ARCH='noarch'
+fi
 echo "ID=$ID VERSION_ID=$VERSION_ID VERSION_CODENAME=$VERSION_CODENAME ARCH=$ARCH"
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
@@ -89,21 +95,21 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
 fi
 
 if [ $ID = 'amzn' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.$REPO_ARCH.rpm"
 fi
 
 if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.$REPO_ARCH.rpm"
 fi
 
 if [ $ID = 'fedora' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.$REPO_ARCH.rpm"
 fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.noarch.rpm"
+    zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
     done
@@ -119,17 +125,20 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
+# Debian/Ubuntu, select on codename
 if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt-get update
 fi
-if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ]; then
+# Enterprise Linux, select on version
+if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
     # ] ] Help out vim syntax highlighting
 fi
+# SUSE is special
 if [ $ID = 'future-opensuse-leap' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
@@ -185,13 +194,19 @@ else
     $INSTALL ninja-build
 fi
 
+exists() {
+    [ -e "$1" ]
+}
+
 # Make the gcc-toolset compiler the default on AlmaLinux
 if [ $ID = 'almalinux' ]; then
-    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
-    # shellcheck disable=SC2016 # we want this expanded at runtime
-    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
-    # shellcheck disable=SC2016 # we want this expanded at runtime
-    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
+    if exists /opt/rh/gcc-toolset-*/enable; then
+        echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+        # shellcheck disable=SC2016 # we want this expanded at runtime
+        echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+        # shellcheck disable=SC2016 # we want this expanded at runtime
+        echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
+    fi
 fi
 
 # Container users can sudo
@@ -304,7 +319,7 @@ if [ $ID != 'amzn' ]; then
         fi
         curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
             bash -s - "$externals_dir/apptainer"
-        rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+        rm -r "$externals_dir/apptainer/$(arch)/libexec/apptainer/cni"
         # Move apptainer out of the default path
         mv "$externals_dir/apptainer/bin" "$externals_dir/apptainer/libexec"
     fi

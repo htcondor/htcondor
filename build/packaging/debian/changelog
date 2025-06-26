@@ -1,3 +1,9 @@
+condor (24.0.9-1) stable; urgency=medium
+
+  * In htcondor2, empty configuration keys are now treated as non-existent
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 10:18:00 -0500
+
 condor (23.10.26-1) stable; urgency=medium
 
   * Fix memory leak in the condor_schedd when using late materialization

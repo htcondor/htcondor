@@ -47,6 +47,7 @@ instructions corresponding to your operating system:
   Amazon Linux 2023;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
+  Enterprise Linux 10 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
   Debian 11 and 12; and Ubuntu 20.04, 22.04, and 24.04.
 * :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 13 and later.
@@ -65,6 +66,7 @@ misbehaving jobs.
   Amazon Linux 2023;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
+  Enterprise Linux 10 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
   Debian 11 and 12; and Ubuntu 20.04, 22.04, and 24.04.
 * :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 13 and later.
