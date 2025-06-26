@@ -1359,6 +1359,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.26-1
+- Fix ingestion of ads into Elasticsearch under very rare circumstances
+- DAGMan better handles being unable to write to a full filesystem
+- 'kill_sig' submit commands are now ignored on the Windows platform
+
 * Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.25-1
 - Fix problems where parallel universe jobs could crash the condor_schedd
 - Prevent condor_starter crash when evicting job during input file transfer
