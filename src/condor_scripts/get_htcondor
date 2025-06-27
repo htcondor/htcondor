@@ -123,6 +123,16 @@ get_distribution() {
         . /etc/os-release
     fi
 
+    ARCH=$(arch)
+    REPO_ARCH='noarch'
+
+    if [ $ID = 'almalinux' ]; then
+        if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+            ARCH='x86_64_v2'
+            REPO_ARCH='x86_64_v2'
+        fi
+    fi
+
     check_forked
 
     VERSION_ID=${VERSION_ID%%.*}
@@ -396,7 +406,7 @@ EOF
                     ;;
             esac
             repo_suffix="${repo_dist}${VERSION_ID}"
-            yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.noarch.rpm"
+            yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.${REPO_ARCH}.rpm"
 
             # Just to make our lives harder, the packages we need from
             # EPEL depend on repositories which are disabled by default,
@@ -591,7 +601,7 @@ do_download() {
             ;;
     esac
 
-    TARBALL_NAME="condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
+    TARBALL_NAME="condor-${ARCH}_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
     TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
     echo "Downloading to condor.tar.gz..."
