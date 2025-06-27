@@ -274,13 +274,13 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.16.1
+Requires: pelican >= 7.17.0
 %else
-Requires: (pelican >= 7.16.5 or pelican-debug >= 7.16.5)
+Requires: (pelican >= 7.17.0 or pelican-debug >= 7.17.0)
 %endif
-Requires: pelican-osdf-compat >= 7.16.5
+Requires: pelican-osdf-compat >= 7.17.0
 
-%if 0%{?rhel} != 7
+%if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
@@ -1477,6 +1477,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.26-1
+- Fix memory leak in the condor_schedd when using late materialization
+- Fix condor_master start up when file descriptor ulimit was huge
+- HTCondor tarballs now contain Pelican 7.17.0
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.26-1
+- Fix ingestion of ads into Elasticsearch under very rare circumstances
+- DAGMan better handles being unable to write to a full filesystem
+- 'kill_sig' submit commands are now ignored on the Windows platform
+
 * Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
 - Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1

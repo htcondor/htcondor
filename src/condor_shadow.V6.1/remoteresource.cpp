@@ -1383,6 +1383,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
 
+	if( update_ad->LookupString(ATTR_VACATE_REASON, string_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON, string_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_CODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_CODE, long_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_SUBCODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, long_value);
+	}
 
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
