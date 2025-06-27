@@ -223,10 +223,10 @@ EOF
     fi
 
     case $ID in
-        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             repo_cmd="dnf --assumeyes"
             case $ID in
-                centos|scientific)
+                centos)
                     repo_cmd="yum --assumeyes"
                     ;;
                 suse|opensuse-leap)
@@ -259,7 +259,7 @@ To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
 To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 EOF
             ;;
-        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             PACKAGE="condor"
             if [[ ! $ROLE ]]; then
                 PACKAGE="minicondor"
@@ -361,7 +361,7 @@ EOF
                 fi
             )
             ;;
-        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             (
             if ! is_dry_run; then
                 set -x
@@ -381,7 +381,7 @@ EOF
 
             repo_dist=$ID
             case $ID in
-                scientific|centos|rhel|almalinux|rocky)
+                centos|rhel|almalinux|rocky)
                     repo_dist="el"
                     echo -e "\n# Installing EPEL"
                     epel_version=$VERSION_ID
@@ -565,17 +565,7 @@ do_download() {
         debian)
             OS_NAME="Debian"
             ;;
-        scientific|centos|rhel)
-            if [ "$VERSION_ID" = "7" ]; then
-                OS_NAME="CentOS"
-            else
-                OS_NAME="AlmaLinux"
-            fi
-            ;;
-        almalinux)
-            OS_NAME="AlmaLinux"
-            ;;
-        rocky)
+        almalinux|centos|rhel|rocky)
             OS_NAME="AlmaLinux"
             ;;
         amzn)
