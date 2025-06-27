@@ -381,11 +381,15 @@ EOF
 
             repo_dist=$ID
             case $ID in
-                centos|rhel|almalinux|rocky)
+                centos|almalinux|rocky)
                     repo_dist="el"
                     echo -e "\n# Installing EPEL"
-                    epel_version=$VERSION_ID
-                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+                    $sh_c "${repo_cmd} install epel-release || ${repo_cmd} reinstall epel-release"
+                    ;;
+                rhel)
+                    repo_dist="el"
+                    echo -e "\n# Installing EPEL"
+                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID}.noarch.rpm"
                     ;;
                 suse|opensuse-leap)
                     repo_dist="leap"
