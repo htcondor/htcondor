@@ -124,12 +124,12 @@ get_distribution() {
     fi
 
     ARCH=$(arch)
-    REPO_ARCH='noarch'
+    repo_arch='noarch'
 
     if [ $ID = 'almalinux' ]; then
         if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
             ARCH='x86_64_v2'
-            REPO_ARCH='x86_64_v2'
+            repo_arch='x86_64_v2'
         fi
     fi
 
@@ -236,9 +236,6 @@ EOF
         centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             repo_cmd="dnf --assumeyes"
             case $ID in
-                centos)
-                    repo_cmd="yum --assumeyes"
-                    ;;
                 suse|opensuse-leap)
                     repo_cmd="zypper --non-interactive"
                     ;;
@@ -406,7 +403,7 @@ EOF
                     ;;
             esac
             repo_suffix="${repo_dist}${VERSION_ID}"
-            yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.${REPO_ARCH}.rpm"
+            repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.${repo_arch}.rpm"
 
             # Just to make our lives harder, the packages we need from
             # EPEL depend on repositories which are disabled by default,
@@ -417,18 +414,21 @@ EOF
                 almalinux.8|rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
                                  $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
                                  ;;
-                almalinux.9|rocky.9 ) $sh_c "dnf -y install dnf-plugins-core"
+                almalinux.9|almalinux.10|rocky.9|rocky.10 ) $sh_c "dnf -y install dnf-plugins-core"
                                  $sh_c "dnf config-manager --set-enabled crb"
                                  ;;
                 # subscription-manager only works if you've already
                 # "register"ed and "attach"ed the system.
                 rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
                          ;;
-                rhel.8 ) ARCH=$(/bin/arch)
+                rhel.8 )
                          $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
                          ;;
-                rhel.9 ) ARCH=$(/bin/arch)
+                rhel.9 )
                          $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-9-${ARCH}-rpms\""
+                         ;;
+                rhel.10 )
+                         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-10-${ARCH}-rpms\""
                          ;;
             esac
 
@@ -437,10 +437,10 @@ EOF
                 suse|opensuse-leap)
                     # There is a way to setup SUSE repos where you can install the repo
                     # with a single zypper command. But, I don't know how to do that (yet)
-                    $sh_c "${repo_cmd} --no-gpg-checks install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    $sh_c "${repo_cmd} --no-gpg-checks install ${repo_rpm} || ${repo_cmd} reinstall ${repo_rpm}"
                     ;;
                 *)
-                    $sh_c "${repo_cmd} install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    $sh_c "${repo_cmd} install ${repo_rpm} || ${repo_cmd} reinstall ${repo_rpm}"
                     ;;
             esac
 
