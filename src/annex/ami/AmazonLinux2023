@@ -36,6 +36,7 @@ sudo rm -fr /var/run/condor/*
 sudo rm -fr /var/lock/condor/InstanceLock
 sudo rm -fr /var/lib/condor/execute/*
 sudo rm -fr /var/lib/condor/spool/*
+sudo rm -fr /etc/condor/config.d/00ec2-dynamic.confi
 sudo rm -fr /etc/condor/config.d/49ec2-instance.config
 sudo rm -fr /etc/condor/config.d/password_file.pl
 sudo /bin/sh -c 'rm -fr ~/.bash_history'
