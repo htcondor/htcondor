@@ -21,13 +21,16 @@ VERSION_CODENAME='none'
 . /etc/os-release
 echo "Building on $NAME $VERSION"
 VERSION_ID=${VERSION_ID%%.*}
-if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
-    ARCH='x86_64_v2'
-    REPO_ARCH='x86_64_v2'
-else
-    ARCH=$(arch)
-    REPO_ARCH='noarch'
+ARCH=$(arch)
+REPO_ARCH='noarch'
+
+if [ $ID = 'almalinux' ]; then
+    if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+        ARCH='x86_64_v2'
+        REPO_ARCH='x86_64_v2'
+    fi
 fi
+
 echo "ID=$ID VERSION_ID=$VERSION_ID VERSION_CODENAME=$VERSION_CODENAME ARCH=$ARCH"
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
@@ -36,7 +39,7 @@ else
     SUDO_GROUP='wheel'
 fi
 
-if [ $ID = debian ] || [ $ID = 'ubuntu' ]; then
+if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     apt-get update
     export DEBIAN_FRONTEND='noninteractive'
     INSTALL='apt-get install --yes'
