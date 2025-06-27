@@ -323,7 +323,14 @@ createConfigTarball(	const char * configDir,
 	std::string annexTokenDomain;
 	param( annexTokenDomain, "ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io" );
 
-	std::string annexUserName = "tlmiller"; // FIXME!
+    char * user_name = NULL;
+    if(! pcache()->get_user_name( geteuid(), user_name )) {
+		formatstr( tarballError, "failed to determine user name" );
+		free(cwd);
+		return false;
+    }
+	std::string annexUserName = user_name;
+	free(user_name);
 
 	// FIXME: Rewrite without system().
 	rv = chdir( ".." );
