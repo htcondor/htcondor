@@ -1,10 +1,16 @@
 *** 23.10.27 bugs
 
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
 - Fixed a bug where the specific vacate reason wasn't reported in the job
   event log or the job ad when a job was evicted from the EP.
   The message ``Unspecified job interruption`` and code 1005 were used
   instead.
   :jira:`3117`
+
 
 *** 23.0.27 bugs
 
