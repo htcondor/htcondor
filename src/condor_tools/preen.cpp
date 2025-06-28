@@ -156,6 +156,8 @@ char ** _argv;
 
 int preen_report();
 
+std::vector<char *> freeThese;
+
 int
 preen_main( int, char ** ) {
 	// argc = _argc;
@@ -178,6 +180,10 @@ preen_main( int, char ** ) {
 	VerboseFlag = false;
 	MailFlag = false;
 	RmFlag = false;
+
+	for (char * s: freeThese) {
+		free(s);
+	}
 
 	// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -326,6 +332,10 @@ main( int argc, char * argv[] ) {
 
 	argc = 4;
 	argv = dcArgv;
+
+	for (int i = 1; i < argc; ++i) {
+		freeThese.push_back(argv[i]);
+	}
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;
