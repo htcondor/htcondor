@@ -130,6 +130,12 @@ class Create(Verb):
             "type": int,
             "default": None,
         },
+        "ami-id":{
+            "args": ("--ami-id",),
+            "help": argparse.SUPPRESS,
+            "type": str,
+            "default": None,
+        }
     }
 
     def __init__(self, logger, **options):
@@ -226,7 +232,7 @@ class Status(Verb):
         annex_attrs = {}
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
-            request_id = slot["hpc_annex_request_id"]
+            request_id = slot.get("hpc_annex_request_id", "None")
             if status.get(annex_name) is None:
                 status[annex_name] = {}
             status[annex_name][request_id] = defaultdict(int)
@@ -234,7 +240,7 @@ class Status(Verb):
 
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
-            request_id = slot["hpc_annex_request_id"]
+            request_id = slot.get("hpc_annex_request_id", "None")
 
             # Ignore dynamic slot, since we just care about aggregates.
             # We could write a similar check for static slots, but we
