@@ -324,11 +324,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		std::string instanceID, connectivityFunctionARN;
 		command->LookupString( "CollectorInstanceID", instanceID );
 		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
+/*
 		CheckConnectivity * cc = new CheckConnectivity(
 			connectivityFunctionARN, instanceID,
 			reply, lambdaGahp, scratchpad,
 			lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
+*/
 
 		PutRule * pr = new PutRule(
 			reply, eventsGahp, scratchpad,
@@ -352,9 +354,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		// to restart a rollback, if that becomes necessary.
 		FunctorSequence * fs;
 		if( uf ) {
-			fs = new FunctorSequence( { cc, gf, uf, pr, pt, br }, last, commandState, commandID, scratchpad );
+			fs = new FunctorSequence( { gf, uf, pr, pt, br }, last, commandState, commandID, scratchpad );
 		} else {
-			fs = new FunctorSequence( { cc, gf, pr, pt, br }, last, commandState, commandID, scratchpad );
+			fs = new FunctorSequence( { gf, pr, pt, br }, last, commandState, commandID, scratchpad );
 		}
 
 		// Create a timer for the gahp to fire when it gets a result.  We must
@@ -375,11 +377,13 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		std::string instanceID, connectivityFunctionARN;
 		command->LookupString( "CollectorInstanceID", instanceID );
 		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
+/*
 		CheckConnectivity * cc = new CheckConnectivity(
 			connectivityFunctionARN, instanceID,
 			reply, lambdaGahp, scratchpad,
 			lambdaURL, publicKeyFile, secretKeyFile,
 			commandState, commandID );
+*/
 
 		OnDemandRequest * odr = new OnDemandRequest( reply, gahp, scratchpad,
 			serviceURL, publicKeyFile, secretKeyFile, commandState,
@@ -389,7 +393,7 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		command->LookupInteger( "EndOfLease", endOfLease );
 
 		if( (! odr->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
-			delete cc;
+			// delete cc;
 			delete odr;
 			goto cleanup;
 		}
@@ -430,9 +434,9 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 
 		FunctorSequence * fs;
 		if( uf ) {
-			fs = new FunctorSequence( { cc, gf, uf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+			fs = new FunctorSequence( { gf, uf, pr, pt, odr }, last, commandState, commandID, scratchpad );
 		} else {
-			fs = new FunctorSequence( { cc, gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
+			fs = new FunctorSequence( { gf, pr, pt, odr }, last, commandState, commandID, scratchpad );
 		}
 
 		int functorSequenceTimer = daemonCore->Register_Timer( 0, TIMER_NEVER,

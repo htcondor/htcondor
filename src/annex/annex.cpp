@@ -167,6 +167,22 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 
+	rv = mkdir( "config.d", 0755 );
+	if( rv != 0 ) {
+		formatstr( tarballError, "unable to make config.d (%d): '%s'",
+			errno, strerror( errno ) );
+		free(cwd);
+		return false;
+	}
+
+	rv = chdir( "config.d" );
+	if( rv != 0 ) {
+		formatstr( tarballError, "unable to change to config.d (%d): '%s'",
+			errno, strerror( errno ) );
+		free(cwd);
+		return false;
+	}
+
 	// Must be readable by the 'condor' user on the instance, but it
 	// will be owned by root.
 	int fd = safe_open_wrapper_follow( "00ec2-dynamic.config",
@@ -182,9 +198,9 @@ createConfigTarball(	const char * configDir,
 	std::string passwordFile = "password_file.pl";
 
 	std::string collectorHost;
-	param( collectorHost, "COLLECTOR_HOST" );
+	param( collectorHost, "ANNEX_COLLECTOR" );
 	if( collectorHost.empty() ) {
-		formatstr( tarballError, "COLLECTOR_HOST empty or undefined" );
+		formatstr( tarballError, "ANNEX_COLLECTOR empty or undefined" );
 		free(cwd);
 		close(fd);
 		return false;
@@ -202,10 +218,10 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 
-	std::string startExpression = "START = MayUseAWS == TRUE\n";
+	std::string startExpression = "START = MY.AnnexName == TARGET.TargetAnnexName\n";
 	if( owner != NULL ) {
-		formatstr( startExpression,
-			"START = (MayUseAWS == TRUE) && stringListMember( Owner, \"%s\" )\n"
+		formatstr_cat( startExpression,
+			"START = $(START) && stringListMember( Owner, \"%s\" )\n"
 			"\n",
 			owner );
 	}
@@ -237,6 +253,51 @@ createConfigTarball(	const char * configDir,
 		annexName, unclaimedTimeout, startExpression.c_str()
 	);
 
+	std::string scheddName;
+	CondorQuery q(SCHEDD_AD);
+	ClassAdList l;
+	auto r = q.fetchAds( l, collectorHost.c_str() );
+	if( r != Q_OK ) {
+		formatstr( tarballError, "unable to get schedd's ad" );
+		free(cwd);
+		return false;
+	}
+	if( l.Length() != 1 ) {
+	    formatstr( tarballError, "Found more than one scheduler in the AP collector" );
+		free(cwd);
+		return false;
+	}
+	l.Rewind();
+    ClassAd * c = l.Next();
+    if(! c->LookupString( ATTR_NAME, scheddName )) {
+	    formatstr( tarballError, "Scheduler ad in AP collector did not contain the scheduler's name." );
+		free(cwd);
+		return false;
+    }
+
+
+	formatstr_cat( contents,
+		"\n"
+		"\n"
+		"COLLECTOR_HOST = <%s>\n"
+		"\n"
+		"ALLOW_ADMINISTRATOR = $(ALLOW_ADMINISTRATOR) $(whoami)@$(hostname)\n"
+		"ALLOW_ADMINISTRATOR = $(ALLOW_ADMINISTRATOR) condor_pool@*\n"
+		"\n"
+		"SEC_DEFAULT_AUTHENTICATION_METHODS = FS IDTOKENS PASSWORD\n"
+		"SEC_PASSWORD_DIRECTORY = $(ETC)/passwords.d\n"
+		"SEC_TOKEN_SYSTEM_DIRECTORY = $(ETC)/tokens.d\n"
+		"SEC_TOKEN_DIRECTORY = $(ETC)/tokens.d\n"
+		"\n"
+		"UPDATE_INTERVAL = 137\n"
+		"\n"
+		"STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n"
+		"STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s\n"
+		"STARTD_DIRECT_ATTACH_INTERVAL = 5\n"
+		"UPDATE_INTERVAL = 5\n",
+		collectorHost.c_str(), scheddName.c_str(), collectorHost.c_str()
+	);
+
 	rv = write( fd, contents.c_str(), contents.size() );
 	if( rv == -1 ) {
 		formatstr( tarballError, "error writing to '%s': '%s' (%d)",
@@ -252,34 +313,54 @@ createConfigTarball(	const char * configDir,
 	close( fd );
 
 
-	std::string localPasswordFile;
-	param( localPasswordFile, "SEC_PASSWORD_FILE" );
-	if( localPasswordFile.empty() ) {
-		formatstr( tarballError, "SEC_PASSWORD_FILE empty or undefined" );
-		free(cwd);
-		return false;
-	}
+	// Fetch a token for interacting with the AP collector and for directly
+	// attaching to the local AP.
 
-	fd = open( localPasswordFile.c_str(), O_RDONLY );
-	if( fd == -1 ) {
-		formatstr( tarballError, "Unable to open SEC_PASSWORD_FILE '%s': %s (%d)",
-			localPasswordFile.c_str(), strerror(errno), errno );
+	std::string annexTokenLifetime;
+	param( annexTokenLifetime, "ANNEX_TOKEN_LIFETIME", "7776000" );
+	std::string annexTokenKeyName;
+	param( annexTokenKeyName, "ANNEX_TOKEN_KEY_NAME", "hpcannex-key" );
+	std::string annexTokenDomain;
+	param( annexTokenDomain, "ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io" );
+
+    char * user_name = NULL;
+    if(! pcache()->get_user_name( geteuid(), user_name )) {
+		formatstr( tarballError, "failed to determine user name" );
 		free(cwd);
 		return false;
-	} else {
-		close( fd );
-	}
+    }
+	std::string annexUserName = user_name;
+	free(user_name);
 
 	// FIXME: Rewrite without system().
-	std::string cpCommand;
-	formatstr( cpCommand, "cp '%s' '%s'", localPasswordFile.c_str(), passwordFile.c_str() );
-	int status = system( cpCommand.c_str() );
+	rv = chdir( ".." );
+	ASSERT(rv == 0);
+	rv = mkdir( "tokens.d", 0755 );
+	ASSERT(rv == 0);
+	rv = chdir( "tokens.d" );
+	ASSERT(rv == 0);
+
+	std::string ctf;
+	formatstr( ctf,
+		"condor_token_fetch"
+		" -lifetime %s"
+		" -file %s.%s@%s"
+		" -key %s"
+		" -authz READ"
+		" -authz ADVERTISE_STARTD -authz ADVERTISE_MASTER"
+		" -authz WRITE",
+		annexTokenLifetime.c_str(),
+		annexName, annexUserName.c_str(), annexTokenDomain.c_str(),
+		annexTokenKeyName.c_str()
+	);
+	int status = system( ctf.c_str() );
 	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
-		formatstr( tarballError, "failed to copy '%s' to '%s'",
-			localPasswordFile.c_str(), passwordFile.c_str() );
+		formatstr( tarballError, "failed to fetch IDTOKEN" );
 		free(cwd);
 		return false;
 	}
+	rv = chdir( ".." );
+	ASSERT(rv == 0);
 
 
 	std::string tbn;
@@ -373,9 +454,9 @@ help( const char * argv0 ) {
 		"\t[-idle <idle duration in decimal hours>]\n"
 		"\n"
 		"To start the annex automatically without a yes/no approval prompt:\n"
-		"\t[-yes]"
+		"\t[-yes]\n"
 		"To customize the annex's HTCondor configuration:\n"
-		"\t[-config-dir </full/path/to/config.d>]\n"
+		"\t[-config-dir </full/path/to/etc>]\n"
 		"\n"
 		"To tag the instances (repeat -tag for each tag):\n"
 		"\t[-tag tag-name tag-value]\n"
