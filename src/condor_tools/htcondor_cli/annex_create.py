@@ -478,6 +478,7 @@ def create_annex_token(logger, type):
 
 # Obviously incomplete.
 def invoke_condor_annex(
+    logger,
     annex_name : str,
     count : int = 1, instance_type : str = None, ami_id : str = None,
 ):
@@ -506,12 +507,15 @@ def invoke_condor_annex(
         # Distinguish our text from condor_annex's text.
         ANSI_BRIGHT = "\033[1m"
         ANSI_RESET_ALL = "\033[0m"
-        logger.info(f"Invoking condor_annex...")
+        logger.info(f"{ANSI_BRIGHT}Requesting AWS EC2 annex...{ANSI_RESET_ALL}")
 
         out, err = proc.communicate(timeout=INITIAL_CONNECTION_TIMEOUT)
 
         if proc.returncode == 0:
-            return True
+            # We could join the control flows for EC2 and HPC at the bottom
+            # of annex_inner_func(), instead, once we're sure this'll work.
+            logger.info(f"{ANSI_BRIGHT}... requested.{ANSI_RESET_ALL}")
+            return 0
         else:
             logger.error(f"Failed to request AWS EC2 annex, aborting.")
             logger.warning(f"{out.strip()}")
@@ -767,6 +771,7 @@ def annex_inner_func(
     # And now for something completely different.
     if system == "aws-ec2":
         invoke_condor_annex(
+            logger,
             annex_name,
             count=nodes,
             instance_type=queue_name,
