@@ -476,6 +476,54 @@ def create_annex_token(logger, type):
         raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
 
 
+# Obviously incomplete.
+def invoke_condor_annex(
+    annex_name : str,
+    count : int = 1, instance_type : str = None, ami_id : str = None,
+):
+    args = [
+        'condor_annex',
+        '-yes',
+        '-annex-name', annex_name,
+        '-count', str(count),
+    ]
+
+    if instance_type is not None:
+        args.extend([ '-aws-on-demand-instance-type', instance_type ])
+    if ami_id is not None:
+        args.extend([ '-aws-on-demand-ami-id', ami_id ])
+
+
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        # This implies text mode.
+        errors="replace",
+    );
+
+    try:
+        # Distinguish our text from condor_annex's text.
+        ANSI_BRIGHT = "\033[1m"
+        ANSI_RESET_ALL = "\033[0m"
+        logger.info(f"Invoking condor_annex...")
+
+        out, err = proc.communicate(timeout=INITIAL_CONNECTION_TIMEOUT)
+
+        if proc.returncode == 0:
+            return True
+        else:
+            logger.error(f"Failed to request AWS EC2 annex, aborting.")
+            logger.warning(f"{out.strip()}")
+            raise RuntimeError(f"Failed to request AWS EC2 annex")
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"Failed to request AWS EC2 annex in {INITIAL_CONNECTION_TIMEOUT} seconds, aborting.")
+        proc.kill()
+        out, err = proc.communicate()
+        raise RuntimeError(f"Failed to request AWS EC2 annex in {INITIAL_CONNECTION_TIMEOUT} seconds")
+
+
 def annex_inner_func(
     logger,
     annex_name,
@@ -496,6 +544,7 @@ def annex_inner_func(
     gpus,
     gpu_type,
     test,
+    ami_id,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -715,9 +764,21 @@ def annex_inner_func(
     )
 
 
+    # And now for something completely different.
+    if system == "aws-ec2":
+        invoke_condor_annex(
+            annex_name,
+            count=nodes,
+            instance_type=queue_name,
+            ami_id=ami_id,
+        )
+        return
+
+
     # Distinguish our text from SSH's text.
     ANSI_BRIGHT = "\033[1m"
     ANSI_RESET_ALL = "\033[0m"
+
 
     ##
     ## The user will do the 2FA/SSO dance here.
