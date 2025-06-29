@@ -218,10 +218,10 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 
-	std::string startExpression = "START = MayUseAWS == TRUE\n";
+	std::string startExpression = "START = MY.AnnexName == TARGET.TargetAnnexName\n";
 	if( owner != NULL ) {
-		formatstr( startExpression,
-			"START = (MayUseAWS == TRUE) && stringListMember( Owner, \"%s\" )\n"
+		formatstr_cat( startExpression,
+			"START = $(START) && stringListMember( Owner, \"%s\" )\n"
 			"\n",
 			owner );
 	}
