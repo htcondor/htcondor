@@ -18,6 +18,11 @@
   that caused some time information to be displayed incorrectly.
   :jira:`3112`
 
+- Fixed a bug where the Machine and Job ClassAds would fail to be
+  written into job scratch directories on Execution Points using
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`3156`
+
 *** 23.10.26 features
 
 - HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
