@@ -126,7 +126,7 @@ get_distribution() {
     ARCH=$(arch)
     repo_arch='noarch'
 
-    if [ $ID = 'almalinux' ]; then
+    if [ "$ID" = 'almalinux' ]; then
         if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
             ARCH='x86_64_v2'
             repo_arch='x86_64_v2'
@@ -592,6 +592,7 @@ do_download() {
             if is_darwin; then
                 OS_NAME=macOS
                 OS_VERSION=13
+                ARCH=x86_64
             else
                 echo
                 echo "Error: Unsupported distribution '$NAME'"
