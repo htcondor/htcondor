@@ -883,7 +883,7 @@ def annex_inner_func(
     # The magic in this job description is thus:
     #   * hpc_annex_start_time is undefined until the job runs and finds
     #     a startd ad with a matching hpc_annex_request_id.
-    #   * The job will go idle (because it can't start) at that poing,
+    #   * The job will go idle (because it can't start) at that point,
     #     based on its Requirements.
     #   * Before then, the job's on_exit_remove must be false -- not
     #     undefined -- to make sure it keeps polling.
@@ -906,7 +906,7 @@ def annex_inner_func(
             "periodic_remove": f"hpc_annex_start_time + {lifetime} + 3600 < time()",
             # Consider adding a log, an output, and an error file to assist
             # in debugging later.  Problem: where should it go?  How does it
-            # cleaned up?
+            # get cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
             "jobbatchname": f'{annex_name} [HPC Annex]',
