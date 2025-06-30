@@ -55,4 +55,13 @@ struct LiveJobCounters {
 
 void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/);
 
+struct AccumJobUsageCounters {
+	int Jobs{0};           // number of proc ads being counted
+	int Spare{0};          // spare to align
+	long long SlotTime{0}; // CumulativeSlotTime
+	double    CpuTime{0};  // CumulativeRemoteUserCpu + CumulativeRemoteSysCpu
+};
+class JobQueueJob;
+bool IncrementJobUsageCounters(AccumJobUsageCounters & num, JobQueueJob * job);
+
 #endif

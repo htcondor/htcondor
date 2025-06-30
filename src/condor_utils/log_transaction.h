@@ -45,6 +45,8 @@ class LoggableClassAdTable;
 
 class Transaction {
 public:
+	typedef std::map<std::string_view,LogRecordList *> OrderedOpsByKeyMap;
+
 	Transaction();
 	~Transaction();
 	void Commit(FILE* fp, const char *filename, LoggableClassAdTable *data_structure, bool nondurable=false);
@@ -54,12 +56,13 @@ public:
 	bool EmptyTransaction() const { return m_EmptyTransaction; }
 	void InTransactionListKeysWithOpType( int op_type, std::list<std::string> &new_keys );
 	bool KeysInTransaction(std::set<std::string> & keys, bool add_keys=false);
+	const OrderedOpsByKeyMap & OrderedOpsByKey() { return op_log; } // for use by ClassAdLog
 	// transaction triggers are used by clients of this class to keep track of things that the client needs to do on commit
 	// they are stored here, but only the client knows what they mean.
 	int  SetTriggers(int mask) { m_triggers |= mask; return m_triggers; }
 	int  GetTriggers() const { return m_triggers; }
 private:
-	std::map<std::string_view,LogRecordList *> op_log;
+	OrderedOpsByKeyMap op_log;
 	LogRecordList ordered_op_log;
 	LogRecordList::iterator op_log_iterating;
 	LogRecordList::iterator op_log_iterating_end;
