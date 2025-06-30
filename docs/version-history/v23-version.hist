@@ -4,6 +4,11 @@
   that caused some time information to be displayed incorrectly.
   :jira:`3112`
 
+- Fixed a bug where the Machine and Job ClassAds would fail to be
+  written into job scratch directories on Execution Points using
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`3156`
+
 *** 23.0.26 bugs
 
 - Fixed a bug in *condor_adstash* that would prevent ads from
