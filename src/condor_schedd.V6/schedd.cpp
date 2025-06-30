@@ -228,9 +228,12 @@ int init_user_ids(const JobQueueUserRec * user) {
 }
 
 // priority records
-extern prio_rec *PrioRec;
-extern int N_PrioRecs;
-extern int grow_prio_recs(int);
+#ifdef PRIO_REC_IS_VECTOR
+ extern std::vector<prio_rec> PrioRec;
+#else
+ extern std::deque<prio_rec> PrioRec;
+#endif
+extern int grow_prio_recs(int); // reserve space if PrioRec is a vector
 
 bool ReadProxyFileIntoAd( const char *file, const OwnerInfo *owner, ClassAd &x509_attrs );
 
@@ -447,19 +450,21 @@ struct job_data_transfer_t {
 	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
-match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
+match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY & jid,
 					  const ClassAd *match, char const *the_user, char const *my_pool,
-					  bool is_dedicated_arg ):
-	use_sec_session(false),
-	claim_id(the_claim_id)
+					  bool is_dedicated_arg )
+	: peer(strdup(p))
+	, user(strdup(the_user))
+	, pool((my_pool && *my_pool) ? strdup(my_pool) : nullptr)
+	, origcluster(jid.cluster)
+	, cluster(jid.cluster)
+	, proc(jid.proc)
+	, status(M_UNCLAIMED)
+	, entered_current_status(time(NULL))
+	, is_dedicated(is_dedicated_arg)
+	, claim_id(the_claim_id)
 {
-	peer = strdup( p );
-	origcluster = cluster = job_id->cluster;
-	proc = job_id->proc;
-	status = M_UNCLAIMED;
-	entered_current_status = time(nullptr);
-	shadowRec = NULL;
-	num_exceptions = 0;
+
 	if( match ) {
 		my_match_ad = new ClassAd( *match );
 		if( IsDebugLevel(D_MACHINE) ) {
@@ -469,18 +474,6 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	} else {
 		my_match_ad = NULL;
 	}
-	user = strdup( the_user );
-	if( my_pool ) {
-		m_pool = std::string(my_pool);
-	}
-	this->is_dedicated = is_dedicated_arg;
-	allocated = false;
-	scheduled = false;
-	needs_release_claim = false;
-	claim_requester = NULL;
-	auth_hole_id = NULL;
-	m_startd_sends_alives = false;
-	m_claim_pslot = false;
 
 	makeDescription();
 
@@ -545,9 +538,6 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 			m_startd_sends_alives = true;
 		}
 	}
-
-	keep_while_idle = 0;
-	idle_timer_deadline = 0;
 }
 
 void
@@ -583,6 +573,7 @@ match_rec::~match_rec()
 	if( user ) {
 		free(user);
 	}
+	if (pool) { free(pool); pool = nullptr; }
 	delete auth_hole_id;
 
 		// If we are shuting down, the daemonCore instance will be null
@@ -897,9 +888,9 @@ Scheduler::~Scheduler()
 
 
 bool
-Scheduler::JobCanFlock(classad::ClassAd &job_ad, const std::string &pool) {
+Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 		// We always trust the home pool...
-	if (pool == HOME_POOL_SUBMITTER_TAG) {return true;}
+	if (!pool || !pool[0]) {return true;}
 
 		// Determine whether we should flock this cluster with this pool.
 	if (m_include_default_flock_param) {
@@ -913,7 +904,7 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const std::string &pool) {
 	std::string flock_targets;
 	if (job_ad.EvaluateAttrString(ATTR_FLOCK_TO, flock_targets)) {
 		for (auto& flock_entry: StringTokenIterator(flock_targets)) {
-			if (!strcasecmp(pool.c_str(), flock_entry.c_str())) {
+			if (!strcasecmp(pool, flock_entry.c_str())) {
 				return true;
 			}
 		}
@@ -1547,7 +1538,7 @@ Scheduler::count_jobs()
 		}
 		SubDat->num.Hits += 1;
 		SubDat->LastHitTime = current_time;
-		if (rec->shadowRec && rec->getPool().empty()) {
+		if (rec->shadowRec && ! rec->pool) {
 				// Sum up the # of cpus claimed by this user and advertise it as
 				// WeightedJobsRunning. 
 
@@ -1555,8 +1546,8 @@ Scheduler::count_jobs()
 			
 			SubDat->num.WeightedJobsRunning += job_weight;
 			SubDat->num.JobsRunning++;
-		} else if (!rec->getPool().empty()) { // non-empty pool name indicates a  remote pool, so add to Flocked count
-			auto iter = SubDat->flock.insert({rec->getPool(), SubmitterFlockCounters()});
+		} else if (rec->pool) { // non-empty pool name indicates a  remote pool, so add to Flocked count
+			auto iter = SubDat->flock.insert({rec->pool, SubmitterFlockCounters()});
 			iter.first->second.JobsRunning++;
 			iter.first->second.WeightedJobsRunning += calcSlotWeight(rec);
 			JobsFlocked++;
@@ -1771,6 +1762,8 @@ Scheduler::count_jobs()
 	dprintf( D_FULLDEBUG,
 			 "Sent HEART BEAT ad to %d collectors. Number of active submittors=%d\n",
 			 num_updates, NumSubmitters );
+
+	maybeWriteDaemonHistory(cad);
 
 	cad->Delete(ATTR_CAPABILITY);
 	cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST);
@@ -4125,7 +4118,6 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	}
 	return job->ownerinfo;
 }
-
 
 void
 Scheduler::remove_unused_owners()
@@ -7692,7 +7684,9 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 		because = "job no longer needs a match";
 		return true;
 	}
-	if( ! Runnable(job, because) ) {
+	runnable_reason_code runnable_code;
+	if( ! Runnable(job, runnable_code) ) {
+		because = getRunnableReason(runnable_code);
 		return true;
 	}
 
@@ -7702,7 +7696,7 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 		int runnable = true;
 		if (match_ad) {
 			//PRAGMA_REMIND("add skip_all_such check to jobCanUseMatch")
-			runnable = scheduler.jobCanUseMatch(job, match_ad, getRemotePool() ? getRemotePool() : "", because);
+			runnable = scheduler.jobCanUseMatch(job, match_ad, getRemotePool(), because);
 			dprintf(D_MATCH | D_VERBOSE, "jobCanUseMatch returns %d for job %d.%d (%s)\n", runnable, job->jid.cluster, job->jid.proc, because);
 		} else {
 			runnable = scheduler.jobCanNegotiate(job, because);
@@ -7751,8 +7745,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	//   enough to fully manage the claimed pslot or will be instructing
 	//   the startd to send updates to an AP collector/negotiator.
 	bool claim_pslot = false;
+	bool is_pslot = false;
 	if (m_will_match_claimed_pslots) {
-		bool is_pslot = false;
 		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
 		if (is_pslot) {
 			std::string slot_state;
@@ -7761,6 +7755,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 				claim_pslot = true;
 			}
 		}
+	} else {
+		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
 	}
 
 	const char* because = "";
@@ -7806,7 +7802,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	}
 
 	match_rec *mrec = scheduler.AddMrec(
-		claim_id, startd.addr(), &job_id, &match_ad,
+		claim_id, startd.addr(), job_id, &match_ad,
 		getMatchUser(), getRemotePool() );
 
 	if( !mrec ) {
@@ -7815,6 +7811,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	}
 
 	mrec->m_claim_pslot = claim_pslot;
+	// TODO: figure out how to set this using the job_id
+	//if (is_pslot) { mrec->m_multi_slot = 2; }
 
 	ContactStartdArgs *args = new ContactStartdArgs( claim_id, extra_claims, startd.addr(), false );
 
@@ -7857,17 +7855,20 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 	ClassAd not_a_real_job;
 	// Tell the startd which CM to report to for real work
 	if (local_cm) {
+		// TODO: move this into requestClaimOpts
 		not_a_real_job.Assign("WorkingCM", local_cm.ptr());
 	}
 
 	// Tell the startd our name, which will go into the slot ad
 	not_a_real_job.Assign(ATTR_SCHEDD_NAME, Name);
 
+	DCStartd::requestClaimOptions opts;
+	opts.claim_pslot = true;
 	startd->asyncRequestOpportunisticClaim(
 		&not_a_real_job,
 		slot_name,
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(), true,
+		scheduler.aliveInterval(), opts,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		20,       // overall timeout on completing claim request
 		cb);
@@ -8035,7 +8036,6 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 int
 Scheduler::negotiate(int /*command*/, Stream* s)
 {
-	int		job_index;
 	int		which_negotiator = 0; 		// >0 implies flocking
 	std::string remote_pool_buf;
 	char const *remote_pool = NULL;
@@ -8261,15 +8261,21 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	}
 
 	ResourceRequestList *resource_requests = new ResourceRequestList;
-	ResourceRequestCluster *cluster = NULL;
 	int next_cluster = 0;
 	int skipped_auto_cluster = -1;
 
 	// std::string'ify owner to speed up comparisons in the loop
 	std::string owner_str(owner);
 
-	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
-		prio_rec *prec = &PrioRec[job_index];
+	auto firstRec = PrioRec.begin();
+	auto endRec = PrioRec.end();
+
+	if (!scheddsAreSubmitters) {
+		firstRec = std::lower_bound(firstRec, endRec, owner_str, prio_rec_submitter_lb{});
+		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
+	}
+
+	for (auto prec = firstRec; prec != endRec && ! skip_negotiation; ++prec) {
 
 		// make sure job isn't flagged as not needing matching
 		if (prec->not_runnable || prec->matched)
@@ -8304,14 +8310,13 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 			continue;
 		}
 
-		if( !cluster || cluster->getAutoClusterId() != auto_cluster_id )
-		{
-				// We always trust the home pool...
+		if (resource_requests->currentId() != auto_cluster_id) {
+			// We always trust the home pool...
 			bool should_match_flock = submitter_tag != HOME_POOL_SUBMITTER_TAG;
 			JobQueueJob* job_ad = (should_match_flock || neg_constraint) ? GetJobAd( prec->id ) : nullptr;
 
 				// Determine whether we should flock this cluster with this pool.
-			if (job_ad && !JobCanFlock(*job_ad, submitter_tag)) {
+			if (job_ad && !JobCanFlock(*job_ad, submitter_tag.c_str())) {
 				continue;
 			}
 			if ( neg_constraint ) {
@@ -8320,10 +8325,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 					continue;
 				}
 			}
-			cluster = new ResourceRequestCluster( auto_cluster_id );
-			resource_requests->push_back( cluster );
 		}
-		cluster->addJob( prec->id );
+		resource_requests->add(auto_cluster_id, prec->id);
 	}
 
 	classy_counted_ptr<MainScheddNegotiate> sn =
@@ -8358,7 +8361,11 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	PROC_ID jobid;
 	jobid.cluster = jobid.proc = -1;
 
-	dprintf(D_FULLDEBUG, "Got DIRECT_ATTACH from %s\n", rsock->peer_description());
+	bool has_daemon_auth = daemonCore->Verify("DIRECT_ATTACH",
+		DAEMON, rsock->peer_addr(), rsock->getFullyQualifiedUser());
+
+	dprintf(D_FULLDEBUG, "Got DIRECT_ATTACH from %s%s\n",
+		rsock->peer_description(), has_daemon_auth ? " (daemon)" : "");
 
 	if (!getClassAd(rsock, cmd_ad)) {
 		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read command ad\n");
@@ -8388,7 +8395,9 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 			// TODO allow trusted users to match all jobs
 			//   Could use ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS
 		slot_ad.Assign(ATTR_AUTHENTICATED_IDENTITY, slot_user);
-		slot_ad.Assign(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, true);
+		if ( ! has_daemon_auth && ! param_boolean("DISABLE_DIRECT_ATTACH_IDENTITY_CHECK",false)) {
+			slot_ad.Assign(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, true);
+		}
 
 		slot_ad.LookupString(ATTR_NAME, slot_name);
 
@@ -8568,6 +8577,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
 
 	classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claim_id.claimId(), args->extraClaims());
+	DCStartd::requestClaimOptions opts;
+	opts.claim_pslot = mrec->m_claim_pslot;
+	if (mrec->m_multi_slot) { opts.num_dslots = mrec->m_multi_slot; }
 
 	this->num_pending_startd_contacts++;
 
@@ -8583,7 +8595,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd,
 		description.c_str(),
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(), mrec->m_claim_pslot,
+		scheduler.aliveInterval(), opts,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		deadline_timeout,       // overall timeout on completing claim request
 		cb );
@@ -8621,9 +8633,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 	if( !msg->claimed_startd_success() ) {
 		// Re-enable the job for matching in the PrioRec array
-		for (int i = 0; i < N_PrioRecs; i++) {
-			if (PrioRec[i].id.cluster == match->cluster && PrioRec[i].id.proc == match->proc) {
-				PrioRec[i].matched = false;
+		// TODO: remove the PrioRec matched field and use the one in the JobQueueJob instead
+		for (auto & rec : PrioRec) {
+			if (rec.id.cluster == match->cluster && rec.id.proc == match->proc) {
+				rec.matched = false;
 				break;
 			}
 		}
@@ -8631,69 +8644,89 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		return;
 	}
 
+	// if we end up moving the original job id to a different match record
+	// we will need to delete the original match record before we exit.
+	bool delete_orig_match = false;
+
 	// If we got information for the newly-claimed slot, then update our
-	// local data to match.
-	// Make sure to preserve attributes from the old ad that were added
-	// outside of the startd.
-	// If the ClaimId changed, make a new match_rec with the new ClaimId
-	// and copy over all of the job-related data.
-	// For now, delete the old match_rec. Eventually, we may want to keep
-	// it around (it should be for the claimed pslot).
+	// local data to match.  First check to see if we any of the returned
+	// slots have the same claim id as the on we used to request the claim
+	// In the normal claim-a-pslot-to-get-a-dslot case, the first entry
+	// in the claimed slots vector will have the id we claimed, and the
+	// pslot will now have a differnt claim id. if more than one claimed slot
+	// is returned, all but the first will have new claim ids.
+	std::vector<match_rec*> slots;
+	size_t orig_match_index = INT_MAX;
 	if (msg->have_claimed_slot_info()) {
+		slots.reserve(msg->claimed_slots().size());
+		PROC_ID job_id{match->cluster, match->proc};
+
 		for (auto & slotInfo : msg->claimed_slots()) {
-			if (slotInfo.claim_id != match->claim_id.claimId()) {
-				PROC_ID job_id(match->cluster, match->proc);
-				SetMrecJobID(match, -1, -1);
-				ClassAd slotAd(slotInfo.slot_ad);
-				slotAd.Update(match->m_added_attrs);
-				match_rec* new_match = AddMrec(slotInfo.claim_id.c_str(), match->peer, &job_id, &slotAd, match->user, match->m_pool.c_str());
-				if (new_match) {
-					// AddMrec can fail and return null for reasons other than out-of-memory
-					DelMrec(match);
-					match = new_match;
-				}
-			} else {
+			if (slotInfo.claim_id == match->claim_id.claimId()) {
+				// since we got an updated slot ad, refresh the ad in the match record
 				match->my_match_ad->CopyFrom(slotInfo.slot_ad);
 				match->my_match_ad->Update(match->m_added_attrs);
+				match->setStatus(M_CLAIMED);
+				orig_match_index = slots.size();
+				slots.push_back(match);
+			} else {
+				if (JobQueueBase::IsJobId(job_id) && orig_match_index >= slots.size()) {
+					// if we didn't overwrite the original match with the first returned
+					// slot ad because the claim id did not match, we want to steal
+					// the original jobid for this match new match.  And then delete the original
+					// match before we exit (but not yet)
+					SetMrecJobID(match,-1,-1);
+					delete_orig_match = true;
+				}
+				match_rec* new_match = AddMrec(slotInfo.claim_id.c_str(), match->peer, job_id,
+					&slotInfo.slot_ad, match->user, match->pool, &match->m_added_attrs);
+				if (new_match) {
+					new_match->setStatus(M_CLAIMED);
+					slots.push_back(new_match);
+				}
 			}
-
-			break; // TODO: remove this to handle more than a single slot in the claim reply
+			job_id.cluster = job_id.proc = 0; // only the first slot can use the original jobid
 		}
+	} else {
+		// we get here when the claim id was a prempting claim (or for a static slot)
+		match->setStatus(M_CLAIMED);
+		slots.push_back(match);
 	}
 
-	match->setStatus( M_CLAIMED );
-
 	// now that we've completed authentication (if enabled),
-	// authorize this startd for READ operations
+	// punch holes in our security layer to authorize this startd for READ operations
 	//
-	if ( match->auth_hole_id == NULL ) {
-		match->auth_hole_id = new std::string;
-		ASSERT(match->auth_hole_id != NULL);
-		if (msg->startd_fqu() && *msg->startd_fqu()) {
-			formatstr(*match->auth_hole_id, "%s/%s",
-			                            msg->startd_fqu(),
-			                            msg->startd_ip_addr());
-		}
-		else {
-			*match->auth_hole_id = msg->startd_ip_addr();
-		}
-		IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-		if (!ipv->PunchHole(READ, *match->auth_hole_id)) {
-			dprintf(D_ALWAYS,
-			        "WARNING: IpVerify::PunchHole error for %s: "
-			            "job %d.%d may fail to execute\n",
-			        match->auth_hole_id->c_str(),
-			        match->cluster,
-			        match->proc);
-			delete match->auth_hole_id;
-			match->auth_hole_id = NULL;
+	std::string auth_hole_id;
+	if (msg->startd_fqu() && *msg->startd_fqu()) {
+		formatstr(auth_hole_id, "%s/%s", msg->startd_fqu(), msg->startd_ip_addr());
+	} else {
+		auth_hole_id = msg->startd_ip_addr();
+	}
+	IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
+	for (match_rec* slot : slots) {
+		// if match doesn't already have a hole punched, do that now
+		if ( ! slot->auth_hole_id) {
+			if ( ! ipv->PunchHole(READ, auth_hole_id)) {
+				dprintf(D_ALWAYS,
+					"WARNING: IpVerify::PunchHole error for %s: "
+					"job %d.%d may fail to execute\n",
+					auth_hole_id.c_str(),
+					slot->cluster,
+					slot->proc);
+
+				break; // no point in trying the other slots, they will just fail also
+
+			} else {
+				// store a pointer to the hole id so we know to remove it
+				slot->auth_hole_id = new std::string(auth_hole_id);
+			}
 		}
 	}
 
 	// If the startd returned any "leftover" partitionable slot resources,
 	// we want to create a match record for it (so we can subsequently find
 	// a job to run on it). 
-	if ( msg->have_leftovers()) {			
+	if ( msg->have_leftovers()) {
 
 		ScheddNegotiate *sn;
 		if (match->is_dedicated) {
@@ -8703,18 +8736,15 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			// probably could/should be changed to be declared as a static method.
 			// Actually, must pass in owner so FindRunnableJob will find a job.
 
-			sn = new DedicatedScheddNegotiate(0, NULL, match->user,
-				match->getPool().empty() ? nullptr : match->getPool().c_str());
+			sn = new DedicatedScheddNegotiate(0, NULL, match->user, match->pool);
 		} else {
 			// Use the DedSched
-			sn = new MainScheddNegotiate(0, NULL, match->user,
-				match->getPool().empty() ? nullptr : match->getPool().c_str());
-		}		
+			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
+		}
 
 			// Setting cluster.proc to -1.-1 should result in the schedd
 			// invoking FindRunnableJob to select an appropriate matching job.
-		PROC_ID jobid;
-		jobid.cluster = -1; jobid.proc = -1;
+		PROC_ID jobid(-1,-1);
 
 		if (match->is_dedicated) {
 			const ClassAd *msg_ad = msg->getJobAd();
@@ -8758,15 +8788,26 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			*(msg->leftover_startd_ad()),last_slot_name.length() > 0 ? last_slot_name.c_str() : slot_name);
 
 		delete sn;
-	} 
-
+	}
+	
 	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
 			// since we might be able to spawn something now.
 		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
 	else {
-		scheduler.StartJob( match );
+		// now that we have queued up handling of the leftovers,
+		// try and start a job on each of the new slots
+		for (match_rec* slot : slots) {
+			scheduler.StartJob(slot);
+		}
+	}
+
+	// if the claimid in the original match record was not used by any of the returned slots
+	// then that match_rec should be deleted (we can't do this before we try and claim the leftovers)
+	if (delete_orig_match) {
+		DelMrec(match);
+		match = nullptr;
 	}
 }
 
@@ -8977,7 +9018,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
 	}
 		// note: AddMrec will makes its own copy of match_ad
-	match_rec *mrec = AddMrec( claim_id.c_str(), startd_addr, job, match_ad, 
+	match_rec *mrec = AddMrec( claim_id.c_str(), startd_addr, *job, match_ad, 
 							   user.c_str(), pool );
 
 		// authorize this startd for READ access
@@ -9183,6 +9224,20 @@ Scheduler::StartJob(match_rec *rec)
 	PROC_ID id;
 
 	ASSERT( rec );
+
+	bool is_ocu_holder = false;
+	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
+	if (is_ocu_holder) {
+		// If the "job" is the one which is responsible for holding the OCU 
+		// claim, don't start the job, but set cluster/proc to -1 to indicate
+		// another job could start here.
+		rec->keep_while_idle = std::numeric_limits<int>::max();
+		rec->is_ocu = true;
+		rec->ocu_originator = {rec->cluster, rec->proc};
+		rec->cluster = rec->proc = -1;
+		rec->my_match_ad->Assign("OCUClaim", true);
+	}
+
 	switch(rec->status) {
 	case M_UNCLAIMED:
 		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
@@ -9206,11 +9261,14 @@ Scheduler::StartJob(match_rec *rec)
 
 	id.cluster = rec->cluster;
 	id.proc = rec->proc;
-	const char * reason = "job was removed";
 	JobQueueJob * job = GetJobAd(id);
-	if ( ! Runnable(job, reason) || ! jobCanUseMatch(job, rec->my_match_ad, rec->getPool(), reason)) {
+	const char * reason = nullptr;
+	runnable_reason_code runnable_code = runnable_reason_code::NotFound;
+	if ( ! Runnable(job, runnable_code) || ! jobCanUseMatch(job, rec->my_match_ad, rec->pool, reason)) {
 		if (IsDebugLevel(D_MATCH)) {
-			dprintf(D_MATCH, "match (%s) was activated, but job %d.%d no longer runnable because %s. searching for new job\n", 
+			// if we didn't get a reason from jobCanUseMatch, then we must have a runnable_code
+			if ( ! reason) reason = getRunnableReason(runnable_code);
+			dprintf(D_MATCH, "match (%s) was activated, but job %d.%d %s. searching for new job\n", 
 				rec->description(), id.cluster, id.proc, reason);
 		}
 			// find the job with the highest priority
@@ -9291,11 +9349,11 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
 	}
 	auto job_ad = GetJobAd(new_job_id);
-	if (job_ad && !JobCanFlock(*job_ad, mrec->getPool())) {
+	if (job_ad && !JobCanFlock(*job_ad, mrec->pool)) {
 		return false;
 	}
 
-	if( new_job_id.proc == -1 ) {
+	if ((new_job_id.proc == -1) && (!mrec->is_ocu)){
 			// no more jobs to run
 		if (mrec->idle_timer_deadline < time(0))  {
 			dprintf(D_ALWAYS,
@@ -9769,7 +9827,7 @@ ExprTree * Scheduler::flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo
 // Check START_VANILLA_UNIVERSE of a job vs a SLOT.  This is called after the negotiator
 // has given us a match, but before we try and activate it.
 //
-bool Scheduler::jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::string &pool, const char *&reason)
+bool Scheduler::jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char *pool, const char *&reason)
 {
 	if ( ! job) {
 		reason = "job not found";
@@ -9790,10 +9848,10 @@ bool Scheduler::jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::
 		runnable = vad.EvalAsBool(expr, false);
 
 		vad.Reset();
-		reason = "from eval of START_VANILLA";
+		reason = runnable ? "START_VANILLA == true" : "START_VANILLA != true";
 	}
 	if (!JobCanFlock(*job, pool)) {
-		reason = "job cannot flock with pool:";
+		reason = "job cannot flock with pool";
 		runnable = false;
 	}
 
@@ -11057,10 +11115,10 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	
 	if (pid) {
 		add_shadow_rec(new_rec);
-	} else if ( new_rec->match && !new_rec->match->getPool().empty() ) {
+	} else if ( new_rec->match && new_rec->match->pool ) {
 		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
 						ATTR_REMOTE_POOL,
-						new_rec->match->getPool().empty() ? nullptr : new_rec->match->getPool().c_str(),
+						new_rec->match->pool,
 						NONDURABLE);
 	}
 	return new_rec;
@@ -11409,8 +11467,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 				}
 			}
 		}
-		if( !mrec->getPool().empty() ) {
-			SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->getPool().c_str());
+		if( mrec->pool ) {
+			SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->pool);
 		}
 		if ( mrec->auth_hole_id ) {
 			SetAttributeString(cluster,
@@ -12145,7 +12203,6 @@ Scheduler::swap_space_exhausted()
 int
 Scheduler::shadow_prio_recs_consistent()
 {
-	int		i;
 	struct shadow_rec	*srp;
 	int		status = 0;
 	int universe = 0;
@@ -12154,8 +12211,8 @@ Scheduler::shadow_prio_recs_consistent()
 	BadCluster = -1;
 	BadProc = -1;
 
-	for( i=0; i<N_PrioRecs; i++ ) {
-		if( (srp=FindSrecByProcID(PrioRec[i].id)) ) {
+	for (auto & rec : PrioRec) {
+		if( (srp=FindSrecByProcID(rec.id)) ) {
 			BadCluster = srp->job_id.cluster;
 			BadProc = srp->job_id.proc;
 			universe = srp->universe;
@@ -12164,8 +12221,8 @@ Scheduler::shadow_prio_recs_consistent()
 				universe!=CONDOR_UNIVERSE_MPI &&
 				universe!=CONDOR_UNIVERSE_PARALLEL) {
 				// display_shadow_recs();
-				// dprintf(D_FULLDEBUG,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
-				dprintf( D_ALWAYS, "ERROR: Found a consistency problem in the PrioRec array for job %d.%d !!!\n", PrioRec[i].id.cluster,PrioRec[i].id.proc );
+				// dprintf(D_FULLDEBUG,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,rec.id.cluster,rec.id.proc,rec.owner);
+				dprintf( D_ALWAYS, "ERROR: Found a consistency problem in the PrioRec array for job %d.%d !!!\n", rec.id.cluster,rec.id.proc );
 				return FALSE;
 			}
 		}
@@ -13325,6 +13382,9 @@ Scheduler::Init()
 	}
 
 	InitJobHistoryFile("HISTORY", "PER_JOB_HISTORY_DIR"); // or re-init it, as the case may be
+
+	// How often should Schedd write ClassAd records to daemon_history (default 15 min)
+	WriteHistRecordInterval = param_integer("SCHEDD_HISTORY_RECORD_INTERVAL", 60 * 15, 0);
 
 		//
 		// We keep a copy of the last interval
@@ -14703,18 +14763,25 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 
 
 match_rec*
-Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
-				   char const *user, char const *pool, match_rec **pre_existing)
+Scheduler::AddMrec(
+	const char * id,
+	const char * peer,
+	const JOB_ID_KEY& jid,
+	const ClassAd* my_match_ad,
+	const char * user,
+	const char * pool,
+	const ClassAd* extraAttrs /* = nullptr*/, // extra attrs sent by negotiator
+	match_rec **pre_existing /* = nullptr*/)  // return claim id colliding match rec
 {
-	match_rec *rec;
+	match_rec *rec = nullptr;
 
 	if( pre_existing ) {
-		*pre_existing = NULL;
+		*pre_existing = nullptr;
 	}
 	if(!id || !peer)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
-		return NULL;
+		return nullptr;
 	} 
 	// spit out a warning and return NULL if we already have this mrec
 	match_rec *tempRec;
@@ -14726,24 +14793,32 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		if( pre_existing ) {
 			*pre_existing = tempRec;
 		}
-		return NULL;
+		return nullptr;
 	}
 
 
-	rec = new match_rec(id, peer, jobId, my_match_ad, user, pool, false);
+	rec = new match_rec(id, peer, jid, my_match_ad, user, pool, false);
 	if(!rec)
 	{
 		EXCEPT("Out of memory!");
 	} 
 
 	if( matches->insert( id, rec ) != 0 ) {
-		ClaimIdParser cid(id);
-		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", cid.publicClaimId());
+		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", rec->claim_id.publicClaimId());
 		delete rec;
-		return NULL;
+		return nullptr;
 	}
-	ASSERT( matchesByJobID->insert( *jobId, rec ) == 0 );
 	numMatches++;
+
+	JobQueueJob *job_ad = nullptr;
+	JobQueueCluster * cluster_ad = nullptr;
+	if (JobQueueBase::IsJobId(jid)) {
+		ASSERT( matchesByJobID->insert( jid, rec ) == 0 );
+		job_ad = GetJobAd(jid);
+		if (job_ad) cluster_ad = job_ad->Cluster();
+	} else if (JobQueueBase::IsClusterId(jid)) {
+		cluster_ad = GetClusterAd(jid.cluster);
+	}
 
 		// Update CurrentRank in the startd ad.  Why?  Because when we
 		// reuse this match for a different job (in
@@ -14751,7 +14826,6 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		// startd CurrentRank, in order to avoid potential
 		// rejection by the startd.
 
-	JobQueueJob *job_ad = GetJobAd(jobId->cluster,jobId->proc);
 	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
 		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
@@ -14760,13 +14834,19 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	}
 
 	// timestamp the first time a job with this ClusterId got a match
-	if (job_ad && job_ad->Cluster() && ! job_ad->Cluster()->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
-		job_ad->Cluster()->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
+	if (cluster_ad && ! cluster_ad->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
+		cluster_ad->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
 	}
 
 	// These are attributes that were added to the slot ad after it
 	// left the startd. We want to preserve them when we get a fresh copy
 	// of the slot ad from the startd.
+	// if an explicit collection of extra attributes were passed, store them now
+	// otherwise, extract the extra attrs from the passed-in match ad.
+	if (extraAttrs) {
+		rec->m_added_attrs.Update(*extraAttrs);
+		if (rec->my_match_ad) rec->my_match_ad->Update(*extraAttrs);
+	} else
 	if(rec->my_match_ad) {
 			// Carry Negotiator Match expressions over from the
 			// match record.
@@ -16698,7 +16778,7 @@ Scheduler::claimLocalStartd()
 		jobad->LookupString(attr_JobUser,job_owner,sizeof(job_owner));
 		ASSERT(job_owner[0]);
 
-		match_rec* mrec = AddMrec( claim_id, startd_addr, &matching_jobid, machine_ad,
+		match_rec* mrec = AddMrec( claim_id, startd_addr, matching_jobid, machine_ad,
 						job_owner,	// special Owner name
 						NULL			// optional negotiator name
 						);
@@ -18440,5 +18520,17 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 	}
 
 	return TRUE;
+}
+
+
+// Write Schedd ClassAd to daemon history?
+void
+Scheduler::maybeWriteDaemonHistory(ClassAd* ad) {
+	static time_t prev_write = 0;
+	time_t now = time(nullptr);
+	if (now - prev_write > WriteHistRecordInterval) {
+		prev_write = now;
+		daemonCore->AppendDaemonHistory(ad);
+	}
 }
 

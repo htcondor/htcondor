@@ -132,8 +132,12 @@ int main( int argc, char *argv[] )
 	int command=-1;
 	int i;
 	bool with_ack = false;
+	bool fake_private_ad = false;
 	bool allow_multiple = false;
 	bool many_connections = false;
+	time_t start_time = time(nullptr);
+	int claim_sequence = 0;
+	std::string claimid; // in case we need to fake a private ad
 
 	set_priv_initialize(); // allow uid switching if root
 	config();
@@ -156,6 +160,8 @@ int main( int argc, char *argv[] )
 			use_tcp = true;
 		} else if(!strncmp(argv[i],"-udp",strlen(argv[i]))) {
 			use_tcp = false;
+		} else if(!strncmp(argv[i],"-fake-private-ad",strlen(argv[i]))) {
+			fake_private_ad = true;
 		} else if(!strncmp(argv[i],"-multiple",strlen(argv[i]))) {
 				// We don't set allow_multiple=true by default, because
 				// existing users (e.g. glideinWMS) have stray blank lines
@@ -198,6 +204,12 @@ int main( int argc, char *argv[] )
 	case UPDATE_STARTD_AD_WITH_ACK:
 		with_ack = true;
 		break;
+	case UPDATE_STARTD_AD:
+		break;
+	default:
+		if (fake_private_ad) {
+			fake_private_ad = false; // not valid unless updating a startd ad
+		}
 	}
 
 	if( with_ack ) {
@@ -325,6 +337,23 @@ int main( int argc, char *argv[] )
 			int result = 0;
 			if ( sock ) {
 				result += putClassAd( sock, *ad );
+				if (fake_private_ad) {
+					ClassAd privateAd;
+					SetMyTypeName(privateAd, STARTD_SLOT_ADTYPE);
+					CopyAttribute(ATTR_STARTD_IP_ADDR, privateAd, *ad);
+					CopyAttribute(ATTR_NAME, privateAd, *ad);
+					claimid.clear();
+					++claim_sequence;
+					// a claim id is <sinful>#<daemon-start-time>#<sequence-num>#<32-byte-hex-secret>
+					ad->LookupString(ATTR_MY_ADDRESS, claimid);
+					formatstr_cat(claimid, "#%lld#%d#%08X", (long long)start_time, claim_sequence, claim_sequence);
+					claimid += "DEADBEEF01234567BEEFBAAD"; // add 24 bytes to the "secret"
+					privateAd.Assign(ATTR_CLAIM_ID, claimid);
+					if ( ! putClassAd(sock, privateAd)) {
+						fprintf(stderr, "failed to send simulated secret ad. ");
+						result = 0; // force a failure below
+					}
+				}
 				result += sock->end_of_message();
 			}
 			if ( result != 2 ) {

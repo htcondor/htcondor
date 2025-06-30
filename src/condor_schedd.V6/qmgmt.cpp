@@ -242,6 +242,7 @@ typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runt
 schedd_runtime_probe WalkJobQ_runtime;
 schedd_runtime_probe WalkJobQ_mark_idle_runtime;
 schedd_runtime_probe WalkJobQ_get_job_prio_runtime;
+schedd_runtime_probe WalkJobQ_update_autocluster_id_runtime;
 
 class Service;
 
@@ -251,15 +252,16 @@ const double PrioRecRebuildMaxTimeSlice = 0.05;
 const double PrioRecRebuildMaxTimeSliceWhenNoMatchFound = 0.1;
 const double PrioRecRebuildMaxInterval = 20 * 60;
 Timeslice   PrioRecArrayTimeslice;
-prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
-prio_rec	* PrioRec = &PrioRecArray[0];
-int			N_PrioRecs = 0;
+#ifdef PRIO_REC_IS_VECTOR
+ std::vector<prio_rec> PrioRec;
+#else
+ std::deque<prio_rec> PrioRec;
+#endif
 time_t      PrioRecMinCoolDownTime = 0;
 std::map<int,int> PrioRecAutoClusterRejected;
 int BuildPrioRecArrayTid = -1;
 int DirtyPrioRecTid = -1;
 
-static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
 JOB_ID_KEY_BUF HeaderKey(0,0);
 
@@ -389,45 +391,6 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 }
 };
 
-// Return the same comparison as above, but just comparing the submitter
-// field.  This allows us to binary search the PrioRecArray by submitter
-// Note the comparison up to the submitter must match the above
-struct prio_rec_submitter_lb {
-bool operator()(const prio_rec& a, const std::string &user) const {
-	if (a.submitter.length() < user.length()) {
-		return false;
-	}
-
-	if (a.submitter.length() > user.length()) {
-		return true;
-	}
-
-	if (a.submitter > user) {
-		return true;
-	}
-
-	return false;
-}
-};
-
-// The corresponding upper bound function, the negation of the above
-struct prio_rec_submitter_ub {
-bool operator()(const std::string &user, const prio_rec &a) const {
-	if (a.submitter.length() < user.length()) {
-		return true;
-	}
-
-	if (a.submitter.length() > user.length()) {
-		return false;
-	}
-
-	if (a.submitter < user) {
-		return true;
-	}
-
-	return false;
-}
-};
 
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
@@ -1765,12 +1728,32 @@ JobQueueCluster::~JobQueueCluster()
 
 bool JobQueueJob::IsNoopJob()
 {
+#if 1
+	if (run == JobRunnableState::DirtyNoop) {
+		bool noop = false;
+		if (this->LookupBool(ATTR_JOB_NOOP, noop) && noop) {
+			run = JobRunnableState::Noop;
+		} else {
+			run = JobRunnableState::Unset;
+		}
+	}
+	return run == JobRunnableState::Noop;
+#else
 	if ( ! has_noop_attr) return false;
 	bool noop = false;
 	if ( ! this->LookupBool(ATTR_JOB_NOOP, noop)) { has_noop_attr = false; }
 	else { has_noop_attr = true; }
 	return has_noop_attr && noop;
+#endif
 }
+
+bool JobQueueJob::IsOCUClaimer() const
+{
+	bool ocu = false;
+	this->LookupBool("IsOCUHolder", ocu);
+	return ocu;
+}
+
 
 void JobQueueBase::CheckJidAndType(const JOB_ID_KEY &key)
 {
@@ -2998,41 +2981,20 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 	return rval;
 }
 
-
 int
 grow_prio_recs( int newsize )
 {
-	int i = 0;
-	prio_rec *tmp = nullptr;
-
-	// just return if PrioRec already equal/larger than the size requested
-	if ( MAX_PRIO_REC >= newsize ) {
-		return 0;
+  #ifdef PRIO_REC_IS_VECTOR
+	if (new_size > (int)PrioRec.capacity()) {
+		PrioRec.reserve(new_size);
 	}
-
 	dprintf(D_FULLDEBUG,"Dynamically growing PrioRec to %d\n",newsize);
-
-	tmp = new prio_rec[(unsigned int)newsize];
-	if ( tmp == nullptr ) {
-		EXCEPT( "grow_prio_recs: out of memory" );
-	}
-
-	/* copy old PrioRecs over */
-	for (i=0;i<N_PrioRecs;i++)
-		tmp[i] = PrioRec[i];
-
-	/* delete old too-small space, but only if we new-ed it; the
-	 * first space came from the heap, so check and don't try to 
-	 * delete that */
-	if ( &PrioRec[0] != &PrioRecArray[0] )
-		delete [] PrioRec;
-
-	/* replace with spanky new big one */
-	PrioRec = tmp;
-	MAX_PRIO_REC = newsize;
+  #else
+	// no need to grow a std::deque
+	(void)newsize;
+  #endif
 	return 0;
 }
-
 
 // test an unqualified username "bob" or a fully qualfied username "bob@domain" to see
 // if it is a queue superuser
@@ -8530,7 +8492,6 @@ schedd_runtime_probe GetAutoCluster_cchit_runtime;
 double last_autocluster_runtime;
 bool   last_autocluster_make_sig;
 int    last_autocluster_type=0;
-int    last_autocluster_classad_cache_hit=0;
 stats_entry_abs<int> SCGetAutoClusterType;
 
 int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
@@ -8540,47 +8501,34 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
             pre_job_prio2 = 0, 
             post_job_prio1 = 0, 
             post_job_prio2 = 0;
-    char    owner[100];
-	const char* dummy = nullptr;
 
 	ASSERT(job);
 
-	owner[0] = 0;
-
-		// We must call getAutoClusterid() in get_job_prio!!!  We CANNOT
-		// return from this function before we call getAutoClusterid(), so call
-		// it early on (before any returns) right now.  The reason for this is
-		// getAutoClusterid() performs a mark/sweep algorithm to garbage collect
-		// old autocluster information.  If we fail to call getAutoClusterid, the
-		// autocluster information for this job will be removed, causing the schedd
-		// to ASSERT later on in the autocluster code. 
-		// Quesitons?  Ask Todd <tannenba@cs.wisc.edu> 01/04
-	last_autocluster_runtime = 0;
-	last_autocluster_classad_cache_hit = 1;
-	last_autocluster_make_sig = false;
-
-	int auto_id = scheduler.autocluster.getAutoClusterid(job);
-	job->autocluster_id = auto_id;
-
-	GetAutoCluster_runtime += last_autocluster_runtime;
-	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
-	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
-	SCGetAutoClusterType = last_autocluster_type;
-	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
-
-	GetAutoCluster_runtime += last_autocluster_runtime;
-	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
-	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
-	SCGetAutoClusterType = last_autocluster_type;
-	GetAutoCluster_cchit_runtime += last_autocluster_classad_cache_hit;
-
-	// Figure out if we should contine and put this job into the PrioRec array
-	// or not.
-	if ( ! Runnable(job, dummy) ||
-			scheduler.AlreadyMatched(job, job->Universe()))
-	{
+#if 0
+	// skip this job, it is not runnable
+	// TODO: maybe put cooldown jobs in PrioRec array?
+	if (job->run != JobRunnableState::Runnable) {
 		return 0;
 	}
+#else
+	// TODO: trust that the job->run code is already up-to-date here....
+	// Figure out if we should contine and put this job into the PrioRec array
+	// or not. 
+	runnable_reason_code code;
+	if ( ! Runnable(job, code)) {
+		job->run = JobRunnableState::NotRunnable;
+		if (code == runnable_reason_code::IsNoopJob) {
+			job->run = JobRunnableState::Noop;
+		}
+		return 0;
+	} else {
+		job->run = JobRunnableState::Runnable;
+		if (scheduler.AlreadyMatched(job, job->Universe())) {
+			job->run = JobRunnableState::Matched;
+			return 0;
+		}
+	}
+#endif
 
 	// --- Insert this job into the PrioRec array ---
 
@@ -8602,6 +8550,20 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
 
+#if 0
+	// the name in the the submitterdata should be the same
+	// as the name we get got with the old code.  Note that
+	// we may be forcing a submitter record to be created here
+	scheduler.get_submitter(job);
+	if ( ! job->submitterdata) {
+		dprintf(D_ERROR, "job %d.%d is marked runnable but submitterdata is not set!", jid.cluster, jid.proc);
+		return 0;
+	}
+	const char * powner = job->submitterdata->Name();
+#else
+	// TODO: use scheduler.get_submitter code above instead of this..
+	char    owner[100];
+	owner[0] = 0;
 	char * powner = owner;
 	int cremain = sizeof(owner);
 		// Note, we should use this method instead of just looking up
@@ -8629,30 +8591,90 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 			strncat(powner, accounting_domain.c_str(), cremain);
 		}
 	}
+#endif
 
-    PrioRec[N_PrioRecs].id             = jid;
-    PrioRec[N_PrioRecs].job_prio       = job_prio;
-    PrioRec[N_PrioRecs].pre_job_prio1  = pre_job_prio1;
-    PrioRec[N_PrioRecs].pre_job_prio2  = pre_job_prio2;
-    PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
-    PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
-    PrioRec[N_PrioRecs].not_runnable   = false;
-    PrioRec[N_PrioRecs].matched        = false;
-	if ( auto_id == -1 ) {
-		PrioRec[N_PrioRecs].auto_cluster_id = jid.cluster;
+	auto & rec = PrioRec.emplace_back();
+	rec.submitter      = powner;
+	rec.id             = jid;
+	rec.job_prio       = job_prio;
+	rec.pre_job_prio1  = pre_job_prio1;
+	rec.pre_job_prio2  = pre_job_prio2;
+	rec.post_job_prio1 = post_job_prio1;
+	rec.post_job_prio2 = post_job_prio2;
+	rec.not_runnable   = false;
+	rec.matched        = false;
+	if (job->autocluster_id < 0) {
+		rec.auto_cluster_id = jid.cluster;
 	} else {
-		PrioRec[N_PrioRecs].auto_cluster_id = auto_id;
-	}
-
-	PrioRec[N_PrioRecs].submitter = powner;
-
-    N_PrioRecs += 1;
-	if ( N_PrioRecs == MAX_PRIO_REC ) {
-		grow_prio_recs( 2 * N_PrioRecs );
+		rec.auto_cluster_id = job->autocluster_id;
 	}
 
 	return 0;
 }
+
+// map the reason code return from Runnable() to a JobQueueJob JobRunnableState code
+static JobRunnableState mapRunnableReasonCode(runnable_reason_code code)
+{
+	static const JobRunnableState aState[]{
+		JobRunnableState::Runnable,    //IsRunnable=0,
+		JobRunnableState::NotRunnable, //NotFound,
+		JobRunnableState::Noop,        //IsNoopJob,
+		JobRunnableState::NotRunnable, //NotIdle,
+		JobRunnableState::NotRunnable, //UniverseNotInService,
+		JobRunnableState::NotRunnable, //OCUClaimer
+		JobRunnableState::NotRunnable, //InLongCooldown,
+		JobRunnableState::Cooldown,    //InShortCooldown,
+		JobRunnableState::Matched,     //AlreadyMatched,
+	};
+	ASSERT((size_t)code >= 0 && (size_t)code < COUNTOF(aState));
+	return aState[(size_t)code];
+}
+
+struct _get_job_prio_info { int num_runnable{0}; int num_cooldown{0}; int num_matched{0}; int num_skipped{0}; };
+
+int update_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * pv)
+{
+	struct _get_job_prio_info & info = *(struct _get_job_prio_info*)pv;
+
+	// getAutoClusterid() performs a mark/sweep algorithm to garbage collect
+	// old autocluster information.  If we fail to call getAutoClusterid, the
+	// autocluster information for this job will be removed, causing the schedd
+	// to ASSERT later on in the autocluster code. 
+	// Quesitons?  Ask Todd <tannenba@cs.wisc.edu> 01/04
+	last_autocluster_runtime = 0;
+	last_autocluster_make_sig = false;
+
+	int auto_id = scheduler.autocluster.getAutoClusterid(job);
+	job->autocluster_id = auto_id;
+
+	GetAutoCluster_runtime += last_autocluster_runtime;
+	if (last_autocluster_make_sig) { GetAutoCluster_signature_runtime += last_autocluster_runtime; }
+	else { GetAutoCluster_hit_runtime += last_autocluster_runtime; }
+	SCGetAutoClusterType = last_autocluster_type;
+
+	// Figure out if we should put this job into the PrioRec array
+	// or not, only jobs that end up in state Runnable will go into the prio rec array
+	// todo maybe also put short cooldown jobs in the array?
+	runnable_reason_code code;
+	if ( ! Runnable(job, code)) {
+		job->run = mapRunnableReasonCode(code);
+		++info.num_skipped;
+		if (code == runnable_reason_code::InShortCooldown) { ++info.num_cooldown; }
+	} else {
+		// assume runnable, but we still need to check to see if we have a match record already
+		job->run = JobRunnableState::Runnable;
+		if (scheduler.AlreadyMatched(job, job->Universe())) {
+			job->run = JobRunnableState::Matched;
+			++info.num_matched;
+			++info.num_skipped;
+		} else {
+			++info.num_runnable;
+		}
+	}
+
+	return 0;
+}
+
 
 bool
 jobLeaseIsValid( ClassAd* job, int cluster, int proc )
@@ -9063,18 +9085,20 @@ static void DoBuildPrioRecArray() {
 	scheduler.autocluster.mark();
 	BuildPrioRec_mark_runtime += rt.tick(now);
 
-	// N_PrioRecs and PrioRecMinCoolDownTime are globals that will be incremented
+	PrioRec.clear();
+	struct _get_job_prio_info info;
+	WalkJobQueue2(update_autocluster_id, &info);
+	grow_prio_recs(info.num_runnable + info.num_cooldown + 5); // +5 because ToddT sez so...
+	// PrioRecMinCoolDownTime is a global that will be incremented
 	// as we walk the job queue. 
-	N_PrioRecs = 0;
 	PrioRecMinCoolDownTime = 0;
 	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
 		// moment. 
-	if( N_PrioRecs ) {
-		std::sort(PrioRec, PrioRec + N_PrioRecs, prio_compar{});
-		BuildPrioRec_sort_runtime += rt.tick(now);
+	if ( ! PrioRec.empty()) {
+		std::sort(PrioRec.begin(), PrioRec.end(), prio_compar{});
 	}
 
 	scheduler.autocluster.sweep();
@@ -9201,7 +9225,8 @@ bool UniverseUsesVanillaStartExpr(int universe)
 void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
 					 char const * user)
 {
-	JobQueueJob *ad = nullptr;
+	JobQueueJob *job = nullptr;
+	runnable_reason_code runnable_code;
 
 	if (user && (strlen(user) == 0)) {
 		user = nullptr;
@@ -9248,6 +9273,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
 
+	bool ocu = false;
+	my_match_ad->LookupBool("OCUClaim", ocu);
+	if (ocu) {
+		match_any_user = true;
+	}
 
 		// Iterate through the most recently constructed list of
 		// jobs, nicely pre-sorted first by submitter, then by job priority
@@ -9256,23 +9286,23 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	std::string user_str = user ? user : "";
 
 	do {
-		prio_rec *first = &PrioRec[0];
-		prio_rec *end = &PrioRec[N_PrioRecs];
+		auto first = PrioRec.begin();
+		auto end = PrioRec.end();
 
 		if (!match_any_user) {
 			first = std::lower_bound(first, end, user_str, prio_rec_submitter_lb{});
 			end = std::upper_bound(first, end, user_str, prio_rec_submitter_ub{});
 		}
 
-		for (prio_rec *p = first; p != end; p++) {
+		for (auto p = first; p != end; p++) {
 			if ( p->not_runnable || p->matched ) {
 					// This record has been disabled, because it is no longer
 					// runnable or already matched.
 				continue;
 			}
 
-			ad = GetJobAd( p->id.cluster, p->id.proc );
-			if (!ad) {
+			job = GetJobAd(p->id);
+			if ( ! job) {
 					// This ad must have been deleted since we last built
 					// runnable job list.
 				continue;
@@ -9284,31 +9314,37 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			if (scheduler.AlreadyMatched(&p->id)) {
+			if (scheduler.AlreadyMatched(job, job->Universe())) {
 				p->matched = true;
+				runnable_code = runnable_reason_code::AlreadyMatched;
 			}
-			if (!Runnable(&p->id)) {
+			else if ( ! Runnable(job, runnable_code)) {
+				// TODO: special case for cooldown here??
 				p->not_runnable = true;
 			}
-			if (p->matched || p->not_runnable) {
+
+			if (runnable_code != runnable_reason_code::IsRunnable) {
 					// This job's status must have changed since the
 					// time it was added to the runnable job list.
 					// The not_runnable and matched flags will prevent
 					// this job from being considered in any
 					// future iterations through the list.
-				dprintf(D_FULLDEBUG,
-						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
-						p->id.cluster, p->id.proc, p->matched ? "already matched" : "no longer runnable");
+				const char * reason = getRunnableReason(runnable_code);
+				dprintf(D_FULLDEBUG, "record for job %d.%d skipped until PrioRec rebuild - %s\n",
+					job->jid.cluster, job->jid.proc, reason);
 
 					// Move along to the next job in the prio rec array
 				continue;
 			}
 
+			dprintf (D_FULLDEBUG, "Job %d.%d: is runnable\n", job->jid.cluster, job->jid.proc);
+
 			if (!match_user.empty()) {
 				// TODO Get the owner from the JobQueueJob object.
 				//   Need to be careful about whether UID_DOMAIN is included.
+				// fix as part of user_is_the_new_owner cleanup...
 				std::string job_user;
-				ad->LookupString(ATTR_USER, job_user);
+				job->LookupString(ATTR_USER, job_user);
 				if (match_user != job_user) {
 					continue;
 				}
@@ -9317,7 +9353,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				// Now check if the job and the claimed resource match.
 				// NOTE : we must do this AFTER we ensure the job is still runnable, which
 				// is why we invoke Runnable() above first.
-			if ( ! IsAMatch( ad, my_match_ad ) ) {
+			if ( ! IsAMatch( job, my_match_ad ) ) {
 					// Job and machine do not match.
 					// Assume that none of the other jobs in this auto-cluster will match.
 					// THIS IS A DANGEROUS ASSUMPTION - what if this job is no longer
@@ -9332,12 +9368,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				// as embodied by the START_VANILLA_UNIVERSE expression.
 #ifdef USE_VANILLA_START
 			if (eval_for_each_job) {
-				vad.Insert(job_attr, ad);
+				vad.Insert(job_attr, job);
 				bool runnable = scheduler.evalVanillaStartExpr(vad);
 				std::ignore = vad.Remove(job_attr);
 
 				if ( ! runnable) {
-					dprintf(D_FULLDEBUG | D_MATCH, "job %d.%d Matches, but START_VANILLA_UNIVERSE is false\n", ad->jid.cluster, ad->jid.proc);
+					dprintf(D_FULLDEBUG | D_MATCH, "job %d.%d Matches, but START_VANILLA_UNIVERSE is false\n", job->jid.cluster, job->jid.proc);
 						// Move along to the next job in the prio rec array
 					continue;
 				}
@@ -9357,7 +9393,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
 			{
 				double new_startd_rank = 0;
-				if( EvalFloat(ATTR_RANK, my_match_ad, ad, new_startd_rank) )
+				if( EvalFloat(ATTR_RANK, my_match_ad, job, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
 						continue;
@@ -9378,7 +9414,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 			std::string jobLimits, recordedLimits;
 			if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
-				EvalString(ATTR_CONCURRENCY_LIMITS,ad,my_match_ad,jobLimits);
+				EvalString(ATTR_CONCURRENCY_LIMITS, job, my_match_ad, jobLimits);
 				my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
 										  recordedLimits);
 				lower_case(jobLimits);
@@ -9396,10 +9432,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				}
 			}
 
-			jobid = p->id; // success!
+			jobid = job->jid; // success!
 			return;
 
 		}	// end of for loop through PrioRec array
+
+		// If we got here and ocu true and match_any_user is false, then
+		// no job from our priority use matched.  Try again for someone else.
+		if (ocu && !match_any_user) {
+			match_any_user = true;
+			continue;
+		}
 
 		if(rebuilt_prio_rec_array) {
 				// We found nothing, and we had a freshly built job list.
@@ -9415,36 +9458,43 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }
 
-bool Runnable(JobQueueJob *job, const char *& reason)
+bool Runnable(JobQueueJob *job, runnable_reason_code & reason)
 {
 	int cur = 0, max = 1;
 
 	if ( ! job || ! job->IsJob())
 	{
-		reason = "not runnable (not found)";
+		reason = runnable_reason_code::NotFound;
 		return false;
 	}
 
 	if (job->IsNoopJob())
 	{
-		reason = "not runnable (IsNoopJob)";
+		reason = runnable_reason_code::IsNoopJob;
 		return false;
 	}
 
+	if (job->IsOCUClaimer()) {
+		reason = runnable_reason_code::IsOCUClaimer;
+		return true;
+	}
+
 	if (job->Status() != IDLE) {
-		reason = "not runnanble (not IDLE)";
+		reason = runnable_reason_code::NotIdle;
 		return false;
 	}
 
 	if( !service_this_universe(job->Universe(), job) )
 	{
-		reason = "not runnable (universe not in service)";
+		reason = runnable_reason_code::UniverseNotInService;
 		return false;
 	}
 
 	time_t cool_down = 0;
 	job->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
-	if (cool_down >= time(nullptr)) {
+	time_t now = time(nullptr);
+	const int cooldown_soon = 5*60;
+	if (cool_down >= now) {
 		if (PrioRecMinCoolDownTime == 0) {
 			// This is the first job we have found in cool down.
 			// Set the cool down time to the expiration time of this job.
@@ -9454,7 +9504,7 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 			// Set the cool down time to the minimum of the two.
 			PrioRecMinCoolDownTime = MIN(PrioRecMinCoolDownTime, cool_down);
 		}
-		reason = "not runnable (in cool-down)";
+		reason = (cool_down > (now + cooldown_soon)) ? runnable_reason_code::InLongCooldown : runnable_reason_code::InShortCooldown;
 		return false;
 	}
 
@@ -9463,14 +9513,40 @@ bool Runnable(JobQueueJob *job, const char *& reason)
 
 	if (cur < max)
 	{
-		reason = "is runnable";
+		reason = runnable_reason_code::IsRunnable;
 		return true;
 	}
 	
-	reason = "not runnable (already matched)";
+	reason = runnable_reason_code::AlreadyMatched;
 	return false;
 }
 
+const char * getRunnableReason(runnable_reason_code code)
+{
+	static const char * const aReason[]{
+		"is runnable", // IsRunnable
+		"not runnable (not found)", //NotFound
+		"not runnable (IsNoopJob)", //IsNoopJob,
+		"not runnable (not IDLE)", //NotIdle,
+		"not runnable (universe not in service)", //UniverseNotInService,
+		"not runnable (is OCU claimer)", // OCU Claimer,
+		"not runnable (in cool-down > 5min)", //InLongCooldown,
+		"not runnable (in cool-down < 5min)", //InShortCooldown,
+		"not runnable (already matched)", //AlreadyMatched,
+	};
+	ASSERT((size_t)code >= 0 && (size_t)code < COUNTOF(aReason));
+	return aReason[(size_t)code];
+}
+
+bool Runnable(JobQueueJob *job, const char *& reason)
+{
+	runnable_reason_code code;
+	bool isrun = Runnable(job, code);
+	reason = getRunnableReason(code);
+	return isrun;
+}
+
+#if 0
 bool Runnable(PROC_ID* id)
 {
 	const char * reason = "";
@@ -9478,6 +9554,7 @@ bool Runnable(PROC_ID* id)
 	dprintf (D_FULLDEBUG, "Job %d.%d: %s\n", id->cluster, id->proc, reason);
 	return runnable;
 }
+#endif
 
 void
 dirtyJobQueue()

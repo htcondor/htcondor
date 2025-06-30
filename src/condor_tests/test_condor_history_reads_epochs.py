@@ -187,7 +187,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
                 pass
             else:
                 #Get Job Id (cluster.proc) and increment dictionary count or add to dictionary
-                job = line.split(" ",1)[0]
+                job = line.strip().split(" ",1)[0]
                 total_lines += 1
                 if job in jobIds:
                     jobIds[job] += 1

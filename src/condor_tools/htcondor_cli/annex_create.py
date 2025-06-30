@@ -460,7 +460,7 @@ def create_annex_token(logger, type):
         out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
 
         if proc.returncode == 0:
-            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY")
+            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY", "")
             if sec_token_directory == "":
                 sec_token_directory = "~/.condor/tokens.d"
             return os.path.expanduser(f"{sec_token_directory}/{token_name}")

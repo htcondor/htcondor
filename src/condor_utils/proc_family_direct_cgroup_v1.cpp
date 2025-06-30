@@ -615,7 +615,7 @@ ProcFamilyDirectCgroupV1::unregister_family(pid_t pid)
 }
 
 bool 
-ProcFamilyDirectCgroupV1::has_been_oom_killed(pid_t pid) {
+ProcFamilyDirectCgroupV1::has_been_oom_killed(pid_t pid, int /*exit_status*/) {
 	bool killed = false;
 
 	// reading 8 bytes from the eventfd will result in a non-zero

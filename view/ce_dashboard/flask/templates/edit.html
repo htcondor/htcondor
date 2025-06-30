@@ -1,4 +1,4 @@
-{% extends "base.html.j2" %}
+{% extends "base.html" %}
 
 {% block title %}
     HTCondorView - Graph Editor
@@ -27,6 +27,7 @@
                     <br>
                     Query: <span class="help"><a href="help/syntax.html" target="_blank">syntax reference</a></span><br>
                     <textarea rows="10" style="width: 90%;" id="graph_query" name="graph_query">DATA</textarea>
+                    <br>
                     <button id="updatebtn">Update Graph</button>
 					<button onclick="copyToClipboard()">Copy HTML for this Graph to the Clipboard</button>
                 </div>
@@ -155,6 +156,14 @@
                         const graph_query = $("#graph_query").val();
                         const graph_query_url = build_graph_query_url(graph_query);
 
+                        // get host query parameter from current URL, so that
+                        // it can be passed to the new URL
+                        const params = new URLSearchParams(window.location.search);
+                        const host = params.get('host');
+                        if (host) {
+                            graph_query_url += "&host=" + host;
+                        }
+
                         urlTool.href = window.location.href;
                         const search = "?" +
                             "title=" + encodeURIComponent(title) + "&" +
@@ -173,6 +182,17 @@
 						url = '<iframe src="' + url + '" width="70%" height="25%"></iframe>';
 					    await navigator.clipboard.writeText(url);
 					      console.log('URL copied to clipboard');
+                              // Bootstrap flash message
+                            const flashHtml = `
+                            <div class="alert alert-success alert-dismissible fade show mt-3" role="alert" id="clipboard-flash">
+                                <strong>HTML copied to clipboard!</strong><br>
+                                <code style="word-break: break-all;">${url.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            `;
+                            $("#vizlog").html(flashHtml);
 					    } catch (err) {
 					      console.error('Failed to copy URL: ', err);
 					    }

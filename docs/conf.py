@@ -74,7 +74,7 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '24.9.0'
+release = '24.10.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2025
@@ -136,6 +136,7 @@ MAN_PAGES = [
         ('condor_config_val', 1),
         ('condor_continue', 1),
         ('condor_dagman', 1),
+        ('condor_dag_checker', 1),
         ('condor_drain', 1),
         ('condor_evicted_files', 1),
         ('condor_fetchlog', 1),

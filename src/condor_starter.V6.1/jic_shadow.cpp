@@ -269,6 +269,7 @@ JICShadow::init( void )
 	{
 		receiveMachineAd(m_job_startd_update_sock);
 		receiveExecutionOverlayAd(m_job_startd_update_sock);
+		receiveMachineSecretsAd(m_job_startd_update_sock);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
@@ -667,11 +668,11 @@ JICShadow::transferOutput( bool &transient_failure )
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
-				updateShadowWithPluginResults("Output");
+				updateShadowWithPluginResults("Output", filetrans);
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
-			updateShadowWithPluginResults("Output");
+			updateShadowWithPluginResults("Output", filetrans);
 		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
@@ -759,7 +760,7 @@ JICShadow::transferOutputMopUp(void)
 		if(!m_ft_info.success && !m_ft_info.try_again) {
 			ASSERT(m_ft_info.hold_code != 0);
 			// The shadow will immediately cut the connection to the
-			// starter when this is called. 
+			// starter when this is called.
 			notifyStarterError(m_ft_info.error_desc.c_str(), true,
 			                   m_ft_info.hold_code,m_ft_info.hold_subcode);
 			return false;
@@ -1102,6 +1103,36 @@ JICShadow::notifyJobTermination( UserProc *user_proc )
 	return rval;
 }
 
+// send a command with a classad payload and receive a classad payload in reply.
+ClassAd * JICShadow::sendStartdCommand(int cmd, ClassAd & payload)
+{
+	ASSERT(cmd != 0 && cmd != 1); // cmd 0 is update, and 1 is final update
+	if ( ! m_job_startd_update_sock) {
+		return nullptr;
+	}
+
+	m_job_startd_update_sock->encode();
+	if( !m_job_startd_update_sock->put(cmd) ||
+		!putClassAd(m_job_startd_update_sock, payload) ||
+		!m_job_startd_update_sock->end_of_message() )
+	{
+		dprintf(D_FULLDEBUG,"Failed to send update command %d to startd.\n", cmd);
+		return nullptr;
+	}
+
+	ClassAd * ret = new ClassAd();
+	m_job_startd_update_sock->decode();
+	if( !getClassAd(m_job_startd_update_sock, *ret) ||
+		!m_job_startd_update_sock->end_of_message())
+	{
+		dprintf(D_FULLDEBUG,"Failed to receive reply for command %d to startd.\n", cmd);
+		delete ret;
+		return nullptr;
+	}
+
+	return ret;
+}
+
 void
 JICShadow::updateStartd( ClassAd *ad, bool final_update )
 {
@@ -1177,10 +1208,23 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 
 	if( critical ) {
 		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Failed to send starter error string to Shadow.\n" );
 			return false;
 		}
+
+		// At this point, we expect the shadow to have already closed up
+		// shop.  Tell the rest of the JICShadow that the syscall socket
+		// is gone...
+		if( syscall_sock ) {
+			if( syscall_sock_registered ) {
+				daemonCore->Cancel_Socket( syscall_sock );
+				syscall_sock_registered = false;
+			}
+			syscall_sock->close();
+		}
+		// ... and to proceed with exiting regardless.
+		fast_exit = true;
 	} else {
 		ClassAd * ad;
 		RemoteErrorEvent event;
@@ -1306,7 +1350,7 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
 
-	updateShadowWithPluginResults("Checkpoint");
+	updateShadowWithPluginResults("Checkpoint", filetrans);
 
 	if( !rval ) {
 		// Failed to transfer.
@@ -2649,9 +2693,9 @@ JICShadow::beginFileTransfer( void )
 
 
 void
-JICShadow::updateShadowWithPluginResults( const char * which ) {
-	if(! filetrans) { return; }
-	if( filetrans->getPluginResultList().size() <= 0 ) { return; }
+JICShadow::updateShadowWithPluginResults( const char * which, FileTransfer * ft ) {
+	if(! ft) { return; }
+	if( ft->getPluginResultList().size() <= 0 ) { return; }
 
 	ClassAd updateAd;
 
@@ -2661,7 +2705,7 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 // or grovelling around in the list.  The former sounds more attractive.
 //
 	classad::ExprList * e = new classad::ExprList();
-	for( const auto & ad : filetrans->getPluginResultList() ) {
+	for( const auto & ad : ft->getPluginResultList() ) {
 		// This requires that plug-ins never generated ads with the
 		// "TransferClass" attribute.  We can enforce that when we
 		// read them off disk, if that becomes necessary.
@@ -2724,7 +2768,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 #endif
 
 	if ( ftrans ) {
-		updateShadowWithPluginResults("Input");
+		updateShadowWithPluginResults("Input", filetrans);
 
 			// Make certain the file transfer succeeded.
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
@@ -3504,7 +3548,7 @@ bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
 	}
 	job_execution_overlay_ad = new ClassAd();
 
-	if (!getClassAd(stream, *job_execution_overlay_ad))
+	if (!getClassAd(stream, *job_execution_overlay_ad) || !stream->end_of_message())
 	{
 		delete job_execution_overlay_ad; job_execution_overlay_ad = nullptr;
 		dprintf(D_ALWAYS, "Received invalid Execution Overlay Ad.  Discarding\n");
@@ -3524,6 +3568,28 @@ bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
 	}
 	return ret_val;
 }
+
+bool JICShadow::receiveMachineSecretsAd(Stream* stream)
+{
+	bool ret_val = true;
+
+	if (machine_secrets_ad) {
+		delete machine_secrets_ad;
+	}
+	machine_secrets_ad = new ClassAd();
+
+	if (!getClassAd(stream, *machine_secrets_ad) || !stream->end_of_message())
+	{
+		delete machine_secrets_ad; machine_secrets_ad = nullptr;
+		dprintf(D_ALWAYS, "Received invalid Machine Private Ad.  Discarding\n");
+		return false;
+	}
+	else if (machine_secrets_ad->size() == 0) {
+		delete machine_secrets_ad; machine_secrets_ad = nullptr;
+	}
+	return ret_val;
+}
+
 
 #if !defined(WINDOWS)
 void
@@ -3634,4 +3700,70 @@ JICShadow::_remove_files_from_output() {
 		}
 		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
 	}
+}
+
+
+bool
+JICShadow::transferCommonInput( ClassAd * setupAd ) {
+	dprintf( D_ZKM, "transferCommonInput(): enter\n" );
+	dPrintAd( D_ZKM, * setupAd );
+
+	FileTransfer stagingFTO;
+
+	const char * cred_path = getCredPath();
+	if( cred_path ) {
+		stagingFTO.setCredsDir( cred_path );
+	}
+
+	// Should we setRuntimeAds()?
+
+	int rval = stagingFTO.Init( setupAd, false, PRIV_USER );
+	if( rval == 0 ) {
+	    dprintf( D_ALWAYS, "Failed to initialize file-transfer object for common-files transfer (%d).\n", rval );
+	    return false;
+	}
+
+	stagingFTO.setSecuritySession( m_filetrans_sec_session );
+	stagingFTO.setSyscallSocket( syscall_sock );
+
+	if( shadow_version ) {
+		stagingFTO.setPeerVersion( * shadow_version );
+	}
+
+	// At some point, we might want to make this nonblocking, in which
+	// case determining success or failure in handleJobSetupCommand()
+	// becomes an interesting problem, probably solved with coroutines.
+	rval = stagingFTO.DownloadFiles();
+
+
+	//
+	// Reporting.
+	//
+
+	// Trigger the epoch entry.
+	updateShadowWithPluginResults("Common", & stagingFTO);
+
+	// Do we still care about this?
+	const std::string & stats = stagingFTO.GetInfo().tcp_stats.c_str();
+	if(! stats.empty()) {
+		std::string full_stats = "(peer stats from starter): ";
+		full_stats += stats;
+
+		// JICShadow::transferInputStatus() ASSERTs here.
+		if(! shadowDisconnected()) {
+			if( shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
+			}
+		}
+	}
+
+
+	dprintf( D_ZKM, "transferCommonInput(): exit\n" );
+	return (rval == 1);
+}
+
+
+void
+JICShadow::resetInputFileCatalog() {
+    filetrans->BuildFileCatalog();
 }

@@ -521,6 +521,23 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     time spent on each client. Setting this option to 0 disables remote
     history access.
 
+:macro-def:`<SUBSYS>_DAEMON_HISTORY[Global]`
+    A path representing a file for the daemon specified by :macro:`SUBSYSTEM`
+    to periodically write ClassAd records into.
+
+    .. note::
+
+        Only the Schedd Daemon is capable of writing into a Daemon
+        history file currently.
+
+:macro-def:`MAX_DAEMON_HISTORY_LOG[Global]`
+    An integer representing the maximum size in bytes the Daemon history
+    can grow before rotating. Defaults to ``20 MB``.
+
+:macro-def:`MAX_DAEMON_HISTORY_ROTATIONS[Global]`
+    An integer representing the maximum number of old rotated Daemon history
+    files to keep around at one time. Default is ``1``.
+
 :macro-def:`MAX_JOB_QUEUE_LOG_ROTATIONS[Global]`
     The *condor_schedd* daemon periodically rotates the job queue
     database file, in order to save disk space. This option controls how
@@ -3782,7 +3799,7 @@ prevent the job from using more scratch space than provisioned.
 
     .. note::
 
-        Docker Universe jobs are not compatible with mount namespaces.
+        Docker and VM Universe jobs are not compatible with mount namespaces.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
     A boolean value that defaults to ``False``. When ``True`` EP slots
@@ -4957,6 +4974,11 @@ These macros control the *condor_schedd*.
     *condor_schedd* sends a ClassAd update to the *condor_collector*
     and how often the *condor_schedd* daemon evaluates jobs. It is
     defined in terms of seconds and defaults to 300 (every 5 minutes).
+
+:macro-def:`SCHEDD_HISTORY_RECORD_INTERVAL[SCHEDD]`
+    An integer value representing the maximum interval between writing
+    the Schedd's ClassAd to the :macro:`SCHEDD_DAEMON_HISTORY` file. This is
+    defined in terms of seconds and defaults to 900 (every 15 minutes).
 
 :macro-def:`ABSENT_SUBMITTER_LIFETIME[SCHEDD]`
     This macro determines the maximum time that the *condor_schedd*
@@ -8085,8 +8107,7 @@ condor_procd Configuration File Macros
     own. Use of the :tool:`condor_procd` results in improved scalability
     because only one instance of this logic is required. The
     :tool:`condor_procd` is required when using group ID-based process
-    tracking (see :ref:`admin-manual/ep-policy-configuration:group
-    id-based process tracking`.
+    tracking.
     In this case, the :macro:`USE_PROCD` setting will be ignored and a
     :tool:`condor_procd` will always be used. By default, the
     :tool:`condor_master` will start a :tool:`condor_procd` that all other daemons
@@ -8132,29 +8153,24 @@ condor_procd Configuration File Macros
     the :tool:`condor_procd` to reliably track all processes associated with
     a job. When ``True``, values for :macro:`MIN_TRACKING_GID` and
     :macro:`MAX_TRACKING_GID` must also be set, or HTCondor will abort,
-    logging an error message. See :ref:`admin-manual/ep-policy-configuration:group
-    id-based process tracking` for a detailed description.
+    logging an error message.
 
 :macro-def:`MIN_TRACKING_GID[PROCD]`
     An integer value, that together with :macro:`MAX_TRACKING_GID` specify a
     range of GIDs to be assigned on a per slot basis for use by the
-    :tool:`condor_procd` in tracking processes associated with a job. See
-    :ref:`admin-manual/ep-policy-configuration:group id-based
-    process tracking` for a detailed description.
+    :tool:`condor_procd` in tracking processes associated with a job.
 
 :macro-def:`MAX_TRACKING_GID[PROCD]`
     An integer value, that together with :macro:`MIN_TRACKING_GID` specify a
     range of GIDs to be assigned on a per slot basis for use by the
-    :tool:`condor_procd` in tracking processes associated with a job. See
-    :ref:`admin-manual/ep-policy-configuration:group id-based process
-    tracking` for a detailed description.
+    :tool:`condor_procd` in tracking processes associated with a job.
 
 :macro-def:`BASE_CGROUP[PROCD]`
     The path to the directory used as the virtual file system for the
     implementation of Linux kernel cgroups. This variable defaults to
     the string ``htcondor``, and is only used on Linux systems. To
     disable cgroup tracking, define this to an empty string. See
-    :ref:`admin-manual/ep-policy-configuration:cgroup-based process
+    :ref:`admin-manual/ep-policy-configuration:cgroup based process
     tracking` for a description of cgroup-based process tracking.
     An administrator can configure distinct cgroup roots for 
     different slot types within the same startd by prefixing
@@ -11388,7 +11404,7 @@ condor_defrag Configuration File Macros
 
 These configuration variables affect the *condor_defrag* daemon. A
 general discussion of *condor_defrag* may be found in
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`.
+:ref:`admin-manual/cm-configuration:defragmenting dynamic slots`.
 
 :macro-def:`DEFRAG_NAME[DEFRAG]`
     Used to give an prefix value to the ``Name`` attribute in the

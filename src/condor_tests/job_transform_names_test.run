@@ -52,33 +52,20 @@ $path_to_file =~ s/\n//;
 print "$path_to_file\n";
 
 $transform = 
-"JOB_TRANSFORM_NAMES = BAD ILLEGAL ALWAYS NEVER ALWAYS_NEWSCRIPT
-JOB_TRANSFORM_BAD \@=end
-[
-  set_NeverThere3 = \"Please work!\";
-  12foo = asd\"as\";
-  ugh = 7 \%\$ 8;
-]
-\@end
+"JOB_TRANSFORM_NAMES = ILLEGAL ALWAYS NEVER ALWAYS_NEWSCRIPT
 JOB_TRANSFORM_ILLEGAL \@=end
-[
-  requirements = illegal =?= true;
-  set_ClusterId = -999;
-]
+  REQUIREMENTS illegal =?= true
+  SET ClusterId -999
 \@end
 JOB_TRANSFORM_ALWAYS \@=end
-[
-  requirements = True;
-  set_AlwaysThere = \"Please work on \$(OPSYSANDVER)\";
-  delete_NeverThere2 = true;
-  eval_set_OnlyProcZero = ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
-]
+  REQUIREMENTS True
+  SET AlwaysThere \"Please work on \$(OPSYSANDVER)\"
+  DELETE NeverThere2
+  EVALSET OnlyProcZero ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
 \@end
 JOB_TRANSFORM_NEVER \@=end
-[
-  requirements = False;
-  set_NeverThere1 = \"Please work!\";
-]
+  REQUIREMENTS False
+  SET NeverThere1 \"Please work!\"
 \@end
 JOB_TRANSFORM_ALWAYS_NEWSCRIPT \@=end
   SET AlwaysThereNew = \"Please work on \$(OPSYSANDVER)\"
@@ -146,27 +133,16 @@ if ($iswindows) {
 print "####################################################################################################\n";
 
 $transform = 
-"JOB_TRANSFORM_NAMES = BAD ALWAYS NEVER ALWAYS_NEWSCRIPT
-JOB_TRANSFORM_BAD \@=end
-[
-  set_NeverThere3 = \"Please work!\";
-  12foo = asd\"as\";
-  ugh = 7 \%\$ 8;
-]
-\@end
+"JOB_TRANSFORM_NAMES = ALWAYS NEVER ALWAYS_NEWSCRIPT
 JOB_TRANSFORM_ALWAYS \@=end
-[
-  requirements = True;
-  set_AlwaysThere = \"Please work on \$(OPSYSANDVER)\";
-  delete_NeverThere2 = true;
-  eval_set_OnlyProcZero = ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
-]
+  REQUIREMENTS True
+  SET AlwaysThere \"Please work on \$(OPSYSANDVER)\"
+  DELETE NeverThere2
+  EVALSET OnlyProcZero ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
 \@end
 JOB_TRANSFORM_NEVER \@=end
-[
-  requirements = False;
-  set_NeverThere1 = \"Please work!\";
-]
+  REQUIREMENTS False
+  SET NeverThere1 \"Please work!\"
 \@end
 JOB_TRANSFORM_ALWAYS_NEWSCRIPT \@=end
   SET AlwaysThereNew = \"Please work on \$(OPSYSANDVER)\"

@@ -118,8 +118,20 @@ get_distribution() {
         return
     fi
 
-    # Every system that we officially support has /etc/os-release
-    . /etc/os-release
+    # Every Linux system that we officially support has /etc/os-release
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+    fi
+
+    ARCH=$(arch)
+    repo_arch='noarch'
+
+    if [ $ID = 'almalinux' ]; then
+        if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+            ARCH='x86_64_v2'
+            repo_arch='x86_64_v2'
+        fi
+    fi
 
     check_forked
 
@@ -133,14 +145,17 @@ get_distribution() {
 
 do_configure_firewall() {
     if command_exists firewall-cmd; then
-        echo -e "\n# Open port 9618 for use by HTCondor"
-        (
-            if ! is_dry_run; then
-                set -x
-            fi
-            $sh_c "firewall-cmd --zone=public --add-port=9618/tcp --permanent"
-            $sh_c "firewall-cmd --reload"
-        )
+        if firewall-cmd --state > /dev/null 2>&1; then
+            # The firewall is running, let's configure it
+            echo -e "\n# Open port 9618 for use by HTCondor"
+            (
+                if ! is_dry_run; then
+                    set -x
+                fi
+                $sh_c "firewall-cmd --zone=public --add-port=9618/tcp --permanent"
+                $sh_c "firewall-cmd --reload"
+            )
+        fi
     fi
 }
 
@@ -218,12 +233,9 @@ EOF
     fi
 
     case $ID in
-        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             repo_cmd="dnf --assumeyes"
             case $ID in
-                centos|scientific)
-                    repo_cmd="yum --assumeyes"
-                    ;;
                 suse|opensuse-leap)
                     repo_cmd="zypper --non-interactive"
                     ;;
@@ -254,7 +266,7 @@ To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
 To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 EOF
             ;;
-        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             PACKAGE="condor"
             if [[ ! $ROLE ]]; then
                 PACKAGE="minicondor"
@@ -293,9 +305,9 @@ EOF
     fi
 
     if [[ ! $ROLE ]]; then
-        echo -e "\n# Installing mini HTCondor for ${ID^} $VERSION_ID"
+        echo -e "\n# Installing mini HTCondor for $PRETTY_NAME"
     else
-        echo -e "\n# Installing HTCondor as ${ROLE} for ${ID^} $VERSION_ID"
+        echo -e "\n# Installing HTCondor as ${ROLE} for $PRETTY_NAME"
     fi
 
     # Run install binaries for each distro accordingly
@@ -356,7 +368,7 @@ EOF
                 fi
             )
             ;;
-        scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
             (
             if ! is_dry_run; then
                 set -x
@@ -376,18 +388,22 @@ EOF
 
             repo_dist=$ID
             case $ID in
-                scientific|centos|rhel|almalinux|rocky)
+                centos|almalinux|rocky)
                     repo_dist="el"
                     echo -e "\n# Installing EPEL"
-                    epel_version=$VERSION_ID
-                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+                    $sh_c "${repo_cmd} install epel-release || ${repo_cmd} reinstall epel-release"
+                    ;;
+                rhel)
+                    repo_dist="el"
+                    echo -e "\n# Installing EPEL"
+                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID}.noarch.rpm"
                     ;;
                 suse|opensuse-leap)
                     repo_dist="leap"
                     ;;
             esac
             repo_suffix="${repo_dist}${VERSION_ID}"
-            yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.noarch.rpm"
+            repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.${repo_arch}.rpm"
 
             # Just to make our lives harder, the packages we need from
             # EPEL depend on repositories which are disabled by default,
@@ -398,18 +414,21 @@ EOF
                 almalinux.8|rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
                                  $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
                                  ;;
-                almalinux.9|rocky.9 ) $sh_c "dnf -y install dnf-plugins-core"
+                almalinux.9|almalinux.10|rocky.9|rocky.10 ) $sh_c "dnf -y install dnf-plugins-core"
                                  $sh_c "dnf config-manager --set-enabled crb"
                                  ;;
                 # subscription-manager only works if you've already
                 # "register"ed and "attach"ed the system.
                 rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
                          ;;
-                rhel.8 ) ARCH=$(/bin/arch)
+                rhel.8 )
                          $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
                          ;;
-                rhel.9 ) ARCH=$(/bin/arch)
+                rhel.9 )
                          $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-9-${ARCH}-rpms\""
+                         ;;
+                rhel.10 )
+                         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-10-${ARCH}-rpms\""
                          ;;
             esac
 
@@ -418,10 +437,10 @@ EOF
                 suse|opensuse-leap)
                     # There is a way to setup SUSE repos where you can install the repo
                     # with a single zypper command. But, I don't know how to do that (yet)
-                    $sh_c "${repo_cmd} --no-gpg-checks install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    $sh_c "${repo_cmd} --no-gpg-checks install ${repo_rpm} || ${repo_cmd} reinstall ${repo_rpm}"
                     ;;
                 *)
-                    $sh_c "${repo_cmd} install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    $sh_c "${repo_cmd} install ${repo_rpm} || ${repo_cmd} reinstall ${repo_rpm}"
                     ;;
             esac
 
@@ -449,7 +468,7 @@ EOF
                 fi
             fi
             echo
-            echo "Error: Unsupported distribution '$ID'"
+            echo "Error: Unsupported distribution '$NAME'"
             echo
             exit 1
             ;;
@@ -560,17 +579,7 @@ do_download() {
         debian)
             OS_NAME="Debian"
             ;;
-        scientific|centos|rhel)
-            if [ "$VERSION_ID" = "7" ]; then
-                OS_NAME="CentOS"
-            else
-                OS_NAME="AlmaLinux"
-            fi
-            ;;
-        almalinux)
-            OS_NAME="AlmaLinux"
-            ;;
-        rocky)
+        almalinux|centos|rhel|rocky)
             OS_NAME="AlmaLinux"
             ;;
         amzn)
@@ -585,14 +594,14 @@ do_download() {
                 OS_VERSION=13
             else
                 echo
-                echo "Error: Unsupported distribution '$ID'"
+                echo "Error: Unsupported distribution '$NAME'"
                 echo
                 exit 1
             fi
             ;;
     esac
 
-    TARBALL_NAME="condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
+    TARBALL_NAME="condor-${ARCH}_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
     TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
     echo "Downloading to condor.tar.gz..."

@@ -23,6 +23,7 @@ I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
+	@echo "  auto       to run sphinx-autobuild for continuous html builds"
 	@echo "  html       to make standalone HTML files"
 	@echo "  dirhtml    to make HTML files named index.html in directories"
 	@echo "  singlehtml to make a single large HTML file"
@@ -48,6 +49,9 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
+
+auto:
+	sphinx-autobuild . _build/html
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

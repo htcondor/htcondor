@@ -45,6 +45,7 @@ public:
 	const std::string & RecordSrc() const { return m_recordSrc; }
 	std::string m_adTypeFilter{};
 	std::string m_scanLimit{};
+	std::string m_daemonSubsys{};
 	bool m_streamresults{false};
 	bool m_searchdir{false};
 	bool m_searchForwards{false};

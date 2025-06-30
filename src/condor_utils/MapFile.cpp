@@ -40,11 +40,8 @@
 // and doesn't suffer from the re-allocation (copy) cost of a vector.
 //
 // Each list entry will either be a regex or an unordered_map, these are implemented
-// as simple classes derived from the CanonicalMapEntry but NOT virtually.
-// We don't want or need the cost of a vtable in this simple heirarchy. Of course
-// it means that we can't do the cleanup in a class destructor, so cleanup is
-// done by explicit calls to the derived classes's clear() method.
-//
+// as simple classes derived from the CanonicalMapEntry.
+
 // All strings are stored in a string pool class (the same one the config code uses)
 // and they are destroyed all at once when the MapFile class is destroyed.
 // The use of a string pool reduces the allocation overhead of strings which
@@ -71,11 +68,21 @@ struct longest_first {
 typedef std::unordered_map<const YourString, const char *, hash_yourstring> LITERAL_HASH;
 typedef std::map<const YourString, const char *, longest_first> PREFIX_MAP;
 
+static size_t min_re_size=0, max_re_size=0, num_re=0, num_zero_re=0;
+static size_t re_size(pcre2_code * re) {
+	if ( !re) return 0;
+	size_t cb = 0;
+	pcre2_pattern_info(re, PCRE2_INFO_SIZE, &cb);
+	++num_re;
+	if (cb) { if (!min_re_size || (cb && (cb < min_re_size))) min_re_size = cb; max_re_size = MAX(cb, max_re_size); }
+	else { ++num_zero_re; }
+	return cb;
+}
+
 class CanonicalMapRegexEntry;
 class CanonicalMapHashEntry;
 class CanoncialMapPrefixEntry;
 
-// note: NOT virtual so that we don't have the allocation cost of a VTBL per entry
 class CanonicalMapEntry {
 public:
 	enum class Type : char {
@@ -84,36 +91,37 @@ public:
 		PREFIX = 4
 	};
 
-	CanonicalMapEntry * next;
-	CanonicalMapEntry(Type t) : next(NULL), entry_type(t) { memset(spare, 0, sizeof(spare)); }
-	~CanonicalMapEntry();
-	bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
+	CanonicalMapEntry *next{};
+	CanonicalMapEntry() = default;
+	virtual ~CanonicalMapEntry();
+	virtual void clear() {};
+	virtual bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon) = 0;
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes, size_t &regexps) const = 0;
 
-	bool is_regex_type() const { return entry_type == Type::REGEX; }
-	bool is_hash_type() const { return entry_type == Type::HASH; }
-	bool is_prefix_type() const { return entry_type == Type::PREFIX; }
-	Type get_entry_type() const { return entry_type; }
 protected:
 	friend class MapFile;
-	void dump(FILE* fp);
-	Type entry_type;
-	char spare[sizeof(void*)-sizeof(Type)];
+	virtual void dump(FILE* fp) = 0;
 };
 
 class CanonicalMapRegexEntry : public CanonicalMapEntry {
 public:
-	CanonicalMapRegexEntry() : CanonicalMapEntry(Type::REGEX), re_options(0), re(NULL), canonicalization(NULL) {}
-	~CanonicalMapRegexEntry() { clear(); }
-	void clear() { if (re) pcre2_code_free(re); re = NULL; canonicalization = NULL; }
+	CanonicalMapRegexEntry() : re_options(0), re(nullptr), canonicalization(nullptr) {}
+	virtual ~CanonicalMapRegexEntry() { clear(); }
+	virtual void clear() { if (re) pcre2_code_free(re); re = nullptr; canonicalization = nullptr; }
 	bool add(const char* pattern, uint32_t options, const char * canon, int * errcode, PCRE2_SIZE * erroffset);
 	bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
-	static CanonicalMapRegexEntry * is_type(CanonicalMapEntry * that) {
-		if (that && that->is_regex_type()) { return reinterpret_cast<CanonicalMapRegexEntry*>(that); }
-		return NULL;
-	}
-	void dump(FILE * fp) {
+	virtual void dump(FILE * fp) {
 		fprintf(fp, "   REGEX { /<compiled_regex>/%x %s }\n", re_options, canonicalization);
 	}
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &/*hashes*/, size_t &regexps) const {
+		++allocs;
+		++regexps;
+		structs += sizeof(*this);
+		if (this->re) { 
+			allocs += 1;
+			structs += re_size(this->re); // we don't know how big a regex actually is, assuming 32 bytes
+		}
+	} 
 private:
 	friend class MapFile;
 	//Regex re;
@@ -124,16 +132,12 @@ private:
 
 class CanonicalMapHashEntry : public CanonicalMapEntry {
 public:
-	CanonicalMapHashEntry() : CanonicalMapEntry(Type::HASH), hm(NULL) {}
-	~CanonicalMapHashEntry() { clear(); }
-	void clear() { if (hm) { hm->clear(); delete hm; } hm = NULL; }
+	CanonicalMapHashEntry():  hm(nullptr) {}
+	virtual ~CanonicalMapHashEntry() { clear(); }
+	virtual void clear() { if (hm) { hm->clear(); delete hm; } hm = nullptr; }
 	bool add(const char * name, const char * canon);
-	bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
-	static CanonicalMapHashEntry * is_type(CanonicalMapEntry * that) {
-		if (that && that->is_hash_type()) { return reinterpret_cast<CanonicalMapHashEntry*>(that); }
-		return NULL;
-	}
-	void dump(FILE * fp) {
+	virtual bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
+	virtual void dump(FILE * fp) {
 		fprintf(fp, "   HASH {\n");
 		if (hm) {
 			for (auto it = hm->begin(); it != hm->end(); ++it) {
@@ -142,7 +146,20 @@ public:
 		}
 		fprintf(fp, "   } # end HASH\n");
 	}
-
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes, size_t &/*regexps*/) const {
+		allocs++;
+		structs += sizeof(*this);
+		if (this->hm) {
+			size_t chm = this->hm->size();
+			hashes += chm;
+			++allocs;
+			structs += sizeof(*this->hm);
+			allocs += chm;
+			structs += chm*sizeof(void*)*4; // key and value are each pointers, + hash entries need a next pointer and the hash value
+			allocs += 1;
+			structs += this->hm->bucket_count() * (sizeof(void*)+sizeof(size_t)); // each bucket must have an item list
+		}
+	}
 private:
 	friend class MapFile;
 	LITERAL_HASH * hm;
@@ -150,10 +167,10 @@ private:
 
 class CanonicalMapPrefixEntry : public CanonicalMapEntry {
 public:
-	CanonicalMapPrefixEntry() : CanonicalMapEntry(Type::PREFIX), prefix_map(NULL) { }
-	~CanonicalMapPrefixEntry() { clear(); }
+	CanonicalMapPrefixEntry() : prefix_map(nullptr) { }
+	virtual ~CanonicalMapPrefixEntry() { clear(); }
 
-	void clear() {
+	virtual void clear() {
 		if( prefix_map ) {
 			prefix_map->clear();
 			delete prefix_map;
@@ -162,20 +179,33 @@ public:
 	}
 	bool add(const char * name, const char * canon);
 
-	bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
+	virtual bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
 
-	static CanonicalMapPrefixEntry * is_type(CanonicalMapEntry * that) {
-		if (that && that->is_prefix_type()) { return reinterpret_cast<CanonicalMapPrefixEntry*>(that); }
-		return NULL;
-	}
-
-	void dump(FILE * fp) {
+	virtual void dump(FILE * fp) {
 		fprintf(fp, "   PREFIX {\n");
 
 		if( prefix_map ) {
 			for( const auto & [key, value] : (*prefix_map) ) {
 				fprintf(fp, "        \"%s\"  %s\n", key.c_str(), value);
 			}
+		}
+	}
+	virtual void memory_size(size_t &allocs, size_t &structs, size_t &hashes, size_t &/*regexps*/) const {
+		++allocs;
+		++structs += sizeof(*this);
+
+		if (this->prefix_map) {
+			size_t chm = this->prefix_map->size();
+			hashes += chm;
+
+			// According to TJ, this function was intendeded for
+			// developer use only, to help us compare the memory
+			// usage of hash vs regex entries.  If somebody using
+			// prefix entries ever has problems, we can come back
+			// and fix this part of the code up.
+			//
+			// Notes: - cbStructs may be intended to be total memory.
+			//        - Each element in map is at least one cAlloc.
 		}
 	}
 
@@ -203,37 +233,7 @@ protected:
 	}
 };
 
-bool CanonicalMapEntry::matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon)
-{
-	if (entry_type == Type::REGEX) {
-		return reinterpret_cast<CanonicalMapRegexEntry*>(this)->matches(principal, cch, groups, pcanon);
-	} else if (entry_type == Type::HASH) {
-		return reinterpret_cast<CanonicalMapHashEntry*>(this)->matches(principal, cch, groups, pcanon);
-	} else if (entry_type == Type::PREFIX) {
-		return reinterpret_cast<CanonicalMapPrefixEntry*>(this)->matches(principal, cch, groups, pcanon);
-	}
-	return false;
-}
-
-void CanonicalMapEntry::dump(FILE* fp)
-{
-	if (entry_type == Type::REGEX) {
-		reinterpret_cast<CanonicalMapRegexEntry*>(this)->dump(fp);
-	} else if (entry_type == Type::HASH) {
-		reinterpret_cast<CanonicalMapHashEntry*>(this)->dump(fp);
-	} else if (entry_type == Type::PREFIX) {
-		reinterpret_cast<CanonicalMapPrefixEntry*>(this)->dump(fp);
-	}
-}
-
 CanonicalMapEntry::~CanonicalMapEntry() {
-	if (entry_type == Type::REGEX) {
-		reinterpret_cast<CanonicalMapRegexEntry*>(this)->clear();
-	} else if (entry_type == Type::HASH) {
-		reinterpret_cast<CanonicalMapHashEntry*>(this)->clear();
-	} else if (entry_type == Type::PREFIX) {
-		reinterpret_cast<CanonicalMapPrefixEntry*>(this)->clear();
-	}
 }
 
 MapFile::MapFile()
@@ -246,64 +246,19 @@ MapFile::~MapFile()
 	clear();
 }
 
-static size_t min_re_size=0, max_re_size=0, num_re=0, num_zero_re=0;
-static size_t re_size(pcre2_code * re) {
-	if ( !re) return 0;
-	size_t cb = 0;
-	pcre2_pattern_info(re, PCRE2_INFO_SIZE, &cb);
-	++num_re;
-	if (cb) { if (!min_re_size || (cb && (cb < min_re_size))) min_re_size = cb; max_re_size = MAX(cb, max_re_size); }
-	else { ++num_zero_re; }
-	return cb;
-}
-
 void get_mapfile_re_info(size_t *info) { info[0] = num_re; info[1] = num_zero_re; info[2] = min_re_size; info[3] = max_re_size; }
 void clear_mapfile_re_info() { min_re_size = max_re_size =  num_re = num_zero_re = 0; }
 
 int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 {
 	size_t cRegex = 0, cHash = 0, cEntries = 0, cAllocs=0, cbStructs=0;
-	for (METHOD_MAP::iterator it = methods.begin(); it != methods.end(); ++it) {
-		CanonicalMapList * list = it->second;
+	for (auto & method : methods) {
+		CanonicalMapList * list = method.second;
 		CanonicalMapEntry * item = list->first;
 		++cAllocs; cbStructs += sizeof(*list); // account for method
 		while (item) {
 			++cEntries; // account for list item
-			if (item->is_hash_type()) {
-				CanonicalMapHashEntry* hitem = reinterpret_cast<CanonicalMapHashEntry*>(item);
-				++cAllocs; cbStructs += sizeof(*hitem);
-				if (hitem->hm) {
-					size_t chm = hitem->hm->size();
-					cHash += chm;
-					++cAllocs; cbStructs += sizeof(*hitem->hm);
-					cAllocs += chm; cbStructs += chm*sizeof(void*)*4; // key and value are each pointers, + hash entries need a next pointer and the hash value
-					cAllocs += 1; cbStructs += hitem->hm->bucket_count() * (sizeof(void*)+sizeof(size_t)); // each bucket must have an item list
-				}
-			} else if (item->is_regex_type()) {
-				CanonicalMapRegexEntry* ritem = reinterpret_cast<CanonicalMapRegexEntry*>(item);
-				++cAllocs; cbStructs += sizeof(*ritem);
-				if (ritem->re) { cAllocs += 1; cbStructs += re_size(ritem->re); }  // we don't know how big a regex actually is, assuming 32 bytes
-				++cRegex;
-			} else if (item->is_prefix_type()) {
-				CanonicalMapPrefixEntry* pitem = reinterpret_cast<CanonicalMapPrefixEntry*>(item);
-				++cAllocs; cbStructs += sizeof(*pitem);
-
-				if (pitem->prefix_map) {
-					size_t chm = pitem->prefix_map->size();
-					cHash += chm;
-
-					// According to TJ, this function was intendeded for
-					// developer use only, to help us compare the memory
-					// usage of hash vs regex entries.  If somebody using
-					// prefix entries ever has problems, we can come back
-					// and fix this part of the code up.
-					//
-					// Notes: - cbStructs may be intended to be total memory.
-					//        - Each element in map is at least one cAlloc.
-				}
-			} else {
-				++cAllocs; cbStructs += sizeof(*item);
-			}
+			item->memory_size(cAllocs, cbStructs, cHash, cRegex);
 			item = item->next;
 		}
 	}
@@ -632,7 +587,7 @@ void MapFile::AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char *
 	} else {
 		if( is_prefix ) {
 			// If the previous entry was a prefix entry, just add to it.
-			CanonicalMapPrefixEntry * pme = CanonicalMapPrefixEntry::is_type(list->last);
+			CanonicalMapPrefixEntry *pme = dynamic_cast<CanonicalMapPrefixEntry *>(list->last);
 			if(! pme) {
 				pme = new CanonicalMapPrefixEntry();
 				list->append(pme);
@@ -640,7 +595,7 @@ void MapFile::AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char *
 			pme->add(apool.insert(principal), canon);
 		} else {
 			// if the previous entry was a hash type entry, then we will just add an item to that hash
-			CanonicalMapHashEntry * hme = CanonicalMapHashEntry::is_type(list->last);
+			CanonicalMapHashEntry * hme = dynamic_cast<CanonicalMapHashEntry *>(list->last);
 			if ( ! hme) {
 				// if it was not, allocate a new hash type entry and add it to the map list
 				hme = new CanonicalMapHashEntry();

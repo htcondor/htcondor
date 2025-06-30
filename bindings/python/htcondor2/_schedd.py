@@ -24,6 +24,7 @@ from ._submit import Submit
 from ._submit_result import SubmitResult
 # So that the typehints match version 1.
 from ._query_opt import QueryOpt as QueryOpts
+from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _schedd_query,
@@ -60,22 +61,38 @@ def job_spec_hack(
     if isinstance(job_spec, list):
         if not all([isinstance(i, str) for i in job_spec]):
             raise TypeError("All elements of the job_spec list must be strings.")
-        job_spec_string = ", ".join(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        if all([re.fullmatch(r'\d+\.\d+', i) for i in job_spec]):
+            job_spec_string = ", ".join(job_spec)
+            return f_job_ids(addr, job_spec_string, *args)
+
+        constraints = []
+        for i in job_spec:
+            if re.fullmatch(r'\d+', i):
+                constraints.append(f"(ClusterID == {i})")
+            elif re.fullmatch(r'\d+\.\d+', i):
+                (clusterID, procID) = i.split('.')
+                constraints.append(f"(ClusterID == {clusterID} && ProcID == {procID})")
+            else:
+                raise ValueError("All elements of the job_spec list must be strings of the form clusterID[.procID]")
+        job_spec_string = " || ".join(constraints)
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, int):
-        job_spec_string = str(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        job_spec_string = f'ClusterID == {job_spec}'
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, classad.ExprTree):
         job_spec_string = str(job_spec)
         return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, str):
-        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+        if re.fullmatch(r'\d+\.\d+', job_spec):
             return f_job_ids(addr, job_spec, *args)
+        if re.fullmatch(r'\d+', job_spec):
+            job_spec_string = f'ClusterID == {job_spec}'
+            return f_constraint(addr, job_spec_string, *args)
         try:
             job_spec_expr = classad.ExprTree(job_spec)
-            return f_constraint(addr, job_spec, *args);
-        except ValueError:
-            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        except classad.ClassAdException:
+            raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        return f_constraint(addr, job_spec, *args);
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
@@ -240,6 +257,73 @@ class Schedd():
         return match_count
 
 
+    def _history(self,
+        src: int,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = [],
+        match : int = -1,
+        since : Union[int, str, classad.ExprTree] = None,
+        **kwargs,
+    ) -> List[classad.ClassAd]:
+        """
+        Internal handler for all history queries to Schedd
+        since all queries take similar arguments.
+
+        :param src: Then enumeration value of which historical record
+            source to read from. See history.cpp
+        :param constraint: Constraint expression to return only the
+            matching ClassAds.
+        :param projection: List of specific ClassAd attributes to return
+            from each matched ClassAd. If not specified the full ClassAd
+            is returned.
+        :param match: Limit of the maximum number of matching ClassAds to
+            return. -1 represents no limit.
+        :param since: Condition to stop scanning the history file. In the
+            integer and string case, stop once job id is located. Otherwise,
+            stop if the ClassAd expression evaluates to true.
+        :return: List of ClassAds.
+
+        :meta private:
+        """
+        projection_string = ",".join(projection)
+
+        if isinstance(since, int):
+            since = f"ClusterID == {since}"
+        elif isinstance(since, str):
+            pattern = re.compile(r'(\d+).(\d+)')
+            matches = pattern.match(since)
+            if matches is None:
+                raise ValueError("since string must be in the form {clusterID}.{procID}")
+            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+        elif isinstance(since, classad.ExprTree):
+            since = str(since)
+        elif since is None:
+            since = ""
+        else:
+            raise TypeError("since must be an int, string, or ExprTree")
+
+        ad_type = kwargs.get("ad_type", None)
+        if isinstance(ad_type, list):
+            ad_type = ",".join(ad_type)
+        elif ad_type is None:
+            ad_type = ""
+        elif not isinstance(ad_type, str):
+            raise TypeError("ad_type must be a list of strings or a string")
+
+        if constraint is None:
+            constraint = ""
+
+        return _history_query(self._addr,
+            str(constraint), projection_string, int(match), since,
+            # Specific record type filter
+            ad_type,
+            # Specific history source file(s)
+            src,
+            # QUERY_SCHEDD_HISTORY (command int)
+            515
+        )
+
+
     # In version 1, history() returned a HistoryIterator which kept a
     # socket around to read results from; this was OK, because the socket
     # usually required no, and at most minimal, attention from the schedd
@@ -276,36 +360,9 @@ class Schedd():
             ``"clusterID == 1038"`` return the same set of jobs.
 
             If :py:obj:`None`, return all (matching) jobs.
+        :return: List of ClassAds.
         """
-        projection_string = ",".join(projection)
-
-        if isinstance(since, int):
-            since = f"ClusterID == {since}"
-        elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
-        elif isinstance(since, classad.ExprTree):
-            since = str(since)
-        elif since is None:
-            since = ""
-        else:
-            raise TypeError("since must be an int, string, or ExprTree")
-
-        if constraint is None:
-            constraint = ""
-
-        return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since,
-            # Ad Type Filter
-            "",
-            # HRS_JOB_HISTORY
-            0,
-            # QUERY_SCHEDD_HISTORY
-            515
-        )
+        return self._history(HistorySrc.ScheddJob, constraint, projection, match, since)
 
 
     def jobEpochHistory(self,
@@ -338,42 +395,40 @@ class Schedd():
             ``"clusterID == 1038"`` return the same set of jobs.
 
             If :py:obj:`None`, return all (matching) jobs.
+        :return: List of ClassAds.
         """
-        projection_string = ",".join(projection)
+        return self._history(HistorySrc.JobEpoch, constraint, projection, match, since, **kwargs)
 
-        if isinstance(since, int):
-            since = f"ClusterID == {since}"
-        elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
-        elif isinstance(since, classad.ExprTree):
-            since = str(since)
-        elif since is None:
-            since = ""
-        else:
-            raise TypeError("since must be an int, string, or ExprTree")
 
-        ad_type = kwargs.get("ad_type", None)
-        if isinstance(ad_type, list):
-            ad_type = ",".join(ad_type)
-        elif ad_type is None:
-            ad_type = ""
-        elif not isinstance(ad_type, str):
-            raise TypeError("ad_type must be a list of strings or a string")
+    def daemonHistory(self,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = [],
+        match : int = -1,
+        since : Optional[classad.ExprTree] = None,
+    ) -> List[classad.ClassAd]:
+        """
+        Query this schedd's historical records from its local
+        `daemon <https://htcondor.readthedocs.io/en/latest/admin-manual/configuration-macros.html#SCHEDD_DAEMON_HISTORY>`_
+        history file.
 
-        if constraint is None:
-            constraint = ""
+        :param constraint:  A query constraint.  Only ClassAds matching this
+            constraint will be returned.  :py:obj:`None` will match all ads.
+        :param projection:  A list of ClassAd attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param match:  The maximum number of ads to return.  The default
+            (``-1``) is to return all ads.
+        :param since:  A ClassAd expression representing when the query should
+            stop scanning historical ClassAd records. The query stops when the
+            expression evaluates to true.
 
-        return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since, ad_type,
-            # HRS_JOB_EPOCH
-            2,
-            # QUERY_SCHEDD_HISTORY
-            515
-        )
+            If :py:obj:`None`, return all (matching) ClassAds.
+        :return: List of ClassAds.
+        """
+        if since is not None and not isinstance(since, classad.ExprTree):
+            raise TypeError("since must be an ExprTree")
+
+        return self._history(HistorySrc.Daemon, constraint, projection, match, since, ad_type="SCHEDD")
 
 
     def submit(self,

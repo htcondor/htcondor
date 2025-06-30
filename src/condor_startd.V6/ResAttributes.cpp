@@ -593,7 +593,13 @@ bool MachAttributes::DevIdMatches(
 // when assign_to_sub > 0, then assign an unused resource from
 // slot assigned_to to it's child dynamic slot assign_to_sub.
 //
-const char * MachAttributes::AllocateDevId(const std::string & tag, const char * request, int assign_to, int assign_to_sub, bool backfill)
+const char * MachAttributes::AllocateDevId(
+	const std::string & tag,
+	const char * request,
+	int assign_to,
+	int assign_to_sub,
+	bool backfill,
+	int assign_from_sub /*=0*/)
 {
 	if ( ! assign_to) return NULL;
 
@@ -619,7 +625,7 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 				// don't bind to a backfill d-slot an id that a primary d-slot is using
 				// TODO: handle the case of a static primary slot that is claimed
 				if (assign_to_sub > 0 && nfr.owner.dyn_id > 0) continue;
-				if (nfr.bkowner.id == cur_id && nfr.bkowner.dyn_id == 0 && DevIdMatches(nft, ixid, require)) {
+				if (nfr.bkowner.id == cur_id && nfr.bkowner.dyn_id == assign_from_sub && DevIdMatches(nft, ixid, require)) {
 					nfr.bkowner.id = assign_to;
 					nfr.bkowner.dyn_id = assign_to_sub;
 					return nfr.id.c_str();
@@ -629,7 +635,7 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 			for (int ixid = 0; ixid < (int)nft.ids.size(); ++ixid) {
 				NonFungibleRes & nfr = nft.ids[ixid];
 				if (offline_ids.count(nfr.id) > 0) continue;  // don't bind offline ids
-				if (nfr.owner.id == cur_id && nfr.owner.dyn_id == 0 && DevIdMatches(nft, ixid, require)) {
+				if (nfr.owner.id == cur_id && nfr.owner.dyn_id == assign_from_sub && DevIdMatches(nft, ixid, require)) {
 					nfr.owner.id = assign_to;
 					nfr.owner.dyn_id = assign_to_sub;
 					return nfr.id.c_str();
@@ -737,7 +743,7 @@ void MachAttributes::ReconfigOfflineDevIds()
 		// look through assigned resource list and see if we have offlined any of them.
 		for (int ii = (int)nft.ids.size()-1; ii >= 0; --ii) {
 			const char * id = nft.ids[ii].id.c_str();
-			const FullSlotId & owner = nft.ids[ii].owner;
+			const NFROwner & owner = nft.ids[ii].owner;
 			if (contains(offline_ids, id)) {
 				dprintf(D_ALWAYS, "%s %s is now marked offline\n", tag, id);
 				if (owner.dyn_id) {
@@ -1529,10 +1535,30 @@ MachAttributes::publish_static(ClassAd* cp)
 	cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
 }
 
+// set the dyn_id of NFT ownership using the claimed state for static slots
+// we do this because static slots only conflict when they are claimed
+void
+MachAttributes::set_nft_activity(std::map<int,bool> &active_slotids_map)
+{
+	for (auto &[restag, nft] : m_machres_nft_map) {
+		for (auto & nfr : nft.ids) {
+			auto found = active_slotids_map.find(nfr.owner.id);
+			if (found != active_slotids_map.end()) {
+				nfr.owner.active = found->second;
+			}
+			found = active_slotids_map.find(nfr.bkowner.id);
+			if (found != active_slotids_map.end()) {
+				nfr.bkowner.active = found->second;
+			}
+		}
+	}
+}
+
 // return true if the given slot has resources that are assigned to both normal and backfill
-// and the given slot is a backfill slot. NOTE: this code does not check to see if the slot is active
+// and the given slot is a backfill slot. when subid_means_claimed is true
+// then only the primary id is checked against the nfr
 bool
-MachAttributes::has_nft_conflicts(int slot_id, int slot_subid)
+MachAttributes::has_nft_conflicts(int slot_id, int slot_subid) const
 {
 	for (auto &[restag, nft] : m_machres_nft_map) {
 		for (const auto & nfr : nft.ids) {
@@ -1649,6 +1675,7 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 	// the global resource conflicts are determined elsewhere and passed in here
 	// we we add the NFR conflicts and then publish
 	std::string conflict = res_conflict;
+	int dpf_cat = D_STATUS; // TODO: change back to D_ZKM once HTCONDOR-3072 is fixed
 
 	// publish "Available" custom resources and resource properties
 	// for use by the evalInEachContext matchmaking function
@@ -1666,7 +1693,7 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 		for (const auto & nfr : nft.ids) {
 			if (slot_id >= 0) {
 				int ot = nfr.is_owned(slot_id, slot_subid);
-				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d.%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
+				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d_%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
 				if (owntype != ot) {
 					if (slot_subid > 0 && (ot &= ~owntype) == 1) {
 						if (conflict.size() > 1) { conflict += ","; }
@@ -1686,16 +1713,16 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 
 		avail += "}";
 		attr = "Available"; attr += restag;
-		dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d setting %s=%s%s\n",
-			slot_id, slot_subid, slot_is_bk,
+		dprintf(D_ZKM | D_VERBOSE, "publish_dyn %s %d_%d setting %s=%s%s\n",
+			slot_is_bk?"bk":"", slot_id, slot_subid,
 			attr.c_str(), avail.c_str(), tmp.c_str());
 		cp->AssignExpr(attr, avail.c_str());
 
 		// if the number of AvailableXX is less than the value of XX in the ad, reduce the value in the ad
 		int num_in_ad = num_avail;
-		if (cp->LookupInteger(restag, num_in_ad)) {
-			dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d %s=%d was %d\n",
-				slot_id, slot_subid, slot_is_bk,
+		if (cp->LookupInteger(restag, num_in_ad) && num_avail != num_in_ad) {
+			dprintf(dpf_cat, "publish_dyn %s %d_%d %s=%d was %d\n",
+				slot_is_bk?"bk":"", slot_id, slot_subid,
 				restag.c_str(), num_avail, num_in_ad);
 			cp->Assign(restag, num_avail);
 		}
@@ -1705,8 +1732,8 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 	if (slot_is_bk) {
 		if (conflict.size() > 0) {
 			cp->Assign("ResourceConflict", conflict);
-			dprintf(D_ZKM, "publish_dyn %d.%d.%d ResourceConflict=%s\n",
-				slot_id, slot_subid, slot_is_bk,
+			dprintf(dpf_cat, "publish_dyn %s %d_%d ResourceConflict=%s\n",
+				slot_is_bk?"bk":"", slot_id, slot_subid,
 				conflict.c_str());
 		} else {
 			cp->Delete("ResourceConflict");
@@ -2057,8 +2084,15 @@ CpuAttributes::set_total_disk(long long total, bool refresh, VolumeManager * vol
 	return false;
 }
 
+// bind non-fungable resource ids to a slot
 bool
-CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail) // bind non-fungable resource ids to a slot
+CpuAttributes::bind_DevIds(
+	MachAttributes* map,
+	int slot_id,
+	int slot_sub_id,
+	bool backfill_slot,
+	bool abort_on_fail,
+	int donor_sub_id)
 {
 	if ( ! map)
 		return true;
@@ -2079,7 +2113,7 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 	}
 
 	for (auto & j : c_slotres_map) {
-		// TODO: handle fractional assigned custome resources?
+		// TODO: handle fractional assigned custom resources?
 		int cAssigned = int(j.second);
 
 		// if this resource already has bound ids, don't bind again.
@@ -2096,7 +2130,7 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 		if (map->machres_devIds().count(j.first)) {
 			int cAllocated = 0;
 			for (int ii = 0; ii < cAssigned; ++ii) {
-				const char * id = map->AllocateDevId(j.first, request, slot_id, slot_sub_id, backfill_slot);
+				const char * id = map->AllocateDevId(j.first, request, slot_id, slot_sub_id, backfill_slot, donor_sub_id);
 				if (id) {
 					++cAllocated;
 					c_slotres_ids_map[j.first].push_back(id);
@@ -2148,7 +2182,7 @@ CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, 
 
 	if ( ! slot_sub_id) return;
 
-	for (auto & j : c_slotres_map) {
+	for (auto & j : c_slotres_map) { // map of resource tag to double quantity
 		slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j.first));
 		if (k != c_slotres_ids_map.end()) {
 			slotres_assigned_ids_t & ids = c_slotres_ids_map[j.first];
@@ -2227,6 +2261,9 @@ CpuAttributes::publish_static(
 	const ResBag * inuse, // resources in-use in primary slot
 	const ResBag * brokenRes) const // resources lost to p-slot because a broken slot was deleted
 {
+	//bool internal_ad = rip && (cp == rip->r_config_classad || cp == rip->r_classad);
+	//bool wrong_internal_ad = rip && (cp == rip->r_classad);
+
 		std::string ids;
 		std::string broken_reason;
 		bool broken = is_broken(&broken_reason);

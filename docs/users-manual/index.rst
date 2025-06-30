@@ -11,7 +11,7 @@ Users' Manual
    file-transfer
    managing-a-job
    automatic-job-management
-   when-job-wont-run
+   troubleshooting
    choosing-an-htcondor-universe
    env-of-job
    job-scheduling

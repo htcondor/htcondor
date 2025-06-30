@@ -81,8 +81,8 @@ Starter::initRunData( void )
 	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
-	s_hold_soft_timeout = -1;
-	s_hold_hard_timeout = -1;
+	s_vacate_soft_timeout = -1;
+	s_vacate_hard_timeout = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
@@ -94,8 +94,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-	m_hold_job_soft_cb = nullptr;
-	m_hold_job_hard_cb = nullptr;
+	m_vacate_job_soft_cb = nullptr;
+	m_vacate_job_hard_cb = nullptr;
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -136,11 +136,11 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_hold_job_soft_cb ) {
-		m_hold_job_soft_cb->cancelCallback();
+	if( m_vacate_job_soft_cb ) {
+		m_vacate_job_soft_cb->cancelCallback();
 	}
-	if( m_hold_job_hard_cb ) {
-		m_hold_job_hard_cb->cancelCallback();
+	if( m_vacate_job_hard_cb ) {
+		m_vacate_job_hard_cb->cancelCallback();
 	}
 }
 
@@ -804,10 +804,21 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		}
 		pending_bytes = stream->bytes_available_to_read();
 
+		Claim* claim = resmgr->getClaimByPid(s_pid);
+
 		if (update_cmd == 1) {
 			final_update = 1;
 		} else if (update_cmd > 1) {
-			// TODO: handle non-update commands sent on the update socket here...
+			ClassAd replyAd;
+			if ( ! claim) {
+				dprintf(D_ERROR, "No claim could be found for starter %d sending update command %d\n", s_pid, update_cmd);
+				replyAd.Assign(ATTR_ERROR_STRING, "No Claim");
+			} else {
+				claim->receiveUpdateCommand(update_cmd, update_ad, replyAd);
+			}
+			stream->encode();
+			putClassAd(stream, replyAd);
+			stream->end_of_message();
 			continue;
 		}
 
@@ -838,7 +849,6 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		double fPercentCPU=0.0;
 		bool has_vm_cpu = update_ad.LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
 
-		Claim* claim = resmgr->getClaimByPid(s_pid);
 		if( claim ) {
 			claim->receiveJobClassAdUpdate(update_ad, final_update);
 
@@ -1327,17 +1337,17 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
+Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft,time_t timeout)
 {
 #ifdef DONT_HOLD_EXITED_JOBS
 	if (got_final_update()) {
-		dprintf(D_ALWAYS, "holdJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		dprintf(D_ALWAYS, "vacateJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
 		if ( ! soft) startKillTimer(timeout);
 		return true;
 	}
 #endif
-	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
-		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
+	if( (soft && m_vacate_job_soft_cb) || (!soft && m_vacate_job_hard_cb) ) {
+		dprintf(D_ALWAYS,"vacateJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
 	}
 
@@ -1357,23 +1367,23 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 	int pending_update = has_pending_update();
 	if (pending_update > 0) {
 		s_in_teardown_with_pending_updates = true;
-		dprintf(D_ALWAYS,"holdJob() called while %d update bytes are pending (starter pid %d).\n", pending_update, s_pid);
+		dprintf(D_ALWAYS,"vacateJob() called while %d update bytes are pending (starter pid %d).\n", pending_update, s_pid);
 	}
 
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
-	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
+	classy_counted_ptr<StarterVacateJobMsg> msg = new StarterVacateJobMsg(vacate_reason, vacate_code, vacate_subcode,soft);
 
-	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
+	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
 
 	msg->setCallback( msg_cb );
 
-	// store the timeout so that the holdJobCallback has access to it.
+	// store the timeout so that the vacateJobCallback has access to it.
 	if (soft) {
-		m_hold_job_soft_cb = msg_cb;
-		s_hold_soft_timeout = timeout;
+		m_vacate_job_soft_cb = msg_cb;
+		s_vacate_soft_timeout = timeout;
 	} else {
-		m_hold_job_hard_cb = msg_cb;
-		s_hold_hard_timeout = timeout;
+		m_vacate_job_hard_cb = msg_cb;
+		s_vacate_hard_timeout = timeout;
 	}
 	starter->sendMsg(msg.get());
 
@@ -1388,31 +1398,31 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 }
 
 void
-Starter::holdJobCallback(DCMsgCallback *cb)
+Starter::vacateJobCallback(DCMsgCallback *cb)
 {
 	bool soft = false;
-	if (cb == m_hold_job_soft_cb) {
+	if (cb == m_vacate_job_soft_cb) {
 		soft = true;
-		m_hold_job_soft_cb = nullptr;
-	} else if (cb == m_hold_job_hard_cb) {
+		m_vacate_job_soft_cb = nullptr;
+	} else if (cb == m_vacate_job_hard_cb) {
 		soft = false;
-		m_hold_job_hard_cb = nullptr;
+		m_vacate_job_hard_cb = nullptr;
 	} else {
-		EXCEPT("Unexpected starter hold callback!");
+		EXCEPT("Unexpected starter vacate callback!");
 	}
 
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
 		if (s_was_reaped || s_got_final_update) {
 			const char * reason = s_was_reaped ? "starter already exited" : "got final update";
-			dprintf(D_ALWAYS, "Failed to hold job (starter pid %d). %s\n", s_pid, reason);
+			dprintf(D_ALWAYS, "Failed to vacate job (starter pid %d). %s\n", s_pid, reason);
 			return;
 		}
-		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
+		dprintf(D_ALWAYS,"Failed to vacate job (starter pid %d), so killing it.\n", s_pid);
 		if (soft) {
-			killSoft(s_hold_soft_timeout);
+			killSoft(s_vacate_soft_timeout);
 		} else {
-			killHard(s_hold_hard_timeout);
+			killHard(s_vacate_hard_timeout);
 		}
 	}
 }

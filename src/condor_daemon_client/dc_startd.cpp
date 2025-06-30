@@ -314,7 +314,13 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim(
+	ClassAd const *req_ad,
+	char const *description,
+	char const *scheduler_addr,
+	int alive_interval,
+	requestClaimOptions & opts,
+	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -327,7 +333,7 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
 
-	if (claim_pslot) {
+	if (opts.claim_pslot) {
 		// TODO Currently, we always request the pslot's max lease time
 		//   (msg->m_pslot_claim_lease=0).
 		//   Consider adding option to let client request shorter lease time.
@@ -340,6 +346,8 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	req_ad->LookupString("WorkingCM", working_cm);
 	if (!working_cm.empty()) {
 		msg->m_num_dslots = 0;
+	} else {
+		msg->m_num_dslots = opts.num_dslots;
 	}
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);

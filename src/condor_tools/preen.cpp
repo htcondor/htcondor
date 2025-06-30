@@ -63,6 +63,9 @@
 
 #include <filesystem>
 
+#include <chrono>
+using namespace std::chrono_literals;
+
 #define PREEN_EXIT_STATUS_SUCCESS       0
 #define PREEN_EXIT_STATUS_FAILURE       1
 #define PREEN_EXIT_STATUS_EMAIL_FAILURE 2
@@ -98,6 +101,7 @@ void check_log_dir();
 void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
+void check_syndicate_dir();
 void bad_file( const char *, const char *, Directory &, const char * extra = NULL );
 void good_file( const char *, const char * );
 int send_email();
@@ -243,6 +247,7 @@ preen_main( int, char ** ) {
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	check_public_files_webroot_dir();
 #endif
+	check_syndicate_dir();
 
 	// Check to see if we need to clean up checkpoint destinations.
 	if(! check_cleanup_dir()) {
@@ -477,6 +482,7 @@ check_spool_dir()
 		"HISTORY",
 		"JOB_EPOCH_HISTORY",
 		"STARTD_HISTORY",
+		"SCHEDD_DAEMON_HISTORY",
 		"COLLECTOR_PERSISTENT_AD_LOG",
 		"LVM_BACKING_FILE",
 	};
@@ -1584,4 +1590,113 @@ check_cleanup_dir() {
 
 	check_cleanup_dir_actual( checkpointCleanup );
 	return true;
+}
+
+
+bool
+lease_has_expired( const std::filesystem::path & file ) {
+	std::error_code ec;
+	auto then = std::filesystem::last_write_time( file, ec );
+	if( ec.value() != 0 ) { return false; }
+
+	auto diff = std::chrono::file_clock::now() - then;
+	if( diff >= 300s ) {
+		return true;
+	}
+
+	return false;
+}
+
+void
+check_syndicate_dir() {
+	char *LOCK_str = param("LOCK");
+	std::string LOCK;
+	if (LOCK_str != nullptr) {
+		LOCK = LOCK_str;
+		free(LOCK_str);
+	}
+	std::filesystem::path lock(LOCK);
+	std::filesystem::path syndicate = lock / "syndicate";
+
+	// The syndicate locking directory has different types of files in it:
+	//
+	//     (1)  Keyfiles, which have no extension.  All other files have
+	//			a keyfile's name as their prefix.
+	//     (2)  Remove locks, which have ".rm_<numeric-depth>" as an extension.
+	//     (3)  Hardlinks, which have the worker's PID as an extension.
+	//     (4)  Message files, with the extension ".message".
+	//     (5)  Hidden keyfiles, which have a leading "." and the provider's
+	//          PID as an extension.
+	//
+	// (1) and (2) are defined to have 300-second leases.  (4) can be removed
+	// if (1) is missing or expired.  (3) can be removed if both (1) and (5)
+	// are missing.  (5) is defined to have the same 300-second lease as (1).
+	//
+
+	std::error_code ec;
+	std::filesystem::recursive_directory_iterator rdi(
+		syndicate, {}, ec
+	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "check_syndicate_dir(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", syndicate.string().c_str(), ec.message().c_str(), ec.value() );
+		return;
+	}
+
+	for( const auto & entry : rdi ) {
+		if( entry.is_regular_file() ) {
+			std::string extension = entry.path().extension().string();
+
+			if( extension == "" ) {
+				// Keyfile.
+				if( lease_has_expired(entry.path()) ) {
+					std::filesystem::remove( entry.path(), ec );
+				}
+				continue;
+			}
+
+            // For some reason, extension() includes the '.' separator.
+			extension = extension.substr(1);
+
+			if( starts_with(extension, "rm_") ) {
+				// Remove lock.
+				if( lease_has_expired(entry.path()) ) {
+					std::filesystem::remove( entry.path(), ec );
+				}
+				continue;
+			}
+
+			char * endptr = NULL;
+			strtol( extension.c_str(), & endptr, 10 );
+			if( * endptr == '\0' ) {
+				if( starts_with( entry.path().filename().string(), "." ) ) {
+					// Hidden keyfile.
+					if( lease_has_expired(entry.path()) ) {
+						std::filesystem::remove( entry.path(), ec );
+					}
+				} else {
+					// Hardlink.
+					std::filesystem::path keyfile = entry.path();
+					keyfile.replace_extension();
+					std::filesystem::path message = entry.path();
+					message.replace_extension("message");
+					dprintf( D_TEST, "Found hardlink '%s', checking if '%s' or '%s' exist...\n", entry.path().filename().c_str(), keyfile.string().c_str(), message.string().c_str() );
+					if( (! std::filesystem::exists(keyfile, ec)) && (! std::filesystem::exists(message, ec)) ) {
+					    dprintf( D_TEST, "Removing hardlink '%s'\n", entry.path().string().c_str() );
+						std::filesystem::remove( entry.path(), ec );
+					}
+				}
+				continue;
+			}
+
+			if( extension == "message" ) {
+				// Message file.
+				std::filesystem::path keyfile = entry.path();
+				keyfile.replace_extension();
+				if(! std::filesystem::exists(keyfile, ec)) {
+					std::filesystem::remove( entry.path(), ec );
+				}
+				continue;
+			}
+		}
+	}
 }

@@ -616,12 +616,19 @@ class ClassAd : public ExprTree
 		ClassAd &operator=(const ClassAd &rhs);
 
 		ClassAd &operator=(ClassAd &&rhs)  noexcept {
-			this->do_dirty_tracking = rhs.do_dirty_tracking;
-			this->chained_parent_ad = rhs.chained_parent_ad;
+			// In the order listed in the header, so that we don't miss any.
 			this->alternateScope = rhs.alternateScope;
 
-			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
 			this->attrList = std::move(rhs.attrList);
+			for( auto & entry : attrList ) {
+				// I wonder what other invariants were forgotten?
+				entry.second->SetParentScope(this);
+			}
+			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
+
+			this->do_dirty_tracking = rhs.do_dirty_tracking;
+			this->chained_parent_ad = rhs.chained_parent_ad;
+			this->parentScope = rhs.parentScope;
 
 			return *this;
 		}

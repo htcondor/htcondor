@@ -39,6 +39,7 @@ htcondor2/_cred_type.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
+htcondor2/_history_src.py
 htcondor2/_daemon_command.py
 htcondor2/_dagman.py
 htcondor2/_drain_type.py
@@ -58,6 +59,7 @@ htcondor2/_job_status.py
 htcondor2/_param.py
 htcondor2/_remote_param.py
 htcondor2/_file_transfer_event_type.py
+htcondor2/_common_files_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
 htcondor2/_loose_functions.py

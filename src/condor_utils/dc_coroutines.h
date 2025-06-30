@@ -287,7 +287,7 @@ namespace cr {
 
 			std::suspend_never initial_suspend() { return {}; }
 
-			std::suspend_always final_suspend() noexcept {
+			std::suspend_never final_suspend() noexcept {
 				if( exception ) { std::rethrow_exception( exception ); }
 				return {};
 			}

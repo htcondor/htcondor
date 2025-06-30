@@ -1,6 +1,80 @@
+*** 23.10.27 bugs
+
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
+- Fixed a bug where the specific vacate reason wasn't reported in the job
+  event log or the job ad when a job was evicted from the EP.
+  The message ``Unspecified job interruption`` and code 1005 were used
+  instead.
+  :jira:`3117`
+
+
+*** 23.0.27 bugs
+
+- Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
+  that caused some time information to be displayed incorrectly.
+  :jira:`3112`
+
+- Fixed a bug where the Machine and Job ClassAds would fail to be
+  written into job scratch directories on Execution Points using
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`3156`
+
+*** 23.10.26 features
+
+- HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.0.
+
 *** 23.10.26 bugs
 
+- Fixed a memory leak in the *condor_schedd* when late materialization
+  is used.
+  :jira:`3096`
+
+- Fixed a bug where the *condor_master* would not start up on systems
+  where ``ulimit -n`` was close to 2 ^ 31 file descriptors.
+  :jira:`3079`
+
 *** 23.0.26 bugs
+
+- Fixed a bug in *condor_adstash* that would prevent ads from
+  being ingested to Elasticsearch or OpenSearch when a lookup
+  of indexes did not start with a writable index.
+  :jira:`3109`
+
+- Fixed a bug when DAGMan's log file was on a full filesystem, DAGMan
+  would not exit with the correct log file full exit code.
+  :jira:`3066`
+
+- The submit commands ``kill_sig``, ``remove_kill_sig``, and
+  ``hold_kill_sig`` are now ignored for Windows jobs.
+  These control Unix process signals, which are not relevant on
+  Windows.
+  :jira:`3078`
+
+- Fixed a bug introduced in HTCondor 23.0.21, 23.10.21, and 24.0.5 that
+  caused the *condor_gridmanager* to fail at startup if
+  macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
+  :jira:`3099`
+
+- The plug-in used to handle ``http`` and ``https`` URLs now sets the
+  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  Web servers which return a 403/Forbidden
+  error when the ``user-agent`` is empty will now function as expected.
+  :jira:`3121`
+
+*** 23.10.25 features
+
+- HTCondor tarballs now contain `Pelican 7.16.5 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.16.5.
+
+- Pelican 7.16.5 now includes end-to-end integrity checks for clients
+
+- HTCondor tarballs now contain `Apptainer 1.4.1 <https://github.com/apptainer/apptainer/releases/tag/v1.4.1>`_
 
 *** 23.10.25 bugs
 
@@ -11,18 +85,18 @@
 *** 23.0.25 bugs
 
 - Fixed some bugs with parallel universe jobs that can cause the
-  ``condor_schedd`` to crash.
+  *condor_schedd* to crash.
   :jira:`3049`
 
 - Fixed a bug that caused the *condor_starter* to crash if a job was
   vacated during input file transfer.
   :jira:`3016`
 
-- ``condor_watch_q`` will now correctly display the full range of job
+- :tool:`condor_watch_q` will now correctly display the full range of job
   ids for each batch grouping.
   :jira:`2992`
 
-- Fixed bug in one of ``condor_upgrade_check``\'s tests that would cause
+- Fixed bug in one of :tool:`condor_upgrade_check`\'s tests that would cause
   the test to check for incorrect hostname when running inside of a container.
   :jira:`3014`
 
