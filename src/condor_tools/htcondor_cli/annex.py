@@ -242,7 +242,7 @@ class Status(Verb):
             annex_name = slot["AnnexName"]
             request_id = slot.get("hpc_annex_request_id", "None")
 
-            # Ignore dynamic slot, since we just care about aggregates.
+            # Ignore dynamic slots, since we just care about aggregates.
             # We could write a similar check for static slots, but we
             # don't ever start any annexes with static slots.  (Bad
             # admin, no cookie!)
