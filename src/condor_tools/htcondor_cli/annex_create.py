@@ -480,6 +480,7 @@ def create_annex_token(logger, type):
 def invoke_condor_annex(
     logger,
     annex_name : str,
+    request_id : str,
     count : int = 1, instance_type : str = None, ami_id : str = None,
 ):
     args = [
@@ -487,6 +488,7 @@ def invoke_condor_annex(
         '-yes',
         '-annex-name', annex_name,
         '-count', str(count),
+        '-request-id', request_id,
     ]
 
     if instance_type is not None:
@@ -768,109 +770,101 @@ def annex_inner_func(
     )
 
 
-    # And now for something completely different.
-    if system == "aws-ec2":
-        invoke_condor_annex(
-            logger,
-            annex_name,
-            count=nodes,
-            instance_type=queue_name,
-            ami_id=ami_id,
-        )
-        return
-
-
-    # Distinguish our text from SSH's text.
-    ANSI_BRIGHT = "\033[1m"
-    ANSI_RESET_ALL = "\033[0m"
-
-
-    ##
-    ## The user will do the 2FA/SSO dance here.
-    ##
-    logger.info(
-        f"{ANSI_BRIGHT}This command will access the system named "
-        f"'{SYSTEM_TABLE[system].pretty_name}' via SSH.  To proceed, "
-        f"follow the prompts from that system "
-        f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
-    )
-    ssh_target = ssh_host_name
-    if ssh_user_name is not None:
-        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
-    logger.debug(
-        f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
-    )
-    rc = make_initial_ssh_connection(
-        ssh_connection_sharing,
-        ssh_user_name,
-        ssh_host_name,
-    )
-    if rc != 0:
-        raise RuntimeError(
-            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system].pretty_name}', aborting ({rc})."
-        )
-    logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
-
-    ##
-    ## Register the clean-up function before creating the mess to clean-up.
-    ##
     remote_script_dir = None
 
-    # Allow atexit functions to run on SIGTERM.
-    signal.signal(signal.SIGTERM, lambda signal, frame: sys.exit(128 + 15))
-    # Hide the traceback on CTRL-C.
-    signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(128 + 2))
-    # Remove the temporary directories on exit.
-    atexit.register(
-        lambda: remove_remote_temporary_directory(
-            logger,
-            ssh_connection_sharing,
-            ssh_user_name,
-            ssh_host_name,
-            remote_script_dir,
-        )
-    )
 
-    logger.debug("Making remote temporary directory...")
-    remote_script_dir = Path(
-        make_remote_temporary_directory(
-            logger,
-            ssh_connection_sharing,
-            ssh_user_name,
-            ssh_host_name,
-        )
-    )
-    logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
+    if system != "aws-ec2":
+        # Distinguish our text from SSH's text.
+        ANSI_BRIGHT = "\033[1m"
+        ANSI_RESET_ALL = "\033[0m"
 
-    #
-    # This operation can fail or take a while, but (HTCONDOR-1058) should
-    # not need to display two lines.
-    #
-    logging.StreamHandler.terminator = " ";
-    logger.info(f"Populating annex temporary directory...")
-    populate_remote_temporary_directory(
-        logger,
-        ssh_connection_sharing,
-        ssh_user_name,
-        ssh_host_name,
-        system,
-        local_script_dir,
-        remote_script_dir,
-        token_file,
-        password_file,
-    )
-    if sif_files:
-        logger.debug("(transferring container images)")
-        transfer_sif_files(
+
+        ##
+        ## The user will do the 2FA/SSO dance here.
+        ##
+        logger.info(
+            f"{ANSI_BRIGHT}This command will access the system named "
+            f"'{SYSTEM_TABLE[system].pretty_name}' via SSH.  To proceed, "
+            f"follow the prompts from that system "
+            f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
+        )
+        ssh_target = ssh_host_name
+        if ssh_user_name is not None:
+            ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+        logger.debug(
+            f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
+        )
+        rc = make_initial_ssh_connection(
+            ssh_connection_sharing,
+            ssh_user_name,
+            ssh_host_name,
+        )
+        if rc != 0:
+            raise RuntimeError(
+                f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system].pretty_name}', aborting ({rc})."
+            )
+        logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
+
+        ##
+        ## Register the clean-up function before creating the mess to clean-up.
+        ##
+
+        # Allow atexit functions to run on SIGTERM.
+        signal.signal(signal.SIGTERM, lambda signal, frame: sys.exit(128 + 15))
+        # Hide the traceback on CTRL-C.
+        signal.signal(signal.SIGINT, lambda signal, frame: sys.exit(128 + 2))
+        # Remove the temporary directories on exit.
+        atexit.register(
+            lambda: remove_remote_temporary_directory(
+                logger,
+                ssh_connection_sharing,
+                ssh_user_name,
+                ssh_host_name,
+                remote_script_dir,
+            )
+        )
+
+        logger.debug("Making remote temporary directory...")
+        remote_script_dir = Path(
+            make_remote_temporary_directory(
+                logger,
+                ssh_connection_sharing,
+                ssh_user_name,
+                ssh_host_name,
+            )
+        )
+        logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
+
+        #
+        # This operation can fail or take a while, but (HTCONDOR-1058) should
+        # not need to display two lines.
+        #
+        logging.StreamHandler.terminator = " ";
+        logger.info(f"Populating annex temporary directory...")
+        populate_remote_temporary_directory(
             logger,
             ssh_connection_sharing,
             ssh_user_name,
             ssh_host_name,
+            system,
+            local_script_dir,
             remote_script_dir,
-            sif_files,
+            token_file,
+            password_file,
         )
-    logging.StreamHandler.terminator = "\n";
-    logger.info("done.")
+        if sif_files:
+            logger.debug("(transferring container images)")
+            transfer_sif_files(
+                logger,
+                ssh_connection_sharing,
+                ssh_user_name,
+                ssh_host_name,
+                remote_script_dir,
+                sif_files,
+            )
+        logging.StreamHandler.terminator = "\n";
+        logger.info("done.")
+
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
@@ -932,7 +926,8 @@ def annex_inner_func(
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.
-            "+hpc_annex_remote_script_dir": f'"{remote_script_dir}"',
+            "+hpc_annex_remote_script_dir": f'"{remote_script_dir}"'
+                if remote_script_dir is not None else "undefined",
         }
     )
 
@@ -997,44 +992,56 @@ def annex_inner_func(
                 else:
                     schedd.edit(job_id, "TransferInput", "undefined")
 
-    remotes = {}
-    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'...\n")
-    rc = invoke_pilot_script(
-        ssh_connection_sharing,
-        ssh_user_name,
-        ssh_host_name,
-        remote_script_dir,
-        system,
-        startd_noclaim_shutdown,
-        annex_name,
-        real_queue_name,
-        collector,
-        token_file,
-        lifetime,
-        owners,
-        nodes,
-        allocation,
-        lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
-        request_id,
-        password_file,
-        cpus,
-        mem_mb,
-        gpus,
-        gpu_type,
-        schedd_name,
-    )
-
-    if rc == 0:
-        logger.info(f"... requested.")
-        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system].pretty_name}' to establish the requested annex.")
-        logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
+    if system == "aws-ec2":
+        invoke_condor_annex(
+            logger,
+            annex_name,
+            count=nodes,
+            instance_type=queue_name,
+            ami_id=ami_id,
+            request_id=request_id,
+        )
     else:
-        error = f"Failed to start annex, {SYSTEM_TABLE[system].batch_system} returned code {rc}"
-        try:
-            schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
-        except Exception:
-            logger.warn(f"Could not remove cluster ID {cluster_id}.")
-        raise RuntimeError(error)
+        remotes = {}
+        logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'...\n")
+        rc = invoke_pilot_script(
+            ssh_connection_sharing,
+            ssh_user_name,
+            ssh_host_name,
+            remote_script_dir,
+            system,
+            startd_noclaim_shutdown,
+            annex_name,
+            real_queue_name,
+            collector,
+            token_file,
+            lifetime,
+            owners,
+            nodes,
+            allocation,
+            lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
+            request_id,
+            password_file,
+            cpus,
+            mem_mb,
+            gpus,
+            gpu_type,
+            schedd_name,
+        )
+
+        if rc == 0:
+            logger.info(f"... requested.")
+        else:
+            error = f"Failed to start annex, {SYSTEM_TABLE[system].batch_system} returned code {rc}"
+            try:
+                schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
+            except Exception:
+                logger.warn(f"Could not remove cluster ID {cluster_id}.")
+            raise RuntimeError(error)
+
+
+    logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system].pretty_name}' to establish the requested annex.")
+    logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
 
 
 def annex_name_exists(annex_name):

@@ -156,7 +156,8 @@ createConfigTarball(	const char * configDir,
 						long unclaimedTimeout,
 						std::string & tarballPath,
 						std::string & tarballError,
-						std::string & instanceID ) {
+						std::string & instanceID,
+						const std::string & requestID ) {
 	char * cwd = get_current_dir_name();
 
 	int rv = chdir( configDir );
@@ -243,14 +244,16 @@ createConfigTarball(	const char * configDir,
 		"\n"
 		"AnnexName = \"%s\"\n"
 		"IsAnnex = TRUE\n"
-		"STARTD_ATTRS = $(STARTD_ATTRS) AnnexName IsAnnex\n"
-		"MASTER_ATTRS = $(MASTER_ATTRS) AnnexName IsAnnex\n"
+		"hpc_annex_request_id = \"%s\"\n"
+		"STARTD_ATTRS = $(STARTD_ATTRS) AnnexName IsAnnex hpc_annex_request_id\n"
+		"MASTER_ATTRS = $(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id.\n"
 		"\n"
 		"STARTD_NOCLAIM_SHUTDOWN = %ld\n"
 		"\n"
 		"%s",
 		collectorHost.c_str(), passwordFile.c_str(),
-		annexName, unclaimedTimeout, startExpression.c_str()
+		annexName, requestID.c_str(),
+		unclaimedTimeout, startExpression.c_str()
 	);
 
 	std::string scheddName;
@@ -546,7 +549,8 @@ void prepareTarballForUpload(	ClassAd & commandArguments,
 								const char * configDir,
 								char * owner, bool ownerSpecified,
 								bool noOwner,
-								long int unclaimedTimeout ) {
+								long int unclaimedTimeout,
+								const std::string & requestID ) {
 	std::string annexName;
 	commandArguments.LookupString( ATTR_ANNEX_NAME, annexName );
 	ASSERT(! annexName.empty());
@@ -595,7 +599,7 @@ void prepareTarballForUpload(	ClassAd & commandArguments,
 	if(! ownerSpecified) { owner = my_username(); }
 	bool createdTarball = createConfigTarball( tempDir, annexName.c_str(),
 		noOwner ? NULL : owner, unclaimedTimeout, tarballPath, tarballError,
-		instanceID );
+		instanceID, requestID );
 	if(! ownerSpecified) { free( owner ); }
 	commandArguments.Assign( "CollectorInstanceID", instanceID );
 
@@ -816,6 +820,8 @@ annex_main( int argc, char ** argv ) {
 	const char * userDataFileName = NULL;
 	std::vector< std::pair< std::string, std::string > > tags;
 	bool skipYesNoPrompt = false;
+
+	std::string requestID;
 
 	enum annex_t {
 		at_none = 0,
@@ -1210,6 +1216,14 @@ annex_main( int argc, char ** argv ) {
 			return 1;
 		} else if( is_dash_arg_prefix( argv[i], "check-setup", 11 ) ) {
 			theCommand = ct_check_setup;
+		} else if( is_dash_arg_prefix( argv[i], "request-id", 7 ) ) {
+			++i;
+			if( i < argc && argv[i] != NULL ) {
+				requestID = argv[i];
+			} else {
+				fprintf( stderr, "%s: -request-id requires an argument.\n", argv[0] );
+				return 1;
+			}
 		} else if( is_dash_arg_prefix( argv[i], "setup", 5 ) ) {
 			theCommand = ct_setup;
 			++i; if( i < argc ) { publicKeyFile = argv[i]; }
@@ -1547,7 +1561,7 @@ annex_main( int argc, char ** argv ) {
 					ASSERT( false );
 			}
 
-			prepareTarballForUpload( commandArguments, configDir, owner, ownerSpecified, noOwner, unclaimedTimeout );
+			prepareTarballForUpload( commandArguments, configDir, owner, ownerSpecified, noOwner, unclaimedTimeout, requestID );
 			handleUserData( commandArguments, clUserDataWins, userData, userDataFileName );
 			return create_annex( commandArguments );
 

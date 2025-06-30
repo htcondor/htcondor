@@ -269,6 +269,7 @@ class Status(Verb):
         target_jobs = schedd.query(
             constraint,
             opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+            # FIXME: hpc_annex_nodes is only for the request record ads, right?
             projection=['JobStatus', 'TargetAnnexName', 'hpc_annex_nodes'],
         )
         for job in target_jobs:
