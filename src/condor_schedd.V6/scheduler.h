@@ -186,6 +186,8 @@ struct SubmitterCounters {
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
 	, OCUClaims(0)
+	, OCUWantedJobs(0)
+	, OCURunningJobs(0)
 	, Hits(0)
 	, JobsCounted(0)
 //	, JobsRecentlyAdded(0)
