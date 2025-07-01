@@ -53,9 +53,7 @@ JICLocalFile::~JICLocalFile()
 void
 JICLocalFile::initFilenames( const char* jobad_path )
 {
-	if( ! jobad_path ) {
-		EXCEPT( "Can't instantiate a JICLocalFile without a filename!" );
-	}
+	ASSERT(jobad_path);
 	if( jobad_path[0] == '-' && jobad_path[1] == '\0' ) {
 			// special case, treat '-' as STDIN
 		job_filename = NULL;
