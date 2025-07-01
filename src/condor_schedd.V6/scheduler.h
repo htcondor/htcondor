@@ -169,6 +169,9 @@ struct SubmitterCounters {
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
   int LocalJobsIdle;    // Local universe
+  int OCUClaims; // OCU Claims held indefinitely by this submitter
+  int OCUWantedJobs; // Total number of idle+running jobs that want an OCU claim
+  int OCURunningJobs; // Running number of jobs that want an OCU Claim
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
   int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
 //  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
@@ -182,6 +185,7 @@ struct SubmitterCounters {
 	, JobsFlocked(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
+	, OCUClaims(0)
 	, Hits(0)
 	, JobsCounted(0)
 //	, JobsRecentlyAdded(0)
