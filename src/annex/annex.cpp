@@ -196,8 +196,6 @@ createConfigTarball(	const char * configDir,
 	}
 
 
-	std::string passwordFile = "password_file.pl";
-
 	std::string collectorHost;
 	param( collectorHost, "ANNEX_COLLECTOR" );
 	if( collectorHost.empty() ) {
@@ -239,7 +237,6 @@ createConfigTarball(	const char * configDir,
 		"SEC_DEFAULT_INTEGRITY = REQUIRED\n"
 		"SEC_DEFAULT_ENCRYPTION = REQUIRED\n"
 		"\n"
-		"SEC_PASSWORD_FILE = /etc/condor/config.d/%s\n"
 		"ALLOW_WRITE = condor_pool@*/* $(LOCAL_HOSTS)\n"
 		"\n"
 		"AnnexName = \"%s\"\n"
@@ -251,9 +248,11 @@ createConfigTarball(	const char * configDir,
 		"STARTD_NOCLAIM_SHUTDOWN = %ld\n"
 		"\n"
 		"%s",
-		collectorHost.c_str(), passwordFile.c_str(),
-		annexName, requestID.c_str(),
-		unclaimedTimeout, startExpression.c_str()
+		collectorHost.c_str(),
+		annexName,
+		requestID.c_str(),
+		unclaimedTimeout,
+		startExpression.c_str()
 	);
 
 	std::string scheddName;
@@ -364,6 +363,24 @@ createConfigTarball(	const char * configDir,
 	}
 	rv = chdir( ".." );
 	ASSERT(rv == 0);
+
+
+	// Copy ANNEX_PASSWORD_FILE to the annex for remote control.
+	rv = mkdir( "passwords.d", 0755 );
+	ASSERT(rv == 0);
+
+	std::string annexPasswordFile;
+	param( annexPasswordFile,
+		"ANNNEX_PASSWORD_FILE", "~/.condor/annex_password_file"
+	);
+	std::string cp;
+	formatstr( cp, "/bin/cp %s passwords.d/POOL", annexPasswordFile.c_str() );
+	status = system( cp.c_str() );
+	if(! (WIFEXITED( status ) && (WEXITSTATUS( status ) == 0))) {
+		formatstr( tarballError, "failed to copy ANNEX_PASSWORD_FILE (%s)", annexPasswordFile.c_str() );
+		free(cwd);
+		return false;
+	}
 
 
 	std::string tbn;
