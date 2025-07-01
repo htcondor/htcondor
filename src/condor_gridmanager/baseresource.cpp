@@ -751,7 +751,7 @@ BaseResource::BatchStatusResult BaseResource::StartBatchStatus()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	ASSERT(false);
+	EXCEPT("Internal consistency error: BaseResource::StartBatchStatus() called.");
 	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
@@ -761,7 +761,7 @@ BaseResource::BatchStatusResult BaseResource::FinishBatchStatus()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	ASSERT(false);
+	EXCEPT("Internal consistency error: BaseResource::FinishBatchStatus() called.");
 	return BSR_ERROR; // Required by Visual C++ compiler
 }
 
@@ -771,7 +771,7 @@ GahpClient * BaseResource::BatchGahp()
 		Likely cause: someone called StartBatchStatusTimer
 		but failed to reimplement this.
 	*/
-	ASSERT(false);
+	EXCEPT("Internal consistency error: BaseResource::BatchGahp() called.");
 	return 0;
 }
 
@@ -817,7 +817,7 @@ void BaseResource::DoBatchStatus( int /* timerID */ )
 				return;
 
 			default:
-				ASSERT(false);
+				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
 		}
 
 	} else {
@@ -839,7 +839,7 @@ void BaseResource::DoBatchStatus( int /* timerID */ )
 				return;
 
 			default:
-				ASSERT(false);
+				EXCEPT("BaseResource::DoBatchStatus: Unknown BatchStatusResult %d", (int)bsr);
 		}
 	}
 }

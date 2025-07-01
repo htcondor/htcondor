@@ -1517,9 +1517,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				recordCheckpointEvent( update_ad );
 				break;
 			default:
-				dprintf(D_ERROR, "Trying to log state change for invalid state %s\n",
+				EXCEPT( "Trying to log state change for invalid state %s",
 						rrStateToString(new_state) );
-				ASSERT(false);
 			}
 				// record the new state
 			setResourceState( new_state );

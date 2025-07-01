@@ -100,14 +100,14 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 					error_string = "";
 					break;
 				default:
-					ASSERT(false);
+					EXCEPT( "Bad %s result", command );
 			}
 		} else if( rc == 0 ) {
 			for( int i = 2; i < result->argc; ++i ) {
 				instance_ids.emplace_back(result->argv[i] );
 			}
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -151,7 +151,7 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -200,7 +200,7 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -358,7 +358,7 @@ int EC2GahpClient::ec2_vm_server_type(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -416,7 +416,7 @@ int EC2GahpClient::ec2_vm_create_keypair(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -468,7 +468,7 @@ int EC2GahpClient::ec2_vm_destroy_keypair(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -515,7 +515,7 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
                 error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
-                ASSERT(false);
+                EXCEPT("Bad %s Result",command);
             }
 
         } else {    // return_code == 0
@@ -571,7 +571,7 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
                 error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
-                ASSERT(false);
+                EXCEPT("Bad %s Result",command);
             }
         } else {    // return_code == 0
             ASSERT(((result->argc-2) % 2) == 0);
@@ -627,7 +627,7 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
                 error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
-                ASSERT(false);
+                EXCEPT("Bad %s Result",command);
             }
 
         } else {    // result_code == 0
@@ -719,7 +719,7 @@ int EC2GahpClient::ec2_spot_start( const std::string & service_url,
                 break;
 
             default:
-                ASSERT(false);
+                EXCEPT( "Bad %s result", command );
                 break;
         }
         delete result;
@@ -770,7 +770,7 @@ int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
                 break;
 
             default:
-                ASSERT(false);
+                EXCEPT( "Bad %s result", command );
                 break;
         }
 
@@ -821,7 +821,7 @@ int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
                 }
             }
         } else {
-            ASSERT(false);
+            EXCEPT( "Bad %s result", command );
         }
 
         delete result;
@@ -880,7 +880,7 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -918,7 +918,7 @@ int EC2GahpClient::bulk_stop(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1007,7 +1007,7 @@ int EC2GahpClient::put_rule(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1045,7 +1045,7 @@ int EC2GahpClient::delete_rule(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1087,7 +1087,7 @@ int EC2GahpClient::get_function(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1131,7 +1131,7 @@ int EC2GahpClient::put_targets(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1171,7 +1171,7 @@ int EC2GahpClient::remove_targets(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1221,7 +1221,7 @@ int EC2GahpClient::s3_upload(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1280,7 +1280,7 @@ int EC2GahpClient::describe_stacks(  const std::string & service_url,
 				outputs[ result->argv[i] ] = result->argv[i + 1];
 			}
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1343,7 +1343,7 @@ int EC2GahpClient::create_stack(
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;
@@ -1387,7 +1387,7 @@ int EC2GahpClient::call_function(	const std::string & service_url,
 			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
-			ASSERT(false);
+			EXCEPT( "Bad %s result", command );
 		}
 
 		delete result;

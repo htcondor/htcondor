@@ -1041,8 +1041,8 @@ void BaseShadow::initUserLog()
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
 				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does
-		ASSERT(0);
+		// holdJobAndExit() should not return, but just in case it does
+		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
 	}
 }
 
