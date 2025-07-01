@@ -1557,7 +1557,7 @@ Scheduler::count_jobs()
 			JobsFlocked++;
 		}
 		if (rec->is_ocu) {
-			// If tihs match is an OCU held claim, increment the per-owned OCU counter
+			// If this match is an OCU held claim, increment the per-owned OCU counter
 			SubDat->num.OCUClaims++;
 		}
 	}
