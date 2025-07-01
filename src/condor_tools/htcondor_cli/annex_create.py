@@ -760,11 +760,18 @@ def annex_inner_func(
     if allocation is not None:
         as_project = f" (as the project '{allocation}') "
 
+
+    project_line = "  To change the project, use --project.  "
+    resources_line = "To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
+    if system == "aws-ec2":
+        project_line = ""
+        resources_line = "  To change the resources requested, change the queue name; see https://aws.amazon.com/ec2/instance-types/ for details."
+
     logger.info(
         f"This will{as_project}request {resources} for an annex named '{annex_name}'"
         f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'."
-        f"  To change the project, use --project."
-        f"  To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
+        f"{project_line}"
+        f"{resources_line}"
         f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
         f"\n"
     )
