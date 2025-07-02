@@ -1,3 +1,5 @@
+*** 23.0.28 bugs
+
 *** 23.0.27 bugs
 
 - Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
