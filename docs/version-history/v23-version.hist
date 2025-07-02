@@ -9,6 +9,10 @@
   :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`3156`
 
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
 *** 23.0.26 bugs
 
 - Fixed a bug in *condor_adstash* that would prevent ads from
