@@ -606,7 +606,7 @@ bool UserCheck(const JobQueueBase *ad, const JobQueueUserRec * test_owner);
 bool UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_owner, bool not_super=false);
 
 bool BuildPrioRecArray(bool no_match_found=false);
-void DirtyPrioRecArray();
+void DirtyPrioRecArray(int tid=-1);
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
 bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
 

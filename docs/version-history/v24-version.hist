@@ -1,3 +1,9 @@
+*** 24.11.0 features
+
+*** 24.11.0 bugs
+
+*** 24.0.11 bugs
+
 *** 24.10.0 features
 
 - The new Python API now includes `htcondor2.disable_debug()`, which is
@@ -52,6 +58,10 @@
 
 - Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
   :jira:`3106`
+
+- Fixed an issue where a job may take an additional 20 minutes to be scheduled to run after leaving cool-down mode.
+  See configuration knob :macro:`SYSTEM_ON_VACATE_COOL_DOWN` for more information about job cool-down mode.
+  :jira:`3059`
 
 *** 24.0.10 bugs
 

@@ -257,8 +257,10 @@ Timeslice   PrioRecArrayTimeslice;
 #else
  std::deque<prio_rec> PrioRec;
 #endif
+time_t      PrioRecMinCoolDownTime = 0;
 std::map<int,int> PrioRecAutoClusterRejected;
 int BuildPrioRecArrayTid = -1;
+int DirtyPrioRecTid = -1;
 
 
 JOB_ID_KEY_BUF HeaderKey(0,0);
@@ -510,6 +512,10 @@ ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, c
 	} else if (jid.cluster == USERRECID_qkey1 && jid.proc > 0) {
 		if (schedd) { return schedd->jobqueue_newUserRec(jid.proc, mytype); }
 		if (YourStringNoCase(PROJECT_ADTYPE) == mytype) { return new JobQueueProjectRec(jid.proc); }
+		if (YourStringNoCase(mytype) != OWNER_ADTYPE) {
+			// assume future rec, make this a no-type ad
+			return new JobQueueBase(jid, JobQueueBase::entry_type_unknown);
+		}
 		return new JobQueueUserRec(jid.proc);
 	}
 	return new JobQueueBase(jid, JobQueueBase::TypeOfJid(jid));
@@ -9327,10 +9333,15 @@ void load_job_factories()
 }
 
 
-void DirtyPrioRecArray() {
+void DirtyPrioRecArray(int tid /*default -1 which means we were not called from a timer*/) {
 		// Mark the PrioRecArray as stale. This will trigger a rebuild,
 		// though possibly not immediately.
 	PrioRecArrayIsDirty = true;
+	if (tid >= 0) {
+		// No need to cancel the timer here if we are called from a timer,
+		// since the timer is not periodic and thus will not be called again.
+		DirtyPrioRecTid = -1;
+	}
 }
 
 // runtime stats for count & time spent building the priorec array
@@ -9351,6 +9362,9 @@ static void DoBuildPrioRecArray() {
 	struct _get_job_prio_info info;
 	WalkJobQueue2(update_autocluster_id, &info);
 	grow_prio_recs(info.num_runnable + info.num_cooldown + 5); // +5 because ToddT sez so...
+	// PrioRecMinCoolDownTime is a global that will be incremented
+	// as we walk the job queue. 
+	PrioRecMinCoolDownTime = 0;
 	WalkJobQueue(get_job_prio);
 	BuildPrioRec_walk_runtime += rt.tick(now);
 
@@ -9435,6 +9449,25 @@ bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 	DoBuildPrioRecArray();
 
 	PrioRecArrayTimeslice.setFinishTimeNow();
+
+	// Now that we have rebuilt the PrioRec array, PrioRecMinCoolDownTime has been updated
+	// to the number of seconds until the next job leaves cool down.  Set a timer to
+	// call DirtyPrioRecArray() when that time is up. 
+	if ( DirtyPrioRecTid >= 0 ) {
+		daemonCore->Cancel_Timer(DirtyPrioRecTid);
+		DirtyPrioRecTid = -1;
+	}
+	if ( PrioRecMinCoolDownTime > 0 ) {
+		time_t seconds_until_cooldown = PrioRecMinCoolDownTime - time(nullptr);
+		// seconds_until_cooldown can be negative if building the PrioRec array
+		// took longer than the time to release the next cool down job.
+		// If this happens, set it to 0 so dirty the prio rec array again immediately.
+		if ( seconds_until_cooldown < 0 ) {
+			seconds_until_cooldown = 0;
+		}
+		DirtyPrioRecTid = daemonCore->Register_Timer(seconds_until_cooldown,
+				&DirtyPrioRecArray, "DirtyPrioRecArray");
+	}
 
 	dprintf(D_ALWAYS,"Rebuilt prioritized runnable job list in %.3fs.%s\n",
 			PrioRecArrayTimeslice.getLastDuration(),
@@ -9735,6 +9768,15 @@ bool Runnable(JobQueueJob *job, runnable_reason_code & reason)
 	time_t now = time(nullptr);
 	const int cooldown_soon = 5*60;
 	if (cool_down >= now) {
+		if (PrioRecMinCoolDownTime == 0) {
+			// This is the first job we have found in cool down.
+			// Set the cool down time to the expiration time of this job.
+			PrioRecMinCoolDownTime = cool_down;
+		} else {
+			// This is not the first job we have found in cool down.
+			// Set the cool down time to the minimum of the two.
+			PrioRecMinCoolDownTime = MIN(PrioRecMinCoolDownTime, cool_down);
+		}
 		reason = (cool_down > (now + cooldown_soon)) ? runnable_reason_code::InLongCooldown : runnable_reason_code::InShortCooldown;
 		return false;
 	}
