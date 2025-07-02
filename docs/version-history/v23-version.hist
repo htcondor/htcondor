@@ -1,3 +1,7 @@
+*** 23.10.28 bugs
+
+*** 23.0.28 bugs
+
 *** 23.10.27 bugs
 
 - Fixed a bug that could cause the startd's mips benchmark to
@@ -10,7 +14,6 @@
   The message ``Unspecified job interruption`` and code 1005 were used
   instead.
   :jira:`3117`
-
 
 *** 23.0.27 bugs
 

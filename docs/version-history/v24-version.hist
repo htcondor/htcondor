@@ -1,3 +1,9 @@
+*** 24.11.0 features
+
+*** 24.11.0 bugs
+
+*** 24.0.11 bugs
+
 *** 24.10.0 features
 
 - The new Python API now includes `htcondor2.disable_debug()`, which is
