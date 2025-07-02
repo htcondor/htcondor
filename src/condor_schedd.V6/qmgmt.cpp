@@ -536,7 +536,7 @@ static inline bool IsSpecialJobId( int cluster_id, int proc_id )
 	return false;
 }
 
-ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, const char * /* mytype */) const
+ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, const char * mytype) const
 {
 	JOB_ID_KEY jid(key);
 	if (jid.cluster > 0) {
@@ -549,6 +549,10 @@ ClassAd* ConstructClassAdLogTableEntry<JobQueuePayload>::New(const char * key, c
 		}
 #ifdef USE_JOB_QUEUE_USERREC
 	} else if (jid.cluster == USERRECID_qkey1 && jid.proc > 0) {
+		if (YourStringNoCase(mytype) != OWNER_ADTYPE) {
+			// assume future Project rec, make this a no-type ad
+			return new JobQueueBase(jid, JobQueueBase::entry_type_unknown);
+		}
 		if (schedd) { return schedd->jobqueue_newUserRec(jid.proc); }
 		return new JobQueueUserRec(jid.proc);
 #endif
@@ -1830,6 +1834,11 @@ void JobQueueBase::CheckJidAndType(const JOB_ID_KEY &key)
 		dprintf(D_ERROR, "ERROR! - JobQueueBase jid is not initialized for %d.%d", key.cluster, key.proc);
 	}
 	if (TypeOfJid(key) != entry_type) {
+		if (TypeOfJid(key) == entry_type_userrec) {
+			// Project records (future) are in the userrec key space, but do not have entry_type_userrec)
+			// we will not treat this as an error here.
+			return;
+		}
 		dprintf(D_ERROR, "ERROR! - JobQueueBase entry_type (%d) is wrong type for %d.%d", entry_type, key.cluster, key.proc);
 	}
 }
