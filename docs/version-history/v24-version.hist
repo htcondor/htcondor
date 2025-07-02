@@ -1,5 +1,9 @@
 *** 24.11.0 features
 
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
 *** 24.11.0 bugs
 
 *** 24.0.11 bugs
