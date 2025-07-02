@@ -18,11 +18,11 @@ Release Notes:
 
 New Features:
 
-.. include-history:: features 24.0.11 23.10.YY 23.0.YY
+.. include-history:: features 24.0.11 23.10.28 23.0.28
 
 Bugs Fixed:
 
-.. include-history:: bugs 24.0.11 23.10.YY 23.0.YY
+.. include-history:: bugs 24.0.11 23.10.28 23.0.28
 
 Version 24.0.10
 ---------------
