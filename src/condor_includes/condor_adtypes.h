@@ -34,6 +34,7 @@
 #define JOB_ADTYPE			"Job"
 #define JOB_SET_ADTYPE			"JobSet"
 #define OWNER_ADTYPE		"Owner"	 /* schedd's owner-of-jobs ad */
+#define PROJECT_ADTYPE		"Project" /* schedd's project ad */
 #define QUERY_ADTYPE			"Query"
 #define COLLECTOR_ADTYPE		"Collector"
 #define CKPT_FILE_ADTYPE		"CkptFile"
@@ -55,6 +56,7 @@
 #define REPLY_ADTYPE			"Reply"
 #define GATEWAY_ADTYPE			"Gateway"
 #define CLUSTER_ADTYPE	 		"Cluster"
+#define CLUSTERPVT_ADTYPE		"ClusterPvt"
 #define GRID_ADTYPE			"Grid"
 #define BOGUS_ADTYPE		"Bogus"
 

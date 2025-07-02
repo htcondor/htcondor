@@ -162,6 +162,9 @@ bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but
 bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
 bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
+JobQueueProjectRec NoneProjectRec(CONDOR_USERREC_ID, "No Project");
+JobQueueProjectRec * get_none_projectrec() { return &NoneProjectRec; }
+
 JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor@family", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
 
@@ -671,6 +674,7 @@ Scheduler::Scheduler() :
 	AllowLateMaterialize = false;
 	NonDurableLateMaterialize = false;
 	EnablePersistentOwnerInfo = true;
+	EnablePersistentProjectInfo = false;
 	EnableJobQueueTimestamps = false;
 	MaxMaterializedJobsPerCluster = INT_MAX;
 	MaxJobsSubmitted = INT_MAX;
@@ -1458,13 +1462,16 @@ Scheduler::count_jobs()
 
 	time_t current_time = time(0);
 
-	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
-		OwnerInfo & Owner = *(it->second);
-		Owner.num.clear_counters();	// clear the jobs counters 
+	for (auto & [name, owni] : OwnersInfo) {
+		owni->num.clear_counters();	// clear the jobs counters 
+	}
+	for (auto & [name, prji] : ProjectInfo) {
+		prji->num.clear_counters();	// clear the jobs counters 
 	}
 	for (OwnerInfo * owni : zombieOwners) {
 		owni->num.clear_counters(); // clear refcounts for zombies also
 	}
+	NoneProjectRec.num.clear_counters();
 
 	FlockPools.clear();
 	if (FlockCollectors.size()) {
@@ -3512,6 +3519,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
     time_t now = time(NULL);
     OwnInfo->LastHitTime = now;
     SubData->LastHitTime = now;
+	if (job->project) { job->project->LastHitTime = now; }
 
     ScheddOtherStats * other_stats = NULL;
     if (scheduler.OtherPoolStats.AnyEnabled()) {
@@ -3565,6 +3573,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	// update per-submitter and per-owner counters
 	SubmitterCounters * Counters = &SubData->num;
 	JobQueueUserRec::CountJobsCounters * OwnerCounts = &OwnInfo->num;
+	JobQueueProjectRec::CountJobsCounters * ProjectCounts = (job->project) ? &job->project->num : &NoneProjectRec.num;
 
 	// Hits also counts matchrecs, which aren't jobs. (hits is sort of a reference count)
 	Counters->Hits += 1;
@@ -3572,6 +3581,9 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	
 	OwnerCounts->Hits += 1;
 	OwnerCounts->JobsCounted += 1;
+
+	ProjectCounts->Hits += 1;
+	ProjectCounts->JobsCounted += 1;
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  )
@@ -3586,6 +3598,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			OwnerCounts->SchedulerJobsRunning += cur_hosts;
 			OwnerCounts->SchedulerJobsIdle += (max_hosts - cur_hosts);
+			ProjectCounts->SchedulerJobsRunning += cur_hosts;
+			ProjectCounts->SchedulerJobsIdle += (max_hosts - cur_hosts);
 			Counters->SchedulerJobsRunning += cur_hosts;
 			Counters->SchedulerJobsIdle += (max_hosts - cur_hosts);
 		}
@@ -3597,6 +3611,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 			OwnerCounts->LocalJobsRunning += cur_hosts;
 			OwnerCounts->LocalJobsIdle += (max_hosts - cur_hosts);
+			ProjectCounts->LocalJobsRunning += cur_hosts;
+			ProjectCounts->LocalJobsIdle += (max_hosts - cur_hosts);
 			Counters->LocalJobsRunning += cur_hosts;
 			Counters->LocalJobsIdle += (max_hosts - cur_hosts);
 		}
@@ -3682,6 +3698,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			// Update Owners array JobsIdle
 		int job_idle = (max_hosts - cur_hosts);
 		OwnerCounts->JobsIdle += job_idle;
+		ProjectCounts->JobsIdle += job_idle;
 		Counters->JobsIdle += job_idle;
 
 			// If we're biasing by slot weight, and the job is idle, and everything parsed...
@@ -3739,6 +3756,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 
 	} else if (status == HELD) {
 		OwnerCounts->JobsHeld++;
+		ProjectCounts->JobsHeld++;
 		Counters->JobsHeld++;
 	}
 
@@ -3855,20 +3873,36 @@ Scheduler::find_ownerinfo(const char * owner)
 	return nullptr;
 }
 
+JobQueueProjectRec *
+Scheduler::find_projectinfo(const char * name)
+{
+	auto it = ProjectInfo.find(name);
+	if (it != ProjectInfo.end()) {
+		return it->second;
+	}
+	return nullptr;
+}
+
+
 int Scheduler::nextUnusedUserRecId()
 {
 	if (NextOwnerId <= LAST_RESERVED_USERREC_ID) { NextOwnerId = LAST_RESERVED_USERREC_ID+1; }
 	return NextOwnerId++;
 }
 
-JobQueueUserRec * Scheduler::jobqueue_newUserRec(int userrec_id)
+JobQueueUserRec * Scheduler::jobqueue_newUserRec(int userrec_id, const char * mytype)
 {
 	auto found = pendingOwners.find(userrec_id);
 	if (found != pendingOwners.end()) {
 		return found->second;
 	}
 	if (userrec_id >= NextOwnerId) { NextOwnerId = userrec_id+1; }
-	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id);
+	JobQueueUserRec * uad = nullptr;
+	if (YourStringNoCase(PROJECT_ADTYPE) == mytype) {
+		uad = new JobQueueProjectRec(userrec_id);
+	} else {
+		uad = new JobQueueUserRec(userrec_id);
+	}
 	pendingOwners[userrec_id] = uad;
 	uad->setPending();
 	return uad;
@@ -3897,6 +3931,29 @@ void Scheduler::jobqueue_deleteUserRec(JobQueueUserRec * uad)
 	zombieOwners.push_back(uad);
 }
 
+void Scheduler::jobqueue_deleteProject(JobQueueProjectRec * pjad)
+{
+	// remove it from the Projects table
+	if (!pjad->empty()) {
+		auto it = scheduler.ProjectInfo.find(pjad->Name());
+		if (it != scheduler.ProjectInfo.end()) {
+			if (it->second == pjad) {
+				scheduler.ProjectInfo.erase(it);
+			}
+		}
+	}
+	// remove it from the pending table
+	auto found = pendingOwners.find(pjad->jid.proc);
+	if (found != pendingOwners.end()) {
+		pendingOwners.erase(found);
+	}
+
+	// we can't safely delete the object until there a no jobs referencing it.
+	// we detect that in count_jobs, so here we put the pointer into the
+	// zombie collection until then
+	zombieOwners.push_back(pjad);
+}
+
 // called on shutdown after we delete the job queue.
 void Scheduler::deleteZombieOwners()
 {
@@ -3917,6 +3974,7 @@ void Scheduler::purgeZombieOwners()
 }
 
 // called by InitJobQueue to put newly added UserRec ads into the OwnerInfo map
+// or newly added ProjectRec ads into the ProjectInfo map
 // and after we commit a transaction, to clear the pending state for new users
 void Scheduler::mapPendingOwners()
 {
@@ -3926,8 +3984,12 @@ void Scheduler::mapPendingOwners()
 		uad->clearPending();
 		uad->flags |= JQU_F_DIRTY; // set dirty to force populate
 		uad->PopulateFromAd();
-		uad->setStaleConfigSuper(); // force a superuser check next time we need to know
-		OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
+		if (uad->IsProject()) {
+			ProjectInfo[uad->Name()] = dynamic_cast<JobQueueProjectRec*>(uad);
+		} else {
+			uad->setStaleConfigSuper(); // force a superuser check next time we need to know
+			OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
+		}
 	}
 	pendingOwners.clear();
 	if (NextOwnerId <= LAST_RESERVED_USERREC_ID) { NextOwnerId = LAST_RESERVED_USERREC_ID+1; }
@@ -3939,16 +4001,28 @@ void Scheduler::clearPendingOwners()
 	for (auto it : pendingOwners) {
 		JobQueueUserRec * uad = it.second;
 		if (uad->isPending() && ! uad->empty()) {
-			// we put pending owners in the owners table so we don't try and create them more than once
-			// but if they are still in the pending state now, we have to remove them.
-			auto it = scheduler.OwnersInfo.find(uad->Name());
-			if (it != scheduler.OwnersInfo.end()) {
-				if (it->second == uad) {
-					scheduler.OwnersInfo.erase(it);
+			if (uad->IsProject()) {
+				// we put pending projects into the projects table and need to remove
+				// them before we delete the corresponding record
+				JobQueueProjectRec * pad = dynamic_cast<JobQueueProjectRec*>(uad);
+				auto pt = scheduler.ProjectInfo.find(pad->Name());
+				if (pt != scheduler.ProjectInfo.end()) {
+					if (pt->second == pad) {
+						scheduler.ProjectInfo.erase(pt);
+					}
+				}
+			} else {
+				// we put pending owners in the owners table so we don't try and create them more than once
+				// but if they are still in the pending state now, we have to remove them.
+				auto it = scheduler.OwnersInfo.find(uad->Name());
+				if (it != scheduler.OwnersInfo.end()) {
+					if (it->second == uad) {
+						scheduler.OwnersInfo.erase(it);
+					}
 				}
 			}
-			delete uad;
 		}
+		delete uad;
 	}
 	pendingOwners.clear();
 }
@@ -4045,7 +4119,7 @@ Scheduler::insert_owner_const(const char * name)
 	return insert_ownerinfo(name);
 }
 
-// lookup (and cache) pointer to the jobs owner instance data
+// lookup (and cache) pointer to the job's owner instance data
 OwnerInfo *
 Scheduler::get_ownerinfo(JobQueueJob * job)
 {
@@ -4059,6 +4133,43 @@ Scheduler::get_ownerinfo(JobQueueJob * job)
 		job->ownerinfo = scheduler.find_ownerinfo(owner);
 	}
 	return job->ownerinfo;
+}
+
+// lookup (and cache) pointer to the job's project record
+JobQueueProjectRec *
+Scheduler::get_projectinfo(JobQueueJob * job)
+{
+	if ( ! job) return nullptr;
+	if ( ! job->project) {
+		std::string name;
+		if ( ! job->LookupString(ATTR_PROJECT_NAME,name) ) {
+			return nullptr;
+		}
+		job->project = find_projectinfo(name.c_str());
+	}
+	return job->project;
+}
+
+JobQueueProjectRec *
+Scheduler::insert_projectinfo(const char * name)
+{
+	if ( ! name || !name[0]) return nullptr;
+
+	JobQueueProjectRec * pjrec = find_projectinfo(name);
+	if (pjrec) return pjrec;
+
+	dprintf(D_ALWAYS, "Creating pending JobQueueProjectRec for project %s\n", name);
+
+	int userrec_id = nextUnusedUserRecId();
+	pjrec = new JobQueueProjectRec(userrec_id, name);
+	ASSERT(pjrec);
+
+	// pending owners and pending projects both go into the pendingOwners collection
+	// because that collection is by id and not by name
+	pendingOwners[userrec_id] = pjrec;
+	pjrec->setPending();
+	ProjectInfo[pjrec->Name()] = pjrec;
+	return pjrec;
 }
 
 // lookup (and cache) pointer to the jobs submitter instance data (aka the OwnerData)
@@ -13307,6 +13418,9 @@ Scheduler::Init()
 
 		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
 		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
+
+		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
+		EnablePersistentProjectInfo = param_boolean("PERSISTENT_PROJECT_RECORDS", false);
 
 		// UID_DOMAIN is a restart knob for the SCHEDD
 		UidDomain = param( "UID_DOMAIN" );

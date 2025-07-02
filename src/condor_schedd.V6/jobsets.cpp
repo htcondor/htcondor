@@ -78,8 +78,9 @@ void JobQueueJobSet::PopulateFromAd()
 	this->LookupInteger("Scheduler" ATTR_TOTAL_REMOVED_JOBS, jobStatusAggregates.SchedulerJobsRemoved);
 }
 
-
-bool JobSets::removeSet(JobQueueJobSet* & jobset)
+// called by the job_queue destructor for JobQueueJobSet objects giving us a chance to clean up
+//
+void JobSets::deleting_JobSet(JobQueueJobSet* jobset)
 {
 	std::string name, alias;
 	jobset->LookupString(ATTR_JOB_SET_NAME, name);
@@ -95,6 +96,12 @@ bool JobSets::removeSet(JobQueueJobSet* & jobset)
 		dprintf(D_STATUS, "Removing JobSet %s id=%d (%u refs)\n", alias.c_str(), jobset->Jobset(), jobset->member_count);
 		mapAliasToId.erase(alias);
 	}
+}
+
+// call when you want to remove a jobset from the alias map, and *also* tell the job_queue to delete it.
+bool JobSets::removeSet(JobQueueJobSet* & jobset)
+{
+	deleting_JobSet(jobset);
 	bool rval = JobSetDestroy(jobset->Jobset());
 	if ( ! rval) {
 		dprintf(D_ALWAYS, "WARNING: unable to remove from log JobSet id=%d\n", jobset->Jobset());
@@ -138,6 +145,7 @@ bool JobSets::addToSet(JobQueueJob & job)
 		return false;
 	}
 	set->member_count += 1;
+	set->pending_remove_count = 0; // can't have pending removes if we are adding
 	if (job.IsJob()) {
 		IncrementLiveJobCounter(set->jobStatusAggregates, job.Universe(), job.Status(), 1);
 	}
@@ -168,6 +176,8 @@ void JobSets::status_change(JobQueueJob & job, int new_status)
 	}
 }
 
+// called when we actually delete the JobQueueJob object (normally in commit transaction)
+// to commit a the pending removes
 bool JobSets::removeJobFromSet(JobQueueJob & job)
 {
 	JobQueueJobSet* jobset = GetJobSetAd(job.set_id);
@@ -178,57 +188,48 @@ bool JobSets::removeJobFromSet(JobQueueJob & job)
 
 	job.set_id = -1;
 
-	// update historical counters now to disk, as this job is leaving
-	// We need a separate count of jobs that are no longer in the set
-	// This is used to initialized the 
 	if (jobset) {
-		if (job.IsJob() && job.Status() >= REMOVED && job.Status() <= COMPLETED) {
-			static const char * const attrs[]{
-				ATTR_TOTAL_REMOVED_JOBS, "Scheduler" ATTR_TOTAL_REMOVED_JOBS,
-				ATTR_TOTAL_COMPLETED_JOBS, "Scheduler" ATTR_TOTAL_COMPLETED_JOBS,
-			};
-			int ix = 2 * (job.Status() - REMOVED) + (job.Universe() == CONDOR_UNIVERSE_SCHEDULER);
-			const char * attr = attrs[ix];
-			int val = 0;
-			jobset->LookupInteger(attr, val);
-			val++;
-			SetSecureAttributeInt(jobset->jid.cluster, jobset->jid.proc, attr, val);
-
-			// accumulate CPUTime of completed jobs as CompletedJobsCpuTime and removed jobs as RemovedJobsCpuTime
-			attr = (job.Status() == REMOVED) ? "RemovedJobsCpuTime" : "CompletedJobsCpuTime";
-			double accum = 0.0, cputime;
-			jobset->LookupFloat(attr, accum);
-			// add the jobs' CumulativeRemoteUserCpu + CumulativeRemoteSysCpu to the jobset cumulative value
-			cputime = 0.0;
-			if (job.LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, cputime) && cputime > 0.0) {
-				accum += cputime;
-			}
-			cputime = 0.0;
-			if (job.LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, cputime) && cputime > 0.0) {
-				accum += cputime;
-			}
-
-			char buf[100];
-			snprintf(buf,100,"%f",accum);
-			SetSecureAttribute(jobset->jid.cluster, jobset->jid.proc, attr, buf);
+		if (job.IsJob()) {
+			IncrementLiveJobCounter(jobset->jobStatusAggregates, job.Universe(), job.Status(), -1);
 		}
 
+		jobset->pending_remove_count = 0; // can't have pending removes if we are doing actual removes.
 		if (jobset->member_count > 0) {
 			jobset->member_count -= 1;
 		}
 
 		// Check if time to destroy this set...
+		// we will normally have already done transacted set garbage collection by the time we get here
 		garbageCollectSet(jobset);
 	}
 
 	return true;
 }
 
+// called when we are removing jobs in a transaction, used to decide if
+// the transaction should also remove the jobset. Returns the jobset id to
+// destroy when the transaction should destroy the jobset
+unsigned int JobSets::removePending(JobQueueJob & job)
+{
+	JobQueueJobSet* jobset = GetJobSetAd(job.set_id);
+	if ( ! jobset) {
+		// if job is not in a set, we don't necessarily create one ;)
+		return false;
+	}
+	jobset->pending_remove_count += 1;
+	if ((jobset->member_count == 0 || jobset->member_count == jobset->pending_remove_count) &&
+		jobset->garbagePolicy == JobQueueJobSet::garbagePolicyEnum::immediateAfterEmpty)
+	{
+		return job.set_id; // return the id of the jobset that should be destroyed
+	}
+	return false;
+}
+
 bool JobSets::garbageCollectSet(JobQueueJobSet* & jobset)
 {
 	// TODO: implement other garbage collection policies
 	if (jobset && 
-		jobset->member_count == 0 &&
+		(jobset->member_count == 0 || jobset->member_count == jobset->pending_remove_count) &&
 		jobset->garbagePolicy == JobQueueJobSet::garbagePolicyEnum::immediateAfterEmpty)
 	{
 		removeSet(jobset);

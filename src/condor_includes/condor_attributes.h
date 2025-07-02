@@ -1238,6 +1238,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_CHECK_EXPR  "CheckExpr"
 #define ATTR_START_EXPR  "StartExpr"
 #define ATTR_PROJECTION  "Projection"
+#define ATTR_PROJECT_NAME "ProjectName"
 #define ATTR_LAST_DRAIN_START_TIME  "LastDrainStartTime"
 #define ATTR_LAST_DRAIN_STOP_TIME  "LastDrainStopTime"
 
