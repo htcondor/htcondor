@@ -26,6 +26,10 @@
   :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`3156`
 
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
 *** 23.10.26 features
 
 - HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
