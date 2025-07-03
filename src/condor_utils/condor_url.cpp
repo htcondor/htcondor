@@ -20,6 +20,8 @@
 
 #include "condor_common.h"
 #include "condor_url.h"
+#include "condor_debug.h"
+#include "condor_regex.h"
 
 const char* IsUrl( const char *url )
 {
@@ -73,6 +75,33 @@ std::string getURLType( const char *url, bool scheme_suffix ) {
 		scheme = std::string(startp, (int)(endp - startp));
 	}
 	return scheme;
+}
+
+bool ParseURL(const std::string & url,
+              std::string * protocol,
+              std::string * host,
+              std::string * path)
+{
+	Regex r;
+	int errCode = 0;
+	int errOffset = 0;
+	bool patternOK = r.compile("([^:]+)://(([^/]+)(/.*)?)", &errCode, &errOffset);
+	ASSERT(patternOK);
+	std::vector<std::string> groups;
+	if(! r.match(url, & groups)) {
+		return false;
+	}
+
+	if (protocol) {
+		*protocol = groups[1];
+	}
+	if (host) {
+		*host = groups[3];
+	}
+	if (path && groups.size() > 4) {
+		*path = groups[4];
+	}
+	return true;
 }
 
 const char* UrlSafePrint(const std::string& in)

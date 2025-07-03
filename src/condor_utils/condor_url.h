@@ -29,6 +29,12 @@
 const char* IsUrl( const char *url );
 std::string getURLType( const char *url, bool scheme_suffix );
 
+// Decompose the given URL
+bool ParseURL(const std::string & url,
+              std::string * protocol,
+              std::string * host,
+              std::string * path);
+
 // Return a copy of the given URL where the query component
 // (the part after '?') is replaced with '...'.
 // Useful when printing URLs that may contain sensitive information

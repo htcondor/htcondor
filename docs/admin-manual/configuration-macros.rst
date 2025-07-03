@@ -8258,6 +8258,11 @@ These macros affect the *condor_credd* and its credmon plugin.
     pass additional command line options to gettoken.  Mostly
     used for vault, where this should be set to "-a vault_name".
 
+:macro-def:`TRUSTED_VAULT_HOSTS[CREDD]`
+    A space-and-comma-separated list of hostnames of Vault servers
+    that the *condor_credd* will accept Vault credentials for.
+    The default (unset) means accept credentials for any Vault server.
+
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
 
