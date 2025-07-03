@@ -1,3 +1,7 @@
+*** 23.10.28 bugs
+
+*** 23.0.28 bugs
+
 *** 23.10.27 bugs
 
 - Fixed a bug that could cause the startd's mips benchmark to
@@ -11,7 +15,6 @@
   instead.
   :jira:`3117`
 
-
 *** 23.0.27 bugs
 
 - Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
@@ -22,6 +25,10 @@
   written into job scratch directories on Execution Points using
   :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`3156`
+
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
 
 *** 23.10.26 features
 
