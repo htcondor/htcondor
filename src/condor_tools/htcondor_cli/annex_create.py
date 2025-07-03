@@ -481,7 +481,10 @@ def invoke_condor_annex(
     logger,
     annex_name : str,
     request_id : str,
-    count : int = 1, instance_type : str = None, ami_id : str = None,
+    count : int = 1,
+    instance_type : str = None,
+    ami_id : str = None,
+    lifetime : int = None,
 ):
     args = [
         'condor_annex',
@@ -495,7 +498,8 @@ def invoke_condor_annex(
         args.extend([ '-aws-on-demand-instance-type', instance_type ])
     if ami_id is not None:
         args.extend([ '-aws-on-demand-ami-id', ami_id ])
-
+    if lifetime is not None:
+        args.extend([ '-duration', f"{(lifetime/60/60):.2f}" ])
 
     proc = subprocess.Popen(
         args,
@@ -1007,6 +1011,7 @@ def annex_inner_func(
             instance_type=queue_name,
             ami_id=ami_id,
             request_id=request_id,
+            lifetime=lifetime,
         )
     else:
         remotes = {}
