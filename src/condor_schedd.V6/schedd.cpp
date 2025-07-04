@@ -1307,6 +1307,7 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	}
 
 	pAd.Assign("OCUClaimsClaimed", Owner.num.OCUClaims);
+	pAd.Assign("OCUClaimsBorrowed", Owner.num.OCUClaimsBorrowed);
 	pAd.Assign("OCURunningJobs",   Owner.num.OCURunningJobs);
 	pAd.Assign("OCUWantedJobs",    Owner.num.OCUWantedJobs);
 
@@ -1559,6 +1560,15 @@ Scheduler::count_jobs()
 		if (rec->is_ocu) {
 			// If this match is an OCU held claim, increment the per-owned OCU counter
 			SubDat->num.OCUClaims++;
+
+			// If this match is running a job by a non-OCU wanter, increment "borrowed" counter
+			if (rec->my_match_ad && (rec->status == M_ACTIVE)) {
+				bool ocu_wanted = false;
+				GetAttributeBool( rec->cluster, rec->proc, "OCUWanted", &ocu_wanted);
+				if (!ocu_wanted) {
+					SubDat->num.OCUClaimsBorrowed++;
+				}
+			}
 		}
 	}
 
