@@ -248,8 +248,8 @@ public:
 		int SchedulerJobsIdle=0;
 		int SchedulerJobsRunning=0;
 		int SchedulerJobsHeld=0;
-		int OCUClaims = 0;
 		int OCUJobsRunning = 0;
+		int OCUJobsWanted = 0; // Number of jobs that prefer an OCU claim, running or idle
 		void clear_counters() { memset(this, 0, sizeof(*this)); }
 	};
 
