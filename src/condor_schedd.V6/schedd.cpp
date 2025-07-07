@@ -1522,6 +1522,9 @@ Scheduler::count_jobs()
 			// with them.
 		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
+	
+	// map of owner to vector of jobs running on borrowed OCU claims
+	std::map<std::string, std::vector<PROC_ID>> jobs_on_borrowed_claims;	
 
 		// set JobsRunning/JobsFlocked for owners
 	matches->startIterations();
@@ -1567,6 +1570,7 @@ Scheduler::count_jobs()
 				GetAttributeBool( rec->cluster, rec->proc, "OCUWanted", &ocu_wanted);
 				if (!ocu_wanted) {
 					SubDat->num.OCUClaimsBorrowed++;
+					jobs_on_borrowed_claims[SubDat->Name()].emplace_back(rec->cluster, rec->proc);
 				}
 			}
 		}
@@ -1585,6 +1589,21 @@ Scheduler::count_jobs()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & SubDat = it->second;
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
+	}
+
+	// Evict jobs running on borrowed OCU claims if need be
+	for (const auto &[name, SubDat]: Submitters) {
+		if (SubDat.num.OCUClaimsBorrowed > 0) {
+			// If this submitter has borrowed OCU claims, we need to evict them
+			// if the number of running jobs exceeds the number of wanted jobs.
+			if (SubDat.num.OCURunningJobs < SubDat.num.OCUWantedJobs) {
+				for (const auto &jid : jobs_on_borrowed_claims[name]) {
+					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
+						jid.cluster, jid.proc, name.c_str());
+					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+				}
+			}
+		}
 	}
 
 	// we may need to create a mark file if we have expired users
@@ -12450,6 +12469,7 @@ Scheduler::child_exit(int pid, int status)
 			if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 				srec->match->setStatus(M_CLAIMED);
 				srec->match->shadowRec = NULL;
+				srec->match->cluster = srec->match->proc = -1;
 				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 				srec->match = NULL;
 			}
@@ -12769,7 +12789,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if( srec != NULL && !srec->removed && srec->match ) {
 				// Don't delete matches we're trying to use for a now job.
 				if(! srec->match->m_now_job.isJobKey()) {
-					DelMrec(srec->match);
+					if (!srec->match->is_ocu) {
+						DelMrec(srec->match);
+					} else {
+						// In the OCU case, move claim back to Claimed/Idle
+						srec->match->setStatus(M_CLAIMED);
+						SetMrecJobID(srec->match, -1, -1);
+					}
 				}
 			}
             switch (exit_code) {
@@ -15094,6 +15120,9 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		mrec->setStatus( M_CLAIMED );
 		if( mrec->is_dedicated ) {
 			deallocMatchRec( mrec );
+		}
+		if (mrec->is_ocu) {
+			SetMrecJobID(mrec,-1,-1); // but for OCU, anyone can claim
 		}
 	}
 }

@@ -9275,9 +9275,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	bool ocu = false;
 	my_match_ad->LookupBool("OCUClaim", ocu);
-	if (ocu) {
-		match_any_user = true;
-	}
 
 		// Iterate through the most recently constructed list of
 		// jobs, nicely pre-sorted first by submitter, then by job priority
