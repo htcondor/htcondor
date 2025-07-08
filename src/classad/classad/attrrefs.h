@@ -98,7 +98,7 @@ class AttributeReference : public ExprTree
 
 	protected:
 		/// Constructor
-    	AttributeReference ();
+		AttributeReference(): parentScope(nullptr), expr(nullptr), absolute(false)  {}
 
   	private:
 		// private ctor for internal use
