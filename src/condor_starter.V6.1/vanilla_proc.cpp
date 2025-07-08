@@ -345,8 +345,14 @@ VanillaProc::StartJob()
 
 		int numCores = 1;
 		if (!starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
-			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd; assuming 1 for cgroup limit purposes.\n");
+			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd.\n");
+			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
+				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_CPUS, numCores)) {
+					dprintf(D_ALWAYS, "   Job does not have Request_Cpus either, falling back to 1 cpu\n");
+				}
+			}
 		}
+
 		fi.cgroup_cpu_shares = 100 * numCores;
 
 		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
@@ -362,8 +368,15 @@ VanillaProc::StartJob()
 		}
 		int64_t memory = 0;
 		if (!starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
-			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; not setting memory limits\n");
-			memory = 0; // just to be sure
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd.\n");
+			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
+				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_MEMORY, memory)) {
+					dprintf(D_ALWAYS, "   Job does not have Request_Memory either, falling back to no memory limit\n");
+					memory = 0; // just to be sure
+				} else {
+					dprintf(D_ALWAYS, "   Using Request_Memory from job at of %ld Mb\n", memory);
+				}
+			}
 		}
 		fi.cgroup_memory_limit = 0; // meaning no limit
 

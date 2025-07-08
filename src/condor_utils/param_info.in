@@ -2838,6 +2838,11 @@ default=30
 type=int
 tags=schedd,starter
 
+[LOCAL_UNIVERSE_CGROUP_ENFORCEMENT]
+default=false
+type=bool
+tags=starter
+
 [STARTER_JOB_HOOK_KEYWORD]
 default=
 type=string
