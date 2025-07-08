@@ -126,6 +126,11 @@ public:
 	return ClassAdLog<K,AD>::GetTransactionKeys( keys );
   }
 
+  bool GetAllTransactionKeys( std::vector<K> & new_keys, std::vector<K> & exist_keys ) {
+	return ClassAdLog<K,AD>::GetAllTransactionKeys( new_keys, exist_keys );
+  }
+
+
   int SetTransactionTriggers(int mask) { return ClassAdLog<K,AD>::SetTransactionTriggers(mask); }
   int GetTransactionTriggers() { return ClassAdLog<K,AD>::GetTransactionTriggers(); }
 
