@@ -4622,6 +4622,11 @@ These macros control the *condor_schedd*.
     jobs on Linux are put into their own cgroup, for monitoring and
     cleanup.
 
+:macro-def:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT[SCHEDD]`
+    When the above is true, if this boolean value which defaults to false
+    is true, then local universe jobs need to have a :subcom:`request_memory`
+    and if the local universe job exceeds that, it will be put on hold.
+
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
     ``TotalSchedulerJobsRunning < 500``. The *condor_schedd* uses this

@@ -1,5 +1,11 @@
 *** 24.11.0 features
 
+- Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
+  defaults to false.  When true, and running on a cgroup enable system, local
+  universe jobs must specify :subcom:`request_memory`, and the job exceeds that
+  limit, it will be put on hold.
+  :jira:`3170`
+
 *** 24.11.0 bugs
 
 *** 24.0.11 bugs
