@@ -274,7 +274,8 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.17.0
+# pelican-debug provides pelican 7.16.1
+Requires: pelican >= 7.16.1
 %else
 Requires: (pelican >= 7.17.0 or pelican-debug >= 7.17.0)
 %endif
