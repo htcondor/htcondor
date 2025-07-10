@@ -248,7 +248,7 @@ class Status(Verb):
             # admin, no cookie!)
             if slot.get("PartitionableSlot", False):
                 status[annex_name][request_id]["TotalCPUs"] += slot["TotalSlotCPUs"]
-                status[annex_name][request_id]["BusyCPUs"] += len(slot["ChildCPUs"])
+                status[annex_name][request_id]["BusyCPUs"] += sum(slot["ChildCPUs"])
                 status[annex_name][request_id]["NodeCount"] += 1
 
             slot_birthday = slot.get("DaemonStartTime")
