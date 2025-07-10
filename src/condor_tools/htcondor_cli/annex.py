@@ -130,6 +130,12 @@ class Create(Verb):
             "type": int,
             "default": None,
         },
+        "ami-id":{
+            "args": ("--ami-id",),
+            "help": argparse.SUPPRESS,
+            "type": str,
+            "default": None,
+        }
     }
 
     def __init__(self, logger, **options):
@@ -226,7 +232,7 @@ class Status(Verb):
         annex_attrs = {}
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
-            request_id = slot["hpc_annex_request_id"]
+            request_id = slot.get("hpc_annex_request_id", "None")
             if status.get(annex_name) is None:
                 status[annex_name] = {}
             status[annex_name][request_id] = defaultdict(int)
@@ -234,15 +240,15 @@ class Status(Verb):
 
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
-            request_id = slot["hpc_annex_request_id"]
+            request_id = slot.get("hpc_annex_request_id", "None")
 
-            # Ignore dynamic slot, since we just care about aggregates.
+            # Ignore dynamic slots, since we just care about aggregates.
             # We could write a similar check for static slots, but we
             # don't ever start any annexes with static slots.  (Bad
             # admin, no cookie!)
             if slot.get("PartitionableSlot", False):
                 status[annex_name][request_id]["TotalCPUs"] += slot["TotalSlotCPUs"]
-                status[annex_name][request_id]["BusyCPUs"] += len(slot["ChildCPUs"])
+                status[annex_name][request_id]["BusyCPUs"] += sum(slot["ChildCPUs"])
                 status[annex_name][request_id]["NodeCount"] += 1
 
             slot_birthday = slot.get("DaemonStartTime")
@@ -263,6 +269,7 @@ class Status(Verb):
         target_jobs = schedd.query(
             constraint,
             opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+            # FIXME: hpc_annex_nodes is only for the request record ads, right?
             projection=['JobStatus', 'TargetAnnexName', 'hpc_annex_nodes'],
         )
         for job in target_jobs:
