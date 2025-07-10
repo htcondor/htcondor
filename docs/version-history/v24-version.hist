@@ -2,6 +2,10 @@
 
 *** 24.11.0 bugs
 
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3131`
+
 *** 24.0.11 bugs
 
 *** 24.10.0 features
