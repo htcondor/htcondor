@@ -501,12 +501,14 @@ def invoke_condor_annex(
     if lifetime is not None:
         args.extend([ '-duration', f"{(lifetime/60/60):.2f}" ])
 
+    # For some reason, the usual method for capturing stdout and stderr
+    # in a single stream resulted in the lines being reordered, even when
+    # setting bufsize to 0.  For now, just send the output straight to
+    # the console, so you can at least see if there was a problem.
     proc = subprocess.Popen(
         args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        # This implies text mode.
-        errors="replace",
+        stdout=sys.stdout,
+        stderr=sys.stderr,
     );
 
     try:
@@ -514,6 +516,7 @@ def invoke_condor_annex(
         ANSI_BRIGHT = "\033[1m"
         ANSI_RESET_ALL = "\033[0m"
         logger.info(f"{ANSI_BRIGHT}Requesting AWS EC2 annex...{ANSI_RESET_ALL}")
+        logger.debug(" ".join(args))
 
         out, err = proc.communicate(timeout=INITIAL_CONNECTION_TIMEOUT)
 
@@ -523,8 +526,7 @@ def invoke_condor_annex(
             logger.info(f"{ANSI_BRIGHT}... requested.{ANSI_RESET_ALL}")
             return 0
         else:
-            logger.error(f"Failed to request AWS EC2 annex, aborting.")
-            logger.warning(f"{out.strip()}")
+            logger.error(f"{ANSI_BRIGHT}... failed to request AWS EC2 annex, aborting.{ANSI_RESET_ALL}")
             raise RuntimeError(f"Failed to request AWS EC2 annex")
 
     except subprocess.TimeoutExpired:
