@@ -59,6 +59,7 @@ ReplyAndClean::operator() () {
 				} else {
 					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(), "%s\n", errorString.c_str() );
 					fprintf( stderr, "%s\n", errorString.c_str() );
+					DC_Exit( 5 );
 				}
 			}
 		}
