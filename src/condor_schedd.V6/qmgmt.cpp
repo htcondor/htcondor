@@ -1847,8 +1847,24 @@ void JobQueueUserRec::PopulateFromAd()
 			this->LookupString(ATTR_USER, this->name);
 		}
 	}
+
 	if (os_user.empty()) {
 		this->LookupString(ATTR_OS_USER, os_user);
+	}
+
+	if (this->flags & JQU_F_DIRTY) {
+		if ( ! this->LookupBool(ATTR_ENABLED, this->enabled)) {
+			if (IsProject()) { this->enabled = true; } // project records are default enabled
+		}
+		this->flags &= ~JQU_F_DIRTY;
+	}
+
+	if (IsProject()) {
+		// for project records, we don't care how ATTR_NAME relates to
+		// the OsUser attribute (there probably isn't one)
+		// and we don't need to give a default value for OsUser
+		// so we can skip the rest
+		return;
 	}
 
 	std::string buf;
@@ -1889,14 +1905,10 @@ void JobQueueUserRec::PopulateFromAd()
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
 		this->Assign(ATTR_OS_USER, os_user);
 	}
-	if (this->flags & JQU_F_DIRTY) {
-		this->LookupBool(ATTR_ENABLED, this->enabled);
-		this->flags &= ~JQU_F_DIRTY;
-	}
 }
 
 // forward declaration
-bool CreateNeededUserRecs(const std::map<int, OwnerInfo*> &needed_owners);
+bool CreateNeededUserRecs(const std::map<int, JobQueueUserRec*> &needed);
 
 void JobQueueJob::PopulateFromAd()
 {
@@ -2228,7 +2240,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// it, and we don't want to confuse things any further.
 	formatstr( correct_scheduler, "DedicatedScheduler@%s", Name );
 
-	// add OwnerInfo to the scheduler map for JobQueueUserRec records that we just loaded
+	// add OwnerInfo, and possibly ProjectInfo to the scheduler maps
+	// for JobQueueUserRec records and JobQueueProjectRec records that we just loaded
 	// this will clear the pending owners collection
 	if (scheduler.HasPersistentOwnerInfo()) {
 		scheduler.mapPendingOwners();
@@ -2279,6 +2292,13 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! cad->ownerinfo) {
 				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
+			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
+				std::string project_name;
+				clusterad->LookupString(ATTR_PROJECT_NAME, project_name);
+				if ( ! project_name.empty()) {
+					clusterad->project = scheduler.insert_projectinfo(project_name.c_str());
+				}
+			}
 			continue;  // done with this cluster ad for the first pass
 		}
 		if ( ! bad->IsJob()) continue;
@@ -2323,10 +2343,32 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 						InitClusterAd(clusterad, owner, jobset_ids, needed_sets);
 					}
 				}
+
+				// link the cluster ad to the project ad if project ads are enabled
+				if (scheduler.HasPersistentProjectInfo()) {
+					if ( ! clusterad->project) {
+						std::string project_name;
+						bool has_proc_project = false;
+						if (clusterad->LookupString(ATTR_PROJECT_NAME, project_name)) {
+						} else if (ad->LookupString(ATTR_PROJECT_NAME, project_name)) {
+							has_proc_project = true;
+						}
+						if ( ! project_name.empty()) {
+							if (has_proc_project) {
+								// backward compat.  If project is not a cluster attribute
+								// copy from the proc ad to the cluster ad
+								clusterad->Assign(ATTR_PROJECT_NAME, project_name);
+							}
+							clusterad->project = scheduler.insert_projectinfo(project_name.c_str());
+						}
+					}
+				}
+
 				clusterad->AttachJob(ad);
 				clusterad->autocluster_id = -1;
 				ad->ChainToAd(clusterad);
 				ad->ownerinfo = clusterad->ownerinfo;
+				ad->project = clusterad->project;
 				ad->SetUniverse(clusterad->Universe());
 				ad->set_id = clusterad->set_id; // cluster ad may not have the right id yet, but it's still ok to copy it
 			}
@@ -2422,6 +2464,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				}
 				IncrementLiveJobCounter(scheduler.liveJobCounts, ad->Universe(), ad->Status(), 1);
 				if (ad->ownerinfo) { IncrementLiveJobCounter(ad->ownerinfo->live, ad->Universe(), ad->Status(), 1); }
+				if (ad->project) { IncrementLiveJobCounter(ad->project->live, ad->Universe(), ad->Status(), 1); }
 			}
 
 				// Make sure ATTR_SCHEDULER is correct.
@@ -2553,8 +2596,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		PersonalUserRec = scheduler.insert_owner_const(username.c_str());
 	}
 
-	// if we get to here we need to turn any pending owners into actual
-	//  UserRec records in the job queue.  
+	// if we get to here we need to turn any pending owners and/or projects
+	// into actual UserRec and ProjectRec records in the job queue.
 	const auto &pending_owners = scheduler.queryPendingOwners();
 	if ( ! pending_owners.empty()) {
 		CreateNeededUserRecs(pending_owners);
@@ -3812,8 +3855,6 @@ static int IsForcedProcAttribute(const char *attr)
 	return 0;
 }
 
-#if 1 // this version works with a const classad::ClassAd, like what we get off the wire.
-
 //PRAGMA_REMIND("TODO: fix submit_utils to use the classad cache and/or fast parsing?")
 
 // Call NewProcInternal, then SetAttribute for each of the attributes in job that are not the
@@ -3887,66 +3928,6 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 	return 0;
 }
 
-#else
-
-// Call NewProcInternal, then SetAttribute for each of the attributes in job that are not the
-// same as the attributre in the given ClusterAd
-int NewProcFromAd (ClassAd * job, int ProcId, JobQueueJob * ClusterAd, SetAttributeFlags_t flags)
-{
-	int ClusterId = ClusterAd->jid.cluster;
-
-	NewProcInternal(ClusterId, ProcId);
-
-	int rval = SetAttributeInt(ClusterId, ProcId, ATTR_PROC_ID, ProcId, flags | SetAttribute_LateMaterialization);
-	if (rval < 0) {
-		dprintf(D_ALWAYS, "ERROR: Failed to set ProcId=%d for job %d.%d (%d)\n", ProcId, ClusterId, ProcId, errno );
-		return rval;
-	}
-
-	ExprTree *tree = NULL;
-	const char *attr;
-	std::string buffer;
-
-	for ( auto itr = job->begin(); itr != job->end(); itr++ ) {
-		attr = itr->first.c_str();
-		tree = itr->second;
-		if ( ! attr || ! tree) {
-			dprintf(D_ALWAYS, "ERROR: Null attribute name or value for job %d.%d\n", ClusterId, ProcId );
-			return -1;
-		}
-
-		bool send_it = false;
-		int forced = IsForcedProcAttribute(attr);
-		if (forced) {
-			send_it = forced > 0;
-		} else {
-			// If we aren't going to unconditionally send it, when we check if the value
-			// matches the value in the cluster ad.
-			// If the values match, don't add the attribute to this proc ad
-			ExprTree *cluster_tree = ClusterAd->LookupExpr(attr);
-			send_it = ! cluster_tree || ! (*tree == *cluster_tree);
-		}
-		if ( ! send_it)
-			continue;
-
-		buffer.clear();
-		const char * rhstr = ExprTreeToString(tree, buffer);
-		if ( ! rhstr ) { 
-			dprintf(D_ALWAYS, "ERROR: Null value for job %d.%d\n", ClusterId, ProcId );
-			return -1;
-		} else {
-			rval = SetAttribute(ClusterId, ProcId, attr, rhstr, flags | SetAttribute_LateMaterialization);
-			if (rval < 0) {
-				dprintf(D_ALWAYS, "ERROR: Failed to set %s=%s for job %d.%d (%d)\n", attr, rhstr, ClusterId, ProcId, errno );
-				return rval;
-			}
-		}
-	}
-
-	return 0;
-}
-
-#endif // 0
 
 bool IncrementJobUsageCounters(AccumJobUsageCounters & num, JobQueueJob * job)
 {
@@ -4175,11 +4156,9 @@ int DestroyProc(int cluster_id, int proc_id)
 
 int DestroyCluster(int /*cluster_id*/, const char* /*reason*/)
 {
-#if 1 // TJ: 2021 neutered DestroyCluster because it was only used by submit on abort 
-	  // The schedd should so this cleanup on it own and in any case,
-	  // what the code below does is incorrect and/or incomplete
+      // TJ: 2021 neutered DestroyCluster because it was only used by submit on abort 
+      // The schedd should do this cleanup on it own
 	return -1;
-#endif
 }
 
 int
@@ -4327,6 +4306,8 @@ enum {
 	idATTR_REQUIREMENTS,
 	idATTR_USER,
 	idATTR_PROJECT_NAME,
+	idATTR_NAME,
+	idATTR_TARGET_TYPE,
 	idATTR_NUM_JOB_RECONNECTS,
 	idATTR_JOB_NOOP,
 	idATTR_JOB_MATERIALIZE_CONSTRAINT,
@@ -4546,6 +4527,16 @@ SetSecureAttributeString(const JobQueueKey & key, const char *attr_name, std::st
 
 	return SetSecureAttribute(key, attr_name, tmpValue, flags);
 }
+
+int DeleteSecureAttribute(const JobQueueKey & key, const char * attr_name)
+{
+	if (attr_name == nullptr) {return -1;}
+	if (JobQueue->DeleteAttribute(key, attr_name)) {
+		return 0;
+	}
+	return -1;
+}
+
 
 
 // Internal helper functions for setting UserRec attributes into a transaction
@@ -6142,6 +6133,7 @@ static const ATTR_IDENT_PAIR aSpecialUserRecAttrs[] = {
 	FILL(ATTR_USERREC_OPT_CREATE_DEPRECATED, catUserRecForbidden), // backward compat hack for 10.x and early 23.0.x
 	FILL(ATTR_DISABLE_REASON,     catUserRecDisable),
 	FILL(ATTR_ENABLED,            catUserRecDisable),
+	FILL(ATTR_NAME,               catUserRecRequiredKey), // required for Project ads
 	FILL(ATTR_NT_DOMAIN,          catUserRecRequiredKey),
 	LIVE(NumCompleted),
 	LIVE(NumHeld),
@@ -6158,6 +6150,7 @@ static const ATTR_IDENT_PAIR aSpecialUserRecAttrs[] = {
 	LIVE(NumSuspended),
 	FILL(ATTR_OWNER,              catUserRecRequiredKey),
 	FILL(ATTR_REQUIREMENTS,       catUserRecForbidden), // don't want to copy the Requirements out of the command ad
+	FILL(ATTR_TARGET_TYPE,        catUserRecForbidden), // don't want to copy the TargetType out of the command ad
 	FILL(ATTR_USER,               catUserRecRequiredKey),
 };
 #undef FILL
@@ -6181,7 +6174,7 @@ static int IsSpecialUserRecAttrName(const char * attr, int& cat)
 
 
 // merge and update command ad into a UserRec ad
-int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled, struct UpdateUserAttributesInfo& info )
+int UpdateUserRecAttributes(JobQueueKey & key, bool is_project, const ClassAd & cmdAd, bool enabled, struct UpdateUserRecAttributesInfo& info)
 {
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
@@ -6208,7 +6201,7 @@ int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled,
 		unparse.Unparse(buf, tree);
 		if (JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0)) {
 			info.valid += 1;
-			JobQueue->SetTransactionTriggers(catSetUserRec);
+			JobQueue->SetTransactionTriggers(is_project ? catSetProjectRec : catSetUserRec);
 		} else {
 			info.invalid += 1;
 		}
@@ -6257,15 +6250,22 @@ static bool MakeUserRec(JobQueueKey & key,
 		;
 	if (rval) {
 		// if there is a defaults ad, store those attributes as well
-		if (defaults) {
-			classad::ClassAdUnParser unparse;
-			unparse.SetOldClassAd( true, true );
-			std::string buf;
+		if (defaults && defaults->size() > 0) {
+			// create a record that we can evaluate the default attributes against
+			ClassAd urec;
+			urec.Assign(ATTR_MY_TYPE, OWNER_ADTYPE);
+			JobQueue->AddAttrsFromTransaction(key, urec);
 
+			classad::Value val;
 			for (auto &[attr, tree] : *defaults) {
-				buf.clear();
-				unparse.Unparse(buf, tree);
-				JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
+				if (defaults->EvaluateExpr(&urec, tree, val, classad::Value::ALL_VALUES)) {
+					if (val.IsUndefinedValue() || val.IsErrorValue()) {
+						dprintf(D_FULLDEBUG, "Ignoring MakeUserRec default attr %s=%s because it evaluated to %s\n",
+							attr.c_str(), ExprTreeToString(tree), val.IsUndefinedValue() ? "Undefined" : "error");
+						continue;
+					}
+					SetSecureAttribute(key, attr.c_str(), val);
+				}
 			}
 		}
 		JobQueue->SetTransactionTriggers(catNewUser);
@@ -6293,15 +6293,24 @@ static bool MakeProjectRec(
 		;
 	if (rval) {
 		// if there is a defaults ad, store those attributes as well
-		if (defaults) {
-			classad::ClassAdUnParser unparse;
-			unparse.SetOldClassAd( true, true );
-			std::string buf;
+		if (defaults && defaults->size() > 0) {
+			// create a record that we can evaluate the default attributes against
+			ClassAd pjad;
+			pjad.Assign(ATTR_MY_TYPE, PROJECT_ADTYPE);
+			pjad.Assign(ATTR_NAME, name);
+			// TODO: this instead?
+			// JobQueue->AddAttrsFromTransaction(key, pjad);
 
+			classad::Value val;
 			for (auto &[attr, tree] : *defaults) {
-				buf.clear();
-				unparse.Unparse(buf, tree);
-				JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
+				if (defaults->EvaluateExpr(&pjad, tree, val, classad::Value::ALL_VALUES)) {
+					if (val.IsUndefinedValue() || val.IsErrorValue()) {
+						dprintf(D_FULLDEBUG, "Ignoring MakeProjectRec default attr %s=%s because it evaluated to %s\n",
+							attr.c_str(), ExprTreeToString(tree), val.IsUndefinedValue() ? "Undefined" : "error");
+						continue;
+					}
+					SetSecureAttribute(key, attr.c_str(), val);
+				}
 			}
 		}
 		JobQueue->SetTransactionTriggers(catNewProject);
@@ -6310,12 +6319,12 @@ static bool MakeProjectRec(
 }
 
 
-// called during InitJobQueue to create UserRec ads that were determined to be needed by the queue
-
+// called during InitJobQueue to create UserRec ads 
+// and ProjectRec ads that were determined to be needed by the queue
 bool
-CreateNeededUserRecs(const std::map<int, OwnerInfo*> &needed_owners)
+CreateNeededUserRecs(const std::map<int, JobQueueUserRec*> &needed)
 {
-	if (needed_owners.empty()) {
+	if (needed.empty()) {
 		return true;
 	}
 
@@ -6327,12 +6336,19 @@ CreateNeededUserRecs(const std::map<int, OwnerInfo*> &needed_owners)
 
 	std::string obuf;
 
-	// create the needed UserRecs
+	// create the needed UserRecs and ProjectRecs
 	const bool enabled = true;
-	for (auto it : needed_owners) {
-		if ( ! MakeUserRec(it.second, enabled, &scheduler.getUserRecDefaultsAd())) {
-			++fail_count;
-			break;
+	for (auto & [id,urec] : needed) {
+		if (urec->IsProject()) {
+			if ( ! MakeProjectRec(urec->jid, urec->Name(), &scheduler.getProjectRecDefaultsAd())) {
+				++fail_count;
+				break;
+			}
+		} else {
+			if ( ! MakeUserRec(urec, enabled, &scheduler.getUserRecDefaultsAd())) {
+				++fail_count;
+				break;
+			}
 		}
 		JobQueueDirty = true;
 	}
@@ -6382,69 +6398,62 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd)
 	dprintf(D_ERROR, "Warning: SCHEDD_USER_DEFAULT_PROPERTIES may not have attributes %s. They will be removed.\n", attrs.c_str());
 }
 
-bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd, const ClassAd & defaultsAd, bool enabled)
+// create user or project rec by command
+bool UserRecCreate(int userrec_id, bool is_project, const char * name, const ClassAd & cmdAd, bool enabled)
 {
 	if (userrec_id <= 0 || userrec_id >= INT_MAX) { return false; }
-	JobQueueKeyBuf key;
-	IdToKey(USERRECID_qkey1, USERRECID_to_qkey2(userrec_id), key);
+	JobQueueKey key(USERRECID_qkey1, USERRECID_to_qkey2(userrec_id));
 
 	bool already_in_transaction = InTransaction();
 	if (!already_in_transaction) {
 		BeginTransaction();
 	}
 
-	std::string obuf;
-	const char * owner = name_of_user(username, obuf);
-	std::string ap_user = username;
-	std::string os_user;
-	if (owner == username) { // owner points to username when username has no @
-		ap_user += '@';
-		ap_user += scheduler.uidDomain();
-	}
-#ifdef WIN32
-	std::string ntdomain;
-	cmdAd.LookupString(ATTR_NT_DOMAIN, ntdomain);
-	if (ntdomain.empty()) {
-		// if the supplied username has a domain value that does not match uidDomain
-		// treat it as an NTDomain value, and rewrite the user value to be owner@uid_domain
-		// this is not ideal, but it is consistent with the way things have always worked.
-		YourStringNoCase domain(domain_of_user(username, scheduler.uidDomain()));
-		if (domain != scheduler.uidDomain()) {
-			ntdomain = domain.ptr();
-			ap_user = owner;
+	int rval = -1;
+	if (is_project) {
+		rval = MakeProjectRec(key, name, &scheduler.getProjectRecDefaultsAd());
+	} else {
+
+		const char * username  = name;
+		std::string obuf;
+		const char * owner = name_of_user(username, obuf);
+		std::string ap_user = username;
+		std::string os_user;
+		if (owner == username) { // owner points to username when username has no @
 			ap_user += '@';
 			ap_user += scheduler.uidDomain();
 		}
-	}
-	if (!ntdomain.empty()) {
-		os_user = owner;
-		os_user += '@';
-		os_user += ntdomain;
-	}
-#else
-	os_user = owner;
-#endif
-
-	bool rval = MakeUserRec(key, ap_user.c_str(), os_user.c_str(), enabled, nullptr);
-	if (rval) {
-		// do quoting using oldclassad syntax
-		classad::ClassAdUnParser unparse;
-		unparse.SetOldClassAd( true, true );
-		std::string buf;
-
-		// set attributes from the defaults ad if they will not just be overridden
-		// by the command ad
-		for (auto &[attr, tree] : defaultsAd) {
-			if (cmdAd.Lookup(attr)) continue;
-
-			buf.clear();
-			unparse.Unparse(buf, tree);
-			JobQueue->SetAttribute(key, attr.c_str(), buf.c_str(), 0);
+	#ifdef WIN32
+		std::string ntdomain;
+		cmdAd.LookupString(ATTR_NT_DOMAIN, ntdomain);
+		if (ntdomain.empty()) {
+			// if the supplied username has a domain value that does not match uidDomain
+			// treat it as an NTDomain value, and rewrite the user value to be owner@uid_domain
+			// this is not ideal, but it is consistent with the way things have always worked.
+			YourStringNoCase domain(domain_of_user(username, scheduler.uidDomain()));
+			if (domain != scheduler.uidDomain()) {
+				ntdomain = domain.ptr();
+				ap_user = owner;
+				ap_user += '@';
+				ap_user += scheduler.uidDomain();
+			}
 		}
+		if (!ntdomain.empty()) {
+			os_user = owner;
+			os_user += '@';
+			os_user += ntdomain;
+		}
+	#else
+		os_user = owner;
+	#endif
 
-		// populate the new userrec with attributes from the command ad
-		struct UpdateUserAttributesInfo dummy; // TODO: expose this to the caller?
-		rval = UpdateUserAttributes(key, cmdAd, enabled, dummy) == 0;
+		rval = MakeUserRec(key, ap_user.c_str(), os_user.c_str(), enabled, &scheduler.getUserRecDefaultsAd());
+	}
+
+	if (rval) {
+		// populate the new userrec or projectrec with attributes from the command ad
+		struct UpdateUserRecAttributesInfo dummy; // TODO: expose this to the caller?
+		rval = UpdateUserRecAttributes(key, is_project, cmdAd, enabled, dummy) == 0;
 	}
 
 	if ( ! already_in_transaction) {
@@ -6554,7 +6563,7 @@ static bool AddImplicitProjectRecords(std::vector<JobQueueKey> &new_keys)
 				// MakeProjectRec adds it to the transaction
 				JobQueueProjectRec * prjad = scheduler.insert_projectinfo(name.c_str());
 				if (prjad->isPending()) {
-					MakeProjectRec(prjad->jid, name.c_str(), nullptr);
+					MakeProjectRec(prjad->jid, name.c_str(), &scheduler.getProjectRecDefaultsAd());
 					implicit_projects.emplace_back(prjad->jid);
 				}
 			}
@@ -9095,6 +9104,8 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 	const bool with_jobsets = (with & WJQ_WITH_JOBSETS) != 0;
 	const bool with_clusters = (with & WJQ_WITH_CLUSTERS) != 0;
 	const bool with_no_jobs = (with & WJQ_WITH_NO_JOBS) != 0;
+	const bool with_users = (with & WJQ_WITH_USERS) != 0;
+	const bool with_projects = (with & WJQ_WITH_PROJECTS) != 0;
 	int num_jobs = 0;
 	bool stopped_early = false;
 
@@ -9119,6 +9130,10 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 			if (! with_jobsets) { continue; }
 		} else if (ad->IsCluster()) { // cluster ads have cluster > 0 && proc < 0
 			if (! with_clusters) { continue; }
+		} else if (ad->IsUserRec()) {
+			if (! with_users) { continue; }
+		} else if (ad->IsProject()) {
+			if (! with_projects) { continue; }
 		} else if ( ! ad->IsJob()) {
 			continue;
 		} else { // jobads have cluster > 0 && proc >= 0
