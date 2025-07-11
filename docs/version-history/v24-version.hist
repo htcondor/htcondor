@@ -1,4 +1,4 @@
-*** 24.10.0 features
+*** 24.10.1 features
 
 - The new Python API now includes `htcondor2.disable_debug()`, which is
   intended interactive use (after debugging a problem).
@@ -38,7 +38,7 @@
   job/user event log; and a new transfer entry in the epoch history.
   :jira:`3052`
 
-*** 24.10.0 bugs
+*** 24.10.1 bugs
 
 - Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
   OAuth2 credential was a plain user-provided access token.
