@@ -1,5 +1,10 @@
 *** 24.0.10 bugs
 
+*** 24.0.9 features
+
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
+  :jira:`3090`
+
 *** 24.0.9 bugs
 
 - The results of ``key in htcondor2.param`` and
