@@ -701,17 +701,16 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 	}
 
 	std::string response;
-
-	fprintf( stdout,
-		"Will request %ld spot slot%s for %.2f hours.  "
-		"Each instance will terminate after being idle for %.2f hours.\n",
-		count,
-		count == 1 ? "" : "s",
-		leaseDuration / 3600.0,
-		unclaimedTimeout / 3600.0
-	);
-
 	if(! skipYesNoPrompt) {
+		fprintf( stdout,
+			"Will request %ld spot slot%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count,
+			count == 1 ? "" : "s",
+			leaseDuration / 3600.0,
+			unclaimedTimeout / 3600.0
+		);
+
 		fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
 		std::getline( std::cin, response );
 	}
@@ -740,15 +739,15 @@ void getODIApproval(	ClassAd & commandArguments,
 						const char * odiInstanceType, bool odiInstanceTypeSpecified,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
 						long int count, long int leaseDuration, long int unclaimedTimeout, bool skipYesNoPrompt ) {
-	fprintf( stdout,
-		"Will request %ld %s on-demand instance%s for %.2f hours.  "
-		"Each instance will terminate after being idle for %.2f hours.\n",
-		count, odiInstanceType, count == 1 ? "" : "s",
-		leaseDuration / 3600.0, unclaimedTimeout / 3600.0
-	);
-
 	std::string response;
 	if(! skipYesNoPrompt) {
+		fprintf( stdout,
+			"Will request %ld %s on-demand instance%s for %.2f hours.  "
+			"Each instance will terminate after being idle for %.2f hours.\n",
+			count, odiInstanceType, count == 1 ? "" : "s",
+			leaseDuration / 3600.0, unclaimedTimeout / 3600.0
+		);
+
 		fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
 		std::getline( std::cin, response );
 	}
