@@ -622,6 +622,7 @@ class Scheduler : public Service
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
 	const ClassAd & getUserRecDefaultsAd() const { return m_userRecDefaultsAd; }
+	const ClassAd & getProjectRecDefaultsAd() const { return m_projectRecDefaultsAd; }
 	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
 	const std::string & getExtendedSubmitHelpFile() const { return m_extendedSubmitHelpFile; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
@@ -781,6 +782,7 @@ private:
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
 	ClassAd             m_userRecDefaultsAd;
+	ClassAd             m_projectRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
 	ClassAd             m_local_starter_ad;
@@ -946,8 +948,11 @@ private:
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
 	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
-					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
+	int			act_on_project(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
 	void		remove_unused_owners();
+	bool		any_userrec_refs(JobQueueUserRec * urec); // returns true if any schedd data structures are holding this given ptr
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
