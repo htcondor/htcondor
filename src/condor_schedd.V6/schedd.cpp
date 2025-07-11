@@ -11907,7 +11907,7 @@ _mark_job_stopped(PROC_ID* job_id)
 	DeleteAttribute( job_id->cluster, job_id->proc, ATTR_SHADOW_BIRTHDATE );
 
 	// if job isn't RUNNING, then our work is already done
-	if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
+	if (status == RUNNING || status == TRANSFERRING_OUTPUT || status == SUSPENDED) {
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
@@ -13195,6 +13195,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 
 	switch( status ) {
 	case RUNNING:
+	case SUSPENDED:
 	case TRANSFERRING_OUTPUT: {
 			//
 			// If the job is running, we are in middle of executing

@@ -1497,6 +1497,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
+			// TODO This code doesn't properly handle a job that goes
+			//   from Suspended to Exited. The starter sends an extra
+			//   update currently so the the state goes to Executing
+			//   first on an eviction, but the shadow shouldn't be
+			//   relying on that.
 		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
 		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
