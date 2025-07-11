@@ -2,10 +2,10 @@
 
 *** 24.0.10 bugs
 
-- The plug-in used to handle ``http`` and ``https`` URLs now sets the
-  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  URLs which return a 403/Forbidden
-  error when the ``user-agent`` is empty will now function as expected.
-  jira:`3121`
+*** 24.0.9 features
+
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
+  :jira:`3090`
 
 *** 24.0.9 bugs
 

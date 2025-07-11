@@ -28,6 +28,7 @@ if [ $ID = 'almalinux' ]; then
     if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
         ARCH='x86_64_v2'
         REPO_ARCH='x86_64_v2'
+        echo '%__cflags_arch_x86_64_level -v2' > /etc/rpm/macros.gcc-arch-level-v2
     fi
 fi
 
