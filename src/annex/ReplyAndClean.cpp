@@ -38,7 +38,6 @@ ReplyAndClean::operator() () {
 				} else {
 					std::string message;
 					formatstr( message, "Annex started.  Its identity with the cloud provider is '%s'.", bulkRequestID.c_str() );
-
 					dprintf( D_AUDIT | D_IDENT | D_PID, getuid(),
 						"%s\n", message.c_str() );
 					fprintf( stdout, "%s", message.c_str() );
@@ -49,6 +48,14 @@ ReplyAndClean::operator() () {
 						fprintf( stdout, "%s", expectedDelay.c_str() );
 					}
 					fprintf( stdout, "\n" );
+
+					std::string region;
+					reply->LookupString( "Region", region );
+					formatstr( message,
+						"https://%s.console.aws.com/ec2/home?region=%s#Instances:search=%s",
+						region.c_str(), region.c_str(), bulkRequestID.c_str()
+					);
+					fprintf( stdout, "See %s if they do not.\n", message.c_str() );
 				}
 			} else {
 				std::string errorString;

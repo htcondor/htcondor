@@ -80,6 +80,10 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		reply->Assign( "ExpectedDelay", expectedDelay );
 	}
 
+	std::string region;
+	command->LookupString( "Region", region );
+	reply->Assign( "Region", region );
+
 	//
 	// Construct the GAHPs.  We do this before anything else because we
 	// need pointers the GAHPs to hand off to the nonblocking sequence

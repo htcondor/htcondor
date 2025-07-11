@@ -1580,6 +1580,8 @@ annex_main( int argc, char ** argv ) {
 
 			prepareTarballForUpload( commandArguments, configDir, owner, ownerSpecified, noOwner, unclaimedTimeout, requestID );
 			handleUserData( commandArguments, clUserDataWins, userData, userDataFileName );
+
+			commandArguments.Assign( "Region", region );
 			return create_annex( commandArguments );
 
 		case ct_update_annex:
