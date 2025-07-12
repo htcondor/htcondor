@@ -164,6 +164,8 @@
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 #define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
+#define SUBMIT_KEY_CommonInputFiles "common_input_files"
+#define SUBMIT_KEY_UncommonContainer "container_image_uncommon"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"

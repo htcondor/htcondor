@@ -316,6 +316,7 @@
 #define ATTR_HIBERNATION_RAW_MASK  "HibernationRawMask"
 #define ATTR_HIBERNATION_METHOD  "HibernationMethod"
 #define ATTR_UNHIBERNATE  "Unhibernate"
+#define ATTR_UNCOMMON_CONTAINER "UncommonContainer"
 #define ATTR_HOLD_KILL_SIG  "HoldKillSig"
 #define ATTR_HOOK_KEYWORD  "HookKeyword"
 #define ATTR_HISTORY_RECORD_SOURCE  "HistoryRecordSource"
