@@ -1,0 +1,48 @@
+# starting from the Amazon Linux 2023 AMI...
+ssh -i ~/.condor/us-east-1.pem ec2-user@<ip-address>
+sudo su
+# 'aws' -- the awscli package -- already installed
+yum install iptables
+# /etc/localtime -- required by singularity -- already installed
+yum install https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.amzn2023.noarch.rpm
+# New versions have dependencies issues.
+yum install condor
+# We'd prefer apptainer (or singularity), but it's not available.
+yum install docker
+yum install condor-annex-ec2
+systemctl enable condor-annex-ec2
+# Add 'condor' to the 'docker' group (in /etc/group)
+vi /etc/group
+
+# Install apptainer.
+sudo dnf install -y https://github.com/apptainer/apptainer/releases/download/v1.4.1/apptainer-1.4.1-1.x86_64.rpm
+
+# Install NVidia's drivers.
+dnf install kernel-devel-$(uname -r) kernel-headers-$(uname -r)
+dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo
+dnf clean expire-cache
+dnf module enable nvidia-driver:latest-dkms
+dnf install cuda-drivers
+dnf install kernel-modules-extra
+
+###
+### Get a "clean" image.
+###
+set +o history
+history -c
+rm -fr ~/.bash_history
+sudo rm -fr /var/log/condor/*
+sudo rm -fr /var/run/condor/*
+sudo rm -fr /var/lock/condor/InstanceLock
+sudo rm -fr /var/lib/condor/execute/*
+sudo rm -fr /var/lib/condor/spool/*
+sudo rm -fr /etc/condor/config.d/00ec2-dynamic.confi
+sudo rm -fr /etc/condor/config.d/49ec2-instance.config
+sudo rm -fr /etc/condor/config.d/password_file.pl
+sudo /bin/sh -c 'rm -fr ~/.bash_history'
+sudo /bin/sh -c 'rm -fr ~/.ssh/authorized_keys'
+sudo /bin/sh -c 'rm -fr ~/.ssh/known_hosts'
+rm -fr ~/.ssh/authorized_keys
+rm -fr ~/.ssh/known_hosts
+
+### Then use the AWS console to create an image from this instance.
