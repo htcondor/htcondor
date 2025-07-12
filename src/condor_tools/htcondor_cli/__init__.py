@@ -3,6 +3,8 @@ import logging as _logging
 _logger = _logging.getLogger(__name__)
 _logger.setLevel(_logging.DEBUG)
 
+import htcondor2
+
 # Set the TMPDIR
 from pathlib import Path as _Path
 from os import environ as _environ
@@ -20,6 +22,12 @@ GLOBAL_OPTIONS = {
         "action": "count",
         "default": 0,
         "help": "Increase verbosity of output (can be specified multiple times)",
+    },
+    "version": {
+        "args": ("-V", "--version"),
+        "action": "version",
+        "version": htcondor2.version(),
+        "help": "Print the HTCondor version and exit"
     },
     "quiet": {
         "args": ("-q", "--quiet"),
