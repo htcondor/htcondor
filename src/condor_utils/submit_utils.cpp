@@ -6597,9 +6597,13 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 				// submit_param( "MY.CommonInputFiles", ATTR_COMMON_INPUT_FILES )
 			);
 
-			std::string modifiedCIF;
-			formatstr( modifiedCIF, "%s, %s", container_image.ptr(), cif.ptr() );
-			AssignJobString( ATTR_COMMON_INPUT_FILES, modifiedCIF.c_str() );
+			if( cif.ptr() && cif.ptr()[0] != '\0' ) {
+				std::string modifiedCIF;
+				formatstr( modifiedCIF, "%s, %s", container_image.ptr(), cif.ptr() );
+				AssignJobString( ATTR_COMMON_INPUT_FILES, modifiedCIF.c_str() );
+			} else {
+				AssignJobString( ATTR_COMMON_INPUT_FILES, container_image.ptr() );
+			}
 		}
 
 		// Now that we've sure that we're transfering the container, set
