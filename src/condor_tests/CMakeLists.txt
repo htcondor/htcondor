@@ -436,6 +436,8 @@ endif()
 			endif()
 		endif()
 
+		condor_pl_test(test_vault_credential "Test handling of vault credentials" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 		# These Ornithology tests only work on linux.
 		# That's expected for some. Others need investigation
 		# to see if we can get them working on other platforms.
