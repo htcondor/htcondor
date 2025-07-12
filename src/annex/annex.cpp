@@ -265,17 +265,17 @@ createConfigTarball(	const char * configDir,
 		return false;
 	}
 	if( l.Length() != 1 ) {
-	    formatstr( tarballError, "Found more than one scheduler in the AP collector" );
+		formatstr( tarballError, "Found more than one scheduler in the AP collector" );
 		free(cwd);
 		return false;
 	}
 	l.Rewind();
-    ClassAd * c = l.Next();
-    if(! c->LookupString( ATTR_NAME, scheddName )) {
-	    formatstr( tarballError, "Scheduler ad in AP collector did not contain the scheduler's name." );
+	ClassAd * c = l.Next();
+	if(! c->LookupString( ATTR_NAME, scheddName )) {
+		formatstr( tarballError, "Scheduler ad in AP collector did not contain the scheduler's name." );
 		free(cwd);
 		return false;
-    }
+	}
 
 
 	formatstr_cat( contents,
@@ -325,12 +325,12 @@ createConfigTarball(	const char * configDir,
 	std::string annexTokenDomain;
 	param( annexTokenDomain, "ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io" );
 
-    char * user_name = NULL;
-    if(! pcache()->get_user_name( geteuid(), user_name )) {
+	char * user_name = NULL;
+	if(! pcache()->get_user_name( geteuid(), user_name )) {
 		formatstr( tarballError, "failed to determine user name" );
 		free(cwd);
 		return false;
-    }
+	}
 	std::string annexUserName = user_name;
 	free(user_name);
 
@@ -1445,7 +1445,7 @@ annex_main( int argc, char ** argv ) {
 			commandArguments.Assign( "UploadTo", tarballTarget ); }
 
 			// Deliberate fall-through to common code.
-            //@fallthrough@
+			//@fallthrough@
 
 		case ct_update_annex:
 			// Set AnnexType and LeaseFunctionARN.
