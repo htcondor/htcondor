@@ -1,4 +1,23 @@
-*** 24.10.0 features
+*** 24.11.0 features
+
+*** 24.11.0 bugs
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3131`
+
+*** 24.0.11 bugs
+
+*** 24.10.1 features
+
+- The new Python API now includes `htcondor2.disable_debug()`, which is
+  intended interactive use (after debugging a problem).
+  :jira:`3003`
+
+- Some errors on the EP that occurred after the AP had released the
+  corresponding claim could cause a slot to remain claimed until the job lease
+  timeout had expired.  This change should reduce incidents of this behavior.
+  :jira:`3028`
 
 - Execution Points enforcing disk limits will now subtract the size of
   pre-existing logical volumes from the advertised available disk. Any
@@ -10,12 +29,34 @@
   show information about execution points enforcing disk limits.
   :jira:`3119`
 
+- Added new :tool:`condor_dag_checker` tool for users to check DAG files
+  for syntactical and logical errors prior to submission.
+  :jira:`3088`
+
 - In the *condor_job_router*, the old ClassAd-based route syntax
   (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
   is no longer supported.
   :jira:`3118`
 
-*** 24.10.0 bugs
+- Improvements to *condor_q* for held jobs. The hold code and subcode are
+  now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
+  displays the first job for each unique hold code and subcode.
+  :jira:`3127`
+
+- Improvements to observability of common files transfer, including new entries
+  in the shadow and starter daemon logs; a new CommonFiles event in the
+  job/user event log; and a new transfer entry in the epoch history.
+  :jira:`3052`
+
+*** 24.10.1 bugs
+
+- Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
+  OAuth2 credential was a plain user-provided access token.
+  :jira:`3084`
+
+- Attempting to send common files to startds whose sinful string is more than
+  256 characters will no longer cause a shadow exception.
+  :jira:`3128`
 
 - Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
   :jira:`3104`
@@ -23,9 +64,19 @@
 - Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
   :jira:`3106`
 
+- Fixed an issue where a job may take an additional 20 minutes to be scheduled to run after leaving cool-down mode.
+  See configuration knob :macro:`SYSTEM_ON_VACATE_COOL_DOWN` for more information about job cool-down mode.
+  :jira:`3059`
+
+- Fixed a bug introduced in HTCondor version 24.8.0 where a job in Suspended
+  status wouldn't change to Idle status when evicted from an EP.
+  This resulted in the job not being considered for scheduling, among other
+  problems.
+  :jira:`3174`
+
 *** 24.0.10 bugs
 
-*** 24.9.1 features
+*** 24.9.2 features
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
   :jira:`3024`
@@ -44,7 +95,7 @@
   expression will be written to the ``StartLog``.
   :jira:`3033`
 
-*** 24.9.1 bugs
+*** 24.9.2 bugs
 
 - Fixed a bug which could cause unnecessary activation failures if the previous
   job in the slot failed to transfer its output.  This would manifest as slots
@@ -60,6 +111,11 @@
   ``job_spec`` parameter to specify a cluster ID as an integer, as a string
   without a proc ID, or in a list of such strings.
   :jira:`2979`
+
+*** 24.0.9 features
+
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
+  :jira:`3090`
 
 *** 24.0.9 bugs
 

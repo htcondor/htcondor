@@ -38,12 +38,15 @@
 /* Get rid of warnings; we cannot change this code */
 #pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
 #pragma warning( disable: 6011 6001 ) // not checking malloc return, Enum_Loc uninitialized at 305 
+
+#define NOMINMAX
 #endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <algorithm>
 #include "dhry.h"
 /* DO NOT include sysapi.h here */
 
@@ -550,7 +553,9 @@ mips_raw( void )
 	}
 
 	// For faster machines, run with more loops.
-	loops = int(floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST )));
+	loops = (int)
+            std::clamp(0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST),
+                      0.0, (double) std::numeric_limits<int>::max());
 	while( true ) {
 		double t1 = condor_gettimestamp_double( );
 		mips_ = dhry_mips(loops);

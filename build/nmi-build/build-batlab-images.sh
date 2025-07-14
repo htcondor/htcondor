@@ -59,6 +59,7 @@ ARCH=$(arch)
     buildimage x86_64_AlmaLinux8 linux/x86_64 almalinux:8 &
     buildimage x86_64_AlmaLinux9 linux/x86_64 almalinux:9 &
     buildimage x86_64_AlmaLinux10 linux/x86_64 almalinux:10 &
+    buildimage x86_64_v2_AlmaLinux10 linux/amd64/v2 almalinux/10-base:10 &
     buildimage x86_64_AmazonLinux2023 linux/x86_64 amazonlinux:2023 &
     buildimage x86_64_Debian11 linux/x86_64 debian:bullseye &
     buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &

@@ -670,6 +670,10 @@ all attributes.
     job attribute in order to constrain which slots containing GPUs a job is matched to.
     Set this attribute in a job by using the submit description file command :subcom:`gpus_minimum_runtime`
 
+:classad-attribute-def:`GridJobId`
+    A string containing the job's ID as reported by the remote job management
+    system.
+
 :classad-attribute-def:`GridJobStatus`
     A string containing the job's status as reported by the remote job
     management system.
@@ -811,6 +815,24 @@ all attributes.
     submitting machine's lack of response. See
     :ref:`users-manual/special-environment-considerations:job leases`
     for details on job leases.
+
+:classad-attribute-def:`JobMaterializePaused`
+    An integer value representing the reason a late materialization factory
+    is paused.
+
+    +---------+-----------------------+
+    | Value   |  Pause Reason         |
+    +=========+=======================+
+    | -1      | Invalid Submit        |
+    +---------+-----------------------+
+    | 0       | Running               |
+    +---------+-----------------------+
+    | 1       | Held                  |
+    +---------+-----------------------+
+    | 2       | Done                  |
+    +---------+-----------------------+
+    | 3       | Removed               |
+    +---------+-----------------------+
 
 :classad-attribute-def:`JobMaxVacateTime`
     An integer expression that specifies the time in seconds requested
@@ -1436,6 +1458,10 @@ all attributes.
 :classad-attribute-def:`ReleaseReason`
     A string containing a human-readable message about why the job was
     released from hold.
+
+:classad-attribute-def:`RemoteHost`
+    A string containing the host name of the remote machine running
+    the job.
 
 :classad-attribute-def:`RemoteIwd`
     The path to the directory in which a job is to be executed on a

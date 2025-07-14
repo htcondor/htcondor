@@ -1,192 +1,260 @@
-Print Formats
+Print Format Tables
 ===================
 
-:index:`Print Format`
-:index:`Custom Print Formats (see Print Format)`
+:index:`Print Format Tables`
+:index:`Custom Print Format Tables`
 
+Many HTCondor tools use a formatting engine called the ClassAd pretty
+printer to display ClassAd information in a meaningful matter. Tools
+that provide a **-format** or **-af/-autoformat** command line options
+use those options to configure the ClassAd pretty printer in a simple
+manner.
 
-Many HTCondor tools that work with ClassAds use a formatting engine
-called the ClassAd pretty printer.  Tools that have a **-format**
-or **-autoformat** argument use those arguments to configure the
-ClassAd pretty printer, and then use the pretty printer to produce output
-from ClassAds.
+The ClassAd pretty printer can be provided a more complex configuration
+via a ``Print Format Table``. A print format table can be provided to
+tools that support complex configuration via the **-print-format** or
+**-pr** command line option such as :tool:`condor_q`, :tool:`condor_status`,
+and :tool:`condor_history`.
 
-The :tool:`condor_q`, :tool:`condor_history` and :tool:`condor_status` tools, as well as others
-that have a **-print-format** or **-pr** argument can configure the ClassAd pretty
-using a file. The syntax of this file is described below.
+.. sidebar:: Syntax Keywords
 
-Not all tools support all of the print format options.
+    All keywords used in the print format table syntax
+    must be uppercase.
+
+    The primary keywords ``SELECT``, ``WHERE``, ``GROUP BY``,
+    and ``SUMMARY`` must be the first word to appear in the
+    line.
+
 
 Syntax
 ------
 
-A print format file consists of a heading line and
-zero or more formatting lines
-followed by optional constraint, sort and summary lines.
-These sections of the format file begin with the keywords
-``SELECT``, ``WHERE``, ``GROUP``, or ``SUMMARY`` which must be in that order if they appear.
-These keywords must be all uppercase and must be the first word on the line.
+A print format table consists of the following parts that must
+appear in order when specified:
 
-A line beginning with # is treated as a comment
+  1. A heading line using the ``SELECT`` keyword.
+  2. Zero or more formatting lines.
+  3. Optional constraint line using the ``WHERE`` keyword.
+  4. Optional sort lines using the ``GROUP BY`` keyword.
+  5. Optional summary line using the ``SUMMARY`` keyword.
 
-A custom print format file must begin with the ``SELECT`` keyword.
-The ``SELECT`` keyword can be followed by options to qualify the type of
-query, the global formatting options and whether or not there will be column
-headings. The prototype for the ``SELECT`` line is:
+Any lines beginning with ``#`` will be treated as a comment.
 
-SELECT [FROM AUTOCLUSTER | UNIQUE] [BARE | NOTITLE | NOHEADER | NOSUMMARY] [LABEL [SEPARATOR <string>]] [<separators>]
+.. sidebar:: String Handling
 
-The first two optional keywords indicate the query type.  These options work only in :tool:`condor_q`.
+    Some keywords are to be followed up by a string denoted
+    as ``<string>``. If the provided text begins with a single
+    or double quote, then the string continues until the next
+    matching quote (i.e. ``'All in the string'``). Strings that
+    do not begin with a quote will continue until the next
+    space or tab.
 
-``FROM AUTOCLUSTER``
-   Used with condor_q to query the schedd's default autocluster set.
+    Any ``\n``, ``\r``, or ``\t`` will be converted into a
+    newline, carriage return, or tab character respectively.
 
-``UNIQUE``
-   Used with condor_q to ask the *condor_schedd* to count unique values. 
-   This option tells the schedd to building a new ``FROM AUTOCLUSTER`` set using the given attributes
 
-The next set of optional keywords enable or disable various things that are normally printed before
-or after the classad output.
+SELECT Line
+~~~~~~~~~~~
 
-``NOTITLE``
-   Disables the title on tools that have a title, like the Schedd name from :tool:`condor_q`.
+A print format table must begin with the ``SELECT`` keyword. This
+keyword can be followed by options to qualify the type of query,
+the global formatting options, and whether or not there will be
+column headings.
 
-``NOHEADER``
-   Disables column headers.
+``SELECT [Query Type] [Details] [Separators]``
 
-``NOSUMMARY``
-   Disables the summary output such as the totals by job stats at the bottom of normal :tool:`condor_q` output.
+The optional ``Query Type`` qualifier have the following keywords:
 
-``BARE``
-  Shorthand for ``NOTITLE`` ``NOHEADER`` ``NOSUMMARY``
+  ``FROM AUTOCLUSTER``
+    Query the Schedd's default auotcluster set.
 
-In the descriptions below ``<string>`` is text.  If the text starts with a single quote, then it continues to
-the next single quote.  If it starts with a double quote, it continues to the next double quote.  If it
-starts with neither, then it continues until the next space or tab.  a \n, \r or \t inside the string will
-be converted into a newline, carriage return or tab character respectively.
+  ``UNIQUE``
+    Query the Schedd for newly built autocluster based on the unique
+    count of provided attributes.
 
-``LABEL [SEPARATOR <string>]``
-   Use item labels rather than column headers. The separator between the label and the value will
-   be **=** unless the ``SEPARATOR`` is used to define a different one.
+  .. note::
 
-``RECORDPREFIX <string>``
-   The value of ``<string>`` will be printed before each ClassAd.  The default is to print nothing.
+    The ``Query Type`` qualifiers only work for :tool:`condor_q`\.
 
-``RECORDSUFFIX <string>``
-   The  value of ``<string>`` will be printed after each ClassAd.  The default is to print the newline character.
+The optional ``Details`` qualifier has the following keywords:
 
-``FIELDPREFIX <string>``
-   The value of ``<string>`` will be printed before each attribute or expression. The default is to print nothing.
+  ``NOTITLE``
+    Disable the title such as the Schedd name from :tool:`condor_q`\.
 
-``FIELDSUFFIX <string>``
-   The value of ``<string>`` will be printed after each attribute or expression. The default is to print a single space.
+  ``NOHEADER``
+    Disable column headers.
 
-After the ``SELECT`` line, there should be zero or more formatting lines one line for each field in the output.
-Each formatting line is a ClassAd attribute or expression followed by zero or more keywords that control formatting,
-the first valid keyword ends the expression.  Keywords are all uppercase and space delimited.
-The prototype for each formatting line is:
+  ``NOSUMMARY``
+    Disable the summary output such as the totals by job stats that
+    :tool:`condor_q` displays by default.
 
-<expr> [AS <label>] [PRINTF <format-string> | PRINTAS <function-name> [ALWAYS] | WIDTH [AUTO | [-]<INT>] ] [FIT | TRUNCATE] [LEFT | RIGHT] [NOPREFIX] [NOSUFFIX]
+  ``BARE``
+    Shorthand for ``NOTITLE NOHEADER NOSUMMARY``.
 
-``AS <string>``
-   defines the label or column heading. 
-   if the formatting line has no AS keyword, then ``<expr>`` will be used as the label or column heading 
+The optional ``Separators`` qualifier has the following keywords:
 
-``PRINTF <string>``
-   ``<string>`` should be a c++ printf format string, the same as used by the **-format** command line arguments for tools
+  ``LABEL [SEPARATOR <string>]``
+    Use item labels rather than column headers. Labels are separated
+    by ``=`` unless defined by ``SEPARATOR <string>``.
 
-``PRINTAS <function>``
-   Format using the built-in function. The Valid function names for ``PRINTAS`` are defined by the code and differ between the various tools,
-   refer to the table at the end of this page.
+  ``RECORDPREFIX <string>``
+    Print ``<string>`` before each ClassAd. Empty by default.
 
-``WIDTH [-]<int>``
-   Align the data to the given width, negative values left align.
+  ``RECORDSUFFIX <string>``
+    Print ``<string>`` after each ClassAd. A newline by default.
 
-``WIDTH AUTO``
-   Use a width sized to fit the largest item.
+  ``FIELDPREFIX <string>``
+    Print ``<string>`` before each ClassAd attribute or expression.
+    Empty by default.
 
-``FIT``
-   Adjust column width to fit the data, normally used with WIDTH AUTO
+  ``FIELDSUFFIX <string>``
+    Print ``<string>`` after each ClassAd attribute or expression.
+    A single space by default.
 
-``TRUNCATE``
-   If the data is larger than the given width, truncate it
 
-``LEFT``
-   Left align the data to the given width
+Formatting Lines
+~~~~~~~~~~~~~~~~
 
-``RIGHT``
-   Right align the data to the given width
+Zero or more lines specifying a ClassAd attribute or expression and
+formatting details to display as a column in the tools output. The
+first valid keyword ends the ClassAd expression.
 
-``NOPREFIX``
-   Do not include the ``FIELDPREFIX`` string for this field
+``<expression> [Header] [Adjustments] [Formatting]``
 
-``NOSUFFIX``
-   Do not include the ``FIELDSUFFIX`` string for this field
+The ``Header`` qualifier has the following keyword:
 
-``OR <char>[<char>]``
-   if the field data is undefined, print ``<char>``, if ``<char>`` is doubled, fill the column with ``<char>``.
-   Allowed values for ``<char>`` are space or one of the following ``?*.-_#0``
+  ``AS <string>``
+    Define label or column heading. If not present then default to
+    using the provided ``<expression>``.
 
-After the field formatting lines, there may be sections in the file that define a query constraint, sorting and grouping
-and the summary line.  These sections can be multiple lines, but must begin with a keyword.
+The ``Adjusments`` qualifier has the following keywords:
 
-``WHERE <constraint-expr>``
-   Display only ClassAds where the expression ``<constraint-expr>`` evaluates to true.
+  ``WIDTH {[-]<integer> | AUTO}``
+    Set the width of the column to explicit ``<integer>`` value or
+    to automatically fit the largest value printed. Negative values
+    cause left alignment.
 
-``GROUP BY <sort-expr> [ASCENDING | DESCENDING]``
-   Sort the ClassAds by evaluating ``<sort-expr>``.  If multiple sort keys are desired, the ``GROUP BY`` line
-   can be followed by lines containing additional expressions, for example
+  ``FIT``
+    Adjust width size to fit the data, normally used with ``WIDTH AUTO``
 
-   .. code-block:: condor-config
+  ``TRUNCATE``
+    Truncate any data that exceeds column width.
 
-     GROUP BY
-       Owner
-       ClusterId  DESCENDING
+  ``LEFT``
+    Left align data within given width.
 
+  ``RIGHT``
+    Right align data within given width.
+
+The ``Formatting`` qualifier has the following keywords:
+
+  ``NOPREFIX``
+    Do not include the ``FIELDPREFIX`` string for this field.
+
+  ``NOSUFFIX``
+    Do not include the ``FIELDSUFFIX`` string for this field.
+
+  ``PRINTF <string>``
+    Specify a `c++ printf <https://cplusplus.com/reference/cstdio/printf/>`_
+    formatted string to print data. Additionally, the following unique
+    specifiers can be specified in the printf string format:
+
+    - ``%T``: Print an integer value as a human readable time value ``DD+hh:mm:ss``
+    - ``%V``: Print timestamp into human readable format ``MM/DD hh:mm``
+
+  ``PRINTAS <function>``
+    Format data using a built-in function. See :ref:`built-in-printas-funcs`
+    for list of built-in function names available for reference.
+
+  ``OR <char>[<char>]``
+    Display specified ``<char>`` for data if ``UNDEFINED``. Fill entire
+    column width if ``<char>`` is doubled. ``<char>`` either be a space
+    or one of the following characters ``?*.-_#0``
+
+
+WHERE Line
+~~~~~~~~~~
+
+Specify a query constraint to filter what ClassAds to display
+in the tools output.
+
+``WHERE <expression>``
+   Display only ClassAds where the expression ``<expression>`` evaluates to true.
+
+
+GROUP BY Line
+~~~~~~~~~~~~~
+
+Specify a sort expression to control the ordering of displayed ClassAds.
+
+``GROUP BY <expression> [ASCENDING | DESCENDING]``
+    Sort ClassAds by evaluating ``<expression>`` in optional ``ASCENDING``
+    or ``DESCENDING`` order.
+
+Multiple sort keys can be specified in the lines following the line
+that declares ``GROUP BY``.
+
+.. code-block:: printf-table
+
+    GROUP BY
+        Owner
+        ClusterId DESCENDING
+
+.. note::
+
+    The ``GROUP BY`` keyword does not function on all tools such
+    as :tool:`condor_history`.
+
+SUMMARY Line
+~~~~~~~~~~~~
+
+Specify whether or not to display a summary table in the output.
+The summary table can also be disabled using ``NOSUMMARY`` or ``BARE``
+keywords in the ``SELECT`` line.
 
 ``SUMMARY [STANDARD | NONE]``
-   Enable or disable the summary totals.
-   The summary can also be disabled using ``NOSUMMARY`` or ``BARE`` keywords on the ``SELECT`` line.
+   Enable or disable the summary.
+
 
 Examples
 --------
 
 This print format file produces the default ``-nobatch`` output of :tool:`condor_q`
 
-.. code-block:: condor-config
+.. code-block:: printf-table
 
    # queue.cpf
    # produce the standard output of condor_q
    SELECT
-      ClusterId     AS "    ID"  NOSUFFIX WIDTH AUTO
-      ProcId        AS " "       NOPREFIX          PRINTF ".%-3d"
-      Owner         AS "OWNER"         WIDTH -14   PRINTAS OWNER
-      QDate         AS "  SUBMITTED"   WIDTH 11    PRINTAS QDATE
-      RemoteUserCpu AS "    RUN_TIME"  WIDTH 12    PRINTAS CPU_TIME
-      JobStatus     AS ST                          PRINTAS JOB_STATUS
+      ClusterId     AS '    ID'       NOSUFFIX WIDTH AUTO
+      ProcId        AS ' '            NOPREFIX            PRINTF '.%-3d'
+      Owner         AS OWNER                   WIDTH -14  PRINTAS OWNER
+      QDate         AS '  SUBMITTED'           WIDTH 11   PRINTAS QDATE
+      RemoteUserCpu AS '    RUN_TIME'          WIDTH 12   PRINTAS CPU_TIME
+      JobStatus     AS ST                                 PRINTAS JOB_STATUS
       JobPrio       AS PRI
-      ImageSize     AS SIZE            WIDTH 6     PRINTAS MEMORY_USAGE
-      Cmd           AS CMD                         PRINTAS JOB_DESCRIPTION
+      ImageSize     AS SIZE                    WIDTH 6    PRINTAS MEMORY_USAGE
+      Cmd           AS CMD                                PRINTAS JOB_DESCRIPTION
    SUMMARY STANDARD
 
 This print format file produces only totals
 
-.. code-block:: condor-config
+.. code-block:: printf-table
 
    # q_totals.cpf
    # show only totals with condor_q
    SELECT NOHEADER NOTITLE
-   SUMMARY STANDARD   
+   SUMMARY STANDARD
 
 This print format file shows typical fields of the Schedd autoclusters.
 
-.. code-block:: condor-config
+.. code-block:: printf-table
 
    # negotiator_autocluster.cpf
    SELECT FROM AUTOCLUSTER
       Owner         AS OWNER         WIDTH -14   PRINTAS OWNER
       JobCount      AS COUNT                     PRINTF %5d
-      AutoClusterId AS " ID"         WIDTH 3
+      AutoClusterId AS ' ID'         WIDTH 3
       JobUniverse   AS UNI                       PRINTF %3d
       RequestMemory AS REQ_MEMORY    WIDTH 10    PRINTAS READABLE_MB
       RequestDisk   AS REQUEST_DISK  WIDTH 12    PRINTAS READABLE_KB
@@ -195,239 +263,247 @@ This print format file shows typical fields of the Schedd autoclusters.
 
 This print format file shows the use of ``SELECT UNIQUE`` 
 
-.. code-block:: condor-config
+.. code-block:: printf-table
 
    # count_jobs_by_owner.cpf
    # aggregate by the given attributes, return unique values plus count and jobids.
    # This query builds an autocluster set in the schedd on the fly using all of the displayed attributes
    # And all of the GROUP BY attributes (except JobCount and JobIds)
    SELECT UNIQUE NOSUMMARY
-      Owner         AS OWNER      WIDTH -20
-      JobUniverse   AS "UNIVERSE "   PRINTAS JOB_UNIVERSE
-      JobStatus     AS STATUS     PRINTAS JOB_STATUS_RAW
+      Owner         AS OWNER       WIDTH -20
+      JobUniverse   AS 'UNIVERSE '           PRINTAS JOB_UNIVERSE
+      JobStatus     AS STATUS                PRINTAS JOB_STATUS_RAW
       RequestCpus   AS CPUS
       RequestMemory AS MEMORY
-      JobCount      AS COUNT      PRINTF  %5d
+      JobCount      AS COUNT                 PRINTF  %5d
       JobIDs
    GROUP BY
       Owner
 
-PRINTAS functions for condor_q
-------------------------------
+.. _built-in-printas-funcs:
 
-Some of the tools that interpret a print format file have specialized formatting functions for certain
-ClassAd attributes.  These are selected by using the ``PRINTAS`` keyword followed
-by the function name.  Available function names depend on the tool. Some functions implicitly use the
-value of certain attributes, often multiple attributes. The list for :tool:`condor_q` is.
+Built-in PRINTAS Functions
+--------------------------
 
-``BATCH_NAME``
-   Used for the ``BATCH_NAME`` column of the default output of :tool:`condor_q`.
-   This function constructs a batch name string using value of the :ad-attr:`JobBatchName`
-   attribute if it exists, otherwise it constructs a batch name from
-   :ad-attr:`JobUniverse`, :ad-attr:`ClusterId`, :ad-attr:`DAGManJobId`, and ``DAGNodeName``.
+The following function names can be used with the ``PRINTAS`` keyword
+to format data. Some functions implicitly use the value of specific
+attributes regardless of the data produced from the evaluated expression.
 
-``BUFFER_IO_MISC``
-   Used for the ``MISC`` column of the ``-io`` output of :tool:`condor_q`.
-   This function constructs an IO string that varies by :ad-attr:`JobUniverse`.
-   It refers to :ad-attr:`TransferringInput`, :ad-attr:`TransferringOutput` and :ad-attr:`TransferQueued`.
+.. warning::
 
-``CPU_TIME``
-   Used for the ``RUN_TIME`` or ``CPU_TIME`` column of the default :tool:`condor_q` output.
-   The result of the function depends on whether the ``-currentrun`` argument is used with :tool:`condor_q`.
-   If :ad-attr:`RemoteUserCpu` is undefined, this function returns undefined. It returns the value of :ad-attr:`RemoteUserCpu`
-   if it is non-zero.  Otherwise it reports the amount of time that the *condor_shadow* has been alive.
-   If the ``-currentrun`` argument is used with :tool:`condor_q`, this will be the shadow lifetime for the current run only.
-   If it is not, then the result is the sum of :ad-attr:`RemoteWallClockTime` and the current shadow lifetime.
-   The result is then formatted using the ``%T`` format.
+    Some ``PRINTAS`` functions render output internally based on specific
+    attributes found in the ClassAd regardless of the provided ``<expression>``.
+    An ``<expression>`` is still required to specified in the formatting
+    line but can be something that results to ``UNDEFINED`` such as ``Dummy``.
 
-``CPU_UTIL``
-   Used for the ``CPU_UTIL`` column of the default :tool:`condor_q` output.
-   This function returns :ad-attr:`RemoteUserCpu` divided by :ad-attr:`CommittedTime` if
-   :ad-attr:`CommittedTime` is non-zero.  It returns undefined if :ad-attr:`CommittedTime` is undefined, zero or negative.
-   The result is then formatted using the ``%.1f`` format.
+    Functions that behave in this manner are marked with ``⨁``.
 
-``DAG_OWNER``
-   Used for the :ad-attr:`Owner` column of default :tool:`condor_q` output.
-   This function returns the value of the :ad-attr:`Owner` attribute when the ``-dag`` option is
-   not passed to :tool:`condor_q`.  When the ``-dag`` option is passed,
-   it returns the value of  ``DAGNodeName`` for jobs that have a :ad-attr:`DAGManJobId` defined, and :ad-attr:`Owner` for all other jobs.
+``⨁ ACTIVITY_CODE``
+    Render a two character code from the :ad-attr:`State` and :ad-attr:`Activity`
+    attributes of the machine ad. For example, this function would return
+    ``Ci`` if the :ad-attr:`State` ``Claimed`` and the :ad-attr:`Activity`
+    was ``Idle``.
 
-``GRID_JOB_ID``
-   Used for the ``GRID_JOB_ID`` column of the ``-grid`` output of :tool:`condor_q`.
-   This function extracts and returns the job id from the ``GridJobId`` attribute.
+    The letter codes for :ad-attr:`State` are:
 
-``GRID_RESOURCE``
-   Used for the ``GRID->MANAGER    HOST`` column of the ``-grid`` output of :tool:`condor_q`.
-   This function extracts and returns the manager and host from the :ad-attr:`GridResource` attribute.
-   For ec2 jobs the host will be the value of :ad-attr:`EC2RemoteVirtualMachineName` attribute.
+        =  ===========
+        ~  None
+        O  Owner
+        U  Unclaimed
+        M  Matched
+        C  Claimed
+        P  Preempting
+        S  Shutdown
+        X  Delete
+        F  Backfill
+        D  Drained
+        #  <undefined>
+        ?  <error>
+        =  ===========
 
-``GRID_STATUS``
-   Used for the ``STATUS`` column of the ``-grid`` output of :tool:`condor_q`.
-   This function renders the status of grid jobs from the :ad-attr:`GridJobStatus` attribute.
-   If the attribute has a string value it is reported unmodified.
-   Otherwise, if :ad-attr:`GridJobStatus` is an integer, it is presumed to be a condor job status
-   and converted to a string.
+    The letter codes for :ad-attr:`Activity` are:
 
-``JOB_DESCRIPTION``
-   Used for the :ad-attr:`Cmd` column of the default output of :tool:`condor_q`.
-   This function renders a job description from the ``MATCH_EXP_JobDescription``,
-   :ad-attr:`JobDescription` or :ad-attr:`Cmd` and :ad-attr:`Args` or :ad-attr:`Arguments` job attributes.
-
-``JOB_FACTORY_MODE``
-   Used for the ``MODE`` column of the ``-factory`` output of :tool:`condor_q`.
-   This function renders an integer value into a string value using the conversion for ``JobMaterializePaused`` modes.
-
-``JOB_ID``
-   Used for the ``ID`` column of the default output of :tool:`condor_q`.
-   This function renders a string job id from the :ad-attr:`ClusterId` and :ad-attr:`ProcId` attributes of the job.
-
-``JOB_STATUS``
-   Used for the ``ST`` column of the default output of :tool:`condor_q`.
-   This function renders a one or two character job status from the
-   :ad-attr:`JobStatus`, :ad-attr:`TransferringInput`, :ad-attr:`TransferringOutput`, :ad-attr:`TransferQueued` and :ad-attr:`LastSuspensionTime` attributes of the job.
-
-``JOB_STATUS_RAW``
-   This function converts an integer to a string using the conversion for :ad-attr:`JobStatus` values.
-
-``JOB_UNIVERSE``
-   Used for the ``UNIVERSE`` column of the ``-idle`` and ``-autocluster`` output of :tool:`condor_q`.
-   This function converts an integer to a string using the conversion for :ad-attr:`JobUniverse` values.
-   Values that are outside the range of valid universes are rendered as ``Unknown``.
-
-``MEMORY_USAGE``
-   Used for the ``SIZE`` column of the default output of :tool:`condor_q`.
-   This function renders a memory usage value in megabytes the :ad-attr:`MemoryUsage` or :ad-attr:`ImageSize` attributes of the job.
-
-:ad-attr:`Owner`
-   Used for the :ad-attr:`Owner` column of the default output of :tool:`condor_q`.
-   This function renders an Owner string from the :ad-attr:`Owner` attribute of the job. Prior to 8.9.9, this function would
-   modify the result based on the :ad-attr:`NiceUser` attribute of the job, but it no longer does so.
-
-:ad-attr:`QDate`
-   Used for the ``SUBMITTED`` column of the default output of :tool:`condor_q`.
-   This function converts a Unix timestamp to a string date and time with 2 digit month, day, hour and minute values.
-
-``READABLE_BYTES``
-   Used for the ``INPUT`` and ``OUTPUT`` columns of the ``-io`` output of :tool:`condor_q`
-   This function renders a numeric byte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-
-``READABLE_KB``
-   This function renders a numeric Kibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Kb, such as :ad-attr:`DiskUsage`.
-
-``READABLE_MB``
-   This function renders a numeric Mibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Mb, such as :ad-attr:`MemoryUsage`.
-
-``REMOTE_HOST``
-   Used for the ``HOST(S)`` column of the ``-run`` output of :tool:`condor_q`.
-   This function extracts the host name from a job attribute appropriate to the :ad-attr:`JobUniverse` value of the job.
-   For Local and Scheduler universe jobs, the Schedd that was queried is used using a variable internal to :tool:`condor_q`.
-   For grid universe jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or :ad-attr:`GridResource` attributes are used.
-   for all other universes the ``RemoteHost`` job attribute is used.
-
-``STDU_GOODPUT``
-   Used for the ``GOODPUT`` column of the ``-goodput`` output of :tool:`condor_q`.
-   This function renders a floating point goodput time in seconds from the
-   :ad-attr:`JobStatus`, :ad-attr:`CommittedTime`, ``ShadowBDay``, ``LastCkptTime``, and :ad-attr:`RemoteWallClockTime` attributes.
-
-``STDU_MPBS``
-   Used for the ``Mb/s`` column of the ``-goodput`` output of :tool:`condor_q`.
-   This function renders a Megabytes per second goodput value from the
-   ``BytesSent``, ``BytesRecvd`` job attributes and total job execution time as calculated by the ``STDU_GOODPUT`` output.
-
-PRINTAS functions for condor_status
------------------------------------
-
-``ACTIVITY_CODE``
-   Render a two character machine state and activity code from the :ad-attr:`State` and :ad-attr:`Activity` attributes of the machine ad.
-   The letter codes for :ad-attr:`State` are:
-
-    =  ===========
-    ~  None
-    O  Owner
-    U  Unclaimed
-    M  Matched
-    C  Claimed
-    P  Preempting
-    S  Shutdown
-    X  Delete
-    F  Backfill
-    D  Drained
-    #  <undefined>
-    ?  <error>
-    =  ===========
-
-   The letter codes for :ad-attr:`Activity` are:
-
-    =  ============
-    0  None
-    i  Idle
-    b  Busy
-    r  Retiring
-    v  Vacating
-    s  Suspended
-    b  Benchmarking
-    k  Killing
-    #  <undefined>
-    ?  <error>
-    =  ============
-
-   For example if :ad-attr:`State` is Claimed and :ad-attr:`Activity` is Idle, then this function returns Ci. 
+        =  ============
+        0  None
+        i  Idle
+        b  Busy
+        r  Retiring
+        v  Vacating
+        s  Suspended
+        b  Benchmarking
+        k  Killing
+        #  <undefined>
+        ?  <error>
+        =  ============
 
 ``ACTIVITY_TIME``
-   Used for the ``ActvtyTime`` column of the default output of :tool:`condor_status`.
-   The function renders the given Unix timestamp as an elapsed time since the ``MyCurrentTime`` or ``LastHeardFrom`` attribute.
+    Render the given Unix timestamp as an elapsed time since :ad-attr:`MyCurrentTime[type=machine]`
+    or :ad-attr:`LastHeardFrom[type=machine]`.
+
+``⨁ BATCH_NAME``
+    Render the job batch name either explicitly set by :ad-attr:`JobBatchName` or
+    constructed using various other attributes.
+
+``⨁ BUFFER_IO_MISC``
+    Render state of job file transfer based on :ad-attr:`TransferringInput`,
+    :ad-attr:`TransferringOutput`, and :ad-attr:`TransferQueued`.
 
 ``CONDOR_PLATFORM``
-   Used for the optional ``Platform`` column of the ``-master`` output of :tool:`condor_status`.
-   This function extracts the Arch and Opsys information from the given string.
+    Render platform ``Arch`` and ``OpSys`` extracted from given string.
 
 ``CONDOR_VERSION``
-   Used for the ``Version`` column of the ``-master`` output of :tool:`condor_status`.
-   This function extract the version number and build id from the given string.
+    Render the HTCondor version extracted from given string.
+
+``⨁ CPU_UTIL``
+    Renders :ad-attr:`RemoteUserCpu` divided by :ad-attr:`CommittedTime` using the
+    ``%.1f`` format specifier. If :ad-attr:`CommittedTime` is ``UNDEFINED``, zero, or
+    a negative number then the result is treated as ``UNDEFINED``.
+
+``⨁ DAG_OWNER``
+    Render :ad-attr:`DAGNodeName` for jobs that have :ad-attr:`DAGManJobId` defined.
+    Otherwise, render :ad-attr:`Owner`.
 
 ``DATE``
-   This function converts a Unix timestamp to a string date and time with 2 digit month, day, hour and minute values.
+    Render a given Unix timestamp as a human readable string ``MM/DD hh:mm``.
 
 ``DUE_DATE``
-   This function converts an elapsed time to a Unix timestamp by adding the ``LastHeardFrom`` attribute to it, and then
-   converts it to a string date and time with 2 digit month, day, hour and minute values.
+    Render a given Unix timestamp with :ad-attr:`LastHeardFrom[type=machine]` time added
+    as a human readable string ``MM/DD hh:mm``.
 
 ``ELAPSED_TIME``
-   Used in multiple places, for instance the ``Uptime`` column of the ``-master`` output of :tool:`condor_status`.
-   This function converts a Unix timestamp to an elapsed time by subtracting it from the ``LastHeardFrom`` attribute,
-   then formats it as a human readable elapsed time.
+    Render a given timestamp with :ad-attr:`LastHeardFrom[type=machine]` time subtracted
+    as a human readable string ``MM/DD hh:mm``.
+
+``⨁ GRID_JOB_ID``
+    Render the job id of a grid universe job extracted from :ad-attr:`GridJobId`.
+
+``⨁ GRID_RESOURCE``
+    Render manager and host for a grid universe job extracted from :ad-attr:`GridResource`.
+    For ec2 jobs the host will be the value of :ad-attr:`EC2RemoteVirtualMachineName`.
+
+``⨁ GRID_STATUS``
+    Render the :ad-attr:`GridJobStatus` for a grid universe job. If the attribute
+    is a string then the value is reported unmodified. Otherwise, if the value is
+    an integer, the status is presumed to be an HTCondor :ad-attr:`JobStatus`.
+
+``⨁ JOB_COMMAND``
+    Render the :ad-attr:`Cmd` and :ad-attr:`Arguments` for a job.
+
+``⨁ JOB_DESCRIPTION``
+    Render the job description from :ad-attr:`JobDescription` or ``MATCH_EXP_JobDescription``
+    if defined. Otherwise, render like ``JOB_COMMAND`` function.
+
+``JOB_FACTORY_MODE``
+    Render a provided integer value as a string representing various :ad-attr:`JobMaterializePaused`
+    modes.
+
+``⨁ JOB_ID``
+    Render the job id string in the form of ":ad-attr:`ClusterId`\.\ :ad-attr:`ProcId`".
+
+``⨁ JOB_STATUS``
+    Render a two character string representation of the current job state base on
+    :ad-attr:`JobStatus` and input/output file transfer status.
+
+``JOB_STATUS_RAW``
+    Render provided integer into the string representation of :ad-attr:`JobStatus`.
+    Values out of range will produce ``Unk``.
+
+``JOB_UNIVERSE``
+    Render provided integer to a string representation of :ad-attr:`JobUniverse`. Values
+    out of range will produce ``Unknown``.
 
 ``LOAD_AVG``
-   Used for the ``LoadAv`` column of the default output of :tool:`condor_status`
-   Render the given floating point value using ``%.3f`` format.
+    Render provided floating point value using the ``%.3f`` format.
 
-``PLATFORM``
-   Used for the ``Platform`` column of the ``-compact`` output of :tool:`condor_status`.
-   Render a compact platform name from the value of the :ad-attr:`OpSys`, :ad-attr:`OpSysAndVer`, :ad-attr:`OpSysShortName` and :ad-attr:`Arch` attributes.
+``MEMBER_COUNT``
+    Render the number of elements in a provided string list or ClassAd list.
+
+``⨁ MEMORY_USAGE``
+    Render the :ad-attr:`MemoryUsage` or :ad-attr:`ImageSize` of a job in megabytes.
+
+``⨁ OWNER``
+    Render the :ad-attr:`Owner` for a job.
+
+``⨁ PLATFORM``
+    Render a compact platform name from the values of :ad-attr:`OpSys`, :ad-attr:`OpSysAndVer`,
+    :ad-attr:`OpSysShortName`, and :ad-attr:`Arch`.
+
+``QDATE``
+    Render a provided Unix timestamp as a human readable string ``MM/DD hh:mm``.
+
+``READABLE_BYTES``
+    Render the provided number of bytes nicely converted to the appropriate B, KB, MB,
+    GB, or TB suffix.
 
 ``READABLE_KB``
-   This function renders a numeric Kibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Kb, such as :ad-attr:`DiskUsage`.
+    Render the provided number of Kibibytes nicely converted to the appropriate B, KB, MB,
+    GB, or TB suffix.
 
 ``READABLE_MB``
-   This function renders a numeric Mibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Mb, such as :ad-attr:`MemoryUsage`.
+    Render the provided number of Mibibytes nicely converted to the appropriate B, KB, MB,
+    GB, or TB suffix.
+
+``⨁ REMOTE_HOST``
+    Render the jobs :ad-attr:`RemoteHost` unless the job is running in the grid universe.
+    For grid universe jobs, either :ad-attr:`EC2RemoteVirtualMachineName` or :ad-attr:`GridResource`
+    will be rendered. For :tool:`condor_q`, scheduler and local universe jobs will render
+    the host of the queried Schedd.
+
+``RUNTIME``
+    Render provided float value as a human readable time string ``DD+hh:mm:ss``.
+
+.. hidden::
+
+    ``⨁ STDU_GOODPUT``
+        Render a jobs 'goodput' time in seconds.
+
+    ``⨁ STDU_MPBS``
+        Render a jobs Megabytes per second of 'goodput' for the total bytes of data
+        sent and received.
 
 ``STRINGS_FROM_LIST``
-   Used for the ``Offline Universes`` column of the ``-offline`` output of :tool:`condor_status`.
-   This function converts a ClassAd list into a string containing a comma separated list of items.
+    Renders a provided ClassAd list as a comma separated string list of items.
 
 ``TIME``
-   Used for the ``KbdIdle`` column of the default output of :tool:`condor_status`.
-   This function converts a numeric time in seconds into a string time including number of days, hours, minutes and seconds.
+    Render provided integer value as a human readable time string ``DD+hh:mm:ss``.
 
 ``UNIQUE``
-   Used for the ``Users`` column of the compact ``-claimed`` output of :tool:`condor_status`
-   This function converts a classad list into a string containing a comma separate list of unique items.
+    Render a provided ClassAd list as a comma separated list of unique items.
 
+Local to condor_q
+~~~~~~~~~~~~~~~~~
 
-:index:`Print Formats`
+The following ``PRINTAS`` functions are only available for use in custom
+print format tables provided to :tool:`condor_q`
 
+``⨁ CPU_TIME``
+    Render the jobs :ad-attr:`RemoteUserCpu` if defined and non-zero. Otherwise, this
+    function renders either the current shadows lifetime or the sum of the current shadows
+    lifetime plus :ad-attr:`RemoteWallClockTime`. The former occurs when :tool:`condor_q`
+    is provided with the ``-currentrun`` command line option.
+
+    The reported value is rendered as a human readable time string ``DD+hh:mm:ss``.
+
+Local to condor_who
+~~~~~~~~~~~~~~~~~~~
+
+The following ``PRINTAS`` functions are only available for use in custom
+print format tables provided to :tool:`condor_who`.
+
+``⨁ JOB_DIR``
+    Render the associated jobs scratch directory path.
+
+``⨁ JOB_DIRCMD``
+    Render either the associated jobs scratch directory path if found or
+    the jobs executed command.
+
+``⨁ JOB_PID``
+    Render the associated jobs process ID (PID).
+
+``⨁ JOB_PROGRAM``
+    Render the associated jobs executed command.
+
+``⨁ SLOT_ID``
+    Render the provided slot ID as a simplified string. ``X`` for static
+    slots and ``X_YYY`` for dynamic slots.
 

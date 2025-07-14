@@ -169,6 +169,7 @@ inline int USERRECID_to_qkey2(unsigned int userrec_id) {
 
 const int JOBSETID_qkey2 = -100;
 const int CLUSTERID_qkey2 = -1;
+const int CLUSTERPRIVATE_qkey2 = -2;
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
     if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey1 called with id=%ud", jobset_id);
@@ -200,7 +201,9 @@ public:
 		entry_type_unknown = 0,
 		entry_type_header,
 		entry_type_userrec,
+		entry_type_project,
 		entry_type_jobset,
+		entry_type_cluster_private,
 		entry_type_cluster,
 		entry_type_job,
 	};
@@ -209,9 +212,10 @@ public:
 			if (key.proc >= 0) { return entry_type_job; }
 			if (key.proc == JOBSETID_qkey2) { return entry_type_jobset; }
 			if (key.proc == CLUSTERID_qkey2) { return entry_type_cluster; }
+			if (key.proc == CLUSTERPRIVATE_qkey2) { return entry_type_cluster_private; }
 		} else if ( ! key.cluster) {
 			if ( ! key.proc) { return entry_type_header; }
-			else if (key.proc > 0) { return entry_type_userrec; }
+			else if (key.proc > 0) { return entry_type_userrec; } // note: could be project rec can't tell just from the jid.
 		}
 		return entry_type_unknown;
 	}
@@ -219,14 +223,21 @@ public:
 	static bool IsClusterId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_cluster; }
 	static bool IsJobSetId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_jobset; }
 	static bool IsUserRecId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_userrec; }
+	static bool IsClusterPrivateId(const JOB_ID_KEY &key) { return TypeOfJid(key) == entry_type_cluster_private; }
 
 	void CheckJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
 	bool IsType(char _type) const { return entry_type == _type; }
 	bool IsJob() const { return IsType(entry_type_job); }
 	bool IsHeader() const { return IsType(entry_type_header); }
 	bool IsUserRec() const { return IsType(entry_type_userrec); }
+	bool IsProject() const { return IsType(entry_type_project); }
 	bool IsJobSet() const { return IsType(entry_type_jobset); }
 	bool IsCluster() const { return IsType(entry_type_cluster); }
+	bool IsClusterPrivate() const { return IsType(entry_type_cluster_private); }
+
+	// write a value from the current record into the job queue log
+	// note that this evaluates expressions, so it is only suitable for working with literals
+	bool UpdateSecureAttribute(const char * attr);
 };
 
 // flag values for JobQueueUserRec
@@ -248,10 +259,13 @@ public:
 		int SchedulerJobsIdle=0;
 		int SchedulerJobsRunning=0;
 		int SchedulerJobsHeld=0;
+		int OCUClaims = 0;
+		int OCUJobsRunning = 0;
 		void clear_counters() { memset(this, 0, sizeof(*this)); }
 	};
 
-	//JOB_ID_KEY jid;
+	//JOB_ID_KEY jid    - declared in JobQueueBase
+	//char entry_type   - declared in JobQueueBase
 	unsigned char flags=JQU_F_DIRTY;   // dirty on creation
 protected:
 	bool        enabled=true;
@@ -260,6 +274,11 @@ protected:
 	unsigned char super=JQU_F_PENDING; // config stale on creation
 	std::string name;   // the name used in the schedd's map of OwnerInfo records
 	std::string os_user; // the os account to use for this user
+	// used by the JobQueueProjectRec constructor
+	JobQueueUserRec(int userrec_id, char _etype, const char *_name=nullptr)
+		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), (_etype == entry_type_project) ? entry_type_project : entry_type_userrec)
+		, super(false), name(_name?_name:"")
+	{}
 public:
 	CountJobsCounters num; // job counts by OWNER rather than by submitter
 	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
@@ -300,6 +319,19 @@ public:
 	void setStaleConfigSuper() { if (super != 1) super = JQU_F_PENDING; } // intrinsic super cant be stale
 	bool IsInherentlySuper() const { return super == 1; }
 	bool IsConfigSuper() const { return super == 2; }
+
+	// add a numeric value to a numeric value in the user record, and optionally
+	// write the result to the job queue log
+	template <typename T> bool AccumToRecordAndLog(const char * attr, T addval, bool log_set_attr=true);
+};
+
+// used to store a Project ClassAd in a condor hashtable.
+class JobQueueProjectRec : public JobQueueUserRec {
+public:
+	JobQueueProjectRec(int userrec_id, const char * _name=nullptr)
+		: JobQueueUserRec(userrec_id, entry_type_project, _name)
+	{}
+	virtual ~JobQueueProjectRec() {};
 };
 
 typedef JobQueueUserRec OwnerInfo;
@@ -330,6 +362,23 @@ inline const class JobQueueUserRec * EffectiveUserRec(QmgmtPeer * peer)
 	return nullptr;
 }
 
+class JobQueueClusterPrivate : public JobQueueBase
+{
+public:
+
+	//JOB_ID_KEY jid    - declared in JobQueueBase
+	//char entry_type   - declared in JobQueueBase
+	unsigned char flags=JQU_F_DIRTY;   // dirty on creation
+public:
+	JobQueueClusterPrivate(const JOB_ID_KEY & key) : JobQueueBase(key, entry_type_cluster_private) {}
+	virtual ~JobQueueClusterPrivate() {};
+	virtual void PopulateFromAd() { flags &= ~JQU_F_DIRTY; }
+
+	bool isDirty() const { return (flags & JQU_F_DIRTY) != 0; }
+	void setDirty() { flags |= JQU_F_DIRTY; }
+};
+
+
 // state of JobQueueJob run variable, used along with the prio-rec array to track which jobs
 // need matches and which have already been given matches.
 // Also used to cache ATTR_JOB_NOOP since that is also checked in the prio-rec
@@ -355,10 +404,11 @@ public:
 	int dirty_flags{0};	// one or more of JQJ_CHACHE_DIRTY_ flags indicating that the job ad differs from the JobQueueJob 
 	int set_id{0};
 	int autocluster_id{0};
-	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap
+	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap and ProjectInfoMap
 	// it is set by count_jobs() or by scheduler::get_submitter_and_owner()
 	// DO NOT FREE FROM HERE!
 	OwnerInfo * ownerinfo{nullptr};
+	JobQueueProjectRec * project{nullptr};
 	struct SubmitterData * submitterdata{nullptr};
 protected:
 	JobQueueCluster * parent{nullptr}; // job pointer back to the cluster ad
@@ -379,6 +429,7 @@ public:
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
+	bool IsOCUClaimer() const; // True if this job holds the ocu claim. It is not a real job
 	void DirtyNoopAttr() { run = JobRunnableState::DirtyNoop; }
 #if 0
 	// FUTURE:
@@ -446,6 +497,7 @@ protected:
 public:
 	garbagePolicyEnum garbagePolicy{garbagePolicyEnum::immediateAfterEmpty};
 	unsigned int member_count{0};
+	unsigned int pending_remove_count{0};
 	OwnerInfo * ownerinfo{nullptr};
 	LiveJobCounters jobStatusAggregates;
 	unsigned int Jobset() const { return (unsigned int)jid.cluster; }
@@ -457,6 +509,10 @@ public:
 	}
 	virtual ~JobQueueJobSet() = default;
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+
+	// add a numeric value to a numeric value in the user record, and optionally
+	// write the result to the job queue log
+	template <typename T> bool AccumToRecordAndLog(const char * attr, T addval, bool log_set_attr=true);
 };
 
 // until we can remove targettype from the classad log entirely
@@ -550,7 +606,7 @@ bool UserCheck(const JobQueueBase *ad, const JobQueueUserRec * test_owner);
 bool UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_owner, bool not_super=false);
 
 bool BuildPrioRecArray(bool no_match_found=false);
-void DirtyPrioRecArray();
+void DirtyPrioRecArray(int tid=-1);
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
 bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
 
@@ -792,6 +848,7 @@ enum class runnable_reason_code : int {
 	IsNoopJob,
 	NotIdle,
 	UniverseNotInService,
+	IsOCUClaimer, // job is an OCU claimer, not a real job
 	InLongCooldown,  // cooldown > 5min
 	InShortCooldown, // cooldown <= 5min
 	AlreadyMatched,

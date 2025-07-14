@@ -1,6 +1,40 @@
+*** 23.10.28 bugs
+
+*** 23.0.28 bugs
+
 *** 23.10.27 bugs
 
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
+- Fixed a bug where the specific vacate reason wasn't reported in the job
+  event log or the job ad when a job was evicted from the EP.
+  The message ``Unspecified job interruption`` and code 1005 were used
+  instead.
+  :jira:`3117`
+
 *** 23.0.27 bugs
+
+- Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
+  that caused some time information to be displayed incorrectly.
+  :jira:`3112`
+
+- Fixed a bug where the Machine and Job ClassAds would fail to be
+  written into job scratch directories on Execution Points using
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`3156`
+
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
+*** 23.10.26 features
+
+- HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.0.
 
 *** 23.10.26 bugs
 
@@ -14,13 +48,18 @@
 
 *** 23.0.26 bugs
 
-- Fixed a bug when dagman's log file was on a full filesystem, dagman
+- Fixed a bug in *condor_adstash* that would prevent ads from
+  being ingested to Elasticsearch or OpenSearch when a lookup
+  of indexes did not start with a writable index.
+  :jira:`3109`
+
+- Fixed a bug when DAGMan's log file was on a full filesystem, DAGMan
   would not exit with the correct log file full exit code.
   :jira:`3066`
 
 - The submit commands ``kill_sig``, ``remove_kill_sig``, and
   ``hold_kill_sig`` are now ignored for Windows jobs.
-  These control unix process signals, which are not relevant on
+  These control Unix process signals, which are not relevant on
   Windows.
   :jira:`3078`
 
@@ -29,15 +68,10 @@
   macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
   :jira:`3099`
 
-- Fixed a bug in *condor_adstash* that would prevent ads from
-  being ingested to Elasticsearch or OpenSearch when a lookup
-  of indexes did not start with a writable index.
-  :jira:3109
-
 - The plug-in used to handle ``http`` and ``https`` URLs now sets the
-  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  URLs which return a 403/Forbidden
+  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  Web servers which return a 403/Forbidden
   error when the ``user-agent`` is empty will now function as expected.
-  jira:`3121`
+  :jira:`3121`
 
 *** 23.10.25 features
 

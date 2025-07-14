@@ -3356,9 +3356,12 @@ int SubmitHash::SetNotification()
 	else if( strcasecmp(how, "ERROR") == 0 ) {
 		notification = NOTIFY_ERROR;
 	} 
+	else if( strcasecmp(how, "START") == 0 ) {
+		notification = NOTIFY_START;
+	} 
 	else {
 		push_error(stderr, "Notification must be 'Never', "
-				 "'Always', 'Complete', or 'Error'\n" );
+				 "'Always', 'Complete', 'Start', or 'Error'\n" );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -7284,6 +7287,12 @@ int SubmitHash::SetProtectedURLTransferLists() {
 					           ATTR_TRANSFER_Q_URL_IN_LIST);
 					ABORT_AND_RETURN( 1 );
 				}
+			} else {
+				// We didn't transfer ownership of the queue_xfer_lists, so delete them
+				for (auto& tree : queue_xfer_lists) {
+					delete tree;
+				}
+				queue_xfer_lists.clear(); // Clear the vector to remove dangling pointers
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string
