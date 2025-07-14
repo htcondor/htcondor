@@ -130,18 +130,83 @@ class Create(Verb):
             "type": int,
             "default": None,
         },
-        "ami-id":{
+        "ami-id": {
             "args": ("--ami-id",),
             "help": argparse.SUPPRESS,
             "type": str,
             "default": None,
-        }
+        },
     }
 
     def __init__(self, logger, **options):
         if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
             raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
         annex_create(logger, **options)
+
+
+class Setup(Verb):
+    """
+    Run condor_annex -setup.
+    """
+
+    options = {
+        "aws-region": {
+            "args": ("--aws-region",),
+            "help": "Which AWS Region to setup.  Default 'us-east-1'.",
+            "type": str,
+            "default": None,
+        },
+    }
+
+
+    def __init__(self, logger, **options):
+        aws_region = options.get("aws_region")
+
+        LIBEXEC = Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor"))
+        args = [ LIBEXEC / "condor_annex" ]
+        if aws_region is not None:
+            args.extend(['-aws-region', aws_region])
+        args.extend(['-setup'])
+
+        proc = subprocess.Popen(args)
+
+        try:
+            proc.wait()
+        except KeyboardInterrupt:
+            proc.kill()
+
+
+class CheckSetup(Verb):
+    """
+    Run condor_annex -setup.
+    """
+
+    options = {
+        "aws-region": {
+            "args": ("--aws-region",),
+            "help": "Which AWS Region's setup to check.",
+            "type": str,
+            "default": None,
+        },
+    }
+
+
+    def __init__(self, logger, **options):
+        aws_region = options.get("aws_region")
+
+        LIBEXEC = Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor"))
+        args = [ LIBEXEC / "condor_annex" ]
+        if aws_region is not None:
+            args.extend(['-aws-region', aws_region])
+        args.extend(['-check-setup'])
+
+        proc = subprocess.Popen(args)
+
+        try:
+            proc.wait()
+        except KeyboardInterrupt:
+            proc.kill()
+        pass
 
 
 class Add(Create):
@@ -586,7 +651,15 @@ class Annex(Noun):
         pass
 
 
+    class setup(Setup):
+        pass
+
+
+    class checksetup(CheckSetup):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup]
 

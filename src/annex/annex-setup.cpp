@@ -153,6 +153,7 @@ check_setup( const char * cloudFormationURL, const char * serviceURL ) {
 			close( fd );
 		}
 
+/* This doesn't match how we do things anymore.
 		// Is the PASSWORD method available?
 		fprintf( stderr, "Checking security configuration... " );
 		Daemon * daemon = new Daemon( DT_COLLECTOR, NULL );
@@ -180,6 +181,7 @@ check_setup( const char * cloudFormationURL, const char * serviceURL ) {
 			}
 		}
 		delete daemon;
+*/
 
 		return check_account_setup( accessKeyFile, secretKeyFile, cfURL, ec2URL );
 	}
