@@ -486,8 +486,9 @@ def invoke_condor_annex(
     ami_id : str = None,
     lifetime : int = None,
 ):
+    LIBEXEC = Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor"))
     args = [
-        'condor_annex',
+        str(LIBEXEC / 'condor_annex'),
         '-yes',
         '-annex-name', annex_name,
         '-count', str(count),
