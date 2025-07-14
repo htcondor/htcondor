@@ -15016,11 +15016,20 @@ Scheduler::unlinkMrec(match_rec* match)
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
 
-	matches->remove(match->claim_id.claimId());
 
 	PROC_ID jobId;
 	jobId.cluster = match->cluster;
 	jobId.proc = match->proc;
+
+	// If this match is an ocu holder, make sure to update the
+	// correct job.
+	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
+		jobId = match->ocu_originator;
+		dirtyJobQueue();
+	}
+
+	matches->remove(match->claim_id.claimId());
+
 	matchesByJobID->remove(jobId);
 
 		// fill any authorization hole we made for this match
