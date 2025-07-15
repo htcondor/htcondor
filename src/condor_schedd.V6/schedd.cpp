@@ -1310,6 +1310,11 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		pAd.Assign(ATTR_NAME, str);
 	}
 
+	pAd.Assign("OCUClaimsClaimed", Owner.num.OCUClaims);
+	pAd.Assign("OCUClaimsBorrowed", Owner.num.OCUClaimsBorrowed);
+	pAd.Assign("OCURunningJobs",   Owner.num.OCURunningJobs);
+	pAd.Assign("OCUWantedJobs",    Owner.num.OCUWantedJobs);
+
 	return true;
 }
 
@@ -1524,6 +1529,9 @@ Scheduler::count_jobs()
 			// with them.
 		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
+	
+	// map of owner to vector of jobs running on borrowed OCU claims
+	std::map<std::string, std::vector<PROC_ID>> jobs_on_borrowed_claims;	
 
 		// set JobsRunning/JobsFlocked for owners
 	matches->startIterations();
@@ -1559,6 +1567,20 @@ Scheduler::count_jobs()
 			iter.first->second.WeightedJobsRunning += calcSlotWeight(rec);
 			JobsFlocked++;
 		}
+		if (rec->is_ocu) {
+			// If this match is an OCU held claim, increment the per-owned OCU counter
+			SubDat->num.OCUClaims++;
+
+			// If this match is running a job by a non-OCU wanter, increment "borrowed" counter
+			if (rec->my_match_ad && (rec->status == M_ACTIVE)) {
+				bool ocu_wanted = false;
+				GetAttributeBool( rec->cluster, rec->proc, "OCUWanted", &ocu_wanted);
+				if (!ocu_wanted) {
+					SubDat->num.OCUClaimsBorrowed++;
+					jobs_on_borrowed_claims[SubDat->Name()].emplace_back(rec->cluster, rec->proc);
+				}
+			}
+		}
 	}
 
 	// count the number of unique owners that have jobs in the queue.
@@ -1574,6 +1596,21 @@ Scheduler::count_jobs()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & SubDat = it->second;
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
+	}
+
+	// Evict jobs running on borrowed OCU claims if need be
+	for (const auto &[name, SubDat]: Submitters) {
+		if (SubDat.num.OCUClaimsBorrowed > 0) {
+			// If this submitter has borrowed OCU claims, we need to evict them
+			// if the number of running jobs exceeds the number of wanted jobs.
+			if (SubDat.num.OCURunningJobs < SubDat.num.OCUWantedJobs) {
+				for (const auto &jid : jobs_on_borrowed_claims[name]) {
+					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
+						jid.cluster, jid.proc, name.c_str());
+					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+				}
+			}
+		}
 	}
 
 	// we may need to create a mark file if we have expired users
@@ -3516,6 +3553,17 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
+	// Update OCU job counters
+	bool OCUWantedJob = false;
+	job->LookupBool("OCUWanted", OCUWantedJob);
+	if (OCUWantedJob) {
+		SubData->num.OCUWantedJobs += 1;
+	}
+
+	if (OCUWantedJob && (status == RUNNING || status == TRANSFERRING_OUTPUT)) {
+		SubData->num.OCURunningJobs += 1;
+	}
+
     time_t now = time(NULL);
     OwnInfo->LastHitTime = now;
     SubData->LastHitTime = now;
@@ -4549,6 +4597,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// If there is a match record for this job, try to find a different
 	// job to run on it.
 	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
+	bool is_ocu_holder = false;
+	GetAttributeBool(job_id.cluster, job_id.proc, "IsOCUHolder", &is_ocu_holder);
+	if (mrec && is_ocu_holder) {
+		// ocu holders are set with infinite keep claim idle, but if we are deleting
+		// the job, that's the only time we want to remove the claim.
+		scheduler.DelMrec(mrec);
+		mrec = nullptr;
+	}
 	if( mrec ) {
 		scheduler.FindRunnableJobForClaim( mrec );
 	}
@@ -8731,6 +8787,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	scheduler.rescheduleContactQueue();
 
 	match_rec *match = (match_rec *)cb->getMiscDataPtr();
+
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED && !match) {
 		// if match is NULL, then this message must have been canceled
 		// from within ~match_rec, in which case there is nothing to do
@@ -8910,7 +8967,20 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			scheduler.StartJob(slot);
+			bool is_ocu_holder = false;
+			GetAttributeBool(slot->cluster,slot->proc,"IsOCUHolder", &is_ocu_holder);
+			if (is_ocu_holder) {
+				// If the "job" is the one which is responsible for holding the OCU 
+				// claim, don't start the job, but set cluster/proc to -1 to indicate
+				// another job could start here.
+				slot->keep_while_idle = std::numeric_limits<int>::max();
+				slot->is_ocu = true;
+				slot->ocu_originator = {slot->cluster, slot->proc};
+				slot->cluster = slot->proc = -1;
+				slot->my_match_ad->Assign("OCUClaim", true);
+			} else {
+				scheduler.StartJob(slot);
+			}
 		}
 	}
 
@@ -9339,14 +9409,7 @@ Scheduler::StartJob(match_rec *rec)
 	bool is_ocu_holder = false;
 	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
 	if (is_ocu_holder) {
-		// If the "job" is the one which is responsible for holding the OCU 
-		// claim, don't start the job, but set cluster/proc to -1 to indicate
-		// another job could start here.
-		rec->keep_while_idle = std::numeric_limits<int>::max();
-		rec->is_ocu = true;
-		rec->ocu_originator = {rec->cluster, rec->proc};
-		rec->cluster = rec->proc = -1;
-		rec->my_match_ad->Assign("OCUClaim", true);
+		return;
 	}
 
 	switch(rec->status) {
@@ -9436,7 +9499,9 @@ Scheduler::StartJob(match_rec *rec)
                // job's keep_idle times to the match
 	int keep_claim_idle_time = 0;
     GetAttributeInt(id.cluster,id.proc,ATTR_JOB_KEEP_CLAIM_IDLE,&keep_claim_idle_time);
-    if (keep_claim_idle_time > 0) {
+	if (rec->is_ocu) {
+		    rec->keep_while_idle = std::numeric_limits<int>::max();
+	} else if (keep_claim_idle_time > 0) {
             rec->keep_while_idle = keep_claim_idle_time;
     } else {
             rec->keep_while_idle = 0;
@@ -9475,6 +9540,13 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 		} else {
 			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
 		}
+		return false;
+	}
+
+	if (new_job_id.proc == -1 && mrec->is_ocu) {
+		// If this is an OCU holder, we don't want to run a job, but
+		// we do want to keep the match record around so that we can
+		// hold the claim for the OCU.
 		return false;
 	}
 
@@ -12500,6 +12572,7 @@ Scheduler::child_exit(int pid, int status)
 			if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 				srec->match->setStatus(M_CLAIMED);
 				srec->match->shadowRec = NULL;
+				srec->match->cluster = srec->match->proc = -1;
 				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 				srec->match = NULL;
 			}
@@ -12819,7 +12892,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if( srec != NULL && !srec->removed && srec->match ) {
 				// Don't delete matches we're trying to use for a now job.
 				if(! srec->match->m_now_job.isJobKey()) {
-					DelMrec(srec->match);
+					if (!srec->match->is_ocu) {
+						DelMrec(srec->match);
+					} else {
+						// In the OCU case, move claim back to Claimed/Idle
+						srec->match->setStatus(M_CLAIMED);
+						SetMrecJobID(srec->match, -1, -1);
+					}
 				}
 			}
             switch (exit_code) {
@@ -15044,11 +15123,20 @@ Scheduler::unlinkMrec(match_rec* match)
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
 
-	matches->remove(match->claim_id.claimId());
 
 	PROC_ID jobId;
 	jobId.cluster = match->cluster;
 	jobId.proc = match->proc;
+
+	// If this match is an ocu holder, make sure to update the
+	// correct job.
+	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
+		jobId = match->ocu_originator;
+		dirtyJobQueue();
+	}
+
+	matches->remove(match->claim_id.claimId());
+
 	matchesByJobID->remove(jobId);
 
 		// fill any authorization hole we made for this match
@@ -15148,6 +15236,9 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		mrec->setStatus( M_CLAIMED );
 		if( mrec->is_dedicated ) {
 			deallocMatchRec( mrec );
+		}
+		if (mrec->is_ocu) {
+			SetMrecJobID(mrec,-1,-1); // but for OCU, anyone can claim
 		}
 	}
 }
