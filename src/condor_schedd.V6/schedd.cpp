@@ -3731,14 +3731,6 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		return 0;
 	}
 
-	bool wantOCUClaim = false;
-	job->LookupBool("WantOCUClaim", wantOCUClaim);
-	if (wantOCUClaim) {
-			// Update Owner array OCUJobsWanted
-		OwnerCounts->OCUJobsWanted++;
-	}
-
-
 	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
 
 			// Update Owner array PrioSet iff knob USE_GLOBAL_JOB_PRIOS is true
