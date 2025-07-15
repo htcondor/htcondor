@@ -128,7 +128,6 @@ MAN_PAGES = [
         ('classads', 1),
         ('condor_adstash', 1),
         ('condor_advertise', 1),
-        ('condor_annex', 1),
         ('condor_check_password', 1),
         ('condor_check_userlogs', 1),
         ('condor_chirp', 1),

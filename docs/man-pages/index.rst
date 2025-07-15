@@ -236,7 +236,6 @@ Other
 
     classad_eval
     condor_adstash
-    condor_annex
     condor_dag_checker
     condor_rmdir
     condor_ssh_start

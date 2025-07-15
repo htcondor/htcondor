@@ -47,7 +47,7 @@ if( LINUX )
 
 	condor_exe( condor_annex
 		"annex.cpp;${annexSources};${gahpClientSources}"
-		"${C_BIN}"
+		"${C_LIBEXEC}"
 		"${CONDOR_LIBS};${LIBUUID_FOUND}"
 		ON )
 

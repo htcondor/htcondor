@@ -130,12 +130,83 @@ class Create(Verb):
             "type": int,
             "default": None,
         },
+        "ami-id": {
+            "args": ("--ami-id",),
+            "help": argparse.SUPPRESS,
+            "type": str,
+            "default": None,
+        },
     }
 
     def __init__(self, logger, **options):
         if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
             raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
         annex_create(logger, **options)
+
+
+class Setup(Verb):
+    """
+    Run condor_annex -setup.
+    """
+
+    options = {
+        "aws-region": {
+            "args": ("--aws-region",),
+            "help": "Which AWS Region to setup.  Default 'us-east-1'.",
+            "type": str,
+            "default": None,
+        },
+    }
+
+
+    def __init__(self, logger, **options):
+        aws_region = options.get("aws_region")
+
+        LIBEXEC = Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor"))
+        args = [ LIBEXEC / "condor_annex" ]
+        if aws_region is not None:
+            args.extend(['-aws-region', aws_region])
+        args.extend(['-setup'])
+
+        proc = subprocess.Popen(args)
+
+        try:
+            proc.wait()
+        except KeyboardInterrupt:
+            proc.kill()
+
+
+class CheckSetup(Verb):
+    """
+    Run condor_annex -setup.
+    """
+
+    options = {
+        "aws-region": {
+            "args": ("--aws-region",),
+            "help": "Which AWS Region's setup to check.",
+            "type": str,
+            "default": None,
+        },
+    }
+
+
+    def __init__(self, logger, **options):
+        aws_region = options.get("aws_region")
+
+        LIBEXEC = Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor"))
+        args = [ LIBEXEC / "condor_annex" ]
+        if aws_region is not None:
+            args.extend(['-aws-region', aws_region])
+        args.extend(['-check-setup'])
+
+        proc = subprocess.Popen(args)
+
+        try:
+            proc.wait()
+        except KeyboardInterrupt:
+            proc.kill()
+        pass
 
 
 class Add(Create):
@@ -226,7 +297,7 @@ class Status(Verb):
         annex_attrs = {}
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
-            request_id = slot["hpc_annex_request_id"]
+            request_id = slot.get("hpc_annex_request_id", "None")
             if status.get(annex_name) is None:
                 status[annex_name] = {}
             status[annex_name][request_id] = defaultdict(int)
@@ -234,15 +305,15 @@ class Status(Verb):
 
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
-            request_id = slot["hpc_annex_request_id"]
+            request_id = slot.get("hpc_annex_request_id", "None")
 
-            # Ignore dynamic slot, since we just care about aggregates.
+            # Ignore dynamic slots, since we just care about aggregates.
             # We could write a similar check for static slots, but we
             # don't ever start any annexes with static slots.  (Bad
             # admin, no cookie!)
             if slot.get("PartitionableSlot", False):
                 status[annex_name][request_id]["TotalCPUs"] += slot["TotalSlotCPUs"]
-                status[annex_name][request_id]["BusyCPUs"] += len(slot["ChildCPUs"])
+                status[annex_name][request_id]["BusyCPUs"] += sum(slot["ChildCPUs"])
                 status[annex_name][request_id]["NodeCount"] += 1
 
             slot_birthday = slot.get("DaemonStartTime")
@@ -263,6 +334,7 @@ class Status(Verb):
         target_jobs = schedd.query(
             constraint,
             opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+            # FIXME: hpc_annex_nodes is only for the request record ads, right?
             projection=['JobStatus', 'TargetAnnexName', 'hpc_annex_nodes'],
         )
         for job in target_jobs:
@@ -579,7 +651,15 @@ class Annex(Noun):
         pass
 
 
+    class setup(Setup):
+        pass
+
+
+    class checksetup(CheckSetup):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup]
 

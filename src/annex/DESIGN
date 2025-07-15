@@ -10,7 +10,7 @@ latter-most may be updated during the lease's lifetime.  The
 function (created during the initial setup; see below) checks if the
 lease has expired, and if it has, does the following: deletes the
 corresponding configuration tarball from the S3 bucket; finds instances
-whose client tokens being with the annex ID; terminates them;
+whose client tokens begin with the annex ID; terminates them;
 deletes its target; and deletes its rule (which will fail if any targets
 are left).
 
@@ -18,7 +18,7 @@ are left).
 it checks the list of spot fleet requests for their client tokens
 in order to find which spot fleet request to terminate.)
 
-	The initial setup uses files in the annexd/setup directory.  For
+	The initial setup uses files in the annex/setup directory.  For
 ease of construction and maintenance, the CloudFormation templates used
 to help automate setup are constructed for each release by running the
 corresponding generate-* script.  generate-bucket creates an S3 bucket
@@ -26,7 +26,7 @@ and reports its automatically-generated name; generate-security-group
 generates a security group (firewall ruleset) for the default VPC
 allowing SSH and HTCondor from anywhere, and reports the security group
 ID; generate-template creates three Lambda functions -- the on-demand
-lease function, the spot fleet lease function, and a function use to
+lease function, the spot fleet lease function, and the function used to
 check connectivity from the cloud to the designated collector.  It also
 creates the necessary security infrastructure for those functions to
 run successfully (IAM roles and Lambda permissions).  generate-role
