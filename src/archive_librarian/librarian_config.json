@@ -1,0 +1,7 @@
+{
+    "epoch_history_path": "sandyEpochHistory.hist",
+    "history_path": "sandyHistory.hist",
+    "db_path": "tester_output.db",
+    "schema_path": "AggregateSchema.sql"
+}
+  
