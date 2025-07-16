@@ -1369,6 +1369,7 @@ JobActionResults::~JobActionResults()
 }
 
 
+
 void
 JobActionResults::record( PROC_ID job_id, action_result_t result ) 
 {
@@ -2168,7 +2169,7 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	bool send_server_time /*= false*/)
 {
 	if (constraint && constraint[0] && ! request_ad.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
-		return Q_PARSE_ERROR;
+		return SC_ERR_BAD_CONSTRAINT;
 	}
 
 	request_ad.Assign(ATTR_SEND_SERVER_TIME, send_server_time);
@@ -2342,7 +2343,7 @@ int DCSchedd::queryJobs (
 	if (constraint && constraint[0]) {
 		classad::ClassAdParser parser;
 		classad::ExprTree *expr = parser.ParseExpression(constraint);
-		if (!expr) return Q_PARSE_ERROR;
+		if (!expr) return SC_ERR_BAD_CONSTRAINT;
 
 		request_ad.Insert(ATTR_REQUIREMENTS, expr);
 	}
@@ -2456,6 +2457,7 @@ int DCSchedd::queryUsers(
 
 ClassAd* DCSchedd::actOnUsers (
 	int cmd, // ENABLE_USERREC or DISABLE_USERREC
+	bool is_project, // act on Project records rather than User records
 	const ClassAd * userads[], // either pass array of ad pointers, (constraints go here)
 	const char * usernames[], // or pass array of username pointers
 	int num_usernames,
@@ -2489,21 +2491,28 @@ ClassAd* DCSchedd::actOnUsers (
 				// if there is a Requirements expression, it take precedence over a USER attribute
 				// but you can't create new records from a requrements expression so just enable/disable/edit is implied
 				create_if = false;
-			} else if ( ! ad->LookupString(ATTR_USER, name)) {
-				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", Q_PARSE_ERROR, "ad %d does not have a User attribute", ii); }
+			} else if ( ! is_project && ! ad->LookupString(ATTR_USER, name)) {
+				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", SC_ERR_BAD_CONSTRAINT, "ad %d does not have a User attribute", ii); }
+				return nullptr;
+			} else if ( is_project && ! ad->LookupString(ATTR_NAME, name)) {
+				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", SC_ERR_BAD_CONSTRAINT, "ad %d does not have a Name attribute", ii); }
 				return nullptr;
 			}
+			if (is_project) cmd_ad.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE);
 			cmd_ad.ChainToAd(const_cast<ClassAd*>(ad));
+		} else if (is_project) {
+			name = usernames[ii];
+			cmd_ad.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE);
+			cmd_ad.Assign(ATTR_NAME, name);
 		} else {
 			name = usernames[ii];
 			cmd_ad.Assign(ATTR_USER, name);
 		}
 		if (create_if) {
-			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE, true);
-			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE_DEPRECATED, true);
+			cmd_ad.Assign(is_project ? ATTR_USERREC_OPT_CREATE_PROJECT : ATTR_USERREC_OPT_CREATE, true);
 		}
 		if (reason) {
-			if (cmd == DISABLE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
+			if (cmd == DISABLE_USERREC || cmd == DELETE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
 		}
 
 		if ( ! putClassAd(sock, cmd_ad)) {
@@ -2537,8 +2546,9 @@ ClassAd * DCSchedd::addUsers(
 	int num_usernames,
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, true, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, nullptr, usernames, num_usernames, true, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(
@@ -2547,25 +2557,27 @@ ClassAd * DCSchedd::enableUsers(
 	bool create_if,           // true if we want to create users that don't already exist
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	const int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(
 	const char * constraint, // expression
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
 	if ( ! constraint) {
 		if (errstack && errstack->empty()) {
-			errstack->pushf("DCSchedd::enableusers", Q_PARSE_ERROR, "constraint expression is required");
+			errstack->pushf("DCSchedd::enableusers", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
 		}
 		return nullptr;
 	}
 	ClassAd cmd_ad;
 	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
 	const ClassAd * ads[] = { &cmd_ad };
-	return actOnUsers (ENABLE_USERREC, ads, nullptr, 1, false, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, ads, nullptr, 1, false, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::addOrEnableUsers(
@@ -2574,8 +2586,9 @@ ClassAd * DCSchedd::addOrEnableUsers(
 	bool create_if,           // true if we want to force ATTR_USERREC_OPT_CREATE=true in all ads that are sent
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, userads, nullptr, num_usernames, create_if, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, userads, nullptr, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::disableUsers(
@@ -2584,8 +2597,9 @@ ClassAd * DCSchedd::disableUsers(
 	const char * reason,
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
-	return actOnUsers (DISABLE_USERREC, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+	return actOnUsers (DISABLE_USERREC, is_user, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::disableUsers(
@@ -2593,23 +2607,55 @@ ClassAd * DCSchedd::disableUsers(
 	const char * reason,
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
 	if ( ! constraint) {
 		if (errstack && errstack->empty()) {
-			errstack->pushf("DCSchedd::enableusers", Q_PARSE_ERROR, "constraint expression is required");
+			errstack->pushf("DCSchedd::disableUsers", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
 		}
 		return nullptr;
 	}
 	ClassAd cmd_ad;
 	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
 	const ClassAd * ads[] = { &cmd_ad };
-	return actOnUsers (DISABLE_USERREC, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+	return actOnUsers (DISABLE_USERREC, is_user, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeUsers(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_user{false}; // the converse of is_project
+	int connect_timeout = 20;
+	return actOnUsers (DELETE_USERREC, is_user, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeUsers(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_user{false}; // the converse of is_project
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeUsers", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DELETE_USERREC, is_user, ads, nullptr, 1, false, reason, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::updateUserAds(
 	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
 	CondorError * errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
 
 	std::vector<const ClassAd*> ads;
@@ -2617,7 +2663,73 @@ ClassAd * DCSchedd::updateUserAds(
 	user_ads.Rewind();
 	const ClassAd * cmdAd;
 	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
-	return actOnUsers (EDIT_USERREC, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::addProjects(
+	const char * names[],   // project names
+	int num_names,          // number of project names
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, is_project, nullptr, names, num_names, true, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::addProjects(
+	const ClassAd * userads[],   // ads must have ATTR_NAME attribute, if create_if may have other attributes as well
+	int num_ads,
+	bool create_if,           // true if we want to create users that don't already exist
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, is_project, userads, nullptr, num_ads, create_if, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeProjects(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (DELETE_USERREC, is_project, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeProjects(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeProjects", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DELETE_USERREC, is_project, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::updateProjectAds(
+	ClassAdList & project_ads, // ads must have ATTR_NAME attribute at a minimum
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+
+	std::vector<const ClassAd*> ads;
+	ads.reserve(project_ads.Length());
+	project_ads.Rewind();
+	const ClassAd * cmdAd;
+	while ((cmdAd = project_ads.Next())) { ads.push_back(cmdAd); }
+	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
 ClassAd* DCSchedd::getDAGManContact(int cluster, CondorError& errstack) {

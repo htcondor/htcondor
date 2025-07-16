@@ -250,6 +250,7 @@ int SetSecureAttributeString(int cluster_id, int proc_id,
 int SetSecureAttributeString(const JOB_ID_KEY & key,
                          const char *attr_name, std::string_view attr_value,
                          SetAttributeFlags_t flags = 0);
+int DeleteSecureAttribute(const JOB_ID_KEY & key, const char * attr_name);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.
