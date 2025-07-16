@@ -5729,6 +5729,9 @@ type=string
 default=scitoken:2.0
 type=string
 
+[TRUSTED_VAULT_HOSTS]
+default=
+type=string
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
