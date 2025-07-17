@@ -2,6 +2,14 @@
 
 *** 23.0.28 bugs
 
+- Fixed a bug where the :ad-attr:`ImageSize` attribute in a slot on a
+  Windows EP was a large random value while the slot was running a job.
+  The bug was due to a change in the Win32 API where the total virtual
+  memory of a process is no longer reported.  From now on
+  :ad-attr:`ImageSize` on a Windows EP will have the same value as
+  :ad-attr:`ResidentSetSize`.
+  :jira:`3179`
+
 *** 23.10.27 bugs
 
 - Fixed a bug that could cause the startd's mips benchmark to
