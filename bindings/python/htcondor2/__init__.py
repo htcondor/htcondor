@@ -71,6 +71,7 @@ with _add_dll_dir():
     from .htcondor2_impl import _reload_config as reload_config
 
     from ._loose_functions import send_command
+    from ._loose_functions import ping
     from ._loose_functions import send_alive
     from ._loose_functions import set_ready_state
 
