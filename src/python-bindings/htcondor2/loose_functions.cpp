@@ -212,6 +212,77 @@ _send_command( PyObject *, PyObject * args ) {
 
 
 static PyObject *
+_ping( PyObject *, PyObject * args ) {
+	// _ping(ad._handle, authz)
+
+	long command = -1;
+	const char * authz = nullptr;
+	DCpermission authz_int = NOT_A_PERM;
+	PyObject_Handle * handle = nullptr;
+
+	if(! PyArg_ParseTuple(args, "Oz", (PyObject **)& handle, & authz )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return nullptr;
+	};
+
+	Daemon d((ClassAd *)handle->t, DT_ANY, nullptr);
+
+	// authz is the string form of an authorization level or a CEDAR command.
+	// Figure out the appropriate CEDAR command integer.
+	if (authz == nullptr) {
+		authz = "DC_NOP";
+	}
+	authz_int = getPermissionFromString(authz);
+	if (authz_int != NOT_A_PERM) {
+		command = getSampleCommand(authz_int);
+	} else {
+		command = getCommandNum(authz);
+	}
+	if (command == -1) {
+		// This was HTCondorEnumError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Unable to determine DaemonCore command value.");
+		return nullptr;
+	}
+
+	ReliSock sock;
+	CondorError errorStack;
+	if (!sock.connect(d.addr(), 0, false, &errorStack)) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Unable to connect to the remote daemon.");
+		return nullptr;
+	}
+
+	if (!d.startSubCommand(DC_SEC_QUERY, command, &sock, 0, nullptr)) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Failed to start command.");
+		return NULL;
+	}
+
+	sock.decode();
+	ClassAd reply_ad;
+	if(!getClassAd(&sock, reply_ad) || !sock.end_of_message()) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Failed to send end-of-message.");
+		return NULL;
+	}
+
+	// Merge the session and Sock policy ads into the ad we got back from the dameon.
+	sock.getPolicyAd(reply_ad);
+	auto itr = (SecMan::session_cache)->find(sock.getSessionID());
+	if (itr == (SecMan::session_cache)->end()) {
+		PyErr_SetString(PyExc_HTCondorException, "Failed to find session.");
+		return nullptr;
+	}
+	reply_ad.Update(*(itr->second.policy()));
+
+	sock.close();
+
+	PyObject * pyClassAd = py_new_classad2_classad(reply_ad.Copy());
+	return pyClassAd;
+}
+
+
+static PyObject *
 _send_alive( PyObject *, PyObject * args ) {
 	// _send_alive( addr, pid, timeout )
 
