@@ -53,12 +53,13 @@ ARCH=$(arch)
 # if [ "$ARCH" = 'aarch64' ]; then
     buildimage aarch64_AlmaLinux8 linux/arm64 arm64v8/almalinux:8 &
     buildimage aarch64_AlmaLinux9 linux/arm64 arm64v8/almalinux:9 &
-    buildimage aarch64_AlmaLinux10 linux/arm64 arm64v8/almalinux:10-kitten &
+    buildimage aarch64_AlmaLinux10 linux/arm64 arm64v8/almalinux:10 &
 # else
     buildimage ppc64le_AlmaLinux8 linux/ppc64le ppc64le/almalinux:8 &
     buildimage x86_64_AlmaLinux8 linux/x86_64 almalinux:8 &
     buildimage x86_64_AlmaLinux9 linux/x86_64 almalinux:9 &
-    buildimage x86_64_AlmaLinux10 linux/x86_64 almalinux:10-kitten &
+    buildimage x86_64_AlmaLinux10 linux/x86_64 almalinux:10 &
+    buildimage x86_64_v2_AlmaLinux10 linux/amd64/v2 almalinux/10-base:10 &
     buildimage x86_64_AmazonLinux2023 linux/x86_64 amazonlinux:2023 &
     buildimage x86_64_Debian11 linux/x86_64 debian:bullseye &
     buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &

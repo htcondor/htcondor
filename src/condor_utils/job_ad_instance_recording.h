@@ -26,11 +26,28 @@
 #define EPOCH_PER_JOB_FILE "job.runs.%d.%d.ads"
 //TODO: Add filename format for per cluster option if implemented
 
-// Function for Shadow to call to write Job Ad per Epoch
-void writeJobEpochFile(
-	classad::ClassAd const *job_ad,
-	classad::ClassAd const *other_ad = NULL,
-	const char *banner_name = "EPOCH"
+// Write Full ClassAd to Epoch history.
+// Optionally, name historical ad type in banner
+void writeAdToEpoch(
+	const classad::ClassAd *ad,
+	const char* banner_name = "EPOCH"
+);
+
+// Write filtered ClassAd to Epoch history.
+// Optionally, name historical ad type in banner
+void writeAdProjectionToEpoch(
+	const classad::ClassAd *ad,
+	const classad::References* filter,
+	const char* banner_name = "EPOCH"
+);
+
+// Write ClassAd with attributes copied from job ad (context)
+// List of copied attributes come from configuration
+// derived by historical ad type in banner
+void writeAdWithContextToEpoch(
+	const classad::ClassAd *ad,
+	const classad::ClassAd *job_ad,
+	const char* banner_name
 );
 
 #endif

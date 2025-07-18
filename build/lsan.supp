@@ -1,0 +1,23 @@
+# LSAN Suppressions file
+
+# These are leak-on-exit
+leak:SharedPortEndpoint::ReceiveSocket
+leak:CollectorList::create
+leak:SharedPortState::HandleUnbound
+
+# A test we don't care that leaks
+leak:test_log_writer
+
+# Can't fix perl
+leak:Perl_safesysmalloc
+leak:Perl_safesyscalloc
+leak:Perl_safesysrealloc
+leak:Perl_set_numeric_standard
+
+#  Python leaks
+leak:AllocNoTrack
+
+# Java
+leak:os::malloc
+leak:os::strdup
+leak:JLI_

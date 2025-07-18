@@ -610,14 +610,14 @@ static bool test_dag_file_parse_all_failures() {
 	}
 
 	i = 0;
-	for (const auto& err : test.GetErrorList()) {
+	for (const auto& err : test.GetParseErrorList()) {
 		emit_output_expected_header();
 		emit_retval(expected[i].c_str());
 
 		emit_output_actual_header();
 		emit_retval(err.c_str());
 
-		if (expected[i] != err) {
+		if (expected[i] != err.str()) {
 			FAIL;
 		}
 

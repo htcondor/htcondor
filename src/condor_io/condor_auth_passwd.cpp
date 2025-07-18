@@ -1928,8 +1928,10 @@ Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk)
 void
 Condor_Auth_Passwd::init_t_buf(struct msg_t_buf *t) 
 {
-	t->a           = NULL;
-	t->b           = NULL;
+	free(t->a);
+	t->a           = nullptr;
+	free(t->b);
+	t->b           = nullptr;
 	t->ra          = NULL;
 	t->rb          = NULL;
 	t->hkt         = NULL;
@@ -2233,9 +2235,12 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 
 		// Protocol step (d)
 	if(m_t_server.a) {
+		if (m_t_client.a) {
+			free(m_t_client.a);
+		}
 		m_t_client.a = strdup(m_t_server.a);
 	} else {
-		m_t_client.a = NULL;
+		m_t_client.a = nullptr;
 	}
 	if(m_server_status == AUTH_PW_A_OK) {
 		m_t_client.rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);

@@ -120,6 +120,8 @@ print "Platform is $arch $opsys, expecting shadow memory = $expectedmemory, will
 # run a job and look at shadow memory usage
 my $append_submit_commands = '
 want_io_proxy = true
+should_transfer_files = yes
+when_to_transfer_output = ON_EXIT
 executable = x_shadow_mem_usage.pl
 output = ' . $testname . '.out
 error  = ' . $testname . '.err

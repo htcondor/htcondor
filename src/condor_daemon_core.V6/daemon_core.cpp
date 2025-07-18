@@ -95,6 +95,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "exit.h"
 #include "largestOpenFD.h"
 
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
 #include <algorithm>
 
 #include "systemd_manager.h"
@@ -452,7 +456,9 @@ DaemonCore::~DaemonCore()
 
 	for (auto &pe: pipeTable) {
 		free( pe.pipe_descrip );
+		pe.pipe_descrip = nullptr;
 		free( pe.handler_descrip );
+		pe.handler_descrip = nullptr;
 	}
 
 	t.CancelAllTimers();
@@ -3026,6 +3032,26 @@ DaemonCore::reconfig(void) {
 	else if( m_refresh_dns_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_refresh_dns_timer );
 		m_refresh_dns_timer = -1;
+	}
+
+	// Configured with a daemon history file
+	// Note: It is up to actual daemon (not DaemonCore)
+	//       to write ClassAd to history
+	std::string subsys_hist_param;
+	formatstr(subsys_hist_param, "%s_DAEMON_HISTORY", get_mySubSystem()->getName());
+	param(m_daemon_history, subsys_hist_param.c_str());
+	if ( ! m_daemon_history.empty()) {
+		m_hist_rotation_info.IsStandardHistory = false;
+		long long maxSize = 0;
+		param_longlong("MAX_DAEMON_HISTORY_LOG", maxSize, true, 1024 * 1024 * 20);
+		m_hist_rotation_info.MaxHistoryFileSize = maxSize;
+		m_hist_rotation_info.NumberBackupHistoryFiles = param_integer("MAX_DAEMON_HISTORY_ROTATIONS", 1, 1);
+
+		dprintf(D_ALWAYS, "Daemon history file: %s\n", m_daemon_history.c_str());
+		dprintf(D_FULLDEBUG, "Maximum Daemon history size: %lld\n",
+		        (long long)m_hist_rotation_info.MaxHistoryFileSize);
+		dprintf(D_FULLDEBUG, "Maximum Daemon history rotations: %d\n",
+		        m_hist_rotation_info.NumberBackupHistoryFiles);
 	}
 
 	// Maximum number of bytes read from a stdout/stderr pipes.
@@ -5677,7 +5703,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
-	runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
+	runtime = dc_stats.AddRuntimeSample("DCRegister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -6953,6 +6979,7 @@ int DaemonCore::Create_Process(
 	int errorpipe[2];
 	std::string executable_fullpath_buf;
 	char const *executable_fullpath = executable;
+	std::string cgroup_name;
 #endif
 
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
@@ -7034,6 +7061,26 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
 		goto wrapup;
 	}
+
+
+#ifdef LINUX
+		// Most callers of Create_Process should give us a meaningful
+		// cgroup name, but if they don't, we still want to put
+		// this process with a FamilyInfo into a cgroup
+		if (family_info && family_info->cgroup == nullptr) {
+			if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+				static int cgroup_counter = 0;
+
+				std::string config = getenv("CONDOR_CONFIG") ? getenv("CONDOR_CONFIG") : "/etc/condor_condor_config";
+				replace_str(config, "/", "_");
+
+				cgroup_name = get_mySubSystem()->getName() + config + std::to_string(cgroup_counter++);
+				cgroup_name = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+
+				family_info->cgroup = cgroup_name.c_str();
+			}
+		}
+#endif
 
 	// if this is the first time Create_Process is being called with a
 	// non-NULL family_info argument, create the ProcFamilyInterface object
@@ -8432,8 +8479,9 @@ int DaemonCore::Create_Process(
 	// A bit of a hack.  If there's a cgroup, we've set that upon
 	// in the child process, to avoid any races.  But here in the parent
 	// we need to record that happened, so we can use the cgroup For
-	// monitoring, cleanup, etc.
-	if (family_info && m_proc_family && family_info->cgroup) {
+	// monitoring, cleanup, etc. But if we are using clone, then
+	// we don't want to do this, because we are sharing memory.
+	if (family_info && m_proc_family && family_info->cgroup && !UseCloneToCreateProcesses()) {
 		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
 	}
 #endif
@@ -9844,9 +9892,8 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 
 	if (this->m_proc_family) {
 #ifdef LINUX
-		bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
-		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_sigkilled && was_oom_killed) {
+		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid, exit_status);
+		if (was_oom_killed) {
 			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
 			exit_status |= DC_STATUS_OOM_KILLED;
 		} 
@@ -11483,4 +11530,87 @@ DaemonCore::SetRemoteAdmin(bool remote_admin)
 		}
 	}
 	m_enable_remote_admin = remote_admin;
+}
+
+
+void
+DaemonCore::AppendDaemonHistory(ClassAd* ad) {
+	// Not configured to write daemon history so return
+	if (m_daemon_history.empty()) { return; }
+
+	// No ClassAd provided print error and return
+	if ( ! ad) {
+		dprintf(D_ERROR, "ERROR: No Daemon ClassAd provided to AppendDaemonHistory()\n.");
+		return;
+	}
+
+	// Buffer ClassAd for write with appropriate banner line
+	std::string buffer;
+	sPrintAd(buffer, *ad, nullptr, nullptr);
+
+	// Add Record write time to ClassAd
+	time_t now = time(nullptr);
+	buffer += "RecordWriteDate = " + std::to_string(now) + "\n";
+
+	// Create historical record banner line
+	std::string banner;
+	formatstr(banner, "*** %s CurrentTime=%lld\n", get_mySubSystem()->getName(), (long long)now);
+	buffer += banner;
+
+	// Set priv_condor to allow writing to condor owned locations i.e. spool directory
+	TemporaryPrivSentry tps(PRIV_CONDOR);
+
+	// Check if we want to rotate the file
+	MaybeRotateHistory(m_hist_rotation_info, buffer.length(), m_daemon_history.c_str());
+
+	// Open file and append Job Ad to it
+	int fd = -1;
+	const char * errmsg = nullptr;
+	const int    open_flags = O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT;
+
+#ifdef WIN32
+	DWORD err = 0;
+	const DWORD attrib =  FILE_ATTRIBUTE_NORMAL;
+	const DWORD create_mode = (open_flags & O_CREAT) ? OPEN_ALWAYS : OPEN_EXISTING;
+	const DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+	HANDLE hf = CreateFile(m_daemon_history.c_str(), FILE_APPEND_DATA, share_mode, nullptr, create_mode, attrib, nullptr);
+	if (hf == INVALID_HANDLE_VALUE) {
+		err = GetLastError();
+	} else {
+		fd = _open_osfhandle((intptr_t)hf, open_flags & (_O_TEXT | _O_WTEXT));
+		if (fd < 0) {
+			// open_osfhandle can sometimes set errno and sometimes _doserrno (i.e. GetLastError()),
+			// the only non-windows error code it sets is EMFILE when the c-runtime fd table is full.
+			if (errno == EMFILE) {
+				err = ERROR_TOO_MANY_OPEN_FILES;
+			} else {
+				err = _doserrno;
+				if (err == NO_ERROR) err = ERROR_INVALID_FUNCTION; // make sure we get an error code
+			}
+			CloseHandle(hf);
+		}
+	}
+	if (fd < 0) errmsg = GetLastErrorString(err);
+#else
+	int err = 0;
+	fd = safe_open_wrapper_follow(m_daemon_history.c_str(), open_flags, 0644);
+	if (fd < 0) {
+		err = errno;
+		errmsg = strerror(errno);
+	}
+#endif
+
+	if (fd < 0) {
+		dprintf(D_ERROR, "ERROR (%d): Failed to open daemon history file (%s): %s\n",
+		        err, condor_basename(m_daemon_history.c_str()), errmsg);
+		return;
+	}
+
+	// Write buffer to daemon history file
+	if (write(fd, buffer.c_str(), buffer.length()) < 0){
+		dprintf(D_ALWAYS, "ERROR (%d): Failed to write daemon ClassAd to daemon history file (%s): %s\n",
+		        errno, condor_basename(m_daemon_history.c_str()), strerror(errno));
+	}
+
+	close(fd);
 }

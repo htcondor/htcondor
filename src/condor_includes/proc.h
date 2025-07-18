@@ -30,6 +30,7 @@
 // a pointer to the first unparsed character is optionally returned.
 // input may be X  or X.  or X.Y.  if no Y is specified then proc will be set to -1
 bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend);
+bool StrIsProcId(std::string_view str, int &cluster, int& proc, const char** pend=nullptr);
 
 // a handy little structure used in a lot of places it has to remain a c style struct
 // because some c code (I'm looking at you std-u) depends on it.
@@ -64,6 +65,7 @@ typedef struct PROC_ID {
 #define NOTIFY_ALWAYS		1
 #define	NOTIFY_COMPLETE		2
 #define NOTIFY_ERROR		3
+#define NOTIFY_START 		4
 
 #define READER	1
 #define WRITER	2
@@ -149,6 +151,7 @@ typedef struct JOB_ID_KEY {
 	// constructing JOB_ID_KEY(NULL) ends up calling this constructor because there is no single int constructor - ClassAdLog depends on that...
 	JOB_ID_KEY(const char * job_id_str) : cluster(0), proc(0) { if (job_id_str) set(job_id_str); }
 	JOB_ID_KEY(const std::string& job_id_str) : cluster(0), proc(0) { set(job_id_str.c_str()); }
+	JOB_ID_KEY(std::string_view job_id_str)  : cluster(0), proc(0) { StrIsProcId(job_id_str, this->cluster, this->proc); }
 	operator const PROC_ID&() const { return *((const PROC_ID*)this); }
 	operator std::string() const;
 	void sprint(std::string &s) const;

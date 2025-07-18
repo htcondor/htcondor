@@ -314,7 +314,13 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim(
+	ClassAd const *req_ad,
+	char const *description,
+	char const *scheduler_addr,
+	int alive_interval,
+	requestClaimOptions & opts,
+	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -327,7 +333,7 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
 
-	if (claim_pslot) {
+	if (opts.claim_pslot) {
 		// TODO Currently, we always request the pslot's max lease time
 		//   (msg->m_pslot_claim_lease=0).
 		//   Consider adding option to let client request shorter lease time.
@@ -340,6 +346,8 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	req_ad->LookupString("WorkingCM", working_cm);
 	if (!working_cm.empty()) {
 		msg->m_num_dslots = 0;
+	} else {
+		msg->m_num_dslots = opts.num_dslots;
 	}
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
@@ -455,9 +463,13 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 
 int
 DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
-						 ReliSock** claim_sock_ptr ) 
+						 ReliSock** claim_sock_ptr, ClassAd * replyAd )
 {
 	int reply;
+	ClassAd dummyAd;
+	bool want_failure_ad = false;
+	const char * ATTR_send_failure_ad = "_condor_send_activation_failure_ad";
+
 	dprintf( D_FULLDEBUG, "Entering DCStartd::activateClaim()\n" );
 
 	setCmdStr( "activateClaim" );
@@ -469,6 +481,11 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 			// we'll give them a pointer to the real object.
 		*claim_sock_ptr = NULL;
 	}
+	if (replyAd) {
+		want_failure_ad = true;
+		replyAd->Clear();
+	}
+	else { replyAd = &dummyAd; }
 
 	if( ! claim_id ) {
 		newError( CA_INVALID_REQUEST,
@@ -499,12 +516,17 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return CONDOR_ERROR;
 	}
+
+	if (want_failure_ad) { job_ad->Assign(ATTR_send_failure_ad, true); }
 	if( ! putClassAd(tmp, *job_ad) ) {
+		if (want_failure_ad) { job_ad->Delete(ATTR_send_failure_ad); }
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::activateClaim: Failed to send job ClassAd to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
+	if (want_failure_ad) { job_ad->Delete(ATTR_send_failure_ad); }
+
 	if( ! tmp->end_of_message() ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::activateClaim: Failed to send EOM to the startd" );
@@ -512,19 +534,22 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		return CONDOR_ERROR;
 	}
 
+
 		// Now, try to get the reply
 	tmp->decode();
-	if( !tmp->code(reply) || !tmp->end_of_message()) {
+	if (tmp->code(reply) &&
+		(tmp->peek_end_of_message() || getClassAd(tmp, *replyAd)) &&
+		tmp->end_of_message())
+	{
+		dprintf( D_FULLDEBUG, "DCStartd::activateClaim: successfully sent command, reply is: %d%s\n",
+			reply, replyAd->size() ? " (with ad)" : "" );
+	} else {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
 		err += _addr;
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
-		delete tmp;
-		return CONDOR_ERROR;
+		reply = CONDOR_ERROR;
 	}
-
-	dprintf( D_FULLDEBUG, "DCStartd::activateClaim: "
-			 "successfully sent command, reply is: %d\n", reply ); 
 
 	if( reply == OK && claim_sock_ptr ) {
 		*claim_sock_ptr = (ReliSock*)tmp;

@@ -1,4 +1,3 @@
-
 Vacate Reason Codes
 ===================
 

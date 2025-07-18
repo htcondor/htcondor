@@ -20,13 +20,16 @@ import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
-from adstash.convert import to_json, unique_doc_id
+from adstash.convert import to_json, unique_doc_id, REQUIRED_ATTRS
 
 
 class StartdHistorySource(GenericAdSource):
 
 
-    def fetch_ads(self, startd_ad, max_ads=10000):
+    def fetch_ads(self, startd_ad, max_ads=10000, projection=set()):
+        if projection:  # If user has defined a projection, make sure it contains required attrs
+            projection = projection | REQUIRED_ATTRS
+
         history_kwargs = {}
         if max_ads > 0:
             history_kwargs["match"] = max_ads
@@ -39,7 +42,7 @@ class StartdHistorySource(GenericAdSource):
             history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting ads from {startd_ad['Machine']} since {since_expr}.")
         startd = htcondor.Startd(startd_ad)
-        return startd.history(constraint=True, projection=[], **history_kwargs)
+        return startd.history(constraint=True, projection=list(projection), **history_kwargs)
 
 
     def process_ads(self, interface, ads, startd_ad, metadata={}, chunk_size=0, **kwargs):

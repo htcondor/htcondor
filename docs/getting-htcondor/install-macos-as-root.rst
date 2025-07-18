@@ -58,7 +58,7 @@ from the tarball before extracting it, like so:
 
 .. code-block:: shell
 
-    xattr -d com.apple.quarantine condor-10.7.1-x86_64_macOS13-stripped.tar.gz
+    xattr -d com.apple.quarantine condor.tar.gz
 
 Install
 -------

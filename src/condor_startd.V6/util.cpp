@@ -462,13 +462,16 @@ reply( Stream* s, int cmd )
 
 
 bool
-refuse( Stream* s )
+refuse( Stream* s, ClassAd* replyAd )
 {
 	s->end_of_message();
 	s->encode();
 	if( !s->put(NOT_OK) ) {
 		return false;
 	} 
+	if (replyAd && ! putClassAd(s, *replyAd)) {
+		return false;
+	}
 	if( !s->end_of_message() ) {
 		return false;
 	}

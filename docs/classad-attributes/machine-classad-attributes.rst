@@ -48,6 +48,10 @@ Machine ClassAd Attributes
     The average number of megabytes transferred from each job from the execution
     sandbox after the job has ended.
 
+:classad-attribute-def:`BrokenContextAds`
+    A nested ClassAd containing details about each broken resource detected on
+    an Execution Point.
+
 :classad-attribute-def:`Microarch`
     On X86_64 Linux machines, this advertises the x86_64 microarchitecture,
     like `x86_64-v2`.  See https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
@@ -498,9 +502,25 @@ Machine ClassAd Attributes
     A boolean value that when ``True`` represents a Linux Execution Point
     is using a loop back device to enforce disk limits.
 
+:classad-attribute-def:`LvmBackingStore`
+    A string value containing the name of the backing LVM device a Linux
+    Execution Point is using to enforce disk limits. This will be the
+    ``<Volume Group Name>`` or ``<Volume Group Name>/<Thinpool LV Name>``.
+
 :classad-attribute-def:`LvmIsThinProvisioning`
     A boolean value that when ``True`` represents a Linux Execution Point
     is using thin provisioned logical volumes to enforce disk limits.
+
+:classad-attribute-def:`LvmDetectedDisk`
+    An integer value representing the size in bytes of the LVM backing
+    Volume Group or Thinpool Logical Volume used to enforce disk limits.
+
+:classad-attribute-def:`LvmNonCondorDiskUsage`
+    An integer representing the total size in bytes utilized by non-HTCondor
+    produced logical volumes associated with the LVM backing Volume Group or
+    Thinpool Logical Volume. This value is subtracted from the
+    :ad-attr:`LvmDetectedDisk` to produce the total available disk available
+    to the *condor_startd*.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
@@ -978,6 +998,9 @@ Machine ClassAd Attributes
      ``"Drained"``
         This slot is not accepting jobs, because the machine is being
         drained.
+
+:classad-attribute-def:`Start`
+    The ClassAd expression configured by the :macro:`START` option.
 
 :classad-attribute-def:`TargetType`
     Describes what type of ClassAd to match with. Always set to the

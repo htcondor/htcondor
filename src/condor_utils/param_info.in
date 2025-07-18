@@ -3112,6 +3112,11 @@ default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
+[SCHEDD_DAEMON_HISTORY]
+default=$(SPOOL)/schedd_daemon_history
+type=string
+tags=daemon_core,schedd
+
 [HISTORY_CONTAINS_JOB_ENVIRONMENT]
 default = true
 
@@ -3178,10 +3183,6 @@ type=string
 tags=JobRouter
 
 [JOB_ROUTER_ROUND_ROBIN_SELECTION]
-default=false
-type=bool
-
-[JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES]
 default=false
 type=bool
 
@@ -5728,6 +5729,9 @@ type=string
 default=scitoken:2.0
 type=string
 
+[TRUSTED_VAULT_HOSTS]
+default=
+type=string
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]

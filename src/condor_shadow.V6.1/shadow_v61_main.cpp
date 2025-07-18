@@ -32,8 +32,23 @@
 #include "spool_version.h"
 #include "file_transfer.h"
 #include "condor_holdcodes.h"
+#include "job_ad_instance_recording.h"
 
 BaseShadow *Shadow = NULL;
+
+class InvokeTheGlobalDestructor {
+	public:
+		InvokeTheGlobalDestructor(BaseShadow * & bsp) : ptr(bsp) { }
+		~InvokeTheGlobalDestructor() {
+			if( ptr != NULL ) {
+				dprintf( D_ZKM, "Calling ~BaseShadow()...\n" );
+				delete ptr;
+			}
+		}
+	private:
+		BaseShadow * & ptr;
+};
+InvokeTheGlobalDestructor itgd(Shadow);
 
 // settings we're given on the command-line
 static const char* schedd_addr = NULL;
@@ -299,6 +314,32 @@ void startShadow( ClassAd *ad )
 
 	initShadow( ad );
 
+	// Process configuration for writing epoch history start ClassAd (i.e. historical SPAWN ad)
+	classad::References filter;
+	bool do_filter = true;
+	std::string spawn_ad_filter;
+
+	param(spawn_ad_filter, "SPAWN_JOB_ATTRS");
+
+	if (istring_view(spawn_ad_filter.c_str()) == "all") {
+		// Configured to write the full job ad to epoch history at start time
+		do_filter = false;
+	} else {
+		// Base attributes needed for 'SPAWN' ad in epoch history
+		filter.insert(ATTR_CLUSTER_ID);
+		filter.insert(ATTR_PROC_ID);
+		filter.insert(ATTR_NUM_SHADOW_STARTS);
+		filter.insert(ATTR_OWNER);
+		filter.insert(ATTR_SHADOW_BIRTHDATE);
+		filter.insert(ATTR_RUN_INSTANCE_ID);
+		filter.insert(ATTR_EPOCH_AD_TYPE);
+		// Configured attributes for 'SPAWN' ad in epoch history
+		for (auto &attr : StringTokenIterator(spawn_ad_filter)) { filter.insert(attr); }
+	}
+
+	// Generate Spawn ClassAd to write to epoch history
+	writeAdProjectionToEpoch(ad, (do_filter ? &filter : nullptr), "SPAWN");
+
 	bool wantClaiming = false;
 	ad->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
 
@@ -529,6 +570,13 @@ recycleShadow(int previous_job_exit_reason)
 		new_job_ad = readJobAd();
 	}
 
+	// Make sure to trigger the cfLock destructor even if we're not
+	// re-using this shadow.
+	delete Shadow;
+	Shadow = NULL;
+	is_reconnect = false;
+	BaseShadow::myshadow_ptr = NULL;
+
 	if( !new_job_ad ) {
 		dprintf(D_FULLDEBUG,"No new job found to run under this shadow.\n");
 		return false;
@@ -537,11 +585,6 @@ recycleShadow(int previous_job_exit_reason)
 	new_job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
 	new_job_ad->LookupInteger(ATTR_PROC_ID,proc);
 	dprintf(D_ALWAYS,"Switching to new job %d.%d\n",cluster,proc);
-
-	delete Shadow;
-	Shadow = NULL;
-	is_reconnect = false;
-	BaseShadow::myshadow_ptr = NULL;
 
 	startShadow( new_job_ad );
 	return true;

@@ -293,8 +293,8 @@ sub hasIPv6 {
 	if ($pingRet == 0) {
 		print "ping IPv6 mode succeeded, will run ipv6 tests\n";
 		# See #5534 -- our Windows interface detection code doesn't work for IPv6.
-		my $platformString = $ENV{ 'NMI_PLATFORM' };
-		return (!($platformString =~ /_winnt_/ || $platformString =~ /_Win/));
+		my $platformString = $^O;
+		return (!($platformString =~ /MSWin32/ || $platformString =~ /cygwin/));
 	} else {
 		print "ping IPv6 mode failed, will skip ipv6 tests\n";
 		return 0;

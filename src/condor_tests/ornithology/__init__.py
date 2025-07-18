@@ -32,3 +32,4 @@ from .meta import get_current_func_name
 from .utils import chain_get, format_script
 from .fixtures import config, standup, action, CONFIG_IDS
 from .scripts import SCRIPTS
+from .try_os_set import try_os_setegid, try_os_seteuid

@@ -54,6 +54,7 @@ static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
 }
 
+//
 // given a relative cgroup name, send a signal
 // to every process in exactly that cgroup (but 
 // not sub-cgroups thereof)
@@ -272,6 +273,15 @@ static bool makeCgroup(const std::string &cgroup_name) {
 	}
 
 	return true;
+}
+
+// Daemon Core calls this right before exit.  The assumption is when the destructor
+// is caled, we are on our way out, we won't be calling any reapers that would
+// also clean up the cgroups.
+ProcFamilyDirectCgroupV2::~ProcFamilyDirectCgroupV2() {
+	for (const auto &[_, name]: cgroup_map) {
+		trimCgroupTree(name);
+	}
 }
 
 // mkdir the cgroup, and all required interior cgroups.  Note that the leaf
@@ -1045,7 +1055,7 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 }
 
 bool 
-ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
+ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid, int exit_status) {
 	bool killed = false;
 
 	// Double check that we have an entry
@@ -1090,8 +1100,9 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::checking if pid %d was oom killed... oom_count was %zu\n", pid, oom_count);
 
 	killed = oom_count > 0;
+	bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
 
-	return killed;
+	return killed && was_sigkilled;
 }
 
 // Returns true if cgroup v2 is mounted
@@ -1150,6 +1161,19 @@ static std::string current_parent_cgroup() {
 		cgroup.erase(lastSlash); // Remove trailing slash
 	}
 	return cgroup;
+}
+
+std::string 
+ProcFamilyDirectCgroupV2::make_full_cgroup_name(const std::string &cgroup_name) {
+		std::string current = current_parent_cgroup();
+		std::string full_cgroup_name = current + '/' + cgroup_name;
+
+		// remove leading / from cgroup_name. cgroupv2 code hates that
+		if (full_cgroup_name.starts_with('/')) {
+			full_cgroup_name = full_cgroup_name.substr(1, full_cgroup_name.size() - 1);
+		}
+		replace_str(full_cgroup_name, "//", "/");
+		return full_cgroup_name;
 }
 
 bool 

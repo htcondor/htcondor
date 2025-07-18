@@ -12,6 +12,7 @@ usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue
 usr/bin/condor_dagman
+usr/bin/condor_dag_checker
 usr/bin/condor_docker_enter
 usr/bin/condor_drain
 usr/bin/condor_evicted_files
@@ -64,6 +65,7 @@ usr/bin/condor_transfer_data
 usr/bin/condor_transform_ads
 usr/bin/condor_update_machine_ad
 usr/bin/condor_upgrade_check
+usr/bin/condor_join_pool
 usr/bin/condor_userlog
 usr/bin/condor_userlog_job_counter
 usr/bin/condor_userprio

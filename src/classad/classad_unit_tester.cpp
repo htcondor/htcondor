@@ -553,7 +553,21 @@ static void test_classad(const Parameters &, Results &results)
     TEST("update from chain is merged",(have_attribute==true));
     TEST("update from chain has attribute c==6",(i==6));
 
-    return;
+	// Test move assignment operator
+    const char *example_classad = "[ c = 3 ; d = 4; ]";
+    ClassAd move_from_classad;
+    const char *example_parent_classad = "[ a = 1; b = 2; ]";
+    ClassAd move_from_parent_classad;
+    ClassAd move_to_classad;
+
+    parser.ParseClassAd(example_classad, move_from_classad);
+    parser.ParseClassAd(example_parent_classad, move_from_parent_classad);
+    move_from_classad.ChainToAd(&move_from_parent_classad);
+	move_to_classad = std::move(move_from_classad);
+	move_to_classad.LookupInteger("d", i);
+    TEST("Move to classad can lookup int", (i == 4));
+	move_to_classad.LookupInteger("a", i);
+    TEST("Move to classad can lookup parent int", (i == 1));
 }
 
 /*********************************************************************

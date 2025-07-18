@@ -770,17 +770,12 @@ DedicatedScheduler::negotiate( int command, Sock* sock, char const* remote_pool 
 		// Now, we've just got to handle the per-job negotiation
 		// protocol itself.
 
+	// create a ResourceRequestList with one entry for each job
+	// using a fake autocluster id for each entry. 
 	auto *requests = new ResourceRequestList;
 	int next_cluster = 0;
-	std::list<PROC_ID>::iterator id;
-
-	for( id = resource_requests.begin();
-		 id != resource_requests.end();
-		 id++ )
-	{
-		auto *cluster = new ResourceRequestCluster( ++next_cluster );
-		requests->push_back( cluster );
-		cluster->addJob( *(id) );
+	for (auto & jid : resource_requests) {
+		requests->add(++next_cluster, jid);
 	}
 
 	classy_counted_ptr<DedicatedScheddNegotiate> neg_handler =
@@ -2275,7 +2270,7 @@ DedicatedScheduler::computeSchedule( )
 			nprocs++;
 		}	
 			
-		if (give_up) {
+		if (give_up || jobs->size() == 0) {
 			continue;
 		}
 
@@ -3260,7 +3255,7 @@ DedicatedScheduler::AddMrec(
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
 		// owner() here...
-	auto *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
+	auto *mrec = new match_rec( claim_id, startd_addr, empty_job_id,
 									 match_ad,owner(),remote_pool,true);
 
 	// Next, insert this match_rec into our hashtables
@@ -4060,8 +4055,8 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			// 2.) add to all_matches, and all_matches_by_name
 			// 3.) Call createAllocations to do the rest  
 
-		char *remote_hosts = nullptr;
-		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
+		std::string remote_hosts;
+		GetAttributeString(id.cluster, id.proc, ATTR_REMOTE_HOSTS, remote_hosts);
 
 		std::string claims;
 		GetPrivateAttributeString(id.cluster, id.proc, ATTR_CLAIM_IDS, claims);
@@ -4142,7 +4137,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, cid.publicClaimId());
 
 			auto *mrec = 
-				new match_rec(claim, sinful, &id,
+				new match_rec(claim, sinful, id,
 						  machineAd, owner(), nullptr, true);
 
 			mrec->setStatus(M_CLAIMED);
@@ -4156,7 +4151,6 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			free(sinful);
 			sinful = nullptr;
 		}
-		free(remote_hosts);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any

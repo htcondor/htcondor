@@ -58,7 +58,7 @@ class ProcFamilyDirectCgroupV2 : public ProcFamilyInterface {
 public:
 
 	ProcFamilyDirectCgroupV2() = default;
-	virtual ~ProcFamilyDirectCgroupV2() = default;
+	virtual ~ProcFamilyDirectCgroupV2();
 	
 	bool register_subfamily_before_fork(FamilyInfo *fi);
 
@@ -106,7 +106,7 @@ public:
 	bool quit(void(*)(void*, int, int),void*) { return false; }; // nothing to do here, only needed when there is a procd
 
 	// Have we seen an oom kill event in this cgroup;
-	bool has_been_oom_killed(pid_t pid);
+	bool has_been_oom_killed(pid_t pid, int exit_status);
 
 	// We don't need these, cgroups just works
 	bool track_family_via_environment(pid_t, PidEnvID&) {return true;}
@@ -119,6 +119,13 @@ public:
 	
 	// Returns true if cgroup v2 is mounted and we can write to it
 	static bool can_create_cgroup_v2();
+
+	// given a string for a name like "myNewgroup", return the
+	// path from the cgroup mount point down to the parent, like
+	// /user.slice/user-1000.slice/app.slice/Mynewcgroup
+	// This is suitable for putting into the FamilyInfo.cgroup
+	static std::string make_full_cgroup_name(const std::string &cgroup_name);
+
 private:
 
 	bool cgroupify_myself(const std::string &cgroup_name);

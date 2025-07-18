@@ -93,6 +93,13 @@ dprintf_config_tool_on_error(const char * flags)
 }
 
 int
+dprintf_deconfig_tool() {
+	dprintf_set_outputs(NULL, 0);
+
+	return 0;
+}
+
+int
 dprintf_config_tool(const char* subsys, const char * flags, const char * logfile /*=NULL*/)
 {
 	char *pval = NULL;

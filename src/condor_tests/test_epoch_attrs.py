@@ -19,6 +19,9 @@ TEST_CASES = {
     "empty": {
         "INPUT": [],
         "TRANSFER": ["requirements"]
+    },
+    "spawn": {
+        "SPAWN": [ "TestAttr1", "TestAttr2" ],
     }
 }
 
@@ -71,6 +74,8 @@ def the_completed_job(the_test_name, the_condor, path_to_sleep, test_dir):
             "transfer_input_files": "null://input.txt",
             "transfer_output_files": "input.txt",
             "output_destination": "null://input.txt",
+            "My.TestAttr1": 10,
+            "My.TestAttr2": False,
         },
         count=1,
     )
@@ -135,9 +140,10 @@ def readNextEpochLogEntry(f) -> EpochLogEntry:
 
 
 ALWAYS_KEYS = {
-    "INPUT": [ "TransferClass", "InputPluginResultList", "EpochWriteDate", "InputPluginInvocations" ],
-    "OUTPUT": [ "TransferClass", "OutputPluginResultList", "EpochWriteDate", "OutputPluginInvocations" ],
-    "CHECKPOINT": [ "TransferClass", "CheckpointPluginResultList", "EpochWriteDate", "CheckpointPluginInvocations" ],
+    "INPUT": [ "RunInstanceID", "EpochAdType", "TransferClass", "InputPluginResultList", "EpochWriteDate", "InputPluginInvocations" ],
+    "OUTPUT": [ "RunInstanceID", "EpochAdType", "TransferClass", "OutputPluginResultList", "EpochWriteDate", "OutputPluginInvocations" ],
+    "CHECKPOINT": [ "RunInstanceID", "EpochAdType", "TransferClass", "CheckpointPluginResultList", "EpochWriteDate", "CheckpointPluginInvocations" ],
+    "SPAWN": [ "RunInstanceID", "EpochAdType", "ClusterId", "ProcId", "EpochWriteDate", "Owner", "NumShadowStarts", "ShadowBday" ],
 }
 
 
@@ -146,6 +152,7 @@ DEFAULT_KEYS = {
     "INPUT": [ "ClusterID", "ProcID", "NumShadowStarts" ],
     "OUTPUT": [ "ClusterID", "ProcID", "NumShadowStarts" ],
     "CHECKPOINT": [ "ClusterID", "ProcID", "NumShadowStarts" ],
+    "SPAWN": [],
 }
 
 class TestEpochAttrs:
@@ -161,7 +168,7 @@ class TestEpochAttrs:
 
                 typeInfo = the_test_case.get(entry.TYPE)
                 if typeInfo is None:
-                    defaultTypeInfo = the_test_case.get("TRANSFER")
+                    defaultTypeInfo = the_test_case.get("TRANSFER") if entry.TYPE != "SPAWN" else None
                     if defaultTypeInfo is None:
                         defaultTypeInfo = DEFAULT_KEYS[entry.TYPE]
                     expectedKeys.extend(defaultTypeInfo)

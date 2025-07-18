@@ -73,6 +73,8 @@ public:
     void writeCustom( ClassAd *ad );
 
 
+	std::string build_subject_line(ClassAd *ad, const char *subject);
+
 		/// Write out the introductory identification for a job
 	bool writeJobId( ClassAd* ad );
 
@@ -96,6 +98,7 @@ public:
 		*/
 	void sendHold( ClassAd* ad, const char* reason );
 	void sendRemove( ClassAd* ad, const char* reason );
+	void sendStart( ClassAd* ad, const char* reason );
 	void sendRelease( ClassAd* ad, const char* reason );
 	void sendHoldAdmin( ClassAd* ad, const char* reason );
 	void sendRemoveAdmin( ClassAd* ad, const char* reason );

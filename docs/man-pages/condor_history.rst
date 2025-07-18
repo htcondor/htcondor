@@ -15,7 +15,7 @@ Synopsis
 **condor_history** [**-debug**] [**-name** *name*] [**-pool** *hostname[:port]*]
 [**-backwards** | **-forwards**] [**-constraint**] [**-since** *jobid | expr*]
 [**-completedsince** *timestamp*] [**-scanlimit** *N*] [**-match | -limit** *N*]
-[**-local**] [**-schedd** | **-startd** | **-epochs[:d] | -transfer-history[iIoOcC]**]
+[**-local**] [**-schedd** | **-startd** | **-epochs[:d] | -transfer-history[iIoOcC]** | **-daemon**]
 [**-file** *filename*] [**-userlog** *filename*] [**-search** *path*] [**-dir/-directory**]
 [**-format** *FormatString* *Attribute*] [**-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*]
 [**-print-format** *filename*] [**-l/-long**] [**-attributes** *Attribute[,Attribute,...]*]
@@ -100,6 +100,13 @@ Options
 
         This option does not have a default print format table and requires a
         format to be specified (i.e. **-long**, **-json**, **-af**, etc.).
+
+**-daemon**
+    Query for ClassAds recorded in the :macro:`<SUBSYS>_DAEMON_HISTORY`
+
+    .. note::
+
+        Currently only Schedd ClassAds are written into this history file.
 
 **-file** *filename*
     Query ClassAd records from the specified *filename*.
@@ -226,6 +233,43 @@ single line, and contains the following items:
  CMD
     The name of the job's executable.
 
+The default information displayed for historical Schedd ClassAds queried from
+the :macro:`SCHEDD_DAEMON_HISTORY` are the following:
+
+ TIMESTAMP
+    The UNIX timestamp representing exactly when the record was
+    written to the history file.
+ DUTY_CYCLE
+    The Schedd's :ad-attr:`RecentDaemonCoreDutyCycle` at the time
+    the record was written.
+ RunningJobs
+    The Schedd's :ad-attr:`TotalRunningJobs` at the time the record
+    was written.
+ IdleJobs
+    The Schedd's :ad-attr:`TotalIdleJobs` at the time the record was
+    written.
+ HeldJobs
+    The Schedd's :ad-attr:`TotalHeldJobs` at the time the record was
+    written.
+ Download
+    The Schedd's :ad-attr:`TransferQueueNumDownloading` at the time
+    the record was written.
+ Waiting
+    The Schedd's :ad-attr:`TransferQueueNumWaitingToDownload` at the time
+    the record was written.
+ WaitingMB
+    The Schedd's :ad-attr:`FileTransferMBWaitingToDownload` at the time
+    the record was written.
+ Upload
+    The Schedd's :ad-attr:`TransferQueueNumUploading` at the time
+    the record was written.
+ Waiting
+    The Schedd's :ad-attr:`TransferQueueNumWaitingToUpload` at the time
+    the record was written.
+ WaitingMB
+    The Schedd's :ad-attr:`FileTransferMBWaitingToUpload` at the time
+    the record was written.
+
 Exit Status
 -----------
 
@@ -327,6 +371,18 @@ Extract last 100 of user Greg's jobs to use for quicker queries:
 
     $ condor_history -extract subset.hist greg -limit 100
     $ condor_history -file subset.hist
+
+Query historical Schedd ClassAds:
+
+.. code-block:: console
+
+    $ condor_history -daemon
+
+Query historical Schedd ClassAds from a remote Schedd:
+
+.. code-block:: console
+
+    $ condor_history -name ap2.chtc.wisc.edu -daemon
 
 See Also
 --------

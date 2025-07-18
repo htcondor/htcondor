@@ -36,11 +36,19 @@ public:
 
 	bool removeJobFromSet(JobQueueJob & job);
 
+	// called when we are removing jobs in a transaction, used to decide if
+	// the transaction should also remove the jobset. Returns the jobset id to
+	// destroy when the jobset destruction should be added to the transaction.
+	unsigned int removePending(JobQueueJob & job);
+
 	void reconfig();
 
 	bool restoreJobSet(JobQueueJobSet *ad);
 
 	bool garbageCollectSet(JobQueueJobSet* & ad);
+
+	// called by the destructor of JobQueueJobSet to remove an id from the alias map
+	void deleting_JobSet(JobQueueJobSet * jobset);
 
 	size_t count() { return mapAliasToId.size(); };
 

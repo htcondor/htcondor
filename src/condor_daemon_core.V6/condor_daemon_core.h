@@ -58,6 +58,7 @@
 #include "generic_stats.h"
 #include "filesystem_remap.h"
 #include "daemon_keep_alive.h"
+#include "classadHistory.h"
 
 #include <vector>
 #include <memory>
@@ -1668,6 +1669,10 @@ class DaemonCore : public Service
 		*/
 	void	publish(ClassAd *ad);
 
+
+		// Append provided Daemon ClassAd to the daemon history file.
+	void AppendDaemonHistory(ClassAd* ad);
+
 		/**
 		   @return A pointer to the CollectorList object that holds
 		   all of the collectors this daemons is configured to
@@ -1992,6 +1997,7 @@ class DaemonCore : public Service
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() const { return m_use_clone_to_create_processes; }
 #else
+	// If we don't have clone(), this is always false no matter what knobs might be set
 	bool UseCloneToCreateProcesses() { return false; }
 #endif
 
@@ -2398,6 +2404,9 @@ class DaemonCore : public Service
 	bool m_enable_remote_admin{false};
 	time_t m_remote_admin_last_time{0};
 	std::string m_remote_admin_last;
+
+	std::string m_daemon_history{};
+	HistoryFileRotationInfo m_hist_rotation_info{};
 };
 
 /**

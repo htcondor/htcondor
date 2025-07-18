@@ -130,10 +130,11 @@ class PrettyPrinter {
 		int        ppSetScheddRunCols( int width, const char * & constr );
 		int    ppSetAnnexInstanceCols( int width, const char * & constr );
 		int    ppSetStartdCompactCols( int width, int & mach_width, const char * & constr );
+		void       ppSetStartdLvmCols( int width, const char * & constr );
+		void     ppSetSlotLvUsageCols( int width, const char * & constr );
 
 	public:
 		AttrListPrintMask           pm;
-		std::vector<const char *>	pm_head;
 		ppOption					ppStyle;
 		ppOption					ppTotalStyle;
 		printmask_headerfooter_t	pmHeadFoot;
@@ -201,5 +202,9 @@ class PrettyPrinter {
 	"PartitionableSlot =?= true || DynamicSlot =!= true"
 #define PMODE_GPUS_COMPACT_CONSTRAINT \
 	"AvailableGPUs isnt undefined && (size(AvailableGPUs) > 0 || (PartitionableSlot && AssignedGPUs isnt undefined))"
+#define PMODE_STARTD_USING_LVM_CONSTRAINT \
+	"IsEnforcingDiskUsage"
+#define PMODE_SLOT_LV_USAGE_CONSTRAINT \
+	"IsEnforcingDiskUsage && PartitionableSlot=!=True"
 
 #endif /* _CONDOR_PRETTY_PRINT_H */

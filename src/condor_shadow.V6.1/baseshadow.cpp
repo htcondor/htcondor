@@ -87,7 +87,7 @@ BaseShadow::BaseShadow() {
 BaseShadow::~BaseShadow() {
 	myshadow_ptr = NULL;
 	if (jobAd) FreeJobAd(jobAd);
-	if (gjid) free(gjid); 
+	if (gjid) free(gjid);
 	if (scheddAddr) free(scheddAddr);
 	if( job_updater ) delete job_updater;
 	if (m_cleanup_retry_tid != -1) daemonCore->Cancel_Timer(m_cleanup_retry_tid);
@@ -277,6 +277,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	if (wantClaiming) {
 		std::string startdSinful;
 		std::string claimid;
+		DCStartd::requestClaimOptions opts;
 
 			// Pull startd addr and claimid out of the jobad
 		jobAd->LookupString(ATTR_STARTD_IP_ADDR, startdSinful);
@@ -295,7 +296,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 											   "description", 
 											   daemonCore->InfoCommandSinfulString(), 
 											   1200 /*alive interval*/,
-											   false, /* don't claim pslot */
+											   opts, /* don't claim pslot */
 											   20 /* net timeout*/, 
 											   100 /*total timeout*/, 
 											   cb);
@@ -385,7 +386,7 @@ BaseShadow::shutDown(int reason, const char* reason_str, int reason_code, int re
 		// Only if the job is trying to leave the queue should we
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
-		writeJobEpochFile(getJobAd());
+		writeAdToEpoch(getJobAd());
 		if( !waitingToUpdateSchedd() ) {
 			shadow_user_policy.checkAtExit();
 				// WARNING: 'this' may have been deleted by the time we get here!!!
@@ -612,7 +613,7 @@ BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_r
 {
 	m_force_fast_starter_shutdown = true;
 	holdJob(reason,hold_reason_code,hold_reason_subcode);
-	writeJobEpochFile(getJobAd());
+	writeAdToEpoch(getJobAd());
 
 	// Doing this neither prevents scary network-level error messages in
 	// the starter log, nor actually works: if the shadow doesn't exit
@@ -959,7 +960,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
-	writeJobEpochFile(getJobAd());
+	writeAdToEpoch(getJobAd());
 
 	if (exit_reason != JOB_RECONNECT_FAILED) {
 		// cleanup this shadow (kill starters, etc)
@@ -1027,6 +1028,12 @@ BaseShadow::emailRemoveEvent( const char* reason )
 	mailer.sendRemove( jobAd, reason );
 }
 
+void
+BaseShadow::emailStartEvent( ClassAd *jobAd, const char* reason ) 
+{
+	Email mailer;
+	mailer.sendStart( jobAd, reason );
+}
 
 void BaseShadow::initUserLog()
 {
@@ -1570,6 +1577,8 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 			// They want it now, so do an update right here.
 		updateJobInQueue(U_STATUS);
 	}
+
+	emailStartEvent(jobAd, "");
 }
 
 
