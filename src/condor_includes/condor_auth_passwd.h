@@ -150,7 +150,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	    log trail; typically, this is something like Sock::getUniqueId() */
 	static bool generate_token(const std::string &id, const std::string &key_id,
 		const std::vector<std::string> &authz_list, long lifetime,
-		bool capability, std::string &token, int ident, CondorError *err);
+		bool capability, std::string &token, int ident, CondorError *err,
+		const ClassAd* extra_claims =  nullptr);
 
 	/* Lookup a token in our database and return the
 	 * subject and scope claims.

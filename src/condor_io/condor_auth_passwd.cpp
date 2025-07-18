@@ -889,6 +889,7 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 	if (jwt.has_payload_claim("cap")) {
 		capability = jwt.get_payload_claim("cap").as_boolean();
 	}
+	// TODO add project and lookup extra_claims
 	if( capability || ! jwt.has_subject() ) {
 		dprintf(D_SECURITY|D_VERBOSE, "JWT is a capability or has no subject, looking up in database\n");
 		std::string kid = jwt.get_key_id();
@@ -1714,6 +1715,7 @@ Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_
 		return false;
 	}
 
+	// TODO add extra_claims
 	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);
@@ -1765,7 +1767,8 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	bool capability,
 	std::string &token,
 	int ident,
-	CondorError *err)
+	CondorError *err,
+	const ClassAd* extra_claims)
 {
 #if !defined(HAVE_SQLITE3_H)
 	if (capability) {
@@ -1831,12 +1834,44 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		authz_set = std::string("condor:/") + join(authz_list, " condor:/");
 	}
 
+	std::string extra_claims_str;
+	if (extra_claims) {
+		classad::ClassAdJsonUnParser unparser(true);
+		unparser.Unparse(extra_claims_str, extra_claims);
+	}
+
 	if (capability) {
 		jwt_builder.set_payload_claim("cap", jwt::traits::kazuho_picojson::value_type(true));
 	} else {
 		jwt_builder.set_subject(id);
 		if (!authz_set.empty()) {
 			jwt_builder.set_payload_claim("scope", jwt::claim(authz_set));
+		}
+		if (extra_claims) {
+			for (auto it = extra_claims->begin(); it != extra_claims->end(); it++) {
+				// TODO skip attrs that we already set:
+				//   iss, iat, exp, sub, jti, scope, cap
+				switch(it->second->GetKind()) {
+				case classad::ExprTree::INTEGER_LITERAL: {
+					long long ival = ((classad::IntegerLiteral*)it->second)->getInteger();
+					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(ival));
+					break;
+				}
+				case classad::ExprTree::BOOLEAN_LITERAL: {
+					bool bval = ((classad::BooleanLiteral*)it->second)->getBool();
+					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(bval));
+					break;
+				}
+				case classad::ExprTree::STRING_LITERAL: {
+					const char* sval = ((classad::StringLiteral*)it->second)->getCString();
+					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(sval));
+					break;
+				}
+				default:
+					dprintf(D_FULLDEBUG, "generate_token(): skipping extra claim %s with type %d\n", it->first.c_str(), (int)it->second->GetKind());
+					break;
+				}
+			}
 		}
 	}
 
@@ -1865,6 +1900,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 			dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", db_file.c_str(), sqlite3_errmsg(db));
 			return false;
 		}
+		// TODO add extra_claims_str
 		rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
 		if (rc != SQLITE_OK) {
 			dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);

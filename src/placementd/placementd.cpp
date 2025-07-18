@@ -36,6 +36,7 @@ struct UserMapEntry
 {
 	std::string ap_id;
 	std::string authz;
+	std::string projects;
 	time_t exp{0};
 };
 
@@ -276,7 +277,7 @@ bool PlacementDaemon::ReadUserMapFile()
 			continue;
 		}
 		items = split(line, " \t\n");
-		if (items.size() < 3 || items.size() > 4) {
+		if (items.size() < 4 || items.size() > 5) {
 			dprintf(D_ERROR, "Ignoring malformed map line: %s\n", line.c_str());
 			continue;
 		}
@@ -287,12 +288,13 @@ bool PlacementDaemon::ReadUserMapFile()
 		if (items[1].find('@') == std::string::npos) {
 			items[1] += "@" + uid_domain;
 		}
-		exp = 0;
+		exp = std::stoll(items[3]);
 		if (items.size() == 4) {
-			exp = std::stoll(items[3]);
+			items.emplace_back("");
 		}
 
-		m_users[items[0]] = UserMapEntry{items[1], items[2], exp};
+		// foreign-id => ap-id, authz, projects, expiration
+		m_users[items[0]] = UserMapEntry{items[1], items[2], items[4], exp};
 	}
 
 	fclose(map_fp);
@@ -365,13 +367,16 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	// done reading input command stream
 	stream->encode();
 
+		// TODO add project
 	ClassAd result_ad;
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
 	std::string requester;
+	std::string project; // project requested for this token
 	std::string authz_list; // authz requested for this token
 	std::vector<std::string> full_authz_list; // all authz from the mapfile
 	std::string bad_authz;
+	ClassAd extra_claims;
 
 	CondorError err;
 	std::vector<std::string> bounding_set;
@@ -396,6 +401,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, 2);
 		goto send_reply;
 	}
+	cmd_ad.LookupString("Project", project);
 	cmd_ad.LookupString("Authorizations", authz_list);
 	cmd_ad.LookupString("Requester", requester);
 	if (requester.empty()) {
@@ -435,6 +441,23 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 
 	token_identity = user_it->second.ap_id;
 
+	if (!project.empty()) {
+		bool found = false;
+		for (const auto& user_proj: StringTokenIterator(user_it->second.projects)) {
+			if (strcasecmp(project.c_str(), user_proj.c_str()) == 0) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			dprintf(D_FULLDEBUG, "User %s isn't authorized for requested project %s\n", user_name.c_str(), project.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, "User not authorized for project");
+			result_ad.Assign(ATTR_ERROR_CODE, 10);
+			goto send_reply;
+		}
+		extra_claims.Assign("project", project);
+	}
+
 	full_authz_list = split(user_it->second.authz);
 	for (const auto& one_authz: StringTokenIterator(authz_list)) {
 		if (contains_anycase(full_authz_list, one_authz)) {
@@ -473,13 +496,14 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 
 	dprintf(D_FULLDEBUG,"JEF Creating IDToken\n");
 	// Create an IDToken for this user
+	// TODO add project to token
 	key_name = htcondor::get_token_signing_key(err);
 	if (key_name.empty()) {
 		result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
 		result_ad.Assign(ATTR_ERROR_CODE, err.code());
 		goto send_reply;
 	}
-	if (!Condor_Auth_Passwd::generate_token(token_identity, key_name, bounding_set, lifetime, true, token, rsock->getUniqueId(), &err)) {
+	if (!Condor_Auth_Passwd::generate_token(token_identity, key_name, bounding_set, lifetime, true, token, rsock->getUniqueId(), &err, &extra_claims)) {
 		result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
 		result_ad.Assign(ATTR_ERROR_CODE, err.code());
 		goto send_reply;
@@ -492,6 +516,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
 	}
 
+	// TODO add project to token table
 	formatstr(stmt_str, "INSERT INTO placementd_tokens (requester_id, foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', '%s', %lld);", requester.c_str(), user_name.c_str(), token_identity.c_str(), authz_list.c_str(), token_jti.c_str(), token_exp);
 	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
@@ -543,6 +568,7 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	struct reply_rec {
 		std::string sub;
 		std::string authz;
+		std::string projects;
 		time_t token_exp;
 		time_t mapping_exp;
 	};
@@ -550,10 +576,10 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	std::map<std::string, reply_rec> reply_users;
 	if (username.empty()) {
 		for (const auto& [name, entry]: m_users) {
-			reply_users[name] = {entry.ap_id, entry.authz, 0, entry.exp};
+			reply_users[name] = {entry.ap_id, entry.authz, entry.projects, 0, entry.exp};
 		}
 	} else if (m_users.find(username) != m_users.end()) {
-		reply_users[username] = {m_users[username].ap_id, m_users[username].authz, 0, m_users[username].exp};
+		reply_users[username] = {m_users[username].ap_id, m_users[username].authz, m_users[username].projects, 0, m_users[username].exp};
 	}
 
 	std::string stmt_str;
@@ -574,6 +600,7 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		const char* rec_user = (const char*)sqlite3_column_text(stmt, 0);
 		time_t rec_exp = sqlite3_column_int(stmt, 1);
 		const char* rec_sub = (const char*)sqlite3_column_text(stmt, 2);
+			// TODO add project?
 		auto reply_it = reply_users.find(rec_user);
 		if (reply_it == reply_users.end()) {
 			reply_users[rec_user].token_exp = rec_exp;
@@ -599,6 +626,9 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		user_ad.Assign("ApUserId", rec.sub);
 		user_ad.Assign("TokenExpiration", rec.token_exp);
 		user_ad.Assign("MappingExpration", rec.mapping_exp);
+		if (!rec.projects.empty()) {
+			user_ad.Assign("Projects", rec.projects);
+		}
 		if (!rec.authz.empty()) {
 			user_ad.Assign("Authorizations", rec.authz);
 		}
@@ -668,6 +698,7 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 			formatstr_cat(where_str, "token_exp >= %lld", (long long)time(nullptr));
 		}
 	}
+		// TODO add project
 	formatstr(stmt_str, "SELECT requester_id, foreign_id, ap_id, authz, token_jti, token_exp FROM placementd_tokens %s;", where_str.c_str());
 
 	sqlite3_stmt* stmt = nullptr;

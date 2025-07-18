@@ -1,12 +1,13 @@
 static PyObject *
 _placement_user_login(PyObject *, PyObject * args) {
-	// _placement_user_login(addr, username, authorizations, requester)
+	// _placement_user_login(addr, username, authorizations, project, requester)
 
 	const char * addr = nullptr;
 	const char * username = nullptr;
 	const char * authz = nullptr;
+	const char * project = nullptr;
 	const char * requester = nullptr;
-	if (! PyArg_ParseTuple(args, "sssz", & addr, & username, & authz, & requester)) {
+	if (! PyArg_ParseTuple(args, "ssszz", & addr, & username, & authz, & project, & requester)) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	}
@@ -23,6 +24,9 @@ _placement_user_login(PyObject *, PyObject * args) {
 	ClassAd cmd_ad;
 	cmd_ad.Assign("UserName", username);
 	cmd_ad.Assign("Authorizations", authz);
+	if (project) {
+		cmd_ad.Assign("Project", project);
+	}
 	if (requester) {
 		cmd_ad.Assign("Requester", requester);
 	}
