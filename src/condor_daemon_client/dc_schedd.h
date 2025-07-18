@@ -506,6 +506,9 @@ public:
 		int cluster,
 		CondorError& errstack);
 
+	// get all the claimed slot ads from schedd
+    bool getClaims(std::vector<std::unique_ptr<ClassAd>> &claims, ClassAd &queryAd, CondorError &errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
