@@ -162,8 +162,13 @@ bool credmon_kick(int cred_type)
 			char buf[256];
 			memset(buf, 0, sizeof(buf));
 			ssize_t len = full_read(fd, buf, sizeof(buf));
-			if (len > 0) {
+			if ((len > 0) && (len < (ssize_t) sizeof(buf))) {
 				buf[len] = 0;
+			}
+			if (len >= (ssize_t)sizeof(buf)) {
+				dprintf(D_ALWAYS, "credmon %s: read too much data from %s, ignoring\n", type, idfile.c_str());
+				close(fd);
+				return false;
 			}
 #if 0 //def WIN32
 			HANDLE h = INVALID_HANDLE_VALUE;
