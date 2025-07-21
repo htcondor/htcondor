@@ -97,7 +97,6 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	set( SRC_DIR ${CMAKE_SOURCE_DIR} )
 	set( BIN_DIR ${CMAKE_BINARY_DIR} )
 	install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
-	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
 	COMMAND xargs -isrc ${CMAKE_COMMAND} -E copy_if_different src ${CMAKE_INSTALL_PREFIX}/lib/condor
 		 )" )
 	# This is required for opensuse, where the system's libssl and
