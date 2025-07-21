@@ -161,8 +161,10 @@ bool credmon_kick(int cred_type)
 		if (fd) {
 			char buf[256];
 			memset(buf, 0, sizeof(buf));
-			size_t len = full_read(fd, buf, sizeof(buf));
-			buf[len] = 0;
+			ssize_t len = full_read(fd, buf, sizeof(buf));
+			if (len > 0) {
+				buf[len] = 0;
+			}
 #if 0 //def WIN32
 			HANDLE h = INVALID_HANDLE_VALUE;
 			// TODO: Open an event handle
