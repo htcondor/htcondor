@@ -149,22 +149,23 @@ static bool check_expectation (
 	actual.clear();
 
 	classad::ClassAdParser parser; parser.SetOldClassAd( true );
-	ExprTree * tree = parser.ParseExpression(exprstr);
-	if ( ! tree) {
+	ExprTree * tree_ptr = parser.ParseExpression(exprstr);
+	if ( ! tree_ptr) {
 		message = std::string("could not parse expr: ") + exprstr;
 		return false;
 	}
 
+	std::unique_ptr<ExprTree> tree(tree_ptr);
 	classad::Value result;
 
 	std::string attr;
-	if (ExprTreeIsAttrRef(tree, attr)) {
+	if (ExprTreeIsAttrRef(tree.get(), attr)) {
 		if ( ! EvalAttr(attr.c_str(), &myad, &targetad, result)) {
 			message = std::string("could not evaluate: ") + attr;
 			return false;
 		}
 	} else {
-		if ( ! EvalExprTree(tree, &myad, &targetad, result, classad::Value::ALL_VALUES)) {
+		if ( ! EvalExprTree(tree.get(), &myad, &targetad, result, classad::Value::ALL_VALUES)) {
 			message = std::string("could not evaluate: ") + exprstr;
 			return false;
 		}
