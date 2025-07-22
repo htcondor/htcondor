@@ -1,3 +1,9 @@
+*** 23.10.27 features
+
+- HTCondor tarballs now contain `Pelican 7.17.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.2.
+
 *** 23.10.27 bugs
 
 - Fixed a bug that could cause the startd's mips benchmark to
