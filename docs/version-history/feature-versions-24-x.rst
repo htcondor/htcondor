@@ -1,5 +1,5 @@
-Version 24 Feature Releases
-===========================
+Version 24.x Feature Releases
+=============================
 
 We release new features in these releases of HTCondor. The details of each
 version are described below.
