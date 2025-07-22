@@ -1,5 +1,9 @@
 *** 23.0.28 bugs
 
+- ``condor_token_request`` no longer fails with an error if the token is
+  automatically approved by the daemon.
+  :jira:`239`
+
 *** 23.0.27 bugs
 
 - Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
