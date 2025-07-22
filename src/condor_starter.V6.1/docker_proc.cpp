@@ -895,7 +895,11 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 
 
 // TODO: Implement.
-void DockerProc::PublishToEnv( Env * /* env */ ) {
+void DockerProc::PublishToEnv(Env *env) {
+	// Publish an vanilla universe job to the environment.
+	// this also takes care of pre/post scripts
+	VanillaProc::PublishToEnv(env);
+
 	dprintf( D_FULLDEBUG, "DockerProc::PublishToEnv()\n" );
 	return;
 }
