@@ -243,8 +243,11 @@ class TestGuidanceCommands:
                     JobEventType.SUBMIT,
                     JobEventType.FILE_TRANSFER,
                     JobEventType.FILE_TRANSFER,
-                    JobEventType.FILE_TRANSFER,
-                    JobEventType.FILE_TRANSFER,
+                ],
+                the_completed_job.event_log.events
+            )
+            assert event_types_in_order(
+                [
                     JobEventType.REMOTE_ERROR,
                     JobEventType.JOB_EVICTED,
                     JobEventType.JOB_HELD,

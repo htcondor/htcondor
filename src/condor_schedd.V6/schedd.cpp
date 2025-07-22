@@ -162,6 +162,9 @@ bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but
 bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
 bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
+JobQueueProjectRec NoneProjectRec(CONDOR_USERREC_ID, "No Project");
+JobQueueProjectRec * get_none_projectrec() { return &NoneProjectRec; }
+
 JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor@family", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
 
@@ -671,6 +674,7 @@ Scheduler::Scheduler() :
 	AllowLateMaterialize = false;
 	NonDurableLateMaterialize = false;
 	EnablePersistentOwnerInfo = true;
+	EnablePersistentProjectInfo = false;
 	EnableJobQueueTimestamps = false;
 	MaxMaterializedJobsPerCluster = INT_MAX;
 	MaxJobsSubmitted = INT_MAX;
@@ -1306,6 +1310,11 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 		pAd.Assign(ATTR_NAME, str);
 	}
 
+	pAd.Assign("OCUClaimsClaimed", Owner.num.OCUClaims);
+	pAd.Assign("OCUClaimsBorrowed", Owner.num.OCUClaimsBorrowed);
+	pAd.Assign("OCURunningJobs",   Owner.num.OCURunningJobs);
+	pAd.Assign("OCUWantedJobs",    Owner.num.OCUWantedJobs);
+
 	return true;
 }
 
@@ -1458,13 +1467,16 @@ Scheduler::count_jobs()
 
 	time_t current_time = time(0);
 
-	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
-		OwnerInfo & Owner = *(it->second);
-		Owner.num.clear_counters();	// clear the jobs counters 
+	for (auto & [name, owni] : OwnersInfo) {
+		owni->num.clear_counters();	// clear the jobs counters 
+	}
+	for (auto & [name, prji] : ProjectInfo) {
+		prji->num.clear_counters();	// clear the jobs counters 
 	}
 	for (OwnerInfo * owni : zombieOwners) {
 		owni->num.clear_counters(); // clear refcounts for zombies also
 	}
+	NoneProjectRec.num.clear_counters();
 
 	FlockPools.clear();
 	if (FlockCollectors.size()) {
@@ -1517,6 +1529,9 @@ Scheduler::count_jobs()
 			// with them.
 		dedicated_scheduler.handleDedicatedJobTimer( 0 );
 	}
+	
+	// map of owner to vector of jobs running on borrowed OCU claims
+	std::map<std::string, std::vector<PROC_ID>> jobs_on_borrowed_claims;	
 
 		// set JobsRunning/JobsFlocked for owners
 	matches->startIterations();
@@ -1552,6 +1567,20 @@ Scheduler::count_jobs()
 			iter.first->second.WeightedJobsRunning += calcSlotWeight(rec);
 			JobsFlocked++;
 		}
+		if (rec->is_ocu) {
+			// If this match is an OCU held claim, increment the per-owned OCU counter
+			SubDat->num.OCUClaims++;
+
+			// If this match is running a job by a non-OCU wanter, increment "borrowed" counter
+			if (rec->my_match_ad && (rec->status == M_ACTIVE)) {
+				bool ocu_wanted = false;
+				GetAttributeBool( rec->cluster, rec->proc, "OCUWanted", &ocu_wanted);
+				if (!ocu_wanted) {
+					SubDat->num.OCUClaimsBorrowed++;
+					jobs_on_borrowed_claims[SubDat->Name()].emplace_back(rec->cluster, rec->proc);
+				}
+			}
+		}
 	}
 
 	// count the number of unique owners that have jobs in the queue.
@@ -1567,6 +1596,21 @@ Scheduler::count_jobs()
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
 		const SubmitterData & SubDat = it->second;
 		if (SubDat.num.Hits > 0) ++NumSubmitters;
+	}
+
+	// Evict jobs running on borrowed OCU claims if need be
+	for (const auto &[name, SubDat]: Submitters) {
+		if (SubDat.num.OCUClaimsBorrowed > 0) {
+			// If this submitter has borrowed OCU claims, we need to evict them
+			// if the number of running jobs exceeds the number of wanted jobs.
+			if (SubDat.num.OCURunningJobs < SubDat.num.OCUWantedJobs) {
+				for (const auto &jid : jobs_on_borrowed_claims[name]) {
+					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
+						jid.cluster, jid.proc, name.c_str());
+					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+				}
+			}
+		}
 	}
 
 	// we may need to create a mark file if we have expired users
@@ -3509,9 +3553,21 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	// increment our count of the number of job ads in the queue
 	scheduler.JobsTotalAds++;
 
+	// Update OCU job counters
+	bool OCUWantedJob = false;
+	job->LookupBool("OCUWanted", OCUWantedJob);
+	if (OCUWantedJob) {
+		SubData->num.OCUWantedJobs += 1;
+	}
+
+	if (OCUWantedJob && (status == RUNNING || status == TRANSFERRING_OUTPUT)) {
+		SubData->num.OCURunningJobs += 1;
+	}
+
     time_t now = time(NULL);
     OwnInfo->LastHitTime = now;
     SubData->LastHitTime = now;
+	if (job->project) { job->project->LastHitTime = now; }
 
     ScheddOtherStats * other_stats = NULL;
     if (scheduler.OtherPoolStats.AnyEnabled()) {
@@ -3565,6 +3621,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	// update per-submitter and per-owner counters
 	SubmitterCounters * Counters = &SubData->num;
 	JobQueueUserRec::CountJobsCounters * OwnerCounts = &OwnInfo->num;
+	JobQueueProjectRec::CountJobsCounters * ProjectCounts = (job->project) ? &job->project->num : &NoneProjectRec.num;
 
 	// Hits also counts matchrecs, which aren't jobs. (hits is sort of a reference count)
 	Counters->Hits += 1;
@@ -3572,6 +3629,9 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	
 	OwnerCounts->Hits += 1;
 	OwnerCounts->JobsCounted += 1;
+
+	ProjectCounts->Hits += 1;
+	ProjectCounts->JobsCounted += 1;
 
 	if ( (universe != CONDOR_UNIVERSE_GRID) &&	// handle Globus below...
 		 (!service_this_universe(universe,job))  )
@@ -3586,6 +3646,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 			OwnerCounts->SchedulerJobsRunning += cur_hosts;
 			OwnerCounts->SchedulerJobsIdle += (max_hosts - cur_hosts);
+			ProjectCounts->SchedulerJobsRunning += cur_hosts;
+			ProjectCounts->SchedulerJobsIdle += (max_hosts - cur_hosts);
 			Counters->SchedulerJobsRunning += cur_hosts;
 			Counters->SchedulerJobsIdle += (max_hosts - cur_hosts);
 		}
@@ -3597,6 +3659,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			scheduler.LocalUniverseJobsIdle += (max_hosts - cur_hosts);
 			OwnerCounts->LocalJobsRunning += cur_hosts;
 			OwnerCounts->LocalJobsIdle += (max_hosts - cur_hosts);
+			ProjectCounts->LocalJobsRunning += cur_hosts;
+			ProjectCounts->LocalJobsIdle += (max_hosts - cur_hosts);
 			Counters->LocalJobsRunning += cur_hosts;
 			Counters->LocalJobsIdle += (max_hosts - cur_hosts);
 		}
@@ -3682,6 +3746,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			// Update Owners array JobsIdle
 		int job_idle = (max_hosts - cur_hosts);
 		OwnerCounts->JobsIdle += job_idle;
+		ProjectCounts->JobsIdle += job_idle;
 		Counters->JobsIdle += job_idle;
 
 			// If we're biasing by slot weight, and the job is idle, and everything parsed...
@@ -3739,6 +3804,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 
 	} else if (status == HELD) {
 		OwnerCounts->JobsHeld++;
+		ProjectCounts->JobsHeld++;
 		Counters->JobsHeld++;
 	}
 
@@ -3855,20 +3921,36 @@ Scheduler::find_ownerinfo(const char * owner)
 	return nullptr;
 }
 
+JobQueueProjectRec *
+Scheduler::find_projectinfo(const char * name)
+{
+	auto it = ProjectInfo.find(name);
+	if (it != ProjectInfo.end()) {
+		return it->second;
+	}
+	return nullptr;
+}
+
+
 int Scheduler::nextUnusedUserRecId()
 {
 	if (NextOwnerId <= LAST_RESERVED_USERREC_ID) { NextOwnerId = LAST_RESERVED_USERREC_ID+1; }
 	return NextOwnerId++;
 }
 
-JobQueueUserRec * Scheduler::jobqueue_newUserRec(int userrec_id)
+JobQueueUserRec * Scheduler::jobqueue_newUserRec(int userrec_id, const char * mytype)
 {
 	auto found = pendingOwners.find(userrec_id);
 	if (found != pendingOwners.end()) {
 		return found->second;
 	}
 	if (userrec_id >= NextOwnerId) { NextOwnerId = userrec_id+1; }
-	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id);
+	JobQueueUserRec * uad = nullptr;
+	if (YourStringNoCase(PROJECT_ADTYPE) == mytype) {
+		uad = new JobQueueProjectRec(userrec_id);
+	} else {
+		uad = new JobQueueUserRec(userrec_id);
+	}
 	pendingOwners[userrec_id] = uad;
 	uad->setPending();
 	return uad;
@@ -3897,6 +3979,29 @@ void Scheduler::jobqueue_deleteUserRec(JobQueueUserRec * uad)
 	zombieOwners.push_back(uad);
 }
 
+void Scheduler::jobqueue_deleteProject(JobQueueProjectRec * pjad)
+{
+	// remove it from the Projects table
+	if (!pjad->empty()) {
+		auto it = scheduler.ProjectInfo.find(pjad->Name());
+		if (it != scheduler.ProjectInfo.end()) {
+			if (it->second == pjad) {
+				scheduler.ProjectInfo.erase(it);
+			}
+		}
+	}
+	// remove it from the pending table
+	auto found = pendingOwners.find(pjad->jid.proc);
+	if (found != pendingOwners.end()) {
+		pendingOwners.erase(found);
+	}
+
+	// we can't safely delete the object until there a no jobs referencing it.
+	// we detect that in count_jobs, so here we put the pointer into the
+	// zombie collection until then
+	zombieOwners.push_back(pjad);
+}
+
 // called on shutdown after we delete the job queue.
 void Scheduler::deleteZombieOwners()
 {
@@ -3917,6 +4022,7 @@ void Scheduler::purgeZombieOwners()
 }
 
 // called by InitJobQueue to put newly added UserRec ads into the OwnerInfo map
+// or newly added ProjectRec ads into the ProjectInfo map
 // and after we commit a transaction, to clear the pending state for new users
 void Scheduler::mapPendingOwners()
 {
@@ -3926,8 +4032,12 @@ void Scheduler::mapPendingOwners()
 		uad->clearPending();
 		uad->flags |= JQU_F_DIRTY; // set dirty to force populate
 		uad->PopulateFromAd();
-		uad->setStaleConfigSuper(); // force a superuser check next time we need to know
-		OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
+		if (uad->IsProject()) {
+			ProjectInfo[uad->Name()] = dynamic_cast<JobQueueProjectRec*>(uad);
+		} else {
+			uad->setStaleConfigSuper(); // force a superuser check next time we need to know
+			OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
+		}
 	}
 	pendingOwners.clear();
 	if (NextOwnerId <= LAST_RESERVED_USERREC_ID) { NextOwnerId = LAST_RESERVED_USERREC_ID+1; }
@@ -3939,16 +4049,28 @@ void Scheduler::clearPendingOwners()
 	for (auto it : pendingOwners) {
 		JobQueueUserRec * uad = it.second;
 		if (uad->isPending() && ! uad->empty()) {
-			// we put pending owners in the owners table so we don't try and create them more than once
-			// but if they are still in the pending state now, we have to remove them.
-			auto it = scheduler.OwnersInfo.find(uad->Name());
-			if (it != scheduler.OwnersInfo.end()) {
-				if (it->second == uad) {
-					scheduler.OwnersInfo.erase(it);
+			if (uad->IsProject()) {
+				// we put pending projects into the projects table and need to remove
+				// them before we delete the corresponding record
+				JobQueueProjectRec * pad = dynamic_cast<JobQueueProjectRec*>(uad);
+				auto pt = scheduler.ProjectInfo.find(pad->Name());
+				if (pt != scheduler.ProjectInfo.end()) {
+					if (pt->second == pad) {
+						scheduler.ProjectInfo.erase(pt);
+					}
+				}
+			} else {
+				// we put pending owners in the owners table so we don't try and create them more than once
+				// but if they are still in the pending state now, we have to remove them.
+				auto it = scheduler.OwnersInfo.find(uad->Name());
+				if (it != scheduler.OwnersInfo.end()) {
+					if (it->second == uad) {
+						scheduler.OwnersInfo.erase(it);
+					}
 				}
 			}
-			delete uad;
 		}
+		delete uad;
 	}
 	pendingOwners.clear();
 }
@@ -4045,7 +4167,7 @@ Scheduler::insert_owner_const(const char * name)
 	return insert_ownerinfo(name);
 }
 
-// lookup (and cache) pointer to the jobs owner instance data
+// lookup (and cache) pointer to the job's owner instance data
 OwnerInfo *
 Scheduler::get_ownerinfo(JobQueueJob * job)
 {
@@ -4059,6 +4181,43 @@ Scheduler::get_ownerinfo(JobQueueJob * job)
 		job->ownerinfo = scheduler.find_ownerinfo(owner);
 	}
 	return job->ownerinfo;
+}
+
+// lookup (and cache) pointer to the job's project record
+JobQueueProjectRec *
+Scheduler::get_projectinfo(JobQueueJob * job)
+{
+	if ( ! job) return nullptr;
+	if ( ! job->project) {
+		std::string name;
+		if ( ! job->LookupString(ATTR_PROJECT_NAME,name) ) {
+			return nullptr;
+		}
+		job->project = find_projectinfo(name.c_str());
+	}
+	return job->project;
+}
+
+JobQueueProjectRec *
+Scheduler::insert_projectinfo(const char * name)
+{
+	if ( ! name || !name[0]) return nullptr;
+
+	JobQueueProjectRec * pjrec = find_projectinfo(name);
+	if (pjrec) return pjrec;
+
+	dprintf(D_ALWAYS, "Creating pending JobQueueProjectRec for project %s\n", name);
+
+	int userrec_id = nextUnusedUserRecId();
+	pjrec = new JobQueueProjectRec(userrec_id, name);
+	ASSERT(pjrec);
+
+	// pending owners and pending projects both go into the pendingOwners collection
+	// because that collection is by id and not by name
+	pendingOwners[userrec_id] = pjrec;
+	pjrec->setPending();
+	ProjectInfo[pjrec->Name()] = pjrec;
+	return pjrec;
 }
 
 // lookup (and cache) pointer to the jobs submitter instance data (aka the OwnerData)
@@ -4438,6 +4597,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// If there is a match record for this job, try to find a different
 	// job to run on it.
 	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
+	bool is_ocu_holder = false;
+	GetAttributeBool(job_id.cluster, job_id.proc, "IsOCUHolder", &is_ocu_holder);
+	if (mrec && is_ocu_holder) {
+		// ocu holders are set with infinite keep claim idle, but if we are deleting
+		// the job, that's the only time we want to remove the claim.
+		scheduler.DelMrec(mrec);
+		mrec = nullptr;
+	}
 	if( mrec ) {
 		scheduler.FindRunnableJobForClaim( mrec );
 	}
@@ -8620,6 +8787,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	scheduler.rescheduleContactQueue();
 
 	match_rec *match = (match_rec *)cb->getMiscDataPtr();
+
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED && !match) {
 		// if match is NULL, then this message must have been canceled
 		// from within ~match_rec, in which case there is nothing to do
@@ -8799,7 +8967,20 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			scheduler.StartJob(slot);
+			bool is_ocu_holder = false;
+			GetAttributeBool(slot->cluster,slot->proc,"IsOCUHolder", &is_ocu_holder);
+			if (is_ocu_holder) {
+				// If the "job" is the one which is responsible for holding the OCU 
+				// claim, don't start the job, but set cluster/proc to -1 to indicate
+				// another job could start here.
+				slot->keep_while_idle = std::numeric_limits<int>::max();
+				slot->is_ocu = true;
+				slot->ocu_originator = {slot->cluster, slot->proc};
+				slot->cluster = slot->proc = -1;
+				slot->my_match_ad->Assign("OCUClaim", true);
+			} else {
+				scheduler.StartJob(slot);
+			}
 		}
 	}
 
@@ -9228,14 +9409,7 @@ Scheduler::StartJob(match_rec *rec)
 	bool is_ocu_holder = false;
 	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
 	if (is_ocu_holder) {
-		// If the "job" is the one which is responsible for holding the OCU 
-		// claim, don't start the job, but set cluster/proc to -1 to indicate
-		// another job could start here.
-		rec->keep_while_idle = std::numeric_limits<int>::max();
-		rec->is_ocu = true;
-		rec->ocu_originator = {rec->cluster, rec->proc};
-		rec->cluster = rec->proc = -1;
-		rec->my_match_ad->Assign("OCUClaim", true);
+		return;
 	}
 
 	switch(rec->status) {
@@ -9325,7 +9499,9 @@ Scheduler::StartJob(match_rec *rec)
                // job's keep_idle times to the match
 	int keep_claim_idle_time = 0;
     GetAttributeInt(id.cluster,id.proc,ATTR_JOB_KEEP_CLAIM_IDLE,&keep_claim_idle_time);
-    if (keep_claim_idle_time > 0) {
+	if (rec->is_ocu) {
+		    rec->keep_while_idle = std::numeric_limits<int>::max();
+	} else if (keep_claim_idle_time > 0) {
             rec->keep_while_idle = keep_claim_idle_time;
     } else {
             rec->keep_while_idle = 0;
@@ -9364,6 +9540,13 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 		} else {
 			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
 		}
+		return false;
+	}
+
+	if (new_job_id.proc == -1 && mrec->is_ocu) {
+		// If this is an OCU holder, we don't want to run a job, but
+		// we do want to keep the match record around so that we can
+		// hold the claim for the OCU.
 		return false;
 	}
 
@@ -11907,7 +12090,7 @@ _mark_job_stopped(PROC_ID* job_id)
 	DeleteAttribute( job_id->cluster, job_id->proc, ATTR_SHADOW_BIRTHDATE );
 
 	// if job isn't RUNNING, then our work is already done
-	if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
+	if (status == RUNNING || status == TRANSFERRING_OUTPUT || status == SUSPENDED) {
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
@@ -12389,6 +12572,7 @@ Scheduler::child_exit(int pid, int status)
 			if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 				srec->match->setStatus(M_CLAIMED);
 				srec->match->shadowRec = NULL;
+				srec->match->cluster = srec->match->proc = -1;
 				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 				srec->match = NULL;
 			}
@@ -12708,7 +12892,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if( srec != NULL && !srec->removed && srec->match ) {
 				// Don't delete matches we're trying to use for a now job.
 				if(! srec->match->m_now_job.isJobKey()) {
-					DelMrec(srec->match);
+					if (!srec->match->is_ocu) {
+						DelMrec(srec->match);
+					} else {
+						// In the OCU case, move claim back to Claimed/Idle
+						srec->match->setStatus(M_CLAIMED);
+						SetMrecJobID(srec->match, -1, -1);
+					}
 				}
 			}
             switch (exit_code) {
@@ -13195,6 +13385,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 
 	switch( status ) {
 	case RUNNING:
+	case SUSPENDED:
 	case TRANSFERRING_OUTPUT: {
 			//
 			// If the job is running, we are in middle of executing
@@ -13307,6 +13498,9 @@ Scheduler::Init()
 
 		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
 		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
+
+		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
+		EnablePersistentProjectInfo = param_boolean("PERSISTENT_PROJECT_RECORDS", false);
 
 		// UID_DOMAIN is a restart knob for the SCHEDD
 		UidDomain = param( "UID_DOMAIN" );
@@ -14929,11 +15123,20 @@ Scheduler::unlinkMrec(match_rec* match)
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
 
-	matches->remove(match->claim_id.claimId());
 
 	PROC_ID jobId;
 	jobId.cluster = match->cluster;
 	jobId.proc = match->proc;
+
+	// If this match is an ocu holder, make sure to update the
+	// correct job.
+	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
+		jobId = match->ocu_originator;
+		dirtyJobQueue();
+	}
+
+	matches->remove(match->claim_id.claimId());
+
 	matchesByJobID->remove(jobId);
 
 		// fill any authorization hole we made for this match
@@ -15033,6 +15236,9 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		mrec->setStatus( M_CLAIMED );
 		if( mrec->is_dedicated ) {
 			deallocMatchRec( mrec );
+		}
+		if (mrec->is_ocu) {
+			SetMrecJobID(mrec,-1,-1); // but for OCU, anyone can claim
 		}
 	}
 }

@@ -22,6 +22,7 @@
 #include "proc.h"
 #include "stl_string_utils.h"
 #include "condor_debug.h"
+#include <charconv> // for std::from_chars
 
 PROC_ID
 getProcByString( const char* str )
@@ -49,31 +50,6 @@ ProcIdToStr( int cluster, int proc, char *buf ) {
 		snprintf(buf,PROC_ID_STR_BUFLEN,"%d.%d",cluster,proc);
 	}
 }
-
-/*
-bool StrToProcId(char const *str, PROC_ID &id) {
-	return StrToProcId(str,id.cluster,id.proc);
-}
-
-bool StrToProcId(char const *str, int &cluster, int &proc) {
-	char const *tmp;
-
-	// skip leading zero, if any
-	if ( *str == '0' ) 
-		str++;
-
-	if ( !(tmp = strchr(str,'.')) ) {
-		cluster = -1;
-		proc = -1;
-		return false;
-	}
-	tmp++;
-
-	cluster = atoi(str);
-	proc = atoi(tmp);
-	return true;
-}
-*/
 
 // parse a string of the form X.Y as a PROC_ID.
 // return true if the input string was a valid proc id and it ended with \0 or comma or whitespace.
@@ -118,6 +94,47 @@ bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend)
 	if (pend) *pend = pe;
 	return valid;
 }
+
+// parse a string of the form X.Y as a PROC_ID.
+// return true if the input string was a valid proc id and it ended with \0 or comma or whitespace.
+// a pointer to the first unparsed character is optionally returned.
+// input may be X  or X.  or X.Y  if no Y is specified then proc will be set to -1
+bool StrIsProcId(std::string_view str, int &cluster, int &proc, const char ** pend)
+{
+	if (str.empty()) return false;
+
+	const char * p = str.data();
+	const char * endp = p + str.size();
+	while (p < endp && isspace(*p)) ++p;
+
+	bool valid = false;
+	auto res = std::from_chars(p, endp, cluster);
+	if (res.ec == std::errc{} && res.ptr > p) { // if success and read at least 1 character
+		p = res.ptr;
+		if (p >= endp || *p == 0 || isspace(*p) || *p == ',') {
+			// if ate at least one character and ended on , space or \0, then this is a bare clusterid
+			// it's valid as long as it's positive.
+			proc = -1;
+			valid = cluster >= 0; // TODO: allow negative cluster id's here??
+		} else if (*p == '.') {
+			// if we end on a . then cluster must be followed by a proc
+			p = ++res.ptr;
+			proc = -1;
+			if (p >= endp || *p == 0 || isspace(*p) || *p == ',') {
+				// ok, if the cluster is followed by a dot and nothing more
+				// this parsed the same as if the dot were not there.
+				valid = cluster >= 0; // TODO: allow negative cluster id's here??
+			} else {
+				// if we get to here, we must have a valid proc, procs are allowed to be negative
+				res = std::from_chars(p, endp, proc);
+				valid = (res.ec == std::errc{} && (res.ptr == endp || *res.ptr == 0 || isspace(*res.ptr) || *res.ptr == ','));
+			}
+		}
+	}
+	if (pend) *pend = res.ptr;
+	return valid;
+}
+
 
 void JOB_ID_KEY::sprint(std::string & s) const
 {

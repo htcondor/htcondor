@@ -6,11 +6,19 @@
   limit, it will be put on hold.
   :jira:`3170`
 
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
+
 *** 24.11.0 bugs
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3131`
 
 *** 24.0.11 bugs
 
-*** 24.10.0 features
+*** 24.10.1 features
 
 - The new Python API now includes `htcondor2.disable_debug()`, which is
   intended interactive use (after debugging a problem).
@@ -50,7 +58,7 @@
   job/user event log; and a new transfer entry in the epoch history.
   :jira:`3052`
 
-*** 24.10.0 bugs
+*** 24.10.1 bugs
 
 - Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
   OAuth2 credential was a plain user-provided access token.
@@ -69,6 +77,12 @@
 - Fixed an issue where a job may take an additional 20 minutes to be scheduled to run after leaving cool-down mode.
   See configuration knob :macro:`SYSTEM_ON_VACATE_COOL_DOWN` for more information about job cool-down mode.
   :jira:`3059`
+
+- Fixed a bug introduced in HTCondor version 24.8.0 where a job in Suspended
+  status wouldn't change to Idle status when evicted from an EP.
+  This resulted in the job not being considered for scheduling, among other
+  problems.
+  :jira:`3174`
 
 *** 24.0.10 bugs
 
