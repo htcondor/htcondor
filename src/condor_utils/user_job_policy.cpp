@@ -239,9 +239,9 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 			ATTR_ALLOWED_JOB_DURATION
 			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_VACATE_CHECK
+			ATTR_PERIODIC_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_RELEASE_CHECK
-			ATTR_PERIODIC_REMOVE_CHECK
 			ATTR_ON_EXIT_HOLD_CHECK
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
@@ -343,6 +343,11 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 
 	int retval;
 
+	/* Should I perform a periodic remove? */
+	if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_REMOVE_CHECK, POLICY_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
+		return retval;
+	}
+
 	/* should I perform a periodic hold? */
 	if(state!=HELD && state!=COMPLETED) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_HOLD_CHECK, POLICY_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
@@ -368,11 +373,6 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 				return retval;
 			}
 		}
-	}
-
-	/* Should I perform a periodic remove? */
-	if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_REMOVE_CHECK, POLICY_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
-		return retval;
 	}
 
 	if( mode == PERIODIC_ONLY ) {
