@@ -188,7 +188,7 @@ void collectJob(
  * A helper function to make sure we're looking at the file we expect
 */
 bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
-    auto [inodeMatch, hashMatch] = checkFileEquals(historyFilePath, fileInfo);
+    auto [inodeMatch, hashMatch] = ArchiveMonitor::checkFileEquals(historyFilePath, fileInfo);
 
     if(!inodeMatch) std::cerr << "Inode doesn't match expected for file at " << historyFilePath;
     if(!hashMatch) std::cerr << "Hash doesn't match expected for file at " << historyFilePath;

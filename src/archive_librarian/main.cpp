@@ -5,30 +5,41 @@
 #include "librarian.h"
 #include <fstream>
 #include <iostream>
-#include "json.hpp"
+#include <sstream>
+#include <unordered_map>
+
+std::unordered_map<std::string, std::string> parseConfigFile(const std::string& filename) {
+    std::unordered_map<std::string, std::string> configMap;
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open config file: " << filename << std::endl;
+        return configMap;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream lineStream(line);
+        std::string key, value;
+
+        if (std::getline(lineStream, key, '=') && std::getline(lineStream, value)) {
+            // Trim whitespace (optional)
+            configMap[key] = value;
+        }
+    }
+
+    return configMap;
+}
 
 int main() {
-    // Load and parse config.json
-    std::ifstream configFile("librarian_config.json");
-    if (!configFile.is_open()) {
-        std::cerr << "Failed to open librarian_config.json" << std::endl;
-        return 1;
-    }
+    // Load and parse librarian_config.txt
+    auto config = parseConfigFile("librarian_config.txt");
 
-    nlohmann::json config;
-    try {
-        configFile >> config;
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to parse JSON: " << e.what() << std::endl;
-        return 1;
-    }
-
-    // Extract required fields
     std::string epochHistoryPath = config["epoch_history_path"];
     std::string historyPath = config["history_path"];
     std::string dbPath = config["db_path"];
     std::string schemaPath = config["schema_path"];
-    size_t jobCacheSize = 10000; // TODO: add this to json file
+    size_t jobCacheSize = 10000; // still hardcoded
+    
 
     Librarian librarian(schemaPath, dbPath, historyPath, epochHistoryPath, jobCacheSize);
 

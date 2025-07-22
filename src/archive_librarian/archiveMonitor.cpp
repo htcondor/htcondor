@@ -32,195 +32,371 @@
 #include "JobRecord.h"  
 #include "readHistory.h"  
 #include "dbHandler.h"
-// #include "archiveMonitor.h"
+#include "archiveMonitor.h"
+#include "FileSet.h"
 
 
 namespace fs = std::filesystem; // where am i?
+ 
+namespace { // Helper functions for ArchiveMonitor utility functions
 
-
-// Helper Function: Convert hash into hex string to log it 
-std::string hashToHex(const uint8_t hash[32]) {
-    char buf[65];
-    for (int i = 0; i < 32; ++i)
-        snprintf(buf + (i * 2), 3, "%02x", hash[i]);
-    buf[64] = 0;
-    return std::string(buf);
-}
-
-// Get hash by reading until first banner and hashing the first JobAd
-std::string getHash(const char* historyFilePath) {
-    FILE* file = fopen(historyFilePath, "rb");
-    if (!file) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
+    // Helper Function: Convert hash into hex string to log it 
+    std::string hashToHex(const uint8_t hash[32]) {
+        char buf[65];
+        for (int i = 0; i < 32; ++i)
+            snprintf(buf + (i * 2), 3, "%02x", hash[i]);
+        buf[64] = 0;
+        return std::string(buf);
     }
 
-    const char* bannerPrefix = "*** Offset =";
-    std::string buffer;
-    char line[4096];
-
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, bannerPrefix, strlen(bannerPrefix)) == 0) {
-            break;
+    // Get hash by reading until first banner and hashing the first JobAd
+    std::string getHash(const char* historyFilePath) {
+        FILE* file = fopen(historyFilePath, "rb");
+        if (!file) {
+            perror("fopen");
+            return std::string{};
         }
-        buffer += line;
+
+        const char* bannerPrefix = "*** Offset =";
+        std::string buffer;
+        char line[4096];
+
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, bannerPrefix, strlen(bannerPrefix)) == 0) {
+                break;
+            }
+            buffer += line;
+        }
+
+        fclose(file);
+
+        uint8_t outputHash[32];
+        SHA256_CTX ctx;
+        sha256_init(&ctx);
+        sha256_update(&ctx, reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.size());
+        sha256_final(&ctx, outputHash);
+
+        std::string hexString = hashToHex(outputHash);
+        return hexString;
     }
 
-    fclose(file);
+    // Collect information about a new file: Name, Inode, Hash
+    std::optional<FileInfo> maybeCollectNewFileInfo(const char *historyFilePath) {
+        FileInfo fileInfo;
 
-    uint8_t outputHash[32];
-    SHA256_CTX ctx;
-    sha256_init(&ctx);
-    sha256_update(&ctx, reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.size());
-    sha256_final(&ctx, outputHash);
+        // Get .FileName from full path
+        std::string fullPath(historyFilePath);
+        size_t pos = fullPath.find_last_of("/\\");
+        fileInfo.FileName = (pos == std::string::npos) ? fullPath : fullPath.substr(pos + 1);
 
-    std::string hexString = hashToHex(outputHash);
-    return hexString;
-}
+        // Get .FileInode and .FileSize using stat
+        struct stat file_stat;
+        if (stat(historyFilePath, &file_stat) == 0) {
+            fileInfo.FileInode = static_cast<long>(file_stat.st_ino);
+            fileInfo.FileSize = static_cast<int64_t>(file_stat.st_size);
+            fileInfo.LastModified = file_stat.st_mtime;
+        } else {
+            printf("[ERROR] Could not get file stats for '%s'\n", historyFilePath);
+            return std::nullopt;
+        }
 
-
-// Collect information about a new file: Name, Inode, Hash
-std::optional<FileInfo> maybeCollectNewFileInfo(const char *historyFilePath) {
-    FileInfo fileInfo;
-
-    // Get .fileName from full path
-    std::string fullPath(historyFilePath);
-    size_t pos = fullPath.find_last_of("/\\");
-    fileInfo.FileName = (pos == std::string::npos) ? fullPath : fullPath.substr(pos + 1);
-
-    // Get .fileInode
-    struct stat file_stat;
-    if (stat(historyFilePath, &file_stat) == 0) {
-        ino_t inode_number = file_stat.st_ino;
-        fileInfo.FileInode = inode_number;
-    } else {
-        printf("[ERROR] Could not get file stats for '%s'\n", historyFilePath);
-    }
-
-    // Get file hash
-    try {
+        // Get .FileHash
         fileInfo.FileHash = getHash(historyFilePath);
-    } catch (const std::exception &e) {
-        printf("[ERROR] Failed to compute hash for file '%s': %s\n", historyFilePath, e.what());
-        return std::nullopt;
+        if (fileInfo.FileHash.empty()) {
+            printf("[ERROR] Failed to compute hash for file '%s'\n", historyFilePath);
+            return std::nullopt;
+        }
+
+        return fileInfo;
     }
 
-    return fileInfo;
-}
-
-FileInfo collectNewFileInfo(const std::string& path, long defaultOffset = 0) {
-    auto maybe = maybeCollectNewFileInfo(path.c_str());
-    if (!maybe) {
-        printf("[ERROR] Couldn't collect file info for: %s\n", path.c_str());
-        FileInfo dummy;
-        dummy.FileName = path.substr(path.find_last_of("/\\") + 1);
-        dummy.LastOffset = defaultOffset;
-        dummy.FileHash = "UNKNOWN";
-        dummy.FileInode = 0;
-        return dummy;
+    // Used to check whether the previous "current" file has changed
+    bool checkRotation(const FileInfo& lastFileRead, const std::string& currHistoryFilePath){
+        auto [inodeMatch, hashMatch] = ArchiveMonitor::checkFileEquals(currHistoryFilePath, lastFileRead);
+        return inodeMatch && hashMatch;
     }
 
-    FileInfo fileInfo = *maybe;
-    fileInfo.LastOffset = defaultOffset; 
-    return fileInfo;
-}
-
-
-// Given a filepath, we check if its equal to the fileInfo struct using hash and inode
-std::pair<bool, bool> checkFileEquals(const std::string& historyFilePath, const FileInfo& fileInfo) {
-    // Get the inode of the file at the filepath
-    struct stat file_stat_check;
-    if (stat(historyFilePath.c_str(), &file_stat_check) != 0) {
-        printf("[ERROR] Failed to stat file: %s\n", historyFilePath.c_str());
-        return {false, false}; // Can't stat file; both checks fail
+    // Helper function for getFilesCreated() to get file info
+    std::time_t to_time_t(std::filesystem::file_time_type ftime) {
+        using namespace std::chrono;
+        auto sctp = time_point_cast<system_clock::duration>(ftime - fs::file_time_type::clock::now()
+            + system_clock::now());
+        return system_clock::to_time_t(sctp);
     }
 
-    // Get the hash of the file at the path
-    std::string hashToCheck = getHash(historyFilePath.c_str());
+    // Helper function to check if a file belongs to this history set
+    bool isHistoryFile(const fs::path& filePath, const std::string& historyPrefix) {
+        std::string filename = filePath.filename().string();
+        return filename.substr(0, historyPrefix.length()) == historyPrefix;
+    }
 
-    // Perform both checks
-    bool inodeMatch = (file_stat_check.st_ino == fileInfo.FileInode);
-    bool hashMatch = (hashToCheck == fileInfo.FileHash);
+    // Helper function to get all history files modified after a certain time
+    std::vector<fs::path> getHistoryFilesModifiedAfter(const std::string& directory,
+                                                  const std::string& historyPrefix,
+                                                  std::time_t afterTime) {
+        std::vector<fs::path> historyFiles;
+        
+        try {
+            for (const auto& entry : fs::directory_iterator(directory)) {
+                if (entry.is_regular_file()) {
+                    const fs::path& filePath = entry.path();
+                    
+                    // Check if this file belongs to our history set
+                    if (isHistoryFile(filePath, historyPrefix)) {
+                        auto writeTime = fs::last_write_time(filePath);
+                        auto writeTime_t = to_time_t(writeTime);  // Use your helper function
+                        
+                        if (writeTime_t > afterTime) {
+                            historyFiles.push_back(filePath);
+                        }
+                    }
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "[getHistoryFilesModifiedAfter] Error reading directory " 
+                    << directory << ": " << e.what() << "\n";
+        }
+        
+        return historyFiles;
+    }
 
-    return {inodeMatch, hashMatch};
-}
+    // Function to perform Step 1 for one history file set:
+    // Find last file we were working on and identifies untracked files
+    std::vector<fs::path> detectRotationAndGetUntrackedFiles(const std::string& directory,
+                                            const std::string& historyPrefix,
+                                            std::time_t lastStatusTime,
+                                            const FileInfo& lastFileRead,
+                                            ArchiveChange& changes) {
+        // Get all history files modified after lastStatusTime
+        std::vector<fs::path> filesAfterUpdate = getHistoryFilesModifiedAfter(directory, historyPrefix, lastStatusTime);
 
-bool checkRotation(const FileInfo& lastFileRead, const std::string& currHistoryFilePath){
-    auto [inodeMatch, hashMatch] = checkFileEquals(currHistoryFilePath, lastFileRead);
-    return inodeMatch && hashMatch;
-}
+        // Sort from oldest to newest
+        std::sort(filesAfterUpdate.begin(), filesAfterUpdate.end(),
+            [](const fs::path& a, const fs::path& b) {
+                return fs::last_write_time(a) < fs::last_write_time(b);
+            });
 
+        if (!filesAfterUpdate.empty()) {
+            const fs::path& oldestFile = filesAfterUpdate.front();
 
-// Helper function for getFilesCreated() to get file info
-std::time_t to_time_t(std::filesystem::file_time_type ftime) {
-    using namespace std::chrono;
-    auto sctp = time_point_cast<system_clock::duration>(ftime - fs::file_time_type::clock::now()
-        + system_clock::now());
-    return system_clock::to_time_t(sctp);
-}
+            // Check if oldest file matches lastFileRead (rotation detection)
+            if (checkRotation(lastFileRead, oldestFile.string())) {
+                // We found a rotation
+                std::cout << "[detectRotationAndGetUntrackedFiles] Rotation detected: "
+                        << lastFileRead.FileName << " -> " << oldestFile.filename().string() << "\n";
 
-// Helper function for getUntrackedFiles() -> gets files made after lastStatusRead.TimeOfUpdate
-std::vector<fs::path> getFilesModifiedAfter(const std::string& directory, std::time_t minTimestamp) {
-    std::vector<std::pair<fs::path, std::time_t>> matching;
+                changes.rotatedFile = std::make_pair(lastFileRead.FileId, oldestFile.filename().string());
 
-    for (const auto& entry : fs::directory_iterator(directory)) {
-        if (!fs::is_regular_file(entry)) continue;
+                // Remove oldest file from untracked list (since it's lastFileRead rotated)
+                filesAfterUpdate.erase(filesAfterUpdate.begin());
+            }
+        }
 
-        auto ftime = fs::last_write_time(entry);
-        std::time_t ctime = to_time_t(ftime);
+        // Return remaining untracked files for next steps (new files)
+        return filesAfterUpdate;
+    }
 
-        if (ctime > minTimestamp) {
-            matching.emplace_back(entry.path(), ctime);
+    // Step 2: Collect FileInfo for all untracked files, update ArchiveChange
+    void trackUntrackedFiles(const std::vector<fs::path>& untrackedFiles,
+                          ArchiveChange& changes) {
+        for (const auto& filePath : untrackedFiles) {
+            try {
+                // Collect FileInfo with size, offset=0 by default
+                FileInfo newFileInfo = ArchiveMonitor::collectNewFileInfo(filePath.string(), 0);
+                newFileInfo.FileSize = static_cast<int64_t>(fs::file_size(filePath));
+
+                // Simply push the copy of FileInfo into the vector
+                changes.newFiles.push_back(newFileInfo);
+
+                std::cout << "[trackUntrackedFiles] Added new file: " << newFileInfo.FileName << "\n";
+
+            } catch (const std::exception& e) {
+                std::cerr << "[trackUntrackedFiles] Failed to process file " << filePath
+                        << ": " << e.what() << "\n";
+            }
         }
     }
 
-    std::sort(matching.begin(), matching.end(),
-        [](const auto& a, const auto& b) {
-            return a.second > b.second;
-        });
 
-    std::vector<fs::path> result;
-    for (const auto& [path, _] : matching) {
-        result.push_back(path);
-    }
+    // Step 3: Look for deleted files that are in the cache but no longer in the directory
+    void checkDeletedFiles(const std::string& directory,
+                        const std::string& historyPrefix,
+                        const std::unordered_map<int, FileInfo>& fileCache,
+                        ArchiveChange& changes) {
+        // Extract values from unordered_map into vector
+        std::vector<FileInfo> sortedCache;
+        sortedCache.reserve(fileCache.size());
+        for (const auto& [fileId, fi] : fileCache) {
+            sortedCache.push_back(fi);
+        }
 
-    return result;
-}
+        // Sort by LastModified (oldest to newest)
+        std::sort(sortedCache.begin(), sortedCache.end(),
+            [](const FileInfo& a, const FileInfo& b) {
+                return a.LastModified < b.LastModified;
+            });
 
+        for (const FileInfo& fi : sortedCache) {
+            std::string fullPath = directory + "/" + fi.FileName;
 
-std::vector<FileInfo> trackUntrackedFiles(const std::string& directory, DBHandler *handler){
-    // Get status and last file read
-    Status lastStatus = handler->readLastStatus();
-    FileInfo lastReadFile = handler->lastFileRead("history");
+            // Double-check that this cached file should belong to our history set
+            // (defensive programming in case cache gets corrupted)
+            if (!isHistoryFile(fs::path(fi.FileName), historyPrefix)) {
+                std::cout << "[checkDeletedFiles] Skipping cached file that doesn't match prefix: " 
+                         << fi.FileName << "\n";
+                continue;
+            }
 
-    printf("[ArchiveMonitor] lastStatus.TimeOfUpdate: %lld  | lastFileRead: %s\n",
-       lastStatus.TimeOfUpdate, lastReadFile.FileName.c_str());
-
-    std::vector<fs::path> untrackedFilePaths = getFilesModifiedAfter(directory, lastStatus.TimeOfUpdate);
-
-    // Step 1: Sort from oldest to newest
-    std::sort(untrackedFilePaths.begin(), untrackedFilePaths.end(),
-        [](const fs::path& a, const fs::path& b) {
-            return fs::last_write_time(a) < fs::last_write_time(b);
-        });
-
-    // Step 2: Check if the least recently modified matches lastReadFile
-    if (!untrackedFilePaths.empty()) {
-        const fs::path& oldest = untrackedFilePaths.front();
-        if (checkRotation(lastReadFile, oldest.c_str())) {
-            untrackedFilePaths.erase(untrackedFilePaths.begin());  // remove the match
+            if (!fs::exists(fullPath)) {
+                std::cout << "[checkDeletedFiles] File missing: " << fi.FileName << "\n";
+                changes.deletedFileIds.push_back(fi.FileId);  // Push only the FileId
+            } else {
+                std::cout << "[checkDeletedFiles] Found file: " << fi.FileName << " — stopping scan.\n";
+                break;  // Stop at first file that still exists
+            }
         }
     }
 
-    // Step 3: Write info for remaining untracked files
-    std::vector<FileInfo> untrackedFiles;
-    for (const fs::path& filePath : untrackedFilePaths) {
-        FileInfo newFile = collectNewFileInfo(filePath.c_str(), 0);
-        untrackedFiles.push_back(newFile); // save to give to manager
-        handler->writeFileInfo(newFile); // push into database
+    // Helper function for very first startup
+    std::vector<fs::path> getAllHistoryFiles(const std::string& directory, const std::string& historyPrefix) {
+        std::vector<fs::path> historyFiles;
+        
+        try {
+            for (const auto& entry : fs::directory_iterator(directory)) {
+                if (entry.is_regular_file()) {
+                    const fs::path& filePath = entry.path();
+                    if (isHistoryFile(filePath, historyPrefix)) {
+                        historyFiles.push_back(filePath);
+                    }
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "[getAllHistoryFiles] Error reading directory " << directory << ": " << e.what() << "\n";
+        }
+        
+        // Sort by modification time (oldest first)
+        std::sort(historyFiles.begin(), historyFiles.end(),
+            [](const fs::path& a, const fs::path& b) {
+                return fs::last_write_time(a) < fs::last_write_time(b);
+            });
+        
+        return historyFiles;
+    }
+    
+
+}
+
+
+namespace ArchiveMonitor{
+
+    // Given a filepath, we check if its equal to the fileInfo struct using hash and inode
+    std::pair<bool, bool> checkFileEquals(const std::string& historyFilePath, const FileInfo& fileInfo) {
+        // Get the inode of the file at the filepath
+        struct stat file_stat_check;
+        if (stat(historyFilePath.c_str(), &file_stat_check) != 0) {
+            printf("[ERROR] Failed to stat file: %s\n", historyFilePath.c_str());
+            return {false, false}; // Can't stat file; both checks fail
+        }
+
+        // Get the hash of the file at the path
+        std::string hashToCheck = getHash(historyFilePath.c_str());
+
+        // Perform both checks
+        bool inodeMatch = (file_stat_check.st_ino == fileInfo.FileInode);
+        bool hashMatch = (hashToCheck == fileInfo.FileHash);
+
+        return {inodeMatch, hashMatch};
     }
 
-    return untrackedFiles; // should be from oldest to newest 
+    FileInfo collectNewFileInfo(const std::string& path, long defaultOffset) {
+        auto maybe = maybeCollectNewFileInfo(path.c_str());
+        if (!maybe) {
+            printf("[ERROR] Couldn't collect file info for: %s\n", path.c_str());
+            FileInfo dummy;
+            dummy.FileName = path.substr(path.find_last_of("/\\") + 1);
+            dummy.LastOffset = defaultOffset;
+            dummy.FileHash = "UNKNOWN";
+            dummy.FileInode = 0;
+            dummy.FileSize = -1;
+            dummy.LastModified = 0;
+            return dummy;
+        }
+
+        FileInfo fileInfo = *maybe;
+        fileInfo.LastOffset = defaultOffset;
+        return fileInfo;
+    }
+
+    /**
+     * @brief Performs all 3 archive-monitoring steps for a single history file set.
+     * 
+     * Steps:
+     * 1. Detect rotation
+     * 2. Track new files
+     * 3. Detect deleted files
+     *
+     * @param historyFileSet Metadata and cache info for this history file set
+     * @param directory The directory path containing the mixed files
+     * @return ArchiveChange describing all detected modifications
+     */
+    ArchiveChange trackHistoryFileSet(FileSet& historyFileSet) {
+        ArchiveChange changes;
+        std::string directory = historyFileSet.historyDirectoryPath;
+        
+        // Is this our first startup? 
+        if (historyFileSet.lastFileReadId == -1) {
+            // This is our very first read! Discover all files and add them as new files
+
+             std::vector<fs::path> allHistoryFiles = getAllHistoryFiles(directory, historyFileSet.historyNameConfig);
+        
+            // Convert paths to FileInfo and add to changes.newFiles
+            for (const auto& filePath : allHistoryFiles) {
+                FileInfo fileInfo;
+                fileInfo.FileName = filePath.filename().string();
+                fileInfo.LastOffset = 0;  // Start from beginning
+                // FileId will be assigned by dbHandler_->insertNewFiles()
+                changes.newFiles.push_back(fileInfo);
+            }
+            
+            printf("[trackHistoryFileSet] First startup: discovered %zu files with prefix '%s'\n", 
+                changes.newFiles.size(), historyFileSet.historyNameConfig.c_str());
+            
+            return changes;
+        }
+
+
+        // Lookup lastFileRead FileInfo from fileMap using lastFileReadId
+        auto it = historyFileSet.fileMap.find(historyFileSet.lastFileReadId);
+        if (it == historyFileSet.fileMap.end()) {
+            std::cerr << "[trackHistoryFileSet] Error: lastFileReadId " << historyFileSet.lastFileReadId
+                    << " not found in fileMap.\n";
+            return changes;
+        }
+        const FileInfo& lastFileRead = it->second;
+
+        // Step 1: Find untracked files and check for rotation
+        std::vector<fs::path> untrackedPaths = detectRotationAndGetUntrackedFiles(
+            directory,
+            historyFileSet.historyNameConfig,
+            historyFileSet.lastStatusTime,
+            lastFileRead,
+            changes
+        );
+
+        // Step 2: Collect info on untracked files and add to ArchiveChange
+        trackUntrackedFiles(untrackedPaths, changes);
+
+        // Step 3: Detect deleted files in cache that no longer exist
+        checkDeletedFiles(directory, historyFileSet.historyNameConfig, historyFileSet.fileMap, changes);
+
+        return changes;
+    }
+
 }
+
+
+
+
+
 
 

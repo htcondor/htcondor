@@ -22,16 +22,19 @@ CREATE TABLE IF NOT EXISTS JobLists (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_user ON JobLists(ClusterId, UserId);
 
-CREATE TABLE IF NOT EXISTS Jobs (
+CREATE TABLE IF NOT EXISTS Jobs (    -- Info from Spawn Ads
     JobId INTEGER PRIMARY KEY AUTOINCREMENT, 
     ClusterId INTEGER NOT NULL,
     ProcId INTEGER NOT NULL,
     UserId INTEGER,
     TimeOfCreation INTEGER, 
     JobListId INTEGER,
+    FileId INTEGER,       -- For possible EpochRecord tracking functionality in the future, currently not filled
+    Offset INTEGER, 
     UNIQUE (ClusterId, ProcId),
     FOREIGN KEY (JobListId) REFERENCES JobLists(JobListId), 
-    FOREIGN KEY (UserId) REFERENCES Users(UserId)
+    FOREIGN KEY (UserId) REFERENCES Users(UserId), 
+    FOREIGN KEY (FileId) REFERENCES Files(FileId)
 );
 CREATE INDEX IF NOT EXISTS idx_Owner ON Jobs(UserId);
 
@@ -61,5 +64,24 @@ CREATE TABLE IF NOT EXISTS Status (
 
     TotalJobsRead INTEGER DEFAULT 0,                   -- From history files
     TotalEpochsRead INTEGER DEFAULT 0,                 -- From epoch files
-    DurationMs INTEGER DEFAULT 0                       -- Duration of update cycle
+    DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
+    BacklogEstimate INTEGER DEFAULT 0                  -- Estimated number of unprocessed ads
+);
+
+CREATE TABLE IF NOT EXISTS StatusData (
+    StatusDataId INTEGER PRIMARY KEY CHECK (AveragesId = 1),  -- Fixed ID for single-row table
+
+    AvgAdsIngestedPerCycle REAL,         -- Mean ads processed per ingest cycle
+    AvgIngestDurationMs REAL,            -- Mean duration (ms) per ingest cycle
+    MeanIngestHz REAL,                   -- Mean ingest rate (ads/sec)
+    MeanArrivalHz REAL,                  -- Mean arrival rate of new ads (ads/sec)
+    MeanBacklogEstimate REAL,            -- Average estimated backlog size
+
+    TotalCycles INTEGER,                 -- Total number of timeout cycles
+    TotalAdsIngested INTEGER,            -- Cumulative count of ads ingested
+
+    LastUpdated INTEGER                  -- Timestamp of most recent update
+
+    -- TO ADD: HitMaxIngestLimitRate REAL     -- Proportion of cycles that hit ingest cap
+    -- TO ADD: ErrorRate REAL                 -- Proportion of cycles with errors
 );

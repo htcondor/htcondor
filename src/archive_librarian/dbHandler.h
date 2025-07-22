@@ -10,12 +10,14 @@
  */
 
 #pragma once
+
 #include <sqlite3.h>
 #include <string>
 #include <vector>
-#include "JobRecord.h"
 #include <unordered_map>
 #include <list>
+#include "JobRecord.h"
+#include "archiveMonitor.h"
 
 // Hash definition so we can use it later
 struct pair_hash {
@@ -30,17 +32,19 @@ class DBHandler {
 public:
     explicit DBHandler(const std::string& schemaPath, const std::string& dbPath, size_t maxCacheSize = 10000);
     ~DBHandler();
+    bool initializeFromSchema(const std::string& schemaPath);
+    bool clearCache() const;
+    bool testConnection();
 
     // Paired write & read functions
     void insertJobRecord(const JobRecord& job);
     void batchInsertJobRecords(const std::vector<JobRecord>& jobs);
-    std::vector<JobRecord> readAllJobs();
 
     void writeFileInfo(FileInfo &info);
     FileInfo readFileById(int fileId);
-    std::vector<FileInfo> readAllFileInfos(); // Helpful for testing
 
-    void writeStatus(const Status& status);
+    StatusData getStatusDataFromDB();
+    bool writeStatus(const Status& status);
     Status readLastStatus();
 
     std::pair<int,int> jobIdLookup(int clusterId, int procId);
@@ -49,6 +53,12 @@ public:
     // Helper functions for archiveMonitor and status
     FileInfo lastFileRead(const std::string& type); // To get the last file read from the Status table
     int countUnprocessedFiles(); // Counts files with 0 lastOffset 
+    bool insertNewFiles(const std::pair<int, std::string>& rotatedFile, std::vector<FileInfo>& newFiles);
+    bool deleteFiles(const std::vector<int>& deletedFileIds);
+    bool insertEpochFileRecords(const std::vector<EpochRecord>& records, const FileInfo& fileInfo);
+    bool insertJobFileRecords(const std::vector<JobRecord>& jobs, const FileInfo& fileInfo);
+    
+
 
     // To read EpochHistory file with all record types
     bool insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation);
@@ -58,14 +68,8 @@ public:
     std::vector<std::tuple<int, int, int>> getJobsForUser(const std::string& username);
     std::vector<std::pair<std::string, int>> getJobCountsPerUser();
 
-    // Helper function for getting the database for testing, setting up schema, and clearing database
-    sqlite3* getDB() const { return db; }
-    bool initializeFromSchema(const std::string& schemaPath);
-    void writeTesterSpawnAd(int clusterId, int procId, const std::string& owner, long timeOfCreation);
-    int countTable (const std::string& table) const;
-    bool clearAllTables();
-    void clearCache();
-
+    // Helper function for getting the database for dbHandlerTestUtils
+    sqlite3* getDB() const { return db_; }
 
 private:
 
@@ -80,11 +84,10 @@ private:
         bool exists(int clusterId, int procId) const;
         void garbageCollect(long minTimestamp);
         void remove(int clusterId, int procId);
+        size_t size() const;
         void clear();
 
     private:
-        sqlite3* db_ = nullptr;
-        sqlite3_stmt* stmt_ = nullptr;
         size_t maxSize_;
 
         // Key type alias for convenience
@@ -98,7 +101,7 @@ private:
     };
 
 
-    sqlite3* db;
+    sqlite3* db_;
     sqlite3_stmt* jobIdLookupStmt_; // preprepared statement for more efficient JobIdLookups
     sqlite3_stmt* userInsertStmt_;
     sqlite3_stmt* userSelectStmt_;
@@ -106,5 +109,5 @@ private:
     sqlite3_stmt* jobListSelectStmt_;
     sqlite3_stmt* jobInsertStmt_;
     sqlite3_stmt* jobSelectStmt_;
-    std::unique_ptr<JobIdCache> jobIdCache;
+    std::unique_ptr<JobIdCache> jobIdCache_;
 };

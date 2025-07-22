@@ -5,6 +5,8 @@ struct Job {
     int ClusterId{};
     int ProcId{};
     long TimeOfCreation{};
+    long Offset{}; // To set up functionality for parsing EPOCH records in the future
+    long FileId{};
 };
 
 struct JobRecord {
@@ -31,6 +33,8 @@ struct FileInfo {
     std::string FileHash;
     std::string FileName;
     long LastOffset{};
+    int64_t FileSize = -1; 
+    std::time_t LastModified;
 };
 
 struct Status {
@@ -45,6 +49,19 @@ struct Status {
     long TotalJobsRead;
     long TotalEpochsRead;
     long DurationMs;
+    long BacklogEstimate = 0; // Not calculating this for now 
+};
+
+struct StatusData {
+    double AvgAdsIngestedPerCycle;    // Mean ads processed per ingest cycle
+    double AvgIngestDurationMs;       // Mean duration (ms) per ingest cycle
+    double MeanIngestHz;              // Mean ingest rate (ads/sec)
+    double MeanArrivalHz;             // Mean arrival rate of new ads (ads/sec)
+    double MeanBacklogEstimate;       // Average estimated backlog size
+    int64_t TotalCycles;              // Total number of timeout cycles
+    int64_t TotalAdsIngested;         // Cumulative count of ads ingested
+    // TO ADD: HitMaxIngestLimitRate   - Proportion of cycles that hit ingest cap
+    //         ErrorRate (?)           - Proportion of cycles with errors
 };
 
 struct EpochRecord {
