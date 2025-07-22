@@ -98,22 +98,27 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
     fi
 fi
 
+# Setup RPM based repositories (include beta repositories)
 if [ $ID = 'amzn' ]; then
     $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-beta.repo
 fi
 
 if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
     $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-beta.repo
 fi
 
 if [ $ID = 'fedora' ]; then
     $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-beta.repo
 fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
 if [ $ID = 'opensuse-leap' ]; then
     zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-beta.repo
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
     done
@@ -125,6 +130,8 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     mkdir -p /etc/apt/keyrings
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/$ID/htcondor-${REPO_VERSION}-${VERSION_CODENAME}.list" -o /etc/apt/sources.list.d/htcondor.list
+    # Include beta repositories
+    sed -i "/-beta/s/^#//" /etc/apt/sources.list.d/htcondor.list
     apt-get update
 fi
 
