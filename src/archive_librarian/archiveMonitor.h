@@ -1,13 +1,42 @@
 #pragma once
+
 #include <string>
+#include <unordered_map>
 #include <vector>
+#include <optional>
+#include <filesystem>
+#include <ctime>
 #include "JobRecord.h"
-#include "dbHandler.h"
+#include "FileSet.h"
 
-std::string getHash(const char* filepath);
+namespace fs = std::filesystem;
 
-FileInfo collectNewFileInfo(const std::string& filePath, long defaultOffset = 0);
+struct ArchiveChange {
+    // If a rotation was detected:
+    // First: FileId of the old file that rotated
+    // Second: New filename it was rotated to
+    std::pair<int, std::string> rotatedFile;
 
-std::pair <bool, bool> checkFileEquals(const std::string& historyFilePath, const FileInfo& fileInfo);
+    // New untracked files to add to the database (full FileInfo structs)
+    std::vector<FileInfo> newFiles;
 
-std::vector<FileInfo> trackUntrackedFiles(const std::string& directory, DBHandler *handler);
+    // FileIds of files that no longer exist on disk and should be deleted
+    std::vector<int> deletedFileIds;
+};
+
+namespace ArchiveMonitor {
+
+    // Check if the file at the path matches the expected info in FileInfo
+    std::pair<bool, bool> checkFileEquals(const std::string& historyFilePath, const FileInfo& fileInfo);
+
+    /**
+     * High-level function to track changes in a directory 
+     * Returns ArchiveChange describing detected modifications.
+     */
+    ArchiveChange trackHistoryFileSet(FileSet& fileSet);
+
+    /**
+     * Collect detailed FileInfo from a file path, with optional offset
+     */
+    FileInfo collectNewFileInfo(const std::string& filePath, long defaultOffset = 0);
+}

@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include "dbHandler.h"
+#include "JobRecord.h"
 
 /**
  * @class Librarian
@@ -40,19 +41,30 @@ public:
      */
     bool update();
 
+
     DBHandler& getDBHandler() const { return *dbHandler_; }
 
 private:
+
+    // CONFIGS - right now, not used anywhere
+    const size_t MAX_EPOCH_RECORDS_PER_UPDATE = 10000;  
+    const size_t MAX_JOB_RECORDS_PER_UPDATE = 10000;    
+
+
+    // Members
     std::string schemaPath_;
     std::string dbPath_;
-    std::string historyFilePath_;
+    FileSet historyFileSet_;
+    FileSet epochHistoryFileSet_;
+    std::string historyFilePath_; // redundant, but hard to get rid of right now
     std::string epochHistoryFilePath_;
     size_t jobCacheSize_;
     std::unique_ptr<DBHandler> dbHandler_;
+    StatusData statusData;
 
-    bool updateFileInfo(FileInfo& epochFileInfo, FileInfo& historyFileInfo);
-    bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo, Status& status);
-    bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo, Status& status);
-    void insertRecords(const std::vector<EpochRecord>& epochRecords, const std::vector<JobRecord>& jobRecords);
+    bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);
+    bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);
+    ArchiveChange trackAndUpdateFileSet(FileSet& fileSet);
+    bool buildProcessingQueue(const FileSet& fileSet, const ArchiveChange& changes, std::vector<FileInfo>& queue);
 
 };
