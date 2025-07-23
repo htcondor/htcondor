@@ -169,6 +169,10 @@ struct SubmitterCounters {
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
   int LocalJobsIdle;    // Local universe
+  int OCUClaims; // OCU Claims held indefinitely by this submitter
+  int OCUClaimsBorrowed; // OCU Claims in use by someone other than the owner
+  int OCUWantedJobs; // Total number of idle+running jobs that want an OCU claim
+  int OCURunningJobs; // Running number of jobs that want an OCU Claim
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
   int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
 //  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
@@ -182,6 +186,10 @@ struct SubmitterCounters {
 	, JobsFlocked(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
+	, OCUClaims(0)
+	, OCUClaimsBorrowed(0)
+	, OCUWantedJobs(0)
+	, OCURunningJobs(0)
 	, Hits(0)
 	, JobsCounted(0)
 //	, JobsRecentlyAdded(0)
@@ -622,6 +630,7 @@ class Scheduler : public Service
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
 	const ClassAd & getUserRecDefaultsAd() const { return m_userRecDefaultsAd; }
+	const ClassAd & getProjectRecDefaultsAd() const { return m_projectRecDefaultsAd; }
 	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
 	const std::string & getExtendedSubmitHelpFile() const { return m_extendedSubmitHelpFile; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
@@ -781,6 +790,7 @@ private:
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
 	ClassAd             m_userRecDefaultsAd;
+	ClassAd             m_projectRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
 	ClassAd             m_local_starter_ad;
@@ -946,8 +956,11 @@ private:
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
 	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
-					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
+	int			act_on_project(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
 	void		remove_unused_owners();
+	bool		any_userrec_refs(JobQueueUserRec * urec); // returns true if any schedd data structures are holding this given ptr
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }

@@ -259,7 +259,6 @@ public:
 		int SchedulerJobsIdle=0;
 		int SchedulerJobsRunning=0;
 		int SchedulerJobsHeld=0;
-		int OCUClaims = 0;
 		int OCUJobsRunning = 0;
 		void clear_counters() { memset(this, 0, sizeof(*this)); }
 	};
@@ -348,8 +347,9 @@ inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name
 	return SetUserAttributeValue(urec, attr_name, tmp);
 }
 int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
-struct UpdateUserAttributesInfo { int valid{0}; int invalid{0}; int special{0}; };
-int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled, struct UpdateUserAttributesInfo& info );
+// these can be used on UserRec or ProjectRec ads
+struct UpdateUserRecAttributesInfo { int valid{0}; int invalid{0}; int special{0}; };
+int UpdateUserRecAttributes(JobQueueKey & key, bool is_project, const ClassAd & cmdAd, bool enabled, struct UpdateUserRecAttributesInfo& info);
 
 // get the Effect User record from the peer
 // returns NULL if no peer or the peer has not yet had an userrec set.
@@ -790,9 +790,11 @@ JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 
 class schedd_runtime_probe;
-#define WJQ_WITH_CLUSTERS 1  // include cluster ads when walking the job queue
-#define WJQ_WITH_JOBSETS  2  // include jobset ads when walking the job queue
-#define WJQ_WITH_NO_JOBS  4  // do not include job (proc) ads when walking the job queue
+#define WJQ_WITH_CLUSTERS 0x01  // include cluster ads when walking the job queue
+#define WJQ_WITH_JOBSETS  0x02  // include jobset ads when walking the job queue
+#define WJQ_WITH_NO_JOBS  0x04  // do not include job (proc) ads when walking the job queue
+#define WJQ_WITH_USERS    0x10  // include user records
+#define WJQ_WITH_PROJECTS 0x20  // include project records
 typedef int (*queue_scan_func)(JobQueuePayload ad, const JobQueueKey& key, void* user);
 void WalkJobQueueEntries(int with, queue_scan_func fn, void* pv, schedd_runtime_probe & ftm);
 #define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), pv, WalkJobQ_ ## fn ## _runtime )
@@ -829,7 +831,7 @@ bool JobSetDestroy(int setid);
 bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName);
 
 bool UserRecDestroy(int userrec_id);
-bool UserRecCreate(int userrec_id, const char * ownerinfoName, const ClassAd & cmdAd, const ClassAd & defaultsAd, bool enabled);
+bool UserRecCreate(int userrec_id, bool is_project, const char * name, const ClassAd & cmdAd, bool enabled);
 void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
 
 // priority records
