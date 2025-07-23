@@ -237,8 +237,8 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 			order. The first one to succeed is the winner:
 
 			ATTR_ALLOWED_JOB_DURATION
-			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_VACATE_CHECK
+			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_RELEASE_CHECK
