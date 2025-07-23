@@ -1,6 +1,6 @@
 *** 24.11.0 features
 
-- Add --version flag to the `htcondor` tool.
+- Add --version flag to the :tool:`htcondor` tool.
   :jira:`3091`
 
 *** 24.11.0 bugs
