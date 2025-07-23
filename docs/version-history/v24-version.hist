@@ -1,9 +1,13 @@
 *** 24.11.0 features
 
-- The `htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
-  The ``condor_annex`` tool has been withdrawn.
-  :jira:`1630`
-  
+- The :tool:`htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
+  The :tool:`condor_annex` tool has been withdrawn; use :tool:`htcondor annex`
+  instead.
+  :jira:`1630`  
+
+- Add --version flag to the :tool:`htcondor` tool.
+  :jira:`3091`
+
 - New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
   restrict which Vault servers the *condor_credd* will accept credentials for.
   :jira:`3136`
