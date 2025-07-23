@@ -328,14 +328,6 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		std::string instanceID, connectivityFunctionARN;
 		command->LookupString( "CollectorInstanceID", instanceID );
 		param( connectivityFunctionARN, "ANNEX_DEFAULT_CONNECTIVITY_FUNCTION_ARN" );
-/*
-		CheckConnectivity * cc = new CheckConnectivity(
-			connectivityFunctionARN, instanceID,
-			reply, lambdaGahp, scratchpad,
-			lambdaURL, publicKeyFile, secretKeyFile,
-			commandState, commandID );
-*/
-
 		PutRule * pr = new PutRule(
 			reply, eventsGahp, scratchpad,
 			eventsURL, publicKeyFile, secretKeyFile,
@@ -397,7 +389,6 @@ createOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 		command->LookupInteger( "EndOfLease", endOfLease );
 
 		if( (! odr->validateAndStore( command, validationError )) || (! validateLease( endOfLease, validationError )) ) {
-			// delete cc;
 			delete odr;
 			goto cleanup;
 		}
