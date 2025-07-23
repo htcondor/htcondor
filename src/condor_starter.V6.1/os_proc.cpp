@@ -739,6 +739,14 @@ OsProc::JobReaper( int pid, int status )
 				}
 			}
 
+			// The shadow doesn't properly handle a job whose state goes
+			// from Suspended to Exited. If we send an update now, the
+			// shadow sees a transition from Suspended to Running.
+			// It'll then see an transition from Running to Exited from
+			// the final update we send shortly therearfter.
+			ClassAd updateAd;
+			starter->publishUpdateAd(&updateAd);
+			starter->jic->periodicJobUpdate(&updateAd);
 		}
 
 			// clear out num_pids... everything under this process

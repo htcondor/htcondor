@@ -294,8 +294,9 @@ for all new users as they first submit jobs is set by the configuration
 variable :macro:`DEFAULT_PRIO_FACTOR`, and defaults to 1000.0. An administrator
 can change this priority factor using the :tool:`condor_userprio` command.  For
 example, setting the priority factor of some user to 2,000 will grant that user
-twice as many cores as a user with the default priority factor of 1,000,
-assuming they both have the same historical usage.
+half as many cores as a user with the default priority factor of 1,000,
+assuming they both have the same historical usage, because their EUPs will
+differ by a factor of two.
 
 The number of slots that a user may receive is inversely related to
 the ratio between the EUPs of submitting users. User A with
