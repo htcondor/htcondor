@@ -1,5 +1,8 @@
 *** 24.11.0 features
 
+- Add --version flag to the :tool:`htcondor` tool.
+  :jira:`3091`
+
 - New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
   restrict which Vault servers the *condor_credd* will accept credentials for.
   :jira:`3136`
