@@ -109,7 +109,6 @@ BuildRequires: mozilla-nss-devel
 BuildRequires: nss-devel
 %endif
 BuildRequires: openssl-devel
-BuildRequires: libxml2-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
 %else

@@ -449,6 +449,7 @@ std::string join( const T & list, const char * delim )
 }
 
 // Library code requires explicit template instantiation, I guess.
+template std::string join<std::vector<const char *>>(const std::vector<const char *> &list, const char* delim);
 template std::string join<std::vector<std::string>>(const std::vector<std::string> &list, const char* delim);
 template std::string join<std::vector<std::string_view>>(const std::vector<std::string_view> &list, const char* delim);
 template std::string join<std::set<std::string>>(const std::set<std::string> & list, const char* delim);
