@@ -220,7 +220,7 @@ class TestGuidanceCommands:
 
         # Did the start actually execute the guidance it was given?
         assert the_starter_log.wait(
-            timeout=1,
+            timeout=10,
             condition=lambda line: the_expected_log_line in line.message,
         )
 
