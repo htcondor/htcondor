@@ -27,6 +27,8 @@
 #include <chrono>
 #include <algorithm>
 #include <optional>
+#include <system_error>
+
 
 #include "sha256.h"
 #include "JobRecord.h"  
@@ -40,16 +42,6 @@ namespace fs = std::filesystem; // where am i?
  
 namespace { // Helper functions for ArchiveMonitor utility functions
 
-    // Helper Function: Convert hash into hex string to log it 
-    std::string hashToHex(const uint8_t hash[32]) {
-        char buf[65];
-        for (int i = 0; i < 32; ++i)
-            snprintf(buf + (i * 2), 3, "%02x", hash[i]);
-        buf[64] = 0;
-        return std::string(buf);
-    }
-
-    // Get hash by reading until first banner and hashing the first JobAd
     std::string getHash(const char* historyFilePath) {
         FILE* file = fopen(historyFilePath, "rb");
         if (!file) {
@@ -57,12 +49,11 @@ namespace { // Helper functions for ArchiveMonitor utility functions
             return std::string{};
         }
 
-        const char* bannerPrefix = "*** Offset =";
         std::string buffer;
         char line[4096];
 
         while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, bannerPrefix, strlen(bannerPrefix)) == 0) {
+            if (strncmp(line, "***", 3) == 0) {
                 break;
             }
             buffer += line;
@@ -76,37 +67,79 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         sha256_update(&ctx, reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.size());
         sha256_final(&ctx, outputHash);
 
-        std::string hexString = hashToHex(outputHash);
-        return hexString;
+        // Inline hashToHex logic
+        char hexBuf[65];
+        for (int i = 0; i < 32; ++i)
+            snprintf(hexBuf + (i * 2), 3, "%02x", outputHash[i]);
+        hexBuf[64] = 0;
+
+        return std::string(hexBuf);
     }
 
     // Collect information about a new file: Name, Inode, Hash
-    std::optional<FileInfo> maybeCollectNewFileInfo(const char *historyFilePath) {
+    std::optional<FileInfo> maybeCollectNewFileInfo(const std::string& historyFilePath) {
         FileInfo fileInfo;
-
-        // Get .FileName from full path
-        std::string fullPath(historyFilePath);
-        size_t pos = fullPath.find_last_of("/\\");
-        fileInfo.FileName = (pos == std::string::npos) ? fullPath : fullPath.substr(pos + 1);
-
-        // Get .FileInode and .FileSize using stat
-        struct stat file_stat;
-        if (stat(historyFilePath, &file_stat) == 0) {
-            fileInfo.FileInode = static_cast<long>(file_stat.st_ino);
-            fileInfo.FileSize = static_cast<int64_t>(file_stat.st_size);
-            fileInfo.LastModified = file_stat.st_mtime;
-        } else {
-            printf("[ERROR] Could not get file stats for '%s'\n", historyFilePath);
+        std::error_code ec;
+        
+        std::filesystem::path filePath(historyFilePath);
+        
+        // Get .FileName from full path - cross-platform safe
+        fileInfo.FileName = filePath.filename().string();
+        
+        // Check if file exists before getting stats
+        if (!std::filesystem::exists(filePath, ec)) {
+            printf("[ERROR] File does not exist: '%s'\n", historyFilePath);
             return std::nullopt;
         }
-
+        if (ec) {
+            printf("[ERROR] Error checking file existence for '%s': %s\n", 
+                historyFilePath, ec.message().c_str());
+            return std::nullopt;
+        }
+        
+        // Get file size using std::filesystem
+        fileInfo.FileSize = std::filesystem::file_size(filePath, ec);
+        if (ec) {
+            printf("[ERROR] Could not get file size for '%s': %s\n", 
+                historyFilePath, ec.message().c_str());
+            return std::nullopt;
+        }
+        
+        // Get last write time
+        auto ftime = std::filesystem::last_write_time(filePath, ec);
+        if (ec) {
+            printf("[ERROR] Could not get last write time for '%s': %s\n", 
+                historyFilePath, ec.message().c_str());
+            return std::nullopt;
+        }
+        
+        // Convert to time_t (may need adjustment based on your needs)
+        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+            ftime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+        );
+        fileInfo.LastModified = std::chrono::system_clock::to_time_t(sctp);
+        
+        // Windows doesn't have an Inode nor a direct equivalent
+        #ifdef _WIN32
+            fileInfo.FileInode = 0; // Just using the same value for all files if on Windows
+        #else
+            // Unix-like systems with inode
+            struct stat file_stat;
+            if (stat(historyFilePath.c_str(), &file_stat) == 0) {
+                fileInfo.FileInode = static_cast<long>(file_stat.st_ino);
+            } else {
+                printf("[ERROR] Could not get inode for '%s'\n", historyFilePath);
+                return std::nullopt;
+            }
+        #endif
+        
         // Get .FileHash
-        fileInfo.FileHash = getHash(historyFilePath);
+        fileInfo.FileHash = getHash(historyFilePath.c_str());
         if (fileInfo.FileHash.empty()) {
             printf("[ERROR] Failed to compute hash for file '%s'\n", historyFilePath);
             return std::nullopt;
         }
-
+        
         return fileInfo;
     }
 
@@ -309,7 +342,7 @@ namespace ArchiveMonitor{
     }
 
     FileInfo collectNewFileInfo(const std::string& path, long defaultOffset) {
-        auto maybe = maybeCollectNewFileInfo(path.c_str());
+        auto maybe = maybeCollectNewFileInfo(path);
         if (!maybe) {
             printf("[ERROR] Couldn't collect file info for: %s\n", path.c_str());
             FileInfo dummy;

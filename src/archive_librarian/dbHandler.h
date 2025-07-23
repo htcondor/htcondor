@@ -101,7 +101,7 @@ private:
     };
 
 
-    sqlite3* db_;
+    sqlite3* db_{nullptr};
     sqlite3_stmt* jobIdLookupStmt_; // preprepared statement for more efficient JobIdLookups
     sqlite3_stmt* userInsertStmt_;
     sqlite3_stmt* userSelectStmt_;

@@ -247,9 +247,7 @@ bool Librarian::update() {
     printf("[Librarian] Starting update protocol...\n");
 
     // Initialize status tracking for this update cycle
-    size_t totalEpochRecords = 0;
-    size_t totalJobRecords = 0;
-    auto startTime = std::chrono::high_resolution_clock::now();
+    auto startTime = std::chrono::system_clock::now();
     Status status;
 
     // PHASE 1: Directory Scanning and File Tracking
@@ -304,10 +302,8 @@ bool Librarian::update() {
             fprintf(stderr, "[Librarian] Warning: FileId %d not found in epochHistoryFileSet.fileMap\n", fileInfo.FileId);
         }
         
-        // Accumulate for status reporting
-        totalEpochRecords += fileRecords.size();
-        printf("[Librarian] Processed %zu epoch records from %s\n", 
-               fileRecords.size(), fileInfo.FileName.c_str());
+        // Accumulate stats for status reporting
+        status.TotalEpochsRead += fileRecords.size();
 
         // Record the last ID read
         status.EpochFileIdLastRead = fileInfo.FileId;
@@ -346,10 +342,8 @@ bool Librarian::update() {
             fprintf(stderr, "[Librarian] Warning: FileId %d not found in historyFileSet.fileMap\n", fileInfo.FileId);
         }
         
-        // Accumulate for status reporting
-        totalJobRecords += fileRecords.size();
-        printf("[Librarian] Processed %zu job records from %s\n", 
-               fileRecords.size(), fileInfo.FileName.c_str());   
+        // Accumulate stats for status reporting
+        status.TotalJobsRead += fileRecords.size();
 
         // Record the last ID read
         status.HistoryFileIdLastRead = fileInfo.FileId;
@@ -362,15 +356,9 @@ bool Librarian::update() {
     // Note that file deletions have already been applied to the in-memory FileMap
 
     // PHASE 5: Status Update and Finalization
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-
-    // Finalize status information
-    status.TimeOfUpdate = timestamp;
-    status.DurationMs = durationMs;
-    status.TotalEpochsRead = totalEpochRecords;
-    status.TotalJobsRead = totalJobRecords;
+    auto endTime = std::chrono::system_clock::now();
+    status.TimeOfUpdate = std::chrono::system_clock::to_time_t(endTime); 
+    status.DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 
     // Persist status to database
     if (!dbHandler_->writeStatus(status)) {

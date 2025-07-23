@@ -49,10 +49,6 @@ int main() {
     }
 
     bool librarianUpdated = librarian.update();
-    if (!librarianUpdated) {
-        std::cerr << "Librarian update failed." << std::endl;
-        return 1;
-    }
 
     // After librarian.update()
     if (librarianUpdated) {
@@ -108,6 +104,9 @@ int main() {
 
         std::cout << "Exiting query interface.\n";
 
+    } else {
+        std::cerr << "Librarian update failed." << std::endl;
+        return 1;
     }
 
     return 0;
