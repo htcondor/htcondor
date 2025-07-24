@@ -10718,23 +10718,25 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	FamilyInfo fi;
 	FamilyInfo *fip = NULL;
 
+#ifdef LINUX
+	std::string cgroup; // outside the block to keep string alive
+#endif
 	if (IsLocalUniverse(srec)) {
 		fip = &fi;
 		fi.max_snapshot_interval = 15;
 #ifdef LINUX
-	std::string cgroup;
-	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
-		// We put each local universe starter into it's own cgroup named by
-		// the job id, assuming that is unique under each schedd.
+		if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+			// We put each local universe starter into it's own cgroup named by
+			// the job id, assuming that is unique under each schedd.
 
-		std::string cgroup_name = "STARTER_for_local_";
-		cgroup_name += std::to_string(job_id->cluster);
-		cgroup_name += '_';
-		cgroup_name += std::to_string(job_id->proc);
+			std::string cgroup_name = "STARTER_for_local_";
+			cgroup_name += std::to_string(job_id->cluster);
+			cgroup_name += '_';
+			cgroup_name += std::to_string(job_id->proc);
 
-		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
-		fi.cgroup = cgroup.c_str();
-	}
+			cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+			fi.cgroup = cgroup.c_str();
+		}
 #endif
 	}
 	
@@ -11081,7 +11083,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	fi.max_snapshot_interval = 15;
 
 #ifdef LINUX
-	std::string cgroup;
+	std::string cgroup; // outside the block to keep string alive
 	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
 		// We put each scheduler universe job into it's own cgroup named by
 		// the job id, assuming that is unique under each schedd.
