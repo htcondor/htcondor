@@ -1,5 +1,10 @@
 *** 24.11.0 features
 
+- The :tool:`htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
+  The ``condor_annex`` tool has been withdrawn; use :tool:`htcondor annex`
+  instead.
+  :jira:`1630`
+
 - Add --version flag to the :tool:`htcondor` tool.
   :jira:`3091`
 

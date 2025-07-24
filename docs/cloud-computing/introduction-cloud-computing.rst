@@ -4,7 +4,7 @@ Introduction
 To be clear, our concern throughout this chapter is with commercial
 services which rent computational resources over the Internet at short
 notice and charge in small increments (by the minute or the hour).
-Currently, the :tool:`condor_annex` tool supports only AWS.  AWS can start booting
+Currently, the :tool:`htcondor annex` tool supports only AWS.  AWS can start booting
 a new virtual machine as quickly as a few seconds after the request;
 barring hardware failure, you will be able to continue renting that VM
 until you stop paying the hourly charge.  The other cloud services are
@@ -16,11 +16,11 @@ advantages over the Grid: first, cloud resources are typically available
 more quickly and in greater quantity than from the Grid; and second,
 because cloud resources are virtual machines, they are considerably more
 customizable than Grid resources.  The major disadvantages are, of
-course, cost and complexity (although we hope that :tool:`condor_annex`
+course, cost and complexity (although we hope that :tool:`htcondor annex`
 reduces the latter).
 
 We illustrate these advantages with what we anticipate will be the most
-common uses for :tool:`condor_annex`.
+common uses for :tool:`htcondor annex`.
 
 Use Case: Deadlines
 -------------------
@@ -66,10 +66,10 @@ Use Case: Experimental Convenience
 ----------------------------------
 
 Although you can experiment with many different HTCondor configurations using
-:tool:`condor_annex` and HTCondor running as a normal user, some configurations may
+:tool:`htcondor annex` and HTCondor running as a normal user, some configurations may
 require elevated privileges.  In other situations, you may not be to create
 an unprivileged HTCondor pool on a machine because that would violate the
 acceptable-use policies, or because you can't change the firewall, or
 because you'd use too much bandwidth.  In those cases, you can instead
 "seed" the cloud with a single-node HTCondor installation and expand it using
-:tool:`condor_annex`.  See :ref:`condor_in_the_cloud` for instructions.
+:tool:`htcondor annex`.  See :ref:`condor_in_the_cloud` for instructions.
