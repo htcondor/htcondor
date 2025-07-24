@@ -49,18 +49,22 @@ struct Status {
     long TotalJobsRead;
     long TotalEpochsRead;
     long DurationMs;
-    long BacklogEstimate = 0; // Not calculating this for now 
+    long JobBacklogEstimate = 0; // Not calculating this for now 
+    bool HitMaxIngestLimit = false;
 };
 
 struct StatusData {
     double AvgAdsIngestedPerCycle;    // Mean ads processed per ingest cycle
     double AvgIngestDurationMs;       // Mean duration (ms) per ingest cycle
     double MeanIngestHz;              // Mean ingest rate (ads/sec)
-    double MeanArrivalHz;             // Mean arrival rate of new ads (ads/sec)
+    double MeanArrivalHz = 0;         // Mean arrival rate of new ads (ads/sec)
     double MeanBacklogEstimate;       // Average estimated backlog size
     int64_t TotalCycles;              // Total number of timeout cycles
     int64_t TotalAdsIngested;         // Cumulative count of ads ingested
-    // TO ADD: HitMaxIngestLimitRate   - Proportion of cycles that hit ingest cap
+    double HitMaxIngestLimitRate;     // Proportion of cycles that hit ingest cap
+
+    int64_t TimeOfLastUpdate;         // Used for MeanArrivalHz calculations
+    bool LastRunLeftBacklog;          // Used for MeanArrivalHz calculations
     //         ErrorRate (?)           - Proportion of cycles with errors
 };
 

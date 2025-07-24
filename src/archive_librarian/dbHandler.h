@@ -45,7 +45,9 @@ public:
 
     StatusData getStatusDataFromDB();
     bool writeStatus(const Status& status);
+    bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData);
     Status readLastStatus();
+    
 
     std::pair<int,int> jobIdLookup(int clusterId, int procId);
     void updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile);

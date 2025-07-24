@@ -398,17 +398,28 @@ int getOrInsertIdPrepared(
     int id = -1;
 
     bindInsert(insertStmt);
-    sqlite3_step(insertStmt);
-    if (sqlite3_changes(sqlite3_db_handle(insertStmt)) > 0) {
+    int rc = sqlite3_step(insertStmt);
+
+    if (rc == SQLITE_DONE) {
+        // Insert succeeded
         id = static_cast<int>(sqlite3_last_insert_rowid(sqlite3_db_handle(insertStmt)));
+    } else if (rc != SQLITE_CONSTRAINT) {
+        // Duplication errors are possible, so make sure this isn't that
+        // Something else unexpected happened
+        fprintf(stderr, "[ERROR] Insert failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(insertStmt)));
     }
+
     sqlite3_reset(insertStmt);
     sqlite3_clear_bindings(insertStmt);
 
     if (id == -1) {
+        // Insert either failed due to constraint or didn't run at all — do SELECT fallback
         bindSelect(selectStmt);
-        if (sqlite3_step(selectStmt) == SQLITE_ROW) {
+        rc = sqlite3_step(selectStmt);
+        if (rc == SQLITE_ROW) {
             id = extractId(selectStmt);
+        } else {
+            fprintf(stderr, "[ERROR] Select fallback failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(selectStmt)));
         }
         sqlite3_reset(selectStmt);
         sqlite3_clear_bindings(selectStmt);
@@ -968,7 +979,7 @@ bool DBHandler::writeStatus(const Status& status) {
         sqlite3_bind_int(stmt, 6, status.TotalJobsRead);
         sqlite3_bind_int(stmt, 7, status.TotalEpochsRead);
         sqlite3_bind_int(stmt, 8, status.DurationMs);
-        sqlite3_bind_int(stmt, 9, status.BacklogEstimate); 
+        sqlite3_bind_int(stmt, 9, status.JobBacklogEstimate); 
 
         sqlite3_step(stmt);
         sqlite3_finalize(stmt);
@@ -978,6 +989,136 @@ bool DBHandler::writeStatus(const Status& status) {
         return false;
     }
 }
+
+/**
+ * Insert a status snapshot into both the 'Status' and 'StatusData' table
+ * Includes Status but also running averages of various performance stats
+ */
+bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData) {
+    const char* statusSql = R"(
+        INSERT INTO Status (
+            TimeOfUpdate,
+            HistoryFileIdLastRead,
+            HistoryFileOffsetLastRead,
+            EpochFileIdLastRead,
+            EpochFileOffsetLastRead,
+            TotalJobsRead,
+            TotalEpochsRead,
+            DurationMs,
+            JobBacklogEstimate,
+            HitMaxIngestLimit
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    )";
+
+    // Construct StatusData SQL dynamically based on whether MeanArrivalHz is non-zero
+    const char* statusDataSqlWithArrivalHz = R"(
+        INSERT INTO StatusData (
+            AvgAdsIngestedPerCycle,
+            AvgIngestDurationMs,
+            MeanIngestHz,
+            MeanArrivalHz,
+            MeanBacklogEstimate,
+            TotalCycles,
+            TotalAdsIngested,
+            HitMaxIngestLimitRate,
+            LastRunLeftBacklog,
+            TimeOfLastUpdate
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    )";
+
+    const char* statusDataSqlWithoutArrivalHz = R"(
+        INSERT INTO StatusData (
+            AvgAdsIngestedPerCycle,
+            AvgIngestDurationMs,
+            MeanIngestHz,
+            MeanBacklogEstimate,
+            TotalCycles,
+            TotalAdsIngested,
+            HitMaxIngestLimitRate,
+            LastRunLeftBacklog,
+            TimeOfLastUpdate
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    )";
+
+    // Start transaction
+    char* errMsg = nullptr;
+    if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        printf("[ERROR] Failed to begin transaction: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    sqlite3_stmt* stmt = nullptr;
+    bool success = false;
+
+    // Insert into Status
+    if (sqlite3_prepare_v2(db_, statusSql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int64(stmt, 1, status.TimeOfUpdate);
+        sqlite3_bind_int(stmt, 2, status.HistoryFileIdLastRead);
+        sqlite3_bind_int64(stmt, 3, status.HistoryFileOffsetLastRead);
+        sqlite3_bind_int(stmt, 4, status.EpochFileIdLastRead);
+        sqlite3_bind_int64(stmt, 5, status.EpochFileOffsetLastRead);
+        sqlite3_bind_int(stmt, 6, status.TotalJobsRead);
+        sqlite3_bind_int(stmt, 7, status.TotalEpochsRead);
+        sqlite3_bind_int(stmt, 8, status.DurationMs);
+        sqlite3_bind_int(stmt, 9, status.JobBacklogEstimate);
+        sqlite3_bind_int(stmt, 10, status.HitMaxIngestLimit ? 1 : 0);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            printf("[ERROR] Failed to insert into Status: %s\n", sqlite3_errmsg(db_));
+        } else {
+            success = true;
+        }
+    } else {
+        printf("[ERROR] Failed to prepare Status insert: %s\n", sqlite3_errmsg(db_));
+    }
+    sqlite3_finalize(stmt);
+
+    // Insert into StatusData (if Status insert succeeded)
+    if (success) {
+        const bool hasArrivalHz = statusData.MeanArrivalHz != 0.0;
+        const char* sql = hasArrivalHz ? statusDataSqlWithArrivalHz : statusDataSqlWithoutArrivalHz;
+
+        if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+            int idx = 1;
+            sqlite3_bind_double(stmt, idx++, statusData.AvgAdsIngestedPerCycle);
+            sqlite3_bind_double(stmt, idx++, statusData.AvgIngestDurationMs);
+            sqlite3_bind_double(stmt, idx++, statusData.MeanIngestHz);
+            if (hasArrivalHz) {
+                sqlite3_bind_double(stmt, idx++, statusData.MeanArrivalHz);
+            }
+            sqlite3_bind_double(stmt, idx++, statusData.MeanBacklogEstimate);
+            sqlite3_bind_int64(stmt, idx++, statusData.TotalCycles);
+            sqlite3_bind_int64(stmt, idx++, statusData.TotalAdsIngested);
+            sqlite3_bind_double(stmt, idx++, statusData.HitMaxIngestLimitRate);
+            sqlite3_bind_int(stmt, idx++, statusData.LastRunLeftBacklog ? 1 : 0);
+            sqlite3_bind_int64(stmt, idx++, statusData.TimeOfLastUpdate);
+
+            if (sqlite3_step(stmt) != SQLITE_DONE) {
+                printf("[ERROR] Failed to insert into StatusData: %s\n", sqlite3_errmsg(db_));
+                success = false;
+            }
+        } else {
+            printf("[ERROR] Failed to prepare StatusData insert: %s\n", sqlite3_errmsg(db_));
+            success = false;
+        }
+        sqlite3_finalize(stmt);
+    }
+
+    // Finalize transaction
+    if (success) {
+        if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+            printf("[ERROR] Failed to commit transaction: %s\n", errMsg);
+            sqlite3_free(errMsg);
+            return false;
+        }
+        return true;
+    } else {
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+}
+
 
 
 /**
@@ -1012,7 +1153,7 @@ Status DBHandler::readLastStatus() {
             status.TotalJobsRead           = sqlite3_column_int(stmt, 5);
             status.TotalEpochsRead         = sqlite3_column_int(stmt, 6);
             status.DurationMs              = sqlite3_column_int(stmt, 7);
-            status.BacklogEstimate         = sqlite3_column_int(stmt, 8);
+            status.JobBacklogEstimate         = sqlite3_column_int(stmt, 8);
         }
     } else {
         printf("[ERROR] Failed to prepare readLastStatus: %s\n", sqlite3_errmsg(db_));

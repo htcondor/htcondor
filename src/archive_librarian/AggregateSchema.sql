@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS Jobs (    -- Info from Spawn Ads
     FOREIGN KEY (FileId) REFERENCES Files(FileId)
 );
 CREATE INDEX IF NOT EXISTS idx_Owner ON Jobs(UserId);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_proc ON Jobs(ClusterId, ProcId);
 
 CREATE TABLE IF NOT EXISTS JobRecords (
     JobRecordId INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -65,23 +66,23 @@ CREATE TABLE IF NOT EXISTS Status (
     TotalJobsRead INTEGER DEFAULT 0,                   -- From history files
     TotalEpochsRead INTEGER DEFAULT 0,                 -- From epoch files
     DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
-    BacklogEstimate INTEGER DEFAULT 0                  -- Estimated number of unprocessed ads
+    JobBacklogEstimate INTEGER DEFAULT 0,              -- Estimated number of unprocessed ads
+    HitMaxIngestLimit BOOLEAN DEFAULT 0                -- Whether this ingestion cycle hit the max ingest limit
 );
 
 CREATE TABLE IF NOT EXISTS StatusData (
-    StatusDataId INTEGER PRIMARY KEY CHECK (AveragesId = 1),  -- Fixed ID for single-row table
+    StatusDataId INTEGER PRIMARY KEY,     
 
-    AvgAdsIngestedPerCycle REAL,         -- Mean ads processed per ingest cycle
-    AvgIngestDurationMs REAL,            -- Mean duration (ms) per ingest cycle
-    MeanIngestHz REAL,                   -- Mean ingest rate (ads/sec)
-    MeanArrivalHz REAL,                  -- Mean arrival rate of new ads (ads/sec)
-    MeanBacklogEstimate REAL,            -- Average estimated backlog size
+    AvgAdsIngestedPerCycle REAL,          -- Mean ads processed per ingest cycle
+    AvgIngestDurationMs REAL,             -- Mean duration (ms) per ingest cycle
+    MeanIngestHz REAL,                    -- Mean ingest rate (ads/sec)
+    MeanArrivalHz REAL,                   -- Mean arrival rate of new ads (ads/sec)
+    MeanBacklogEstimate REAL,             -- Average estimated backlog size
 
-    TotalCycles INTEGER,                 -- Total number of timeout cycles
-    TotalAdsIngested INTEGER,            -- Cumulative count of ads ingested
+    TotalCycles INTEGER,                  -- Total number of timeout cycles
+    TotalAdsIngested INTEGER,             -- Cumulative count of ads ingested
 
-    LastUpdated INTEGER                  -- Timestamp of most recent update
-
-    -- TO ADD: HitMaxIngestLimitRate REAL     -- Proportion of cycles that hit ingest cap
-    -- TO ADD: ErrorRate REAL                 -- Proportion of cycles with errors
+    HitMaxIngestLimitRate REAL,           -- Proportion of cycles that hit ingest cap
+    LastRunLeftBacklog BOOLEAN DEFAULT 0, -- Whether the previous run left backlog
+    TimeOfLastUpdate INTEGER              -- Timestamp of most recent update
 );

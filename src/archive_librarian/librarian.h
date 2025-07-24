@@ -60,11 +60,16 @@ private:
     std::string epochHistoryFilePath_;
     size_t jobCacheSize_;
     std::unique_ptr<DBHandler> dbHandler_;
-    StatusData statusData;
+    StatusData statusData_;
+    double EstimatedBytesPerJob_;
 
     bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);
     bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);
     ArchiveChange trackAndUpdateFileSet(FileSet& fileSet);
     bool buildProcessingQueue(const FileSet& fileSet, const ArchiveChange& changes, std::vector<FileInfo>& queue);
+    bool calculateEstimatedBytesPerJob();
+    int calculateBacklogFromBytes(const Status& status);
+    void updateStatusData(Status status);
+    void estimateArrivalRateWhileAsleep();
 
 };

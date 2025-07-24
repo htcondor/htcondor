@@ -9,6 +9,7 @@
 #include <memory>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -71,31 +72,201 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
 // STATUS TRACKING UTILITIES
 // ================================
 
-// Calculates an estimated backlog of unprocessed jobs based on file sizes and bytes per job
-int calculateBacklogFromBytes(
-    int64_t lastFileSizeBytes,
-    int64_t lastOffsetRead,
-    const std::vector<std::pair<std::string, int64_t>>& unreadFiles,
-    double estimatedBytesPerJob
-) {
-    if (estimatedBytesPerJob <= 0) return 0;
+// Finds a history file matching the config name pattern and calculates 
+// EstimatedBytesPerJob_ as the byte size from file start to first "***" line
+bool Librarian::calculateEstimatedBytesPerJob() {
+    std::error_code ec;
+    std::filesystem::path historyDir(historyFileSet_.historyDirectoryPath);
+    
+    // Check if directory exists
+    if (!std::filesystem::exists(historyDir, ec) || ec) {
+        return false;
+    }
+    
+    // Find a file that starts with historyConfigName and has additional content
+    for (const auto& entry : std::filesystem::directory_iterator(historyDir, ec)) {
+        if (ec) {
+            return false;
+        }
+        
+        if (entry.is_regular_file(ec) && !ec) {
+            std::string filename = entry.path().filename().string();
+            
+            // Check if filename starts with historyConfigName and has more content after it
+            if (filename.length() > historyFileSet_.historyNameConfig.length() &&
+                filename.substr(0, historyFileSet_.historyNameConfig.length()) == historyFileSet_.historyNameConfig) {
+                
+                std::ifstream file(entry.path());
+                if (!file.is_open()) {
+                    continue; // Try next file
+                }
+                
+                std::string line;
+                std::streampos startPos = file.tellg();
+                
+                // Check if tellg() failed
+                if (startPos == std::streampos(-1)) {
+                    file.close();
+                    continue;
+                }
+                
+                // Read until we find a line starting with "***"
+                while (std::getline(file, line)) {
+                    if (line.length() >= 3 && line.substr(0, 3) == "***") {
+                        std::streampos endPos = file.tellg();
+                        if (endPos == std::streampos(-1)) {
+                            file.close();
+                            continue;
+                        }
+                        
+                        std::streamsize chunkSize = endPos - startPos;
+                        EstimatedBytesPerJob_ = static_cast<double>(chunkSize);
+                        file.close();
+                        return true;
+                    }
+                }
+                
+                file.close();
+                // If we reach here, no "***" line was found in this file
+                // Continue to try other files
+            }
+        }
+    }
+    
+    // No suitable file found or no "***" line found
+    return false;
+}
 
-    // Bytes left in the partially read file
-    int64_t unreadInLastFile = std::max<int64_t>(0, lastFileSizeBytes - lastOffsetRead);
+/**
+ * @brief Estimates remaining job records by calculating unread bytes in history files
+ * 
+ * Calculates bytes remaining in the last partially-read file plus all bytes in
+ * unread files (LastOffset == 0), then estimates job count using estimatedBytesPerJob_.
+ */
+int Librarian::calculateBacklogFromBytes(const Status& status) {
+    if (EstimatedBytesPerJob_ <= 0) return 0;
 
-    // Bytes in fully unread files
-    int64_t unreadInFullFiles = 0;
-    for (const auto& [filename, fileSize] : unreadFiles) {
-        unreadInFullFiles += fileSize;
+    int64_t totalUnreadBytes = 0;
+
+    // Find the last read file info
+    auto lastFileIt = historyFileSet_.fileMap.find(status.HistoryFileIdLastRead);
+    if (lastFileIt != historyFileSet_.fileMap.end()) {
+        const FileInfo& lastFileInfo = lastFileIt->second;
+        
+        try {
+            // Get the size of the last read file
+            int64_t lastFileSizeBytes = std::filesystem::file_size(lastFileInfo.FileName);
+            
+            // Calculate bytes left in the partially read file
+            int64_t unreadInLastFile = std::max<int64_t>(0, lastFileSizeBytes - status.HistoryFileOffsetLastRead);
+            totalUnreadBytes += unreadInLastFile;
+            
+        } catch (const std::filesystem::filesystem_error& e) {
+            printf("[Librarian] Warning: Could not get file size for %s: %s\n", 
+                   lastFileInfo.FileName.c_str(), e.what());
+            // Continue without counting this file
+        }
+    } else {
+        printf("[Librarian] Warning: historyFileIdLastRead (%d) not found in historyFileSet_.fileMap\n", 
+               status.HistoryFileIdLastRead);
     }
 
-    int64_t totalUnreadBytes = unreadInLastFile + unreadInFullFiles;
+    // Find all unread files (LastOffset == 0) and sum their sizes
+    for (const auto& [fileId, fileInfo] : historyFileSet_.fileMap) {
+        if (fileInfo.LastOffset == 0) {
+            try {
+                int64_t fileSize = std::filesystem::file_size(fileInfo.FileName);
+                totalUnreadBytes += fileSize;
+                
+            } catch (const std::filesystem::filesystem_error& e) {
+                printf("[Librarian] Warning: Could not get file size for %s: %s\n", 
+                       fileInfo.FileName.c_str(), e.what());
+                // Continue without counting this file
+            }
+        }
+    }
 
-    // Estimated number of ads still unread
-    int estimatedBacklog = static_cast<int>(std::round(totalUnreadBytes / estimatedBytesPerJob));
+    // Calculate estimated backlog
+    int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJob_));
+    
+    printf("[Librarian] Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n", 
+           totalUnreadBytes, estimatedBacklog);
+    
     return estimatedBacklog;
 }
 
+void Librarian::estimateArrivalRateWhileAsleep() {
+    int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+
+    // Calculate arrival rate if we didn't leave backlog last time and have previous timestamp
+    // Create dummy status for backlog calculation
+    Status dummyStatus = {};
+    dummyStatus.HistoryFileIdLastRead = historyFileSet_.lastFileReadId;
+
+    auto lastFileIt = historyFileSet_.fileMap.find(dummyStatus.HistoryFileIdLastRead);
+    if (lastFileIt != historyFileSet_.fileMap.end()) {
+        dummyStatus.HistoryFileOffsetLastRead = lastFileIt->second.LastOffset;
+
+        int backlogAds = calculateBacklogFromBytes(dummyStatus);
+        int64_t timeDeltaMs = currentTime - statusData_.TimeOfLastUpdate;
+
+        if (timeDeltaMs > 0) {
+            double arrivalHz = (backlogAds * 1000.0) / timeDeltaMs;
+            double n = static_cast<double>(statusData_.TotalCycles + 1); // +1 for the cycle about to start
+            statusData_.MeanArrivalHz += (arrivalHz - statusData_.MeanArrivalHz) / n;
+        }
+    }
+}
+
+
+void Librarian::updateStatusData(Status status) {
+    int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    // Increment total cycles
+    statusData_.TotalCycles++;
+    
+    // Update total ads ingested
+    statusData_.TotalAdsIngested += status.TotalJobsRead;
+    
+    // Calculate current cycle values
+    double currentAdsPerCycle = static_cast<double>(status.TotalJobsRead);
+    double currentDurationMs = static_cast<double>(status.DurationMs);
+    double currentIngestHz = (currentDurationMs > 0) ? 
+        (currentAdsPerCycle * 1000.0 / currentDurationMs) : 0.0;
+    double currentBacklogEstimate = static_cast<double>(status.JobBacklogEstimate);
+    
+    // Update averages using incremental formula: new_avg = old_avg + (new_value - old_avg) / n
+    double n = static_cast<double>(statusData_.TotalCycles);
+    
+    statusData_.AvgAdsIngestedPerCycle += 
+        (currentAdsPerCycle - statusData_.AvgAdsIngestedPerCycle) / n;
+    
+    statusData_.AvgIngestDurationMs += 
+        (currentDurationMs - statusData_.AvgIngestDurationMs) / n;
+    
+    statusData_.MeanIngestHz += 
+        (currentIngestHz - statusData_.MeanIngestHz) / n;
+    
+    statusData_.MeanBacklogEstimate += 
+        (currentBacklogEstimate - statusData_.MeanBacklogEstimate) / n;
+    
+    // Update hit max ingest limit rate
+    if (status.HitMaxIngestLimit) {
+        // Count of cycles that hit limit is now: (old_rate * old_n) + 1
+        // New rate is: ((old_rate * old_n) + 1) / new_n
+        statusData_.HitMaxIngestLimitRate = 
+            (statusData_.HitMaxIngestLimitRate * (n - 1) + 1.0) / n;
+    } else {
+        // No hit this cycle, just update denominator
+        statusData_.HitMaxIngestLimitRate = 
+            (statusData_.HitMaxIngestLimitRate * (n - 1)) / n;
+    }
+    
+    // Update tracking variables
+    statusData_.TimeOfLastUpdate = currentTime;
+}
 
 // ================================
 // ARCHIVE MANAGEMENT (PRIVATE HELPERS)
@@ -228,8 +399,14 @@ bool Librarian::initialize() {
     }
 
     printf("[Librarian] DBHandler initialized.\n");
+
+    // Fill in info to be used for Status estimates later
+    if (!calculateEstimatedBytesPerJob()) {
+        EstimatedBytesPerJob_ = 5814.0;
+    }
     return true;
 }
+
 
 /**
  * @brief Executes one complete update cycle
@@ -246,15 +423,24 @@ bool Librarian::initialize() {
 bool Librarian::update() {
     printf("[Librarian] Starting update protocol...\n");
 
+    // PhHASE  0: Status Tracking and Recovery
     // Initialize status tracking for this update cycle
+
     auto startTime = std::chrono::system_clock::now();
     Status status;
+
+    // Estimate arrivalHz while asleep if there was no backlog left last cycle
+    if (!statusData_.LastRunLeftBacklog && statusData_.TimeOfLastUpdate > 0) estimateArrivalRateWhileAsleep ();
+
+    // Recovery: Populate statusData_ and FileSet structs if memory is empty
+    
 
     // PHASE 1: Directory Scanning and File Tracking
     ArchiveChange epochChange = trackAndUpdateFileSet(epochHistoryFileSet_);
     ArchiveChange historyChange = trackAndUpdateFileSet(historyFileSet_);
 
     // PHASE 2: Queue Construction
+    // TODO: use lastFileReadId in queue construction so that we don't reread tracked but unread files
     std::vector<FileInfo> epochQueue;
     std::vector<FileInfo> historyQueue;
 
@@ -272,7 +458,19 @@ bool Librarian::update() {
     // PHASE 3: Record Processing
 
     // Process Epoch Queue
+    size_t totalEpochRecordsProcessed = 0;
+    size_t epochFilesProcessed = 0;
+
     for (FileInfo& fileInfo : epochQueue) {
+
+        // Check if we've already exceeded the limit - if so stop processing
+        if (totalEpochRecordsProcessed >= MAX_EPOCH_RECORDS_PER_UPDATE) {
+            printf("[Librarian] Reached epoch record limit (%zu), stopping epoch processing. Processed %zu files, %zu remaining.\n", 
+                   MAX_EPOCH_RECORDS_PER_UPDATE, epochFilesProcessed, epochQueue.size() - epochFilesProcessed);
+            status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
+            break;
+        }
+
         printf("[Librarian] Processing epoch file: %s (offset: %lld)\n", 
                fileInfo.FileName.c_str(), fileInfo.LastOffset);
         
@@ -302,7 +500,8 @@ bool Librarian::update() {
             fprintf(stderr, "[Librarian] Warning: FileId %d not found in epochHistoryFileSet.fileMap\n", fileInfo.FileId);
         }
         
-        // Accumulate stats for status reporting
+        // Accumulate stats for status reporting'
+        totalEpochRecordsProcessed += fileRecords.size(); // TODO: currently duplicating this but theoretically we could just use status
         status.TotalEpochsRead += fileRecords.size();
 
         // Record the last ID read
@@ -311,8 +510,19 @@ bool Librarian::update() {
     }
     
     // Process History Queue
+    size_t totalJobRecordsProcessed = 0;
+    size_t historyFilesProcessed = 0;
 
     for (FileInfo& fileInfo : historyQueue) {
+
+        // Check if we've already exceeded the limit
+        if (totalJobRecordsProcessed >= MAX_JOB_RECORDS_PER_UPDATE) {
+            printf("[Librarian] Reached job record limit (%zu), stopping history processing. Processed %zu files, %zu remaining.\n", 
+                   MAX_JOB_RECORDS_PER_UPDATE, historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
+            status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
+            break;
+        }
+
         printf("[Librarian] Processing history file: %s (offset: %lld)\n", 
                fileInfo.FileName.c_str(), fileInfo.LastOffset);
         
@@ -343,12 +553,12 @@ bool Librarian::update() {
         }
         
         // Accumulate stats for status reporting
+        totalJobRecordsProcessed += fileRecords.size(); 
         status.TotalJobsRead += fileRecords.size();
 
         // Record the last ID read
         status.HistoryFileIdLastRead = fileInfo.FileId;
         status.HistoryFileOffsetLastRead = fileInfo.LastOffset;
-        
     }
 
     // PHASE 4: Garbage collection will be implemented here!
@@ -359,9 +569,11 @@ bool Librarian::update() {
     auto endTime = std::chrono::system_clock::now();
     status.TimeOfUpdate = std::chrono::system_clock::to_time_t(endTime); 
     status.DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    status.JobBacklogEstimate = calculateBacklogFromBytes(status);
+    updateStatusData(status);
 
     // Persist status to database
-    if (!dbHandler_->writeStatus(status)) {
+    if (!dbHandler_->writeStatusAndData(status, statusData_)) {
         fprintf(stderr, "[Librarian] Warning: Failed to write status to database\n");
         // Don't want to fail the entire update cycle for this, just logging it
     }
