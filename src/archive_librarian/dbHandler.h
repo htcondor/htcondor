@@ -18,6 +18,7 @@
 #include <list>
 #include "JobRecord.h"
 #include "archiveMonitor.h"
+#include "cache.hpp"
 
 // Hash definition so we can use it later
 struct pair_hash {
@@ -47,6 +48,9 @@ public:
     bool writeStatus(const Status& status);
     bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData);
     Status readLastStatus();
+    bool maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
+                           FileSet& epochHistoryFileSet_,
+                           StatusData& statusData_);
     
 
     std::pair<int,int> jobIdLookup(int clusterId, int procId);
@@ -77,29 +81,47 @@ private:
 
     class JobIdCache {
     public:
+        // Composite key type for (clusterId, procId)
+        struct Key {
+            int clusterId;
+            int procId;
+            
+            bool operator<(const Key& other) const {
+                if (clusterId != other.clusterId) {
+                    return clusterId < other.clusterId;
+                }
+                return procId < other.procId;
+            }
+            
+            bool operator==(const Key& other) const {
+                return clusterId == other.clusterId && procId == other.procId;
+            }
+        };
+        
+        // Value type storing jobId, jobListId, and timestamp
+        struct Value {
+            int jobId;
+            int jobListId;
+            long timestamp;
+            
+            Value() : jobId(-1), jobListId(-1), timestamp(0) {}
+            Value(int jId, int jListId, long ts) : jobId(jId), jobListId(jListId), timestamp(ts) {}
+        };
+
         explicit JobIdCache(size_t maxSize = 10000);
-        ~JobIdCache();
+        ~JobIdCache() = default;  
 
         std::pair<int,int> get(int clusterId, int procId);
-        void put(int clusterId, int procId, int jobId, int jobListId, long timestamp);
-        void updateTimestamp(int clusterId, int procId, long timestamp);
+        void put(int clusterId, int procId, int jobId, int jobListId, long timestamp); 
+        void updateTimestamp(int clusterId, int procId, long timestamp);  
         bool exists(int clusterId, int procId) const;
-        void garbageCollect(long minTimestamp);
         void remove(int clusterId, int procId);
         size_t size() const;
         void clear();
 
+
     private:
-        size_t maxSize_;
-
-        // Key type alias for convenience
-        using Key = std::pair<int,int>;
-
-        // List to track usage order for LRU eviction (front = most recent)
-        std::list<Key> usageOrder_;
-
-        // Cache maps Key -> tuple(value + iterator into usageOrder)
-        std::unordered_map<Key, std::tuple<int,int,long,std::list<Key>::iterator>, pair_hash> cache_;
+        Cache<Key, Value> cache_;  // Replace all the old private members with this
     };
 
 

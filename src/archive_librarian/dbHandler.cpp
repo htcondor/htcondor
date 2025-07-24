@@ -44,91 +44,47 @@ namespace fs = std::filesystem;
 * <JobId, JobListId, TimeOfCreation> tuple. 
 * The cache uses LRU garbage processing. 
 */
-DBHandler::JobIdCache::JobIdCache(size_t maxSize)
-    : maxSize_(maxSize) {}
-
-DBHandler::JobIdCache::~JobIdCache() {
-}
+DBHandler::JobIdCache::JobIdCache(size_t maxSize) : cache_(maxSize) {}
 
 std::pair<int, int> DBHandler::JobIdCache::get(int clusterId, int procId) {
     Key key = {clusterId, procId};
-    auto it = cache_.find(key);
-    if (it == cache_.end()) {
+    
+    if (!cache_.contains(key)) {
         return {-1, -1}; // Not found
     }
-
-    // Move accessed key to front (most recently used)
-    usageOrder_.erase(std::get<3>(it->second));
-    usageOrder_.push_front(key);
-    std::get<3>(it->second) = usageOrder_.begin();
-
-    return {std::get<0>(it->second), std::get<1>(it->second)};
+    
+    // Access the value (this updates the LRU automatically in the templated cache)
+    const Value& value = cache_[key];
+    return {value.jobId, value.jobListId};
 }
 
 void DBHandler::JobIdCache::put(int clusterId, int procId, int jobId, int jobListId, long timestamp) {
     Key key = {clusterId, procId};
-    auto it = cache_.find(key);
-
-    if (it != cache_.end()) {
-        // Update existing entry and move to front
-        std::get<0>(it->second) = jobId;
-        std::get<1>(it->second) = jobListId;
-        std::get<2>(it->second) = timestamp;
-
-        usageOrder_.erase(std::get<3>(it->second));
-        usageOrder_.push_front(key);
-        std::get<3>(it->second) = usageOrder_.begin();
-
-    } else {
-        // Evict least recently used if cache is full
-        if (cache_.size() >= maxSize_) {
-            Key lruKey = usageOrder_.back();
-            usageOrder_.pop_back();
-            cache_.erase(lruKey);
-        }
-
-        // Insert new entry at front
-        usageOrder_.push_front(key);
-        cache_[key] = std::make_tuple(jobId, jobListId, timestamp, usageOrder_.begin());
-    }
+    Value value(jobId, jobListId, timestamp);
+    
+    // The templated cache handles LRU eviction automatically
+    cache_.insert(key, value);
 }
 
 void DBHandler::JobIdCache::updateTimestamp(int clusterId, int procId, long timestamp) {
     Key key = {clusterId, procId};
-    auto it = cache_.find(key);
-    if (it != cache_.end()) {
-        std::get<2>(it->second) = std::max(std::get<2>(it->second), timestamp);
-
-        // Move to front on update timestamp as usage
-        usageOrder_.erase(std::get<3>(it->second));
-        usageOrder_.push_front(key);
-        std::get<3>(it->second) = usageOrder_.begin();
+    
+    if (cache_.contains(key)) {
+        // Get current value, update timestamp, and re-insert
+        Value& value = cache_[key]; // This updates LRU access time
+        value.timestamp = std::max(value.timestamp, timestamp);
     }
 }
 
 bool DBHandler::JobIdCache::exists(int clusterId, int procId) const {
-    return cache_.count({clusterId, procId}) > 0;
+    Key key = {clusterId, procId};
+    return cache_.contains(key);
 }
 
-void DBHandler::JobIdCache::garbageCollect(long minTimestamp) {
-    for (auto it = cache_.begin(); it != cache_.end(); ) {
-        long timestamp = std::get<2>(it->second);
-        if (timestamp < minTimestamp) {
-            usageOrder_.erase(std::get<3>(it->second));
-            it = cache_.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
 
 void DBHandler::JobIdCache::remove(int clusterId, int procId) {
     Key key = {clusterId, procId};
-    auto it = cache_.find(key);
-    if (it != cache_.end()) {
-        usageOrder_.erase(std::get<3>(it->second));
-        cache_.erase(it);
-    }
+    cache_.remove(key);
 }
 
 size_t DBHandler::JobIdCache::size() const {
@@ -137,7 +93,6 @@ size_t DBHandler::JobIdCache::size() const {
 
 void DBHandler::JobIdCache::clear() {
     cache_.clear();
-    usageOrder_.clear();
 }
 
 
@@ -1117,6 +1072,150 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
+}
+
+
+// Change this to A) move the logic about calling recovery into librarian
+// B) idk
+bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
+                           FileSet& epochHistoryFileSet_,
+                           StatusData& statusData_)
+{
+	bool recoverHistory = historyFileSet_.fileMap.empty() || historyFileSet_.lastFileReadId == -1;
+	bool recoverEpoch = epochHistoryFileSet_.fileMap.empty() || epochHistoryFileSet_.lastFileReadId == -1;
+	bool recoverStatusData = (statusData_.TimeOfLastUpdate == 0);
+
+	if (!recoverHistory && !recoverEpoch && !recoverStatusData) {
+		return true; // Nothing to recover, success
+	}
+
+	char* errMsg = nullptr;
+	int rc = sqlite3_exec(db_, "BEGIN;", nullptr, nullptr, &errMsg);
+	if (rc != SQLITE_OK) {
+		std::cerr << "Failed to begin transaction: " << (errMsg ? errMsg : "unknown") << "\n";
+		if (errMsg) sqlite3_free(errMsg);
+		return false;
+	}
+
+	bool success = true;
+
+	// Lambda for rollback and ending function early on error
+	auto rollbackAndReturnFalse = [&]() {
+		if (sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+			std::cerr << "Failed to rollback transaction: " << (errMsg ? errMsg : "unknown") << "\n";
+			if (errMsg) sqlite3_free(errMsg);
+		}
+		return false;
+	};
+
+	// 2. Recover StatusData
+	if (recoverStatusData) {
+		const std::string statusDataSql =
+			"SELECT AvgAdsIngestedPerCycle, AvgIngestDurationMs, MeanIngestHz, MeanArrivalHz, "
+			"MeanBacklogEstimate, TotalCycles, TotalAdsIngested, HitMaxIngestLimitRate, LastRunLeftBacklog, "
+			"TimeOfLastUpdate FROM StatusData ORDER BY TimeOfLastUpdate DESC LIMIT 1;";
+
+		sqlite3_stmt* stmt = nullptr;
+		rc = sqlite3_prepare_v2(db_, statusDataSql.c_str(), -1, &stmt, nullptr);
+		if (rc != SQLITE_OK) {
+			std::cerr << "Failed to prepare StatusData query\n";
+			success = rollbackAndReturnFalse();
+			return success;
+		}
+		rc = sqlite3_step(stmt);
+		if (rc == SQLITE_ROW) {
+			statusData_.AvgAdsIngestedPerCycle = sqlite3_column_double(stmt, 0);
+			statusData_.AvgIngestDurationMs = sqlite3_column_double(stmt, 1);
+			statusData_.MeanIngestHz = sqlite3_column_double(stmt, 2);
+			statusData_.MeanArrivalHz = sqlite3_column_double(stmt, 3);
+			statusData_.MeanBacklogEstimate = sqlite3_column_double(stmt, 4);
+			statusData_.TotalCycles = sqlite3_column_int64(stmt, 5);
+			statusData_.TotalAdsIngested = sqlite3_column_int64(stmt, 6);
+			statusData_.HitMaxIngestLimitRate = sqlite3_column_double(stmt, 7);
+			statusData_.LastRunLeftBacklog = sqlite3_column_int(stmt, 8) != 0;
+			statusData_.TimeOfLastUpdate = sqlite3_column_int64(stmt, 9);
+		}
+		sqlite3_finalize(stmt);
+	}
+
+	// 3. Recover Status
+	const std::string statusSql =
+		"SELECT TimeOfUpdate, HistoryFileIdLastRead, HistoryFileOffsetLastRead, "
+		"EpochFileIdLastRead, EpochFileOffsetLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
+
+	sqlite3_stmt* stmtStatus = nullptr;
+	rc = sqlite3_prepare_v2(db_, statusSql.c_str(), -1, &stmtStatus, nullptr);
+	if (rc != SQLITE_OK) {
+		std::cerr << "Failed to prepare Status query\n";
+		success = rollbackAndReturnFalse();
+		return success;
+	}
+	rc = sqlite3_step(stmtStatus);
+	if (rc == SQLITE_ROW) {
+		int64_t timeOfUpdate = sqlite3_column_int64(stmtStatus, 0);
+		int historyFileId = sqlite3_column_int(stmtStatus, 1);
+		int64_t historyFileOffset = sqlite3_column_int64(stmtStatus, 2);
+		int epochFileId = sqlite3_column_int(stmtStatus, 3);
+		int64_t epochFileOffset = sqlite3_column_int64(stmtStatus, 4);
+
+		statusData_.TimeOfLastUpdate = timeOfUpdate;
+
+		if (recoverHistory) {
+			historyFileSet_.lastFileReadId = historyFileId;
+			historyFileSet_.lastStatusTime = timeOfUpdate;
+			// Store offset if needed
+		}
+		if (recoverEpoch) {
+			epochHistoryFileSet_.lastFileReadId = epochFileId;
+			epochHistoryFileSet_.lastStatusTime = timeOfUpdate;
+			// Store offset if needed
+		}
+	}
+	sqlite3_finalize(stmtStatus);
+
+	// 4. Recover Files
+	const std::string filesSql =
+		"SELECT FileId, FileName, FileInode, FileHash, LastOffset FROM Files WHERE DateOfRotation IS NULL;";
+
+	sqlite3_stmt* stmtFiles = nullptr;
+	rc = sqlite3_prepare_v2(db_, filesSql.c_str(), -1, &stmtFiles, nullptr);
+	if (rc != SQLITE_OK) {
+		std::cerr << "Failed to prepare Files query\n";
+		success = rollbackAndReturnFalse();
+		return success;
+	}
+	while ((rc = sqlite3_step(stmtFiles)) == SQLITE_ROW) {
+		FileInfo fileInfo{};
+		fileInfo.FileId = sqlite3_column_int64(stmtFiles, 0);
+		fileInfo.FileName = reinterpret_cast<const char*>(sqlite3_column_text(stmtFiles, 1));
+		fileInfo.FileInode = sqlite3_column_int64(stmtFiles, 2);
+		fileInfo.FileHash = reinterpret_cast<const char*>(sqlite3_column_text(stmtFiles, 3));
+		fileInfo.LastOffset = sqlite3_column_int64(stmtFiles, 4);
+		fileInfo.FileSize = -1;      // No size in table
+		fileInfo.LastModified = 0;   // Not available
+
+		if (fileInfo.FileName.rfind(historyFileSet_.historyNameConfig, 0) == 0) {
+			historyFileSet_.fileMap[fileInfo.FileId] = fileInfo;
+		}
+		else if (fileInfo.FileName.rfind(epochHistoryFileSet_.historyNameConfig, 0) == 0) {
+			epochHistoryFileSet_.fileMap[fileInfo.FileId] = fileInfo;
+		}
+	}
+	sqlite3_finalize(stmtFiles);
+
+	rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
+	if (rc != SQLITE_OK) {
+		std::cerr << "Failed to commit transaction: " << (errMsg ? errMsg : "unknown") << "\n";
+		if (errMsg) sqlite3_free(errMsg);
+		// Try rollback if commit failed
+		if (sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+			std::cerr << "Failed to rollback transaction: " << (errMsg ? errMsg : "unknown") << "\n";
+			if (errMsg) sqlite3_free(errMsg);
+		}
+		return false;
+	}
+
+	return true;
 }
 
 

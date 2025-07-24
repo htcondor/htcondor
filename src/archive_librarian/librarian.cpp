@@ -423,17 +423,18 @@ bool Librarian::initialize() {
 bool Librarian::update() {
     printf("[Librarian] Starting update protocol...\n");
 
-    // PhHASE  0: Status Tracking and Recovery
+    // PhHASE  0: Status Tracking and Data Recovery
     // Initialize status tracking for this update cycle
 
     auto startTime = std::chrono::system_clock::now();
+
+    // Recovery: Populate statusData_ and FileSet structs if memory is empty
+    dbHandler_->maybeRecoverStatusAndFiles(historyFileSet_, epochHistoryFileSet_, statusData_);
     Status status;
 
     // Estimate arrivalHz while asleep if there was no backlog left last cycle
     if (!statusData_.LastRunLeftBacklog && statusData_.TimeOfLastUpdate > 0) estimateArrivalRateWhileAsleep ();
 
-    // Recovery: Populate statusData_ and FileSet structs if memory is empty
-    
 
     // PHASE 1: Directory Scanning and File Tracking
     ArchiveChange epochChange = trackAndUpdateFileSet(epochHistoryFileSet_);
