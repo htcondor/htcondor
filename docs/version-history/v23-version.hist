@@ -6,6 +6,10 @@
 
 *** 23.0.27 bugs
 
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
 - Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
   that caused some time information to be displayed incorrectly.
   :jira:`3112`
@@ -14,10 +18,6 @@
   written into job scratch directories on Execution Points using
   :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`3156`
-
-- condor_ssh_to_job now works correctly when TMP is set to longer
-  paths, such as when running under glidein.
-  :jira:`3163`
 
 *** 23.0.26 bugs
 
