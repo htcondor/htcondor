@@ -858,51 +858,6 @@ FileInfo DBHandler::lastFileRead(const std::string& type) {
 // Status Tracking
 // -------------------------
 
-/**
- * Load current running statistics from the StatusData database table.
- * Called on startup to restore running totals (e.g., avg ingest rate, total cycles).
- */
-StatusData DBHandler::getStatusDataFromDB() {
-    const char* query = R"(
-        SELECT
-            AvgAdsIngestedPerCycle,
-            AvgIngestDurationMs,
-            MeanIngestHz,
-            MeanArrivalHz,
-            MeanBacklogEstimate,
-            TotalCycles,
-            TotalAdsIngested
-        FROM StatusAverages
-        WHERE AveragesId = 1;
-    )";
-
-    sqlite3_stmt* stmt;
-    StatusData result{};
-
-    int rc = sqlite3_prepare_v2(db_, query, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(db_)));
-    }
-
-    rc = sqlite3_step(stmt);
-    if (rc == SQLITE_ROW) {
-        result.AvgAdsIngestedPerCycle = sqlite3_column_double(stmt, 0);  // REAL
-        result.AvgIngestDurationMs    = sqlite3_column_double(stmt, 1);  // REAL
-        result.MeanIngestHz           = sqlite3_column_double(stmt, 2);  // REAL
-        result.MeanArrivalHz          = sqlite3_column_double(stmt, 3);  // REAL
-        result.MeanBacklogEstimate    = sqlite3_column_double(stmt, 4);  // REAL
-        result.TotalCycles            = sqlite3_column_int64(stmt, 5);   // INTEGER
-        result.TotalAdsIngested       = sqlite3_column_int64(stmt, 6);   // INTEGER
-    } else if (rc == SQLITE_DONE) {
-        std::cerr << "[StatusAverages] No row with AveragesId = 1 found.\n";
-    } else {
-        sqlite3_finalize(stmt);
-        throw std::runtime_error("Failed to step statement: " + std::string(sqlite3_errmsg(db_)));
-    }
-
-    sqlite3_finalize(stmt);
-    return result;
-}
 
 /**
  * Insert a status snapshot into the Status table.
@@ -946,7 +901,7 @@ bool DBHandler::writeStatus(const Status& status) {
 }
 
 /**
- * Insert a status snapshot into both the 'Status' and 'StatusData' table
+ * Insert a status snapshot into the 'Status' table and update the single row in 'StatusData' table
  * Includes Status but also running averages of various performance stats
  */
 bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData) {
@@ -965,34 +920,34 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
-    // Construct StatusData SQL dynamically based on whether MeanArrivalHz is non-zero
+    // Update StatusData SQL - now updates the single row instead of inserting
     const char* statusDataSqlWithArrivalHz = R"(
-        INSERT INTO StatusData (
-            AvgAdsIngestedPerCycle,
-            AvgIngestDurationMs,
-            MeanIngestHz,
-            MeanArrivalHz,
-            MeanBacklogEstimate,
-            TotalCycles,
-            TotalAdsIngested,
-            HitMaxIngestLimitRate,
-            LastRunLeftBacklog,
-            TimeOfLastUpdate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        UPDATE StatusData SET
+            AvgAdsIngestedPerCycle = ?,
+            AvgIngestDurationMs = ?,
+            MeanIngestHz = ?,
+            MeanArrivalHz = ?,
+            MeanBacklogEstimate = ?,
+            TotalCycles = ?,
+            TotalAdsIngested = ?,
+            HitMaxIngestLimitRate = ?,
+            LastRunLeftBacklog = ?,
+            TimeOfLastUpdate = ?
+        WHERE StatusDataId = 1;
     )";
 
     const char* statusDataSqlWithoutArrivalHz = R"(
-        INSERT INTO StatusData (
-            AvgAdsIngestedPerCycle,
-            AvgIngestDurationMs,
-            MeanIngestHz,
-            MeanBacklogEstimate,
-            TotalCycles,
-            TotalAdsIngested,
-            HitMaxIngestLimitRate,
-            LastRunLeftBacklog,
-            TimeOfLastUpdate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        UPDATE StatusData SET
+            AvgAdsIngestedPerCycle = ?,
+            AvgIngestDurationMs = ?,
+            MeanIngestHz = ?,
+            MeanBacklogEstimate = ?,
+            TotalCycles = ?,
+            TotalAdsIngested = ?,
+            HitMaxIngestLimitRate = ?,
+            LastRunLeftBacklog = ?,
+            TimeOfLastUpdate = ?
+        WHERE StatusDataId = 1;
     )";
 
     // Start transaction
@@ -1029,7 +984,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     }
     sqlite3_finalize(stmt);
 
-    // Insert into StatusData (if Status insert succeeded)
+    // Update StatusData (if Status insert succeeded)
     if (success) {
         const bool hasArrivalHz = statusData.MeanArrivalHz != 0.0;
         const char* sql = hasArrivalHz ? statusDataSqlWithArrivalHz : statusDataSqlWithoutArrivalHz;
@@ -1050,11 +1005,11 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             sqlite3_bind_int64(stmt, idx++, statusData.TimeOfLastUpdate);
 
             if (sqlite3_step(stmt) != SQLITE_DONE) {
-                printf("[ERROR] Failed to insert into StatusData: %s\n", sqlite3_errmsg(db_));
+                printf("[ERROR] Failed to update StatusData: %s\n", sqlite3_errmsg(db_));
                 success = false;
             }
         } else {
-            printf("[ERROR] Failed to prepare StatusData insert: %s\n", sqlite3_errmsg(db_));
+            printf("[ERROR] Failed to prepare StatusData update: %s\n", sqlite3_errmsg(db_));
             success = false;
         }
         sqlite3_finalize(stmt);
@@ -1074,9 +1029,12 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     }
 }
 
-
-// Change this to A) move the logic about calling recovery into librarian
-// B) idk
+/**
+ * Recovers the librarian's local cache information from the database if the process
+ * caches are empty or uninitialized (e.g., after a restart or crash). This function
+ * repopulates file tracking state, status data, and reading positions to resume
+ * processing from where it left off.
+ */
 bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
                            FileSet& epochHistoryFileSet_,
                            StatusData& statusData_)
@@ -1108,12 +1066,12 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 		return false;
 	};
 
-	// 2. Recover StatusData
+	// 2. Recover StatusData - now reads from the single row
 	if (recoverStatusData) {
 		const std::string statusDataSql =
 			"SELECT AvgAdsIngestedPerCycle, AvgIngestDurationMs, MeanIngestHz, MeanArrivalHz, "
 			"MeanBacklogEstimate, TotalCycles, TotalAdsIngested, HitMaxIngestLimitRate, LastRunLeftBacklog, "
-			"TimeOfLastUpdate FROM StatusData ORDER BY TimeOfLastUpdate DESC LIMIT 1;";
+			"TimeOfLastUpdate FROM StatusData WHERE StatusDataId = 1;";
 
 		sqlite3_stmt* stmt = nullptr;
 		rc = sqlite3_prepare_v2(db_, statusDataSql.c_str(), -1, &stmt, nullptr);

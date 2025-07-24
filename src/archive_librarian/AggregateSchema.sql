@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS Status (
 );
 
 CREATE TABLE IF NOT EXISTS StatusData (
-    StatusDataId INTEGER PRIMARY KEY,     
+    StatusDataId INTEGER PRIMARY KEY CHECK (StatusDataId = 1),     
 
     AvgAdsIngestedPerCycle REAL,          -- Mean ads processed per ingest cycle
     AvgIngestDurationMs REAL,             -- Mean duration (ms) per ingest cycle

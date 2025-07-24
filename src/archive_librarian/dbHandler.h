@@ -44,7 +44,6 @@ public:
     void writeFileInfo(FileInfo &info);
     FileInfo readFileById(int fileId);
 
-    StatusData getStatusDataFromDB();
     bool writeStatus(const Status& status);
     bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData);
     Status readLastStatus();
