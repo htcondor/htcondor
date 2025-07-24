@@ -285,11 +285,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.17.0
+Requires: pelican >= 7.17.2
 %else
-Requires: (pelican >= 7.17.0 or pelican-debug >= 7.17.0)
+Requires: (pelican >= 7.17.2 or pelican-debug >= 7.17.2)
 %endif
-Requires: pelican-osdf-compat >= 7.17.0
+Requires: pelican-osdf-compat >= 7.17.2
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -1495,7 +1495,18 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.9-1
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
+- Fix bug where the vacate reason was not propagated back to the user
+- HTCondor tarballs now contain Pelican 7.17.2
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
+- Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+- Fix incorrect time reported by htcondor status for long running jobs
+- Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.9-1
 - In htcondor2, empty configuration keys are now treated as non-existent
 
 * Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.26-1
@@ -1508,7 +1519,7 @@ fi
 - DAGMan better handles being unable to write to a full filesystem
 - 'kill_sig' submit commands are now ignored on the Windows platform
 
-* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.8-1
 - Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
   - Pelican 7.16.5 now includes end-to-end integrity checks for clients
