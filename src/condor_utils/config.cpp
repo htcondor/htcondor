@@ -3594,6 +3594,7 @@ static const char * evaluate_macro_func (
 				else { tvalue = ""; }
 			}
 			if (tmp2) { free(tmp2); } tmp2 = NULL;
+			delete tree; tree=nullptr;
 		}
 		break;
 
