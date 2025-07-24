@@ -6,19 +6,22 @@
 
 *** 23.10.27 bugs
 
-- Fixed a bug that could cause the startd's mips benchmark to
-  run forever, consuming a cpu core and resulting in the 
-  :ad-attr:`Mips` attribute to be undefined.
-  :jira:`3134`
-
 - Fixed a bug where the specific vacate reason wasn't reported in the job
   event log or the job ad when a job was evicted from the EP.
   The message ``Unspecified job interruption`` and code 1005 were used
   instead.
   :jira:`3117`
 
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
 
 *** 23.0.27 bugs
+
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
 
 - Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
   that caused some time information to be displayed incorrectly.
@@ -28,10 +31,6 @@
   written into job scratch directories on Execution Points using
   :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`3156`
-
-- condor_ssh_to_job now works correctly when TMP is set to longer
-  paths, such as when running under glidein.
-  :jira:`3163`
 
 *** 23.10.26 features
 
