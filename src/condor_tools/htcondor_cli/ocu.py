@@ -66,6 +66,7 @@ class Create(Verb):
         try:
             result = schedd.submit(submit_description, count=1)
             cluster_id = result.cluster()
+            print(f"OCU placed with ClusterId {cluster_id}.")
         except Exception as e:
             raise RuntimeError(f"Error placing ocu:\n{str(e)}")
 
@@ -117,7 +118,8 @@ class Remove(Verb):
                 reason=f"via htcondor ocu remove (by user {getpass.getuser()})"
             )
         except Exception as e:
-            logger.error(f"Error while trying to remove job set {ocu_id}:\n{str(e)}")
+            logger.error(f"Error while trying to remove ocu {ocu_id}:\n{str(e)}")
+            raise RuntimeError(f"Error removing ocu: {str(e)}")
 
         logger.info(f"Removed {ocu_id}.")
         if remove_ad.get("TotalError", 0) > 0:
