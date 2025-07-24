@@ -88,11 +88,13 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 		fprintf(stderr, "Failed to request a new token: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
-	if (request_id.empty()) {
+	if (token.empty() && request_id.empty()) {
 		fprintf(stderr, "Remote daemon did not provide a valid request ID.\n");
 		exit(1);
 	}
-	printf("Token request enqueued.  Ask an administrator to please approve request %s.\n", request_id.c_str());
+	if (!request_id.empty()) {
+		printf("Token request enqueued.  Ask an administrator to please approve request %s.\n", request_id.c_str());
+	}
 
 	while (token.empty()) {
 		sleep(5);
