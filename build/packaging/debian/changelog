@@ -1,3 +1,33 @@
+condor (24.10.2-1) stable; urgency=medium
+
+  * Remove support for old JobRouter syntax
+  * New condor_dag_checker tool finds syntax and logic errors before run
+  * New condor_q -hold-codes produces a summary of held jobs
+  * condor_status -lvm reports current disk usage by slots on the EPs
+  * Fix bug where condor_q would truncate job counts to six digits
+  * Fix bug where suspended jobs did not change state to idle when vacated
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 10:23:00 -0500
+
+condor (24.0.10-1) stable; urgency=medium
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 10:04:00 -0500
+
+condor (23.10.27-1) stable; urgency=medium
+
+  * Fix bug where the vacate reason was not propagated back to the user
+  * HTCondor tarballs now contain Pelican 7.17.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 09:58:00 -0500
+
+condor (23.0.27-1) stable; urgency=medium
+
+  * Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+  * Fix incorrect time reported by htcondor status for long running jobs
+  * Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 09:49:00 -0500
+
 condor (24.9.2-1) stable; urgency=medium
 
   * New job attribute to report number of input files transferred by protocol
