@@ -1359,6 +1359,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
+- Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+- Fix incorrect time reported by htcondor status for long running jobs
+- Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
 * Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.26-1
 - Fix ingestion of ads into Elasticsearch under very rare circumstances
 - DAGMan better handles being unable to write to a full filesystem
