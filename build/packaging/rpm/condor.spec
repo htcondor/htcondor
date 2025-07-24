@@ -1495,7 +1495,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Jun 24 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
+* Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
 
 * Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
 - Fix bug where the vacate reason was not propagated back to the user
