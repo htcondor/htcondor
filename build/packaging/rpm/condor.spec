@@ -1538,7 +1538,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
 - Remove support for old JobRouter syntax
 - New condor_dag_checker tool finds syntax and logic errors before run
 - New condor_q -hold-codes produces a summary of held jobs
@@ -1546,13 +1546,13 @@ fi
 - Fix bug where condor_q would truncate job counts to six digits
 - Fix bug where suspended jobs did not change state to idle when vacated
 
-* Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
 
-* Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
 - Fix bug where the vacate reason was not propagated back to the user
 - HTCondor tarballs now contain Pelican 7.17.2
 
-* Thu Jul 24 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
 - Fix bug where condor_ssh_to_job failed when EP scratch path is too long
 - Fix incorrect time reported by htcondor status for long running jobs
 - Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
