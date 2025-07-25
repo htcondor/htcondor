@@ -34,3 +34,7 @@ AND JobListId NOT IN (SELECT DISTINCT JobListId FROM Jobs WHERE JobListId IS NOT
 -- 6. Delete files
     -- Delete the File entries that we had previously marked
 DELETE FROM Files WHERE FileId IN (SELECT FileId FROM FilesToDelete);
+
+-- 7. Delete all Status updates that are more than 7 days old
+DELETE FROM Status
+WHERE TimeOfUpdate < strftime('%s','now') - (7 * 86400);

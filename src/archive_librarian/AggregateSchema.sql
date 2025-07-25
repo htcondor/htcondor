@@ -73,7 +73,9 @@ CREATE TABLE IF NOT EXISTS Status (
     DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
     JobBacklogEstimate INTEGER DEFAULT 0,              -- Estimated number of unprocessed ads
     HitMaxIngestLimit BOOLEAN DEFAULT 0                -- Whether this ingestion cycle hit the max ingest limit
+    GarbageCollectionRun BOOLEAN DEFAULT 0             -- Whether garbage collection ran during this ingestion cycle
 );
+CREATE INDEX IF NOT EXISTS idx_TimeOfUpdateInStatus ON Status(TimeOfUpdate);
 
 CREATE TABLE IF NOT EXISTS StatusData (
     StatusDataId INTEGER PRIMARY KEY CHECK (StatusDataId = 1),     

@@ -33,11 +33,11 @@ class DBHandler {
 public:
 
     // Constructor & Destructor
-    explicit DBHandler(const std::string& schemaPath, const std::string& dbPath, size_t maxCacheSize = 10000);
+    explicit DBHandler(const std::string& schemaSQL, const std::string& dbPath, size_t maxCacheSize = 10000);
     ~DBHandler();
 
     // Database initialization and maintenance
-    bool initializeFromSchema(const std::string& schemaPath);
+    bool initializeFromSchema(const std::string& schemaSQL);
     bool clearCache() const;
     bool testConnection();
 
@@ -64,8 +64,13 @@ public:
     // === File Archive Management ===
     
     // File monitoring and lifecycle operations
-    bool DBHandler::insertNewFilesAndDeleteOldOnes(ArchiveChange& fileSetChange);
+    bool insertNewFilesAndDeleteOldOnes(ArchiveChange& fileSetChange);
 
+    // === Garbage Collection ===
+    
+    // Runs garbageCollection query saved in Librarian and passed to dbHandler 
+    bool runGarbageCollection(const std::string &gcSql, int targetFileLimit);
+;
     // === User Query Interface ===
     
     // User-facing data retrieval functions

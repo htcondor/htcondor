@@ -51,6 +51,7 @@ struct Status {
     long DurationMs;
     long JobBacklogEstimate = 0; // Not calculating this for now 
     bool HitMaxIngestLimit = false;
+    bool GarbageCollectionRun = false;
 };
 
 struct StatusData {

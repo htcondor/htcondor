@@ -10,26 +10,70 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <string>
+#include <sstream>
 
 namespace fs = std::filesystem;
 
 // ================================
-// CONSTRUCTOR
+// CONSTRUCTOR AND INITIALIZATION
 // ================================
 
 Librarian::Librarian(const std::string& schemaPath,
                      const std::string& dbPath,
                      const std::string& historyFilePath,
                      const std::string& epochHistoryFilePath,
-                     size_t jobCacheSize)
+                     const std::string& gcQueryPath,
+                     size_t jobCacheSize, 
+                     size_t databaseSize)
     : schemaPath_(schemaPath),
       dbPath_(dbPath),
       historyFilePath_(historyFilePath),
       epochHistoryFilePath_(epochHistoryFilePath),
       jobCacheSize_(jobCacheSize),
+      databaseSizeLimit_(databaseSize),
       historyFileSet_(historyFilePath),
+      gcQueryPath_(gcQueryPath),
       epochHistoryFileSet_(epochHistoryFilePath) {}
 
+
+// Loads and returns the contents of a schema SQL file.
+// Returns an empty string if the file can't be opened.
+// Used to initialize the database schema.
+std::string Librarian::loadSchemaFromFile(const std::string& schemaPath) {
+    std::ifstream file(schemaPath);
+    if (!file.is_open()) {
+        printf("[ERROR] Failed to open schema file: %s\n", schemaPath.c_str());
+        return "";
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+
+// Loads the garbage collection SQL from the gcQueryPath_ file.
+// Stores the result in gcQuerySQL_ for later use.
+// Returns false if the file can't be opened or is empty.
+bool Librarian::loadGCQuery() {
+    std::ifstream file(gcQueryPath_);
+    if (!file.is_open()) {
+        printf("[ERROR] Failed to open GC query file: %s\n", gcQueryPath_.c_str());
+        return false;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    gcQuerySQL_ = buffer.str();
+
+    if (gcQuerySQL_.empty()) {
+        printf("[ERROR] GC query file is empty: %s\n", gcQueryPath_.c_str());
+        return false;
+    }
+
+    return true;
+}
 
 // ================================
 // FILE READS AND WRITES
@@ -73,7 +117,7 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
 // ================================
 
 // Finds a history file matching the config name pattern and calculates 
-// EstimatedBytesPerJob_ as the byte size from file start to first "***" line
+// EstimatedBytesPerJobInArchive_ as the byte size from file start to first "***" line
 bool Librarian::calculateEstimatedBytesPerJob() {
     std::error_code ec;
     std::filesystem::path historyDir(historyFileSet_.historyDirectoryPath);
@@ -120,7 +164,7 @@ bool Librarian::calculateEstimatedBytesPerJob() {
                         }
                         
                         std::streamsize chunkSize = endPos - startPos;
-                        EstimatedBytesPerJob_ = static_cast<double>(chunkSize);
+                        EstimatedBytesPerJobInArchive_ = static_cast<double>(chunkSize);
                         file.close();
                         return true;
                     }
@@ -141,10 +185,10 @@ bool Librarian::calculateEstimatedBytesPerJob() {
  * @brief Estimates remaining job records by calculating unread bytes in history files
  * 
  * Calculates bytes remaining in the last partially-read file plus all bytes in
- * unread files (LastOffset == 0), then estimates job count using estimatedBytesPerJob_.
+ * unread files (LastOffset == 0), then estimates job count using EstimatedBytesPerJobInArchive_.
  */
 int Librarian::calculateBacklogFromBytes(const Status& status) {
-    if (EstimatedBytesPerJob_ <= 0) return 0;
+    if (EstimatedBytesPerJobInArchive_ <= 0) return 0;
 
     int64_t totalUnreadBytes = 0;
 
@@ -187,7 +231,7 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
     }
 
     // Calculate estimated backlog
-    int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJob_));
+    int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJobInArchive_));
     
     printf("[Librarian] Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n", 
            totalUnreadBytes, estimatedBacklog);
@@ -336,9 +380,7 @@ ArchiveChange Librarian::trackAndUpdateFileSet(FileSet& fileSet) {
     applyArchiveChangeToFileSet(fileSetChange, fileSet);
 
     return fileSetChange;
-}
-
-
+}\
 
 /**
  * @brief Builds a processing queue from file set and archive changes
@@ -378,6 +420,60 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
 
 
 // ================================
+// GARBAGE COLLECTION
+// ================================
+
+
+/**
+ * Get the file system size of the database in bytes.
+ * Portable across all file systems.
+ * 
+ * @param db_path Path to the database file
+ * @return Size in bytes, or 0 if file doesn't exist
+ */
+std::uintmax_t get_database_size(const std::string& db_path) {
+    std::error_code ec;
+    auto size = std::filesystem::file_size(db_path, ec);
+    
+    if (ec) {
+        return 0;  // File doesn't exist or other error
+    }
+    
+    return size;
+}
+
+
+bool Librarian::cleanupDatabaseIfNeeded() {
+    bool garbageCollected =  false;
+
+    // Get current database size
+    size_t currentSize = get_database_size(dbPath_);
+    
+    // Calculate high watermark (97% of capacity)
+    size_t highWatermark = static_cast<size_t>(databaseSizeLimit_ * 0.97);
+    
+    // Check if we've exceeded the high watermark
+    if (currentSize > highWatermark) {
+        // Calculate low watermark (85% of capacity)
+        size_t lowWatermark = static_cast<size_t>(databaseSizeLimit_ * 0.85);
+        
+        // Calculate how many bytes we need to free up
+        size_t bytesToDelete = currentSize - lowWatermark;
+        
+        // Calculate number of jobs to delete (round up to ensure we delete enough)
+        int numJobsToDelete = static_cast<int>(std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
+        
+        // Next step: run the query to delete jobs
+        garbageCollected = dbHandler_->runGarbageCollection(gcQuerySQL_, numJobsToDelete);
+        if(!garbageCollected){
+            printf("[Librarian] Garbage collection attempted but failed.");
+        }
+    }
+
+    return garbageCollected;
+}
+
+// ================================
 // CORE PUBLIC INTERFACE
 // ================================
 
@@ -389,8 +485,19 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
 bool Librarian::initialize() { 
     printf("[Librarian] Initializing DBHandler...\n");
 
+    // Load SQL query strings
+    std::string schemaSQL = this->loadSchemaFromFile(schemaPath_);
+    if(schemaSQL.empty()) {
+        printf("[Librarian] Schema initialization has failed! Could not get schema.sql from file\n");
+        return false;
+    }
+    if (!loadGCQuery()) {
+        printf("[Librarian] Failed to load garbage collection query.\n");
+        return false;
+    }
+
     // Construct the DBHandler with provided schema, db path, and cache size.
-    dbHandler_ = std::make_unique<DBHandler>(schemaPath_, dbPath_, jobCacheSize_);
+    dbHandler_ = std::make_unique<DBHandler>(schemaSQL, dbPath_, jobCacheSize_);
 
     // Check whether database is connected and has correct expect tables
     if (!dbHandler_->testConnection()) {
@@ -402,7 +509,7 @@ bool Librarian::initialize() {
 
     // Fill in info to be used for Status estimates later
     if (!calculateEstimatedBytesPerJob()) {
-        EstimatedBytesPerJob_ = 5814.0;
+        EstimatedBytesPerJobInArchive_ = 5814.0;
     }
     return true;
 }
@@ -562,11 +669,15 @@ bool Librarian::update() {
         status.HistoryFileOffsetLastRead = fileInfo.LastOffset;
     }
 
-    // PHASE 4: Status Update and Finalization
+    // PHASE 4: Garbage Collection
+    bool garbageCollected = cleanupDatabaseIfNeeded();
+
+    // PHASE 5: Status Update and Finalization
     auto endTime = std::chrono::system_clock::now();
     status.TimeOfUpdate = std::chrono::system_clock::to_time_t(endTime); 
     status.DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     status.JobBacklogEstimate = calculateBacklogFromBytes(status);
+    status.GarbageCollectionRun = garbageCollected;
     updateStatusData(status);
 
     // Persist status to database
@@ -574,9 +685,6 @@ bool Librarian::update() {
         fprintf(stderr, "[Librarian] Warning: Failed to write status to database\n");
         // Don't want to fail the entire update cycle for this, just logging it
     }
-
-    // PHASE 5: Garbage Collection
-    
 
     printf("[Librarian] Update protocol completed successfully. Inserted %zu job records, %zu epoch records in %ld ms.\n",
         status.TotalJobsRead, status.TotalEpochsRead, status.DurationMs);

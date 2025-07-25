@@ -27,7 +27,9 @@ public:
               const std::string& dbPath,
               const std::string& historyFilePath,
               const std::string& epochHistoryFilePath,
-              size_t jobCacheSize = 10000);
+              const std::string& gcQueryPath,
+              size_t jobCacheSize = 10000, 
+              size_t databaseSize = 615);
 
     /**
      * @brief Initializes DBHandler and sets up the schema.
@@ -58,11 +60,17 @@ private:
     FileSet epochHistoryFileSet_;
     std::string historyFilePath_; // redundant, but hard to get rid of right now
     std::string epochHistoryFilePath_;
+    std::string gcQueryPath_;
+    std::string gcQuerySQL_; 
     size_t jobCacheSize_;
     std::unique_ptr<DBHandler> dbHandler_;
     StatusData statusData_;
-    double EstimatedBytesPerJob_;
+    double EstimatedBytesPerJobInArchive_;
+    double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
+    double databaseSizeLimit_;
 
+    std::string loadSchemaFromFile(const std::string& schemaPath);
+    bool Librarian::loadGCQuery();
     bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);
     bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);
     ArchiveChange trackAndUpdateFileSet(FileSet& fileSet);
@@ -71,5 +79,6 @@ private:
     int calculateBacklogFromBytes(const Status& status);
     void updateStatusData(Status status);
     void estimateArrivalRateWhileAsleep();
+    bool cleanupDatabaseIfNeeded();
 
 };

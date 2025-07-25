@@ -209,17 +209,8 @@ DBHandler::~DBHandler() {
     }
 }
 
-bool DBHandler::initializeFromSchema(const std::string& schemaPath) {
-    std::ifstream file(schemaPath);
-    if (!file.is_open()) {
-        printf("[ERROR] Failed to open schema file: %s\n", schemaPath.c_str());
-        return false;
-    }
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string schemaSQL = buffer.str();
-
+bool DBHandler::initializeFromSchema(const std::string& schemaSQL) {
     // Enable foreign key constraints
     char* errMsg = nullptr;
     int rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, &errMsg);
@@ -769,8 +760,9 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             TotalEpochsRead,
             DurationMs,
             JobBacklogEstimate,
-            HitMaxIngestLimit
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            HitMaxIngestLimit,
+            GarbageCollectionRun
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     // Update StatusData SQL - now updates the single row instead of inserting
@@ -826,6 +818,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         sqlite3_bind_int(stmt, 8, status.DurationMs);
         sqlite3_bind_int(stmt, 9, status.JobBacklogEstimate);
         sqlite3_bind_int(stmt, 10, status.HitMaxIngestLimit ? 1 : 0);
+        sqlite3_bind_int(stmt, 11, status.GarbageCollectionRun ? 1 : 0);
 
         if (sqlite3_step(stmt) != SQLITE_DONE) {
             printf("[ERROR] Failed to insert into Status: %s\n", sqlite3_errmsg(db_));
@@ -1139,6 +1132,76 @@ bool DBHandler::insertNewFilesAndDeleteOldOnes(ArchiveChange& fileSetChange) {
     sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
     return true;
 }
+
+
+// -------------------------
+// Garbage Collection
+// -------------------------
+
+// NOTE: This function would not work if more of the statements had parameters that need to be bound
+// It currently only accepts bindings for the very first statement, which is where we indicate 
+// the n number of jobs that we need to delete to get to the low watermark
+bool DBHandler::runGarbageCollection(const std::string &gcQuerySQL, int fileLimit) {
+    if (!db_) return false;
+
+    char *errMsg = nullptr;
+
+    if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        printf("[GC] Begin transaction failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    size_t pos = gcQuerySQL.find(';');
+    if (pos == std::string::npos) {
+        printf("[GC] Invalid GC SQL - no statement terminator\n");
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    std::string step1Sql = gcQuerySQL.substr(0, pos + 1);
+    std::string step2Sql = gcQuerySQL.substr(pos + 1);
+
+    // Prepare step1, bind ?, execute
+    sqlite3_stmt *stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, step1Sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        printf("[GC] Prepare step1 failed: %s\n", sqlite3_errmsg(db_));
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    if (sqlite3_bind_int(stmt, 1, fileLimit) != SQLITE_OK) {
+        printf("[GC] Bind failed: %s\n", sqlite3_errmsg(db_));
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        printf("[GC] Execute step1 failed: %s\n", sqlite3_errmsg(db_));
+        sqlite3_finalize(stmt);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+    sqlite3_finalize(stmt);
+
+    // Exec the rest
+    if (sqlite3_exec(db_, step2Sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        printf("[GC] Exec step2 failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        printf("[GC] Commit failed: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    printf("[GC] Garbage collection successful.\n");
+    return true;
+}
+
 
 
 // -------------------------
