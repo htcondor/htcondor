@@ -278,7 +278,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     }
 
     long matchCount = 0;
-	for (auto& id: StringTokenIterator(job_list)) {
+        for (auto& id: StringTokenIterator(job_list)) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
             qc.abort();
@@ -640,9 +640,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
     //
 
     //if (dry_run) {
-    //	FILE * outfile = nullptr; // FILE* to dry-run to
-    //	simQ.Connect(outfile, false, false);
-    //	myq = &SimQ;
+    //  FILE * outfile = nullptr; // FILE* to dry-run to
+    //  simQ.Connect(outfile, false, false);
+    //  myq = &SimQ;
     //} else
     {
         if (scheddQ.Connect(schedd, errstack) == 0) {
@@ -936,7 +936,7 @@ _history_query(PyObject *, PyObject * args) {
 
     std::string prefix = "";
     std::string projectionList = "{";
-	for (auto& attr : StringTokenIterator(projection)) {
+    for (auto& attr : StringTokenIterator(projection)) {
         projectionList += prefix + "\"" + attr + "\"";
         prefix = ", ";
     }
@@ -1284,7 +1284,7 @@ _schedd_get_dag_contact_info(PyObject *, PyObject * args) {
 static PyObject *
 _schedd_get_claims(PyObject *, PyObject * args) {
 
-	char *addr = nullptr;
+    char *addr = nullptr;
     const char * constraint = NULL;
     const char * projection = NULL;
 
@@ -1295,24 +1295,24 @@ _schedd_get_claims(PyObject *, PyObject * args) {
 
     CondorError errStack;
 
-	DCSchedd schedd(addr);
+    DCSchedd schedd(addr);
     std::vector<std::unique_ptr<ClassAd>> results;
 
-	ClassAd queryAd;
-	if (constraint) {
-		queryAd.AssignExpr(ATTR_REQUIREMENTS, constraint);
-	}
+    ClassAd queryAd;
+    if (constraint) {
+        queryAd.AssignExpr(ATTR_REQUIREMENTS, constraint);
+    }
 
-	if (projection) {
-		queryAd.Assign(ATTR_PROJECTION, projection);
-	}
+    if (projection) {
+        queryAd.Assign(ATTR_PROJECTION, projection);
+    }
 
-	bool result = schedd.getClaims(results, queryAd, errStack);
+    bool result = schedd.getClaims(results, queryAd, errStack);
 
-	if (!result) {
+    if (!result) {
         PyErr_SetString(PyExc_HTCondorException, "Cannot query schedd");
         return nullptr;
-	}
+    }
 
     PyObject * list = PyList_New(0);
     if( list == nullptr ) {
