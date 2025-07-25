@@ -136,24 +136,22 @@ bool Librarian::calculateEstimatedBytesPerJob() {
         if (entry.is_regular_file(ec) && !ec) {
             std::string filename = entry.path().filename().string();
             
-            // Check if filename starts with historyConfigName and has more content after it
+            // Check if filename starts with historyNameConfig and has more content after it
             if (filename.length() > historyFileSet_.historyNameConfig.length() &&
                 filename.substr(0, historyFileSet_.historyNameConfig.length()) == historyFileSet_.historyNameConfig) {
                 
-                std::ifstream file(entry.path());
+                std::ifstream file(entry.path(), std::ios::binary);
                 if (!file.is_open()) {
                     continue; // Try next file
                 }
                 
                 std::string line;
                 std::streampos startPos = file.tellg();
-                
-                // Check if tellg() failed
                 if (startPos == std::streampos(-1)) {
                     file.close();
                     continue;
                 }
-                
+
                 // Read until we find a line starting with "***"
                 while (std::getline(file, line)) {
                     if (line.length() >= 3 && line.substr(0, 3) == "***") {
@@ -162,24 +160,34 @@ bool Librarian::calculateEstimatedBytesPerJob() {
                             file.close();
                             continue;
                         }
-                        
+
                         std::streamsize chunkSize = endPos - startPos;
                         EstimatedBytesPerJobInArchive_ = static_cast<double>(chunkSize);
+
                         file.close();
+
+                        // Now get the size of the whole file
+                        std::uintmax_t fileSize = std::filesystem::file_size(entry.path(), ec);
+                        if (ec || EstimatedBytesPerJobInArchive_ <= 0.0) {
+                            return false;
+                        }
+
+                        EstimatedJobsPerFileInArchive_ = static_cast<int>(
+                            static_cast<double>(fileSize) / EstimatedBytesPerJobInArchive_
+                        );
+
                         return true;
                     }
                 }
-                
-                file.close();
-                // If we reach here, no "***" line was found in this file
-                // Continue to try other files
+
+                file.close(); // No "***" line found
             }
         }
     }
-    
-    // No suitable file found or no "***" line found
+
     return false;
 }
+
 
 /**
  * @brief Estimates remaining job records by calculating unread bytes in history files
@@ -462,9 +470,13 @@ bool Librarian::cleanupDatabaseIfNeeded() {
         
         // Calculate number of jobs to delete (round up to ensure we delete enough)
         int numJobsToDelete = static_cast<int>(std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
-        
+
+        // Convert jobs to files: calculate how many files we need to delete to satisfy numJobsToDelete
+        // Round up to ensure we delete enough files to cover the required number of jobs
+        int numFilesToDelete = static_cast<int>(std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
+
         // Next step: run the query to delete jobs
-        garbageCollected = dbHandler_->runGarbageCollection(gcQuerySQL_, numJobsToDelete);
+        garbageCollected = dbHandler_->runGarbageCollection(gcQuerySQL_, numFilesToDelete);
         if(!garbageCollected){
             printf("[Librarian] Garbage collection attempted but failed.");
         }

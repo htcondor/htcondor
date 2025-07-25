@@ -66,8 +66,9 @@ private:
     std::unique_ptr<DBHandler> dbHandler_;
     StatusData statusData_;
     double EstimatedBytesPerJobInArchive_;
+    int EstimatedJobsPerFileInArchive_;
     double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
-    double databaseSizeLimit_;
+    double databaseSizeLimit_ = 2.0 * 1024 * 1024 * 1024;  // 2 GB in bytes
 
     std::string loadSchemaFromFile(const std::string& schemaPath);
     bool Librarian::loadGCQuery();
