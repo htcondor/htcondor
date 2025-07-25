@@ -274,11 +274,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.17.0
+Requires: pelican >= 7.17.2
 %else
-Requires: (pelican >= 7.17.0 or pelican-debug >= 7.17.0)
+Requires: (pelican >= 7.17.2 or pelican-debug >= 7.17.2)
 %endif
-Requires: pelican-osdf-compat >= 7.17.0
+Requires: pelican-osdf-compat >= 7.17.2
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -1477,6 +1477,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
+- Fix bug where the vacate reason was not propagated back to the user
+- HTCondor tarballs now contain Pelican 7.17.2
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
+- Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+- Fix incorrect time reported by htcondor status for long running jobs
+- Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
 * Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.26-1
 - Fix memory leak in the condor_schedd when using late materialization
 - Fix condor_master start up when file descriptor ulimit was huge
