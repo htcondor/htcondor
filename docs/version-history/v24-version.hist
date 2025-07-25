@@ -12,6 +12,10 @@
   restrict which Vault servers the *condor_credd* will accept credentials for.
   :jira:`3136`
 
+- The new Python API now includes `htcondor2.ping()`, which operates like
+  `htcondor.SecMan.ping()` in the old API.
+  :jira:`3180`
+
 - Added new python method "get_claims" to the schedd object, which returns
   the classads of the claimed slots.
   :jira:`3181`
