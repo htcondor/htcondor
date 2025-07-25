@@ -1,13 +1,37 @@
 *** 23.10.28 bugs
 
+- Fixed a bug where an old client (version 9.0 or earlier) with lax
+  security settings (authentication, encryption, and integrity all
+  disabled or optional) would fail to communicate with a daemon with
+  stronger security settings.
+  :jira:`3189`
+
+- Fixed a bug with docker universe jobs that have a PostCmd.
+  This PostCmd script was not passed the environment variables
+  _CONDOR_MAINJOB_EXIT_CODE or _CONDOR_MAINJOB_EXIT_SIGNAL
+  :jira:`3185`
+
+- Fixed a bug where the :ad-attr:`ImageSize` attribute in a slot on a
+  Windows EP was a large random value while the slot was running a job.
+  The bug was due to a change in the Win32 API where the total virtual
+  memory of a process is no longer reported.  From now on
+  :ad-attr:`ImageSize` on a Windows EP will have the same value as
+  :ad-attr:`ResidentSetSize`.
+  :jira:`3179`
+
 *** 23.0.28 bugs
 
-*** 23.10.27 bugs
+- ``condor_token_request`` no longer fails with an error if the token is
+  automatically approved by the daemon.
+  :jira:`239`
 
-- Fixed a bug that could cause the startd's mips benchmark to
-  run forever, consuming a cpu core and resulting in the 
-  :ad-attr:`Mips` attribute to be undefined.
-  :jira:`3134`
+*** 23.10.27 features
+
+- HTCondor tarballs now contain `Pelican 7.17.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.2.
+
+*** 23.10.27 bugs
 
 - Fixed a bug where the specific vacate reason wasn't reported in the job
   event log or the job ad when a job was evicted from the EP.
@@ -15,7 +39,16 @@
   instead.
   :jira:`3117`
 
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
 *** 23.0.27 bugs
+
+- condor_ssh_to_job now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
 
 - Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
   that caused some time information to be displayed incorrectly.
@@ -25,10 +58,6 @@
   written into job scratch directories on Execution Points using
   :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`3156`
-
-- condor_ssh_to_job now works correctly when TMP is set to longer
-  paths, such as when running under glidein.
-  :jira:`3163`
 
 *** 23.10.26 features
 
