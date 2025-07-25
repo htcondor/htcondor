@@ -1,4 +1,5 @@
-epoch_history_path=history_pool/sandyEpochHistory.hist
-history_path=history_pool/sandyHistory.hist
-db_path=history_pool/tester_output.db
-schema_path=history_pool/AggregateSchema.sql
+epoch_history_path=sandyEpochHistory.hist
+history_path=sandyHistory.hist
+db_path=tester_output.db
+schema_path=AggregateSchema.sql
+gcQuery_path=GarbageCollect.sql

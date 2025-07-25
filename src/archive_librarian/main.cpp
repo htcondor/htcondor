@@ -38,10 +38,12 @@ int main() {
     std::string historyPath = config["history_path"];
     std::string dbPath = config["db_path"];
     std::string schemaPath = config["schema_path"];
+    std::string gcQueryPath = config["gcQuery_path"];
     size_t jobCacheSize = 10000; // still hardcoded
+    double dbSizeLimit = 2.0 * 1024 * 1024 * 1024; ; // 2 GB
     
 
-    Librarian librarian(schemaPath, dbPath, historyPath, epochHistoryPath, jobCacheSize);
+    Librarian librarian(schemaPath, dbPath, historyPath, epochHistoryPath, gcQueryPath, jobCacheSize, dbSizeLimit);
 
     if (!librarian.initialize()) {
         std::cerr << "Failed to initialize Librarian." << std::endl;

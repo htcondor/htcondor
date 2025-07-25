@@ -29,7 +29,7 @@ public:
               const std::string& epochHistoryFilePath,
               const std::string& gcQueryPath,
               size_t jobCacheSize = 10000, 
-              size_t databaseSize = 615);
+              size_t databaseSize);
 
     /**
      * @brief Initializes DBHandler and sets up the schema.
