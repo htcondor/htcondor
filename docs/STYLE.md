@@ -27,6 +27,25 @@ documentation. Some notable ones are listed below:
 
 ### HTCondor specific markups
 
+**:jira:** is used to automatically create links to one or more JIRA tickets and create a version history
+anchor for easy linking. Multiple comma separated ticket numbers can be provided.
+
+Example: **:jira:\`1234\`** -- Link to one JIRA Ticket (#1234)
+
+Example: **:jira:\`1234,9876\`** -- Make links to two JIRA tickets (#1234 and #9876)
+
+---
+
+**:hist-anchor:** is used to add a version history entry anchor for entries with no associated **:jira:**
+tag. The provided contents can either be the keyword *default* (case insensitive) or a valid URL string.
+Note: Spaces are automatically replaced with hyphens.
+
+Example: **:hist-anchor:\`default\`** -- Create default anchor for entry (*version-history*)
+
+Example: **:hist-anchor:`Release Notes`** -- Create *Release-Notes* anchor for version history entry.
+
+---
+
 **:index:** used to add entries to the index.  Our users do rely on the index, so take care to make good entries.  It
 is encouraged to have multiple meaningful index entries for the same topic. In some cases it may make sense
 to have both an index and inverted index entry for a topic.  For example, we have a primary index entry
