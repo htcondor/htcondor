@@ -219,7 +219,6 @@ _ping( PyObject *, PyObject * args ) {
 	long command = -1;
 	const char * authz = nullptr;
 	DCpermission authz_int = NOT_A_PERM;
-	PyObject_Handle * handle = nullptr;
 
 	if(! PyArg_ParseTuple(args, "sz", & addr, & authz )) {
 		// PyArg_ParseTuple() has already set an exception for us.
