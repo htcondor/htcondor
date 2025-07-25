@@ -840,6 +840,7 @@
 #define ATTR_USER  "User"
 #define ATTR_USERREC_OPT_prefix "_userrec_opt_"
 #define ATTR_USERREC_OPT_CREATE "_userrec_opt_create"
+#define ATTR_USERREC_OPT_CREATE_PROJECT "_userrec_opt_create_project"
 #define ATTR_USERREC_OPT_UPDATE "_userrec_opt_update"
 #define ATTR_USERREC_OPT_ME "_userrec_opt_me"
 #define ATTR_USERREC_OPT_CREATE_DEPRECATED "create"

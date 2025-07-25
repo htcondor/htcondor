@@ -91,20 +91,6 @@ endif()
 condor_exe_test(condor_test_auth "test_auth.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
-# Check condor_version's shared library dependencies and copy a specific
-# subset of those libraries into <release>/lib/condor
-if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
-	set( SRC_DIR ${CMAKE_SOURCE_DIR} )
-	set( BIN_DIR ${CMAKE_BINARY_DIR} )
-	install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
-	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
-	COMMAND xargs -isrc ${CMAKE_COMMAND} -E copy_if_different src ${CMAKE_INSTALL_PREFIX}/lib/condor
-		 )" )
-	# This is required for opensuse, where the system's libssl and
-	# libcrypto files don't have owner write permission.
-	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
-endif()
-
 
 ###########################################################
 # condor_ssh_to_job hackery

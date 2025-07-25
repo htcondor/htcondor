@@ -32,7 +32,7 @@ class System:
         self.default_queue = default_queue
 
         assert isinstance(batch_system, str)
-        self.batch_system =  batch_system
+        self.batch_system = batch_system
 
         assert isinstance(executable, str)
         self.executable = executable
@@ -149,6 +149,52 @@ class Bridges2System(System):
             queue["gpus_per_node"] = 4
 
         return queue
+
+
+class AWSEC2System(System):
+    def __init__(self, *,
+        pretty_name: str,
+        host_name: str,
+        default_queue: str,
+        batch_system: str,
+        executable: str,
+        other_scripts: list,
+        allocation_reqd: bool = False,
+        queues: dict,
+    ):
+        assert isinstance(pretty_name, str)
+
+        assert isinstance(pretty_name, str)
+        self.pretty_name = pretty_name
+
+        # assert isinstance(host_name, str)
+        self.host_name = host_name
+
+        # assert isinstance(default_queue, str)
+        self.default_queue = default_queue
+
+        assert isinstance(batch_system, str)
+        self.batch_system = batch_system
+
+        # assert isinstance(executable, str)
+        self.executable = executable
+
+        # assert isinstance(other_scripts, list)
+        self.other_scripts = other_scripts
+
+        assert isinstance(allocation_reqd, bool)
+        self.allocation_required = allocation_reqd
+
+        assert isinstance(queues, dict)
+        self.queues = queues
+
+
+    def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
+        return queue_name
+
+    def get_constraints(self, queue_name, gpus, gpu_type):
+        # Let's not to any validation for this quite yet.
+        return self.queues.get("<instance-type>")
 
 
 class PerlmutterSystem(System):
@@ -361,47 +407,6 @@ SYSTEM_TABLE = {
             },
         },
     }
-    ),
-
-    "stampede2": System( **{
-        "pretty_name":      "Stampede 2",
-        "host_name":        "stampede2.tacc.utexas.edu",
-        "default_queue":    "normal",
-        "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
-        "allocation_reqd":  False,
-
-        "queues": {
-            "normal": {
-                "max_nodes_per_job":    256,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       68,
-                "ram_per_node":         96 * 1024,
-
-                "max_jobs_in_queue":    50,
-            },
-            "development": {
-                "max_nodes_per_job":    16,
-                "max_duration":         2 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       68,
-                "ram_per_node":         96 * 1024,
-
-                "max_jobs_in_queue":    1,
-            },
-            "skx-normal": {
-                "max_nodes_per_job":    128,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       48,
-                "ram_per_node":         192 * 1024,
-
-                "max_jobs_in_queue":    20,
-            },
-        },
-    },
     ),
 
     "expanse": System( **{
@@ -630,6 +635,26 @@ SYSTEM_TABLE = {
         },
     },
     ),
+
+
+    "aws-ec2": AWSEC2System( **{
+        "pretty_name":      "AWS EC2",
+        "host_name":        None,
+        "default_queue":    "m4.large",
+        "batch_system":     "aws-ec2",
+        "executable":       None,
+        "other_scripts":    None,
+        "allocation_reqd":  False,
+
+        "queues": {
+            "<instance-type>": {
+                # All instance types are whole-node allocated.
+                "allocation_type":      "node",
+                "max_nodes_per_job":    None,
+            },
+        },
+    },
+    ),
 }
 
 
@@ -673,8 +698,8 @@ def validate_constraints( *,
             raise ValueError(error_string)
 
         # Don't allow the user to request more than max nodes.
-        mnpj = queue['max_nodes_per_job']
-        if nodes > mnpj:
+        mnpj = queue.get('max_nodes_per_job')
+        if mnpj is not None and nodes > mnpj:
             error_string = f"The '{queue_name}' queue is limited to {mnpj} nodes per job.  Use --nodes to set."
             raise ValueError(error_string)
 
@@ -717,7 +742,8 @@ def validate_constraints( *,
             raise ValueError(error_string)
 
     # (E) You must not specify a lifetime longer than the queue's duration.
-    if queue['max_duration'] < lifetime_in_seconds:
+    md = queue.get('max_duration')
+    if md is not None and md < lifetime_in_seconds:
         error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the requested lifetime ({lifetime_in_seconds} seconds).  Use --lifetime to set."
         raise ValueError(error_string)
 

@@ -11,18 +11,18 @@ Synopsis
 
 **condor_qusers** [**-help**] [**-version**] [**-debug** ]
 [**-name** *schedd-name*] [**-pool** *pool-name*]
-[**-long** | **-af** *{attrs}* | **-format** *fmt* *attr*]
+[**-long** | **-af** *{attrs}* | **-format** *fmt* *attr* | **-usage**]
+[**-projects[:also]** ]
 [**-user** *username* | **-constraint** *expression*]
-[**-add** | **-enable** | **-disable** [**-reason** *reason-string*]] *{users}*
+[**-add** | **-remove** | **-enable** | **-disable** [**-reason** *reason-string*]] *{names}*
 [**-edit** *{edits}*]
 
 Description
 -----------
 
-*condor_qusers* adds, edits, enables, disables or shows User records in the AP.
-Which user records are specified by name or by constraint.  The tool will do only one of these
-things at a time.  It will print user records if no add, enable, disable, or edit
-option is chosen.
+*condor_qusers* adds, removes, edits, enables, disables or shows User or Project records in the AP.
+Which records are specified by name or by constraint.  The tool will do only one of these
+things at a time.  It will print User records if run with no options.
 
 Options
 -------
@@ -41,12 +41,15 @@ Options
     specified pool
  **-user** *username*
     Operate on or query the given User ClassAd
+ **-projects[:also]**
+    Operate on or query Project ClassAds.  Use optional ``:also`` to query
+    both User and Project ClassAds.
  **-constraint** *expression*
-    Operate on or query all User ClassAds matching the given constraint expression.
- **-long**
-    Print User ClassAds in long form
+    Operate on or query all User or Project ClassAds matching the given constraint expression.
+ **-long[:json|jsonl|new|newl|xml|long]
+    Print ClassAds in the specified form. If no form is specified, long form will be used.
  **-format** *fmt* *attr*
-    Print selected attribute of the User ClassAds using the given format.
+    Print selected attribute of the User or Project ClassAds using the given format.
  **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
     (output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
@@ -88,14 +91,20 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
- **-add** *user1 [user2 ...]*
-    Add User ClassAds for the given users.
+ **-usage**
+    Display CPU and Slot usage.  The ``Completed`` and ``Removed`` columns as
+    well as the ``CpuTime`` and ``SlotTime`` columns only count jobs that have left the Schedd.
+    Jobs that have completed or been removed but have not yet left the Schedd are counted as ``Pending``.
+ **-add** *name1 [name2 ...]*
+    Add User or Project ClassAds with the given names.
+ **-remove** *name1 [name2 ...]*
+    Remove User or Project ClassAds with the given names.
  **-edit** *attr=expr [attr2=expr2]*
-    Add custom attributes to User ClassAds. Use with a **-constraint** or **-user** argument to select which users to edit.
- **-enable** *user1 [user2 ...]*
-    Enable the given users, adding them if necessary.
- **-disable** *user1 [user2 ...]*
-    Disable the given users. Disabled users cannot submit jobs. 
+    Add custom attributes to User or Project ClassAds. Use with a **-constraint** or *name* argument to select which records to edit.
+ **-enable** *name1 [name2 ...]*
+    Enable the given users, adding them if necessary. Enabling a project currently has no effect.
+ **-disable** *name1 [name2 ...]*
+    Disable the given users. Disabled users cannot submit jobs. Disabling a project currently has no effect.
  **-reason** *reason-string*
     Provide a reason for disabling when used with **-disable**.  The disable reason
     will be included in the error message when submit fails because a user is disabled.
@@ -119,16 +128,24 @@ Examples
 General Remarks
 ---------------
 
-An APs User ClassAds have attributes that count the number of jobs that user has in the queue, as well
-as enable/disable and the short and fully-qualified user name.  The full set of attributes can can be viewed with
+An APs User ClassAds have attributes that count the number of jobs in the queue submitted by that user.
+The full set of attributes can can be viewed with
 
 .. code-block:: console
 
       $ condor_qusers -long
 
+An APs Project ClassAds also have attributes that count the number of jobs in the queue associated with that project.
+The full set of attributes can can be viewed with
+
+.. code-block:: console
+
+      $ condor_qusers -projects -long
+
+
 Exit Status
 -----------
 
 *condor_qusers* will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
+and it will exit with a non-zero value upon failure.
 

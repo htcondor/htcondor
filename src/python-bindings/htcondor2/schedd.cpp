@@ -278,7 +278,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     }
 
     long matchCount = 0;
-	for (auto& id: StringTokenIterator(job_list)) {
+        for (auto& id: StringTokenIterator(job_list)) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
             qc.abort();
@@ -640,9 +640,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
     //
 
     //if (dry_run) {
-    //	FILE * outfile = nullptr; // FILE* to dry-run to
-    //	simQ.Connect(outfile, false, false);
-    //	myq = &SimQ;
+    //  FILE * outfile = nullptr; // FILE* to dry-run to
+    //  simQ.Connect(outfile, false, false);
+    //  myq = &SimQ;
     //} else
     {
         if (scheddQ.Connect(schedd, errstack) == 0) {
@@ -936,7 +936,7 @@ _history_query(PyObject *, PyObject * args) {
 
     std::string prefix = "";
     std::string projectionList = "{";
-	for (auto& attr : StringTokenIterator(projection)) {
+    for (auto& attr : StringTokenIterator(projection)) {
         projectionList += prefix + "\"" + attr + "\"";
         prefix = ", ";
     }
@@ -1279,4 +1279,59 @@ _schedd_get_dag_contact_info(PyObject *, PyObject * args) {
     }
 
     return py_new_classad2_classad(result);
+}
+
+static PyObject *
+_schedd_get_claims(PyObject *, PyObject * args) {
+
+    char *addr = nullptr;
+    const char * constraint = NULL;
+    const char * projection = NULL;
+
+    if (!PyArg_ParseTuple( args, "zzs", &addr, &constraint, &projection)) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return nullptr;
+    }
+
+    CondorError errStack;
+
+    DCSchedd schedd(addr);
+    std::vector<std::unique_ptr<ClassAd>> results;
+
+    ClassAd queryAd;
+    if (constraint) {
+        queryAd.AssignExpr(ATTR_REQUIREMENTS, constraint);
+    }
+
+    if (projection) {
+        queryAd.Assign(ATTR_PROJECTION, projection);
+    }
+
+    bool result = schedd.getClaims(results, queryAd, errStack);
+
+    if (!result) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot query schedd");
+        return nullptr;
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == nullptr ) {
+        PyErr_SetString( PyExc_MemoryError, "_schedd_get_claims" );
+        return nullptr;
+    }
+
+    for (auto & classAd : results ) {
+        //PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(*classAd));
+        PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        auto rv = PyList_Append(list, pyClassAd);
+        Py_DecRef(pyClassAd);
+
+        if( rv != 0 ) {
+            // PyList_Append() has already set an exception for us.
+            return nullptr;
+        }
+    }
+
+    return list;
+
 }

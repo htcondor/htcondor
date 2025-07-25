@@ -109,7 +109,6 @@ BuildRequires: mozilla-nss-devel
 BuildRequires: nss-devel
 %endif
 BuildRequires: openssl-devel
-BuildRequires: libxml2-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
 %else
@@ -287,11 +286,11 @@ Requires: rsync
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.17.0
+Requires: pelican >= 7.17.2
 %else
-Requires: (pelican >= 7.17.0 or pelican-debug >= 7.17.0)
+Requires: (pelican >= 7.17.2 or pelican-debug >= 7.17.2)
 %endif
-Requires: pelican-osdf-compat >= 7.17.0
+Requires: pelican-osdf-compat >= 7.17.2
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -998,6 +997,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
 %_libexecdir/condor/check-url
+%_libexecdir/condor/condor_annex
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
@@ -1074,7 +1074,6 @@ rm -rf %{buildroot}
 %endif
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
-%_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1214,7 +1213,6 @@ rm -rf %{buildroot}
 %_bindir/condor_job_router_info
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
-%_bindir/condor_annex
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 %_bindir/condor_adstash
@@ -1538,6 +1536,25 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+- Remove support for old JobRouter syntax
+- New condor_dag_checker tool finds syntax and logic errors before run
+- New condor_q -hold-codes produces a summary of held jobs
+- condor_status -lvm reports current disk usage by slots on the EPs
+- Fix bug where condor_q would truncate job counts to six digits
+- Fix bug where suspended jobs did not change state to idle when vacated
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
+- Fix bug where the vacate reason was not propagated back to the user
+- HTCondor tarballs now contain Pelican 7.17.2
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
+- Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+- Fix incorrect time reported by htcondor status for long running jobs
+- Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
 * Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.9.2-1
 - New job attribute to report number of input files transferred by protocol
 - Optional condor_schedd history log file
@@ -1545,7 +1562,7 @@ fi
 - Fix bug that caused claim failure when previous output transfer failed
 - Fix bug where access tokens were not generated from Vault tokens
 
-* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.9-1
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.9-1
 - Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
 - In htcondor2, empty configuration keys are now treated as non-existent
 
@@ -1570,7 +1587,7 @@ fi
 - htcondor ap status now reports the AP's RecentDaemonCoreDutyCycle
 - Can configure condor_adstash to fetch a custom projection of attributes
 
-* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.8-1
 - Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
 - HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
   - Pelican 7.16.5 now includes end-to-end integrity checks for clients
