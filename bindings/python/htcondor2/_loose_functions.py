@@ -1,4 +1,5 @@
 from typing import Optional
+from typing import Union
 
 from ._common_imports import (
     classad,
@@ -123,19 +124,26 @@ def set_ready_state(state : str = "Ready") -> None:
     _set_ready_state(state, addr)
 
 
-def ping(ad : classad.ClassAd, authz : Optional[str] = None) -> classad.ClassAd:
+def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -> classad.ClassAd:
     """
     Send a ping command to an HTCondor daemon.
 
-    :param classad2.ClassAd ad: The daemon's location.
+    :param location: A string specifying the daemon's ``sinful`` address
+                     or a :class:`classad2.ClassAd` describing the daemon
+                     as returned by :meth:`Collector.locate`.
     :param str authz: Authorization level or command to test.
     """
 
-    if ad.get('MyAddress') is None:
+    addr = None
+    if isinstance(location, str):
+        addr = location
+    else:
+        addr = location.get("MyAddress")
+    if addr is None:
         # This was HTCondorValueError in version 1.
-        raise ValueError('Address not available in location ClassAd.')
+        raise ValueError('Address not available in location argument.')
 
     if authz is None:
         authz = "DC_NOP"
 
-    return _ping(ad._handle, authz)
+    return _ping(addr, authz)

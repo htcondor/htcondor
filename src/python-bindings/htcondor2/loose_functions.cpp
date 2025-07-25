@@ -215,17 +215,18 @@ static PyObject *
 _ping( PyObject *, PyObject * args ) {
 	// _ping(ad._handle, authz)
 
+	const char* addr = nullptr;
 	long command = -1;
 	const char * authz = nullptr;
 	DCpermission authz_int = NOT_A_PERM;
 	PyObject_Handle * handle = nullptr;
 
-	if(! PyArg_ParseTuple(args, "Oz", (PyObject **)& handle, & authz )) {
+	if(! PyArg_ParseTuple(args, "sz", & addr, & authz )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	};
 
-	Daemon d((ClassAd *)handle->t, DT_ANY, nullptr);
+	Daemon d(DT_ANY, addr, nullptr);
 
 	// authz is the string form of an authorization level or a CEDAR command.
 	// Figure out the appropriate CEDAR command integer.
