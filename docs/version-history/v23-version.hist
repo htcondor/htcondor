@@ -1,5 +1,11 @@
 *** 23.10.28 bugs
 
+- Fixed a bug where an old client (version 9.0 or earlier) with lax
+  security settings (authentication, encryption, and integrity all
+  disabled or optional) would fail to communicate with a daemon with
+  stronger security settings.
+  :jira:`3189`
+
 - Fixed a bug with docker universe jobs that have a PostCmd.
   This PostCmd script was not passed the environment variables
   _CONDOR_MAINJOB_EXIT_CODE or _CONDOR_MAINJOB_EXIT_SIGNAL
