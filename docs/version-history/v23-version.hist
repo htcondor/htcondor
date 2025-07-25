@@ -23,7 +23,7 @@
   paths, such as when running under glidein.
   :jira:`3163`
 
-- Fixed a bug in ``htcondor job status`` and ``htcondor dag status``
+- Fixed a bug in :tool:`htcondor job status` and :tool:`htcondor dag status`
   that caused some time information to be displayed incorrectly.
   :jira:`3112`
 
@@ -59,15 +59,15 @@
   would not exit with the correct log file full exit code.
   :jira:`3066`
 
-- The submit commands ``kill_sig``, ``remove_kill_sig``, and
-  ``hold_kill_sig`` are now ignored for Windows jobs.
+- The submit commands :subcom:`kill_sig`, :subcom:`remove_kill_sig`, and
+  :subcom:`hold_kill_sig` are now ignored for Windows jobs.
   These control Unix process signals, which are not relevant on
   Windows.
   :jira:`3078`
 
 - Fixed a bug introduced in HTCondor 23.0.21, 23.10.21, and 24.0.5 that
   caused the *condor_gridmanager* to fail at startup if
-  macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
+  :macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
   :jira:`3099`
 
 - The plug-in used to handle ``http`` and ``https`` URLs now sets the
