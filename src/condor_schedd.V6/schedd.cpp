@@ -2224,10 +2224,7 @@ int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 		}
 
 		if (constraint) {
-			classad::Value result;
-			bool t_or_f = false;
-			EvalExprToBool(constraint, match->my_match_ad, nullptr, result);
-			if (result.IsBooleanValue(t_or_f) && (!t_or_f)) {
+			if (!IsAConstraintMatch(&queryAd, match->my_match_ad)) {
 				continue;
 			}
 		}
