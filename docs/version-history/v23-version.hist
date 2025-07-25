@@ -19,7 +19,7 @@
 
 *** 23.0.27 bugs
 
-- condor_ssh_to_job now works correctly when TMP is set to longer
+- :tool:`condor_ssh_to_job` now works correctly when TMP is set to longer
   paths, such as when running under glidein.
   :jira:`3163`
 
