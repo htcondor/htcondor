@@ -4,6 +4,9 @@
   restrict which Vault servers the *condor_credd* will accept credentials for.
   :jira:`3136`
 
+- The new Python API now includes `htcondor2.ping()`, which operates like
+  `htcondor.SecMan.ping()` in the old API.
+
 *** 24.11.0 bugs
 
 - Added new "notification = start" option to *condor_submit*, which
