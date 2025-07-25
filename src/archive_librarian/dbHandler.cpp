@@ -21,7 +21,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <sstream>
+#include <sstream> 
 #include <unordered_map>
 #include <functional>
 #include <filesystem>
@@ -458,50 +458,6 @@ bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int pro
 }
 
 /**
- * Insert a JobRecord into the database, using job and file info.
- */
-void DBHandler::insertJobRecord(const JobRecord& jobRecord) {
-    // Lookup JobId using ClusterId and ProcId
-    std::pair <int, int> jobIdCacheResults = jobIdLookup(jobRecord.ClusterId, jobRecord.ProcId);
-    int jobId = jobIdCacheResults.first;
-    int jobListId = jobIdCacheResults.second;
-
-    if (jobId == -1) {
-        printf("[ERROR] JobRecord was not preceded by Spawn ad, no matching JobId\n"
-                "Writing JobAd for ClusterId %d, ProcId %d\n", 
-                jobRecord.ClusterId, jobRecord.ProcId);
-        insertUnseenJob(jobRecord.Owner, jobRecord.ClusterId, jobRecord.ProcId, jobRecord.CompletionDate);
-
-        // Lookup freshly inserted info
-        jobIdCacheResults = jobIdLookup(jobRecord.ClusterId, jobRecord.ProcId);
-        jobId = jobIdCacheResults.first;
-        jobListId = jobIdCacheResults.second;
-    }
-
-    const char* sql = R"(
-        INSERT INTO JobRecords (Offset, CompletionDate, JobId, FileId, JobListId)
-        VALUES (?, ?, ?, ?, ?);
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_int64(stmt, 1, jobRecord.Offset);
-        sqlite3_bind_int64(stmt, 2, jobRecord.CompletionDate);
-        sqlite3_bind_int(stmt, 3, jobId);
-        sqlite3_bind_int(stmt, 4, jobRecord.FileId);
-        sqlite3_bind_int(stmt, 5, jobListId);
-
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            printf("[ERROR] Failed to insert into JobRecords: %s\n", sqlite3_errmsg(db_));
-        }
-    } else {
-            printf("[ERROR] Failed to prepare JobRecords insert: %s \n", sqlite3_errmsg(db_));
-    }
-
-    if (stmt) sqlite3_finalize(stmt);
-}
-
-/**
  * Batch insert multiple JobRecords in a single transaction.
  */
 void DBHandler::batchInsertJobRecords(const std::vector<JobRecord>& jobs) {
@@ -597,11 +553,6 @@ void DBHandler::batchInsertEpochRecords(const std::vector<EpochRecord>& records)
     }
 }
 
-/**
- * Insert epoch records and update file processing status atomically
- * This wrapper ensures both epoch records insertion and file offset update 
- * happen in a single transaction
- */
 /**
  * Insert epoch records and update file processing status atomically
  * This wrapper ensures both epoch records insertion and file offset update 
@@ -798,107 +749,9 @@ void DBHandler::updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile) 
 }
 
 
-/**
- * Read info about a file using FileId into a FileInfo struct
- */
-FileInfo DBHandler::readFileById(int fileId) {
-    FileInfo info{};
-    const char* sql = "SELECT FileId, FileName, FileInode, FileHash, LastOffset FROM Files WHERE FileId = ?;";
-    sqlite3_stmt* stmt;
-
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        printf("Failed to prepare statement: %s\n", sqlite3_errmsg(db_)); 
-        return info;
-    }
-
-    sqlite3_bind_int(stmt, 1, fileId);
-
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        info.FileId = sqlite3_column_int(stmt, 0);
-        info.FileName = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-        info.FileInode = sqlite3_column_int64(stmt, 2);
-        info.FileHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
-        info.LastOffset = sqlite3_column_int64(stmt, 4);
-    } else {
-        printf("No file found with FileId %d\n", fileId);
-    }
-
-    sqlite3_finalize(stmt);
-    return info;
-}
-
-/**
- * Return the most recent file processed (of type "history" or "epoch") from the 'Status' table
- */
-FileInfo DBHandler::lastFileRead(const std::string& type) {
-    int fileId = 0;
-
-    const char* sql = nullptr;
-    if (type == "history") {
-        sql = "SELECT HistoryFileIdLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
-    } else if (type == "epoch") {
-        sql = "SELECT EpochFileIdLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
-    } else {
-        throw std::invalid_argument("Invalid file type requested");
-    }
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        if (sqlite3_step(stmt) == SQLITE_ROW) {
-            fileId = sqlite3_column_int(stmt, 0);
-        }
-    }
-    if (stmt) sqlite3_finalize(stmt);
-
-    return readFileById(fileId); 
-}
-
-
 // -------------------------
 // Status Tracking
 // -------------------------
-
-
-/**
- * Insert a status snapshot into the Status table.
- * Includes History/Epoch FileIds, Offset, as well as Number of Jobs read during this run
- * And how long the latest update took
- */
-bool DBHandler::writeStatus(const Status& status) {
-    const char* sql = R"(
-        INSERT INTO Status (
-            TimeOfUpdate,
-            HistoryFileIdLastRead,
-            HistoryFileOffsetLastRead,
-            EpochFileIdLastRead,
-            EpochFileOffsetLastRead,
-            TotalJobsRead,
-            TotalEpochsRead,
-            DurationMs,
-            BacklogEstimate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-    )";
-
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        sqlite3_bind_int64(stmt, 1, status.TimeOfUpdate);
-        sqlite3_bind_int(stmt, 2, status.HistoryFileIdLastRead);
-        sqlite3_bind_int64(stmt, 3, status.HistoryFileOffsetLastRead);
-        sqlite3_bind_int(stmt, 4, status.EpochFileIdLastRead);
-        sqlite3_bind_int64(stmt, 5, status.EpochFileOffsetLastRead);
-        sqlite3_bind_int(stmt, 6, status.TotalJobsRead);
-        sqlite3_bind_int(stmt, 7, status.TotalEpochsRead);
-        sqlite3_bind_int(stmt, 8, status.DurationMs);
-        sqlite3_bind_int(stmt, 9, status.JobBacklogEstimate); 
-
-        sqlite3_step(stmt);
-        sqlite3_finalize(stmt);
-        return true;
-    } else {
-        printf("[ERROR] Failed to prepare writeStatus statement: %s\n", sqlite3_errmsg(db_));
-        return false;
-    }
-}
 
 /**
  * Insert a status snapshot into the 'Status' table and update the single row in 'StatusData' table
@@ -1176,73 +1029,16 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 	return true;
 }
 
-
-
-/**
- * Retrieve the most recent Status entry.
- */
-Status DBHandler::readLastStatus() {
-    Status status{};
-    const char* sql = R"(
-        SELECT
-            TimeOfUpdate,
-            HistoryFileIdLastRead,
-            HistoryFileOffsetLastRead,
-            EpochFileIdLastRead,
-            EpochFileOffsetLastRead,
-            TotalJobsRead,
-            TotalEpochsRead,
-            DurationMs,
-            BacklogEstimate
-        FROM Status
-        ORDER BY TimeOfUpdate DESC
-        LIMIT 1;
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        if (sqlite3_step(stmt) == SQLITE_ROW) {
-            status.TimeOfUpdate             = sqlite3_column_int64(stmt, 0);
-            status.HistoryFileIdLastRead   = sqlite3_column_int(stmt, 1);
-            status.HistoryFileOffsetLastRead = sqlite3_column_int64(stmt, 2);
-            status.EpochFileIdLastRead     = sqlite3_column_int(stmt, 3);
-            status.EpochFileOffsetLastRead = sqlite3_column_int64(stmt, 4);
-            status.TotalJobsRead           = sqlite3_column_int(stmt, 5);
-            status.TotalEpochsRead         = sqlite3_column_int(stmt, 6);
-            status.DurationMs              = sqlite3_column_int(stmt, 7);
-            status.JobBacklogEstimate         = sqlite3_column_int(stmt, 8);
-        }
-    } else {
-        printf("[ERROR] Failed to prepare readLastStatus: %s\n", sqlite3_errmsg(db_));
-    }
-
-    sqlite3_finalize(stmt);
-    return status;
-}
-
-
-/**
- * Count the number of files with LastOffset == 0 (unprocessed).
- * Meant to be used by ArchiveMonitor upon implementation. 
- */
-int DBHandler::countUnprocessedFiles() {
-    int count = 0;
-    const char* sql = "SELECT COUNT(*) FROM Files WHERE LastOffset = 0;";
-    sqlite3_stmt* stmt;
-    if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
-        if (sqlite3_step(stmt) == SQLITE_ROW) {
-            count = sqlite3_column_int(stmt, 0);
-        }
-    }
-    sqlite3_finalize(stmt);
-    return count;
-}
-
 // -------------------------
 // ArchiveChange Handlers
 // -------------------------
 
-bool DBHandler::insertNewFiles(const std::pair<int, std::string>& rotatedFile, std::vector<FileInfo>& newFiles) {
+bool DBHandler::insertNewFilesAndDeleteOldOnes(ArchiveChange& fileSetChange) {
+
+    std::pair<int, std::string>& rotatedFile = fileSetChange.rotatedFile;
+    std::vector<FileInfo>& newFiles = fileSetChange.newFiles;
+    std::vector<int>& deletedFileIds = fileSetChange.deletedFileIds;
+
     sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
 
     bool success = true;
@@ -1309,36 +1105,36 @@ bool DBHandler::insertNewFiles(const std::pair<int, std::string>& rotatedFile, s
 
     sqlite3_finalize(insertStmt);
 
-    sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
-    return true;
-}
+    // 3. Mark deleted files with deletion timestamp
+    if (!deletedFileIds.empty()) {
+       std::string deleteSQL = "UPDATE Files SET DateOfDeletion = ? WHERE FileId = ?";
+       sqlite3_stmt* deleteStmt = nullptr;
 
-bool DBHandler::deleteFiles(const std::vector<int>& deletedFileIds) {
-    sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+       if (sqlite3_prepare_v2(db_, deleteSQL.c_str(), -1, &deleteStmt, nullptr) != SQLITE_OK) {
+           fprintf(stderr, "Failed to prepare delete marking statement: %s\n", sqlite3_errmsg(db_));
+           sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+           return false;
+       }
 
-    std::string deleteSQL = "DELETE FROM Files WHERE FileId = ?";
-    sqlite3_stmt* deleteStmt = nullptr;
+       std::time_t now = std::time(nullptr);
+       
+       for (int fileId : deletedFileIds) {
+           sqlite3_bind_int64(deleteStmt, 1, static_cast<sqlite3_int64>(now));
+           sqlite3_bind_int(deleteStmt, 2, fileId);
 
-    if (sqlite3_prepare_v2(db_, deleteSQL.c_str(), -1, &deleteStmt, nullptr) != SQLITE_OK) {
-        fprintf(stderr, "Failed to prepare delete statement: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+           if (sqlite3_step(deleteStmt) != SQLITE_DONE) {
+               fprintf(stderr, "Failed to mark file as deleted: %s\n", sqlite3_errmsg(db_));
+               sqlite3_finalize(deleteStmt);
+               sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+               return false;
+           }
+
+           sqlite3_reset(deleteStmt);
+       }
+
+       sqlite3_finalize(deleteStmt);
     }
 
-    for (int fileId : deletedFileIds) {
-        sqlite3_bind_int(deleteStmt, 1, fileId);
-
-        if (sqlite3_step(deleteStmt) != SQLITE_DONE) {
-            fprintf(stderr, "Failed to delete file: %s\n", sqlite3_errmsg(db_));
-            sqlite3_finalize(deleteStmt);
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            return false;
-        }
-
-        sqlite3_reset(deleteStmt);
-    }
-
-    sqlite3_finalize(deleteStmt);
 
     sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
     return true;

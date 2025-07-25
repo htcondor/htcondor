@@ -4,9 +4,11 @@ CREATE TABLE IF NOT EXISTS Files (
     FileInode INTEGER,
     FileHash TEXT,
     LastOffset INTEGER,
-    DateOfRotation INTEGER
+    DateOfRotation INTEGER,
+    DateOfDeletion INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_inode_hash ON Files(FileInode, FileHash);
+CREATE INDEX IF NOT EXISTS idx_date_of_deletion ON Files(DateOfDeletion);
 
 CREATE TABLE IF NOT EXISTS Users (
     UserId INTEGER PRIMARY KEY, 
@@ -36,8 +38,10 @@ CREATE TABLE IF NOT EXISTS Jobs (    -- Info from Spawn Ads
     FOREIGN KEY (UserId) REFERENCES Users(UserId), 
     FOREIGN KEY (FileId) REFERENCES Files(FileId)
 );
-CREATE INDEX IF NOT EXISTS idx_Owner ON Jobs(UserId);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_proc ON Jobs(ClusterId, ProcId);
+CREATE INDEX IF NOT EXISTS idx_OwnerInJobs ON Jobs(UserId);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_cluster_proc_jobs ON Jobs(ClusterId, ProcId);
+CREATE INDEX IF NOT EXISTS idx_JobListIdInJobs ON Jobs(JobListId);
+
 
 CREATE TABLE IF NOT EXISTS JobRecords (
     JobRecordId INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -52,6 +56,7 @@ CREATE TABLE IF NOT EXISTS JobRecords (
 );
 CREATE INDEX IF NOT EXISTS idx_JobIdInJobRecords ON JobRecords(JobId);
 CREATE INDEX IF NOT EXISTS idx_JobListIdInJobRecords ON JobRecords(JobListId);
+CREATE INDEX IF NOT EXISTS idx_FileIdInJobRecords ON JobRecords(FileId);
 
 CREATE TABLE IF NOT EXISTS Status (
     StatusId INTEGER PRIMARY KEY AUTOINCREMENT,

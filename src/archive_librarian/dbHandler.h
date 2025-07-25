@@ -31,49 +31,50 @@ class JobIdLookup;
 
 class DBHandler {
 public:
+
+    // Constructor & Destructor
     explicit DBHandler(const std::string& schemaPath, const std::string& dbPath, size_t maxCacheSize = 10000);
     ~DBHandler();
+
+    // Database initialization and maintenance
     bool initializeFromSchema(const std::string& schemaPath);
     bool clearCache() const;
     bool testConnection();
 
-    // Paired write & read functions
-    void insertJobRecord(const JobRecord& job);
-    void batchInsertJobRecords(const std::vector<JobRecord>& jobs);
-
-    void writeFileInfo(FileInfo &info);
-    FileInfo readFileById(int fileId);
-
-    bool writeStatus(const Status& status);
-    bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData);
-    Status readLastStatus();
-    bool maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
-                           FileSet& epochHistoryFileSet_,
-                           StatusData& statusData_);
+    // === Core Data Operations ===
     
-
+    // Job Record Operations
     std::pair<int,int> jobIdLookup(int clusterId, int procId);
-    void updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile);
+    bool insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation);
 
-    // Helper functions for archiveMonitor and status
-    FileInfo lastFileRead(const std::string& type); // To get the last file read from the Status table
-    int countUnprocessedFiles(); // Counts files with 0 lastOffset 
-    bool insertNewFiles(const std::pair<int, std::string>& rotatedFile, std::vector<FileInfo>& newFiles);
-    bool deleteFiles(const std::vector<int>& deletedFileIds);
+    // Batch record insertion for file processing
     bool insertEpochFileRecords(const std::vector<EpochRecord>& records, const FileInfo& fileInfo);
     bool insertJobFileRecords(const std::vector<JobRecord>& jobs, const FileInfo& fileInfo);
-    
-
-
-    // To read EpochHistory file with all record types
-    bool insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation);
     void batchInsertEpochRecords(const std::vector<EpochRecord>& records);
+    void batchInsertJobRecords(const std::vector<JobRecord>& jobs);
 
-    // User query functions
+    // File Information Operations
+    void writeFileInfo(FileInfo &info);
+    void updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile);
+
+    // Status and Monitoring Operations
+    bool writeStatusAndData(const Status& status, const StatusData& statusData);
+    bool maybeRecoverStatusAndFiles(FileSet& historyFileSet_, FileSet& epochHistoryFileSet_, StatusData& statusData_);
+
+    // === File Archive Management ===
+    
+    // File monitoring and lifecycle operations
+    bool DBHandler::insertNewFilesAndDeleteOldOnes(ArchiveChange& fileSetChange);
+
+    // === User Query Interface ===
+    
+    // User-facing data retrieval functions
     std::vector<std::tuple<int, int, int>> getJobsForUser(const std::string& username);
     std::vector<std::pair<std::string, int>> getJobCountsPerUser();
 
-    // Helper function for getting the database for dbHandlerTestUtils
+    // === Testing Support ===
+    
+    // Helper function to support testing utilities
     sqlite3* getDB() const { return db_; }
 
 private:

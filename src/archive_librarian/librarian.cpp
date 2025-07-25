@@ -329,7 +329,7 @@ ArchiveChange Librarian::trackAndUpdateFileSet(FileSet& fileSet) {
     // Change the name of the rotated file, add new files to directory and populate their FileIds. 
     // Does NOT handle marking deleted files as deleted, as will be added either here or later when
     // garbage collection is implemented. 
-    dbHandler_->insertNewFiles(fileSetChange.rotatedFile, fileSetChange.newFiles);
+    dbHandler_->insertNewFilesAndDeleteOldOnes(fileSetChange);
 
     // Step 3: Apply the same changes to the in-memory FileSet,
     // so that the system’s internal state reflects what’s on disk.
@@ -562,11 +562,7 @@ bool Librarian::update() {
         status.HistoryFileOffsetLastRead = fileInfo.LastOffset;
     }
 
-    // PHASE 4: Garbage collection will be implemented here!
-    // TODO: Modify the database based on the files that have been marked deleted
-    // Note that file deletions have already been applied to the in-memory FileMap
-
-    // PHASE 5: Status Update and Finalization
+    // PHASE 4: Status Update and Finalization
     auto endTime = std::chrono::system_clock::now();
     status.TimeOfUpdate = std::chrono::system_clock::to_time_t(endTime); 
     status.DurationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
@@ -578,6 +574,9 @@ bool Librarian::update() {
         fprintf(stderr, "[Librarian] Warning: Failed to write status to database\n");
         // Don't want to fail the entire update cycle for this, just logging it
     }
+
+    // PHASE 5: Garbage Collection
+    
 
     printf("[Librarian] Update protocol completed successfully. Inserted %zu job records, %zu epoch records in %ld ms.\n",
         status.TotalJobsRead, status.TotalEpochsRead, status.DurationMs);
