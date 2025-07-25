@@ -725,12 +725,18 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	sec_req cli_req;
 	sec_req srv_req;
 
+	// If the client only has the alternate attribute, then the server should
+	// prefer using the alternate attribute.
+	// This ensures that when talking with an old client, the server won't
+	// insist on enabling encryption/integrity without authentication.
+	// 9.0 clients can't handle that.
+	bool use_alt = false;
 
 	// get the attribute from each
 	if (!cli_ad.LookupString(attr, cli_buf) && attr_alt) {
-		cli_ad.LookupString(attr_alt, cli_buf);
+		use_alt = cli_ad.LookupString(attr_alt, cli_buf);
 	}
-	if (!srv_ad.LookupString(attr, srv_buf) && attr_alt) {
+	if ((!srv_ad.LookupString(attr, srv_buf) || use_alt) && attr_alt) {
 		srv_ad.LookupString(attr_alt, srv_buf);
 	}
 
