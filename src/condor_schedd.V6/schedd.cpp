@@ -2193,13 +2193,18 @@ int Scheduler::make_ad_list(
    return ads.Length();
 }
 
-int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
+int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 	int more = 1;
 	int num_ads = 0;
 
 	if( IsDebugLevel( D_TEST ) ) {
 		pcccDumpTable( D_TEST );
 	}
+
+	classad::ExprTree *constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
+
+	classad::References projection;
+	mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, projection);
 
 	stream->encode();
 
@@ -2218,7 +2223,15 @@ int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
 			continue;
 		}
 
-		if( !stream->code( more ) || !putClassAd( stream, * match->my_match_ad ) ) {
+		if (constraint) {
+			if (!IsAConstraintMatch(&queryAd, match->my_match_ad)) {
+				continue;
+			}
+		}
+
+		classad::References *proj_ptr = (projection.size() > 0) ? &projection : nullptr;
+
+		if( !stream->code( more ) || !putClassAd(stream, *match->my_match_ad, 0 /*options*/, proj_ptr)) {
 			dprintf( D_ALWAYS, "Error sending query result to client, aborting.\n" );
 			return FALSE;
 		}

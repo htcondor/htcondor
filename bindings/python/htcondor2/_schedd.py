@@ -45,6 +45,7 @@ from .htcondor2_impl import (
     _schedd_spool,
     _schedd_refresh_gsi_proxy,
     _schedd_get_dag_contact_info,
+    _schedd_get_claims,
 )
 
 
@@ -697,6 +698,19 @@ class Schedd():
             raise TypeError("cluster must be an integer")
         return _schedd_get_dag_contact_info(self._addr, cluster)
 
+    def get_claims(self,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = []
+    ) -> List[classad.ClassAd]:
+        """
+        Query the schedd for the list of classads that represent claimed slots
+        :param constraint: Constraint expression to return only the
+            matching claims.  If empty, return all matches.
+        :param projection: List of specific ClassAd attributes to return
+            from each match. If not specified the full match is returned.
+        """
+        projection_string = ",".join(projection)
+        return _schedd_get_claims(self._addr, str(constraint), projection_string)
 
 def _add_line_from_itemdata(submit_file, item, separator):
     if isinstance(item, str):

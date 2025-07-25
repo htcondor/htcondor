@@ -2781,3 +2781,51 @@ ClassAd* DCSchedd::getDAGManContact(int cluster, CondorError& errstack) {
 
 	return result_ad;
 }
+
+bool 
+DCSchedd::getClaims(std::vector<std::unique_ptr<ClassAd>> &claims, ClassAd &queryAd, CondorError& errstack) {
+	ReliSock rsock;
+
+	rsock.timeout(20);  // Years of careful research
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::getClaims: Failed to connect to schedd (%s)\n", _addr.c_str());
+		errstack.push("DCSchedd::getClaims", CEDAR_ERR_CONNECT_FAILED, "Failed to connect to schedd");
+		return false;
+	}
+
+	// Not really STARTD_ADS, but claims that look a lot like startd ads
+	if( ! startCommand(QUERY_STARTD_ADS, (Sock*)&rsock, 0, &errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::getClaims: Failed to send command (COMMAND_QUERY_ADS) to the schedd\n");
+		return false;
+	}
+
+	// Put the query classad on the wire
+	if ( ! putClassAd(&rsock, queryAd) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:getClaims: Can't send query classad, probably an authorization failure\n");
+		errstack.push("DCSchedd::getClaims", CEDAR_ERR_PUT_FAILED, "Can't send classad, probably an authorization failure");
+		return false;
+	}
+
+	// Attempt to get responses from schedd
+	rsock.decode();
+	int more_flag = 0;
+
+	rsock.code(more_flag);
+
+	while (more_flag) {
+		ClassAd* result_ad = new ClassAd();
+		if( ! getClassAd(&rsock, *result_ad)) {
+			dprintf(D_ALWAYS, "DCSchedd:getClaims: Can't read response ad from %s\n", _addr.c_str());
+			errstack.push("DCSchedd::getClaims", CEDAR_ERR_GET_FAILED, "Can't read response ad");
+			delete result_ad;
+			return false;
+		}
+		claims.emplace_back(result_ad); // transfer ownership to the unique_ptr within
+
+		// Are there more ads?
+		rsock.code(more_flag);
+	}
+	rsock.end_of_message();
+
+	return true;
+}

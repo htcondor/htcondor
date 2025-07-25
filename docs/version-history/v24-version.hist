@@ -12,6 +12,10 @@
   restrict which Vault servers the *condor_credd* will accept credentials for.
   :jira:`3136`
 
+- Added new python method "get_claims" to the schedd object, which returns
+  the classads of the claimed slots.
+  :jira:`3181`
+
 *** 24.11.0 bugs
 
 - Added new "notification = start" option to *condor_submit*, which
