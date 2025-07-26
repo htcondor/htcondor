@@ -39,7 +39,7 @@
   for syntactical and logical errors prior to submission.
   :jira:`3088`
 
-- Improvements to *condor_q* for held jobs. The hold code and subcode are
+- Improvements to :tool:`condor_q` for held jobs. The hold code and subcode are
   now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
   displays the first job for each unique hold code and subcode.
   :jira:`3127`
@@ -49,7 +49,7 @@
   show information about execution points enforcing disk limits.
   :jira:`3119`
 
-- The new Python API now includes `htcondor2.disable_debug()`, which is
+- The new Python API now includes :py:meth:`htcondor2.disable_debug`, which is
   intended interactive use (after debugging a problem).
   :jira:`3003`
 
@@ -65,7 +65,7 @@
 
 *** 24.10.2 bugs
 
-- Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
+- Fixed a bug in :tool:`condor_q` default output where counts of jobs could be truncated to 6 digits.
   :jira:`3106`
 
 - Fixed a bug introduced in HTCondor version 24.8.0 where a job in Suspended
