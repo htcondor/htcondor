@@ -4478,7 +4478,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
 	// FIXME: Strictly speaking, only the submit utils need to know about this
-	// bool.  Can we make its value available without adding to the job ad? 
+	// bool.  Can we make its value available without adding to the job ad?
 	{SUBMIT_KEY_UncommonContainer, ATTR_UNCOMMON_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
@@ -4612,6 +4612,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_AllowedExecuteDuration, ATTR_JOB_ALLOWED_EXECUTE_DURATION, SimpleSubmitKeyword::f_as_expr},
 
 	{SUBMIT_KEY_JobSet, ATTR_JOB_SET_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+
+	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -6728,7 +6730,7 @@ int SubmitHash::SetTransferFiles()
 
 		// docker creds are always stored in a file named "config.json"
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
-		
+
 		struct stat buf;
 		int r = stat(docker_creds_file.c_str(), &buf);
 		if (r != 0) {
@@ -6778,7 +6780,7 @@ int SubmitHash::SetTransferFiles()
 		//
 		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
 		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
-		// 
+		//
 		// Error if:
 		//  (A) bad user input - getShouldTransferFilesNum fails
 		//  (B) bas user input - getFileTransferOutputNum fails
@@ -6794,7 +6796,7 @@ int SubmitHash::SetTransferFiles()
 	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
-	// if they didn't check to see if the admin did. 
+	// if they didn't check to see if the admin did.
 	auto_free_ptr should_param(submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles));
 	if (! should_param) {
 		if (job->LookupString(ATTR_SHOULD_TRANSFER_FILES, tmp)) {
