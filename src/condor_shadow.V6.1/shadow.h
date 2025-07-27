@@ -29,6 +29,7 @@
 #include <optional>
 #include "guidance.h"
 
+typedef std::vector< std::pair< std::string, std::string > > ListOfCatalogs;
 
 class ShadowHookMgr;
 
@@ -210,27 +211,12 @@ class UniShadow : public BaseShadow
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
-	virtual ClassAd do_common_file_transfer( const ClassAd & request, const std::string & commonInputFiles, const std::string & cifName );
 
  protected:
 
 	virtual void logReconnectedEvent( void );
 
 	virtual void logReconnectFailedEvent( const char* reason );
-
-
-	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName, bool print_waiting=true);
-
-	FileTransfer * commonFTO = NULL;
-	SingleProviderSyndicate * cfLock = NULL;
-	bool resume_job_setup = false;
-
-
-	bool _cifNameInitialized = false;
-	virtual bool hasCIFName();
-	std::string _cifName;
-	virtual const std::string & getCIFName();
-	int producer_keep_alive = -1;
 
  private:
 
@@ -241,6 +227,41 @@ class UniShadow : public BaseShadow
 	int delayedExitReason;
 
 	void requestJobRemoval();
+
+
+	//
+	// Internal implementation details specific to pseudo_request_guidance().
+	//
+
+	ClassAd before_common_file_transfer(
+		const std::string & cifName, const std::string & commonInputFiles
+	);
+	bool after_common_file_transfer(
+	    const ClassAd & request,
+	    const std::string & cifName,
+	    std::string & stagingDir
+	);
+
+	const std::string & getCIFName();
+	ClassAd handle_wiring_failure();
+	bool hasCIFName();
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
+	    ClassAd request,
+	    ListOfCatalogs common_file_catalogs,
+	    bool print_waiting=true
+	);
+
+	void set_provider_keep_alive( SingleProviderSyndicate * cfLock );
+
+	FileTransfer * commonFTO = NULL;
+	// The SingleProviderSyndicate can't be default-constructed.
+	std::map< std::string, SingleProviderSyndicate * > cfLocks;
+	bool resume_job_setup = false;
+
+	bool _cifNameInitialized = false;
+	std::string _cifName;
+	int producer_keep_alive = -1;
 };
 
 #endif
