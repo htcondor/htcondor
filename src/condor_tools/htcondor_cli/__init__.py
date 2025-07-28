@@ -3,6 +3,8 @@ import logging as _logging
 _logger = _logging.getLogger(__name__)
 _logger.setLevel(_logging.DEBUG)
 
+import htcondor2
+
 # Set the TMPDIR
 from pathlib import Path as _Path
 from os import environ as _environ
@@ -20,6 +22,12 @@ GLOBAL_OPTIONS = {
         "action": "count",
         "default": 0,
         "help": "Increase verbosity of output (can be specified multiple times)",
+    },
+    "version": {
+        "args": ("-V", "--version"),
+        "action": "version",
+        "version": htcondor2.version(),
+        "help": "Print the HTCondor version and exit"
     },
     "quiet": {
         "args": ("-q", "--quiet"),
@@ -69,6 +77,7 @@ from htcondor_cli.credential import Credential
 from htcondor_cli.server import Server
 from htcondor_cli.access_point import AccessPoint
 from htcondor_cli.central_manager import CentralManager
+from htcondor_cli.ocu import OCU
 NOUNS = _OrderedDict()
 NOUNS["dag"] = DAG
 NOUNS["job"] = Job
@@ -78,6 +87,7 @@ NOUNS["credential"] = Credential
 NOUNS["server"] = Server
 NOUNS["ap"] = AccessPoint
 NOUNS["cm"] = CentralManager
+NOUNS["ocu"] = OCU
 
 # annex needs fcntl which does not exist on windows
 if _os_name != 'nt':

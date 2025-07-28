@@ -23,14 +23,10 @@ resources" to any AP which has that functionality enabled.  When you do,
 you'll give the set of resources you're leasing a name; we call a named
 set of leased resources an *annex*.
 
-HTCondor provides access to two different kinds of annexes:
-the so-called "HPC" annexes (which use HTC resources), through the
-:doc:`../man-pages/htcondor`
-tool; and cloud annexes, through the
-:doc:`../man-pages/condor_annex`
-tool.  The latter is described in some detail in
-:doc:`../cloud-computing/index`
-section; we'll only discuss the former here.
+HTCondor provides access to annexes through the :tool:`htcondor annex`
+tool, which supports both AWS' EC2 and a number of HPC systems.  The former
+is described in some detail in the :doc:`../cloud-computing/index` section;
+we'll only discuss the former here.
 
 Recipes
 '''''''

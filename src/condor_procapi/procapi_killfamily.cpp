@@ -749,10 +749,16 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
                 *((LARGE_INTEGER*)(ctrblk + offsets->stime));
 
 			pi->pid      =  thispid;
-			pi->imgsize  += (long) (*((long*)(ctrblk + offsets->imgsize ))) 
-				/ 1024;
-			pi->rssize   += (long) (*((long*)(ctrblk + offsets->rssize  ))) 
-				/ 1024;
+
+			int64_t rss_bytes;
+			if (offsets->rssize_width == 4) {
+				rss_bytes = *(long*)(ctrblk + offsets->rssize);
+			} else {
+				rss_bytes = ((LARGE_INTEGER*)(ctrblk + offsets->rssize))->QuadPart;
+			}
+
+			pi->rssize   += (unsigned long)(rss_bytes/1024);
+			pi->imgsize  += (unsigned long)(rss_bytes/1024);
 #if HAVE_PSS
 #error pssize not handled for this platform
 #endif

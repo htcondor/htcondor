@@ -138,6 +138,8 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_HAD:
 		_subsys = "HAD";
 		break;
+	case DT_ANY:
+		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
 				"Daemon object", (int)_type, daemonString(_type) );
@@ -1142,15 +1144,15 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 	char				*host = NULL;
 	bool				nameHasPort = false;
 
-	if ( _subsys.empty() ) {
-		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
-		return false;
-	}
-
 	if( ! _addr.empty() && is_valid_sinful(_addr.c_str()) ) {
 		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
 		_is_local = false;
 		return true;
+	}
+
+	if ( _subsys.empty() ) {
+		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
+		return false;
 	}
 
 		// If we were not passed a name or an addr, check the
@@ -1727,7 +1729,7 @@ Daemon::initVersion( void )
 		// If we didn't find the version string via locate(), and
 		// we're a local daemon, try to ident the daemon's binary
 		// directly. 
-	if( _version.empty() && _is_local ) {
+	if( _version.empty() && _is_local && !_subsys.empty()) {
 		dprintf( D_HOSTNAME, "No version string in local address file, "
 				 "trying to find it in the daemon's binary\n" );
 		char* exe_file = param( _subsys.c_str() );
@@ -1963,13 +1965,15 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	initStringFromAd( ad, ATTR_NAME, _name );
 
 		// construct the IP_ADDR attribute
-	formatstr( buf, "%sIpAddr", _subsys.c_str() );
-	if ( ad->LookupString( buf, buf2 ) ) {
-		Set_addr(buf2);
-		found_addr = true;
-		addr_attr_name = buf;
+	if (!_subsys.empty()) {
+		formatstr(buf, "%sIpAddr", _subsys.c_str());
+		if ( ad->LookupString(buf, buf2) ) {
+			Set_addr(buf2);
+			found_addr = true;
+			addr_attr_name = buf;
+		}
 	}
-	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
+	if ( !found_addr && ad->LookupString(ATTR_MY_ADDRESS, buf2) ) {
 		Set_addr(buf2);
 		found_addr = true;
 		addr_attr_name = ATTR_MY_ADDRESS;

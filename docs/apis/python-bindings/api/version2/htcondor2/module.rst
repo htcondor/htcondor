@@ -18,6 +18,8 @@
    immediately, but are never written to disk.  To change another process's
    configuration (e.g., a running daemon's), use :class:`RemoteParam`.
 
+.. autofunction:: ping
+
 .. autofunction:: platform
 
 .. autofunction:: reload_config
