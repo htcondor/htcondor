@@ -371,10 +371,10 @@ VanillaProc::StartJob()
 			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd.\n");
 			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
 				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_MEMORY, memory)) {
-					dprintf(D_ALWAYS, "   Job does not have Request_Memory either, falling back to no memory limit\n");
+					dprintf(D_ALWAYS, "   Job does not have RequestMemory either, falling back to no memory limit\n");
 					memory = 0; // just to be sure
 				} else {
-					dprintf(D_ALWAYS, "   Using Request_Memory from job at of %ld Mb\n", memory);
+					dprintf(D_ALWAYS, "   Using RequestMemory from job at of %ld Mb\n", memory);
 				}
 			}
 		}
