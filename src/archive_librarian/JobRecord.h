@@ -35,6 +35,8 @@ struct FileInfo {
     long LastOffset{};
     int64_t FileSize = -1; 
     std::time_t LastModified;
+    std::string DateOfRotation{};
+    bool FullyRead = false;
 };
 
 struct Status {

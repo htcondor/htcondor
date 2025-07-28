@@ -26,7 +26,9 @@
 #include <filesystem>
 #include <chrono>
 #include <algorithm>
+#include <ranges>
 #include <optional>
+#include <regex>
 #include <system_error>
 
 
@@ -76,6 +78,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         return std::string(hexBuf);
     }
 
+
     // Collect information about a new file: Name, Inode, Hash
     std::optional<FileInfo> maybeCollectNewFileInfo(const std::string& historyFilePath) {
         FileInfo fileInfo;
@@ -85,13 +88,18 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         
         // Get .FileName from full path - cross-platform safe
         fileInfo.FileName = filePath.filename().string();
-        
+
+        // Check for rotated file pattern: ends with YYYYMMDDTHHMMSS (potentially more S digits)
+        auto dateOfRotation = ArchiveMonitor::extractDateOfRotation(fileInfo.FileName);
+        if (dateOfRotation.has_value()) {
+            fileInfo.DateOfRotation = dateOfRotation.value();
+        }
+
         // Check if file exists before getting stats
         if (!std::filesystem::exists(filePath, ec)) {
             printf("[ERROR] File does not exist: '%s'\n", historyFilePath);
             return std::nullopt;
-        }
-        if (ec) {
+        } else if (ec) {
             printf("[ERROR] Error checking file existence for '%s': %s\n", 
                 historyFilePath, ec.message().c_str());
             return std::nullopt;
@@ -204,7 +212,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         std::vector<fs::path> filesAfterUpdate = getHistoryFilesModifiedAfter(directory, historyPrefix, lastStatusTime);
 
         // Sort from oldest to newest
-        std::sort(filesAfterUpdate.begin(), filesAfterUpdate.end(),
+        std::ranges::sort(filesAfterUpdate,
             [](const fs::path& a, const fs::path& b) {
                 return fs::last_write_time(a) < fs::last_write_time(b);
             });
@@ -215,9 +223,6 @@ namespace { // Helper functions for ArchiveMonitor utility functions
             // Check if oldest file matches lastFileRead (rotation detection)
             if (checkRotation(lastFileRead, oldestFile.string())) {
                 // We found a rotation
-                std::cout << "[detectRotationAndGetUntrackedFiles] Rotation detected: "
-                        << lastFileRead.FileName << " -> " << oldestFile.filename().string() << "\n";
-
                 changes.rotatedFile = std::make_pair(lastFileRead.FileId, oldestFile.filename().string());
 
                 // Remove oldest file from untracked list (since it's lastFileRead rotated)
@@ -264,10 +269,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         }
 
         // Sort by LastModified (oldest to newest)
-        std::sort(sortedCache.begin(), sortedCache.end(),
-            [](const FileInfo& a, const FileInfo& b) {
-                return a.LastModified < b.LastModified;
-            });
+        std::ranges::sort(sortedCache, std::ranges::less(), &FileInfo::LastModified);
 
         for (const FileInfo& fi : sortedCache) {
             std::string fullPath = directory + "/" + fi.FileName;
@@ -308,7 +310,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         }
         
         // Sort by modification time (oldest first)
-        std::sort(historyFiles.begin(), historyFiles.end(),
+        std::ranges::sort(historyFiles,
             [](const fs::path& a, const fs::path& b) {
                 return fs::last_write_time(a) < fs::last_write_time(b);
             });
@@ -321,6 +323,22 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
 
 namespace ArchiveMonitor{
+
+    /**
+    * Extracts YYYYMMDDTHHMMSS timestamp from rotated filenames ending with that pattern.
+    * Returns std::nullopt if no rotation timestamp is found.
+    */
+    std::optional<std::string> extractDateOfRotation(const std::string& filename) {
+        std::regex rotatedPattern(R"(.*(\d{4}\d{2}\d{2}T\d{2}\d{2}\d{2})\d*$)");
+        std::smatch match;
+
+        if (std::regex_match(filename, match, rotatedPattern)) {
+            // Extract the YYYYMMDDTHHMMSS part (first 15 characters of the timestamp)
+            return match[1].str();
+        }
+        
+        return std::nullopt;  // No match found
+    }
 
     // Given a filepath, we check if its equal to the fileInfo struct using hash and inode
     std::pair<bool, bool> checkFileEquals(const std::string& historyFilePath, const FileInfo& fileInfo) {

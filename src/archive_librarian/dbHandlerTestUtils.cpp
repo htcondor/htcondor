@@ -93,7 +93,7 @@ bool DBHandlerTestUtils::clearAllTables(const DBHandler& handler) {
 /**
  * Clear the internal job ID cache.
  */
-void DBHandlerTestUtils::clearCache(const DBHandler& handler){
+void DBHandlerTestUtils::clearCache(DBHandler& handler){
     handler.clearCache();
 }
 

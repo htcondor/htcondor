@@ -26,6 +26,9 @@ struct ArchiveChange {
 
 namespace ArchiveMonitor {
 
+    // A helper function to use regex and extract the DateOfRotation value from a rotated file's name
+    std::optional<std::string> extractDateOfRotation(const std::string& filename);
+
     // Check if the file at the path matches the expected info in FileInfo
     std::pair<bool, bool> checkFileEquals(const std::string& historyFilePath, const FileInfo& fileInfo);
 
