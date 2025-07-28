@@ -348,7 +348,7 @@ VanillaProc::StartJob()
 			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd.\n");
 			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
 				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_CPUS, numCores)) {
-					dprintf(D_ALWAYS, "   Job does not have Request_Cpus either, falling back to 1 cpu\n");
+					dprintf(D_ALWAYS, "   Job does not have RequestCpus either, falling back to 1 cpu\n");
 				}
 			}
 		}
