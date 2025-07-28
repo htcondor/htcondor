@@ -1262,31 +1262,49 @@ join<ListOfCatalogs>(const ListOfCatalogs & list, const char* delim) {
 		str = it->first; ++it;
 		for( ; it != list.end(); ++it ) {
 			str += delim;
-			str += it->first; ++it;
+			str += it->first;
 		}
 	}
 	return str;
 }
 
+
+//
+// Rather than maintain an array of timers, one for each provisioned
+// catalog, maintain an array of provisioned catalogs iterated over
+// by a single timer.
+//
+
 void
-UniShadow::set_provider_keep_alive( SingleProviderSyndicate * cfLock ) {
-	// Before we start common file transfer, start a timer that
-	// calls this->cfLock->touch() every sixty seconds.
-	this->producer_keep_alive = daemonCore->Register_Timer(
-		0, 60,
-		[cfLock] (int /* timerID */) -> void {
-			dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
-			if(! cfLock->touch()) {
-				// cfLock is owned by the UniShadow object, whose destructor
-				// will be called before the process exits.
-				EXCEPT( "Elected producer touch() failed, aborting.\n" );
-			}
-		},
-		"SingleProviderSyndicate producer keep-alive"
-	);
+UniShadow::set_provider_keep_alive( const std::string & cifName ) {
+	static std::vector<std::string> cifNames;
+	cifNames.push_back(cifName);
+
 	if( this->producer_keep_alive == -1 ) {
-		delete cfLock;
-		EXCEPT( "Elected producer couldn't register keep-alive, aborting.\n" );
+		this->producer_keep_alive = daemonCore->Register_Timer(
+			0, 60,
+			[this] (int /* timerID */) -> void {
+				// If this timer happens to fire on our way out the door, don't asplode.
+				for( const auto & cifName : cifNames ) {
+					if( this->cfLocks.contains(cifName) ) {
+						SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
+						if( cfLock != NULL ) { continue; }
+
+						dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
+						if(! cfLock->touch()) {
+							// I boldly claim that the global destructor will delete
+							// the corresponding cfLock.
+							EXCEPT( "Elected producer touch() failed, aborting.\n" );
+						}
+					}
+				}
+			},
+			"SingleProviderSyndicate producer keep-alive"
+		);
+		if( this->producer_keep_alive == -1 ) {
+			// I boldly claim that the global destructor will delete the corresponding cfLock.
+			EXCEPT( "Elected producer couldn't register keep-alive, aborting.\n" );
+		}
 	}
 }
 
@@ -1352,18 +1370,12 @@ UniShadow::start_common_input_conversation(
 			//
 
 			case SingleProviderSyndicate::PROVIDER:
-				set_provider_keep_alive( cfLock );
+				set_provider_keep_alive( cifName );
 
 				// This would be cleaner as a nested coroutine, but not
 				// so much so that I want to figure that out right now.
-dprintf( D_ALWAYS, "1 cifName = %p\n", & cifName );
-dprintf( D_ALWAYS, "1 cifName = %s\n", cifName.c_str() );
 				guidance = before_common_file_transfer( cifName, commonInputFiles );
-dprintf( D_ALWAYS, "2 cifName = %p\n", & cifName );
-dprintf( D_ALWAYS, "2 cifName = %s\n", cifName.c_str() );
 				request = co_yield guidance;
-dprintf( D_ALWAYS, "3 cifName = %p\n", & cifName );
-dprintf( D_ALWAYS, "3 cifName = %s\n", cifName.c_str() );
 				success = after_common_file_transfer( request, cifName, stagingDir );
 				if(! success) {
 					guidance.Clear();
@@ -1416,6 +1428,7 @@ dprintf( D_ALWAYS, "3 cifName = %s\n", cifName.c_str() );
 
 	// If all the catalogs have been mapped, we have nothing more to do.
 	if( unreadyCatalogs.empty() ) {
+		dprintf( D_ZKM, "All catalogs mapped after the first pass.\n" );
 		co_return guidance;
 	}
 
@@ -1440,7 +1453,7 @@ dprintf( D_ALWAYS, "3 cifName = %s\n", cifName.c_str() );
 		// Check each unready catalog.  If it's READY or PROVIDER, do the
 		// right thing and record the catalog as ready.
 		for( const auto & [cifName, commonInputFiles] : unreadyCatalogs ) {
-			dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+			dprintf( D_ZKM, "Unready catalog named '%s' lists '%s'.\n", cifName.c_str(), commonInputFiles.c_str() );
 
 			SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
 			ASSERT(cfLock != NULL);
@@ -1451,7 +1464,7 @@ dprintf( D_ALWAYS, "3 cifName = %s\n", cifName.c_str() );
 			dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 			switch( status ) {
 				case SingleProviderSyndicate::PROVIDER:
-					set_provider_keep_alive( cfLock );
+					set_provider_keep_alive( cifName );
 
 					// This would be cleaner as a nested coroutine, but not
 					// so much so that I want to figure that out right now.
@@ -1509,7 +1522,7 @@ dprintf( D_ALWAYS, "3 cifName = %s\n", cifName.c_str() );
 		}
 
 		// The ready catalogs are no longer unready.
-		dprintf( D_ZKM, "Found ready catalogs: %s\n", join(readyCatalogs, ", ").c_str() );
+		dprintf( D_ZKM, "Found ready catalogs: %s.\n", join(readyCatalogs, ", ").c_str() );
 		std::erase_if( unreadyCatalogs,
 			[readyCatalogs](const ListOfCatalogs::value_type & k) {
 				auto [cifName, commonInputFiles] = k;
@@ -1517,7 +1530,7 @@ dprintf( D_ALWAYS, "3 cifName = %s\n", cifName.c_str() );
 			}
 		);
 		readyCatalogs.clear();
-		dprintf( D_ZKM, "Unready catalogs are now: %s\n", join(unreadyCatalogs, ", ").c_str() );
+		dprintf( D_ZKM, "Unready catalogs are now: %s.\n", join(unreadyCatalogs, ", ").c_str() );
 
 		// If there are any unready catalogs, check again in five
 		// seconds after going back into the event loop.
@@ -1773,7 +1786,9 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				dprintf( D_ZKM, "Starting common input files conversation during job setup.\n" );
 				in_conversation = true;
 				std::vector< std::pair< std::string, std::string > > common_file_catalogs {
-					{this->getCIFName(), commonInputFiles}
+					{this->getCIFName(), commonInputFiles},
+//					{"temporary-example", "temporary-example.common"},
+//					{"temporary-example-2", "temporary-example-2.common"},
 				};
 				the_coroutine = std::move(
 					this->start_common_input_conversation(request, common_file_catalogs)

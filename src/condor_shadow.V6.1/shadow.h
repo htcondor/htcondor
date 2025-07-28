@@ -252,7 +252,7 @@ class UniShadow : public BaseShadow
 	    bool print_waiting=true
 	);
 
-	void set_provider_keep_alive( SingleProviderSyndicate * cfLock );
+	void set_provider_keep_alive( const std::string & cifName );
 
 	FileTransfer * commonFTO = NULL;
 	// The SingleProviderSyndicate can't be default-constructed.
