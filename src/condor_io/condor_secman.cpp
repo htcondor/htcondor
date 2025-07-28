@@ -504,6 +504,12 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 	sec_req sec_negotiation = sec_req_param ("SEC_%s_NEGOTIATION", auth_level, SEC_REQ_PREFERRED);
 
+	// The ALLOW authorization level shouldn't require authentication,
+	// but we'll allow a specific command handler or the client to force it.
+	if (auth_level == ALLOW_PERM && !force_authentication) {
+		sec_authentication_new = SEC_REQ_OPTIONAL;
+	}
+
 	if( raw_protocol ) {
 		sec_negotiation = SEC_REQ_NEVER;
 		sec_authentication = SEC_REQ_NEVER;
