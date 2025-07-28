@@ -20,6 +20,7 @@
 
 #include "classad/common.h"
 #include "classad/exprTree.h"
+#include <iterator>
 
 namespace classad {
 
