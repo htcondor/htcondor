@@ -513,6 +513,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	if( raw_protocol ) {
 		sec_negotiation = SEC_REQ_NEVER;
 		sec_authentication = SEC_REQ_NEVER;
+		sec_authentication_new = SEC_REQ_NEVER;
 		sec_encryption = SEC_REQ_NEVER;
 		sec_integrity = SEC_REQ_NEVER;
 	}
@@ -548,19 +549,15 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		// in order for the client & server to determine if they can be used.
 		UpdateAuthenticationMetadata(*ad);
 	} else {
-		if( sec_authentication == SEC_REQ_REQUIRED ) {
+		if( sec_authentication_new == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
-					 "but a feature was required! failing...\n" );
+					 "but auth was required! failing...\n" );
 			return false;
 		} else {
-			// disable auth, which disables crypto and integrity.
-			// if any of these were required, auth would be required
-			// too after calling ReconcileSecurityDependency.
+			// disable auth, since we have no methods
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
-			 	"disabling authentication, crypto, and integrity.\n" );
-			sec_authentication = SEC_REQ_NEVER;
-			sec_encryption = SEC_REQ_NEVER;
-			sec_integrity = SEC_REQ_NEVER;
+				"disabling authentication.\n" );
+			sec_authentication_new = SEC_REQ_NEVER;
 		}
 	}
 
