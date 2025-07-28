@@ -139,5 +139,6 @@ main( int, char ** ) {
         fprintf( stderr, "TransferErrorData[1] wrong size.\n" );
     }
 
+    delete filteredAd;
     return 0;
 }

@@ -29,6 +29,7 @@ MAIL={true_path}
 SENDMAIL={true_path}
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 DOCKER_PERFORM_TEST=false
+SINGULARITY_TEST_SANDBOX_TIMEOUT=8
 # The default FILETRANSFER_PLUGINS contains support for box,onedrive,
 # and gdrive.  On startup, the startd runs each of these with the -classad
 # option to probe.  However, this is somewhat slow, as they are each implemented

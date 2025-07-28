@@ -11712,14 +11712,6 @@ has.
     in this directory are read, to define the metrics. The default
     directory ``/etc/condor/ganglia.d/`` is used when not specified.
 
-condor_annex Configuration File Macros
---------------------------------------
-
-:index:`condor_annex configuration variables<single: condor_annex configuration variables; configuration>`
-
-See :doc:`/cloud-computing/annex-configuration` for :tool:`condor_annex`
-configuration file macros.
-
 ``htcondor annex`` Configuration File Macros
 --------------------------------------------
 :index:`htcondor annex configuration variables<single: htcondor annex configuration variables; configuration>`

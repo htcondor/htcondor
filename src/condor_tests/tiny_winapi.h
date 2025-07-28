@@ -608,6 +608,13 @@ typedef unsigned int (__stdcall * pntQIP)(HANDLE hProc, int eInfo, void* pInfo, 
 #else
    // when /Oi is used, memset is an intrinsic.
    extern "C" void * __cdecl memset(char* p, int value, size_t cb) { while (cb) { p[--cb] = (char)value; } return p; };
+   extern "C" void * __cdecl memcpy(char* d, const char *s, size_t n) {
+      size_t i = 0;
+      for (i = 0; i < n; ++i) {
+          d[i] = s[i];
+      }
+      return d;
+   };
 #endif
    void ZeroMemory(void* p, size_t cb) { memset((char*)p, 0, cb); }
 
