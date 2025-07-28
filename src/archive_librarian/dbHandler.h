@@ -4,7 +4,7 @@
  * Major components:
  * - jobIdCache: avoids repeated DB hits for JobId/JobListId lookups
  * - insertUnseenJob: populates missing User, JobList, and Job entries
- * - batchInsertJobRecords / batchInsertEpochRecords: main entrypoints for history processing
+ * - insertJobFileRecords/insertEpochFileRecords: batch inserts JobRecords and updates their File info in one transaction
  * - writeFileInfo / updateFileInfo: track file-level processing state
  * - Status tracking: records how much of each file has been processed
  */
@@ -19,39 +19,35 @@
 #include "JobRecord.h"
 #include "archiveMonitor.h"
 #include "cache.hpp"
+#include "JobQueryStructures.h"
 
-// Hash definition so we can use it later
-struct pair_hash {
-    std::size_t operator()(const std::pair<int, int>& p) const {
-        return std::hash<int>{}(p.first) ^ (std::hash<int>{}(p.second) << 1);
-    }
-};
-
-class JobIdLookup;
 
 class DBHandler {
 public:
 
     // Constructor & Destructor
-    explicit DBHandler(const std::string& schemaSQL, const std::string& dbPath, size_t maxCacheSize = 10000);
+    DBHandler() = delete;
+    explicit DBHandler(const std::string& schemaPath, const std::string& dbPath, size_t maxCacheSize = 10000);
+    DBHandler(const DBHandler&) = delete;
+    DBHandler(DBHandler&&) = delete;
+    DBHandler& operator=(const DBHandler&) = delete;
+    DBHandler& operator=(DBHandler&&) = delete;
     ~DBHandler();
 
     // Database initialization and maintenance
     bool initializeFromSchema(const std::string& schemaSQL);
-    bool clearCache() const;
-    bool testConnection();
+    bool clearCache();
+
+    // Testing whether database was correctly constructed and connection works
+    bool DBHandler::testDatabaseConnection();
+    bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL);
 
     // === Core Data Operations ===
     
-    // Job Record Operations
-    std::pair<int,int> jobIdLookup(int clusterId, int procId);
-    bool insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation);
-
     // Batch record insertion for file processing
+    // Records 'FileRecords' - ie, it batches both the JobRecord insertion and the 'File' table update
     bool insertEpochFileRecords(const std::vector<EpochRecord>& records, const FileInfo& fileInfo);
     bool insertJobFileRecords(const std::vector<JobRecord>& jobs, const FileInfo& fileInfo);
-    void batchInsertEpochRecords(const std::vector<EpochRecord>& records);
-    void batchInsertJobRecords(const std::vector<JobRecord>& jobs);
 
     // File Information Operations
     void writeFileInfo(FileInfo &info);
@@ -64,7 +60,7 @@ public:
     // === File Archive Management ===
     
     // File monitoring and lifecycle operations
-    bool insertNewFilesAndDeleteOldOnes(ArchiveChange& fileSetChange);
+    bool insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange);
 
     // === Garbage Collection ===
     
@@ -76,6 +72,7 @@ public:
     // User-facing data retrieval functions
     std::vector<std::tuple<int, int, int>> getJobsForUser(const std::string& username);
     std::vector<std::pair<std::string, int>> getJobCountsPerUser();
+    bool queryJobRecordsForJobList(const std::string& username, int clusterId, std::vector<QueriedJobRecord>& jobRecords);
 
     // === Testing Support ===
     
@@ -84,59 +81,21 @@ public:
 
 private:
 
-    class JobIdCache {
-    public:
-        // Composite key type for (clusterId, procId)
-        struct Key {
-            int clusterId;
-            int procId;
-            
-            bool operator<(const Key& other) const {
-                if (clusterId != other.clusterId) {
-                    return clusterId < other.clusterId;
-                }
-                return procId < other.procId;
-            }
-            
-            bool operator==(const Key& other) const {
-                return clusterId == other.clusterId && procId == other.procId;
-            }
-        };
-        
-        // Value type storing jobId, jobListId, and timestamp
-        struct Value {
-            int jobId;
-            int jobListId;
-            long timestamp;
-            
-            Value() : jobId(-1), jobListId(-1), timestamp(0) {}
-            Value(int jId, int jListId, long ts) : jobId(jId), jobListId(jListId), timestamp(ts) {}
-        };
+    // Job Record Operations
+    std::pair<int,int> jobIdLookup(int clusterId, int procId);
+    bool insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation);
 
-        explicit JobIdCache(size_t maxSize = 10000);
-        ~JobIdCache() = default;  
-
-        std::pair<int,int> get(int clusterId, int procId);
-        void put(int clusterId, int procId, int jobId, int jobListId, long timestamp); 
-        void updateTimestamp(int clusterId, int procId, long timestamp);  
-        bool exists(int clusterId, int procId) const;
-        void remove(int clusterId, int procId);
-        size_t size() const;
-        void clear();
-
-
-    private:
-        Cache<Key, Value> cache_;  // Replace all the old private members with this
-    };
-
+    // Batch processes and inserts Epoch/Job records
+    void batchInsertEpochRecords(const std::vector<EpochRecord>& records);
+    bool batchInsertJobRecords(const std::vector<JobRecord>& jobs);
 
     sqlite3* db_{nullptr};
-    sqlite3_stmt* jobIdLookupStmt_; // preprepared statement for more efficient JobIdLookups
-    sqlite3_stmt* userInsertStmt_;
-    sqlite3_stmt* userSelectStmt_;
-    sqlite3_stmt* jobListInsertStmt_;
-    sqlite3_stmt* jobListSelectStmt_;
-    sqlite3_stmt* jobInsertStmt_;
-    sqlite3_stmt* jobSelectStmt_;
-    std::unique_ptr<JobIdCache> jobIdCache_;
+    sqlite3_stmt* jobIdLookupStmt_{nullptr}; // preprepared statement for more efficient JobIdLookups
+    sqlite3_stmt* userInsertStmt_{nullptr};
+    sqlite3_stmt* userSelectStmt_{nullptr};
+    sqlite3_stmt* jobListInsertStmt_{nullptr};
+    sqlite3_stmt* jobListSelectStmt_{nullptr};
+    sqlite3_stmt* jobInsertStmt_{nullptr};
+    sqlite3_stmt* jobSelectStmt_{nullptr};
+    Cache<std::pair<int, int>, std::pair<int, int>> jobIdCache_;
 };

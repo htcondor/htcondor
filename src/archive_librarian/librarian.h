@@ -4,6 +4,7 @@
 #include <memory>
 #include "dbHandler.h"
 #include "JobRecord.h"
+#include "JobQueryStructures.h"
 
 /**
  * @class Librarian
@@ -23,13 +24,11 @@
  */
 class Librarian {
 public:
-    Librarian(const std::string& schemaPath,
-              const std::string& dbPath,
+    Librarian(const std::string& dbPath,
               const std::string& historyFilePath,
               const std::string& epochHistoryFilePath,
-              const std::string& gcQueryPath,
               size_t jobCacheSize = 10000, 
-              size_t databaseSize);
+              size_t databaseSize = 2ULL * 1024 * 1024 * 1024);
 
     /**
      * @brief Initializes DBHandler and sets up the schema.
@@ -43,6 +42,8 @@ public:
      */
     bool update();
 
+    int query(int argc, char* argv[]);
+
 
     DBHandler& getDBHandler() const { return *dbHandler_; }
 
@@ -54,24 +55,25 @@ private:
 
 
     // Members
-    std::string schemaPath_;
     std::string dbPath_;
     FileSet historyFileSet_;
     FileSet epochHistoryFileSet_;
     std::string historyFilePath_; // redundant, but hard to get rid of right now
     std::string epochHistoryFilePath_;
-    std::string gcQueryPath_;
-    std::string gcQuerySQL_; 
+    std::string gcQuerySQL_{}; 
     size_t jobCacheSize_;
     std::unique_ptr<DBHandler> dbHandler_;
     StatusData statusData_;
-    double EstimatedBytesPerJobInArchive_;
-    int EstimatedJobsPerFileInArchive_;
+    double EstimatedBytesPerJobInArchive_{0.0};
+    int EstimatedJobsPerFileInArchive_{0};
     double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
-    double databaseSizeLimit_ = 2.0 * 1024 * 1024 * 1024;  // 2 GB in bytes
+    double databaseSizeLimit_{0.0}; // Will be set by constructor (defaults to 2GB if not specified)
 
-    std::string loadSchemaFromFile(const std::string& schemaPath);
-    bool Librarian::loadGCQuery();
+    // Helper methods for Librarian::initialize()
+    std::string Librarian::loadSchemaSQL();
+    bool Librarian::loadGCSQL();
+
+    // Helper methods for Librarian::update()
     bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);
     bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);
     ArchiveChange trackAndUpdateFileSet(FileSet& fileSet);
@@ -80,6 +82,15 @@ private:
     int calculateBacklogFromBytes(const Status& status);
     void updateStatusData(Status status);
     void estimateArrivalRateWhileAsleep();
+
+    // Librarian::update() : Step 6 - Garbage Collection
     bool cleanupDatabaseIfNeeded();
+
+    // Helper methods for Librarian::query()
+    QueryResult executeQuery(const std::string& username, int clusterId);
+    std::vector<std::string> readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords);
+    std::vector<ParsedJobRecord> parseClassAds(const std::vector<std::string>& rawClassAds);
+    std::optional<ParsedJobRecord> parseClassAd(const std::string& classAdText);
+    std::optional<std::string> readJobAtOffset(const std::string& filePath, long offset);
 
 };

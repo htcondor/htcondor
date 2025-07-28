@@ -12,7 +12,7 @@ namespace DBHandlerTestUtils {
 
     bool clearAllTables(const DBHandler& handler);
 
-    void clearCache(const DBHandler& handler);
+    void clearCache(DBHandler& handler);
 
     int countTable(const DBHandler& handler, const std::string& table);
 

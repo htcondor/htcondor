@@ -2,6 +2,8 @@
 #include "readHistory.h"
 #include "archiveMonitor.h"
 #include "FileSet.h"
+#include "JobAnalysisUtils.h" 
+#include "SavedQueries.h"
 
 #include <filesystem>
 #include <cstdio>
@@ -19,59 +21,33 @@ namespace fs = std::filesystem;
 // CONSTRUCTOR AND INITIALIZATION
 // ================================
 
-Librarian::Librarian(const std::string& schemaPath,
-                     const std::string& dbPath,
+Librarian::Librarian(const std::string& dbPath,
                      const std::string& historyFilePath,
                      const std::string& epochHistoryFilePath,
-                     const std::string& gcQueryPath,
                      size_t jobCacheSize, 
                      size_t databaseSize)
-    : schemaPath_(schemaPath),
-      dbPath_(dbPath),
+    : dbPath_(dbPath),
       historyFilePath_(historyFilePath),
       epochHistoryFilePath_(epochHistoryFilePath),
       jobCacheSize_(jobCacheSize),
       databaseSizeLimit_(databaseSize),
       historyFileSet_(historyFilePath),
-      gcQueryPath_(gcQueryPath),
       epochHistoryFileSet_(epochHistoryFilePath) {}
 
 
-// Loads and returns the contents of a schema SQL file.
-// Returns an empty string if the file can't be opened.
-// Used to initialize the database schema.
-std::string Librarian::loadSchemaFromFile(const std::string& schemaPath) {
-    std::ifstream file(schemaPath);
-    if (!file.is_open()) {
-        printf("[ERROR] Failed to open schema file: %s\n", schemaPath.c_str());
-        return "";
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+std::string Librarian::loadSchemaSQL() {
+    return SavedQueries::SCHEMA_SQL;
 }
 
-
-// Loads the garbage collection SQL from the gcQueryPath_ file.
-// Stores the result in gcQuerySQL_ for later use.
-// Returns false if the file can't be opened or is empty.
-bool Librarian::loadGCQuery() {
-    std::ifstream file(gcQueryPath_);
-    if (!file.is_open()) {
-        printf("[ERROR] Failed to open GC query file: %s\n", gcQueryPath_.c_str());
-        return false;
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    gcQuerySQL_ = buffer.str();
-
+// Simplified - no file I/O needed
+bool Librarian::loadGCSQL() {
+    gcQuerySQL_ = SavedQueries::GC_QUERY_SQL;
+    
     if (gcQuerySQL_.empty()) {
-        printf("[ERROR] GC query file is empty: %s\n", gcQueryPath_.c_str());
+        printf("[ERROR] GC query is empty\n");
         return false;
     }
-
+    
     return true;
 }
 
@@ -92,6 +68,12 @@ bool Librarian::readEpochRecords(std::vector<EpochRecord>& newEpochRecords, File
         return false;
     }
     fileInfo.LastOffset = newOffset;
+    
+    // Check if this rotated file is now fully read
+    if (!fileInfo.DateOfRotation.empty() && fileInfo.LastOffset >= fileInfo.FileSize) {
+        fileInfo.FullyRead = true;
+    }
+    
     return true;
 }
 
@@ -108,9 +90,14 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
         return false;
     }
     fileInfo.LastOffset = newOffset;
+    
+    // Check if this rotated file is now fully read
+    if (!fileInfo.DateOfRotation.empty() && fileInfo.LastOffset >= fileInfo.FileSize) {
+        fileInfo.FullyRead = true;
+    }
+    
     return true;
 }
-
 
 // ================================
 // STATUS TRACKING UTILITIES
@@ -340,6 +327,11 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
         auto it = fileSet.fileMap.find(lastFileReadId);
         if (it != fileSet.fileMap.end()) {
             it->second.FileName = newName;
+            
+            // Extract and set DateOfRotation from the new rotated filename
+            if (auto dateOfRotation = ArchiveMonitor::extractDateOfRotation(newName)) {
+                it->second.DateOfRotation = *dateOfRotation;
+            }
         } else {
             fprintf(stderr, "[Librarian] Warning: Rotated file not found in fileMap. FileId=%d\n", lastFileReadId);
         }
@@ -354,7 +346,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
         }
     }
 
-    // 3. Remove deleted files from FileSEt's FileMap
+    // 3. Remove deleted files from FileSet's FileMap
     for (int deletedFileId : change.deletedFileIds) {
         size_t erased = fileSet.fileMap.erase(deletedFileId);
         if (erased == 0) {
@@ -379,9 +371,7 @@ ArchiveChange Librarian::trackAndUpdateFileSet(FileSet& fileSet) {
 
     // Step 2: Apply SOME of those changes to the persistent database.
     // Change the name of the rotated file, add new files to directory and populate their FileIds. 
-    // Does NOT handle marking deleted files as deleted, as will be added either here or later when
-    // garbage collection is implemented. 
-    dbHandler_->insertNewFilesAndDeleteOldOnes(fileSetChange);
+    dbHandler_->insertNewFilesAndMarkOldOnes(fileSetChange);
 
     // Step 3: Apply the same changes to the in-memory FileSet,
     // so that the system’s internal state reflects what’s on disk.
@@ -485,6 +475,148 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     return garbageCollected;
 }
 
+
+// ================================
+// USER QUERY INTERFACE
+// ================================
+
+// move down into public utilities! but later
+int Librarian::query(int argc, char* argv[]) {
+    // Parse command line arguments using internal utilities
+    auto options = JobAnalysisUtils::parseArguments(argc, argv);
+    
+    // Validate arguments
+    if (options.username.empty() || options.clusterId == -1) {
+        JobAnalysisUtils::printManual();
+        return 1;
+    }
+    
+    // Execute the query using helper method
+    auto result = executeQuery(options.username, options.clusterId);
+    
+    if (!result.success) {
+        JobAnalysisUtils::printError(result.errorMessage);
+        return 1;
+    }
+    
+    if (result.jobs.empty()) {
+        JobAnalysisUtils::printNoJobsFound(options.username, options.clusterId);
+        return 0;
+    }
+    
+    // Format and display output using utilities
+    if (!options.flags.hasAnyFlag()) {
+        JobAnalysisUtils::printBaseOutput(result.jobs, options.username, options.clusterId);
+    } else {
+        JobAnalysisUtils::printAnalysisOutput(result.jobs, options.flags, options.username, options.clusterId);
+    }
+    
+    return 0;
+}
+
+QueryResult Librarian::executeQuery(const std::string& username, int clusterId) {
+    // Execute the actual query
+    std::vector<QueriedJobRecord> jobRecords;
+    
+    if (!dbHandler_->queryJobRecordsForJobList(username, clusterId, jobRecords)) {
+        return {false, "No jobs found for user '" + username + "', cluster " + std::to_string(clusterId), {}};
+    }
+    
+    if (jobRecords.empty()) {
+        return {false, "No jobs found for user '" + username + "', cluster " + std::to_string(clusterId), {}};
+    }
+    
+    std::vector<std::string> rawClassAds = readJobsGroupedByFile(jobRecords);
+    if (rawClassAds.empty()) {
+        return {false, "Could not read any job data from archive files", {}};
+    }
+    
+    // Parse ClassAds using utility function
+    std::vector<ParsedJobRecord> parsedJobs = JobAnalysisUtils::parseClassAds(rawClassAds);
+    
+    if (parsedJobs.empty()) {
+        return {false, "Failed to parse any job records", {}};
+    }
+    
+    return {true, "", parsedJobs};
+}
+
+std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords) {
+    // Group by fileName to minimize file operations
+    std::map<std::string, std::vector<std::pair<long, FileInfo>>> fileGroups;
+    
+    for (const auto& record : jobRecords) {
+        FileInfo fileInfo;
+        fileInfo.FileId = record.fileId;
+        fileInfo.FileInode = record.fileInode;
+        fileInfo.FileHash = record.fileHash;
+        fileInfo.FileName = record.fileName;
+        
+        fileGroups[record.fileName].emplace_back(record.offset, fileInfo);
+    }
+    
+    std::vector<std::string> allJobs;
+    int skippedFiles = 0;
+    int skippedJobs = 0;
+    
+    for (const auto& [fileName, offsetsAndInfo] : fileGroups) {
+        // TODO: Fix file path handling - currently using relative path
+        std::string filePath = fileName;
+        
+        // Verify file integrity using the first FileInfo (they should all be the same for same file)
+        auto [fileExists, fileMatches] = ArchiveMonitor::checkFileEquals(filePath, offsetsAndInfo[0].second);
+        if (!fileExists || !fileMatches) {
+            skippedFiles++;
+            skippedJobs += offsetsAndInfo.size();
+            printf("Warning: Skipping %zu jobs from file %s (file verification failed)\n", 
+                   offsetsAndInfo.size(), fileName.c_str());
+            continue;
+        }
+        
+        // Read all jobs from this file
+        for (const auto& [offset, fileInfo] : offsetsAndInfo) {
+            if (auto jobData = readJobAtOffset(filePath, offset)) {
+                allJobs.push_back(*jobData);
+            } else {
+                printf("Warning: Could not read job at offset %ld in file %s\n", 
+                       offset, fileName.c_str());
+            }
+        }
+    }
+    
+    if (skippedFiles > 0) {
+        printf("Summary: Skipped %d jobs from %d inaccessible files\n", 
+               skippedJobs, skippedFiles);
+    }
+    
+    return allJobs;
+}
+
+std::optional<std::string> Librarian::readJobAtOffset(const std::string& filePath, long offset) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        return std::nullopt;
+    }
+    
+    file.seekg(offset);
+    if (!file.good()) {
+        return std::nullopt;
+    }
+    
+    std::string jobData;
+    std::string line;
+    
+    // Read until we hit the *** delimiter
+    while (std::getline(file, line)) {
+        if (line.find("***") == 0) {
+            break;
+        }
+        jobData += line + "\n";
+    }
+    
+    return jobData.empty() ? std::nullopt : std::make_optional(jobData);
+}
+
 // ================================
 // CORE PUBLIC INTERFACE
 // ================================
@@ -498,12 +630,12 @@ bool Librarian::initialize() {
     printf("[Librarian] Initializing DBHandler...\n");
 
     // Load SQL query strings
-    std::string schemaSQL = this->loadSchemaFromFile(schemaPath_);
+    std::string schemaSQL = this->loadSchemaSQL();
     if(schemaSQL.empty()) {
         printf("[Librarian] Schema initialization has failed! Could not get schema.sql from file\n");
         return false;
     }
-    if (!loadGCQuery()) {
+    if (!loadGCSQL()) {
         printf("[Librarian] Failed to load garbage collection query.\n");
         return false;
     }
@@ -512,8 +644,12 @@ bool Librarian::initialize() {
     dbHandler_ = std::make_unique<DBHandler>(schemaSQL, dbPath_, jobCacheSize_);
 
     // Check whether database is connected and has correct expect tables
-    if (!dbHandler_->testConnection()) {
+    if (!dbHandler_->testDatabaseConnection()) {
         fprintf(stderr, "[Librarian] DBHandler connection test failed\n");
+        return false;
+    }
+    if(!dbHandler_->verifyDatabaseSchema(schemaSQL)) {
+        fprintf(stderr, "[Librarian] DBHandler schema is not as expected\n");
         return false;
     }
 
