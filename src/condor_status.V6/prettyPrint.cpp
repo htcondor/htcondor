@@ -329,7 +329,7 @@ void PrettyPrinter::ppSetStartdOfflineCols(int /*width*/, const char * & constr)
 const char * const startdAbsent_PrintFormat = "SELECT\n"
 	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??\n"
 	ATTR_OPSYS                      " WIDTH -10 OR ??\n"
-	ATTR_ARCH                       " WIDTH  -6 OR ??\n"
+	ATTR_ARCH                       " WIDTH  -8 OR ??\n"
 	ATTR_LAST_HEARD_FROM  " AS 'Went Absent' WIDTH -11 PRINTAS DATE OR ??\n"
 	ATTR_CLASSAD_LIFETIME " AS 'Will Forget' WIDTH -11 PRINTAS DUE_DATE ??\n"
 "WHERE Absent\n"
@@ -388,7 +388,7 @@ int PrettyPrinter::ppSetStartdCompactCols (int /*width*/, int & mach_width, cons
 const char * const startdPFV_Normal[] = { "SELECT",
 	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??",
 	ATTR_OPSYS                      " WIDTH -10 OR ??",
-	ATTR_ARCH                       " WIDTH  -6 OR ??",
+	ATTR_ARCH                       " WIDTH  -8 OR ??",
 	ATTR_STATE                      " WIDTH AUTO OR ??",
 	ATTR_ACTIVITY                   " WIDTH  -8 OR ??",
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??",
@@ -408,7 +408,7 @@ const char * startdPF_ActivityTime = ATTR_ENTERED_CURRENT_ACTIVITY " AS Activity
 const char * const startdNormal_PrintFormat = "SELECT\n"
 	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??\n"
 	ATTR_OPSYS                      " WIDTH -10 OR ??\n"
-	ATTR_ARCH                       " WIDTH  -6 OR ??\n"
+	ATTR_ARCH                       " WIDTH  -8 OR ??\n"
 	ATTR_STATE                      " WIDTH  -9 OR ??\n"
 	ATTR_ACTIVITY                   " WIDTH  -8 OR ??\n"
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
@@ -537,7 +537,7 @@ const char * const serverCompact_PrintFormat = "SELECT\n"
 const char * const server_PrintFormat = "SELECT\n"
 	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??\n"
 	ATTR_OPSYS                      " WIDTH -10 OR ??\n"
-	ATTR_ARCH                       " WIDTH  -6 OR ??\n"
+	ATTR_ARCH                       " WIDTH  -8 OR ??\n"
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
 	ATTR_MEMORY                     " WIDTH   8 PRINTF %8d OR ??\n"
 	ATTR_DISK                       " WIDTH   9 PRINTF %9d OR ??\n"
@@ -593,7 +593,7 @@ const char * const startdState_PrintFormat = "SELECT\n"
 	ATTR_CPUS                " AS Cpu           OR ??\n"
 	ATTR_MEMORY           " AS ' Mem'   WIDTH   5 OR ??\n"
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv    WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
-	ATTR_KEYBOARD_IDLE " AS '  KbdIdle' WIDTH  12 TRUNCATE PRINTAS TIME OR ??"
+	ATTR_KEYBOARD_IDLE " AS '  KbdIdle' WIDTH  12 TRUNCATE PRINTAS TIME OR ??\n"
 	ATTR_STATE                        " WIDTH  -7 OR ??\n"
 	ATTR_ENTERED_CURRENT_STATE    " AS '  StateTime' WIDTH  12 TRUNCATE PRINTAS ELAPSED_TIME OR ??\n"
 	ATTR_ACTIVITY           " AS Activ          OR ??\n"
@@ -637,13 +637,6 @@ const char * const claimedCompact_PrintFormat = "SELECT\n"
 "WHERE " PMODE_CLAIMED_COMPACT_CONSTRAINT "\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
-
-const char * startdPFV_Run_epilog[] {
-	ATTR_CONDOR_LOAD_AVG " AS LoadAv    WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??",
-	ATTR_REMOTE_USER " AS '  KbdIdle' WIDTH  12 TRUNCATE PRINTAS TIME OR ??",
-	ATTR_CLIENT_MACHINE                        " WIDTH  -7 OR ??",
-"SUMMARY STANDARD"
-};
 
 void PrettyPrinter::ppSetRunCols (int width, const char * & constr)
 {
