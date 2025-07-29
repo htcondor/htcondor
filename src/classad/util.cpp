@@ -26,8 +26,6 @@
 #include <math.h>
 
 using std::string;
-using std::pair;
-
 
 namespace classad {
 
