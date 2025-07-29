@@ -242,9 +242,7 @@ class UniShadow : public BaseShadow
 	    std::string & stagingDir
 	);
 
-	const std::string & getCIFName();
 	ClassAd handle_wiring_failure();
-	bool hasCIFName();
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
 	    ClassAd request,
@@ -253,15 +251,18 @@ class UniShadow : public BaseShadow
 	);
 
 	void set_provider_keep_alive( const std::string & cifName );
+	int producer_keep_alive = -1;
 
+	// We only transfer one catalog at a time.
 	FileTransfer * commonFTO = NULL;
+
 	// The SingleProviderSyndicate can't be default-constructed.
 	std::map< std::string, SingleProviderSyndicate * > cfLocks;
+	// At some point we'll figure out nesting our coroutines and
+	// we won't need this any more.
 	bool resume_job_setup = false;
 
-	bool _cifNameInitialized = false;
-	std::string _cifName;
-	int producer_keep_alive = -1;
+	std::optional<std::string> uniqueCIFName( const std::string & cifName );
 };
 
 #endif

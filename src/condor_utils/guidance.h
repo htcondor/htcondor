@@ -40,6 +40,7 @@ enum class GuidanceResult : int {
 
 std::optional<std::string> makeCIFName(
     const classad::ClassAd & jobAd,
+    const std::string & baseName,
     const std::string & startdAddress
 );
 

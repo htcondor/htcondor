@@ -1288,7 +1288,7 @@ UniShadow::set_provider_keep_alive( const std::string & cifName ) {
 				for( const auto & cifName : cifNames ) {
 					if( this->cfLocks.contains(cifName) ) {
 						SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
-						if( cfLock != NULL ) { continue; }
+						if( cfLock == NULL ) { continue; }
 
 						dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
 						if(! cfLock->touch()) {
@@ -1735,23 +1735,37 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		//
 
 
-		// If the AP has decided to stage common input for this job, issue
-		// the corresponding command.
 		//
-		// For milestone 1, we will just check for a job-ad attribute.
-		std::string commonInputFiles;
-		if(! getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
-			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
-		} else if(! this->hasCIFName()) {
-			dprintf( D_ALWAYS, "Unable to determine name for common input files, can't run job!\n" );
+		// Which common files, if any, were we asked for?
+		//
+		std::string commonInputCatalogs;
+		std::vector< std::pair< std::string, std::string > > common_file_catalogs;
+		jobAd->LookupString("_x_common_input_catalogs", commonInputCatalogs);
+		for( const auto & cifName : StringTokenIterator(commonInputCatalogs) ) {
+			auto internal_catalog_name = uniqueCIFName(cifName);
+			if(! internal_catalog_name) {
+				dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+				// We don't have a mechanism to inform the submitter of internal
+				// errors like this, so for now we're stuck putting the job on hold.
+				holdJob( "Internal error: failed to construct unique name for catalog.",
+					CONDOR_HOLD_CODE::JobNotStarted, 4
+				);
 
-			// We don't have a mechanism to inform the submitter of internal
-			// errors like this, so for now we're stuck putting the job on hold.
-			holdJob( "Unable to determine name for common input files, can't run job.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+				return GuidanceResult::Command;
+			}
+
+			std::string commonInputFiles;
+			jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
+			common_file_catalogs.push_back({* internal_catalog_name, commonInputFiles});
+			dprintf( D_ZKM,
+				"Found common file catalog '%s' = '%s'\n",
+				cifName.c_str(), commonInputFiles.c_str()
 			);
+		}
 
-			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+		if( common_file_catalogs.empty() ) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else {
 			// This should have been take care of by match-making, but for the
 			// first milestone, that has to be done by hand and might have been
@@ -1785,11 +1799,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			if(! in_conversation) {
 				dprintf( D_ZKM, "Starting common input files conversation during job setup.\n" );
 				in_conversation = true;
-				std::vector< std::pair< std::string, std::string > > common_file_catalogs {
-					{this->getCIFName(), commonInputFiles},
-//					{"temporary-example", "temporary-example.common"},
-//					{"temporary-example-2", "temporary-example-2.common"},
-				};
+
 				the_coroutine = std::move(
 					this->start_common_input_conversation(request, common_file_catalogs)
 				);
@@ -1816,25 +1826,11 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 }
 
 
-bool
-UniShadow::hasCIFName() {
-	if(! _cifNameInitialized) {
-		getCIFName();
-		return hasCIFName();
-	}
-	return _cifNameInitialized && (! _cifName.empty());
-}
-
-
-const std::string &
-UniShadow::getCIFName() {
-	if(! _cifNameInitialized) {
-		char * startdAddress = NULL;
-		this->remRes->getStartdAddress(startdAddress);
-		auto cifName = makeCIFName(* this->jobAd, startdAddress);
-		free( startdAddress );
-		if( cifName ) { _cifName = * cifName; }
-		_cifNameInitialized = true;
-	}
-	return _cifName;
+std::optional<std::string>
+UniShadow::uniqueCIFName( const std::string & cifName ) {
+	char * startdAddress = NULL;
+	this->remRes->getStartdAddress(startdAddress);
+	auto rval = makeCIFName(* this->jobAd, cifName, startdAddress);
+	free( startdAddress );
+	return rval;
 }

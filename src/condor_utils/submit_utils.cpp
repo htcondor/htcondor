@@ -4477,9 +4477,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_WantJobNetworking, ATTR_WANT_JOB_NETWORKING, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
-	// FIXME: Strictly speaking, only the submit utils need to know about this
-	// bool.  Can we make its value available without adding to the job ad?
-	{SUBMIT_KEY_UncommonContainer, ATTR_UNCOMMON_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -4612,8 +4609,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_AllowedExecuteDuration, ATTR_JOB_ALLOWED_EXECUTE_DURATION, SimpleSubmitKeyword::f_as_expr},
 
 	{SUBMIT_KEY_JobSet, ATTR_JOB_SET_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
-
-	{SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES, SimpleSubmitKeyword::f_as_string},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -6579,33 +6574,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr())  {
-		bool userRequestedUncommonContainer = false;
-		job->LookupBool(ATTR_UNCOMMON_CONTAINER, userRequestedUncommonContainer);
-		if( userRequestedUncommonContainer ) {
-			input_files.emplace_back(container_image.ptr());
-			if (accumulate_size_kb) {
-				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
-			}
-		} else {
-			// FIXME: Use catalog notation, instead.
-
-
-			// This only checks the hash, which is annoying, because the
-			// job ad isn't fully populated at this point (MY.* missing).
-			// Not sure if we want to support that or not, actually.
-			auto_free_ptr cif(
-				submit_param( SUBMIT_KEY_CommonInputFiles, ATTR_COMMON_INPUT_FILES )
-				// submit_param( "MY.CommonInputFiles", ATTR_COMMON_INPUT_FILES )
-			);
-
-			if( cif.ptr() && cif.ptr()[0] != '\0' ) {
-				std::string modifiedCIF;
-				formatstr( modifiedCIF, "%s, %s", container_image.ptr(), cif.ptr() );
-				AssignJobString( ATTR_COMMON_INPUT_FILES, modifiedCIF.c_str() );
-			} else {
-				AssignJobString( ATTR_COMMON_INPUT_FILES, container_image.ptr() );
-			}
+	if (container_image.ptr()) {
+		input_files.emplace_back(container_image.ptr());
+		if (accumulate_size_kb) {
+			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
 		}
 
 		// Now that we've sure that we're transfering the container, set
