@@ -145,6 +145,62 @@ GCC_DIAG_ON(cast-qual)
 
 #include <stdio.h>
 
+static std::string tokens_db_file;
+
+#if defined(HAVE_SQLITE3_H)
+
+sqlite3* acquireTokensDbHandle()
+{
+	std::string cfg_db_file;
+	int rc = 0;
+	sqlite3* db = nullptr;
+	char *db_err_msg = nullptr;
+	std::string stmt_str;
+
+	if (!param(cfg_db_file, "TOKENS_DATABASE")) {
+		tokens_db_file.clear();
+		return nullptr;
+	}
+
+		// TODO consider adding a short busy wait
+	rc = sqlite3_open_v2(cfg_db_file.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", cfg_db_file.c_str(), sqlite3_errmsg(db));
+		return nullptr;
+	}
+
+	if (cfg_db_file != tokens_db_file) {
+		// First time opening this database file. Check that our tables exist.
+		rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT PRIMARY KEY, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
+		if (rc != SQLITE_OK) {
+			dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);
+			sqlite3_close(db);
+			free(db_err_msg);
+			return nullptr;
+		}
+		rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting_extra_claims (token_jti TEXT, claim TEXT, value TEXT, FOREIGN KEY (token_jti) REFERENCES idtokens_minting (token_jti), PRIMARY KEY (token_jti, claim))", nullptr, nullptr, &db_err_msg);
+		if (rc != SQLITE_OK) {
+			dprintf(D_ERROR, "Failed to create extra_claims db table: %s\n", db_err_msg);
+			sqlite3_close(db);
+			free(db_err_msg);
+			return nullptr;
+		}
+
+		tokens_db_file = cfg_db_file;
+	}
+
+	return db;
+}
+
+void releaseTokensDbHandle(sqlite3* db)
+{
+	// TODO Abort any active transaction?
+
+	sqlite3_close(db);
+}
+
+#endif // defined(HAVE_SQLITE3_H)
+
 namespace {
 
 bool checkToken(const std::string &line,
@@ -861,6 +917,7 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 	bool capability = false;
 	std::vector<std::string> authz, scopes;
 	std::string username, issuer, groups, jti;
+	std::string project;
 
 	if (jwt.has_issuer()) {
 		issuer = jwt.get_issuer();
@@ -893,13 +950,26 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 	if( capability || ! jwt.has_subject() ) {
 		dprintf(D_SECURITY|D_VERBOSE, "JWT is a capability or has no subject, looking up in database\n");
 		std::string kid = jwt.get_key_id();
-		if (!lookup_token(jti, kid, m_identity, scopes_str)) {
+		std::map<std::string, std::string> extra_claims;
+		if (!lookup_token(jti, kid, m_identity, scopes_str, extra_claims)) {
 			dprintf(D_SECURITY, "JWT not found in database (jti=%s)\n", jti.c_str());
 			return false;
+		}
+		auto proj_itr = extra_claims.find("project");
+		if (proj_itr != extra_claims.end()) {
+			classad::ClassAdJsonParser parser;
+			ExprTree* expr = parser.ParseExpression(proj_itr->second, true);
+			if (expr && expr->GetKind() == ExprTree::STRING_LITERAL) {
+				project = ((classad::StringLiteral*)expr)->getString();
+			}
+			delete expr;
 		}
 	} else {
 		if (jwt.has_payload_claim("scope")) {
 			scopes_str = jwt.get_payload_claim("scope").as_string();
+		}
+		if (jwt.has_payload_claim("project")) {
+			project = jwt.get_payload_claim("project").as_string();
 		}
 	}
 
@@ -931,6 +1001,9 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 	}
 	if (!scopes.empty()) {
 		m_policy_ad.InsertAttr(ATTR_TOKEN_SCOPES, join(scopes, ","));
+	}
+	if (!project.empty()) {
+		m_policy_ad.InsertAttr("TokenProject", project);
 	}
 	if (m_identity.empty()) {
 		// This should not be possible: the SciTokens library should fail such a token.
@@ -1693,69 +1766,70 @@ fail:
 
 
 bool
-Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope)
+Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope, std::map<std::string, std::string>& extra_claims)
 {
 #if !defined(HAVE_SQLITE3_H)
 	return false;
 #else
-	std::string db_file;
 	int rc = 0;
-	sqlite3* db = nullptr;
-	char *db_err_msg = nullptr;
-	std::string stmt_str;
-
-	if (!param(db_file, "TOKENS_DATABASE")) {
-		return false;
-	}
-
-		// TODO consider adding a short busy wait
-	rc = sqlite3_open_v2(db_file.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", db_file.c_str(), sqlite3_errmsg(db));
-		return false;
-	}
-
-	// TODO add extra_claims
-	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);
-		sqlite3_close(db);
-		free(db_err_msg);
-		return false;
-	}
-
-	formatstr(stmt_str, "SELECT token_sub, token_scope FROM idtokens_minting WHERE token_kid='%s' AND token_jti='%s' ;", key_id.c_str(), jti.c_str());
-
-	sqlite3_stmt* stmt = nullptr;
-	rc = sqlite3_prepare_v2(db, stmt_str.c_str(), -1, &stmt, nullptr);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(db));
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		free(db_err_msg);
-		return false;
-	}
-
 	bool found = false;
+	bool db_success = false;
+	sqlite3* db = nullptr;
+	sqlite3_stmt* stmt = nullptr;
+
+	db = acquireTokensDbHandle();
+	if (db == nullptr) {
+		return false;
+	}
+
+	rc = sqlite3_prepare_v2(db, "SELECT token_sub, token_scope FROM idtokens_minting WHERE token_kid=? AND token_jti=? ;", -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		goto db_done;
+	}
+	if (sqlite3_bind_text(stmt, 1, key_id.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 2, jti.c_str(), -1, SQLITE_STATIC) != SQLITE_OK)
+	{
+		goto db_done;
+	}
+
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		found = true;
 		subject = (const char*)sqlite3_column_text(stmt, 0);
 		scope = (const char*)sqlite3_column_text(stmt, 1);
 	}
 	if (rc != SQLITE_DONE) {
-		dprintf(D_ERROR, "sqlite3_step returned %d\n", rc);
-		sqlite3_finalize(stmt);
-		sqlite3_close(db);
-		free(db_err_msg);
-		return false;
+		goto db_done;
 	}
 
 	sqlite3_finalize(stmt);
+	stmt = nullptr;
 
-	sqlite3_close(db);
-	free(db_err_msg);
+	rc = sqlite3_prepare_v2(db, "SELECT claim, value FROM idtokens_minting_extra_claims WHERE token_jti=? ;", -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		goto db_done;
+	}
+	if (sqlite3_bind_text(stmt, 1, jti.c_str(), -1, SQLITE_STATIC) != SQLITE_OK)
+	{
+		goto db_done;
+	}
 
-	return found;
+	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
+		extra_claims[(const char*)sqlite3_column_text(stmt, 0)] = (const char*)sqlite3_column_text(stmt, 1);
+	}
+	if (rc != SQLITE_DONE) {
+		goto db_done;
+	}
+
+	db_success = true;
+
+ db_done:
+	if (!db_success) {
+		dprintf(D_ERROR, "Tokens database failure: %d %s\n", sqlite3_extended_errcode(db), sqlite3_errmsg(db));
+	}
+	sqlite3_finalize(stmt);
+	releaseTokensDbHandle(db);
+
+	return db_success && found;
 #endif
 }
 
@@ -1834,10 +1908,43 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		authz_set = std::string("condor:/") + join(authz_list, " condor:/");
 	}
 
-	std::string extra_claims_str;
+	std::map<std::string, std::string> extra_claims_map;
 	if (extra_claims) {
 		classad::ClassAdJsonUnParser unparser(true);
-		unparser.Unparse(extra_claims_str, extra_claims);
+
+		for (auto it = extra_claims->begin(); it != extra_claims->end(); it++) {
+			std::string value_str;
+			unparser.Unparse(value_str, it->second);
+			switch(it->second->GetKind()) {
+			case classad::ExprTree::INTEGER_LITERAL: {
+				extra_claims_map[it->first] = value_str;
+				if (!capability) {
+					int64_t ival = ((classad::IntegerLiteral*)it->second)->getInteger();
+					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(ival));
+				}
+				break;
+			}
+			case classad::ExprTree::BOOLEAN_LITERAL: {
+				extra_claims_map[it->first] = value_str;
+				if (!capability) {
+					bool bval = ((classad::BooleanLiteral*)it->second)->getBool();
+					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(bval));
+				}
+				break;
+			}
+			case classad::ExprTree::STRING_LITERAL: {
+				extra_claims_map[it->first] = value_str;
+				if (!capability) {
+					const char* sval = ((classad::StringLiteral*)it->second)->getCString();
+					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(sval));
+				}
+				break;
+			}
+			default:
+				dprintf(D_FULLDEBUG, "generate_token(): skipping extra claim %s with type %d\n", it->first.c_str(), (int)it->second->GetKind());
+				break;
+			}
+		}
 	}
 
 	if (capability) {
@@ -1846,32 +1953,6 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		jwt_builder.set_subject(id);
 		if (!authz_set.empty()) {
 			jwt_builder.set_payload_claim("scope", jwt::claim(authz_set));
-		}
-		if (extra_claims) {
-			for (auto it = extra_claims->begin(); it != extra_claims->end(); it++) {
-				// TODO skip attrs that we already set:
-				//   iss, iat, exp, sub, jti, scope, cap
-				switch(it->second->GetKind()) {
-				case classad::ExprTree::INTEGER_LITERAL: {
-					long long ival = ((classad::IntegerLiteral*)it->second)->getInteger();
-					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(ival));
-					break;
-				}
-				case classad::ExprTree::BOOLEAN_LITERAL: {
-					bool bval = ((classad::BooleanLiteral*)it->second)->getBool();
-					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(bval));
-					break;
-				}
-				case classad::ExprTree::STRING_LITERAL: {
-					const char* sval = ((classad::StringLiteral*)it->second)->getCString();
-					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(sval));
-					break;
-				}
-				default:
-					dprintf(D_FULLDEBUG, "generate_token(): skipping extra claim %s with type %d\n", it->first.c_str(), (int)it->second->GetKind());
-					break;
-				}
-			}
 		}
 	}
 
@@ -1888,38 +1969,63 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 
 #if defined(HAVE_SQLITE3_H)
-	std::string db_file;
-	if (param(db_file, "TOKENS_DATABASE")) {
+	sqlite3* db = acquireTokensDbHandle();
+	if (db != nullptr) {
+		bool db_success = false;
 		int rc = 0;
-		sqlite3* db = nullptr;
-		char *db_err_msg = nullptr;
+		sqlite3_stmt* pstmt = nullptr;
 		std::string stmt_str;
 
-		rc = sqlite3_open_v2(db_file.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+		rc = sqlite3_prepare_v2(db, "INSERT INTO idtokens_minting (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, capability) VALUES (?, ?, ?, ?, ?, ?, ?, ?);", -1, &pstmt, nullptr);
 		if (rc != SQLITE_OK) {
-			dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", db_file.c_str(), sqlite3_errmsg(db));
-			return false;
+			goto db_done;
 		}
-		// TODO add extra_claims_str
-		rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
-		if (rc != SQLITE_OK) {
-			dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);
-			sqlite3_close(db);
-			free(db_err_msg);
-			return false;
+		if (sqlite3_bind_text(pstmt, 1, issuer.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+			sqlite3_bind_text(pstmt, 2, key_id_str, -1, SQLITE_STATIC) != SQLITE_OK ||
+			sqlite3_bind_text(pstmt, 3, jti.ptr(), -1, SQLITE_STATIC) != SQLITE_OK ||
+			sqlite3_bind_int64(pstmt, 4, (sqlite3_int64)iat_unix) != SQLITE_OK ||
+			sqlite3_bind_int64(pstmt, 5, (sqlite3_int64)exp_unix) != SQLITE_OK ||
+			sqlite3_bind_text(pstmt, 6, id.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+			sqlite3_bind_text(pstmt, 7, authz_set.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+			sqlite3_bind_int(pstmt, 8, (int)capability) != SQLITE_OK)
+		{
+			goto db_done;
+		}
+		rc = sqlite3_step(pstmt);
+		if (rc != SQLITE_DONE) {
+			goto db_done;
+		}
+		sqlite3_finalize(pstmt);
+		pstmt = nullptr;
+
+		for (auto& [claim, value]: extra_claims_map) {
+			rc = sqlite3_prepare_v2(db, "INSERT INTO idtokens_minting_extra_claims (token_jti, claim, value) VALUES (?, ?, ?);", -1, &pstmt, nullptr);
+			if (rc != SQLITE_OK) {
+				goto db_done;
+			}
+			if (sqlite3_bind_text(pstmt, 1, jti.ptr(), -1, SQLITE_STATIC) != SQLITE_OK ||
+				sqlite3_bind_text(pstmt, 2, claim.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+				sqlite3_bind_text(pstmt, 3, value.c_str(), -1, SQLITE_STATIC) != SQLITE_OK)
+			{
+				goto db_done;
+			}
+			if (sqlite3_step(pstmt) != SQLITE_DONE) {
+				goto db_done;
+			}
+			sqlite3_finalize(pstmt);
+			pstmt = nullptr;
 		}
 
-		formatstr(stmt_str, "INSERT INTO idtokens_minting (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, capability) VALUES ('%s', '%s', '%s', %lld, %lld, '%s', '%s', %d);", issuer.c_str(), key_id_str, jti.ptr(), (long long)iat_unix, (long long)exp_unix, id.c_str(), authz_set.c_str(), (int)capability);
-		rc = sqlite3_exec(db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
-		if (rc != SQLITE_OK) {
-			dprintf(D_ERROR, "Adding tokens db entry failed: %s\n", db_err_msg);
-			sqlite3_close(db);
-			free(db_err_msg);
+		db_success = true;
+	db_done:
+		if (!db_success) {
+			dprintf(D_ERROR, "Tokens database failure: %d %s\n", sqlite3_extended_errcode(db), sqlite3_errmsg(db));
+		}
+		sqlite3_finalize(pstmt);
+		releaseTokensDbHandle(db);
+		if (!db_success) {
 			return false;
 		}
-
-		sqlite3_close(db);
-		free(db_err_msg);
 	} else if (capability) {
 		dprintf(D_ERROR, "No tokens database, can't use capability token\n");
 		return false;

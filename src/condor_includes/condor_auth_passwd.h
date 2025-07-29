@@ -156,7 +156,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	/* Lookup a token in our database and return the
 	 * subject and scope claims.
 	 */
-	static bool lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope);
+	static bool lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope, std::map<std::string, std::string>& extra_claims);
 
 	/** Metadata needed prior to starting authorization */
 	static bool preauth_metadata(classad::ClassAd &ad);
