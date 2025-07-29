@@ -1325,7 +1325,6 @@ rm -rf %{buildroot}
 %_libdir/libclassad.so
 %dir %_includedir/classad/
 %_includedir/classad/attrrefs.h
-%_includedir/classad/cclassad.h
 %_includedir/classad/classad_distribution.h
 %_includedir/classad/classadErrno.h
 %_includedir/classad/classad.h
