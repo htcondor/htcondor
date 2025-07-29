@@ -64,6 +64,9 @@ extern const char* JOB_EXECUTION_OVERLAY_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
 const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 
+// the IP for IO proxy server is the default docker bridge network.
+const char* DOCKER_DEFAULT_IOPROXY_IP = "172.17.0.1";
+
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
 #	define file_contains contains_anycase
@@ -2976,6 +2979,33 @@ JICShadow::initShadowInfo( ClassAd* ad )
 }
 
 
+static bool
+getDockerBridge(condor_sockaddr &dockerInterface)
+{
+	std::string bridge_ip;
+	bool ok = false;
+
+	char* bridge_addr = param("DOCKER_IOPROXY_ADDR");
+	if (bridge_addr) {
+	    condor_sockaddr ipv4, ipv6;
+    	ok = network_interface_to_sockaddr("DOCKER_IOPROXY_ADDR", bridge_addr, ipv4, ipv6, dockerInterface);
+		if( ok ) {
+		    std::string bridge_ip = dockerInterface.to_ip_string();
+			dprintf(D_ALWAYS, "Starter will use %s[%s] as docker bridge network.\n", bridge_addr, bridge_ip.c_str());
+		} else {
+			dprintf(D_ALWAYS,
+					"Failed to determine Docker Bridge IP address using DOCKER_IOPROXY_ADDR=%s\n",
+					bridge_addr);
+		}
+		free(bridge_addr);
+	} else {
+		dprintf(D_ALWAYS, "Starter will use default docker bridge network.\n");
+		dockerInterface.from_ip_string(DOCKER_DEFAULT_IOPROXY_IP);
+		ok = true;
+	}
+	return ok;
+}
+
 
 bool
 JICShadow::initIOProxy( void )
@@ -3050,10 +3080,10 @@ JICShadow::initIOProxy( void )
 		want_delayed ? "true" : "false");
 	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
+		condor_sockaddr dockerInterface;
 		condor_sockaddr *bindTo = NULL;
-		struct in_addr addr;
-		addr.s_addr = htonl(0xac110001);
-		condor_sockaddr dockerInterface(addr);
+		
+		// Connect to docker default bridge network
 
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
@@ -3061,7 +3091,14 @@ JICShadow::initIOProxy( void )
 		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
 		bool hasDockerImage = ! dockerImage.empty();
 		if (wantDocker || hasDockerImage) {
-			bindTo = &dockerInterface;
+			// Use the docker bridge network for the ioproxy
+			if (getDockerBridge(dockerInterface)) {
+				bindTo = &dockerInterface;
+			} else {
+				dprintf( D_ERROR,
+						 "Couldn't prepare IO Proxy for Docker job.\n" );
+				return false;
+			}
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,

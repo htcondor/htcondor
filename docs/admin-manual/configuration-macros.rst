@@ -4543,6 +4543,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     run on the EP.  When true, if the Architecture in the image is defined
     and does not match the EP, the job is put on hold.
 
+:macro-def:`DOCKER_IOPROXY_ADDR[STARTD]`
+    Define the IP of the gateway used to create the IO proxy for chirp communications.
+    The default value (``172.17.0.1``, the default docker bridege network)
+    is the recommended value in almost all the situations except if docker
+    is explictly configured to use a different network or to run the executor with Docker in Docker.
+
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
