@@ -697,7 +697,8 @@ Starter::handleJobSetupCommand(
 			//
 
 			std::filesystem::path executeDir( s->GetSlotDir() );
-			std::filesystem::path stagingDir = executeDir / "staging";
+			std::filesystem::path parentDir = executeDir / "staging";
+			std::filesystem::path stagingDir = parentDir / cifName;
 			{
 				// We could check STARTER_NESTED_SCRATCH to see if we needed
 				// to create this directory as PRIV_CONDOR instead of PRIV_USER,
@@ -706,9 +707,23 @@ Starter::handleJobSetupCommand(
 				TemporaryPrivSentry tps(PRIV_ROOT);
 
 				std::error_code errorCode;
-				std::filesystem::create_directory( stagingDir, errorCode );
+				std::filesystem::create_directories( stagingDir, errorCode );
 				if( errorCode ) {
+					// FIXME: this actually carries on.  Use continue_conversation
+					// to report the error, instead.
 					dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
+					return false;
+				}
+
+				std::filesystem::permissions(
+					parentDir,
+					perms::owner_read | perms::owner_write | perms::owner_exec,
+					errorCode
+				);
+				if( errorCode ) {
+					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
+					// FIXME: this actually carries on.  Use continue_conversation
+					// to report the error, instead.
 					return false;
 				}
 
@@ -718,7 +733,9 @@ Starter::handleJobSetupCommand(
 					errorCode
 				);
 				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to set permissions on staging directory, aborting: %s (%d).\n", errorCode.message().c_str(), errorCode.value() );
+					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
+					// FIXME: this actually carries on.  Use continue_conversation
+					// to report the error, instead.
 					return false;
 				}
 
@@ -731,9 +748,18 @@ Starter::handleJobSetupCommand(
 				// Build fix only.
 
 #else
-				int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+				int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
-					dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
+					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
+					// FIXME: this actually carries on.  Use continue_conversation
+					// to report the error, instead.
+					return false;
+				}
+				rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+				if( rv != 0 ) {
+					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
+					// FIXME: this actually carries on.  Use continue_conversation
+					// to report the error, instead.
 					return false;
 				}
 #endif /* WINDOWS */

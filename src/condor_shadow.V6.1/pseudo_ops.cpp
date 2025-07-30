@@ -1780,7 +1780,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			request.LookupInteger(
 				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
 			);
-			if( hasCommonFilesTransfer < 1 ) {
+			if( hasCommonFilesTransfer < 2 ) {
 				// Put the job on hold with a request to add the requirement.
 				holdJob("Please add TARGET.HasCommonFilesTransfer to your requirements expression.", 1003, 5 );
 
