@@ -26,46 +26,40 @@
 
 #include <iostream>
 
-using std::string;
-using std::vector;
-using std::pair;
-using std::cout;
-using std::endl;
-
 using namespace classad;
 
 int main(int, char **)
 {
-    string classad_version;
+	std::string classad_version;
 
     ClassAdLibraryVersion(classad_version);
 
-    cout << "ClassAd Library v" << classad_version << "\n";
+    std::cout << "ClassAd Library v" << classad_version << "\n";
 
     /* ----- Namespace support ----- */
-    cout << "  Classad namespace:               ";
-    cout << "yes\n";
+    std::cout << "  Classad namespace:               ";
+    std::cout << "yes\n";
 
     /* ----- Shared library function support ----- */
-    cout << "  Shared library function support: ";
+    std::cout << "  Shared library function support: ";
 #if defined(UNIX)
-    cout << "yes\n";
+    std::cout << "yes\n";
 #else
-    cout << "no\n";
+    std::cout << "no\n";
 #endif
 
     /* ----- Regular expressions ----- */
-    cout << "  Regular expression function:     ";
-    cout << "PCRE\n";
+    std::cout << "  Regular expression function:     ";
+    std::cout << "PCRE\n";
 
     /* ----- GNU version, if applicable ----- */
 #if defined __GNUC__ && defined __GNUC_MINOR__
-    cout << "  GCC version:                     ";
-    cout << __GNUC__ << "." << __GNUC_MINOR__;
+    std::cout << "  GCC version:                     ";
+    std::cout << __GNUC__ << "." << __GNUC_MINOR__;
 #if defined __GNUC_PATCHLEVEL__
-    cout << "." << __GNUC_PATCHLEVEL__;
+    std::cout << "." << __GNUC_PATCHLEVEL__;
 #endif
-    cout << endl;
+    std::cout << std::endl;
 #endif
 
     return 0;
