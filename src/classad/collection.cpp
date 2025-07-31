@@ -22,14 +22,9 @@
 #include "classad/collection.h"
 #include <fcntl.h>
 
-using std::string;
-using std::vector;
-using std::pair;
-
-
 namespace classad {
 
-static bool string_is_empty(const string &text);
+static bool string_is_empty(const std::string &text);
  
 const char *const ClassAdCollectionInterface::CollOpStrings[] = {
     "no op",
@@ -89,10 +84,10 @@ ClassAdCollectionInterface::
 
 ClassAd *ClassAdCollectionInterface::
 _CreateSubView( const ViewName &viewName, const ViewName &parentViewName, 
-	const string &constraint, const string &rank, const string &partitionExprs )
+	const std::string &constraint, const std::string &rank, const std::string &partitionExprs )
 {
     ClassAd 	*rec;
-	string		buffer;
+	std::string		buffer;
 
 	buffer = "[ ViewName = \"";
 	buffer +=  viewName;
@@ -124,11 +119,11 @@ _CreateSubView( const ViewName &viewName, const ViewName &parentViewName,
 
 ClassAd *ClassAdCollectionInterface::
 _CreatePartition( const ViewName &viewName, const ViewName &parentViewName,
-    const string &constraint, const string &rank, const string &partitionExprs,
+    const std::string &constraint, const std::string &rank, const std::string &partitionExprs,
     ClassAd *rep )
 {
     ClassAd 	*rec;
-	string				buffer;
+	std::string				buffer;
 
 	buffer = "[ ViewName = \"";
 	buffer +=  viewName;
@@ -179,11 +174,11 @@ _DeleteView( const ViewName &viewName )
 
 
 ClassAd *ClassAdCollectionInterface::
-_SetViewInfo( const ViewName &viewName, const string &constraint,
-    const string &rank, const string &partitionExprs )
+_SetViewInfo( const ViewName &viewName, const std::string &constraint,
+    const std::string &rank, const std::string &partitionExprs )
 {
     ClassAd 	*rec=NULL;
-	string		buffer;
+	std::string		buffer;
 
 	buffer = "[ ViewName = \"";
 	buffer +=  viewName;
@@ -212,7 +207,7 @@ _SetViewInfo( const ViewName &viewName, const string &constraint,
 
 
 ClassAd *ClassAdCollectionInterface::
-_AddClassAd( const string &xactionName, const string &key,ClassAd *ad )
+_AddClassAd( const std::string &xactionName, const std::string &key,ClassAd *ad )
 {
     ClassAd *rec;
     ExprTree * pAd = ad;
@@ -234,7 +229,7 @@ _AddClassAd( const string &xactionName, const string &key,ClassAd *ad )
 }
 
 ClassAd *ClassAdCollectionInterface::
-_UpdateClassAd( const string &xactionName, const string &key, ClassAd *ad )
+_UpdateClassAd( const std::string &xactionName, const std::string &key, ClassAd *ad )
 {
     ClassAd *rec;
     if( !( rec = new ClassAd( ) ) ) {
@@ -255,7 +250,7 @@ _UpdateClassAd( const string &xactionName, const string &key, ClassAd *ad )
 }
 
 ClassAd *ClassAdCollectionInterface::
-_ModifyClassAd( const string &xactionName, const string &key, ClassAd *ad )
+_ModifyClassAd( const std::string &xactionName, const std::string &key, ClassAd *ad )
 {
     ClassAd *rec;
     if( !( rec = new ClassAd( ) ) ) {
@@ -276,7 +271,7 @@ _ModifyClassAd( const string &xactionName, const string &key, ClassAd *ad )
 }
 
 ClassAd *ClassAdCollectionInterface::
-_RemoveClassAd( const string &xactionName, const string &key )
+_RemoveClassAd( const std::string &xactionName, const std::string &key )
 {
     ClassAd *rec;
 
@@ -311,7 +306,7 @@ SetAcknowledgementMode( AckMode a )
 
 
 bool ClassAdCollectionInterface::
-SetCurrentTransaction( const string &xactionName )
+SetCurrentTransaction( const std::string &xactionName )
 {
 	if( xactionName == "" || IsActiveTransaction( xactionName ) ) {
 		currentXactionName = xactionName;
@@ -321,7 +316,7 @@ SetCurrentTransaction( const string &xactionName )
 }
 
 void ClassAdCollectionInterface::
-GetCurrentTransaction( string &xactionName ) const
+GetCurrentTransaction( std::string &xactionName ) const
 {
 	xactionName = currentXactionName;
 }
@@ -330,7 +325,7 @@ GetCurrentTransaction( string &xactionName ) const
 ClassAd *ClassAdCollectionInterface::
 ReadLogEntry( FILE *fp )
 {
-	string	line;
+	std::string	line;
 	int		ch;
 
 		// accumulate until end-of-line/file in buffer
@@ -362,7 +357,7 @@ WriteLogEntry( FILE *fp, ClassAd *rec, bool synch )
 	wrote_entry = true;
 
 	if (fp) {
-		string buffer;
+		std::string buffer;
 		unparser.Unparse( buffer, rec );
 		if (fprintf(fp, "%s\n", buffer.c_str()) < 0) {
 		    wrote_entry = false;
@@ -421,10 +416,10 @@ ReadLogFile( )
 bool ClassAdCollectionInterface::
 TruncateLog( )
 {
-    string  tmpLogFileName;
+    std::string  tmpLogFileName;
     int     newLog_fd;
     FILE    *newLog_fp;
-	string	logLine;
+	std::string	logLine;
 
     if( logFileName.empty( ) ) {
         CondorErrno = ERR_BAD_LOG_FILENAME;
@@ -490,7 +485,7 @@ TruncateLog( )
 #pragma warning(pop) // restore 4996
 #endif
 
-static bool string_is_empty(const string &text)
+static bool string_is_empty(const std::string &text)
 {
 	bool is_empty;
 
