@@ -13,19 +13,6 @@
  */
 
 
-/**
- * @struct QueryResult
- * @brief Result container for database query operations
- * 
- * Encapsulates the success/failure status of database queries along with
- * either the retrieved job records or an error message. Enables graceful
- * error handling without exceptions.
- */
-struct QueryResult {
-    bool success;                       // True if query succeeded, false on any error
-    std::string errorMessage;           // Human-readable error description (empty on success)
-    std::vector<ParsedJobRecord> jobs; // Retrieved job records (empty on failure)
-};
 
 /**
  * @struct ParsedJobRecord
@@ -59,6 +46,24 @@ struct ParsedJobRecord {
     std::string raw_classad_text;       // Complete unparsed ClassAd text from archive file
 };
 
+
+
+/**
+ * @struct QueryResult
+ * @brief Result container for database query operations
+ * 
+ * Encapsulates the success/failure status of database queries along with
+ * either the retrieved job records or an error message. Enables graceful
+ * error handling without exceptions.
+ */
+struct QueryResult {
+    bool success;                       // True if query succeeded, false on any error
+    std::string errorMessage;           // Human-readable error description (empty on success)
+    std::vector<ParsedJobRecord> jobs; // Retrieved job records (empty on failure)
+};
+
+
+
 /**
  * @struct QueriedJobRecord  
  * @brief Raw job record data retrieved from database queries
@@ -74,4 +79,15 @@ struct QueriedJobRecord {
     long fileInode;                     // File system inode for verification
     std::string fileHash;               // File hash for integrity checking
     int completionDate;                 // Job completion timestamp
+};
+
+
+// Structure to hold analysis statistics if analysis flags are set
+ struct AnalysisStats {
+    double min = 0.0;
+    double max = 0.0;
+    double mean = 0.0;
+    double median = 0.0;
+    size_t count = 0;
+    double total = 0.0;  // For summing up times, etc.
 };

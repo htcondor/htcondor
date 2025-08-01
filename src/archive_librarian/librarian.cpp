@@ -13,6 +13,8 @@
 #include <cmath>
 #include <fstream>
 #include <string>
+#include <iomanip>
+#include <iostream>
 #include <sstream>
 
 namespace fs = std::filesystem;
@@ -192,34 +194,44 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
     if (lastFileIt != historyFileSet_.fileMap.end()) {
         const FileInfo& lastFileInfo = lastFileIt->second;
         
-        try {
-            // Get the size of the last read file
-            int64_t lastFileSizeBytes = std::filesystem::file_size(lastFileInfo.FileName);
-            
+        // Construct full path to the history file
+        std::filesystem::path fullFilePath = std::filesystem::path(historyFileSet_.historyDirectoryPath) / lastFileInfo.FileName;
+        
+        // Check if file exists and get its size without exceptions
+        std::error_code ec;
+        int64_t lastFileSizeBytes = std::filesystem::file_size(fullFilePath, ec);
+        
+        if (!ec) {
+            // File size retrieved successfully
             // Calculate bytes left in the partially read file
             int64_t unreadInLastFile = std::max<int64_t>(0, lastFileSizeBytes - status.HistoryFileOffsetLastRead);
             totalUnreadBytes += unreadInLastFile;
-            
-        } catch (const std::filesystem::filesystem_error& e) {
+        } else {
             printf("[Librarian] Warning: Could not get file size for %s: %s\n", 
-                   lastFileInfo.FileName.c_str(), e.what());
+                fullFilePath.string().c_str(), ec.message().c_str());
             // Continue without counting this file
         }
     } else {
         printf("[Librarian] Warning: historyFileIdLastRead (%d) not found in historyFileSet_.fileMap\n", 
-               status.HistoryFileIdLastRead);
+            status.HistoryFileIdLastRead);
     }
 
     // Find all unread files (LastOffset == 0) and sum their sizes
     for (const auto& [fileId, fileInfo] : historyFileSet_.fileMap) {
         if (fileInfo.LastOffset == 0) {
-            try {
-                int64_t fileSize = std::filesystem::file_size(fileInfo.FileName);
+            // Construct full path to the history file
+            std::filesystem::path fullFilePath = std::filesystem::path(historyFileSet_.historyDirectoryPath) / fileInfo.FileName;
+            
+            // Check if file exists and get its size without exceptions
+            std::error_code ec;
+            int64_t fileSize = std::filesystem::file_size(fullFilePath, ec);
+            
+            if (!ec) {
+                // File size retrieved successfully
                 totalUnreadBytes += fileSize;
-                
-            } catch (const std::filesystem::filesystem_error& e) {
+            } else {
                 printf("[Librarian] Warning: Could not get file size for %s: %s\n", 
-                       fileInfo.FileName.c_str(), e.what());
+                    fullFilePath.string().c_str(), ec.message().c_str());
                 // Continue without counting this file
             }
         }
@@ -311,6 +323,31 @@ void Librarian::updateStatusData(Status status) {
 // ARCHIVE MANAGEMENT (PRIVATE HELPERS)
 // ================================
 
+// Testing function to see what has actually been saved to a FileSet struct
+void PrintFileSetInfo(const FileSet& fs) {
+    std::cout << "\n[Librarian] Printing FileSet Info: \n" ;
+    std::cout << "------------------------------------------------- \n" ;
+    std::cout << "History Name Config: " << fs.historyNameConfig << "\n";
+    std::cout << "History Directory Path: " << fs.historyDirectoryPath << "\n";
+    std::cout << "Last Status Time: " << fs.lastStatusTime << "\n";
+    std::cout << "Last File Read ID: " << fs.lastFileReadId << "\n";
+
+    std::cout << "\nFile Map:\n";
+    std::cout << std::left << std::setw(10) << "FileId"
+              << std::setw(20) << "FileName"
+              << std::setw(15) << "Inode"
+              << std::setw(40) << "Hash" << "\n";
+    std::cout << std::string(85, '-') << "\n";
+
+    for (const auto& [id, info] : fs.fileMap) {
+        std::cout << std::left << std::setw(10) << id
+                  << std::setw(20) << info.FileName
+                  << std::setw(15) << info.FileInode
+                  << std::setw(40) << info.FileHash << "\n";
+    }
+    std::cout << "------------------------------------------------- \n" ;
+}
+
 /**
  * @brief Applies detected archive changes to the in-memory FileSet
  * This function synchronizes the FileSet with filesystem changes detected by ArchiveMonitor
@@ -321,7 +358,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
 
     // 1. Handle rotated file
     if (!change.rotatedFile.second.empty()) {
-        const int lastFileReadId = change.rotatedFile.first;
+        const long lastFileReadId = change.rotatedFile.first;
         const std::string& newName = change.rotatedFile.second;
 
         auto it = fileSet.fileMap.find(lastFileReadId);
@@ -333,7 +370,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
                 it->second.DateOfRotation = *dateOfRotation;
             }
         } else {
-            fprintf(stderr, "[Librarian] Warning: Rotated file not found in fileMap. FileId=%d\n", lastFileReadId);
+            fprintf(stderr, "[Librarian] Warning: Rotated file not found in fileMap. FileId=%ld\n", lastFileReadId);
         }
     }
 
@@ -347,13 +384,14 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
     }
 
     // 3. Remove deleted files from FileSet's FileMap
-    for (int deletedFileId : change.deletedFileIds) {
+    for (long deletedFileId : change.deletedFileIds) {
         size_t erased = fileSet.fileMap.erase(deletedFileId);
         if (erased == 0) {
-            fprintf(stderr, "[Librarian] Warning: Tried to delete file not found in fileMap. FileId=%d\n", deletedFileId);
+            fprintf(stderr, "[Librarian] Warning: Tried to delete file not found in fileMap. FileId=%ld\n", deletedFileId);
         }
     }
 }
+
 
 /**
  * @brief Scans directory for changes and updates both database and in-memory FileSet
@@ -397,10 +435,10 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
         auto it = fileSet.fileMap.find(fileSet.lastFileReadId);
         if (it != fileSet.fileMap.end()) {
             queue.push_back(it->second);
-            printf("[Librarian] Added lastFileRead to queue: %s (FileId: %d)\n", 
+            printf("[Librarian] Added lastFileRead to queue: %s (FileId: %ld)\n", 
                    it->second.FileName.c_str(), it->second.FileId);
         } else {
-            printf("[Librarian] Error: lastFileReadId %d not found in fileMap\n", fileSet.lastFileReadId);
+            printf("[Librarian] Error: lastFileReadId %ld not found in fileMap\n", fileSet.lastFileReadId);
             return false;
         }
     }
@@ -408,7 +446,7 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
     // SECOND PRIORITY: Add new files from archive changes in order 
     for (const FileInfo& newFile : changes.newFiles) {
         queue.push_back(newFile);
-        printf("[Librarian] Added new file to queue: %s (FileId: %d)\n", 
+        printf("[Librarian] Added new file to queue: %s (FileId: %ld)\n", 
                newFile.FileName.c_str(), newFile.FileId);
     }
 
@@ -482,9 +520,11 @@ bool Librarian::cleanupDatabaseIfNeeded() {
 
 // move down into public utilities! but later
 int Librarian::query(int argc, char* argv[]) {
-    // Parse command line arguments using internal utilities
-    auto options = JobAnalysisUtils::parseArguments(argc, argv);
     
+    // Parse command line arguments using internal utilities
+    JobAnalysisUtils::CommandOptions options;
+    JobAnalysisUtils::parseArguments(argc, argv, options);
+
     // Validate arguments
     if (options.username.empty() || options.clusterId == -1) {
         JobAnalysisUtils::printManual();
@@ -492,7 +532,7 @@ int Librarian::query(int argc, char* argv[]) {
     }
     
     // Execute the query using helper method
-    auto result = executeQuery(options.username, options.clusterId);
+    auto result = executeQuery(options.username, options.clusterId, historyFileSet_.historyDirectoryPath);
     
     if (!result.success) {
         JobAnalysisUtils::printError(result.errorMessage);
@@ -514,7 +554,7 @@ int Librarian::query(int argc, char* argv[]) {
     return 0;
 }
 
-QueryResult Librarian::executeQuery(const std::string& username, int clusterId) {
+QueryResult Librarian::executeQuery(const std::string& username, int clusterId, std::string historyDirectoryPath) {
     // Execute the actual query
     std::vector<QueriedJobRecord> jobRecords;
     
@@ -526,7 +566,8 @@ QueryResult Librarian::executeQuery(const std::string& username, int clusterId) 
         return {false, "No jobs found for user '" + username + "', cluster " + std::to_string(clusterId), {}};
     }
     
-    std::vector<std::string> rawClassAds = readJobsGroupedByFile(jobRecords);
+    printf("[Librarian] JobList Id found, reading jobs grouped by file...");
+    std::vector<std::string> rawClassAds = readJobsGroupedByFile(jobRecords, historyDirectoryPath);
     if (rawClassAds.empty()) {
         return {false, "Could not read any job data from archive files", {}};
     }
@@ -541,7 +582,7 @@ QueryResult Librarian::executeQuery(const std::string& username, int clusterId) 
     return {true, "", parsedJobs};
 }
 
-std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords) {
+std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords, std::string historyDirectoryPath) {
     // Group by fileName to minimize file operations
     std::map<std::string, std::vector<std::pair<long, FileInfo>>> fileGroups;
     
@@ -560,8 +601,10 @@ std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<Quer
     int skippedJobs = 0;
     
     for (const auto& [fileName, offsetsAndInfo] : fileGroups) {
-        // TODO: Fix file path handling - currently using relative path
-        std::string filePath = fileName;
+        printf("[Librarian] Reading from file %s\n", fileName.c_str());
+
+        // Construct full file path using historyDirectoryPath
+        std::string filePath = historyDirectoryPath + "/" + fileName;
         
         // Verify file integrity using the first FileInfo (they should all be the same for same file)
         auto [fileExists, fileMatches] = ArchiveMonitor::checkFileEquals(filePath, offsetsAndInfo[0].second);
@@ -602,6 +645,10 @@ std::optional<std::string> Librarian::readJobAtOffset(const std::string& filePat
     if (!file.good()) {
         return std::nullopt;
     }
+    
+    // Skip to the start of the next line
+    std::string dummy;
+    std::getline(file, dummy);  // Read and discard the partial/complete line
     
     std::string jobData;
     std::string line;
@@ -659,6 +706,7 @@ bool Librarian::initialize() {
     if (!calculateEstimatedBytesPerJob()) {
         EstimatedBytesPerJobInArchive_ = 5814.0;
     }
+
     return true;
 }
 
@@ -685,11 +733,10 @@ bool Librarian::update() {
 
     // Recovery: Populate statusData_ and FileSet structs if memory is empty
     dbHandler_->maybeRecoverStatusAndFiles(historyFileSet_, epochHistoryFileSet_, statusData_);
-    Status status;
+    Status status = {};
 
     // Estimate arrivalHz while asleep if there was no backlog left last cycle
     if (!statusData_.LastRunLeftBacklog && statusData_.TimeOfLastUpdate > 0) estimateArrivalRateWhileAsleep ();
-
 
     // PHASE 1: Directory Scanning and File Tracking
     ArchiveChange epochChange = trackAndUpdateFileSet(epochHistoryFileSet_);
@@ -716,6 +763,7 @@ bool Librarian::update() {
     // Process Epoch Queue
     size_t totalEpochRecordsProcessed = 0;
     size_t epochFilesProcessed = 0;
+    printf("[Librarian] Processing epoch file queue...\n");
 
     for (FileInfo& fileInfo : epochQueue) {
 
@@ -727,12 +775,12 @@ bool Librarian::update() {
             break;
         }
 
-        printf("[Librarian] Processing epoch file: %s (offset: %lld)\n", 
+        printf("[Librarian] Processing epoch file: %s (offset: %ld)\n", 
                fileInfo.FileName.c_str(), fileInfo.LastOffset);
         
         std::vector<EpochRecord> fileRecords;
         if (!readEpochRecords(fileRecords, fileInfo)) {
-            printf("[Librarian] Failed to read epoch records from %s \n", fileInfo.FileName);
+            printf("[Librarian] Failed to read epoch records from %s \n", fileInfo.FileName.c_str());
             return false;
         }
         
@@ -753,7 +801,7 @@ bool Librarian::update() {
         if (it != epochHistoryFileSet_.fileMap.end()) {
             it->second.LastOffset = fileInfo.LastOffset;
         } else {
-            fprintf(stderr, "[Librarian] Warning: FileId %d not found in epochHistoryFileSet.fileMap\n", fileInfo.FileId);
+            fprintf(stderr, "[Librarian] Warning: FileId %ld not found in epochHistoryFileSet.fileMap\n", fileInfo.FileId);
         }
         
         // Accumulate stats for status reporting'
@@ -768,6 +816,7 @@ bool Librarian::update() {
     // Process History Queue
     size_t totalJobRecordsProcessed = 0;
     size_t historyFilesProcessed = 0;
+    printf("[Librarian] Processing history file queue...\n");
 
     for (FileInfo& fileInfo : historyQueue) {
 
@@ -779,12 +828,12 @@ bool Librarian::update() {
             break;
         }
 
-        printf("[Librarian] Processing history file: %s (offset: %lld)\n", 
+        printf("[Librarian] Processing history file: %sf (offset: %ld)\n", 
                fileInfo.FileName.c_str(), fileInfo.LastOffset);
         
         std::vector<JobRecord> fileRecords;
         if (!readJobRecords(fileRecords, fileInfo)) {
-            printf("[Librarian] Failed to read job records from %s \n", fileInfo.FileName);
+            printf("[Librarian] Failed to read job records from %s \n", fileInfo.FileName.c_str());
             return false;
         }
 
@@ -805,7 +854,7 @@ bool Librarian::update() {
         if (it != historyFileSet_.fileMap.end()) {
             it->second.LastOffset = fileInfo.LastOffset;
         } else {
-            fprintf(stderr, "[Librarian] Warning: FileId %d not found in historyFileSet.fileMap\n", fileInfo.FileId);
+            fprintf(stderr, "[Librarian] Warning: FileId %ld not found in historyFileSet.fileMap\n", fileInfo.FileId);
         }
         
         // Accumulate stats for status reporting

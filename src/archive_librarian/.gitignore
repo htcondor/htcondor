@@ -1,3 +1,9 @@
-history_pool/
+hist/
 build/
-Testing/Temporary
+CMakeFiles/
+Makefile
+cmake_install.cmake 
+tester_output.db
+CMakeCache.txt
+myHistoryList
+myHistoryList.dSYM/

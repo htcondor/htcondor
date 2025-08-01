@@ -39,8 +39,8 @@ public:
     bool clearCache();
 
     // Testing whether database was correctly constructed and connection works
-    bool DBHandler::testDatabaseConnection();
-    bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL);
+    bool testDatabaseConnection();
+    bool verifyDatabaseSchema(const std::string& schemaSQL);
 
     // === Core Data Operations ===
     

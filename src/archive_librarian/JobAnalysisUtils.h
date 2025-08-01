@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JobQueryStructures.h"
+#include "cache.hpp"
 #include <string>
 #include <vector>
 #include <optional>
@@ -14,9 +15,10 @@ namespace JobAnalysisUtils {
         bool files = false;
         bool when = false;
         bool where = false;
-        
+        bool status = false;
+
         bool hasAnyFlag() const {
-            return usage || batch || dag || files || when || where;
+            return usage || batch || dag || files || when || where || status;
         }
     };
 
@@ -34,15 +36,15 @@ namespace JobAnalysisUtils {
 
 
     // Command line parsing utility
-    CommandOptions parseArguments(int argc, char* argv[]);
+    void parseArguments(int argc, char* argv[], CommandOptions& options);
 
     // Output formatting utilities - called by Librarian::query()
     void printBaseOutput(const std::vector<ParsedJobRecord>& jobs, 
                         const std::string& username, int clusterId);
 
     void printAnalysisOutput(const std::vector<ParsedJobRecord>& jobs, 
-                        const AnalysisFlags& flags,
-                        const std::string& username, int clusterId);
+                            const AnalysisFlags& flags,
+                            const std::string& username, int clusterId);
 
     void printManual();
 
