@@ -118,7 +118,9 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"d, null://create-epoch-entry"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
+
         "transfer_input_files":     "input3.txt",
         "use_oauth_services":       "the_credential",
 
@@ -219,7 +221,9 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         # Force a delay; the constant is to ensure that we would print out
         # the waiting message at least twice (if the delay remains at five
         # seconds each time).
-        "MY.CommonInputFiles":      '"big_input1.txt, big_input2.txt, debug://sleep/15"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"big_input1.txt, big_input2.txt, debug://sleep/15"',
+
         "transfer_input_files":     "big_input3.txt",
 
         "leave_in_queue":           True,
@@ -371,7 +375,9 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"multi_input1.txt, multi_input2.txt"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"multi_input1.txt, multi_input2.txt"',
+
         "transfer_input_files":     "multi_input3.txt",
 
         "leave_in_queue":           True,
@@ -386,7 +392,8 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     job_description_b = { ** job_description_a,
         "arguments":
             f'{kill_file} multi_input4.txt multi_input5.txt multi_input6.txt',
-        "MY.CommonInputFiles":      '"multi_input4.txt, multi_input5.txt"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"multi_input4.txt, multi_input5.txt"',
         "transfer_input_files":     "multi_input6.txt",
     }
 

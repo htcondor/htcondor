@@ -50,7 +50,12 @@ UniShadow::~UniShadow() {
 	if ( producer_keep_alive != -1 ) {
 		daemonCore->Cancel_Timer( producer_keep_alive );
 	}
-	if ( cfLock ) delete cfLock;
+	// This makes me sad, but the SingleProviderSyndicate can't be
+	// default-constructed.  FIXME: could we get value semantics
+	// with a different kind of data structure?
+	for( const auto & [cifName, sps] : cfLocks ) {
+	    delete sps;
+	}
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 
