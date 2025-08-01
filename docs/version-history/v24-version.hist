@@ -26,6 +26,10 @@
   sends an email when the job starts for the first time.
   :jira:`3131`
 
+- When responding to a ping request for the ALLOW authorization level,
+  daemons no longer require authentication.
+  :jira:`3195`
+
 *** 24.0.11 bugs
 
 *** 24.10.2 features
