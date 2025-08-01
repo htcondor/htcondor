@@ -1050,6 +1050,17 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 
 bool
+LookupIntInContext( const ClassAd & ad, const std::string & attr, int & value ) {
+	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
+	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
+	if( context ) {
+		return context->LookupInteger( attr, value );
+	}
+	return false;
+}
+
+
+bool
 LookupBoolInContext( const ClassAd & ad, const std::string & attr, bool & value ) {
 	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
 	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
@@ -1205,8 +1216,29 @@ UniShadow::after_common_file_transfer(
 		this->cfLocks.erase(cifName);
 		delete cfLock;
 
+		// If we before even starting the file transfer, reschedule the job
+		// as if the file transfer has failed believing it could be tried
+		// again, but FIXME: with a cool down, to avoid hitting the same
+		// problem on the EP again.  (We don't have a default value for
+		// SYSTEM_ON_VACATE_COOL_DOWN?  Really?)
+		bool should_cool_down = false;
+
+		int requestResultCode = (int)RequestResult::Invalid;
+		LookupIntInContext( request, ATTR_REQUEST_RESULT_CODE, requestResultCode );
+		if( requestResultCode != (int)RequestResult::Invalid ) {
+			should_cool_down = true;
+			this->jobAd->Assign( ATTR_REQUEST_RESULT_CODE, requestResultCode );
+		}
+
+		int requestResultSubcode = (int)RequestResult::Invalid;
+		LookupIntInContext( request, ATTR_REQUEST_RESULT_SUBCODE, requestResultSubcode );
+		if( requestResultSubcode != (int)RequestResult::Invalid ) {
+			should_cool_down = true;
+			this->jobAd->Assign( ATTR_REQUEST_RESULT_SUBCODE, requestResultSubcode );
+		}
+
 		const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
-		if( info.try_again ) {
+		if( info.try_again || should_cool_down ) {
 			// Consider replacing this with a delayed (zero-second
 			// timer) call to evictJob().
 			this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));

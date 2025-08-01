@@ -604,6 +604,16 @@ mapContentsOfDirectoryInto(
 #endif /* WINDOWS */
 
 
+#define REPLY_WITH_ERROR(cmd,code,subcode) \
+	ClassAd context; \
+	context.InsertAttr( ATTR_COMMAND, cmd ); \
+	context.InsertAttr( ATTR_RESULT, false ); \
+	context.InsertAttr( ATTR_REQUEST_RESULT_CODE, (int)code ); \
+	context.InsertAttr( ATTR_REQUEST_RESULT_SUBCODE, (int)subcode ); \
+	continue_conversation(context); \
+	return true;
+
+
 bool
 Starter::handleJobSetupCommand(
   Starter * s,
@@ -709,10 +719,8 @@ Starter::handleJobSetupCommand(
 				std::error_code errorCode;
 				std::filesystem::create_directories( stagingDir, errorCode );
 				if( errorCode ) {
-					// FIXME: this actually carries on.  Use continue_conversation
-					// to report the error, instead.
 					dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
-					return false;
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 
 				std::filesystem::permissions(
@@ -722,9 +730,7 @@ Starter::handleJobSetupCommand(
 				);
 				if( errorCode ) {
 					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-					// FIXME: this actually carries on.  Use continue_conversation
-					// to report the error, instead.
-					return false;
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 
 				std::filesystem::permissions(
@@ -734,9 +740,7 @@ Starter::handleJobSetupCommand(
 				);
 				if( errorCode ) {
 					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-					// FIXME: this actually carries on.  Use continue_conversation
-					// to report the error, instead.
-					return false;
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 
 #ifdef    WINDOWS
@@ -751,16 +755,12 @@ Starter::handleJobSetupCommand(
 				int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
 					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-					// FIXME: this actually carries on.  Use continue_conversation
-					// to report the error, instead.
-					return false;
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 				rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
 					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
-					// FIXME: this actually carries on.  Use continue_conversation
-					// to report the error, instead.
-					return false;
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 #endif /* WINDOWS */
 			}
