@@ -163,11 +163,11 @@ static const char
 	"OnExitHold = true\n\t\tOnExitRemove = true\n\t\tJobStatus = 2",
 	*PERIODIC_HOLD = 
 	"\tPeriodicHold = true\n\t\t"
-	"PeriodicRemove = true\n\t\tPeriodicRelease = true\n\t\t"
+	"PeriodicRemove = false\n\t\tPeriodicRelease = true\n\t\t"
 	"OnExitHold = true\n\t\tOnExitRemove = true\n\t\tJobStatus = 2",
 	*PERIODIC_RELEASE = 
 	"\tPeriodicHold = false\n\t\t"
-	"PeriodicRelease = true\n\t\tPeriodicRemove = true\n\t\t"
+	"PeriodicRelease = true\n\t\tPeriodicRemove = false\n\t\t"
 	"OnExitHold = true\n\t\tOnExitRemove = true\n\t\tJobStatus = 5",
 	*PERIODIC_REMOVE = 
 	"\tPeriodicHold = false\n\t\t"
@@ -2644,6 +2644,9 @@ static bool test_release_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", RELEASE_FROM_HOLD);
+
+	// reset state from previous test...
+	param_insert("SYSTEM_PERIODIC_REMOVE", "false");
 	param_insert("SYSTEM_PERIODIC_RELEASE", "true");
 	//param_info_insert("SYSTEM_PERIODIC_RELEASE", NULL, "true", NULL, ".*", 
 	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);

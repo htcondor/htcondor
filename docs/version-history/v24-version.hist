@@ -9,6 +9,11 @@
 
 *** 24.0.12 bugs
 
+- If the *condor_schedd* evaluates :macro:`SYSTEM_PERIODIC_REMOVE` to true and
+  :macro:`SYSTEM_PERIODIC_HOLD` to true, now the remove wins.  Previously, the
+  hold won.
+  :jira:`621`
+
 *** 24.11.0 features
 
 - The :tool:`htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
