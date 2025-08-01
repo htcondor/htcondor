@@ -13589,6 +13589,9 @@ Scheduler::Init()
 	tmp = param("SYSTEM_ON_VACATE_COOL_DOWN");
 	if (tmp) {
 		ParseClassAdRvalExpr(tmp, m_jobCoolDownExpr);
+		if( m_jobCoolDownExpr == nullptr ) {
+		    dprintf( D_ALWAYS, "Failed to parse SYSTEM_ON_VACATE_COOL_DOWN expression, ignoring it.\n" );
+		}
 		free(tmp);
 	}
 
