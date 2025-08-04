@@ -74,9 +74,9 @@ class PrettyPrinter {
 		int setPPstyle( ppOption pps, int arg_index, const char * argv );
 		void reportPPconflict(const char * argv, const char * more);
 
+	#ifdef USE_PPSETCOLUMN
 		void ppSetColumnFormat( const char * print, int width, bool truncate, ivfield alt, const char * attr );
 		void ppSetColumnFormat( const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt, const char * attr );
-		void ppSetColumnFormat( const char * attr, const Lbl & label, int width, bool truncate, ivfield alt = WideInvalidField );
 
 		void ppSetColumn( const char * attr, const Lbl & label, int width, bool truncate, ivfield alt = WideInvalidField );
 		void ppSetColumn( const char * attr, int width, bool truncate, ivfield alt = WideInvalidField );
@@ -85,6 +85,7 @@ class PrettyPrinter {
 		void ppSetColumn( const char * attr, const Lbl & label, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt = WideInvalidField );
 		void ppSetColumn( const char * attr, const CustomFormatFn & fmt, int width, bool truncate, ivfield alt = WideInvalidField );
 		void ppSetColumn( const char * attr, const Lbl & label, const CustomFormatFn & fmt, const char * print, int width, bool truncate = true, ivfield alt = WideInvalidField );
+	#endif
 
 		void ppDisplayHeadings( FILE* file, ClassAd *ad, const char * pszExtra );
 		void prettyPrintInitMask( classad::References & proj, const char * & constr, bool no_pr_files );
@@ -104,27 +105,27 @@ class PrettyPrinter {
 		const char * adtypeNameFromPPMode() const;
 
 		int set_status_print_mask_from_stream( const char * streamid, bool is_filename, const char ** pconstraint );
+		int set_print_mask_from_stream (SimpleInputStream & stream, const char ** pconstraint);
 
-
-		void ppSetAnyNormalCols();
-		void ppSetStartdOfflineCols();
-		void ppSetStartdAbsentCols();
-		void    ppSetStartDaemonCols( int width, const char * & constr );
-		void    ppSetStartdNormalCols( int width );
-		void           ppSetStateCols( int width );
-		void             ppSetRunCols( int width );
+		void       ppSetAnyNormalCols( int width, const char * & constr );
+		void   ppSetStartdOfflineCols( int width, const char * & constr );
+		void    ppSetStartdAbsentCols( int width, const char * & constr );
+		void     ppSetStartDaemonCols( int width, const char * & constr );
+		void    ppSetStartdNormalCols( int width, const char * & constr );
+		void           ppSetStateCols( int width, const char * & constr );
+		void             ppSetRunCols( int width, const char * & constr );
 		void            ppSetGPUsCols( int width, bool daemon_ad, const char * & constr );
 		void          ppSetBrokenCols( int width, bool daemon_ad, const char * & constr );
-		void ppSetCollectorNormalCols( int width );
-		void  ppSetCkptSrvrNormalCols( int width );
-		void   ppSetStorageNormalCols( int width );
-		void      ppSetGridNormalCols( int width );
-		int     ppSetMasterNormalCols( int width );
-		int     ppSetDefragNormalCols( int width );
-		int ppSetAccountingNormalCols( int width );
-		int ppSetNegotiatorNormalCols( int width );
-		int     ppSetScheddNormalCols( int width, int & mach_width );
-		int  ppSetSubmitterNormalCols( int width, int & mach_width );
+		void ppSetCollectorNormalCols( int width, int & mach_width, const char * & constr );
+		void  ppSetCkptSrvrNormalCols( int width, const char * & constr );
+		void   ppSetStorageNormalCols( int width, const char * & constr );
+		void      ppSetGridNormalCols( int width, const char * & constr );
+		int     ppSetMasterNormalCols( int width, const char * & constr );
+		int     ppSetDefragNormalCols( int width, const char * & constr );
+		int ppSetAccountingNormalCols( int width, const char * & constr );
+		int ppSetNegotiatorNormalCols( int width, const char * & constr );
+		int     ppSetScheddNormalCols( int width, int & mach_width, const char * & constr );
+		int  ppSetSubmitterNormalCols( int width, int & mach_width, const char * & constr );
 		void          ppSetServerCols( int width, const char * & constr );
 		int       ppSetScheddDataCols( int width, const char * & constr );
 		int        ppSetScheddRunCols( int width, const char * & constr );
@@ -148,6 +149,9 @@ class PrettyPrinter {
 		int							width_of_fixed_cols;
 		int							ixCol_Name;
 		int							ixCol_Machine;
+		std::vector<const char *>   pfvec; // temporary print format vector used while ppSet???Cols functions
+
+		void initStartdNormalPFV(int width);
 
 		struct {
 			AdTypes			adType;

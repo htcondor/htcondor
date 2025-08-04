@@ -6,6 +6,11 @@
   limit, it will be put on hold.
   :jira:`3170`
 
+- Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
+  which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
+  and htchirp.py to work correctly inside a docker universe job.
+  :jira:`3197`
+
 *** 24.12.0 bugs
 
 *** 24.0.12 bugs
@@ -37,6 +42,10 @@
 - Added new "notification = start" option to *condor_submit*, which
   sends an email when the job starts for the first time.
   :jira:`3131`
+
+- When responding to a ping request for the ALLOW authorization level,
+  daemons no longer require authentication.
+  :jira:`3195`
 
 *** 24.0.11 bugs
 

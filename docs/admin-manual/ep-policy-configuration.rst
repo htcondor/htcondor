@@ -3616,6 +3616,14 @@ want additional options passed to the docker container create command. To do
 so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
 append these to the docker container create command.
 
+Docker universe jobs may use the chirp protoocl to read or write files
+and job ad attributes to or from the Access Point.  By default, HTCondor
+assumes that the network named "docker0" can communicate from inside
+the container to the starter outside the container.  If the docker runtime
+is configured to use a different network, the administrator can set
+the configuation know :macro:`DOCKER_NETWORK_NAME` to the appropriate
+network name.
+
 Docker universe jobs may fail to start on certain Linux machines when
 SELinux is enabled. The symptom is a permission denied error when
 reading or executing from the condor scratch directory. To fix this

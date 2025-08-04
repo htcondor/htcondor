@@ -4515,6 +4515,11 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     may request with the ``docker_network_type`` submit file command.
     Advertised into the slot attribute DockerNetworks.
 
+:macro-def:`DOCKER_NETWORK_NAME[STARTD]`
+    A string that defaults to "docker0".  This is the name of the network
+    that a docker universe job can use to talk to the host machine.  This
+    is used by :tool:`condor_chirp`.
+
 :macro-def:`DOCKER_SHM_SIZE[STARTD]`
     An optional knob that can be configured to adapt the ``--shm-size`` Docker
     container create argument. Allowed values are integers in bytes.
