@@ -11,6 +11,10 @@
   and htchirp.py to work correctly inside a docker universe job.
   :jira:`3197`
 
+- Added new :ad-attr:`NumInputTransferStarts` and :ad-attr:`NumOutputTransferStarts`
+  counters to the job record.
+  :jira:`3194`
+
 *** 24.12.0 bugs
 
 *** 24.0.12 bugs

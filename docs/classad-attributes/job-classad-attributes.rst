@@ -1128,8 +1128,17 @@ all attributes.
     that can reconnected: those in the **vanilla** and **java**
     universes.
 
+:classad-attribute-def:`NumInputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the input sandbox. This number will always be between :ad-attr:`NumShadowStarts`
+    and :ad-attr:`NumJobStarts` inclusive.
+
 :classad-attribute-def:`NumJobStarts`
     An integer count of the number of times the job started executing.
+
+:classad-attribute-def:`NumOutputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the output sandbox.
 
 :classad-attribute-def:`NumPids`
     A count of the number of child processes that this job has.
