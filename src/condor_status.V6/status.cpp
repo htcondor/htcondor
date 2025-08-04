@@ -1266,7 +1266,7 @@ main (int argc, char *argv[])
 	}
 
 	if(offlineMode) {
-		const char * constr = "size( OfflineUniverses ) != 0";
+		const char * constr = "size(OfflineUniverses) != 0";
 		if (diagnose) { printf( "Adding constraint [%s]\n", constr ); }
 		query->addANDConstraint(constr);
 
@@ -2343,44 +2343,29 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
 
-int PrettyPrinter::set_status_print_mask_from_stream (
-	const char * streamid,
-	bool is_filename,
+int PrettyPrinter::set_print_mask_from_stream (
+	SimpleInputStream & stream,
 	const char ** pconstraint)
 {
 	PrintMaskMakeSettings pmopt;
 	std::string messages;
 
 	pmopt.headfoot = pmHeadFoot;
+	pmopt.fixed_width_implies_truncate = false;
+	pmopt.generate_printf_from_width = false;
 
-	SimpleInputStream * pstream = NULL;
-	*pconstraint = NULL;
-
-	FILE *file = NULL;
-	if (MATCH == strcmp("-", streamid)) {
-		pstream = new SimpleFileInputStream(stdin, false);
-	} else if (is_filename) {
-		file = safe_fopen_wrapper_follow(streamid, "r");
-		if (file == NULL) {
-			fprintf(stderr, "Can't open select file: %s\n", streamid);
-			return -1;
-		}
-		pstream = new SimpleFileInputStream(file, true);
-	} else {
-		pstream = new StringLiteralInputStream(streamid);
-	}
-	ASSERT(pstream);
+	*pconstraint = nullptr;
 
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
+	AttrListPrintMask * sumymask = nullptr;
 	int err = SetAttrListPrintMaskFromStream(
-					*pstream,
-					&LocalPrintFormatsTable,
-					pm,
-					pmopt,
-					group_by_keys,
-					NULL,
-					messages);
-	delete pstream; pstream = NULL;
+		stream,
+		&LocalPrintFormatsTable,
+		pm,
+		pmopt,
+		group_by_keys,
+		sumymask,
+		messages);
 	if ( ! err) {
 		if (pmopt.aggregate != PR_NO_AGGREGATION) {
 			fprintf(stderr, "print-format aggregation not supported\n");
@@ -2400,6 +2385,35 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
 }
+
+int PrettyPrinter::set_status_print_mask_from_stream (
+	const char * streamid,
+	bool is_filename,
+	const char ** pconstraint)
+{
+	*pconstraint = nullptr;
+	if ( ! is_filename) {
+		StringLiteralInputStream slis(streamid);
+		return set_print_mask_from_stream(slis, pconstraint);
+	}
+
+	FILE *file = NULL;
+	bool close_file = false;
+	if (MATCH == strcmp("-", streamid)) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(streamid, "r");
+		if ( ! file) {
+			fprintf(stderr, "Can't open select file: %s\n", streamid);
+			return -1;
+		}
+		close_file = true;
+	}
+	SimpleFileInputStream sfis(file, close_file);
+	return set_print_mask_from_stream(sfis, pconstraint);
+}
+
 
 static void init_internal_printmask(AttrListPrintMask & prmask, const char * format)
 {

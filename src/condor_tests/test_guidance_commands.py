@@ -220,7 +220,7 @@ class TestGuidanceCommands:
 
         # Did the start actually execute the guidance it was given?
         assert the_starter_log.wait(
-            timeout=1,
+            timeout=10,
             condition=lambda line: the_expected_log_line in line.message,
         )
 
@@ -243,8 +243,11 @@ class TestGuidanceCommands:
                     JobEventType.SUBMIT,
                     JobEventType.FILE_TRANSFER,
                     JobEventType.FILE_TRANSFER,
-                    JobEventType.FILE_TRANSFER,
-                    JobEventType.FILE_TRANSFER,
+                ],
+                the_completed_job.event_log.events
+            )
+            assert event_types_in_order(
+                [
                     JobEventType.REMOTE_ERROR,
                     JobEventType.JOB_EVICTED,
                     JobEventType.JOB_HELD,

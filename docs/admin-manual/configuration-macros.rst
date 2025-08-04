@@ -4515,6 +4515,11 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     may request with the ``docker_network_type`` submit file command.
     Advertised into the slot attribute DockerNetworks.
 
+:macro-def:`DOCKER_NETWORK_NAME[STARTD]`
+    A string that defaults to "docker0".  This is the name of the network
+    that a docker universe job can use to talk to the host machine.  This
+    is used by :tool:`condor_chirp`.
+
 :macro-def:`DOCKER_SHM_SIZE[STARTD]`
     An optional knob that can be configured to adapt the ``--shm-size`` Docker
     container create argument. Allowed values are integers in bytes.
@@ -4621,6 +4626,11 @@ These macros control the *condor_schedd*.
     A boolean value that defaults to true.  When true, local universe
     jobs on Linux are put into their own cgroup, for monitoring and
     cleanup.
+
+:macro-def:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT[SCHEDD]`
+    When the above is true, if this boolean value which defaults to false
+    is true, then local universe jobs need to have a :subcom:`request_memory`
+    and if the local universe job exceeds that, it will be put on hold.
 
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
@@ -11706,14 +11716,6 @@ has.
     in terms of HTCondor ClassAd attributes to be published. All files
     in this directory are read, to define the metrics. The default
     directory ``/etc/condor/ganglia.d/`` is used when not specified.
-
-condor_annex Configuration File Macros
---------------------------------------
-
-:index:`condor_annex configuration variables<single: condor_annex configuration variables; configuration>`
-
-See :doc:`/cloud-computing/annex-configuration` for :tool:`condor_annex`
-configuration file macros.
 
 ``htcondor annex`` Configuration File Macros
 --------------------------------------------

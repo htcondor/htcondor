@@ -2193,13 +2193,18 @@ int Scheduler::make_ad_list(
    return ads.Length();
 }
 
-int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
+int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 	int more = 1;
 	int num_ads = 0;
 
 	if( IsDebugLevel( D_TEST ) ) {
 		pcccDumpTable( D_TEST );
 	}
+
+	classad::ExprTree *constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
+
+	classad::References projection;
+	mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, projection);
 
 	stream->encode();
 
@@ -2218,7 +2223,15 @@ int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
 			continue;
 		}
 
-		if( !stream->code( more ) || !putClassAd( stream, * match->my_match_ad ) ) {
+		if (constraint) {
+			if (!IsAConstraintMatch(&queryAd, match->my_match_ad)) {
+				continue;
+			}
+		}
+
+		classad::References *proj_ptr = (projection.size() > 0) ? &projection : nullptr;
+
+		if( !stream->code( more ) || !putClassAd(stream, *match->my_match_ad, 0 /*options*/, proj_ptr)) {
 			dprintf( D_ALWAYS, "Error sending query result to client, aborting.\n" );
 			return FALSE;
 		}
@@ -2299,30 +2312,54 @@ int Scheduler::command_query_ads(int command, Stream* stream)
 	return TRUE;
 }
 
+static bool IsQueryConstraintMatch(classad::ExprTree * constr, ClassAd * queryAd, ClassAd * ad)
+{
+	bool want_ad = true; // no constraint matches everything 
+	if (constr) {
+		classad::Value result;
+		if ( ! EvalExprToBool(constr, queryAd, ad, result) ||
+			 ! result.IsBooleanValueEquiv(want_ad)) {
+			want_ad = false; // not a valid constraint, so don't match
+		}
+	}
+	return want_ad;
+}
+
 // in support of condor_qusers query.
 //
 int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 {
 	ClassAd queryAd;
 	int num_ads = 0;
-
-	dprintf( D_FULLDEBUG, "In command_query_user_ads\n" );
+	int num_user_ads = 0;
+	int num_project_ads = 0;
 
 	stream->decode();
 	stream->timeout(15);
 	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
-		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		dprintf( D_ALWAYS, "Failed to receive query for QUERY_USERREC_ADS: aborting\n" );
 		return FALSE;
 	}
 
 	ClassAd summaryAd;
 	summaryAd.Assign(ATTR_MY_TYPE, "Summary");
 	summaryAd.Assign("TotalUserAds", OwnersInfo.size());
+	summaryAd.Assign("TotalProjectAds", ProjectInfo.size());
+
+	std::string target;
+	classad::References targets;
+	if (queryAd.LookupString(ATTR_TARGET_TYPE, target)) {
+		add_attrs_from_string_tokens(targets, target.c_str());
+		dprintf( D_FULLDEBUG, "In command_query_user_ads for %s ad types\n", target.c_str());
+	} else {
+		targets.insert(OWNER_ADTYPE);
+		dprintf( D_FULLDEBUG, "In command_query_user_ads\n");
+	}
 
 	int limit = INT_MAX;
 	queryAd.LookupInteger(ATTR_LIMIT_RESULTS, limit);
 
-	bool has_constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
+	classad::ExprTree * constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
 
 	const classad::References * proj=nullptr;
 	classad::References projection;
@@ -2337,17 +2374,63 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 	// Now, find the ClassAds that match.
 	stream->encode();
-	for (const auto &[name, urec] : OwnersInfo) {
-		if (num_ads >= limit) break;
-		if ( ! has_constraint || IsAConstraintMatch(&queryAd, urec)) {
-			ClassAd ad;
-			urec->live.publish(ad,"Num");
-			ad.ChainToAd(urec);
-			if ( !putClassAd(stream, ad, put_opts, proj)) {
-				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
-				return FALSE;
+	if (targets.count(OWNER_ADTYPE)) {
+		int user_limit = limit;
+		queryAd.LookupInteger(OWNER_ADTYPE ATTR_LIMIT_RESULTS, user_limit);
+
+		classad::ExprTree * constr = queryAd.Lookup(OWNER_ADTYPE ATTR_REQUIREMENTS);
+		if ( ! constr) constr = constraint;
+
+		classad::References user_projection;
+		if (queryAd.Lookup(OWNER_ADTYPE ATTR_PROJECTION)) {
+			int has_user_proj = mergeProjectionFromQueryAd(queryAd, OWNER_ADTYPE ATTR_PROJECTION, user_projection);
+			if (has_user_proj > 0) { proj = &user_projection; }
+			else if (has_user_proj == 0) { proj = nullptr; }
+		}
+
+		for (const auto &[name, urec] : OwnersInfo) {
+			if (num_ads >= limit || num_user_ads >= user_limit) break;
+			if (IsQueryConstraintMatch(constr, &queryAd, urec)) {
+				ClassAd ad;
+				urec->live.publish(ad,"Num");
+				ad.ChainToAd(urec);
+				if ( !putClassAd(stream, ad, put_opts, proj)) {
+					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
+					return FALSE;
+				}
+				num_ads++;
+				num_user_ads++;
 			}
-			num_ads++;
+		}
+	}
+
+	if (targets.count(PROJECT_ADTYPE)) {
+		int proj_limit = limit;
+		queryAd.LookupInteger(PROJECT_ADTYPE ATTR_LIMIT_RESULTS, proj_limit);
+
+		classad::ExprTree * constr = queryAd.Lookup(PROJECT_ADTYPE ATTR_REQUIREMENTS);
+		if ( ! constr) constr = constraint;
+
+		classad::References proj_projection;
+		if (queryAd.Lookup(PROJECT_ADTYPE ATTR_PROJECTION)) {
+			int has_proj_proj = mergeProjectionFromQueryAd(queryAd, PROJECT_ADTYPE ATTR_PROJECTION, proj_projection);
+			if (has_proj_proj > 0) { proj = &proj_projection; }
+			else if (has_proj_proj == 0) { proj = nullptr; }
+		}
+
+		for (const auto &[name, pjad] : ProjectInfo) {
+			if (num_ads >= limit || num_project_ads >= proj_limit) break;
+			if (IsQueryConstraintMatch(constr, &queryAd, pjad)) {
+				ClassAd ad;
+				pjad->live.publish(ad,"Num");
+				ad.ChainToAd(pjad);
+				if ( !putClassAd(stream, ad, put_opts, proj)) {
+					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
+					return FALSE;
+				}
+				num_ads++;
+				num_project_ads++;
+			}
 		}
 	}
 
@@ -2360,47 +2443,131 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	return TRUE;
 }
 
+// common USERREC_ENABLE handler for UserRec and ProjectRec for the case when
+// enabling and not creating
+//
+static int handle_enable_userrec_cmd (
+	JobQueueUserRec * urec,
+	const ClassAd & cmdAd,
+	TransactionWatcher & txn,
+	CondorError & /*errstack*/,
+	struct UpdateUserRecAttributesInfo & updatesInfo)
+{
+	const bool is_project = urec->IsProject();
+	int userrec_id = urec->jid.proc;
+	bool enable = urec->IsEnabled();
+	bool do_update = false;
+	if (cmdAd.LookupBool(ATTR_USERREC_OPT_UPDATE, do_update) && do_update) {
+		bool has_enable = cmdAd.LookupBool(ATTR_ENABLED, enable);
+		txn.BeginOrContinue(userrec_id);
+		UpdateUserRecAttributes(urec->jid, is_project, cmdAd, enable, updatesInfo);
+		// if the update is setting enabled to false, make sure that DisableReason is also set to a string
+		if (has_enable && ! enable) {
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0); // update will have filtered this
+			std::string reason;
+			if ( ! cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, "by update command");
+			}
+		}
+	} else {
+		// if opt_update is not set, and the record exists, then we want to enable it
+		// unless the command ad says to disable it, in which case we leave it alone
+		enable = true;
+		cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enable);
+	}
+	if (enable && ! urec->IsEnabled()) {
+		txn.BeginOrContinue(userrec_id);
+		SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
+		DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
+	}
+
+	return 0;
+}
+
+
+int Scheduler::act_on_project(
+	int cmd,
+	const std::string & project_name,
+	const ClassAd& cmdAd,
+	TransactionWatcher & txn,
+	CondorError & errstack,
+	struct UpdateUserRecAttributesInfo & updatesInfo)
+{
+	int rval = 0;
+	const bool is_project{true};
+
+	JobQueueProjectRec * pjad = find_projectinfo(project_name.c_str());
+
+	switch (cmd) {
+	case ENABLE_USERREC:
+		if (pjad) { // enable, not add
+			// The JobQueueProjectRec is derived from JobQueueUserRec, and it shares the code for
+			// enabling and disabling with the base, it is valid here to use SetUserAttribute, etc.
+			rval = handle_enable_userrec_cmd(pjad, cmdAd, txn, errstack, updatesInfo);
+		} else { // project does not exist,  we must add
+			bool add_if_not = false;
+			if (cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE_PROJECT, add_if_not) && add_if_not) {
+				int userrec_id = scheduler.nextUnusedUserRecId();
+				txn.BeginOrContinue(userrec_id);
+				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, true);
+			} else {
+				rval = SC_ERR_NOT_FOUND;
+			}
+		}
+		break;
+	case EDIT_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			rval = UpdateUserRecAttributes(pjad->jid, is_project, cmdAd, pjad->IsEnabled(), updatesInfo);
+		} else { // user does not exist, cannot be edited
+			rval = SC_ERR_NOT_FOUND;
+		}
+		break;
+	case DELETE_USERREC:
+		if (pjad) { // delete
+			bool in_use = any_userrec_refs(pjad);
+
+			txn.BeginOrContinue(pjad->jid.proc);
+			if (in_use) {
+				// TODO: pending delete attribute?
+				// SetUserAttributeInt(*pjad, ATTR_ENABLED, 0);
+				rval = SC_ERR_OBJECT_IN_USE;
+				errstack.pushf("SCHEDD", SC_ERR_OBJECT_IN_USE, "Project %s is in use\n", pjad->Name());
+			} else {
+				// UserRecDestroy works on project ads as well as User ads
+				UserRecDestroy(pjad->jid.proc);
+			}
+		} else {
+			rval = SC_ERR_NOT_FOUND;
+		}
+		break;
+
+	default:
+		rval = SC_ERR_NOT_IMPLEMENTED; // not implemented
+		break;
+	}
+
+	return rval;
+}
+
+
 int Scheduler::act_on_user(
 	int cmd,
 	const std::string & username,
 	const ClassAd& cmdAd,
 	TransactionWatcher & txn,
-	CondorError & /*errstack*/,
-	struct UpdateUserAttributesInfo & updatesInfo)
+	CondorError & errstack,
+	struct UpdateUserRecAttributesInfo & updatesInfo)
 {
 	int rval = 0;
+	const bool is_user{false}; // the converse of is_project=true
 
 	OwnerInfo * urec = find_ownerinfo(username.c_str());
 
 	switch (cmd) {
 	case ENABLE_USERREC:
 		if (urec) { // enable, not add
-			int userrec_id = urec->jid.proc;
-			bool enable = urec->IsEnabled();
-			bool do_update = false;
-			if (cmdAd.LookupBool(ATTR_USERREC_OPT_UPDATE, do_update) && do_update) {
-				bool has_enable = cmdAd.LookupBool(ATTR_ENABLED, enable);
-				txn.BeginOrContinue(userrec_id);
-				UpdateUserAttributes(urec->jid, cmdAd, enable, updatesInfo);
-				// if the update is setting enabled to false, make sure that DisableReason is also set to a string
-				if (has_enable && ! enable) {
-					SetUserAttributeInt(*urec, ATTR_ENABLED, 0); // update will have filtered this
-					std::string reason;
-					if ( ! cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
-						SetUserAttributeString(*urec, ATTR_DISABLE_REASON, "by update command");
-					}
-				}
-			} else {
-				// if opt_update is not set, and the record exists, then we want to enable it
-				// unless the command ad says to disable it, in which case we leave it alone
-				enable = true;
-				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enable);
-			}
-			if (enable && ! urec->IsEnabled()) {
-				txn.BeginOrContinue(userrec_id);
-				SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
-				DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
-			}
+			rval = handle_enable_userrec_cmd(urec, cmdAd, txn, errstack, updatesInfo);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if ((cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE, add_if_not) ||
@@ -2409,9 +2576,9 @@ int Scheduler::act_on_user(
 				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enabled);
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
-				UserRecCreate(userrec_id, username.c_str(), cmdAd, getUserRecDefaultsAd(), enabled);
+				UserRecCreate(userrec_id, is_user, username.c_str(), cmdAd, enabled);
 			} else {
-				rval = 2;
+				rval = SC_ERR_NOT_FOUND;
 			}
 		}
 		break;
@@ -2426,15 +2593,15 @@ int Scheduler::act_on_user(
 				// TODO set default reason string
 			}
 		} else { // user does not exist, cannot be disabled
-			rval = 2;
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 	case EDIT_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			UpdateUserAttributes(urec->jid, cmdAd, urec->IsEnabled(), updatesInfo);
+			UpdateUserRecAttributes(urec->jid, is_user, cmdAd, urec->IsEnabled(), updatesInfo);
 		} else { // user does not exist, cannot be edited
-			rval = 2;
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 	case RESET_USERREC:
@@ -2442,21 +2609,31 @@ int Scheduler::act_on_user(
 			txn.BeginOrContinue(urec->jid.proc);
 			// TODO: this should be a DeleteSecureAttribute
 			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
+		} else {
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 	case DELETE_USERREC:
-		if (urec) { // disable
+		if (urec) { // delete
+			// if the urec Hits count is 0, we do a double check.
+			// scan the job queue looking for cluster ads or jobset ads that use
+			// the given userrec,  if there are none, then we can delete it
+			// otherwise just disable it.
+			bool in_use = any_userrec_refs(urec);
+
 			txn.BeginOrContinue(urec->jid.proc);
-			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
-			// TODO: check if unused so we can just delete it now...
-			// UserRecDestroy(urec->jid.proc);
+			if (in_use) {
+				SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
+			} else {
+				UserRecDestroy(urec->jid.proc);
+			}
 		} else {
-			// nothing to do.
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 
 	default:
-		rval = 42; // not implemented
+		rval = SC_ERR_NOT_IMPLEMENTED; // not implemented
 		break;
 	}
 
@@ -2464,13 +2641,14 @@ int Scheduler::act_on_user(
 }
 
 // in support of condor_qusers add|edit|enble|disable|reset|delete
+// for both UserRec and ProjectRec ads
 //
 int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmdAd;
 	int num_users = 0;
-	struct UpdateUserAttributesInfo updatesInfo;
+	struct UpdateUserRecAttributesInfo updatesInfo;
 
 	dprintf( D_FULLDEBUG, "In command_act_on_user_ads\n" );
 
@@ -2482,7 +2660,8 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		return FALSE;
 	}
 
-	std::vector<ClassAd> acts;
+	std::vector<ClassAd> acts; 
+	if (num_users > 1) { acts.reserve(num_users); }
 	for (int ii = 0; ii < num_users; ++ii) {
 		ClassAd & ad = acts.emplace_back();
 		if( !getClassAd(stream, ad)) {
@@ -2515,33 +2694,70 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 	int rval = 0;
 	int num_ads = 0;
 	TransactionWatcher txn;
-	std::string username;
+	std::string name;
 	CondorError errstack;
 
 	for (auto & act : acts) {
+		bool is_project = false;
+		std::string target; // default target to owner
+		if (act.LookupString(ATTR_TARGET_TYPE, target)) {
+			act.Delete(ATTR_TARGET_TYPE); // don't pass the target type along in case this is an edit
+			is_project = YourStringNoCase(PROJECT_ADTYPE) == target;
+			if ( ! is_project && YourStringNoCase(OWNER_ADTYPE) != target) {
+				rval = SC_ERR_NOT_IMPLEMENTED; // not implemented
+				break;
+			}
+		} else if (cmd == ENABLE_USERREC && act.Lookup(ATTR_USERREC_OPT_CREATE_PROJECT)) {
+			is_project = true;
+		}
+
 		if (act.Lookup(ATTR_REQUIREMENTS)) {
-			for (const auto& it : OwnersInfo) {
-				if (IsAConstraintMatch(&act, it.second)) {
-					rval = act_on_user(cmd, it.first, act, txn, errstack, updatesInfo);
-					if (rval) break;
-					++num_ads;
+			if (is_project) {
+				for (const auto&[name,pjad] : ProjectInfo) {
+					if (IsAConstraintMatch(&act, pjad)) {
+						rval = act_on_project(cmd, name, act, txn, errstack, updatesInfo);
+						if (0 == rval) ++num_ads;
+						if (SC_ERR_OBJECT_IN_USE == rval && cmd == DELETE_USERREC) rval = 0;
+						if (rval) break;
+					}
+				}
+			} else {
+				for (const auto&[name,urec] : OwnersInfo) {
+					if (IsAConstraintMatch(&act, urec)) {
+						rval = act_on_user(cmd, name, act, txn, errstack, updatesInfo);
+						if (rval) break;
+						++num_ads;
+					}
 				}
 			}
 			if (rval) break;
-		} else if (act.LookupString(ATTR_USER, username) && ! username.empty()) {
-			rval = act_on_user(cmd, username, act, txn, errstack, updatesInfo);
+
+		} else if ( ! is_project && act.LookupString(ATTR_USER, name) && ! name.empty()) {
+			rval = act_on_user(cmd, name, act, txn, errstack, updatesInfo);
 			if (rval) break;
 			++num_ads;
-		} else if (act.Lookup(ATTR_USERREC_OPT_ME)) {
-			username = rsock->getFullyQualifiedUser();
-			rval = act_on_user(cmd, username, act, txn, errstack, updatesInfo);
+		} else if ( ! is_project && act.Lookup(ATTR_USERREC_OPT_ME)) {
+			name = rsock->getFullyQualifiedUser();
+			rval = act_on_user(cmd, name, act, txn, errstack, updatesInfo);
 			if (rval) break;
 			++num_ads;
+		} else if (is_project && act.LookupString(ATTR_NAME, name) && ! name.empty()) {
+			rval = act_on_project(cmd, name, act, txn, errstack, updatesInfo);
+			if (rval == 0) ++num_ads;
+			if (rval == SC_ERR_NOT_FOUND) rval = 0;
+			if (SC_ERR_OBJECT_IN_USE == rval && cmd == DELETE_USERREC) rval = 0; // don't break
+			if (rval) break;
 		} else {
 			rval = 1;
-			errstack.push("SCHEDD", rval, "Dont know what user to act on.");
+			errstack.push("SCHEDD", rval, is_project ? "Dont know what project to act on." : "Dont know what user to act on.");
 			break;
 		}
+	}
+
+	// use the errstack error code if we would otherwise be
+	// returning success but we processed no ads
+	if ( ! rval && ! num_ads && errstack.code()) {
+		rval = errstack.code();
 	}
 
 	// commit or abort any pending transactions.
@@ -3890,6 +4106,59 @@ Scheduler::insert_submitter(const char * name)
 	return Subdat;
 }
 
+// check ref count of JobQueueUserRec then do a brute force search
+// for any structures that are holding the given JobQueueUserRec ptr
+// Note that JobQueueProjectRec derives from JobQueueUserRec so this function can also
+// be used to check refs for Project records.
+// returns true if there are any refs to the pointer
+bool Scheduler::any_userrec_refs(JobQueueUserRec * urec)
+{
+	if ( ! urec) return false;
+
+	struct _urec_refs { JobQueueUserRec* ptr; bool in_use; } refs = {urec, urec->num.Hits > 0};
+
+	if ( ! refs.in_use) {
+
+		schedd_runtime_probe runtime;
+		WalkJobQueueEntries(
+			(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS | WJQ_WITH_NO_JOBS),
+			[](JobQueuePayload bad, const JOB_ID_KEY & /*jid*/, void * pv) -> int {
+				auto & refs = *(struct _urec_refs*)pv;
+				if (bad->IsCluster()) {
+					JobQueueCluster * cad = dynamic_cast<JobQueueCluster*>(bad);
+					if (cad->ownerinfo == refs.ptr || cad->project == refs.ptr) {
+						refs.in_use = true;
+						return -1; // stop scanning
+					}
+				} else if (bad->IsJobSet()) {
+					JobQueueJobSet * jsad = dynamic_cast<JobQueueJobSet*>(bad);
+					if (jsad->ownerinfo == refs.ptr) {
+						refs.in_use = true;
+						return -1; // stop scanning
+					}
+				}
+				return 0;
+			},
+			&refs,
+			runtime);
+	}
+
+	if ( ! refs.in_use) {
+		GridJobOwners.startIterations();
+		GridUserIdentity userident;
+		GridJobCounts gridcounts;
+		while( GridJobOwners.iterate(userident, gridcounts) ) {
+			if (userident.ownerinfo() == urec) {
+				refs.in_use = true;
+				break;
+			}
+		}
+	}
+
+	return refs.in_use;
+}
+
+
 OwnerInfo *
 Scheduler::find_ownerinfo(const char * owner)
 {
@@ -4033,7 +4302,10 @@ void Scheduler::mapPendingOwners()
 		uad->flags |= JQU_F_DIRTY; // set dirty to force populate
 		uad->PopulateFromAd();
 		if (uad->IsProject()) {
-			ProjectInfo[uad->Name()] = dynamic_cast<JobQueueProjectRec*>(uad);
+			auto * pjad = dynamic_cast<JobQueueProjectRec*>(uad);
+			if (pjad && scheduler.HasPersistentProjectInfo()) {
+				ProjectInfo[uad->Name()] = pjad;
+			}
 		} else {
 			uad->setStaleConfigSuper(); // force a superuser check next time we need to know
 			OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
@@ -10480,23 +10752,25 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	FamilyInfo fi;
 	FamilyInfo *fip = NULL;
 
+#ifdef LINUX
+	std::string cgroup; // outside the block to keep string alive
+#endif
 	if (IsLocalUniverse(srec)) {
 		fip = &fi;
 		fi.max_snapshot_interval = 15;
 #ifdef LINUX
-	std::string cgroup;
-	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
-		// We put each local universe starter into it's own cgroup named by
-		// the job id, assuming that is unique under each schedd.
+		if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+			// We put each local universe starter into it's own cgroup named by
+			// the job id, assuming that is unique under each schedd.
 
-		std::string cgroup_name = "STARTER_for_local_";
-		cgroup_name += std::to_string(job_id->cluster);
-		cgroup_name += '_';
-		cgroup_name += std::to_string(job_id->proc);
+			std::string cgroup_name = "STARTER_for_local_";
+			cgroup_name += std::to_string(job_id->cluster);
+			cgroup_name += '_';
+			cgroup_name += std::to_string(job_id->proc);
 
-		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
-		fi.cgroup = cgroup.c_str();
-	}
+			cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_name);
+			fi.cgroup = cgroup.c_str();
+		}
 #endif
 	}
 	
@@ -10843,7 +11117,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	fi.max_snapshot_interval = 15;
 
 #ifdef LINUX
-	std::string cgroup;
+	std::string cgroup; // outside the block to keep string alive
 	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
 		// We put each scheduler universe job into it's own cgroup named by
 		// the job id, assuming that is unique under each schedd.
@@ -13707,6 +13981,17 @@ Scheduler::Init()
 	}
 	// TODO: add SCHEDD_USER_CREATION_TRANSFORM ?
 
+	m_projectRecDefaultsAd.Clear();
+	user_def_props.set(param("SCHEDD_PROJECTREC_DEFAULT_PROPERTIES"));
+	if (user_def_props) {
+		if ( ! initAdFromString(user_def_props, m_projectRecDefaultsAd)) {
+			dprintf(D_ERROR, "Warning: SCHEDD_PROJECTREC_DEFAULT_PROPERTIES value has errors.\n");
+		}
+		UserRecFixupDefaultsAd(m_projectRecDefaultsAd);
+		user_def_props.clear();
+	}
+
+
 	m_extendedSubmitCommands.Clear();
 	auto_free_ptr extended_cmds(param("EXTENDED_SUBMIT_COMMANDS"));
 	if (extended_cmds) {
@@ -15804,7 +16089,10 @@ Scheduler::publish( ClassAd *cad ) {
 	
 	cad->Assign( ATTR_DISK, sysapi_disk_space(this->LocalUnivExecuteDir) );
 
-	cad->Assign( ATTR_CPUS, 1 );
+	int cpus = 1;
+	int hyperthreads = 1;
+	sysapi_ncpus(&cpus, &hyperthreads);
+	cad->Assign( ATTR_CPUS, std::max(cpus, hyperthreads));
 
 		// -------------------------------------------------------
 		// Local Universe Attributes

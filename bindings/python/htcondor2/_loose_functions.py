@@ -1,4 +1,5 @@
 from typing import Optional
+from typing import Union
 
 from ._common_imports import (
     classad,
@@ -10,6 +11,7 @@ from ._daemon_command import DaemonCommand
 
 from .htcondor2_impl import (
     _send_command,
+    _ping,
     _send_alive,
     _set_ready_state,
     HTCondorException,
@@ -121,3 +123,28 @@ def set_ready_state(state : str = "Ready") -> None:
         raise HTCondorException('CONDOR_INHERIT environment variable malformed.')
 
     _set_ready_state(state, addr)
+
+
+def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -> classad.ClassAd:
+    """
+    Send a ping command to an HTCondor daemon.
+
+    :param location: A string specifying the daemon's ``sinful`` address
+                     or a :class:`classad2.ClassAd` describing the daemon
+                     as returned by :meth:`Collector.locate`.
+    :param str authz: Authorization level or command to test.
+    """
+
+    addr = None
+    if isinstance(location, str):
+        addr = location
+    else:
+        addr = location.get("MyAddress")
+    if addr is None:
+        # This was HTCondorValueError in version 1.
+        raise ValueError('Address not available in location argument.')
+
+    if authz is None:
+        authz = "DC_NOP"
+
+    return _ping(addr, authz)

@@ -504,9 +504,16 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 
 	sec_req sec_negotiation = sec_req_param ("SEC_%s_NEGOTIATION", auth_level, SEC_REQ_PREFERRED);
 
+	// The ALLOW authorization level shouldn't require authentication,
+	// but we'll allow a specific command handler or the client to force it.
+	if (auth_level == ALLOW_PERM && !force_authentication) {
+		sec_authentication_new = SEC_REQ_OPTIONAL;
+	}
+
 	if( raw_protocol ) {
 		sec_negotiation = SEC_REQ_NEVER;
 		sec_authentication = SEC_REQ_NEVER;
+		sec_authentication_new = SEC_REQ_NEVER;
 		sec_encryption = SEC_REQ_NEVER;
 		sec_integrity = SEC_REQ_NEVER;
 	}
@@ -542,19 +549,15 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 		// in order for the client & server to determine if they can be used.
 		UpdateAuthenticationMetadata(*ad);
 	} else {
-		if( sec_authentication == SEC_REQ_REQUIRED ) {
+		if( sec_authentication_new == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
-					 "but a feature was required! failing...\n" );
+					 "but auth was required! failing...\n" );
 			return false;
 		} else {
-			// disable auth, which disables crypto and integrity.
-			// if any of these were required, auth would be required
-			// too after calling ReconcileSecurityDependency.
+			// disable auth, since we have no methods
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
-			 	"disabling authentication, crypto, and integrity.\n" );
-			sec_authentication = SEC_REQ_NEVER;
-			sec_encryption = SEC_REQ_NEVER;
-			sec_integrity = SEC_REQ_NEVER;
+				"disabling authentication.\n" );
+			sec_authentication_new = SEC_REQ_NEVER;
 		}
 	}
 
@@ -725,12 +728,18 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	sec_req cli_req;
 	sec_req srv_req;
 
+	// If the client only has the alternate attribute, then the server should
+	// prefer using the alternate attribute.
+	// This ensures that when talking with an old client, the server won't
+	// insist on enabling encryption/integrity without authentication.
+	// 9.0 clients can't handle that.
+	bool use_alt = false;
 
 	// get the attribute from each
 	if (!cli_ad.LookupString(attr, cli_buf) && attr_alt) {
-		cli_ad.LookupString(attr_alt, cli_buf);
+		use_alt = cli_ad.LookupString(attr_alt, cli_buf);
 	}
-	if (!srv_ad.LookupString(attr, srv_buf) && attr_alt) {
+	if ((!srv_ad.LookupString(attr, srv_buf) || use_alt) && attr_alt) {
 		srv_ad.LookupString(attr_alt, srv_buf);
 	}
 
