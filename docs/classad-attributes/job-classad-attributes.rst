@@ -1130,7 +1130,9 @@ all attributes.
 
 :classad-attribute-def:`NumInputTransferStarts`
     An integer count of the number of times the job began transferring
-    the input sandbox.
+    the input sandbox. This number will be greater than or equal to
+    :ad-attr:`NumJobStarts` depending on whether the transfer fails or
+    not.
 
 :classad-attribute-def:`NumJobStarts`
     An integer count of the number of times the job started executing.
