@@ -300,6 +300,8 @@ public:
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
+	void setOCU( bool ocu ) { c_ocu = ocu; }
+
 	bool waitingForActivation() const;
 	void invalidateID();
 
@@ -362,6 +364,7 @@ private:
 	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
 	bool        c_schedd_reported_job_done;
+	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage

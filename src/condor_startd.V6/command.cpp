@@ -1518,6 +1518,12 @@ accept_request_claim(
 	}
 	claim->rip()->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 
+	{
+		bool ocu_holder = false;
+		claim->ad()->LookupBool(ATTR_OCU_HOLDER, ocu_holder);
+		claim->setOCU(ocu_holder);
+	}
+
 	// if an array of d-slots were passed, we want to change them to claimed state also.
 	// The claim passed above may or may not be attached to the first d-slot here
 	// It will have a bunch of info from the request ad stuffed into it.  the claims
