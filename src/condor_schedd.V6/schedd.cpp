@@ -16044,7 +16044,10 @@ Scheduler::publish( ClassAd *cad ) {
 	
 	cad->Assign( ATTR_DISK, sysapi_disk_space(this->LocalUnivExecuteDir) );
 
-	cad->Assign( ATTR_CPUS, 1 );
+	int cpus = 1;
+	int hyperthreads = 1;
+	sysapi_ncpus(&cpus, &hyperthreads);
+	cad->Assign( ATTR_CPUS, std::max(cpus, hyperthreads));
 
 		// -------------------------------------------------------
 		// Local Universe Attributes

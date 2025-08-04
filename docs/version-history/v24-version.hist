@@ -1,5 +1,11 @@
 *** 24.12.0 features
 
+- Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
+  defaults to false.  When true, and running on a cgroup enable system, local
+  universe jobs must specify :subcom:`request_memory`, and the job exceeds that
+  limit, it will be put on hold.
+  :jira:`3170`
+
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
   and htchirp.py to work correctly inside a docker universe job.
