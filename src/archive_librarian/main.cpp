@@ -1,12 +1,13 @@
 // main.cpp
 // Alpha Driver for the Librarian service: reads config, updates database, and provides interactive query shell.
 
-
 #include "librarian.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
+#include <string>
 
 std::unordered_map<std::string, std::string> parseConfigFile(const std::string& filename) {
     std::unordered_map<std::string, std::string> configMap;
@@ -30,6 +31,78 @@ std::unordered_map<std::string, std::string> parseConfigFile(const std::string& 
     return configMap;
 }
 
+// Helper function to split command into argc/argv format
+std::vector<std::string> parseCommand(const std::string& command) {
+    std::vector<std::string> tokens;
+    std::istringstream iss(command);
+    std::string token;
+    
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    
+    return tokens;
+}
+
+void runUpdateProcess(Librarian& librarian) {
+    std::cout << "Starting database update..." << std::endl;
+    bool librarianUpdated = librarian.update();
+
+    if (librarianUpdated) {
+        std::cout << "Database update completed successfully." << std::endl;
+    } else {
+        std::cerr << "Database update failed." << std::endl;
+    }
+}
+
+void runQueryProcess(Librarian& librarian) {
+    while (true) {
+        std::string response;
+        std::cout << "\nWould you like to run a query? (y/n): ";
+        std::getline(std::cin, response);
+
+        if (response != "y" && response != "Y") break;
+
+        std::cout << "\nEnter myHistoryList command (e.g., '-user snayar2 -clusterId 23 -usage'):\n";
+        std::cout << "Command: ";
+        
+        std::string command;
+        std::getline(std::cin, command);
+        
+        // Parse the command string into argc/argv format
+        auto tokens = parseCommand("myHistoryList " + command); // Add program name
+        
+        // Convert to char* array - create a persistent copy of the strings
+        std::vector<std::unique_ptr<char[]>> argStorage;
+        std::vector<char*> argv;
+        
+        for (const auto& token : tokens) {
+            // Allocate memory and copy the string
+            auto storage = std::make_unique<char[]>(token.length() + 1);
+            std::strcpy(storage.get(), token.c_str());
+            argv.push_back(storage.get());
+            argStorage.push_back(std::move(storage));
+        }
+        argv.push_back(nullptr);
+
+        int argc = static_cast<int>(tokens.size());
+        
+        // Call the query system - argStorage keeps the strings alive
+        std::cout << "\n--- Query Results ---\n";
+        int result = librarian.query(argc, argv.data());
+        
+        if (result != 0) {
+            std::cout << "Query failed with exit code: " << result << "\n";
+        }
+        std::cout << "--- End Results -----\n";
+        
+        // tokens goes out of scope here, which is fine because we're done with argv
+    }
+    
+    std::cout << "Exiting query interface.\n";
+}
+
+
 int main() {
     // Load and parse librarian_config.txt
     auto config = parseConfigFile("librarian_config.txt");
@@ -37,78 +110,41 @@ int main() {
     std::string epochHistoryPath = config["epoch_history_path"];
     std::string historyPath = config["history_path"];
     std::string dbPath = config["db_path"];
-    std::string schemaPath = config["schema_path"];
-    std::string gcQueryPath = config["gcQuery_path"];
     size_t jobCacheSize = 10000; // still hardcoded
-    double dbSizeLimit = 2.0 * 1024 * 1024 * 1024; ; // 2 GB
+    double dbSizeLimit = 2.0 * 1024 * 1024 * 1024; // 2 GB
     
-
-    Librarian librarian(schemaPath, dbPath, historyPath, epochHistoryPath, gcQueryPath, jobCacheSize, dbSizeLimit);
+    // Updated constructor call - removed schemaPath and gcQueryPath
+    Librarian librarian(dbPath, historyPath, epochHistoryPath, jobCacheSize, dbSizeLimit);
 
     if (!librarian.initialize()) {
         std::cerr << "Failed to initialize Librarian." << std::endl;
         return 1;
     }
 
-    bool librarianUpdated = librarian.update();
-
-    // After librarian.update()
-    if (librarianUpdated) {
-        while (true) {
-            std::string response;
-            std::cout << "\nWould you like to run a query? (y/n): ";
-            std::getline(std::cin, response);
-
-            if (response != "y" && response != "Y") break;
-
-            std::cout << "\nQuery Options:\n";
-            std::cout << "  1. List my jobs\n";
-            std::cout << "  2. List all users and how many jobs they've run\n";
-            std::cout << "Enter choice (1/2): ";
-            std::getline(std::cin, response);
-
-            if (response == "1") {
-                std::string username;
-                std::cout << "Enter user name: ";
-                std::getline(std::cin, username);
-
-                auto jobs = librarian.getDBHandler().getJobsForUser(username);
-
-                if (jobs.empty()) {
-                    std::cout << "No jobs found for user '" << username << "'.\n";
-                } else {
-                    std::cout << "\nJobs for user '" << username << "':\n";
-                    for (const auto& [clusterId, procId, timeCreated] : jobs) {
-                        std::cout << "  ClusterId: " << clusterId
-                                << ", ProcId: " << procId
-                                << ", Created: " << timeCreated << "\n";
-                    }
-                }
-            }
-
-            else if (response == "2") {
-                auto userJobCounts = librarian.getDBHandler().getJobCountsPerUser();
-
-                if (userJobCounts.empty()) {
-                    std::cout << "No user job data found.\n";
-                } else {
-                    std::cout << "\nUser Job Counts:\n";
-                    for (const auto& [username, count] : userJobCounts) {
-                        std::cout << "  " << username << ": " << count << " jobs\n";
-                    }
-                }
-            }
-
-            else {
-                std::cout << "Invalid choice. Please enter 1 or 2.\n";
-            }
+    // Main menu loop
+    while (true) {
+        std::cout << "\n=== Librarian Main Menu ===" << std::endl;
+        std::cout << "1) Update database" << std::endl;
+        std::cout << "2) Query database" << std::endl;
+        std::cout << "3) Exit" << std::endl;
+        std::cout << "Choose an option (1-3): ";
+        
+        std::string choice;
+        std::getline(std::cin, choice);
+        
+        if (choice == "1") {
+            runUpdateProcess(librarian);
         }
-
-        std::cout << "Exiting query interface.\n";
-
-    } else {
-        std::cerr << "Librarian update failed." << std::endl;
-        return 1;
+        else if (choice == "2") {
+            runQueryProcess(librarian);
+        }
+        else if (choice == "3") {
+            std::cout << "Goodbye!" << std::endl;
+            break;
+        }
+        else {
+            std::cout << "Invalid choice. Please enter 1, 2, or 3." << std::endl;
+        }
     }
 
     return 0;

@@ -55,8 +55,8 @@ DBHandler::DBHandler(const std::string& schemaSQL, const std::string& dbPath, si
         throw std::runtime_error("Failed to initialize schema");
     }
 
-    const char* jobInsertSQL = "SELECT JobId, JobListId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
-    if (sqlite3_prepare_v2(db_, jobInsertSQL, -1, &jobIdLookupStmt_, nullptr) != SQLITE_OK) {
+    const char* jobLookupSQL = "SELECT JobId, JobListId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
+    if (sqlite3_prepare_v2(db_, jobLookupSQL, -1, &jobIdLookupStmt_, nullptr) != SQLITE_OK) {
         printf ("[ERROR] Failed to prepare jobIdLookupStmt_: %s \n ", sqlite3_errmsg(db_));
         jobIdLookupStmt_ = nullptr;
     }
@@ -91,7 +91,7 @@ DBHandler::DBHandler(const std::string& schemaSQL, const std::string& dbPath, si
         jobInsertStmt_ = nullptr;
     }
 
-    const char* jobLookupSQL = "SELECT JobId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
+    const char* jobSelectSQL = "SELECT JobId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
     if (sqlite3_prepare_v2(db_, jobLookupSQL, -1, &jobSelectStmt_, nullptr) != SQLITE_OK) {
         printf("[ERROR] Failed to prepare jobSelectStmt: %s\n", sqlite3_errmsg(db_));
         jobSelectStmt_ = nullptr;
@@ -146,44 +146,14 @@ DBHandler::~DBHandler() {
     }
 }
 
-
 bool DBHandler::initializeFromSchema(const std::string& schemaSQL) {
     char* errMsg = nullptr;
     int rc;
-    
-    // Enable WAL mode first (Write Ahead Logging)
-    // Allows multiple readers during a write (no database lock)
-    rc = sqlite3_exec(db_, "PRAGMA journal_mode = WAL;", nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to enable WAL mode: %s\n", errMsg);
-        sqlite3_free(errMsg);
-        return false;
-    }
-    
-    // Set synchronous to NORMAL for better performance in WAL mode
-    // Means that SQl waits for the OS to receive the data but doesn't wait for 
-    // physical desk write (waiting for the OS to confirm is the default)
-    rc = sqlite3_exec(db_, "PRAGMA synchronous = NORMAL;", nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to set synchronous mode: %s\n", errMsg);
-        sqlite3_free(errMsg);
-        return false;
-    }
     
     // Enable foreign key constraints
     rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         printf("[ERROR] Failed to enable foreign keys: %s\n", errMsg);
-        sqlite3_free(errMsg);
-        return false;
-    }
-    
-    // Set WAL checkpoint interval
-    // Every 100 pages (~4MB), the .wal file will be merged back with the database
-    // Makes writes much faster while trying to avoid .wal file growing too large
-    rc = sqlite3_exec(db_, "PRAGMA wal_autocheckpoint = 1000;", nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to set WAL checkpoint interval: %s\n", errMsg);
         sqlite3_free(errMsg);
         return false;
     }
@@ -230,7 +200,6 @@ bool DBHandler::initializeFromSchema(const std::string& schemaSQL) {
         return false;
     }
 
-    printf("[INFO] Database schema initialized successfully with WAL mode\n");
     return true;
 }
 
@@ -364,33 +333,57 @@ int getOrInsertIdPrepared(
 ) {
     int id = -1;
 
+    // STEP 1: Try SELECT first
+    bindSelect(selectStmt);
+    int rc = sqlite3_step(selectStmt);
+    if (rc == SQLITE_ROW) {
+        // Found existing record
+        id = extractId(selectStmt);
+        sqlite3_reset(selectStmt);
+        sqlite3_clear_bindings(selectStmt);
+        return id;
+    } else if (rc != SQLITE_DONE) {
+        // SELECT failed for some reason other than "no rows found"
+        fprintf(stderr, "[ERROR] Select failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(selectStmt)));
+        sqlite3_reset(selectStmt);
+        sqlite3_clear_bindings(selectStmt);
+        return -1;
+    }
+    
+    // Clean up SELECT statement
+    sqlite3_reset(selectStmt);
+    sqlite3_clear_bindings(selectStmt);
+
+    // STEP 2: Record doesn't exist, try INSERT
     bindInsert(insertStmt);
-    int rc = sqlite3_step(insertStmt);
+    rc = sqlite3_step(insertStmt);
 
     if (rc == SQLITE_DONE) {
         // Insert succeeded
         id = static_cast<int>(sqlite3_last_insert_rowid(sqlite3_db_handle(insertStmt)));
-    } else if (rc != SQLITE_CONSTRAINT) {
-        // Duplication errors are possible, so make sure this isn't that
-        // Something else unexpected happened
-        fprintf(stderr, "[ERROR] Insert failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(insertStmt)));
-    }
-
-    sqlite3_reset(insertStmt);
-    sqlite3_clear_bindings(insertStmt);
-
-    if (id == -1) {
-        // Insert either failed due to constraint or didn't run at all — do SELECT fallback
+    } else if (rc == SQLITE_CONSTRAINT) {
+        // Race condition: someone else inserted between our SELECT and INSERT
+        // Do SELECT again to get the ID
+        sqlite3_reset(insertStmt);
+        sqlite3_clear_bindings(insertStmt);
+        
         bindSelect(selectStmt);
         rc = sqlite3_step(selectStmt);
         if (rc == SQLITE_ROW) {
             id = extractId(selectStmt);
         } else {
-            fprintf(stderr, "[ERROR] Select fallback failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(selectStmt)));
+            fprintf(stderr, "[ERROR] Race condition SELECT fallback failed: %s\n", 
+                    sqlite3_errmsg(sqlite3_db_handle(selectStmt)));
         }
         sqlite3_reset(selectStmt);
         sqlite3_clear_bindings(selectStmt);
+    } else {
+        // Some other insert error
+        fprintf(stderr, "[ERROR] Insert failed: %s\n", sqlite3_errmsg(sqlite3_db_handle(insertStmt)));
     }
+
+    sqlite3_reset(insertStmt);
+    sqlite3_clear_bindings(insertStmt);
 
     return id;
 }
@@ -436,7 +429,7 @@ bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int pro
         }
     );
     if(jobListId == -1) {
-        printf("[ERROR] Failed to insert/lookup jobListId for {cluster, proc} : {%d, %d}\n", clusterId, procId);
+        printf("[ERROR] Failed to insert/lookup jobListId for {cluster, user} : {%d, %d}\n", clusterId, userId);
         return false;
     }
 
@@ -498,7 +491,7 @@ bool DBHandler::batchInsertJobRecords(const std::vector<JobRecord>& jobs) {
         std::tie(jobId, jobListId) = jobIdLookup(job.ClusterId, job.ProcId);
 
         if (jobId == -1) { 
-            printf("[ERROR] JobRecord was not preceded by Spawn ad, no matching JobId\n"
+            printf("[WARNING] JobRecord was not preceded by Spawn ad, no matching JobId\n"
                 "Writing JobAd for ClusterId %d, ProcId %d\n", 
                 job.ClusterId, job.ProcId);
 
@@ -512,7 +505,6 @@ bool DBHandler::batchInsertJobRecords(const std::vector<JobRecord>& jobs) {
             std::tie(jobId, jobListId) = jobIdLookup(job.ClusterId, job.ProcId);
         }
 
-        printf("FileId is %ld\n",job.FileId);
         sqlite3_bind_int64(stmt, 1, job.Offset);
         sqlite3_bind_int64(stmt, 2, job.CompletionDate);
         sqlite3_bind_int(stmt, 3, jobId);
@@ -550,7 +542,7 @@ void DBHandler::batchInsertEpochRecords(const std::vector<EpochRecord>& records)
         } else { // We haven't seen this Job info before, it wasn't in db nor cache
             bool insertSuccess = insertUnseenJob(record.Owner, record.ClusterId, record.ProcId, record.CurrentTime);
             if(!insertSuccess){
-                printf("[ERROR] Failed to insert EpochRecord - ClusterId: %d, ProcId: %d, Owner: %s, Time: %lld, AtOffset: %lld\n", 
+                printf("[ERROR] Failed to insert EpochRecord - ClusterId: %d, ProcId: %d, Owner: %s, Time: %ld, AtOffset: %ld\n", 
                        record.ClusterId, 
                        record.ProcId, 
                        record.Owner.c_str(),
@@ -628,7 +620,7 @@ bool DBHandler::insertEpochFileRecords(const std::vector<EpochRecord>& records, 
     sqlite3_finalize(stmt);
 
     if (result != SQLITE_DONE) {
-        printf("Failed to update Files table for FileId %d: %s\n", 
+        printf("Failed to update Files table for FileId %ld: %s\n", 
                fileInfo.FileId, sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
@@ -696,7 +688,7 @@ bool DBHandler::insertJobFileRecords(const std::vector<JobRecord>& jobs, const F
     sqlite3_finalize(stmt);
 
     if (result != SQLITE_DONE) {
-        printf("Failed to update Files table for FileId %d: %s\n", 
+        printf("Failed to update Files table for FileId %ld: %s\n", 
                fileInfo.FileId, sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
@@ -958,6 +950,23 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 		return true; // Nothing to recover, success
 	}
 
+    // Check if database is empty -> if so, no recovery needed, this is the first run
+    const char* checkDatabaseEmptySql = "SELECT COUNT(*) FROM (SELECT 1 FROM file_info LIMIT 1)";
+    sqlite3_stmt* stmt;
+    
+    if (sqlite3_prepare_v2(db_, checkDatabaseEmptySql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return false;  
+    }
+    
+    sqlite3_step(stmt);
+    int count = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    
+    if (count == 0) {
+        printf("[DBHandler] No existing data found, skipping recovery\n");
+        return false;  // No data in database, this is the first startup
+    }
+
 	char* errMsg = nullptr;
 	int rc = sqlite3_exec(db_, "BEGIN;", nullptr, nullptr, &errMsg);
 	if (rc != SQLITE_OK) {
@@ -1136,32 +1145,66 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
     }
 
     // 2. Insert new files and record FileIds back into FileInfo objects
-    std::string insertSQL = "INSERT INTO Files (FileName) VALUES (?)";
+    const char* insertSQL = R"(
+        INSERT OR IGNORE INTO Files (FileName, FileInode, FileHash, LastOffset)
+        VALUES (?, ?, ?, ?)
+    )";
+
     sqlite3_stmt* insertStmt = nullptr;
 
-    if (sqlite3_prepare_v2(db_, insertSQL.c_str(), -1, &insertStmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db_, insertSQL, -1, &insertStmt, nullptr) != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare insert statement: %s\n", sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
         return false;
     }
 
     for (FileInfo& newFile : newFiles) {
-        sqlite3_bind_text(insertStmt, 1, newFile.FileName.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(insertStmt, 1, newFile.FileName.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(insertStmt, 2, newFile.FileInode);
+        sqlite3_bind_text(insertStmt, 3, newFile.FileHash.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(insertStmt, 4, newFile.LastOffset);
 
         if (sqlite3_step(insertStmt) != SQLITE_DONE) {
-            fprintf(stderr, "Failed to insert new file: %s\n", sqlite3_errmsg(db_));
+            fprintf(stderr, "Insert (or ignore) failed: %s\n", sqlite3_errmsg(db_));
             sqlite3_finalize(insertStmt);
             sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
             return false;
         }
 
-        int insertedId = static_cast<int>(sqlite3_last_insert_rowid(db_));
-        newFile.FileId = insertedId;
-
         sqlite3_reset(insertStmt);
     }
 
     sqlite3_finalize(insertStmt);
+
+    // Now fetch FileIds for all inserted/existing files
+    const char* selectSQL = R"(
+        SELECT FileId FROM Files WHERE FileInode = ? AND FileHash = ?
+    )";
+
+    sqlite3_stmt* selectStmt = nullptr;
+    if (sqlite3_prepare_v2(db_, selectSQL, -1, &selectStmt, nullptr) != SQLITE_OK) {
+        fprintf(stderr, "Failed to prepare select statement: %s\n", sqlite3_errmsg(db_));
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+        return false;
+    }
+
+    for (FileInfo& newFile : newFiles) {
+        sqlite3_bind_int64(selectStmt, 1, newFile.FileInode);
+        sqlite3_bind_text(selectStmt, 2, newFile.FileHash.c_str(), -1, SQLITE_TRANSIENT);
+
+        if (sqlite3_step(selectStmt) == SQLITE_ROW) {
+            newFile.FileId = sqlite3_column_int(selectStmt, 0);
+        } else {
+            fprintf(stderr, "Failed to fetch FileId after insert/ignore for file: %s\n", newFile.FileName.c_str());
+            sqlite3_finalize(selectStmt);
+            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
+            return false;
+        }
+
+        sqlite3_reset(selectStmt);
+    }
+
+    sqlite3_finalize(selectStmt);
 
     // 3. Mark deleted files with deletion timestamp
     if (!deletedFileIds.empty()) {
@@ -1195,6 +1238,8 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
 
 
     sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
+
+    printf("[DBHandler] Inserted %zu new files and marked old ones.\n", newFiles.size());
     return true;
 }
 
@@ -1341,6 +1386,7 @@ std::vector<std::pair<std::string, int>> DBHandler::getJobCountsPerUser() {
 // Used by CLI tool to get file offsets and metadata needed to read ClassAds from archive files.
 // Executes multi-table query in single transaction: Users -> JobLists -> JobRecords -> Files
 bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clusterId, std::vector<QueriedJobRecord>& jobRecords) {
+    printf("[DBHandler] Querying for JobList records...");
     // Begin transaction
     char* errorMessage = nullptr;
     if (sqlite3_exec(db_, "BEGIN TRANSACTION", nullptr, nullptr, &errorMessage) != SQLITE_OK) {
@@ -1460,9 +1506,14 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
         // Collect file information
         while (sqlite3_step(fileStmt) == SQLITE_ROW) {
             long fileId = sqlite3_column_int64(fileStmt, 0);
-            std::string fileName = reinterpret_cast<const char*>(sqlite3_column_text(fileStmt, 1));
-            long fileInode = sqlite3_column_int64(fileStmt, 2);
-            std::string fileHash = reinterpret_cast<const char*>(sqlite3_column_text(fileStmt, 3));
+            const char* namePtr = reinterpret_cast<const char*>(sqlite3_column_text(fileStmt, 1));
+            std::string fileName = namePtr ? namePtr : "";  // Use empty string if NULL
+            long fileInode = 0;  // Default value
+            if (sqlite3_column_type(fileStmt, 2) != SQLITE_NULL) {
+                fileInode = sqlite3_column_int64(fileStmt, 2);
+            }
+            const char* hashPtr = reinterpret_cast<const char*>(sqlite3_column_text(fileStmt, 3));
+            std::string fileHash = hashPtr ? hashPtr : "";  // Use empty string if NULL
             
             fileInfoMap[fileId] = std::make_tuple(fileName, fileInode, fileHash);
         }

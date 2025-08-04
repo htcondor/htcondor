@@ -190,8 +190,8 @@ void collectJob(
 bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
     auto [inodeMatch, hashMatch] = ArchiveMonitor::checkFileEquals(historyFilePath, fileInfo);
 
-    if(!inodeMatch) std::cerr << "Inode doesn't match expected for file at " << historyFilePath;
-    if(!hashMatch) std::cerr << "Hash doesn't match expected for file at " << historyFilePath;
+    if(!inodeMatch) printf("Inode doesn't match expected for file at %s \n", historyFilePath);
+    if(!hashMatch) printf("Hash doesn't match expected for file at %s \n", historyFilePath);
 
     return inodeMatch && hashMatch;
 }
@@ -394,7 +394,7 @@ long readEpochIncremental(const char *historyFilePath, std::vector<EpochRecord> 
     }
 
     file.close();
-    std::cerr << "[DEBUG] Done. Returning new offset: " << lastBannerOffset << "\n";
+    std::cerr << "[HistoryReader] Done. Returning new offset: " << lastBannerOffset << "\n";
     return lastBannerOffset;
 }
 

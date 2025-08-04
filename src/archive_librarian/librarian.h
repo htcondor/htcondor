@@ -70,8 +70,8 @@ private:
     double databaseSizeLimit_{0.0}; // Will be set by constructor (defaults to 2GB if not specified)
 
     // Helper methods for Librarian::initialize()
-    std::string Librarian::loadSchemaSQL();
-    bool Librarian::loadGCSQL();
+    std::string loadSchemaSQL();
+    bool loadGCSQL();
 
     // Helper methods for Librarian::update()
     bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);
@@ -87,8 +87,8 @@ private:
     bool cleanupDatabaseIfNeeded();
 
     // Helper methods for Librarian::query()
-    QueryResult executeQuery(const std::string& username, int clusterId);
-    std::vector<std::string> readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords);
+    QueryResult executeQuery(const std::string& username, int clusterId, std::string historyDirectoryPath);
+    std::vector<std::string> readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords, std::string historyDirectoryPath);
     std::vector<ParsedJobRecord> parseClassAds(const std::vector<std::string>& rawClassAds);
     std::optional<ParsedJobRecord> parseClassAd(const std::string& classAdText);
     std::optional<std::string> readJobAtOffset(const std::string& filePath, long offset);

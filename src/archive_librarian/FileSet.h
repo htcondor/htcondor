@@ -2,15 +2,17 @@
 
 #include <string>
 #include <unordered_map>
-#include <ctime>        
-#include "JobRecord.h"    
+#include <ctime>       
+ 
+#include "JobRecord.h"   
+namespace fs = std::filesystem; 
 
 struct FileSet {
    std::string historyNameConfig;     // The prefix/identifier for this set of history files
    std::string historyDirectoryPath;  // The directory path where these history files are located
    std::unordered_map<int, FileInfo> fileMap; // The int here is for FileId
    std::time_t lastStatusTime;
-   int lastFileReadId;
+   long lastFileReadId;
 
    // Constructor
    FileSet(const std::string& filePath)
