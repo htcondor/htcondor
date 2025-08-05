@@ -111,7 +111,7 @@ main( void )
 					std::cout << "Error reading attribute name\n";
 					break;
 				}	
-                getline(cin, buffer3, '\n');
+                std::getline(std::cin, buffer3, '\n');
 				if( !parser.ParseExpression( buffer3, fexpr, true ) ) {
 					std::cout << "Error parsing expression: " << buffer3 << endl;
 					std::cout << "(" << CondorErrMsg << ")\n";
@@ -147,7 +147,7 @@ main( void )
 				break;
 
 			case DEEP_DELETE_ATTRIBUTE:
-                cin >> buffer1;
+                std::cin >> buffer1;
 				if( buffer1.length() < 1) {
 					std::cout << "Error reading primary expression\n";
 					break;
@@ -156,7 +156,7 @@ main( void )
 					std::cout << "Error parsing expression: " << buffer1 << endl;
 					break;
 				}
-                getline(cin, buffer2, '\n');
+                std::getline(std::cin, buffer2, '\n');
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
 					std::cout << "Error evaluating expression: " <<  buffer1 << endl;
@@ -177,7 +177,7 @@ main( void )
 				break;
 
 			case EVALUATE:
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
 					std::cout << "Error parsing expression: " << buffer1 << endl;
 					break;
@@ -197,7 +197,7 @@ main( void )
 				break;
 		
 			case EVALUATE_WITH_SIGNIFICANCE:
-                getline(cin, buffer1, '\n');
+                std::getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
 					std::cout << "Error parsing expression: " <<  buffer1 << endl;
 					break;
@@ -224,7 +224,7 @@ main( void )
 				break;
 
 			case FLATTEN: 
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
 					std::cout << "Error parsing expression: " << buffer1 << endl;
 					break;
@@ -260,7 +260,7 @@ main( void )
 					std::cout << "Error reading attribute name\n";
 					break;
 				}	
-                getline(cin, buffer2, '\n');
+                getline(std::cin, buffer2, '\n');
 				if( !parser.ParseExpression( buffer2, expr, true ) ) {
 					std::cout << "Error parsing expression: " <<  buffer2 << endl;
 					break;
@@ -273,7 +273,7 @@ main( void )
 
 			case NEW_TOPLEVEL: 
 				ad->Clear();
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				if( !( ad = parser.ParseClassAd( buffer1, true ) ) ) {
 					std::cout << "Error parsing classad\n";
 				}
@@ -283,7 +283,7 @@ main( void )
 				output = "";
 				unparser.Unparse( output, ad );
 				std::cout << output << endl;
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case QUIT: 
@@ -291,7 +291,7 @@ main( void )
 				exit( 0 );
 
 			case REMOVE_ATTRIBUTE:
-                cin >> buffer1;
+                std::cin >> buffer1;
 				if( buffer1.length() < 1) {
 					std::cout << "Error reading attribute name\n";
 					break;
@@ -299,7 +299,7 @@ main( void )
 				if( !ad->Remove( buffer1 ) ) {
 					std::cout << "Error removing attribute " << buffer1 << endl;
 				}
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case SET_MATCH_TOPLEVEL: 
