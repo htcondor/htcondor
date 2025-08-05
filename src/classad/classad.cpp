@@ -23,8 +23,6 @@
 #include "classad/sink.h"
 #include "classad/classadCache.h"
 
-using std::string;
-
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 namespace classad {
