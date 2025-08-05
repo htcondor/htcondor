@@ -1,0 +1,285 @@
+#!/usr/bin/env pytest
+
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+from ornithology import (
+    Condor,
+    action,
+    ClusterState,
+    format_script,
+    write_file,
+    JobStatus,
+)
+
+import os
+from pathlib import Path
+import shutil
+
+import htcondor2
+
+
+#
+# This is based on `test_cif.py`; these test aren't included there because
+# (a) that test already takes close to two minutes to run, and
+# (b) the helper functions in this test will have to be a little different.
+#
+
+#
+# The basic idea is similar: we submit some jobs which stitch together the
+# input files to make an output file with known contents.  For these tests,
+# the jobs will `cat` _all_ of the input files: this not only confirms that
+# we got the _correct_ input files, but that we did _not_ get any of the
+# others.  (Unless they're empty, which we'll check for with an `ls` as part
+# of the output, I guess.)
+#
+# In particular, we'll submit two sets of jobs: set 1 will have catalogs A
+# and B, and set 2 will have catalogs A and C.  The catalogs will have
+# disjoint file membership, and each file will have unique contents.
+#
+# As in `test_cif.py`, we'll also be verifying that we transferred the
+# catalogs the correct number of times.  This leads to two test cases
+# for the preceeding scenario: one with two invocations of condor_submit,
+# and one with one invocation of DAGMan.  In the former, there must be
+# four transfers: A twice (once for each cluster) and B and C once each
+# (once for each cluster).  In the latter, A is only transferred once.
+#
+
+#
+# It remains to be seen how we can test the requirement that catalogs
+# named by different submmiters (the Owner attribute, not the misnamed
+# Submitter attribute that's actually for accounting) are different.
+#
+
+@action
+def the_cs_local_dir(test_dir):
+    return test_dir / "cs.d"
+
+
+@action
+def the_cs_user_dir(the_cs_local_dir):
+    the_cs_user_dir = the_cs_local_dir / "user.d"
+    the_cs_user_dir.mkdir(exist_ok=True)
+    return the_cs_user_dir
+
+
+@action
+def the_cs_lock_dir(the_cs_local_dir):
+    return the_cs_local_dir / "lock.d"
+
+
+@action
+def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
+    with Condor(
+        local_dir=the_cs_local_dir,
+        config={
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "LOCK":                     the_cs_lock_dir.as_posix(),
+            "NUM_CPUS":                 4,
+            "STARTER_NESTED_SCRATCH":   True,
+        },
+    ) as the_cs_condor:
+        yield the_cs_condor
+
+
+@action
+def the_cs_job_script(test_dir):
+    script_path = test_dir / "cs_job_script"
+
+    script_text = format_script(
+    """
+        #!/bin/bash
+
+        ls *.txt
+        cat *.txt
+
+        while true; do
+            sleep 1
+            if [ -e $1 ]; then
+                exit 0
+            fi
+        done
+
+        exit 1
+    """
+    )
+
+    write_file(script_path, script_text)
+    return script_path
+
+
+@action
+def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
+    os.chdir(the_cs_user_dir)
+
+    # We did all the complicated nested-directory stuff
+    # in `test_cif.py`, so this is just a pile of files.
+    for f in ("A1", "A2", "B1", "B2", "C1", "C2"):
+        (the_cs_user_dir / f"{f}.txt").write_text(f"{f}\n")
+
+    kill_file = (the_cs_user_dir / "kill-cs-$(ClusterID).$(ProcID)")
+    job_description = {
+        "universe":                 "vanilla",
+        "executable":               the_cs_job_script.as_posix(),
+        "arguments":                kill_file.as_posix(),
+
+        "log":                      "cs_job.log.$(CLUSTER)",
+        "output":                   "cs_job.output.$(CLUSTER).$(PROCESS)",
+        "error":                    "cs_job.error.$(CLUSTER).$(PROCESS)",
+
+        "request_cpus":             1,
+        "request_memory":           1,
+
+        "MY._x_catalog_A":                  '"A1.txt, A2.txt"',
+
+        "should_transfer_files":    True,
+
+        "leave_in_queue":           True,
+    }
+
+    job_description_a = {
+        ** job_description,
+        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
+    }
+
+    job_description_b = {
+        ** job_description,
+        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
+    }
+
+
+    # Submit two jobs of each type.
+    job_handle_a = the_cs_condor.submit(
+        description=job_description_a,
+        count=2
+    )
+
+    job_handle_b = the_cs_condor.submit(
+        description=job_description_b,
+        count=2
+    )
+
+
+    # Wait for them all to start.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=ClusterState.all_running,
+        fail_condition=ClusterState.any_terminal
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=ClusterState.running_exactly(2),
+        fail_condition=ClusterState.any_terminal
+    )
+
+
+    # Touch their kill files.
+    (the_cs_user_dir / f"kill-cs-{job_handle_a.clusterid}.0").touch(exist_ok=True)
+    (the_cs_user_dir / f"kill-cs-{job_handle_a.clusterid}.1").touch(exist_ok=True)
+    (the_cs_user_dir / f"kill-cs-{job_handle_b.clusterid}.0").touch(exist_ok=True)
+    (the_cs_user_dir / f"kill-cs-{job_handle_b.clusterid}.1").touch(exist_ok=True)
+
+
+    # Wait for them to finish.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=ClusterState.all_terminal
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=ClusterState.all_terminal
+    )
+
+
+    return job_handle_a, job_handle_b
+
+
+# ---- assertion helpers ------------------------------------------------------
+
+
+def output_is_as_expected(completed_cif_job, the_expected_output):
+    ads = completed_cif_job.query( projection=['Out'] )
+
+    for ad in ads:
+        out = Path(ad['Out'])
+        text = out.read_text()
+        assert text == the_expected_output
+
+
+def count_shadow_log_lines(the_condor, the_phrase):
+    shadow_log = the_condor.shadow_log.open()
+    lines = list(filter(
+        lambda line: the_phrase in line,
+        shadow_log.read(),
+    ))
+    return len(lines)
+
+
+def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
+    staging_commands_sent = count_shadow_log_lines(
+        the_condor, "StageCommonFiles"
+    )
+    assert staging_commands_sent == count
+
+    successful_staging_commands = count_shadow_log_lines(
+        the_condor, "Staging successful"
+    )
+    assert successful_staging_commands == count
+
+    keyfile_touches = count_shadow_log_lines(
+        the_condor, "Elected producer touch"
+    )
+    assert keyfile_touches == count
+
+    job_evictions = count_shadow_log_lines(
+        the_condor, "is being evicted from"
+    )
+    assert job_evictions == 0
+
+    common_transfer_begins = count_shadow_log_lines(
+        the_condor, "Starting common files transfer."
+    )
+    assert common_transfer_begins == cf_xfers
+
+    common_transfer_ends = count_shadow_log_lines(
+        the_condor, "Finished common files transfer: success."
+    )
+    assert common_transfer_ends == cf_xfers
+
+    if cf_waits is not None:
+        common_transfer_waits = count_shadow_log_lines(
+            the_condor, "Waiting for common files to be transferred"
+        )
+        assert common_transfer_waits == cf_waits
+
+
+def lock_dir_is_clean(the_lock_dir):
+    syndicate_dir = the_lock_dir / "syndicate"
+
+    files = list(syndicate_dir.iterdir())
+    assert len(files) == 0
+
+
+class TestCIFCatalogs:
+
+    def test_condor_submit(self, the_cs_lock_dir, the_cs_condor, completed_cs_jobs):
+        output_is_as_expected(
+            completed_cs_jobs[0],
+            "A1.txt\nA2.txt\nB1.txt\nB2.txt\nA1\nA2\nB1\nB2\n"
+        )
+        output_is_as_expected(
+            completed_cs_jobs[1],
+            "A1.txt\nA2.txt\nC1.txt\nC2.txt\nA1\nA2\nC1\nC2\n"
+        )
+        # Specifically, A should be transferred twice, B once, and C once.
+        # That leaves 4 non-staging transferring.  We won't worry about
+        # how many transfers were left waiting for now -- see test_many_cif_jobs()
+        # in `test_cif.py` for details of how to make that test deterministic,
+        # if we'd ever like to add it in here.
+        shadow_log_is_as_expected(the_cs_condor, 4, 4, None)
+        lock_dir_is_clean(the_cs_lock_dir)
