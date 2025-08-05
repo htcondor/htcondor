@@ -102,24 +102,24 @@ main( void )
 					break;
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					std::cout << "Error parsing expression: " <<  buffer1 << endl;
+					std::cout << "Error parsing expression: " <<  buffer1 << std::endl;
 					std::cout << "(" << CondorErrMsg << ")\n";
 					break;
 				}
-                cin >> buffer2;
+				std::cin >> buffer2;
 				if( buffer2.length() < 1) {
 					std::cout << "Error reading attribute name\n";
 					break;
 				}	
                 std::getline(std::cin, buffer3, '\n');
 				if( !parser.ParseExpression( buffer3, fexpr, true ) ) {
-					std::cout << "Error parsing expression: " << buffer3 << endl;
+					std::cout << "Error parsing expression: " << buffer3 << std::endl;
 					std::cout << "(" << CondorErrMsg << ")\n";
 					break;
 				} 
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					std::cout << "Error evaluating expression: " <<  buffer1 << endl;
+					std::cout << "Error evaluating expression: " <<  buffer1 << std::endl;
 					delete expr;
 					delete fexpr;
 					expr = NULL;
@@ -135,7 +135,7 @@ main( void )
 					break;
 				}	
 				if( !adptr->Insert( buffer2, fexpr ) ) {
-					std::cout << "Error Inserting expression: " << buffer3 << endl;
+					std::cout << "Error Inserting expression: " << buffer3 << std::endl;
 					delete fexpr;
 					delete expr;
 					fexpr = NULL;
@@ -153,13 +153,13 @@ main( void )
 					break;
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					std::cout << "Error parsing expression: " << buffer1 << endl;
+					std::cout << "Error parsing expression: " << buffer1 << std::endl;
 					break;
 				}
                 std::getline(std::cin, buffer2, '\n');
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					std::cout << "Error evaluating expression: " <<  buffer1 << endl;
+					std::cout << "Error evaluating expression: " <<  buffer1 << std::endl;
 					delete expr;
 					break;
 				}
@@ -170,7 +170,7 @@ main( void )
 					break;
 				}
 				if( !adptr->Remove( buffer2 ) ) {
-					std::cout << "Warning:  Attribute %s not found" << buffer2 << endl;
+					std::cout << "Warning:  Attribute %s not found" << buffer2 << std::endl;
 				}
 				delete expr;
 				expr = NULL;
@@ -179,19 +179,19 @@ main( void )
 			case EVALUATE:
                 getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					std::cout << "Error parsing expression: " << buffer1 << endl;
+					std::cout << "Error parsing expression: " << buffer1 << std::endl;
 					break;
 				}
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					std::cout << "Error evaluating expression: " << buffer1 << endl;
+					std::cout << "Error evaluating expression: " << buffer1 << std::endl;
 					delete expr;
 					expr = NULL;
 					break;
 				}
 				output = "";
 				unparser.Unparse( output, value );
-				std::cout << output << endl;
+				std::cout << output << std::endl;
 				delete expr;
 				expr = NULL;
 				break;
@@ -199,12 +199,12 @@ main( void )
 			case EVALUATE_WITH_SIGNIFICANCE:
                 std::getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					std::cout << "Error parsing expression: " <<  buffer1 << endl;
+					std::cout << "Error parsing expression: " <<  buffer1 << std::endl;
 					break;
 				}
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value, fexpr ) ) {
-					std::cout << "Error evaluating expression: " << buffer1 << endl;
+					std::cout << "Error evaluating expression: " << buffer1 << std::endl;
 					delete expr;
 					delete fexpr;
 					expr = NULL;
@@ -213,10 +213,10 @@ main( void )
 				}
 				output = "";
 				unparser.Unparse( output, value );
-				std::cout << output << endl;
+				std::cout << output << std::endl;
 				output = "";
 				unparser.Unparse( output, fexpr );
-				std::cout << output << endl;
+				std::cout << output << std::endl;
 				delete expr;
 				expr = NULL;
 				delete fexpr;
@@ -226,7 +226,7 @@ main( void )
 			case FLATTEN: 
                 getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					std::cout << "Error parsing expression: " << buffer1 << endl;
+					std::cout << "Error parsing expression: " << buffer1 << std::endl;
 					break;
 				}
 				expr->SetParentScope( ad );
@@ -234,13 +234,13 @@ main( void )
 					if( fexpr ) {
 						output = "";
 						unparser.Unparse( output, fexpr );
-						std::cout << output << endl;
+						std::cout << output << std::endl;
 						delete fexpr;
 						fexpr = NULL;
 					} else {
 						output = "";
 						unparser.Unparse( output, value );
-						std::cout << output << endl;
+						std::cout << output << std::endl;
 					}
 				} else {	
 					std::cout << "Error flattening expression\n";
@@ -251,18 +251,18 @@ main( void )
 				
 			case HELP: 
 				help(); 
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case INSERT_ATTRIBUTE:
-                cin >> buffer1; 
+				std::cin >> buffer1; 
 				if( buffer1.length() < 1) {
 					std::cout << "Error reading attribute name\n";
 					break;
 				}	
                 getline(std::cin, buffer2, '\n');
 				if( !parser.ParseExpression( buffer2, expr, true ) ) {
-					std::cout << "Error parsing expression: " <<  buffer2 << endl;
+					std::cout << "Error parsing expression: " <<  buffer2 << std::endl;
 					break;
 				} 
 				if( !ad->Insert( buffer1, expr ) ) {
@@ -282,7 +282,7 @@ main( void )
 			case OUTPUT_TOPLEVEL:
 				output = "";
 				unparser.Unparse( output, ad );
-				std::cout << output << endl;
+				std::cout << output << std::endl;
                 getline(std::cin, buffer1, '\n');
 				break;
 
@@ -297,7 +297,7 @@ main( void )
 					break;
 				}
 				if( !ad->Remove( buffer1 ) ) {
-					std::cout << "Error removing attribute " << buffer1 << endl;
+					std::cout << "Error removing attribute " << buffer1 << std::endl;
 				}
                 getline(std::cin, buffer1, '\n');
 				break;
@@ -305,13 +305,13 @@ main( void )
 			case SET_MATCH_TOPLEVEL: 
 				delete ad;
 				if( !( ad = MatchClassAd::MakeMatchClassAd( NULL, NULL ) ) ){
-					std::cout << "Error making classad\n" << endl;
+					std::cout << "Error making classad\n" << std::endl;
 				}
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			default:
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 		}
 
 		std::cout << "\n# ";
