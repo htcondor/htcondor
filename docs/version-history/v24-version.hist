@@ -19,33 +19,33 @@
 
 *** 24.0.12 bugs
 
-*** 24.11.0 features
+*** 24.11.1 features
+
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3133`
+
+- The new Python API now includes `htcondor2.ping()`, which operates like
+  `htcondor.SecMan.ping()` in the old API.
+  :jira:`3180`
 
 - The :tool:`htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
   The ``condor_annex`` tool has been withdrawn; use :tool:`htcondor annex`
   instead.
   :jira:`1630`
 
-- Add --version flag to the :tool:`htcondor` tool.
-  :jira:`3091`
-
-- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
-  restrict which Vault servers the *condor_credd* will accept credentials for.
-  :jira:`3136`
-
-- The new Python API now includes `htcondor2.ping()`, which operates like
-  `htcondor.SecMan.ping()` in the old API.
-  :jira:`3180`
-
 - Added new python method "get_claims" to the schedd object, which returns
   the classads of the claimed slots.
   :jira:`3181`
 
-*** 24.11.0 bugs
+- Add --version flag to the :tool:`htcondor` tool.
+  :jira:`3091`
 
-- Added new "notification = start" option to *condor_submit*, which
-  sends an email when the job starts for the first time.
-  :jira:`3131`
+*** 24.11.1 bugs
 
 - When responding to a ping request for the ALLOW authorization level,
   daemons no longer require authentication.

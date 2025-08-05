@@ -467,7 +467,8 @@ class BaseShadow : public Service
 
 		/** Improve Hold/EvictReason string and codes before sending this info
 			to the job classad in the schedd. */
-	std::string improveReasonAttributes(const char* orig_reason_str, int  &reason_code, int &reason_subcode);
+	std::string improveReasonAttributes(const char* orig_reason_str, int  &reason_code, int &reason_subcode,
+		std::string& url_file_type);
 
 	// config file parameters
 	int reconnect_ceiling;

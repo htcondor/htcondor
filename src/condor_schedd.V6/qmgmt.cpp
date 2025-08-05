@@ -4318,6 +4318,7 @@ enum {
 	idATTR_JOB_MATERIALIZE_PAUSED,
 	idATTR_HOLD_REASON,
 	idATTR_HOLD_REASON_CODE,
+	idATTR_VACATE_REASON_CODE,
 	idATTR_JOB_SET_ID,
 	idATTR_JOB_SET_NAME,
 	idATTR_NT_DOMAIN,
@@ -4397,6 +4398,7 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_RANK,               catTargetScope),
 	FILL(ATTR_REQUIREMENTS,       catTargetScope),
 	FILL(ATTR_USER,              0),
+	FILL(ATTR_VACATE_REASON_CODE, 0),
 
 
 };
@@ -5267,6 +5269,42 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 		if ( new_status != curr_status && curr_status > 0 ) {
 			SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, curr_status, flags );
+		}
+	}
+	else if (attr_id == idATTR_VACATE_REASON_CODE) {
+		// Update count per hold reason in the job ad.
+		// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
+		int vacate_reason = (int)strtol( attr_value, nullptr, 10 );
+				
+		// Update count in job ad of how many times job was vacated
+		incrementJobAdAttr(cluster_id, proc_id, ATTR_NUM_VACATES);
+
+		// If the vacate reason is a file transfer error, the shadow will set an attribute
+		// ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL to indicate the protocol used for the
+		// file transfer that caused the vacate.  We want to increment the number of
+		// vacates by reason and protocol, so we need to check for that attribute here
+		// and remove it so that we don't increment the count twice.
+		// If the attribute is not set, then we just increment the count by reason.
+		// If the attribute is set, then we increment the count by reason and protocol.
+		std::string protocol;
+		GetAttributeString(cluster_id, proc_id, ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL, protocol);
+		if (!protocol.empty()) {
+			DeleteAttribute(cluster_id, proc_id, ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL);
+		}
+
+		try {
+			std::string attr_name = (CONDOR_HOLD_CODE::_from_integral(vacate_reason))._to_string();
+			incrementJobAdAttr(cluster_id, proc_id, attr_name.c_str(), ATTR_NUM_VACATES_BY_REASON);
+			if (!protocol.empty()) {
+				// If we had a protocol, then this is a file transfer vacate
+				// and we want to also count the number of vacates by protocol.
+				attr_name += protocol;
+				incrementJobAdAttr(cluster_id, proc_id, attr_name.c_str(), ATTR_NUM_VACATES_BY_REASON);
+			}
+		}
+		catch (std::runtime_error const&) {
+			// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
+			incrementJobAdAttr(cluster_id, proc_id, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_VACATES_BY_REASON);
 		}
 	}
 	else if (attr_id == idATTR_HOLD_REASON_CODE || attr_id == idATTR_HOLD_REASON) {

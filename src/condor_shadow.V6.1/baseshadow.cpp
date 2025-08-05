@@ -446,7 +446,8 @@ BaseShadow::reconnectFailed( const char* reason )
 }
 
 std::string
-BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_code, int & /*reason_subcode*/ )
+BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_code, int & /*reason_subcode*/,
+	std::string& url_file_type)
 {
 	/* This method is invokved by the shadow when we are putting a job on hold or back to idle, and allow us to
 	   change/edit the Hold/EvictReason attribute and Hold/EvictReason codes before the shadow sends the info
@@ -503,7 +504,7 @@ BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_co
 
 		// If transfer failure involved an URL (via transfer plugin), try to parse out the URL
 		std::string url_file;
-		std::string url_file_type;
+		// This is now passed as a method parameter - std::string url_file_type;
 		pos = old_reason.find("URL file = ");
 		if (pos != std::string::npos) {
 			pos += strlen("URL file = ");
@@ -936,11 +937,36 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 
 	// Note: improveReasonAttributescan change the reason_code and subcode,
 	// and will pass back a potentially improved reason string.
+	std::string url_file_type; // This will be used to store the protocol used for file transfer.
 	std::string improved_reason_str =
-		improveReasonAttributes(reason_str, reason_code, reason_subcode);
+		improveReasonAttributes(reason_str, reason_code, reason_subcode, url_file_type);
 	// If we have an improved reason string, use it instead.
 	if (!improved_reason_str.empty()) {
 		reason_str = improved_reason_str.c_str();
+	}
+
+	// If we had a problem moving files, we want to record the protocol used
+	// for the file transfer, so that we can update the Evict Num Reasons
+	// attributes by protocol in the schedd.
+	if (reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError ||
+		reason_code == FILETRANSFER_HOLD_CODE::UploadFileError)
+	{
+		if (url_file_type.empty()) {
+			// If we don't have a URL file type, then we don't know what protocol was used.
+			// So just set the protocol to "unknown".
+			url_file_type = "Cedar";
+		} else {
+			// Make url_file_type camel case, so that it is consistent with the
+			// other protocols we use in the Additional Hold/Evict Num Reasons attributes.
+			std::transform(url_file_type.begin(), url_file_type.end(), url_file_type.begin(),
+				[](unsigned char c) { return std::tolower(c); });
+			url_file_type[0] = std::toupper(url_file_type[0]);
+			// Consider osdf to be the Pelican protocol.
+			if (url_file_type == "Osdf") {
+				url_file_type = "Pelican";
+			}
+		}
+		jobAd->Assign(ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL, url_file_type);
 	}
 
 	if( getMachineName(machine) ) {
