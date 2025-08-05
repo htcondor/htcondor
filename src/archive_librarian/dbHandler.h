@@ -40,7 +40,7 @@ public:
 
     // Testing whether database was correctly constructed and connection works
     bool testDatabaseConnection();
-    bool verifyDatabaseSchema(const std::string& schemaSQL);
+    bool verifyDatabaseSchema(const std::string& schemaSQL, double schemaVersionNumber);
 
     // === Core Data Operations ===
     

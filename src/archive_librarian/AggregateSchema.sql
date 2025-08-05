@@ -94,3 +94,14 @@ CREATE TABLE IF NOT EXISTS StatusData (
     LastRunLeftBacklog BOOLEAN DEFAULT 0, -- Whether the previous run left backlog
     TimeOfLastUpdate INTEGER              -- Timestamp of most recent update
 );
+
+CREATE TABLE IF NOT EXISTS SchemaVersion (
+    VersionId REAL PRIMARY KEY CHECK (VersionId = 1.0),
+    VersionNotes TEXT,
+    SingleRow INTEGER DEFAULT 1 UNIQUE CHECK (SingleRow = 1)
+);
+
+-- Insert the value in
+INSERT OR IGNORE INTO SchemaVersion (VersionId, VersionNotes) 
+VALUES (1.0, 'Initial Archive Librarian schema');
+

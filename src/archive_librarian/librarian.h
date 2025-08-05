@@ -28,7 +28,8 @@ public:
               const std::string& historyFilePath,
               const std::string& epochHistoryFilePath,
               size_t jobCacheSize = 10000, 
-              size_t databaseSize = 2ULL * 1024 * 1024 * 1024);
+              size_t databaseSize = 2ULL * 1024 * 1024 * 1024, 
+              double schemaVersionNumber = 1.0);
 
     /**
      * @brief Initializes DBHandler and sets up the schema.
@@ -50,8 +51,8 @@ public:
 private:
 
     // CONFIGS - right now, not used anywhere
-    const size_t MAX_EPOCH_RECORDS_PER_UPDATE = 10000;  
-    const size_t MAX_JOB_RECORDS_PER_UPDATE = 10000;    
+    const size_t MAX_EPOCH_RECORDS_PER_UPDATE = 1000000;
+    const size_t MAX_JOB_RECORDS_PER_UPDATE = 1000000;    
 
 
     // Members
@@ -68,6 +69,7 @@ private:
     int EstimatedJobsPerFileInArchive_{0};
     double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
     double databaseSizeLimit_{0.0}; // Will be set by constructor (defaults to 2GB if not specified)
+    double schemaVersionNumber_{1.0};
 
     // Helper methods for Librarian::initialize()
     std::string loadSchemaSQL();

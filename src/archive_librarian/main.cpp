@@ -112,9 +112,10 @@ int main() {
     std::string dbPath = config["db_path"];
     size_t jobCacheSize = 10000; // still hardcoded
     double dbSizeLimit = 2.0 * 1024 * 1024 * 1024; // 2 GB
+    double schemaVersionNumber = 1.0;
     
     // Updated constructor call - removed schemaPath and gcQueryPath
-    Librarian librarian(dbPath, historyPath, epochHistoryPath, jobCacheSize, dbSizeLimit);
+    Librarian librarian(dbPath, historyPath, epochHistoryPath, jobCacheSize, dbSizeLimit, schemaVersionNumber);
 
     if (!librarian.initialize()) {
         std::cerr << "Failed to initialize Librarian." << std::endl;

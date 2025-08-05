@@ -27,6 +27,8 @@
 #include <filesystem>
 #include <list>
 #include <set>
+#include<thread>
+#include<chrono>
 
 #include "JobRecord.h"
 #include "dbHandler.h"
@@ -229,49 +231,76 @@ bool DBHandler::testDatabaseConnection() {
 } 
 
 // Verify that the database schema matches expected structure
-bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL) {
-    // Parse expected table names from the schema SQL
-    std::vector<std::string> expectedTables = {
-        "Files",
-        "Users", 
-        "JobLists",
-        "Jobs",
-        "JobRecords",
-        "Status",
-        "StatusData"
-    };
+bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL, double schemaVersionNumber) {
+    // Count CREATE TABLE statements in the schema SQL
+    std::string searchStr = "CREATE TABLE";
+    size_t expectedTableCount = 0;
+    size_t pos = 0;
     
-    // Check that all expected tables exist
-    const char* checkTablesQuery = R"(
-        SELECT name FROM sqlite_master 
-        WHERE type='table' AND name IN (
-            'Files',
-            'Users',
-            'JobLists', 
-            'Jobs',
-            'JobRecords',
-            'Status',
-            'StatusData'
-        );
+    while ((pos = schemaSQL.find(searchStr, pos)) != std::string::npos) {
+        expectedTableCount++;
+        pos += searchStr.length();
+    }
+    
+    if (expectedTableCount == 0) {
+        fprintf(stderr, "[DBHandler] No CREATE TABLE statements found in schema SQL\n");
+        return false;
+    }
+    
+    // Count actual tables in the database
+    const char* countTablesQuery = R"(
+        SELECT COUNT(*) FROM sqlite_master 
+        WHERE type='table' AND name NOT LIKE 'sqlite_%';
     )";
 
     sqlite3_stmt* stmt = nullptr;
-    int result = sqlite3_prepare_v2(db_, checkTablesQuery, -1, &stmt, nullptr);
+    int result = sqlite3_prepare_v2(db_, countTablesQuery, -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
-        fprintf(stderr, "[DBHandler] Table check prepare failed: %s\n", 
+        fprintf(stderr, "[DBHandler] Table count prepare failed: %s\n", 
                 sqlite3_errmsg(db_));
         return false;
     }
     
-    int tableCount = 0;
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        tableCount++;
+    int actualTableCount = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        actualTableCount = sqlite3_column_int(stmt, 0);
     }
     sqlite3_finalize(stmt);
     
-    if (tableCount < expectedTables.size()) {  
-        fprintf(stderr, "[DBHandler] Missing required tables (found %d, expected %zu)\n", 
-                tableCount, expectedTables.size());
+    if (actualTableCount != expectedTableCount) {
+        fprintf(stderr, "[DBHandler] Table count mismatch. Expected: %zu, Found: %d\n", 
+                expectedTableCount, actualTableCount);
+        return false;
+    }
+    
+    // Check schema version matches expected value
+    const char* versionQuery = "SELECT VersionId FROM SchemaVersion LIMIT 1;";
+    
+    result = sqlite3_prepare_v2(db_, versionQuery, -1, &stmt, nullptr);
+    if (result != SQLITE_OK) {
+        fprintf(stderr, "[DBHandler] Schema version check prepare failed: %s\n", 
+                sqlite3_errmsg(db_));
+        return false;
+    }
+    
+    result = sqlite3_step(stmt);
+    if (result == SQLITE_ROW) {
+        double actualVersion = sqlite3_column_double(stmt, 0);
+        sqlite3_finalize(stmt);
+        
+        if (actualVersion != schemaVersionNumber) {
+            fprintf(stderr, "[DBHandler] Schema version mismatch. Expected: %.1f, Found: %.1f\n", 
+                    schemaVersionNumber, actualVersion);
+            return false;
+        }
+    } else if (result == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        fprintf(stderr, "[DBHandler] SchemaVersion table exists but contains no version data\n");
+        return false;
+    } else {
+        fprintf(stderr, "[DBHandler] Schema version query failed: %s\n", 
+                sqlite3_errmsg(db_));
+        sqlite3_finalize(stmt);
         return false;
     }
     
@@ -464,6 +493,7 @@ bool DBHandler::insertUnseenJob(const std::string& owner, int clusterId, int pro
     return true;
 }
 
+
 /**
  * Batch insert multiple JobRecords in a single transaction.
  */
@@ -488,13 +518,10 @@ bool DBHandler::batchInsertJobRecords(const std::vector<JobRecord>& jobs) {
     int jobId, jobListId;
 
     for (const auto& job : jobs) {
+
         std::tie(jobId, jobListId) = jobIdLookup(job.ClusterId, job.ProcId);
 
         if (jobId == -1) { 
-            printf("[WARNING] JobRecord was not preceded by Spawn ad, no matching JobId\n"
-                "Writing JobAd for ClusterId %d, ProcId %d\n", 
-                job.ClusterId, job.ProcId);
-
             bool insertSuccess = insertUnseenJob(job.Owner, job.ClusterId, job.ProcId, job.CompletionDate);
             if(!insertSuccess){
                 printf("JobAd for ClusterId %d, ProcId %d failed! Exiting ... \n", job.ClusterId, job.ProcId);
@@ -805,6 +832,10 @@ void DBHandler::updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile) 
  * Insert a status snapshot into the 'Status' table and update the single row in 'StatusData' table
  * Includes Status but also running averages of various performance stats
  */
+/**
+ * Insert a status snapshot into the 'Status' table and update the single row in 'StatusData' table
+ * Includes Status but also running averages of various performance stats
+ */
 bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statusData) {
     const char* statusSql = R"(
         INSERT INTO Status (
@@ -822,34 +853,37 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
-    // Update StatusData SQL - now updates the single row instead of inserting
+    // Use INSERT OR REPLACE to handle missing row - will insert if doesn't exist, update if it does
     const char* statusDataSqlWithArrivalHz = R"(
-        UPDATE StatusData SET
-            AvgAdsIngestedPerCycle = ?,
-            AvgIngestDurationMs = ?,
-            MeanIngestHz = ?,
-            MeanArrivalHz = ?,
-            MeanBacklogEstimate = ?,
-            TotalCycles = ?,
-            TotalAdsIngested = ?,
-            HitMaxIngestLimitRate = ?,
-            LastRunLeftBacklog = ?,
-            TimeOfLastUpdate = ?
-        WHERE StatusDataId = 1;
+        INSERT OR REPLACE INTO StatusData (
+            StatusDataId,
+            AvgAdsIngestedPerCycle,
+            AvgIngestDurationMs,
+            MeanIngestHz,
+            MeanArrivalHz,
+            MeanBacklogEstimate,
+            TotalCycles,
+            TotalAdsIngested,
+            HitMaxIngestLimitRate,
+            LastRunLeftBacklog,
+            TimeOfLastUpdate
+        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     const char* statusDataSqlWithoutArrivalHz = R"(
-        UPDATE StatusData SET
-            AvgAdsIngestedPerCycle = ?,
-            AvgIngestDurationMs = ?,
-            MeanIngestHz = ?,
-            MeanBacklogEstimate = ?,
-            TotalCycles = ?,
-            TotalAdsIngested = ?,
-            HitMaxIngestLimitRate = ?,
-            LastRunLeftBacklog = ?,
-            TimeOfLastUpdate = ?
-        WHERE StatusDataId = 1;
+        INSERT OR REPLACE INTO StatusData (
+            StatusDataId,
+            AvgAdsIngestedPerCycle,
+            AvgIngestDurationMs,
+            MeanIngestHz,
+            MeanArrivalHz,
+            MeanBacklogEstimate,
+            TotalCycles,
+            TotalAdsIngested,
+            HitMaxIngestLimitRate,
+            LastRunLeftBacklog,
+            TimeOfLastUpdate
+        ) VALUES (1, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?);
     )";
 
     // Start transaction
@@ -887,7 +921,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     }
     sqlite3_finalize(stmt);
 
-    // Update StatusData (if Status insert succeeded)
+    // Insert/Update StatusData (if Status insert succeeded)
     if (success) {
         const bool hasArrivalHz = statusData.MeanArrivalHz != 0.0;
         const char* sql = hasArrivalHz ? statusDataSqlWithArrivalHz : statusDataSqlWithoutArrivalHz;
@@ -908,11 +942,11 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             sqlite3_bind_int64(stmt, idx++, statusData.TimeOfLastUpdate);
 
             if (sqlite3_step(stmt) != SQLITE_DONE) {
-                printf("[ERROR] Failed to update StatusData: %s\n", sqlite3_errmsg(db_));
+                printf("[ERROR] Failed to insert/update StatusData: %s\n", sqlite3_errmsg(db_));
                 success = false;
             }
         } else {
-            printf("[ERROR] Failed to prepare StatusData update: %s\n", sqlite3_errmsg(db_));
+            printf("[ERROR] Failed to prepare StatusData insert/update: %s\n", sqlite3_errmsg(db_));
             success = false;
         }
         sqlite3_finalize(stmt);
@@ -937,24 +971,19 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
  * caches are empty or uninitialized (e.g., after a restart or crash). This function
  * repopulates file tracking state, status data, and reading positions to resume
  * processing from where it left off.
+ * NOTE: Currently this function unconditionally runs recovery if database is not empty,
+ * but this behavior might change after the system is daemonized
  */
 bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
                            FileSet& epochHistoryFileSet_,
                            StatusData& statusData_)
 {
-	bool recoverHistory = historyFileSet_.fileMap.empty() || historyFileSet_.lastFileReadId == -1;
-	bool recoverEpoch = epochHistoryFileSet_.fileMap.empty() || epochHistoryFileSet_.lastFileReadId == -1;
-	bool recoverStatusData = (statusData_.TimeOfLastUpdate == 0);
-
-	if (!recoverHistory && !recoverEpoch && !recoverStatusData) {
-		return true; // Nothing to recover, success
-	}
-
     // Check if database is empty -> if so, no recovery needed, this is the first run
-    const char* checkDatabaseEmptySql = "SELECT COUNT(*) FROM (SELECT 1 FROM file_info LIMIT 1)";
-    sqlite3_stmt* stmt;
+    const char* checkDatabaseEmptySql = "SELECT COUNT(*) FROM (SELECT 1 FROM Files LIMIT 1);";
+    sqlite3_stmt* stmt = nullptr;
     
     if (sqlite3_prepare_v2(db_, checkDatabaseEmptySql, -1, &stmt, nullptr) != SQLITE_OK) {
+        printf("[DBHandler] Database was empty, starting first startup protocol");
         return false;  
     }
     
@@ -986,37 +1015,35 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 		return false;
 	};
 
-	// 2. Recover StatusData - now reads from the single row
-	if (recoverStatusData) {
-		const std::string statusDataSql =
-			"SELECT AvgAdsIngestedPerCycle, AvgIngestDurationMs, MeanIngestHz, MeanArrivalHz, "
-			"MeanBacklogEstimate, TotalCycles, TotalAdsIngested, HitMaxIngestLimitRate, LastRunLeftBacklog, "
-			"TimeOfLastUpdate FROM StatusData WHERE StatusDataId = 1;";
+	// 1. Recover StatusData - now reads from the single row
+	const std::string statusDataSql =
+		"SELECT AvgAdsIngestedPerCycle, AvgIngestDurationMs, MeanIngestHz, MeanArrivalHz, "
+		"MeanBacklogEstimate, TotalCycles, TotalAdsIngested, HitMaxIngestLimitRate, LastRunLeftBacklog, "
+		"TimeOfLastUpdate FROM StatusData WHERE StatusDataId = 1;";
 
-		sqlite3_stmt* stmt = nullptr;
-		rc = sqlite3_prepare_v2(db_, statusDataSql.c_str(), -1, &stmt, nullptr);
-		if (rc != SQLITE_OK) {
-			std::cerr << "Failed to prepare StatusData query\n";
-			success = rollbackAndReturnFalse();
-			return success;
-		}
-		rc = sqlite3_step(stmt);
-		if (rc == SQLITE_ROW) {
-			statusData_.AvgAdsIngestedPerCycle = sqlite3_column_double(stmt, 0);
-			statusData_.AvgIngestDurationMs = sqlite3_column_double(stmt, 1);
-			statusData_.MeanIngestHz = sqlite3_column_double(stmt, 2);
-			statusData_.MeanArrivalHz = sqlite3_column_double(stmt, 3);
-			statusData_.MeanBacklogEstimate = sqlite3_column_double(stmt, 4);
-			statusData_.TotalCycles = sqlite3_column_int64(stmt, 5);
-			statusData_.TotalAdsIngested = sqlite3_column_int64(stmt, 6);
-			statusData_.HitMaxIngestLimitRate = sqlite3_column_double(stmt, 7);
-			statusData_.LastRunLeftBacklog = sqlite3_column_int(stmt, 8) != 0;
-			statusData_.TimeOfLastUpdate = sqlite3_column_int64(stmt, 9);
-		}
-		sqlite3_finalize(stmt);
+	sqlite3_stmt* stmtStatusData = nullptr;
+	rc = sqlite3_prepare_v2(db_, statusDataSql.c_str(), -1, &stmtStatusData, nullptr);
+	if (rc != SQLITE_OK) {
+		std::cerr << "Failed to prepare StatusData query\n";
+		success = rollbackAndReturnFalse();
+		return success;
 	}
+	rc = sqlite3_step(stmtStatusData);
+	if (rc == SQLITE_ROW) {
+		statusData_.AvgAdsIngestedPerCycle = sqlite3_column_double(stmtStatusData, 0);
+		statusData_.AvgIngestDurationMs = sqlite3_column_double(stmtStatusData, 1);
+		statusData_.MeanIngestHz = sqlite3_column_double(stmtStatusData, 2);
+		statusData_.MeanArrivalHz = sqlite3_column_double(stmtStatusData, 3);
+		statusData_.MeanBacklogEstimate = sqlite3_column_double(stmtStatusData, 4);
+		statusData_.TotalCycles = sqlite3_column_int64(stmtStatusData, 5);
+		statusData_.TotalAdsIngested = sqlite3_column_int64(stmtStatusData, 6);
+		statusData_.HitMaxIngestLimitRate = sqlite3_column_double(stmtStatusData, 7);
+		statusData_.LastRunLeftBacklog = sqlite3_column_int(stmtStatusData, 8) != 0;
+		statusData_.TimeOfLastUpdate = sqlite3_column_int64(stmtStatusData, 9);
+	}
+	sqlite3_finalize(stmtStatusData);
 
-	// 3. Recover Status
+	// 2. Recover Status
 	const std::string statusSql =
 		"SELECT TimeOfUpdate, HistoryFileIdLastRead, HistoryFileOffsetLastRead, "
 		"EpochFileIdLastRead, EpochFileOffsetLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
@@ -1038,20 +1065,15 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 
 		statusData_.TimeOfLastUpdate = timeOfUpdate;
 
-		if (recoverHistory) {
-			historyFileSet_.lastFileReadId = historyFileId;
-			historyFileSet_.lastStatusTime = timeOfUpdate;
-			// Store offset if needed
-		}
-		if (recoverEpoch) {
-			epochHistoryFileSet_.lastFileReadId = epochFileId;
-			epochHistoryFileSet_.lastStatusTime = timeOfUpdate;
-			// Store offset if needed
-		}
+		historyFileSet_.lastFileReadId = historyFileId;
+		historyFileSet_.lastStatusTime = timeOfUpdate;
+		
+		epochHistoryFileSet_.lastFileReadId = epochFileId;
+		epochHistoryFileSet_.lastStatusTime = timeOfUpdate;
 	}
 	sqlite3_finalize(stmtStatus);
 
-	// 4. Recover Files
+	// 3. Recover Files
 	const std::string filesSql =
 		"SELECT FileId, FileName, FileInode, FileHash, LastOffset FROM Files WHERE DateOfRotation IS NULL;";
 

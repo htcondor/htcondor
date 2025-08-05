@@ -1,9 +1,10 @@
 hist/
 build/
 CMakeFiles/
-Makefile
 cmake_install.cmake 
-tester_output.db
 CMakeCache.txt
 myHistoryList
 myHistoryList.dSYM/
+annex/
+arc_gahp/
+tester_output.db
