@@ -285,11 +285,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.17.2
+Requires: pelican >= 7.18.0
 %else
-Requires: (pelican >= 7.17.2 or pelican-debug >= 7.17.2)
+Requires: (pelican >= 7.18.0 or pelican-debug >= 7.18.0)
 %endif
-Requires: pelican-osdf-compat >= 7.17.2
+Requires: pelican-osdf-compat >= 7.18.0
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
