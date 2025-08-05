@@ -199,6 +199,131 @@ def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
     return job_handle_a, job_handle_b
 
 
+# ---- (fake) DAGMan ------------------------------------------------------
+
+
+@action
+def the_dagman_local_dir(test_dir):
+    return test_dir / "dm.d"
+
+
+@action
+def the_dagman_user_dir(the_dagman_local_dir):
+    the_dagman_user_dir = the_dagman_local_dir / "user.d"
+    the_dagman_user_dir.mkdir(exist_ok=True)
+    return the_dagman_user_dir
+
+
+@action
+def the_dagman_lock_dir(the_dagman_local_dir):
+    return the_dagman_local_dir / "lock.d"
+
+
+@action
+def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
+    with Condor(
+        local_dir=the_dagman_local_dir,
+        config={
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "LOCK":                     the_dagman_lock_dir.as_posix(),
+            "NUM_CPUS":                 4,
+            "STARTER_NESTED_SCRATCH":   True,
+        },
+    ) as the_dagman_condor:
+        yield the_dagman_condor
+
+
+@action
+def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_script):
+    os.chdir(the_dagman_user_dir)
+
+    # We did all the complicated nested-directory stuff
+    # in `test_cif.py`, so this is just a pile of files.
+    for f in ("A1", "A2", "B1", "B2", "C1", "C2"):
+        (the_dagman_user_dir / f"{f}.txt").write_text(f"{f}\n")
+
+    kill_file = (the_dagman_user_dir / "kill-dm-$(ClusterID).$(ProcID)")
+    job_description = {
+        "MY.DAGManJobID":           "20",
+
+        "universe":                 "vanilla",
+        "executable":               the_cs_job_script.as_posix(),
+        "arguments":                kill_file.as_posix(),
+
+        "log":                      "cs_job.log.$(CLUSTER)",
+        "output":                   "cs_job.output.$(CLUSTER).$(PROCESS)",
+        "error":                    "cs_job.error.$(CLUSTER).$(PROCESS)",
+
+        "request_cpus":             1,
+        "request_memory":           1,
+
+        "MY._x_catalog_A":          '"A1.txt, A2.txt"',
+
+        "should_transfer_files":    True,
+
+        "leave_in_queue":           True,
+    }
+
+    job_description_a = {
+        ** job_description,
+        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY._x_catalog_B":                  '"B1.txt, B2.txt"',
+    }
+
+    job_description_b = {
+        ** job_description,
+        "MY._x_common_input_catalogs":      '"A, C"',
+        "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
+    }
+
+
+    # Submit two jobs of each type.
+    job_handle_a = the_dagman_condor.submit(
+        description=job_description_a,
+        count=2
+    )
+
+    job_handle_b = the_dagman_condor.submit(
+        description=job_description_b,
+        count=2
+    )
+
+
+    # Wait for them all to start.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=ClusterState.all_running,
+        fail_condition=ClusterState.any_terminal
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=ClusterState.running_exactly(2),
+        fail_condition=ClusterState.any_terminal
+    )
+
+
+    # Touch their kill files.
+    (the_dagman_user_dir / f"kill-dm-{job_handle_a.clusterid}.0").touch(exist_ok=True)
+    (the_dagman_user_dir / f"kill-dm-{job_handle_a.clusterid}.1").touch(exist_ok=True)
+    (the_dagman_user_dir / f"kill-dm-{job_handle_b.clusterid}.0").touch(exist_ok=True)
+    (the_dagman_user_dir / f"kill-dm-{job_handle_b.clusterid}.1").touch(exist_ok=True)
+
+
+    # Wait for them to finish.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=ClusterState.all_terminal
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=ClusterState.all_terminal
+    )
+
+
+    return job_handle_a, job_handle_b
+
+
 # ---- assertion helpers ------------------------------------------------------
 
 
@@ -277,9 +402,21 @@ class TestCIFCatalogs:
             "A1.txt\nA2.txt\nC1.txt\nC2.txt\nA1\nA2\nC1\nC2\n"
         )
         # Specifically, A should be transferred twice, B once, and C once.
-        # That leaves 4 non-staging transferring.  We won't worry about
-        # how many transfers were left waiting for now -- see test_many_cif_jobs()
-        # in `test_cif.py` for details of how to make that test deterministic,
-        # if we'd ever like to add it in here.
+        # If we later care about how many transfers waited, see `test_cif.py`.
         shadow_log_is_as_expected(the_cs_condor, 4, 4, None)
         lock_dir_is_clean(the_cs_lock_dir)
+
+
+    def test_dagman(self, the_dagman_lock_dir, the_dagman_condor, completed_dagman_jobs):
+        output_is_as_expected(
+            completed_dagman_jobs[0],
+            "A1.txt\nA2.txt\nB1.txt\nB2.txt\nA1\nA2\nB1\nB2\n"
+        )
+        output_is_as_expected(
+            completed_dagman_jobs[1],
+            "A1.txt\nA2.txt\nC1.txt\nC2.txt\nA1\nA2\nC1\nC2\n"
+        )
+        # Specifically, A should be transferred once, B once, and C once.
+        # If we later care about how many transfers waited, see `test_cif.py`.
+        shadow_log_is_as_expected(the_dagman_condor, 3, 3, None)
+        lock_dir_is_clean(the_dagman_lock_dir)
