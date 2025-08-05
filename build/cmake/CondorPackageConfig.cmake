@@ -369,7 +369,7 @@ elseif ( ${OS_NAME} MATCHES "^WIN" )
 elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
-	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
+	execute_process( COMMAND python3 -c "import sysconfig; import sys; sys.stdout.write(sysconfig.get_path('platlib')[1:])" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
 
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name
