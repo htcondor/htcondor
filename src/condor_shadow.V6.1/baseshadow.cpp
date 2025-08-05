@@ -958,9 +958,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		} else {
 			// Make url_file_type camel case, so that it is consistent with the
 			// other protocols we use in the Additional Hold/Evict Num Reasons attributes.
-			std::transform(url_file_type.begin(), url_file_type.end(), url_file_type.begin(),
-				[](unsigned char c) { return std::tolower(c); });
-			url_file_type[0] = std::toupper(url_file_type[0]);
+			title_case(url_file_type);
 			// Consider osdf to be the Pelican protocol.
 			if (url_file_type == "Osdf") {
 				url_file_type = "Pelican";
