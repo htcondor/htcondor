@@ -80,8 +80,8 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.17.2),
-         pelican-osdf-compat (>= 7.17.2),
+         pelican (>= 7.18.0),
+         pelican-osdf-compat (>= 7.18.0),
 #endif
          libjs-bootstrap,
          libjs-jquery,
