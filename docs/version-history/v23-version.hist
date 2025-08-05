@@ -2,8 +2,6 @@
 
 *** 23.0.29 bugs
 
-*** 23.10.28 bugs
-
 *** 23.10.28 features
 
 - HTCondor tarballs now contain `Pelican 7.18.0 <https://pelicanplatform.org/releases>`_
