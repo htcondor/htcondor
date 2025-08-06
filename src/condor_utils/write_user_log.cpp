@@ -35,6 +35,7 @@
 #include "condor_attributes.h"
 #include "CondorError.h"
 #include "set_user_priv_from_ad.h"
+#include "directory.h"
 
 #include <string>
 #include <algorithm>
@@ -714,6 +715,27 @@ WriteUserLog::openFile(
 	mode_t mode = 0664;
 	fd = safe_open_wrapper_follow( file, flags, mode );
 	if( fd < 0 ) {
+		// See if there's a missing intermediate directory
+		if ( errno == ENOENT ) {
+			std::string dir = file;
+			// Remove the filename from the path
+			size_t pos = dir.find_last_of( "/\\" );
+			if ( pos != std::string::npos ) {
+				dir.erase( pos );
+			}
+
+			if (!mkdir_and_parents_if_needed(dir.c_str(), 0755)) {
+				dprintf( D_ALWAYS,
+						 "WriteUserLog::initialize: "
+							 "mkdir_and_parents_if_needed(\"%s\") failed - errno %d (%s)\n",
+						 dir.c_str(),
+						 errno,
+						 strerror(errno) );
+				return false;
+			}
+			// Try to open the file again
+			fd = safe_open_wrapper_follow( file, flags, mode );
+		}
 		dprintf( D_ALWAYS,
 					"WriteUserLog::initialize: "
 						"safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
