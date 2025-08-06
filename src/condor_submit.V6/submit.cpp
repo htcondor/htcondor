@@ -1941,7 +1941,7 @@ int submit_jobs (
 
 	if (GotQueueCommand > 1) {
 		fprintf(stderr, "\nWarning: Use of multiple queue statements in a single submit file is deprecated."
-		                "\n         This functionality will be removed in the V24 feature series. To see"
+		                "\n         This functionality will be removed in the 25.x feature series. To see"
 		                "\n         how multiple queue statements can be converted into one visit:"
 		                "\nhttps://htcondor.readthedocs.io/en/latest/auto-redirect.html?category=example&tag=convert-multi-queue-statements\n");
 	}
