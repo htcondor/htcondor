@@ -408,7 +408,7 @@ void credmon_sweep_creds(const char * cred_dir, int cred_type)
 #else
 	std::string fullpathname;
 	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
-	struct dirent **namelist;
+	struct dirent **namelist = nullptr;
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {
