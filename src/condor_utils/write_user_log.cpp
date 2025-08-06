@@ -724,7 +724,7 @@ WriteUserLog::openFile(
 				dir.erase( pos );
 			}
 
-			if (!mkdir_and_parents_if_needed(dir.c_str(), 0755)) {
+			if (!mkdir_and_parents_if_needed(dir.c_str(), 0755, PRIV_USER)) {
 				dprintf( D_ALWAYS,
 						 "WriteUserLog::initialize: "
 							 "mkdir_and_parents_if_needed(\"%s\") failed - errno %d (%s)\n",
@@ -736,6 +736,10 @@ WriteUserLog::openFile(
 			// Try to open the file again
 			fd = safe_open_wrapper_follow( file, flags, mode );
 		}
+	}
+
+	// check again 
+	if (fd < 0 ) {
 		dprintf( D_ALWAYS,
 					"WriteUserLog::initialize: "
 						"safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",
