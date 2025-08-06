@@ -10052,7 +10052,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->erase(pidentry->child_session_id);
+		getSecMan()->session_cache.erase(pidentry->child_session_id);
 #ifdef WIN32
 		// close WIN32 handles
 	::CloseHandle(pidentry->hThread);  pidentry->hThread = NULL;
@@ -10840,7 +10840,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 
 KeyCache*
 DaemonCore::getKeyCache() {
-	return sec_man->session_cache;
+	return &sec_man->session_cache;
 }
 
 SecMan* DaemonCore :: getSecMan()
