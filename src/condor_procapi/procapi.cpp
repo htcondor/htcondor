@@ -596,14 +596,10 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 		do {
 			if (env_buffer == NULL) {
 				env_buffer = (char*)malloc(sizeof(char) * read_size);
-				if ( env_buffer == NULL ) {
-					EXCEPT( "Procapi::getProcInfo: Out of memory!");
-				}
+				ASSERT(env_buffer);
 			} else {
 				env_buffer = (char*)realloc(env_buffer, read_size * multiplier);
-				if ( env_buffer == NULL ) {
-					EXCEPT( "Procapi::getProcInfo: Out of memory!");
-				}
+				ASSERT(env_buffer);
 				multiplier++;
 			}
 
@@ -643,9 +639,7 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 		// it mimics and environ variable. The addition +1 is for the end NULL;
 		char **env_environ;
 		env_environ = (char**)malloc(sizeof(char *) * (entries + 1));
-		if (env_environ == NULL) {
-			EXCEPT( "Procapi::getProcInfo: Out of memory!");
-		}
+		ASSERT(env_environ);
 
 		// set up the pointers from the env_environ into the env_buffer
 		index = 0;
@@ -1177,9 +1171,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	}
 
 	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
-	if (kp == NULL) {
-		EXCEPT("ProcAPI: getProcInfo() Out of memory!");
-	}
+	ASSERT(kp);
 
 	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
 		if (errno == ESRCH) {
