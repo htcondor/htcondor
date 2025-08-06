@@ -6180,17 +6180,21 @@ pid_t CreateProcessForkit::fork_exec() {
 #ifdef HAVE_CLONE
 		if (fork_flags & CLONE_NEWUSER) {
 			int fd = open("/proc/self/uid_map", O_WRONLY);
-			if (fd && (uid_map.size() > 0)) {
+			if ((fd >= 0)  && (uid_map.size() > 0)) {
 				std::ignore = write(fd, uid_map.c_str(), uid_map.size());
+			}
+			if (fd >= 0) {
 				close(fd);
 			}
 			fd = open("/proc/self/setgroups", O_WRONLY);
-			if (fd) {
+
+			if (fd >= 0) {
 				std::ignore = write(fd, "deny", 5);
 				close(fd);
 			}
+
 			fd = open("/proc/self/gid_map", O_WRONLY);
-			if (fd) {
+			if (fd >= 0) {
 				std::ignore = write(fd, gid_map.c_str(), gid_map.size());
 				close(fd);
 			}
