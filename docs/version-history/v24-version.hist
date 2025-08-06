@@ -17,6 +17,9 @@
 
 *** 24.12.0 bugs
 
+  Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
+  :jira:`3208`
+
 *** 24.0.12 bugs
 
 *** 24.11.1 features
