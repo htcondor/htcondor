@@ -625,7 +625,8 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
     // Initialize the new cluster ad.
-    if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
+    auto_free_ptr owner(my_username());
+    if( sb->init_base_ad( time(NULL), owner ) != 0 ) {
 
         std::string error = "Failed to create a cluster ad, errmsg="
             + sb->error_stack()->getFullText();
