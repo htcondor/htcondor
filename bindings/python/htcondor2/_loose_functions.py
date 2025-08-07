@@ -8,6 +8,7 @@ from ._common_imports import (
 from ._ad_type import AdType
 from ._daemon_type import DaemonType
 from ._daemon_command import DaemonCommand
+from ._security_context import SecurityContext
 
 from .htcondor2_impl import (
     _send_command,
@@ -124,7 +125,7 @@ def set_ready_state(state : str = "Ready") -> None:
     _set_ready_state(state, addr)
 
 
-def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -> classad.ClassAd:
+def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, security : SecurityContext = None) -> classad.ClassAd:
     """
     Send a ping command to an HTCondor daemon.
 
@@ -132,6 +133,7 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -
                      or a :class:`classad2.ClassAd` describing the daemon
                      as returned by :meth:`Collector.locate`.
     :param str authz: Authorization level or command to test.
+    :param security: SecurtiyContext to use for authenteication.
     """
 
     addr = None
@@ -146,4 +148,8 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -
     if authz is None:
         authz = "DC_NOP"
 
-    return _ping(addr, authz)
+    token = None
+    if security != None:
+        token = security.preferredToken
+
+    return _ping(addr, authz, token)
