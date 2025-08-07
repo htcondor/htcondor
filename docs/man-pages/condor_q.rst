@@ -161,7 +161,14 @@ columns of information, with one line of output per job:
 
 .. code-block:: text
 
-        ID, OWNER, HELD_SINCE, HOLD_REASON
+        ID, OWNER, HELD_SINCE, CODE/SUB, HOLD_REASON
+
+If the **-hold-codes** option is specified, *condor_q* displays the following
+columns of information, with one line of output for each unique value of hold code and subcode:
+
+.. code-block:: text
+
+        OWNER, CODE/SUB COUNT HELD_SINCE, HOLD_REASON
 
 If the **-totals** option is specified, *condor_q* displays only one
 line of output no matter how many jobs and batches of jobs are in the
@@ -314,6 +321,8 @@ The available output data are as follows:
     held.
  HOLD_REASON
     (**-hold** only) The hold reason for the job.
+ CODE/SUB
+    (**-hold** only) The hold code and subcode for the job.
 
 Analyze
 '''''''
@@ -473,6 +482,13 @@ Options
     (output option) Get information about jobs in the hold state. Also
     displays the time the job was placed into the hold state and the
     reason why the job was placed in the hold state.
+ **-hold-codes**
+    (output option) Get information about jobs in the hold state. The
+    first job for each unique hold code and subcode is displayed along
+    with the time and reason that job went on hold.  Note that jobs
+    with the same hold code and subcode may have different hold reason
+    strings, so this output will not show all of the hold information for
+    all jobs.  Use this output as a summary to guide further investigation.
  **-limit** *Number*
     (output option) Limit the number of items output to *Number*.
  **-io**

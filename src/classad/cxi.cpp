@@ -21,10 +21,6 @@
 #include "classad/classad_distribution.h"
 #include <iostream>
 
-using std::string;
-using std::vector;
-using std::pair;
-
 using namespace classad;
 
 enum Commands {
@@ -47,7 +43,7 @@ enum Commands {
 	_LAST_COMMAND_ 
 };
 
-string CommandWords[] = 
+std::string CommandWords[] = 
 {
 	"",
 
@@ -69,61 +65,61 @@ string CommandWords[] =
 };
 
 void help( void );
-int  findCommand( string cmdStr );
+int  findCommand( std::string cmdStr );
 
 int 
 main( void )
 {
 	ClassAd 		*ad, *adptr;
-    string          cmdString;
+	std::string          cmdString;
 	ExprTree		*expr=NULL, *fexpr=NULL;
 	int 			command;
 	Value			value;
 	ClassAdParser	parser;
 	PrettyPrint		unparser;
-	string			output, buffer1, buffer2, buffer3;
+	std::string			output, buffer1, buffer2, buffer3;
 
 	ad = new ClassAd();
 
-	cout << "'h' for help\n# ";
+	std::cout << "'h' for help\n# ";
 	while( 1 ) {	
-	    cin >> cmdString;
-        if (cin.eof()) {
-            cout << "\nExiting.\n";
+		std::cin >> cmdString;
+        if (std::cin.eof()) {
+			std::cout << "\nExiting.\n";
             exit(0);
         }
 		command = findCommand( cmdString );
 		switch( command ) {
 			case CLEAR_TOPLEVEL: 
 				ad->Clear();
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case DEEP_INSERT_ATTRIBUTE:
-                cin >> buffer1;
+				std::cin >> buffer1;
 				if( buffer1.length() < 1 ) {	// expr
-					cout << "Error reading primary expression\n";
+					std::cout << "Error reading primary expression\n";
 					break;
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					cout << "Error parsing expression: " <<  buffer1 << endl;
-                    cout << "(" << CondorErrMsg << ")\n";
+					std::cout << "Error parsing expression: " <<  buffer1 << std::endl;
+					std::cout << "(" << CondorErrMsg << ")\n";
 					break;
 				}
-                cin >> buffer2;
+				std::cin >> buffer2;
 				if( buffer2.length() < 1) {
-					cout << "Error reading attribute name\n";
+					std::cout << "Error reading attribute name\n";
 					break;
 				}	
-                getline(cin, buffer3, '\n');
+                std::getline(std::cin, buffer3, '\n');
 				if( !parser.ParseExpression( buffer3, fexpr, true ) ) {
-					cout << "Error parsing expression: " << buffer3 << endl;
-                    cout << "(" << CondorErrMsg << ")\n";
+					std::cout << "Error parsing expression: " << buffer3 << std::endl;
+					std::cout << "(" << CondorErrMsg << ")\n";
 					break;
 				} 
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					cout << "Error evaluating expression: " <<  buffer1 << endl;
+					std::cout << "Error evaluating expression: " <<  buffer1 << std::endl;
 					delete expr;
 					delete fexpr;
 					expr = NULL;
@@ -131,7 +127,7 @@ main( void )
 					break;
 				}
 				if( !value.IsClassAdValue( adptr ) ) {
-					cout << "Error:  Primary expression was not a classad\n";
+					std::cout << "Error:  Primary expression was not a classad\n";
 					delete expr;
 					expr = NULL;
 					delete fexpr;
@@ -139,7 +135,7 @@ main( void )
 					break;
 				}	
 				if( !adptr->Insert( buffer2, fexpr ) ) {
-					cout << "Error Inserting expression: " << buffer3 << endl;
+					std::cout << "Error Inserting expression: " << buffer3 << std::endl;
 					delete fexpr;
 					delete expr;
 					fexpr = NULL;
@@ -151,64 +147,64 @@ main( void )
 				break;
 
 			case DEEP_DELETE_ATTRIBUTE:
-                cin >> buffer1;
+                std::cin >> buffer1;
 				if( buffer1.length() < 1) {
-					cout << "Error reading primary expression\n";
+					std::cout << "Error reading primary expression\n";
 					break;
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					cout << "Error parsing expression: " << buffer1 << endl;
+					std::cout << "Error parsing expression: " << buffer1 << std::endl;
 					break;
 				}
-                getline(cin, buffer2, '\n');
+                std::getline(std::cin, buffer2, '\n');
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					cout << "Error evaluating expression: " <<  buffer1 << endl;
+					std::cout << "Error evaluating expression: " <<  buffer1 << std::endl;
 					delete expr;
 					break;
 				}
 				if( !value.IsClassAdValue( adptr ) ) {
-					cout << "Error:  Primary expression was not a classad\n";
+					std::cout << "Error:  Primary expression was not a classad\n";
 					delete expr;
 					expr = NULL;
 					break;
 				}
 				if( !adptr->Remove( buffer2 ) ) {
-					cout << "Warning:  Attribute %s not found" << buffer2 << endl;
+					std::cout << "Warning:  Attribute %s not found" << buffer2 << std::endl;
 				}
 				delete expr;
 				expr = NULL;
 				break;
 
 			case EVALUATE:
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					cout << "Error parsing expression: " << buffer1 << endl;
+					std::cout << "Error parsing expression: " << buffer1 << std::endl;
 					break;
 				}
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					cout << "Error evaluating expression: " << buffer1 << endl;
+					std::cout << "Error evaluating expression: " << buffer1 << std::endl;
 					delete expr;
 					expr = NULL;
 					break;
 				}
 				output = "";
 				unparser.Unparse( output, value );
-				cout << output << endl;
+				std::cout << output << std::endl;
 				delete expr;
 				expr = NULL;
 				break;
 		
 			case EVALUATE_WITH_SIGNIFICANCE:
-                getline(cin, buffer1, '\n');
+                std::getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					cout << "Error parsing expression: " <<  buffer1 << endl;
+					std::cout << "Error parsing expression: " <<  buffer1 << std::endl;
 					break;
 				}
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value, fexpr ) ) {
-					cout << "Error evaluating expression: " << buffer1 << endl;
+					std::cout << "Error evaluating expression: " << buffer1 << std::endl;
 					delete expr;
 					delete fexpr;
 					expr = NULL;
@@ -217,10 +213,10 @@ main( void )
 				}
 				output = "";
 				unparser.Unparse( output, value );
-				cout << output << endl;
+				std::cout << output << std::endl;
 				output = "";
 				unparser.Unparse( output, fexpr );
-				cout << output << endl;
+				std::cout << output << std::endl;
 				delete expr;
 				expr = NULL;
 				delete fexpr;
@@ -228,9 +224,9 @@ main( void )
 				break;
 
 			case FLATTEN: 
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					cout << "Error parsing expression: " << buffer1 << endl;
+					std::cout << "Error parsing expression: " << buffer1 << std::endl;
 					break;
 				}
 				expr->SetParentScope( ad );
@@ -238,16 +234,16 @@ main( void )
 					if( fexpr ) {
 						output = "";
 						unparser.Unparse( output, fexpr );
-						cout << output << endl;
+						std::cout << output << std::endl;
 						delete fexpr;
 						fexpr = NULL;
 					} else {
 						output = "";
 						unparser.Unparse( output, value );
-						cout << output << endl;
+						std::cout << output << std::endl;
 					}
 				} else {	
-					cout << "Error flattening expression\n";
+					std::cout << "Error flattening expression\n";
 				}
 				delete expr;
 				expr = NULL;
@@ -255,70 +251,70 @@ main( void )
 				
 			case HELP: 
 				help(); 
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case INSERT_ATTRIBUTE:
-                cin >> buffer1; 
+				std::cin >> buffer1; 
 				if( buffer1.length() < 1) {
-					cout << "Error reading attribute name\n";
+					std::cout << "Error reading attribute name\n";
 					break;
 				}	
-                getline(cin, buffer2, '\n');
+                getline(std::cin, buffer2, '\n');
 				if( !parser.ParseExpression( buffer2, expr, true ) ) {
-					cout << "Error parsing expression: " <<  buffer2 << endl;
+					std::cout << "Error parsing expression: " <<  buffer2 << std::endl;
 					break;
 				} 
 				if( !ad->Insert( buffer1, expr ) ) {
-					cout << "Error Inserting expression\n";
+					std::cout << "Error Inserting expression\n";
 				}
 				expr = NULL;
 				break;
 
 			case NEW_TOPLEVEL: 
 				ad->Clear();
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				if( !( ad = parser.ParseClassAd( buffer1, true ) ) ) {
-					cout << "Error parsing classad\n";
+					std::cout << "Error parsing classad\n";
 				}
 				break;
 			
 			case OUTPUT_TOPLEVEL:
 				output = "";
 				unparser.Unparse( output, ad );
-				cout << output << endl;
-                getline(cin, buffer1, '\n');
+				std::cout << output << std::endl;
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case QUIT: 
-				cout << "Exiting\n\n";
+				std::cout << "Exiting\n\n";
 				exit( 0 );
 
 			case REMOVE_ATTRIBUTE:
-                cin >> buffer1;
+                std::cin >> buffer1;
 				if( buffer1.length() < 1) {
-					cout << "Error reading attribute name\n";
+					std::cout << "Error reading attribute name\n";
 					break;
 				}
 				if( !ad->Remove( buffer1 ) ) {
-					cout << "Error removing attribute " << buffer1 << endl;
+					std::cout << "Error removing attribute " << buffer1 << std::endl;
 				}
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			case SET_MATCH_TOPLEVEL: 
 				delete ad;
 				if( !( ad = MatchClassAd::MakeMatchClassAd( NULL, NULL ) ) ){
-					cout << "Error making classad\n" << endl;
+					std::cout << "Error making classad\n" << std::endl;
 				}
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 				break;
 
 			default:
-                getline(cin, buffer1, '\n');
+                getline(std::cin, buffer1, '\n');
 		}
 
-		cout << "\n# ";
+		std::cout << "\n# ";
 	}
 
 	exit( 0 );
@@ -329,30 +325,30 @@ main( void )
 void 
 help( void )
 {
-	cout << "\nCommands are:\n";
-	cout << "clear_toplevel\n\tClear toplevel ad\n";
-	cout << "deep_insert <expr1> <name> <expr2>\n\tInsert (<name>,<expr2>) into"
+	std::cout << "\nCommands are:\n";
+	std::cout << "clear_toplevel\n\tClear toplevel ad\n";
+	std::cout << "deep_insert <expr1> <name> <expr2>\n\tInsert (<name>,<expr2>) into"
 		" classad <expr1>. (No inter-token spaces\n\tallowed in <expr1>.)\n";
-	cout << "deep_delete <expr> <name>\n\tDelete <name> from classad "
+	std::cout << "deep_delete <expr> <name>\n\tDelete <name> from classad "
 		"<expr>. (No inter-token spaces allowed\n\tin <expr>.\n";
-	cout << "evaluate <expr>\n\tEvaluate <expr> (in toplevel ad)\n" ;
-	cout << "sigeval <expr>\n\tEvaluate <expr> (in toplevel) and "
+	std::cout << "evaluate <expr>\n\tEvaluate <expr> (in toplevel ad)\n" ;
+	std::cout << "sigeval <expr>\n\tEvaluate <expr> (in toplevel) and "
 		"identify significant\n\tsubexpressions\n";
-	cout << "flatten <expr>\n\tFlatten <expr> (in toplevel ad)\n";
-	cout << "help\n\tHelp --- this screen\n" ;
-	cout << "insert_attribute <name> <expr>\n\tInsert attribute (<name>,<expr>)"
+	std::cout << "flatten <expr>\n\tFlatten <expr> (in toplevel ad)\n";
+	std::cout << "help\n\tHelp --- this screen\n" ;
+	std::cout << "insert_attribute <name> <expr>\n\tInsert attribute (<name>,<expr>)"
 		"into toplevel\n";
-	cout << "new_toplevel <classad>\n\tEnter new toplevel ad\n";
-	cout << "output_toplevel\n\tOutput toplevel ad\n";
-	cout << "quit\n\tQuit\n";
-	cout << "delete_attribute <name>\n\tDelete attribute <name> from "
+	std::cout << "new_toplevel <classad>\n\tEnter new toplevel ad\n";
+	std::cout << "output_toplevel\n\tOutput toplevel ad\n";
+	std::cout << "quit\n\tQuit\n";
+	std::cout << "delete_attribute <name>\n\tDelete attribute <name> from "
 		"toplevel\n";
-	cout << "set_match_toplevel\n\tSetup a toplevel ad for matching\n";
-	cout << "\nA command may be specified by an unambiguous prefix\n";
+	std::cout << "set_match_toplevel\n\tSetup a toplevel ad for matching\n";
+	std::cout << "\nA command may be specified by an unambiguous prefix\n";
 }
 
 int
-findCommand( string cmdStr )
+findCommand( std::string cmdStr )
 {
 	int cmd = 0, len = (int)cmdStr.length();
 
@@ -371,14 +367,14 @@ findCommand( string cmdStr )
 	}
 
     if (cmd < 0) {
-        cout <<  "\nAmbiguous command " << cmdStr << "; matches:\n";
+		std::cout <<  "\nAmbiguous command " << cmdStr << "; matches:\n";
         for( int i = _NO_CMD_+1 ; i < _LAST_COMMAND_ ; i++ ) {
             if( strncmp(CommandWords[i].c_str(), cmdStr.c_str(), len) == 0)  {
-                cout << "\t" << CommandWords[i] << "\n";
+				std::cout << "\t" << CommandWords[i] << "\n";
             }
         }
     } else if( cmd == 0) {
-		cout << "\nUnknown command " << cmdStr <<" \n";
+		std::cout << "\nUnknown command " << cmdStr <<" \n";
 		return -1;
 	}
 

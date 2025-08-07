@@ -24,7 +24,7 @@
 #include "condor_attributes.h"
 //#include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, std::vector<KeyInfo> key_param, const ClassAd& policy_param, time_t expiration_param, int lease_interval )
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, std::vector<KeyInfo> key_param, const ClassAd& policy_param, time_t expiration_param, int lease_interval, const std::string& context_tag )
 	: _id(id_param)
 	, _addr(addr_param)
 	, _keys(key_param)
@@ -33,6 +33,7 @@ KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& ad
 	, _lease_interval(lease_interval)
 	, _lease_expiration(0)
 	, _lingering(false)
+	, _context_tag(context_tag)
 {
 	if (_keys.empty()) {
 		_preferred_protocol = CONDOR_NO_PROTOCOL;

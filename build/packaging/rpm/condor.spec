@@ -27,6 +27,10 @@ Name: condor
 Version: %{condor_version}
 %global version_ %(tr . _ <<< %{version})
 
+%if 0%{?x86_64_v2}
+BuildArch: x86_64_v2
+%endif
+
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
@@ -105,7 +109,6 @@ BuildRequires: mozilla-nss-devel
 BuildRequires: nss-devel
 %endif
 BuildRequires: openssl-devel
-BuildRequires: libxml2-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
 %else
@@ -282,22 +285,20 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-%if 0%{?suse_version}
-# Hold back pelican on openSUSE until version 7.16.1 is released
-Requires: pelican >= 7.14.1
-Requires: pelican-osdf-compat >= 7.14.1
+%if 0%{?rhel} == 7
+Requires: pelican >= 7.18.0
 %else
-Requires: pelican >= 7.15.1
-Requires: pelican-osdf-compat >= 7.15.1
+Requires: (pelican >= 7.18.0 or pelican-debug >= 7.18.0)
 %endif
+Requires: pelican-osdf-compat >= 7.18.0
 
-%if 0%{?rhel} != 7
+%if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.1 is released
+# Hold back apptainer until version 1.4.2 is released
 Requires: apptainer >= 1.3.6
 %endif
 %endif
@@ -363,11 +364,11 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
+%endif
 
 # upgrade-checks package discontinued as of 24.8.0
 Obsoletes: %{name}-upgrade-checks < 24.8.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
-%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -688,6 +689,13 @@ export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
+%if 0%{?x86_64_v2}
+export CFLAGS="${CFLAGS} -march=x86-64-v2"
+export CXXFLAGS="${CXXFLAGS} -march=x86-64-v2"
+export FFLAGS="${FFLAGS} -march=x86-64-v2"
+export FCFLAGS="${FCFLAGS} -march=x86-64-v2"
+%endif
+
 # build man files
 %if 0%{?amzn}
 # if this environment variable is set, sphinx-build cannot import markupsafe
@@ -989,6 +997,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
 %_libexecdir/condor/check-url
+%_libexecdir/condor/condor_annex
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
@@ -1065,12 +1074,12 @@ rm -rf %{buildroot}
 %endif
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
-%_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
 %_mandir/man1/condor_dagman.1.gz
+%_mandir/man1/condor_dag_checker.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
 %_mandir/man1/condor_gpu_discovery.1.gz
@@ -1166,6 +1175,7 @@ rm -rf %{buildroot}
 %_bindir/condor_check_password
 %_bindir/condor_check_config
 %_bindir/condor_dagman
+%_bindir/condor_dag_checker
 %_bindir/condor_rm
 %_bindir/condor_vacate
 %_bindir/condor_run
@@ -1203,7 +1213,6 @@ rm -rf %{buildroot}
 %_bindir/condor_job_router_info
 %_bindir/condor_transform_ads
 %_bindir/condor_update_machine_ad
-%_bindir/condor_annex
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 %_bindir/condor_adstash
@@ -1213,6 +1222,7 @@ rm -rf %{buildroot}
 %_bindir/condor_test_token
 %_bindir/condor_manifest
 %_bindir/condor_upgrade_check
+%_bindir/condor_join_pool
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1315,7 +1325,6 @@ rm -rf %{buildroot}
 %_libdir/libclassad.so
 %dir %_includedir/classad/
 %_includedir/classad/attrrefs.h
-%_includedir/classad/cclassad.h
 %_includedir/classad/classad_distribution.h
 %_includedir/classad/classadErrno.h
 %_includedir/classad/classad.h
@@ -1526,14 +1535,75 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.0-2
-- Use pelican 7.14.1 on openSUSE
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+- Remove support for old JobRouter syntax
+- New condor_dag_checker tool finds syntax and logic errors before run
+- New condor_q -hold-codes produces a summary of held jobs
+- condor_status -lvm reports current disk usage by slots on the EPs
+- Fix bug where condor_q would truncate job counts to six digits
+- Fix bug where suspended jobs did not change state to idle when vacated
 
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.7-2
-- Use pelican 7.14.1 on openSUSE
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.10-1
 
-* Mon May 05 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.24-2
-- Use pelican 7.14.1 on openSUSE
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
+- Fix bug where the vacate reason was not propagated back to the user
+- HTCondor tarballs now contain Pelican 7.17.2
+
+* Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
+- Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+- Fix incorrect time reported by htcondor status for long running jobs
+- Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.9.2-1
+- New job attribute to report number of input files transferred by protocol
+- Optional condor_schedd history log file
+- condor_watch_q can now track DAGMan jobs when using the -clusters option
+- Fix bug that caused claim failure when previous output transfer failed
+- Fix bug where access tokens were not generated from Vault tokens
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.9-1
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
+- In htcondor2, empty configuration keys are now treated as non-existent
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.26-1
+- Fix memory leak in the condor_schedd when using late materialization
+- Fix condor_master start up when file descriptor ulimit was huge
+- HTCondor tarballs now contain Pelican 7.17.0
+
+* Thu Jun 26 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.26-1
+- Fix ingestion of ads into Elasticsearch under very rare circumstances
+- DAGMan better handles being unable to write to a full filesystem
+- 'kill_sig' submit commands are now ignored on the Windows platform
+
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.8.1-1
+- Fix claim re-use, which was broken in HTCondor version 24.5.1
+- Add support for hierarchic and delegatable v2 cgroups
+- Add the ability to put each HTCondor daemon in its own cgroup
+- Always sets the execute bit on the executable regardless of its origin
+- The EP sets the HOME environment variable to match the /etc/passwd entry
+- Add new 'halt' and 'resume' verbs to "htcondor dag"
+- Add htcondor2.DAGMan class to send commands to a running DAG
+- htcondor ap status now reports the AP's RecentDaemonCoreDutyCycle
+- Can configure condor_adstash to fetch a custom projection of attributes
+
+* Thu Jun 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.8-1
+- Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+  - Pelican 7.16.5 now includes end-to-end integrity checks for clients
+- Add Python wheel for Python 3.13, drop Python wheel for Python 3.7
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
+
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.25-1
+- Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+- HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+
+* Thu May 29 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.25-1
+- Fix problems where parallel universe jobs could crash the condor_schedd
+- Prevent condor_starter crash when evicting job during input file transfer
+- condor_watch_q now properly displays job id ranges by using numeric sort
 
 * Tue Apr 22 2025 Tim Theisen <tim@cs.wisc.edu> - 24.7.3-1
 - condor_who now works for Glideins

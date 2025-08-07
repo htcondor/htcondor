@@ -12,6 +12,7 @@ from ._common_imports import (
 
 from ._drain_type import DrainType
 from ._completion_type import CompletionType
+from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _startd_drain_jobs,
@@ -144,8 +145,7 @@ class Startd():
             str(constraint), projection_string, int(match), since,
             # Ad Type Filter
             "",
-            # HRS_STARTD_JOB_HIST
-            1,
+            HistorySrc.StartdJob,
             # GET_HISTORY
             429,
         )

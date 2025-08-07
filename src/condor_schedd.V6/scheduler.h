@@ -169,6 +169,10 @@ struct SubmitterCounters {
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
   int LocalJobsIdle;    // Local universe
+  int OCUClaims; // OCU Claims held indefinitely by this submitter
+  int OCUClaimsBorrowed; // OCU Claims in use by someone other than the owner
+  int OCUWantedJobs; // Total number of idle+running jobs that want an OCU claim
+  int OCURunningJobs; // Running number of jobs that want an OCU Claim
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
   int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
 //  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
@@ -182,6 +186,10 @@ struct SubmitterCounters {
 	, JobsFlocked(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
+	, OCUClaims(0)
+	, OCUClaimsBorrowed(0)
+	, OCUWantedJobs(0)
+	, OCURunningJobs(0)
 	, Hits(0)
 	, JobsCounted(0)
 //	, JobsRecentlyAdded(0)
@@ -216,8 +224,10 @@ struct SubmitterData {
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
 
 class JobQueueUserRec;
+class JobQueueProjectRec;
 typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
+typedef std::map<std::string, JobQueueProjectRec*, classad::CaseIgnLTStr> ProjectInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
@@ -225,64 +235,65 @@ constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
 class match_rec
 {
  public:
-    match_rec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
+    match_rec(char const*, char const*, const JOB_ID_KEY & jid, const ClassAd*, char const*, char const* pool,bool is_dedicated);
 	~match_rec();
 
-    char*   		peer; //sinful address of startd
-	std::string        m_description;
+	char * peer{nullptr}; //sinful address of startd
+	char * user{nullptr};
+	char * pool{nullptr}; // negotiator hostname if flocking; else empty
+	shadow_rec * shadowRec{nullptr};
 
 		// cluster of the job we used to obtain the match
-	int				origcluster; 
+	int origcluster{0};
 
 		// if match is currently active, cluster and proc of the
 		// running job associated with this match; otherwise,
 		// cluster==origcluster and proc==-1
 		// NOTE: use SetMrecJobID() to change cluster and proc,
 		// because this updates the index of matches by job id.
-    int     		cluster;
-    int     		proc;
+	int cluster{0};
+	int proc{0};
 
-    int     		status;
-	shadow_rec*		shadowRec;
-	int				num_exceptions;
-	time_t			entered_current_status;
-	ClassAd*		my_match_ad;
-	ClassAd         m_added_attrs;
-	char*			user;
-	bool            is_dedicated; // true if this match belongs to ded. sched.
-	bool			allocated;	// For use by the DedicatedScheduler
-	bool			scheduled;	// For use by the DedicatedScheduler
-	bool			needs_release_claim;
-	bool use_sec_session;
+	int status{0};
+	int num_exceptions{0};
+	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
+	time_t idle_timer_deadline{0}; // if the above is nonzero, abstime to hold claim
+	time_t entered_current_status{0};
+	PROC_ID m_now_job{0,0};
+
+	ClassAd * my_match_ad{nullptr};
+	ClassAd m_added_attrs;
+
+	bool is_dedicated{false}; // true if this match belongs to ded. sched.
+	bool allocated{false}; // For use by the DedicatedScheduler
+	bool scheduled{false}; // For use by the DedicatedScheduler
+	bool needs_release_claim{false};
+	bool use_sec_session{false};
+	bool			is_ocu {false}; // when true, hold forever, hand out to others
+    PROC_ID         ocu_originator;  // procid of the ocu claimer job
+									
+	bool m_startd_sends_alives{false}; // in practice, actual default is true since 7.5.4
+	bool m_claim_pslot{false};
+	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
+
 	ClaimIdParser claim_id;
-	classy_counted_ptr<DCMsgCallback> claim_requester;
+	classy_counted_ptr<DCMsgCallback> claim_requester{nullptr};
 
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
 		// punched hole
-	std::string*	auth_hole_id;
-
-	bool m_startd_sends_alives;
-	bool m_claim_pslot;
-	int  m_multi_slot{0}; // when > 1, make a multi-d-slot split request
-
-	int keep_while_idle; // number of seconds to hold onto an idle claim
-	time_t idle_timer_deadline; // if the above is nonzero, abstime to hold claim
+	std::string*	auth_hole_id{nullptr};
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );
 
+	std::string m_description;
 	void makeDescription();
 	char const *description() const {
 		return m_description.c_str();
 	}
 
-	const std::string & getPool() const {return m_pool;}
-
-	PROC_ID m_now_job;
-
-	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
 class GridUserIdentity {
@@ -503,10 +514,18 @@ class Scheduler : public Service
 	// match managing
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
-    match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
+	match_rec*		AddMrec(
+		const char * claim_id,
+		const char * addr,
+		const JOB_ID_KEY& jid,
+		const ClassAd* matchAd,
+		const char * user,
+		const char * pool,
+		const ClassAd* extraAttrs = nullptr, // extra attrs sent by negotiator
+		match_rec **pre_existing = nullptr);
 	// support for START_VANILLA_UNIVERSE
 	ExprTree *      flattenVanillaStartExpr(JobQueueJob * job, const OwnerInfo* powni);
-	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const std::string &pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
+	bool            jobCanUseMatch(JobQueueJob * job, ClassAd * slot_ad, const char * pool, const char *&because); // returns true when START_VANILLA allows this job to run on this match
 	bool            jobCanNegotiate(JobQueueJob * job, const char *&because); // returns true when START_VANILLA allows this job to negotiate
 	bool            vanillaStartExprIsConst(VanillaMatchAd &vad, bool &bval);
 	bool            evalVanillaStartExpr(VanillaMatchAd &vad);
@@ -536,7 +555,8 @@ class Scheduler : public Service
 	void			spawnShadow( shadow_rec* );
 	void			spawnLocalStarter( shadow_rec* );
 	bool			claimLocalStartd();
-	bool			isStillRunnable( int cluster, int proc, int &status ); 
+	bool			isStillRunnable( int cluster, int proc, int &status );
+
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
@@ -550,6 +570,7 @@ class Scheduler : public Service
 	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
+
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
@@ -609,6 +630,7 @@ class Scheduler : public Service
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
 	const ClassAd & getUserRecDefaultsAd() const { return m_userRecDefaultsAd; }
+	const ClassAd & getProjectRecDefaultsAd() const { return m_projectRecDefaultsAd; }
 	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
 	const std::string & getExtendedSubmitHelpFile() const { return m_extendedSubmitHelpFile; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
@@ -678,19 +700,31 @@ class Scheduler : public Service
 	classad::References MinimalSigAttrs;
 
 	int		nextUnusedUserRecId();
-	JobQueueUserRec * jobqueue_newUserRec(int userrec_id);
+	JobQueueUserRec * jobqueue_newUserRec(int userrec_id, const char * mytype);
 	void jobqueue_deleteUserRec(JobQueueUserRec * uad);
-	void mapPendingOwners();
+	void jobqueue_deleteProject(JobQueueProjectRec * pjad);
+	void mapPendingOwners(); // pending owners can be either userrec or projectrec
 	// these are used during startup to handle the case where jobs have Owner/User attributes but
 	// there is no persistnt JobQueueUserRec in the job_queue
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
 	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
+	bool HasPersistentProjectInfo() const { return EnablePersistentProjectInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
 	const OwnerInfo * lookup_owner_const(const char*);
+	// make sure that a job object has a submitter record pointer
+	const SubmitterData * get_submitter(JobQueueJob * job) {
+		SubmitterData * subdat = nullptr;
+		if (job) { get_submitter_and_owner(job, subdat); }
+		return subdat;
+	}
 	void incrementRecentlyAdded(OwnerInfo * ownerinfo);
+	JobQueueProjectRec * find_projectinfo(const char * project_name);
+	JobQueueProjectRec * get_projectinfo(JobQueueJob * job);
+	// find a project record or insert a pending project record
+	JobQueueProjectRec * insert_projectinfo(const char * project_name);
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
@@ -723,7 +757,7 @@ class Scheduler : public Service
 
 private:
 
-	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
+	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
@@ -756,6 +790,7 @@ private:
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
 	ClassAd             m_userRecDefaultsAd;
+	ClassAd             m_projectRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
 	ClassAd             m_local_starter_ad;
@@ -774,6 +809,7 @@ private:
 	Timeslice       PeriodicExprInterval;
 	int             periodicid;
 	int				QueueCleanInterval;
+	int				WriteHistRecordInterval{0};
 	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				JobStartCount;
@@ -784,6 +820,7 @@ private:
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
 	bool			EnablePersistentOwnerInfo;
+	bool			EnablePersistentProjectInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
@@ -822,6 +859,7 @@ private:
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
+	ProjectInfoMap  ProjectInfo;   // map of JobQueueProjectRec ads by project name
 
 	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
@@ -918,8 +956,11 @@ private:
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
 	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
-					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
+	int			act_on_project(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
 	void		remove_unused_owners();
+	bool		any_userrec_refs(JobQueueUserRec * urec); // returns true if any schedd data structures are holding this given ptr
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
@@ -1044,6 +1085,8 @@ private:
 
 		// Command handler for collector token requests.
 	int handle_collector_token_request(int, Stream *s);
+
+	void maybeWriteDaemonHistory(ClassAd* ad);
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.

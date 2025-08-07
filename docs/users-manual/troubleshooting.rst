@@ -1,5 +1,94 @@
+Troubleshooting HTCondor Jobs
+=============================
+
+How To Debug a Held Jobs
+------------------------
+
+When HTCondor cannot successfully run a job, heuristics decide whether the
+failure was a problem with the job itself, or with the system. If the
+reason was a problem with the job that might repeat, should HTCondor
+attempt to re-run the job, then HTCondor will "hold" the job, so that it
+will not be automatically re-run.  You can see these held jobs by running
+condor_q -hold.  A held job is a signal from the system to the user that
+some kind of manual intervention should be taken to fix the problem.
+
+Determining the reason for the hold
+'''''''''''''''''''''''''''''''''''
+
+When a job is held, HTCondor records the reason for the hold.  There are many
+reasons why a job might be held, and the first step in fixing the problem is to
+find out why it was held.
+
+Running the command
+
+.. code-block:: shell
+
+   $ condor_q -hold
+
+will show you all your held jobs on this schedd.  HTCondor version 25.0 and
+later will show the Hold Code and Hold Subcode, in the output of condor_q -hold:
+
+
+.. code-block:: console
+
+   -- Schedd: ap1000: <1.2.3.4:9618...>
+ ID      OWNER          HELD_SINCE  CODE/SUB HOLD_REASON
+ 215.0   scientist      6/9  17:29    32/0   Error from slot1@ep: Job has gone over cgroup memory limit of 20096 megabytes
+
+The "CODE" field before the slash is the Hold Code and the "SUB" field after the slash
+is the Hold Subcode.  The Hold Code is a number that indicates the general
+reason for the hold, and the Hold Subcode is a number that indicates the
+specific reason for the hold.  The Hold Reason is a human-readable
+explanation of the hold, which may include the job ID, the machine name,
+and other information that can help you to understand the problem.
+
+Common reasons for hold are that the job has used more memory or disk than
+it requested in :subcom:`request_memory` or :subcom:`request_disk`. If so,
+you can fix the problem by increasing the memory or disk requested, or
+by changing the job to use less memory or disk.
+
+Another common cause for holds is that the input files for the job do not
+exist, are not readable, or the name in the submit file is incorrect. You
+can fix this by making the files available, or resubmitting the job with
+the correct filenames.
+
+The complete table of hold codes and subcodes is available at
+:ref:`codes-other-values/hold-reason-codes:Hold Reason Codes`.  Note that your local administrator may
+define policies to put jobs on hold for other reasons, so this
+table may not be complete for your system.
+
+.. note::
+
+    
+   Older versions of condor_q -hold do not show the Hold Code and Hold Subcode.
+   To get these, you should run
+
+   .. code-block:: shell
+
+      $ condor_q -hold -f "%d." ClusterId  -format "%d " ProcId -format "%d/" HoldReasonCode -format "%d\n" HoldReasonSubCode
+
+
+Releasing the held job to retry
+'''''''''''''''''''''''''''''''
+
+Once you have addressed the problem causing the hold, you can release the job
+for HTCondor to retry running it by running
+
+.. code-block:: shell
+
+   $ condor_release 215.0
+
+to release a specific job, or
+
+.. code-block:: shell
+
+   $ condor_release -all
+
+to release all your held jobs.
+
+
 How To Debug an Always Idle Job
-===============================
+-------------------------------
 
 Sometimes, when you submit a job to HTCondor, it sits idle seemingly forever,
 :tool:`condor_q` shows it in the idle state, when you expect it should start running.
@@ -7,7 +96,7 @@ This can be frustrating, but there are tools to give visibility so you can
 debug what is going on.
 
 Jobs that start but are quickly evicted
----------------------------------------
+'''''''''''''''''''''''''''''''''''''''
 
 One possibility is that the job is actually starting, but something goes wrong
 very quickly after it starts, so the Execution Point evicts the job, and the
@@ -56,7 +145,7 @@ Then this flapping is the problem, and you'll need to figure out why.  Perhaps a
 useful, maybe you'll need to ask a system administrator.
 
 Jobs that don't match any Execution Point
------------------------------------------
+'''''''''''''''''''''''''''''''''''''''''
 
 Another common cause of an always-idle job is that the job doesn't match any
 slot in the pool.  Perhaps the memory or disk requested in the submit file is
@@ -108,7 +197,7 @@ this:
            0 are able to run your job
 
           WARNING:  Be advised:
-             No machines matched the jobs's constraints
+             No machines matched the job's constraints
 
 
 In this example, RequestMemory is set too high, so the job won't match any machines.
@@ -118,7 +207,7 @@ this probably isn't the problem, or, it could be that very few machines in your
 pool match your job, and you'll just need to wait until they are available.
 
 Not enough priority
--------------------
+'''''''''''''''''''
 
 Another reason your job isn't running is that other jobs of yours are running,
 but your priority isn't good enough to allow any more of your jobs running.
@@ -129,7 +218,7 @@ give your more important jobs a higher job priority.  The command
 is what HTCondor uses to calculate your fair share.
 
 Systemic problems
------------------
+'''''''''''''''''
 
 The final case is that you have done nothing wrong, but there is some problem
 with the system.  Maybe a network is down, or a system daemon has crashed,

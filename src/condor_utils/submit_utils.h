@@ -46,7 +46,7 @@
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_Executable "executable"
-#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_exectuable"
+#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
 #define SUBMIT_KEY_Arguments2 "arguments2"

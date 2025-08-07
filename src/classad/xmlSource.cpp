@@ -30,11 +30,6 @@
 #include <charconv>
 #include <system_error>
 
-using std::string;
-using std::vector;
-using std::pair;
-
-
 namespace classad {
 
 ClassAdXMLParser::
@@ -51,14 +46,14 @@ ClassAdXMLParser::
 }
 
 bool ClassAdXMLParser::
-ParseClassAd( const string &buffer, ClassAd &classad)
+ParseClassAd( const std::string &buffer, ClassAd &classad)
 {
 	int offset = 0;
 	return ParseClassAd(buffer, classad, offset);
 }
 
 bool ClassAdXMLParser::
-ParseClassAd( const string &buffer, ClassAd &classad, int &offset)
+ParseClassAd( const std::string &buffer, ClassAd &classad, int &offset)
 {
 	ClassAd          *classad_out;
 	StringLexerSource lexer_source(&buffer, offset);
@@ -94,7 +89,7 @@ ParseClassAd( LexerSource *lexer_source, ClassAd &ad)
 
 
 ClassAd *ClassAdXMLParser::
-ParseClassAd( const string &buffer)
+ParseClassAd( const std::string &buffer)
 {
 	int offset = 0;
 
@@ -102,7 +97,7 @@ ParseClassAd( const string &buffer)
 }
 
 ClassAd *ClassAdXMLParser::
-ParseClassAd( const string &buffer, int &offset)
+ParseClassAd( const std::string &buffer, int &offset)
 {
 	ClassAd          *classad;
 	StringLexerSource lexer_source(&buffer, offset);
@@ -165,7 +160,7 @@ ParseClassAd(ClassAd *classad_in)
 				  delete local_ad;
 			      return NULL;
 			    } else if( token.tag_type == XMLLexer::tagType_Start) {
-					string attribute_name;
+					std::string attribute_name;
 					ExprTree *tree;
 					
 					tree = ParseAttribute(attribute_name);
@@ -207,7 +202,7 @@ ParseClassAd(ClassAd *classad_in)
 
 ExprTree *ClassAdXMLParser::
 ParseAttribute(
-	string    &attribute_name)
+	std::string    &attribute_name)
 {
 	ExprTree         *tree;
 	XMLLexer::Token  token;
@@ -279,7 +274,7 @@ ParseList(void)
 	ExprTree           *tree;
 	ExprTree           *subtree;
 	XMLLexer::Token    token;
-	vector<ExprTree*>  expressions;
+	std::vector<ExprTree*>  expressions;
 
 	tree = NULL;
 	lexer.ConsumeToken(&token);
@@ -316,7 +311,7 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 	have_token = lexer.ConsumeToken(&token);
 	assert(have_token && token.tag_id == tag_id);
 
-	// Get text of number or string
+	// Get text of number or std::string
 	have_token = lexer.PeekToken(&token);
 
 	if (have_token && token.token_type == XMLLexer::tokenType_Text) {
@@ -341,10 +336,10 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 				tree = Literal::MakeReal(real);
 			}
 		}
-		else {        // its a string
+		else {        // its a std::string
 			bool validStr = true;
 			convert_escapes(token.text, validStr );
-			if(!validStr) {  // invalid string because it had /0 escape sequence
+			if(!validStr) {  // invalid std::string because it had /0 escape sequence
 				return NULL;
 			} else {
 				tree = Literal::MakeString(token.text);
@@ -353,7 +348,7 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 	
 	} else if (tag_id == XMLLexer::tagID_String) {
 		// We were expecting text and got none, so we had
-		// the empty string, which was skipped by the lexer.
+		// the empty std::string, which was skipped by the lexer.
 		tree = Literal::MakeString("");
 	}
 
@@ -373,7 +368,7 @@ ParseBool(void)
 	assert(token.tag_id == XMLLexer::tagID_Bool);
 
 	bool   value;
-	string truth_value = token.attributes["v"];
+	std::string truth_value = token.attributes["v"];
 
 	if (truth_value == "t" || truth_value == "T") {
 		value = true;

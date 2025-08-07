@@ -96,8 +96,10 @@ class UniShadow : public BaseShadow
 	void hookTimerCancel();
 
 	const char * getStarterVersion() {
-		if( remRes ) { return remRes->starter_version; }
-		return NULL;
+		if (remRes && !remRes->starter_version.empty()) { 
+			return remRes->starter_version.c_str();
+		}
+		return nullptr;
 	}
 
 		/** Shadow should attempt to reconnect to a disconnected
@@ -217,7 +219,7 @@ class UniShadow : public BaseShadow
 	virtual void logReconnectFailedEvent( const char* reason );
 
 
-	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName);
+	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName, bool print_waiting=true);
 
 	FileTransfer * commonFTO = NULL;
 	SingleProviderSyndicate * cfLock = NULL;

@@ -668,11 +668,11 @@ JICShadow::transferOutput( bool &transient_failure )
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
-				updateShadowWithPluginResults("Output");
+				updateShadowWithPluginResults("Output", filetrans);
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
-			updateShadowWithPluginResults("Output");
+			updateShadowWithPluginResults("Output", filetrans);
 		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
@@ -760,7 +760,7 @@ JICShadow::transferOutputMopUp(void)
 		if(!m_ft_info.success && !m_ft_info.try_again) {
 			ASSERT(m_ft_info.hold_code != 0);
 			// The shadow will immediately cut the connection to the
-			// starter when this is called. 
+			// starter when this is called.
 			notifyStarterError(m_ft_info.error_desc.c_str(), true,
 			                   m_ft_info.hold_code,m_ft_info.hold_subcode);
 			return false;
@@ -1208,10 +1208,23 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 
 	if( critical ) {
 		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Failed to send starter error string to Shadow.\n" );
 			return false;
 		}
+
+		// At this point, we expect the shadow to have already closed up
+		// shop.  Tell the rest of the JICShadow that the syscall socket
+		// is gone...
+		if( syscall_sock ) {
+			if( syscall_sock_registered ) {
+				daemonCore->Cancel_Socket( syscall_sock );
+				syscall_sock_registered = false;
+			}
+			syscall_sock->close();
+		}
+		// ... and to proceed with exiting regardless.
+		fast_exit = true;
 	} else {
 		ClassAd * ad;
 		RemoteErrorEvent event;
@@ -1337,7 +1350,7 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
 
-	updateShadowWithPluginResults("Checkpoint");
+	updateShadowWithPluginResults("Checkpoint", filetrans);
 
 	if( !rval ) {
 		// Failed to transfer.
@@ -2680,9 +2693,9 @@ JICShadow::beginFileTransfer( void )
 
 
 void
-JICShadow::updateShadowWithPluginResults( const char * which ) {
-	if(! filetrans) { return; }
-	if( filetrans->getPluginResultList().size() <= 0 ) { return; }
+JICShadow::updateShadowWithPluginResults( const char * which, FileTransfer * ft ) {
+	if(! ft) { return; }
+	if( ft->getPluginResultList().size() <= 0 ) { return; }
 
 	ClassAd updateAd;
 
@@ -2692,7 +2705,7 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 // or grovelling around in the list.  The former sounds more attractive.
 //
 	classad::ExprList * e = new classad::ExprList();
-	for( const auto & ad : filetrans->getPluginResultList() ) {
+	for( const auto & ad : ft->getPluginResultList() ) {
 		// This requires that plug-ins never generated ads with the
 		// "TransferClass" attribute.  We can enforce that when we
 		// read them off disk, if that becomes necessary.
@@ -2755,7 +2768,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 #endif
 
 	if ( ftrans ) {
-		updateShadowWithPluginResults("Input");
+		updateShadowWithPluginResults("Input", filetrans);
 
 			// Make certain the file transfer succeeded.
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
@@ -3038,9 +3051,13 @@ JICShadow::initIOProxy( void )
 	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
 		condor_sockaddr *bindTo = NULL;
-		struct in_addr addr;
-		addr.s_addr = htonl(0xac110001);
-		condor_sockaddr dockerInterface(addr);
+
+		condor_sockaddr dockerInterface;
+		condor_sockaddr dockerInterfaceV6;   // not used;
+		condor_sockaddr dockerInterfaceBest; // also not used;
+		std::string docker_network_name;
+		param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
+		network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest);
 
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
@@ -3617,6 +3634,7 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
     // The execute directory is now owned by the user and mode 0700 by default.
 	TemporaryPrivSentry sentry(PRIV_USER);
 	if ( get_priv_state() != PRIV_USER ) {
+		fclose(file);
 		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
 		return;
 	}
@@ -3721,6 +3739,29 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 	// case determining success or failure in handleJobSetupCommand()
 	// becomes an interesting problem, probably solved with coroutines.
 	rval = stagingFTO.DownloadFiles();
+
+
+	//
+	// Reporting.
+	//
+
+	// Trigger the epoch entry.
+	updateShadowWithPluginResults("Common", & stagingFTO);
+
+	// Do we still care about this?
+	const std::string & stats = stagingFTO.GetInfo().tcp_stats.c_str();
+	if(! stats.empty()) {
+		std::string full_stats = "(peer stats from starter): ";
+		full_stats += stats;
+
+		// JICShadow::transferInputStatus() ASSERTs here.
+		if(! shadowDisconnected()) {
+			if( shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
+			}
+		}
+	}
+
 
 	dprintf( D_ZKM, "transferCommonInput(): exit\n" );
 	return (rval == 1);

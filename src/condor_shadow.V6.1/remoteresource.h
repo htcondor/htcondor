@@ -415,8 +415,7 @@ class RemoteResource : public Service {
 
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
-	char * starter_version = NULL;
-
+	std::string starter_version;
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not

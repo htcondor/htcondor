@@ -82,7 +82,7 @@ public:
 
 	// Have we seen an oom kill event, only implemented
 	// for cgroups
-	virtual bool has_been_oom_killed(pid_t) { return false;} // meaning "don't know for sure"
+	virtual bool has_been_oom_killed(pid_t, int) { return false;} // meaning "don't know for sure"
 																 //
 	// call prior to destroying the ProcFamily class to insure that cleanup happens before we exit.
 	virtual bool quit(void(*notify)(void*me, int pid, int status),void*me) = 0;

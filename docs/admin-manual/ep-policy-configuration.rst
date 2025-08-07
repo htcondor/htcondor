@@ -737,15 +737,9 @@ which creates and manages this cgroups.
     :align: center
 
     flowchart TD
-      starter("`Cgroup 
-                of 
-                condor_starter`")
-      job_scope("`Cgroup
-                  for
-                  job scope`")
-      job_slice("`Cgroup
-                  for
-                  job slice`")
+      starter("Cgroup <br> of <br> condor_starter")
+      job_scope("Cgroup <br> for <br> job scope")
+      job_slice("Cgroup <br> for <br> job slice")
       starter -->  job_scope
       job_scope --> job_slice
       style starter fill:pink
@@ -878,6 +872,22 @@ eight slots where running jobs, with each configured for one cpu, the
 cpu usage would be assigned equally to each job, regardless of the
 number of processes or threads in each job.
 
+
+.. sidebar:: LVM Mount Namespace
+
+    By default, the ephemeral filesystem is mounted in a mount namespace
+    making the filesystem private to the job if compatible
+    (see :macro:`LVM_HIDE_MOUNT`). Thus, the contents of the filesystem
+    are not visible to processes outside of the *condor_starters* process
+    tree.
+
+    The ``nsenter`` command can be used to enter this namespace
+    in order inspect the job's sandbox:
+
+    .. code-block:: console
+
+        # nsenter -t <starter-pid> -m <command>
+
 .. _LVM Description:
 
 Per Job Ephemeral Scratch Filesystems
@@ -905,11 +915,7 @@ to handle these errors internally at all places writes occur. Even in included t
 libraries.
 
 .. note::
-    The ephemeral filesystem created for the job is private to that job so the contents of
-    the filesystem are not visible outside the process hierarchy. The nsenter command can
-    be used to enter this namespace in order inspect the job's sandbox.
 
-.. note::
     As this filesystem will never live through a system reboot, it is mounted with mount options
     that optimize for performance, not reliability, and may improve performance for I/O heavy
     jobs.
@@ -3609,6 +3615,14 @@ files and machine descriptions to command line options, an administrator may
 want additional options passed to the docker container create command. To do
 so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
 append these to the docker container create command.
+
+Docker universe jobs may use the chirp protoocl to read or write files
+and job ad attributes to or from the Access Point.  By default, HTCondor
+assumes that the network named "docker0" can communicate from inside
+the container to the starter outside the container.  If the docker runtime
+is configured to use a different network, the administrator can set
+the configuation know :macro:`DOCKER_NETWORK_NAME` to the appropriate
+network name.
 
 Docker universe jobs may fail to start on certain Linux machines when
 SELinux is enabled. The symptom is a permission denied error when

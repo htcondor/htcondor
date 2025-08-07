@@ -71,10 +71,12 @@ with _add_dll_dir():
     from .htcondor2_impl import _reload_config as reload_config
 
     from ._loose_functions import send_command
+    from ._loose_functions import ping
     from ._loose_functions import send_alive
     from ._loose_functions import set_ready_state
 
     from .htcondor2_impl import _enable_debug as enable_debug
+    from .htcondor2_impl import _disable_debug as disable_debug
     from .htcondor2_impl import _enable_log as enable_log
     from ._logging import _log as log
 
@@ -93,6 +95,8 @@ with _add_dll_dir():
     from ._log_level import LogLevel
     from ._daemon_command import DaemonCommand
     from ._submit_method import SubmitMethod
+    from ._history_src import HistorySrc
+    from ._common_files_event_type import CommonFilesEventType
 
     # Classes.
     from ._collector import Collector

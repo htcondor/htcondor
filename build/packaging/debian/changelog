@@ -1,3 +1,110 @@
+condor (24.10.2-1) stable; urgency=medium
+
+  * Remove support for old JobRouter syntax
+  * New condor_dag_checker tool finds syntax and logic errors before run
+  * New condor_q -hold-codes produces a summary of held jobs
+  * condor_status -lvm reports current disk usage by slots on the EPs
+  * Fix bug where condor_q would truncate job counts to six digits
+  * Fix bug where suspended jobs did not change state to idle when vacated
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 10:23:00 -0500
+
+condor (24.0.10-1) stable; urgency=medium
+
+  * All changes in 23.0.27 and 23.10.27
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 10:04:00 -0500
+
+condor (23.10.27-1) stable; urgency=medium
+
+  * Fix bug where the vacate reason was not propagated back to the user
+  * HTCondor tarballs now contain Pelican 7.17.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 09:58:00 -0500
+
+condor (23.0.27-1) stable; urgency=medium
+
+  * Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+  * Fix incorrect time reported by htcondor status for long running jobs
+  * Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 09:49:00 -0500
+
+condor (24.9.2-1) stable; urgency=medium
+
+  * New job attribute to report number of input files transferred by protocol
+  * Optional condor_schedd history log file
+  * condor_watch_q can now track DAGMan jobs when using the -clusters option
+  * Fix bug that caused claim failure when previous output transfer failed
+  * Fix bug where access tokens were not generated from Vault tokens
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 10:44:00 -0500
+
+condor (24.0.9-1) stable; urgency=medium
+
+  * Initial Support for Enterprise Linux 10, including the x86_64_v2 platform
+  * In htcondor2, empty configuration keys are now treated as non-existent
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 10:18:00 -0500
+
+condor (23.10.26-1) stable; urgency=medium
+
+  * Fix memory leak in the condor_schedd when using late materialization
+  * Fix condor_master start up when file descriptor ulimit was huge
+  * HTCondor tarballs now contain Pelican 7.17.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 07:08:00 -0500
+
+condor (23.0.26-1) stable; urgency=medium
+
+  * Fix ingestion of ads into Elasticsearch under very rare circumstances
+  * DAGMan better handles being unable to write to a full filesystem
+  * 'kill_sig' submit commands are now ignored on the Windows platform
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 Jun 2025 06:59:00 -0500
+
+condor (24.8.1-1) stable; urgency=medium
+
+  * Fix claim re-use, which was broken in HTCondor version 24.5.1
+  * Add support for hierarchic and delegatable v2 cgroups
+  * Add the ability to put each HTCondor daemon in its own cgroup
+  * Always sets the execute bit on the executable regardless of its origin
+  * The EP sets the HOME environment variable to match the /etc/passwd entry
+  * Add new 'halt' and 'resume' verbs to "htcondor dag"
+  * Add htcondor2.DAGMan class to send commands to a running DAG
+  * htcondor ap status now reports the AP's RecentDaemonCoreDutyCycle
+  * Can configure condor_adstash to fetch a custom projection of attributes
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Jun 2025 10:16:00 -0500
+
+condor (24.0.8-1) stable; urgency=medium
+
+  * Fix 24.0.7 bug where cgroup v1 out-of-memory was not properly handled
+  * HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+    * Pelican 7.16.5 now includes end-to-end integrity checks for clients
+  * Add Python wheel for Python 3.13, drop Python wheel for Python 3.7
+  * Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+  * Fix problems where parallel universe jobs could crash the condor_schedd
+  * Prevent condor_starter crash when evicting job during input file transfer
+  * condor_watch_q now properly displays job id ranges by using numeric sort
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Jun 2025 10:11:00 -0500
+
+condor (23.10.25-1) stable; urgency=medium
+
+  * Fix bug where DAGMAN_MAX_JOBS_IDLE was being ignored
+  * HTCondor tarballs now contain Pelican 7.16.5 and Apptainer 1.4.1
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 May 2025 10:16:00 -0500
+
+condor (23.0.25-1) stable; urgency=medium
+
+  * Fix problems where parallel universe jobs could crash the condor_schedd
+  * Prevent condor_starter crash when evicting job during input file transfer
+  * condor_watch_q now properly displays job id ranges by using numeric sort
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 May 2025 10:04:00 -0500
+
 condor (24.7.3-1) stable; urgency=medium
 
   * condor_who now works for Glideins

@@ -1,42 +1,87 @@
-Version 24 Feature Releases
-===========================
+Version 24.x Feature Releases
+=============================
 
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
-Version 24.9.0
+Version 24.12.0
+---------------
+
+Release Notes:
+
+.. HTCondor version 24.12.0 released on September 18, 2025.
+
+- HTCondor version 24.12.0 planned release date is September 18, 2025.
+
+New Features:
+
+.. include-history:: features 24.12.0 24.0.12 23.10.29 23.0.29
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.12.0 24.0.12 23.10.29 23.0.29
+
+Version 24.11.1
+---------------
+
+Release Notes:
+
+.. HTCondor version 24.11.1 released on August 21, 2025.
+
+- HTCondor version 24.11.1 planned release date is August 21, 2025.
+
+New Features:
+
+.. include-history:: features 24.11.1 24.0.11 23.10.28 23.0.28
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.11.1 24.0.11 23.10.28 23.0.28
+
+Version 24.10.2
+---------------
+
+Release Notes:
+
+- HTCondor version 24.10.2 released on July 28, 2025.
+
+New Features:
+
+.. include-history:: features 24.10.2 24.0.10 23.10.27 23.0.27
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.10.2 24.0.10 23.10.27 23.0.27
+
+Version 24.9.2
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.9.0 released on Month Date, 2025.
-
-- HTCondor version 24.9.0 planned release date is Month Date, 2025.
+- HTCondor version 24.9.2 released on June 26, 2025.
 
 New Features:
 
-.. include-history:: features 24.9.0 24.0.9 23.10.26 23.0.26
+.. include-history:: features 24.9.2 24.0.9 23.10.26 23.0.26
 
 Bugs Fixed:
 
-.. include-history:: bugs 24.9.0 24.0.9 23.10.26 23.0.26
+.. include-history:: bugs 24.9.2 24.0.9 23.10.26 23.0.26
 
-Version 24.8.0
+Version 24.8.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.8.0 released on May 27, 2025.
-
-- HTCondor version 24.8.0 planned release date is May 27, 2025.
+- HTCondor version 24.8.1 released on June 12, 2025.
 
 New Features:
 
-.. include-history:: features 24.8.0 24.0.8 23.10.25 23.0.25
+.. include-history:: features 24.8.1 24.0.8 23.10.25 23.0.25
 
 Bugs Fixed:
 
-.. include-history:: bugs 24.8.0 24.0.8 23.10.25 23.0.25
+.. include-history:: bugs 24.8.1 24.0.8 23.10.25 23.0.25
 
 Version 24.7.3
 --------------

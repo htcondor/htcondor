@@ -165,8 +165,6 @@ RemoteResource::~RemoteResource()
 	if ( next_reconnect_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer( next_reconnect_tid );
 	}
-
-	if( starter_version ) { free( starter_version ); }
 }
 
 
@@ -884,15 +882,14 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
-	starter_version = NULL;
-	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
+	if( ad->LookupString(ATTR_VERSION, starter_version) ) {
+		dprintf(D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version.c_str()); 
 	}
 
-	if ( starter_version == NULL ) {
+	if (starter_version.empty()) {
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
-		filetrans.setPeerVersion( starter_version );
+		filetrans.setPeerVersion(starter_version.c_str());
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
@@ -1364,6 +1361,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
 
+	if( update_ad->LookupString(ATTR_VACATE_REASON, string_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON, string_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_CODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_CODE, long_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_SUBCODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, long_value);
+	}
 
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 4 > prefixes( { "Common", "Input", "Checkpoint", "Output" } );
@@ -1381,6 +1387,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		if( resultAttr != NULL ) {
 			resultList = dynamic_cast<classad::ExprList *>(resultAttr);
 
+			bool updateAdOwnsResultList = true;
 			if( resultList != nullptr ) {
 				std::vector<ExprTree *> results;
 				std::vector<ExprTree *> invocations;
@@ -1400,6 +1407,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
 
+				updateAdOwnsResultList = false;
 				resultList = new classad::ExprList( results );
 				invocationList = new classad::ExprList( invocations );
 			}
@@ -1418,8 +1426,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// This sets the value in the header.
 			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
 			c.Delete( "TransferClass" );
-			std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
-			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
+			if (updateAdOwnsResultList) {
+				std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
+			} else {
+				c.Delete(attributeName);
+			}
+			// This is actually the match ad, which is mostly useless.
+			// writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 
@@ -1481,6 +1494,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
+			// TODO This code doesn't properly handle a job that goes
+			//   from Suspended to Exited. The starter sends an extra
+			//   update currently so the the state goes to Executing
+			//   first on an eviction, but the shadow shouldn't be
+			//   relying on that.
 		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
 		} else if ( strcasecmp(job_state, "Running") == MATCH ) {

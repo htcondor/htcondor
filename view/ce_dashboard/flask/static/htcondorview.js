@@ -1410,6 +1410,8 @@ function AfterqueryObj(options) {
 
     this.colormap = {};
     this.next_color = 0;
+
+    this.lastDate = 0;
 }
 
 AfterqueryObj.prototype.elid = function (id) {
@@ -2602,6 +2604,27 @@ AfterqueryObj.prototype.doQueryBy = function (grid, argval) {
 };
 
 
+AfterqueryObj.prototype.doAddRowIfEmpty = function (ingrid, argval) {
+    AfterqueryObj.log("addRowIfEmpty:", argval);
+    if (!ingrid.data.length) {
+        const newRow = [];
+        const currentDate = this.lastDate===0 ? new Date() : this.lastDate;
+        for (let i = 0; i < ingrid.types.length; i++) {
+            if (ingrid.types[i] === AfterqueryObj.T_NUM) {
+                newRow.push(0);
+            } else if (ingrid.types[i] === AfterqueryObj.T_STRING) {
+                newRow.push(argval);
+            } else if (ingrid.types[i] === AfterqueryObj.T_DATE || ingrid.types[i] === AfterqueryObj.T_DATETIME) {
+                newRow.push(currentDate);
+            } else {
+                newRow.push(null);
+            }
+        }
+        ingrid.data.push(newRow);
+    }
+    return ingrid;
+}
+
 AfterqueryObj.prototype.deltaBy = function (ingrid, keys) {
     let row;
     let rowi;
@@ -2892,6 +2915,23 @@ AfterqueryObj.prototype.doYSpread = function (grid, argval) {
 
 
 AfterqueryObj.prototype.doLimit = function (ingrid, limit) {
+    if (limit === "lastDate") {
+        // First, order by -Date
+        ingrid = this.orderBy(ingrid, ["-Date"]);
+        // Then, limit to the last date.
+        // If the last date is not set, set it to the first date
+        // in the sorted data. Then count the number of rows
+        // with that date, and use that as the limit.
+        if (this.lastDate === 0 && ingrid.data.length > 0) {
+            this.lastDate = ingrid.data[0][0];
+        }
+        limit = 0;
+        for (const row of ingrid.data) {
+            if (row[0].getTime() === this.lastDate.getTime()) {
+                limit++;
+            }
+        }
+    }
     limit = parseInt(limit);
     if (ingrid.data.length > limit) {
         return {
@@ -3491,6 +3531,11 @@ AfterqueryObj.prototype.addTransforms = function (queue, args) {
                 return that.doPivotBy(g, a);
             }, argval);
         }
+        else if (argkey === "addRowIfEmpty") {
+            transform(function (g, a) {
+                return that.doAddRowIfEmpty(g, a);
+            }, argval);
+        }
         else if (argkey === "filter") {
             transform(function (g, a) {
                 return that.doFilterBy(g, a);
@@ -3604,7 +3649,6 @@ AfterqueryObj.prototype.dyIndexFromX = function (dychart, x) {
     }
     return i;
 };
-
 
 AfterqueryObj.NaNToZeroFormatter = function (dt, col) {
     for (let row = 0; row < dt.getNumberOfRows(); row++) {
@@ -3844,6 +3888,7 @@ AfterqueryObj.prototype.scanGVizChartOptions = function (args, options) {
             || key === "group"
             || key === "limit"
             || key === "filter"
+            || key === "addRowIfEmpty"
             || key === "q"
             || key === "pivot"
             || key === "treegroup"
@@ -4635,5 +4680,3 @@ var HeatGrid = function (el) {
         ctx.putImageData(img, 0, 0);
     };
 };
-
-////////////////////////////////////////////////////////////////////////////////

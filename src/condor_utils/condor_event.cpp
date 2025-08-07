@@ -32,6 +32,7 @@
 #include "write_eventlog.h" // for the EPLogEvent structure and utility functions
 #include "misc_utils.h"
 #include "utc_time.h"
+#include "condor_regex.h"
 
 //added by Ameet
 #include "condor_environ.h"
@@ -73,7 +74,7 @@ int ULogFile::read_formatted(const char * fmt, va_list args) {
 }
 */
 
-const char ULogEventNumberNames[][41] = {
+const char ULogEventNumberNames[][47] = {
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -121,6 +122,7 @@ const char ULogEventNumberNames[][41] = {
 	"ULOG_FILE_USED",				// File in reuse dir utilized
 	"ULOG_FILE_REMOVED",			// File in reuse dir removed.
 	"ULOG_DATAFLOW_JOB_SKIPPED",	// Dataflow job skipped
+	"ULOG_COMMON_FILES",			// Common Files event
 };
 
 // event names for events between ULOG_EP_FIRST and ULOG_EP_LAST
@@ -300,6 +302,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		return new DataflowJobSkippedEvent;
+
+	case ULOG_COMMON_FILES:
+		return new CommonFilesEvent;
 
 	default:
 		if ((int)event >= ULOG_EP_FIRST && (int)event <= ULOG_EP_FUTURE_EVENT) {
@@ -973,6 +978,9 @@ ULogEvent::toClassAd(ClassAd &ad, bool event_time_utc) const
 		break;
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		SetMyTypeName(*myad, "DataflowJobSkippedEvent");
+		break;
+	case ULOG_COMMON_FILES:
+		SetMyTypeName(*myad, "CommonFilesEvent");
 		break;
 		// ULOG_EP_FIRST to ULOG_EP_LAST
 	case ULOG_EP_STARTUP:
@@ -5924,6 +5932,80 @@ FileTransferEvent::initFromClassAd( ClassAd * ad ) {
 	ad->LookupInteger( "QueueingDelay", queueingDelay );
 
 	ad->LookupString( "Host", host );
+}
+
+//
+// CommonFilesEvent
+//
+
+const char * CommonFilesEvent::CommonFilesEventStrings[] = {
+	"NONE",
+	"Entered queue to transfer common files",
+	"Started transferring common files",
+	"Finished transferring common files",
+	"Started waiting for previous job to transfer common files",
+	"Finished waitiing for previous job to transfer common files"
+};
+
+CommonFilesEvent::CommonFilesEvent() : type((+CommonFilesEventType::None)._to_string()) {
+	eventNumber = ULOG_COMMON_FILES;
+}
+
+int
+CommonFilesEvent::readEvent( ULogFile& file, bool & got_sync_line ) {
+	std::string eventString;
+	if(! read_optional_line( eventString, file, got_sync_line )) {
+		return 0;
+	}
+
+	// The last thing on the line must be `CommonFilesEventType(<type>)`.
+	Regex r; int errCode = 0; int errOffset = 0;
+	bool patternOK = r.compile( "Common files event: (.+)$", &errCode, &errOffset );
+	ASSERT( patternOK );
+
+	std::vector<std::string> groups;
+	if(! r.match( eventString, & groups)) {
+		return 0;
+	}
+	type = groups[1];
+
+	return 1;
+}
+
+bool
+CommonFilesEvent::formatBody( std::string & out ) {
+	if(! formatstr_cat( out, "Common files event: %s\n", type.c_str() )) {
+		return false;
+	}
+
+	auto cfet = CommonFilesEventType::_from_string_nocase_nothrow(type.c_str());
+	if( cfet ) {
+		if(! formatstr_cat( out, "\t%s\n", CommonFilesEventStrings[cfet->_to_integral()] )) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+ClassAd *
+CommonFilesEvent::toClassAd( bool event_time_utc ) {
+	ClassAd * ad = ULogEvent::toClassAd(event_time_utc);
+	if(! ad) { return NULL; }
+
+	if(! ad->InsertAttr("Type", type)) {
+		delete ad;
+		return NULL;
+	}
+
+	return ad;
+}
+
+void
+CommonFilesEvent::initFromClassAd( ClassAd * ad ) {
+	ULogEvent::initFromClassAd( ad );
+
+	ad->LookupString( "Type", type );
 }
 
 

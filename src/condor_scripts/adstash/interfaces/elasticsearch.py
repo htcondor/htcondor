@@ -110,7 +110,7 @@ class ElasticsearchInterface(GenericInterface):
 
         # find which index is reporting as writable
         for index, alias_info in indices.items():
-            if alias_info["aliases"][alias]["is_write_index"]:
+            if alias_info["aliases"][alias].get("is_write_index"):
                 logging.info(f"{alias} is an alias, found active index {index}.")
                 return index
 

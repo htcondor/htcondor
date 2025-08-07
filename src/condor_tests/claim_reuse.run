@@ -1,0 +1,153 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use Condor;
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+# To test claim re-use, we run a startd with two p-slots
+# one that has a START expression that evaluates to false in the absence of a job
+# and the other that has a START expression that evaluates to undefined in the absence of a job
+#
+# This test will verify that claims can be re-used on the second slot, but not on the first
+# Verification of claim-reuse is done by examining the EP eventlog 
+# and counting claims vs. activations
+#
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+  # enable an eventlog for the EP
+  STARTD_EVENTLOG = $(LOG)/EpEvents
+
+  # force 2 GPUs: of type TITAN RTX (type 3)
+  GPU_SIM = 3,2
+  use FEATURE : GPUs(-sim:$(GPU_SIM))
+  # force 4 cpus
+  NUM_CPUS = 4
+  # use the standard desktop value for IS_OWNER
+  IS_OWNER = (START =?= FALSE)
+  # two dynamic slots, one for GPU jobs, the other for single core cpu jobs
+  use FEATURE : PartitionableSlot(1,Cpus=2,Memory=50%,Disk=50%,GPUs=2)
+  use FEATURE : PartitionableSlot(2,Cpus=2,Memory=50%,Disk=50%)
+  # slot type 1 will only run GPU jobs and can't re-use claims because IS_OWNER will be false with no TARGET
+  SLOT_TYPE_1_START = TARGET.RequestGpus =?= 1
+  # slot type 2 will only run single core jobs, and will re-use claims because IS_OWNER is undefined with no TARGET
+  SLOT_TYPE_2_START = TARGET.RequestCpus == 1
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = CondorTest::GetDefaultTestName();
+
+   # share a user log for all of the jobs.
+   # RunCheck will ignore events that are not for the cluster it submits
+   # so sharing a user log between submits does not confuse it
+my $user_log = CondorTest::TempFileName("$testname.user_log");
+
+my $num_ok = 0;
+my $on_success = sub {
+	my %info = @_;
+	my $jobid = $info{'cluster'} . '.' . $info{'job'};
+	TLOG("job $jobid completed successfully\n");
+	$num_ok += 1;
+};
+
+my $on_reconnectfailed = sub {
+	my %info = @_;
+	my $cluster_id = $info{'cluster'};
+	my $jobid = $cluster_id . '.' . $info{'job'};
+	TLOG("job $jobid failed to reconnect - aborting\n");
+	system("condor_rm $cluster_id");
+};
+
+TLOG("Submit 6 GPU jobs without claim re-use and wait for them to finish\n");
+
+   # submit GPU jobs, these should only run on SLOT_TYPE_1 and should run 2 at a time.
+my $result = SimpleJob::RunCheck(
+	queue_sz => 6,
+	runthis => "x_sleep.pl",
+	duration => "1",
+	should_transfer_files => "YES",
+	user_log => $user_log,
+	append_submit_commands => "request_GPUs=1",
+	on_success => $on_success,
+	on_reconnectfailed => $on_reconnectfailed,
+	);
+
+TLOG("Submit 6 CPU jobs with claim re-use and wait for them to finish\n");
+
+   # submit cpu jobs, these should only run on SLOT_TYPE_2 and should run 2 at a time.
+my $result = SimpleJob::RunCheck(
+	queue_sz => 6,
+	runthis => "x_sleep.pl",
+	duration => "1",
+	should_transfer_files => "YES",
+	user_log => $user_log,
+	append_submit_commands => "request_cpus=1",
+	on_success => $on_success,
+	on_reconnectfailed => $on_reconnectfailed,
+	);
+
+	# turn off startd
+TLOG("Shutting down Startd\n");
+runCondorTool("condor_off -startd -peaceful");
+
+	# wait for startd to shutdown (event 103 is EP_SHUTDOWN)
+TLOG("Waiting for Startd to shut down\n");
+my $eventlog = `condor_config_val STARTD_EVENTLOG`; chomp($eventlog);
+my @eventout = ();
+runCondorTool("condor_wait -echo -wait 60 -event-id 103 $eventlog",\@eventout,2,{emit_output=>0});
+
+	# count claim and activation events for each slot type
+	# and then compare with expected results.
+TLOG("Scanning EP Eventlog $eventlog\n");
+my $claim1 = 0;
+my $claim2 = 0;
+my $act1 = 0;
+my $act2 = 0;
+foreach my $line (@eventout) {
+	if ($line =~ /^([0-9]+)\s+\(00([0-9])\.00([0-9])\.000/) {
+		my $slot = "$2_$3";
+		my $type = $2;
+		my $event = $1;
+		print "  event $1 slot $slot : $line";
+		if ($event == 104) {
+			if ($type == 1) { $claim1 += 1; }
+			if ($type == 2) { $claim2 += 1; }
+		}
+		if ($event == 106) {
+			if ($type == 1) { $act1 += 1; }
+			if ($type == 2) { $act2 += 1; }
+		}
+	}
+}
+print "\n";
+
+TLOG("slottype 1 has $claim1 claims and $act1 activations (expected 6 and 6 w/o claim re-use)\n");
+my $ok_slot1 = $claim1 == 6 && $act1 == 6;
+RegisterResult($ok_slot1, test_name=>$testname, check_name=>'claims are not re-used');
+
+TLOG("slottype 2 has $claim2 claims and $act2 activations (expected 2 and 6 with claim re-use)\n");
+my $ok_slot2 = $claim2 == 2 && $act2 == 6;
+RegisterResult($ok_slot2, test_name=>$testname, check_name=>'claims are re-used');
+
+#my $result = $ok_slot1_1 && $ok_slot1_2;
+
+CondorTest::EndTest();
