@@ -1787,7 +1787,7 @@ bool JobQueueJob::IsNoopJob()
 bool JobQueueJob::IsOCUClaimer() const
 {
 	bool ocu = false;
-	this->LookupBool("IsOCUHolder", ocu);
+	this->LookupBool(ATTR_OCU_HOLDER, ocu);
 	return ocu;
 }
 

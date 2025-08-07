@@ -89,6 +89,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_badput_caused_by_preemption(false)
 	, c_schedd_closed_claim(false)
 	, c_schedd_reported_job_done(false)
+	, c_ocu(false)
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
@@ -332,6 +333,10 @@ Claim::publish( ClassAd* cad )
 			cad->Assign(ATTR_IS_SPLITTABLE, true);
 		}
 	}
+
+	if (c_ocu) {
+		cad->Assign(ATTR_OCU, true);
+	} 
 
 	publishStateTimes( cad );
 

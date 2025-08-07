@@ -373,6 +373,8 @@
 #define ATTR_JOB_ORIG_CMD  "OrigCmd"
 #define ATTR_JOB_DESCRIPTION "JobDescription"
 #define ATTR_STACK_SIZE  "StackSize"
+#define ATTR_OCU  "OCU"
+#define ATTR_OCU_HOLDER  "IsOCUHolder"
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"
