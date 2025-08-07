@@ -15,6 +15,10 @@
   counters to the job record.
   :jira:`3194`
 
+- Added optional second argument for the macro expansion function ``$BASENAME()`` that
+  specifies the file extension or suffix to remove.
+  :jira:`3206`
+
 *** 24.12.0 bugs
 
   Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
