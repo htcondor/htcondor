@@ -526,7 +526,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	if (mkdir(user_cred_path.c_str(), 0700) < 0) {
 		int err = errno;
 		if (err != EEXIST) {
-			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s", err, user_cred_path.c_str());
+			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s\n", err, user_cred_path.c_str());
 			if (err == EACCES || err == EPERM || err == ENOENT || err == ENOTDIR) {
 				// for one of several reasons, the parent directory does not allow the creation of subdirs.
 				return FAILURE_CONFIG_ERROR;
