@@ -1003,7 +1003,7 @@ Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_pic
 		m_policy_ad.InsertAttr(ATTR_TOKEN_SCOPES, join(scopes, ","));
 	}
 	if (!project.empty()) {
-		m_policy_ad.InsertAttr("TokenProject", project);
+		m_policy_ad.InsertAttr(ATTR_TOKEN_PROJECT, project);
 	}
 	if (m_identity.empty()) {
 		// This should not be possible: the SciTokens library should fail such a token.
