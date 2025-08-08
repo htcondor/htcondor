@@ -133,7 +133,7 @@ PlacementDaemon::Init()
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to open database file %s: %s\n", m_databaseFile.c_str(), sqlite3_errmsg(m_db));
 	}
-	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (requester_id TEXT, foreign_id TEXT, ap_id TEXT, authz TEXT, token_jti TEXT, token_exp INTEGER)", nullptr, nullptr, &db_err_msg);
+	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (requester_id TEXT, foreign_id TEXT, ap_id TEXT, authz TEXT, token_jti TEXT, token_exp INTEGER, token_project TEXT)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to create db table: %s\n", db_err_msg);
 	}
@@ -346,9 +346,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmd_ad;
-	int rc = 0;
-	char *db_err_msg = nullptr;
-	std::string stmt_str;
+	sqlite3_stmt* stmt = nullptr;
 
 	dprintf( D_FULLDEBUG, "In command_user_login\n" );
 
@@ -516,19 +514,29 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
 	}
 
-	// TODO add project to token table
-	formatstr(stmt_str, "INSERT INTO placementd_tokens (requester_id, foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', '%s', %lld);", requester.c_str(), user_name.c_str(), token_identity.c_str(), authz_list.c_str(), token_jti.c_str(), token_exp);
-	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
+	if (sqlite3_prepare_v2(m_db, "INSERT INTO placementd_tokens (requester_id, foreign_id, ap_id, authz, token_jti, token_exp, token_project) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);", -1, &stmt, nullptr) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 1, requester.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 2, user_name.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 3, token_identity.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 4, authz_list.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 5, token_jti.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_bind_int64(stmt, 6, (sqlite3_int64)token_exp) != SQLITE_OK ||
+		sqlite3_bind_text(stmt, 7, project.c_str(), -1, SQLITE_STATIC) != SQLITE_OK ||
+		sqlite3_step(stmt) != SQLITE_DONE)
+	{
+		dprintf(D_ERROR, "Placementd database failure: %d %s\n", sqlite3_extended_errcode(m_db), sqlite3_errmsg(m_db));
+		result_ad.Assign(ATTR_ERROR_STRING, "Failed to update database");
+		result_ad.Assign(ATTR_ERROR_CODE, 11);
+		goto send_reply;
 	}
-	free(db_err_msg);
 
 	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account '%s', authz '%s'\n", user_name.c_str(), token_identity.c_str(), authz_list.c_str());
 
 	result_ad.Assign(ATTR_SEC_TOKEN, token);
 
  send_reply:
+	sqlite3_finalize(stmt);
+
 	// Finally, close up shop.  We have to send the result ad to signal the end.
 	if( !putClassAd(stream, result_ad) || !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
@@ -542,6 +550,7 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmd_ad;
 	std::string username;
+	int rc;
 
 	dprintf( D_FULLDEBUG, "In command_query_users\n" );
 
@@ -589,11 +598,23 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		formatstr(stmt_str, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= %lld AND foreign_id='%s';", (long long)time(nullptr), username.c_str());
 	}
 	sqlite3_stmt* stmt = nullptr;
-	int rc = sqlite3_prepare_v2(m_db, stmt_str.c_str(), -1, &stmt, nullptr);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
-		sqlite3_finalize(stmt);
-		return false;
+	if (username.empty()) {
+		if (sqlite3_prepare_v2(m_db, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= ?1 ;", -1, &stmt, nullptr) != SQLITE_OK ||
+			sqlite3_bind_int64(stmt, 1, (sqlite3_int64)time(nullptr)) != SQLITE_OK)
+		{
+			dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_finalize(stmt);
+			return FALSE;
+		}
+	} else {
+		if (sqlite3_prepare_v2(m_db, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= ?1 AND foreign_id=?2 ;", -1, &stmt, nullptr) != SQLITE_OK ||
+			sqlite3_bind_int64(stmt, 1, (sqlite3_int64)time(nullptr)) != SQLITE_OK ||
+			sqlite3_bind_text(stmt, 2, username.c_str(), -1, SQLITE_STATIC) != SQLITE_OK)
+		{
+			dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
+			sqlite3_finalize(stmt);
+			return FALSE;
+		}
 	}
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
@@ -685,11 +706,11 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 	std::string stmt_str;
 	std::string where_str;
 	if (!jti.empty()) {
-		formatstr(where_str, "WHERE token_jti='%s' ", jti.c_str());
+		formatstr(where_str, "WHERE token_jti=?1 ");
 	} else if (!username.empty() || valid_only) {
 		where_str = "WHERE ";
 		if (!username.empty()) {
-			formatstr_cat(where_str, "foreign_id='%s' ", username.c_str());
+			formatstr_cat(where_str, "foreign_id=?2 ", username.c_str());
 		}
 		if (!username.empty() && valid_only) {
 			where_str += "AND ";
@@ -698,8 +719,7 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 			formatstr_cat(where_str, "token_exp >= %lld", (long long)time(nullptr));
 		}
 	}
-		// TODO add project
-	formatstr(stmt_str, "SELECT requester_id, foreign_id, ap_id, authz, token_jti, token_exp FROM placementd_tokens %s;", where_str.c_str());
+	formatstr(stmt_str, "SELECT requester_id, foreign_id, ap_id, authz, token_jti, token_exp, token_project FROM placementd_tokens %s;", where_str.c_str());
 
 	sqlite3_stmt* stmt = nullptr;
 	int rc = sqlite3_prepare_v2(m_db, stmt_str.c_str(), -1, &stmt, nullptr);
@@ -708,8 +728,16 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 		sqlite3_finalize(stmt);
 		return false;
 	}
+	if ((!jti.empty() && sqlite3_bind_text(stmt, 1, jti.c_str(), -1, SQLITE_STATIC) != SQLITE_OK) ||
+		(!username.empty() && sqlite3_bind_text(stmt, 2, username.c_str(), -1, SQLITE_STATIC) != SQLITE_OK))
+	{
+		dprintf(D_ERROR, "sqlite3_bind failed: %s\n", sqlite3_errmsg(m_db));
+		sqlite3_finalize(stmt);
+		return false;
+	}
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
+		const char* str;
 		token_ad.Clear();
 		token_ad.Assign("Requester", (const char*)sqlite3_column_text(stmt, 0));
 		token_ad.Assign("UserName", (const char*)sqlite3_column_text(stmt, 1));
@@ -717,6 +745,10 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 		token_ad.Assign("Authorizations", (const char*)sqlite3_column_text(stmt, 3));
 		token_ad.Assign("TokenId", (const char*)sqlite3_column_text(stmt, 4));
 		token_ad.Assign("TokenExpiration", sqlite3_column_int(stmt, 5));
+		str = (const char*)sqlite3_column_text(stmt, 6);
+		if (str && str[0]) {
+			token_ad.Assign("Project", str);
+		}
 		if (!putClassAd(stream, token_ad)) {
 			dprintf(D_ALWAYS, "Error sending token ad for %s command\n", cmd_name);
 			sqlite3_finalize(stmt);
