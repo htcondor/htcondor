@@ -321,8 +321,8 @@ main( int argc, char * argv[] ) {
 
 // Additional mocks.  Stubbing these out dramatically decreases the
 // number of source files required to build this test, and its complexity.
-Starter::Starter() { }
-Starter::~Starter() { }
+Starter::Starter() = default;
+Starter::~Starter() = default;
 
 bool Starter::Init(JobInfoCommunicator*, char const*, bool, int, int, int) { EXCEPT("MOCK"); return false; }
 void Starter::StarterExit(int code) { EXCEPT("MOCK"); exit(code); }
@@ -367,8 +367,8 @@ VolumeManager::Handle::~Handle() { }
 #endif /* defined(LINUX) */
 
 
-JobInfoCommunicator::JobInfoCommunicator() { }
-JobInfoCommunicator::~JobInfoCommunicator() { }
+JobInfoCommunicator::JobInfoCommunicator() = default;
+JobInfoCommunicator::~JobInfoCommunicator() = default;
 
 const char* JobInfoCommunicator::jobInputFilename() { EXCEPT("MOCK"); return NULL; }
 const char* JobInfoCommunicator::jobOutputFilename() { EXCEPT("MOCK"); return NULL; }
