@@ -152,6 +152,13 @@
   expression will be written to the ``StartLog``.
   :jira:`3033`
 
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to true.  When false,
+  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  directory.  When true, the job's scratch directory is a subdirectory thereof, named
+  "scratch", with the intention that all condor metadata files will be moved to peer 
+  directories, and not pollute the job's scratch directory with condor control files.
+   :jira:`3080`
+
 *** 24.9.2 bugs
 
 - Fixed a bug which could cause unnecessary activation failures if the previous
