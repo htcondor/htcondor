@@ -126,6 +126,9 @@ public:
 	// then use exit_status() and/or error_code() to find out what happened.
 	// at that point Output() can be used to get whatever output was returned.
 	const char* wait_for_output(time_t timeout);
+	const char* wait_for_output(
+		time_t timeout, std::function<void()> callback
+	);
 
 	// capture program output until it exits or the timout expires
 	// returns true and the exit code if the program runs to completion.
@@ -171,7 +174,10 @@ protected:
 	MyStringCharSource src;
 
 	// returns 0 on success, error code on error
-	int read_until_eof(time_t timeout);
+	int read_until_eof(
+		time_t timeout,
+		std::function<void()> * callback = nullptr
+	);
 
 private:
 	int   bytes_read; // number of bytes read for this program
