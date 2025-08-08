@@ -55,6 +55,7 @@ my %memory_data64 = (
 	"debian10" => "768",
 	"debian11" => "768",
 	"debian12" => "1300",
+	"debian13" => "1500",
 	"fedora20" => "660",
 	"fedora21" => "668",
 	"fedora27" => "704",

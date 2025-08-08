@@ -12,6 +12,7 @@ docker://htcondor/nmi-build:x86_64_v2_AlmaLinux10-24001100
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-24001100
 docker://htcondor/nmi-build:x86_64_Debian11-24001100
 docker://htcondor/nmi-build:x86_64_Debian12-24001100
+docker://htcondor/nmi-build:x86_64_Debian13-24001100
 docker://htcondor/nmi-build:x86_64_openSUSE15-24001100
 docker://htcondor/nmi-build:x86_64_Ubuntu20-24001100
 docker://htcondor/nmi-build:x86_64_Ubuntu22-24001100
