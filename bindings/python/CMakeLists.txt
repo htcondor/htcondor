@@ -69,8 +69,7 @@ htcondor2/__init__.py
 htcondor2/personal.py
 htcondor2/_utils/__init__.py
 htcondor2/_utils/ansi.py
-Htcondor2/_utils/ascii.py
-Htcondor2/_utils/keyboard.py
+htcondor2/_utils/keyboard.py
 
 # sigh. sigh.
 htcondor2/htchirp/__init__.py

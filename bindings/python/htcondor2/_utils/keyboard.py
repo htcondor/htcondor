@@ -19,8 +19,6 @@ import os
 import sys
 from typing import Optional
 
-from .ascii import Ascii
-
 IS_WINDOWS = (os.name == "nt")
 
 if IS_WINDOWS:
@@ -75,24 +73,20 @@ class KBHit():
             self.is_listening = True
 
     def getch(self) -> Optional[str]:
-        """Read character from standard input. Note: Use kbhit() to determine if key pressed"""
-        if IS_WINDOWS:
-            return msvcrt.getch().decode('utf-8')
-        elif self.is_listening:
-            return sys.stdin.read(1)
-        else:
-            return None
+        """Read character from standard input if key has been pressed"""
+        if self.__kbhit():
+            if IS_WINDOWS:
+                return msvcrt.getch().decode('utf-8')
+            elif self.is_listening:
+                return sys.stdin.read(1)
+
+        return None
 
     def anyKeyPressed(self) -> bool:
-        """Check if 'any' key is pressed (some limitations)"""
-        if self.kbhit():
-            c = self.getch()
-            if c is not None:
-                return (c >= Ascii.SPACE and c <= Ascii.DELETE) or c in [Ascii.ESC, Ascii.NL, Ascii.CR, Ascii.TAB]
+        """Check if 'any' key is pressed"""
+        return self.__kbhit() == True
 
-        return False
-
-    def kbhit(self) -> Optional[bool]:
+    def __kbhit(self) -> Optional[bool]:
         """Check if key has been pressed"""
         if IS_WINDOWS:
             return msvcrt.kbhit()
