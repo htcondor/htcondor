@@ -15,6 +15,13 @@
   counters to the job record.
   :jira:`3194`
 
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to true.  When false,
+  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  directory.  When true, the job's scratch directory is a subdirectory thereof, named
+  "scratch", with the intention that all condor metadata files will be moved to peer 
+  directories, and not pollute the job's scratch directory with condor control files.
+  :jira:`3080`
+
 - Added optional second argument for the macro expansion function ``$BASENAME()`` that
   specifies the file extension or suffix to remove.
   :jira:`3206`
@@ -151,13 +158,6 @@
   expression evaluates to false.  When this happens, analysis of the slot :ad-attr:`Requirements[type=Machine]`
   expression will be written to the ``StartLog``.
   :jira:`3033`
-
-- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to true.  When false,
-  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
-  directory.  When true, the job's scratch directory is a subdirectory thereof, named
-  "scratch", with the intention that all condor metadata files will be moved to peer 
-  directories, and not pollute the job's scratch directory with condor control files.
-   :jira:`3080`
 
 *** 24.9.2 bugs
 
