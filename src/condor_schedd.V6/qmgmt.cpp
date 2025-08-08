@@ -6589,6 +6589,9 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 	std::string last_proxy_file;
 	ClassAd proxy_file_attrs;
 
+	std::string session_project;
+	policy_ad.LookupString(ATTR_TOKEN_PROJECT, session_project);
+
 	// Put X509 credential information in cluster ads (from either the
 	// job's proxy or the GSI authentication on the CEDAR socket).
 	// Proc ads should get X509 credential information only if they
@@ -6664,6 +6667,11 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
+
+		if (JobQueueBase::IsClusterId(jid) && !session_project.empty()) {
+			SetSecureAttributeString(jid.cluster, jid.proc, ATTR_PROJECT_NAME, session_project.c_str());
+			JobQueue->SetTransactionTriggers(catJobProject);
+		}
 
 		std::string x509up, iwd;
 		GetAttributeString(jid.cluster, jid.proc, ATTR_X509_USER_PROXY, x509up);
