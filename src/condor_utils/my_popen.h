@@ -21,6 +21,7 @@
 #ifndef __MY_POPEN__
 #define __MY_POPEN__
 
+#include <functional>
 
 FILE *my_popenv( const char *const argv [],
                  const char * mode,
