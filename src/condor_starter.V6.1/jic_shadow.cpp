@@ -2652,8 +2652,10 @@ JICShadow::beginFileTransfer( void )
 
 		this->file_xfer_last_alive_time = time(nullptr);
 #ifndef WINDOWS
-		this->file_xfer_last_alive_tid = 
-			daemonCore->Register_Timer(20, 300, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this); 
+		int delay = param_integer("STARTER_XFER_LAST_ALIVE_DELAY", 20);
+		int interval = param_integer("STARTER_XFER_LAST_ALIVE_INTERVAL", 300);
+		this->file_xfer_last_alive_tid =
+			daemonCore->Register_Timer(delay, interval, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this);
 #endif
 		return true;
 	}
@@ -2728,7 +2730,7 @@ JICShadow::updateShadowWithPluginResults( const char * which, FileTransfer * ft 
 	updateShadow( & updateAd );
 }
 
-void 
+void
 JICShadow::verifyXferProgressing(int /*timerid*/) {
 	int stall_timeout = param_integer("STARTER_FILE_XFER_STALL_TIMEOUT", 3600);
 	time_t now = time(nullptr);

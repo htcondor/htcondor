@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
 #include "sig_install.h"
@@ -1131,6 +1132,7 @@ int MyPopenTimer::read_until_eof(time_t timeout, std::function<void()> * callbac
 	int ix = 0;
 	const int cbBuf = 0x2000;
 	char * buffer = (char*)calloc(1, cbBuf);
+	time_t keepalive_interval = param_integer("MY_POPEN_KEEPALIVE_INTERVAL", 60);
 	for(;;) {
 		bool wait_for_hotness = false;
 		int cb = (int)fread(buffer+ix, 1, cbBuf-ix, fp);
@@ -1179,8 +1181,8 @@ int MyPopenTimer::read_until_eof(time_t timeout, std::function<void()> * callbac
 				sleep(2);
 			#else
 				time_t wait_time = timeout - elapsed_time;
-				if( wait_time > 60 ) {
-					wait_time = 60;
+				if( wait_time > keepalive_interval ) {
+					wait_time = keepalive_interval;
 				}
 				int rv = poll(&fdt, 1, int(wait_time*1000));
 				if(rv == 0) {
