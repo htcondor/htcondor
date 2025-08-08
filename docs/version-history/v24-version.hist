@@ -11,6 +11,9 @@
   and htchirp.py to work correctly inside a docker universe job.
   :jira:`3197`
 
+- :tool:`condor_watch_q` will now exit upon key press from keyboard.
+  :jira:`3199`
+
 - Added new :ad-attr:`NumInputTransferStarts` and :ad-attr:`NumOutputTransferStarts`
   counters to the job record.
   :jira:`3194`
