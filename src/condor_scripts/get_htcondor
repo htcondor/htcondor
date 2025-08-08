@@ -103,6 +103,7 @@ get_distribution() {
         #
         #     debian 11 bullseye
         #     debian 12 bookworm
+        #     debian 13 trixie
         #     ubuntu 20 focal
         #     ubuntu 22 jammy
         #     ubuntu 24 noble
