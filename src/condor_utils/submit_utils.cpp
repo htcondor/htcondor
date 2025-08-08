@@ -3538,7 +3538,7 @@ int SubmitHash::SetArguments()
 	bool args_success = true;
 	std::string error_msg;
 
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
 		std::string value;
@@ -4051,7 +4051,7 @@ int SubmitHash::SetExecutable()
 	}
 
 	char *shell = submit_param(SUBMIT_KEY_Shell);
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			return 0;

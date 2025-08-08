@@ -20,7 +20,21 @@
   job without a user log file.
   :jira:`3210`
 
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to true.  When false,
+  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  directory.  When true, the job's scratch directory is a subdirectory thereof, named
+  "scratch", with the intention that all condor metadata files will be moved to peer 
+  directories, and not pollute the job's scratch directory with condor control files.
+  :jira:`3080`
+
+- Added optional second argument for the macro expansion function ``$BASENAME()`` that
+  specifies the file extension or suffix to remove.
+  :jira:`3206`
+
 *** 24.12.0 bugs
+
+  Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
+  :jira:`3208`
 
 *** 24.0.12 bugs
 
@@ -33,6 +47,11 @@
 - Added new "notification = start" option to *condor_submit*, which
   sends an email when the job starts for the first time.
   :jira:`3133`
+
+- Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
+  These attributes provide counts about why a job left the running state without
+  completing (i.e. was vacated from the execution point).
+  :jira:`3204`
 
 - The new Python API now includes `htcondor2.ping()`, which operates like
   `htcondor.SecMan.ping()` in the old API.

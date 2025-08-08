@@ -268,8 +268,8 @@ _ping( PyObject *, PyObject * args ) {
 
 	// Merge the session and Sock policy ads into the ad we got back from the dameon.
 	sock.getPolicyAd(reply_ad);
-	auto itr = (SecMan::session_cache)->find(sock.getSessionID());
-	if (itr == (SecMan::session_cache)->end()) {
+	auto itr = SecMan::session_cache.find(sock.getSessionID());
+	if (itr == SecMan::session_cache.end()) {
 		PyErr_SetString(PyExc_HTCondorException, "Failed to find session.");
 		return nullptr;
 	}

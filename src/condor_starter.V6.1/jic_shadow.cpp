@@ -2248,7 +2248,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		formatstr( updateAdPath, "%s/%s",
 			starter->GetWorkingDir(0), ".update.ad"
 		);
-		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
 			formatstr( updateAdPath, "%s/%s",
 				starter->GetWorkingDir(0), "../htcondor/.update.ad"
 			);
@@ -3634,6 +3634,7 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
     // The execute directory is now owned by the user and mode 0700 by default.
 	TemporaryPrivSentry sentry(PRIV_USER);
 	if ( get_priv_state() != PRIV_USER ) {
+		fclose(file);
 		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
 		return;
 	}
