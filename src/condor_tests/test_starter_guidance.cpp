@@ -368,7 +368,7 @@ VolumeManager::Handle::~Handle() { }
 
 
 JobInfoCommunicator::JobInfoCommunicator() = default;
-JobInfoCommunicator::~JobInfoCommunicator() = default; 
+JobInfoCommunicator::~JobInfoCommunicator() = default;
 
 const char* JobInfoCommunicator::jobInputFilename() { EXCEPT("MOCK"); return NULL; }
 const char* JobInfoCommunicator::jobOutputFilename() { EXCEPT("MOCK"); return NULL; }
