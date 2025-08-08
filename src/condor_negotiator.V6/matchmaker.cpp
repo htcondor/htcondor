@@ -751,7 +751,7 @@ reinitialize ()
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
-	dprintf (D_ALWAYS,"MAX_TIME_PER_SCHEDD = %ld sec\n",MaxTimePerSchedd);
+	dprintf (D_ALWAYS,"MAX_TIME_PER_SCHEDD = %lld sec\n",(long long)MaxTimePerSchedd);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
 
 	if (PreemptionRank) {
@@ -2385,7 +2385,7 @@ negotiateWithGroup ( bool isFloorRound,
 				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
 					submitterName.c_str(), scheddAddr.c_str());
 				dprintf(D_ALWAYS, "%d seconds so far for this submitter\n", totalTime);
-				dprintf(D_ALWAYS, "%ld seconds so far for this schedd\n", totalTimeSchedd);
+				dprintf(D_ALWAYS, "%lld seconds so far for this schedd\n", (long long)totalTimeSchedd);
 			}
 
 			double submitterLimit = 0.0;
@@ -2518,8 +2518,8 @@ negotiateWithGroup ( bool isFloorRound,
 					"  Negotiation with %s skipped because of time limits:\n",
 					submitterName.c_str());
 				dprintf(D_ALWAYS,
-					"  %ld seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %ld secs\n ",
-					totalTimeSchedd, scheddName.c_str(), MaxTimePerSchedd);
+					"  %lld seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %ld secs\n ",
+					(long long)totalTimeSchedd, scheddName.c_str(), MaxTimePerSchedd);
 				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {
@@ -3954,10 +3954,10 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 		if (currentTime >= deadline) {
 			dprintf (D_ALWAYS, 	
-			"    Reached deadline for %s after %d sec... stopping\n"
-			"       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_SCHEDD = %ld sec, MAX_TIME_PER_CYCLE = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
-				schedd_id.c_str(), (int)(currentTime - beginTime),
-				MaxTimePerSubmitter, MaxTimePerSchedd, MaxTimePerCycle,
+			"    Reached deadline for %s after %lld sec... stopping\n"
+			"       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_SCHEDD = %lld sec, MAX_TIME_PER_CYCLE = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
+				schedd_id.c_str(), (long long)(currentTime - beginTime),
+				MaxTimePerSubmitter, (long long)MaxTimePerSchedd, MaxTimePerCycle,
 				MaxTimePerSpin);
 			break;	// get out of the infinite for loop & stop negotiating
 		}
