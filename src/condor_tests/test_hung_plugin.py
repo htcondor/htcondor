@@ -60,7 +60,7 @@ def the_completed_job(the_condor):
 
     assert job_handle.wait(
         timeout=100,
-        condition=ClusterState.all_terminal,
+        condition=ClusterState.all_complete,
     )
 
     return job_handle
