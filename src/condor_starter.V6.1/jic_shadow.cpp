@@ -436,12 +436,10 @@ JICShadow::setupJobEnvironment_part2(void)
 			// DaemonCore asap and wait for the file transfer callback
 			// that was registered
 		return;
-	} 
+	}
 
-		// Otherwise, there were no files to transfer, so we can
-		// pretend the transfer just finished and try to spawn the job
-		// now.
-	transferInputStatus(nullptr);
+		// Otherwise, just spawn the job.
+	doneWithInputTransfer();
 }
 
 bool
@@ -2743,25 +2741,25 @@ JICShadow::verifyXferProgressing(int /*timerid*/) {
 int
 JICShadow::transferInputStatus(FileTransfer *ftrans)
 {
-	// An in-progress message? (ftrans is null when we fake completion)
-	if (ftrans) {
-		const FileTransfer::FileTransferInfo &info = ftrans->GetInfo();
-		if (IsDebugCategory(D_ZKM)) {
-			std::string buf;
-			info.dump(buf,"\t");
-			if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
-			dprintf(D_ZKM /* | (info.in_progress ? 0 : D_BACKTRACE) */, "starter transferInputStatus: %s", buf.c_str());
-		}
-		if (info.in_progress) {
-			// a status ping message. xfer is still making progress!
-			this->file_xfer_last_alive_time = time(nullptr);
-			return 1;
-		}
+	ASSERT(ftrans);
+	const FileTransfer::FileTransferInfo & info = ftrans->GetInfo();
+
+	//
+	// If this is a progress update, note that we've received it.
+	//
+	if( info.in_progress ) {
+		this->file_xfer_last_alive_time = time(nullptr);
+		return 1;
 	}
 
-	dprintf(D_ZKM,"transferInputCompleted(%p) success=%d try_again=%d\n", ftrans,
-		ftrans ? ftrans->GetInfo().success : -1,
-		ftrans ? ftrans->GetInfo().try_again : -1) ;
+	//
+	// The FileTransfer object invoke the callback for every update,
+	// but does NOT preserve the status at the time of the update,
+	// which means it can send a completion notice more than once.
+	//
+	static bool first_completion_notice = true;
+	if(! first_completion_notice) { return 1; }
+	first_completion_notice = false;
 
 #ifndef WINDOWS
 	if (this->file_xfer_last_alive_tid) {
@@ -2769,152 +2767,156 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 	}
 #endif
 
-	if ( ftrans ) {
-		updateShadowWithPluginResults("Input", filetrans);
+	updateShadowWithPluginResults("Input", filetrans);
 
-			// Make certain the file transfer succeeded.
-		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
-		if ( !ft_info.success ) {
+		// Make certain the file transfer succeeded.
+	FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
+	if ( !ft_info.success ) {
 
-			UnreadyReason urea = { ft_info.hold_code, ft_info.hold_subcode, "Failed to transfer files: " };
-			if ( ! ft_info.try_again && ! urea.hold_code) {
-				// make sure we have a valid hold code
-				urea.hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
-			}
-			if (ft_info.error_desc.empty()) {
-				urea.message += " reason unknown.";
-			} else {
-				urea.message += ft_info.error_desc;
-			}
-
-			dprintf(D_ERROR, "%s\n", urea.message.c_str());
-
-			// setupCompleted with non-success will queue a SkipJob timer to
-			// start output transfer of FailureFiles
-			setupCompleted(ft_info.try_again ? JOB_SHOULD_REQUEUE : JOB_SHOULD_HOLD, &urea);
-			m_job_setup_done = true;
-			return TRUE;
+		UnreadyReason urea = { ft_info.hold_code, ft_info.hold_subcode, "Failed to transfer files: " };
+		if ( ! ft_info.try_again && ! urea.hold_code) {
+			// make sure we have a valid hold code
+			urea.hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+		}
+		if (ft_info.error_desc.empty()) {
+			urea.message += " reason unknown.";
+		} else {
+			urea.message += ft_info.error_desc;
 		}
 
+		dprintf(D_ERROR, "%s\n", urea.message.c_str());
 
-		// It's not enought to for the FTO to believe that the transfer
-		// of a checkpoint succeeded if that checkpoint wasn't transferred
-		// by CEDAR (because our file-transfer plugins don't do integrity).
-		std::string checkpointDestination;
-		if( job_ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
-			// We only generate MANIFEST files if the checkpoint wasn't
-			// stored to the spool, which is exactly the case in which
-			// we want to do this manual integrity check.
-
-			// Due to a shortcoming in the FTO, we can't send files with
-			// one name from the shadow to the starter with another, so
-			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
-			// it is erroneous to have received more than one.
-
-			int checkpointNumber = -1;
-			std::string manifestFileName;
-			const char * currentFile = nullptr;
-			// Should this be starter->getWorkingDir(false)?
-			Directory sandboxDirectory( "." );
-			while( (currentFile = sandboxDirectory.Next()) ) {
-				checkpointNumber = manifest::getNumberFromFileName( currentFile );
-				if( -1 != checkpointNumber ) {
-					if(! manifestFileName.empty()) {
-						std::string message = "Found more than one MANIFEST file, aborting.";
-						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( "%s", message.c_str() );
-					}
-					manifestFileName = currentFile;
-				}
-			}
-			checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
+		// setupCompleted with non-success will queue a SkipJob timer to
+		// start output transfer of FailureFiles
+		setupCompleted(ft_info.try_again ? JOB_SHOULD_REQUEUE : JOB_SHOULD_HOLD, &urea);
+		m_job_setup_done = true;
+		return TRUE;
+	}
 
 
-			if(! manifestFileName.empty()) {
-				// This file should have been transferred via CEDAR, so this
-				// check shouldn't be necessary, but it also ensures that we
-				// haven't had a name collision with the job.
-				if(! manifest::validateManifestFile( manifestFileName )) {
-					std::string message = "Invalid MANIFEST file, aborting.";
+	// It's not enought to for the FTO to believe that the transfer
+	// of a checkpoint succeeded if that checkpoint wasn't transferred
+	// by CEDAR (because our file-transfer plugins don't do integrity).
+	std::string checkpointDestination;
+	if( job_ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
+		// We only generate MANIFEST files if the checkpoint wasn't
+		// stored to the spool, which is exactly the case in which
+		// we want to do this manual integrity check.
 
-					// Try to notify the shadow that this checkpoint download was invalid.
-					ClassAd eventAd;
-					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
-					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-					int rv = -1;
-					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
-						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
-					}
+		// Due to a shortcoming in the FTO, we can't send files with
+		// one name from the shadow to the starter with another, so
+		// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
+		// it is erroneous to have received more than one.
 
+		int checkpointNumber = -1;
+		std::string manifestFileName;
+		const char * currentFile = nullptr;
+		// Should this be starter->getWorkingDir(false)?
+		Directory sandboxDirectory( "." );
+		while( (currentFile = sandboxDirectory.Next()) ) {
+			checkpointNumber = manifest::getNumberFromFileName( currentFile );
+			if( -1 != checkpointNumber ) {
+				if(! manifestFileName.empty()) {
+					std::string message = "Found more than one MANIFEST file, aborting.";
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s", message.c_str() );
 				}
-
-				std::string error;
-				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
-					// Try to notify the shadow that this checkpoint download was invalid.
-					ClassAd eventAd;
-					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
-					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-					int rv = -1;
-					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
-						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
-
-						// For now, just fall through to the self-immolation
-						// code.  We'd like to do better (in general), but it
-						// it really does have the desired effect (for now.)
-						//
-						// In the future, we could switch on `rv`.  FIXME:
-						// check the shadow to make sure it currently sends
-						// only 0 (AC, commit suicide) and negative numbers
-						// (you done f'd up somehow), ideally only -1.
-					}
-
-					formatstr( error, "%s, aborting.", error.c_str() );
-					notifyStarterError( error.c_str(), true, 0, 0 );
-					EXCEPT( "%s", error.c_str() );
-				}
-
-				unlink( manifestFileName.c_str() );
+				manifestFileName = currentFile;
 			}
 		}
+		checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
 
-		const char *stats = m_ft_info.tcp_stats.c_str();
-		if (strlen(stats) != 0) {
-			std::string full_stats = "(peer stats from starter): ";
-			full_stats += stats;
 
-			ASSERT( !shadowDisconnected() );
+		if(! manifestFileName.empty()) {
+			// This file should have been transferred via CEDAR, so this
+			// check shouldn't be necessary, but it also ensures that we
+			// haven't had a name collision with the job.
+			if(! manifest::validateManifestFile( manifestFileName )) {
+				std::string message = "Invalid MANIFEST file, aborting.";
 
-			if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
-				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
-			}
-		}
-
-			// chmod +x the executable, but only if it is in the scratch dir
-			// has its execute bit set.
-		std::string cmd;
-		if (job_ad->LookupString(ATTR_JOB_CMD, cmd))
-		{
-				// if we are running as root, the files were downloaded
-				// as PRIV_USER, so switch to that priv level to do chmod
-			TemporaryPrivSentry _(PRIV_USER);
-
-			std::string cmd_basename = condor_basename(cmd.c_str());
-			std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
-				DIR_DELIM_CHAR	 + cmd_basename;
-			if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
-				if (errno != ENOENT) {
-					dprintf(D_ALWAYS,
-							"warning: unable to chmod %s to "
-							"ensure execute bit is set: %s\n",
-							condor_basename(cmd.c_str()),
-							strerror(errno));
+				// Try to notify the shadow that this checkpoint download was invalid.
+				ClassAd eventAd;
+				eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+				eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+				int rv = -1;
+				if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+					dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
 				}
+
+				notifyStarterError( message.c_str(), true, 0, 0 );
+				EXCEPT( "%s", message.c_str() );
+			}
+
+			std::string error;
+			if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+				// Try to notify the shadow that this checkpoint download was invalid.
+				ClassAd eventAd;
+				eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+				eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+				int rv = -1;
+				if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+					dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+
+					// For now, just fall through to the self-immolation
+					// code.  We'd like to do better (in general), but it
+					// it really does have the desired effect (for now.)
+					//
+					// In the future, we could switch on `rv`.  FIXME:
+					// check the shadow to make sure it currently sends
+					// only 0 (AC, commit suicide) and negative numbers
+					// (you done f'd up somehow), ideally only -1.
+				}
+
+				formatstr( error, "%s, aborting.", error.c_str() );
+				notifyStarterError( error.c_str(), true, 0, 0 );
+				EXCEPT( "%s", error.c_str() );
+			}
+
+			unlink( manifestFileName.c_str() );
+		}
+	}
+
+	const char *stats = m_ft_info.tcp_stats.c_str();
+	if (strlen(stats) != 0) {
+		std::string full_stats = "(peer stats from starter): ";
+		full_stats += stats;
+
+		ASSERT( !shadowDisconnected() );
+
+		if (shadow_version && shadow_version->built_since_version(8, 5, 8)) {
+			REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
+		}
+	}
+
+		// chmod +x the executable, but only if it is in the scratch dir
+		// has its execute bit set.
+	std::string cmd;
+	if (job_ad->LookupString(ATTR_JOB_CMD, cmd))
+	{
+			// if we are running as root, the files were downloaded
+			// as PRIV_USER, so switch to that priv level to do chmod
+		TemporaryPrivSentry _(PRIV_USER);
+
+		std::string cmd_basename = condor_basename(cmd.c_str());
+		std::string cmd_in_scratch_dir = std::string(starter->GetWorkingDir(false)) + 
+			DIR_DELIM_CHAR	 + cmd_basename;
+		if (chmod(cmd_in_scratch_dir.c_str(), 0755) == -1) {
+			if (errno != ENOENT) {
+				dprintf(D_ALWAYS,
+						"warning: unable to chmod %s to "
+						"ensure execute bit is set: %s\n",
+						condor_basename(cmd.c_str()),
+						strerror(errno));
 			}
 		}
 	}
 
+	doneWithInputTransfer();
+	return 1;
+}
+
+void
+JICShadow::doneWithInputTransfer() {
 	// We are done with input transfer, so record the sandbox content now
 	// note that if setupCompleted() runs a PREPARE_JOB hook which modifies the sandbox
 	// the post hook code will need to re-do this work, which currently it does not.
@@ -2928,8 +2930,6 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 	// Now that we're done, report successful setup to the base class which tells the starter.
 	// This will either queue a prepare hook. or a queue a DEFERRAL timer to launch the job
 	setupCompleted(0);
-
-	return 1;
 }
 
 
