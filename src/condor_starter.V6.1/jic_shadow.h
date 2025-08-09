@@ -480,6 +480,8 @@ private:
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
+	void doneWithInputTransfer();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //

@@ -280,7 +280,7 @@ def the_condor(test_dir, the_config, the_config_name):
             'JOB_EPOCH_HISTORY':                '$(LOG)/EpochLog',
             'SCHEDD_INTERVAL':                  '2',
             'SHADOW.FILE_TRANSFER_STATS_LOG':   '$(LOG)/shadow_transfer_history',
-            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_STATUS D_TEST',
+            'SHADOW_DEBUG':                     'D_CATEGORY D_SUB_SECOND D_STATUS D_TEST',
             ** the_config['config'],
         }
     ) as the_condor:
