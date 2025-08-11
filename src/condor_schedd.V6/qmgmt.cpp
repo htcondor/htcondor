@@ -2168,7 +2168,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
 	JobQueueBase *bad = nullptr;
-	JobQueueCluster *clusterad = nullptr;
 	JobQueueKey key;
 	std::vector<unsigned int> jobset_ids;
 	std::unordered_map<std::string, unsigned int> needed_sets;
@@ -2294,9 +2293,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
-				clusterad->LookupString(ATTR_PROJECT_NAME, project_name);
+				cad->LookupString(ATTR_PROJECT_NAME, project_name);
 				if ( ! project_name.empty()) {
-					clusterad->project = scheduler.insert_projectinfo(project_name.c_str());
+					cad->project = scheduler.insert_projectinfo(project_name.c_str());
 				}
 			}
 			continue;  // done with this cluster ad for the first pass
@@ -2326,7 +2325,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->Delete(ATTR_AUTO_CLUSTER_ID);
 
 			// link all proc ads to their cluster ad, if there is one
-			clusterad = GetClusterAd(cluster_num);
+			JobQueueCluster* clusterad = GetClusterAd(cluster_num);
 			if (clusterad) {
 				if ( ! clusterad->ownerinfo) {
 					InitClusterAd(clusterad, owner, jobset_ids, needed_sets);
