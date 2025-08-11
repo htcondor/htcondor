@@ -84,7 +84,10 @@ class KBHit():
 
     def anyKeyPressed(self) -> bool:
         """Check if 'any' key is pressed"""
-        return self.__kbhit() == True
+        hit = self.__kbhit() == True
+        if hit and IS_WINDOWS:
+            consume = msvcrt.getch()
+        return hit
 
     def __kbhit(self) -> Optional[bool]:
         """Check if key has been pressed"""
