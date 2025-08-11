@@ -8946,7 +8946,7 @@ static JobRunnableState mapRunnableReasonCode(runnable_reason_code code)
 		JobRunnableState::Cooldown,    //InShortCooldown,
 		JobRunnableState::Matched,     //AlreadyMatched,
 	};
-	ASSERT((size_t)code >= 0 && (size_t)code < COUNTOF(aState));
+	ASSERT((size_t)code < COUNTOF(aState));
 	return aState[(size_t)code];
 }
 
@@ -9857,7 +9857,7 @@ const char * getRunnableReason(runnable_reason_code code)
 		"not runnable (in cool-down < 5min)", //InShortCooldown,
 		"not runnable (already matched)", //AlreadyMatched,
 	};
-	ASSERT((size_t)code >= 0 && (size_t)code < COUNTOF(aReason));
+	ASSERT((size_t)code < COUNTOF(aReason));
 	return aReason[(size_t)code];
 }
 
