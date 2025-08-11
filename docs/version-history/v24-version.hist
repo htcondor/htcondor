@@ -31,6 +31,10 @@
   specifies the file extension or suffix to remove.
   :jira:`3206`
 
+- :tool:`condor_adstash` now parses and stores per-attempt transfer error data when
+  reading transfer epoch history.
+  :jira:`3122`
+
 *** 24.12.0 bugs
 
   Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
