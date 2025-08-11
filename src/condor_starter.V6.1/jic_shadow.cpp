@@ -2599,6 +2599,13 @@ JICShadow::beginFileTransfer( void )
 
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
+		// If we're retrying input transfer, stop ignoring completion notices.
+		first_completion_notice = true;
+		// Also, don't leak the filetrans object.
+		if( filetrans ) {
+			delete filetrans;
+		}
+
 		filetrans = new FileTransfer();
 
 		// file transfer plugins will need to know about OAuth credentials
@@ -2757,7 +2764,6 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 	// but does NOT preserve the status at the time of the update,
 	// which means it can send a completion notice more than once.
 	//
-	static bool first_completion_notice = true;
 	if(! first_completion_notice) { return 1; }
 	first_completion_notice = false;
 
