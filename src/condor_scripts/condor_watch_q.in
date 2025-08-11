@@ -37,6 +37,7 @@ import htcondor2 as htcondor
 import classad2 as classad
 
 from htcondor2._utils.ansi import Color, colorize, is_capable
+from htcondor2._utils.keyboard import KBHit
 
 IS_WINDOWS = os.name == "nt"
 
@@ -141,6 +142,14 @@ def parse_args():
                 job_statuses=", ".join(EXIT_JOB_STATUS_CHECK.keys()),
             )
         ),
+    )
+    parser.add_argument(
+        "-exit-on-key-press",
+        "-no-exit-on-key-press",
+        action=NegateAction,
+        nargs=0,
+        default=sys.stdout.isatty(),
+        help="Enable/disable exit by any key press. Enabled by default if connected to a tty",
     )
 
     # DISPLAY OPTIONS
@@ -357,8 +366,12 @@ class ExitConditions(argparse.Action):
 
 
 class NegateAction(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, **kwargs)
+
     def __call__(self, parser, args, values, option_string=None):
-        setattr(args, self.dest, option_string.rstrip("-").startswith("no"))
+        enable = (option_string.strip("-").lower().startswith("no") != True)
+        setattr(args, self.dest, enable)
 
 
 def cli():
@@ -392,6 +405,7 @@ def cli():
             color=args.color,
             refresh=args.refresh,
             abbreviate_path_components=args.abbreviate,
+            args=args
         )
     except Exception as e:
         if args.debug:
@@ -426,6 +440,8 @@ GROUPBY_ATTRIBUTE_TO_AD_KEY = {
 }
 GROUPBY_AD_KEY_TO_ATTRIBUTE = {v: k for k, v in GROUPBY_ATTRIBUTE_TO_AD_KEY.items()}
 
+HALF_A_SECOND = 500 / 1000
+
 
 def watch_q(
     users=None,
@@ -446,6 +462,7 @@ def watch_q(
     color=True,
     refresh=True,
     abbreviate_path_components=False,
+    args=None,
 ):
     filter_ids = None if cluster_ids is None else [int(cid) for cid in cluster_ids]
     if users is None and cluster_ids is None and specified_logs is None and batches is None:
@@ -494,6 +511,8 @@ def watch_q(
             constraint, collector, schedd
         )
         last_nodes_total_check_time = time.time()
+
+        keyboard = KBHit(args.exit_on_key_press)
 
         while True:
             with display_temporary_message("Processing new events...", enabled=refresh):
@@ -602,7 +621,7 @@ def watch_q(
                     msg += "\n..."
 
                 if not exit_conditions:
-                    msg += "\nInput ^C to exit"
+                    msg += "\nPress any key to exit" if args.exit_on_key_press else "\nPress ^C to exit"
 
             if clear and move:
                 sys.stdout.write(move + clear + move)
@@ -625,7 +644,10 @@ def watch_q(
                     )
                     sys.exit(exit_status)
 
-            time.sleep(2)
+            if args.exit_on_key_press and keyboard.anyKeyPressed():
+                raise KeyboardInterrupt
+
+            time.sleep(HALF_A_SECOND)
     except KeyboardInterrupt:
         sys.exit(0)
 
