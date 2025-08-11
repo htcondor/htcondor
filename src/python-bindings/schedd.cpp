@@ -1545,8 +1545,8 @@ struct Schedd {
         }
         session_id = command_pair->second;
 
-        auto itr = (SecMan::session_cache)->find(session_id);
-        if (itr == (SecMan::session_cache)->end())
+        auto itr = (SecMan::session_cache).find(session_id);
+        if (itr == (SecMan::session_cache).end())
         {
             return false;
         }

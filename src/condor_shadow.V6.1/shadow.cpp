@@ -728,6 +728,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 				}
 			}
 		}
+
+		// Increment (or set) number of job input transfer starts
+		int num_input_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers)) {
+			num_input_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers);
 	} else if( (!tq) && (!ti) && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
@@ -747,6 +754,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
 			te.setQueueingDelay( now - then );
 		}
+
+		// Increment (or set) number of job output transfer starts
+		int num_output_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers)) {
+			num_output_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers);
 	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );

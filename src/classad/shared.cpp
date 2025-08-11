@@ -32,10 +32,6 @@
  *
  ***************************************************************************/
 
-using std::string;
-using std::vector;
-using std::pair;
-
 using namespace classad;
 
 static bool todays_date(const char *name, const ArgumentList &arguments,

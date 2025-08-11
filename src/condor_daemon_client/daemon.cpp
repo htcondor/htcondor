@@ -42,6 +42,8 @@
 
 #include "ipv6_hostname.h"
 
+int Daemon::m_next_sec_context_id = 1;
+
 void
 Daemon::common_init() {
 	_type = DT_NONE;
@@ -138,6 +140,8 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_HAD:
 		_subsys = "HAD";
 		break;
+	case DT_ANY:
+		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
 				"Daemon object", (int)_type, daemonString(_type) );
@@ -212,6 +216,8 @@ Daemon::deepCopy( const Daemon &copy )
 		m_daemon_ad_ptr = new ClassAd(*copy.m_daemon_ad_ptr);
 	}
 
+	m_sec_context_id = copy.m_sec_context_id;
+	m_preferred_token = copy.m_preferred_token;
 	m_owner = copy.m_owner;
 	m_methods = copy.m_methods;
 
@@ -556,7 +562,7 @@ Daemon::connectSock(Sock *sock, time_t sec, CondorError* errstack, bool non_bloc
 
 
 StartCommandResult
-Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man )
+Daemon::startCommand_internal( SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -564,6 +570,14 @@ Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, time_t ti
 
 	// NOTE: if there is a callback function, we _must_ guarantee that it is
 	// eventually called in all code paths.
+
+	if (m_use_new_sec_context_id) {
+		m_sec_context_id = m_next_sec_context_id++;
+		m_use_new_sec_context_id = false;
+	}
+	if (m_sec_context_id > 0) {
+		formatstr(req.m_sec_context_tag, "daemon:%d", m_sec_context_id);
+	}
 
 	ASSERT(req.m_sock);
 
@@ -640,6 +654,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout
 	req.m_nonblocking = nonblocking;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -663,6 +678,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, Condor
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -759,6 +775,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorErr
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -781,6 +798,7 @@ Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -1142,15 +1160,15 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 	char				*host = NULL;
 	bool				nameHasPort = false;
 
-	if ( _subsys.empty() ) {
-		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
-		return false;
-	}
-
 	if( ! _addr.empty() && is_valid_sinful(_addr.c_str()) ) {
 		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
 		_is_local = false;
 		return true;
+	}
+
+	if ( _subsys.empty() ) {
+		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
+		return false;
 	}
 
 		// If we were not passed a name or an addr, check the
@@ -1727,7 +1745,7 @@ Daemon::initVersion( void )
 		// If we didn't find the version string via locate(), and
 		// we're a local daemon, try to ident the daemon's binary
 		// directly. 
-	if( _version.empty() && _is_local ) {
+	if( _version.empty() && _is_local && !_subsys.empty()) {
 		dprintf( D_HOSTNAME, "No version string in local address file, "
 				 "trying to find it in the daemon's binary\n" );
 		char* exe_file = param( _subsys.c_str() );
@@ -1963,13 +1981,15 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	initStringFromAd( ad, ATTR_NAME, _name );
 
 		// construct the IP_ADDR attribute
-	formatstr( buf, "%sIpAddr", _subsys.c_str() );
-	if ( ad->LookupString( buf, buf2 ) ) {
-		Set_addr(buf2);
-		found_addr = true;
-		addr_attr_name = buf;
+	if (!_subsys.empty()) {
+		formatstr(buf, "%sIpAddr", _subsys.c_str());
+		if ( ad->LookupString(buf, buf2) ) {
+			Set_addr(buf2);
+			found_addr = true;
+			addr_attr_name = buf;
+		}
 	}
-	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
+	if ( !found_addr && ad->LookupString(ATTR_MY_ADDRESS, buf2) ) {
 		Set_addr(buf2);
 		found_addr = true;
 		addr_attr_name = ATTR_MY_ADDRESS;

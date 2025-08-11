@@ -221,6 +221,13 @@ findTokens(const std::string &issuer,
         std::string &token,
         std::string &signature)
 {
+	const std::string& tag_token_contents = SecMan::getTagPreferredToken();
+	if (!tag_token_contents.empty() &&
+		checkToken(tag_token_contents, issuer, server_key_ids, "", username, token, signature))
+	{
+		return true;
+	}
+
 	const std::string &token_contents = SecMan::getToken();
 	if (!token_contents.empty() &&
 		checkToken(token_contents, issuer, server_key_ids, "", username, token, signature))
@@ -1703,8 +1710,10 @@ Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk)
 void
 Condor_Auth_Passwd::init_t_buf(struct msg_t_buf *t) 
 {
-	t->a           = NULL;
-	t->b           = NULL;
+	free(t->a);
+	t->a           = nullptr;
+	free(t->b);
+	t->b           = nullptr;
 	t->ra          = NULL;
 	t->rb          = NULL;
 	t->hkt         = NULL;
@@ -2008,9 +2017,12 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 
 		// Protocol step (d)
 	if(m_t_server.a) {
+		if (m_t_client.a) {
+			free(m_t_client.a);
+		}
 		m_t_client.a = strdup(m_t_server.a);
 	} else {
-		m_t_client.a = NULL;
+		m_t_client.a = nullptr;
 	}
 	if(m_server_status == AUTH_PW_A_OK) {
 		m_t_client.rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
@@ -3034,6 +3046,10 @@ Condor_Auth_Passwd::should_try_auth()
 	if (has_named_creds) {
 		dprintf(D_SECURITY|D_VERBOSE,
 			"Can try token auth because we have at least one named credential.\n");
+		return true;
+	}
+
+	if (!SecMan::getTagPreferredToken().empty() || !SecMan::getToken().empty()) {
 		return true;
 	}
 

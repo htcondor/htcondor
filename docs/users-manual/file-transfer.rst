@@ -887,9 +887,10 @@ S3 Transfer Recipes
 **Transferring files to and from Amazon S3**
 
 Specify your credential files in the submit file using the attributes
-:subcom:`aws_access_key_id_file` and :subcom:`aws_secret_access_key_file`.
-:index:`aws_access_key_id_file<single: aws_access_key_id_file; example>`,
-:index:`aws_secret_access_key_file<single: aws_secret_access_key_file; example>`,
+:subcom:`aws_access_key_id_file`
+:index:`aws_access_key_id_file<single: aws_access_key_id_file; example>`
+and :subcom:`aws_secret_access_key_file`.
+:index:`aws_secret_access_key_file<single: aws_secret_access_key_file; example>`
 Amazon S3 switched from global buckets
 to region-specific buckets; use the first URL form for the older buckets
 and the second for newer buckets.
@@ -900,12 +901,12 @@ and the second for newer buckets.
     aws_secret_access_key_file = /home/example/secrets/secretAccessKey
 
     # For old, non-region-specific buckets.
-    # transfer_input_files = s3://<bucket-name>/<key-name>,
-    # transfer_output_remaps = "output.dat = s3://<bucket-name>/<output-key-name>"
+    # transfer_input_files = s3://<bucket-name>/<key-or-file>,
+    # transfer_output_remaps = "output.dat = s3://<bucket-name>/<key-or-file>"
 
     # or, for new, region-specific buckets:
-    transfer_input_files = s3://<bucket-name>.s3.<region>.amazonaws.com/<key>
-    transfer_output_remaps = "output.dat = s3://<bucket-name>.s3.<region>.amazonaws.com/<output-key-name>"
+    transfer_input_files = s3://<bucket-name>.s3.<region>.amazonaws.com/<key-or-file>
+    transfer_output_remaps = "output.dat = s3://<bucket-name>.s3.<region>.amazonaws.com/<key-or-file>"
 
     # Optionally, specify a region for S3 URLs which don't include one:
     # aws_region = <region>

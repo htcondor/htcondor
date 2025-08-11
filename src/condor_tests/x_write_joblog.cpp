@@ -521,6 +521,75 @@ int writeFactoryResumedEvent(WriteUserLog &logFile)
 }
 
 int
+writeFileTransferEvent( WriteUserLog & logFile, FileTransferEvent::FileTransferEventType t ) {
+	FileTransferEvent evt;
+	evt.setType(t);
+	if( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad FileTransferEvent(%d) write\n", (int)t);
+		exit(1);
+	}
+	return 0;
+}
+
+int writeInputTransferQueuedEvent(WriteUserLog &logFile)
+{
+	return writeFileTransferEvent(logFile, FileTransferEvent::IN_QUEUED);
+}
+
+int writeInputTransferStartedEvent(WriteUserLog &logFile)
+{
+	return writeFileTransferEvent(logFile, FileTransferEvent::IN_STARTED);
+}
+
+int writeInputTransferFinishedEvent(WriteUserLog &logFile)
+{
+	return writeFileTransferEvent(logFile, FileTransferEvent::IN_FINISHED);
+}
+
+int writeOutputTransferQueuedEvent(WriteUserLog &logFile)
+{
+	return writeFileTransferEvent(logFile, FileTransferEvent::OUT_QUEUED);
+}
+
+int writeOutputTransferStartedEvent(WriteUserLog &logFile)
+{
+	return writeFileTransferEvent(logFile, FileTransferEvent::OUT_STARTED);
+}
+
+int writeOutputTransferFinishedEvent(WriteUserLog &logFile)
+{
+	return writeFileTransferEvent(logFile, FileTransferEvent::OUT_FINISHED);
+}
+
+int
+writeCommonFilesTransferEvent( WriteUserLog & logFile, const std::string & t ) {
+	CommonFilesEvent evt;
+	evt.setType(t);
+	if( !logFile.writeEvent(&evt) ) {
+		printf("Complain about bad CommonFilesEvent(%s) write\n", t.c_str());
+		exit(1);
+	}
+	return 0;
+}
+
+int writeCommonFilesTransferStartedEvent(WriteUserLog & logFile)
+{
+	return writeCommonFilesTransferEvent(logFile, (+CommonFilesEventType::TransferStarted)._to_string());
+}
+
+int writeCommonFilesTransferFinishedEvent(WriteUserLog &logFile)
+{
+	return writeCommonFilesTransferEvent(logFile, (+CommonFilesEventType::TransferFinished)._to_string());
+}
+
+int writeCommonFilesTransferWaitStartedEvent(WriteUserLog &logFile)
+{
+	return writeCommonFilesTransferEvent(logFile, (+CommonFilesEventType::WaitStarted)._to_string());
+}
+
+
+
+int
 main(int argc, const char * argv[])
 {
 	const char * logname = "local.log";
@@ -570,6 +639,18 @@ main(int argc, const char * argv[])
 	writeClusterRemoveEvent(logFile);
 	writeFactoryPausedEvent(logFile);
 	writeFactoryResumedEvent(logFile);
+
+	// This can't be right.
+	writeInputTransferQueuedEvent(logFile);
+	writeInputTransferStartedEvent(logFile);
+	writeInputTransferFinishedEvent(logFile);
+	writeOutputTransferQueuedEvent(logFile);
+	writeOutputTransferStartedEvent(logFile);
+	writeOutputTransferFinishedEvent(logFile);
+
+	writeCommonFilesTransferStartedEvent(logFile);
+	writeCommonFilesTransferFinishedEvent(logFile);
+	writeCommonFilesTransferWaitStartedEvent(logFile);
 
 	exit(0);
 }

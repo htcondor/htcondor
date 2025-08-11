@@ -129,11 +129,10 @@ static int getDisplayWidth();
 // Default historical ClassAd record formats and necessary attribute projections
 
 const char * const defaultJob_PrintFormat = "SELECT\n"
-"ClusterId         AS ' ID'  NOSUFFIX WIDTH    5 PRINTF  '%4d.'\n"
-"ProcId            AS ' '    NOPREFIX WIDTH    3 PRINTF  '%-3d'\n"
+"ClusterId         AS ' ID         '  WIDTH AUTO PRINTAS JOB_ID\n"
 "Owner             AS OWNER           WIDTH  -14 PRINTAS OWNER OR ??\n"
 "QDate             AS '  SUBMITTED'   WIDTH   11 PRINTAS QDATE OR ??\n"
-"RemoteWallClockTime ?:(RemoteUserCpu?:0) AS 'RUN_TIME    ' WIDTH 12 PRINTF %T\n"
+"RemoteWallClockTime ?:(RemoteUserCpu?:0) AS '  RUN_TIME  ' WIDTH 12 PRINTF %T\n"
 "JobStatus         AS ST                         PRINTAS JOB_STATUS\n"
 "CompletionDate    AS '  COMPLETED'   WIDTH   11 PRINTAS QDATE\n"
 "Cmd               AS CMD             WIDTH    0 PRINTAS JOB_DESCRIPTION\n"

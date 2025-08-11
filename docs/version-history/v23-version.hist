@@ -1,6 +1,79 @@
+*** 23.10.29 bugs
+
+*** 23.0.29 bugs
+
+*** 23.10.28 features
+
+- HTCondor tarballs now contain `Pelican 7.18.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.18.0.
+
+*** 23.10.28 bugs
+
+- Fixed a bug with docker universe jobs that have a PostCmd.
+  This PostCmd script was not passed the environment variables
+  _CONDOR_MAINJOB_EXIT_CODE or _CONDOR_MAINJOB_EXIT_SIGNAL
+  :jira:`3185`
+
+- Fixed a bug where the :ad-attr:`ImageSize` attribute in a slot on a
+  Windows EP was a large random value while the slot was running a job.
+  The bug was due to a change in the Win32 API where the total virtual
+  memory of a process is no longer reported.  From now on
+  :ad-attr:`ImageSize` on a Windows EP will have the same value as
+  :ad-attr:`ResidentSetSize`.
+  :jira:`3179`
+
+- Fixed a bug where an old client (version 9.0 or earlier) with lax
+  security settings (authentication, encryption, and integrity all
+  disabled or optional) would fail to communicate with a daemon with
+  stronger security settings.
+  :jira:`3189`
+
+*** 23.0.28 bugs
+
+- ``condor_token_request`` no longer fails with an error if the token is
+  automatically approved by the daemon.
+  :jira:`239`
+
+*** 23.10.27 features
+
+- HTCondor tarballs now contain `Pelican 7.17.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.2.
+
 *** 23.10.27 bugs
 
+- Fixed a bug where the specific vacate reason wasn't reported in the job
+  event log or the job ad when a job was evicted from the EP.
+  The message ``Unspecified job interruption`` and code 1005 were used
+  instead.
+  :jira:`3117`
+
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
 *** 23.0.27 bugs
+
+- :tool:`condor_ssh_to_job` now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
+- Fixed a bug in :tool:`htcondor job status` and :tool:`htcondor dag status`
+  that caused some time information to be displayed incorrectly.
+  :jira:`3112`
+
+- Fixed a bug where the Machine and Job ClassAds would fail to be
+  written into job scratch directories on Execution Points using
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`3156`
+
+*** 23.10.26 features
+
+- HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.0.
 
 *** 23.10.26 bugs
 
@@ -14,25 +87,30 @@
 
 *** 23.0.26 bugs
 
-- Fixed a bug when dagman's log file was on a full filesystem, dagman
+- Fixed a bug in *condor_adstash* that would prevent ads from
+  being ingested to Elasticsearch or OpenSearch when a lookup
+  of indexes did not start with a writable index.
+  :jira:`3109`
+
+- Fixed a bug when DAGMan's log file was on a full filesystem, DAGMan
   would not exit with the correct log file full exit code.
   :jira:`3066`
 
-- The submit commands ``kill_sig``, ``remove_kill_sig``, and
-  ``hold_kill_sig`` are now ignored for Windows jobs.
-  These control unix process signals, which are not relevant on
+- The submit commands :subcom:`kill_sig`, :subcom:`remove_kill_sig`, and
+  :subcom:`hold_kill_sig` are now ignored for Windows jobs.
+  These control Unix process signals, which are not relevant on
   Windows.
   :jira:`3078`
 
 - Fixed a bug introduced in HTCondor 23.0.21, 23.10.21, and 24.0.5 that
   caused the *condor_gridmanager* to fail at startup if
-  macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
+  :macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
   :jira:`3099`
 
-- Fixed a bug in *condor_adstash* that would prevent ads from
-  being ingested to Elasticsearch or OpenSearch when a lookup
-  of indexes did not start with a writable index.
-  :jira:3109
+- The plug-in used to handle ``http`` and ``https`` URLs now sets the
+  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  Web servers which return a 403/Forbidden
+  error when the ``user-agent`` is empty will now function as expected.
+  :jira:`3121`
 
 *** 23.10.25 features
 

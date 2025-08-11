@@ -5,13 +5,13 @@ usr/bin/classad_eval
 usr/bin/classad_functional_tester
 usr/bin/classad_version
 usr/bin/condor_adstash
-usr/bin/condor_annex
 usr/bin/condor_check_config
 usr/bin/condor_check_password
 usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue
 usr/bin/condor_dagman
+usr/bin/condor_dag_checker
 usr/bin/condor_docker_enter
 usr/bin/condor_drain
 usr/bin/condor_evicted_files
@@ -90,6 +90,7 @@ usr/libexec/condor/cleanup_locally_mounted_checkpoint
 usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
 usr/libexec/condor/common-cloud-attributes-google.py
+usr/libexec/condor/condor_annex
 usr/libexec/condor/condor_chirp
 usr/libexec/condor/condor_container_launcher.sh
 usr/libexec/condor/condor_credmon_oauth.wsgi

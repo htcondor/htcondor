@@ -2514,6 +2514,20 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     HTCondor will set HOME to the home directory of the user
     on the EP system.
 
+:macro-def:`STARTER_NESTED_SCRATCH[FileSystem]`
+    A boolean value that defaults to true.  When false, the job's scratch
+    directory hierarchy is created in the same way as it was previous
+    to HTCondor 24.9.  That is, the job's scratch directory is a 
+    direct subdirectory of :macro:`EXECUTE` named *dir_<starter_pid>*,
+    and owned by the user.  When true, the scratch directory is 
+    a subdirectory of that directory named scratch.  There are other
+    subdirectories named "user", where user-owned HTCondor files
+    will go, such as credentials, the .job.ad and other metadata.
+    There is also an htcondor subdirectory, where files owned by
+    the HTCondor system will go.  The idea is the scratch directory
+    should not be polluted with system files, and only contain files
+    the job expects to be there.
+
 :macro-def:`FILESYSTEM_DOMAIN[FileSystem]`
     An arbitrary string that is used to decide if the two machines, a
     access point and an execute machine, share a file system. Although
@@ -4515,6 +4529,11 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     may request with the ``docker_network_type`` submit file command.
     Advertised into the slot attribute DockerNetworks.
 
+:macro-def:`DOCKER_NETWORK_NAME[STARTD]`
+    A string that defaults to "docker0".  This is the name of the network
+    that a docker universe job can use to talk to the host machine.  This
+    is used by :tool:`condor_chirp`.
+
 :macro-def:`DOCKER_SHM_SIZE[STARTD]`
     An optional knob that can be configured to adapt the ``--shm-size`` Docker
     container create argument. Allowed values are integers in bytes.
@@ -4621,6 +4640,11 @@ These macros control the *condor_schedd*.
     A boolean value that defaults to true.  When true, local universe
     jobs on Linux are put into their own cgroup, for monitoring and
     cleanup.
+
+:macro-def:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT[SCHEDD]`
+    When the above is true, if this boolean value which defaults to false
+    is true, then local universe jobs need to have a :subcom:`request_memory`
+    and if the local universe job exceeds that, it will be put on hold.
 
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
@@ -8258,6 +8282,11 @@ These macros affect the *condor_credd* and its credmon plugin.
     pass additional command line options to gettoken.  Mostly
     used for vault, where this should be set to "-a vault_name".
 
+:macro-def:`TRUSTED_VAULT_HOSTS[CREDD]`
+    A space-and/or-comma-separated list of hostnames of Vault servers
+    that the *condor_credd* will accept Vault credentials for.
+    The default (unset) means accept credentials for any Vault server.
+
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
 
@@ -11701,14 +11730,6 @@ has.
     in terms of HTCondor ClassAd attributes to be published. All files
     in this directory are read, to define the metrics. The default
     directory ``/etc/condor/ganglia.d/`` is used when not specified.
-
-condor_annex Configuration File Macros
---------------------------------------
-
-:index:`condor_annex configuration variables<single: condor_annex configuration variables; configuration>`
-
-See :doc:`/cloud-computing/annex-configuration` for :tool:`condor_annex`
-configuration file macros.
 
 ``htcondor annex`` Configuration File Macros
 --------------------------------------------

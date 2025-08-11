@@ -25,9 +25,6 @@
 #include <list>
 
 using namespace classad;
-using std::string;
-using std::vector;
-using std::pair;
 
 
 /**
@@ -339,7 +336,7 @@ ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std:
 	return pEnv;
 }
 
-bool CachedExprEnvelope::_debug_dump_keys(const string & szFile)
+bool CachedExprEnvelope::_debug_dump_keys(const std::string & szFile)
 {
   if ( ! _cache) return false;
   return _cache->dump_keys(szFile);
@@ -357,7 +354,7 @@ void CachedExprEnvelope::_debug_print_stats(FILE* fp)
   if (_cache) _cache->print_stats(fp);
 }
 
-CachedExprEnvelope * CachedExprEnvelope::check_hit(const string & szName, const string& szValue)
+CachedExprEnvelope * CachedExprEnvelope::check_hit(const std::string & szName, const std::string& szValue)
 {
    CachedExprEnvelope * pRet = 0; 
 

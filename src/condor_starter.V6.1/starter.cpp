@@ -168,7 +168,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	} else {
 		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				(long)daemonCore->getpid() );
-		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
 			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
 			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
 		} else {
@@ -2112,11 +2112,6 @@ Starter::createTempExecuteDir( void )
 		return false;
 	}
 
-	dprintf_open_logs_in_directory(WorkingDir.c_str());
-
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
-
 #if !defined(WIN32)
 	if (use_chown) {
 		priv_state p = set_root_priv();
@@ -2135,6 +2130,12 @@ Starter::createTempExecuteDir( void )
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
 	int chdir_result = chdir(WorkingDir.c_str());
+
+	dprintf_open_logs_in_directory(WorkingDir.c_str());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
+
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {

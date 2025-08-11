@@ -47,6 +47,7 @@ instructions corresponding to your operating system:
   Amazon Linux 2023;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
+  Enterprise Linux 10 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
   Debian 11 and 12; and Ubuntu 22.04 and 24.04.
 * :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 13 and later.
@@ -65,6 +66,7 @@ misbehaving jobs.
   Amazon Linux 2023;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
+  Enterprise Linux 10 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
   Debian 11 and 12; and Ubuntu 22.04 and 24.04.
 * :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 13 and later.
@@ -102,10 +104,6 @@ the :ref:`quick_start_guide` after logging in to the ``submit`` pod.
 Although you can use our Docker images (or Kubernetes support) in the cloud,
 HTCondor also supports cloud-native distribution.
 
-* For Amazon Web Services, we offer a
-  `minicondor image <https://aws.amazon.com/marketplace/pp/B073WHVRPR>`_
-  preconfigured for use with :ref:`condor_annex <annex_users_guide>`,
-  which allows to easily add cloud resources to your pool.
 * The :ref:`google_cloud_hpc_toolkit` lets you construct an entire HTCondor
   pool that scales automatically to run submitted jobs. If you're new to
   HTCondor, you can proceed to the :ref:`quick_start_guide` immediately after
