@@ -293,9 +293,9 @@ else(NOT WINDOWS)
                 message(STATUS "Got PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
                 message(STATUS "Got PYTHON3_VERSION_MINOR = ${PYTHON3_VERSION_MINOR}")
             endif()
-        endif(NOT "${PYTHON_LIBRARY_SUFFIX}" MATCHES "3[91]")
+        endif(${PYTHON_LIBRARY_SUFFIX} LESS 9)
 
-    endif (${PYTHON_LIBRARY_SUFFIX} LESS 9)
+    endif (WANT_PYTHON3_BINDINGS AND PYTHON3_INSTALL_DIR)
     message(STATUS "=======================================================")
 
 endif(NOT WINDOWS)
