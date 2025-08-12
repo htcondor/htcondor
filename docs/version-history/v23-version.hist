@@ -1,5 +1,14 @@
 *** 23.10.29 bugs
 
+- Fixed a bug where Flock Collectors could be forgotten after
+  having a connection interruption.
+  :jira:`3200`
+
+- Fixed a bug where a *condor_schedd* would not attempt to flock
+  to collectors in the :macro:`FLOCK_TO` list when a communication
+  failure occurred to a collector earlier in the list.
+  :jira:`3200`
+
 *** 23.0.29 bugs
 
 *** 23.10.28 features
