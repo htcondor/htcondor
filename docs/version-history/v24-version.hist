@@ -84,6 +84,12 @@
 
 *** 24.0.11 bugs
 
+*** 24.10.3 bugs
+
+- Fixed a bug introduced in version 24.10.2 that caused
+  `condor_store_cred add` to fail.
+  :jira:`3213`
+
 *** 24.10.2 features
 
 - In the *condor_job_router*, the old ClassAd-based route syntax
