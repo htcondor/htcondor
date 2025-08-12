@@ -54,7 +54,6 @@ Daemon::common_init() {
 	_tried_init_version = false;
 	_is_configured = true;
 	_error_code = CA_SUCCESS;
-	m_daemon_ad_ptr = NULL;
 	char buf[200];
 	snprintf(buf,sizeof(buf),"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
 	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
@@ -158,7 +157,7 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 			 _name.c_str(), _pool.c_str(), _addr.c_str() );
 
 	// let's have our own copy of the daemon's ad in this case.
-	m_daemon_ad_ptr = new ClassAd(*tAd);	
+	m_daemon_ad = *tAd;
 
 }
 
@@ -212,9 +211,7 @@ Daemon::deepCopy( const Daemon &copy )
 	_tried_init_hostname = copy._tried_init_hostname;
 	_tried_init_version = copy._tried_init_version;
 	_is_configured = copy._is_configured;
-	if(copy.m_daemon_ad_ptr) {
-		m_daemon_ad_ptr = new ClassAd(*copy.m_daemon_ad_ptr);
-	}
+	m_daemon_ad = copy.m_daemon_ad;
 
 	m_sec_context_id = copy.m_sec_context_id;
 	m_preferred_token = copy.m_preferred_token;
@@ -239,7 +236,6 @@ Daemon::~Daemon()
 		display( D_HOSTNAME );
 		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
 	}
-	if( m_daemon_ad_ptr) { delete m_daemon_ad_ptr; }
 }
 
 
@@ -249,56 +245,54 @@ Daemon::~Daemon()
 
 ClassAd *
 Daemon::locationAd() {
-	if( m_daemon_ad_ptr ) {
+	if( !m_daemon_ad.empty() ) {
 		// dprintf( D_ALWAYS, "locationAd(): found daemon ad, returning it\n" );
-		return m_daemon_ad_ptr;
+		return &m_daemon_ad;
 	}
 
-	if( m_location_ad_ptr ) {
+	if( !m_location_ad.empty() ) {
 		// dprintf( D_ALWAYS, "locationAd(): found location ad, returning it\n" );
-		return m_location_ad_ptr;
+		return &m_location_ad;
 	}
 
-	ClassAd * locationAd = new ClassAd();
 	const char * buffer = NULL;
 
 	buffer = this->addr();
 	if(! buffer) { goto failure; }
-	if(! locationAd->InsertAttr(ATTR_MY_ADDRESS, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_MY_ADDRESS, buffer)) { goto failure; }
 
 	buffer = this->name();
 	if(! buffer) { buffer = "Unknown"; }
-	if(! locationAd->InsertAttr(ATTR_NAME, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_NAME, buffer)) { goto failure; }
 
 	buffer = this->fullHostname();
 	if(! buffer) { buffer = "Unknown"; }
-	if(! locationAd->InsertAttr(ATTR_MACHINE, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_MACHINE, buffer)) { goto failure; }
 
 	/* This will inevitably be overwritten by CondorVersion(), below,
 	   so I don't know what the original was attempting accomplish here. */
 	buffer = this->version();
 	if(! buffer) { buffer = ""; }
-	if(! locationAd->InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
 
 	AdTypes ad_type;
 	if(! convert_daemon_type_to_ad_type(this->type(), ad_type)) { goto failure; }
 	buffer = AdTypeToString(ad_type);
 	if(! buffer) { goto failure; }
-	if(! locationAd->InsertAttr(ATTR_MY_TYPE, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_MY_TYPE, buffer)) { goto failure; }
 
 	buffer = CondorVersion();
-	if(! locationAd->InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
 
 	buffer = CondorPlatform();
-	if(! locationAd->InsertAttr(ATTR_PLATFORM, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_PLATFORM, buffer)) { goto failure; }
 
 	// dprintf( D_ALWAYS, "locationAd(): synthesized location ad, returning it.\n" );
-	m_location_ad_ptr = locationAd;
-	return m_location_ad_ptr;
+	return &m_location_ad;
 
   failure:;
 	// dprintf( D_ALWAYS, "Daemon::locationAd() failed.\n" );
-	delete locationAd;
+	m_location_ad.Clear();
 	return NULL;
 }
 
@@ -1400,12 +1394,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		if ( ! getInfoFromAd( scan ) ) {
 			return false;
 		}
-		if( !m_daemon_ad_ptr) {
+		if( m_daemon_ad.empty()) {
 			// I don't think we can ever get into a case where we already
 			// have located the daemon and have a copy of its ad, but just
 			// in case, don't stash another copy of it if we can't find it.
 			// I hope this is a deep copy wiht no chaining bullshit
-			m_daemon_ad_ptr = new ClassAd(*scan);	
+			m_daemon_ad = *scan;
 		}
 			// The version and platfrom aren't critical, so don't
 			// return failure if we can't find them...
@@ -1942,8 +1936,8 @@ Daemon::readLocalClassAd( const char* subsys )
 	adFromFile = new ClassAd;
 	InsertFromFile(addr_fp, *adFromFile, "...", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(adFromFile);
-	if(!m_daemon_ad_ptr) {
-		m_daemon_ad_ptr = new ClassAd(*adFromFile);
+	if(m_daemon_ad.empty()) {
+		m_daemon_ad = *adFromFile;
 	}
 	std::unique_ptr<ClassAd> smart_ad_ptr(adFromFile);
 	

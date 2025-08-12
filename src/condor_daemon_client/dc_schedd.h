@@ -93,9 +93,6 @@ public:
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
 
-		/// Destructor
-	~DCSchedd();
-
 		/** Hold all jobs that match the given constraint.
 			Set ATTR_HOLD_REASON to the given reason.
 			@param constraint What jobs to act on
