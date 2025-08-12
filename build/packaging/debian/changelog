@@ -1,3 +1,9 @@
+condor (24.10.3-1) stable; urgency=medium
+
+  * Fix condor_store_cred bug that broke installing with get_htcondor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Aug 2025 08:08:00 -0500
+
 condor (24.10.2-1) stable; urgency=medium
 
   * Remove support for old JobRouter syntax
