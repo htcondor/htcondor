@@ -249,12 +249,17 @@ fi
 
 # Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
-if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ] && [ $VERSION_CODENAME != 'trixie' ]; then
+if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    if [ $VERSION_CODENAME = 'trixie' ]; then
+        TRIXIE='-trixie+'
+    else
+        TRIXIE=''
+    fi
     $INSTALL wget
-    APPTAINER_VERSION=1.4.1
-    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
-    $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
-    rm ./apptainer_${APPTAINER_VERSION}_amd64.deb
+    APPTAINER_VERSION=1.4.2
+    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -324,7 +329,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Install apptainer into externals directory
-if [ $ID != 'amzn' ] && [ $VERSION_CODENAME != 'trixie' ]; then
+if [ $ID != 'amzn' ]; then
     if [ $ID != 'ubuntu' ] || [ "$ARCH" != 'ppcle64' ]; then
         mkdir -p "$externals_dir/apptainer"
         if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
