@@ -1,17 +1,24 @@
-cmake_minimum_required(VERSION 3.14)
-project(testbase)
+################################################################
+#
+# Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License.  You may
+# obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+################################################################
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Add debug flags for better debugging
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -fsanitize=address -fno-omit-frame-pointer")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-fsanitize=address")
-
-# Main driver executable
-add_executable(
-  myHistoryList
+# Librarian Source Files
+set(LibrarianSources
   main.cpp
   librarian.cpp
   readHistory.cpp
@@ -21,17 +28,14 @@ add_executable(
   sha256.c
 )
 
-target_link_libraries(myHistoryList
-  pthread
-  sqlite3
-)
+# Temporary build as a one off executable
+condor_exe(condor_librarian "${LibrarianSources}" ${C_BIN} "${CONDOR_LIBS}" ON)
 
-# Custom clean target to remove executable and database files
-add_custom_target(clean-all
-  COMMAND ${CMAKE_COMMAND} -E remove -f myHistoryList
-  COMMAND ${CMAKE_COMMAND} -E remove -f tester_output.db
-  COMMAND ${CMAKE_COMMAND} -E remove -f tester_output.db-wal  
-  COMMAND ${CMAKE_COMMAND} -E remove -f tester_output.db-shm
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  COMMENT "Cleaning executable and database files"
-)
+# Future: Build as daemon
+#condor_daemon(
+#	EXE condor_librarian
+#	SOURCES "${LibrarianSources}"
+#	LIBRARIES "${CONDOR_LIBS}"
+#	INSTALL ${C_SBIN}
+#)
+
