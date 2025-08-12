@@ -1,6 +1,10 @@
 // main.cpp
 // Alpha Driver for the Librarian service: reads config, updates database, and provides interactive query shell.
 
+#include "condor_common.h"
+//#include "condor_daemon_core.h"
+#include "condor_config.h"
+
 #include "librarian.h"
 #include <fstream>
 #include <iostream>
@@ -9,27 +13,6 @@
 #include <vector>
 #include <string>
 
-std::unordered_map<std::string, std::string> parseConfigFile(const std::string& filename) {
-    std::unordered_map<std::string, std::string> configMap;
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open config file: " << filename << std::endl;
-        return configMap;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-        std::istringstream lineStream(line);
-        std::string key, value;
-
-        if (std::getline(lineStream, key, '=') && std::getline(lineStream, value)) {
-            // Trim whitespace (optional)
-            configMap[key] = value;
-        }
-    }
-
-    return configMap;
-}
 
 // Helper function to split command into argc/argv format
 std::vector<std::string> parseCommand(const std::string& command) {
@@ -104,18 +87,23 @@ void runQueryProcess(Librarian& librarian) {
 
 
 int main() {
-    // Load and parse librarian_config.txt
-    auto config = parseConfigFile("librarian_config.txt");
+    dprintf_set_tool_debug("TOOL", 0);
+    set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
+    set_priv_initialize(); // allow uid switching if root
+    config();
 
-    std::string epochHistoryPath = config["epoch_history_path"];
-    std::string historyPath = config["history_path"];
-    std::string dbPath = config["db_path"];
+    std::string historyPath;
+    param(historyPath, "HISTORY", "hist/history");
+
+    std::string dbPath;
+    param(dbPath, "LIBRARIAN_DATABASE");
+
     size_t jobCacheSize = 10000; // still hardcoded
     double dbSizeLimit = 2.0 * 1024 * 1024 * 1024; // 2 GB
     double schemaVersionNumber = 1.0;
     
     // Updated constructor call - removed schemaPath and gcQueryPath
-    Librarian librarian(dbPath, historyPath, epochHistoryPath, jobCacheSize, dbSizeLimit, schemaVersionNumber);
+    Librarian librarian(dbPath, historyPath, historyPath, jobCacheSize, dbSizeLimit, schemaVersionNumber);
 
     if (!librarian.initialize()) {
         std::cerr << "Failed to initialize Librarian." << std::endl;

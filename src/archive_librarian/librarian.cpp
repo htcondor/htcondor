@@ -569,7 +569,7 @@ int Librarian::query(int argc, char* argv[]) {
     std::cout << "\n\nQuery execution took " << durationMs << " ms\n";
     
     // Write timing data to file
-    std::ofstream timingFile("librarian_query_times.txt", std::ios::app);
+    /*std::ofstream timingFile("librarian_query_times.txt", std::ios::app);
     if (timingFile.is_open()) {
         timingFile << queryString << "\n";
         timingFile << durationMs << " ms\n";
@@ -577,7 +577,7 @@ int Librarian::query(int argc, char* argv[]) {
         timingFile.close();
     } else {
         printf("Warning: Could not write to librarian_query_times.txt\n");
-    }
+    }*/
     
     // Format and display output using utilities
     if (!options.flags.hasAnyFlag()) {

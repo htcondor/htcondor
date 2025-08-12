@@ -19,7 +19,7 @@
 
 # Librarian Source Files
 set(LibrarianSources
-  main.cpp
+  librarian_main.cpp
   librarian.cpp
   readHistory.cpp
   archiveMonitor.cpp
