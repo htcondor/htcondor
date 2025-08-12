@@ -499,7 +499,6 @@ Requires: python2-cryptography
 Requires: python2-scitokens
 %else
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-six
 Requires: python3-cryptography
 Requires: python3-scitokens
 %endif
@@ -539,7 +538,6 @@ Summary: Vault credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-six
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
 Requires: python36-urllib3
