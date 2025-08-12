@@ -5195,7 +5195,7 @@ description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
-default=50000
+default=2000000000
 range=0,
 type=int
 description=History Helper max number of history ads

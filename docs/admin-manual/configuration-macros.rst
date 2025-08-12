@@ -516,7 +516,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`HISTORY_HELPER_MAX_HISTORY[Global]`
     Specifies the maximum number of ClassAds to parse on behalf of
-    remote history clients. The default is 10,000. This allows the
+    remote history clients. The default is 2,000,000,000. This allows the
     system administrator to indirectly manage the maximum amount of CPU
     time spent on each client. Setting this option to 0 disables remote
     history access.

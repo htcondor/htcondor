@@ -6,6 +6,11 @@
   limit, it will be put on hold.
   :jira:`3170`
 
+- :macro:`HISTORY_HELPER_MAX_HISTORY` defalt raise from 10,000 to 2,000,000,000
+  effectively removing the limit.  We now believe that running large
+  remote history queries will not have a negative impact on the *condor_schedd*
+  :jira:`3215`
+
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
   and htchirp.py to work correctly inside a docker universe job.
