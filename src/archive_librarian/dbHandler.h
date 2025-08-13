@@ -19,7 +19,6 @@
 #include "JobRecord.h"
 #include "archiveMonitor.h"
 #include "cache.hpp"
-#include "JobQueryStructures.h"
 #include "config.hpp"
 
 
@@ -67,12 +66,6 @@ public:
     // === Garbage Collection ===
     // Runs garbageCollection query saved in Librarian and passed to dbHandler 
     bool runGarbageCollection(const std::string &gcSql, int targetFileLimit);
-
-    // === User Query Interface ===
-    // User-facing data retrieval functions
-    std::vector<std::tuple<int, int, int>> getJobsForUser(const std::string& username);
-    std::vector<std::pair<std::string, int>> getJobCountsPerUser();
-    bool queryJobRecordsForJobList(const std::string& username, int clusterId, std::vector<QueriedJobRecord>& jobRecords);
 
     // === Testing Support ===
     // Helper function to support testing utilities

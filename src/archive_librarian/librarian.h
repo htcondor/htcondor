@@ -4,7 +4,6 @@
 #include <memory>
 #include "dbHandler.h"
 #include "JobRecord.h"
-#include "JobQueryStructures.h"
 #include "config.hpp"
 
 /**
@@ -38,8 +37,7 @@ public:
      */
     bool update();
 
-    int query(int argc, char* argv[]);
-
+    // Configuration manager
     LibrarianConfig config{};
 
 private:
@@ -53,7 +51,8 @@ private:
     DBHandler dbHandler_{config};
     FileSet historyFileSet_;
     FileSet epochHistoryFileSet_;
-    std::string gcQuerySQL_{}; 
+
+    // TODO: cleanup status code
     StatusData statusData_;
     double EstimatedBytesPerJobInArchive_{0.0};
     int EstimatedJobsPerFileInArchive_{0};
@@ -73,12 +72,5 @@ private:
 
     // Librarian::update() : Step 6 - Garbage Collection
     bool cleanupDatabaseIfNeeded();
-
-    // Helper methods for Librarian::query()
-    QueryResult executeQuery(const std::string& username, int clusterId, std::string historyDirectoryPath);
-    std::vector<std::string> readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords, std::string historyDirectoryPath);
-    std::vector<ParsedJobRecord> parseClassAds(const std::vector<std::string>& rawClassAds);
-    std::optional<ParsedJobRecord> parseClassAd(const std::string& classAdText);
-    std::optional<std::string> readJobAtOffset(const std::string& filePath, long offset);
 
 };

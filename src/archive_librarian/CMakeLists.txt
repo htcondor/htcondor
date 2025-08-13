@@ -24,7 +24,6 @@ set(LibrarianSources
   readHistory.cpp
   archiveMonitor.cpp
   dbHandler.cpp
-  JobAnalysisUtils.cpp
 )
 
 # Temporary build as a one off executable
