@@ -1,6 +1,6 @@
 src/condor_examples/condor-annex-ec2 usr/libexec/condor/
 src/condor_examples/50ec2.config etc/condor/config.d/
-#if defined(BULLSEYE) || defined (FOCAL)
+#if defined(BULLSEYE) || defined(FOCAL)
 src/condor_examples/condor-annex-ec2.service lib/systemd/system/
 #else
 src/condor_examples/condor-annex-ec2.service usr/lib/systemd/system/

@@ -250,11 +250,16 @@ fi
 # Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    if [ $VERSION_CODENAME = 'trixie' ]; then
+        TRIXIE='-trixie+'
+    else
+        TRIXIE=''
+    fi
     $INSTALL wget
-    APPTAINER_VERSION=1.4.1
-    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
-    $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
-    rm ./apptainer_${APPTAINER_VERSION}_amd64.deb
+    APPTAINER_VERSION=1.4.2
+    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -271,17 +276,19 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 pelican pelican-osdf-compat
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libboost-python1.74.0 libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libboost-python1.74.0 libscitokens0 libvomsapi1v5
+    elif [ $VERSION_CODENAME = 'trixie' ]; then
+        apt-get download libboost-python1.83.0 libscitokens0t64 libvomsapi1t64
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt-get download libboost-python1.71.0 libvomsapi1v5
+        apt-get download libboost-python1.71.0 libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libboost-python1.74.0 libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'noble' ]; then
-        apt-get download libboost-python1.83.0 libvomsapi1t64
+        apt-get download libboost-python1.83.0 libscitokens0t64 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1

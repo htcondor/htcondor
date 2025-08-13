@@ -14,7 +14,7 @@ Build-Depends: cmake (>= 3.16),
 #else
                debhelper-compat (= 13),
 #endif
-#if ! defined(PPC64LE)
+#if !defined(PPC64LE)
                default-jdk,
 #endif
                dh-python,
