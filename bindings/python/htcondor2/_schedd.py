@@ -28,6 +28,7 @@ from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _schedd_query,
+    _schedd_userrec_query,
     _schedd_act_on_job_ids,
     _schedd_act_on_job_constraint,
     _schedd_edit_job_ids,
@@ -147,6 +148,85 @@ class Schedd():
         :param opts:  Special query options; see the enumeration for details.
         '''
         results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
+        if callback is None:
+            return results
+
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
+
+    def queryUserAds(self,
+        constraint : Union[str, classad.ExprTree] = "",
+        projection : List[str] = [],
+        callback : Callable[[classad.ClassAd], Any] = None,
+        limit : int = -1,
+    ) -> List[classad.ClassAd]:
+        '''
+        Query the *condor_schedd* daemon for user ads.
+
+        :param constraint:  A query constraint.  Only user ads matching this
+            constraint will be returned.  The default will return all user ads
+        :param projection:  A list of classad attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param callback:  A filtering function.  It will be invoked for
+            each user ad which matches the constraint.  The value returned
+            by *callback* will replace the corresponding user ad in the
+            list returned by this method unless that value is `None`, which
+            will instead be omitted.
+        :param limit:  The maximum number of user ads to return.  The default
+            (``-1``) is to return all ads.
+        '''
+        results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), 0)
+        if callback is None:
+            return results
+
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
+
+    def queryProjectAds(self,
+        constraint : Union[str, classad.ExprTree] = "",
+        projection : List[str] = [],
+        callback : Callable[[classad.ClassAd], Any] = None,
+        limit : int = -1,
+    ) -> List[classad.ClassAd]:
+        '''
+        Query the *condor_schedd* daemon for project ads.
+
+        :param constraint:  A query constraint.  Only project ads matching this
+            constraint will be returned.  The default will return all project ads
+        :param projection:  A list of classad attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param callback:  A filtering function.  It will be invoked for
+            each project ad which matches the constraint.  The value returned
+            by *callback* will replace the corresponding project ad in the
+            list returned by this method unless that value is `None`, which
+            will instead be omitted.
+        :param limit:  The maximum number of project ads to return.  The default
+            (``-1``) is to return all ads.
+        '''
+        project_flag = 1 # 0=default, 1=project, 2=user, 3=both
+        results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), project_flag)
         if callback is None:
             return results
 

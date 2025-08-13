@@ -11,6 +11,25 @@ _schedd_query_callback( void * r, ClassAd * ad ) {
     return false;
 }
 
+static int
+_schedd_userrec_query_callback( void * r, ClassAd * ad ) {
+    auto * results = static_cast<PyObject*>(r);
+
+    // py_new_classad2_classad takes ownership of the ad
+    PyObject * pyClassAd = py_new_classad2_classad(ad);
+    auto rv = PyList_Append(results, pyClassAd);
+    Py_DecRef(pyClassAd);
+
+    if (rv != 0) {
+        // pthon set an error, we need to break out of the query
+        // and return a negative code so that the caller knows.
+        return -1;
+    }
+
+    // return 0 to indicate that the results list took ownership of the ad
+    return 0;
+}
+
 
 static PyObject *
 _schedd_query(PyObject *, PyObject * args) {
@@ -106,6 +125,108 @@ _schedd_query(PyObject *, PyObject * args) {
     }
 
     return list;
+}
+
+static PyObject *
+_schedd_userrec_query(PyObject *, PyObject * args) {
+    // _schedd_userrec_query(addr, constraint, projection, limit, projects_flag)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    PyObject * projection = NULL;
+    long limit = -1; // -1 is no limit
+    long projects_flag = 0; // 0=default, 1=project, 2=user, 3=both
+    if(! PyArg_ParseTuple( args, "zzOll", & addr, & constraint, & projection, & limit, & projects_flag )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+#if 0 // wait for debugger, then break
+  #ifdef WIN32
+    fprintf(stderr, "pid=%u\n_schedd_userrec_query(%s,%s,...%d)\n", GetCurrentProcessId(),
+        addr ? addr : "null", constraint ? constraint : "constraint", projects_flag);
+    static bool debugger_present = false;
+    while ( ! debugger_present) {
+        debugger_present = IsDebuggerPresent();
+        Sleep(1000);
+    }
+    DebugBreak();
+  #endif
+#endif
+
+    if(! PyList_Check(projection)) {
+        PyErr_SetString(PyExc_TypeError, "projection must be a list");
+        return NULL;
+    }
+
+    DCSchedd schedd(addr);
+
+    classad::References attributes;
+    int rv = py_list_to_projection(projection, attributes, "projection");
+    if( rv == -1 ) {
+        // py_list_to_projection() has already set an exception for us.
+        return NULL;
+    }
+
+    ClassAd queryAd;
+    CondorError errStack;
+    ClassAd *summaryAd = nullptr;
+
+    PyObject * results = nullptr;
+
+    rv = schedd.makeUsersQueryAd(queryAd, constraint, attributes, limit);
+    if (0 == rv) {
+        // TODO: move this into makeUsersQueryAd and handle the case of
+        // separate constraint and projection for each ad type
+        switch (projects_flag & 0x3) {
+        case 1: queryAd.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE); break;
+        case 2: queryAd.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE); break;
+        case 3: queryAd.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE "," PROJECT_ADTYPE); break;
+        }
+
+        results = PyList_New(0);
+        if( results == NULL ) {
+            PyErr_SetString( PyExc_MemoryError, "_schedd_userrec_query" );
+            return NULL;
+        }
+
+        int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
+        rv = schedd.queryUsers(
+            queryAd, _schedd_userrec_query_callback, results,
+            connect_timeout, &errStack, &summaryAd);
+    }
+
+    if (0 == rv) {
+        // success, we just want to return the results
+    } else {
+        // failure, free any results and set an error into python if needed
+        if (results) {
+            Py_DecRef(results);
+            results = nullptr;
+        }
+        switch (rv) {
+            case 0: break;  // should never get here on success, this is just for clarity.
+            case -1: break; // error already set by python (in callback)
+
+            case Q_UNSUPPORTED_OPTION_ERROR:
+                // This was HTCondorIOError in version 1.
+                PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
+                break;
+
+            case SC_ERR_BAD_CONSTRAINT:
+                PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
+                break;
+
+            default:
+                // This was HTCondorIOError in version 1.
+                std::string error = "Failed to fetch ads from schedd, errmsg="
+                                  + errStack.getFullText();
+                PyErr_SetString(PyExc_HTCondorException, error.c_str());
+                break;
+        }
+    }
+
+    return results;
 }
 
 
