@@ -14,6 +14,8 @@
 #include "AWSv4-impl.h"
 
 
+#define MAX_BASE_NAME_LENGTH 64
+
 //
 // The EP needs to distinguish between common filesets.  For the moment,
 // we're only sharing common files within the same cluster, so we just need
@@ -88,8 +90,9 @@ makeCIFName(
     // Construct the full internal catalog name.
     std::string fullCIFName;
     // FIXME: Check the maximum base name length at submit time.
-    formatstr( fullCIFName, "%.64s@%s#%d_%s",
-        baseName.c_str(), scheddName.c_str(), clusterID, addressHash.c_str()
+    formatstr( fullCIFName, "%.*s@%s#%d_%s",
+        MAX_BASE_NAME_LENGTH, baseName.c_str(),
+        scheddName.c_str(), clusterID, addressHash.c_str()
     );
     return fullCIFName;
 }
