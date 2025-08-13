@@ -46,7 +46,7 @@ Additionally, the following repositories are required for specific platforms:
 deb-based Distributions
 -----------------------
 
-We support four deb-based platforms: Debian 11 (Bullseye) and Debian 12 (Bookworm); and
+We support five deb-based platforms: Debian 11 (Bullseye), Debian 12 (Bookworm), and Debian 13 (Trixie); and
 Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
@@ -59,6 +59,7 @@ with ``apt-key add`` before adding the repositories below.
 
 * Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bullseye main``
 * Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bookworm main``
+* Debian 13: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x trixie main``
 
 Ubuntu 22.04 and 24.04
 ######################

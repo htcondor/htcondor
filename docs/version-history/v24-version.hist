@@ -87,6 +87,11 @@
   daemons no longer require authentication.
   :jira:`3195`
 
+*** 24.0.11 features
+
+- Initial support for Debian 13 (trixie).
+  :jira:`3212`
+
 *** 24.0.11 bugs
 
 *** 24.10.3 bugs

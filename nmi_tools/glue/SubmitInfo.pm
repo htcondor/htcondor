@@ -287,6 +287,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Debian10' => 'x86_64_Debian9',
 	'nmi-build:x86_64_Debian11' => 'x86_64_Debian9',
 	'nmi-build:x86_64_Debian12' => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian13' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
