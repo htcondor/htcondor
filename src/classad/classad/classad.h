@@ -575,6 +575,7 @@ class ClassAd : public ExprTree
         /** Return the number of attributes at the root level of this ClassAd.
          */
         int size(void) const { return (int)attrList.size(); }
+		bool empty() const { return attrList.empty(); }
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
@@ -611,7 +612,7 @@ class ClassAd : public ExprTree
          */
 		virtual ExprTree* Copy( ) const;
 
-        /** Make a deep copy of the ClassAd, via the == operator. 
+        /** Make a deep copy of the ClassAd, via the = operator.
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
