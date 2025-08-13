@@ -29,11 +29,7 @@
 #include <stdlib.h>
 #include "JobRecord.h"  
 #include "archiveMonitor.h"
-extern "C" {
-    #include "sha256.h"
-}
 
-#define SHA256_BLOCK_SIZE 32
 
 // -------------------------
 // Lightweight backward file reader – optimized with chunked reads

@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <functional>
 #include <filesystem>
 #include <chrono>
 #include <algorithm>
@@ -31,8 +32,6 @@
 #include <regex>
 #include <system_error>
 
-
-#include "sha256.h"
 #include "JobRecord.h"  
 #include "readHistory.h"  
 #include "dbHandler.h"
@@ -43,7 +42,6 @@ namespace fs = std::filesystem; // where am i?
  
 namespace { // Helper functions for ArchiveMonitor utility functions
 
-    // TODO: Replace with std::hash -> std::stringstream << std::hex -> std::string (and remove third party sha256 files)
     std::string getHash(const char* historyFilePath) {
         FILE* file = fopen(historyFilePath, "rb");
         if (!file) {
@@ -63,19 +61,9 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
         fclose(file);
 
-        uint8_t outputHash[32];
-        SHA256_CTX ctx;
-        sha256_init(&ctx);
-        sha256_update(&ctx, reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.size());
-        sha256_final(&ctx, outputHash);
-
-        // Inline hashToHex logic
-        char hexBuf[65];
-        for (int i = 0; i < 32; ++i)
-            snprintf(hexBuf + (i * 2), 3, "%02x", outputHash[i]);
-        hexBuf[64] = 0;
-
-        return std::string(hexBuf);
+        std::stringstream ss;
+        ss << std::hex << std::hash<std::string>{}(buffer);
+        return ss.str();
     }
 
 

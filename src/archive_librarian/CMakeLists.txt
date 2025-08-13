@@ -25,7 +25,6 @@ set(LibrarianSources
   archiveMonitor.cpp
   dbHandler.cpp
   JobAnalysisUtils.cpp
-  sha256.c
 )
 
 # Temporary build as a one off executable
