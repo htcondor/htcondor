@@ -29,7 +29,7 @@
 #include <optional>
 #include "guidance.h"
 
-typedef std::vector< std::pair< std::string, std::string > > ListOfCatalogs;
+using ListOfCatalogs = std::vector< std::pair< std::string, std::string > >;
 
 class ShadowHookMgr;
 

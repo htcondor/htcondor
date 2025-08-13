@@ -605,13 +605,15 @@ mapContentsOfDirectoryInto(
 
 
 #define REPLY_WITH_ERROR(cmd,code,subcode) \
+	{ \
 	ClassAd context; \
 	context.InsertAttr( ATTR_COMMAND, cmd ); \
 	context.InsertAttr( ATTR_RESULT, false ); \
 	context.InsertAttr( ATTR_REQUEST_RESULT_CODE, (int)code ); \
 	context.InsertAttr( ATTR_REQUEST_RESULT_SUBCODE, (int)subcode ); \
 	continue_conversation(context); \
-	return true;
+	return true; \
+	}
 
 
 bool
