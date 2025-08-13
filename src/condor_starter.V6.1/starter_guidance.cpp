@@ -757,12 +757,12 @@ Starter::handleJobSetupCommand(
 				int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
 					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
 				}
 				rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
 					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
 				}
 #endif /* WINDOWS */
 			}
