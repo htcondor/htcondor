@@ -34,7 +34,9 @@
 #include "dbHandler.h"
 #include "archiveMonitor.h"
 #include "cache.hpp"
+#include "SavedQueries.h"
 
+namespace conf = LibrarianConfigOptions;
 namespace fs = std::filesystem;
 
 
@@ -42,19 +44,67 @@ namespace fs = std::filesystem;
 // DBHandler Constructor / Destructor
 // -------------------------
 
-DBHandler::DBHandler(const std::string& schemaSQL, const std::string& dbPath, size_t maxCacheSize)
-    : jobIdCache_(maxCacheSize)
-{
-    if (sqlite3_open(dbPath.c_str(), &db_) != SQLITE_OK) {
+bool DBHandler::initialize() {
+    jobIdCache_.setLimit((size_t)(config[conf::i::DBMaxJobCacheSize]));
+
+    if (sqlite3_open(config[conf::str::DBPath].c_str(), &db_) != SQLITE_OK) {
         std::string err = sqlite3_errmsg(db_);
+        printf("Failed to open SQLite Data Base: %s\n", err.c_str());
         sqlite3_close(db_); // technically redundant if db is already bad, but harmless
-        throw std::runtime_error("Failed to open SQLite DB: " + err); // TODO CHANGE THIS
+        return false;
     }
 
-    if (!initializeFromSchema(schemaSQL)) {
-        sqlite3_close(db_);
-        db_ = nullptr;
-        throw std::runtime_error("Failed to initialize schema");
+    char* errMsg = nullptr;
+    int rc;
+
+    // Enable foreign key constraints
+    rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("[ERROR] Failed to enable foreign keys: %s\n", errMsg ? errMsg : "Unknown");
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    // Begin transaction for atomic schema creation
+    rc = sqlite3_exec(db_, "BEGIN IMMEDIATE TRANSACTION;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("[ERROR] Failed to begin transaction: %s\n", errMsg ? errMsg : "Unknown");
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    // Execute the schema SQL
+    rc = sqlite3_exec(db_, SavedQueries::SCHEMA_SQL.c_str(), nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("[ERROR] Failed to initialize DB schema: %s\n", errMsg ? errMsg : "Unknown");
+
+        // Rollback on failure
+        char* rollbackErrMsg = nullptr;
+        int rollbackRc = sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &rollbackErrMsg);
+        if (rollbackRc != SQLITE_OK) {
+            printf("[ERROR] Failed to rollback transaction: %s\n", rollbackErrMsg ? rollbackErrMsg : "Unknown");
+            sqlite3_free(rollbackErrMsg);
+        }
+
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    // Commit the transaction
+    rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        printf("[ERROR] Failed to commit schema transaction: %s\n", errMsg ? errMsg : "Unknown");
+
+        // Attempt rollback on commit failure
+        char* rollbackErrMsg = nullptr;
+        int rollbackRc = sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &rollbackErrMsg);
+        if (rollbackRc != SQLITE_OK) {
+            printf("[ERROR] Failed to rollback after commit failure: %s\n", rollbackErrMsg ? rollbackErrMsg : "Unknown");
+            sqlite3_free(rollbackErrMsg);
+        }
+
+        sqlite3_free(errMsg);
+        return false;
     }
 
     const char* jobLookupSQL = "SELECT JobId, JobListId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
@@ -94,11 +144,12 @@ DBHandler::DBHandler(const std::string& schemaSQL, const std::string& dbPath, si
     }
 
     const char* jobSelectSQL = "SELECT JobId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
-    if (sqlite3_prepare_v2(db_, jobLookupSQL, -1, &jobSelectStmt_, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db_, jobSelectSQL, -1, &jobSelectStmt_, nullptr) != SQLITE_OK) {
         printf("[ERROR] Failed to prepare jobSelectStmt: %s\n", sqlite3_errmsg(db_));
         jobSelectStmt_ = nullptr;
     }
 
+    return true;
 }
 
 DBHandler::~DBHandler() {
@@ -137,8 +188,6 @@ DBHandler::~DBHandler() {
         jobSelectStmt_ = nullptr;
     }
 
-    
-
     if (db_) {
         int rc = sqlite3_close(db_);
         if (rc != SQLITE_OK) {
@@ -148,68 +197,6 @@ DBHandler::~DBHandler() {
     }
 }
 
-bool DBHandler::initializeFromSchema(const std::string& schemaSQL) {
-    char* errMsg = nullptr;
-    int rc;
-    
-    // Enable foreign key constraints
-    rc = sqlite3_exec(db_, "PRAGMA foreign_keys = ON;", nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to enable foreign keys: %s\n", errMsg);
-        sqlite3_free(errMsg);
-        return false;
-    }
-
-    // Begin transaction for atomic schema creation
-    rc = sqlite3_exec(db_, "BEGIN IMMEDIATE TRANSACTION;", nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to begin transaction: %s\n", errMsg);
-        sqlite3_free(errMsg);
-        return false;
-    }
-
-    // Execute the schema SQL
-    rc = sqlite3_exec(db_, schemaSQL.c_str(), nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to initialize DB schema: %s\n", errMsg);
-        
-        // Rollback on failure
-        char* rollbackErrMsg = nullptr;
-        int rollbackRc = sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &rollbackErrMsg);
-        if (rollbackRc != SQLITE_OK) {
-            printf("[ERROR] Failed to rollback transaction: %s\n", rollbackErrMsg);
-            sqlite3_free(rollbackErrMsg);
-        }
-        
-        sqlite3_free(errMsg);
-        return false;
-    }
-
-    // Commit the transaction
-    rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        printf("[ERROR] Failed to commit schema transaction: %s\n", errMsg);
-        
-        // Attempt rollback on commit failure
-        char* rollbackErrMsg = nullptr;
-        int rollbackRc = sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &rollbackErrMsg);
-        if (rollbackRc != SQLITE_OK) {
-            printf("[ERROR] Failed to rollback after commit failure: %s\n", rollbackErrMsg);
-            sqlite3_free(rollbackErrMsg);
-        }
-        
-        sqlite3_free(errMsg);
-        return false;
-    }
-
-    return true;
-}
-
-
-bool DBHandler::clearCache() {
-    jobIdCache_.clear(); 
-    return (jobIdCache_.size() == 0);
-}
 
 // For Librarian to check whether DBHandler has been initialized and works properly upon startup
 // Check if the database connection is working properly
@@ -219,14 +206,14 @@ bool DBHandler::testDatabaseConnection() {
         fprintf(stderr, "[DBHandler] Database handle is null\n");
         return false;
     }
-    
+
     // 2. Test basic connectivity
     int result = sqlite3_exec(db_, "SELECT 1;", nullptr, nullptr, nullptr);
     if (result != SQLITE_OK) {
         fprintf(stderr, "[DBHandler] Basic query failed: %s\n", sqlite3_errmsg(db_));
         return false;
     }
-    
+
     return true;
 } 
 
@@ -234,19 +221,19 @@ bool DBHandler::testDatabaseConnection() {
 bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL, double schemaVersionNumber) {
     // Count CREATE TABLE statements in the schema SQL
     std::string searchStr = "CREATE TABLE";
-    size_t expectedTableCount = 0;
+    int expectedTableCount = 0;
     size_t pos = 0;
-    
+
     while ((pos = schemaSQL.find(searchStr, pos)) != std::string::npos) {
         expectedTableCount++;
         pos += searchStr.length();
     }
-    
+
     if (expectedTableCount == 0) {
         fprintf(stderr, "[DBHandler] No CREATE TABLE statements found in schema SQL\n");
         return false;
     }
-    
+
     // Count actual tables in the database
     const char* countTablesQuery = R"(
         SELECT COUNT(*) FROM sqlite_master 
@@ -260,34 +247,33 @@ bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL, double schema
                 sqlite3_errmsg(db_));
         return false;
     }
-    
+
     int actualTableCount = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         actualTableCount = sqlite3_column_int(stmt, 0);
     }
     sqlite3_finalize(stmt);
-    
+
     if (actualTableCount != expectedTableCount) {
-        fprintf(stderr, "[DBHandler] Table count mismatch. Expected: %zu, Found: %d\n", 
+        fprintf(stderr, "[DBHandler] Table count mismatch. Expected: %d, Found: %d\n", 
                 expectedTableCount, actualTableCount);
         return false;
     }
-    
+
     // Check schema version matches expected value
     const char* versionQuery = "SELECT VersionId FROM SchemaVersion LIMIT 1;";
-    
     result = sqlite3_prepare_v2(db_, versionQuery, -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
         fprintf(stderr, "[DBHandler] Schema version check prepare failed: %s\n", 
                 sqlite3_errmsg(db_));
         return false;
     }
-    
+
     result = sqlite3_step(stmt);
     if (result == SQLITE_ROW) {
         double actualVersion = sqlite3_column_double(stmt, 0);
         sqlite3_finalize(stmt);
-        
+
         if (actualVersion != schemaVersionNumber) {
             fprintf(stderr, "[DBHandler] Schema version mismatch. Expected: %.1f, Found: %.1f\n", 
                     schemaVersionNumber, actualVersion);
@@ -303,7 +289,7 @@ bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL, double schema
         sqlite3_finalize(stmt);
         return false;
     }
-    
+
     return true;
 }
 
@@ -347,7 +333,7 @@ std::pair<int, int> DBHandler::jobIdLookup(int clusterId, int procId) {
     if (rc != SQLITE_DONE) {
         printf("[ERROR] sqlite3_step failed for ClusterId= %d, ProcId= %d - %s \n", 
         clusterId, procId, sqlite3_errmsg(db_));
-    } 
+    }
 
     return {-1, -1};
 }
@@ -378,7 +364,7 @@ int getOrInsertIdPrepared(
         sqlite3_clear_bindings(selectStmt);
         return -1;
     }
-    
+
     // Clean up SELECT statement
     sqlite3_reset(selectStmt);
     sqlite3_clear_bindings(selectStmt);
@@ -395,7 +381,7 @@ int getOrInsertIdPrepared(
         // Do SELECT again to get the ID
         sqlite3_reset(insertStmt);
         sqlite3_clear_bindings(insertStmt);
-        
+
         bindSelect(selectStmt);
         rc = sqlite3_step(selectStmt);
         if (rc == SQLITE_ROW) {
@@ -584,12 +570,12 @@ void DBHandler::batchInsertEpochRecords(const std::vector<EpochRecord>& records)
 // To convert DateOfRotation and DateOfDeletion strings to timestamps for database insert
 int64_t convertRotationStringToTimestamp(const std::string& rotationStr) {
     if (rotationStr.empty()) return 0;
-    
+
     // Parse "20241215T143022" format into a timestamp
     std::tm tm = {};
     std::istringstream ss(rotationStr);
     ss >> std::get_time(&tm, "%Y%m%dT%H%M%S");
-    
+
     return static_cast<int64_t>(std::mktime(&tm));
 }
 
@@ -621,7 +607,7 @@ bool DBHandler::insertEpochFileRecords(const std::vector<EpochRecord>& records, 
     } else {
         updateFilesSql = "UPDATE Files SET LastOffset = ?, FullyRead = ? WHERE FileId = ?;";
     }
-    
+
     sqlite3_stmt* stmt = nullptr;
     result = sqlite3_prepare_v2(db_, updateFilesSql.c_str(), -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
@@ -632,7 +618,7 @@ bool DBHandler::insertEpochFileRecords(const std::vector<EpochRecord>& records, 
 
     // Bind parameters
     sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(fileInfo.LastOffset));
-    
+
     if (!fileInfo.DateOfRotation.empty()) {
         int64_t rotationTimestamp = convertRotationStringToTimestamp(fileInfo.DateOfRotation);
         sqlite3_bind_int64(stmt, 2, rotationTimestamp);
@@ -670,7 +656,7 @@ bool DBHandler::insertEpochFileRecords(const std::vector<EpochRecord>& records, 
  * happen in a single transaction
  */
 bool DBHandler::insertJobFileRecords(const std::vector<JobRecord>& jobs, const FileInfo& fileInfo) {
-    
+
     // Begin outer transaction for atomicity
     int result = sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
     if (result != SQLITE_OK) {
@@ -689,7 +675,7 @@ bool DBHandler::insertJobFileRecords(const std::vector<JobRecord>& jobs, const F
     } else {
         updateFilesSql = "UPDATE Files SET LastOffset = ?, FullyRead = ? WHERE FileId = ?;";
     }
-    
+
     sqlite3_stmt* stmt = nullptr;
     result = sqlite3_prepare_v2(db_, updateFilesSql.c_str(), -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
@@ -700,7 +686,7 @@ bool DBHandler::insertJobFileRecords(const std::vector<JobRecord>& jobs, const F
 
     // Bind parameters
     sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(fileInfo.LastOffset));
-    
+
     if (!fileInfo.DateOfRotation.empty()) {
         int64_t rotationTimestamp = convertRotationStringToTimestamp(fileInfo.DateOfRotation);
         sqlite3_bind_int64(stmt, 2, rotationTimestamp);
@@ -1059,9 +1045,9 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 	if (rc == SQLITE_ROW) {
 		int64_t timeOfUpdate = sqlite3_column_int64(stmtStatus, 0);
 		int historyFileId = sqlite3_column_int(stmtStatus, 1);
-		int64_t historyFileOffset = sqlite3_column_int64(stmtStatus, 2);
+		std::ignore = sqlite3_column_int64(stmtStatus, 2);
 		int epochFileId = sqlite3_column_int(stmtStatus, 3);
-		int64_t epochFileOffset = sqlite3_column_int64(stmtStatus, 4);
+		std::ignore = sqlite3_column_int64(stmtStatus, 4);
 
 		statusData_.TimeOfLastUpdate = timeOfUpdate;
 
@@ -1418,21 +1404,21 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
         }
         return false;
     }
-    
+
     bool success = false;
-    
+
     // Step 1: Get UserId
     const char* userQuery = "SELECT UserId FROM Users WHERE UserName = ?";
     sqlite3_stmt* userStmt = nullptr;
-    
+
     if (sqlite3_prepare_v2(db_, userQuery, -1, &userStmt, nullptr) != SQLITE_OK) {
         printf("Failed to prepare user query: %s\n", sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
-    
+
     sqlite3_bind_text(userStmt, 1, username.c_str(), -1, SQLITE_TRANSIENT);
-    
+
     int userId = -1;
     if (sqlite3_step(userStmt) == SQLITE_ROW) {
         userId = sqlite3_column_int(userStmt, 0);
@@ -1443,20 +1429,20 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
         return false;
     }
     sqlite3_finalize(userStmt);
-    
+
     // Step 2: Get JobListId
     const char* jobListQuery = "SELECT JobListId FROM JobLists WHERE UserId = ? AND ClusterId = ?";
     sqlite3_stmt* jobListStmt = nullptr;
-    
+
     if (sqlite3_prepare_v2(db_, jobListQuery, -1, &jobListStmt, nullptr) != SQLITE_OK) {
         printf("Failed to prepare job list query: %s\n", sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
-    
+
     sqlite3_bind_int(jobListStmt, 1, userId);
     sqlite3_bind_int(jobListStmt, 2, clusterId);
-    
+
     int jobListId = -1;
     if (sqlite3_step(jobListStmt) == SQLITE_ROW) {
         jobListId = sqlite3_column_int(jobListStmt, 0);
@@ -1467,42 +1453,42 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
         return false;
     }
     sqlite3_finalize(jobListStmt);
-    
+
     // Step 3: Get JobRecords
     const char* jobRecordsQuery = "SELECT Offset, FileId, CompletionDate FROM JobRecords WHERE JobListId = ?";
     sqlite3_stmt* jobRecordsStmt = nullptr;
-    
+
     if (sqlite3_prepare_v2(db_, jobRecordsQuery, -1, &jobRecordsStmt, nullptr) != SQLITE_OK) {
         printf("Failed to prepare job records query: %s\n", sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
-    
+
     sqlite3_bind_int(jobRecordsStmt, 1, jobListId);
-    
+
     // Collect unique FileIds and JobRecord data
     std::set<long> uniqueFileIds;
     std::vector<std::tuple<long, long, int>> tempJobRecords; // offset, fileId, completionDate
-    
+
     while (sqlite3_step(jobRecordsStmt) == SQLITE_ROW) {
         long offset = sqlite3_column_int64(jobRecordsStmt, 0);
         long fileId = sqlite3_column_int64(jobRecordsStmt, 1);
         int completionDate = sqlite3_column_int(jobRecordsStmt, 2);
-        
+
         tempJobRecords.emplace_back(offset, fileId, completionDate);
         uniqueFileIds.insert(fileId);
     }
     sqlite3_finalize(jobRecordsStmt);
-    
+
     if (tempJobRecords.empty()) {
         printf("No job records found for JobListId %d\n", jobListId);
         sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
-    
+
     // Step 4: Get FileInfo for all unique FileIds (batched query)
     std::map<long, std::tuple<std::string, long, std::string>> fileInfoMap; // removed lastOffset
-    
+
     if (!uniqueFileIds.empty()) {
         // Build IN clause for batched query
         std::string fileQuery = "SELECT FileId, FileName, FileInode, FileHash FROM Files WHERE FileId IN (";
@@ -1511,20 +1497,20 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
             fileQuery += "?";
         }
         fileQuery += ")";
-        
+
         sqlite3_stmt* fileStmt = nullptr;
         if (sqlite3_prepare_v2(db_, fileQuery.c_str(), -1, &fileStmt, nullptr) != SQLITE_OK) {
             printf("Failed to prepare file query: %s\n", sqlite3_errmsg(db_));
             sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
             return false;
         }
-        
+
         // Bind FileIds
         int bindIndex = 1;
         for (long fileId : uniqueFileIds) {
             sqlite3_bind_int64(fileStmt, bindIndex++, fileId);
         }
-        
+
         // Collect file information
         while (sqlite3_step(fileStmt) == SQLITE_ROW) {
             long fileId = sqlite3_column_int64(fileStmt, 0);
@@ -1541,13 +1527,13 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
         }
         sqlite3_finalize(fileStmt);
     }
-    
+
     // Step 5: Combine JobRecords with FileInfo
     for (const auto& [offset, fileId, completionDate] : tempJobRecords) {
         auto fileInfoIt = fileInfoMap.find(fileId);
         if (fileInfoIt != fileInfoMap.end()) {
             const auto& [fileName, fileInode, fileHash] = fileInfoIt->second;
-            
+
             QueriedJobRecord jobRecord;
             jobRecord.offset = offset;
             jobRecord.fileId = fileId;
@@ -1555,19 +1541,19 @@ bool DBHandler::queryJobRecordsForJobList(const std::string& username, int clust
             jobRecord.fileInode = fileInode;
             jobRecord.fileHash = fileHash;
             jobRecord.completionDate = completionDate;
-            
+
             jobRecords.push_back(jobRecord);
         }
     }
-    
+
     success = true;
-    
+
     // Commit transaction
     if (sqlite3_exec(db_, "COMMIT", nullptr, nullptr, nullptr) != SQLITE_OK) {
         printf("Failed to commit transaction: %s\n", sqlite3_errmsg(db_));
         sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
         return false;
     }
-    
+
     return success;
 }

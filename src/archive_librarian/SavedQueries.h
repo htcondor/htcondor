@@ -3,6 +3,9 @@
 
 #include <string>
 
+// TODO: Remove Namespace
+// TODO: Move DBHandler statments here
+
 namespace SavedQueries {
     
     // Database schema initialization query
@@ -71,6 +74,8 @@ CREATE TABLE IF NOT EXISTS Status (
     StatusId INTEGER PRIMARY KEY AUTOINCREMENT,
     TimeOfUpdate INTEGER NOT NULL,                     -- Timestamp for this status record
 
+    -- TODO: Generalize LastArchiveFileRead details and Total Records Processed
+
     HistoryFileIdLastRead INTEGER,                     -- FK to Files table (history)
     HistoryFileOffsetLastRead INTEGER,                 -- Byte offset in that history file
 
@@ -103,6 +108,7 @@ CREATE TABLE IF NOT EXISTS StatusData (
     TimeOfLastUpdate INTEGER              -- Timestamp of most recent update
 );
 
+-- TODO: Make Major,Minor,Patch Version scheme
 CREATE TABLE IF NOT EXISTS SchemaVersion (
     VersionId REAL PRIMARY KEY CHECK (VersionId = 1.0),
     VersionNotes TEXT,
@@ -114,6 +120,7 @@ INSERT OR IGNORE INTO SchemaVersion (VersionId, VersionNotes)
 VALUES (1.0, 'Initial Archive Librarian schema');
 )";
 
+// TODO: Break this up and do logic/steps in librarian code
     // Garbage collection query
     const std::string GC_QUERY_SQL = R"(
 -- 1. Find files to delete (ordered by deletion date, limited by job count target that we calculate)

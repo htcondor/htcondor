@@ -4,6 +4,8 @@
 #include <vector>
 #include "JobRecord.h"  // Defines JobRecord, EpochRecord, and FileInfo structs
 
+// TODO: Replace with generic archive reader
+
 /**
  * @brief Parses a HTCondor history file in reverse from the latest offset, extracting JobRecords.
  *

@@ -1,7 +1,6 @@
 #include "librarian.h"
 #include "readHistory.h"
 #include "archiveMonitor.h"
-#include "FileSet.h"
 #include "JobAnalysisUtils.h" 
 #include "SavedQueries.h"
 
@@ -17,43 +16,8 @@
 #include <iostream>
 #include <sstream>
 
+namespace conf = LibrarianConfigOptions;
 namespace fs = std::filesystem;
-
-// ================================
-// CONSTRUCTOR AND INITIALIZATION
-// ================================
-
-Librarian::Librarian(const std::string& dbPath,
-                     const std::string& historyFilePath,
-                     const std::string& epochHistoryFilePath,
-                     size_t jobCacheSize, 
-                     size_t databaseSize, 
-                     double schemaVersionNumber)
-    : dbPath_(dbPath),
-      historyFilePath_(historyFilePath),
-      epochHistoryFilePath_(epochHistoryFilePath),
-      jobCacheSize_(jobCacheSize),
-      databaseSizeLimit_(databaseSize),
-      historyFileSet_(historyFilePath),
-      epochHistoryFileSet_(epochHistoryFilePath), 
-      schemaVersionNumber_(schemaVersionNumber) {}
-
-
-std::string Librarian::loadSchemaSQL() {
-    return SavedQueries::SCHEMA_SQL;
-}
-
-// Simplified - no file I/O needed
-bool Librarian::loadGCSQL() {
-    gcQuerySQL_ = SavedQueries::GC_QUERY_SQL;
-    
-    if (gcQuerySQL_.empty()) {
-        printf("[ERROR] GC query is empty\n");
-        return false;
-    }
-    
-    return true;
-}
 
 // ================================
 // FILE READS AND WRITES
@@ -74,12 +38,12 @@ bool Librarian::readEpochRecords(std::vector<EpochRecord>& newEpochRecords, File
         return false;
     }
     fileInfo.LastOffset = newOffset;
-    
+
     // Check if this rotated file is now fully read
     if (!fileInfo.DateOfRotation.empty() && fileInfo.LastOffset >= fileInfo.FileSize) {
         fileInfo.FullyRead = true;
     }
-    
+
     return true;
 }
 
@@ -98,12 +62,12 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
         return false;
     }
     fileInfo.LastOffset = newOffset;
-    
+
     // Check if this rotated file is now fully read
     if (!fileInfo.DateOfRotation.empty() && fileInfo.LastOffset >= fileInfo.FileSize) {
         fileInfo.FullyRead = true;
     }
-    
+
     return true;
 }
 
@@ -116,30 +80,30 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
 bool Librarian::calculateEstimatedBytesPerJob() {
     std::error_code ec;
     std::filesystem::path historyDir(historyFileSet_.historyDirectoryPath);
-    
+
     // Check if directory exists
     if (!std::filesystem::exists(historyDir, ec) || ec) {
         return false;
     }
-    
+
     // Find a file that starts with historyConfigName and has additional content
     for (const auto& entry : std::filesystem::directory_iterator(historyDir, ec)) {
         if (ec) {
             return false;
         }
-        
+
         if (entry.is_regular_file(ec) && !ec) {
             std::string filename = entry.path().filename().string();
-            
+
             // Check if filename starts with historyNameConfig and has more content after it
             if (filename.length() > historyFileSet_.historyNameConfig.length() &&
                 filename.substr(0, historyFileSet_.historyNameConfig.length()) == historyFileSet_.historyNameConfig) {
-                
+
                 std::ifstream file(entry.path(), std::ios::binary);
                 if (!file.is_open()) {
                     continue; // Try next file
                 }
-                
+
                 std::string line;
                 std::streampos startPos = file.tellg();
                 if (startPos == std::streampos(-1)) {
@@ -199,14 +163,14 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
     auto lastFileIt = historyFileSet_.fileMap.find(status.HistoryFileIdLastRead);
     if (lastFileIt != historyFileSet_.fileMap.end()) {
         const FileInfo& lastFileInfo = lastFileIt->second;
-        
+
         // Construct full path to the history file
         std::filesystem::path fullFilePath = std::filesystem::path(historyFileSet_.historyDirectoryPath) / lastFileInfo.FileName;
-        
+
         // Check if file exists and get its size without exceptions
         std::error_code ec;
         int64_t lastFileSizeBytes = std::filesystem::file_size(fullFilePath, ec);
-        
+
         if (!ec) {
             // File size retrieved successfully
             // Calculate bytes left in the partially read file
@@ -227,11 +191,11 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
         if (fileInfo.LastOffset == 0) {
             // Construct full path to the history file
             std::filesystem::path fullFilePath = std::filesystem::path(historyFileSet_.historyDirectoryPath) / fileInfo.FileName;
-            
+
             // Check if file exists and get its size without exceptions
             std::error_code ec;
             int64_t fileSize = std::filesystem::file_size(fullFilePath, ec);
-            
+
             if (!ec) {
                 // File size retrieved successfully
                 totalUnreadBytes += fileSize;
@@ -245,10 +209,10 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
 
     // Calculate estimated backlog
     int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJobInArchive_));
-    
+
     printf("[Librarian] Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n", 
            totalUnreadBytes, estimatedBacklog);
-    
+
     return estimatedBacklog;
 }
 
@@ -280,35 +244,35 @@ void Librarian::estimateArrivalRateWhileAsleep() {
 void Librarian::updateStatusData(Status status) {
     int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
-    
+
     // Increment total cycles
     statusData_.TotalCycles++;
-    
+
     // Update total ads ingested
     statusData_.TotalAdsIngested += status.TotalJobsRead;
-    
+
     // Calculate current cycle values
     double currentAdsPerCycle = static_cast<double>(status.TotalJobsRead);
     double currentDurationMs = static_cast<double>(status.DurationMs);
     double currentIngestHz = (currentDurationMs > 0) ? 
         (currentAdsPerCycle * 1000.0 / currentDurationMs) : 0.0;
     double currentBacklogEstimate = static_cast<double>(status.JobBacklogEstimate);
-    
+
     // Update averages using incremental formula: new_avg = old_avg + (new_value - old_avg) / n
     double n = static_cast<double>(statusData_.TotalCycles);
-    
+
     statusData_.AvgAdsIngestedPerCycle += 
         (currentAdsPerCycle - statusData_.AvgAdsIngestedPerCycle) / n;
-    
+
     statusData_.AvgIngestDurationMs += 
         (currentDurationMs - statusData_.AvgIngestDurationMs) / n;
-    
+
     statusData_.MeanIngestHz += 
         (currentIngestHz - statusData_.MeanIngestHz) / n;
-    
+
     statusData_.MeanBacklogEstimate += 
         (currentBacklogEstimate - statusData_.MeanBacklogEstimate) / n;
-    
+
     // Update hit max ingest limit rate
     if (status.HitMaxIngestLimit) {
         // Count of cycles that hit limit is now: (old_rate * old_n) + 1
@@ -320,7 +284,7 @@ void Librarian::updateStatusData(Status status) {
         statusData_.HitMaxIngestLimitRate = 
             (statusData_.HitMaxIngestLimitRate * (n - 1)) / n;
     }
-    
+
     // Update tracking variables
     statusData_.TimeOfLastUpdate = currentTime;
 }
@@ -330,7 +294,7 @@ void Librarian::updateStatusData(Status status) {
 // ================================
 
 // Testing function to see what has actually been saved to a FileSet struct
-void PrintFileSetInfo(const FileSet& fs) {
+/*void PrintFileSetInfo(const FileSet& fs) {
     std::cout << "\n[Librarian] Printing FileSet Info: \n" ;
     std::cout << "------------------------------------------------- \n" ;
     std::cout << "History Name Config: " << fs.historyNameConfig << "\n";
@@ -352,7 +316,7 @@ void PrintFileSetInfo(const FileSet& fs) {
                   << std::setw(40) << info.FileHash << "\n";
     }
     std::cout << "------------------------------------------------- \n" ;
-}
+}*/
 
 /**
  * @brief Applies detected archive changes to the in-memory FileSet
@@ -370,7 +334,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
         auto it = fileSet.fileMap.find(lastFileReadId);
         if (it != fileSet.fileMap.end()) {
             it->second.FileName = newName;
-            
+
             // Extract and set DateOfRotation from the new rotated filename
             if (auto dateOfRotation = ArchiveMonitor::extractDateOfRotation(newName)) {
                 it->second.DateOfRotation = *dateOfRotation;
@@ -415,14 +379,14 @@ ArchiveChange Librarian::trackAndUpdateFileSet(FileSet& fileSet) {
 
     // Step 2: Apply SOME of those changes to the persistent database.
     // Change the name of the rotated file, add new files to directory and populate their FileIds. 
-    dbHandler_->insertNewFilesAndMarkOldOnes(fileSetChange);
+    dbHandler_.insertNewFilesAndMarkOldOnes(fileSetChange);
 
     // Step 3: Apply the same changes to the in-memory FileSet,
     // so that the system’s internal state reflects what’s on disk.
     applyArchiveChangeToFileSet(fileSetChange, fileSet);
 
     return fileSetChange;
-}\
+}
 
 /**
  * @brief Builds a processing queue from file set and archive changes
@@ -476,11 +440,11 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
 std::uintmax_t get_database_size(const std::string& db_path) {
     std::error_code ec;
     auto size = std::filesystem::file_size(db_path, ec);
-    
+
     if (ec) {
         return 0;  // File doesn't exist or other error
     }
-    
+
     return size;
 }
 
@@ -489,19 +453,19 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     bool garbageCollected =  false;
 
     // Get current database size
-    size_t currentSize = get_database_size(dbPath_);
-    
+    size_t currentSize = get_database_size(config[conf::str::DBPath]);
+
     // Calculate high watermark (97% of capacity)
     size_t highWatermark = static_cast<size_t>(databaseSizeLimit_ * 0.97);
-    
+
     // Check if we've exceeded the high watermark
     if (currentSize > highWatermark) {
         // Calculate low watermark (85% of capacity)
         size_t lowWatermark = static_cast<size_t>(databaseSizeLimit_ * 0.85);
-        
+
         // Calculate how many bytes we need to free up
         size_t bytesToDelete = currentSize - lowWatermark;
-        
+
         // Calculate number of jobs to delete (round up to ensure we delete enough)
         int numJobsToDelete = static_cast<int>(std::ceil(static_cast<double>(bytesToDelete) / EstimatedBytesPerJobInDatabase_));
 
@@ -510,7 +474,7 @@ bool Librarian::cleanupDatabaseIfNeeded() {
         int numFilesToDelete = static_cast<int>(std::ceil(static_cast<double>(numJobsToDelete) / EstimatedJobsPerFileInArchive_));
 
         // Next step: run the query to delete jobs
-        garbageCollected = dbHandler_->runGarbageCollection(gcQuerySQL_, numFilesToDelete);
+        garbageCollected = dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete);
         if(!garbageCollected){
             printf("[Librarian] Garbage collection attempted but failed.");
         }
@@ -526,7 +490,7 @@ bool Librarian::cleanupDatabaseIfNeeded() {
 
 // move down into public utilities! but later
 int Librarian::query(int argc, char* argv[]) {
-    
+
     // Parse command line arguments using internal utilities
     JobAnalysisUtils::CommandOptions options;
     JobAnalysisUtils::parseArguments(argc, argv, options);
@@ -536,7 +500,7 @@ int Librarian::query(int argc, char* argv[]) {
         JobAnalysisUtils::printManual();
         return 1;
     }
-    
+
     // Build query string for logging
     std::string queryString = "myList -user " + options.username + " -clusterId " + std::to_string(options.clusterId);
     if (options.flags.usage) queryString += " -usage";
@@ -546,16 +510,16 @@ int Librarian::query(int argc, char* argv[]) {
     if (options.flags.when) queryString += " -when";
     if (options.flags.where) queryString += " -where";
     if (options.flags.status) queryString += " -status";
-    
+
     // Execute the query using helper method
     auto startTime = std::chrono::high_resolution_clock::now(); // Check whether offsets actually make this process faster
     auto result = executeQuery(options.username, options.clusterId, historyFileSet_.historyDirectoryPath);
-    
+
     if (!result.success) {
         JobAnalysisUtils::printError(result.errorMessage);
         return 1;
     }
-    
+
     if (result.jobs.empty()) {
         JobAnalysisUtils::printNoJobsFound(options.username, options.clusterId);
         return 0;
@@ -567,80 +531,69 @@ int Librarian::query(int argc, char* argv[]) {
 
     // Report timing to console
     std::cout << "\n\nQuery execution took " << durationMs << " ms\n";
-    
-    // Write timing data to file
-    /*std::ofstream timingFile("librarian_query_times.txt", std::ios::app);
-    if (timingFile.is_open()) {
-        timingFile << queryString << "\n";
-        timingFile << durationMs << " ms\n";
-        timingFile << "\n\n";
-        timingFile.close();
-    } else {
-        printf("Warning: Could not write to librarian_query_times.txt\n");
-    }*/
-    
+
     // Format and display output using utilities
     if (!options.flags.hasAnyFlag()) {
         JobAnalysisUtils::printBaseOutput(result.jobs, options.username, options.clusterId);
     } else {
         JobAnalysisUtils::printAnalysisOutput(result.jobs, options.flags, options.username, options.clusterId);
     }
-    
+
     return 0;
 }
 
 QueryResult Librarian::executeQuery(const std::string& username, int clusterId, std::string historyDirectoryPath) {
     // Execute the actual query
     std::vector<QueriedJobRecord> jobRecords;
-    
-    if (!dbHandler_->queryJobRecordsForJobList(username, clusterId, jobRecords)) {
+
+    if (!dbHandler_.queryJobRecordsForJobList(username, clusterId, jobRecords)) {
         return {false, "No jobs found for user '" + username + "', cluster " + std::to_string(clusterId), {}};
     }
-    
+
     if (jobRecords.empty()) {
         return {false, "No jobs found for user '" + username + "', cluster " + std::to_string(clusterId), {}};
     }
-    
+
     printf("[Librarian] JobList Id found, reading jobs grouped by file...");
     std::vector<std::string> rawClassAds = readJobsGroupedByFile(jobRecords, historyDirectoryPath);
     if (rawClassAds.empty()) {
         return {false, "Could not read any job data from archive files", {}};
     }
-    
+
     // Parse ClassAds using utility function
     std::vector<ParsedJobRecord> parsedJobs = JobAnalysisUtils::parseClassAds(rawClassAds);
-    
+
     if (parsedJobs.empty()) {
         return {false, "Failed to parse any job records", {}};
     }
-    
+
     return {true, "", parsedJobs};
 }
 
 std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<QueriedJobRecord>& jobRecords, std::string historyDirectoryPath) {
     // Group by fileName to minimize file operations
     std::map<std::string, std::vector<std::pair<long, FileInfo>>> fileGroups;
-    
+
     for (const auto& record : jobRecords) {
         FileInfo fileInfo;
         fileInfo.FileId = record.fileId;
         fileInfo.FileInode = record.fileInode;
         fileInfo.FileHash = record.fileHash;
         fileInfo.FileName = record.fileName;
-        
+
         fileGroups[record.fileName].emplace_back(record.offset, fileInfo);
     }
-    
+
     std::vector<std::string> allJobs;
     int skippedFiles = 0;
     int skippedJobs = 0;
-    
+
     for (const auto& [fileName, offsetsAndInfo] : fileGroups) {
         printf("[Librarian] Reading from file %s\n", fileName.c_str());
 
         // Construct full file path using historyDirectoryPath
         std::string filePath = historyDirectoryPath + "/" + fileName;
-        
+
         // Verify file integrity using the first FileInfo (they should all be the same for same file)
         auto [fileExists, fileMatches] = ArchiveMonitor::checkFileEquals(filePath, offsetsAndInfo[0].second);
         if (!fileExists || !fileMatches) {
@@ -650,7 +603,7 @@ std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<Quer
                    offsetsAndInfo.size(), fileName.c_str());
             continue;
         }
-        
+
         // Read all jobs from this file
         for (const auto& [offset, fileInfo] : offsetsAndInfo) {
             if (auto jobData = readJobAtOffset(filePath, offset)) {
@@ -661,12 +614,12 @@ std::vector<std::string> Librarian::readJobsGroupedByFile(const std::vector<Quer
             }
         }
     }
-    
+
     if (skippedFiles > 0) {
         printf("Summary: Skipped %d jobs from %d inaccessible files\n", 
                skippedJobs, skippedFiles);
     }
-    
+
     return allJobs;
 }
 
@@ -675,19 +628,19 @@ std::optional<std::string> Librarian::readJobAtOffset(const std::string& filePat
     if (!file.is_open()) {
         return std::nullopt;
     }
-    
+
     file.seekg(offset);
     if (!file.good()) {
         return std::nullopt;
     }
-    
+
     // Skip to the start of the next line
     std::string dummy;
     std::getline(file, dummy);  // Read and discard the partial/complete line
-    
+
     std::string jobData;
     std::string line;
-    
+
     // Read until we hit the *** delimiter
     while (std::getline(file, line)) {
         if (line.find("***") == 0) {
@@ -695,7 +648,7 @@ std::optional<std::string> Librarian::readJobAtOffset(const std::string& filePat
         }
         jobData += line + "\n";
     }
-    
+
     return jobData.empty() ? std::nullopt : std::make_optional(jobData);
 }
 
@@ -711,26 +664,20 @@ std::optional<std::string> Librarian::readJobAtOffset(const std::string& filePat
 bool Librarian::initialize() { 
     printf("[Librarian] Initializing DBHandler...\n");
 
-    // Load SQL query strings
-    std::string schemaSQL = this->loadSchemaSQL();
-    if(schemaSQL.empty()) {
-        printf("[Librarian] Schema initialization has failed! Could not get schema.sql from file\n");
-        return false;
-    }
-    if (!loadGCSQL()) {
-        printf("[Librarian] Failed to load garbage collection query.\n");
-        return false;
-    }
+    historyFileSet_.Init(config[conf::str::ArchiveFile]);
+    epochHistoryFileSet_.Init(config[conf::str::ArchiveFile]);
 
     // Construct the DBHandler with provided schema, db path, and cache size.
-    dbHandler_ = std::make_unique<DBHandler>(schemaSQL, dbPath_, jobCacheSize_);
+    if ( ! dbHandler_.initialize()) {
+        return false;
+    }
 
     // Check whether database is connected and has correct expect tables
-    if (!dbHandler_->testDatabaseConnection()) {
+    if (!dbHandler_.testDatabaseConnection()) {
         fprintf(stderr, "[Librarian] DBHandler connection test failed\n");
         return false;
     }
-    if(!dbHandler_->verifyDatabaseSchema(schemaSQL, schemaVersionNumber_)) {
+    if(!dbHandler_.verifyDatabaseSchema(SavedQueries::SCHEMA_SQL, schemaVersionNumber_)) {
         fprintf(stderr, "[Librarian] DBHandler schema is not as expected\n");
         return false;
     }
@@ -767,7 +714,7 @@ bool Librarian::update() {
     auto startTime = std::chrono::system_clock::now();
 
     // Recovery: Populate statusData_ and FileSet structs if memory is empty
-    dbHandler_->maybeRecoverStatusAndFiles(historyFileSet_, epochHistoryFileSet_, statusData_);
+    dbHandler_.maybeRecoverStatusAndFiles(historyFileSet_, epochHistoryFileSet_, statusData_);
     Status status = {};
 
     // Estimate arrivalHz while asleep if there was no backlog left last cycle
@@ -786,12 +733,11 @@ bool Librarian::update() {
         printf("[Librarian] Failed to build epoch processing queue\n");
         return false;
     }
-    
+
     if (!buildProcessingQueue(historyFileSet_, historyChange, historyQueue)) {
         printf("[Librarian] Failed to build history processing queue\n");
         return false;
     }
-    
 
     // PHASE 3: Record Processing
 
@@ -812,13 +758,13 @@ bool Librarian::update() {
 
         printf("[Librarian] Processing epoch file: %s (offset: %ld)\n", 
                fileInfo.FileName.c_str(), fileInfo.LastOffset);
-        
+
         std::vector<EpochRecord> fileRecords;
         if (!readEpochRecords(fileRecords, fileInfo)) {
             printf("[Librarian] Failed to read epoch records from %s \n", fileInfo.FileName.c_str());
             return false;
         }
-        
+
         // If nothing new to read, move on to the next file
         if(fileRecords.empty()){
             printf("[Librarian] No new epoch records in %s, skipping this file \n", fileInfo.FileName.c_str());
@@ -828,11 +774,11 @@ bool Librarian::update() {
         }
 
         // Atomic transaction: Insert records AND update file offset
-        if (!dbHandler_->insertEpochFileRecords(fileRecords, fileInfo)) {
+        if (!dbHandler_.insertEpochFileRecords(fileRecords, fileInfo)) {
                 printf("[Librarian] Failed to atomically process epoch file %s\n", fileInfo.FileName.c_str());
                 continue;
         }
-        
+
         // Update in-memory FileSet with new offset
         auto it = epochHistoryFileSet_.fileMap.find(fileInfo.FileId);
         if (it != epochHistoryFileSet_.fileMap.end()) {
@@ -840,7 +786,7 @@ bool Librarian::update() {
         } else {
             fprintf(stderr, "[Librarian] Warning: FileId %ld not found in epochHistoryFileSet.fileMap\n", fileInfo.FileId);
         }
-        
+
         // Accumulate stats for status reporting'
         totalEpochRecordsProcessed += fileRecords.size(); // TODO: currently duplicating this but theoretically we could just use status
         status.TotalEpochsRead += fileRecords.size();
@@ -849,7 +795,7 @@ bool Librarian::update() {
         status.EpochFileIdLastRead = fileInfo.FileId;
         status.EpochFileOffsetLastRead = fileInfo.LastOffset;
     }
-    
+
     // Process History Queue
     size_t totalJobRecordsProcessed = 0;
     size_t historyFilesProcessed = 0;
@@ -883,7 +829,7 @@ bool Librarian::update() {
         }
 
         // Atomic transaction: Insert records AND update file offset
-        if (!dbHandler_->insertJobFileRecords(fileRecords, fileInfo)) {
+        if (!dbHandler_.insertJobFileRecords(fileRecords, fileInfo)) {
                 printf("[Librarian] Failed to atomically process history file %s\n", fileInfo.FileName.c_str());
                 continue;
         }
@@ -895,7 +841,7 @@ bool Librarian::update() {
         } else {
             fprintf(stderr, "[Librarian] Warning: FileId %ld not found in historyFileSet.fileMap\n", fileInfo.FileId);
         }
-        
+
         // Accumulate stats for status reporting
         totalJobRecordsProcessed += fileRecords.size(); 
         status.TotalJobsRead += fileRecords.size();
@@ -917,7 +863,7 @@ bool Librarian::update() {
     updateStatusData(status);
 
     // Persist status to database
-    if (!dbHandler_->writeStatusAndData(status, statusData_)) {
+    if (!dbHandler_.writeStatusAndData(status, statusData_)) {
         fprintf(stderr, "[Librarian] Warning: Failed to write status to database\n");
         // Don't want to fail the entire update cycle for this, just logging it
     }

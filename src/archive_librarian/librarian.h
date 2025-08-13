@@ -5,6 +5,7 @@
 #include "dbHandler.h"
 #include "JobRecord.h"
 #include "JobQueryStructures.h"
+#include "config.hpp"
 
 /**
  * @class Librarian
@@ -24,12 +25,6 @@
  */
 class Librarian {
 public:
-    Librarian(const std::string& dbPath,
-              const std::string& historyFilePath,
-              const std::string& epochHistoryFilePath,
-              size_t jobCacheSize = 10000, 
-              size_t databaseSize = 2ULL * 1024 * 1024 * 1024, 
-              double schemaVersionNumber = 1.0);
 
     /**
      * @brief Initializes DBHandler and sets up the schema.
@@ -45,8 +40,7 @@ public:
 
     int query(int argc, char* argv[]);
 
-
-    DBHandler& getDBHandler() const { return *dbHandler_; }
+    LibrarianConfig config{};
 
 private:
 
@@ -56,24 +50,16 @@ private:
 
 
     // Members
-    std::string dbPath_;
+    DBHandler dbHandler_{config};
     FileSet historyFileSet_;
     FileSet epochHistoryFileSet_;
-    std::string historyFilePath_; // redundant, but hard to get rid of right now
-    std::string epochHistoryFilePath_;
     std::string gcQuerySQL_{}; 
-    size_t jobCacheSize_;
-    std::unique_ptr<DBHandler> dbHandler_;
     StatusData statusData_;
     double EstimatedBytesPerJobInArchive_{0.0};
     int EstimatedJobsPerFileInArchive_{0};
     double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
     double databaseSizeLimit_{0.0}; // Will be set by constructor (defaults to 2GB if not specified)
     double schemaVersionNumber_{1.0};
-
-    // Helper methods for Librarian::initialize()
-    std::string loadSchemaSQL();
-    bool loadGCSQL();
 
     // Helper methods for Librarian::update()
     bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);

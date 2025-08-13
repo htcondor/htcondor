@@ -1,5 +1,3 @@
-// main.cpp
-// Alpha Driver for the Librarian service: reads config, updates database, and provides interactive query shell.
 
 #include "condor_common.h"
 //#include "condor_daemon_core.h"
@@ -13,6 +11,7 @@
 #include <vector>
 #include <string>
 
+namespace conf = LibrarianConfigOptions;
 
 // Helper function to split command into argc/argv format
 std::vector<std::string> parseCommand(const std::string& command) {
@@ -92,20 +91,15 @@ int main() {
     set_priv_initialize(); // allow uid switching if root
     config();
 
-    std::string historyPath;
-    param(historyPath, "HISTORY", "hist/history");
+    Librarian librarian;
 
-    std::string dbPath;
-    param(dbPath, "LIBRARIAN_DATABASE");
+    //std::string historyPath;
+    param(librarian.config[conf::str::ArchiveFile], "HISTORY");
 
-    size_t jobCacheSize = 10000; // still hardcoded
-    double dbSizeLimit = 2.0 * 1024 * 1024 * 1024; // 2 GB
-    double schemaVersionNumber = 1.0;
-    
-    // Updated constructor call - removed schemaPath and gcQueryPath
-    Librarian librarian(dbPath, historyPath, historyPath, jobCacheSize, dbSizeLimit, schemaVersionNumber);
+    //std::string dbPath;
+    param(librarian.config[conf::str::DBPath], "LIBRARIAN_DATABASE");
 
-    if (!librarian.initialize()) {
+    if ( ! librarian.initialize()) {
         std::cerr << "Failed to initialize Librarian." << std::endl;
         return 1;
     }

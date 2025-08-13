@@ -37,13 +37,13 @@
 #include "readHistory.h"  
 #include "dbHandler.h"
 #include "archiveMonitor.h"
-#include "FileSet.h"
 
 
 namespace fs = std::filesystem; // where am i?
  
 namespace { // Helper functions for ArchiveMonitor utility functions
 
+    // TODO: Replace with std::hash -> std::stringstream << std::hex -> std::string (and remove third party sha256 files)
     std::string getHash(const char* historyFilePath) {
         FILE* file = fopen(historyFilePath, "rb");
         if (!file) {

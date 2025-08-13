@@ -71,6 +71,7 @@ struct StatusData {
     //         ErrorRate (?)           - Proportion of cycles with errors
 };
 
+// TODO: Remove
 struct EpochRecord {
     int ClusterId;
     int ProcId;
