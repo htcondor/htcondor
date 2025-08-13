@@ -172,3 +172,40 @@ file transfer event in a log to date:
     for e in jel.events(stop_after=0):
         if e.type == htcondor2.JobEventType.FILE_TRANSFER:
             print(htcondor2.FileTransferEventType(e["type"]))
+
+
+Using :data:`htcondor2.DaemonType.Startd` to find Daemons
+---------------------------------------------------------
+
+Prior to :ref:`version-history/feature-versions-23-x:Version 23.9.6`,
+the *condor_startd* advertised one ad
+for each slot, and you could call :meth:`htcondor2.Collector.locate`
+(or :meth:`htcondor2.Collector.locateAll()`, a distinction we'll ignore
+for the rest of this section) to find them.  The ``name`` parameter, if
+any, was the name of a slot, e.g., ``slot1_1@ep.condor.example``.  The
+returned ad reperesented the same daemon (the *condor_startd*), regardless
+of the ``name`` used.
+
+In :ref:`version-history/feature-versions-23-x:Version 23.9.6`,
+:macro:`ENABLE_STARTD_DAEMON_AD` became enabled by default, and the
+*condor_startd* now also advertises an ad about the whole machine.  When
+talking to collectors so configured, the ``name`` parameter must be name of
+the daemon, e.g., ``ep.condor.example``; the query will not return slot ads.
+
+Therefore, if you want to use :meth:`htcondor2.Collector.locate` (and
+specify the ``name`` parameter), you must know if you're talking to an
+"older" or a "newer" collector.  It may be easier to instead use
+:meth:`htcondor2.Collector.query`:
+
+.. code-block:: python
+
+    import htcondor2
+
+
+    c = htcondor2.Collector()
+    query = "'Machine == 'ep.condor.example'"
+    # The current locate projection.
+    projection = ['Name', 'Machine', 'AddressV1', 'MyAddress', 'CondorVersion', 'CondorPlatform']
+    r = c.query( htcondor2.AdType.Startd, query, projection )
+    # query() is more like locateAll(), in that it returns a list.
+    print(r[0])
