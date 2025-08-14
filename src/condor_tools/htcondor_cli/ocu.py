@@ -63,6 +63,9 @@ class Create(Verb):
         # Turn this job into an OCU holder
         submit_description["+IsOCUHolder"] = "true"
 
+        # Allow an empty Executable line
+        submit_description["Executable"] = "ocu"
+
         try:
             result = schedd.submit(submit_description, count=1)
             cluster_id = result.cluster()
