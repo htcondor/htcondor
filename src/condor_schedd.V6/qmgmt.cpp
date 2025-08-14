@@ -9645,6 +9645,25 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				p->not_runnable = true;
 			}
 
+			if (ocu) {
+				if (match_any_user) {
+					// Our OCU claim
+					bool OCUWanted = false;
+					job->LookupBool("OCUWanted", OCUWanted);
+					if ( ! OCUWanted) {
+						continue;
+					}
+				} else {
+					// Someone else's OCU claim
+					// only allow a job that is willing
+					bool OCUWilling = false;
+					job->LookupBool("OCUWilling", OCUWilling);
+					if ( ! OCUWilling) {
+						continue;
+					}
+				}
+			}
+
 			if (runnable_code != runnable_reason_code::IsRunnable) {
 					// This job's status must have changed since the
 					// time it was added to the runnable job list.
@@ -9760,7 +9779,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		}	// end of for loop through PrioRec array
 
 		// If we got here and ocu true and match_any_user is false, then
-		// no job from our priority use matched.  Try again for someone else.
+		// no job from our priority user matched.  Try again for someone else.
 		if (ocu && !match_any_user) {
 			match_any_user = true;
 			continue;
