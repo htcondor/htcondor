@@ -17,7 +17,12 @@
 
 *** 24.12.0 bugs
 
-  Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
+- Fixed a problem where setting :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`
+  to longer than macro:`STARTER_FILE_XFER_STALL_TIMEOUT` would prevent the
+  logging the output of hung file-transfer plug-ins.
+  :jira:`3202`
+
+- Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
 
 *** 24.0.12 bugs
