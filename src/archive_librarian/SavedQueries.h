@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_date_of_deletion ON Files(DateOfDeletion);
 CREATE TABLE IF NOT EXISTS Users (
     UserId INTEGER PRIMARY KEY, 
     UserName TEXT, 
+    DateOfLastJob INTEGER,    -- Not Used currently: TODO use for garbage collection (i.e. keep user entry for time N after last job entry removed)
     UNIQUE (UserName)
 );
 
@@ -74,16 +75,10 @@ CREATE TABLE IF NOT EXISTS Status (
     StatusId INTEGER PRIMARY KEY AUTOINCREMENT,
     TimeOfUpdate INTEGER NOT NULL,                     -- Timestamp for this status record
 
-    -- TODO: Generalize LastArchiveFileRead details and Total Records Processed
+    FileIdLastRead INTEGER,                            -- FK to Files table (history)
+    FileOffsetLastRead INTEGER,                        -- Byte offset in that history file
 
-    HistoryFileIdLastRead INTEGER,                     -- FK to Files table (history)
-    HistoryFileOffsetLastRead INTEGER,                 -- Byte offset in that history file
-
-    EpochFileIdLastRead INTEGER,                       -- FK to Files table (epoch)
-    EpochFileOffsetLastRead INTEGER,                   -- Byte offset in that epoch file
-
-    TotalJobsRead INTEGER DEFAULT 0,                   -- From history files
-    TotalEpochsRead INTEGER DEFAULT 0,                 -- From epoch files
+    TotalRecordsRead INTEGER DEFAULT 0,                -- Records processed
     DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
     JobBacklogEstimate INTEGER DEFAULT 0,              -- Estimated number of unprocessed ads
     HitMaxIngestLimit BOOLEAN DEFAULT 0,               -- Whether this ingestion cycle hit the max ingest limit

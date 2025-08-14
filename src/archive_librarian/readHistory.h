@@ -23,19 +23,3 @@ long readHistoryIncremental(const char *historyFile,
                             std::vector<JobRecord> &out,
                             FileInfo &fileInfoOut);
 
-/**
- * @brief Parses a HTCondor epoch history file in forward order, extracting only SPAWN-type EpochRecords.
- *
- * @param historyFilePath Path to the epoch history file.
- * @param out Vector to populate with parsed EpochRecords (only SPAWN banners are stored).
- * @param fileInfo File metadata (hash, inode, and last offset) used to verify and track file state.
- * @return The new offset reached after parsing, or -1 if file mismatch.
- *
- * Notes:
- * - Only records new entries with offset > fileInfo.LastOffset.
- * - Returns last processed offset to allow incremental updates.
- * - Skips non-SPAWN banners.
- */
-long readEpochIncremental(const char *historyFilePath, 
-                          std::vector<EpochRecord> &out, 
-                          FileInfo &fileInfo);

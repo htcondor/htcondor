@@ -27,13 +27,12 @@
 #include <filesystem>
 #include <list>
 #include <set>
-#include<thread>
-#include<chrono>
+#include <thread>
+#include <chrono>
 
 #include "JobRecord.h"
 #include "dbHandler.h"
 #include "archiveMonitor.h"
-#include "cache.hpp"
 #include "SavedQueries.h"
 
 namespace conf = LibrarianConfigOptions;
@@ -538,35 +537,6 @@ bool DBHandler::batchInsertJobRecords(const std::vector<JobRecord>& jobs) {
     return true;
 }
 
-
-/**
- * Insert jobs from epoch records (if not already in cache/db)
- * Inserts Spawn ads read from Epoch History file
- */
-void DBHandler::batchInsertEpochRecords(const std::vector<EpochRecord>& records) {
-
-    for (const auto& record : records) {
-        // Lookup JobId using ClusterId and ProcId
-        int jobId, jobListId;
-        std::tie(jobId, jobListId) = jobIdLookup(record.ClusterId, record.ProcId);
-        
-        if(jobId != -1){ // We found this Job info already, which means this job info has already been processed 
-            continue;
-        } else { // We haven't seen this Job info before, it wasn't in db nor cache
-            bool insertSuccess = insertUnseenJob(record.Owner, record.ClusterId, record.ProcId, record.CurrentTime);
-            if(!insertSuccess){
-                printf("[ERROR] Failed to insert EpochRecord - ClusterId: %d, ProcId: %d, Owner: %s, Time: %ld, AtOffset: %ld\n", 
-                       record.ClusterId, 
-                       record.ProcId, 
-                       record.Owner.c_str(),
-                       record.CurrentTime,
-                       record.Offset);
-                continue;
-            }
-        }
-    }
-}
-
 // To convert DateOfRotation and DateOfDeletion strings to timestamps for database insert
 int64_t convertRotationStringToTimestamp(const std::string& rotationStr) {
     if (rotationStr.empty()) return 0;
@@ -579,76 +549,6 @@ int64_t convertRotationStringToTimestamp(const std::string& rotationStr) {
     return static_cast<int64_t>(std::mktime(&tm));
 }
 
-/**
- * Insert epoch records and update file processing status atomically
- * This wrapper ensures both epoch records insertion and file offset update 
- * happen in a single transaction
- */
-/**
- * Insert epoch records and update file processing status atomically
- * This wrapper ensures both epoch records insertion and file offset update 
- * happen in a single transaction
- */
-bool DBHandler::insertEpochFileRecords(const std::vector<EpochRecord>& records, const FileInfo& fileInfo) {
-    // Begin outer transaction for atomicity
-    int result = sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
-    if (result != SQLITE_OK) {
-        printf("Failed to begin transaction for epoch file records insertion\n");
-        return false;
-    }
-
-    // Insert epoch records using existing function (now transaction-less)
-    batchInsertEpochRecords(records);
-
-    // Update the Files table - always update LastOffset and FullyRead, conditionally update DateOfRotation
-    std::string updateFilesSql;
-    if (!fileInfo.DateOfRotation.empty()) {
-        updateFilesSql = "UPDATE Files SET LastOffset = ?, DateOfRotation = ?, FullyRead = ? WHERE FileId = ?;";
-    } else {
-        updateFilesSql = "UPDATE Files SET LastOffset = ?, FullyRead = ? WHERE FileId = ?;";
-    }
-
-    sqlite3_stmt* stmt = nullptr;
-    result = sqlite3_prepare_v2(db_, updateFilesSql.c_str(), -1, &stmt, nullptr);
-    if (result != SQLITE_OK) {
-        printf("Failed to prepare Files update statement: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
-    }
-
-    // Bind parameters
-    sqlite3_bind_int64(stmt, 1, static_cast<sqlite3_int64>(fileInfo.LastOffset));
-
-    if (!fileInfo.DateOfRotation.empty()) {
-        int64_t rotationTimestamp = convertRotationStringToTimestamp(fileInfo.DateOfRotation);
-        sqlite3_bind_int64(stmt, 2, rotationTimestamp);
-        sqlite3_bind_int(stmt, 3, fileInfo.FullyRead ? 1 : 0);
-        sqlite3_bind_int(stmt, 4, fileInfo.FileId);
-    } else {
-        sqlite3_bind_int(stmt, 2, fileInfo.FullyRead ? 1 : 0);
-        sqlite3_bind_int(stmt, 3, fileInfo.FileId);
-    }
-
-    result = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-
-    if (result != SQLITE_DONE) {
-        printf("Failed to update Files table for FileId %ld: %s\n", 
-               fileInfo.FileId, sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
-    }
-
-    // Commit the transaction
-    result = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
-    if (result != SQLITE_OK) {
-        printf("Failed to commit transaction: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
-    }
-
-    return true;
-}
 
 /**
  * Insert job records and update file processing status atomically
@@ -826,17 +726,14 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     const char* statusSql = R"(
         INSERT INTO Status (
             TimeOfUpdate,
-            HistoryFileIdLastRead,
-            HistoryFileOffsetLastRead,
-            EpochFileIdLastRead,
-            EpochFileOffsetLastRead,
-            TotalJobsRead,
-            TotalEpochsRead,
+            FileIdLastRead,
+            FileOffsetLastRead,
+            TotalRecordsRead,
             DurationMs,
             JobBacklogEstimate,
             HitMaxIngestLimit,
             GarbageCollectionRun
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     )";
 
     // Use INSERT OR REPLACE to handle missing row - will insert if doesn't exist, update if it does
@@ -888,14 +785,11 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         sqlite3_bind_int64(stmt, 1, status.TimeOfUpdate);
         sqlite3_bind_int(stmt, 2, status.HistoryFileIdLastRead);
         sqlite3_bind_int64(stmt, 3, status.HistoryFileOffsetLastRead);
-        sqlite3_bind_int(stmt, 4, status.EpochFileIdLastRead);
-        sqlite3_bind_int64(stmt, 5, status.EpochFileOffsetLastRead);
-        sqlite3_bind_int(stmt, 6, status.TotalJobsRead);
-        sqlite3_bind_int(stmt, 7, status.TotalEpochsRead);
-        sqlite3_bind_int(stmt, 8, status.DurationMs);
-        sqlite3_bind_int(stmt, 9, status.JobBacklogEstimate);
-        sqlite3_bind_int(stmt, 10, status.HitMaxIngestLimit ? 1 : 0);
-        sqlite3_bind_int(stmt, 11, status.GarbageCollectionRun ? 1 : 0);
+        sqlite3_bind_int(stmt, 4, status.TotalJobsRead);
+        sqlite3_bind_int(stmt, 5, status.DurationMs);
+        sqlite3_bind_int(stmt, 6, status.JobBacklogEstimate);
+        sqlite3_bind_int(stmt, 7, status.HitMaxIngestLimit ? 1 : 0);
+        sqlite3_bind_int(stmt, 8, status.GarbageCollectionRun ? 1 : 0);
 
         if (sqlite3_step(stmt) != SQLITE_DONE) {
             printf("[ERROR] Failed to insert into Status: %s\n", sqlite3_errmsg(db_));
@@ -960,9 +854,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
  * NOTE: Currently this function unconditionally runs recovery if database is not empty,
  * but this behavior might change after the system is daemonized
  */
-bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
-                           FileSet& epochHistoryFileSet_,
-                           StatusData& statusData_)
+bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData& statusData_)
 {
     // Check if database is empty -> if so, no recovery needed, this is the first run
     const char* checkDatabaseEmptySql = "SELECT COUNT(*) FROM (SELECT 1 FROM Files LIMIT 1);";
@@ -1031,8 +923,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 
 	// 2. Recover Status
 	const std::string statusSql =
-		"SELECT TimeOfUpdate, HistoryFileIdLastRead, HistoryFileOffsetLastRead, "
-		"EpochFileIdLastRead, EpochFileOffsetLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
+		"SELECT TimeOfUpdate, HistoryFileIdLastRead, HistoryFileOffsetLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
 
 	sqlite3_stmt* stmtStatus = nullptr;
 	rc = sqlite3_prepare_v2(db_, statusSql.c_str(), -1, &stmtStatus, nullptr);
@@ -1046,16 +937,11 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 		int64_t timeOfUpdate = sqlite3_column_int64(stmtStatus, 0);
 		int historyFileId = sqlite3_column_int(stmtStatus, 1);
 		std::ignore = sqlite3_column_int64(stmtStatus, 2);
-		int epochFileId = sqlite3_column_int(stmtStatus, 3);
-		std::ignore = sqlite3_column_int64(stmtStatus, 4);
 
 		statusData_.TimeOfLastUpdate = timeOfUpdate;
 
 		historyFileSet_.lastFileReadId = historyFileId;
 		historyFileSet_.lastStatusTime = timeOfUpdate;
-		
-		epochHistoryFileSet_.lastFileReadId = epochFileId;
-		epochHistoryFileSet_.lastStatusTime = timeOfUpdate;
 	}
 	sqlite3_finalize(stmtStatus);
 
@@ -1082,9 +968,6 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_,
 
 		if (fileInfo.FileName.rfind(historyFileSet_.historyNameConfig, 0) == 0) {
 			historyFileSet_.fileMap[fileInfo.FileId] = fileInfo;
-		}
-		else if (fileInfo.FileName.rfind(epochHistoryFileSet_.historyNameConfig, 0) == 0) {
-			epochHistoryFileSet_.fileMap[fileInfo.FileId] = fileInfo;
 		}
 	}
 	sqlite3_finalize(stmtFiles);

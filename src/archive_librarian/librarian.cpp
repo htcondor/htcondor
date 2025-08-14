@@ -22,29 +22,6 @@ namespace fs = std::filesystem;
 // FILE READS AND WRITES
 // ================================  
 
-/**
- * @brief Reads new epoch records from the epoch history file and updates the file offset
- * @param newEpochRecords Output vector to store newly read epoch records
- * @param fileInfo Input/output file information containing current offset, updated with new offset
- * @return true if successful, false on failure
- */
-bool Librarian::readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& fileInfo) {
-    
-    std::string fullPath = epochHistoryFileSet_.historyDirectoryPath + "/" + fileInfo.FileName;
-    long newOffset = readEpochIncremental(fullPath.c_str(), newEpochRecords, fileInfo);
-    if (newOffset < 0) {
-        fprintf(stderr, "[Librarian] Failed to read epoch records.\n");
-        return false;
-    }
-    fileInfo.LastOffset = newOffset;
-
-    // Check if this rotated file is now fully read
-    if (!fileInfo.DateOfRotation.empty() && fileInfo.LastOffset >= fileInfo.FileSize) {
-        fileInfo.FullyRead = true;
-    }
-
-    return true;
-}
 
 /**
  * @brief Reads new job records from the history file and updates the file offset
@@ -496,7 +473,6 @@ bool Librarian::initialize() {
     printf("[Librarian] Initializing DBHandler...\n");
 
     historyFileSet_.Init(config[conf::str::ArchiveFile]);
-    epochHistoryFileSet_.Init(config[conf::str::ArchiveFile]);
 
     // Construct the DBHandler with provided schema, db path, and cache size.
     if ( ! dbHandler_.initialize()) {
@@ -545,25 +521,18 @@ bool Librarian::update() {
     auto startTime = std::chrono::system_clock::now();
 
     // Recovery: Populate statusData_ and FileSet structs if memory is empty
-    dbHandler_.maybeRecoverStatusAndFiles(historyFileSet_, epochHistoryFileSet_, statusData_);
+    dbHandler_.maybeRecoverStatusAndFiles(historyFileSet_, statusData_);
     Status status = {};
 
     // Estimate arrivalHz while asleep if there was no backlog left last cycle
     if (!statusData_.LastRunLeftBacklog && statusData_.TimeOfLastUpdate > 0) estimateArrivalRateWhileAsleep ();
 
     // PHASE 1: Directory Scanning and File Tracking
-    ArchiveChange epochChange = trackAndUpdateFileSet(epochHistoryFileSet_);
     ArchiveChange historyChange = trackAndUpdateFileSet(historyFileSet_);
 
     // PHASE 2: Queue Construction
     // TODO: use lastFileReadId in queue construction so that we don't reread tracked but unread files
-    std::vector<FileInfo> epochQueue;
     std::vector<FileInfo> historyQueue;
-
-    if (!buildProcessingQueue(epochHistoryFileSet_, epochChange, epochQueue)) {
-        printf("[Librarian] Failed to build epoch processing queue\n");
-        return false;
-    }
 
     if (!buildProcessingQueue(historyFileSet_, historyChange, historyQueue)) {
         printf("[Librarian] Failed to build history processing queue\n");
@@ -571,62 +540,6 @@ bool Librarian::update() {
     }
 
     // PHASE 3: Record Processing
-
-    // Process Epoch Queue
-    size_t totalEpochRecordsProcessed = 0;
-    size_t epochFilesProcessed = 0;
-    printf("[Librarian] Processing epoch file queue...\n");
-
-    for (FileInfo& fileInfo : epochQueue) {
-
-        // Check if we've already exceeded the limit - if so stop processing
-        if (totalEpochRecordsProcessed >= MAX_EPOCH_RECORDS_PER_UPDATE) {
-            printf("[Librarian] Reached epoch record limit (%zu), stopping epoch processing. Processed %zu files, %zu remaining.\n", 
-                   MAX_EPOCH_RECORDS_PER_UPDATE, epochFilesProcessed, epochQueue.size() - epochFilesProcessed);
-            status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
-            break;
-        }
-
-        printf("[Librarian] Processing epoch file: %s (offset: %ld)\n", 
-               fileInfo.FileName.c_str(), fileInfo.LastOffset);
-
-        std::vector<EpochRecord> fileRecords;
-        if (!readEpochRecords(fileRecords, fileInfo)) {
-            printf("[Librarian] Failed to read epoch records from %s \n", fileInfo.FileName.c_str());
-            return false;
-        }
-
-        // If nothing new to read, move on to the next file
-        if(fileRecords.empty()){
-            printf("[Librarian] No new epoch records in %s, skipping this file \n", fileInfo.FileName.c_str());
-            status.EpochFileIdLastRead = fileInfo.FileId;
-            status.EpochFileOffsetLastRead = fileInfo.LastOffset;
-            continue;
-        }
-
-        // Atomic transaction: Insert records AND update file offset
-        if (!dbHandler_.insertEpochFileRecords(fileRecords, fileInfo)) {
-                printf("[Librarian] Failed to atomically process epoch file %s\n", fileInfo.FileName.c_str());
-                continue;
-        }
-
-        // Update in-memory FileSet with new offset
-        auto it = epochHistoryFileSet_.fileMap.find(fileInfo.FileId);
-        if (it != epochHistoryFileSet_.fileMap.end()) {
-            it->second.LastOffset = fileInfo.LastOffset;
-        } else {
-            fprintf(stderr, "[Librarian] Warning: FileId %ld not found in epochHistoryFileSet.fileMap\n", fileInfo.FileId);
-        }
-
-        // Accumulate stats for status reporting'
-        totalEpochRecordsProcessed += fileRecords.size(); // TODO: currently duplicating this but theoretically we could just use status
-        status.TotalEpochsRead += fileRecords.size();
-
-        // Record the last ID read
-        status.EpochFileIdLastRead = fileInfo.FileId;
-        status.EpochFileOffsetLastRead = fileInfo.LastOffset;
-    }
-
     // Process History Queue
     size_t totalJobRecordsProcessed = 0;
     size_t historyFilesProcessed = 0;
@@ -635,9 +548,9 @@ bool Librarian::update() {
     for (FileInfo& fileInfo : historyQueue) {
 
         // Check if we've already exceeded the limit
-        if (totalJobRecordsProcessed >= MAX_JOB_RECORDS_PER_UPDATE) {
+        if (totalJobRecordsProcessed >= config[conf::i::MaxRecordsPerUpdate]) {
             printf("[Librarian] Reached job record limit (%zu), stopping history processing. Processed %zu files, %zu remaining.\n", 
-                   MAX_JOB_RECORDS_PER_UPDATE, historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
+                   config[conf::i::MaxRecordsPerUpdate], historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
             status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
             break;
         }

@@ -71,14 +71,4 @@ struct StatusData {
     //         ErrorRate (?)           - Proportion of cycles with errors
 };
 
-// TODO: Remove
-struct EpochRecord {
-    int ClusterId;
-    int ProcId;
-    int RunInstanceId;
-    std::string Owner;
-    long CurrentTime;
-    long Offset;    // We'll calculate this offset manually
-    long FileId;
-    std::string RecordType;
-};
+

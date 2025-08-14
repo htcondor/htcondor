@@ -41,16 +41,9 @@ public:
     LibrarianConfig config{};
 
 private:
-
-    // CONFIGS - right now, not used anywhere
-    const size_t MAX_EPOCH_RECORDS_PER_UPDATE = 1000000;
-    const size_t MAX_JOB_RECORDS_PER_UPDATE = 1000000;    
-
-
     // Members
     DBHandler dbHandler_{config};
     FileSet historyFileSet_;
-    FileSet epochHistoryFileSet_;
 
     // TODO: cleanup status code
     StatusData statusData_;
@@ -61,7 +54,6 @@ private:
     double schemaVersionNumber_{1.0};
 
     // Helper methods for Librarian::update()
-    bool readEpochRecords(std::vector<EpochRecord>& newEpochRecords, FileInfo& epochFileInfo);
     bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);
     ArchiveChange trackAndUpdateFileSet(FileSet& fileSet);
     bool buildProcessingQueue(const FileSet& fileSet, const ArchiveChange& changes, std::vector<FileInfo>& queue);

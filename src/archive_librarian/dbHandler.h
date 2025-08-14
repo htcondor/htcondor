@@ -47,7 +47,6 @@ public:
     
     // Batch record insertion for file processing
     // Records 'FileRecords' - ie, it batches both the JobRecord insertion and the 'File' table update
-    bool insertEpochFileRecords(const std::vector<EpochRecord>& records, const FileInfo& fileInfo);
     bool insertJobFileRecords(const std::vector<JobRecord>& jobs, const FileInfo& fileInfo);
 
     // File Information Operations
@@ -56,7 +55,7 @@ public:
 
     // Status and Monitoring Operations
     bool writeStatusAndData(const Status& status, const StatusData& statusData);
-    bool maybeRecoverStatusAndFiles(FileSet& historyFileSet_, FileSet& epochHistoryFileSet_, StatusData& statusData_);
+    bool maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData& statusData_);
 
     // === File Archive Management ===
     
@@ -78,12 +77,12 @@ private:
     bool insertUnseenJob(const std::string& owner, int clusterId, int procId, int64_t timeOfCreation);
 
     // Batch processes and inserts Epoch/Job records
-    void batchInsertEpochRecords(const std::vector<EpochRecord>& records);
     bool batchInsertJobRecords(const std::vector<JobRecord>& jobs);
 
     const LibrarianConfig& config;
 
     sqlite3* db_{nullptr};
+    // TODO: Make map{name:stmt}?
     sqlite3_stmt* jobIdLookupStmt_{nullptr}; // preprepared statement for more efficient JobIdLookups
     sqlite3_stmt* userInsertStmt_{nullptr};
     sqlite3_stmt* userSelectStmt_{nullptr};
