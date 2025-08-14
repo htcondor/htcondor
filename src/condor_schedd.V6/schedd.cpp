@@ -4901,7 +4901,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// job to run on it.
 	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
 	bool is_ocu_holder = false;
-	GetAttributeBool(job_id.cluster, job_id.proc, "IsOCUHolder", &is_ocu_holder);
+	GetAttributeBool(job_id.cluster, job_id.proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (mrec && is_ocu_holder) {
 		// ocu holders are set with infinite keep claim idle, but if we are deleting
 		// the job, that's the only time we want to remove the claim.
@@ -9271,7 +9271,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
 			bool is_ocu_holder = false;
-			GetAttributeBool(slot->cluster,slot->proc,"IsOCUHolder", &is_ocu_holder);
+			GetAttributeBool(slot->cluster,slot->proc,ATTR_OCU_HOLDER, &is_ocu_holder);
 			if (is_ocu_holder) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
@@ -9710,7 +9710,7 @@ Scheduler::StartJob(match_rec *rec)
 	ASSERT( rec );
 
 	bool is_ocu_holder = false;
-	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
+	GetAttributeBool(rec->cluster,rec->proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (is_ocu_holder) {
 		return;
 	}
