@@ -2518,8 +2518,8 @@ negotiateWithGroup ( bool isFloorRound,
 					"  Negotiation with %s skipped because of time limits:\n",
 					submitterName.c_str());
 				dprintf(D_ALWAYS,
-					"  %lld seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %ld secs\n ",
-					(long long)totalTimeSchedd, scheddName.c_str(), MaxTimePerSchedd);
+					"  %lld seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %lld secs\n ",
+					(long long)totalTimeSchedd, scheddName.c_str(), (long long)MaxTimePerSchedd);
 				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {
