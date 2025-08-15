@@ -3,6 +3,8 @@ from typing import Optional
 from typing import List
 from typing import Tuple
 
+import socket
+
 from .htcondor2_impl import _handle as handle_t
 
 from .htcondor2_impl import _collector_init
@@ -164,6 +166,23 @@ class Collector():
         ad_type = _ad_type_from_daemon_type(daemon_type)
         if name is not None:
             constraint = f'stricmp(Name, "{name}") == 0'
+
+            # Daemon::locate() calls getDaemonInfo(), which has special
+            # code for DT_STARTD: if name contains an @, assume that
+            # we've figured out the full hostname and match that against
+            # against the `Machine` attribute, instead.
+            if daemon_type == DaemonType.Startd and "@" not in name:
+                # This is, after tracing all the scattered logic, how
+                # Daemon::locate() converts a hostname into an FQDN.
+                r = socket.getaddrinfo(
+                        name, None,
+                        socket.AF_UNSPEC, socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP, socket.AI_CANONNAME
+                )
+                if len(r) == 0:
+                    return None
+                constraint = f'stricmp(Machine, "{r[0][3]}") == 0'
+
             list = _collector_query(self._handle, int(ad_type), constraint, Collector._for_location, None, name)
             if len(list) == 0:
                 return None
