@@ -704,6 +704,7 @@ class Schedd():
     ) -> List[classad.ClassAd]:
         """
         Query the schedd for the list of classads that represent claimed slots
+
         :param constraint: Constraint expression to return only the
             matching claims.  If empty, return all matches.
         :param projection: List of specific ClassAd attributes to return
