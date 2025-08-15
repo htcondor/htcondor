@@ -165,12 +165,12 @@ class Collector():
         """
         ad_type = _ad_type_from_daemon_type(daemon_type)
         if name is not None:
-            constraint = f'stricmp(Name, "{name}") == 0'
+            constraint = f'Name == "{name}"'
 
             # Daemon::locate() calls getDaemonInfo(), which has special
-            # code for DT_STARTD: if name contains an @, assume that
-            # we've figured out the full hostname and match that against
-            # against the `Machine` attribute, instead.
+            # code for DT_STARTD: if name does not contain an @, figure
+            # out the full hostname and match that against the `Machine`
+            # attribute, instead.
             if daemon_type == DaemonType.Startd and "@" not in name:
                 # This is, after tracing all the scattered logic, how
                 # Daemon::locate() converts a hostname into an FQDN.
@@ -181,7 +181,7 @@ class Collector():
                 )
                 if len(r) == 0:
                     return None
-                constraint = f'stricmp(Machine, "{r[0][3]}") == 0'
+                constraint = f'Machine == "{r[0][3]}"'
 
             list = _collector_query(self._handle, int(ad_type), constraint, Collector._for_location, None, name)
             if len(list) == 0:
