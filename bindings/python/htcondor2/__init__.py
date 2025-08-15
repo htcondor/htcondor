@@ -70,6 +70,8 @@ with _add_dll_dir():
     from .htcondor2_impl import _set_subsystem as set_subsystem
     from .htcondor2_impl import _reload_config as reload_config
 
+    from ._security_context import SecurityContext
+
     from ._loose_functions import send_command
     from ._loose_functions import ping
     from ._loose_functions import send_alive
