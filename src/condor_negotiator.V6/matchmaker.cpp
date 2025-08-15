@@ -751,7 +751,7 @@ reinitialize ()
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
-	dprintf (D_ALWAYS,"MAX_TIME_PER_SCHEDD = %d sec\n",MaxTimePerSchedd);
+	dprintf (D_ALWAYS,"MAX_TIME_PER_SCHEDD = %lld sec\n",(long long)MaxTimePerSchedd);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_PIESPIN = %d sec\n",MaxTimePerSpin);
 
 	if (PreemptionRank) {
@@ -2227,7 +2227,7 @@ negotiateWithGroup ( bool isFloorRound,
 	double 		pieLeftOrig;
 	size_t		submitterAdsCountOrig;
 	int			totalTime;
-	int			totalTimeSchedd;
+	time_t		totalTimeSchedd;
 	int			num_idle_jobs;
 
     time_t duration_phase3 = 0;
@@ -2385,7 +2385,7 @@ negotiateWithGroup ( bool isFloorRound,
 				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",
 					submitterName.c_str(), scheddAddr.c_str());
 				dprintf(D_ALWAYS, "%d seconds so far for this submitter\n", totalTime);
-				dprintf(D_ALWAYS, "%d seconds so far for this schedd\n", totalTimeSchedd);
+				dprintf(D_ALWAYS, "%lld seconds so far for this schedd\n", (long long)totalTimeSchedd);
 			}
 
 			double submitterLimit = 0.0;
@@ -2518,8 +2518,8 @@ negotiateWithGroup ( bool isFloorRound,
 					"  Negotiation with %s skipped because of time limits:\n",
 					submitterName.c_str());
 				dprintf(D_ALWAYS,
-					"  %d seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %d secs\n ",
-					totalTimeSchedd, scheddName.c_str(), MaxTimePerSchedd);
+					"  %lld seconds spent on this schedd (%s), MAX_TIME_PER_SCHEDD is %lld secs\n ",
+					(long long)totalTimeSchedd, scheddName.c_str(), (long long)MaxTimePerSchedd);
 				negotiation_cycle_stats[0]->schedds_out_of_time.insert(scheddName.c_str());
 				result = MM_DONE;
 			} else if (remainingTimeForThisCycle <= 0) {
@@ -3954,10 +3954,10 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 		if (currentTime >= deadline) {
 			dprintf (D_ALWAYS, 	
-			"    Reached deadline for %s after %d sec... stopping\n"
-			"       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_SCHEDD = %d sec, MAX_TIME_PER_CYCLE = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
-				schedd_id.c_str(), (int)(currentTime - beginTime),
-				MaxTimePerSubmitter, MaxTimePerSchedd, MaxTimePerCycle,
+			"    Reached deadline for %s after %lld sec... stopping\n"
+			"       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_SCHEDD = %lld sec, MAX_TIME_PER_CYCLE = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
+				schedd_id.c_str(), (long long)(currentTime - beginTime),
+				MaxTimePerSubmitter, (long long)MaxTimePerSchedd, MaxTimePerCycle,
 				MaxTimePerSpin);
 			break;	// get out of the infinite for loop & stop negotiating
 		}
@@ -6272,12 +6272,12 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, s->start_time);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_END, i, s->end_time);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PERIOD, i, (int)period);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, (int)s->duration);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1, i, (int)s->duration_phase1);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2, i, (int)s->duration_phase2);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3, i, (int)s->duration_phase3);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4, i, (int)s->duration_phase4);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PERIOD, i, period);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, s->duration);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1, i, s->duration_phase1);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2, i, s->duration_phase2);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3, i, s->duration_phase3);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4, i, s->duration_phase4);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS, i, (int)s->total_slots);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS, i, (int)s->trimmed_slots);
         SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS, i, (int)s->candidate_slots);
