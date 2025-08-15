@@ -1,5 +1,13 @@
 *** 24.12.0 features
 
+- :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
+  (instead of :attr:`Name`) when trying to find *condor_startd* daemons, if
+  if the ``name`` argument is not the name of a slot.  This allows programmers
+  to call :meth:`htcondor2.Collector.locate` using the fully-qualified domain
+  name and get a result from a collector whether or not
+  :macro:`ENABLE_STARTD_DAEMON_AD` is set.
+  :jira:`2911`
+
 - Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
   defaults to false.  When true, and running on a cgroup enable system, local
   universe jobs must specify :subcom:`request_memory`, and the job exceeds that
