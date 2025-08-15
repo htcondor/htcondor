@@ -147,7 +147,13 @@ BuildRequires: systemd-units
 %endif
 Requires: systemd
 
+%if 0%{?rhel} || 0%{?amzn} || 0%{?fedora}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
+%endif
+
+%if 0%{?suse_version}
+BuildRequires: python3-Sphinx python3-sphinx_rtd_theme
+%endif
 
 # openssh-server needed for condor_ssh_to_job
 Requires: openssh-server
