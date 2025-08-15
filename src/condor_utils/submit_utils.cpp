@@ -6574,7 +6574,7 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr())  {
+	if (container_image.ptr()) {
 		input_files.emplace_back(container_image.ptr());
 		if (accumulate_size_kb) {
 			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
@@ -6702,7 +6702,7 @@ int SubmitHash::SetTransferFiles()
 
 		// docker creds are always stored in a file named "config.json"
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
-		
+
 		struct stat buf;
 		int r = stat(docker_creds_file.c_str(), &buf);
 		if (r != 0) {
@@ -6752,7 +6752,7 @@ int SubmitHash::SetTransferFiles()
 		//
 		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
 		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
-		// 
+		//
 		// Error if:
 		//  (A) bad user input - getShouldTransferFilesNum fails
 		//  (B) bas user input - getFileTransferOutputNum fails
@@ -6768,7 +6768,7 @@ int SubmitHash::SetTransferFiles()
 	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
-	// if they didn't check to see if the admin did. 
+	// if they didn't check to see if the admin did.
 	auto_free_ptr should_param(submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles));
 	if (! should_param) {
 		if (job->LookupString(ATTR_SHOULD_TRANSFER_FILES, tmp)) {
