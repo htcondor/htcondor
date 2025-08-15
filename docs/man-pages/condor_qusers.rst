@@ -1,4 +1,4 @@
-      
+
 
 *condor_qusers*
 ===============
@@ -46,7 +46,7 @@ Options
     both User and Project ClassAds.
  **-constraint** *expression*
     Operate on or query all User or Project ClassAds matching the given constraint expression.
- **-long[:json|jsonl|new|newl|xml|long]
+ **-long[:json|jsonl|new|newl|xml|long]**
     Print ClassAds in the specified form. If no form is specified, long form will be used.
  **-format** *fmt* *attr*
     Print selected attribute of the User or Project ClassAds using the given format.
