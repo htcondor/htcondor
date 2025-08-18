@@ -58,7 +58,7 @@
 
 *** 24.0.12 bugs
 
-*** 24.11.1 features
+*** 24.11.2 features
 
 - New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
   restrict which Vault servers the *condor_credd* will accept credentials for.
@@ -89,7 +89,7 @@
 - Add --version flag to the :tool:`htcondor` tool.
   :jira:`3091`
 
-*** 24.11.1 bugs
+*** 24.11.2 bugs
 
 - When responding to a ping request for the ALLOW authorization level,
   daemons no longer require authentication.
