@@ -238,6 +238,9 @@ Requires: apptainer >= 1.3.6
 %endif
 %endif
 
+# Ensure that our bash completions work
+Recommends: bash-completion
+
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
 #Provides: user(condor) = 64
 #Provides: group(condor) = 64
