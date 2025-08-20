@@ -46,6 +46,8 @@
 #include "shortfile.h"
 #include "single_provider_syndicate.h"
 
+#include <regex>
+
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
@@ -1298,13 +1300,53 @@ UniShadow::start_common_input_conversation(
 						// Consider replacing this with a delayed (zero-second
 						// timer) call to evictJob().
 						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+						// FIXME: This should generate the same vacate
+						// reason(s) as uncommon input file transfer.
 						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
 						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
 						remRes->setExitReason(JOB_SHOULD_REQUEUE);
 						remRes->killStarter(false);
 					} else {
-						holdJob( "Failed to transfer common files.", CONDOR_HOLD_CODE::JobNotStarted, 3 );
+						// FIXME: Will this be correct for a starter-side failure?
+						dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
+							info.error_desc.c_str(), info.hold_code, info.hold_subcode
+						);
+
+						// From JICShadow::transferInputStatus().
+						std::string hold_reason = "Failed to transfer files: ";
+						if(! info.error_desc.empty()) {
+							hold_reason += info.error_desc;
+						} else {
+							hold_reason += " reason unknown.";
+						}
+
+						// FIXME: This is probably wrong, since it's not common file -specific.
+						int hold_code = info.hold_code;
+						int hold_subcode = info.hold_subcode;
+						std::string url_file_type;
+						std::string improved_reason = improveReasonAttributes(
+								info.error_desc.c_str(),
+								hold_code, hold_subcode, url_file_type
+						);
+
+						// This seems wrong -- improveReasonAttributes() could
+						// have changed the hold code and sub-code even if it
+						// didn't produce and improved string -- but it's how
+						// the original code in evictJob() worked.
+						if( improved_reason.empty() ) {
+							holdJob( info.error_desc.c_str(), hold_code, hold_subcode );
+						} else {
+							// improveReasonAttribute() will not specify that
+							// job is going on hold because of _common_ input
+							// transfer, so fix it here.
+							std::regex r("Transfer input files failure");
+							improved_reason = std::regex_replace(
+								improved_reason, r,
+								"Transfer common input files failure"
+							);
+							holdJob( improved_reason.c_str(), hold_code, hold_subcode );
+						}
 					}
 
 					guidance.Clear();
