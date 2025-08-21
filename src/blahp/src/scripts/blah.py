@@ -44,7 +44,7 @@ class BlahConfigParser(RawConfigParser, object):
         else:
             super(BlahConfigParser, self).__init__(defaults=defaults, strict=False)
         # TODO: readfp() is replaced by read_file() in Python 3.2+
-        self.readfp(vfile)
+        self.read_file(vfile)
 
     def items(self):
         return super(BlahConfigParser, self).items(self.header)
