@@ -1493,6 +1493,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.11-1
+- Initial support for Debian 13 (trixie)
+
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.28-1
 - Exit -code and -signal environment variables are now set for Docker jobs
 - Fix issue where ImageSize was over-reported on the Windows platform
