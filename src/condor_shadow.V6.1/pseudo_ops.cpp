@@ -46,6 +46,8 @@
 #include "shortfile.h"
 #include "single_provider_syndicate.h"
 
+#include <regex>
+
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
@@ -1293,18 +1295,70 @@ UniShadow::start_common_input_conversation(
 					delete this->cfLock;
 					this->cfLock = NULL;
 
+					//
+					// Improve the starter's hold/vacate reason.
+					//
+					// From JICShadow::transferInputStatus().
+					//
 					const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
-					if( info.try_again ) {
-						// Consider replacing this with a delayed (zero-second
-						// timer) call to evictJob().
-						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
-						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
-						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
-						remRes->setExitReason(JOB_SHOULD_REQUEUE);
-						remRes->killStarter(false);
+
+					std::string reason = "Failed to transfer files: ";
+					if(! info.error_desc.empty()) {
+						reason += info.error_desc;
 					} else {
-						holdJob( "Failed to transfer common files.", CONDOR_HOLD_CODE::JobNotStarted, 3 );
+						reason += " reason unknown.";
+					}
+
+					// This is not common file -specific...
+					// we know if it's a hold or a vacate.
+					int code = info.hold_code;
+					int subcode = info.hold_subcode;
+					std::string url_file_type;
+					std::string improved_reason = improveReasonAttributes(
+							reason.c_str(),
+							code, subcode, url_file_type
+					);
+
+					// ... so go ahead and clean it up now.
+					if( improved_reason.empty() ) {
+						improved_reason = reason;
+					} else {
+						std::regex r("Transfer input files failure");
+						improved_reason = std::regex_replace(
+							improved_reason, r,
+							"Transfer common input files failure"
+						);
+					}
+
+
+					// According ToddT (on 2025-08-21), the `try_again` field
+					// has only ever been intended for immediate starter-side
+					// retries of CEDAR transfers.  (There's certainly nothing
+					// in the plug-in interface, ignoring the incomplete
+					// HTCONDOR-3064.)  So we'll just ignore it here.
+
+					// FIXME: Will this be correct for a starter-side failure?
+					dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
+						info.error_desc.c_str(), info.hold_code, info.hold_subcode
+					);
+
+
+					// This seems wrong -- improveReasonAttributes() could
+					// have changed the hold code and sub-code even if it
+					// didn't produce and improved string -- but it's how
+					// the original code in evictJob() worked.
+					if( improved_reason.empty() ) {
+						holdJob( info.error_desc.c_str(), code, subcode );
+					} else {
+						// improveReasonAttribute() will not specify that
+						// job is going on hold because of _common_ input
+						// transfer, so fix it here.
+						std::regex r("Transfer input files failure");
+						improved_reason = std::regex_replace(
+							improved_reason, r,
+							"Transfer common input files failure"
+						);
+						holdJob( improved_reason.c_str(), code, subcode );
 					}
 
 					guidance.Clear();
