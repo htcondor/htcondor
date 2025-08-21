@@ -49,7 +49,7 @@ class Collector():
                       with a ``MyAddress`` attribute (such as might be returned
                       by :meth:`locate`).  :py:obj:`None` means the value of the
                       configuration parameter ``COLLECTOR_HOST``.
-        :param security: SecurtiyContext to use for authenteication.
+        :param security: SecurityContext to use for authentication.
         """
         self._handle = handle_t()
 
