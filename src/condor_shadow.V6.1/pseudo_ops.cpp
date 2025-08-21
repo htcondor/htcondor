@@ -1295,16 +1295,53 @@ UniShadow::start_common_input_conversation(
 					delete this->cfLock;
 					this->cfLock = NULL;
 
+					//
+					// Improve the starter's hold/vacate reason.
+					//
+					// From JICShadow::transferInputStatus().
+					//
 					const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
+
+					std::string reason = "Failed to transfer files: ";
+					if(! info.error_desc.empty()) {
+						reason += info.error_desc;
+					} else {
+						reason += " reason unknown.";
+					}
+
+					// This is not common file -specific...
+					// we know if it's a hold or a vacate.
+					int code = info.hold_code;
+					int subcode = info.hold_subcode;
+					std::string url_file_type;
+					std::string improved_reason = improveReasonAttributes(
+							reason.c_str(),
+							code, subcode, url_file_type
+					);
+
+					// ... so go ahead and clean it up now.
+					if( improved_reason.empty() ) {
+						improved_reason = reason;
+					} else {
+						std::regex r("Transfer input files failure");
+						improved_reason = std::regex_replace(
+							improved_reason, r,
+							"Transfer common input files failure"
+						);
+					}
+
+
 					if( info.try_again ) {
 						// Consider replacing this with a delayed (zero-second
 						// timer) call to evictJob().
 						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
-						// FIXME: This should generate the same vacate
-						// reason(s) as uncommon input file transfer.
-						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
-						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
+						this->jobAd->Assign(ATTR_VACATE_REASON, improved_reason.c_str());
+						// This seems wrong -- improveReasonAttributes() could
+						// have changed the hold code and sub-code even if it
+						// didn't produce and improved string -- but it's how
+						// the original code in evictJob() worked.
+						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, code);
+						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, subcode);
 						remRes->setExitReason(JOB_SHOULD_REQUEUE);
 						remRes->killStarter(false);
 					} else {
@@ -1313,29 +1350,13 @@ UniShadow::start_common_input_conversation(
 							info.error_desc.c_str(), info.hold_code, info.hold_subcode
 						);
 
-						// From JICShadow::transferInputStatus().
-						std::string hold_reason = "Failed to transfer files: ";
-						if(! info.error_desc.empty()) {
-							hold_reason += info.error_desc;
-						} else {
-							hold_reason += " reason unknown.";
-						}
-
-						// FIXME: This is probably wrong, since it's not common file -specific.
-						int hold_code = info.hold_code;
-						int hold_subcode = info.hold_subcode;
-						std::string url_file_type;
-						std::string improved_reason = improveReasonAttributes(
-								info.error_desc.c_str(),
-								hold_code, hold_subcode, url_file_type
-						);
 
 						// This seems wrong -- improveReasonAttributes() could
 						// have changed the hold code and sub-code even if it
 						// didn't produce and improved string -- but it's how
 						// the original code in evictJob() worked.
 						if( improved_reason.empty() ) {
-							holdJob( info.error_desc.c_str(), hold_code, hold_subcode );
+							holdJob( info.error_desc.c_str(), code, subcode );
 						} else {
 							// improveReasonAttribute() will not specify that
 							// job is going on hold because of _common_ input
@@ -1345,7 +1366,7 @@ UniShadow::start_common_input_conversation(
 								improved_reason, r,
 								"Transfer common input files failure"
 							);
-							holdJob( improved_reason.c_str(), hold_code, hold_subcode );
+							holdJob( improved_reason.c_str(), code, subcode );
 						}
 					}
 
