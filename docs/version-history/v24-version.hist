@@ -1,5 +1,11 @@
 *** 24.0.12 bugs
 
+*** 24.0.12 features
+
+- Updated :tool:`condor_upgrade_check` to test for well known gotchas
+  between v24 and v25 of HTCondor installations.
+  :jira:`3209`
+
 *** 24.0.11 bugs
 
 *** 24.0.10 bugs

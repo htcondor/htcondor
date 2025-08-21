@@ -21,7 +21,7 @@ import re
 
 try:
     import htcondor
-    import classad
+    import classad2 as classad
 except ImportError:
     print(
         textwrap.dedent(
