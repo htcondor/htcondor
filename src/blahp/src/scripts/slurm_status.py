@@ -425,10 +425,10 @@ def get_slurm_location(program):
     _slurm_location_cache = slurm_bindir
     return slurm_bin_location
 
-job_id_re = re.compile("JobId=([0-9]+) .*")
-exec_host_re = re.compile("\s*BatchHost=([\w\-.]+)")
-status_re = re.compile("\s*JobState=([\w]+) .*")
-exit_status_re = re.compile(".* ExitCode=(-?[0-9]+:[0-9]+)")
+job_id_re = re.compile(r"JobId=([0-9]+) .*")
+exec_host_re = re.compile(r"\s*BatchHost=([\w\-.]+)")
+status_re = re.compile(r"\s*JobState=([\w]+) .*")
+exit_status_re = re.compile(r".* ExitCode=(-?[0-9]+:[0-9]+)")
 status_mapping = {"BOOT_FAIL": 4, "CANCELLED": 3, "COMPLETED": 4, "CONFIGURING": 1, "COMPLETING": 2, "FAILED": 4, "NODE_FAIL": 4, "PENDING": 1, "PREEMPTED": 4, "RUNNING": 2, "SPECIAL_EXIT": 4, "STOPPED": 2, "SUSPENDED": 2, "TIMEOUT": 4}
 
 def parse_squeue(output):
@@ -485,7 +485,7 @@ def fill_cache(cache_location, cluster):
     global launchtime
     launchtime = time.time()
 
-cache_line_re = re.compile("([0-9]+[\.\w\-]+):\s+(.+)")
+cache_line_re = re.compile(r"([0-9]+[\.\w\-]+):\s+(.+)")
 def cache_to_status(jobid, fd):
     reader = csv.reader(fd, delimiter='\t')
     for row in reader:
@@ -545,7 +545,7 @@ def check_cache(jobid, cluster, recurse=True):
             return None
     return cache_to_status(jobid, fd)
 
-job_status_re = re.compile(".*JobStatus=(\d+);.*")
+job_status_re = re.compile(r".*JobStatus=(\d+);.*")
 
 def main():
     initLog()

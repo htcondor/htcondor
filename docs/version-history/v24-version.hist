@@ -1,5 +1,8 @@
 *** 24.0.12 bugs
 
+- Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
+  :jira:`3225`
+
 *** 24.0.11 features
 
 - Initial support for Debian 13 (trixie).
