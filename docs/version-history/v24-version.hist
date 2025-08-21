@@ -19,6 +19,12 @@
   remote history queries will not have a negative impact on the *condor_schedd*
   :jira:`3215`
 
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated as freqently as :ad-attr:`ImageSize` is so that the default
+  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
+  jobs which go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
+
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
   and htchirp.py to work correctly inside a docker universe job.

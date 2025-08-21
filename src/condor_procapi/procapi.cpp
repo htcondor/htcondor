@@ -1480,22 +1480,18 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
         *((LARGE_INTEGER*)(ctrblk + offsets->utime));
     LARGE_INTEGER st = (LARGE_INTEGER) 
         *((LARGE_INTEGER*)(ctrblk + offsets->stime));
-    //LARGE_INTEGER virtsz = (LARGE_INTEGER) 
-    //    *((LARGE_INTEGER*)(ctrblk + offsets->virtsize));
 
     procRaw.pid       = (pid_t) *((long*)(ctrblk + offsets->procid  ));
     procRaw.ppid      = ntSysInfo.GetParentPID(pid);
 
 	if (offsets->rssize_width == 4) {
 		procRaw.rssize = *(long*)(ctrblk + offsets->rssize);
+		procRaw.imgsize = *(long*)(ctrblk + offsets->workset);
 	}
 	else {
-		procRaw.rssize =
-			((LARGE_INTEGER*)(ctrblk + offsets->rssize))->QuadPart;
+		procRaw.rssize = ((LARGE_INTEGER*)(ctrblk + offsets->rssize))->QuadPart;
+		procRaw.imgsize = ((LARGE_INTEGER*)(ctrblk + offsets->workset))->QuadPart;
 	}
-	// use rssize for imgsize, since we don't get anything better from
-	// the ProcessPerfData, for most processes .virtsize is always 0xFFFFFFFF
-	procRaw.imgsize    = procRaw.rssize;
 
 	procRaw.majfault  = (long) *((long*)(ctrblk + offsets->faults  ));
 	procRaw.minfault  = 0;  // not supported by NT; all faults lumped into major.
@@ -1569,19 +1565,16 @@ ProcAPI::buildProcInfoList(pid_t /*BOLOpid*/)
         sGetProcInfoListPid += qpcDeltaSec(iter_start);
 
 		LARGE_INTEGER* liptr = nullptr;
-		// we used to use virtsize for imgsize, but a some point Windows changed so that
-		// virtsize is 0xFFFFFFFF for most processes, so we can't anymore
-		//liptr = (LARGE_INTEGER*)(ctrblk + offsets->virtsize);
-		//pi->imgsize = (unsigned long)(liptr->QuadPart / 1024);
 		if (offsets->rssize_width == 4) {
 			pi->rssize = *(long*)(ctrblk + offsets->rssize) / 1024;
+			pi->imgsize = *(long*)(ctrblk + offsets->workset) / 1024;
 		}
 		else {
 			liptr = (LARGE_INTEGER*)(ctrblk + offsets->rssize);
 			pi->rssize = (unsigned long)(liptr->QuadPart / 1024);
+			liptr = (LARGE_INTEGER*)(ctrblk + offsets->workset);
+			pi->imgsize = (unsigned long)(liptr->QuadPart / 1024);
 		}
-		// the best value we have for imgsize is RSS
-		pi->imgsize = pi->rssize;
 
 		pi->user_time = (long)(ut.QuadPart / objectFrequency);
 		pi->sys_time = (long) (st.QuadPart / objectFrequency);
@@ -2383,11 +2376,6 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
   
     pThisCounter = nextCounter(pThisCounter);  // "Virtual Bytes Peak"
     pThisCounter = nextCounter(pThisCounter);  // "Virtual Bytes"
-//    printcounter ( stdout, pThisCounter );
-    offsets->virtsize = pThisCounter->CounterOffset;  // image size
-	if (pThisCounter->CounterSize != 8) {
-		unexpected_counter_size("virtual bytes", pThisCounter->CounterSize, "8");
-	}
   
     pThisCounter = nextCounter(pThisCounter);  // "Page Faults/Sec"
 //    printcounter ( stdout, pThisCounter );
@@ -2400,13 +2388,20 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     offsets->rssize = pThisCounter->CounterOffset;   // working set peak 
 	offsets->rssize_width = pThisCounter->CounterSize;
 	if ((offsets->rssize_width != 4) && (offsets->rssize_width != 8)) {
-		unexpected_counter_size("working set",
+		unexpected_counter_size("working set peak",
 		                        pThisCounter->CounterSize,
 		                        "4 or 8");
 	}
 
 //    printcounter ( stdout, pThisCounter );
 	pThisCounter = nextCounter(pThisCounter); // "Working Set"
+	offsets->workset = pThisCounter->CounterOffset;   // working set
+	if (offsets->rssize_width != pThisCounter->CounterSize) {
+		unexpected_counter_size("working set",
+			pThisCounter->CounterSize,
+			"equal in size to working set peak");
+	}
+
 	pThisCounter = nextCounter(pThisCounter); // "Page File Bytes Peak"
 
     
