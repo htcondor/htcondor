@@ -1331,43 +1331,34 @@ UniShadow::start_common_input_conversation(
 					}
 
 
-					if( info.try_again ) {
-						// Consider replacing this with a delayed (zero-second
-						// timer) call to evictJob().
-						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
-						this->jobAd->Assign(ATTR_VACATE_REASON, improved_reason.c_str());
-						// This seems wrong -- improveReasonAttributes() could
-						// have changed the hold code and sub-code even if it
-						// didn't produce and improved string -- but it's how
-						// the original code in evictJob() worked.
-						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, code);
-						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, subcode);
-						remRes->setExitReason(JOB_SHOULD_REQUEUE);
-						remRes->killStarter(false);
+					// According ToddT (on 2025-08-21), the `try_again` field
+					// has only ever been intended for immediate starter-side
+					// retries of CEDAR transfers.  (There's certainly nothing
+					// in the plug-in interface, ignoring the incomplete
+					// HTCONDOR-3064.)  So we'll just ignore it here.
+
+					// FIXME: Will this be correct for a starter-side failure?
+					dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
+						info.error_desc.c_str(), info.hold_code, info.hold_subcode
+					);
+
+
+					// This seems wrong -- improveReasonAttributes() could
+					// have changed the hold code and sub-code even if it
+					// didn't produce and improved string -- but it's how
+					// the original code in evictJob() worked.
+					if( improved_reason.empty() ) {
+						holdJob( info.error_desc.c_str(), code, subcode );
 					} else {
-						// FIXME: Will this be correct for a starter-side failure?
-						dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
-							info.error_desc.c_str(), info.hold_code, info.hold_subcode
+						// improveReasonAttribute() will not specify that
+						// job is going on hold because of _common_ input
+						// transfer, so fix it here.
+						std::regex r("Transfer input files failure");
+						improved_reason = std::regex_replace(
+							improved_reason, r,
+							"Transfer common input files failure"
 						);
-
-
-						// This seems wrong -- improveReasonAttributes() could
-						// have changed the hold code and sub-code even if it
-						// didn't produce and improved string -- but it's how
-						// the original code in evictJob() worked.
-						if( improved_reason.empty() ) {
-							holdJob( info.error_desc.c_str(), code, subcode );
-						} else {
-							// improveReasonAttribute() will not specify that
-							// job is going on hold because of _common_ input
-							// transfer, so fix it here.
-							std::regex r("Transfer input files failure");
-							improved_reason = std::regex_replace(
-								improved_reason, r,
-								"Transfer common input files failure"
-							);
-							holdJob( improved_reason.c_str(), code, subcode );
-						}
+						holdJob( improved_reason.c_str(), code, subcode );
 					}
 
 					guidance.Clear();
