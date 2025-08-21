@@ -14,7 +14,7 @@ Build-Depends: cmake (>= 3.16),
 #else
                debhelper-compat (= 13),
 #endif
-#if ! defined(PPC64LE)
+#if !defined(PPC64LE)
                default-jdk,
 #endif
                dh-python,
@@ -80,8 +80,8 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.18.0),
-         pelican-osdf-compat (>= 7.18.0),
+         pelican (>= 7.18.1),
+         pelican-osdf-compat (>= 7.18.1),
 #endif
          libjs-bootstrap,
          libjs-jquery,

@@ -1,12 +1,23 @@
 *** 23.10.29 bugs
 
+- Fixed a bug where Flock Collectors could be forgotten after
+  having a connection interruption.
+  :jira:`3200`
+
+- Fixed a bug where a *condor_schedd* would not attempt to flock
+  to collectors in the :macro:`FLOCK_TO` list when a communication
+  failure occurred to a collector earlier in the list.
+  :jira:`3200`
+
 *** 23.0.29 bugs
 
 *** 23.10.28 features
 
-- HTCondor tarballs now contain `Pelican 7.18.0 <https://pelicanplatform.org/releases>`_
+- HTCondor tarballs now contain `Pelican 7.18.1 <https://pelicanplatform.org/releases>`_
 
-- The condor package now requires pelican-7.18.0.
+- The condor package now requires pelican-7.18.1.
+
+- HTCondor tarballs now contain `Apptainer 1.4.2 <https://github.com/apptainer/apptainer/releases/tag/v1.4.2>`_
 
 *** 23.10.28 bugs
 

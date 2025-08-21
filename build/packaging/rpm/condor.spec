@@ -285,11 +285,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.18.0
+Requires: pelican >= 7.18.1
 %else
-Requires: (pelican >= 7.18.0 or pelican-debug >= 7.18.0)
+Requires: (pelican >= 7.18.1 or pelican-debug >= 7.18.1)
 %endif
-Requires: pelican-osdf-compat >= 7.18.0
+Requires: pelican-osdf-compat >= 7.18.1
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -492,7 +492,6 @@ Requires: python2-cryptography
 Requires: python2-scitokens
 %else
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-six
 Requires: python3-cryptography
 Requires: python3-scitokens
 %endif
@@ -531,7 +530,6 @@ Summary: Vault credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-six
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
 %endif
