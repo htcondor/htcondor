@@ -19,6 +19,10 @@
   remote history queries will not have a negative impact on the *condor_schedd*
   :jira:`3215`
 
+- :tool:`condor_userprio` now no longer needs the negotiator to be running
+  if it only needs the collector to get userprio data.
+  :jira:`3221`
+
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
   and htchirp.py to work correctly inside a docker universe job.
