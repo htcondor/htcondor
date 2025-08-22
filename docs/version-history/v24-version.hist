@@ -19,12 +19,6 @@
   remote history queries will not have a negative impact on the *condor_schedd*
   :jira:`3215`
 
-- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
-  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
-  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
-  jobs which go over :ad-attr:`Memory` in a timely manner.
-  :jira:`3224`
-
 - :tool:`condor_userprio` now no longer needs the negotiator to be running
   if it only needs the collector to get userprio data.
   :jira:`3221`
@@ -70,6 +64,14 @@
 
 - Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
   :jira:`3225`
+
+*** 24.11.3 features
+
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
+  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
+  jobs which go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
 
 *** 24.11.2 features
 
