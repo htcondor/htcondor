@@ -170,9 +170,9 @@ TEST_CASES = [
 
     # Verify that specifying a GPU type or a GPU count for a queue without
     # GPUs fails.
-    ( ['normal@stampede2'], True ),
-    ( ['normal@stampede2', '--gpus', '1'], False ),
-    ( ['normal@stampede2', '--gpu-type', 'default'], False ),
+    ( ['RM@bridges2'], True ),
+    ( ['RM@bridges2', '--gpus', '1'], False ),
+    ( ['RM@bridges2', '--gpu-type', 'default'], False ),
 
     # Verify that not specifying a GPU type, or specifying an invalid GPU
     # type, for a GPU queue that requires one fails.
@@ -187,11 +187,11 @@ TEST_CASES = [
     ( ['gpu@anvil', '--nodes', '2', '--gpus', '4', '--gpu-type', 'a_type' ], False ),
 
     # Verify that queues respect max_duration.
-    ( ['normal@stampede2', '--nodes', '2', '--lifetime', str((48 * 60 * 60) - 1)], True ),
-    ( ['normal@stampede2', '--nodes', '2', '--lifetime', str((48 * 60 * 60) + 1)], False ),
+    ( ['shared@spark', '--cpus', '2', '--lifetime', str((7 * 24 * 60 * 60) - 1)], True ),
+    ( ['shared@spark', '--cpus', '2', '--lifetime', str((7 * 24 * 60 * 60) + 1)], False ),
 
-    ( ['development@stampede2', '--nodes', '2', '--lifetime', str((2 * 60 * 60) - 1)], True ),
-    ( ['development@stampede2', '--nodes', '2', '--lifetime', str((2 * 60 * 60) + 1)], False ),
+    ( ['int@spark', '--cpus', '2', '--lifetime', str((4 * 60 * 60) - 1)], True ),
+    ( ['int@spark', '--cpus', '2', '--lifetime', str((4 * 60 * 60) + 1)], False ),
 
     ( ['wholenode@anvil', '--nodes', '2', '--lifetime', str((96 * 60 * 60) - 1)], True ),
     ( ['wholenodel@anvil', '--nodes', '2', '--lifetime', str((96 * 60 * 60) + 1)], False ),

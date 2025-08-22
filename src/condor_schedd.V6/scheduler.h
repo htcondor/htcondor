@@ -169,6 +169,10 @@ struct SubmitterCounters {
   int SchedulerJobsIdle;    // Scheduler Universe (i.e dags)
   int LocalJobsRunning; // Local universe
   int LocalJobsIdle;    // Local universe
+  int OCUClaims; // OCU Claims held indefinitely by this submitter
+  int OCUClaimsBorrowed; // OCU Claims in use by someone other than the owner
+  int OCUWantedJobs; // Total number of idle+running jobs that want an OCU claim
+  int OCURunningJobs; // Running number of jobs that want an OCU Claim
   int Hits;  // used in the mark/sweep algorithm of count_jobs to detect Owners that no longer have any jobs in the queue.
   int JobsCounted; // smaller than Hits by the number of match recs for this Owner.
 //  int JobsRecentlyAdded; // zeroed on each sweep, incremented on submission.
@@ -182,6 +186,10 @@ struct SubmitterCounters {
 	, JobsFlocked(0)
 	, SchedulerJobsRunning(0), SchedulerJobsIdle(0)
 	, LocalJobsRunning(0), LocalJobsIdle(0)
+	, OCUClaims(0)
+	, OCUClaimsBorrowed(0)
+	, OCUWantedJobs(0)
+	, OCURunningJobs(0)
 	, Hits(0)
 	, JobsCounted(0)
 //	, JobsRecentlyAdded(0)
@@ -216,8 +224,10 @@ struct SubmitterData {
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
 
 class JobQueueUserRec;
+class JobQueueProjectRec;
 typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
+typedef std::map<std::string, JobQueueProjectRec*, classad::CaseIgnLTStr> ProjectInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
@@ -545,7 +555,8 @@ class Scheduler : public Service
 	void			spawnShadow( shadow_rec* );
 	void			spawnLocalStarter( shadow_rec* );
 	bool			claimLocalStartd();
-	bool			isStillRunnable( int cluster, int proc, int &status ); 
+	bool			isStillRunnable( int cluster, int proc, int &status );
+
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
@@ -559,6 +570,7 @@ class Scheduler : public Service
 	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
+
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
@@ -618,6 +630,7 @@ class Scheduler : public Service
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
 	const ClassAd & getUserRecDefaultsAd() const { return m_userRecDefaultsAd; }
+	const ClassAd & getProjectRecDefaultsAd() const { return m_projectRecDefaultsAd; }
 	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
 	const std::string & getExtendedSubmitHelpFile() const { return m_extendedSubmitHelpFile; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
@@ -687,14 +700,16 @@ class Scheduler : public Service
 	classad::References MinimalSigAttrs;
 
 	int		nextUnusedUserRecId();
-	JobQueueUserRec * jobqueue_newUserRec(int userrec_id);
+	JobQueueUserRec * jobqueue_newUserRec(int userrec_id, const char * mytype);
 	void jobqueue_deleteUserRec(JobQueueUserRec * uad);
-	void mapPendingOwners();
+	void jobqueue_deleteProject(JobQueueProjectRec * pjad);
+	void mapPendingOwners(); // pending owners can be either userrec or projectrec
 	// these are used during startup to handle the case where jobs have Owner/User attributes but
 	// there is no persistnt JobQueueUserRec in the job_queue
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
 	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
+	bool HasPersistentProjectInfo() const { return EnablePersistentProjectInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
@@ -706,6 +721,10 @@ class Scheduler : public Service
 		return subdat;
 	}
 	void incrementRecentlyAdded(OwnerInfo * ownerinfo);
+	JobQueueProjectRec * find_projectinfo(const char * project_name);
+	JobQueueProjectRec * get_projectinfo(JobQueueJob * job);
+	// find a project record or insert a pending project record
+	JobQueueProjectRec * insert_projectinfo(const char * project_name);
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
@@ -771,6 +790,7 @@ private:
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
 	ClassAd             m_userRecDefaultsAd;
+	ClassAd             m_projectRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
 	ClassAd             m_local_starter_ad;
@@ -800,6 +820,7 @@ private:
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
 	bool			EnablePersistentOwnerInfo;
+	bool			EnablePersistentProjectInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
@@ -838,6 +859,7 @@ private:
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
+	ProjectInfoMap  ProjectInfo;   // map of JobQueueProjectRec ads by project name
 
 	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
@@ -934,8 +956,11 @@ private:
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
 	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
-					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
+	int			act_on_project(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserRecAttributesInfo & info);
 	void		remove_unused_owners();
+	bool		any_userrec_refs(JobQueueUserRec * urec); // returns true if any schedd data structures are holding this given ptr
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }

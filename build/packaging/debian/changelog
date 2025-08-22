@@ -1,3 +1,70 @@
+condor (24.11.2-1) stable; urgency=medium
+
+  * Add job attributes to track why and how often a job is vacated
+  * Add the ability to notify a user when their job first starts
+  * Can now specify which Vault servers are trusted
+  * Added htcondor2.ping() to the Python bindings
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:18:00 -0500
+
+condor (24.0.11-1) stable; urgency=medium
+
+  * Initial support for Debian 13 (trixie)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:11:00 -0500
+
+condor (23.10.28-1) stable; urgency=medium
+
+  * Exit -code and -signal environment variables are now set for Docker jobs
+  * Fix issue where ImageSize was over-reported on the Windows platform
+  * HTCondor tarballs now contain Pelican 7.18.1 and Apptainer 1.4.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:04:00 -0500
+
+condor (23.0.28-1) stable; urgency=medium
+
+  * Fix condor_token_request to accept automatically-approved tokens
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 06:55:00 -0500
+
+condor (24.10.3-1) stable; urgency=medium
+
+  * Fix condor_store_cred bug that broke installing with get_htcondor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Aug 2025 08:08:00 -0500
+
+condor (24.10.2-1) stable; urgency=medium
+
+  * Remove support for old JobRouter syntax
+  * New condor_dag_checker tool finds syntax and logic errors before run
+  * New condor_q -hold-codes produces a summary of held jobs
+  * condor_status -lvm reports current disk usage by slots on the EPs
+  * Fix bug where condor_q would truncate job counts to six digits
+  * Fix bug where suspended jobs did not change state to idle when vacated
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 10:23:00 -0500
+
+condor (24.0.10-1) stable; urgency=medium
+
+  * All changes in 23.0.27 and 23.10.27
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 10:04:00 -0500
+
+condor (23.10.27-1) stable; urgency=medium
+
+  * Fix bug where the vacate reason was not propagated back to the user
+  * HTCondor tarballs now contain Pelican 7.17.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 09:58:00 -0500
+
+condor (23.0.27-1) stable; urgency=medium
+
+  * Fix bug where condor_ssh_to_job failed when EP scratch path is too long
+  * Fix incorrect time reported by htcondor status for long running jobs
+  * Fix bug where .job.ad, .machine.ad files were missing when LVM is in use
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 24 Jul 2025 09:49:00 -0500
+
 condor (24.9.2-1) stable; urgency=medium
 
   * New job attribute to report number of input files transferred by protocol

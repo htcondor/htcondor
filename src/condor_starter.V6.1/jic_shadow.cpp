@@ -2248,7 +2248,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		formatstr( updateAdPath, "%s/%s",
 			starter->GetWorkingDir(0), ".update.ad"
 		);
-		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
 			formatstr( updateAdPath, "%s/%s",
 				starter->GetWorkingDir(0), "../htcondor/.update.ad"
 			);
@@ -3051,9 +3051,13 @@ JICShadow::initIOProxy( void )
 	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
 		condor_sockaddr *bindTo = NULL;
-		struct in_addr addr;
-		addr.s_addr = htonl(0xac110001);
-		condor_sockaddr dockerInterface(addr);
+
+		condor_sockaddr dockerInterface;
+		condor_sockaddr dockerInterfaceV6;   // not used;
+		condor_sockaddr dockerInterfaceBest; // also not used;
+		std::string docker_network_name;
+		param(docker_network_name, "DOCKER_NETWORK_NAME", "docker0");
+		network_interface_to_sockaddr("DOCKER_NETWORK_NAME", docker_network_name.c_str(), dockerInterface, dockerInterfaceV6, dockerInterfaceBest);
 
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
@@ -3630,6 +3634,7 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
     // The execute directory is now owned by the user and mode 0700 by default.
 	TemporaryPrivSentry sentry(PRIV_USER);
 	if ( get_priv_state() != PRIV_USER ) {
+		fclose(file);
 		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
 		return;
 	}

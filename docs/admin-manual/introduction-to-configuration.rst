@@ -838,6 +838,11 @@ as given in these definitions.
 
 ``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
 
+``$BASENAME(filename, suffix-to-remove)`` expands to the basename without
+    the file extension or extensions when the filename ends with suffix-to-remove.
+    It bahaves like ``$Fnx(filename)`` when the filename does not end with
+    suffix-to-remove.  Use this to remove nested suffixes like ``.tar.gz``.
+
 ``$INT(item-to-convert)`` or ``$INT(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert``. The ``format-specifier`` has the same syntax as

@@ -42,6 +42,8 @@
 
 #include "ipv6_hostname.h"
 
+int Daemon::m_next_sec_context_id = 1;
+
 void
 Daemon::common_init() {
 	_type = DT_NONE;
@@ -52,7 +54,6 @@ Daemon::common_init() {
 	_tried_init_version = false;
 	_is_configured = true;
 	_error_code = CA_SUCCESS;
-	m_daemon_ad_ptr = NULL;
 	char buf[200];
 	snprintf(buf,sizeof(buf),"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
 	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
@@ -138,6 +139,8 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_HAD:
 		_subsys = "HAD";
 		break;
+	case DT_ANY:
+		break;
 	default:
 		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
 				"Daemon object", (int)_type, daemonString(_type) );
@@ -154,7 +157,7 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 			 _name.c_str(), _pool.c_str(), _addr.c_str() );
 
 	// let's have our own copy of the daemon's ad in this case.
-	m_daemon_ad_ptr = new ClassAd(*tAd);	
+	m_daemon_ad = *tAd;
 
 }
 
@@ -208,10 +211,10 @@ Daemon::deepCopy( const Daemon &copy )
 	_tried_init_hostname = copy._tried_init_hostname;
 	_tried_init_version = copy._tried_init_version;
 	_is_configured = copy._is_configured;
-	if(copy.m_daemon_ad_ptr) {
-		m_daemon_ad_ptr = new ClassAd(*copy.m_daemon_ad_ptr);
-	}
+	m_daemon_ad = copy.m_daemon_ad;
 
+	m_sec_context_id = copy.m_sec_context_id;
+	m_preferred_token = copy.m_preferred_token;
 	m_owner = copy.m_owner;
 	m_methods = copy.m_methods;
 
@@ -233,7 +236,6 @@ Daemon::~Daemon()
 		display( D_HOSTNAME );
 		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
 	}
-	if( m_daemon_ad_ptr) { delete m_daemon_ad_ptr; }
 }
 
 
@@ -243,56 +245,54 @@ Daemon::~Daemon()
 
 ClassAd *
 Daemon::locationAd() {
-	if( m_daemon_ad_ptr ) {
+	if( !m_daemon_ad.empty() ) {
 		// dprintf( D_ALWAYS, "locationAd(): found daemon ad, returning it\n" );
-		return m_daemon_ad_ptr;
+		return &m_daemon_ad;
 	}
 
-	if( m_location_ad_ptr ) {
+	if( !m_location_ad.empty() ) {
 		// dprintf( D_ALWAYS, "locationAd(): found location ad, returning it\n" );
-		return m_location_ad_ptr;
+		return &m_location_ad;
 	}
 
-	ClassAd * locationAd = new ClassAd();
 	const char * buffer = NULL;
 
 	buffer = this->addr();
 	if(! buffer) { goto failure; }
-	if(! locationAd->InsertAttr(ATTR_MY_ADDRESS, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_MY_ADDRESS, buffer)) { goto failure; }
 
 	buffer = this->name();
 	if(! buffer) { buffer = "Unknown"; }
-	if(! locationAd->InsertAttr(ATTR_NAME, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_NAME, buffer)) { goto failure; }
 
 	buffer = this->fullHostname();
 	if(! buffer) { buffer = "Unknown"; }
-	if(! locationAd->InsertAttr(ATTR_MACHINE, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_MACHINE, buffer)) { goto failure; }
 
 	/* This will inevitably be overwritten by CondorVersion(), below,
 	   so I don't know what the original was attempting accomplish here. */
 	buffer = this->version();
 	if(! buffer) { buffer = ""; }
-	if(! locationAd->InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
 
 	AdTypes ad_type;
 	if(! convert_daemon_type_to_ad_type(this->type(), ad_type)) { goto failure; }
 	buffer = AdTypeToString(ad_type);
 	if(! buffer) { goto failure; }
-	if(! locationAd->InsertAttr(ATTR_MY_TYPE, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_MY_TYPE, buffer)) { goto failure; }
 
 	buffer = CondorVersion();
-	if(! locationAd->InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
 
 	buffer = CondorPlatform();
-	if(! locationAd->InsertAttr(ATTR_PLATFORM, buffer)) { goto failure; }
+	if(! m_location_ad.InsertAttr(ATTR_PLATFORM, buffer)) { goto failure; }
 
 	// dprintf( D_ALWAYS, "locationAd(): synthesized location ad, returning it.\n" );
-	m_location_ad_ptr = locationAd;
-	return m_location_ad_ptr;
+	return &m_location_ad;
 
   failure:;
 	// dprintf( D_ALWAYS, "Daemon::locationAd() failed.\n" );
-	delete locationAd;
+	m_location_ad.Clear();
 	return NULL;
 }
 
@@ -556,7 +556,7 @@ Daemon::connectSock(Sock *sock, time_t sec, CondorError* errstack, bool non_bloc
 
 
 StartCommandResult
-Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man )
+Daemon::startCommand_internal( SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -564,6 +564,14 @@ Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, time_t ti
 
 	// NOTE: if there is a callback function, we _must_ guarantee that it is
 	// eventually called in all code paths.
+
+	if (m_use_new_sec_context_id) {
+		m_sec_context_id = m_next_sec_context_id++;
+		m_use_new_sec_context_id = false;
+	}
+	if (m_sec_context_id > 0) {
+		formatstr(req.m_sec_context_tag, "daemon:%d", m_sec_context_id);
+	}
 
 	ASSERT(req.m_sock);
 
@@ -640,6 +648,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout
 	req.m_nonblocking = nonblocking;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -663,6 +672,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, Condor
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -759,6 +769,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorErr
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -781,6 +792,7 @@ Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
+	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -1142,15 +1154,15 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 	char				*host = NULL;
 	bool				nameHasPort = false;
 
-	if ( _subsys.empty() ) {
-		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
-		return false;
-	}
-
 	if( ! _addr.empty() && is_valid_sinful(_addr.c_str()) ) {
 		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
 		_is_local = false;
 		return true;
+	}
+
+	if ( _subsys.empty() ) {
+		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
+		return false;
 	}
 
 		// If we were not passed a name or an addr, check the
@@ -1382,12 +1394,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		if ( ! getInfoFromAd( scan ) ) {
 			return false;
 		}
-		if( !m_daemon_ad_ptr) {
+		if( m_daemon_ad.empty()) {
 			// I don't think we can ever get into a case where we already
 			// have located the daemon and have a copy of its ad, but just
 			// in case, don't stash another copy of it if we can't find it.
 			// I hope this is a deep copy wiht no chaining bullshit
-			m_daemon_ad_ptr = new ClassAd(*scan);	
+			m_daemon_ad = *scan;
 		}
 			// The version and platfrom aren't critical, so don't
 			// return failure if we can't find them...
@@ -1727,7 +1739,7 @@ Daemon::initVersion( void )
 		// If we didn't find the version string via locate(), and
 		// we're a local daemon, try to ident the daemon's binary
 		// directly. 
-	if( _version.empty() && _is_local ) {
+	if( _version.empty() && _is_local && !_subsys.empty()) {
 		dprintf( D_HOSTNAME, "No version string in local address file, "
 				 "trying to find it in the daemon's binary\n" );
 		char* exe_file = param( _subsys.c_str() );
@@ -1924,8 +1936,8 @@ Daemon::readLocalClassAd( const char* subsys )
 	adFromFile = new ClassAd;
 	InsertFromFile(addr_fp, *adFromFile, "...", adIsEOF, errorReadingAd, adEmpty);
 	ASSERT(adFromFile);
-	if(!m_daemon_ad_ptr) {
-		m_daemon_ad_ptr = new ClassAd(*adFromFile);
+	if(m_daemon_ad.empty()) {
+		m_daemon_ad = *adFromFile;
 	}
 	std::unique_ptr<ClassAd> smart_ad_ptr(adFromFile);
 	
@@ -1963,13 +1975,15 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	initStringFromAd( ad, ATTR_NAME, _name );
 
 		// construct the IP_ADDR attribute
-	formatstr( buf, "%sIpAddr", _subsys.c_str() );
-	if ( ad->LookupString( buf, buf2 ) ) {
-		Set_addr(buf2);
-		found_addr = true;
-		addr_attr_name = buf;
+	if (!_subsys.empty()) {
+		formatstr(buf, "%sIpAddr", _subsys.c_str());
+		if ( ad->LookupString(buf, buf2) ) {
+			Set_addr(buf2);
+			found_addr = true;
+			addr_attr_name = buf;
+		}
 	}
-	else if ( ad->LookupString( ATTR_MY_ADDRESS, buf2 ) ) {
+	if ( !found_addr && ad->LookupString(ATTR_MY_ADDRESS, buf2) ) {
 		Set_addr(buf2);
 		found_addr = true;
 		addr_attr_name = ATTR_MY_ADDRESS;

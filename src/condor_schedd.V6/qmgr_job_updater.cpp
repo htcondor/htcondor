@@ -109,9 +109,11 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		"TransferInQueued",
 		"TransferInStarted",
 		"TransferInFinished",
+		ATTR_NUM_INPUT_XFER_STARTS,
 		"TransferOutQueued",
 		"TransferOutStarted",
 		"TransferOutFinished",
+		ATTR_NUM_OUTPUT_XFER_STARTS,
 		ATTR_TRANSFER_INPUT_STATS,
 		ATTR_TRANSFER_OUTPUT_STATS,
 		ATTR_NUM_JOB_STARTS,
@@ -176,6 +178,7 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_HOLD_REASON_CODE,
 		ATTR_HOLD_REASON_SUBCODE,
 		ATTR_LAST_VACATE_TIME,
+		ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL,
 		ATTR_VACATE_REASON,
 		ATTR_VACATE_REASON_CODE,
 		ATTR_VACATE_REASON_SUBCODE
@@ -183,6 +186,7 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 
 	evict_job_queue_attrs = {
 		ATTR_LAST_VACATE_TIME,
+		ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL,
 		ATTR_VACATE_REASON,
 		ATTR_VACATE_REASON_CODE,
 		ATTR_VACATE_REASON_SUBCODE

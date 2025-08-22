@@ -63,7 +63,7 @@ is a list of items that administrators should be aware of.
   JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES,
   JOB_ROUTER_ENTRIES_FILE, and JOB_ROUTER_ENTRIES_CMD)
   is no longer supported and will be removed during the
-  lifetime of the **V24** feature series.
+  lifetime of the **25.x** feature series.
   The new route language (configuration macros :macro:`JOB_ROUTER_ROUTE_<name>`,
   :macro:`JOB_ROUTER_TRANSFORM_<name>` :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`,
   and :macro:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`) should be used instead.

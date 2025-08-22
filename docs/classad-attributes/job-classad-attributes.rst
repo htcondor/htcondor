@@ -1128,8 +1128,17 @@ all attributes.
     that can reconnected: those in the **vanilla** and **java**
     universes.
 
+:classad-attribute-def:`NumInputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the input sandbox. This number will always be between :ad-attr:`NumShadowStarts`
+    and :ad-attr:`NumJobStarts` inclusive.
+
 :classad-attribute-def:`NumJobStarts`
     An integer count of the number of times the job started executing.
+
+:classad-attribute-def:`NumOutputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the output sandbox.
 
 :classad-attribute-def:`NumPids`
     A count of the number of child processes that this job has.
@@ -1163,6 +1172,33 @@ all attributes.
     since HTCondor-G will always place a job on hold when it gives up on
     some error condition. Note that if the user places the job on hold
     using the :tool:`condor_hold` command, this attribute is not incremented.
+
+:classad-attribute-def:`NumVacates`
+    An integer value that will increment every time a job leaves the running state and returns to the idle state.
+    It may be undefined until the job has been vacated at least once.
+
+:classad-attribute-def:`NumVacatesByReason`
+    The value of this attribute is a (nested) classad containing a count of how many times a job has been
+    vacated (left running state and returned to the idle state) grouped by the reason the job was vacated.
+    It may be undefined until the job has been vacated
+    at least once. Each attribute name in this classad is
+    a NumVacateByReason label; see the table above under 
+    the documentation for job attribute :ad-attr:`VacateReasonCode` for a table of possible values. Each attribute
+    value is an integer stating how many times the job was vacated for that specific reason.
+    In addition, if the job was vacated due to TransferInputError or TransferOuputError, an additional
+    attribute count is added with the file transfer protocol appended that was responsible for the error.
+    For example, if a job was vacated four times, once due to a startd shutdown, once due to a claim deactivation,
+    and twice due to a transfer input error both involving the CEDAR protocol (the protocol used by HTCondor to move files between the AP and the
+    EP), the value of this attribute would look like this:
+
+    .. code-block:: condor-classad
+
+        NumVacates = 4
+        NumVacatesByReason = [ StartdShutdown = 1; ClaimDeactivated = 1; TransferInputError = 2; TransferInputErrorCedar = 2 ]
+
+    Note in the above example there is both TransferInputError (count across all protocols) and TransferInputErrorCedar (count specific to the CEDAR protocol).
+    Possible values for the protocol depend upon the file transfer plug-ins that are configured in the HTCondor pool, but may include
+    ``Cedar``, ``Http``, ``S3``, ``Pelican``, ``Ftp``, and others.
 
 :classad-attribute-def:`OSHomeDir`
     This attribute is only set in the starter's copy of the job ad, and expands
@@ -1906,7 +1942,8 @@ all attributes.
     The below table defines values used by
     attributes :ad-attr:`VacateReasonCode` and
     :ad-attr:`VacateReasonSubCode`.
-    Values defined for :ad-attr:`HoldReasonCode` are also valid here
+    Values defined for :ad-attr:`HoldReasonCode` are also valid values for
+    :ad-attr:`VacateReasonCode`.
 
     .. include:: ../codes-other-values/vacate-reason-codes.rst
         :start-line: 3

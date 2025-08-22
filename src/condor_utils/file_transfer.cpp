@@ -1838,6 +1838,11 @@ FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
 		                                  tmp_buf,
 		                                  nleft);
 
+		if (nread < 0) {
+			delete [] tmp_buf;
+			return false;
+		}
+
 		buf.insert(buf.size(), tmp_buf, nread);
 		nleft -= nread;
 

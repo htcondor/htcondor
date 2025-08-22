@@ -232,12 +232,25 @@ int SetAttributeExpr(int cluster, int proc, const char *attr,
 int SetSecureAttributeInt(int cluster_id, int proc_id,
                          const char *attr_name, int attr_value,
                          SetAttributeFlags_t flags = 0);
+int SetSecureAttributeInt(const JOB_ID_KEY & key,
+                         const char *attr_name, long long int_value,
+                         SetAttributeFlags_t flags = 0);
 int SetSecureAttribute(int cluster_id, int proc_id,
-                         const char *attr_name, const char *attr_value, 
+                         const char *attr_name, const char *attr_value,
+                         SetAttributeFlags_t flags = 0);
+int SetSecureAttribute(const JOB_ID_KEY & key,
+                         const char *attr_name, const classad::Value & attr_value,
+                         SetAttributeFlags_t flags = 0);
+int SetSecureAttribute(const JOB_ID_KEY & key,
+                         const char *attr_name, const char *unparsed_expr,
                          SetAttributeFlags_t flags = 0);
 int SetSecureAttributeString(int cluster_id, int proc_id, 
                          const char *attr_name, const char *attr_value, 
                          SetAttributeFlags_t flags = 0);
+int SetSecureAttributeString(const JOB_ID_KEY & key,
+                         const char *attr_name, std::string_view attr_value,
+                         SetAttributeFlags_t flags = 0);
+int DeleteSecureAttribute(const JOB_ID_KEY & key, const char * attr_name);
 
 /** Set LastJobLeaseRenewalReceived = <xact start time> and
     JobLeaseDurationReceived = dur for the specified cluster/proc.

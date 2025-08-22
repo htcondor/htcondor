@@ -27,20 +27,9 @@
 #include <assert.h>
 #include "classad_functional_tester.h"
 
-using std::string;
-using std::vector;
-using std::pair;
-using std::map;
-using std::cin;
-using std::cout;
-using std::cerr;
-using std::ifstream;
-using std::ofstream;
-using std::endl;
-
 using namespace classad;
 
-typedef map<string, Variable *> VariableMap;
+typedef std::map<std::string, Variable *> VariableMap;
 
 /*--------------------------------------------------------------------
  *
@@ -82,7 +71,7 @@ public:
 	bool      debug;
     bool      verbose;
     bool      interactive;
-    ifstream  *input_file;
+    std::ifstream  *input_file;
 
 	Parameters() { input_file = NULL; }
     ~Parameters() { if (input_file) delete input_file; }
@@ -99,7 +88,7 @@ public:
     PrintFormat format;
 };
 
-typedef map<string, Variable *> VariableMap;
+typedef std::map<std::string, Variable *> VariableMap;
 
 /*--------------------------------------------------------------------
  *
@@ -107,41 +96,41 @@ typedef map<string, Variable *> VariableMap;
  *
  *--------------------------------------------------------------------*/
 
-bool read_line(string &line, State &state, Parameters &parameters);
-bool read_line_stdin(string &line, State &state, Parameters &parameters);
-bool read_line_file(string &line, State &state, Parameters &parameters);
-bool replace_variables(string &line, State &state, Parameters &parameters);
-Command get_command(string &line, Parameters &parameters);
-bool get_variable_name(string &line, bool swallow_equals, string &variable_name, 
+bool read_line(std::string &line, State &state, Parameters &parameters);
+bool read_line_stdin(std::string &line, State &state, Parameters &parameters);
+bool read_line_file(std::string &line, State &state, Parameters &parameters);
+bool replace_variables(std::string &line, State &state, Parameters &parameters);
+Command get_command(std::string &line, Parameters &parameters);
+bool get_variable_name(std::string &line, bool swallow_equals, std::string &variable_name, 
                        State &state, Parameters &parameters);
-bool get_file_name(string &line, string &variable_name, State &state,
+bool get_file_name(std::string &line, std::string &variable_name, State &state,
                    Parameters &parameters);
-ExprTree *get_expr(string &line, State &state, Parameters &parameters);
-void get_two_exprs(string &line, ExprTree *&tree1, ExprTree *&tree2, 
+ExprTree *get_expr(std::string &line, State &state, Parameters &parameters);
+void get_two_exprs(std::string &line, ExprTree *&tree1, ExprTree *&tree2, 
                    State &state, Parameters &parameters);
 void print_expr(ExprTree *tree, State &state, Parameters &parameters);
 bool evaluate_expr(ExprTree *tree, Value &value, Parameters &parameters);
-void shorten_line(string &line, int offset);
-bool handle_command(Command command, string &line, State &state, 
+void shorten_line(std::string &line, int offset);
+bool handle_command(Command command, std::string &line, State &state, 
                     Parameters &parameters);
-void handle_let(string &line, State &state, Parameters &parameters);
-void handle_eval(string &line, State &state, Parameters &parameters);
-void handle_same(string &line, State &state, Parameters &parameters);
-void handle_sameq(string &line, State &state, Parameters &parameters);
-void handle_diff(string &line, State &state, Parameters &parameters);
-void handle_diffq(string &line, State &state, Parameters &parameters);
-void handle_set(string &line, State &state, Parameters &parameters);
-void handle_show(string &line, State &state, Parameters &parameters);
-void handle_writexml(string &line, State &state, Parameters &parameters);
-void handle_readxml(string &line, State &state, Parameters &parameters);
-void handle_echo(string &line, State &state, Parameters &parameters);
-void handle_print(string &line, State &state, Parameters &parameters);
+void handle_let(std::string &line, State &state, Parameters &parameters);
+void handle_eval(std::string &line, State &state, Parameters &parameters);
+void handle_same(std::string &line, State &state, Parameters &parameters);
+void handle_sameq(std::string &line, State &state, Parameters &parameters);
+void handle_diff(std::string &line, State &state, Parameters &parameters);
+void handle_diffq(std::string &line, State &state, Parameters &parameters);
+void handle_set(std::string &line, State &state, Parameters &parameters);
+void handle_show(std::string &line, State &state, Parameters &parameters);
+void handle_writexml(std::string &line, State &state, Parameters &parameters);
+void handle_readxml(std::string &line, State &state, Parameters &parameters);
+void handle_echo(std::string &line, State &state, Parameters &parameters);
+void handle_print(std::string &line, State &state, Parameters &parameters);
 void handle_help(void);
 void print_version(void);
 void print_error_message(const char *error, State &state);
-void print_error_message(string &error, State &state);
+void print_error_message(std::string &error, State &state);
 void print_final_state(State &state);
-bool line_is_comment(string &line);
+bool line_is_comment(std::string &line);
 bool expr_okay_for_xml_file(ExprTree *tree, State &state, Parameters &parameters);
 
 /*********************************************************************
@@ -172,9 +161,9 @@ void Parameters::ParseCommandLine(
 		} else {
 			if (input_file == NULL) {
                 interactive = false;
-				input_file = new ifstream(argv[arg_index]);
+				input_file = new std::ifstream(argv[arg_index]);
                 if (input_file->bad()) {
-                    cout << "Could not open file '" << argv[arg_index] <<"'.\n";
+                    std::cout << "Could not open file '" << argv[arg_index] <<"'.\n";
                     exit(1);
                 }
 			}
@@ -205,7 +194,7 @@ State::State()
  *
  *********************************************************************/
 Variable::Variable(
-    string  &name, 
+    std::string  &name, 
     ExprTree *tree)
 {
     _name    = name;
@@ -221,7 +210,7 @@ Variable::Variable(
  *
  *********************************************************************/
 Variable::Variable(
-    string &name, 
+    std::string &name, 
     Value  &value)
 {
     _name    = name;
@@ -253,7 +242,7 @@ Variable::~Variable()
  *
  *********************************************************************/
 void Variable::GetStringRepresentation(
-    string &representation)
+    std::string &representation)
 {
     ClassAdUnParser unparser;
 
@@ -278,7 +267,7 @@ int main(
     char **argv)
 {
     bool        quit;
-    string      line;
+    std::string      line;
     State       state;
     Parameters  parameters;
 
@@ -288,7 +277,7 @@ int main(
 
     while (!quit && read_line(line, state, parameters) == true) {
         bool      good_line;
-        string    error;
+        std::string    error;
         Command   command;
 
         good_line = replace_variables(line, state, parameters);
@@ -317,7 +306,7 @@ int main(
  *
  *********************************************************************/
 bool read_line(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -338,7 +327,7 @@ bool read_line(
  *
  *********************************************************************/
 bool read_line_stdin(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &)
 {
@@ -347,21 +336,21 @@ bool read_line_stdin(
     line = "";
     have_input = true;
 
-    if (cin.eof()) {
+    if (std::cin.eof()) {
         have_input = false;
     } else {
         bool   in_continuation = false;
         bool   done = false;
-        string line_segment;
+        std::string line_segment;
 
-        cout << "> ";
+        std::cout << "> ";
 
         while (!done) {
-            getline(cin, line_segment, '\n');
+            getline(std::cin, line_segment, '\n');
             if (line_is_comment(line_segment)) {
                 // ignore comments
                 if (in_continuation) {
-                    cout << "? ";
+                    std::cout << "? ";
                     continue;
                 } else {
                     have_input = true;
@@ -371,16 +360,16 @@ bool read_line_stdin(
             }
             line += line_segment;
             state.line_number++;
-            if (cin.eof() && line.size() == 0) {
+            if (std::cin.eof() && line.size() == 0) {
                 have_input = false;
             } else {
                 have_input = true;
             }
-            if (line[line.size()-1] == '\\' && !cin.eof()) {
+            if (line[line.size()-1] == '\\' && !std::cin.eof()) {
                 in_continuation = true;
                 line = line.substr(0, line.size()-1); // chop off trailing /
                 done = false;
-                cout << "? ";
+                std::cout << "? ";
             } else {
                 done = true;
             }
@@ -390,7 +379,7 @@ bool read_line_stdin(
     if (!have_input) {
         // The user did not explicitly quit, but the end of input
         // was reached. So print out a newline to look nice.
-        cout << endl;
+        std::cout << std::endl;
     }
 
     return have_input;
@@ -403,13 +392,13 @@ bool read_line_stdin(
  *
  *********************************************************************/
 bool read_line_file(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
     bool           have_input;
     static bool    have_cached_line = false;
-    static string  cached_line = "";
+    static std::string  cached_line = "";
 
     // We read a line, either from our one-line cache, or the file.
     if (!have_cached_line) {
@@ -465,19 +454,19 @@ bool read_line_file(
  *
  *********************************************************************/
 bool replace_variables(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
     bool    good_line;
-    string  error;
+    std::string  error;
 
     good_line = true;
     error = "";
     for (;;) {
         size_t      dollar, current_position;
-        string   variable_name;
-        string   variable_value;
+        std::string   variable_name;
+        std::string   variable_value;
         Variable *var;
 
         current_position = 0;
@@ -512,7 +501,7 @@ bool replace_variables(
 
         // We have to be careful with substr() because with gcc 2.96, it likes to 
         // assert/except if you give it values that are too large.
-        string end;
+        std::string end;
         if (current_position < line.size()) {
             end = line.substr(current_position);
         } else {
@@ -523,7 +512,7 @@ bool replace_variables(
     
 
     if (parameters.debug) {
-        cerr << "# after replacement: " << line << endl;
+		std::cerr << "# after replacement: " << line << std::endl;
     }
     
     if (!good_line) {
@@ -540,12 +529,12 @@ bool replace_variables(
  *
  *********************************************************************/
 Command get_command(
-    string     &line, 
+    std::string     &line, 
     Parameters &)
 {
     int      current_position;
     int      length;
-    string   command_name;
+    std::string   command_name;
     Command  command;
    
     current_position = 0;
@@ -608,7 +597,7 @@ Command get_command(
  *********************************************************************/
 bool handle_command(
     Command    command, 
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -674,11 +663,11 @@ bool handle_command(
  *
  *********************************************************************/
 void handle_let(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
-    string    variable_name;
+    std::string    variable_name;
     ExprTree  *tree;
     Variable  *variable;
 
@@ -702,11 +691,11 @@ void handle_let(
  *
  *********************************************************************/
 void handle_eval(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
-    string    variable_name;
+    std::string    variable_name;
     ExprTree  *tree;
     Variable  *variable;
 
@@ -723,7 +712,7 @@ void handle_eval(
 					classad::ClassAdUnParser unp;
 					std::string s;
 					unp.Unparse(s, value);
-                    cout << s << endl;
+                    std::cout << s << std::endl;
                 }
             }
         }
@@ -738,7 +727,7 @@ void handle_eval(
  *
  *********************************************************************/
 void handle_print(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -759,7 +748,7 @@ void handle_print(
  *
  *********************************************************************/
 void handle_same(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -769,13 +758,13 @@ void handle_same(
     get_two_exprs(line, tree, tree2, state, parameters);
     if (tree != NULL || tree2 != NULL) {
         if (parameters.debug) {
-            cout << "Sameeval has two trees: \n";
-            cout << " "; 
+            std::cout << "Sameeval has two trees: \n";
+            std::cout << " "; 
             print_expr(tree, state, parameters); 
-            cout << endl;
-            cout << " "; 
+            std::cout << std::endl;
+            std::cout << " "; 
             print_expr(tree2, state, parameters);
-            cout << endl;
+            std::cout << std::endl;
         }
         if (!evaluate_expr(tree, value1, parameters)) {
             print_error_message("Couldn't evaluate first expression.\n", state);
@@ -788,9 +777,9 @@ void handle_same(
 				std::string s2;
 				unp.Unparse(s1, value1);
 				unp.Unparse(s2, value2);
-                cout << "They evaluated to: \n";
-                cout << " " << s1 << endl;
-                cout << " " << s2 << endl;
+                std::cout << "They evaluated to: \n";
+                std::cout << " " << s1 << std::endl;
+                std::cout << " " << s2 << std::endl;
             }
             print_error_message("the expressions are different.", state);
         }
@@ -812,7 +801,7 @@ void handle_same(
  *
  *********************************************************************/
 void handle_sameq(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -840,7 +829,7 @@ void handle_sameq(
  *
  *********************************************************************/
 void handle_diff(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -873,7 +862,7 @@ void handle_diff(
  *
  *********************************************************************/
 void handle_diffq(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
@@ -901,12 +890,12 @@ void handle_diffq(
  *
  *********************************************************************/
 void handle_set(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
-    string  option_name;
-    string  option_value;
+    std::string  option_name;
+    std::string  option_value;
 
     if (get_variable_name(line, false, option_name, state, parameters)) {
         if (get_variable_name(line, false, option_value, state, parameters)) {
@@ -937,27 +926,27 @@ void handle_set(
  *
  *********************************************************************/
 void handle_show(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
-    string  option_name;
+    std::string  option_name;
 
     if (get_variable_name(line, false, option_name, state, parameters)) {
         if (option_name == "format") {
-            cout << "Format: ";
+            std::cout << "Format: ";
             switch (state.format) {
             case print_Compact:
-                cout << "Traditional Compact\n";
+                std::cout << "Traditional Compact\n";
                 break;
             case print_Pretty:
-                cout << "Traditional Pretty\n";
+                std::cout << "Traditional Pretty\n";
                 break;
             case print_XML:
-                cout << "XML Compact\n";
+                std::cout << "XML Compact\n";
                 break;
             case print_XMLPretty:
-                cout << "XML Pretty\n";
+                std::cout << "XML Pretty\n";
                 break;
             }
         } else {
@@ -975,13 +964,13 @@ void handle_show(
  *
  *********************************************************************/
 void handle_writexml(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
-    string    filename;
+    std::string    filename;
     ExprTree  *expr;
-    ofstream  xml_file;
+    std::ofstream  xml_file;
 
     expr = NULL;
     if (get_file_name(line, filename, state, parameters)) {
@@ -989,14 +978,14 @@ void handle_writexml(
             if (expr_okay_for_xml_file(expr, state, parameters)) {
                 xml_file.open(filename.c_str());
                 if (xml_file.bad()) {
-                    string error_message;
+                    std::string error_message;
                     error_message = "Can't open ";
                     error_message += filename;
                     error_message += " for output";
                     print_error_message(error_message, state);
                 } else {
                     ClassAdXMLUnParser unparser;
-                    string             classad_text;
+                    std::string             classad_text;
 
                     xml_file << "<classads>\n";
 
@@ -1012,7 +1001,7 @@ void handle_writexml(
                             classad = *iter;
                             classad_text = "";
                             unparser.Unparse(classad_text, classad);
-                            xml_file << classad_text << endl;
+                            xml_file << classad_text << std::endl;
                         }
                     }
                     xml_file << "</classads>\n";
@@ -1033,19 +1022,19 @@ void handle_writexml(
  *
  *********************************************************************/
 void handle_readxml(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &parameters)
 {
-    string    variable_name;
-    string    file_name;
+    std::string    variable_name;
+    std::string    file_name;
 
     if (get_variable_name(line, false, variable_name, state, parameters)) {
         if (get_file_name(line, file_name, state, parameters)) {
             FILE *xml_file = fopen(file_name.c_str(), "r");
 
             if (!xml_file) {
-                string error;
+                std::string error;
                 error = "Can't read file: ";
                 error += file_name;
                 print_error_message(error, state);
@@ -1080,11 +1069,11 @@ void handle_readxml(
  *
  *********************************************************************/
 void handle_echo(
-    string     &line, 
+    std::string     &line, 
     State      &, 
     Parameters &)
 {
-    string new_line = "";
+    std::string new_line = "";
     int    index;
 
     index = 0;
@@ -1097,7 +1086,7 @@ void handle_echo(
         index++;
     }
 
-    cout << new_line << endl;
+    std::cout << new_line << std::endl;
     return;
 }
 
@@ -1111,26 +1100,26 @@ void handle_help(void)
 {
     print_version();
 
-    cout << "\n";
-    cout << "Commands:\n";
-    cout << "let name = expr   Set a variable to an unevaluated expression.\n";
-    cout << "eval name = expr  Set a variable to an evaluated expression.\n";
-    cout << "same expr1 expr2  Prints a message only if expr1 and expr2 are different.\n";
-    cout << "sameq expr1 expr2 Prints a message only if expr1 and expr2 are different.\n";
-    cout <<"                   same evaluates its expressions first, sameq doesn't.\n";
-    cout << "diff expr1 expr2  Prints a message only if expr1 and expr2 are the same.\n";
-    cout << "diffq expr1 expr2 Prints a message only if expr1 and expr2 are the same.\n";
-    cout <<"                   diff evaluates its expressions first, diffq doesn't.\n";
-    cout << "set opt value     Sets an option to a particular value.\n";
-    cout << "quit              Exit this program.\n";
-    cout << "help              Print this message.\n";
-    cout << "\n";
-    cout << "Options (for the set command):\n";
-    cout << "format              Set the way ClassAds print.\n";
-    cout << "  compact           A compact, traditional style\n";
-    cout << "  pretty            Traditional, with more spaces\n";
-    cout << "  xml               A compact XML representation\n";
-    cout << "  xmlpretty         XML with extra spacing for readability.\n";
+    std::cout << "\n";
+    std::cout << "Commands:\n";
+    std::cout << "let name = expr   Set a variable to an unevaluated expression.\n";
+    std::cout << "eval name = expr  Set a variable to an evaluated expression.\n";
+    std::cout << "same expr1 expr2  Prints a message only if expr1 and expr2 are different.\n";
+    std::cout << "sameq expr1 expr2 Prints a message only if expr1 and expr2 are different.\n";
+    std::cout <<"                   same evaluates its expressions first, sameq doesn't.\n";
+    std::cout << "diff expr1 expr2  Prints a message only if expr1 and expr2 are the same.\n";
+    std::cout << "diffq expr1 expr2 Prints a message only if expr1 and expr2 are the same.\n";
+    std::cout <<"                   diff evaluates its expressions first, diffq doesn't.\n";
+    std::cout << "set opt value     Sets an option to a particular value.\n";
+    std::cout << "quit              Exit this program.\n";
+    std::cout << "help              Print this message.\n";
+    std::cout << "\n";
+    std::cout << "Options (for the set command):\n";
+    std::cout << "format              Set the way ClassAds print.\n";
+    std::cout << "  compact           A compact, traditional style\n";
+    std::cout << "  pretty            Traditional, with more spaces\n";
+    std::cout << "  xml               A compact XML representation\n";
+    std::cout << "  xmlpretty         XML with extra spacing for readability.\n";
     return;
 }
 
@@ -1141,9 +1130,9 @@ void handle_help(void)
  *
  *********************************************************************/
 bool get_variable_name(
-    string     &line, 
+    std::string     &line, 
     bool       swallow_equals, 
-    string     &variable_name, 
+    std::string     &variable_name, 
     State      &state,
     Parameters &parameters)
 {
@@ -1190,9 +1179,9 @@ bool get_variable_name(
 
     if (parameters.debug) {
         if (have_good_name) {
-            cout << "# Got variable name: " << variable_name << endl;
+            std::cout << "# Got variable name: " << variable_name << std::endl;
         } else {
-            cout << "# Bad variable name: " << variable_name << endl;
+            std::cout << "# Bad variable name: " << variable_name << std::endl;
         }
     }
 
@@ -1207,8 +1196,8 @@ bool get_variable_name(
  *
  *********************************************************************/
 bool get_file_name(
-    string     &line, 
-    string     &variable_name, 
+    std::string     &line, 
+    std::string     &variable_name, 
     State      &state,
     Parameters &parameters)
 {
@@ -1238,9 +1227,9 @@ bool get_file_name(
 
     if (parameters.debug) {
         if (have_good_name) {
-            cout << "# Got file name: " << variable_name << endl;
+            std::cout << "# Got file name: " << variable_name << std::endl;
         } else {
-            cout << "# Bad file name: " << variable_name << endl;
+            std::cout << "# Bad file name: " << variable_name << std::endl;
         }
     }
 
@@ -1255,7 +1244,7 @@ bool get_file_name(
  *
  *********************************************************************/
 ExprTree *get_expr(
-    string     &line, 
+    std::string     &line, 
     State      &state, 
     Parameters &)
 {
@@ -1282,7 +1271,7 @@ ExprTree *get_expr(
  *
  *********************************************************************/
 void get_two_exprs(
-    string     &line, 
+    std::string     &line, 
     ExprTree   *&tree1, 
     ExprTree   *&tree2, 
     State      &state, 
@@ -1298,9 +1287,9 @@ void get_two_exprs(
         tree2 = NULL;
     } else {
         if (parameters.debug) {
-            cout << "# Tree1: "; 
+            std::cout << "# Tree1: "; 
             print_expr(tree1, state, parameters); 
-            cout << endl;
+            std::cout << std::endl;
         }
     
         if (parser.PeekToken() != Lexer::LEX_COMMA) {
@@ -1318,11 +1307,11 @@ void get_two_exprs(
                 delete tree1;
                 tree1 = NULL;
             } else if (parameters.debug){
-                cout << "# Tree2: "; 
+                std::cout << "# Tree2: "; 
                 print_expr(tree2, state, parameters); 
-                cout << "# Tree1: "; 
+                std::cout << "# Tree1: "; 
                 print_expr(tree1, state, parameters); 
-                cout << endl;
+                std::cout << std::endl;
             }
         }
     }
@@ -1342,7 +1331,7 @@ void print_expr(
     State      &state,
     Parameters &)
 {
-    string output;
+    std::string output;
 
     if (state.format == print_Compact) {
         ClassAdUnParser unparser;
@@ -1359,7 +1348,7 @@ void print_expr(
         unparser.SetCompactSpacing(false);
         unparser.Unparse(output, tree);
     }
-    cout << output << endl;
+    std::cout << output << std::endl;
     return;
 }
 
@@ -1390,7 +1379,7 @@ bool evaluate_expr(
  *
  *********************************************************************/
 void shorten_line(
-    string &line, 
+    std::string &line, 
     int    offset)
 {
     // We have to be careful with substr() because with gcc 2.96, it likes to 
@@ -1411,11 +1400,11 @@ void shorten_line(
  *********************************************************************/
 void print_version(void)
 {
-    string classad_version;
+    std::string classad_version;
 
     ClassAdLibraryVersion(classad_version);
 
-    cout << "ClassAd Functional Tester v" << classad_version << endl;
+    std::cout << "ClassAd Functional Tester v" << classad_version << std::endl;
 
     return;
 }
@@ -1430,7 +1419,7 @@ void print_error_message(
     const char  *error, 
     State &state)
 {
-    string error_s = error;
+    std::string error_s = error;
     print_error_message(error_s, state);
     return;
 }
@@ -1443,10 +1432,10 @@ void print_error_message(
  *
  *********************************************************************/
 void print_error_message(
-    string &error, 
+    std::string &error, 
     State  &state)
 {
-    cout << "* Line " << state.line_number << ": " << error << endl;
+    std::cout << "* Line " << state.line_number << ": " << error << std::endl;
     state.number_of_errors++;
     return;
 }
@@ -1461,17 +1450,17 @@ void print_final_state(
     State &state)
 {
     if (state.number_of_errors == 0) {
-        cout << "No errors.\n";
+        std::cout << "No errors.\n";
     } else if (state.number_of_errors == 1) {
-        cout << "1 error.\n";
+        std::cout << "1 error.\n";
     } else {
-        cout << state.number_of_errors << " errors\n";
+        std::cout << state.number_of_errors << " errors\n";
     }
     return;
 }
 
 bool line_is_comment(
-    string &line)
+    std::string &line)
 {
     bool is_comment;
 
@@ -1494,7 +1483,7 @@ bool expr_okay_for_xml_file(
         is_okay = true;
     } else if (tree->GetKind() != ExprTree::EXPR_LIST_NODE) {
         is_okay = false;
-        cout << "We have " << (int) tree->GetKind() << endl;
+        std::cout << "We have " << (int) tree->GetKind() << std::endl;
     } else {
         ExprList *list = (ExprList *) tree;
         ExprList::iterator  iter;
@@ -1505,7 +1494,7 @@ bool expr_okay_for_xml_file(
 
             element = *iter;
             if (element->GetKind() != ExprTree::CLASSAD_NODE) {
-                cout << "Inside list, we have " << (int) tree->GetKind() << endl;
+                std::cout << "Inside list, we have " << (int) tree->GetKind() << std::endl;
                 is_okay = false;
                 break;
             }
