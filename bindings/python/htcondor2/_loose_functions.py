@@ -133,7 +133,7 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, s
                      or a :class:`classad2.ClassAd` describing the daemon
                      as returned by :meth:`Collector.locate`.
     :param str authz: Authorization level or command to test.
-    :param security: SecurityContext to use for authenteication.
+    :param security: SecurityContext to use for authentication.
     """
 
     addr = None
