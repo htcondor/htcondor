@@ -1,3 +1,9 @@
+*** 24.0.12 features
+
+- Updated :tool:`condor_upgrade_check` to test for well known gotchas
+  between v24 and v25 of HTCondor installations.
+  :jira:`3209`
+
 *** 24.0.12 bugs
 
 - Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
