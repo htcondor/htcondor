@@ -1,3 +1,5 @@
+*** 24.11.3 features
+
 *** 24.11.2 features
 
 - Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
