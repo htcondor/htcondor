@@ -366,7 +366,9 @@ private:
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
-	long long c_image_size;	// ImageSize from last call to updateUsage
+	long long c_image_size;	// ImageSize (total_image_size) from last call to updateUsage
+	long long c_cur_rss{0}; // current (not peak) ResidentSetSize from updateUsage
+	long long c_peak_rss{0};// peak ResidentSetSize from updateUsage
 
 	std::string c_vacate_reason;
 	int c_vacate_code{0};
