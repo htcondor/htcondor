@@ -115,4 +115,4 @@ Availability
 
 Linux, MacOS, Windows
 
-Introduced in v24.10.0 of HTCondor
+Introduced in v24.10.1 of HTCondor

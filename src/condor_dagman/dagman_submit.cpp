@@ -84,7 +84,7 @@ struct NodeVar {
 // Check if node var key is in specified list of items to defer (True add to other structure) return True for deferred
 static bool check_defer_var(std::vector<NodeVar>& deferred, const NodeVar& var, const std::set<std::string>& key_filter) {
 	if (key_filter.contains(var.key)) {
-		deferred.push_back(std::move(var));
+		deferred.push_back(var);
 		return true;
 	}
 	return false;

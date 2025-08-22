@@ -26,8 +26,6 @@
 #include <math.h>
 
 using std::string;
-using std::pair;
-
 
 namespace classad {
 
@@ -52,7 +50,7 @@ int get_random_integer(void)
     static char initialized = 0;
 
 	if (!initialized) {
-        int seed = time(NULL);
+        time_t seed = time(NULL);
         srand48(seed);
         initialized = 1;
 	}

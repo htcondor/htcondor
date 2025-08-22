@@ -661,16 +661,19 @@ public:
 
 		// Set the owner for this daemon; if possible, always
 		// authenticate with the remote daemon as this owner.
-	void setOwner(const std::string &owner) {m_owner = owner;}
+	void setOwner(const std::string &owner) {m_owner = owner; m_use_new_sec_context_id = true;}
 	const std::string &getOwner() const {return m_owner;}
 
 		// Set the authentication methods to use with this daemon object;
 		// overrides those built-in to the param table.
-	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
+	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods; m_use_new_sec_context_id = true;}
 	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
 
 	void setSecSessionId(const std::string& sess_id) { m_sec_session_id = sess_id; }
 	const std::string& getSecSessionId() { return m_sec_session_id; }
+
+	void setPreferredToken(const std::string& token) { m_preferred_token = token; m_use_new_sec_context_id = true; }
+	const std::string& getPreferredToken() { return m_preferred_token; }
 
 protected:
 	// Data members
@@ -915,7 +918,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man );
+	StartCommandResult startCommand_internal( SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -943,11 +946,15 @@ private:
 	// and folks who try to do something different will get a compile-time error
 	// unless they use DaemonAllowLocateFull::locate().
 
-	ClassAd *m_daemon_ad_ptr;
+	ClassAd m_daemon_ad;
 
-	ClassAd * m_location_ad_ptr = NULL;
+	ClassAd m_location_ad;
 
 	std::string m_trust_domain;
+
+	static int m_next_sec_context_id;
+	int m_sec_context_id{0};
+	bool m_use_new_sec_context_id{false};
 
 		// The virtual 'owner' of this collector object
 	std::string m_owner;
@@ -955,6 +962,10 @@ private:
 		// The security session to use for each command.
 		// If empty, find/create a session automatically
 	std::string m_sec_session_id;
+
+		// When authenticating with IDTokens, use this token if possible
+		// (i.e. issuer and signing key match the server),
+	std::string m_preferred_token;
 
 		// Authentication method overrides
 	std::vector<std::string> m_methods;
@@ -985,7 +996,7 @@ public:
 			should be prepared for this method to return NULL.
 			The caller must copy the classad it gets back!
 		  */
-	ClassAd *daemonAd() { locate(LOCATE_FULL); return m_daemon_ad_ptr; }
+	ClassAd *daemonAd() { locate(LOCATE_FULL); return &m_daemon_ad; }
 
 };
 

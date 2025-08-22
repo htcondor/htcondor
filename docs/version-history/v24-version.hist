@@ -1,12 +1,148 @@
-*** 24.11.0 features
+*** 24.12.0 features
 
-*** 24.11.0 bugs
+- :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
+  (instead of :attr:`Name`) when trying to find *condor_startd* daemons, if
+  if the ``name`` argument is not the name of a slot.  This allows programmers
+  to call :meth:`htcondor2.Collector.locate` using the fully-qualified domain
+  name and get a result from a collector whether or not
+  :macro:`ENABLE_STARTD_DAEMON_AD` is set.
+  :jira:`2911`
+
+- Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
+  defaults to false.  When true, and running on a cgroup enable system, local
+  universe jobs must specify :subcom:`request_memory`, and the job exceeds that
+  limit, it will be put on hold.
+  :jira:`3170`
+
+- :macro:`HISTORY_HELPER_MAX_HISTORY` defalt raise from 10,000 to 2,000,000,000
+  effectively removing the limit.  We now believe that running large
+  remote history queries will not have a negative impact on the *condor_schedd*
+  :jira:`3215`
+
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
+  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
+  jobs which go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
+
+- :tool:`condor_userprio` now no longer needs the negotiator to be running
+  if it only needs the collector to get userprio data.
+  :jira:`3221`
+
+- Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
+  which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
+  and htchirp.py to work correctly inside a docker universe job.
+  :jira:`3197`
+
+- :tool:`condor_watch_q` will now exit upon key press from keyboard.
+  :jira:`3199`
+
+- Added new :ad-attr:`NumInputTransferStarts` and :ad-attr:`NumOutputTransferStarts`
+  counters to the job record.
+  :jira:`3194`
+
+- If the file listed in :subcom:`log` is in a directory that does not exist, HTCondor
+  will now try to create that directory (as the user).  Previously, it ran the
+  job without a user log file.
+  :jira:`3210`
+
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to true.  When false,
+  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  directory.  When true, the job's scratch directory is a subdirectory thereof, named
+  "scratch", with the intention that all condor metadata files will be moved to peer 
+  directories, and not pollute the job's scratch directory with condor control files.
+  :jira:`3080`
+
+- Added optional second argument for the macro expansion function ``$BASENAME()`` that
+  specifies the file extension or suffix to remove.
+  :jira:`3206`
+
+- :tool:`condor_adstash` now parses and stores per-attempt transfer error data when
+  reading transfer epoch history.
+  :jira:`3122`
+
+*** 24.12.0 bugs
+
+- Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
+  :jira:`3208`
+
+*** 24.0.12 bugs
+
+- Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
+  :jira:`3225`
+
+*** 24.11.2 features
+
+- Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
+  These attributes provide counts about why a job left the running state without
+  completing (i.e. was vacated from the execution point).
+  :jira:`3204`
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3133`
+
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
+
+- The new Python API now includes `htcondor2.ping()`, which operates like
+  `htcondor.SecMan.ping()` in the old API.
+  :jira:`3180`
+
+- The :tool:`htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
+  The ``condor_annex`` tool has been withdrawn; use :tool:`htcondor annex`
+  instead.
+  :jira:`1630`
+
+- Added new python method "get_claims" to the schedd object, which returns
+  the classads of the claimed slots.
+  :jira:`3181`
+
+- Add --version flag to the :tool:`htcondor` tool.
+  :jira:`3091`
+
+*** 24.11.2 bugs
+
+- When responding to a ping request for the ALLOW authorization level,
+  daemons no longer require authentication.
+  :jira:`3195`
+
+*** 24.0.11 features
+
+- Initial support for Debian 13 (trixie).
+  :jira:`3212`
 
 *** 24.0.11 bugs
 
-*** 24.10.0 features
+*** 24.10.3 bugs
 
-- The new Python API now includes `htcondor2.disable_debug()`, which is
+- Fixed a bug introduced in version 24.10.2 that caused
+  `condor_store_cred add` to fail.
+  :jira:`3213`
+
+*** 24.10.2 features
+
+- In the *condor_job_router*, the old ClassAd-based route syntax
+  (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
+  is no longer supported.
+  :jira:`3118`
+
+- Added new :tool:`condor_dag_checker` tool for users to check DAG files
+  for syntactical and logical errors prior to submission.
+  :jira:`3088`
+
+- Improvements to :tool:`condor_q` for held jobs. The hold code and subcode are
+  now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
+  displays the first job for each unique hold code and subcode.
+  :jira:`3127`
+
+- Added new ``-lvm`` option to :tool:`condor_status` to view current disk usage
+  of slots enforcing disk limits. This option can be paired with ``-startd`` to
+  show information about execution points enforcing disk limits.
+  :jira:`3119`
+
+- The new Python API now includes :py:meth:`htcondor2.disable_debug`, which is
   intended interactive use (after debugging a problem).
   :jira:`3003`
 
@@ -15,36 +151,26 @@
   timeout had expired.  This change should reduce incidents of this behavior.
   :jira:`3028`
 
-- Execution Points enforcing disk limits will now subtract the size of
-  pre-existing logical volumes from the advertised available disk. Any
-  logical volumes associated with HTCondor are not subtracted.
-  :jira:`3119`
-
-- Added new ``-lvm`` option to :tool:`condor_status` to view current disk usage
-  of slots enforcing disk limits. This option can be paired with ``-startd`` to
-  show information about execution points enforcing disk limits.
-  :jira:`3119`
-
-- Added new :tool:`condor_dag_checker` tool for users to check DAG files
-  for syntactical and logical errors prior to submission.
-  :jira:`3088`
-
-- In the *condor_job_router*, the old ClassAd-based route syntax
-  (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
-  is no longer supported.
-  :jira:`3118`
-
-- Improvements to *condor_q* for held jobs. The hold code and subcode are
-  now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
-  displays the first job for each unique hold code and subcode.
-  :jira:`3127`
-
 - Improvements to observability of common files transfer, including new entries
   in the shadow and starter daemon logs; a new CommonFiles event in the
   job/user event log; and a new transfer entry in the epoch history.
   :jira:`3052`
 
-*** 24.10.0 bugs
+*** 24.10.2 bugs
+
+- Fixed a bug in :tool:`condor_q` default output where counts of jobs could be truncated to 6 digits.
+  :jira:`3106`
+
+- Fixed a bug introduced in HTCondor version 24.8.0 where a job in Suspended
+  status wouldn't change to Idle status when evicted from an EP.
+  This resulted in the job not being considered for scheduling, among other
+  problems.
+  :jira:`3174`
+
+- Execution Points enforcing disk limits will now subtract the size of
+  pre-existing logical volumes from the advertised available disk. Any
+  logical volumes associated with HTCondor are not subtracted.
+  :jira:`3119`
 
 - Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
   OAuth2 credential was a plain user-provided access token.
@@ -56,9 +182,6 @@
 
 - Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
   :jira:`3104`
-
-- Fixed a bug in *condor_q* default output where counts of jobs could be truncated to 6 digits.
-  :jira:`3106`
 
 - Fixed an issue where a job may take an additional 20 minutes to be scheduled to run after leaving cool-down mode.
   See configuration knob :macro:`SYSTEM_ON_VACATE_COOL_DOWN` for more information about job cool-down mode.

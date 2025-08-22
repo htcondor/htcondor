@@ -3538,7 +3538,7 @@ int SubmitHash::SetArguments()
 	bool args_success = true;
 	std::string error_msg;
 
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
 		std::string value;
@@ -4051,7 +4051,7 @@ int SubmitHash::SetExecutable()
 	}
 
 	char *shell = submit_param(SUBMIT_KEY_Shell);
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			return 0;
@@ -9565,8 +9565,12 @@ process_job_credentials(
 		}
 
 		if (call_storer) {
-			if( my_system(storer_args) != 0 ) {
-				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
+			int rc = my_system(storer_args);
+			if (rc < 0) {
+				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
+				return 1;
+			} else if (rc > 0) {
+				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
 				return 1;
 			}
 		}

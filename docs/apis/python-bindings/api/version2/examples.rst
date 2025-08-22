@@ -172,3 +172,42 @@ file transfer event in a log to date:
     for e in jel.events(stop_after=0):
         if e.type == htcondor2.JobEventType.FILE_TRANSFER:
             print(htcondor2.FileTransferEventType(e["type"]))
+
+
+Using :data:`htcondor2.DaemonType.Startd` to find Daemons
+---------------------------------------------------------
+
+Prior to :ref:`version-history/feature-versions-23-x:Version 23.9.6`,
+the *condor_startd* advertised one ad for each slot.  If you called
+:meth:`htcondor2.Collector.locate` with the name of a slot, you would
+get the address of that *condor_startd*.
+
+In :ref:`version-history/feature-versions-23-x:Version 23.9.6`,
+:macro:`ENABLE_STARTD_DAEMON_AD` became enabled by default, and the
+*condor_startd* now also advertises an ad about the whole machine.  When
+talking to collectors so configured, the ``name`` parameter must be name of
+the daemon, which defaults to the full-qualified domain name; the query will
+not return slot ads.
+
+In either case, the :attr:`Machine` attribute will be the fully-qualified
+domain name of the host on which the *condor_startd* is runinng, so you can
+use that to look for *condor_startd*\ s without knowing the precise configuration
+of the collector(s) you're asking.
+
+As of :ref:`version-history/feature-versions-24-x:Version 24.12.0`, this is
+done for you if the ``name`` parameter does not contain an ``@`` character.
+
+For earlier versions, something like the following will work.
+
+.. code-block:: python
+
+    import htcondor2
+
+
+    c = htcondor2.Collector()
+    query = "'Machine == 'ep.condor.example'"
+    # The current locate projection.
+    projection = ['Name', 'Machine', 'AddressV1', 'MyAddress', 'CondorVersion', 'CondorPlatform']
+    r = c.query( htcondor2.AdType.Startd, query, projection )
+    # query() is more like locateAll(), in that it returns a list.
+    print(r[0])

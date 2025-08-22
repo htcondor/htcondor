@@ -221,6 +221,13 @@ findTokens(const std::string &issuer,
         std::string &token,
         std::string &signature)
 {
+	const std::string& tag_token_contents = SecMan::getTagPreferredToken();
+	if (!tag_token_contents.empty() &&
+		checkToken(tag_token_contents, issuer, server_key_ids, "", username, token, signature))
+	{
+		return true;
+	}
+
 	const std::string &token_contents = SecMan::getToken();
 	if (!token_contents.empty() &&
 		checkToken(token_contents, issuer, server_key_ids, "", username, token, signature))
@@ -3039,6 +3046,10 @@ Condor_Auth_Passwd::should_try_auth()
 	if (has_named_creds) {
 		dprintf(D_SECURITY|D_VERBOSE,
 			"Can try token auth because we have at least one named credential.\n");
+		return true;
+	}
+
+	if (!SecMan::getTagPreferredToken().empty() || !SecMan::getToken().empty()) {
 		return true;
 	}
 

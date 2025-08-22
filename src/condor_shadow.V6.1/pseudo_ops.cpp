@@ -46,6 +46,8 @@
 #include "shortfile.h"
 #include "single_provider_syndicate.h"
 
+#include <regex>
+
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
@@ -1216,11 +1218,11 @@ UniShadow::after_common_file_transfer(
 		this->cfLocks.erase(cifName);
 		delete cfLock;
 
-		// If we before even starting the file transfer, reschedule the job
-		// as if the file transfer has failed believing it could be tried
-		// again, but FIXME: with a cool down, to avoid hitting the same
-		// problem on the EP again.  (We don't have a default value for
-		// SYSTEM_ON_VACATE_COOL_DOWN?  Really?)
+
+		// Determine if the _request_ failed.  (If it succeeded, then we
+		// can check to see if the _transfer_ failed.)  If it failed,
+		// reschedule the job FIXME: with a cool-down to avoid re-runnning
+		// on the same slot.
 		bool should_cool_down = false;
 
 		int requestResultCode = (int)RequestResult::Invalid;
@@ -1237,18 +1239,82 @@ UniShadow::after_common_file_transfer(
 			this->jobAd->Assign( ATTR_REQUEST_RESULT_SUBCODE, requestResultSubcode );
 		}
 
-		const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
-		if( info.try_again || should_cool_down ) {
+		// According ToddT (on 2025-08-21), the `try_again` field
+		// has only ever been intended for immediate starter-side
+		// retries of CEDAR transfers.  (There's certainly nothing
+		// in the plug-in interface, ignoring the incomplete
+		// HTCONDOR-3064.)  So we'll just ignore it here; that means
+		// that the only case we vacate for is a failure to attempt
+		// common files transfer at all.
+		if( should_cool_down ) {
 			// Consider replacing this with a delayed (zero-second
 			// timer) call to evictJob().
 			this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
-			this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
+			this->jobAd->Assign(ATTR_VACATE_REASON, "Common file transfer failed to start.");
+			// See comment below about which codes we're using here.
 			this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
 			remRes->setExitReason(JOB_SHOULD_REQUEUE);
 			remRes->killStarter(false);
+		}
+
+
+		//
+		// Improve the starter's hold/vacate reason.
+		//
+		// From JICShadow::transferInputStatus().
+		//
+		const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
+
+		std::string reason = "Failed to transfer files: ";
+		if(! info.error_desc.empty()) {
+			reason += info.error_desc;
 		} else {
-			holdJob( "Failed to transfer common files.", CONDOR_HOLD_CODE::JobNotStarted, 3 );
+		    reason += " reason unknown.";
+		}
+
+		// This is not common file -specific...
+		// we know if it's a hold or a vacate.
+		int code = info.hold_code;
+		int subcode = info.hold_subcode;
+		std::string url_file_type;
+		std::string improved_reason = improveReasonAttributes(
+				reason.c_str(),
+				code, subcode, url_file_type
+		);
+
+		// ... so go ahead and clean it up now.
+		if( improved_reason.empty() ) {
+			improved_reason = reason;
+		} else {
+			std::regex r("Transfer input files failure");
+			improved_reason = std::regex_replace(
+				improved_reason, r,
+				"Transfer common input files failure"
+			);
+		}
+
+		// FIXME: Will this be correct for a starter-side failure?
+		dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
+			info.error_desc.c_str(), info.hold_code, info.hold_subcode
+		);
+
+		// This seems wrong -- improveReasonAttributes() could
+		// have changed the hold code and sub-code even if it
+		// didn't produce and improved string -- but it's how
+		// the original code in evictJob() worked.
+		if( improved_reason.empty() ) {
+			holdJob( info.error_desc.c_str(), code, subcode );
+		} else {
+			// improveReasonAttribute() will not specify that
+			// job is going on hold because of _common_ input
+			// transfer, so fix it here.
+			std::regex r("Transfer input files failure");
+			improved_reason = std::regex_replace(
+				improved_reason, r,
+				"Transfer common input files failure"
+			);
+			holdJob( improved_reason.c_str(), code, subcode );
 		}
 
 		return false;

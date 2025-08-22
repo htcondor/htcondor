@@ -193,7 +193,9 @@ int main(int argc, const char *argv[]) {
 	if (options.audience) {
 		cred_info.Assign("audience", options.audience);
 	}
-	cred_info.Assign(ATTR_NEED_REFRESH, !options.plain);
+	if (cred_type == STORE_CRED_USER_OAUTH) {
+		cred_info.Assign(ATTR_NEED_REFRESH, !options.plain);
+	}
 
 	// determine where to direct our command
 	daemon = NULL;

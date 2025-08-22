@@ -161,6 +161,11 @@ public:
 	*/
 	bool GetTransactionKeys( std::set<std::string> &keys );
 
+	/* get an ordered list of keys mentioned in the transaction, new keys in the 
+	*  first collection and keys that are mentioned but not new in the second collection
+	*/
+	bool GetAllTransactionKeys( std::vector<K> & new_keys, std::vector<K> & exist_keys );
+
 		// increase non-durable commit level
 		// if > 0, begin non-durable commits
 		// return old level
@@ -906,6 +911,25 @@ bool ClassAdLog<K,AD>::GetTransactionKeys( std::set<std::string> &keys )
 	active_transaction->KeysInTransaction( keys );
 	return true;
 }
+
+/* get an ordered list of keys mentioned in the transaction, new keys in the 
+*  first collection and keys that are mentioned but not new in the second collection
+*/
+template <typename K, typename AD>
+bool ClassAdLog<K,AD>::GetAllTransactionKeys( std::vector<K> & new_keys, std::vector<K> & exist_keys )
+{
+	if ( ! active_transaction) { return false; }
+	for (auto & [key,lrec] : active_transaction->OrderedOpsByKey()) {
+		if (key.empty() || ! lrec || lrec->empty()) continue;
+		if (lrec->front()->get_op_type() == CondorLogOp_NewClassAd) {
+			new_keys.emplace_back(key);
+		} else {
+			exist_keys.emplace_back(key);
+		}
+	}
+	return true;
+}
+
 
 
 #endif
