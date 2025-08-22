@@ -1477,6 +1477,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.28-1
+- Exit -code and -signal environment variables are now set for Docker jobs
+- Fix issue where ImageSize was over-reported on the Windows platform
+- HTCondor tarballs now contain Pelican 7.18.1 and Apptainer 1.4.2
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
+- Fix condor_token_request to accept automatically-approved tokens
+
 * Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.27-1
 - Fix bug where the vacate reason was not propagated back to the user
 - HTCondor tarballs now contain Pelican 7.17.2

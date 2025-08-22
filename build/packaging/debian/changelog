@@ -1,3 +1,17 @@
+condor (23.10.28-1) stable; urgency=medium
+
+  * Exit -code and -signal environment variables are now set for Docker jobs
+  * Fix issue where ImageSize was over-reported on the Windows platform
+  * HTCondor tarballs now contain Pelican 7.18.1 and Apptainer 1.4.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:04:00 -0500
+
+condor (23.0.28-1) stable; urgency=medium
+
+  * Fix condor_token_request to accept automatically-approved tokens
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 06:55:00 -0500
+
 condor (23.10.27-1) stable; urgency=medium
 
   * Fix bug where the vacate reason was not propagated back to the user
