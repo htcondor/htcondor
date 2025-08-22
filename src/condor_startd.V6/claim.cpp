@@ -315,6 +315,20 @@ Claim::publish( ClassAd* cad )
 		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
 		// also the CpusUsage value
 		cad->Assign(ATTR_CPUS_USAGE, c_cpus_usage);
+
+		// when we are using the procd for memory usage reporting, the STARTD only sees
+		// update for memory usage when the starter updates both the shadow and the STARTD
+		// which happens about every 5 Minutes.  this is far too slow for policy evaluation.
+		// 
+		// We want to refresh RSS in the ad whenever we refresh ImageSize in the ad if
+		// we are getting RSS updates from the procd. Right now, we only know for sure
+		// that we are getting updates from the proc on windows. thus #ifdef WIN32
+	#ifdef WIN32
+		// TODO: make this conditional on cgroup memory tracking, instead of WIN32
+		cad->Assign(ATTR_RESIDENT_SET_SIZE, c_peak_rss);
+	#endif
+		//TODO: fix it so that c_cur_rss is not a peak value, then advertise it.
+		//cad->Assign("Cur" ATTR_RESIDENT_SET_SIZE, c_cur_rss);
 	}
 
 	// If this claim is for vm universe, update some info about VM
@@ -1517,6 +1531,8 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 {
 	percentCpuUsage = 0.0;
 	imageSize = 0;
+	long long cur_rss = 0;
+	long long peak_rss = 0;
 	if (c_starter_pid) {
 		Starter *starter = findStarterByPid(c_starter_pid);
 		if ( ! starter) {
@@ -1525,10 +1541,19 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 		const ProcFamilyUsage & usage = starter->updateUsage();
 		percentCpuUsage = usage.percent_cpu;
 		imageSize = usage.total_image_size;
+		cur_rss = usage.total_resident_set_size; // TJ: v24.12 procd seems to be returning peak RSS on Windows
+		peak_rss = usage.max_image_size;
+		//dprintf(D_ZKM, "Claim::updateUsage (%u) TotImageSize=%lld, TotRss=%lld, max=%llu\n",
+		//	c_starter_pid, imageSize, cur_rss, peak_rss);
+	} else if (c_rip && ! c_rip->is_partitionable_slot()) {
+		//dprintf(D_ZKM, "Claim::updateUsage (no starter pid) ImageSize=%lld\n", imageSize);
 	}
+
 	// save off the last values so we can use them in the ::publish method
 	c_cpus_usage = percentCpuUsage / 100;
 	c_image_size = imageSize;
+	c_cur_rss = cur_rss;
+	c_peak_rss = peak_rss;
 }
 
 
@@ -2305,6 +2330,8 @@ Claim::resetClaim( void )
 	c_starter_pid = 0;
 	c_image_size = 0;
 	c_cpus_usage = 0;
+	c_peak_rss = 0;
+	c_cur_rss = 0;
 
 	if( c_jobad && c_type == CLAIM_COD ) {
 		delete( c_jobad );
