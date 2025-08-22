@@ -20,7 +20,7 @@ import re
 # End imports
 
 try:
-    import htcondor
+    import htcondor2 as htcondor
     import classad2 as classad
 except ImportError:
     print(
@@ -170,6 +170,8 @@ def check_job_router_syntax(*args, **kwargs):
             using JOB_ROUTER_ROUTE_NAMES and JOB_ROUTER_ROUTE_<name>.
             For more information visit:
                 https://htcondor.readthedocs.io/en/latest/grid-computing/job-router.html#the-htcondor-job-router
+            For assistance converting from old to new syntax use:
+                condor_transfrom_ads -convert help
             """,
             offset=8,
             debug=Debug.WARNING,
