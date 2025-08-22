@@ -20,7 +20,7 @@
   :jira:`3215`
 
 - On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
-  be updated as freqently as :ad-attr:`ImageSize` is so that the default
+  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
   :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
   jobs which go over :ad-attr:`Memory` in a timely manner.
   :jira:`3224`
