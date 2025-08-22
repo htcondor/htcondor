@@ -1359,6 +1359,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
+- Fix condor_token_request to accept automatically-approved tokens
+
 * Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.27-1
 - Fix bug where condor_ssh_to_job failed when EP scratch path is too long
 - Fix incorrect time reported by htcondor status for long running jobs
