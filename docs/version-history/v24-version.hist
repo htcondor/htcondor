@@ -64,18 +64,18 @@
 
 *** 24.11.2 features
 
-- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
-  restrict which Vault servers the *condor_credd* will accept credentials for.
-  :jira:`3136`
+- Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
+  These attributes provide counts about why a job left the running state without
+  completing (i.e. was vacated from the execution point).
+  :jira:`3204`
 
 - Added new "notification = start" option to *condor_submit*, which
   sends an email when the job starts for the first time.
   :jira:`3133`
 
-- Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
-  These attributes provide counts about why a job left the running state without
-  completing (i.e. was vacated from the execution point).
-  :jira:`3204`
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
 
 - The new Python API now includes `htcondor2.ping()`, which operates like
   `htcondor.SecMan.ping()` in the old API.

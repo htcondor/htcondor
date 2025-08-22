@@ -1296,6 +1296,23 @@ fi
 # configuration
 
 %changelog
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.11.2-1
+- Add job attributes to track why and how often a job is vacated
+- Add the ability to notify a user when their job first starts
+- Can now specify which Vault servers are trusted
+- Added htcondor2.ping() to the Python bindings
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.11-1
+- Initial support for Debian 13 (trixie)
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.28-1
+- Exit -code and -signal environment variables are now set for Docker jobs
+- Fix issue where ImageSize was over-reported on the Windows platform
+- HTCondor tarballs now contain Pelican 7.18.1 and Apptainer 1.4.2
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
+- Fix condor_token_request to accept automatically-approved tokens
+
 * Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
 - Fix condor_store_cred bug that broke installing with get_htcondor
 
