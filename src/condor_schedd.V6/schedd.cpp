@@ -1641,16 +1641,20 @@ Scheduler::count_jobs()
 					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
 						jid.cluster, jid.proc, name.c_str());
 					match_rec *mrec = scheduler.FindMrecByJobID(jid);
-					ClassAd *my_match_ad = mrec->my_match_ad;
 
-					// Increment counter of per-match OCU evictions
-					if (my_match_ad) {
-						int OCUEvictions = 0;
-						my_match_ad->LookupInteger("OCUEvictions", OCUEvictions);
-						OCUEvictions++;
-						my_match_ad->Assign("OCUEvictions", OCUEvictions);
+					// it really should be there, but just in case
+					if (mrec) {
+						ClassAd *my_match_ad = mrec->my_match_ad;
+
+						// Increment counter of per-match OCU evictions
+						if (my_match_ad) {
+							int OCUEvictions = 0;
+							my_match_ad->LookupInteger("OCUEvictions", OCUEvictions);
+							OCUEvictions++;
+							my_match_ad->Assign("OCUEvictions", OCUEvictions);
+						}
+						enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
 					}
-					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
 				}
 			}
 		}
