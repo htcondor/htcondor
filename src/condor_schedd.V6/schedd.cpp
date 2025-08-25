@@ -1971,6 +1971,8 @@ Scheduler::count_jobs()
 				auto iter = FlockExtra.find(pool);
 				if (iter == FlockExtra.end()) {
 					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
+					// TODO This code is broken with fully-qualified owner names.
+					//   This assumes SubDat.owners contains OS usernames.
 					value.second->setOwner(*SubDat.owners.begin());
 					value.second->setAuthenticationMethods({"TOKEN"});
 					auto iter2 = FlockExtra.insert(std::move(value));
