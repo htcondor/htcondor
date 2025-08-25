@@ -9,12 +9,18 @@ class SecurityContext():
     def __init__(self, token: str = None):
         self._preferred_token = token
 
-    def setToken(self, token: str = None):
-        self._preferred_token = token
-
-    def setPreferredToken(self, token: str = None):
-        self._preferred_token = token
-
-    @property
-    def preferredToken(self):
+    def _getPreferredToken(self):
         return self._preferred_token
+
+    def _setPreferredToken(self, token: str = None):
+        self._preferred_token = token
+
+    def _delPreferredToken(self):
+        del self._preferred_token
+
+    preferredToken = property(
+        _getPreferredToken,
+        _setPreferredToken,
+        _delPreferredToken,
+        """The token (by value) to try when using this security context."""
+    )
