@@ -265,6 +265,14 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
         "leave_in_queue":           True,
     }
 
+    # FIXME: We should test that:
+    #
+    # 1.  A, B and A, C with *B != *C produce different output.
+    # 2.  A, B and A, B with *B != *C produce different output.
+    # 3.  A, B and A, C with *B == *C produce the same output (but
+    #     transfer common files twice).
+    # 4.  A, B and A, B with *B == *B produce the same output (but
+    #     transer common files once).
     job_description_a = {
         ** job_description,
         "MY._x_common_input_catalogs":      '"A, B"',

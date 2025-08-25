@@ -4479,7 +4479,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
 	// FIXME: Strictly speaking, only the submit utils need to know about this
 	// bool.  Can we make its value available without adding to the job ad?
-	{SUBMIT_KEY_UncommonContainer, ATTR_UNCOMMON_CONTAINER, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_ContainerIsCommon, ATTR_CONTAINER_IS_COMMON, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -6578,9 +6578,9 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image.ptr())  {
-		bool userRequestedUncommonContainer = false;
-		job->LookupBool(ATTR_UNCOMMON_CONTAINER, userRequestedUncommonContainer);
-		if( userRequestedUncommonContainer ) {
+		bool userRequestedCommonContainer = true;
+		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
+		if(! userRequestedCommonContainer) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
 				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
