@@ -1,5 +1,13 @@
 *** 25.2.0 features
 
+- Container images (see :subcom:`container_image`) that are neither on
+  shared filesystems nor transferred by the container service (*e.g.*,
+  ``docker://`` URLs) are now considered common files by default, meaning
+  that jobs from the same cluster (or DAG) that run on the same machine at
+  overlapping times may not need to all individually transfer the container
+  image.
+  :jira:`3168`
+
 *** 25.2.0 bugs
 
 *** 25.1.0 features
