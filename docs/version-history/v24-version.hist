@@ -19,6 +19,10 @@
   remote history queries will not have a negative impact on the *condor_schedd*
   :jira:`3215`
 
+- :tool:`condor_userprio` now no longer needs the negotiator to be running
+  if it only needs the collector to get userprio data.
+  :jira:`3221`
+
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
   and htchirp.py to work correctly inside a docker universe job.
@@ -60,22 +64,39 @@
   on hold and :subcom:`notification` was set to error.
   :jira:`3219`
 
+*** 24.0.12 features
+
+- Updated :tool:`condor_upgrade_check` to test for well known gotchas
+  between v24 and v25 of HTCondor installations.
+  :jira:`3209`
+
 *** 24.0.12 bugs
 
+- Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
+  :jira:`3225`
+
+*** 24.11.3 features
+
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
+  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
+  jobs which go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
+
 *** 24.11.2 features
-
-- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
-  restrict which Vault servers the *condor_credd* will accept credentials for.
-  :jira:`3136`
-
-- Added new "notification = start" option to *condor_submit*, which
-  sends an email when the job starts for the first time.
-  :jira:`3133`
 
 - Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
   These attributes provide counts about why a job left the running state without
   completing (i.e. was vacated from the execution point).
   :jira:`3204`
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3133`
+
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
 
 - The new Python API now includes `htcondor2.ping()`, which operates like
   `htcondor.SecMan.ping()` in the old API.
