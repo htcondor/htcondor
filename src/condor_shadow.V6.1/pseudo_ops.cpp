@@ -1435,7 +1435,15 @@ UniShadow::start_common_input_conversation(
 
 		SingleProviderSyndicate * cfLock = new SingleProviderSyndicate(cifName);
 		auto [iter, inserted] = this->cfLocks.insert({cifName, cfLock});
-		ASSERT(inserted);
+		if(! inserted) {
+			if( iter->first == cifName ) {
+				dprintf( D_ALWAYS, "Ignoring duplicate catalog name '%s'\n", cifName.c_str() );
+				continue;
+			} else {
+				EXCEPT("Failed to insert single provider syndicate into syndicate list, and it was not a duplicate catalog.\n" );
+			}
+		}
+
 		std::string stagingDir;
 
 		std::string message;

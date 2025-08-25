@@ -4477,6 +4477,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_WantJobNetworking, ATTR_WANT_JOB_NETWORKING, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
+	// FIXME: Strictly speaking, only the submit utils need to know about this
+	// bool.  Can we make its value available without adding to the job ad?
+	{SUBMIT_KEY_UncommonContainer, ATTR_UNCOMMON_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -6574,10 +6577,27 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr()) {
-		input_files.emplace_back(container_image.ptr());
-		if (accumulate_size_kb) {
-			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+	if (container_image.ptr())  {
+		bool userRequestedUncommonContainer = false;
+		job->LookupBool(ATTR_UNCOMMON_CONTAINER, userRequestedUncommonContainer);
+		if( userRequestedUncommonContainer ) {
+			input_files.emplace_back(container_image.ptr());
+			if (accumulate_size_kb) {
+				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+			}
+		} else {
+			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+			std::string xcip;
+			job->LookupString( "_x_common_input_catalogs", xcip );
+			// This function is called more than once for multiple-proc
+			// submissions, which means the whole thing is probably in
+			// the wrong place.  For now, just avoid duplicate entries.
+			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+				if(! xcip.empty()) { xcip += ", "; }
+				xcip += "condor_container_image";
+				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+			}
 		}
 
 		// Now that we've sure that we're transfering the container, set
