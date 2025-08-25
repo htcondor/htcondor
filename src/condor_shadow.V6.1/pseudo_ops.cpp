@@ -1848,7 +1848,10 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		std::vector< std::pair< std::string, std::string > > common_file_catalogs;
 		jobAd->LookupString("_x_common_input_catalogs", commonInputCatalogs);
 		for( const auto & cifName : StringTokenIterator(commonInputCatalogs) ) {
-			auto internal_catalog_name = uniqueCIFName(cifName);
+			std::string commonInputFiles;
+			jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
+
+			auto internal_catalog_name = uniqueCIFName(cifName, commonInputFiles);
 			if(! internal_catalog_name) {
 				dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 				// We don't have a mechanism to inform the submitter of internal
@@ -1861,8 +1864,6 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				return GuidanceResult::Command;
 			}
 
-			std::string commonInputFiles;
-			jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
 			common_file_catalogs.push_back({* internal_catalog_name, commonInputFiles});
 			dprintf( D_ZKM,
 				"Found common file catalog '%s' = '%s'\n",
@@ -1885,7 +1886,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			long long int clusterID = 0;
 			ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
 			formatstr( default_name, "clusterID_%lld", clusterID );
-			auto internal_catalog_name = uniqueCIFName(default_name);
+			auto internal_catalog_name = uniqueCIFName(default_name, common_input_files);
 			if(! internal_catalog_name) {
 				dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 				// We don't have a mechanism to inform the submitter of internal
@@ -1970,10 +1971,10 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 
 std::optional<std::string>
-UniShadow::uniqueCIFName( const std::string & cifName ) {
+UniShadow::uniqueCIFName( const std::string & cifName, const std::string & content ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = makeCIFName(* this->jobAd, cifName, startdAddress);
+	auto rval = makeCIFName(* this->jobAd, cifName, startdAddress, content);
 	free( startdAddress );
 	return rval;
 }

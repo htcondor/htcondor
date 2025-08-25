@@ -262,7 +262,9 @@ class UniShadow : public BaseShadow
 	// we won't need this any more.
 	bool resume_job_setup = false;
 
-	std::optional<std::string> uniqueCIFName( const std::string & cifName );
+	std::optional<std::string> uniqueCIFName(
+		const std::string & cifName, const std::string & content
+	);
 };
 
 #endif

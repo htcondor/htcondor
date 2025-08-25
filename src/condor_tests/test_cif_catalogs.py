@@ -273,8 +273,8 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
 
     job_description_b = {
         ** job_description,
-        "MY._x_common_input_catalogs":      '"A, C"',
-        "MY._x_catalog_C":                  '"C1.txt, C2.txt"',
+        "MY._x_common_input_catalogs":      '"A, B"',
+        "MY._x_catalog_B":                  '"C1.txt, C2.txt"',
     }
 
 

@@ -46,7 +46,8 @@ enum class RequestResult : int {
 std::optional<std::string> makeCIFName(
     const classad::ClassAd & jobAd,
     const std::string & baseName,
-    const std::string & startdAddress
+    const std::string & startdAddress,
+    const std::string & content
 );
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

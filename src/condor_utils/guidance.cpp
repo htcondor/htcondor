@@ -36,7 +36,8 @@ std::optional<std::string>
 makeCIFName(
     const classad::ClassAd & jobAd,
     const std::string & baseName,
-    const std::string & startdAddress
+    const std::string & startdAddress,
+    const std::string & content
 ) {
     std::string cifName;
 
@@ -55,6 +56,11 @@ makeCIFName(
     // the DAGMan job ID.
     //
     // The internal name therefore includes the base name.
+    //
+    // If the cluster ID is a DAGMan job ID, then a particular name could
+    // refer to different contents in the different job submit files.  To
+    // distinguish between catalogs in this scenario, we must include the
+    // hash of the contents.
     //
 
 
@@ -87,12 +93,20 @@ makeCIFName(
     AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, addressHash );
 
 
+    // Construct the content-hash.
+    if(! AWSv4Impl::doSha256( content, messageDigest, & mdLength )) {
+        return std::nullopt;
+    }
+    std::string contentHash;
+    AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, contentHash );
+
+
     // Construct the full internal catalog name.
     std::string fullCIFName;
     // FIXME: Check the maximum base name length at submit time.
-    formatstr( fullCIFName, "%.*s@%s#%d_%s",
+    formatstr( fullCIFName, "%.*s@%s#%d_%s=%s",
         MAX_BASE_NAME_LENGTH, baseName.c_str(),
-        scheddName.c_str(), clusterID, addressHash.c_str()
+        scheddName.c_str(), clusterID, addressHash.c_str(), contentHash.c_str()
     );
     return fullCIFName;
 }

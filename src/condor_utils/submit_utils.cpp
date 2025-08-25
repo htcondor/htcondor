@@ -6586,13 +6586,15 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
 			}
 		} else {
+			// FIXME: This does not check to see if the container image varies
+			// per-proc, which it must not for this code to work.
 			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
 
 			std::string xcip;
 			job->LookupString( "_x_common_input_catalogs", xcip );
-			// This function is called more than once for multiple-proc
-			// submissions, which means the whole thing is probably in
-			// the wrong place.  For now, just avoid duplicate entries.
+			// Don't duplicate entries.  This can't be the right way to do
+			// this; this function may be in the wrong place (unless we want
+			// to allow a different container image per proc).
 			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
 				if(! xcip.empty()) { xcip += ", "; }
 				xcip += "condor_container_image";
