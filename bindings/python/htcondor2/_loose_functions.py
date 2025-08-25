@@ -150,6 +150,6 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, s
 
     token = None
     if security is not None:
-        token = security.preferredToken
+        token = security.preferred_token
 
     return _ping(addr, authz, token)

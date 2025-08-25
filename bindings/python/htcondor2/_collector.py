@@ -55,7 +55,7 @@ class Collector():
 
         token = None
         if security is not None:
-            token = security.preferredToken
+            token = security.preferred_token
 
         if pool is None or isinstance(pool, str):
             _collector_init(self, self._handle, pool, token)

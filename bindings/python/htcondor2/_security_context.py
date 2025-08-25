@@ -18,7 +18,7 @@ class SecurityContext():
     def _delPreferredToken(self):
         del self._preferred_token
 
-    preferredToken = property(
+    preferred_token = property(
         _getPreferredToken,
         _setPreferredToken,
         _delPreferredToken,
