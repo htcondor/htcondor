@@ -60,6 +60,10 @@
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
 
+- Fixed bug that prevented emails being sent to users when jobs went
+  on hold and :subcom:`notification` was set to error.
+  :jira:`3219`
+
 *** 24.0.12 features
 
 - Updated :tool:`condor_upgrade_check` to test for well known gotchas

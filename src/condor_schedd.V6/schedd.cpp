@@ -13172,6 +13172,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);
 				}
 				exit_code = JOB_SHOULD_HOLD;
+				Email mailer;
+				mailer.sendHold(job_ad, reason.c_str());
 			}
 		}
 	}
