@@ -1,5 +1,3 @@
-*** 23.0.29 bugs
-
 *** 23.0.28 bugs
 
 - ``condor_token_request`` no longer fails with an error if the token is
