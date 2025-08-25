@@ -1862,6 +1862,37 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			);
 		}
 
+
+		std::string common_input_files;
+		bool found_htc25_plumbing =
+			getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, common_input_files );
+
+		int required_version = 2;
+		if( common_file_catalogs.empty() && found_htc25_plumbing ) {
+			required_version = 1;
+		}
+
+		if( found_htc25_plumbing ) {
+			std::string default_name;
+			long long int clusterID = 0;
+			ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
+			formatstr( default_name, "clusterID_%lld", clusterID );
+			auto internal_catalog_name = uniqueCIFName(default_name);
+			if(! internal_catalog_name) {
+				dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+				// We don't have a mechanism to inform the submitter of internal
+				// errors like this, so for now we're stuck putting the job on hold.
+				holdJob( "Internal error: failed to construct unique name for catalog.",
+					CONDOR_HOLD_CODE::JobNotStarted, 4
+				);
+
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+				return GuidanceResult::Command;
+			}
+			common_file_catalogs.push_back({* internal_catalog_name, common_input_files});
+		}
+
+
 		if( common_file_catalogs.empty() ) {
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else {
@@ -1878,9 +1909,15 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			request.LookupInteger(
 				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
 			);
-			if( hasCommonFilesTransfer < 2 ) {
+			if( hasCommonFilesTransfer < required_version ) {
 				// Put the job on hold with a request to add the requirement.
-				holdJob("Please add TARGET.HasCommonFilesTransfer to your requirements expression.", 1003, 5 );
+				std::string holdMessage;
+				formatstr( holdMessage,
+					"Please add `(TARGET.HasCommonFilesTransfer >= %d)` to "
+					"your requirements expression.",
+					required_version
+				);
+				holdJob( holdMessage.c_str(), 1003, 5 );
 
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
 				return GuidanceResult::Command;
