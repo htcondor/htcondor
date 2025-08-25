@@ -1,3 +1,7 @@
+*** 24.12.13 bugs
+
+*** 24.0.13 bugs
+
 *** 24.12.0 features
 
 - :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
@@ -18,12 +22,6 @@
   effectively removing the limit.  We now believe that running large
   remote history queries will not have a negative impact on the *condor_schedd*
   :jira:`3215`
-
-- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
-  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
-  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
-  jobs which go over :ad-attr:`Memory` in a timely manner.
-  :jira:`3224`
 
 - :tool:`condor_userprio` now no longer needs the negotiator to be running
   if it only needs the collector to get userprio data.
@@ -66,10 +64,24 @@
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
 
+*** 24.0.12 features
+
+- Updated :tool:`condor_upgrade_check` to test for well known gotchas
+  between v24 and v25 of HTCondor installations.
+  :jira:`3209`
+
 *** 24.0.12 bugs
 
 - Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
   :jira:`3225`
+
+*** 24.11.3 features
+
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
+  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
+  jobs which go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
 
 *** 24.11.2 features
 
