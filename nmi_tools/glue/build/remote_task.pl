@@ -47,7 +47,6 @@ my $NATIVE_DEBUG_TASK     = "remote_task-create_native_unstripped";
 my $NATIVE_TASK           = "remote_task-create_native";
 my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
-my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
 my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
@@ -183,11 +182,6 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
     else {
         print "We do not generate a native package for this platform.\n";
         exit 0;
-    }
-} elsif ($taskname eq $RUN_UNIT_TESTS) {
-    if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-    } else {
-        $execstr = "ctest -v --output-on-failure -L batlab";
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
