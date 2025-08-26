@@ -46,7 +46,7 @@ Additionally, the following repositories are required for specific platforms:
 deb-based Distributions
 -----------------------
 
-We support five deb-based platforms: Debian 12 (Bookworm) and Debian 13 (Trixie); and
+We support the following deb-based platforms: Debian 12 (Bookworm) and Debian 13 (Trixie); and
 Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
