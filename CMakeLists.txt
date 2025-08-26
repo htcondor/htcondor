@@ -18,7 +18,7 @@
 
 ##########################################################################
 # Set project
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(CONDOR LANGUAGES C CXX)
 
 # Exactly c++ 20 for all platforms
