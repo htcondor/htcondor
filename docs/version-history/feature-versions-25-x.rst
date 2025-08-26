@@ -1,10 +1,8 @@
-Version 24.x LTS Releases
-=========================
+Version 25.x Feature Releases
+=============================
 
-HTCondor 24.x transitioned from feature to LTS with the release of 24.12.13.
-These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
-(and potentially, ports to new platforms) will be provided in future
-24.12.y versions. New features will be added in the 25.x.y feature versions.
+We release new features in these releases of HTCondor. The details of each
+version are described below.
 
 Version 25.2.0
 --------------
