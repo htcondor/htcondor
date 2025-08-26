@@ -1,5 +1,8 @@
 #!/usr/bin/env pytest
 
+import pytest
+import subprocess
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -91,7 +94,7 @@ def the_cs_job_script(test_dir):
 
     script_text = format_script(
     """
-        #!/bin/bash
+        #!/bin/sh
 
         ls *.txt
         cat *.txt
@@ -332,6 +335,140 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
     return job_handle_a, job_handle_b
 
 
+# ---- common containers ------------------------------------------------------
+
+
+@action
+def the_container_image(test_dir):
+    return Path("/home/tlmiller/Work/condor/test/busybox.sif")
+
+@action
+def the_container_local_dir(test_dir):
+    return test_dir / "cc.d"
+
+
+@action
+def the_container_user_dir(the_container_local_dir):
+    the_container_user_dir = the_container_local_dir / "user.d"
+    the_container_user_dir.mkdir(exist_ok=True)
+    return the_container_user_dir
+
+
+@action
+def the_container_kill_dir(test_dir):
+    the_container_kill_dir = test_dir / "kill.d"
+    the_container_kill_dir.mkdir(exist_ok=True)
+    return the_container_kill_dir
+
+
+@action
+def the_container_lock_dir(the_container_local_dir):
+    return the_container_local_dir / "lock.d"
+
+
+@action
+def the_container_condor(the_container_local_dir, the_container_lock_dir, the_container_kill_dir):
+    with Condor(
+        local_dir=the_container_local_dir,
+        config={
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "LOCK":                     the_container_lock_dir.as_posix(),
+            "NUM_CPUS":                 4,
+            "STARTER_NESTED_SCRATCH":   True,
+            "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
+        },
+    ) as the_container_condor:
+        yield the_container_condor
+
+
+@action
+def completed_container_jobs(the_container_condor, the_container_user_dir, the_cs_job_script, the_container_image, the_container_kill_dir):
+    os.chdir(the_container_user_dir)
+
+    # We did all the complicated nested-directory stuff
+    # in `test_cif.py`, so this is just a pile of files.
+    for f in ("A1", "A2"):
+        (the_container_user_dir / f"{f}.txt").write_text(f"{f}\n")
+
+    kill_file = the_container_kill_dir / "kill-cc-$(ClusterID).$(ProcID)"
+    job_description = {
+        "universe":                 "vanilla",
+        "executable":               the_cs_job_script.as_posix(),
+        "arguments":                kill_file.as_posix(),
+        "container_image":          the_container_image.as_posix(),
+        "transfer_executable":      True,
+
+        "log":                      "cc_job.log.$(CLUSTER)",
+        "output":                   "cc_job.output.$(CLUSTER).$(PROCESS)",
+        "error":                    "cc_job.error.$(CLUSTER).$(PROCESS)",
+
+        "request_cpus":             1,
+        "request_memory":           1,
+
+        "MY.CommonInputFiles":      '"A1.txt, A2.txt"',
+
+        "should_transfer_files":    True,
+
+        "leave_in_queue":           True,
+    }
+
+    job_description_a = {
+        ** job_description,
+    }
+
+    job_description_b = {
+        ** job_description,
+        "container_is_common": "False",
+    }
+
+
+    # Submit two jobs of each type.
+    job_handle_a = the_container_condor.submit(
+        description=job_description_a,
+        count=2
+    )
+
+    job_handle_b = the_container_condor.submit(
+        description=job_description_b,
+        count=2
+    )
+
+
+    # Wait for them all to start.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=ClusterState.all_running,
+        fail_condition=ClusterState.any_terminal
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=ClusterState.running_exactly(2),
+        fail_condition=ClusterState.any_terminal
+    )
+
+
+    # Touch their kill files.
+    (the_container_kill_dir / f"kill-cc-{job_handle_a.clusterid}.0").touch(exist_ok=True)
+    (the_container_kill_dir / f"kill-cc-{job_handle_a.clusterid}.1").touch(exist_ok=True)
+    (the_container_kill_dir / f"kill-cc-{job_handle_b.clusterid}.0").touch(exist_ok=True)
+    (the_container_kill_dir / f"kill-cc-{job_handle_b.clusterid}.1").touch(exist_ok=True)
+
+
+    # Wait for them to finish.
+    assert job_handle_a.wait(
+        timeout=60,
+        condition=ClusterState.all_terminal
+    )
+    assert job_handle_b.wait(
+        timeout=60,
+        condition=ClusterState.all_terminal
+    )
+
+
+    return job_handle_a, job_handle_b
+
+
 # ---- assertion helpers ------------------------------------------------------
 
 
@@ -398,6 +535,52 @@ def lock_dir_is_clean(the_lock_dir):
     assert len(files) == 0
 
 
+# ---- Singularity checks -----------------------------------------------------
+# All stolen from `test_singularity_sif.py`, and which should probably be made
+# Ornithology fixtures.
+
+def SingularityIsWorthy():
+    result = subprocess.run("singularity --version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode('utf-8')
+
+    logger.debug(output)
+    if "apptainer" in output:
+        return True
+
+    if "3." in output:
+        return True
+
+    return False
+
+
+def SingularityIsWorking():
+    result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr busybox.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode('utf-8')
+
+    logger.debug(output)
+
+    if result.returncode == 0:
+        return True
+    else:
+        return False
+
+
+# For the test to work, we need user namespaces to be working
+# and enough of them.  This is a race, but better to try
+# to test first.
+def UserNamespacesFunctional():
+    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    if result.returncode == 7:
+        print("unshare seems to work correctly, proceeding with test\n")
+        return True
+    else:
+        print("unshare command failed, test cannot work, skipping test\n")
+        return False
+
+
+# ---- Tests ------------------------------------------------------------------
+
+
 class TestCIFCatalogs:
 
     def test_condor_submit(self, the_cs_lock_dir, the_cs_condor, completed_cs_jobs):
@@ -428,3 +611,23 @@ class TestCIFCatalogs:
         # If we later care about how many transfers waited, see `test_cif.py`.
         shadow_log_is_as_expected(the_dagman_condor, 3, 3, None)
         lock_dir_is_clean(the_dagman_lock_dir)
+
+
+    @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
+    @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
+    @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
+    def test_container(self, the_container_lock_dir, the_container_condor, completed_container_jobs):
+        output_is_as_expected(
+            completed_container_jobs[0],
+            "A1.txt\nA2.txt\nA1\nA2\n"
+        )
+        output_is_as_expected(
+            completed_container_jobs[1],
+            "A1.txt\nA2.txt\nA1\nA2\n"
+        )
+        # Specifically, the container should be transferred once,
+        # and A should be transferred twice.  (The container will be
+        # transferred three times, but the last two won't be common
+        # transfers, which is what we're counting here.)
+        shadow_log_is_as_expected(the_container_condor, 3, 3, None)
+        lock_dir_is_clean(the_container_lock_dir)
