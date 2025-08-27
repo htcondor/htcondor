@@ -76,7 +76,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual void notifyJobPreSpawn( void ) { EXCEPT("MOCK"); }
         virtual bool notifyJobExit( int, int, UserProc* ) { EXCEPT("MOCK"); return false; }
         virtual int notifyJobTermination( UserProc* ) { EXCEPT("MOCK"); return -1; }
-        virtual bool notifyStarterError( const char*, bool, int, int ) { EXCEPT("MOCK"); return false; }
+        virtual bool notifyStarterError( const char*, bool, int, int, bool ) { EXCEPT("MOCK"); return false; }
         virtual void addToOutputFiles( const char* ) { EXCEPT("MOCK"); }
         virtual void removeFromOutputFiles( const char*) { EXCEPT("MOCK"); }
         virtual bool registerStarterInfo( void ) { EXCEPT("MOCK"); return false; }

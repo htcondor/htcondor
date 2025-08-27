@@ -11679,6 +11679,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON);
 	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON_CODE);
 	DeleteAttribute(cluster, proc, ATTR_VACATE_REASON_SUBCODE);
+	DeleteAttribute(cluster, proc, ATTR_VACATE_EP_SUGGESTS_HOLD);
 }
 
 static void
@@ -13129,13 +13130,15 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			OTHER.JobsCoolDown += 1;
 		}
 		else {
-			int code = 0;
-			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
-			if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+			bool ep_suggests_hold = false;
+			GetAttributeBool(job_id.cluster, job_id.proc, ATTR_VACATE_EP_SUGGESTS_HOLD, &ep_suggests_hold);
+			if (ep_suggests_hold) {
 				std::string reason;
+				int code = 0;
 				int subcode = 0;
 				GetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, reason);
 				SetAttributeString(job_id.cluster, job_id.proc, ATTR_HOLD_REASON, reason.c_str());
+				GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
 				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_CODE, code);
 				if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode) >= 0) {
 					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);

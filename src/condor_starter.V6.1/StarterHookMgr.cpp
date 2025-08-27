@@ -133,7 +133,7 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 				"ERROR in StarterHookMgr::tryHookPrepareJob_implementation: %s\n",
 				err_msg.c_str());
 		starter->jic->notifyStarterError(err_msg.c_str(), true,
-						 CONDOR_HOLD_CODE::HookPrepareJobFailure, 0);
+						 CONDOR_HOLD_CODE::HookPrepareJobFailure, 0, true);
 		delete hook_client;
 		return -1;
 	}
@@ -305,7 +305,8 @@ HookPrepareJobClient::hookExited(int exit_status) {
 			log_msg.c_str(),
 			exit_status != 0 ? true : false, // shadow except or not (if hold code below is zero)
 			exit_status > 0 && exit_status < 300 ? CONDOR_HOLD_CODE::HookPrepareJobFailure : 0, // hold job or not
-			exit_status   // subcode 
+			exit_status,   // subcode
+			exit_status > 0 && exit_status < 300 // suggest holding job
 		);
 	}
 

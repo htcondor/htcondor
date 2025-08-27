@@ -203,7 +203,8 @@ public:
 			@param hold_reason_subcode The sub-code to record
 		 */
 	bool notifyStarterError( const char* err_msg, bool critical,
-	                         int hold_reason_code, int hold_reason_subcode);
+	                         int hold_reason_code, int hold_reason_subcode,
+	                         bool suggest_hold);
 
 
 		/**

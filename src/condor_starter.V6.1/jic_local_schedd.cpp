@@ -541,9 +541,10 @@ JICLocalSchedd::retryJobCleanupHandler( int /* timerID */ )
 }
 
 bool
-JICLocalSchedd::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
+JICLocalSchedd::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode, bool suggest_hold )
 {
-	JICLocal::notifyStarterError(err_msg,critical,hold_reason_code,hold_reason_subcode);
+	JICLocal::notifyStarterError(err_msg,critical,hold_reason_code,hold_reason_subcode, suggest_hold);
+	// JEF don't hold if suggest_hold==false
 	if( hold_reason_code ) {
 		holdJob( err_msg, hold_reason_code, hold_reason_subcode );
 	}

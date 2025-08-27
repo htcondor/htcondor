@@ -169,7 +169,7 @@ public:
 
 	int notifyJobTermination( UserProc* ) { return 0; };
 
-	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode, bool suggest_hold );
 
 		// // // // // // // // // // // //
 		// Misc utilities

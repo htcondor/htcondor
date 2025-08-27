@@ -224,7 +224,7 @@ class BaseShadow : public Service
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 		*/
-	void evictJob( int exit_reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
+	void evictJob(int exit_reason, const char* reason_str, int reason_code=0, int reason_subcode=0, bool ep_suggests_hold=false);
 		/** It's possible to the shadow to initiate eviction, and in
 			some cases that means we need to wait around for the starter
 			to tell us what happened.

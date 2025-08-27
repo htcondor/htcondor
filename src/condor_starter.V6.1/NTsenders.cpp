@@ -910,7 +910,7 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
 }                                                                              
 
 int
-REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str )
+REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str, bool suggest_hold )
 {
 	RemoteErrorEvent event;
 	ClassAd *ad;
@@ -922,6 +922,7 @@ REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char co
 	event.setHoldReasonSubCode( hold_reason_subcode );
 	ad = event.toClassAd(true);
 	ASSERT(ad);
+	ad->Assign(ATTR_VACATE_EP_SUGGESTS_HOLD, suggest_hold);
 	int retval = REMOTE_CONDOR_ulog( *ad );
 	delete ad;
 	return retval;

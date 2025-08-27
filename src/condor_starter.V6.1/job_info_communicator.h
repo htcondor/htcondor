@@ -307,7 +307,7 @@ public:
 	// preceeding.  Only called if Starter::transferOutput() fails.
 	virtual int notifyJobTermination( UserProc* user_proc ) = 0;
 
-	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode ) = 0;
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode, bool suggest_hold ) = 0;
 
 
 	void setOutputAdFile( const char* path );

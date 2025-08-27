@@ -515,6 +515,7 @@ pseudo_ulog( ClassAd *ad )
 	std::string CriticalErrorBuf;
 	int hold_reason_code = 0;
 	int hold_reason_sub_code = 0;
+	bool ep_suggests_hold = false;
 
 	if(!event) {
 		std::string add_str;
@@ -551,6 +552,8 @@ pseudo_ulog( ClassAd *ad )
 			if (hold_reason_code == 0) {
 				hold_reason_code = CONDOR_HOLD_CODE::StarterError;
 			}
+			ep_suggests_hold = hold_reason_code > 0 && hold_reason_code < CONDOR_HOLD_CODE::VacateBase;
+			ad->LookupBool(ATTR_VACATE_EP_SUGGESTS_HOLD, ep_suggests_hold);
 		}
 	}
 
@@ -568,7 +571,7 @@ pseudo_ulog( ClassAd *ad )
 		// Let the RemoteResource know that the starter is shutting
 		// down and failing to kill it it expected.
 		thisRemoteResource->resourceExit( JOB_SHOULD_REQUEUE, -1 );
-		Shadow->evictJob(JOB_SHOULD_REQUEUE, critical_error, hold_reason_code, hold_reason_sub_code);
+		Shadow->evictJob(JOB_SHOULD_REQUEUE, critical_error, hold_reason_code, hold_reason_sub_code, ep_suggests_hold);
 	}
 
 	delete event;

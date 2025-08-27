@@ -692,7 +692,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
 			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
-			            	                      create_process_errno );
+			                                      create_process_errno, true );
 			}
 		}
 

@@ -1707,6 +1707,7 @@ Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
+	// JEF startd should send explicit hold/no-hold bool
 	if (vacate_code >= CONDOR_HOLD_CODE::VacateBase) {
 		m_vacateReason = vacate_reason;
 		m_vacateCode = vacate_code;
@@ -3259,7 +3260,7 @@ Starter::cleanupJobs( void )
 
 	// If setup failed and we should hold the job, notify the startd
 	if (m_setupStatus == JOB_SHOULD_HOLD) {
-		jic->notifyStarterError(m_urea.message.c_str(), true, m_urea.hold_code, m_urea.hold_subcode);
+		jic->notifyStarterError(m_urea.message.c_str(), true, m_urea.hold_code, m_urea.hold_subcode, true);
 	}
 
 		// No more jobs, all cleanup done, notify our JIC
@@ -3306,6 +3307,7 @@ Starter::publishJobInfoAd(std::vector<UserProc *> *proc_list, ClassAd* ad)
 		ad->Assign(ATTR_VACATE_REASON, m_vacateReason);
 		ad->Assign(ATTR_VACATE_REASON_CODE, m_vacateCode);
 		ad->Assign(ATTR_VACATE_REASON_SUBCODE, m_vacateSubcode);
+		ad->Assign(ATTR_VACATE_EP_SUGGESTS_HOLD, false);
 		found_one = true;
 	}
 	return found_one;

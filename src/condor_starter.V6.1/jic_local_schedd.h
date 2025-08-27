@@ -149,7 +149,7 @@ public:
 	virtual bool notifyJobExit( int exit_status, int reason, 
 								UserProc* user_proc );  
 
-	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
+	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode, bool suggest_hold );
 
 protected:
 

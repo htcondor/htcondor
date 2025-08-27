@@ -896,7 +896,7 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
 
 void
-BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, int reason_subcode)
+BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, int reason_subcode, bool ep_suggests_hold)
 {
 	std::string from_where;
 	std::string machine;
@@ -917,6 +917,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		reason_str = job_ad_reason.c_str();
 		jobAd->LookupInteger(ATTR_VACATE_REASON_CODE, reason_code);
 		jobAd->LookupInteger(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+		jobAd->LookupBool(ATTR_VACATE_EP_SUGGESTS_HOLD, ep_suggests_hold);
 	}
 
 	if (reason_str == nullptr || *reason_str == '\0') {
@@ -983,6 +984,8 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON, reason_str);
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+	// JEF set this only if true?
+	jobAd->Assign(ATTR_VACATE_EP_SUGGESTS_HOLD, ep_suggests_hold);
 
 	writeAdToEpoch(getJobAd());
 

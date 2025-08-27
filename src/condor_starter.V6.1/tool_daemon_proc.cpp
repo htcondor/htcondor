@@ -304,7 +304,7 @@ ToolDaemonProc::StartJob()
 			std::string err_msg;
 			formatstr( err_msg, "Failed to execute '%s': %s",
 							 args_string.c_str(), create_process_error );
-			starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno );
+			starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno, true );
 		}
 		EXCEPT( "Create_Process(%s, ...) failed", args_string.c_str() );
 		return FALSE;

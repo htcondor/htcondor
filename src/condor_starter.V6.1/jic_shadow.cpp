@@ -762,13 +762,13 @@ JICShadow::transferOutputMopUp(void)
 			// The shadow will immediately cut the connection to the
 			// starter when this is called.
 			notifyStarterError(m_ft_info.error_desc.c_str(), true,
-			                   m_ft_info.hold_code,m_ft_info.hold_subcode);
+			                   m_ft_info.hold_code,m_ft_info.hold_subcode, true);
 			return false;
 		}
 
 		// We hit some "transient" error, but we've retried too many times,
 		// so tell the shadow we are giving up.
-		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
+		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,m_ft_info.hold_code,m_ft_info.hold_subcode,false);
 		return false;
 	} else if( ! m_ft_rval ) {
 	    //
@@ -1187,7 +1187,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 }
 
 bool
-JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
+JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode, bool suggest_hold )
 {
 	u_log->logStarterError( err_msg, critical );
 
@@ -1207,7 +1207,14 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	}
 
 	if( critical ) {
-		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
+		if (hold_reason_code > 0 && suggest_hold == false) {
+			if (!shadow_version || !shadow_version->built_since_version(24, 12, 0)) {
+				dprintf(D_ALWAYS, "Old shadow, suppressing code/subcode for non-hold vacate (code=%d subcode=%d)\n", hold_reason_code, hold_reason_subcode);
+				hold_reason_code = 0;
+				hold_reason_subcode = 0;
+			}
+		}
+		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg, suggest_hold) < 0 ) {
 			dprintf( D_ALWAYS,
 					 "Failed to send starter error string to Shadow.\n" );
 			return false;
@@ -1250,8 +1257,12 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 bool
 JICShadow::holdJob( const char* hold_reason, int hold_reason_code, int hold_reason_subcode )
 {
+	// TODO Some callers pass a 0 code to indicate job should not be held.
+	//   We should update them to allow passing a real vacate code without
+	//   suggesting a hold to the shadow.
+	bool suggest_hold = hold_reason_code > 0;
 	gotHold();
-	return notifyStarterError( hold_reason, true, hold_reason_code, hold_reason_subcode );
+	return notifyStarterError( hold_reason, true, hold_reason_code, hold_reason_subcode, suggest_hold );
 }
 
 bool
@@ -1551,7 +1562,7 @@ JICShadow::initUserPriv( void )
 				formatstr(error_msg, "Could not install primary unix group %s "
 						"from supplmental groups", new_primary_group.c_str());
 				dprintf( D_ALWAYS, "ERROR: %s\n", error_msg.c_str());
-				notifyStarterError(error_msg.c_str(), true, CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup,0);
+				notifyStarterError(error_msg.c_str(), true, CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup,0,true);
 				return false;
 			}
 		}
@@ -2819,7 +2830,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 				if( -1 != checkpointNumber ) {
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
-						notifyStarterError( message.c_str(), true, 0, 0 );
+						notifyStarterError(message.c_str(), true, 0, 0, false);
 						EXCEPT( "%s", message.c_str() );
 					}
 					manifestFileName = currentFile;
@@ -2844,7 +2855,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
 					}
 
-					notifyStarterError( message.c_str(), true, 0, 0 );
+					notifyStarterError(message.c_str(), true, 0, 0, false);
 					EXCEPT( "%s", message.c_str() );
 				}
 
@@ -2869,7 +2880,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					}
 
 					formatstr( error, "%s, aborting.", error.c_str() );
-					notifyStarterError( error.c_str(), true, 0, 0 );
+					notifyStarterError(error.c_str(), true, 0, 0, false);
 					EXCEPT( "%s", error.c_str() );
 				}
 

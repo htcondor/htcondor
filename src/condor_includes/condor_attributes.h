@@ -848,6 +848,7 @@
 #define ATTR_USERREC_OPT_ME "_userrec_opt_me"
 #define ATTR_USERREC_OPT_CREATE_DEPRECATED "create"
 #define ATTR_VACATE  "Vacate"
+#define ATTR_VACATE_EP_SUGGESTS_HOLD  "VacateEPSuggestsHold"
 #define ATTR_VACATE_REASON  "VacateReason"
 #define ATTR_VACATE_REASON_CODE  "VacateReasonCode"
 #define ATTR_VACATE_REASON_SUBCODE  "VacateReasonSubCode"

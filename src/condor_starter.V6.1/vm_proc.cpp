@@ -160,7 +160,7 @@ bool handleFTL( const char * reason ) {
 		formatstr( errorString, "An internal error prevented HTCondor "
 			"from starting the VM.  This job will be rescheduled.  "
 			"(%s).\n", reason );
-		starter->jic->notifyStarterError( errorString.c_str(), false, 0, 0 );
+		starter->jic->notifyStarterError( errorString.c_str(), false, 0, 0, false );
 		starter->jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, NULL );
 	}
 
@@ -321,7 +321,7 @@ VMProc::StartJob()
 		formatstr(err_msg, "%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.c_str());
 		starter->jic->notifyStarterError( err_msg.c_str(), true,
-				CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
+				CONDOR_HOLD_CODE::FailedToCreateProcess, 0, true);
 		return false;
 	}
 	m_job_name = vm_job_name;
@@ -332,7 +332,7 @@ VMProc::StartJob()
 		formatstr(err_msg, "%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.c_str());
 		starter->jic->notifyStarterError( err_msg.c_str(), true,
-				CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
+				CONDOR_HOLD_CODE::FailedToCreateProcess, 0, true);
 		return false;
 	}
 	lower_case(vm_type_name);
@@ -401,7 +401,7 @@ VMProc::StartJob()
 			err_msg = m_vmgahp->start_err_msg;
 		}
 		reportErrorToStartd();
-		starter->jic->notifyStarterError( err_msg.c_str(), true, 0, 0);
+		starter->jic->notifyStarterError( err_msg.c_str(), true, 0, 0, false);
 
 		delete m_vmgahp;
 		m_vmgahp = NULL;
@@ -641,7 +641,7 @@ VMProc::StartJob()
 				// Using i for the hold reason subcode is entirely arbitrary,
 				// but may assist in writing periodic release expressions,
 				// which I understand to be the point.
-				starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, i );
+				starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, i, true );
 
 				free( errorString );
 				return false;

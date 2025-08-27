@@ -270,7 +270,7 @@ JICLocal::notifyJobExit( int /*exit_status*/, int reason, UserProc*
 
 
 bool
-JICLocal::notifyStarterError( const char* err_msg, bool critical, int /*hold_reason_code*/, int /*hold_reason_subcode*/ )
+JICLocal::notifyStarterError( const char* err_msg, bool critical, int /*hold_reason_code*/, int /*hold_reason_subcode*/, bool /*suggest_hold*/ )
 {
 	u_log->logStarterError( err_msg, critical );
 	return true;
