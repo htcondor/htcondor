@@ -234,8 +234,9 @@ public:
 	void	send_updates_and_clear_dirty( int timerID = -1 );
 
 	void vacate_all(bool fast, const std::string& reason, int code, int subcode) {
-		if (fast) { walk( [&](Resource* rip) { rip->kill_claim(reason, code, subcode); } ); }
-		else { walk( [&](Resource* rip) { rip->retire_claim(false, reason, code, subcode); } ); }
+		// Assume this is never the job's fault, so don't suggest a hold
+		if (fast) { walk( [&](Resource* rip) { rip->kill_claim(reason, code, subcode, false); } ); }
+		else { walk( [&](Resource* rip) { rip->retire_claim(false, reason, code, subcode, false); } ); }
 	}
 
 	// called from the ~Resource destructor when the deleted slot has a parent

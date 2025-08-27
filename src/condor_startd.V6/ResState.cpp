@@ -635,7 +635,7 @@ void ResState::change_to_suggested_state(State new_state, Activity new_act, cons
 		case xa_preempt_and_retire: // irreversible retirement
 			rip->setPreemptIsTrue();
 			rip->setBadputCausedByPreemption();
-			rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
+			rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0, false);
 			return; // retire_claim changed the state, we can leave now.
 			break;
 
@@ -646,18 +646,18 @@ void ResState::change_to_suggested_state(State new_state, Activity new_act, cons
 		case xa_preempt_may_vacate:
 			if (rip->hasPreemptingClaim()) {
 				if (rip->r_pre->rank() > rip->r_cur->rank()) {
-					rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+					rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0, false);
 				} else {
-					rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+					rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0, false);
 				}
 			}
 			break;
 
 		case xa_preclaim_vacate:
 			if (rip->r_pre->rank() > rip->r_cur->rank()) {
-				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0, false);
 			} else {
-				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0, false);
 			}
 			break;
 
@@ -969,9 +969,9 @@ ResState::enter_action( State s, Activity a,
 
 				if (rip->hasPreemptingClaim()) {
 					if (rip->r_pre->rank() > rip->r_cur->rank()) {
-						rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+						rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0, false);
 					} else {
-						rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+						rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0, false);
 					}
 				}
 				change( retiring_act );

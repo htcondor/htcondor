@@ -1686,12 +1686,14 @@ Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 	std::string vacate_reason;
 	int vacate_code;
 	int vacate_subcode;
+	int vacate_suggest_hold;
 	int soft;
 
 	s->decode();
 	if( !s->get(vacate_reason) ||
 		!s->get(vacate_code) ||
 		!s->get(vacate_subcode) ||
+		!s->get(vacate_suggest_hold) ||
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
@@ -1699,7 +1701,7 @@ Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 		return FALSE;
 	}
 
-	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", vacate_code, vacate_subcode, vacate_reason.c_str());
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d suggest_hold=%d soft=%d reason=%s\n", vacate_code, vacate_subcode, vacate_suggest_hold, soft, vacate_reason.c_str());
 
 	int reply = 1;
 	s->encode();
@@ -1707,11 +1709,11 @@ Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
-	// JEF startd should send explicit hold/no-hold bool
-	if (vacate_code >= CONDOR_HOLD_CODE::VacateBase) {
+	if (!vacate_suggest_hold) {
 		m_vacateReason = vacate_reason;
 		m_vacateCode = vacate_code;
 		m_vacateSubcode = vacate_subcode;
+		m_vacateSuggestHold = false;
 		if (soft) {
 			return this->RemoteShutdownGraceful(0);
 		} else {

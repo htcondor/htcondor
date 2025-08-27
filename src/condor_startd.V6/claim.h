@@ -240,13 +240,13 @@ public:
 	bool starterKillFamily();
 	bool starterKillSoft();
 	bool starterKillHard();
-	void starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft );
+	void starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode, bool suggest_hold, bool soft );
 	void starterVacateJob(bool soft);
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad ) const;
 
-	void setVacateReason(const std::string& reason, int code, int subcode);
+	void setVacateReason(const std::string& reason, int code, int subcode, bool suggest_hold);
 	void setVacateInfo(EPLogEvent & ep_event);
 	void clearVacateReason();
 
@@ -373,6 +373,7 @@ private:
 	std::string c_vacate_reason;
 	int c_vacate_code{0};
 	int c_vacate_subcode{0};
+	bool c_vacate_suggest_hold{false};
 
  public:
 	std::string c_working_cm;	// if claimed for another CM, our temporary CM

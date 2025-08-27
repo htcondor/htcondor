@@ -75,7 +75,7 @@ public:
 	bool	suspend( void );
 	bool	resume( void );
 
-	bool	vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft,time_t timeout);
+	bool	vacateJob(char const *vacate_reason, int vacate_code, int vacate_subcode, bool suggest_hold, bool soft, time_t timeout);
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).

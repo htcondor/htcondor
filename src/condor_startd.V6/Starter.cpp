@@ -1337,7 +1337,7 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft,time_t timeout)
+Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode, bool suggest_hold, bool soft,time_t timeout)
 {
 #ifdef DONT_HOLD_EXITED_JOBS
 	if (got_final_update()) {
@@ -1371,7 +1371,7 @@ Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,
 	}
 
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
-	classy_counted_ptr<StarterVacateJobMsg> msg = new StarterVacateJobMsg(vacate_reason, vacate_code, vacate_subcode,soft);
+	classy_counted_ptr<StarterVacateJobMsg> msg = new StarterVacateJobMsg(vacate_reason, vacate_code, vacate_subcode, suggest_hold, soft);
 
 	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
 

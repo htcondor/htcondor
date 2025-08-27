@@ -197,11 +197,12 @@ DCStarter::delegateX509Proxy( const char * filename, time_t expiration_time, cha
 	return XUS_Error;
 }
 
-StarterVacateJobMsg::StarterVacateJobMsg( char const *vacate_reason, int vacate_code, int vacate_subcode, bool soft ):
+StarterVacateJobMsg::StarterVacateJobMsg( char const *vacate_reason, int vacate_code, int vacate_subcode, bool suggest_hold, bool soft ):
 	DCMsg(STARTER_VACATE_JOB),
 	m_vacate_reason(vacate_reason),
 	m_vacate_code(vacate_code),
 	m_vacate_subcode(vacate_subcode),
+	m_vacate_suggest_hold(suggest_hold),
 	m_soft(soft)
 {
 }
@@ -214,6 +215,7 @@ StarterVacateJobMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 		sock->put(m_vacate_reason) &&
 		sock->put(m_vacate_code) &&
 		sock->put(m_vacate_subcode) &&
+		sock->put((int)m_vacate_suggest_hold) &&
 		sock->put((int)m_soft);
 }
 

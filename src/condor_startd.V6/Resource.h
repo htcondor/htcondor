@@ -102,9 +102,9 @@ public:
 	const char * param(std::string& out, const char * name, const char * def) const;
 
 		// Public methods that can be called from command handlers
-	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode);	// Gracefully finish job and release claim
-	int		release_claim(const std::string& reason, int code, int subcode);	// Send softkill to starter; release claim
-	int		kill_claim(const std::string& reason, int code, int subcode);		// Quickly kill starter and release claim
+	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode, bool suggest_hold);	// Gracefully finish job and release claim
+	int		release_claim(const std::string& reason, int code, int subcode, bool suggest_hold);	// Send softkill to starter; release claim
+	int		kill_claim(const std::string& reason, int code, int subcode, bool suggest_hold);		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
 	int 	suspend_claim(); // suspend the claim
@@ -122,7 +122,7 @@ public:
 		// Tell the starter to put the job on hold
 	void hold_job(bool soft);
 
-	void setVacateReason(const std::string reason, int code, int subcode);
+	void setVacateReason(const std::string reason, int code, int subcode, bool suggest_hold);
 
 #if 0
 		// True if no more jobs will be accepted on the current claim.

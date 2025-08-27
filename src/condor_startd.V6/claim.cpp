@@ -1285,7 +1285,7 @@ Claim::finishKillClaim()
 
 		// Kill the claim.
 	// JEF do we need a real reason here? There shouldn't be a starter.
-	res_ip->kill_claim("", 0, 0);
+	res_ip->kill_claim("", 0, 0, false);
 	return TRUE;
 }
 
@@ -1901,9 +1901,9 @@ Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 	}
 	if( isActive()) {
 		if( graceful ) {
-			starterVacateJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
+			starterVacateJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false, true);
 		} else {
-			starterVacateJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
+			starterVacateJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false, false);
 		}
 	}
 		// not active, so nothing to do
@@ -2018,7 +2018,7 @@ Claim::starterKillHard( void )
 
 
 void
-Claim::starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft )
+Claim::starterVacateJob( char const *vacate_reason, int vacate_code, int vacate_subcode, bool suggest_hold, bool soft )
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
@@ -2036,7 +2036,7 @@ Claim::starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_su
 		} else {
 			timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
 		}
-		if( starter->vacateJob(vacate_reason,vacate_code,vacate_subcode,soft,timeout) ) {
+		if( starter->vacateJob(vacate_reason, vacate_code, vacate_subcode, suggest_hold, soft, timeout) ) {
 			changeState(soft ? CLAIM_VACATING : CLAIM_KILLING);
 			return;
 		}
@@ -2055,7 +2055,7 @@ void
 Claim::starterVacateJob(bool soft)
 {
 	if (!c_vacate_reason.empty()) {
-		starterVacateJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, soft);
+		starterVacateJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, c_vacate_suggest_hold, soft);
 	} else {
 		if (soft) {
 			starterKillSoft();
@@ -2711,13 +2711,14 @@ Claim::invalidateID() {
 }
 
 void
-Claim::setVacateReason(const std::string& reason, int code, int subcode)
+Claim::setVacateReason(const std::string& reason, int code, int subcode, bool suggest_hold)
 {
 	// TODO refuse to update if already set?
 	if (!reason.empty()) {
 		c_vacate_reason = reason;
 		c_vacate_code = code;
 		c_vacate_subcode = subcode;
+		c_vacate_suggest_hold = suggest_hold;
 	}
 }
 

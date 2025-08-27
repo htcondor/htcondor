@@ -105,7 +105,7 @@ public:
 
 class StarterVacateJobMsg: public DCMsg {
 public:
-	StarterVacateJobMsg( char const *vacate_reason, int vacate_code, int vacate_subcode, bool soft );
+	StarterVacateJobMsg( char const *vacate_reason, int vacate_code, int vacate_subcode, bool suggest_hold, bool soft );
 
 	bool writeMsg( DCMessenger *messenger, Sock *sock );
 	bool readMsg( DCMessenger *messenger, Sock *sock );
@@ -115,6 +115,7 @@ private:
 	std::string m_vacate_reason;
 	int m_vacate_code;
 	int m_vacate_subcode;
+	bool m_vacate_suggest_hold;
 	bool m_soft;
 };
 

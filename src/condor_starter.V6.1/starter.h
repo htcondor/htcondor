@@ -462,6 +462,7 @@ private:
 	std::string m_vacateReason;
 	int m_vacateCode{0};
 	int m_vacateSubcode{0};
+	bool m_vacateSuggestHold{false};
 
 		//
 		// When set to true, that means the Starter was asked to

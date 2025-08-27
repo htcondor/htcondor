@@ -477,7 +477,7 @@ Resource::set_parent( Resource* rip)
 
 
 int
-Resource::retire_claim(bool reversible, const std::string& reason, int code, int subcode)
+Resource::retire_claim(bool reversible, const std::string& reason, int code, int subcode, bool suggest_hold)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -495,7 +495,7 @@ Resource::retire_claim(bool reversible, const std::string& reason, int code, int
 				r_cur->setRetirePeacefully(true);
 			}
 		}
-		setVacateReason(reason, code, subcode);
+		setVacateReason(reason, code, subcode, suggest_hold);
 		change_state( retiring_act );
 		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
 			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
@@ -524,16 +524,16 @@ Resource::retire_claim(bool reversible, const std::string& reason, int code, int
 
 
 int
-Resource::release_claim(const std::string& reason, int code, int subcode)
+Resource::release_claim(const std::string& reason, int code, int subcode, bool suggest_hold)
 {
 	switch( state() ) {
 	case claimed_state:
-		setVacateReason(reason, code, subcode);
+		setVacateReason(reason, code, subcode, suggest_hold);
 		change_state( preempting_state, vacating_act );
 		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
-			setVacateReason(reason, code, subcode);
+			setVacateReason(reason, code, subcode, suggest_hold);
 			change_state( preempting_state, vacating_act );
 		}
 		break;
@@ -553,12 +553,12 @@ Resource::release_claim(const std::string& reason, int code, int subcode)
 
 
 int
-Resource::kill_claim(const std::string& reason, int code, int subcode)
+Resource::kill_claim(const std::string& reason, int code, int subcode, bool suggest_hold)
 {
 	switch( state() ) {
 	case claimed_state:
 	case preempting_state:
-		setVacateReason(reason, code, subcode);
+		setVacateReason(reason, code, subcode, suggest_hold);
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
@@ -751,10 +751,12 @@ Resource::shutdownAllClaims(bool graceful, bool reversible, const std::string& r
 	bool safe = Resource::DYNAMIC_SLOT != get_feature();
 
 	// shutdown our own claims
+	// Assume this is never the job's fault, so don't suggest a hold
+	bool suggest_hold = false;
 	if( graceful ) {
-		retire_claim(reversible, reason, code, subcode);
+		retire_claim(reversible, reason, code, subcode, suggest_hold);
 	} else {
-		kill_claim(reason, code, subcode);
+		kill_claim(reason, code, subcode, suggest_hold);
 	}
 
 	// if we haven't deleted ourselves, mark ourselves unavailable and
@@ -1856,7 +1858,7 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterVacateJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
+	r_cur->starterVacateJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode, true, soft);
 }
 
 int
@@ -3844,7 +3846,8 @@ void Resource::disable(const std::string& reason, int code, int subcode)
 {
 
     /* kill the claim */
-	kill_claim(reason, code, subcode);
+	// Assume this is never the job's fault, so don't suggest a hold
+	kill_claim(reason, code, subcode, false);
 
 	/* let the negotiator know not to match any new jobs to
     this slot */
@@ -4307,9 +4310,9 @@ Resource::invalidateAllClaimIDs() {
 }
 
 void
-Resource::setVacateReason(const std::string reason, int code, int subcode)
+Resource::setVacateReason(const std::string reason, int code, int subcode, bool suggest_hold)
 {
 	if (state() == claimed_state && r_cur) {
-		r_cur->setVacateReason(reason, code, subcode);
+		r_cur->setVacateReason(reason, code, subcode, suggest_hold);
 	}
 }

@@ -139,7 +139,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done)
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
 		// JEF reason already set by deactivate_claim(), make optional here?
-		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0);
+		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
 	}
 
 	return rval;
@@ -459,7 +459,7 @@ command_release_claim(int cmd, Stream* stream )
 			// The shadow is either gone and not coming back, or it no
 			// longer cares what the starter has to say; make sure we don't
 			// tie up a slot waiting out the job lease period for a reconnect.
-			rip->kill_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
+			rip->kill_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0, false);
 			goto success_exit;
 		}
 	}
@@ -614,7 +614,7 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
+			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0, false);
 			break;
 
 		default:
@@ -633,7 +633,7 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
-			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
+			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0, false);
 			break;
 		default:
 			rip->log_ignore( cmd, s );
@@ -1051,7 +1051,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				std::string dslot_name = dslots[i]->r_name;
 				// TODO This doesn't distinguish between rank and prio preemptions
 				// TODO This doesn't update the preemption stats
-				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0, false);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
@@ -2662,7 +2662,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
-			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
+			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0, false);
 		}
 	}
 
