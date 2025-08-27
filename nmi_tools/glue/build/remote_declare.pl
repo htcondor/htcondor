@@ -42,7 +42,6 @@ my $NATIVE_DEBUG_TASK     = "remote_task-create_native_unstripped";
 my $NATIVE_TASK           = "remote_task-create_native";
 my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
-my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
 my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
@@ -128,7 +127,6 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
-    print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
 elsif ($ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|Rocky|Debian|Ubuntu/) {
     print TASKLIST "$NATIVE_TASK 4h\n";
@@ -151,7 +149,6 @@ else {
     print TASKLIST "$TAR_TASK 4h\n";
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$CHECK_TAR_TASK 4h\n";
-    print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }
 
 if (defined($opt_coverity_analysis)) {
