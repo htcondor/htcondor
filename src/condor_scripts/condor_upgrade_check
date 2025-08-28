@@ -189,8 +189,7 @@ def check_job_transform_old_syntax(*args, **kwargs):
             name = name.strip()
             xform = htcondor.param.get(f"JOB_TRANSFORM_{name}")
             if xform is not None:
-                ad = classad.parseOne(xform)
-                if ad is not None and len(ad) > 0:
+                if xform.strip().startswith("["):
                     bad_syntax_xforms.append(f"JOB_TRANSFORM_{name}")
 
         l = len(bad_syntax_xforms)
