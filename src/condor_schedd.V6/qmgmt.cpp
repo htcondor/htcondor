@@ -9607,6 +9607,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// Stringify the user to make comparison faster
 	std::string user_str = user ? user : "";
 
+	std::string remoteOwner;
+	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
+
 	do {
 		auto first = PrioRec.begin();
 		auto end = PrioRec.end();
@@ -9646,11 +9649,15 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			}
 
 			if (ocu) {
-				if (match_any_user) {
+				std::string jobOwner;
+				job->LookupString(ATTR_USER, jobOwner);
+
+				if (remoteOwner == jobOwner) {
 					// Our OCU claim
 					bool OCUWanted = false;
+					// Only match our own OCU claim if OCUWanted is true
 					job->LookupBool("OCUWanted", OCUWanted);
-					if ( ! OCUWanted) {
+					if (!OCUWanted) {
 						continue;
 					}
 				} else {
@@ -9774,6 +9781,16 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			}
 
 			jobid = job->jid; // success!
+			if (ocu) {
+				if (my_match_ad) {
+					int ocu_claims = 0;
+					std::string ocu_claim_stat_attr = 
+						match_any_user ? "OCUClaimsByBorrowers" : "OCUClaimsByOwner";
+					my_match_ad->LookupInteger(ocu_claim_stat_attr, ocu_claims);
+					ocu_claims++;
+					my_match_ad->Assign(ocu_claim_stat_attr, ocu_claims);
+				}
+			}
 			return;
 
 		}	// end of for loop through PrioRec array
