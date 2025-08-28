@@ -14,6 +14,7 @@ from .htcondor2_impl import _collector_advertise
 
 from ._ad_type import AdType
 from ._daemon_type import DaemonType
+from ._security_context import SecurityContext
 
 from ._common_imports import classad
 
@@ -43,31 +44,36 @@ class Collector():
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
-    def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str], None] = None):
+    def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str], None] = None, security : SecurityContext = None ):
         """
         :param pool:  A ``host::port`` string specifying the remote collector,
                       a list (or tuple) of such strings, or a ClassAd
                       with a ``MyAddress`` attribute (such as might be returned
                       by :meth:`locate`).  :py:obj:`None` means the value of the
                       configuration parameter ``COLLECTOR_HOST``.
+        :param security: SecurityContext to use for authentication.
         """
         self._handle = handle_t()
 
+        token = None
+        if security is not None:
+            token = security.preferred_token
+
         if pool is None or isinstance(pool, str):
-            _collector_init(self, self._handle, pool)
+            _collector_init(self, self._handle, pool, token)
             return
 
         if isinstance(pool, classad.ClassAd):
             addr = pool.get("MyAddress")
             if addr is None:
                 raise ValueError("if ClassAd, pool must have MyAddress attribute")
-            _collector_init(self, self._handle, addr)
+            _collector_init(self, self._handle, addr, token)
             return
 
         if isinstance(pool, [list, tuple]):
             # For now, just assume that the elements are strings.
             str_list = ", ".join(pool)
-            _collector_init(self, self._handle, str_list)
+            _collector_init(self, self._handle, str_list, token)
             return
 
         raise TypeError("pool is not a string, list (or tuple) of strings, or a ClassAd")
