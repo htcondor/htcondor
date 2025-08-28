@@ -1,0 +1,10 @@
+#!/bin/sh
+./build-images --no-cache --series=23.0
+./build-images --series=23.0 --push
+./build-images --no-cache --series=23.x
+./build-images --series=23.x --push
+./build-images --no-cache --series=24.0
+./build-images --series=24.0 --push
+./build-images --no-cache --series=24.x
+./build-images --series=24.x --push
+
