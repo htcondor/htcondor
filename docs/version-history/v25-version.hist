@@ -1,5 +1,9 @@
 *** 25.2.0 features
 
+- Improved DAGMan to allow :dag-cmd:`SUBMIT-DESCRIPTION`\'s to be declared
+  after nodes the reference the named inline submit description.
+  :jira:`3230`
+
 *** 25.2.0 bugs
 
 *** 25.1.0 features
