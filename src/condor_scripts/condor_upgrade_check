@@ -171,7 +171,7 @@ def check_job_router_syntax(*args, **kwargs):
             For more information visit:
                 https://htcondor.readthedocs.io/en/latest/grid-computing/job-router.html#the-htcondor-job-router
             For assistance converting from old to new syntax use:
-                condor_transfrom_ads -convert help
+                condor_transfrom_ads -help convert
             """,
             offset=8,
             debug=Debug.WARNING,
@@ -189,8 +189,7 @@ def check_job_transform_old_syntax(*args, **kwargs):
             name = name.strip()
             xform = htcondor.param.get(f"JOB_TRANSFORM_{name}")
             if xform is not None:
-                ad = classad.parseOne(xform)
-                if ad is not None and len(ad) > 0:
+                if xform.strip().startswith("["):
                     bad_syntax_xforms.append(f"JOB_TRANSFORM_{name}")
 
         l = len(bad_syntax_xforms)
@@ -215,6 +214,7 @@ def check_job_transform_old_syntax(*args, **kwargs):
                 """,
                 offset=4
             )
+            return False
 
     return True
 
