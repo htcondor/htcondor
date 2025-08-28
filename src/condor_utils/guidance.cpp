@@ -14,6 +14,8 @@
 #include "AWSv4-impl.h"
 
 
+#define MAX_BASE_NAME_LENGTH 64
+
 //
 // The EP needs to distinguish between common filesets.  For the moment,
 // we're only sharing common files within the same cluster, so we just need
@@ -32,47 +34,56 @@
 
 std::optional<std::string>
 makeCIFName(
-    const classad::ClassAd & jobAd, const std::string & startdAddress
+    const classad::ClassAd & jobAd,
+    const std::string & baseName,
+    const std::string & startdAddress,
+    const std::string & content
 ) {
     std::string cifName;
 
+    //
+    // The internal name of a catalog must be distinct across all startds,
+    // so that it doesn't collide on the AP.  It must be distinct across all
+    // APs, so that it doesn't collide on the EP.  It must be distinct for
+    // each group of jobs deliberately sharing a set of catalogs.  The name
+    // must distinguish between the different catalogs within that group.
+    //
+    // The internal name therefore ends with a hash of the startd address.
+    //
+    // The internal name therefore includes the name of the schedd.
+    //
+    // The internal name therefore includes a cluster ID, which may be
+    // the DAGMan job ID.
+    //
+    // The internal name therefore includes the base name.
+    //
+    // If the cluster ID is a DAGMan job ID, then a particular name could
+    // refer to different contents in the different job submit files.  To
+    // distinguish between catalogs in this scenario, we must include the
+    // hash of the contents.
+    //
 
+
+    // Determine the cluster ID.
+    int clusterID = -1;
+    if(! jobAd.LookupInteger( ATTR_DAGMAN_JOB_ID, clusterID )) {
+        if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
+            return std::nullopt;
+        }
+    }
+
+
+    // Extract the schedd's name.
     std::string globalJobID;
     if(! jobAd.LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
         return std::nullopt;
     }
     auto sections = split( globalJobID, "#" );
+    std::string scheddName = sections[0];
 
 
-    std::string userSuppliedName;
-    if( jobAd.LookupString( "CIFName", userSuppliedName ) ) {
-        // <submmiter>@<scheddName>-<userSuppliedName>
-        std::string submitter;
-        if(! jobAd.LookupString( ATTR_USER, submitter )) {
-            return std::nullopt;
-        }
-
-        // This would be better checked at submit time.
-        if( userSuppliedName.length() > 64 ) {
-            return std::nullopt;
-        }
-
-        formatstr( cifName, "%s@%s-%s",
-            submitter.c_str(), sections[0].c_str(), userSuppliedName.c_str()
-        );
-    } else {
-        int clusterID = -1;
-        if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
-            return std::nullopt;
-        }
-
-        // <scheddName>#<clusterID>
-        formatstr( cifName, "%s#%d", sections[0].c_str(), clusterID );
-    }
-
-
-    // Some startdAddress sinfuls are so long that they exceed the maximum
-    // filename length.  Hash them, instead.
+    // Construct the startd address hash.  We hash these addresses to
+    // avoid accidentally creating filenames that are too long.
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     if(! AWSv4Impl::doSha256( startdAddress, messageDigest, & mdLength )) {
@@ -82,7 +93,20 @@ makeCIFName(
     AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, addressHash );
 
 
+    // Construct the content-hash.
+    if(! AWSv4Impl::doSha256( content, messageDigest, & mdLength )) {
+        return std::nullopt;
+    }
+    std::string contentHash;
+    AWSv4Impl::convertMessageDigestToLowercaseHex( messageDigest, mdLength, contentHash );
+
+
+    // Construct the full internal catalog name.
     std::string fullCIFName;
-    formatstr( fullCIFName, "%s_%s", cifName.c_str(), addressHash.c_str() );
+    // FIXME: Check the maximum base name length at submit time.
+    formatstr( fullCIFName, "%.*s@%s#%d_%s=%s",
+        MAX_BASE_NAME_LENGTH, baseName.c_str(),
+        scheddName.c_str(), clusterID, addressHash.c_str(), contentHash.c_str()
+    );
     return fullCIFName;
 }

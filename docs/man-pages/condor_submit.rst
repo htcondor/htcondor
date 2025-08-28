@@ -2292,13 +2292,16 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_image` = < image-name >
     Defines the name of the container image. Can be a singularity .sif file,
-    a singularity exploded directory, or a path to an image in a docker style 
-    repository
+    a singularity exploded directory, or a path to an image in a docker style
+    repository.  Images that are neither on shared filesystems nor transferred
+    by the container service (*e.g.*, ``docker://`` URLs) are
+    considered common files by default.  If you need to disable this for
+    some reason, see :subcom:`container_is_common`.
 
  :subcom-def:`transfer_container` = < True | False >
     A boolean value that defaults to True.  When false, sif container images
     and expanded directories are assumed to be pre-staged on the EP, and
-    HTCondor will not attempt to transfer them. 
+    HTCondor will not attempt to transfer them.
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
@@ -2307,6 +2310,11 @@ COMMANDS FOR THE CONTAINER UNIVERSE
  :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
     Binds a new, empty writeable directory inside the container image the
     job will have permissions to write to.
+
+ :subcom-def:`container_is_common` = < True | False >
+    Defaults to ``True``.  If ``False``, HTCondor will not treat the
+    container image as a common file, requiring it to be transferred to
+    each job individually.
 
 ADVANCED COMMANDS
 
