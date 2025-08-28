@@ -10,7 +10,6 @@ docker://htcondor/nmi-build:x86_64_AlmaLinux9-24110202
 docker://htcondor/nmi-build:x86_64_AlmaLinux10-24110202
 docker://htcondor/nmi-build:x86_64_v2_AlmaLinux10-24110202
 docker://htcondor/nmi-build:x86_64_AmazonLinux2023-24110202
-docker://htcondor/nmi-build:x86_64_Debian11-24110202
 docker://htcondor/nmi-build:x86_64_Debian12-24110202
 docker://htcondor/nmi-build:x86_64_Debian13-24110202
 docker://htcondor/nmi-build:x86_64_openSUSE15-24110202
@@ -20,6 +19,3 @@ x86_64_macOS13
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
 x86_64_Windows10
-
-# We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora41-24110202
