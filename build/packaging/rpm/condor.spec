@@ -286,8 +286,7 @@ Requires: pelican-osdf-compat >= 7.18.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.2 is released
-Requires: apptainer >= 1.3.6
+Requires: apptainer >= 1.4.2
 %endif
 %endif
 
