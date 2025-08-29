@@ -340,10 +340,6 @@ public:
 	int GetEffectivePrio() const { return _effectivePriority; }
 	int GetSubPrio() const { return subPriority; }
 
-	bool HasInlineDesc() const { return !inline_desc.empty(); }
-	void SetInlineDesc(std::string& desc) { inline_desc = desc; }
-	std::string_view& GetInlineDesc() { return inline_desc; }
-
 	// Set node category
 	void SetCategory(const char *categoryName, ThrottleByCategory &catThrottles);
 	// Get node throttle category
@@ -435,7 +431,6 @@ private:
 
 	std::string _nodeName{}; // Unique node name provided by user
 	std::string error_text{}; // Node error message
-	std::string_view inline_desc{}; // DAG file inline submit description to use at submit time
 	std::string_view _saveFile{}; // Filename to write save point rescue file
 	std::string_view _directory{}; // Node directory to run within... Do not malloc or free!
 	std::string_view _cmdFile{}; // Job list submit file... Do not malloc or free!
