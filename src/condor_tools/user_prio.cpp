@@ -593,21 +593,16 @@ main(int argc, const char* argv[])
   if (!negotiator.locate(Daemon::LOCATE_FOR_ADMIN)) {
 	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
               argv[0], pool_name ? pool_name : "local pool");
-	  exit(1);
+	  // If we are getting userprio info from the collector, don't exit,
+	  // as we don't need to talk to the negotiator. If we do, we'll
+	  // exit with an approriate error later.
   }
 
-	// Only 8.5.3+ negotiators send their accounting data to the collector
-  const char *ver = negotiator.version();
-  if (ver) {
-	CondorVersionInfo vsi(ver);
-	if (!forceFromCollector && vsi.built_since_version(8,5,3)) {
-		fromCollector = true;
-	}
-	negotiatorCanDoDirect = vsi.built_since_version(9,1,1);
-  } else {
-	// no version means that the negotiator is local, so it must be our version... right?
-	negotiatorCanDoDirect = true;
+  if (!forceFromCollector) {
+	  fromCollector = true;
   }
+  negotiatorCanDoDirect = true; // Assumes a post version 9.1.1 negotiator, which supports direct query.
+ 
   // knob to disable negotiator modular direct query, in case this causes problems (the results *are* a bit different)
   if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", false)) {
 	  negotiatorCanDoDirect = false;

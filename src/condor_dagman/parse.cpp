@@ -292,22 +292,24 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		if (NODE_KEYWORDS.contains(token)) {
 			std::string keyword(token);
 			std::string nodename;
-			const char * subfile = NULL;
+			const char* subfile = nullptr;
 
 			bool pre_parse_success = pre_parse_node(nodename, subfile);
 
 			std::string inline_end;
 			if (pre_parse_success && get_inline_desc_end(subfile, inline_end)) {
+				static uint32_t inline_count = 0;
 				std::string err;
 				std::string desc = parse_inline_desc(ms, gl_opts, inline_end, err, line);
+				std::string key = nodename + "-InlineDesc" + std::to_string(inline_count++);
+
 				if ( ! err.empty()) {
 					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
 					pre_parse_success = false;
 				} else {
-					dag->InlineDescriptions.insert(std::make_pair(nodename, desc));
+					subfile = dag->add_inline_desc(key, desc);
 				}
 
-				subfile = "InlineSubmitDesc"; // Set a pseudo filename
 				token = strtok(line, DELIMITERS); // Continue tokenizing after end token
 			}
 
@@ -317,11 +319,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				                                      "", "submitfile");
 				std::string temp_nodename = munge_node_name(nodename.c_str());
 				Node *node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
-				if (node) {
-					if (dag->InlineDescriptions.contains(nodename)) {
-						node->SetInlineDesc(dag->InlineDescriptions[nodename]);
-					}
-				} else {
+				if ( ! node) {
 					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n",
 					             nodename.c_str());
 					parsed_line_successfully = false;
@@ -353,7 +351,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				if ( ! err.empty()) {
 					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
 				} else {
-					dag->InlineDescriptions.insert(std::make_pair(descName, data));
+					std::ignore = dag->add_inline_desc(descName, data);
 					parsed_line_successfully = true;
 				}
 			}

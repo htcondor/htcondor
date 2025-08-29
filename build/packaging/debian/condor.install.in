@@ -177,7 +177,7 @@ usr/sbin/rvgahp_server
 usr/sbin/scitokens_credential_producer
 usr/lib/python3/* usr/lib/python3/
 usr/libexec/blahp/* usr/libexec/blahp/
-#if defined (BULLSEYE) || defined (FOCAL)
+#if defined(BULLSEYE) || defined(FOCAL)
 src/condor_examples/condor.service lib/systemd/system/
 #else
 src/condor_examples/condor.service usr/lib/systemd/system/

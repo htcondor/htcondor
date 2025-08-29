@@ -205,7 +205,9 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	std::string cmdFile = node->GetCmdFile();
 	auto vars = init_vars(dm, *node);
 
-	if (node->HasInlineDesc()) {
+	const std::string_view desc = dm.dag->get_inline_desc(cmdFile);
+
+	if (desc.size()) {
 		formatstr(cmdFile, "%s-inline.%d.temp", node->GetNodeName(), daemonCore->getpid());
 		if (dagmanUtils.fileExists(cmdFile)) {
 			debug_printf(DEBUG_QUIET, "Warning: Temporary submit file '%s' already exists. Overwriting...\n",
@@ -218,7 +220,6 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 			return false;
 		}
 
-		std::string_view& desc = node->GetInlineDesc();
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
 			             cmdFile.c_str(), desc.data());
@@ -287,7 +288,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	int exit_status;
 	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
 
-	if (dm.config[conf::b::RemoveTempSubFiles] && node->HasInlineDesc()) {
+	if (dm.config[conf::b::RemoveTempSubFiles] && desc.size()) {
 		dagmanUtils.tolerant_unlink(cmdFile);
 	}
 
@@ -362,13 +363,14 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::string errmsg;
 	std::string URL;
 	auto_free_ptr owner(my_username());
-	const std::string_view inline_desc = node->GetInlineDesc();
+
+	const char* cmdFile = node->GetCmdFile(); // used when submit source is an actual file
+	const std::string_view inline_desc = dm.dag->get_inline_desc(cmdFile);;
 
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;
 	MacroStreamMemoryFile msm(inline_desc.data(), inline_desc.size(), msm_source);
 	MacroStream* ms = &msm;
-	const char* cmdFile = node->GetCmdFile(); // used when submit source is an actual file
 
 	char* tmp_qline = nullptr;
 	std::string queue_args;
@@ -399,7 +401,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
 
 	// read in the submit file
-	if (node->HasInlineDesc()) {
+	if (inline_desc.size()) {
 		ms = &msm;
 		// Note: cmdFile is set to inline description name for inline descriptions
 		submitHash.insert_submit_filename(cmdFile, msm_source);

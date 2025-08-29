@@ -1787,7 +1787,7 @@ bool JobQueueJob::IsNoopJob()
 bool JobQueueJob::IsOCUClaimer() const
 {
 	bool ocu = false;
-	this->LookupBool("IsOCUHolder", ocu);
+	this->LookupBool(ATTR_OCU_HOLDER, ocu);
 	return ocu;
 }
 
@@ -2168,7 +2168,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
 	JobQueueBase *bad = nullptr;
-	JobQueueCluster *clusterad = nullptr;
 	JobQueueKey key;
 	std::vector<unsigned int> jobset_ids;
 	std::unordered_map<std::string, unsigned int> needed_sets;
@@ -2294,9 +2293,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
-				clusterad->LookupString(ATTR_PROJECT_NAME, project_name);
+				cad->LookupString(ATTR_PROJECT_NAME, project_name);
 				if ( ! project_name.empty()) {
-					clusterad->project = scheduler.insert_projectinfo(project_name.c_str());
+					cad->project = scheduler.insert_projectinfo(project_name.c_str());
 				}
 			}
 			continue;  // done with this cluster ad for the first pass
@@ -2326,7 +2325,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->Delete(ATTR_AUTO_CLUSTER_ID);
 
 			// link all proc ads to their cluster ad, if there is one
-			clusterad = GetClusterAd(cluster_num);
+			JobQueueCluster* clusterad = GetClusterAd(cluster_num);
 			if (clusterad) {
 				if ( ! clusterad->ownerinfo) {
 					InitClusterAd(clusterad, owner, jobset_ids, needed_sets);
@@ -9608,6 +9607,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// Stringify the user to make comparison faster
 	std::string user_str = user ? user : "";
 
+	std::string remoteOwner;
+	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
+
 	do {
 		auto first = PrioRec.begin();
 		auto end = PrioRec.end();
@@ -9644,6 +9646,29 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			else if ( ! Runnable(job, runnable_code)) {
 				// TODO: special case for cooldown here??
 				p->not_runnable = true;
+			}
+
+			if (ocu) {
+				std::string jobOwner;
+				job->LookupString(ATTR_USER, jobOwner);
+
+				if (remoteOwner == jobOwner) {
+					// Our OCU claim
+					bool OCUWanted = false;
+					// Only match our own OCU claim if OCUWanted is true
+					job->LookupBool("OCUWanted", OCUWanted);
+					if (!OCUWanted) {
+						continue;
+					}
+				} else {
+					// Someone else's OCU claim
+					// only allow a job that is willing
+					bool OCUWilling = false;
+					job->LookupBool("OCUWilling", OCUWilling);
+					if ( ! OCUWilling) {
+						continue;
+					}
+				}
 			}
 
 			if (runnable_code != runnable_reason_code::IsRunnable) {
@@ -9756,12 +9781,22 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			}
 
 			jobid = job->jid; // success!
+			if (ocu) {
+				if (my_match_ad) {
+					int ocu_claims = 0;
+					std::string ocu_claim_stat_attr = 
+						match_any_user ? "OCUClaimsByBorrowers" : "OCUClaimsByOwner";
+					my_match_ad->LookupInteger(ocu_claim_stat_attr, ocu_claims);
+					ocu_claims++;
+					my_match_ad->Assign(ocu_claim_stat_attr, ocu_claims);
+				}
+			}
 			return;
 
 		}	// end of for loop through PrioRec array
 
 		// If we got here and ocu true and match_any_user is false, then
-		// no job from our priority use matched.  Try again for someone else.
+		// no job from our priority user matched.  Try again for someone else.
 		if (ocu && !match_any_user) {
 			match_any_user = true;
 			continue;

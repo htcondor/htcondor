@@ -4092,12 +4092,23 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// recurse down the splice tree moving everything up into myself.
-	for (auto& splice: _splices) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice.first.c_str());
-		om = splice.second->LiftSplices(DESCENDENTS);
+	for (auto& [splice_name, splice]: _splices) {
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice_name.c_str());
+		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
-		AssumeOwnershipofNodes(splice.first, om);
+		AssumeOwnershipofNodes(splice_name, om);
 		delete om;
+		om = nullptr;
+
+		for (const auto& [desc_name, desc] : splice->InlineDescriptions) {
+			const auto& [_, success] = InlineDescriptions.insert(std::make_pair(desc_name, desc));
+			if ( ! success && InlineDescriptions[desc_name] != desc) {
+				// If we have splices using differing descriptions using the same name abort
+				debug_printf(DEBUG_NORMAL, "WARNING: Conflicting inline descriptions using the same name '%s' between %s%s and splice %s.\n",
+				             desc_name.c_str(), (_spliceScope != "root") ? "splice " : "",
+				             _spliceScope.c_str(), splice_name.c_str());
+			}
+		}
 	}
 
 	// Now delete all of them.

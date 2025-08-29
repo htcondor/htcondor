@@ -935,7 +935,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		}
 	}
 
-	// Note: improveReasonAttributescan change the reason_code and subcode,
+	// Note: improveReasonAttributes can change the reason_code and subcode,
 	// and will pass back a potentially improved reason string.
 	std::string url_file_type; // This will be used to store the protocol used for file transfer.
 	std::string improved_reason_str =

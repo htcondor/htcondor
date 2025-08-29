@@ -1,6 +1,6 @@
 ###############################################################
 #
-# Copyright (C) 2022, Condor Team, Computer Sciences Department,
+# Copyright (C) 2025, Condor Team, Computer Sciences Department,
 # University of Wisconsin-Madison, WI.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -32,25 +32,19 @@ if ( NOT PROPER )
 	# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of pcre2_ variables
 	FetchContent_declare(
 			pcre2
-			URL ${EXTERNALS_SOURCE_URL}/pcre2-10.39.tar.gz
-			URL_HASH MD5=7389e3524de2cda3d21fde8c224febf1
+			URL ${EXTERNALS_SOURCE_URL}/pcre2-10.46.tar.gz
+			URL_HASH MD5=38c1d3820b744afbc0565144ef893129
+			EXCLUDE_FROM_ALL
 			)
 
 	# Check if population has already been performed
-	FetchContent_GetProperties(pcre2)
-	if(NOT pcre2_POPULATED)
-		# Fetch the content using previously declared details
-		FetchContent_Populate(pcre2)
-
-		# Load the pcre2 cmake file, but exclude the install target, so nothing gets installed
-		add_subdirectory(${pcre2_SOURCE_DIR} ${pcre2_BINARY_DIR} EXCLUDE_FROM_ALL)
-	endif()
+	FetchContent_MakeAvailable(pcre2)
 
 	# pcre2-8 is the cmake target for 8 bit characters, which expands to the proper platform-specific filename(s)
 	set(PCRE2_FOUND pcre2-8)
 
 	# pcre2 10.41 will do this for us, but for now attach the include dir to the library target
-	target_include_directories(pcre2-8-shared INTERFACE "${pcre2_BINARY_DIR}")
+	# target_include_directories(pcre2-8-shared INTERFACE "${pcre2_BINARY_DIR}")
 
 	# Remove this when we drop Ubuntu 18 (and cmake 3.10)
 	set(PCRE2_INCLUDE ${pcre2_BINARY_DIR})

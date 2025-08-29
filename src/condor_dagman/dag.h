@@ -329,9 +329,25 @@ public:
 	void SetJobstateLogFileName(const char *logFileName);
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 
+	const char* add_inline_desc(const std::string& name, const std::string& desc) {
+		const auto& [it, added] = InlineDescriptions.insert_or_assign(name, desc);
+		if ( ! added) { // True for inserted and false for assigned
+			debug_printf(DEBUG_NORMAL, "Warning: Inline Description name '%s' used multiple time. Overwritting...\n",
+			             name.c_str());
+		}
+		return it->first.c_str();
+	}
+
+	std::string_view get_inline_desc(const std::string& name) {
+		std::string_view desc;
+		if (InlineDescriptions.contains(name)) {
+			desc = InlineDescriptions[name];
+		}
+		return desc;
+	}
+
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
-	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 	ThrottleByCategory _catThrottles;
 
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
@@ -339,6 +355,7 @@ public:
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
+	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
 	typedef enum {
 		SUBMIT_RESULT_OK,

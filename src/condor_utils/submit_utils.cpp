@@ -9565,8 +9565,12 @@ process_job_credentials(
 		}
 
 		if (call_storer) {
-			if( my_system(storer_args) != 0 ) {
-				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
+			int rc = my_system(storer_args);
+			if (rc < 0) {
+				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
+				return 1;
+			} else if (rc > 0) {
+				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
 				return 1;
 			}
 		}

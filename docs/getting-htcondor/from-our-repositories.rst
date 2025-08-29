@@ -29,10 +29,10 @@ For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
-* `Amazon Linux 2023 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.amzn2023.noarch.rpm>`_
-* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.el8.noarch.rpm>`_
-* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.el9.noarch.rpm>`_
-* `openSUSE LEAP 15 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.leap15.noarch.rpm>`_
+* `Amazon Linux 2023 <https://research.cs.wisc.edu/htcondor/repo/25.x/htcondor-release-current.amzn2023.noarch.rpm>`_
+* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/25.x/htcondor-release-current.el8.noarch.rpm>`_
+* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/25.x/htcondor-release-current.el9.noarch.rpm>`_
+* `openSUSE LEAP 15 <https://research.cs.wisc.edu/htcondor/repo/25.x/htcondor-release-current.leap15.noarch.rpm>`_
 
 The Enterprise Linux HTCondor packages depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -46,25 +46,25 @@ Additionally, the following repositories are required for specific platforms:
 deb-based Distributions
 -----------------------
 
-We support four deb-based platforms: Debian 11 (Bullseye) and Debian 12 (Bookworm); and
+We support the following deb-based platforms: Debian 12 (Bookworm) and Debian 13 (Trixie); and
 Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
 
-Debian 11, and 12
-#################
+Debian 12 and 13
+################
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-25.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bullseye main``
-* Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bookworm main``
+* Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/25.x bookworm main``
+* Debian 13: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/25.x trixie main``
 
 Ubuntu 22.04 and 24.04
 ######################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-25.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x jammy main``
-* Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x noble main``
+* Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/25.x jammy main``
+* Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/25.x noble main``

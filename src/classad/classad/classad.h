@@ -575,6 +575,7 @@ class ClassAd : public ExprTree
         /** Return the number of attributes at the root level of this ClassAd.
          */
         int size(void) const { return (int)attrList.size(); }
+		bool empty() const { return attrList.empty(); }
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
@@ -611,7 +612,7 @@ class ClassAd : public ExprTree
          */
 		virtual ExprTree* Copy( ) const;
 
-        /** Make a deep copy of the ClassAd, via the == operator. 
+        /** Make a deep copy of the ClassAd, via the = operator.
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
@@ -632,6 +633,21 @@ class ClassAd : public ExprTree
 
 			return *this;
 		}
+
+		ClassAd(ClassAd &&rhs) : 
+   				alternateScope(rhs.alternateScope),
+				attrList(std::move(rhs.attrList)),
+				dirtyAttrList(std::move(rhs.dirtyAttrList)),
+				do_dirty_tracking(rhs.do_dirty_tracking),
+				chained_parent_ad(rhs.chained_parent_ad),
+				parentScope(rhs.parentScope)
+		{
+				for(auto &entry: attrList ) {
+					// I wonder what other invariants were forgotten?
+					entry.second->SetParentScope(this);
+			}
+		}
+
         /** Fill in this ClassAd with the contents of the other ClassAd.
          *  This ClassAd is cleared of its contents before the copy happens.
          *  @return true if the copy succeeded, false otherwise.

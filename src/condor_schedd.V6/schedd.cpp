@@ -1640,7 +1640,21 @@ Scheduler::count_jobs()
 				for (const auto &jid : jobs_on_borrowed_claims[name]) {
 					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
 						jid.cluster, jid.proc, name.c_str());
-					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+					match_rec *mrec = scheduler.FindMrecByJobID(jid);
+
+					// it really should be there, but just in case
+					if (mrec) {
+						ClassAd *my_match_ad = mrec->my_match_ad;
+
+						// Increment counter of per-match OCU evictions
+						if (my_match_ad) {
+							int OCUEvictions = 0;
+							my_match_ad->LookupInteger("OCUEvictions", OCUEvictions);
+							OCUEvictions++;
+							my_match_ad->Assign("OCUEvictions", OCUEvictions);
+						}
+						enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+					}
 				}
 			}
 		}
@@ -1971,6 +1985,8 @@ Scheduler::count_jobs()
 				auto iter = FlockExtra.find(pool);
 				if (iter == FlockExtra.end()) {
 					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
+					// TODO This code is broken with fully-qualified owner names.
+					//   This assumes SubDat.owners contains OS usernames.
 					value.second->setOwner(*SubDat.owners.begin());
 					value.second->setAuthenticationMethods({"TOKEN"});
 					auto iter2 = FlockExtra.insert(std::move(value));
@@ -4901,7 +4917,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// job to run on it.
 	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
 	bool is_ocu_holder = false;
-	GetAttributeBool(job_id.cluster, job_id.proc, "IsOCUHolder", &is_ocu_holder);
+	GetAttributeBool(job_id.cluster, job_id.proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (mrec && is_ocu_holder) {
 		// ocu holders are set with infinite keep claim idle, but if we are deleting
 		// the job, that's the only time we want to remove the claim.
@@ -9271,7 +9287,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
 			bool is_ocu_holder = false;
-			GetAttributeBool(slot->cluster,slot->proc,"IsOCUHolder", &is_ocu_holder);
+			GetAttributeBool(slot->cluster,slot->proc,ATTR_OCU_HOLDER, &is_ocu_holder);
 			if (is_ocu_holder) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
@@ -9710,7 +9726,7 @@ Scheduler::StartJob(match_rec *rec)
 	ASSERT( rec );
 
 	bool is_ocu_holder = false;
-	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
+	GetAttributeBool(rec->cluster,rec->proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (is_ocu_holder) {
 		return;
 	}
@@ -13172,6 +13188,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);
 				}
 				exit_code = JOB_SHOULD_HOLD;
+				Email mailer;
+				mailer.sendHold(job_ad, reason.c_str());
 			}
 		}
 	}
