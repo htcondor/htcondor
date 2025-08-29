@@ -1640,7 +1640,21 @@ Scheduler::count_jobs()
 				for (const auto &jid : jobs_on_borrowed_claims[name]) {
 					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
 						jid.cluster, jid.proc, name.c_str());
-					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+					match_rec *mrec = scheduler.FindMrecByJobID(jid);
+
+					// it really should be there, but just in case
+					if (mrec) {
+						ClassAd *my_match_ad = mrec->my_match_ad;
+
+						// Increment counter of per-match OCU evictions
+						if (my_match_ad) {
+							int OCUEvictions = 0;
+							my_match_ad->LookupInteger("OCUEvictions", OCUEvictions);
+							OCUEvictions++;
+							my_match_ad->Assign("OCUEvictions", OCUEvictions);
+						}
+						enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+					}
 				}
 			}
 		}
@@ -1971,6 +1985,8 @@ Scheduler::count_jobs()
 				auto iter = FlockExtra.find(pool);
 				if (iter == FlockExtra.end()) {
 					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
+					// TODO This code is broken with fully-qualified owner names.
+					//   This assumes SubDat.owners contains OS usernames.
 					value.second->setOwner(*SubDat.owners.begin());
 					value.second->setAuthenticationMethods({"TOKEN"});
 					auto iter2 = FlockExtra.insert(std::move(value));
@@ -13172,6 +13188,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);
 				}
 				exit_code = JOB_SHOULD_HOLD;
+				Email mailer;
+				mailer.sendHold(job_ad, reason.c_str());
 			}
 		}
 	}
