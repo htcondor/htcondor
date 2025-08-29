@@ -573,7 +573,6 @@ _classad_parse_next( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-
     // The 'auto' type from the ClassAdFileParseType and the 'auto' type
     // from version 1 both have weird, undocumented semantics, and they
     // disagree.  The 'auto' from version 1 only distinguished between
@@ -588,12 +587,9 @@ _classad_parse_next( PyObject *, PyObject * args ) {
         pType = isOldAd(from_string) ? ClassAdFileParseType::Parse_long : ClassAdFileParseType::Parse_new;
     }
 
+    std::string_view instr(from_string);
+    size_t from_string_length = instr.size();
 
-    size_t from_string_length = strlen(from_string);
-
-    // On Mac, fmemopen() returns NULL if the buffer is 0 bytes long.  Since
-    // there's clearly not another ad in a 0-byte buffer, we're done iterating.
-    //
     // This looks silly -- we could certainly check if the returned offset
     // was the whole buffer -- but doing it this way simplifies the generator.
     if( from_string_length == 0 ) {
@@ -601,33 +597,19 @@ _classad_parse_next( PyObject *, PyObject * args ) {
         return Py_BuildValue("Oi", Py_None, 0);
     }
 
-
-#if defined(WINDOWS)
-    FILE * file = NULL;
-    // The Windows C API does not appear to have a race-free way to create
-    // temporary files that aren't in the root directory, which is insane.
-    auto e = tmpfile_s(& file);
-
-    if( e != 0 || file == NULL ) {
-        PyErr_SetString(PyExc_ClassAdException, "Unable to open temporary file.");
-        return NULL;
+    // remove leading whitespace to avoid confusing the auto parser
+    // or getting back an empty ad without reading the whole buffer
+    // but keep track of how many prefix chars we skipped, since
+    // we need to return the number of chars we parsed.
+    long offset = 0;
+    while ( ! instr.empty() && isspace(instr.front())) {
+        instr.remove_prefix(1);
+        ++offset;
     }
-
-    fprintf( file, "%s\0", from_string );
-    rewind( file );
-#else
-    FILE * file = fmemopen( const_cast<char *>(from_string), from_string_length, "r" );
-
-    if( file == NULL ) {
-        // This was a ClassAdParseError in version 1.
-        PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
-        return NULL;
-    }
-#endif /* WINDOWS */
 
     CondorClassAdFileIterator ccafi;
-    if(! ccafi.begin( file, false, pType )) {
-        fclose( file );
+    CompatStringViewLexerSource lexsrc(instr,0);
+    if(! ccafi.begin(&lexsrc, false, pType)) {
 
         // This was a ClassAdParseError in version 1.
         PyErr_SetString(PyExc_ValueError, "Unable to parse input stream into a ClassAd.");
@@ -636,8 +618,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
     ClassAd * result = new ClassAd();
     int numAttrs = ccafi.next( * result );
-    long offset = ftell( file );
-    fclose( file );
+    offset += lexsrc.GetCurrentLocation(); // calculate end offset relative to from_string
 
     if( numAttrs <= 0 ) {
         if( offset == (long)from_string_length ) {

@@ -31,6 +31,8 @@ from .htcondor2_impl import (
     _schedd_userrec_query,
     _schedd_act_on_job_ids,
     _schedd_act_on_job_constraint,
+    _schedd_act_on_userrec_list,
+    _schedd_act_on_userrec_constraint,
     _schedd_edit_job_ids,
     _schedd_edit_job_constraint,
     _schedd_reschedule,
@@ -97,6 +99,30 @@ def job_spec_hack(
         return f_constraint(addr, job_spec, *args);
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
+
+# helper method that routes various types of userrec_spec
+# to the correct userrec act function
+def userrec_act_dispatcher(
+    addr : str,
+    userrec_spec : Union[List[str], str, classad.ExprTree, List[classad.ClassAd] ],
+    f_name_list : callable,
+    f_constraint : callable,
+    args : list,
+):
+    if isinstance(userrec_spec, list):
+        if all([isinstance(i, str) for i in userrec_spec]):
+            return f_name_list(addr, userrec_spec, *args)
+        elif all([isinstance(i, classad.ClassAd) for i in userrec_spec]):
+            return f_name_list(addr, userrec_spec, args[0] + 0x20000, args[1])
+        else:
+            raise TypeError("All elements of the userrec list must be strings or classads");
+    elif isinstance(userrec_spec, classad.ExprTree):
+        job_spec_string = str(userrec_spec)
+        return f_constraint(addr, job_spec_string, *args)
+    elif isinstance(userrec_spec, str):
+        return f_name_list(addr, [userrec_spec], *args);
+    else:
+        raise TypeError("The userrec_spec must be list of strings, a list of ClassAd, a string, or an ExprTree." );
 
 
 class Schedd():
@@ -225,7 +251,7 @@ class Schedd():
         :param limit:  The maximum number of project ads to return.  The default
             (``-1``) is to return all ads.
         '''
-        project_flag = 1 # 0=default, 1=project, 2=user, 3=both
+        project_flag = 1 # 0=default/user, 1=project
         results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), project_flag)
         if callback is None:
             return results
@@ -293,6 +319,142 @@ class Schedd():
         pyResult["TotalChangedAds"] = result["ActionResult"]
 
         return pyResult
+
+    def addUserRec(self,
+        user_spec : Union[List[str], str, List[classad.ClassAd] ],
+    ) -> classad.ClassAd:
+        """
+        Add User record(s) to the *condor_schedd* daemon if a User
+        record with the given name does not already exist.
+
+        :param user_spec: Which user(s) to add.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ClassAd` of initial user records
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x10000 + 541, None)
+        )
+        return result;
+
+    def enableUserRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+    ) -> classad.ClassAd:
+        """
+        Enable User record(s) to the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to enable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (541, None)
+        )
+        return result;
+
+    def disableUserRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Disable User record(s) in the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to enable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint
+        :param reason: A free-form justification.  Defaults to
+            "Python-initiated action"
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (542, reason)
+        )
+        return result;
+
+    def removeUserRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Remove User record(s) in the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to enable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint
+        :param reason: A free-form justification that is used when
+             the record cannot be removed.  Defaults to
+            "Python-initiated action"
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (549, reason)
+        )
+        return result;
+
+
+    def addProjectRec(self,
+        project_spec : Union[List[str], str, List[classad.ClassAd] ],
+    ) -> classad.ClassAd:
+        """
+        Add Project record(s) to the *condor_schedd* daemon.
+
+        :param project_spec: Which projects(s) to add.  A :class:`str`
+             of the project name, a :class:`list` of such
+             strings, a :class:`classad2.ClassAd` of project ads
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, project_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x10000 + 0x80000 + 541, None)
+        )
+        return result;
+
+    def removeProjectRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Remove Project record(s) in the *condor_schedd* daemon.
+
+        :param Project_spec: Which projects(s) to remove.  A :class:`str`
+             of the project name, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint
+        :param reason: A free-form justification that is used when
+             the record cannot be removed.  Defaults to
+            "Python-initiated action"
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 549, reason)
+        )
+        return result;
 
 
     # In version 1, edit(ClassAd) and edit_multiple() weren't documented,

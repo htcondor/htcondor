@@ -141,19 +141,6 @@ _schedd_userrec_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-#if 0 // wait for debugger, then break
-  #ifdef WIN32
-    fprintf(stderr, "pid=%u\n_schedd_userrec_query(%s,%s,...%d)\n", GetCurrentProcessId(),
-        addr ? addr : "null", constraint ? constraint : "constraint", projects_flag);
-    static bool debugger_present = false;
-    while ( ! debugger_present) {
-        debugger_present = IsDebuggerPresent();
-        Sleep(1000);
-    }
-    DebugBreak();
-  #endif
-#endif
-
     if(! PyList_Check(projection)) {
         PyErr_SetString(PyExc_TypeError, "projection must be a list");
         return NULL;
@@ -369,6 +356,213 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
 
 
     // See comment in _schedd_act_on_job_ids().
+    return py_new_classad2_classad(result);
+}
+
+static PyObject *
+_schedd_act_on_userrec_list(PyObject *, PyObject * args) {
+    // _schedd_act_on_userrec_list(addr, name_list, action, reason_string)
+
+    const char * addr = NULL;
+    PyObject * name_list;
+    long action = 0;
+    const char * reason_string = NULL;
+
+    if(! PyArg_ParseTuple( args, "zOlz", & addr, & name_list, & action, & reason_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    // action is a composite of cmd, create_if=0x10000 and is_project=0x80000
+    // if any other bit is set, then action is invalid
+    int  cmd = action & 0xFFFF;
+    bool create_if = (action & 0x10000) != 0;
+    bool list_of_ads =  (action & 0x20000) != 0;
+    bool is_project = (action & 0x80000) != 0;
+    if ((action & ~0xBFFFF) != 0 || cmd < ENABLE_USERREC || cmd > DELETE_USERREC) {
+        PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        return NULL;
+    }
+
+#if 0 // wait for debugger, then break
+#ifdef WIN32
+    fprintf(stderr, "pid=%u\_schedd_act_on_userrec_list(%s,0x%x,...%s)\n", GetCurrentProcessId(),
+        addr ? addr : "null", action, reason_string ? reason_string : "null");
+    static bool debugger_present = false;
+    while ( ! debugger_present) {
+        debugger_present = IsDebuggerPresent();
+        Sleep(1000);
+    }
+    DebugBreak();
+#endif
+#endif
+
+    int rv = 0;
+    std::vector<std::string> names;
+    int num_names = 0;
+    std::vector<const char * > name_vec;
+    std::vector<const ClassAd*> ads;
+
+    if (list_of_ads) {
+        Py_ssize_t size = PyList_Size(name_list);
+        for( int i = 0; i < size; ++i ) {
+            PyObject * py_s = PyList_GetItem(name_list, i);
+            if( py_s == NULL ) {
+                // PyList_GetItem() has already set an exception for us.
+                return NULL;
+            }
+            auto * handle = get_handle_from(py_s);
+            ClassAd* ad = (ClassAd *)handle->t;
+            ads.push_back(ad);
+        }
+        num_names = (int)ads.size();
+    } else {
+        rv = py_list_to_vector_of_strings(name_list, names, "name_list");
+        if( rv == -1 ) {
+            // py_list_to_vector_of_strings() has already set an exception for us.
+            return NULL;
+        }
+        num_names = (int)names.size();
+        name_vec.reserve(num_names);
+        for (auto & name : names) { name_vec.emplace_back(name.c_str()); }
+    }
+
+
+    // convert python list to an array of const char *
+
+    ClassAd * result = NULL;
+    DCSchedd schedd(addr);
+    CondorError errstack;
+
+    switch (cmd) {
+    case ENABLE_USERREC:
+        if (list_of_ads) {
+            result = schedd.addOrEnableUserRecs(&ads[0], num_names, create_if, is_project, &errstack);
+        } else if (is_project) {
+            result = schedd.enableProjects(&name_vec[0], num_names, create_if, &errstack);
+        } else {
+            result = schedd.enableUsers(&name_vec[0], num_names, create_if, &errstack);
+        }
+        break;
+
+    case DISABLE_USERREC:
+        if (list_of_ads) {
+            PyErr_SetString(PyExc_HTCondorException, "Disable mixed users and projects not implemented.");
+        } else if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        } else {
+            result = schedd.disableUsers(&name_vec[0], num_names, reason_string, &errstack);
+        }
+        break;
+
+    case DELETE_USERREC:
+        if (list_of_ads) {
+            PyErr_SetString(PyExc_HTCondorException, "Remove mixed users and projects not implemented.");
+        } else if (is_project) {
+            result = schedd.removeProjects(&name_vec[0], num_names, reason_string, &errstack);
+        } else {
+            result = schedd.removeUsers(&name_vec[0], num_names, reason_string, &errstack);
+        }
+        break;
+
+    default:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Project action not implemented.");
+        } else {
+            PyErr_SetString(PyExc_HTCondorException, "User action not implemented.");
+        }
+        break;
+    }
+
+    if( result == NULL ) {
+        PyErr_SetString(PyExc_HTCondorException, "Error when performing user or project action on the schedd.");
+        return NULL;
+    }
+
+    return py_new_classad2_classad(result);
+}
+
+static PyObject *
+_schedd_act_on_userrec_constraint(PyObject *, PyObject * args) {
+    // _schedd_act_on_userrec_constraint(addr, constraint, action, reason_string)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    long action = 0;
+    const char * reason_string = NULL;
+
+    if(! PyArg_ParseTuple( args, "zzlz", & addr, & constraint, & action, & reason_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    // action is a composite of cmd, create_if=0x10000 and is_project=0x80000
+    // if any other bit is set, then action is invalid
+    int  cmd = action & 0xFFFF;
+    //bool create_if = (action & 0x10000) != 0;
+    bool is_project = (action & 0x80000) != 0;
+    if ((action & ~0x9FFFF) != 0 || cmd < ENABLE_USERREC || cmd > DELETE_USERREC) {
+        PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        return NULL;
+    }
+
+#if 0 // wait for debugger, then break
+#ifdef WIN32
+    fprintf(stderr, "pid=%u\_schedd_act_on_userrec_constraint(%s,0x%x,...%s)\n", GetCurrentProcessId(),
+        addr ? addr : "null", action, reason_string ? reason_string : "null");
+    static bool debugger_present = false;
+    while ( ! debugger_present) {
+        debugger_present = IsDebuggerPresent();
+        Sleep(1000);
+    }
+    DebugBreak();
+#endif
+#endif
+
+
+    ClassAd * result = NULL;
+    DCSchedd schedd(addr);
+    CondorError errstack;
+
+    switch (cmd) {
+    case ENABLE_USERREC:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Enable Projects not implemented.");
+        } else {
+            result = schedd.enableUsers(constraint, &errstack);
+        }
+        break;
+
+    case DISABLE_USERREC:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        } else {
+            result = schedd.disableUsers(constraint, reason_string, &errstack);
+        }
+        break;
+
+    case DELETE_USERREC:
+        if (is_project) {
+            result = schedd.removeProjects(constraint, reason_string, &errstack);
+        } else {
+            result = schedd.removeUsers(constraint, reason_string, &errstack);
+        }
+        break;
+
+    default:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Project action not implemented.");
+        } else {
+            PyErr_SetString(PyExc_HTCondorException, "User action not implemented.");
+        }
+        break;
+    }
+
+    if( result == NULL ) {
+        PyErr_SetString(PyExc_HTCondorException, "Error when performing user or project action on the schedd.");
+        return NULL;
+    }
+
     return py_new_classad2_classad(result);
 }
 
