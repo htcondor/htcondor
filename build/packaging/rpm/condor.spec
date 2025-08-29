@@ -68,9 +68,6 @@ BuildRequires: openldap-devel
 BuildRequires: cmake >= 3.16
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
-%if 0%{?rhel} >= 8
-BuildRequires: boost-devel
-%endif
 %if 0%{?suse_version}
 BuildRequires: rpm-config-SUSE
 %else
@@ -123,15 +120,6 @@ BuildRequires: gcc11
 BuildRequires: gcc11-c++
 %endif
 
-%if 0%{?rhel} >= 8
-BuildRequires: boost-static
-%endif
-
-%if  0%{?suse_version}
-BuildRequires: libboost_python-py3-1_75_0-devel
-%else
-BuildRequires: boost-python3-devel
-%endif
 BuildRequires: libuuid-devel
 %if 0%{?suse_version}
 Requires: libuuid1
@@ -364,11 +352,6 @@ A collection of tests to verify that HTCondor is operating properly.
 Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?suse_version}
-Requires: libboost_python-py3-1_75_0
-%else
-Requires: boost-python3
-%endif
 Requires: python3
 Requires: python3-cryptography
 
