@@ -59,7 +59,6 @@ if "THE_URL" in os.environ:
 
 IMAGES_BY_CHANNEL = {
     "stable": [
-        "debian:11",
         "debian:12",
         "debian:13",
         "ubuntu:20.04",
@@ -82,7 +81,6 @@ IMAGES_BY_CHANNEL = {
         "ppc64le/almalinux:8",
     ],
     "current": [
-        "debian:11",
         "debian:12",
         "debian:13",
         "ubuntu:22.04",
@@ -147,7 +145,6 @@ TESTS = {
 }
 
 PREFICES_BY_IMAGE = {
-    "debian:11" : "apt-get update && apt-get install -y curl",
     "debian:12" : "apt-get update && apt-get install -y curl",
     "debian:13" : "apt-get update && apt-get install -y curl",
     "ubuntu:20.04": "apt-get update && apt-get install -y curl",
