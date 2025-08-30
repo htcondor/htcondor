@@ -14,7 +14,6 @@ fi
 cd $tarball
 
 if [ ! -d etc -o ! -d usr ]; then
-    ls -l
     echo That does not look like an HTCondor tarball
     exit 1
 fi
