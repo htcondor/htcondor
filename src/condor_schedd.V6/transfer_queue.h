@@ -55,7 +55,7 @@ class TransferQueueRequest {
 
 	bool SendGoAhead(XFER_QUEUE_ENUM go_ahead=XFER_QUEUE_GO_AHEAD,char const *reason=NULL);
 
-	bool ReadReport(class TransferQueueManager *manager) const;
+	bool ReadReport(class TransferQueueManager *manager, const std::string & jobID) const;
 
 	ReliSock *m_sock;
 	std::string m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)

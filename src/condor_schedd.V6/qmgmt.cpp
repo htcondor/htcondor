@@ -4325,6 +4325,7 @@ enum {
 	idATTR_DISABLE_REASON,
 	idATTR_USERREC_OPT_CREATE_DEPRECATED,
 	idATTR_USERREC_LIVE,
+	idATTR_TRANSFERRING_INPUT,
 };
 
 enum {
@@ -4396,10 +4397,9 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_PROJECT_NAME,       catJobProject),
 	FILL(ATTR_RANK,               catTargetScope),
 	FILL(ATTR_REQUIREMENTS,       catTargetScope),
-	FILL(ATTR_USER,              0),
+	FILL(ATTR_TRANSFERRING_INPUT, 0),
+	FILL(ATTR_USER,               0),
 	FILL(ATTR_VACATE_REASON_CODE, 0),
-
-
 };
 #undef FILL
 
@@ -4805,6 +4805,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	IdToKey(cluster_id,proc_id,key);
 
+dprintf( D_ALWAYS, "%d.%d: %s = %s\n", cluster_id, proc_id, attr_name, attr_value );
 	int rc = ModifyAttrCheck(key, attr_name, attr_value, flags, err);
 	if ( rc <= 0 ) {
 		return rc;
@@ -5194,7 +5195,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				dprintf(D_ALWAYS, "SetAttribute security violation: cannot change JobSetId of existing jobset\n");
 				errno = EACCES;
 				return -1;
-			} 
+			}
 			if (job) {
 				// TODO: allow id to be set to existing set owned by this user
 				dprintf(D_ALWAYS, "SetAttribute security violation: cannot change JobSetId of existing job\n");
@@ -5216,7 +5217,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// we add the cluster_id to a queue maintained by the schedd.
 		// This is because at this point we may not have the proc_id, so
 		// we can't add the full job information. The schedd will later
-		// take this cluster_id and look at all of its procs to see if 
+		// take this cluster_id and look at all of its procs to see if
 		// need to be added to the main CronTab list of jobs.
 		//
 		//PRAGMA_REMIND("tj: move this into the cluster job object?")
@@ -5274,7 +5275,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// Update count per hold reason in the job ad.
 		// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
 		int vacate_reason = (int)strtol( attr_value, nullptr, 10 );
-				
+
 		// Update count in job ad of how many times job was vacated
 		incrementJobAdAttr(cluster_id, proc_id, ATTR_NUM_VACATES);
 
@@ -5336,6 +5337,43 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if (is_spooling_hold) {
 			// set a transaction trigger for spooling hold
 			JobQueue->SetTransactionTriggers(catSpoolingHold);
+		}
+	}
+	else if (attr_id == idATTR_TRANSFERRING_INPUT) {
+		// Copied from the ClassAd code, but it would be better to be,
+		// if possible, explicit, and ask for a parse.
+		if (0 == strcasecmp(attr_value, "true")) {
+			// We'll assume for now that we don't see this set twice,
+			// but it would be better to actually check that.
+
+			// Copied from FileTransfer::DoObtainAndSendTransferGoAhead();
+			// this conditional should be refactored for production code.
+			long int transferInputSizeMB = -1;
+			GetAttributeInt( cluster_id, proc_id, ATTR_TRANSFER_INPUT_SIZE_MB, & transferInputSizeMB );
+			if( transferInputSizeMB != -1 ) {
+				// This value is truncated rather than rounded.
+				transferInputSizeMB += 1;
+				// FIXME: For this to be precise, the code in the FileTransfer
+				// object would have to check against the truncated-in-MB
+				// size as well.
+				long int sandbox_size = transferInputSizeMB * 1024 * 1024;
+				long int min_required_to_transfer = param_integer(
+					"BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER", 100 * 1024 * 1024
+				);
+				if( sandbox_size <= min_required_to_transfer ) {
+					// If we just started transferring data, and the job will
+					// not be entering the transfer queue, increment the
+					// per-protocol transfer counts.
+					dprintf( D_ALWAYS, "FIXME: Increment protocol-transferring counts for job ID %d.%d (transfer queue will be skipped).\n", cluster_id, proc_id );
+				}
+			}
+		}
+
+		if (0 == strcasecmp(attr_value, "false")) {
+			// We'll assume for now that we don't see this set twice,
+			// but it would be better to actually check that.
+
+			dprintf( D_ALWAYS, "FIXME: Decrement protocol-transferring counts for job ID %d.%d (no longer transferring input).\n", cluster_id, proc_id );
 		}
 	}
 

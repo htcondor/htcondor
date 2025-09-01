@@ -397,16 +397,16 @@ TransferQueueManager::HandleReport( Stream *sock )
 	auto it = m_xfer_queue.begin();
 	while (it != m_xfer_queue.end()) {
 		TransferQueueRequest *client  = *it;
-		
+
 		if( client->m_sock == sock ) {
-			if( !client->ReadReport(this) ) {
+			if( !client->ReadReport(this, client->m_jobid) ) {
 				dprintf(D_FULLDEBUG,
 						"TransferQueueManager: dequeueing %s.\n",
 						client->Description());
 
 				delete client;
 
-				// This invalidates it, but we are on our way out 
+				// This invalidates it, but we are on our way out
 				// anyway by now.
 				it = m_xfer_queue.erase(it);
 
@@ -432,7 +432,7 @@ TransferQueueManager::HandleReport( Stream *sock )
 }
 
 bool
-TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
+TransferQueueRequest::ReadReport(TransferQueueManager *manager, const std::string & jobID) const
 {
 	std::string report;
 	m_sock->decode();
@@ -443,6 +443,7 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 	}
 
 	if( report.empty() ) {
+		dprintf( D_ALWAYS, "FIXME: Increment protocol-transferring counts for job ID %s (transfer queue exited).\n", jobID.c_str() );
 		return false;
 	}
 
