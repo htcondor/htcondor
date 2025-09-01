@@ -70,8 +70,6 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 
-# In some (near) future version, remove all references to WANT_PYTHON2_BINDINGS...
-option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" OFF)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 
 
@@ -79,11 +77,6 @@ option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 if(NOT WINDOWS)
 	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
 	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
-
-	# We don't support python2 on mac (anymore)
-	if (APPLE)
-		set(WANT_PYTHON2_BINDINGS OFF)
-	endif()
 
 	# Wheels are build in an environment that intentionlly doesn't have the
 	# python .so's or .a's installed, but does have the header files.
@@ -118,33 +111,6 @@ if(NOT WINDOWS)
 		endif()
 
 	endif()
-
-	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
-
-		find_package (Python2 COMPONENTS Interpreter Development)
-
-		set(PYTHON_VERSION_STRING    ${Python2_VERSION})
-		set(PYTHON_VERSION_MAJOR     ${Python2_VERSION_MAJOR})
-		set(PYTHON_VERSION_MINOR     ${Python2_VERSION_MINOR})
-		set(PYTHON_VERSION_PATCH     ${Python2_VERSION_PATCH})
-		set(PYTHON_INCLUDE_DIRS      ${Python2_INCLUDE_DIRS})
-		set(PYTHON_LIB               ${Python2_LIBRARIES})
-		set(PYTHON_MODULE_EXTENSION  "${CMAKE_SHARED_LIBRARY_SUFFIX}")
-
-		set(PYTHON_EXECUTABLE        ${Python2_EXECUTABLE})
-
-		set(PYTHON_LIBRARIES "${PYTHON_LIB}")
-
-		set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
-		set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
-		set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
-
-		if (Python2_FOUND)
-			set(PYTHONLIBS_FOUND TRUE)
-			message(STATUS "Python2 library found at ${PYTHON_LIB}")
-		endif()
-
-	endif(WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
