@@ -1,4 +1,4 @@
-*** 24.12.1 features
+*** 24.12.2 features
 
 - :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
   (instead of :attr:`Name`) when trying to find *condor_startd* daemons, if
@@ -40,7 +40,7 @@
   job without a user log file.
   :jira:`3210`
 
-- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to true.  When false,
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to false.  When false,
   the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
   directory.  When true, the job's scratch directory is a subdirectory thereof, named
   "scratch", with the intention that all condor metadata files will be moved to peer 
@@ -61,7 +61,7 @@
   jobs which go over :ad-attr:`Memory` in a timely manner.
   :jira:`3224`
 
-*** 24.12.1 bugs
+*** 24.12.2 bugs
 
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
