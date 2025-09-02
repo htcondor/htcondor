@@ -66,6 +66,10 @@
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
 
+- Fixed bug when :macro:`STARTER_NESTED_SCRATCH` is true and
+  :macro:`SINGULARITY_TARGET_DIR` was also set.
+  :jira:`3243`
+
 - Fixed bug that prevented emails being sent to users when jobs went
   on hold and :subcom:`notification` was set to error.
   :jira:`3219`
