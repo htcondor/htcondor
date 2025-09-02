@@ -206,7 +206,7 @@ Singularity::setup(ClassAd &machineAd,
 
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
-		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
+		exec = target_dir + '/' + orig_exec_val.substr(slot_dir.length());
 		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
