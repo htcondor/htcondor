@@ -835,7 +835,7 @@ def test_get_history(default_condor, test_check_details, wait_for_job):
     # history file. Retry a few times if we don't see the ad.
     retry_count = 0
     ad = {}
-    if (len(ad) == 0 and retry_count < 4):
+    while (len(ad) == 0 and retry_count < 4):
         p = default_condor.run_command([
             "condor_history",
             "-epochs",
