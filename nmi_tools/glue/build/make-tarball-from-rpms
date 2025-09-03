@@ -93,6 +93,15 @@ fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
+$cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
+
+# Move configuration files back to example directory
+mv tarball/etc/condor/config.d/* tarball/examples/
+
 # Extract external RPMs
 for path in $(find /usr/local/condor/externals -name \*.rpm); do
     file=${path##*/}
@@ -101,19 +110,11 @@ for path in $(find /usr/local/condor/externals -name \*.rpm); do
     extract_rpm $path tarball
 done
 
-$cmd_dir/make-tarball-links tarball
-if [ $? -ne 0 ];then
-    echo 'ERROR: tarball link script failed'
-    exit 1
-fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64:$ORIGIN/../lib64/condor'
 if [ $? -ne 0 ];then
     echo 'ERROR: set rpath script failed'
     exit 1
 fi
-
-# Move configuration files back to example directory
-mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Fixup directory permissions for the tarball
 chmod 700 tarball/etc/condor/passwords.d
