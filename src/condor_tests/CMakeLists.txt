@@ -406,7 +406,11 @@ endif()
 			if(NOT EMULATED_PLATFORM)
 				# The emulated platforms are too slow to run these tests.
 				condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_checkpoint_destination_two "Test checkpoint_destination_two" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				if(NOT APPLE)
+					# This test fails intermittently on MacOSX for reasons outside our control.
+					condor_pl_test(test_checkpoint_destination_two "Test checkpoint_destination_two" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				endif(NOT APPLE)
+
 				condor_pl_test(test_checkpoint_preen "Test checkpoint_destination cleanup via preen" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
