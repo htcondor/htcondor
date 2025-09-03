@@ -278,17 +278,17 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     pushd "$externals_dir"
     apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt-get download libboost-python1.74.0 libscitokens0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt-get download libboost-python1.74.0 libscitokens0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'trixie' ]; then
-        apt-get download libboost-python1.83.0 libscitokens0t64 libvomsapi1t64
+        apt-get download libscitokens0t64 libvomsapi1t64
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt-get download libboost-python1.71.0 libscitokens0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt-get download libboost-python1.74.0 libscitokens0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'noble' ]; then
-        apt-get download libboost-python1.83.0 libscitokens0t64 libvomsapi1t64
+        apt-get download libscitokens0t64 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
@@ -301,17 +301,11 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
-    if [ $ID = 'centos' ] && [ $VERSION_ID -eq 7 ]; then
-        yumdownloader --downloadonly --destdir="$externals_dir" \
-            boost169-python3 python36-chardet python36-idna python36-pysocks python36-requests python36-six python36-urllib3
-    else
-        yumdownloader --downloadonly --destdir="$externals_dir" boost-python3
-    fi
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 pelican pelican-osdf-compat
 fi
 
 # Clean up package caches
