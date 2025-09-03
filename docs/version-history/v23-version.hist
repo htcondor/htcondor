@@ -1,0 +1,337 @@
+*** 23.10.29 features
+
+- The condor RPM package now requires at least apptainer version 1.4.2.
+
+*** 23.10.29 bugs
+
+- Fixed a bug where Flock Collectors could be forgotten after
+  having a connection interruption.
+  :jira:`3200`
+
+- Fixed a bug where a *condor_schedd* would not attempt to flock
+  to collectors in the :macro:`FLOCK_TO` list when a communication
+  failure occurred to a collector earlier in the list.
+  :jira:`3200`
+
+- Fixed a packaging bug in tarballs for RPM-based systems which resulted
+  in the Pelican file-transfer plug-in not being enabled by default.
+  :jira:`3239`
+
+*** 23.0.29 bugs
+
+*** 23.10.28 features
+
+- HTCondor tarballs now contain `Pelican 7.18.1 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.18.1.
+
+- HTCondor tarballs now contain `Apptainer 1.4.2 <https://github.com/apptainer/apptainer/releases/tag/v1.4.2>`_
+
+*** 23.10.28 bugs
+
+- Fixed a bug with docker universe jobs that have a PostCmd.
+  This PostCmd script was not passed the environment variables
+  _CONDOR_MAINJOB_EXIT_CODE or _CONDOR_MAINJOB_EXIT_SIGNAL
+  :jira:`3185`
+
+- Fixed a bug where the :ad-attr:`ImageSize` attribute in a slot on a
+  Windows EP was a large random value while the slot was running a job.
+  The bug was due to a change in the Win32 API where the total virtual
+  memory of a process is no longer reported.  From now on
+  :ad-attr:`ImageSize` on a Windows EP will have the same value as
+  :ad-attr:`ResidentSetSize`.
+  :jira:`3179`
+
+- Fixed a bug where an old client (version 9.0 or earlier) with lax
+  security settings (authentication, encryption, and integrity all
+  disabled or optional) would fail to communicate with a daemon with
+  stronger security settings.
+  :jira:`3189`
+
+*** 23.0.28 bugs
+
+- ``condor_token_request`` no longer fails with an error if the token is
+  automatically approved by the daemon.
+  :jira:`239`
+
+*** 23.10.27 features
+
+- HTCondor tarballs now contain `Pelican 7.17.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.2.
+
+*** 23.10.27 bugs
+
+- Fixed a bug where the specific vacate reason wasn't reported in the job
+  event log or the job ad when a job was evicted from the EP.
+  The message ``Unspecified job interruption`` and code 1005 were used
+  instead.
+  :jira:`3117`
+
+- Fixed a bug that could cause the startd's mips benchmark to
+  run forever, consuming a cpu core and resulting in the 
+  :ad-attr:`Mips` attribute to be undefined.
+  :jira:`3134`
+
+*** 23.0.27 bugs
+
+- :tool:`condor_ssh_to_job` now works correctly when TMP is set to longer
+  paths, such as when running under glidein.
+  :jira:`3163`
+
+- Fixed a bug in :tool:`htcondor job status` and :tool:`htcondor dag status`
+  that caused some time information to be displayed incorrectly.
+  :jira:`3112`
+
+- Fixed a bug where the Machine and Job ClassAds would fail to be
+  written into job scratch directories on Execution Points using
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`3156`
+
+*** 23.10.26 features
+
+- HTCondor tarballs now contain `Pelican 7.17.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.17.0.
+
+*** 23.10.26 bugs
+
+- Fixed a memory leak in the *condor_schedd* when late materialization
+  is used.
+  :jira:`3096`
+
+- Fixed a bug where the *condor_master* would not start up on systems
+  where ``ulimit -n`` was close to 2 ^ 31 file descriptors.
+  :jira:`3079`
+
+*** 23.0.26 bugs
+
+- Fixed a bug in *condor_adstash* that would prevent ads from
+  being ingested to Elasticsearch or OpenSearch when a lookup
+  of indexes did not start with a writable index.
+  :jira:`3109`
+
+- Fixed a bug when DAGMan's log file was on a full filesystem, DAGMan
+  would not exit with the correct log file full exit code.
+  :jira:`3066`
+
+- The submit commands :subcom:`kill_sig`, :subcom:`remove_kill_sig`, and
+  :subcom:`hold_kill_sig` are now ignored for Windows jobs.
+  These control Unix process signals, which are not relevant on
+  Windows.
+  :jira:`3078`
+
+- Fixed a bug introduced in HTCondor 23.0.21, 23.10.21, and 24.0.5 that
+  caused the *condor_gridmanager* to fail at startup if
+  :macro:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR` was set to ``True``.
+  :jira:`3099`
+
+- The plug-in used to handle ``http`` and ``https`` URLs now sets the
+  ``user-agent`` header by default (``condor_curl_plugin/0.2``).  Web servers which return a 403/Forbidden
+  error when the ``user-agent`` is empty will now function as expected.
+  :jira:`3121`
+
+*** 23.10.25 features
+
+- HTCondor tarballs now contain `Pelican 7.16.5 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.16.5.
+
+- Pelican 7.16.5 now includes end-to-end integrity checks for clients
+
+- HTCondor tarballs now contain `Apptainer 1.4.1 <https://github.com/apptainer/apptainer/releases/tag/v1.4.1>`_
+
+*** 23.10.25 bugs
+
+- Fixed bug where :macro:`DAGMAN_MAX_JOBS_IDLE` value was not being respected by DAGMan
+  even if no limit was specified via :tool:`condor_submit_dag`\s ``-maxidle`` option.
+  :jira:`3011`
+
+*** 23.0.25 bugs
+
+- Fixed some bugs with parallel universe jobs that can cause the
+  *condor_schedd* to crash.
+  :jira:`3049`
+
+- Fixed a bug that caused the *condor_starter* to crash if a job was
+  vacated during input file transfer.
+  :jira:`3016`
+
+- :tool:`condor_watch_q` will now correctly display the full range of job
+  ids for each batch grouping.
+  :jira:`2992`
+
+- Fixed bug in one of :tool:`condor_upgrade_check`\'s tests that would cause
+  the test to check for incorrect hostname when running inside of a container.
+  :jira:`3014`
+
+*** 23.10.24 features
+
+- HTCondor tarballs now contain `Pelican 7.15.1 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.15.1. The weak dependency is no longer used, because dnf would
+  not update to the requested pelican version.
+
+- HTCondor tarballs now contain `Apptainer 1.4.0 <https://github.com/apptainer/apptainer/releases/tag/v1.4.0>`_
+
+- The condor RPM package now requires at least apptainer version 1.3.6.
+
+*** 23.10.24 bugs
+
+- Fixed a bug that could cause the *condor_starter* to crash
+  when running docker universe jobs with custom volume mounts.
+  :jira:`2890`
+
+- Fixed a bug preventing spooled or remote jobs using
+  :subcom:`preserve_relative_paths` from working.
+  :jira:`2877`
+
+- The *condor_kbdd* now also looks in the ``XDG_RUNTIME_DIRECTORY``
+  when trying to find a XAuthority file to use to connect to a local
+  X server.
+  :jira:`2921`
+
+- Fixed a bug that prevented daemons from updating their ads in the
+  *condor_collector* when authentication is disabled but encryption or
+  integrity is enabled.
+  :jira:`2888`
+
+- Fixed a bug in :tool:`condor_adstash` that caused it to fail to discover
+  *condor_startd* daemons using :macro:`ENABLE_STARTD_DAEMON_AD`
+  (enabled by default since HTCondor 23.9).
+  :jira:`2908`
+
+- Fixed a bug with :subcom:`transfer_output_remaps` when given an erroneous 
+  trailing semicolon.
+  :jira:`2910`
+
+- Fixed some bugs with parallel universe jobs that can cause the
+  ``condor_schedd`` to crash.
+  :jira:`3049`
+
+
+*** 23.0.24 bugs
+
+- Fixed inflated memory usage reporting for docker universe jobs on hosts using
+  cgroups V2. The reported memory no longer includes the cached memory.
+  :jira:`2961`
+
+- Fixed a bug where specifying :subcom:`transfer_output_remaps` from a path
+  which didn't exist to a ``file://`` URL would cause HTCondor to report a
+  useless (albeit correct) error.
+  :jira:`2790`
+
+- Fixed a bug that could cause the *condor_shadow* daemon to crash when
+  the :subcom:`transfer_input_files` list was very long (thousands of characters).
+  :jira:`2859`
+
+- Fixed a bug where two different *condor_gridmanager* processes could
+  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
+  evaluated to ``UNDEFINED`` or an empty string for any job.
+  :jira:`2895`
+
+- Fixed a rare bug in the *condor_schedd*, when
+  :macro:`PER_JOB_HISTORY_DIR` is set that could cause
+  a repeated restart loop.
+  :jira:`2902`
+
+- X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
+  :jira:`2904`
+
+- Fixed a bug that could cause the *condor_gridmanager* to crash when
+  there were ARC CE jobs with no :ad-attr:`X509UserProxy`.
+  :jira:`2907`
+
+- Fixed a bug that usually prevented :subcom:`manifest` from populating the
+  ``in`` and ``out`` files.
+  :jira:`2916`
+
+- Fixed a bug that could cause a job submission to fail if a previous
+  job submission to the same *condor_schedd* failed.
+  :jira:`2917`
+
+- Fixed a bug where daemons wouldn't immediately apply new security policy
+  to incoming commands after a reconfigure.
+  :jira:`2929`
+
+- Fixed a bug where :tool:`condor_history` would crash when reading a history file
+  larger than ``2GB`` in the default mode (**backwards**).
+  :jira:`2933`
+
+- Fixed a bug that caused the ce-audit plugin to fail.
+  :jira:`2963`
+
+- Removed a scary-looking message in the log of the *condor_collector* about
+  denying NEGOTIATOR-level authorization when the client wasn't requesting
+  that authorization level.
+  :jira:`2964`
+
+- Fixed a bug that caused most updates of collector ads via UDP to be
+  rejected.
+  :jira:`2975`
+
+- Fixed a bug where the *condor_shadow* would wait for the job lease to
+  expire (usually 40 minutes) before returning a job to idle status when
+  the *condor_starter* failed to initialize.
+  :jira:`2997`
+
+- The *condor_startd* now checks to see if the :macro:`START` expression of a static slot still
+  evaluates to true before it allows a slot to be claimed. This helps to give an accurate reply
+  to the *condor_schedd* when it tries to claim a slot with a START expression that
+  changes frequently.
+  :jira:`3013`
+
+*** 23.10.21 features
+
+- HTCondor tarballs now contain `Pelican 7.13.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.13.0>`_
+
+*** 23.10.21 bugs
+
+- Fixed a bug where chirp would not work in container universe jobs
+  using the docker runtime.
+  :jira:`2866`
+
+- Fixed a bug where referencing :attr:`htcondor2.JobEvent.cluster`
+  could crash if processed log event was not associated with job(s)
+  (i.e. had a negative value).
+  :jira:`2881`
+
+*** 23.0.21 bugs
+
+- Fixed a bug that caused the *condor_gridmanager* to abort if a job that
+  it was managing disappeared from the job queue (i.e. due to someone
+  running *condor_rm -force*).
+  :jira:`2845`
+
+- Fixed a bug that caused grid ads from different Access Points to
+  overwrite each other in the collector.
+  :jira:`2876`
+
+- Fixed a memory leak that can occur in any HTCondor daemon when an
+  invalid ClassAd expression is encountered.
+  :jira:`2847`
+
+- Fixed a bug that caused daemons to go into infinite recursion,
+  eventually crashing when they ran out of stack memory.
+  :jira:`2873`
+
+*** 23.10.20 bugs
+
+- Fixed issue where EPs using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
+  fill up the EPs filesystem due to excessive saving of metadata to
+  ``/etc/lvm/archive``.
+  :jira:`2791`
+
+- Fixed bug where :subcom:`container_service_names` did not work.
+  :jira:`2829`
+
+- Fixed very rare bug that could cause the *condor_startd* to crash
+  when the *condor_collector* times out queries and DNS is running
+  very slowly.
+  :jira:`2831`
+
+*** 23.0.20 bugs
+
+- Updated :tool:`condor_upgrade_check` to test for use for PASSWORD
+  authentication and warn about the authenticated identity changing.
+  :jira:`2823`
