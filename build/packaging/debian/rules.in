@@ -112,7 +112,6 @@ override_dh_fixperms-arch:
 	dh_fixperms
 	chmod a-x debian/condor/usr/libexec/condor/interactive.sub
 	chmod a-x debian/condor/usr/libexec/condor/ce-audit.so
-	chmod a-x debian/condor/usr/libexec/condor/libclassad_python_user.*.so
 
 
 override_dh_install-arch:
