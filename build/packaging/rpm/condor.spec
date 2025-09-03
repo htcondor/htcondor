@@ -68,9 +68,6 @@ BuildRequires: openldap-devel
 BuildRequires: cmake >= 3.16
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
-%if 0%{?rhel} >= 8
-BuildRequires: boost-devel
-%endif
 %if 0%{?suse_version}
 BuildRequires: rpm-config-SUSE
 %else
@@ -123,15 +120,6 @@ BuildRequires: gcc11
 BuildRequires: gcc11-c++
 %endif
 
-%if 0%{?rhel} >= 8
-BuildRequires: boost-static
-%endif
-
-%if  0%{?suse_version}
-BuildRequires: libboost_python-py3-1_75_0-devel
-%else
-BuildRequires: boost-python3-devel
-%endif
 BuildRequires: libuuid-devel
 %if 0%{?suse_version}
 Requires: libuuid1
@@ -233,8 +221,7 @@ Requires: pelican-osdf-compat >= 7.18.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.2 is released
-Requires: apptainer >= 1.3.6
+Requires: apptainer >= 1.4.2
 %endif
 %endif
 
@@ -364,11 +351,6 @@ A collection of tests to verify that HTCondor is operating properly.
 Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?suse_version}
-Requires: libboost_python-py3-1_75_0
-%else
-Requires: boost-python3
-%endif
 Requires: python3
 Requires: python3-cryptography
 
@@ -735,7 +717,6 @@ mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
 mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
-mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
 
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
@@ -1208,9 +1189,6 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-%_libdir/libpyclassad3*.so
-%_libexecdir/condor/libclassad_python_user.cpython-3*.so
-%_libexecdir/condor/libclassad_python3_user.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/

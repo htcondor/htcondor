@@ -70,8 +70,6 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 
-# In some (near) future version, remove all references to WANT_PYTHON2_BINDINGS...
-option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" OFF)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 
 
@@ -79,11 +77,6 @@ option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 if(NOT WINDOWS)
 	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
 	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
-
-	# We don't support python2 on mac (anymore)
-	if (APPLE)
-		set(WANT_PYTHON2_BINDINGS OFF)
-	endif()
 
 	# Wheels are build in an environment that intentionlly doesn't have the
 	# python .so's or .a's installed, but does have the header files.
@@ -118,33 +111,6 @@ if(NOT WINDOWS)
 		endif()
 
 	endif()
-
-	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
-
-		find_package (Python2 COMPONENTS Interpreter Development)
-
-		set(PYTHON_VERSION_STRING    ${Python2_VERSION})
-		set(PYTHON_VERSION_MAJOR     ${Python2_VERSION_MAJOR})
-		set(PYTHON_VERSION_MINOR     ${Python2_VERSION_MINOR})
-		set(PYTHON_VERSION_PATCH     ${Python2_VERSION_PATCH})
-		set(PYTHON_INCLUDE_DIRS      ${Python2_INCLUDE_DIRS})
-		set(PYTHON_LIB               ${Python2_LIBRARIES})
-		set(PYTHON_MODULE_EXTENSION  "${CMAKE_SHARED_LIBRARY_SUFFIX}")
-
-		set(PYTHON_EXECUTABLE        ${Python2_EXECUTABLE})
-
-		set(PYTHON_LIBRARIES "${PYTHON_LIB}")
-
-		set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
-		set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
-		set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
-
-		if (Python2_FOUND)
-			set(PYTHONLIBS_FOUND TRUE)
-			message(STATUS "Python2 library found at ${PYTHON_LIB}")
-		endif()
-
-	endif(WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
@@ -548,11 +514,7 @@ option(HAVE_BOINC "Compiling support for backfill with BOINC" OFF)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
-if (WINDOWS OR APPLE)
-	option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" OFF)
-else()
-	option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-endif()
+option(WITH_PYTHON_BINDINGS "Support for v1 HTCondor Python bindings" OFF)
 option(WITH_PYTHON_BINDINGS_V2 "Support for HTCondor V2 python bindings" ON)
 option(WITH_PYTHON_BINDINGS_V3 "Support for HTCondor V3 python bindings" ON)
 option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
@@ -708,21 +670,13 @@ else ()
 endif()
 
 # Common externals
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.46)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
 else ()
-
-	if (WITH_PYTHON_BINDINGS)
-		if (APPLE)
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-		else()
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
-		endif()
-	endif()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)

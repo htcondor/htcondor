@@ -62,6 +62,7 @@ htcondor2/_file_transfer_event_type.py
 htcondor2/_common_files_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
+htcondor2/_security_context.py
 htcondor2/_loose_functions.py
 htcondor2/__init__.py
 

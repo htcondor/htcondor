@@ -985,7 +985,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		}
 
 		int decoded_bytes = 0;
-		unsigned char * decoded = NULL;
+		unsigned char * decoded = nullptr;
 		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
 		if( decoded == NULL ) {
 			dprintf( D_ALWAYS, "Failed to decode contents of diagnostic result for '%s'.\n", diagnostic.c_str() );
@@ -996,11 +996,13 @@ pseudo_event_notification( const ClassAd & ad ) {
 		if( exitStatus != 0 ) {
 			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
 			dprintf( D_FULLDEBUG, "Output to first NUL follows: '%s'\n", decoded );
+			free(decoded);
 			return GENERIC_EVENT_RV_OK;
 		}
 
 		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
 			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
+			free(decoded);
 			return GENERIC_EVENT_RV_CONFUSED;
 		}
 

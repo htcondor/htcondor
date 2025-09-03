@@ -219,13 +219,18 @@ _ping( PyObject *, PyObject * args ) {
 	long command = -1;
 	const char * authz = nullptr;
 	DCpermission authz_int = NOT_A_PERM;
+	const char* token = nullptr;
 
-	if(! PyArg_ParseTuple(args, "sz", & addr, & authz )) {
+	if(! PyArg_ParseTuple(args, "szz", & addr, & authz , &token)) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	};
 
 	Daemon d(DT_ANY, addr, nullptr);
+
+	if (token) {
+		d.setPreferredToken(token);
+	}
 
 	// authz is the string form of an authorization level or a CEDAR command.
 	// Figure out the appropriate CEDAR command integer.
