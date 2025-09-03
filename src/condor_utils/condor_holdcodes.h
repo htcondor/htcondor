@@ -204,4 +204,10 @@ BETTER_ENUM(FILETRANSFER_HOLD_CODE, int,
 
 )
 
+// Job Out Of Resources (OOR) SubHoldCode
+BETTER_ENUM(OUT_OF_RESOURCES_SUB_CODE, int,
+	Memory = 0,
+	Disk = 1
+)
+
 #endif

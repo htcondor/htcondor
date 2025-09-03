@@ -1067,7 +1067,7 @@ VanillaProc::outOfMemoryEvent() {
 	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.c_str());
 
 	// This ulogs the hold event and KILLS the shadow
-	starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+	starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Memory);
 
 	return 0;
 }
