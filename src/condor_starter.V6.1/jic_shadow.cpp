@@ -2248,7 +2248,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		formatstr( updateAdPath, "%s/%s",
 			starter->GetWorkingDir(0), ".update.ad"
 		);
-		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
 			formatstr( updateAdPath, "%s/%s",
 				starter->GetWorkingDir(0), "../htcondor/.update.ad"
 			);
