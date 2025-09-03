@@ -1036,8 +1036,8 @@ private:
 
 	static void		token_request_callback(bool success, void *miscdata);
 
-	HashTable <std::string, match_rec *> *matches;
-	HashTable <PROC_ID, match_rec *> *matchesByJobID;
+	std::map<std::string, match_rec *> matches;
+	std::map<PROC_ID, match_rec *> matchesByJobID;
 	std::map<int, shadow_rec *> shadowsByPid;
 	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
 	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;

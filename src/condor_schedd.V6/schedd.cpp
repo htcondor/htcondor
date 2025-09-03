@@ -727,8 +727,6 @@ Scheduler::Scheduler() :
 	leaseAliveInterval = 500000;	// init to a nice big number
 	aliveid = -1;
 	ExitWhenDone = FALSE;
-	matches = NULL;
-	matchesByJobID = NULL;
 
 	numMatches = 0;
 	numShadows = 0;
@@ -838,17 +836,8 @@ Scheduler::~Scheduler()
 
 	if (CondorAdministrator)
 		free(CondorAdministrator);
-	if (matches) {
-		matches->startIterations();
-		match_rec *rec;
-		std::string id;
-		while (matches->iterate(id, rec) == 1) {
-			delete rec;
-		}
-		delete matches;
-	}
-	if (matchesByJobID) {
-		delete matchesByJobID;
+	for (const auto& [id, rec]: matches) {
+		delete rec;
 	}
 	for (const auto &[pid, rec]: shadowsByPid) {
 		delete rec;
@@ -1159,9 +1148,11 @@ void
 Scheduler::check_claim_request_timeouts()
 {
 	if(RequestClaimTimeout > 0) {
-		matches->startIterations();
-		match_rec *rec;
-		while(matches->iterate(rec) == 1) {
+		// DelMrec() will erase the matches entry, so be careful here...
+		auto it = matches.begin();
+		while (it != matches.end()) {
+			match_rec* rec = it->second;
+			it++;
 			if(rec->status == M_STARTD_CONTACT_LIMBO) {
 				time_t time_left = rec->entered_current_status + \
 				                 RequestClaimTimeout - time(NULL);
@@ -1567,9 +1558,7 @@ Scheduler::count_jobs()
 	std::map<std::string, std::vector<PROC_ID>> jobs_on_borrowed_claims;	
 
 		// set JobsRunning/JobsFlocked for owners
-	matches->startIterations();
-	match_rec *rec;
-	while(matches->iterate(rec) == 1) {
+	for (const auto& [id, rec]: matches) {
 		SubmitterData * SubDat;
 		if (user_is_the_new_owner) {
 			SubDat = insert_submitter(rec->user);
@@ -2255,16 +2244,8 @@ int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 
 	stream->encode();
 
-	// The HashTable class is /so/ broken:
-	//	* no operator !=
-	//	* post-increment operator modifies the base class
-	//	* no pre-increment operator
-	//	* i->second doesn't work, but (*i).second does
-	//  * will not work with C++11 for( auto && i : v ) {}
-	auto i = matches->begin();
 	dprintf( D_TEST, "Dumping match records (with now jobs)...\n" );
-	for( ; !(i == matches->end()); i.advance() ) {
-		match_rec * match = (*i).second;
+	for (const auto& [id, match]: matches) {
 
 		if( match->my_match_ad == NULL ) {
 			continue;
@@ -2285,7 +2266,7 @@ int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 
 		if( match->m_now_job.isJobKey() ) {
 			dprintf( D_TEST, "Match record '%s' has now job %d.%d\n",
-				(*i).first.c_str(), match->m_now_job.cluster, match->m_now_job.proc );
+				id.c_str(), match->m_now_job.cluster, match->m_now_job.proc );
 		}
 
 		num_ads++;
@@ -8923,7 +8904,8 @@ Scheduler::release_claim(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
-	if( matches->lookup(claim_id, mrec) != 0 ) {
+	auto it = matches.find(claim_id);
+	if (it == matches.end()) {
 			// We couldn't find this match in our table, perhaps it's
 			// from a dedicated resource.
 		dedicated_scheduler.DelMrec( claim_id );
@@ -8932,6 +8914,7 @@ Scheduler::release_claim(int, Stream *sock)
 			// The startd has sent us RELEASE_CLAIM because it has
 			// destroyed the claim.  There is therefore no need for us
 			// to send RELEASE_CLAIM to the startd.
+		mrec = it->second;
 		mrec->needs_release_claim = false;
 
 		DelMrec( mrec );
@@ -9703,8 +9686,11 @@ Scheduler::StartJobs( int /* timerID */ )
 	this->calculateCronTabSchedules();
 		
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
-	matches->startIterations();
-	while(matches->iterate(rec) == 1) {
+	// StartJob() may erase the matches entry, so be careful here...
+	auto it = matches.begin();
+	while (it != matches.end()) {
+		rec = it->second;
+		it++;
 			// If it's not in M_CLAIMED status, then it's not ready
 			// to start a job.
 		if ( rec->status == M_CLAIMED ) {
@@ -14144,12 +14130,6 @@ Scheduler::Init()
 		launch_local_startd();
 	}
 
-	if (matches == NULL) {
-		matches = new HashTable <std::string, match_rec *> (hashFunction);
-		matchesByJobID =
-			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID);
-	}
-
 	char *flock_collector_hosts, *flock_negotiator_hosts;
 	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
 	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
@@ -15319,7 +15299,9 @@ Scheduler::AddMrec(
 	} 
 	// spit out a warning and return NULL if we already have this mrec
 	match_rec *tempRec;
-	if( matches->lookup( id, tempRec ) == 0 ) {
+	auto it = matches.find(id);
+	if (it != matches.end()) {
+		tempRec = it->second;
 		char const *pubid = tempRec->claim_id.publicClaimId();
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
@@ -15337,7 +15319,8 @@ Scheduler::AddMrec(
 		EXCEPT("Out of memory!");
 	} 
 
-	if( matches->insert( id, rec ) != 0 ) {
+	auto [it2, success] = matches.emplace(id, rec);
+	if (!success) {
 		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", rec->claim_id.publicClaimId());
 		delete rec;
 		return nullptr;
@@ -15347,7 +15330,8 @@ Scheduler::AddMrec(
 	JobQueueJob *job_ad = nullptr;
 	JobQueueCluster * cluster_ad = nullptr;
 	if (JobQueueBase::IsJobId(jid)) {
-		ASSERT( matchesByJobID->insert( jid, rec ) == 0 );
+		auto [it, success] = matchesByJobID.emplace(jid, rec);
+		ASSERT(success);
 		job_ad = GetJobAd(jid);
 		if (job_ad) cluster_ad = job_ad->Cluster();
 	} else if (JobQueueBase::IsClusterId(jid)) {
@@ -15414,20 +15398,19 @@ Scheduler::AddMrec(
 int
 Scheduler::DelMrec(char const* id)
 {
-	match_rec *rec;
-
 	if(!id)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
 
-	if( matches->lookup(id, rec) != 0 ) {
+	auto it = matches.find(id);
+	if( it == matches.end() ) {
 			// Couldn't find it, return failure
 		return -1;
 	}
 
-	return DelMrec( rec );
+	return DelMrec(it->second);
 }
 
 
@@ -15475,9 +15458,9 @@ Scheduler::unlinkMrec(match_rec* match)
 		dirtyJobQueue();
 	}
 
-	matches->remove(match->claim_id.claimId());
+	matches.erase(match->claim_id.claimId());
 
-	matchesByJobID->remove(jobId);
+	matchesByJobID.erase(jobId);
 
 		// fill any authorization hole we made for this match
 	if (match->auth_hole_id != NULL) {
@@ -15513,26 +15496,31 @@ shadow_rec*
 Scheduler::FindSrecByProcID(PROC_ID proc)
 {
 	auto it = shadowsByProcID.find(proc);
-	if (it == shadowsByProcID.end()) {
+	if (it != shadowsByProcID.end()) {
+		return it->second;
+	} else {
 		return nullptr;
 	}
-	return it->second;
 }
 
 match_rec *
 Scheduler::FindMrecByJobID(PROC_ID job_id) {
-	match_rec *match = NULL;
-	if( matchesByJobID->lookup( job_id, match ) < 0) {
-		return NULL;
+	auto it = matchesByJobID.find(job_id);
+	if (it != matchesByJobID.end()) {
+		return it->second;
+	} else {
+		return nullptr;
 	}
-	return match;
 }
 
 match_rec *
 Scheduler::FindMrecByClaimID(char const *claim_id) {
-	match_rec *rec = NULL;
-	(void) matches->lookup(claim_id, rec);
-	return rec;
+	auto it = matches.find(claim_id);
+	if (it == matches.end()) {
+		return nullptr;
+	} else {
+		return it->second;
+	}
 }
 
 void
@@ -15545,12 +15533,13 @@ Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
 		return; // no change
 	}
 
-	matchesByJobID->remove(old_job_id);
+	matchesByJobID.erase(old_job_id);
 
 	match->cluster = job_id.cluster;
 	match->proc = job_id.proc;
 	if( match->proc != -1 ) {
-		ASSERT( matchesByJobID->insert(job_id, match) == 0 );
+		auto [it, success] = matchesByJobID.emplace(job_id, match);
+		ASSERT(success);
 	}
 }
 
@@ -15876,7 +15865,6 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 void
 Scheduler::sendAlives( int /* timerID */ )
 {
-	match_rec	*mrec;
 	int		  	numsent=0;
 	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
@@ -15906,8 +15894,7 @@ Scheduler::sendAlives( int /* timerID */ )
 
 	time_t now = time(nullptr);
 	BeginTransaction();
-	matches->startIterations();
-	while (matches->iterate(mrec) == 1) {
+	for (const auto& [id, mrec]: matches) {
 		if( mrec->status == M_ACTIVE ) {
 			time_t renew_time = 0;
 			if ( starter_handles_alives && 
@@ -15938,8 +15925,11 @@ Scheduler::sendAlives( int /* timerID */ )
 	}
 	CommitNonDurableTransactionOrDieTrying();
 
-	matches->startIterations();
-	while (matches->iterate(mrec) == 1) {
+	// DelMrec() will erase the matches entry, so be careful here...
+	auto it = matches.begin();
+	while (it != matches.end()) {
+		match_rec* mrec = it->second;
+		it++;
 		if( mrec->m_startd_sends_alives == false &&
 			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
 
