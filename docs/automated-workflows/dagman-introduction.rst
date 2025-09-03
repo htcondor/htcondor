@@ -377,9 +377,11 @@ arguments surrounded by spaces:
 +---------------+---------------+-------------------+--------------------+
 |               | $JOBID        | $CLUSTERID        | $JOB_COUNT         |
 |               +---------------+-------------------+--------------------+
-|  POST Scripts | $RETURN       | $EXIT_CODES       | $EXIT_CODE_COUNTS  |
+|  POST Scripts | $RETURN       | $SUCCESS          | $PRE_SCRIPT_RETURN |
 |               +---------------+-------------------+--------------------+
-|               | $SUCCESS      | $JOB_ABORT_COUNT  | $PRE_SCRIPT_RETURN |
+|               | $EXIT_CODES   | $EXIT_CODE_COUNTS | $EXIT_CODE_LIST    |
+|               +---------------+-------------------+--------------------+
+|               |               | $JOB_ABORT_COUNT  |                    |
 +---------------+---------------+-------------------+--------------------+
 
 
@@ -437,6 +439,8 @@ Macros for POST Scripts only:
      the value of ``$RETURN`` will be -1004.
 -  ``$EXIT_CODES`` is an ordered comma separated list of :ad-attr:`ExitCode`\ s returned
    by the jobs associated with the node.
+-  ``$EXIT_CODE_LIST`` a comma separated list of each job's :ad-attr:`ExitCode` ordered by
+   job :ad-attr:`ProcId`\'s. Removed jobs will have no value in their position.
 -  ``$EXIT_CODE_COUNTS`` is a ordered comma separated list of the number of jobs associated
    with the node that exited with a particular :ad-attr:`ExitCode`. The information
    is passed as ``{ExitCode}:{Count}``.
