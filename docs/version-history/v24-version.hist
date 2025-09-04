@@ -1,3 +1,11 @@
+*** 24.12.13 bugs
+
+- Fixed bug where the message ``Processing new events...`` would briefly
+  flash while running :tool:`condor_watch_q`
+  :jira:`3244`
+
+*** 24.0.13 bugs
+
 *** 24.12.2 features
 
 - :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute

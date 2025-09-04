@@ -29,7 +29,6 @@ import os
 import time
 import operator
 import re
-import contextlib
 import shutil
 import struct
 
@@ -515,113 +514,112 @@ def watch_q(
         keyboard = KBHit(args.exit_on_key_press)
 
         while True:
-            with display_temporary_message("Processing new events...", enabled=refresh):
-                processing_messages = tracker.process_events()
-                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            processing_messages = tracker.process_events()
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                if (
-                    not all(
-                        cluster_id in cluster_ids_with_nodes_total
-                        for cluster_id in dagman_job_cluster_ids
-                    )
-                    and time.time() - last_nodes_total_check_time > 60
-                ):
-                    last_nodes_total_check_time = time.time()
-                    (
-                        batch_name_to_nodes_total,
-                        cluster_ids_with_nodes_total,
-                    ) = find_nodes_total(constraint, collector, schedd)
-
-                # "if msg is not None" skips the first iteration, when there's nothing to clear
-                if msg is not None and refresh:
-                    msg = strip_ansi(msg)
-                    prev_lines = list(msg.splitlines())
-                    prev_len_lines = [len(line) for line in prev_lines]
-                    move = "\033[{}A\r".format(len(prev_len_lines))
-                    clear = "\n".join(" " * len(line) for line in prev_lines) + "\n"
-
-                groups, batch_name_to_nodes_total = group_clusters(
-                    tracker.clusters,
-                    key,
-                    dagman_clusters_to_paths,
-                    batch_names,
-                    dagman_job_cluster_ids,
+            if (
+                not all(
+                    cluster_id in cluster_ids_with_nodes_total
+                    for cluster_id in dagman_job_cluster_ids
+                )
+                and time.time() - last_nodes_total_check_time > 60
+            ):
+                last_nodes_total_check_time = time.time()
+                (
                     batch_name_to_nodes_total,
-                    specified_clusters,
+                    cluster_ids_with_nodes_total,
+                ) = find_nodes_total(constraint, collector, schedd)
+
+            # "if msg is not None" skips the first iteration, when there's nothing to clear
+            if msg is not None and refresh:
+                msg = strip_ansi(msg)
+                prev_lines = list(msg.splitlines())
+                prev_len_lines = [len(line) for line in prev_lines]
+                move = "\033[{}A\r".format(len(prev_len_lines))
+                clear = "\n".join(" " * len(line) for line in prev_lines) + "\n"
+
+            groups, batch_name_to_nodes_total = group_clusters(
+                tracker.clusters,
+                key,
+                dagman_clusters_to_paths,
+                batch_names,
+                dagman_job_cluster_ids,
+                batch_name_to_nodes_total,
+                specified_clusters,
+            )
+            rows_by_key, totals = make_rows_from_groups(
+                groups, key, batch_name_to_nodes_total
+            )
+
+            headers, rows_by_key = strip_empty_columns(rows_by_key)
+
+            # strip out 0 values
+            rows_by_key = {
+                key: {k: v for k, v in row.items() if v != 0}
+                for key, row in rows_by_key.items()
+            }
+
+            if key == EVENT_LOG and abbreviate_path_components:
+                for row in rows_by_key.values():
+                    row[key] = abbreviate_path(row[key])
+
+            rows_by_key = sorted(
+                rows_by_key.items(),
+                key=lambda key_row: min(
+                    cluster.cluster_id for cluster in groups[key_row[0]]
+                ),
+            )
+
+            msg = []
+
+            terminal_columns, terminal_rows = get_terminal_size()
+
+            if table:
+                msg += make_table(
+                    row_progress_bar=row_progress_bar,
+                    terminal_columns=terminal_columns,
+                    headers=[key] + headers,
+                    rows=[row for _, row in rows_by_key],
+                    row_fmt=row_fmt,
+                    alignment=TABLE_ALIGNMENT,
+                    fill="-",
+                    color=color,
                 )
-                rows_by_key, totals = make_rows_from_groups(
-                    groups, key, batch_name_to_nodes_total
+                msg += [""]
+
+            if progress_bar:
+                msg += make_progress_bar(
+                    totals=totals, width=terminal_columns, color=color
                 )
+                msg += [""]
 
-                headers, rows_by_key = strip_empty_columns(rows_by_key)
+            if summary:
+                if summary_type == "totals":
+                    msg += make_summary_with_totals(totals, width=terminal_columns)
+                elif summary_type == "percentages":
+                    msg += make_summary_with_percentages(
+                        totals, width=terminal_columns
+                    )
+                msg += [""]
 
-                # strip out 0 values
-                rows_by_key = {
-                    key: {k: v for k, v in row.items() if v != 0}
-                    for key, row in rows_by_key.items()
-                }
+            if updated_at:
+                msg += ["Updated at {}".format(now)] + [""]
 
-                if key == EVENT_LOG and abbreviate_path_components:
-                    for row in rows_by_key.values():
-                        row[key] = abbreviate_path(row[key])
-
-                rows_by_key = sorted(
-                    rows_by_key.items(),
-                    key=lambda key_row: min(
-                        cluster.cluster_id for cluster in groups[key_row[0]]
-                    ),
+            if len(msg) > terminal_rows:
+                msg = msg[: terminal_rows - 1]
+                msg = (
+                    "\n".join(msg[:-1])
+                    + "\nInsufficient terminal height to display full output!"
                 )
+            else:
+                # msg[:-1] because we need to strip the last blank section delimiter line off
+                msg = "\n".join(msg[:-1])
 
-                msg = []
+            if not refresh:
+                msg += "\n..."
 
-                terminal_columns, terminal_rows = get_terminal_size()
-
-                if table:
-                    msg += make_table(
-                        row_progress_bar=row_progress_bar,
-                        terminal_columns=terminal_columns,
-                        headers=[key] + headers,
-                        rows=[row for _, row in rows_by_key],
-                        row_fmt=row_fmt,
-                        alignment=TABLE_ALIGNMENT,
-                        fill="-",
-                        color=color,
-                    )
-                    msg += [""]
-
-                if progress_bar:
-                    msg += make_progress_bar(
-                        totals=totals, width=terminal_columns, color=color
-                    )
-                    msg += [""]
-
-                if summary:
-                    if summary_type == "totals":
-                        msg += make_summary_with_totals(totals, width=terminal_columns)
-                    elif summary_type == "percentages":
-                        msg += make_summary_with_percentages(
-                            totals, width=terminal_columns
-                        )
-                    msg += [""]
-
-                if updated_at:
-                    msg += ["Updated at {}".format(now)] + [""]
-
-                if len(msg) > terminal_rows:
-                    msg = msg[: terminal_rows - 1]
-                    msg = (
-                        "\n".join(msg[:-1])
-                        + "\nInsufficient terminal height to display full output!"
-                    )
-                else:
-                    # msg[:-1] because we need to strip the last blank section delimiter line off
-                    msg = "\n".join(msg[:-1])
-
-                if not refresh:
-                    msg += "\n..."
-
-                if not exit_conditions:
-                    msg += "\nPress any key to exit" if args.exit_on_key_press else "\nPress ^C to exit"
+            if not exit_conditions:
+                msg += "\nPress any key to exit" if args.exit_on_key_press else "\nPress ^C to exit"
 
             if clear and move:
                 sys.stdout.write(move + clear + move)
@@ -680,21 +678,6 @@ def get_terminal_size():
                 return terminal_size(int(cols), int(rows))
         except Exception:
             return terminal_size(80, 24)
-
-
-@contextlib.contextmanager
-def display_temporary_message(msg, enabled=True):
-    """Display a single-line message until the context ends."""
-    if enabled:
-        print(msg, end="")
-        sys.stdout.flush()
-
-        yield
-
-        print("\r{}\r".format(" " * len(msg)), end="")
-        sys.stdout.flush()
-    else:
-        yield
 
 
 PROJECTION = [
