@@ -500,7 +500,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Memory);
 			DockerAPI::rm( containerName, error );
 
 			if ( starter->Hold( ) ) {
