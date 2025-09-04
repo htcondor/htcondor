@@ -141,6 +141,27 @@ def warn_multi_q_deprecation(*args, **kwargs):
     )
 
 
+def warn_python_api_v2(*args, **kwargs):
+    """Warn about removal of V1 Python API"""
+    format_print(
+        """
+        Warning:
+            The original Python API is no longer supported.  The `htcondor`
+            and `classad` modules have been removed from HTCondor 25, and
+            replaced with the `htcondor2` and `classad2` modules.
+        $(<EMPTY_LINE>)
+            The modules are almost entirely compatible, but scripts using
+            the original API will not work until switched to the new API;
+            see the following URL for details.
+        $(<EMPTY_LINE>)
+            https://htcondor.readthedocs.io/en/latest/apis/python-bindings/api/version2/migration-guide.html
+        """,
+        offset=4,
+        newline=True,
+        debug=Debug.WARNING,
+    )
+
+
 def check_job_router_syntax(*args, **kwargs):
     """Check for old job router configuration syntax."""
     deprecated_knobs = ["DEFAULTS", "ENTRIES", "ENTRIES_CMD", "ENTRIES_FILE"]
@@ -593,6 +614,13 @@ INCOMPATIBILITY_CHECKS = [
         synopsis="Pool PASSWORD identity changed from condor_pool@UID_DOMAIN to condor@password",
         version=(23, 9, 6),
     ),
+    Check(
+        test=warn_python_api_v2,
+        name="Python API Deprecation",
+        tag="PY-API",
+        synopsis="HTCondor Python API is no longer available",
+        version=(25, 0, 0),
+    ),
 ]
 
 # Sort checks by version
@@ -719,7 +747,7 @@ def run_checks(args, ignore_list, only_list, daemons):
 
         if not check.test(args):
             num_failed_checks += 1
-            format_print(f"Check {check.name} [{check.tag}] failed", offset=8)
+            format_print(f"Check {check.name} [{check.tag}] failed", offset=8, debug=Debug.DETAILED)
         else:
             format_print("No issue found with check", offset=8, debug=Debug.DETAILED)
 
