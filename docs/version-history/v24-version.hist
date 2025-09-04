@@ -89,6 +89,11 @@
 - Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
   :jira:`3225`
 
+- Fixed bug where jobs held due to exceeding disk usage had the same
+  :ad-attr:`HoldReasonCode` and :ad-attr:`HoldReasonSubCode` as jobs
+  that exceeded memory usage.
+  :jira:`3248`
+
 *** 24.11.2 features
 
 - Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
