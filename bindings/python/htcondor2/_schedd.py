@@ -329,7 +329,7 @@ class Schedd():
 
         :param user_spec: Which user(s) to add.  A :class:`str`
              of the username, a :class:`list` of such
-             strings, or a :class:`classad2.ClassAd` of initial user records
+             strings, or a list of the initial User records in :class:`classad2.ClassAd` form.
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """
@@ -348,7 +348,9 @@ class Schedd():
 
         :param user_spec: Which user(s) to enable.  A :class:`str`
              of the username, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that
+             match the constraint will be enabled.
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """
@@ -366,11 +368,13 @@ class Schedd():
         """
         Disable User record(s) in the *condor_schedd* daemon.
 
-        :param user_spec: Which user(s) to enable.  A :class:`str`
+        :param user_spec: Which user(s) to disable.  A :class:`str`
              of the username, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that match
+             the constraint will be disabled.
         :param reason: A free-form justification.  Defaults to
-            "Python-initiated action"
+            "Python-initiated action".
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """
@@ -391,12 +395,14 @@ class Schedd():
         """
         Remove User record(s) in the *condor_schedd* daemon.
 
-        :param user_spec: Which user(s) to enable.  A :class:`str`
+        :param user_spec: Which user(s) to remove.  A :class:`str`
              of the username, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that match
+             the constraint will be removed.
         :param reason: A free-form justification that is used when
              the record cannot be removed.  Defaults to
-            "Python-initiated action"
+            "Python-initiated action".
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """
@@ -419,7 +425,7 @@ class Schedd():
 
         :param project_spec: Which projects(s) to add.  A :class:`str`
              of the project name, a :class:`list` of such
-             strings, a :class:`classad2.ClassAd` of project ads
+             strings, or a list of the initial Project records in :class:`classad2.ClassAd` form.
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """
@@ -439,10 +445,12 @@ class Schedd():
 
         :param Project_spec: Which projects(s) to remove.  A :class:`str`
              of the project name, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that match
+             the constraint will be removed.
         :param reason: A free-form justification that is used when
              the record cannot be removed.  Defaults to
-            "Python-initiated action"
+            "Python-initiated action".
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """

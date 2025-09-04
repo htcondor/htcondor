@@ -403,6 +403,7 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
     std::vector<const char * > name_vec;
     std::vector<const ClassAd*> ads;
 
+
     if (list_of_ads) {
         Py_ssize_t size = PyList_Size(name_list);
         for( int i = 0; i < size; ++i ) {
@@ -423,12 +424,11 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
             return NULL;
         }
         num_names = (int)names.size();
+        // convert python list to an array of const char *
         name_vec.reserve(num_names);
         for (auto & name : names) { name_vec.emplace_back(name.c_str()); }
     }
 
-
-    // convert python list to an array of const char *
 
     ClassAd * result = NULL;
     DCSchedd schedd(addr);
