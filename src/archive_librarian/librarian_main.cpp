@@ -17,10 +17,7 @@ int main() {
 
     Librarian librarian;
 
-    //std::string historyPath;
     param(librarian.config[conf::str::ArchiveFile], "HISTORY");
-
-    //std::string dbPath;
     param(librarian.config[conf::str::DBPath], "LIBRARIAN_DATABASE");
 
     if ( ! librarian.initialize()) {

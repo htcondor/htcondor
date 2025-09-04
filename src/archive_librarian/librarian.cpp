@@ -484,7 +484,7 @@ bool Librarian::initialize() {
         fprintf(stderr, "[Librarian] DBHandler connection test failed\n");
         return false;
     }
-    if(!dbHandler_.verifyDatabaseSchema(SavedQueries::SCHEMA_SQL, schemaVersionNumber_)) {
+    if(!dbHandler_.verifyDatabaseSchema(SavedQueries::SCHEMA_SQL)) {
         fprintf(stderr, "[Librarian] DBHandler schema is not as expected\n");
         return false;
     }
@@ -548,8 +548,8 @@ bool Librarian::update() {
     for (FileInfo& fileInfo : historyQueue) {
 
         // Check if we've already exceeded the limit
-        if (totalJobRecordsProcessed >= config[conf::i::MaxRecordsPerUpdate]) {
-            printf("[Librarian] Reached job record limit (%zu), stopping history processing. Processed %zu files, %zu remaining.\n", 
+        if (totalJobRecordsProcessed >= (size_t)config[conf::i::MaxRecordsPerUpdate]) {
+            printf("[Librarian] Reached job record limit (%d), stopping history processing. Processed %zu files, %zu remaining.\n", 
                    config[conf::i::MaxRecordsPerUpdate], historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
             status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
             break;

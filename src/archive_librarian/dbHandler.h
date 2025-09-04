@@ -41,7 +41,7 @@ public:
 
     // Testing whether database was correctly constructed and connection works
     bool testDatabaseConnection();
-    bool verifyDatabaseSchema(const std::string& schemaSQL, double schemaVersionNumber);
+    bool verifyDatabaseSchema(const std::string& schemaSQL);
 
     // === Core Data Operations ===
     
@@ -51,7 +51,7 @@ public:
 
     // File Information Operations
     void writeFileInfo(FileInfo &info);
-    void updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile);
+    void updateFileInfo(FileInfo historyFile);
 
     // Status and Monitoring Operations
     bool writeStatusAndData(const Status& status, const StatusData& statusData);
@@ -71,6 +71,8 @@ public:
     sqlite3* getDB() const { return db_; }
 
 private:
+
+    int getSchemaVersion();
 
     // Job Record Operations
     std::pair<int,int> jobIdLookup(int clusterId, int procId);

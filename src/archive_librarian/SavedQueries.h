@@ -103,16 +103,6 @@ CREATE TABLE IF NOT EXISTS StatusData (
     TimeOfLastUpdate INTEGER              -- Timestamp of most recent update
 );
 
--- TODO: Make Major,Minor,Patch Version scheme
-CREATE TABLE IF NOT EXISTS SchemaVersion (
-    VersionId REAL PRIMARY KEY CHECK (VersionId = 1.0),
-    VersionNotes TEXT,
-    SingleRow INTEGER DEFAULT 1 UNIQUE CHECK (SingleRow = 1)
-);
-
--- Insert the value in
-INSERT OR IGNORE INTO SchemaVersion (VersionId, VersionNotes) 
-VALUES (1.0, 'Initial Archive Librarian schema');
 )";
 
 // TODO: Break this up and do logic/steps in librarian code

@@ -39,6 +39,24 @@ namespace conf = LibrarianConfigOptions;
 namespace fs = std::filesystem;
 
 
+#define ROLLBACK_AND_RETURN()\
+    char* err; \
+    if (sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &err) != SQLITE_OK) { \
+        printf("Error: Failed to rollback: %s\n", err); \
+        sqlite3_free(err); \
+    } \
+    return false;
+
+/* Macro to do schema updates on a per version basis provided a raw string of statements
+#define UPDATE_SCHEMA(details)\
+    char* err; \
+    if (sqlite3_exec(db_, details.c_str(), nullptr, nullptr, &err) != SQLITE_OK) { \
+        printf("Error: Failed to execute schema update: %s\n", err); \
+        sqlite3_free(err); \
+        ROLLBACK_AND_RETURN(); \
+    }
+*/
+
 // -------------------------
 // DBHandler Constructor / Destructor
 // -------------------------
@@ -64,6 +82,14 @@ bool DBHandler::initialize() {
         return false;
     }
 
+    int version = getSchemaVersion();
+    if (version == -1) {
+        printf("Error: Failed to get current schema version.\n");
+        return false;
+    }
+
+    printf("Database Schema Version: %d\n", version);
+
     // Begin transaction for atomic schema creation
     rc = sqlite3_exec(db_, "BEGIN IMMEDIATE TRANSACTION;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
@@ -76,36 +102,33 @@ bool DBHandler::initialize() {
     rc = sqlite3_exec(db_, SavedQueries::SCHEMA_SQL.c_str(), nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         printf("[ERROR] Failed to initialize DB schema: %s\n", errMsg ? errMsg : "Unknown");
-
-        // Rollback on failure
-        char* rollbackErrMsg = nullptr;
-        int rollbackRc = sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &rollbackErrMsg);
-        if (rollbackRc != SQLITE_OK) {
-            printf("[ERROR] Failed to rollback transaction: %s\n", rollbackErrMsg ? rollbackErrMsg : "Unknown");
-            sqlite3_free(rollbackErrMsg);
-        }
-
         sqlite3_free(errMsg);
-        return false;
+        ROLLBACK_AND_RETURN();
+    }
+
+    // Switch to run version modification statments of database
+    // Note: Use case fall throughs adding newer versions lower
+    //       Also, don't forget to change the new version in the database!!!
+    switch (version) {
+        case 0: // Initializing new database
+            [[fallthrough]];
+        default:
+            if (sqlite3_exec(db_, "PRAGMA user_version = 1;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
+                printf("[ERROR] Failed to commit schema transaction: %s\n", errMsg ? errMsg : "Unknown");
+                sqlite3_free(errMsg);
+                ROLLBACK_AND_RETURN();
+            }
     }
 
     // Commit the transaction
     rc = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg);
     if (rc != SQLITE_OK) {
         printf("[ERROR] Failed to commit schema transaction: %s\n", errMsg ? errMsg : "Unknown");
-
-        // Attempt rollback on commit failure
-        char* rollbackErrMsg = nullptr;
-        int rollbackRc = sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &rollbackErrMsg);
-        if (rollbackRc != SQLITE_OK) {
-            printf("[ERROR] Failed to rollback after commit failure: %s\n", rollbackErrMsg ? rollbackErrMsg : "Unknown");
-            sqlite3_free(rollbackErrMsg);
-        }
-
         sqlite3_free(errMsg);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
+    // TODO: Make these a map(name:stmt)?
     const char* jobLookupSQL = "SELECT JobId, JobListId FROM Jobs WHERE ClusterId = ? AND ProcId = ?";
     if (sqlite3_prepare_v2(db_, jobLookupSQL, -1, &jobIdLookupStmt_, nullptr) != SQLITE_OK) {
         printf ("[ERROR] Failed to prepare jobIdLookupStmt_: %s \n ", sqlite3_errmsg(db_));
@@ -217,7 +240,7 @@ bool DBHandler::testDatabaseConnection() {
 } 
 
 // Verify that the database schema matches expected structure
-bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL, double schemaVersionNumber) {
+bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL) {
     // Count CREATE TABLE statements in the schema SQL
     std::string searchStr = "CREATE TABLE";
     int expectedTableCount = 0;
@@ -259,37 +282,29 @@ bool DBHandler::verifyDatabaseSchema(const std::string& schemaSQL, double schema
         return false;
     }
 
-    // Check schema version matches expected value
-    const char* versionQuery = "SELECT VersionId FROM SchemaVersion LIMIT 1;";
-    result = sqlite3_prepare_v2(db_, versionQuery, -1, &stmt, nullptr);
-    if (result != SQLITE_OK) {
-        fprintf(stderr, "[DBHandler] Schema version check prepare failed: %s\n", 
-                sqlite3_errmsg(db_));
-        return false;
-    }
-
-    result = sqlite3_step(stmt);
-    if (result == SQLITE_ROW) {
-        double actualVersion = sqlite3_column_double(stmt, 0);
-        sqlite3_finalize(stmt);
-
-        if (actualVersion != schemaVersionNumber) {
-            fprintf(stderr, "[DBHandler] Schema version mismatch. Expected: %.1f, Found: %.1f\n", 
-                    schemaVersionNumber, actualVersion);
-            return false;
-        }
-    } else if (result == SQLITE_DONE) {
-        sqlite3_finalize(stmt);
-        fprintf(stderr, "[DBHandler] SchemaVersion table exists but contains no version data\n");
-        return false;
-    } else {
-        fprintf(stderr, "[DBHandler] Schema version query failed: %s\n", 
-                sqlite3_errmsg(db_));
-        sqlite3_finalize(stmt);
-        return false;
-    }
-
     return true;
+}
+
+
+int DBHandler::getSchemaVersion() {
+    if ( ! db_) {
+        printf("Error: Database connection is not created.\n");
+        return -1;
+    }
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db_, "PRAGMA user_version;", -1, &stmt, nullptr) != SQLITE_OK) {
+        printf("Error: Failed to prepare version query: %s\n", sqlite3_errmsg(db_));
+        return -1;
+    }
+
+    int version = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        version = sqlite3_column_int(stmt, 0);
+    }
+
+    sqlite3_finalize(stmt);
+    return version;
 }
 
 
@@ -580,8 +595,7 @@ bool DBHandler::insertJobFileRecords(const std::vector<JobRecord>& jobs, const F
     result = sqlite3_prepare_v2(db_, updateFilesSql.c_str(), -1, &stmt, nullptr);
     if (result != SQLITE_OK) {
         printf("Failed to prepare Files update statement: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     // Bind parameters
@@ -603,16 +617,14 @@ bool DBHandler::insertJobFileRecords(const std::vector<JobRecord>& jobs, const F
     if (result != SQLITE_DONE) {
         printf("Failed to update Files table for FileId %ld: %s\n", 
                fileInfo.FileId, sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     // Commit the transaction
     result = sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, nullptr);
     if (result != SQLITE_OK) {
         printf("Failed to commit transaction: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     return true;
@@ -680,7 +692,7 @@ void DBHandler::writeFileInfo(FileInfo &info) {
  * Update LastOffset for the history and epoch files after parsing.
  * Change offset to match progress in reading Epoch + History files
  */
-void DBHandler::updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile) {
+void DBHandler::updateFileInfo(FileInfo historyFile) {
     const char* updateSQL = R"(
         UPDATE Files
         SET LastOffset = ?
@@ -693,18 +705,12 @@ void DBHandler::updateFileInfo(FileInfo epochHistoryFile, FileInfo historyFile) 
         return;
     }
 
-    auto update = [&](const FileInfo& fi) {
-        sqlite3_reset(stmt);
-        sqlite3_bind_int64(stmt, 1, fi.LastOffset);
-        sqlite3_bind_text(stmt, 2, fi.FileName.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(stmt, 1, historyFile.LastOffset);
+    sqlite3_bind_text(stmt, 2, historyFile.FileName.c_str(), -1, SQLITE_TRANSIENT);
 
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            printf("[DBHandler] Failed to update offset for file %s: %s\n", fi.FileName.c_str(), sqlite3_errmsg(db_));
-        } 
-    };
-
-    update(epochHistoryFile);
-    update(historyFile);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        printf("[DBHandler] Failed to update offset for file %s: %s\n", historyFile.FileName.c_str(), sqlite3_errmsg(db_));
+    }
 
     sqlite3_finalize(stmt);
 }
@@ -737,7 +743,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
     )";
 
     // Use INSERT OR REPLACE to handle missing row - will insert if doesn't exist, update if it does
-    const char* statusDataSqlWithArrivalHz = R"(
+    const char* statusDataSqlArrivalHz = R"(
         INSERT OR REPLACE INTO StatusData (
             StatusDataId,
             AvgAdsIngestedPerCycle,
@@ -751,22 +757,6 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
             LastRunLeftBacklog,
             TimeOfLastUpdate
         ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    )";
-
-    const char* statusDataSqlWithoutArrivalHz = R"(
-        INSERT OR REPLACE INTO StatusData (
-            StatusDataId,
-            AvgAdsIngestedPerCycle,
-            AvgIngestDurationMs,
-            MeanIngestHz,
-            MeanArrivalHz,
-            MeanBacklogEstimate,
-            TotalCycles,
-            TotalAdsIngested,
-            HitMaxIngestLimitRate,
-            LastRunLeftBacklog,
-            TimeOfLastUpdate
-        ) VALUES (1, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?);
     )";
 
     // Start transaction
@@ -803,17 +793,14 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
 
     // Insert/Update StatusData (if Status insert succeeded)
     if (success) {
-        const bool hasArrivalHz = statusData.MeanArrivalHz != 0.0;
-        const char* sql = hasArrivalHz ? statusDataSqlWithArrivalHz : statusDataSqlWithoutArrivalHz;
+        const char* sql = statusDataSqlArrivalHz;
 
         if (sqlite3_prepare_v2(db_, sql, -1, &stmt, nullptr) == SQLITE_OK) {
             int idx = 1;
             sqlite3_bind_double(stmt, idx++, statusData.AvgAdsIngestedPerCycle);
             sqlite3_bind_double(stmt, idx++, statusData.AvgIngestDurationMs);
             sqlite3_bind_double(stmt, idx++, statusData.MeanIngestHz);
-            if (hasArrivalHz) {
-                sqlite3_bind_double(stmt, idx++, statusData.MeanArrivalHz);
-            }
+            sqlite3_bind_double(stmt, idx++, statusData.MeanArrivalHz);
             sqlite3_bind_double(stmt, idx++, statusData.MeanBacklogEstimate);
             sqlite3_bind_int64(stmt, idx++, statusData.TotalCycles);
             sqlite3_bind_int64(stmt, idx++, statusData.TotalAdsIngested);
@@ -841,8 +828,7 @@ bool DBHandler::writeStatusAndData(const Status& status, const StatusData& statu
         }
         return true;
     } else {
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 }
 
@@ -884,15 +870,6 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 
 	bool success = true;
 
-	// Lambda for rollback and ending function early on error
-	auto rollbackAndReturnFalse = [&]() {
-		if (sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
-			std::cerr << "Failed to rollback transaction: " << (errMsg ? errMsg : "unknown") << "\n";
-			if (errMsg) sqlite3_free(errMsg);
-		}
-		return false;
-	};
-
 	// 1. Recover StatusData - now reads from the single row
 	const std::string statusDataSql =
 		"SELECT AvgAdsIngestedPerCycle, AvgIngestDurationMs, MeanIngestHz, MeanArrivalHz, "
@@ -903,8 +880,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 	rc = sqlite3_prepare_v2(db_, statusDataSql.c_str(), -1, &stmtStatusData, nullptr);
 	if (rc != SQLITE_OK) {
 		std::cerr << "Failed to prepare StatusData query\n";
-		success = rollbackAndReturnFalse();
-		return success;
+		ROLLBACK_AND_RETURN();
 	}
 	rc = sqlite3_step(stmtStatusData);
 	if (rc == SQLITE_ROW) {
@@ -929,8 +905,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 	rc = sqlite3_prepare_v2(db_, statusSql.c_str(), -1, &stmtStatus, nullptr);
 	if (rc != SQLITE_OK) {
 		std::cerr << "Failed to prepare Status query\n";
-		success = rollbackAndReturnFalse();
-		return success;
+		ROLLBACK_AND_RETURN();
 	}
 	rc = sqlite3_step(stmtStatus);
 	if (rc == SQLITE_ROW) {
@@ -953,8 +928,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 	rc = sqlite3_prepare_v2(db_, filesSql.c_str(), -1, &stmtFiles, nullptr);
 	if (rc != SQLITE_OK) {
 		std::cerr << "Failed to prepare Files query\n";
-		success = rollbackAndReturnFalse();
-		return success;
+		ROLLBACK_AND_RETURN();
 	}
 	while ((rc = sqlite3_step(stmtFiles)) == SQLITE_ROW) {
 		FileInfo fileInfo{};
@@ -977,11 +951,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 		std::cerr << "Failed to commit transaction: " << (errMsg ? errMsg : "unknown") << "\n";
 		if (errMsg) sqlite3_free(errMsg);
 		// Try rollback if commit failed
-		if (sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
-			std::cerr << "Failed to rollback transaction: " << (errMsg ? errMsg : "unknown") << "\n";
-			if (errMsg) sqlite3_free(errMsg);
-		}
-		return false;
+		ROLLBACK_AND_RETURN();
 	}
 
 	return true;
@@ -1030,8 +1000,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
         }
 
         if (!success) {
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            return false;
+            ROLLBACK_AND_RETURN();
         }
     }
 
@@ -1045,8 +1014,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
 
     if (sqlite3_prepare_v2(db_, insertSQL, -1, &insertStmt, nullptr) != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare insert statement: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     for (FileInfo& newFile : newFiles) {
@@ -1058,8 +1026,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
         if (sqlite3_step(insertStmt) != SQLITE_DONE) {
             fprintf(stderr, "Insert (or ignore) failed: %s\n", sqlite3_errmsg(db_));
             sqlite3_finalize(insertStmt);
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            return false;
+            ROLLBACK_AND_RETURN();
         }
 
         sqlite3_reset(insertStmt);
@@ -1075,8 +1042,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
     sqlite3_stmt* selectStmt = nullptr;
     if (sqlite3_prepare_v2(db_, selectSQL, -1, &selectStmt, nullptr) != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare select statement: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     for (FileInfo& newFile : newFiles) {
@@ -1088,8 +1054,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
         } else {
             fprintf(stderr, "Failed to fetch FileId after insert/ignore for file: %s\n", newFile.FileName.c_str());
             sqlite3_finalize(selectStmt);
-            sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-            return false;
+            ROLLBACK_AND_RETURN();
         }
 
         sqlite3_reset(selectStmt);
@@ -1104,8 +1069,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
 
        if (sqlite3_prepare_v2(db_, deleteSQL.c_str(), -1, &deleteStmt, nullptr) != SQLITE_OK) {
            fprintf(stderr, "Failed to prepare delete marking statement: %s\n", sqlite3_errmsg(db_));
-           sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-           return false;
+           ROLLBACK_AND_RETURN();
        }
 
        std::time_t now = std::time(nullptr);
@@ -1117,8 +1081,7 @@ bool DBHandler::insertNewFilesAndMarkOldOnes(ArchiveChange& fileSetChange) {
            if (sqlite3_step(deleteStmt) != SQLITE_DONE) {
                fprintf(stderr, "Failed to mark file as deleted: %s\n", sqlite3_errmsg(db_));
                sqlite3_finalize(deleteStmt);
-               sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-               return false;
+               ROLLBACK_AND_RETURN();
            }
 
            sqlite3_reset(deleteStmt);
@@ -1156,8 +1119,7 @@ bool DBHandler::runGarbageCollection(const std::string &gcQuerySQL, int fileLimi
     size_t pos = gcQuerySQL.find(';');
     if (pos == std::string::npos) {
         printf("[GC] Invalid GC SQL - no statement terminator\n");
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     std::string step1Sql = gcQuerySQL.substr(0, pos + 1);
@@ -1167,20 +1129,17 @@ bool DBHandler::runGarbageCollection(const std::string &gcQuerySQL, int fileLimi
     sqlite3_stmt *stmt = nullptr;
     if (sqlite3_prepare_v2(db_, step1Sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         printf("[GC] Prepare step1 failed: %s\n", sqlite3_errmsg(db_));
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
     if (sqlite3_bind_int(stmt, 1, fileLimit) != SQLITE_OK) {
         printf("[GC] Bind failed: %s\n", sqlite3_errmsg(db_));
         sqlite3_finalize(stmt);
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         printf("[GC] Execute step1 failed: %s\n", sqlite3_errmsg(db_));
         sqlite3_finalize(stmt);
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
     sqlite3_finalize(stmt);
 
@@ -1188,15 +1147,13 @@ bool DBHandler::runGarbageCollection(const std::string &gcQuerySQL, int fileLimi
     if (sqlite3_exec(db_, step2Sql.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
         printf("[GC] Exec step2 failed: %s\n", errMsg);
         sqlite3_free(errMsg);
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
         printf("[GC] Commit failed: %s\n", errMsg);
         sqlite3_free(errMsg);
-        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr);
-        return false;
+        ROLLBACK_AND_RETURN();
     }
 
     printf("[GC] Garbage collection successful.\n");
