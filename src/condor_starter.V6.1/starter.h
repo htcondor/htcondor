@@ -28,7 +28,7 @@
 
 #if defined(LINUX) || defined(DARWIN)
     // We don't test on BSD, so don't claim the hardlink code works there.
-    #define CFT_VERSION 1
+    #define CFT_VERSION 2
 #else
     #define CFT_VERSION 0
 #endif
