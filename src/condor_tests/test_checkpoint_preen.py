@@ -704,11 +704,18 @@ class TestCheckpointDestination:
         schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {the_removed_job.clusterid}'
 
-        # Make sure the job has left the queue.
-        result = schedd.query(
-            constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID"],
-        )
+        # Make sure the job has left the queue.  Might not happen right away, so retry
+        result = {1}
+        retries = 0
+        while ((len(result) != 0) and (retries < 5)):
+            result = schedd.query(
+                    constraint=constraint,
+                    projection=["CheckpointDestination", "GlobalJobID"],
+                    )
+            if len(result) != 0:
+                os.sleep(3)
+            retries += 1
+
         assert(len(result) == 0)
 
 
