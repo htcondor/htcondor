@@ -489,10 +489,11 @@ public:
 		const char * constraint,  // expression
 		CondorError *errstack);
 
-	ClassAd * addOrEnableUsers(
+	ClassAd * addOrEnableUserRecs(
 		const ClassAd * userads[],   // ads must have ATTR_USER attribute, if create_if may have other attributes as well
 		int num_usernames,
-		bool create_if,           // true if we want to create users that don't already exist
+		bool create_if,            // true if we want to create users that don't already exist
+		bool is_project,           // true if project ad or mixed user and project ads
 		CondorError *errstack);
 
 	ClassAd * disableUsers(
@@ -524,6 +525,12 @@ public:
 	ClassAd * addProjects(
 		const char * names[],   // project names
 		int num_names,          // number of project names
+		CondorError *errstack);
+
+	ClassAd * enableProjects(
+		const char * names[],   // project names
+		int num_names,          // number of project names
+		bool create_if,         // true if we want to create projects that don't already exist
 		CondorError *errstack);
 
 	ClassAd * addProjects(
