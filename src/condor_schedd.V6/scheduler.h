@@ -998,7 +998,7 @@ private:
 		// to query the CronTab object to ask it what the next
 		// runtime is for job is
 		//
-	HashTable<PROC_ID, CronTab*> *cronTabs;	
+	std::map<PROC_ID, CronTab*> cronTabs;
 		//
 		// A list of cluster_ids that may have jobs that require
 		// CronTab execution scheduling

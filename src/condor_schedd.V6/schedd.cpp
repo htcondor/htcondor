@@ -787,7 +787,6 @@ Scheduler::Scheduler() :
 	From.sin_addr.s_addr = 0;
 
 	m_use_startd_for_local = false;
-	cronTabs = 0;
 	MaxExceptions = 0;
 	m_job_machine_attrs_history_length = 0;
 
@@ -866,13 +865,8 @@ Scheduler::~Scheduler()
 		//
 		// Delete CronTab objects
 		//
-	if ( this->cronTabs ) {
-		this->cronTabs->startIterations();
-		CronTab *current;
-		while ( this->cronTabs->iterate( current ) >= 1 ) {
-			if ( current ) delete current;
-		}
-		delete this->cronTabs;
+	for (const auto& [id, current] : cronTabs) {
+		delete current;
 	}
 
 	delete slotWeightOfJob;
@@ -13341,15 +13335,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// runtime for it. This prevents a job from going
 				// on hold, then released only to fail again
 				// because a new runtime wasn't calculated for it
-			CronTab *cronTab = NULL;
-			if ( this->cronTabs->lookup( job_id, cronTab ) >= 0 ) {
-					// Delete the cached object				
-				if ( cronTab ) {
-					delete cronTab;
-					this->cronTabs->remove(job_id);
-					this->cronTabs->insert(job_id, nullptr);
-				}
-			} // CronTab
+			auto cron_it = cronTabs.find(job_id);
+			if (cron_it != cronTabs.end()) {
+				delete cron_it->second;
+				cron_it->second = nullptr;
+			}
 
 			if (JOB_MISSED_DEFERRAL_TIME == exit_code) {
 				stats.JobsMissedDeferralTime += 1;
@@ -13747,8 +13737,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		// next execution time calculated for it
 		// 11.01.2005 - Andy - pavlo@cs.wisc.edu 
 		//
-	CronTab *cronTab = NULL;
-	if ( this->cronTabs->lookup( *job_id, cronTab ) >= 0 ) {
+	if ( cronTabs.find(*job_id) != cronTabs.end()) {
 			//
 			// Set the force flag to true so it will always 
 			// calculate the next execution time
@@ -14256,39 +14245,22 @@ Scheduler::Init()
 		//
 		// CronTab Table
 		// We keep a list of proc_id's for jobs that define a cron
-		// schedule for exection. We first get the pointer to the 
-		// original table, and then instantiate a new one
-		//
-	HashTable<PROC_ID, CronTab*> *origCronTabs = this->cronTabs;
-	this->cronTabs = new HashTable<PROC_ID, CronTab*>(
-												hashFuncPROC_ID );
-		//
-		// Now if there was a table from before, we will want
-		// to copy all the proc_id's into our new table. We don't
+		// schedule for exection. On a reconfig, we don't
 		// keep the CronTab objects because they'll get reinstantiated
-		// later on when the Schedd tries to calculate the next runtime
-		// We have a little safety check to make sure that the the job 
-		// actually exists before adding it back in
+		// later on when the Schedd tries to calculate the next runtime.
+		// If a job doesn't exist, remove its entry.
 		//
-		// Note: There could be a problem if MaxJobsRunning is substaintially
-		// less than what it was from before on a reconfig, and in which case
-		// the new cronTabs hashtable might not be big enough to store all
-		// the old jobs. This unlikely for now because I doubt anybody will
-		// be submitting that many CronTab jobs, but it is still possible.
-		// See the comments about about automatically resizing HashTable's
-		//
-	if ( origCronTabs != NULL ) {
-		CronTab *cronTab;
-		PROC_ID id;
-		origCronTabs->startIterations();
-		while ( origCronTabs->iterate( id, cronTab ) == 1 ) {
-			if ( cronTab ) delete cronTab;
-			ClassAd *cronTabAd = GetJobAd( id.cluster, id.proc );
-			if ( cronTabAd ) {
-				this->cronTabs->insert( id, NULL );
-			}
-		} // WHILE
-		delete origCronTabs;
+	auto cron_it = cronTabs.begin();
+	while (cron_it != cronTabs.end()) {
+		auto prev_it = cron_it++;
+		delete prev_it->second;
+		if (GetJobAd(prev_it->first) != nullptr) {
+			// Job still exists: keep entry, but clear value
+			prev_it->second = nullptr;
+		} else {
+			// Job no longer exists: remove entry
+			cronTabs.erase(prev_it);
+		}
 	}
 
 	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 2);
@@ -17109,12 +17081,10 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	PROC_ID id;
 	id.cluster = cluster;
 	id.proc    = proc;
-	CronTab *cronTab;
-	if ( this->cronTabs->lookup( id, cronTab ) >= 0 ) {
-		if ( cronTab != NULL) {
-			delete cronTab;
-			this->cronTabs->remove(id);
-		}
+	auto it = cronTabs.find(id);
+	if (it != cronTabs.end()) {
+		delete it->second;
+		cronTabs.erase(it);
 	}
 
 	// This gets called on jobs with LeaveJobInQueue set, which we don't want.
@@ -17390,11 +17360,9 @@ void
 Scheduler::addCronTabClassAd( JobQueueJob *jobAd )
 {
 	if ( NULL == m_adSchedd ) return;
-	CronTab *cronTab = NULL;
 	PROC_ID id = jobAd->jid;
-	if ( this->cronTabs->lookup( id, cronTab ) < 0 &&
-		 CronTab::needsCronTab( jobAd ) ) {
-		this->cronTabs->insert( id, NULL );
+	if (cronTabs.find(id) == cronTabs.end() && CronTab::needsCronTab(jobAd)) {
+		cronTabs.emplace(id, nullptr);
 	}
 }
 
@@ -17427,7 +17395,6 @@ Scheduler::addCronTabClusterId( int cluster_id )
 void 
 Scheduler::processCronTabClusterIds( )
 {
-	CronTab *cronTab = NULL;
 		//
 		// Loop through all the cluster_ids that we have stored
 		// For each cluster, we will inspect the job ads of all its
@@ -17438,8 +17405,8 @@ Scheduler::processCronTabClusterIds( )
 		if ( ! cad) continue;
 
 		for (JobQueueJob * job = cad->FirstJob(); job != nullptr; job = cad->NextJob(job)) {
-			if (this->cronTabs->lookup(job->jid, cronTab) < 0 && CronTab::needsCronTab(job)) {
-				this->cronTabs->insert(job->jid, nullptr);
+			if (cronTabs.find(job->jid) == cronTabs.end() && CronTab::needsCronTab(job)) {
+				cronTabs.emplace(job->jid, nullptr);
 			}
 		}
 	} // WHILE
@@ -17455,11 +17422,8 @@ Scheduler::processCronTabClusterIds( )
 void
 Scheduler::calculateCronTabSchedules( )
 {
-	PROC_ID id;
-	CronTab *cronTab = NULL;
 	this->processCronTabClusterIds();
-	this->cronTabs->startIterations();
-	while ( this->cronTabs->iterate( id, cronTab ) >= 1 ) {
+	for (const auto& [id, cronTab]: cronTabs) {
 		ClassAd *jobAd = GetJobAd( id.cluster, id.proc );
 		if ( jobAd ) {
 			this->calculateCronTabSchedule( jobAd );
@@ -17495,8 +17459,12 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		//
 		// Check whether this needs a schedule
 		//
-	if ( !CronTab::needsCronTab( jobAd ) ) {	
-		this->cronTabs->remove( id );
+	if ( !CronTab::needsCronTab( jobAd ) ) {
+		auto it = cronTabs.find(id);
+		if (it != cronTabs.end()) {
+			delete it->second;
+			cronTabs.erase(it);
+		}
 		return ( true );
 	}
 	
@@ -17527,7 +17495,10 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		// See if we can get the cached scheduler object 
 		//
 	CronTab *cronTab = NULL;
-	(void) this->cronTabs->lookup( id, cronTab );
+	auto it = cronTabs.find(id);
+	if (it != cronTabs.end()) {
+		cronTab = it->second;
+	}
 	if ( ! cronTab ) {
 			//
 			// There wasn't a cached object, so we'll need to create
@@ -17543,7 +17514,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				//
 			valid = cronTab->isValid();
 			if ( valid ) {
-				this->cronTabs->insert( id, cronTab, true );
+				cronTabs[id] = cronTab;
 			} else {
 				error = cronTab->getError();
 				delete cronTab;
