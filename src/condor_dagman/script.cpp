@@ -99,8 +99,25 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 
 	_executedCMD.clear(); // Clear previous recorded executed command
 
-	std::string exitCodes, exitFreq;
-	for (const auto& [code, count] : _node->JobExitCodes()) {
+	size_t numAborted = 0;
+	std::map<short int, size_t> exit_codes;
+	std::string exitCodes, exitFreq, exitList;
+
+	size_t proc = 0;
+	for (const auto [_, val] : _node->GetJobInfo()) {
+		if ( ! exitList.empty()) { exitList += ","; }
+		if (val == JOB_EXIT_UNKNOWN) {
+			debug_printf(DEBUG_NORMAL, "Error: Job proc %zu exit is unknown!\n", proc);
+		} else if (val == JOB_EXIT_ABORT) {
+			numAborted++;
+		} else {
+			exit_codes[val]++;
+			exitList += std::to_string(val);
+		}
+		proc++;
+	}
+
+	for (const auto& [code, count] : exit_codes) {
 		if ( ! exitCodes.empty()) { exitCodes += ","; }
 		exitCodes += std::to_string(code);
 
@@ -171,11 +188,14 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		} else if (cmp_arg == "$EXIT_CODE_COUNTS") {
 			arg = checkIsPre(_type, "$EXIT_CODE_COUNTS") ? token : exitFreq;
 
+		} else if (cmp_arg == "$EXIT_CODE_LIST") {
+			arg = checkIsPre(_type, "$EXIT_CODE_LIST") ? token : exitList;
+
 		} else if (cmp_arg == "$PRE_SCRIPT_RETURN") {
 			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN") ? token : std::to_string(_retValScript);
 
 		} else if (cmp_arg == "$JOB_ABORT_COUNT") {
-			arg = checkIsPre(_type, "$JOB_ABORT_COUNT") ? token : std::to_string(_node->JobsAborted());
+			arg = checkIsPre(_type, "$JOB_ABORT_COUNT") ? token : std::to_string(numAborted);
 
 		// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
