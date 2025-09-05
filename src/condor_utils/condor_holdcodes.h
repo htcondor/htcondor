@@ -224,4 +224,29 @@ BETTER_ENUM(OUT_OF_RESOURCES_SUB_CODE, int,
 	Disk = 104
 )
 
+/* Helper functions to decipher hold codes and subcodes.
+
+   These functions help determine if a job should be held or vacated based on its hold codes and subcodes.
+   Any code greater than or equal to 1000 means vacate instead of hold. An unspecified error is also vacate.
+   Also any subcode less than or equal to -1000 also means vacate instead of hold.
+*/
+inline bool shouldVacateJobBasedOnCodes(int code, int subcode) {
+	const int codeVacateBase = CONDOR_HOLD_CODE::VacateBase;
+	const int subcodeVacateBase = -1 * CONDOR_HOLD_CODE::VacateBase;
+	if (code <= 0) {
+		// unspecified error; vacate instead of hold.
+		return true;
+	}
+	if (code >= codeVacateBase) {
+		return true;
+	}
+	if (subcode <= subcodeVacateBase) {
+		return true;
+	}
+	return false;
+}
+inline bool shouldHoldJobBasedOnCodes(int code, int subcode) {
+	return !shouldVacateJobBasedOnCodes(code, subcode);
+}
+
 #endif
