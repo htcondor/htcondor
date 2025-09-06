@@ -74,6 +74,10 @@
   on hold and :subcom:`notification` was set to error.
   :jira:`3219`
 
+- Fixed bug introduced in 24.11 that caused the schedd to 
+  occassionally crash when dagman completed.
+  :jira:`3250`
+
 *** 24.0.12 features
 
 - Updated :tool:`condor_upgrade_check` to test for well known gotchas
