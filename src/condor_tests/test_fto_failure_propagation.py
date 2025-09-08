@@ -12,6 +12,7 @@
 import pytest
 from ornithology import *
 import classad2
+import time
 
 #--------------------------------------------------------------------------
 # Test Case Structure:
@@ -847,7 +848,7 @@ def test_get_history(default_condor, test_check_details, wait_for_job):
         ad = classad2.parseOne(p.stdout)
         retry_count += 1
         if (len(ad) == 0):
-            os.sleep(5)
+            time.sleep(5)
 
     return (expected_ad, ad, xfer_type)
 
@@ -894,7 +895,7 @@ def test_get_plugin_history(default_condor, test_check_details, wait_for_job):
         ad = classad2.parseOne(p.stdout)
         retry_count += 1
         if (len(ad) == 0):
-            os.sleep(5)
+            time.sleep(5)
 
     return (i_ad, ad, i_type)
 
