@@ -63,6 +63,9 @@ class Create(Verb):
         # Turn this job into an OCU holder
         submit_description["+IsOCUHolder"] = "true"
 
+        # Allow an empty Executable line
+        submit_description["Executable"] = "ocu"
+
         try:
             result = schedd.submit(submit_description, count=1)
             cluster_id = result.cluster()
@@ -81,7 +84,8 @@ class Status(Verb):
         submitter_ads = collector.query(htcondor.AdType.Submitter, constraint="True")
 
         if len(submitter_ads) == 0:
-            raise RuntimeError("Collector returned no ClassAds for submitters")
+            print("There are no submitters in this pool, therefore no OCUs.")
+            sys.exit(0)
 
         print("Owner                          OCUClaimed  OCUClaimedBorrowed OCUsWantedJobs  OCURunningJobs")
         print("-----                          ----------  ------------------ --------------  --------------")

@@ -516,7 +516,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`HISTORY_HELPER_MAX_HISTORY[Global]`
     Specifies the maximum number of ClassAds to parse on behalf of
-    remote history clients. The default is 10,000. This allows the
+    remote history clients. The default is 2,000,000,000. This allows the
     system administrator to indirectly manage the maximum amount of CPU
     time spent on each client. Setting this option to 0 disables remote
     history access.
@@ -2513,6 +2513,20 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     container runtimes might themselves set it.  When true, 
     HTCondor will set HOME to the home directory of the user
     on the EP system.
+
+:macro-def:`STARTER_NESTED_SCRATCH[FileSystem]`
+    A boolean value that defaults to true.  When false, the job's scratch
+    directory hierarchy is created in the same way as it was previous
+    to HTCondor 24.9.  That is, the job's scratch directory is a 
+    direct subdirectory of :macro:`EXECUTE` named *dir_<starter_pid>*,
+    and owned by the user.  When true, the scratch directory is 
+    a subdirectory of that directory named scratch.  There are other
+    subdirectories named "user", where user-owned HTCondor files
+    will go, such as credentials, the .job.ad and other metadata.
+    There is also an htcondor subdirectory, where files owned by
+    the HTCondor system will go.  The idea is the scratch directory
+    should not be polluted with system files, and only contain files
+    the job expects to be there.
 
 :macro-def:`FILESYSTEM_DOMAIN[FileSystem]`
     An arbitrary string that is used to decide if the two machines, a

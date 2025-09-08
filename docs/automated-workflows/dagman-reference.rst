@@ -319,6 +319,8 @@ Macros that can be passed to a script as optional arguments like ``$<macro>``
      successful list of jobs execution.
         **EXIT_CODES**        | An ordered comma separated list of all :ad-attr:`ExitCode`\ s returned by\
      jobs associated with the node.
+        **EXIT_CODE_LIST**    | A comma separated list of each jobs :ad-attr:`ExitCode` ordered by :ad-attr:`ProcId`\
+     Removed jobs will have no value.
         **EXIT_CODE_COUNTS**  | An ordered comma separated list of the number of jobs that exited with a particular\
      :ad-attr:`ExitCode` (``{ExitCode}:{Count}``).
         **PRE_SCRIPT_RETURN** | Return value of the associated node's PRE Script.

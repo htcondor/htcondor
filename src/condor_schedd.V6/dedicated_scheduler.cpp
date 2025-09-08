@@ -1794,10 +1794,12 @@ DedicatedScheduler::sortResources( )
 	// scheduler, do so here
 
 	if (param_boolean("DEDICATED_SCHEDULER_USE_SERIAL_CLAIMS", false)) {
+		// unlinkMrec() will erase the matches entry, so be careful here...
 		match_rec *mr = nullptr;
-		std::string id;
-		scheduler.matches->startIterations();
-		while (scheduler.matches->iterate(id, mr) == 1) {
+		auto it = scheduler.matches.begin();
+		while (it != scheduler.matches.end()) {
+			mr = it->second;
+			it++;
 			if (mr->status == M_CLAIMED) {
 				// this match rec is claimed/idle, steal it for the ded sched
 				mr->needs_release_claim = false;

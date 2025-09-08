@@ -1707,7 +1707,7 @@ Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
-	if (vacate_code >= CONDOR_HOLD_CODE::VacateBase) {
+	if (shouldVacateJobBasedOnCodes(vacate_code, vacate_subcode)) {
 		m_vacateReason = vacate_reason;
 		m_vacateCode = vacate_code;
 		m_vacateSubcode = vacate_subcode;
@@ -4309,7 +4309,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 		std::string limit_str = to_string_byte_units(limit);
 		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
 		         limit_str.c_str());
-		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Disk);
 		m_lvm_held_job = true;
 	}
 

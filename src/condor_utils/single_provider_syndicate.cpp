@@ -271,6 +271,7 @@ SingleProviderSyndicate::acquire( std::string & message ) {
 
                 return SingleProviderSyndicate::Status(status_byte);
             } else {
+                close(fd);
                 dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): read invalid lock byte %d\n", (int)status_byte );
                 return SingleProviderSyndicate::INVALID;
             }

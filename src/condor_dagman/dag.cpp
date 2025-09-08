@@ -658,7 +658,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 		_totalJobsCompleted++;
 
 		node->SetProcEvent(event->proc, ABORT_TERM_MASK);
-		node->IncrementJobsAborted();
+		node->RecordJobAbort(event->proc);
 		node->JobFailure();
 
 		// This code is here because if a held job is removed, we
@@ -685,7 +685,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 
 		// If we haven't failed yet and we have reached our node job list failure tolerance then fail node
 		if (node->GetStatus() != Node::STATUS_ERROR && batch_failed) {
-			node->TerminateFailure();
+			node->SetStatus(Node::STATUS_ERROR); // Mostly for late materialization
 			node->MarkFailed();
 
 			if (node->GetQueuedJobs() > 0) {
@@ -715,7 +715,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 		bool job_failed = !(termEvent->normal && termEvent->returnValue == 0);
 		bool batch_failed = false;
 
-		node->CountJobExitCode(termEvent->returnValue);
+		node->RecordJobExitCode(termEvent->proc, termEvent->returnValue);
 
 		if (job_failed) { // job failed or was killed by a signal
 			node->JobFailure();
@@ -753,7 +753,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 
 			// If we haven't failed yet and we have reached our node job list failure tolerance then fail node
 			if (node->GetStatus() != Node::STATUS_ERROR && batch_failed) {
-				node->TerminateFailure();
+				node->SetStatus(Node::STATUS_ERROR); // Mostly for late materialization
 				node->MarkFailed();
 
 				if (node->GetQueuedJobs() > 0) {
@@ -868,6 +868,7 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 					_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 				}
 
+				node->TerminateFailure();
 				SetStatus(DAG_STATUS_NODE_FAILED);
 
 				// Set descendants to Futile
@@ -1209,6 +1210,8 @@ Dag::ProcessClusterRemoveEvent(Node *node, bool recovery) {
 	if (node->GetStatus() == Node::STATUS_ERROR) {
 		if (node->DoRetry()) {
 			RestartNode(node, recovery);
+		} else {
+			node->TerminateFailure();
 		}
 	}
 
@@ -1216,7 +1219,6 @@ Dag::ProcessClusterRemoveEvent(Node *node, bool recovery) {
 	// For non-cluster jobs, this is done in DecrementProcCount
 	_jobstateLog.WriteJobSuccessOrFailure(node);
 	UpdateNodeCounts(node, -1);
-	node->Cleanup();
 }
 
 //---------------------------------------------------------------------------
@@ -2996,7 +2998,7 @@ Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_terminate
 	//These are total counters
 	int held = 0, idle = 0, run = 0, term = 0;
 	//These are per node counters
-	int node_held = 0, numProcs = 0;
+	int node_held = 0;
 
 	// This is to count jobs from all nodes including service nodes
 	static const std::vector<const std::vector<Node*>*> all_nodes = { &_nodes, &_service_nodes };
@@ -3006,12 +3008,9 @@ Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_terminate
 		for (const auto& node : *collection) {
 			//Reset state counters
 			node_held = 0;
-			numProcs = node->GetProcEventsSize();
 			//For each Job Proc event
-			for (int i=0; i < numProcs; i++) {
-				//Get unsigned char representing the event bitmap
-				//and check states
-				const unsigned char procEvent = node->GetProcEvent(i);
+			for (const auto [procEvent, _] : node->GetJobInfo()) {
+				// Check recorded job states
 				if ((procEvent & HOLD_MASK) != 0) { held++; node_held++; }
 				else if ((procEvent & IDLE_MASK) != 0) { idle++; }
 				else if ((procEvent & ABORT_TERM_MASK) != 0) { term++; }
@@ -3754,7 +3753,6 @@ Dag::DecrementProcCount(Node *node)
 
 	if (node->AllProcsDone()) {
 		UpdateNodeCounts(node, -1);
-		node->Cleanup();
 	}
 }
 
@@ -4092,12 +4090,23 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// recurse down the splice tree moving everything up into myself.
-	for (auto& splice: _splices) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice.first.c_str());
-		om = splice.second->LiftSplices(DESCENDENTS);
+	for (auto& [splice_name, splice]: _splices) {
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice_name.c_str());
+		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
-		AssumeOwnershipofNodes(splice.first, om);
+		AssumeOwnershipofNodes(splice_name, om);
 		delete om;
+		om = nullptr;
+
+		for (const auto& [desc_name, desc] : splice->InlineDescriptions) {
+			const auto& [_, success] = InlineDescriptions.insert(std::make_pair(desc_name, desc));
+			if ( ! success && InlineDescriptions[desc_name] != desc) {
+				// If we have splices using differing descriptions using the same name abort
+				debug_printf(DEBUG_NORMAL, "WARNING: Conflicting inline descriptions using the same name '%s' between %s%s and splice %s.\n",
+				             desc_name.c_str(), (_spliceScope != "root") ? "splice " : "",
+				             _spliceScope.c_str(), splice_name.c_str());
+			}
+		}
 	}
 
 	// Now delete all of them.

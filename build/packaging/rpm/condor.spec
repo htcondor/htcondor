@@ -1,21 +1,11 @@
 %define condor_version 1.0.0
 
-# On EL7 don't terminate the build because of bad bytecompiling
-%if 0%{?rhel} == 7
-%define _python_bytecompile_errors_terminate_build 0
-%endif
-
 # Don't use changelog date in CondorVersion
 %global source_date_epoch_from_changelog 0
 
 # set uw_build to 0 for downstream (Fedora or EPEL)
 # UW build includes stuff for testing and tarballs
 %define uw_build 0
-
-%if 0%{?rhel} == 7
-# Use devtoolset 11 for EL7
-%define devtoolset 11
-%endif
 
 %if 0%{?rhel} == 8 || 0%{?rhel} == 9
 # Use gcc-toolset 14 for EL8 and EL9
@@ -56,9 +46,6 @@ Source0: %{name}-%{condor_version}.tar.gz
 
 Source8: htcondor.pp
 
-# Patch credmon-oauth to use Python 2 on EL7
-Patch1: rhel7-python2.patch
-
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires: cmake
@@ -78,18 +65,9 @@ BuildRequires: openldap2-devel
 %else
 BuildRequires: openldap-devel
 %endif
-%if 0%{?rhel} == 7
-BuildRequires: cmake3
-BuildRequires: python-devel
-BuildRequires: python-setuptools
-%else
 BuildRequires: cmake >= 3.16
-%endif
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
-%if 0%{?rhel} >= 8
-BuildRequires: boost-devel
-%endif
 %if 0%{?suse_version}
 BuildRequires: rpm-config-SUSE
 %else
@@ -117,11 +95,7 @@ BuildRequires: expat-devel
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
-%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{?suse_version}
 BuildRequires: python3-devel
-%else
-BuildRequires: python-devel
-%endif
 BuildRequires: libcurl-devel
 
 # Authentication build requirements
@@ -146,27 +120,6 @@ BuildRequires: gcc11
 BuildRequires: gcc11-c++
 %endif
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-BuildRequires: python36-devel
-BuildRequires: boost169-devel
-BuildRequires: boost169-static
-%endif
-
-%if 0%{?rhel} >= 8
-BuildRequires: boost-static
-%endif
-
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-BuildRequires: python3-devel
-BuildRequires: boost169-python2-devel
-BuildRequires: boost169-python3-devel
-%else
-%if  0%{?suse_version}
-BuildRequires: libboost_python-py3-1_75_0-devel
-%else
-BuildRequires: boost-python3-devel
-%endif
-%endif
 BuildRequires: libuuid-devel
 %if 0%{?suse_version}
 Requires: libuuid1
@@ -182,11 +135,7 @@ BuildRequires: systemd-units
 %endif
 Requires: systemd
 
-%if 0%{?rhel} == 7
-BuildRequires: python36-sphinx python36-sphinx_rtd_theme
-%endif
-
-%if 0%{?rhel} >= 8 || 0%{?amzn} || 0%{?fedora}
+%if 0%{?rhel} || 0%{?amzn} || 0%{?fedora}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
@@ -214,21 +163,7 @@ Requires: jq
 
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
-# The use the python-requests library in EPEL is based Python 3.6
-# However, Amazon Linux 2 has Python 3.7
-%if ! 0%{?amzn}
-%if 0%{?rhel} == 7
-Requires: python36-requests
-%else
 Requires: python3-requests
-%endif
-%endif
-
-%if 0%{?rhel} == 7
-Requires: python2-condor = %{version}-%{release}
-# For some reason OSG VMU tests need python-request
-Requires: python-requests
-%endif
 
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
@@ -245,17 +180,9 @@ Requires(preun): systemd-units
 Requires(postun): systemd-units
 %endif
 
-%if 0%{?rhel} == 7
-Requires(post): systemd-sysv
-Requires(post): policycoreutils-python
-Requires(post): selinux-policy-targeted >= 3.13.1-102
-%endif
-
-%if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{?suse_version}
 Requires(post): python3-policycoreutils
 %if ! 0%{?suse_version}
 Requires(post): selinux-policy-targeted
-%endif
 %endif
 
 # Require libraries that we dlopen
@@ -285,46 +212,25 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-%if 0%{?rhel} == 7
-Requires: pelican >= 7.18.0
-%else
-Requires: (pelican >= 7.18.0 or pelican-debug >= 7.18.0)
-%endif
-Requires: pelican-osdf-compat >= 7.18.0
+Requires: (pelican >= 7.18.1 or pelican-debug >= 7.18.1)
+Requires: pelican-osdf-compat >= 7.18.1
 
-%if 0%{?rhel} != 7 && ! 0%{?amzn}
+%if ! 0%{?amzn}
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-# Hold back apptainer until version 1.4.2 is released
-Requires: apptainer >= 1.3.6
+Requires: apptainer >= 1.4.2
 %endif
 %endif
 
-%if 0%{?rhel} != 7
 # Ensure that our bash completions work
 Recommends: bash-completion
-%endif
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
 #Provides: user(condor) = 64
 #Provides: group(condor) = 64
-
-%if 0%{?rhel} == 7
-# Standard Universe discontinued as of 8.9.0
-Obsoletes: %{name}-std-universe < 8.9.0
-Provides: %{name}-std-universe = %{version}-%{release}
-
-# Cream gahp discontinued as of 8.9.9
-Obsoletes: %{name}-cream-gahp < 8.9.9
-Provides: %{name}-cream-gahp = %{version}-%{release}
-
-# 32-bit shadow discontinued as of 8.9.9
-Obsoletes: %{name}-small-shadow < 8.9.9
-Provides: %{name}-small-shadow = %{version}-%{release}
-%endif
 
 %if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
@@ -366,9 +272,11 @@ Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
 %endif
 
+%if 0%{?rhel} <= 10
 # upgrade-checks package discontinued as of 24.8.0
 Obsoletes: %{name}-upgrade-checks < 24.8.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
+%endif
 
 %if 0%{?suse_version}
 %debug_package
@@ -439,52 +347,16 @@ Requires: %name = %version-%release
 A collection of tests to verify that HTCondor is operating properly.
 
 #######################
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31
-%package -n python2-condor
-Summary: Python bindings for HTCondor
-Group: Applications/System
-Requires: python >= 2.2
-Requires: python2-cryptography
-Requires: %name = %version-%release
-%{?python_provide:%python_provide python2-condor}
-%if 0%{?rhel} >= 7
-Requires: boost169-python2
-%endif
-# Remove before F30
-Provides: %{name}-python = %{version}-%{release}
-Provides: %{name}-python%{?_isa} = %{version}-%{release}
-Obsoletes: %{name}-python < %{version}-%{release}
-
-%description -n python2-condor
-The python bindings allow one to directly invoke the C++ implementations of
-the ClassAd library and HTCondor from python
-%endif
-
-
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
-#######################
 %package -n python3-condor
 Summary: Python bindings for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} == 7
-Requires: boost169-python3
-%else
-%if 0%{?suse_version}
-Requires: libboost_python-py3-1_75_0
-%else
-Requires: boost-python3
-%endif
-%endif
 Requires: python3
-%if 0%{?rhel} != 7
 Requires: python3-cryptography
-%endif
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
-%endif
 
 
 #######################
@@ -492,17 +364,9 @@ the ClassAd library and HTCondor from python
 Summary: Local issuer credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} == 7
-Requires: python2-condor = %{version}-%{release}
-Requires: python-six
-Requires: python2-cryptography
-Requires: python2-scitokens
-%else
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-six
 Requires: python3-cryptography
 Requires: python3-scitokens
-%endif
 Conflicts: %name-credmon-vault
 
 %description credmon-local
@@ -517,15 +381,9 @@ Summary: OAuth2 credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
-%if 0%{?rhel} == 7
-Requires: python2-requests-oauthlib
-Requires: python-flask
-Requires: mod_wsgi
-%else
 Requires: python3-requests-oauthlib
 Requires: python3-flask
 Requires: python3-mod_wsgi
-%endif
 Requires: httpd
 
 %description credmon-oauth
@@ -539,15 +397,8 @@ Summary: Vault credmon for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
-Requires: python3-six
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-Requires: python36-cryptography
-Requires: python36-urllib3
-%endif
-%if 0%{?rhel} >= 8
 Requires: python3-cryptography
 Requires: python3-urllib3
-%endif
 %if %uw_build
 # Although htgettoken is only needed on the submit machine and
 #  condor-credmon-vault is needed on both the submit and credd machines,
@@ -569,12 +420,7 @@ Summary: Multi-credmon support for HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: condor-credmon-local = %{version}-%{release}
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-Requires: python36-urllib3
-%endif
-%if 0%{?rhel} >= 8
 Requires: python3-urllib3
-%endif
 Requires: htgettoken >= 1.1
 
 %description credmon-multi
@@ -588,9 +434,7 @@ of condor-credmon-vault when concurrent support is needed.
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 Requires: python3-condor = %version-%release
-%endif
 
 %description -n minicondor
 This example configuration is good for trying out HTCondor for the first time.
@@ -602,9 +446,7 @@ shortens many timers to be more responsive.
 Summary: Configuration for an Access Point
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 Requires: python3-condor = %version-%release
-%endif
 
 %description ap
 This example configuration is good for installing an Access Point.
@@ -615,9 +457,7 @@ After installation, one could join a pool or start an annex.
 Summary: Configuration for an Execution Point
 Group: Applications/System
 Requires: %name = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 Requires: python3-condor = %version-%release
-%endif
 
 %description ep
 This example configuration is good for installing an Execution Point.
@@ -661,11 +501,6 @@ exit 0
 # For release tarballs
 %setup -q -n %{name}-%{condor_version}
 
-# Patch credmon-oauth to use Python 2 on EL7
-%if 0%{?rhel} == 7
-%patch1 -p1
-%endif
-
 # fix errant execute permissions
 find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
@@ -701,11 +536,7 @@ export FCFLAGS="${FCFLAGS} -march=x86-64-v2"
 # if this environment variable is set, sphinx-build cannot import markupsafe
 env -u RPM_BUILD_ROOT make -C docs man
 %else
-%if 0%{?rhel} == 7
-make -C docs SPHINXBUILD=sphinx-build-3.6 man
-%else
 make -C docs man
-%endif
 %endif
 
 %if %uw_build
@@ -734,7 +565,7 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
-%if 0%{?rhel} == 7 || 0%{?rhel} == 8
+%if 0%{?rhel} == 8
        -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
@@ -803,13 +634,6 @@ cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libd
 # Drop in a symbolic link for backward compatibility
 ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 
-%if %uw_build
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-# Drop in a link for backward compatibility for small shadow
-ln -s condor_shadow %{buildroot}/%{_sbindir}/condor_shadow_s
-%endif
-%endif
-
 populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/condor-%{version}/etc/examples/*
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
@@ -842,11 +666,10 @@ populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{versio
 mkdir -p -m0755 %{buildroot}/usr/share/condor/config.d
 
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
-# Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
-mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
-mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/execute
-mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/krb_credentials
-mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
+mkdir -p -m0755 %{buildroot}/%{_sharedstatedir}/condor/spool
+mkdir -p -m0755 %{buildroot}/%{_sharedstatedir}/condor/execute
+mkdir -p -m0755 %{buildroot}/%{_sharedstatedir}/condor/krb_credentials
+mkdir -p -m2770 %{buildroot}/%{_sharedstatedir}/condor/oauth_credentials
 
 
 # not packaging configure/install scripts
@@ -870,16 +693,6 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/RE
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
 
-###
-# Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
-%if 0%{?rhel} == 7
-ln -s ../..%{_sbindir}/condor_credmon_oauth          %{buildroot}/%{_bindir}/condor_credmon_oauth
-ln -s ../..%{_sbindir}/scitokens_credential_producer %{buildroot}/%{_bindir}/scitokens_credential_producer
-mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon
-ln -s ../../../..%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/scitokens-credmon/scitokens-credmon.wsgi
-%endif
-###
-
 # install tmpfiles.d/condor.conf
 mkdir -p %{buildroot}%{_tmpfilesdir}
 install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor-tmpfiles.conf %{buildroot}%{_tmpfilesdir}/%{name}.conf
@@ -892,10 +705,8 @@ install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.ser
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 
-%if 0%{?rhel} >= 7
 mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
-%endif
 
 # Install perl modules
 
@@ -906,10 +717,6 @@ mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
 mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
-%if 0%{?rhel} == 7
-mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
-%endif
-mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
 
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
@@ -919,10 +726,6 @@ rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%condor_version
 
 # Fix up blahp installation
-%if 0%{?rhel} == 7
-# Don't rely on Python 3 on EL7 (not installed by default)
-sed -i 's;/usr/bin/python3;/usr/bin/python2;' %{buildroot}%{_libexecdir}/blahp/*status.py
-%endif
 # Move batch system customization files to /etc, with symlinks in the
 # original location. Admins will need to edit these.
 install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
@@ -931,11 +734,6 @@ for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
     ln -s ../../../etc/blahp/${batch_system}_local_submit_attributes.sh \
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
-
-# condor_adstash no longer supported on EL7
-%if 0%{?rhel} == 7
-rm -rf %{buildroot}/%_libexecdir/condor/adstash
-%endif
 
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
@@ -974,9 +772,7 @@ rm -rf %{buildroot}
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
 %_datadir/condor/CondorJavaWrapper.class
-%if 0%{?rhel} >= 7
 %_datadir/condor/htcondor.pp
-%endif
 %dir %_sysconfdir/condor/passwords.d/
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
@@ -1034,23 +830,12 @@ rm -rf %{buildroot}
 %_libexecdir/condor/common-cloud-attributes-aws.py
 %_libexecdir/condor/common-cloud-attributes-aws.sh
 %_libexecdir/condor/onedrive_plugin.py
-# TODO: get rid of these
-# Not sure where these are getting built
-%if 0%{?rhel} <= 7 && ! 0%{?fedora} && ! 0%{?suse_version}
-%_libexecdir/condor/box_plugin.pyc
-%_libexecdir/condor/box_plugin.pyo
-%_libexecdir/condor/gdrive_plugin.pyc
-%_libexecdir/condor/gdrive_plugin.pyo
-%_libexecdir/condor/onedrive_plugin.pyc
-%_libexecdir/condor/onedrive_plugin.pyo
-%endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/ce-audit.so
-%if ! ( 0%{?rhel} == 7 )
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/adstash.py
 %_libexecdir/condor/adstash/config.py
@@ -1071,7 +856,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/json_file.py
 %_libexecdir/condor/adstash/interfaces/null.py
 %_libexecdir/condor/adstash/interfaces/registry.py
-%endif
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_password.1.gz
@@ -1247,11 +1031,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_schedd
 %_sbindir/condor_set_shutdown
 %_sbindir/condor_shadow
-%if %uw_build
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
-%{_sbindir}/condor_shadow_s
-%endif
-%endif
 %_sbindir/condor_sos
 %_sbindir/condor_startd
 %_sbindir/condor_starter
@@ -1403,20 +1182,6 @@ rm -rf %{buildroot}
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
 
-%if 0%{?rhel} <= 7 && 0%{?fedora} <= 31 && ! 0%{?suse_version}
-%files -n python2-condor
-%defattr(-,root,root,-)
-%_bindir/condor_top
-%_bindir/classad_eval
-%_bindir/condor_watch_q
-%_libdir/libpyclassad2*.so
-%_libexecdir/condor/libclassad_python_user.so
-%{python_sitearch}/classad/
-%{python_sitearch}/htcondor/
-%{python_sitearch}/htcondor-*.egg-info/
-%endif
-
-%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1424,16 +1189,12 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-%_libdir/libpyclassad3*.so
-%_libexecdir/condor/libclassad_python_user.cpython-3*.so
-%_libexecdir/condor/libclassad_python3_user.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 /usr/lib64/python%{python3_version}/site-packages/classad2/
 /usr/lib64/python%{python3_version}/site-packages/htcondor2/
-%endif
 
 %files credmon-local
 %doc examples/condor_credmon_oauth
@@ -1444,24 +1205,11 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-oauth-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-%if 0%{?rhel} == 7
-###
-# Backwards compatibility with the previous versions and configs of scitokens-credmon
-%_bindir/condor_credmon_oauth
-%_bindir/scitokens_credential_producer
-###
-%endif
 
 %files credmon-oauth
 %_var/www/wsgi-scripts/condor_credmon_oauth
 %config(noreplace) %_sysconfdir/condor/config.d/40-oauth-tokens.conf
 %ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
-%if 0%{?rhel} == 7
-###
-# Backwards compatibility with the previous versions and configs of scitokens-credmon
-%_var/www/wsgi-scripts/scitokens-credmon
-###
-%endif
 
 %files credmon-vault
 %doc examples/condor_credmon_oauth
@@ -1498,7 +1246,6 @@ if [ $? = 0 ]; then
    # the number of extraneous SELinux warnings on f17 is very high
 fi
 %endif
-%if 0%{?rhel} >= 7
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
@@ -1507,7 +1254,6 @@ if [ $? = 0 ]; then
 %endif
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
 fi
-%endif
 if [ $1 -eq 1 ] ; then
     # Initial installation 
     /bin/systemctl daemon-reload >/dev/null 2>&1 || :
@@ -1527,14 +1273,27 @@ fi
 # binary has changed and do graceful or peaceful restart, based on its
 # configuration
 
-%triggerun -- condor < 7.7.0-0.5
-
-/usr/bin/systemd-sysv-convert --save condor >/dev/null 2>&1 ||:
-
-/sbin/chkconfig --del condor >/dev/null 2>&1 || :
-/bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
-
 %changelog
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.11.2-1
+- Add job attributes to track why and how often a job is vacated
+- Add the ability to notify a user when their job first starts
+- Can now specify which Vault servers are trusted
+- Added htcondor2.ping() to the Python bindings
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.11-1
+- Initial support for Debian 13 (trixie)
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.28-1
+- Exit -code and -signal environment variables are now set for Docker jobs
+- Fix issue where ImageSize was over-reported on the Windows platform
+- HTCondor tarballs now contain Pelican 7.18.1 and Apptainer 1.4.2
+
+* Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.28-1
+- Fix condor_token_request to accept automatically-approved tokens
+
+* Tue Aug 12 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
+- Fix condor_store_cred bug that broke installing with get_htcondor
+
 * Mon Jul 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.10.2-1
 - Remove support for old JobRouter syntax
 - New condor_dag_checker tool finds syntax and logic errors before run

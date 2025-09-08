@@ -2796,6 +2796,11 @@ default=
 type=string
 tags=starter
 
+[STARTER_NESTED_SCRATCH]
+default=false
+type=bool
+tags=starter
+
 [STARTER_NUM_THREADS_ENV_VARS]
 default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS PYTHON_CPU_COUNT ROOT_MAX_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
@@ -5190,7 +5195,7 @@ description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
-default=50000
+default=2000000000
 range=0,
 type=int
 description=History Helper max number of history ads

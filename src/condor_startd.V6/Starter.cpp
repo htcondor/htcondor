@@ -1273,7 +1273,7 @@ Starter::startSoftkillTimeout( time_t timeout )
 	if( s_softkill_tid < 0 ) {
 		EXCEPT( "Can't register softkillTimeout timer" );
 	}
-	dprintf(D_FULLDEBUG,"Using max vacate time of %ds for this job.\n",softkill_timeout);
+	dprintf(D_FULLDEBUG,"Using max vacate time of %llds for this job.\n",(long long)softkill_timeout);
 	return TRUE;
 }
 

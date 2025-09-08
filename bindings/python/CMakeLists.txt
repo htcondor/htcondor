@@ -62,6 +62,7 @@ htcondor2/_file_transfer_event_type.py
 htcondor2/_common_files_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
+htcondor2/_security_context.py
 htcondor2/_loose_functions.py
 htcondor2/__init__.py
 
@@ -69,6 +70,7 @@ htcondor2/__init__.py
 htcondor2/personal.py
 htcondor2/_utils/__init__.py
 htcondor2/_utils/ansi.py
+htcondor2/_utils/keyboard.py
 
 # sigh. sigh.
 htcondor2/htchirp/__init__.py

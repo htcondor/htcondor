@@ -946,9 +946,9 @@ private:
 	// and folks who try to do something different will get a compile-time error
 	// unless they use DaemonAllowLocateFull::locate().
 
-	ClassAd *m_daemon_ad_ptr;
+	ClassAd m_daemon_ad;
 
-	ClassAd * m_location_ad_ptr = NULL;
+	ClassAd m_location_ad;
 
 	std::string m_trust_domain;
 
@@ -996,7 +996,7 @@ public:
 			should be prepared for this method to return NULL.
 			The caller must copy the classad it gets back!
 		  */
-	ClassAd *daemonAd() { locate(LOCATE_FULL); return m_daemon_ad_ptr; }
+	ClassAd *daemonAd() { locate(LOCATE_FULL); return &m_daemon_ad; }
 
 };
 

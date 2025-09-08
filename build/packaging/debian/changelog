@@ -1,3 +1,38 @@
+condor (24.11.2-1) stable; urgency=medium
+
+  * Add job attributes to track why and how often a job is vacated
+  * Add the ability to notify a user when their job first starts
+  * Can now specify which Vault servers are trusted
+  * Added htcondor2.ping() to the Python bindings
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:18:00 -0500
+
+condor (24.0.11-1) stable; urgency=medium
+
+  * Initial support for Debian 13 (trixie)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:11:00 -0500
+
+condor (23.10.28-1) stable; urgency=medium
+
+  * Exit -code and -signal environment variables are now set for Docker jobs
+  * Fix issue where ImageSize was over-reported on the Windows platform
+  * HTCondor tarballs now contain Pelican 7.18.1 and Apptainer 1.4.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 07:04:00 -0500
+
+condor (23.0.28-1) stable; urgency=medium
+
+  * Fix condor_token_request to accept automatically-approved tokens
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Aug 2025 06:55:00 -0500
+
+condor (24.10.3-1) stable; urgency=medium
+
+  * Fix condor_store_cred bug that broke installing with get_htcondor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Aug 2025 08:08:00 -0500
+
 condor (24.10.2-1) stable; urgency=medium
 
   * Remove support for old JobRouter syntax

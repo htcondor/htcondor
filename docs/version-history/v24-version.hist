@@ -1,4 +1,20 @@
-*** 24.12.0 features
+*** 24.12.13 bugs
+
+- Fixed bug where the message ``Processing new events...`` would briefly
+  flash while running :tool:`condor_watch_q`
+  :jira:`3244`
+
+*** 24.0.13 bugs
+
+*** 24.12.2 features
+
+- :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
+  (instead of :attr:`Name`) when trying to find *condor_startd* daemons, if
+  if the ``name`` argument is not the name of a slot.  This allows programmers
+  to call :meth:`htcondor2.Collector.locate` using the fully-qualified domain
+  name and get a result from a collector whether or not
+  :macro:`ENABLE_STARTD_DAEMON_AD` is set.
+  :jira:`2911`
 
 - Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
   defaults to false.  When true, and running on a cgroup enable system, local
@@ -6,41 +22,100 @@
   limit, it will be put on hold.
   :jira:`3170`
 
+- :macro:`HISTORY_HELPER_MAX_HISTORY` defalt raise from 10,000 to 2,000,000,000
+  effectively removing the limit.  We now believe that running large
+  remote history queries will not have a negative impact on the *condor_schedd*
+  :jira:`3215`
+
+- :tool:`condor_userprio` now no longer needs the negotiator to be running
+  if it only needs the collector to get userprio data.
+  :jira:`3221`
+
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
   and htchirp.py to work correctly inside a docker universe job.
   :jira:`3197`
 
+- :tool:`condor_watch_q` will now exit upon key press from keyboard.
+  :jira:`3199`
+
 - Added new :ad-attr:`NumInputTransferStarts` and :ad-attr:`NumOutputTransferStarts`
   counters to the job record.
   :jira:`3194`
 
-*** 24.12.0 bugs
+- If the file listed in :subcom:`log` is in a directory that does not exist, HTCondor
+  will now try to create that directory (as the user).  Previously, it ran the
+  job without a user log file.
+  :jira:`3210`
 
-- Fixed a problem where setting :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`
-  to longer than macro:`STARTER_FILE_XFER_STALL_TIMEOUT` would prevent the
-  logging the output of hung file-transfer plug-ins.
-  :jira:`3202`
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to false.  When false,
+  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  directory.  When true, the job's scratch directory is a subdirectory thereof, named
+  "scratch", with the intention that all condor metadata files will be moved to peer 
+  directories, and not pollute the job's scratch directory with condor control files.
+  :jira:`3080`
+
+- Added optional second argument for the macro expansion function ``$BASENAME()`` that
+  specifies the file extension or suffix to remove.
+  :jira:`3206`
+
+- :tool:`condor_adstash` now parses and stores per-attempt transfer error data when
+  reading transfer epoch history.
+  :jira:`3122`
+
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
+  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
+  jobs which go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
+
+*** 24.12.2 bugs
 
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
 
+- Fixed bug when :macro:`STARTER_NESTED_SCRATCH` is true and
+  :macro:`SINGULARITY_TARGET_DIR` was also set.
+  :jira:`3243`
+
+- Fixed bug that prevented emails being sent to users when jobs went
+  on hold and :subcom:`notification` was set to error.
+  :jira:`3219`
+
+- Fixed bug introduced in 24.11 that caused the schedd to 
+  occassionally crash when dagman completed.
+  :jira:`3250`
+
+*** 24.0.12 features
+
+- Updated :tool:`condor_upgrade_check` to test for well known gotchas
+  between v24 and v25 of HTCondor installations.
+  :jira:`3209`
+
 *** 24.0.12 bugs
 
-*** 24.11.1 features
+- Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
+  :jira:`3225`
 
-- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
-  restrict which Vault servers the *condor_credd* will accept credentials for.
-  :jira:`3136`
+- Fixed bug where jobs held due to exceeding disk usage had the same
+  :ad-attr:`HoldReasonCode` and :ad-attr:`HoldReasonSubCode` as jobs
+  that exceeded memory usage.
+  :jira:`3248`
 
-- Added new "notification = start" option to *condor_submit*, which
-  sends an email when the job starts for the first time.
-  :jira:`3133`
+*** 24.11.2 features
 
 - Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
   These attributes provide counts about why a job left the running state without
   completing (i.e. was vacated from the execution point).
   :jira:`3204`
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3133`
+
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
 
 - The new Python API now includes `htcondor2.ping()`, which operates like
   `htcondor.SecMan.ping()` in the old API.
@@ -58,13 +133,24 @@
 - Add --version flag to the :tool:`htcondor` tool.
   :jira:`3091`
 
-*** 24.11.1 bugs
+*** 24.11.2 bugs
 
 - When responding to a ping request for the ALLOW authorization level,
   daemons no longer require authentication.
   :jira:`3195`
 
+*** 24.0.11 features
+
+- Initial support for Debian 13 (trixie).
+  :jira:`3212`
+
 *** 24.0.11 bugs
+
+*** 24.10.3 bugs
+
+- Fixed a bug introduced in version 24.10.2 that caused
+  `condor_store_cred add` to fail.
+  :jira:`3213`
 
 *** 24.10.2 features
 

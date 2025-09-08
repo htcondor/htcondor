@@ -46,11 +46,6 @@ DCSchedd::DCSchedd( const ClassAd& ad, const char* the_pool )
 {
 }
 
-DCSchedd::~DCSchedd( void )
-{
-}
-
-
 ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
 					const char *reason_code,
