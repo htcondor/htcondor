@@ -2749,12 +2749,12 @@ int
 JICShadow::transferInputStatus(FileTransfer *ftrans)
 {
 	ASSERT(ftrans);
-	const FileTransfer::FileTransferInfo & info = ftrans->GetInfo();
+	const FileTransfer::FileTransferInfo & ft_info = ftrans->GetInfo();
 
 	//
 	// If this is a progress update, note that we've received it.
 	//
-	if( info.in_progress ) {
+	if( ft_info.in_progress ) {
 		this->file_xfer_last_alive_time = time(nullptr);
 		return 1;
 	}
@@ -2775,8 +2775,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 
 	updateShadowWithPluginResults("Input", filetrans);
 
-		// Make certain the file transfer succeeded.
-	FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
+	// Make certain the file transfer succeeded.
 	if ( !ft_info.success ) {
 
 		UnreadyReason urea = { ft_info.hold_code, ft_info.hold_subcode, "Failed to transfer files: " };
