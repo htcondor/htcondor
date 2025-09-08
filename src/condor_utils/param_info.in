@@ -3136,7 +3136,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup, TokensDatabase
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3220,7 +3220,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes AuthTokenProject
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -6108,6 +6108,30 @@ default=true
 description=Location of the checkpoint destination map file
 default=$(LOCAL_DIR)/checkpoint-destination-mapfile
 type=path
+
+[PLACEMENTD]
+default=$(SBIN)/condor_placementd
+type=path
+
+[PLACEMENTD_LOG]
+default=$(LOG)/PlacementdLog
+type=path
+
+[PLACEMENTD_MAPFILE]
+default=$(ETC)/placementd_mapfile
+type=path
+
+[PLACEMENTD_AUTHORIZATIONS_MAPFILE]
+default=$(ETC)/placementd_authorizations_mapfile
+type=path
+
+[TOKENS_DATABASE]
+default=$(SPOOL)/TokensDatabase
+type=path
+
+[SEC_ACCEPT_CAPABILITY_TOKENS]
+default=false
+type=bool
 
 ######
 ## add metaknobs below this banner

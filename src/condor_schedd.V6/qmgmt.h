@@ -590,6 +590,7 @@ void DestroyJobQueue( void );
 int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
+bool JobQueueInitDone();
 
 bool isQueueSuperUser(const JobQueueUserRec * user);
 

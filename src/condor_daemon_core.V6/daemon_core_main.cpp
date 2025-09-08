@@ -2036,6 +2036,7 @@ handle_dc_start_token_request(int, Stream* stream)
 					final_key_name,
 					token_request.getBoundingSet(),
 					token_request.getLifetime(),
+					false,
 					token,
 					static_cast<Sock*>(stream)->getUniqueId(),
 					&err))
@@ -2448,6 +2449,7 @@ handle_dc_approve_token_request(int, Stream* stream)
 			final_key_name,
 			token_request.getBoundingSet(),
 			token_request.getLifetime(),
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
@@ -2534,6 +2536,7 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 				final_key_name,
 				token_request.getBoundingSet(),
 				token_request.getLifetime(),
+				false,
 				token,
 				static_cast<Sock*>(stream)->getUniqueId(),
 				&err))
@@ -2634,7 +2637,7 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 			if (lifetime < 0) {lifetime = 0;}
 
 			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
-				lifetime, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
+					lifetime, false, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
 			{
 				error_code = err.code();
 				error_string = err.getFullText();
@@ -2814,6 +2817,7 @@ handle_dc_session_token(int, Stream* stream)
 			final_key_name,
 			authz_list,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))

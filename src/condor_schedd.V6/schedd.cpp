@@ -4363,6 +4363,11 @@ void Scheduler::clearPendingOwners()
 					}
 				}
 			}
+				// JEF TODO This code assumes each generic account is in
+				//   use by a single UserRec.
+			if (m_claimedGenericOsUsers.erase(uad->OsUser()) != 0) {
+				m_openGenericOsUsers.insert(uad->OsUser());
+			}
 		}
 		delete uad;
 	}
@@ -4373,7 +4378,7 @@ void Scheduler::clearPendingOwners()
 // or (windows only) a partially qualified owner@ntdomain name
 // this will lookup the OwnerInfo record, and return it, creating a new (pending) one if needed
 OwnerInfo *
-Scheduler::insert_ownerinfo(const char * owner)
+Scheduler::insert_ownerinfo(const char * owner, CondorError* errstack)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
@@ -4437,6 +4442,20 @@ Scheduler::insert_ownerinfo(const char * owner)
 		#endif
 	}
 
+	if (m_useGenericOsUsers && JobQueueInitDone()) {
+		auto acct_itr = m_openGenericOsUsers.begin();
+		if (acct_itr == m_openGenericOsUsers.end()) {
+			dprintf(D_ERROR, "No generic OS users left for new AP user\n");
+			if (errstack) {
+				errstack->pushf("SCHEDD", ENOSPC, "No OS user available for AP user %s", owner);
+			}
+			return nullptr;
+		}
+		os_user = *acct_itr;
+		m_claimedGenericOsUsers.insert(*acct_itr);
+		m_openGenericOsUsers.erase(acct_itr);
+	}
+
 	int userrec_id = nextUnusedUserRecId();
 	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, ap_user.c_str(), os_user.c_str());
 	pendingOwners[userrec_id] = uad;
@@ -4456,9 +4475,9 @@ Scheduler::lookup_owner_const(const char * owner)
 }
 
 const OwnerInfo *
-Scheduler::insert_owner_const(const char * name)
+Scheduler::insert_owner_const(const char * name, CondorError* errstack)
 {
-	return insert_ownerinfo(name);
+	return insert_ownerinfo(name, errstack);
 }
 
 // lookup (and cache) pointer to the job's owner instance data
@@ -9625,6 +9644,8 @@ PostInitJobQueue()
 		//
 	WalkJobQueue(updateSchedDInterval);
 
+	scheduler.configGenericOsUsers();
+
 	extern int dump_job_q_stats(int cat);
 	dump_job_q_stats(D_FULLDEBUG);
 }
@@ -14579,6 +14600,8 @@ Scheduler::Init()
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
 
+	configGenericOsUsers();
+
 	first_time_in_init = false;
 }
 
@@ -14894,6 +14917,27 @@ Scheduler::RegisterTimers()
 				 PeriodicExprInterval.getMinInterval(),
 				 param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 		periodicid = -1;
+	}
+}
+
+void Scheduler::configGenericOsUsers()
+{
+	std::string accts;
+	param(accts, "AP_GENERIC_OS_USERS");
+	m_claimedGenericOsUsers.clear();
+	m_openGenericOsUsers.clear();
+	if (!accts.empty()) {
+		m_useGenericOsUsers = true;
+		for (const auto& os_acct: StringTokenIterator(accts)) {
+			m_openGenericOsUsers.insert(os_acct);
+		}
+		for (const auto& [user_name, user_rec]: OwnersInfo) {
+			if (m_openGenericOsUsers.erase(user_rec->OsUser()) != 0) {
+				m_claimedGenericOsUsers.insert(user_rec->OsUser());
+			}
+		}
+	} else {
+		m_useGenericOsUsers = false;
 	}
 }
 
@@ -15801,6 +15845,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			final_key_name,
 			bounding_set,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))

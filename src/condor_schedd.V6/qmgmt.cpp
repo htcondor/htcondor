@@ -216,6 +216,7 @@ void	DoSetAttributeCallbacks(const std::vector<JobQueueKey> &new_ids, const std:
 int		MaterializeJobs(JobQueueCluster * clusterAd, TransactionWatcher & txn, int & retry_delay);
 
 static bool qmgmt_was_initialized = false;
+static bool job_queue_init_done = false;
 static JobQueueType *JobQueue = nullptr;
 static std::set<JOB_ID_KEY> DirtyJobIDs;
 static std::set<JOB_ID_KEY>::iterator DirtyJobIDsItr = DirtyJobIDs.begin();
@@ -2738,6 +2739,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	if( spool_cur_version != SPOOL_CUR_VERSION_SCHEDD_SUPPORTS ) {
 		WriteSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
 	}
+
+	job_queue_init_done = true;
 }
 
 
@@ -3618,7 +3621,11 @@ NewCluster(CondorError* errstack)
 					// create user a user record for a new submitter
 					// the insert_owner_const will make a pending user record
 					// which we then add to the current transaction by calling MakeUserRec
-					urec = scheduler.insert_owner_const(user);
+					urec = scheduler.insert_owner_const(user, errstack);
+					if (urec == nullptr) {
+						errno = ENOSPC;
+						return NEWJOB_ERR_INTERNAL;
+					}
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
 						if (errstack) {
@@ -5000,18 +5007,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				return -1;
 		}
 
-#if !defined(WIN32)
-		uid_t user_uid = 0;
-		if ( can_switch_ids() && !pcache()->get_user_uid( owner, user_uid ) ) {
-			dprintf( D_ALWAYS, "SetAttribute security violation: "
-					 "setting owner to %s, which is not a valid user account\n",
-					 attr_value );
-			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s, which is not a "
-				"valid user account", attr_value);
-			errno = EACCES;
-			return -1;
-		}
-#endif
 		if (query_can_change_only) {
 			return 0;
 		}
@@ -6615,7 +6610,7 @@ static bool AddImplicitProjectRecords(std::vector<JobQueueKey> &new_keys)
 
 
 static int
-AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
+AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errstack)
 {
 	ClassAd policy_ad;
 	if (Q_SOCK && Q_SOCK->getReliSock()) {
@@ -6630,6 +6625,9 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 	ClassAd *x509_attrs = &policy_ad;
 	std::string last_proxy_file;
 	ClassAd proxy_file_attrs;
+
+	std::string session_project;
+	policy_ad.LookupString(ATTR_TOKEN_PROJECT, session_project);
 
 	// Put X509 credential information in cluster ads (from either the
 	// job's proxy or the GSI authentication on the CEDAR socket).
@@ -6672,13 +6670,45 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 				// ...
 			std::string ap_user;
 			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
-			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
-			if (ownerinfo && ownerinfo->OsUser()) {
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
+			const JobQueueUserRec *urec = scheduler.lookup_owner_const(ap_user.c_str());
+			if (urec == nullptr) {
+				dprintf(D_ERROR, "No User Record for user %s, aborting transaction\n", ap_user.c_str());
+				if (errstack) {
+					errstack->pushf("SCHEDD", EACCES, "Unknown User %s.", ap_user.c_str());
+				}
+				return -1;
+			}
+
+			const char* os_user = urec->OsUser();
+			if (os_user == nullptr) {
+				dprintf(D_ERROR, "User %s has no OS user, aborting transaction\n", ap_user.c_str());
+				if (errstack) {
+					errstack->pushf("SCHEDD", EACCES, "No OS user for %s.", ap_user.c_str());
+				}
+				return -1;
+			} else {
+#if !defined(WIN32)
+				uid_t user_uid = 0;
+				if ( can_switch_ids() && !pcache()->get_user_uid( os_user, user_uid ) ) {
+					dprintf(D_ERROR, "User %s has OS user %s, which is not a valid OS account, aborting transaction\n",
+					        ap_user.c_str(), os_user);
+					if (errstack) {
+						errstack->pushf("SCHEDD", EACCES, "Setting OsUser to %s, which is not a "
+										"valid OS account", os_user);
+					}
+					return -1;
+				}
+#endif
+				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, os_user);
 			}
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
+
+		if (JobQueueBase::IsClusterId(jid) && !session_project.empty()) {
+			SetSecureAttributeString(jid.cluster, jid.proc, ATTR_PROJECT_NAME, session_project.c_str());
+			JobQueue->SetTransactionTriggers(catJobProject);
+		}
 
 		std::string x509up, iwd;
 		GetAttributeString(jid.cluster, jid.proc, ATTR_X509_USER_PROXY, x509up);
@@ -9924,6 +9954,9 @@ int GetJobQueuedCount() {
     return job_queued_count;
 }
 
+bool JobQueueInitDone() {
+	return job_queue_init_done;
+}
 
 /**********************************************************************
  * These qmgt function support JobSets - see jobsets.cpp       

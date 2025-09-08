@@ -712,7 +712,7 @@ class Scheduler : public Service
 	bool HasPersistentProjectInfo() const { return EnablePersistentProjectInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
-	const OwnerInfo * insert_owner_const(const char*);
+	const OwnerInfo * insert_owner_const(const char*, CondorError* errstack=nullptr);
 	const OwnerInfo * lookup_owner_const(const char*);
 	// make sure that a job object has a submitter record pointer
 	const SubmitterData * get_submitter(JobQueueJob * job) {
@@ -725,6 +725,12 @@ class Scheduler : public Service
 	JobQueueProjectRec * get_projectinfo(JobQueueJob * job);
 	// find a project record or insert a pending project record
 	JobQueueProjectRec * insert_projectinfo(const char * project_name);
+
+	void configGenericOsUsers();
+
+	bool m_useGenericOsUsers{false};
+	std::set<std::string> m_openGenericOsUsers;
+	std::set<std::string> m_claimedGenericOsUsers;
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
@@ -950,7 +956,7 @@ private:
 	int			command_act_on_user_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
-	OwnerInfo     * insert_ownerinfo(const char*);
+	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
 	SubmitterData * insert_submitter(const char*);
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);

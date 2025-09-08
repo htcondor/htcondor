@@ -60,7 +60,7 @@ makeAdTypeToWhichAdsTable() {
 		{ CLUSTER_ADTYPE,		CLUSTER_AD },
 		{ GENERIC_ADTYPE,		GENERIC_AD },
 		{ CREDD_ADTYPE,			CREDD_AD },
-		{ XFER_SERVICE_ADTYPE,	XFER_SERVICE_AD },
+		{ PLACEMENTD_ADTYPE,	PLACEMENTD_AD },
 		{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD },
 		{ GRID_ADTYPE,			GRID_AD },
 		{ DEFRAG_ADTYPE,		DEFRAG_AD },    // Defrag ads go into the generic table in the collector
