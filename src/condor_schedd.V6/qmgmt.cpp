@@ -4808,6 +4808,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	JobQueueJob    *job = nullptr;
 	JobQueueJobSet *jobset = nullptr;
 	std::string		new_value;
+	std::string err_str;
 	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
 	IdToKey(cluster_id,proc_id,key);
@@ -5155,6 +5156,38 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if (attr_id == idATTR_PROJECT_NAME) {
 		if (scheduler.HasPersistentProjectInfo()) {
+			// Ensure ProjectName is a string literal
+			std::string project_buf(attr_value);
+			bool project_is_valid = false;
+			if (project_buf.size() > 2 && project_buf[0] == '"' && project_buf[project_buf.size()-1] == '"')
+			{
+				project_buf = project_buf.substr(1, project_buf.size() - 2);
+				project_is_valid = project_buf.find('"') == std::string::npos;
+			}
+			if (!project_is_valid) {
+				formatstr(err_str, "Setting ProjectName to %s, which is not a valid string", attr_value);
+				dprintf(D_ERROR, "SetAttribute security violation: %s\n", err_str.c_str());
+				if (err) err->push("QMGMT", EACCES, err_str.c_str());
+				errno = EACCES;
+				return -1;
+			}
+
+			// If the client session has a project attribute, the project
+			// name given here must match.
+			if (Q_SOCK && Q_SOCK->getReliSock()) {
+				std::string sess_project;
+				ClassAd policy_ad;
+				const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
+				daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+				policy_ad.LookupString(ATTR_TOKEN_PROJECT, sess_project);
+				if (!sess_project.empty() && strcasecmp(sess_project.c_str(), project_buf.c_str()) != 0) {
+					formatstr(err_str, "Setting ProjectName to \"%s\" when token project is \"%s\"", project_buf.c_str(), sess_project.c_str());
+					dprintf(D_ERROR, "SetAttribute security violation: %s\n", err_str.c_str());
+					if (err) err->push("QMGMT", EACCES, err_str.c_str());
+					errno = EACCES;
+					return -1;
+				}
+			}
 			// when there are project records, ProjectName is a cluster only attribute
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
