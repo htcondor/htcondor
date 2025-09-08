@@ -12342,6 +12342,34 @@ mark_job_running(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc,
 						ATTR_NUM_JOB_STARTS, num);
 	}
+
+	match_rec *mrec = scheduler.FindMrecByJobID(*job_id);
+
+	// Update some ocu-centric statistics if using an ocu resource
+	if (mrec && mrec->is_ocu) {
+		int ocu_cluster = mrec->ocu_originator.cluster;
+		int ocu_proc = mrec->ocu_originator.proc;
+		bool ocu_wanted = false;
+		bool ocu_willing = false;
+		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWanted",&ocu_wanted);
+		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWilling", &ocu_willing);
+
+		std::string ocu_attr_name;
+		if (ocu_wanted) {
+			ocu_attr_name = ATTR_OCU_OWNER_ACTIVATIONS;
+		} else if (ocu_willing) {
+			ocu_attr_name = ATTR_OCU_BORROWER_ACTIVATIONS;
+		}
+		
+		if (!ocu_attr_name.empty()) {
+			int ocu_num_uses = 0;
+			GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_num_uses);
+			ocu_num_uses++;
+			SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_num_uses);
+			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIM_START_TIME, time(nullptr));
+		}
+	}
+
 	MarkJobClean(*job_id);
 }
 
@@ -12397,6 +12425,9 @@ _mark_job_stopped(PROC_ID* job_id)
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING || status == TRANSFERRING_OUTPUT || status == SUSPENDED) {
 
+
+		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
+				 job_id->proc );
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_ENTERED_CURRENT_STATUS, time(0) );
@@ -12409,8 +12440,6 @@ _mark_job_stopped(PROC_ID* job_id)
 		}
 		DeleteAttribute( job_id->cluster, job_id->proc, ATTR_REMOTE_POOL );
 
-		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
-				 job_id->proc );
 	}	
 }
 
@@ -12869,6 +12898,32 @@ Scheduler::child_exit(int pid, int status)
 	ASSERT(srec);
 
 	if( srec->match ) {
+		// Update OCU stats, if any
+		if (srec->match->is_ocu) {
+			int ocu_cluster = srec->match->ocu_originator.cluster;
+			int ocu_proc = srec->match->ocu_originator.proc;
+			bool ocu_wanted = false;
+			bool ocu_willing = false;
+			GetAttributeBool(srec->job_id.cluster, srec->job_id.proc, "OCUWanted",&ocu_wanted);
+			GetAttributeBool(srec->job_id.cluster, srec->job_id.proc, "OCUWilling", &ocu_willing);
+
+			std::string ocu_attr_name;
+			if (ocu_wanted) {
+				ocu_attr_name = "OCUOwnerActivationTime";
+			} else if (ocu_willing) {
+				ocu_attr_name = "OCUBorrowerActivationTime";
+			}
+			time_t ocu_start_time = 0;
+			time_t now = time(nullptr);
+			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIM_START_TIME, &ocu_start_time);
+			if ((now > ocu_start_time) && (ocu_start_time > 0)) {
+				time_t ocu_time = now - ocu_start_time;
+				time_t ocu_total_time = 0;
+				GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_total_time);
+				ocu_total_time += ocu_time;
+				SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_total_time);
+			}
+		}
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 			DelMrec( srec->match );
 			srec->match = NULL;
