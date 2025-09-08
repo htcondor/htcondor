@@ -1736,7 +1736,7 @@ struct Schedd {
         ClassAd * result_ad = nullptr;
         {
             condor::ModuleLock ml;
-            result_ad = schedd.addOrEnableUsers(&userads[0], num_users, add_if_not, &errstack);
+            result_ad = schedd.addOrEnableUserRecs(&userads[0], num_users, add_if_not, false, &errstack);
         }
         if ( ! result_ad) {
             std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();

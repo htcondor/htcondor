@@ -141,6 +141,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_userrec_query", &_schedd_userrec_query, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_constraint", &_schedd_act_on_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_act_on_userrec_list", &_schedd_act_on_userrec_list, METH_VARARGS, NULL},
+	{"_schedd_act_on_userrec_constraint", &_schedd_act_on_userrec_constraint, METH_VARARGS, NULL},
 	{"_schedd_edit_job_ids", &_schedd_edit_job_ids, METH_VARARGS, NULL},
 	{"_schedd_edit_job_constraint", &_schedd_edit_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_reschedule", &_schedd_reschedule, METH_VARARGS, NULL},
