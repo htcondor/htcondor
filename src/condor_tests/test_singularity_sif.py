@@ -102,6 +102,40 @@ def completed_test_job(condor, test_job_hash):
 
     return ctj.query()[0]
 
+@action
+def test_job_hash_with_xfer():
+    return {
+            "universe": "container",
+            "container_image": "empty.sif",
+            "executable": "/bin/cp",
+            "arguments": "an_input_file an_output_file",
+            "should_transfer_files": "yes",
+            "when_to_transfer_output": "on_exit",
+            "transfer_executable": "False",
+            "output": "output",
+            "error": "error",
+            "log": "log_td",
+            "leave_in_queue": "True"
+            }
+# Test that file xfer works with SINGULARITY_TARGET_DIR
+@action
+def completed_test_job_with_xfer(condor_with_td, test_job_hash_with_xfer):
+
+    with open("an_input_file", "w") as f:
+        f.write("This is the input file\n")
+
+    ctj_td = condor_with_td.submit(
+        {**test_job_hash_with_xfer}, count=1
+    )
+
+    assert ctj_td.wait(
+        condition=ClusterState.all_terminal,
+        timeout=60,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+    return True
+
 # For the test to work, we need a singularity/apptainer which can work with
 # SIF files, which is any version of apptainer, or singularity >= 3
 def SingularityIsWorthy():
