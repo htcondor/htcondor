@@ -713,7 +713,7 @@ class TestCheckpointDestination:
                     projection=["CheckpointDestination", "GlobalJobID"],
                     )
             if len(result) != 0:
-                os.sleep(3)
+                time.sleep(3)
             retries += 1
 
         assert(len(result) == 0)
