@@ -591,12 +591,6 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		reply_users[username] = {m_users[username].ap_id, m_users[username].authz, m_users[username].projects, 0, m_users[username].exp};
 	}
 
-	std::string stmt_str;
-	if (username.empty()) {
-		formatstr(stmt_str, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= %lld;", (long long)time(nullptr));
-	} else {
-		formatstr(stmt_str, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= %lld AND foreign_id='%s';", (long long)time(nullptr), username.c_str());
-	}
 	sqlite3_stmt* stmt = nullptr;
 	if (username.empty()) {
 		if (sqlite3_prepare_v2(m_db, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= ?1 ;", -1, &stmt, nullptr) != SQLITE_OK ||
@@ -705,12 +699,16 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 
 	std::string stmt_str;
 	std::string where_str;
+	bool bind_jti = false;
+	bool bind_username = false;
 	if (!jti.empty()) {
+		bind_jti = true;
 		formatstr(where_str, "WHERE token_jti=?1 ");
 	} else if (!username.empty() || valid_only) {
 		where_str = "WHERE ";
 		if (!username.empty()) {
-			formatstr_cat(where_str, "foreign_id=?2 ", username.c_str());
+			bind_username = true;
+			formatstr_cat(where_str, "foreign_id=?2 ");
 		}
 		if (!username.empty() && valid_only) {
 			where_str += "AND ";
@@ -728,8 +726,8 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 		sqlite3_finalize(stmt);
 		return false;
 	}
-	if ((!jti.empty() && sqlite3_bind_text(stmt, 1, jti.c_str(), -1, SQLITE_STATIC) != SQLITE_OK) ||
-		(!username.empty() && sqlite3_bind_text(stmt, 2, username.c_str(), -1, SQLITE_STATIC) != SQLITE_OK))
+	if ((bind_jti && sqlite3_bind_text(stmt, 1, jti.c_str(), -1, SQLITE_STATIC) != SQLITE_OK) ||
+		(bind_username && sqlite3_bind_text(stmt, 2, username.c_str(), -1, SQLITE_STATIC) != SQLITE_OK))
 	{
 		dprintf(D_ERROR, "sqlite3_bind failed: %s\n", sqlite3_errmsg(m_db));
 		sqlite3_finalize(stmt);
