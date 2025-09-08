@@ -2797,7 +2797,7 @@ type=string
 tags=starter
 
 [STARTER_NESTED_SCRATCH]
-default=false
+default=true
 type=bool
 tags=starter
 
