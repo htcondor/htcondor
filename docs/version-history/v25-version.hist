@@ -18,6 +18,11 @@
 
 *** 25.2.0 bugs
 
+- Fixed a problem where setting :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`
+  to longer than :macro:`STARTER_FILE_XFER_STALL_TIMEOUT` would prevent the
+  logging the output of hung file-transfer plug-ins.
+  :jira:`3202`
+
 *** 25.0.2 bugs
 
 *** 25.1.0 features

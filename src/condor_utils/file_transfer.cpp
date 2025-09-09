@@ -2066,30 +2066,33 @@ FileTransfer::UpdateXferStatus(FileTransferStatus status)
 	// No transfer pipe, I am either forked child or pretending to be (windows)
 	// I must not touch r_Info, but use the internal i_Info instead
 
-	if( i_Info.xfer_status != status ) {
-		bool write_failed = false;
-		if( TransferPipe[1] != -1 ) {
-			int n;
-			char cmd = IN_PROGRESS_UPDATE_XFER_PIPE_CMD;
+	// We could filter based on `status` not being different than
+	// `i_Info.xfer_status`, but then we'd have to add an unfiltered
+	// pipe command for the "keepalives" we send while waiting for a plug-in.
 
+	bool write_failed = false;
+	if( TransferPipe[1] != -1 ) {
+		int n;
+		char cmd = IN_PROGRESS_UPDATE_XFER_PIPE_CMD;
+
+		n = daemonCore->Write_Pipe( TransferPipe[1],
+									&cmd,
+									sizeof(cmd) );
+		if(n != sizeof(cmd)) write_failed = true;
+
+		if(!write_failed) {
+			int i = status;
 			n = daemonCore->Write_Pipe( TransferPipe[1],
-										&cmd,
-										sizeof(cmd) );
-			if(n != sizeof(cmd)) write_failed = true;
-
-			if(!write_failed) {
-				int i = status;
-				n = daemonCore->Write_Pipe( TransferPipe[1],
-											(char *)&i,
-											sizeof(int) );
-				if(n != sizeof(int)) write_failed = true;
-			}
-		}
-
-		if( !write_failed ) {
-			i_Info.xfer_status = status;
+										(char *)&i,
+										sizeof(int) );
+			if(n != sizeof(int)) write_failed = true;
 		}
 	}
+
+	if( !write_failed ) {
+		i_Info.xfer_status = status;
+	}
+
 }
 
 int
@@ -6584,7 +6587,14 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	}
 
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	p_timer.wait_and_close(timeout);
+	p_timer.wait_for_output(
+		timeout,
+		[](void) -> void {
+			dprintf( D_TEST, "wait_for_output() callback (single)\n" );
+			return;
+		}
+	);
+	p_timer.close_program(1);
 	int rc = p_timer.exit_status();
 
 	bool exit_by_signal;
@@ -6950,7 +6960,18 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	p_timer.wait_and_close(timeout);
+	p_timer.wait_for_output(
+		timeout,
+		[this](void) -> void {
+			dprintf( D_TEST, "wait_for_output() callback (multi)\n" );
+
+			// This doesn't look like it calls the client callback if
+			// we're not the forked child, which seems wrongly inconsistent.
+			this->UpdateXferStatus( XFER_STATUS_ACTIVE );
+			return;
+		}
+	);
+	p_timer.close_program(1);
 	int rc = p_timer.exit_status();
 	time_t plugin_finished = time(nullptr);
 	pi.duration_in_seconds = plugin_finished - plugin_started;
