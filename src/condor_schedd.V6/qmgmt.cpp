@@ -1299,7 +1299,7 @@ bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effe
 
 	jquser = urec;
 	if ( ! jquser) {
-		dprintf(D_ALWAYS, "QmgmtPeer::setEffectiveOwner(%p,%d) result is to clear effective\n",
+		dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) result is to clear effective\n",
 			urec, ignore_effective_super);
 		return true;
 	}
@@ -1317,7 +1317,7 @@ bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effe
 		fquser = strdup(user.c_str());
 	}
 
-	dprintf(D_ALWAYS, "QmgmtPeer::setEffectiveOwner(%p,%d) result is user=%s owner=%s\n",
+	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) result is user=%s owner=%s\n",
 		urec, ignore_effective_super,
 		fquser ? fquser : "(null)",
 		owner ? owner : "(null)");
