@@ -288,8 +288,12 @@ Singularity::setup(ClassAd &machineAd,
 		bind_spec += target_dir;
 		// Only change PWD to our new target dir if that's where we should startup.
 		if (job_iwd == execute_dir) {
+			// replace the slot_dir prefix of execute dir with target_dir
+			std::string pwd{execute_dir};
+			replace_str(pwd, slot_dir, target_dir);
+
 			sing_args.AppendArg("--pwd");
-			sing_args.AppendArg(target_dir.c_str());
+			sing_args.AppendArg(pwd);
 		}
 		// Update the environment variables
 		retargetEnvs(job_env, target_dir, execute_dir);
