@@ -3691,7 +3691,7 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err)
 	trim(timestr);
 
 	// Remove any newlines from submit failure reason
-	std::ranges::transform(err.begin(), err.end(), err.begin(), [](unsigned char c) { return c == '\n' ? ' ' : c; });
+	std::ranges::transform(err, err.begin(), [](unsigned char c) { return c == '\n' ? ' ' : c; });
 
 	// NOTE: Keep inline with PrintEvent() message
 	// NOTE: The ULOG_ prefix is a lie asked for directly by pegasus *sigh*
