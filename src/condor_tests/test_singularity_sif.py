@@ -70,6 +70,15 @@ def condor(test_dir):
     with Condor(test_dir / "condor", config={"SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\""}) as condor:
         yield condor
 
+# Setup a personal condor with SINGULARITY_TARGET_DIR set
+@standup
+def condor_with_td(test_dir):
+    with Condor(test_dir / "condor_td", config={
+        "SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\"",
+        "SINGULARITY_TARGET_DIR": "/td"}) as condor_with_td:
+        yield condor_with_td
+
+# The actual job will cat a file
 # The actual job will cat a file
 @action
 def test_job_hash():
@@ -109,6 +118,7 @@ def test_job_hash_with_xfer():
             "container_image": "empty.sif",
             "executable": "/bin/cp",
             "arguments": "an_input_file an_output_file",
+            "transfer_input_files": "an_input_file",
             "should_transfer_files": "yes",
             "when_to_transfer_output": "on_exit",
             "transfer_executable": "False",
@@ -134,7 +144,7 @@ def completed_test_job_with_xfer(condor_with_td, test_job_hash_with_xfer):
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
-    return True
+    return ctj_td.query()[0]
 
 # For the test to work, we need a singularity/apptainer which can work with
 # SIF files, which is any version of apptainer, or singularity >= 3
@@ -183,3 +193,5 @@ class TestContainerUni:
     @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
     def test_container_uni(self, sif_file_fixture, completed_test_job):
             assert completed_test_job['ExitCode'] == 0
+    def test_container_uni_with_xfer(self, completed_test_job_with_xfer):
+            assert completed_test_job_with_xfer['ExitCode'] == 0
