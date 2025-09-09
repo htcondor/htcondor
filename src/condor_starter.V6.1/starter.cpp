@@ -168,7 +168,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	} else {
 		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				(long)daemonCore->getpid() );
-		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
 			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
 			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
 		} else {
