@@ -36,11 +36,18 @@ enum class GuidanceResult : int {
 #define RTYPE_JOB_ENVIRONMENT       "JobEnvironment"
 #define RTYPE_JOB_SETUP             "JobSetup"
 
-#define ETYPE_DIAGNOSTIC_RESULT "DiagnosticResult"
+#define ETYPE_DIAGNOSTIC_RESULT     "DiagnosticResult"
+
+enum class RequestResult : int {
+    Invalid = -1,
+    InternalError = 1,
+};
 
 std::optional<std::string> makeCIFName(
     const classad::ClassAd & jobAd,
-    const std::string & startdAddress
+    const std::string & baseName,
+    const std::string & startdAddress,
+    const std::string & content
 );
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

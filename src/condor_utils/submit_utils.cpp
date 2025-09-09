@@ -4477,6 +4477,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_WantJobNetworking, ATTR_WANT_JOB_NETWORKING, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
+	// FIXME: Strictly speaking, only the submit utils need to know about this
+	// bool.  Can we make its value available without adding to the job ad?
+	{SUBMIT_KEY_ContainerIsCommon, ATTR_CONTAINER_IS_COMMON, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -6575,9 +6578,28 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image.ptr())  {
-		input_files.emplace_back(container_image.ptr());
-		if (accumulate_size_kb) {
-			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+		bool userRequestedCommonContainer = true;
+		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
+		if(! userRequestedCommonContainer) {
+			input_files.emplace_back(container_image.ptr());
+			if (accumulate_size_kb) {
+				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+			}
+		} else {
+			// FIXME: This does not check to see if the container image varies
+			// per-proc, which it must not for this code to work.
+			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+			std::string xcip;
+			job->LookupString( "_x_common_input_catalogs", xcip );
+			// Don't duplicate entries.  This can't be the right way to do
+			// this; this function may be in the wrong place (unless we want
+			// to allow a different container image per proc).
+			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+				if(! xcip.empty()) { xcip += ", "; }
+				xcip += "condor_container_image";
+				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+			}
 		}
 
 		// Now that we've sure that we're transfering the container, set
@@ -6702,7 +6724,7 @@ int SubmitHash::SetTransferFiles()
 
 		// docker creds are always stored in a file named "config.json"
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
-		
+
 		struct stat buf;
 		int r = stat(docker_creds_file.c_str(), &buf);
 		if (r != 0) {
@@ -6752,7 +6774,7 @@ int SubmitHash::SetTransferFiles()
 		//
 		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
 		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
-		// 
+		//
 		// Error if:
 		//  (A) bad user input - getShouldTransferFilesNum fails
 		//  (B) bas user input - getFileTransferOutputNum fails
@@ -6768,7 +6790,7 @@ int SubmitHash::SetTransferFiles()
 	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
-	// if they didn't check to see if the admin did. 
+	// if they didn't check to see if the admin did.
 	auto_free_ptr should_param(submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles));
 	if (! should_param) {
 		if (job->LookupString(ATTR_SHOULD_TRANSFER_FILES, tmp)) {
