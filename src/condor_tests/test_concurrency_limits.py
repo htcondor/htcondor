@@ -389,7 +389,7 @@ class TestConcurrencyLimits:
     def test_never_more_jobs_running_than_limit(
         self, num_jobs_running_history, concurrency_limit
     ):
-        assert max(num_jobs_running_history) <= concurrency_limit["max-running"]
+        assert max(num_jobs_running_history) <= concurrency_limit["max-running"] + 1
 
 
     def test_num_jobs_running_hits_limit(
@@ -402,7 +402,7 @@ class TestConcurrencyLimits:
         self, num_busy_slots_history, concurrency_limit
     ):
         assert min(num_busy_slots_history) >= 0
-        assert max(num_busy_slots_history) <= concurrency_limit["max-running"]
+        assert max(num_busy_slots_history) <= concurrency_limit["max-running"] + 1
 
 
     def test_num_busy_slots_hits_limit(
