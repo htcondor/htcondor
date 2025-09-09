@@ -339,8 +339,14 @@ def completed_dagman_jobs(the_dagman_condor, the_dagman_user_dir, the_cs_job_scr
 
 
 @action
-def the_container_image(test_dir):
-    return Path("/home/tlmiller/Work/condor/test/busybox.sif")
+def the_container_image(test_dir, pytestconfig):
+    # This is a gross hack.
+    ctest_path = test_dir / ".." / "busybox.sif"
+    if ctest_path.exists():
+        return ctest_path
+    else:
+        return Path(pytestconfig.rootdir) / "busybox.sif"
+
 
 @action
 def the_container_local_dir(test_dir):
