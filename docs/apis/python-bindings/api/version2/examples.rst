@@ -194,7 +194,7 @@ domain name of the host on which the *condor_startd* is runinng, so you can
 use that to look for *condor_startd*\ s without knowing the precise configuration
 of the collector(s) you're asking.
 
-As of :ref:`version-history/feature-versions-24-x:Version 24.12.2`, this is
+As of :ref:`version-history/feature-versions-24-x:Version 24.12.3`, this is
 done for you if the ``name`` parameter does not contain an ``@`` character.
 
 For earlier versions, something like the following will work.
