@@ -17,6 +17,10 @@
  * - long readEpochIncremental(const char* file, std::vector<EpochRecord>& out, FileInfo& fileInfoOut)
  */
 
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+
 #include <string>
 #include <vector>
 #include <fstream>
@@ -132,9 +136,9 @@ bool parseBanner(BannerInfo &out, const std::string &line) {
         out.completionDate = std::stol(m[5]);
         return true;
     } else {
-    std::cerr << "[WARN] Failed to match banner line: " << line << "\n";
-    return false;
-    }   
+        dprintf(D_ERROR, "Failed to match banner line: %s\n", line.c_str());
+        return false;
+    }
 }
 
 // Check whether line starts with *** to find offset banners
@@ -146,7 +150,6 @@ static inline bool starts_with(const char *str, const char *prefix) {
 * A helper function to populate a JobRecord struct and put it into the output vector
 */
 void collectJob(
-    const std::vector<std::string> &exprs, // right now unused because we're looking purely at the banner info
     const BannerInfo &banner,
     std::vector<JobRecord> &jobs,
     long fileId) {
@@ -169,8 +172,8 @@ void collectJob(
 bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
     auto [inodeMatch, hashMatch] = ArchiveMonitor::checkFileEquals(historyFilePath, fileInfo);
 
-    if(!inodeMatch) printf("Inode doesn't match expected for file at %s \n", historyFilePath);
-    if(!hashMatch) printf("Hash doesn't match expected for file at %s \n", historyFilePath);
+    if(!inodeMatch) dprintf(D_FULLDEBUG, "Inode doesn't match expected for file at %s\n", historyFilePath);
+    if(!hashMatch) dprintf(D_FULLDEBUG, "Hash doesn't match expected for file at %s\n", historyFilePath);
 
     return inodeMatch && hashMatch;
 }
@@ -187,13 +190,13 @@ bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
 long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> &out, FileInfo &fileInfo) {
     BackwardFileReader reader(historyFilePath);
     if (reader.LastError()) {
-        std::cerr << "Error opening history file: " << historyFilePath << "\n";
+        dprintf(D_ERROR, "Error opening history file: %s\n", historyFilePath);
         return 0;
     }
 
     // Verify that filepath still points to a file w/ all the expected FileInfo
     if (!verifyFileMatch(historyFilePath, fileInfo)) {
-        std::cerr << "File has changed or rotated.\n";
+        dprintf(D_STATUS, "File has changed or rotated.\n");
         return -1;
     }
 
@@ -204,7 +207,6 @@ long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> 
     bool done = false;
     long lastOffset = -1;
     long stopOffset = fileInfo.LastOffset;
-    std::vector<std::string> exprs; // TODO: Will hold parsed info from the body of JobAd, right now its empty
 
     bool firstLineRead = false;  // Flag to check if it's the first line being read
 
@@ -235,8 +237,7 @@ long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> 
                 if (std::regex_search(lines.front(), match, offsetRegex)) {
                     lastOffset = std::stol(match[1].str());  // Store the offset number
                 } else {
-                    std::cerr << "[WARN] Failed to extract offset from the first line." << std::endl;
-                    std::cerr << "Line is: " << lines.front() <<std::endl;
+                    dprintf(D_ERROR, "Failed to extract offset from the first line: %s\n", lines.front().c_str());
                 }
 
                 firstLineRead = true;  // Set the flag to prevent further checks 
@@ -244,7 +245,7 @@ long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> 
 
         if(lastOffset == stopOffset) {
             done = true; //We've already processed up to this point
-            std::cerr << "No new entries have been added to this file." << std::endl;
+            dprintf(D_FULLDEBUG, "No new entries have been added to this file.\n");
             continue;
         }
 
@@ -259,16 +260,12 @@ long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> 
                     if (stopOffset && banner.offset == stopOffset) {
                         done = true;
                     } else {
-                        collectJob(exprs, banner, out, fileInfo.FileId);
+                        collectJob(banner, out, fileInfo.FileId);
                     }
                 } else {
-                    std::cerr << "[WARN] Failed to parse banner: " << l << "\n";
+                    dprintf(D_ERROR, "Failed to parse banner: %s\n", l.c_str());
                 }
-                exprs.clear(); // Clear exprs after processing the banner
-            } else {
-                exprs.push_back(l); // Fill exprs with non-banner lines
             }
-
         }
 
         lines.clear();  // Clear lines for next chunk

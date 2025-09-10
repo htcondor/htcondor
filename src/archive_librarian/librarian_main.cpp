@@ -2,6 +2,7 @@
 #include "condor_common.h"
 //#include "condor_daemon_core.h"
 #include "condor_config.h"
+#include "condor_debug.h"
 
 #include "librarian.h"
 #include <iostream>
@@ -10,10 +11,10 @@
 namespace conf = LibrarianConfigOptions;
 
 int main() {
-    dprintf_set_tool_debug("TOOL", 0);
-    set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
     set_priv_initialize(); // allow uid switching if root
     config();
+
+    dprintf_set_tool_debug("TOOL", 0);
 
     Librarian librarian;
 
@@ -21,7 +22,7 @@ int main() {
     param(librarian.config[conf::str::DBPath], "LIBRARIAN_DATABASE");
 
     if ( ! librarian.initialize()) {
-        std::cerr << "Failed to initialize Librarian." << std::endl;
+        dprintf(D_ERROR, "Failed to initialize Librarian.\n");
         return 1;
     }
 

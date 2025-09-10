@@ -1,3 +1,7 @@
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+
 #include "librarian.h"
 #include "readHistory.h"
 #include "archiveMonitor.h"
@@ -34,7 +38,7 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
     std::string fullPath = historyFileSet_.historyDirectoryPath + "/" + fileInfo.FileName;
     long newOffset = readHistoryIncremental(fullPath.c_str(), newJobRecords, fileInfo);
     if (newOffset < 0) {
-        fprintf(stderr, "[Librarian] Failed to read job records.\n");
+        dprintf(D_ERROR, "Failed to read job records.\n");
         return false;
     }
     fileInfo.LastOffset = newOffset;
@@ -153,13 +157,13 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
             int64_t unreadInLastFile = std::max<int64_t>(0, lastFileSizeBytes - status.HistoryFileOffsetLastRead);
             totalUnreadBytes += unreadInLastFile;
         } else {
-            printf("[Librarian] Warning: Could not get file size for %s: %s\n", 
-                fullFilePath.string().c_str(), ec.message().c_str());
+            dprintf(D_ERROR, "Warning: Could not get file size for %s: %s\n",
+                    fullFilePath.string().c_str(), ec.message().c_str());
             // Continue without counting this file
         }
     } else {
-        printf("[Librarian] Warning: historyFileIdLastRead (%d) not found in historyFileSet_.fileMap\n", 
-            status.HistoryFileIdLastRead);
+        dprintf(D_ERROR, "Warning: Last history file ID (%d) not found.\n",
+                status.HistoryFileIdLastRead);
     }
 
     // Find all unread files (LastOffset == 0) and sum their sizes
@@ -176,8 +180,8 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
                 // File size retrieved successfully
                 totalUnreadBytes += fileSize;
             } else {
-                printf("[Librarian] Warning: Could not get file size for %s: %s\n", 
-                    fullFilePath.string().c_str(), ec.message().c_str());
+                dprintf(D_ERROR, "Warning: Could not get file size for %s: %s\n",
+                        fullFilePath.string().c_str(), ec.message().c_str());
                 // Continue without counting this file
             }
         }
@@ -186,8 +190,8 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
     // Calculate estimated backlog
     int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJobInArchive_));
 
-    printf("[Librarian] Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n", 
-           totalUnreadBytes, estimatedBacklog);
+    dprintf(D_ALWAYS, "Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n",
+            totalUnreadBytes, estimatedBacklog);
 
     return estimatedBacklog;
 }
@@ -316,7 +320,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
                 it->second.DateOfRotation = *dateOfRotation;
             }
         } else {
-            fprintf(stderr, "[Librarian] Warning: Rotated file not found in fileMap. FileId=%ld\n", lastFileReadId);
+            dprintf(D_ERROR, "Warning: Rotated file not found in fileMap. FileId=%ld\n", lastFileReadId);
         }
     }
 
@@ -325,7 +329,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
         if (newFile.FileId != 0) {
             fileSet.fileMap[newFile.FileId] = newFile;
         } else {
-            fprintf(stderr, "[Librarian] Warning: New file has invalid FileId. Skipping.\n");
+            dprintf(D_ERROR, "Warning: New file has invalid FileId. Skipping.\n");
         }
     }
 
@@ -333,7 +337,7 @@ void applyArchiveChangeToFileSet(const ArchiveChange& change, FileSet& fileSet) 
     for (long deletedFileId : change.deletedFileIds) {
         size_t erased = fileSet.fileMap.erase(deletedFileId);
         if (erased == 0) {
-            fprintf(stderr, "[Librarian] Warning: Tried to delete file not found in fileMap. FileId=%ld\n", deletedFileId);
+            dprintf(D_ERROR, "Warning: Tried to delete file not found in fileMap. FileId=%ld\n", deletedFileId);
         }
     }
 }
@@ -381,10 +385,10 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
         auto it = fileSet.fileMap.find(fileSet.lastFileReadId);
         if (it != fileSet.fileMap.end()) {
             queue.push_back(it->second);
-            printf("[Librarian] Added lastFileRead to queue: %s (FileId: %ld)\n", 
-                   it->second.FileName.c_str(), it->second.FileId);
+            dprintf(D_FULLDEBUG, "Added lastFileRead to queue: %s (FileId: %ld)\n",
+                    it->second.FileName.c_str(), it->second.FileId);
         } else {
-            printf("[Librarian] Error: lastFileReadId %ld not found in fileMap\n", fileSet.lastFileReadId);
+            dprintf(D_ERROR, "Error: lastFileReadId %ld not found in fileMap\n", fileSet.lastFileReadId);
             return false;
         }
     }
@@ -392,7 +396,7 @@ bool Librarian::buildProcessingQueue(const FileSet& fileSet,
     // SECOND PRIORITY: Add new files from archive changes in order 
     for (const FileInfo& newFile : changes.newFiles) {
         queue.push_back(newFile);
-        printf("[Librarian] Added new file to queue: %s (FileId: %ld)\n", 
+        dprintf(D_ALWAYS, "Added new file to queue: %s (FileId: %ld)\n",
                newFile.FileName.c_str(), newFile.FileId);
     }
 
@@ -452,7 +456,7 @@ bool Librarian::cleanupDatabaseIfNeeded() {
         // Next step: run the query to delete jobs
         garbageCollected = dbHandler_.runGarbageCollection(SavedQueries::GC_QUERY_SQL, numFilesToDelete);
         if(!garbageCollected){
-            printf("[Librarian] Garbage collection attempted but failed.");
+            dprintf(D_ERROR, "Garbage collection attempted but failed.\n");
         }
     }
 
@@ -469,11 +473,10 @@ bool Librarian::cleanupDatabaseIfNeeded() {
  * This should only be called once during daemon startup
  * @return true if initialization successful, false on failure
  */
-bool Librarian::initialize() { 
-    printf("[Librarian] Initializing DBHandler...\n");
-
+bool Librarian::initialize() {
     historyFileSet_.Init(config[conf::str::ArchiveFile]);
 
+    dprintf(D_FULLDEBUG, "Initializing DBHandler.\n");
     // Construct the DBHandler with provided schema, db path, and cache size.
     if ( ! dbHandler_.initialize()) {
         return false;
@@ -481,15 +484,15 @@ bool Librarian::initialize() {
 
     // Check whether database is connected and has correct expect tables
     if (!dbHandler_.testDatabaseConnection()) {
-        fprintf(stderr, "[Librarian] DBHandler connection test failed\n");
+        dprintf(D_ERROR, "DBHandler connection test failed\n");
         return false;
     }
     if(!dbHandler_.verifyDatabaseSchema(SavedQueries::SCHEMA_SQL)) {
-        fprintf(stderr, "[Librarian] DBHandler schema is not as expected\n");
+        dprintf(D_ERROR, "DBHandler schema is not as expected\n");
         return false;
     }
 
-    printf("[Librarian] DBHandler initialized.\n");
+    dprintf(D_FULLDEBUG, "DBHandler initialized.\n");
 
     // Fill in info to be used for Status estimates later
     if (!calculateEstimatedBytesPerJob()) {
@@ -513,7 +516,7 @@ bool Librarian::initialize() {
  * @return true if update cycle completed successfully, false on error
  */
 bool Librarian::update() {
-    printf("[Librarian] Starting update protocol...\n");
+    dprintf(D_FULLDEBUG, "Starting update protocol.\n");
 
     // PhHASE  0: Status Tracking and Data Recovery
     // Initialize status tracking for this update cycle
@@ -535,7 +538,7 @@ bool Librarian::update() {
     std::vector<FileInfo> historyQueue;
 
     if (!buildProcessingQueue(historyFileSet_, historyChange, historyQueue)) {
-        printf("[Librarian] Failed to build history processing queue\n");
+        dprintf(D_ERROR, "Failed to build history processing queue\n");
         return false;
     }
 
@@ -543,30 +546,30 @@ bool Librarian::update() {
     // Process History Queue
     size_t totalJobRecordsProcessed = 0;
     size_t historyFilesProcessed = 0;
-    printf("[Librarian] Processing history file queue...\n");
+    dprintf(D_FULLDEBUG, "Processing history file queue.\n");
 
     for (FileInfo& fileInfo : historyQueue) {
 
         // Check if we've already exceeded the limit
         if (totalJobRecordsProcessed >= (size_t)config[conf::i::MaxRecordsPerUpdate]) {
-            printf("[Librarian] Reached job record limit (%d), stopping history processing. Processed %zu files, %zu remaining.\n", 
-                   config[conf::i::MaxRecordsPerUpdate], historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
+            dprintf(D_STATUS, "Reached job record limit (%d), stopping history processing. Processed %zu files, %zu remaining.\n",
+                    config[conf::i::MaxRecordsPerUpdate], historyFilesProcessed, historyQueue.size() - historyFilesProcessed);
             status.HitMaxIngestLimit = true; // Note that we hit the limit during this ingestion cycle
             break;
         }
 
-        printf("[Librarian] Processing history file: %sf (offset: %ld)\n", 
-               fileInfo.FileName.c_str(), fileInfo.LastOffset);
+        dprintf(D_STATUS, "Processing history file: %sf (offset: %ld)\n",
+                fileInfo.FileName.c_str(), fileInfo.LastOffset);
         
         std::vector<JobRecord> fileRecords;
         if (!readJobRecords(fileRecords, fileInfo)) {
-            printf("[Librarian] Failed to read job records from %s \n", fileInfo.FileName.c_str());
+            dprintf(D_ERROR, "Failed to read job records from %s\n", fileInfo.FileName.c_str());
             return false;
         }
 
         // If nothing new to read, move on to the next file
         if(fileRecords.empty()){
-            printf("[Librarian] No new job records in %s, skipping this file \n", fileInfo.FileName.c_str());
+            dprintf(D_FULLDEBUG, "No new job records in %s, skipping this file\n", fileInfo.FileName.c_str());
                 status.HistoryFileIdLastRead = fileInfo.FileId;
                 status.HistoryFileOffsetLastRead = fileInfo.LastOffset;
             continue;
@@ -574,7 +577,7 @@ bool Librarian::update() {
 
         // Atomic transaction: Insert records AND update file offset
         if (!dbHandler_.insertJobFileRecords(fileRecords, fileInfo)) {
-                printf("[Librarian] Failed to atomically process history file %s\n", fileInfo.FileName.c_str());
+                dprintf(D_ERROR, "Failed to atomically process history file %s\n", fileInfo.FileName.c_str());
                 continue;
         }
         
@@ -583,7 +586,7 @@ bool Librarian::update() {
         if (it != historyFileSet_.fileMap.end()) {
             it->second.LastOffset = fileInfo.LastOffset;
         } else {
-            fprintf(stderr, "[Librarian] Warning: FileId %ld not found in historyFileSet.fileMap\n", fileInfo.FileId);
+            dprintf(D_ERROR, "Warning: FileId %ld not found in historyFileSet.fileMap\n", fileInfo.FileId);
         }
 
         // Accumulate stats for status reporting
@@ -608,11 +611,11 @@ bool Librarian::update() {
 
     // Persist status to database
     if (!dbHandler_.writeStatusAndData(status, statusData_)) {
-        fprintf(stderr, "[Librarian] Warning: Failed to write status to database\n");
+        dprintf(D_ERROR, "Warning: Failed to write status to database\n");
         // Don't want to fail the entire update cycle for this, just logging it
     }
 
-    printf("[Librarian] Update protocol completed successfully. Inserted %zu job records, %zu epoch records in %ld ms.\n",
-        status.TotalJobsRead, status.TotalEpochsRead, status.DurationMs);
+    dprintf(D_FULLDEBUG, "Update protocol completed successfully. Inserted %zu job records, %zu epoch records in %ld ms.\n",
+            status.TotalJobsRead, status.TotalEpochsRead, status.DurationMs);
     return true;
 }
