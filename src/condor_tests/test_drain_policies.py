@@ -65,7 +65,7 @@ def job_file(test_dir):
 
         for i in range( 0, int(maxSleep) ):
             if os.path.isfile( killFile ):
-                memoryWaste = list( range( 0, 1024 * 1024 * 16 ) )
+                memoryWaste = list( range( 0, 1024 * 1024 * 4 ) )
             time.sleep( 1 )
 
         sys.exit( 0 )
