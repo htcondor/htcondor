@@ -106,11 +106,12 @@ CREATE TABLE IF NOT EXISTS StatusData (
 )";
 
 // TODO: Break this up and do logic/steps in librarian code
+// TODO: Make Status table clean out time configurable
     // Garbage collection query
     const std::string GC_QUERY_SQL = R"(
 -- 1. Find files to delete (ordered by deletion date, limited by job count target that we calculate)
       -- Creates a temporary table with the FileIds of only the Files that we want to delete
-CREATE TEMP TABLE FilesToDelete AS 
+CREATE TEMP TABLE IF NOT EXISTS FilesToDelete AS 
 SELECT FileId FROM Files 
 WHERE DateOfDeletion IS NOT NULL 
 ORDER BY DateOfDeletion ASC 
@@ -118,14 +119,14 @@ LIMIT ?; -- calculated based on job count needed
 
 -- 2. Collect JobIds 
       -- Finds all JobIds that are in those selected Files 
-CREATE TEMP TABLE JobsToDelete AS
+CREATE TEMP TABLE IF NOT EXISTS JobsToDelete AS
 SELECT DISTINCT JobId 
 FROM JobRecords 
 WHERE FileId IN (SELECT FileId FROM FilesToDelete);
 
 -- 3. Collect JobListIds that might become empty
      -- Finds any associated JobListIds to the jobs we're about to delete and saves them to check later
-CREATE TEMP TABLE JobListsToCheck AS
+CREATE TEMP TABLE IF NOT EXISTS JobListsToCheck AS
 SELECT DISTINCT JobListId 
 FROM JobRecords 
 WHERE JobId IN (SELECT JobId FROM JobsToDelete);
@@ -145,9 +146,14 @@ AND JobListId NOT IN (SELECT DISTINCT JobListId FROM Jobs WHERE JobListId IS NOT
     -- Delete the File entries that we had previously marked
 DELETE FROM Files WHERE FileId IN (SELECT FileId FROM FilesToDelete);
 
--- 7. Delete all Status updates that are more than 7 days old
+-- 7. Delete all Status updates that are more than 5 minutes old
 DELETE FROM Status
-WHERE TimeOfUpdate < strftime('%s','now') - (7 * 86400);
+WHERE TimeOfUpdate < strftime('%s','now') - (60 * 5);
+
+-- 8. Drop temporary tables
+DROP TABLE IF EXISTS FilesToDelete;
+DROP TABLE IF EXISTS JobsToDelete;
+DROP TABLE IF EXISTS JobListsToCheck;
 )";
 }
 
