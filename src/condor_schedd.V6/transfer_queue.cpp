@@ -28,6 +28,9 @@
 #include "condor_email.h"
 #include "algorithm"
 
+extern std::map< std::string, int > currentTransfersByProtocol;
+#include "qmgmt.h"
+
 TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
 	m_sock(sock),
 	m_queue_user(queue_user),
@@ -444,6 +447,24 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager, const std::strin
 
 	if( report.empty() ) {
 		dprintf( D_ALWAYS, "FIXME: Increment protocol-transferring counts for job ID %s (transfer queue exited).\n", jobID.c_str() );
+
+		auto jobIDs = split(jobID, ".");
+		int cluster_id = std::stoi(jobIDs[0]);
+		int proc_id = std::stoi(jobIDs[1]);
+		ClassAd * jobAd = GetJobAd( cluster_id, proc_id );
+
+		std::string transferPluginMethods;
+		if( jobAd->LookupString( ATTR_WANT_TRANSFER_PLUGIN_METHODS, transferPluginMethods ) ) {
+			auto protocols = split( transferPluginMethods );
+			for( const auto & protocol : protocols ) {
+				// do we need to initialize to 0?
+				currentTransfersByProtocol[protocol] += 1;
+				dprintf( D_ALWAYS, "protocol %s = %d\n",
+					protocol.c_str(), currentTransfersByProtocol[protocol]
+				);
+			}
+		}
+
 		return false;
 	}
 

@@ -70,6 +70,8 @@
 
 #define USE_MATERIALIZE_POLICY
 
+std::map< std::string, int > currentTransfersByProtocol;
+
 // Do filtered iteration in a way that is specific to the job queue
 //
 template <typename K, typename AD>
@@ -4805,7 +4807,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	IdToKey(cluster_id,proc_id,key);
 
-dprintf( D_ALWAYS, "%d.%d: %s = %s\n", cluster_id, proc_id, attr_name, attr_value );
 	int rc = ModifyAttrCheck(key, attr_name, attr_value, flags, err);
 	if ( rc <= 0 ) {
 		return rc;
@@ -5365,6 +5366,20 @@ dprintf( D_ALWAYS, "%d.%d: %s = %s\n", cluster_id, proc_id, attr_name, attr_valu
 					// not be entering the transfer queue, increment the
 					// per-protocol transfer counts.
 					dprintf( D_ALWAYS, "FIXME: Increment protocol-transferring counts for job ID %d.%d (transfer queue will be skipped).\n", cluster_id, proc_id );
+
+					ClassAd * jobAd = GetJobAd( cluster_id, proc_id );
+					std::string transferPluginMethods;
+					if( jobAd->LookupString( ATTR_WANT_TRANSFER_PLUGIN_METHODS, transferPluginMethods ) ) {
+dprintf( D_ALWAYS, "FIXME: %d.%d methods = %s\n", cluster_id, proc_id, transferPluginMethods.c_str() );
+						auto protocols = split( transferPluginMethods );
+						for( const auto & protocol : protocols ) {
+							// do we need to initialize to 0?
+							currentTransfersByProtocol[protocol] += 1;
+							dprintf( D_ALWAYS, "protocol %s = %d\n",
+								protocol.c_str(), currentTransfersByProtocol[protocol]
+							);
+						}
+					}
 				}
 			}
 		}
@@ -5374,6 +5389,20 @@ dprintf( D_ALWAYS, "%d.%d: %s = %s\n", cluster_id, proc_id, attr_name, attr_valu
 			// but it would be better to actually check that.
 
 			dprintf( D_ALWAYS, "FIXME: Decrement protocol-transferring counts for job ID %d.%d (no longer transferring input).\n", cluster_id, proc_id );
+
+			ClassAd * jobAd = GetJobAd( cluster_id, proc_id );
+			std::string transferPluginMethods;
+			if( jobAd->LookupString( ATTR_WANT_TRANSFER_PLUGIN_METHODS, transferPluginMethods ) ) {
+dprintf( D_ALWAYS, "FIXME: %d.%d methods = %s\n", cluster_id, proc_id, transferPluginMethods.c_str() );
+				auto protocols = split( transferPluginMethods );
+				for( const auto & protocol : protocols ) {
+					// do we need to initialize to 0?
+					currentTransfersByProtocol[protocol] -= 1;
+					dprintf( D_ALWAYS, "protocol %s = %d\n",
+						protocol.c_str(), currentTransfersByProtocol[protocol]
+					);
+				}
+			}
 		}
 	}
 
