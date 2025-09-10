@@ -53,7 +53,6 @@ private:
     double EstimatedBytesPerJobInArchive_{0.0};
     int EstimatedJobsPerFileInArchive_{0};
     double EstimatedBytesPerJobInDatabase_{1024}; // Currently hard coded but ideally is calculated upon initialization
-    double databaseSizeLimit_{0.0}; // Will be set by constructor (defaults to 2GB if not specified)
 
     // Helper methods for Librarian::update()
     bool readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& historyFileInfo);

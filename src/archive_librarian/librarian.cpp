@@ -435,13 +435,15 @@ bool Librarian::cleanupDatabaseIfNeeded() {
     // Get current database size
     size_t currentSize = get_database_size(config[conf::str::DBPath]);
 
+    long long size_limit = config[conf::ll::DBMaxSizeBytes];
+
     // Calculate high watermark (97% of capacity)
-    size_t highWatermark = static_cast<size_t>(databaseSizeLimit_ * 0.97);
+    size_t highWatermark = static_cast<size_t>(size_limit * 0.97);
 
     // Check if we've exceeded the high watermark
     if (currentSize > highWatermark) {
         // Calculate low watermark (85% of capacity)
-        size_t lowWatermark = static_cast<size_t>(databaseSizeLimit_ * 0.85);
+        size_t lowWatermark = static_cast<size_t>(size_limit * 0.85);
 
         // Calculate how many bytes we need to free up
         size_t bytesToDelete = currentSize - lowWatermark;

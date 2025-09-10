@@ -2,7 +2,7 @@
 
 namespace LibrarianConfigOptions {
 	enum class b { // Librarian boolean config options
-		NONE = 0,
+		//Option = 0,
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -13,12 +13,12 @@ namespace LibrarianConfigOptions {
 	};
 
 	enum class ll { // Librarian long long config options
-		DBMaxSizeBytes = 0,                          // Maximum size of data base in bytes
+		DBMaxSizeBytes = 0,                           // Maximum size of data base in bytes
 		_SIZE // MUST BE FINAL ITEM
 	};
 
 	enum class dbl { // Librarian double config options
-		NONE = 0,
+		//Option = 0,
 		_SIZE // MUST BE FINAL ITEM
 	};
 
