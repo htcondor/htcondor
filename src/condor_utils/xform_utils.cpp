@@ -705,6 +705,31 @@ static const char * is_xform_statement(const char * line, const char * keyword)
 	return NULL;
 }
 
+// returns true and the remainder of the line if line starts with the given transform statement
+// returns false and leaves the line with leading whitespace trimmed otherwise
+static bool is_xform_statement(std::string_view & line, const char * keyword)
+{
+	while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }
+	if (line.empty()) return false;
+	if (line.front() == '#') return false;
+
+	const char *p = keyword;
+	while (tolower(line.front()) == *p) {
+		++p;
+		line.remove_prefix(1);
+		if (line.empty()) return false;
+	}
+	if (*p == 0) {
+		// we might have a match!
+		if ( ! line.empty() && (isspace(line.front()) || line.front() == '=')) {
+			line.remove_prefix(1);
+			while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }
+			return true;
+		}
+	}
+	return false;
+}
+
 static const char * is_non_trivial_iterate(const char * is_transform)
 {
 	const char * iter_args = NULL;
@@ -901,6 +926,42 @@ int MacroStreamXFormSource::open(const char * statements_in, int & offset, std::
 	// tell the caller where we stopped parsing
 	offset += start + length;
 	return linecount;
+}
+
+int MacroStreamXFormSource::set_simple_transform(const char * statements)
+{
+	int rval = 0;
+	const char * xform_body = statements;
+
+	// trim leading blank lines, comments and requirements
+	StringTokenIterator lines(statements, "\n\x1e", STI_NO_TRIM);
+	int start, length;
+	while ((start = lines.next_token(length)) >= 0) {
+		xform_body = statements+start;
+		std::string_view line(xform_body, length);
+
+		while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }
+		if (line.empty()) continue;
+		if (line.front() == '#') continue;
+
+		if (is_xform_statement(line, "requirements")) {
+			std::string buf(line); trim(buf);
+			start = lines.next_token(length);
+			if (start <= 0) {
+				return -2;
+			}
+
+			requirements.set(strdup(buf.c_str()));
+			requirements.Expr(&rval);
+			xform_body = statements+start;
+		}
+
+		break; // stop scanning.
+	}
+
+	MacroStreamCharSource::open(xform_body, LocalMacro, "\n\x1e");
+	rewind();
+	return rval;
 }
 
 // this parser is used with condor_transform_ads to parse rules files
@@ -1276,15 +1337,162 @@ void MacroStreamXFormSource::reset(XFormHash &set)
 //
 // **************************************************************************************
 
+// use the collection in the XFormAdUndo class to revert a transform
+// on the given ad.  This consumes the values in the XFormAdUndo
+// but leaves the keys behind, making it the same as a dirty attributes list
+int XFormAdUndo::Revert(ClassAd & ad)
+{
+	int num_changes = 0;
+	for (auto & it : list) {
+		++num_changes;
+		if (it.second) {
+			// rhs is an expr tree, this could be something we got from a swap, or Remove
+			// but it could also be a copy of an parent attribute from a Remove
+			// if it is parent copy, we want to prune the child rather than inserting
+			if (deletions.contains(it.first)) {
+				ExprTree * tree = nullptr;
+				auto * parent = ad.GetChainedParentAd();
+				if (parent) { tree = parent->Lookup(it.first); }
+				if (tree && *tree == *it.second) {
+					ad.PruneChildAttr(it.first, false);
+					delete it.second;
+				} else {
+					// rhs is an expr tree, and not a parent copy so we insert
+					ad.Insert(it.first, it.second);
+				}
+			} else {
+				// rhs is an expr tree, and not a parent copy so we insert
+				ad.Insert(it.first, it.second);
+			}
+			it.second = nullptr;
+		} else if (ad.GetChainedParentAd()) {
+			// rhs is nullptr, but there is a parent ad, so we prune
+			// since a delete would end up setting the value to undefined
+			// rather than removing the attr from the prod ad
+			ad.PruneChildAttr(it.first, false);
+		} else {
+			// rhs is nullptr, so we delete
+			ad.Delete(it.first);
+		}
+	}
+	return num_changes;
+}
+
 struct _parse_rules_args {
 	MacroStreamXFormSource & xfm;
 	XFormHash & mset;
-	ClassAd * ad;
-	void (*fnlog)(struct _parse_rules_args & args, bool is_error, const char * fmt, ...);
-	FILE * errfd;
-	FILE * outfd;
-	unsigned int options;
-	int step_count;
+	ClassAd * ad{nullptr};
+	XFormAdUndo* undo{nullptr};
+	void (*fnlog)(struct _parse_rules_args & args, bool is_error, const char * fmt, ...){nullptr};
+	FILE * errfd{nullptr};
+	FILE * outfd{nullptr};
+	unsigned int options{0};
+	int step_count{0};
+
+	bool InsertAdExpr(ClassAd * ad, const std::string & attr, classad::ExprTree * expr) {
+		ExprTree * old_tree = nullptr;
+		if (ad->Swap(attr, expr, old_tree)) {
+			if (undo) {
+				// Note that the old_tree is from the ProcAd, so a null here
+				// doesn't indicate that the cluster ad had no value
+				auto [_,inserted] = undo->list.emplace(attr, old_tree);
+				if ( ! inserted) {
+					// undo already had this key
+					if (old_tree) { delete old_tree; }
+				}
+			} else {
+				if (old_tree) { delete old_tree; }
+			}
+			return true;
+		}
+		return false;
+	}
+	bool DeleteAdExpr(ClassAd * ad, const std::string & attr) {
+		// will tree returned from remove be a copy from the parent ad?
+		bool is_parent_attr = undo != nullptr && ad->find(attr) == ad->end();
+		ExprTree * tree = ad->Remove(attr);
+		if (tree) {
+			if (undo) {
+				// if there is a chained parent ad, the tree here may be a copy
+				// of the parent value rather than the removed ProcAd value
+				auto [_,inserted] = undo->list.emplace(attr, tree);
+				if ( ! inserted) {
+					// undo already had this key
+					delete tree;
+				} else if (is_parent_attr) {
+					// we inserted the key, but it was a copy of the parent ad
+					// so we want to handle undo.Revert differently
+					undo->deletions.emplace(attr);
+				}
+			} else {
+				delete tree;
+				// we have to mark this as dirty explicitly, because Delete doesn't
+				ad->MarkAttributeDirty(attr);
+			}
+		}
+		return tree != nullptr;
+	}
+	bool RenameAdExpr(ClassAd * ad, const std::string & from_attr, const char* to_attr) {
+		bool is_parent_attr = undo != nullptr && ad->find(from_attr) == ad->end();
+		ExprTree * tree = ad->Remove(from_attr);
+		if (tree) {
+			ExprTree * to_tree = nullptr;
+			if (ad->Swap(to_attr, tree, to_tree)) {
+				if (undo) {
+					auto [_,inserted] = undo->list.emplace(to_attr, to_tree);
+					if ( ! inserted) {
+						// undo already had this key
+						if (to_tree) { delete to_tree; }
+					}
+					auto insert_result = undo->list.emplace(from_attr, nullptr);
+					if ( ! insert_result.second) {
+						// undo already had this key
+					} else {
+						// we have to stash a copy of the old from value since we
+						// moved the value itself to to_attr
+						insert_result.first->second = tree->Copy();
+						// we inserted the key, but it was a copy of the parent ad
+						// so we want to handle undo.Revert differently
+						if (is_parent_attr) undo->deletions.emplace(from_attr);
+					}
+				} else if (to_tree) {
+					if (to_tree) { delete to_tree; }
+				}
+				return true;
+			} else {
+				bool log_errs  = fnlog && (options & XFORM_UTILS_LOG_ERRORS);
+				if (log_errs) fnlog(*this, true, "ERROR: could not rename %s to %s\n", from_attr.c_str(), to_attr);
+				if ( ! ad->Insert(from_attr, tree)) { // put it back
+					delete tree;
+				}
+			}
+		}
+		return false;
+	}
+	bool CopyAdExpr(ClassAd * ad, const std::string & from_attr, const char* to_attr) {
+		ExprTree * tree = ad->Lookup(from_attr);
+		if (tree) {
+			tree = tree->Copy();
+			ExprTree * old_tree = nullptr;
+			if (ad->Swap(to_attr, tree, old_tree)) {
+				if (undo) {
+					auto [_,inserted] = undo->list.emplace(to_attr, old_tree);
+					if ( ! inserted) {
+						// undo already had this key
+						if (old_tree) { delete old_tree; }
+					}
+				} else {
+					if (old_tree) { delete old_tree; }
+				}
+				return true;
+			} else {
+				bool log_errs  = fnlog && (options & XFORM_UTILS_LOG_ERRORS);
+				if (log_errs) fnlog(*this, true, "ERROR: could not copy %s to %s\n", from_attr.c_str(), to_attr);
+				delete tree;
+			}
+		}
+		return false;
+	}
 };
 
 
@@ -1295,13 +1503,7 @@ static int DoDeleteAttr(ClassAd * ad, const std::string & attr, struct _parse_ru
 {
 	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
 	if (log_steps) { pra->fnlog(*pra, false, "DELETE %s\n", attr.c_str()); }
-	if (ad->Delete(attr)) {
-		// Mark the attribute we just removed as dirty, since the schedd relies
-		// upon the ClassAd dirty attribute list to see what changed, and it must
-		// know about removed attributes.
-		// Supposedly classad::ClassAd library is supposed to add removed attrs to the
-		// dirty list all on its own, but this is currently not the case.
-		ad->MarkAttributeDirty(attr);
+	if (pra->DeleteAdExpr(ad, attr)) {
 		return 1;
 	} else {
 		return 0;
@@ -1321,16 +1523,8 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 		if (log_errs) pra->fnlog(*pra, true, "ERROR: RENAME %s new name %s is not valid\n", attr.c_str(), attrNew);
 		return -1;
 	} else {
-		ExprTree * tree = ad->Remove(attr);
-		if (tree) {
-			if (ad->Insert(attrNew, tree)) {
-				return 1;
-			} else {
-				if (log_errs) pra->fnlog(*pra, true, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
-				if ( ! ad->Insert(attr, tree)) {
-					delete tree;
-				}
-			}
+		if (pra->RenameAdExpr(ad, attr, attrNew)) {
+			return 1;
 		}
 	}
 	return 0;
@@ -1349,15 +1543,8 @@ static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrN
 		if (log_steps) pra->fnlog(*pra, true, "ERROR: COPY %s new name %s is not valid\n", attr.c_str(), attrNew);
 		return -1;
 	} else {
-		ExprTree * tree = ad->Lookup(attr);
-		if (tree) {
-			tree = tree->Copy();
-			if (ad->Insert(attrNew, tree)) {
-				return 1;
-			} else {
-				if (log_steps) pra->fnlog(*pra, true, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
-				delete tree;
-			}
+		if (pra->CopyAdExpr(ad, attr, attrNew)) {
+			return 1;
 		}
 	}
 	return 0;
@@ -1679,21 +1866,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 		break;
 
 	case kw_TRANSFORM:
-#if 1
 		//PRAGMA_REMIND("tj move this out of the parser callback.")
-#else
-		if (pargs->xforms->has_pending_fp()) {
-			std::string errmsg;
-			// EXPAND_GLOBS_TO_FILES | EXPAND_GLOBS_TO_DIRS
-			// EXPAND_GLOBS_WARN_EMPTY | EXPAND_GLOBS_FAIL_EMPTY
-			// EXPAND_GLOBS_WARN_DUPS | EXPAND_GLOBS_ALLOW_DUPS 
-			int expand_options = EXPAND_GLOBS_WARN_EMPTY;
-			int rval = pargs->xforms->parse_iterate_args(rhs.ptr(), expand_options, mset, errmsg);
-			if (rval < 0) {
-				if (is_tool) log(*pargs, "ERROR: %s\n", errmsg.c_str()); return -1;
-			}
-		}
-#endif
 		break;
 
 	// these keywords manipulate the ad
@@ -1713,7 +1886,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			if ( ! expr) {
 				if (log) log(*pargs, true, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
-				if ( ! ad->Insert(attr, expr)) {
+				if ( ! pargs->InsertAdExpr(ad, attr, expr)) {
 					if (log) log(*pargs, true, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
 					delete expr;
 				}
@@ -1731,7 +1904,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 				if (log) log(*pargs, true, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				ExprTree * tree = XFormCopyValueToTree(val);
-				if ( ! ad->Insert(attr, tree)) {
+				if ( ! pargs->InsertAdExpr(ad, attr, tree)) {
 					if (log) log(*pargs, true, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 					delete tree;
 				} else if (log_steps) {
@@ -1794,14 +1967,15 @@ int TransformClassAd (
 	MacroStreamXFormSource & xfm,  // the set of transform rules
 	XFormHash & mset,              // the hashtable used as temporary storage
 	std::string & errmsg,          // holds parse errors on failure
-	unsigned int  flags)           // One or more of XFORM_UTILS_* flags
+	unsigned int  flags, /*=0*/    // One or more of XFORM_UTILS_* flags
+	XFormAdUndo * undo /*=nullptr*/) // Optional undo attributes collection, doubles as dirty attributes collection
 {
 	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
 	ctx.ad = input_ad;
 	ctx.adname = "MY.";
 	ctx.also_in_config = true;
 
-	_parse_rules_args args = { xfm, mset, input_ad, nullptr, nullptr, nullptr, flags, 0 };
+	_parse_rules_args args = { xfm, mset, input_ad, undo };
 	if (flags) {
 		if (flags & XFORM_UTILS_LOG_TO_DPRINTF) {
 			args.fnlog = ParseRuleDprintLog;
@@ -1810,12 +1984,15 @@ int TransformClassAd (
 			args.errfd = stderr;
 			args.outfd = stdout;
 		}
+		args.options = flags;
 	}
 
 	xfm.rewind();
 	int rval = Parse_macros(xfm, 0, mset.macros(), READ_MACROS_SUBMIT_SYNTAX, &ctx, errmsg, ParseRulesCallback, &args);
 	if (rval) {
-		if (flags&1) fprintf(stderr, "Transform of ad %s failed!\n", "");
+		if (flags&XFORM_UTILS_LOG_ERRORS) {
+			args.fnlog(args, true, "Transform of ad %s failed!\n", "");
+		}
 		return rval;
 	}
 	return rval;

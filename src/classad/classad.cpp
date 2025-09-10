@@ -571,6 +571,38 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	return true;
 }
 
+bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_tree)
+{
+	// sanity checks
+	if( attrName.empty() ) {
+		CondorErrno = ERR_MISSING_ATTRNAME;
+		CondorErrMsg= "no attribute name when inserting expression in classad";
+		return false;
+	}
+	if( !tree ) {
+		CondorErrno = ERR_BAD_EXPRESSION;
+		CondorErrMsg = "no expression when inserting attribute in classad";
+		return false;
+	}
+
+	// parent of the expression is this classad
+	tree->SetParentScope( this );
+
+	std::pair<AttrList::iterator,bool> insert_result = attrList.emplace(attrName, tree);
+	if ( ! insert_result.second) {
+		// replace existing value
+		old_tree = insert_result.first->second;
+		insert_result.first->second = tree;
+	} else {
+		old_tree = nullptr;
+	}
+
+	MarkAttributeDirty(attrName);
+
+	return true;
+}
+
+
 // Optimized code for inserting literals, use when the caller has guaranteed the validity
 // of the name and literal and wants a fast code path for insertion.  This function ALWAYS
 // bypasses the classad cache, which is fine for numeral literals, but probably a bad idea

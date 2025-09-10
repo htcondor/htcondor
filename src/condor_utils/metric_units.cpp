@@ -57,7 +57,13 @@ metric_units( double bytes )
 // passing the expression on to the classad code to be parsed to preserve the
 // assumption that the base units of the output is not bytes.
 //
-bool parse_int64_bytes(const char * input, int64_t & value, int base, char * parsed_unit /*=nullptr*/)
+bool parse_int64_bytes(
+    const char * input,
+    int64_t & value,
+    int base,
+    char * parsed_unit /*=nullptr*/,
+    const char* separators /*=nullptr*/,
+    const char ** endp /*=nullptr*/)
 {
         const char * tmp = input;
         while (isspace(*tmp)) ++tmp;
@@ -109,7 +115,16 @@ bool parse_int64_bytes(const char * input, int64_t & value, int base, char * par
         // Tolerate a b (as in Kb) and whitespace at the end, anything else and return false)
         if (p[1] == 'b' || p[1] == 'B') p += 2;
         while (isspace(*p)) ++p;
+        // If optional separator and endp are passed, the input is valid if we are on
+        // a separator character
+        if (endp && separators && strchr(separators, *p)) {
+            *endp = p;
+            value = val;
+            return true;
+        }
+        // otherwise the input is valid if we are on a \0 char
         if (!*p) {
+                if (endp) *endp = p;
                 value = val;
                 return true;
         }

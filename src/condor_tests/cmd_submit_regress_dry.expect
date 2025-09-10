@@ -342,6 +342,45 @@ JobMaxRetries=2
 JobSuccessExitCode=5
 OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= JobSuccessExitCode
 
+==retry_mem1.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 2048"$/
+
+==retry_mem_max.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 2048"$/
+
+==retry_mem_incr.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 1524"$/
+
+==retry_mem_incr2.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 2048"$/
+
+==retry_mem_incr_max.sub
+RequestMemory=1024
+MaxRequestMemory=2048
+NextRequestMemory=RequestMemory + 512
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory MIN\(\{NextRequestMemory, MaxRequestMemory\}\)"$/
+
+==retry_mem2.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+RetryRequestMemory={ 2048,8192 }
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[NextRequestMemory\?:0\]\x1eEVALSET NextRequestMemory .*"$/
+
+==retry_mem3.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+RetryRequestMemory={ 2048,8192 }
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[NextRequestMemory\?:0\]\x1eEVALSET NextRequestMemory .*"$/
+
 ==parallel.sub
 JobUniverse=11
 MaxHosts=5
