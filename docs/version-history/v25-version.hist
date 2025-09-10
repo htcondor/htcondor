@@ -12,6 +12,11 @@
   after nodes that reference the named inline submit description.
   :jira:`3230`
 
+- DAGMan will now output a structured message for job submission failures
+  to the debug log file. This message is formatted similarly to the read
+  userlog job event message.
+  :jira:`3257`
+
 - Added new DAGMan Post :dag-cmd:`SCRIPT` macro to provide exit code for each
   job associated with a node. This is in the form of a comma separated list.
   :jira:`3245`

@@ -384,14 +384,14 @@ private:
 	void ProcessClusterSubmitEvent(Node *node); // Cluster submit (late materialization)
 	void ProcessClusterRemoveEvent(Node *node, bool recovery); // Cluster removed (late materialization)
 	void ProcessSuccessfulSubmit(Node *node, const CondorID &condorID); // Post process of successful submit of node jobs
-	void ProcessFailedSubmit(Node *node, int max_submit_attempts); // Post process of failed submit of node jobs
+	void ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err); // Post process of failed submit of node jobs
 
 	void DecrementProcCount(Node *node);
 	void UpdateNodeCounts(Node *node, int change);
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID); // Submit a nodes job to Schedd queue
+	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
