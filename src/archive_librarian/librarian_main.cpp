@@ -3,54 +3,79 @@
 //#include "condor_daemon_core.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "match_prefix.h"
 
 #include "librarian.h"
 #include <iostream>
 #include <string>
+#include <stdexcept>
 
 namespace conf = LibrarianConfigOptions;
 
-int main() {
+int main(int argc, const char** argv) {
     set_priv_initialize(); // allow uid switching if root
     config();
 
-    dprintf_set_tool_debug("TOOL", 0);
+    dprintf_set_tool_debug("TOOL", "D_FULLDEBUG");
 
     Librarian librarian;
 
     param(librarian.config[conf::str::ArchiveFile], "HISTORY");
     param(librarian.config[conf::str::DBPath], "LIBRARIAN_DATABASE");
 
+    int delay = 20;
+    int break_after = -1;
+
+    for (int i = 1; i < argc; i++) {
+        if (is_dash_arg_prefix(argv[i], "delay", 1)) {
+            if (i + 1 >= argc) {
+                dprintf(D_ERROR, "Error: -delay flag requires number parameter\n");
+                exit(1);
+            }
+
+            i++;
+
+            try {
+                delay = std::stoi(argv[i]);
+                if (delay < 0) { throw std::invalid_argument("Value must be a positive integer"); }
+            } catch (const std::exception& e) {
+                dprintf(D_ERROR, "Error: Invalid argument for delay '%s': %s\n", argv[i], e.what());
+                exit(1);
+            }
+        } else if (is_dash_arg_prefix(argv[i], "break-after", 5)) {
+            if (i + 1 >= argc) {
+                dprintf(D_ERROR, "Error: -break-after flag requires number parameter\n");
+                exit(1);
+            }
+
+            i++;
+
+            try {
+                break_after = std::stoi(argv[i]);
+            } catch (const std::exception& e) {
+                dprintf(D_ERROR, "Error: Invalid argument for break-after '%s': %s\n", argv[i], e.what());
+                exit(1);
+            }
+        }
+    }
+
     if ( ! librarian.initialize()) {
         dprintf(D_ERROR, "Failed to initialize Librarian.\n");
         return 1;
     }
 
-    // Main menu loop
+    int iterations = 0;
     while (true) {
-        std::cout << "\n=== Librarian Main Menu ===" << std::endl;
-        std::cout << "1) Update database" << std::endl;
-        std::cout << "2) Exit" << std::endl;
-        std::cout << "3) Exit" << std::endl;
-        std::cout << "Choose an option (1-3): ";
-        
-        std::string choice;
-        std::getline(std::cin, choice);
-        
-        if (choice == "1") {
-            std::cout << "Starting database update..." << std::endl;
-            if (librarian.update()) {
-                std::cout << "Database update completed successfully." << std::endl;
-            } else {
-                std::cerr << "Database update failed." << std::endl;
-            }
+        if (break_after >= 0 && break_after <= iterations++) { break; }
+
+        if (delay) {
+            dprintf(D_FULLDEBUG, "Sleeping for %d seconds\n", delay);
+            sleep(delay);
         }
-        else if (choice == "2" || choice == "3") {
-            std::cout << "Goodbye!" << std::endl;
-            break;
-        }
-        else {
-            std::cout << "Invalid choice. Please enter 1, 2, or 3." << std::endl;
+
+        dprintf(D_FULLDEBUG, "Updating database\n");
+        if ( ! librarian.update()) {
+            dprintf(D_ALWAYS, "Update failed\n");
         }
     }
 
