@@ -30,6 +30,8 @@
 
 extern std::map< std::string, int > currentTransfersByProtocol;
 #include "qmgmt.h"
+#include "scheduler.h"
+extern Scheduler scheduler;
 
 TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
 	m_sock(sock),
@@ -462,6 +464,10 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager, const std::strin
 				dprintf( D_ALWAYS, "protocol %s = %d\n",
 					protocol.c_str(), currentTransfersByProtocol[protocol]
 				);
+				// Hack.
+				if( protocol == "osdf" ) {
+					scheduler.stats.CurrentTransfersOSDF = currentTransfersByProtocol[protocol];
+				}
 			}
 		}
 

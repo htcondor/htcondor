@@ -5378,6 +5378,10 @@ dprintf( D_ALWAYS, "FIXME: %d.%d methods = %s\n", cluster_id, proc_id, transferP
 							dprintf( D_ALWAYS, "protocol %s = %d\n",
 								protocol.c_str(), currentTransfersByProtocol[protocol]
 							);
+							// Hack.
+							if( protocol == "osdf" ) {
+								scheduler.stats.CurrentTransfersOSDF = currentTransfersByProtocol[protocol];
+							}
 						}
 					}
 				}
@@ -5401,6 +5405,10 @@ dprintf( D_ALWAYS, "FIXME: %d.%d methods = %s\n", cluster_id, proc_id, transferP
 					dprintf( D_ALWAYS, "protocol %s = %d\n",
 						protocol.c_str(), currentTransfersByProtocol[protocol]
 					);
+					// Hack.
+					if( protocol == "osdf" ) {
+						scheduler.stats.CurrentTransfersOSDF = currentTransfersByProtocol[protocol];
+					}
 				}
 			}
 		}
