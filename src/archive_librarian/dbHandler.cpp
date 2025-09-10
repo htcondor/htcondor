@@ -901,7 +901,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 
 	// 2. Recover Status
 	const std::string statusSql =
-		"SELECT TimeOfUpdate, HistoryFileIdLastRead, HistoryFileOffsetLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
+		"SELECT TimeOfUpdate, FileIdLastRead, FileOffsetLastRead FROM Status ORDER BY TimeOfUpdate DESC LIMIT 1;";
 
 	sqlite3_stmt* stmtStatus = nullptr;
 	rc = sqlite3_prepare_v2(db_, statusSql.c_str(), -1, &stmtStatus, nullptr);
