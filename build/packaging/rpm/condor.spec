@@ -988,6 +988,7 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_version
+%_bindir/condor_librarian
 %_bindir/condor_history
 %_bindir/condor_status
 %_bindir/condor_wait
