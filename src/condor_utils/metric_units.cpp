@@ -108,6 +108,7 @@ bool parse_int64_bytes(
         // if we to here and we are at the end of the string
         // then the input is valid, return true;
         if (!*p || !p[1]) {
+                if (endp) *endp = p;
                 value = val;
                 return true;
         }
@@ -118,7 +119,7 @@ bool parse_int64_bytes(
         // If optional separator and endp are passed, the input is valid if we are on
         // a separator character
         if (endp && separators && strchr(separators, *p)) {
-            *endp = p;
+            if (endp) *endp = p;
             value = val;
             return true;
         }
