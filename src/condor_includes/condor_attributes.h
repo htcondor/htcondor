@@ -702,6 +702,8 @@
 #define ATTR_ADDRESS_V1 "AddressV1"
 #define ATTR_NUM_JOB_STARTS_DELAYED  "NumJobStartsDelayed"
 #define ATTR_NUM_PENDING_CLAIMS  "NumPendingClaims"
+#define ATTR_NUM_PENDING_CLAIMS_IN_Q "NumPendingClaimsInQueue"
+#define ATTR_NUM_PENDING_CLAIMS_IN_CONTACT "NumPendingClaimsInContact"
 #define ATTR_SCHEDD_SWAP_EXHAUSTED  "ScheddSwapExhausted"
 #define ATTR_SCHEDD_INTERVAL  "ScheddInterval"
 #define ATTR_SCHEDD_IP_ADDR  "ScheddIpAddr"

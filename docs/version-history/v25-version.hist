@@ -21,6 +21,10 @@
   job associated with a node. This is in the form of a comma separated list.
   :jira:`3245`
 
+- Added new fine grained attributes :ad-attr:`NumPendingClaimsInQueue` and
+  :ad-attr:`NumPendingClaimsInContact` to the *condor_schedd* record.
+  :jira:`3125`
+
 *** 25.2.0 bugs
 
 - Fixed a problem where setting :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`

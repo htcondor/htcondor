@@ -1771,6 +1771,8 @@ Scheduler::count_jobs()
 
 	cad->Assign(ATTR_NUM_JOB_STARTS_DELAYED, RunnableJobQueue.size());
 	cad->Assign(ATTR_NUM_PENDING_CLAIMS, startdContactQueue.size() + num_pending_startd_contacts);
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS_IN_Q, startdContactQueue.size());
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS_IN_CONTACT, num_pending_startd_contacts);
 
 	m_xfer_queue_mgr.publish(cad);
 
