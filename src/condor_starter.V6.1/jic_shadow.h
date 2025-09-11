@@ -123,8 +123,13 @@ public:
 			If you call this, and transient_failure is not true, you
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
+			transferOutputStart() and transferOutputFinish() should
+			not be called directly by outside code. They are helpers
+			for transferOutput().
 		*/
-	bool transferOutput( bool &transient_failure );
+	bool transferOutput(bool& transient_failure, bool& in_progress);
+	bool transferOutputStart(bool& transient_failure, bool& in_progress);
+	bool transferOutputFinish(bool& transient_failure, bool& in_progress);
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the
@@ -312,10 +317,13 @@ private:
 	int transferStatusCallback(FileTransfer * ftrans) {
 		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
 			return transferInputStatus(ftrans);
+		} else if (ftrans->GetInfo().type == FileTransfer::TransferType::UploadFilesType) {
+			return transferOutputStatus(ftrans);
 		}
 		return 1;
 	}
 	int transferInputStatus(FileTransfer *);
+	int transferOutputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -509,6 +517,7 @@ private:
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
 	bool m_did_output_transfer;
+	bool m_output_transfer_active{false};
 
 
 		// specially made security sessions if we are doing
