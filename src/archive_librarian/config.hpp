@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 namespace LibrarianConfigOptions {
 	enum class b { // Librarian boolean config options
 		//Option = 0,

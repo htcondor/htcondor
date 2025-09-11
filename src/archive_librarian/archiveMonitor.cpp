@@ -35,6 +35,7 @@
 #include <optional>
 #include <regex>
 #include <system_error>
+#include <format>
 
 #include "JobRecord.h"  
 #include "readHistory.h"  
@@ -65,9 +66,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
         fclose(file);
 
-        std::stringstream ss;
-        ss << std::hex << std::hash<std::string>{}(buffer);
-        return ss.str();
+        return std::format("{:X}", std::hash<std::string>{}(buffer));
     }
 
 

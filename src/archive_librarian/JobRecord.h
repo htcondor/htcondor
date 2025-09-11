@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <ctime>
 
 struct Job {
     int ClusterId{0};

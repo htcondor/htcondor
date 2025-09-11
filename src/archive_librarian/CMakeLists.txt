@@ -17,23 +17,26 @@
 #
 ################################################################
 
-# Librarian Source Files
-set(LibrarianSources
-  librarian_main.cpp
-  librarian.cpp
-  readHistory.cpp
-  archiveMonitor.cpp
-  dbHandler.cpp
-)
+if (HAVE_SQLITE3_H)
+	# Librarian Source Files
+	set(LibrarianSources
+	  librarian_main.cpp
+	  librarian.cpp
+	  readHistory.cpp
+	  archiveMonitor.cpp
+	  dbHandler.cpp
+	)
 
-# Temporary build as a one off executable
-condor_exe(condor_librarian "${LibrarianSources}" ${C_BIN} "${CONDOR_LIBS}" ON)
+	# Temporary build as a one off executable
+	condor_exe(condor_librarian "${LibrarianSources}" ${C_BIN} "${CONDOR_LIBS}" ON)
 
-# Future: Build as daemon
-#condor_daemon(
-#	EXE condor_librarian
-#	SOURCES "${LibrarianSources}"
-#	LIBRARIES "${CONDOR_LIBS}"
-#	INSTALL ${C_SBIN}
-#)
+	# Future: Build as daemon
+	#condor_daemon(
+	#	EXE condor_librarian
+	#	SOURCES "${LibrarianSources}"
+	#	LIBRARIES "${CONDOR_LIBS}"
+	#	INSTALL ${C_SBIN}
+	#)
+endif()
+
 
