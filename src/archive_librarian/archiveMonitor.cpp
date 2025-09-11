@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "stl_string_utils.h"
 
 #include <iostream>
 #include <string>
@@ -35,7 +36,7 @@
 #include <optional>
 #include <regex>
 #include <system_error>
-#include <format>
+//#include <format>
 
 #include "JobRecord.h"  
 #include "readHistory.h"  
@@ -66,7 +67,10 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
         fclose(file);
 
-        return std::format("{:X}", std::hash<std::string>{}(buffer));
+        std::string hash;
+        formatstr(hash, "%x", std::hash<std::string>{}(buffer));
+        return hash;
+        //return std::format("{:X}", std::hash<std::string>{}(buffer));
     }
 
 
