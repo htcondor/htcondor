@@ -302,11 +302,11 @@ private:
 
 		/** Read all the relevent attributes out of the job ad and
 			decide if we need to transfer files.  If so, instantiate a
-			FileTransfer object, start the transfer, and return true.
+			FileTransfer object, start the input transfer, and return true.
 			If we don't have to transfer anything, return false.
 			@return true if transfer was begun, false if not
 		*/
-	bool beginFileTransfer( void );
+	bool beginInputTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferStatusCallback(FileTransfer * ftrans) {
@@ -508,7 +508,7 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
-	bool m_did_transfer;
+	bool m_did_output_transfer;
 
 
 		// specially made security sessions if we are doing

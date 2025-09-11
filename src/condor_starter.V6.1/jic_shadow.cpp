@@ -159,7 +159,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	shadow = NULL;
 	shadow_version = NULL;
 	filetrans = NULL;
-	m_did_transfer = false;
+	m_did_output_transfer = false;
 	m_filetrans_sec_session = NULL;
 	m_reconnect_sec_session = NULL;
 	
@@ -431,7 +431,7 @@ JICShadow::setupJobEnvironment_part2(void)
 {
 		// call our helper method to see if we want to do a file
 		// transfer at all, and if so, initiate it.
-	if( beginFileTransfer() ) {
+	if( beginInputTransfer() ) {
 			// We started a transfer, so we just want to return to
 			// DaemonCore asap and wait for the file transfer callback
 			// that was registered
@@ -549,7 +549,7 @@ bool JICShadow::allJobsDone( void )
 	bool r1 = JobInfoCommunicator::allJobsDone();
 
 	// Tell shadow job is done, and moving to job state transfer output
-	if (!m_did_transfer) {
+	if (!m_did_output_transfer) {
 		publishJobExitAd( &update_ad );
 		// Note if updateShadow() fails, it will dprintf into the log.
 		updateShadow( &update_ad );
@@ -567,7 +567,7 @@ JICShadow::transferOutput( bool &transient_failure )
 
 	transient_failure = false;
 
-	if (m_did_transfer) {
+	if (m_did_output_transfer) {
 		return true;
 	}
 
@@ -638,7 +638,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		if (final_transfer) {
 			if ( !filetrans->InitDownloadFilenameRemaps(job_ad) ) {
 				dprintf( D_ALWAYS, "Failed to setup output file remaps.\n" );
-				m_did_transfer = false;
+				m_did_output_transfer = false;
 				return false;
 			}
 		}
@@ -724,7 +724,7 @@ JICShadow::transferOutput( bool &transient_failure )
 				}
 			}
 
-			m_did_transfer = false;
+			m_did_output_transfer = false;
 			return false;
 		}
 	}
@@ -732,7 +732,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		// In both cases, we should record that we were successful so
 		// that if we ever come through here again to retry the whole
 		// job cleanup process we don't attempt to transfer again.
-	m_did_transfer = true;
+	m_did_output_transfer = true;
 	return true;
 }
 
@@ -742,7 +742,7 @@ JICShadow::transferOutputMopUp(void)
 
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
 
-	if (m_did_transfer) {
+	if (m_did_output_transfer) {
 		/* nothing was marked wrong if we were able to do the transfer */
 		return true;
 	}
@@ -2594,7 +2594,7 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 }
 
 bool
-JICShadow::beginFileTransfer( void )
+JICShadow::beginInputTransfer( void )
 {
 
 		// if requested in the jobad, transfer files over.  
