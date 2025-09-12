@@ -21,6 +21,10 @@
   job associated with a node. This is in the form of a comma separated list.
   :jira:`3245`
 
+- The *condor_starter* can now refresh job credentials and respond to
+  commands while doing output file transfers.
+  :jira:`3259`
+
 *** 25.2.0 bugs
 
 - Fixed a problem where setting :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`
