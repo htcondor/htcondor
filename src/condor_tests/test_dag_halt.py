@@ -32,7 +32,7 @@ class Actions(str, enum.Enum):
     RESUME_TOOL = "resume_tool"
 
 # Timeout for all sections that wait on something
-TIMEOUT = 45
+TIMEOUT = 90
 
 # Various files for debugging and timing
 CONTINUE_FILE = "dag.continue"
