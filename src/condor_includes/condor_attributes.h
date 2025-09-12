@@ -972,6 +972,8 @@
 #define ATTR_PERIODIC_RELEASE_CHECK  "PeriodicRelease"
 #define ATTR_PERIODIC_REMOVE_CHECK  "PeriodicRemove"
 #define ATTR_PERIODIC_VACATE_CHECK  "PeriodicVacate"
+#define ATTR_TRANSFORM_ON_EVICT  "TransformOnEvict"
+#define ATTR_TRANSFORM_BODY_PREFIX "TransformBody_"
 #define ATTR_TIMER_REMOVE_CHECK  "TimerRemove"
 #define ATTR_TIMER_REMOVE_CHECK_SENT  "TimerRemoveSent"
 
@@ -1119,6 +1121,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUIRE_GPUS  "RequireGPUs"
 #define ATTR_REQUIRE_PREFIX "Require"
 #define ATTR_REQUEST_VIRTUAL_MEMORY  "RequestVirtualMemory"
+#define ATTR_MAX_REQUEST_MEMORY "MaxRequestMemory"
+#define ATTR_RETRY_REQUEST_MEMORY "RetryRequestMemory"
 // GPUs property constraints
 #define ATTR_GPUS_MIN_MEMORY "GPUsMinMemory"
 #define ATTR_GPUS_MIN_CAPABILITY "GPUsMinCapability"

@@ -103,6 +103,12 @@ class ClassAd : public ExprTree
 		*/
 		bool Insert( const std::string& attrName, ExprTree* expr);   // (ignores cache)
 		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
+		/*
+			Swap() is just like Insert() except it returns the old exprtree rather than
+			deleting it.  If there was no old exprtree, the old_expr is set to nullptr
+			i.e Swap is like Remove followed by Insert.
+		*/
+		bool Swap(const std::string& attrName, ExprTree* expr, ExprTree* & old_expr);
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax

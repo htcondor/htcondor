@@ -43,7 +43,11 @@ unmodified when false is returned.
 
 If a parsed_unit ptr is passed, the character that was parsed to determine the unit is returned.
 or 0 is returned if there was no unit parsed
+
+If separators and endp are passed, the input is valid if it ends in one of the separator characters
+and endp will point to that separator character
 */
-bool parse_int64_bytes(const char * input, int64_t & value, int base, char* parsed_unit=nullptr);
+bool parse_int64_bytes(const char * input, int64_t & value, int base,
+	char* parsed_unit=nullptr, const char* separators=nullptr, const char ** endp=nullptr);
 
 #endif

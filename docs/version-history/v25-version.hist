@@ -1,5 +1,9 @@
 *** 25.2.0 features
 
+- A job can now specify both an initial value for :submit-cmd:`request_memory`
+  and a retry with a larger memory request if job uses more memory than the initial request.
+  :jira:`3227`
+
 - Container images (see :subcom:`container_image`) that are neither on
   shared filesystems nor transferred by the container service (*e.g.*,
   ``docker://`` URLs) are now considered common files by default, meaning

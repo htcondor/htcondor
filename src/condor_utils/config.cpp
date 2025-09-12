@@ -1322,6 +1322,14 @@ bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _s
 	return input != NULL;
 }
 
+bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _src, const char * seps)
+{
+	src = _src;
+	if (input) delete input;
+	input = new StringTokenIterator(src_string, seps, STI_NO_TRIM);
+	return input != NULL;
+}
+
 int MacroStreamCharSource::close(MACRO_SET& /*set*/, int parsing_return_val)
 {
 	return parsing_return_val;
