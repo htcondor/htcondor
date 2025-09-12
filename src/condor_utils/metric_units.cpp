@@ -96,7 +96,7 @@ bool parse_int64_bytes(
         // parse the multiplier postfix
         int64_t mult = 1;
         if (parsed_unit) { *parsed_unit = *p; }
-        if (!*p) { mult = base; }
+        if (!*p || (separators && strchr(separators, *p))) { mult = base; }
         else if (*p == 'k' || *p == 'K') mult = 1024;
         else if (*p == 'm' || *p == 'M') mult = 1024*1024;
         else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;

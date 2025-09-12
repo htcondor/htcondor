@@ -818,9 +818,9 @@ COMMANDS FOR MATCHMAKING
 
  :subcom-def:`retry_request_memory` = <quantity> [, <quantity2> [...]]
     The amount of memory in Mb the job should request if it is evicted from
-    a slot for using more than the jobs original ``request_memory`` value.
+    a slot for using more than the original ``request_memory`` value.
 
-    If value can be a single quantity, or a comma separated list of quantities.
+    The value can be a single quantity, or a comma separated list of quantities.
     If more than one quantity is specified, each must be larger than the previous one.
 
     Characters may be appended to a numerical value to indicate units.
@@ -846,7 +846,7 @@ COMMANDS FOR MATCHMAKING
     request when the job is evicted from a slot for using too much memory.
     When used along with ``retry_request_memory_max``, the memory request
     will continue to increase util it hits the max value.  If a job that
-    is as the max value is evicted for using too much memory it will be 
+    is at the max value is evicted for using too much memory it will be 
     put on hold.  If this submit command is used without ``retry_request_memory_max``,
     the memory request will only be increased once.
 

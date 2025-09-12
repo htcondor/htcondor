@@ -721,6 +721,7 @@ static bool is_xform_statement(std::string_view & line, const char * keyword)
 	}
 	if (*p == 0) {
 		// we might have a match!
+		while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }
 		if ( ! line.empty() && (isspace(line.front()) || line.front() == '=')) {
 			line.remove_prefix(1);
 			while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }

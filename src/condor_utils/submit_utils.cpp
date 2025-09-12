@@ -4106,8 +4106,13 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 	lines += set_attr_body;
 	//lines += "\x1e";
 
-	std::string bodyattr = std::string(ATTR_TRANSFORM_BODY_PREFIX) + attr;
-	AssignJobString(bodyattr.c_str(), lines.c_str());
+	// write the submit transform body, we put this only into the cluster ad
+	// since it can never vary by proc. NextRequestMemory and MaxRequestMemory can vary by proc
+	// but the transform body never will.
+	if ( ! clusterAd) {
+		std::string bodyattr = std::string(ATTR_TRANSFORM_BODY_PREFIX) + attr;
+		AssignJobString(bodyattr.c_str(), lines.c_str());
+	}
 
 	std::string evck_list;
 	job->LookupString(ATTR_TRANSFORM_ON_EVICT, evck_list);
@@ -5016,6 +5021,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetOnEvictExpressions
 	{SUBMIT_KEY_OnEvictChecks, ATTR_TRANSFORM_ON_EVICT, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
 	{SUBMIT_KEY_RetryRequestMemory, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
+// comment out for now so make digest will never prune this pair of submit commands.
+// TODO: have a mechanism so that late mat can handle the case where only one of these is pruned from the digest
 	{SUBMIT_KEY_RetryRequestMemoryMax, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
 	{SUBMIT_KEY_RetryRequestMemoryIncrease, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
 	// invoke SetKillSig
