@@ -13,6 +13,12 @@ from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.utils import atomic_rename
 
 
+_KEY_ALGO_PREAMBLE = {
+    "RS256": "BEGIN RSA PRIVATE KEY",
+    "ES256": "BEGIN EC PRIVATE KEY",
+}
+
+
 class TokenInfo:
     def __init__(
             self,
@@ -58,6 +64,7 @@ class LocalCredmon(OAuthCredmon):
                 with open(self._private_key_location, 'r') as private_key:
                     self._private_key = private_key.read()
                 self.private_key_id = self.get_credmon_config("KEY_ID", "local")
+                self.private_key_algo = self.get_credmon_config("PRIVATE_KEY_ALGORITHM", "ES256")
             else:
                 self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but key not found or not readable")
             self.token_issuer = self.get_credmon_config("ISSUER", self.token_issuer)
@@ -73,11 +80,14 @@ class LocalCredmon(OAuthCredmon):
             self._private_key_location = None
         if not self.token_issuer and htcondor:
             self.token_issuer = 'https://{}'.format(htcondor.param["FULL_HOSTNAME"])
-        # algorithm is hardcoded to ES256, warn if private key does not appear to use EC
-        if (self._private_key_location is not None) and ("BEGIN EC PRIVATE KEY" not in self._private_key.split("\n")[0]):
-            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
-            self.log.warning("`scitokens-admin-create-key --pem-private` should be used with `--ec` option")
+        # Check that the key matches the configured algorithm
+        if (self._private_key_location is not None) and (_KEY_ALGO_PREAMBLE.get(self.private_key_algo, "") not in self._private_key.split("\n")[0]):
+            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use {self.private_key_algo} algorithm")
+            self.log.warning(f"{_KEY_ALGO_PREAMBLE.get(self.private_key_algo, '')} not found in key file")
             self.log.warning("Errors are likely to occur when attempting to serialize SciTokens")
+        elif self.private_key_algo not in _KEY_ALGO_PREAMBLE:
+            self.log.warning(f"New or unknown private key algorithm '{self.private_key_algo}'")
+            self.log.warning("Errors may occur when attempting to serialize SciTokens")
 
 
     def get_credmon_config(self, config: str, default: str="") -> str:
@@ -180,7 +190,7 @@ class LocalCredmon(OAuthCredmon):
 
         info = self.generate_access_token_info(username, token_name)
 
-        token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self.private_key_id)
+        token = scitokens.SciToken(algorithm=self.private_key_algo, key=self._private_key, key_id=self.private_key_id)
         token.update_claims({'sub': info.sub})
         token.update_claims({'scope': " ".join(info.scopes)})
 
