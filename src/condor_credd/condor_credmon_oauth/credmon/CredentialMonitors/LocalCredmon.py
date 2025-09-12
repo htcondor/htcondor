@@ -8,6 +8,7 @@ from typing import List
 
 import scitokens
 import htcondor2 as htcondor
+import classad2 as classad
 
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.utils import atomic_rename
@@ -44,7 +45,8 @@ class LocalCredmon(OAuthCredmon):
         super(LocalCredmon, self).__init__(*args, **kwargs)
         self.provider = provider
         self.token_issuer = None
-        self.authz_template = "read:/user/{username} write:/user/{username}"
+        self.authz_template = r"read:/user/{username} write:/user/{username}"
+        self.authz_template_expr = None
         self.authz_group_template = None
         self.authz_group_mapfile = None
         self.authz_group_requirement = None
@@ -62,6 +64,7 @@ class LocalCredmon(OAuthCredmon):
                 self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but key not found or not readable")
             self.token_issuer = self.get_credmon_config("ISSUER", self.token_issuer)
             self.authz_template = self.get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
+            self.authz_template_expr = self.get_credmon_config("AUTHZ_TEMPLATE_EXPR", self.authz_template_expr)
             self.authz_group_mapfile = self.get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
             self.authz_group_template = self.get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
             self.authz_group_requirement  = self.get_credmon_config("AUTHZ_GROUP_REQUIREMENT", self.authz_group_requirement)
@@ -120,6 +123,18 @@ class LocalCredmon(OAuthCredmon):
         """
         # Create scopes from user and group templates
         scopes = [self.authz_template.format(username=username)]
+        if self.authz_template_expr:
+            try:
+                eval_context = classad.ClassAd({
+                    "Username": username,
+                    "Scopes": classad.ExprTree(self.authz_template_expr),
+                })
+                eval_scopes = eval_context.eval("Scopes")
+                if not isinstance(eval_scopes, str):
+                    raise TypeError(f"ClassAd expression '{self.authz_template_expr}' did not evaluate to a string")
+                scopes.append(eval_scopes)
+            except Exception:
+                self.log.exception(f"Not adding scopes from {self.credmon_name}_CREDMON_AUTHZ_TEMPLATE_EXPR due to exception")
         if self.authz_group_template:
             if self.authz_group_mapfile is None:
                 self.log.warning(f"{self.credmon_name}_CREDMON_AUTHZ_GROUP_MAPFILE is undefined, cannot add group authorizations")
