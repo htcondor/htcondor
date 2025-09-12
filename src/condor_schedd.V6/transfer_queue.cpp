@@ -28,6 +28,11 @@
 #include "condor_email.h"
 #include "algorithm"
 
+extern std::map< std::string, int > currentTransfersByProtocol;
+#include "qmgmt.h"
+#include "scheduler.h"
+extern Scheduler scheduler;
+
 TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
 	m_sock(sock),
 	m_queue_user(queue_user),
@@ -397,16 +402,16 @@ TransferQueueManager::HandleReport( Stream *sock )
 	auto it = m_xfer_queue.begin();
 	while (it != m_xfer_queue.end()) {
 		TransferQueueRequest *client  = *it;
-		
+
 		if( client->m_sock == sock ) {
-			if( !client->ReadReport(this) ) {
+			if( !client->ReadReport(this, client->m_jobid) ) {
 				dprintf(D_FULLDEBUG,
 						"TransferQueueManager: dequeueing %s.\n",
 						client->Description());
 
 				delete client;
 
-				// This invalidates it, but we are on our way out 
+				// This invalidates it, but we are on our way out
 				// anyway by now.
 				it = m_xfer_queue.erase(it);
 
@@ -432,7 +437,7 @@ TransferQueueManager::HandleReport( Stream *sock )
 }
 
 bool
-TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
+TransferQueueRequest::ReadReport(TransferQueueManager *manager, const std::string & jobID) const
 {
 	std::string report;
 	m_sock->decode();
@@ -443,6 +448,29 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 	}
 
 	if( report.empty() ) {
+		dprintf( D_ALWAYS, "FIXME: Increment protocol-transferring counts for job ID %s (transfer queue exited).\n", jobID.c_str() );
+
+		auto jobIDs = split(jobID, ".");
+		int cluster_id = std::stoi(jobIDs[0]);
+		int proc_id = std::stoi(jobIDs[1]);
+		ClassAd * jobAd = GetJobAd( cluster_id, proc_id );
+
+		std::string transferPluginMethods;
+		if( jobAd->LookupString( ATTR_WANT_TRANSFER_PLUGIN_METHODS, transferPluginMethods ) ) {
+			auto protocols = split( transferPluginMethods );
+			for( const auto & protocol : protocols ) {
+				// do we need to initialize to 0?
+				currentTransfersByProtocol[protocol] += 1;
+				dprintf( D_ALWAYS, "protocol %s = %d\n",
+					protocol.c_str(), currentTransfersByProtocol[protocol]
+				);
+				// Hack.
+				if( protocol == "osdf" ) {
+					scheduler.stats.CurrentTransfersOSDF = currentTransfersByProtocol[protocol];
+				}
+			}
+		}
+
 		return false;
 	}
 
