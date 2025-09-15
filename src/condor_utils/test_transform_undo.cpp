@@ -546,7 +546,6 @@ void load_test_jobs(std::vector<ClassAd> & holder, std::vector<ClassAd*> & jobs,
 		// parse from string
 		std::string_view instr(ptr, cch);
 
-		size_t from_string_length = instr.size();
 		while ( ! instr.empty() && isspace(instr.front())) {
 			instr.remove_prefix(1);
 		}
@@ -558,11 +557,9 @@ void load_test_jobs(std::vector<ClassAd> & holder, std::vector<ClassAd*> & jobs,
 		}
 
 		// load a job or chained cluster/proc 
-		size_t first_index = holder.size();
 		ClassAd & ad = holder.emplace_back();
 		int numAttrs = ccfi.next(ad);
 		if (numAttrs > 0) {
-			int num_proc_ads = 0;
 			while ( ! lexsrc.AtEnd()) {
 				ClassAd & procAd = holder.emplace_back();
 				numAttrs = ccfi.next(procAd);
@@ -586,7 +583,6 @@ void load_test_jobs(std::vector<ClassAd> & holder, std::vector<ClassAd*> & jobs,
 			// parse from string
 			std::string_view instr(ptr, cch);
 
-			size_t from_string_length = instr.size();
 			while ( ! instr.empty() && isspace(instr.front())) {
 				instr.remove_prefix(1);
 			}
@@ -720,7 +716,7 @@ void testing_transforms(bool verbose)
 			}
 
 			// check to see if the ads were reverted correctly by the undo
-			for (auto ii = 0; ii < ads_holder.size(); ++ii) {
+			for (size_t ii = 0; ii < ads_holder.size(); ++ii) {
 				JOB_ID_KEY jid2(1,-1);
 				ads_holder[ii].LookupInteger(ATTR_CLUSTER_ID, jid2.cluster);
 				ads_holder[ii].LookupInteger(ATTR_PROC_ID, jid2.proc);
@@ -844,7 +840,7 @@ void testing_transforms_on_a_job(bool verbose, ClassAd * test_job)
 	}
 }
 
-void testing_undos(bool verbose, ClassAd * job)
+void testing_undos(bool verbose, ClassAd *)
 {
 	if (verbose) {
 		fprintf( stdout, "\n----- testing_undos ----\n\n");
@@ -956,7 +952,6 @@ int main( int /*argc*/, const char ** argv) {
 
 		// parse from string
 		std::string_view instr(jobad_string);
-		size_t from_string_length = instr.size();
 		while ( ! instr.empty() && isspace(instr.front())) {
 			instr.remove_prefix(1);
 		}
