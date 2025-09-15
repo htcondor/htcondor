@@ -373,13 +373,13 @@ TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET 
 RequestMemory=1024
 TransformOnEvict="RequestMemory"
 RetryRequestMemory={ 2048,8192 }
-TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[NextRequestMemory\?:0\]\x1eEVALSET NextRequestMemory .*"$/
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[RetryRequestMemoryIndex\?:0\]\x1eEVALSET RetryRequestMemoryIndex .*"$/
 
 ==retry_mem3.sub
 RequestMemory=1024
 TransformOnEvict="RequestMemory"
 RetryRequestMemory={ 2048,8192 }
-TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[NextRequestMemory\?:0\]\x1eEVALSET NextRequestMemory .*"$/
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[RetryRequestMemoryIndex\?:0\]\x1eEVALSET RetryRequestMemoryIndex .*"$/
 
 ==parallel.sub
 JobUniverse=11
