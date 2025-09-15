@@ -6873,15 +6873,16 @@ condor_submit Configuration File Entries
 
     .. code-block:: text
 
-          ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
+          128
 
 :macro-def:`JOB_DEFAULT_REQUESTDISK[SUBMIT]`
     The amount of disk in KiB to acquire for a job, if the job does not
     specify how much it needs using the
     :subcom:`request_disk[and JOB_DEFAULT_REQUESTDISK]`
     submit command. If the job defines the value, then that value takes
-    precedence. If not set, then then the default is defined as
-    :ad-attr:`DiskUsage`.
+    precedence. If not set, then then the default is the maximum of 1 GB
+    and the 125% of the transfer input size which is the expression.
+    :ad-attr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify

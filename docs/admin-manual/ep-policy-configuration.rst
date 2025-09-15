@@ -594,9 +594,8 @@ values for these variables, should they not be set are
 .. code-block:: condor-config
 
     JOB_DEFAULT_REQUESTCPUS = 1
-    JOB_DEFAULT_REQUESTMEMORY = \
-        ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)
-    JOB_DEFAULT_REQUESTDISK = DiskUsage
+    JOB_DEFAULT_REQUESTMEMORY = 128
+    JOB_DEFAULT_REQUESTDISK = MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024
 
 Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
