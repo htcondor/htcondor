@@ -13098,7 +13098,7 @@ int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_bo
 	// we want to convert the current value for each key to a SetAttribute call
 	for (auto &[key,oldval] : undo.list) {
 		ExprTree * tree = job->Lookup(key);
-		if (tree && oldval && *tree == *oldval) continue;
+		if (tree && oldval && *SkipExprEnvelope(tree) == *SkipExprEnvelope(oldval)) continue;
 		const char * attr = key.c_str();
 		const char *rhstr = nullptr;
 
