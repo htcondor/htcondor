@@ -4034,7 +4034,7 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 				push_error(stderr, "%s retry increment must be a positive number or an expression that references %s\n", attr, attr);
 				ABORT_AND_RETURN(1);
 			}
-			formatstr(inc_expr, "%s + %lld", attr, inclit);
+			formatstr(inc_expr, "%s + %lld", attr, (long long)inclit);
 			tmp.AssignExpr("Increment", inc_expr.c_str());
 		} else {
 			// If the increment is not a constant, it can be an expression that references Request*
