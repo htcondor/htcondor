@@ -31,6 +31,7 @@ my $wantedout = $testname . $mypid . ".out" . "\$(NODE)";
 
 my $submitadditions = '
 arguments =  machine $(NODE)
+request_disk = (TransferInputSizeMB+1) * (1024+256)
 +ParallelShutdownPolicy = "WAIT_FOR_ALL"
 machine_count = 4
 ';
