@@ -30,7 +30,7 @@
   :jira:`3125`
 
 - The *condor_credmon_local* can now use RSA-based (RS256) keys to generate
-  tokens by setting :macro:`LOCAL_CREDMON_PRIVATE_KEY_ALGORITH` to ``RS256``.
+  tokens by setting :macro:`LOCAL_CREDMON_PRIVATE_KEY_ALGORITHM` to ``RS256``.
   :jira:`3266`
 
 *** 25.2.0 bugs
