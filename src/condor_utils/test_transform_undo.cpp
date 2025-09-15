@@ -455,12 +455,12 @@ static const char nextmax_result3[] =R"(JOB_SHOULD_HOLD
 // test for retry_request_memory iterating
 static const char * retry_mem_seq = 
 	"REQUIREMENTS (VacateReasonCode==21 && VacateReasonSubCode==102) || (VacateReasonCode == 34 && VacateReasonSubCode == 102)\x1e"
-	"EVALSET RequestMemory RetryRequestMemory[NextRequestMemory?:0]\x1e"
-	"EVALSET NextRequestMemory MIN({size(RetryRequestMemory)-1, (NextRequestMemory?:0)+1})"
+	"EVALSET RequestMemory RetryRequestMemory[RetryRequestMemoryIndex?:0]\x1e"
+	"EVALSET RetryRequestMemoryIndex MIN({size(RetryRequestMemory)-1, (RetryRequestMemoryIndex?:0)+1})"
 ;
 static const char seq_result1[] =R"(JOB_SHOULD_REQUEUE
-NextRequestMemory = 1
 RequestMemory = 250
+RetryRequestMemoryIndex = 1
 )";
 static const char seq_result2[] =R"(JOB_SHOULD_REQUEUE
 RequestMemory = 500
@@ -646,7 +646,7 @@ void testing_transforms(bool verbose)
 		fprintf( stdout, "\n----- testing_transforms ----\n\n");
 	}
 
-	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory"};
+	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory", "RetryRequestMemoryIndex"};
 
 	std::vector<ClassAd>  ads_holder;
 	std::vector<ClassAd*> jobs;
@@ -766,7 +766,7 @@ void testing_transforms_on_a_job(bool verbose, ClassAd * test_job)
 
 	std::vector<ClassAd>  ads_holder;
 	std::vector<ClassAd*> jobs;
-	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory"};
+	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory", "RetryRequestMemoryIndex"};
 	if (test_job) jobs.push_back(test_job);
 	else {
 		load_test_jobs(ads_holder, jobs, basic_jobdata, nullptr);

@@ -4010,16 +4010,16 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 
 		std::string retry_attr = std::string("Retry") + attr;
 		AssignJobExpr(retry_attr.c_str(), seqlist.c_str());
-		std::string next_attr = std::string("Next") += attr;
-		//AssignJobVal(next_attr.c_str(), 0);
+		std::string index_attr = retry_attr + "Index";
+		//AssignJobVal(index_attr.c_str(), 0);
 
 		// submit sets job[RetryRequestMemory] = {a, b, last}
-		// EVALSET RequestMemory RetryRequestMemory[NextRequestMemory?:0]
-		// EVALSET NextRequestMemory MIN({size(RetryRequestMemory)-1, (NextRequestMemory?:0)+1})
+		// EVALSET RequestMemory RetryRequestMemory[RetryRequestMemoryIndex?:0]
+		// EVALSET RetryRequestMemoryIndex MIN({size(RetryRequestMemory)-1, (RetryRequestMemoryIndex?:0)+1})
 
-		formatstr(set_attr_body, "EVALSET %s %s[%s?:0]\x1e", attr, retry_attr.c_str(), next_attr.c_str());
+		formatstr(set_attr_body, "EVALSET %s %s[%s?:0]\x1e", attr, retry_attr.c_str(), index_attr.c_str());
 		formatstr_cat(set_attr_body, "EVALSET %s MIN({size(%s)-1, (%s?:0)+1})",
-			next_attr.c_str(), retry_attr.c_str(), next_attr.c_str());
+			index_attr.c_str(), retry_attr.c_str(), index_attr.c_str());
 
 	} else if (incr) {
 		// if no sequence, but there is an increment, we use a strategy of
