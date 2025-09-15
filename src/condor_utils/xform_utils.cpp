@@ -721,10 +721,11 @@ static bool is_xform_statement(std::string_view & line, const char * keyword)
 	}
 	if (*p == 0) {
 		// we might have a match!
-		while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }
-		if ( ! line.empty() && (isspace(line.front()) || line.front() == '=')) {
+		if ( ! line.empty() && isspace(line.front())) {
 			line.remove_prefix(1);
 			while ( ! line.empty() && isspace(line.front())) { line.remove_prefix(1); }
+			// "KEYWORD =" is setting a var, not defining a transform command
+			if ( ! line.empty() && line.front() == '=') return false;
 			return true;
 		}
 	}
@@ -935,6 +936,7 @@ int MacroStreamXFormSource::set_simple_transform(const char * statements)
 	const char * xform_body = statements;
 
 	// trim leading blank lines, comments and requirements
+	// REQUIREMENTS must be the first command in a simple transform
 	StringTokenIterator lines(statements, "\n\x1e", STI_NO_TRIM);
 	int start, length;
 	while ((start = lines.next_token(length)) >= 0) {
@@ -945,6 +947,7 @@ int MacroStreamXFormSource::set_simple_transform(const char * statements)
 		if (line.empty()) continue;
 		if (line.front() == '#') continue;
 
+		// note that is_xform_statement will mutate line even if it returns false
 		if (is_xform_statement(line, "requirements")) {
 			std::string buf(line); trim(buf);
 			start = lines.next_token(length);

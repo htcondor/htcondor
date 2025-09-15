@@ -455,12 +455,12 @@ static const char nextmax_result3[] =R"(JOB_SHOULD_HOLD
 // test for retry_request_memory iterating
 static const char * retry_mem_seq = 
 	"REQUIREMENTS (VacateReasonCode==21 && VacateReasonSubCode==102) || (VacateReasonCode == 34 && VacateReasonSubCode == 102)\x1e"
-	"EVALSET RequestMemory RetryRequestMemory[NextRequestMemory?:0]\x1e"
-	"EVALSET NextRequestMemory MIN({size(RetryRequestMemory)-1, (NextRequestMemory?:0)+1})"
+	"EVALSET RequestMemory RetryRequestMemory[RetryRequestMemoryIndex?:0]\x1e"
+	"EVALSET RetryRequestMemoryIndex MIN({size(RetryRequestMemory)-1, (RetryRequestMemoryIndex?:0)+1})"
 ;
 static const char seq_result1[] =R"(JOB_SHOULD_REQUEUE
-NextRequestMemory = 1
 RequestMemory = 250
+RetryRequestMemoryIndex = 1
 )";
 static const char seq_result2[] =R"(JOB_SHOULD_REQUEUE
 RequestMemory = 500
@@ -546,7 +546,6 @@ void load_test_jobs(std::vector<ClassAd> & holder, std::vector<ClassAd*> & jobs,
 		// parse from string
 		std::string_view instr(ptr, cch);
 
-		size_t from_string_length = instr.size();
 		while ( ! instr.empty() && isspace(instr.front())) {
 			instr.remove_prefix(1);
 		}
@@ -558,11 +557,9 @@ void load_test_jobs(std::vector<ClassAd> & holder, std::vector<ClassAd*> & jobs,
 		}
 
 		// load a job or chained cluster/proc 
-		size_t first_index = holder.size();
 		ClassAd & ad = holder.emplace_back();
 		int numAttrs = ccfi.next(ad);
 		if (numAttrs > 0) {
-			int num_proc_ads = 0;
 			while ( ! lexsrc.AtEnd()) {
 				ClassAd & procAd = holder.emplace_back();
 				numAttrs = ccfi.next(procAd);
@@ -586,7 +583,6 @@ void load_test_jobs(std::vector<ClassAd> & holder, std::vector<ClassAd*> & jobs,
 			// parse from string
 			std::string_view instr(ptr, cch);
 
-			size_t from_string_length = instr.size();
 			while ( ! instr.empty() && isspace(instr.front())) {
 				instr.remove_prefix(1);
 			}
@@ -650,7 +646,7 @@ void testing_transforms(bool verbose)
 		fprintf( stdout, "\n----- testing_transforms ----\n\n");
 	}
 
-	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory"};
+	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory", "RetryRequestMemoryIndex"};
 
 	std::vector<ClassAd>  ads_holder;
 	std::vector<ClassAd*> jobs;
@@ -720,7 +716,7 @@ void testing_transforms(bool verbose)
 			}
 
 			// check to see if the ads were reverted correctly by the undo
-			for (auto ii = 0; ii < ads_holder.size(); ++ii) {
+			for (size_t ii = 0; ii < ads_holder.size(); ++ii) {
 				JOB_ID_KEY jid2(1,-1);
 				ads_holder[ii].LookupInteger(ATTR_CLUSTER_ID, jid2.cluster);
 				ads_holder[ii].LookupInteger(ATTR_PROC_ID, jid2.proc);
@@ -770,7 +766,7 @@ void testing_transforms_on_a_job(bool verbose, ClassAd * test_job)
 
 	std::vector<ClassAd>  ads_holder;
 	std::vector<ClassAd*> jobs;
-	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory"};
+	classad::References interesting_keys{"RequestMemory", "NextRequestMemory", "MaxRequestMemory", "RetryRequestMemory", "RetryRequestMemoryIndex"};
 	if (test_job) jobs.push_back(test_job);
 	else {
 		load_test_jobs(ads_holder, jobs, basic_jobdata, nullptr);
@@ -844,7 +840,7 @@ void testing_transforms_on_a_job(bool verbose, ClassAd * test_job)
 	}
 }
 
-void testing_undos(bool verbose, ClassAd * job)
+void testing_undos(bool verbose, ClassAd *)
 {
 	if (verbose) {
 		fprintf( stdout, "\n----- testing_undos ----\n\n");
@@ -956,7 +952,6 @@ int main( int /*argc*/, const char ** argv) {
 
 		// parse from string
 		std::string_view instr(jobad_string);
-		size_t from_string_length = instr.size();
 		while ( ! instr.empty() && isspace(instr.front())) {
 			instr.remove_prefix(1);
 		}
