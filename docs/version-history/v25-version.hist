@@ -8,6 +8,9 @@
 
 - A job can now specify both an initial value for :submit-cmd:`request_memory`
   and a retry with a larger memory request if job uses more memory than the initial request.
+  The default value for :submit-cmd:`request_memory` and for :submit-cmd:`request_disk`
+  have been changed so that jobs will no longer default to trying to grow the request
+  based on previous usage.
   :jira:`3227`
 
 - Container images (see :subcom:`container_image`) that are neither on
