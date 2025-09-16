@@ -106,6 +106,18 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
 
+	{"_reload_config_usermaps", & _reload_config_usermaps, METH_VARARGS, R"C0ND0R(
+	    Reload the userMap mapfiles defined in the HTCondor configuration for the current subsystem.
+	)C0ND0R"},
+
+	{"_load_a_config_usermap_file", & _load_a_config_usermap_file, METH_VARARGS, R"C0ND0R(
+	    Load a HTCondor map file so it can be used by the classad userMap function. A subsequent call to reload_config
+	    or reload_config_usermaps will reset the internal set of userMap files and may remove this userMap name.
+
+	    :param str name: The userMap name
+	    :param str filepath: The full path to the usermap file
+	)C0ND0R"},
+
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
 	{"_ping", & _ping, METH_VARARGS, NULL},
