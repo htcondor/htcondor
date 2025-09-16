@@ -8596,6 +8596,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 
 	// empty table options gets original split behavior.  (basically standard_foreach_table_opts)
 	bool legacy_split = table_opts.empty();
+	bool split_on_ws = table_opts.ws_sep; // capture the split-on-whitespace flag in case we need to turn it off
 
 	// setup token seps
 	const char* token_seps = ", \t";
@@ -8605,6 +8606,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 	char sep_char = 0;
 	if (legacy_split && item.find_first_of('\x1f') != std::string_view::npos) {
 		sep_char = '\x1f'; // autodetected US separator
+		split_on_ws = false; // turnoff whitespace splitting.
 	} else {
 		sep_char = table_opts.sep_char;
 	}
@@ -8612,7 +8614,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 		// build a dynamic token_seps string
 		char* seps = table_token_seps;
 		*seps++ = sep_char;
-		if (table_opts.ws_sep) { *seps++ = ' '; *seps++ = '\t'; }
+		if (split_on_ws) { *seps++ = ' '; *seps++ = '\t'; }
 		*seps = 0;
 
 		token_seps = table_token_seps;
