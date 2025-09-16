@@ -1,5 +1,9 @@
 *** 25.3.0 features
 
+- :tool:`condor_watch_q` will now display for total number of jobs for
+  clusters using late materialization.
+  :jira:`3164`
+
 *** 25.3.0 bugs
 
 *** 25.0.3 bugs
