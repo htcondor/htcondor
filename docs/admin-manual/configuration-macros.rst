@@ -6880,8 +6880,8 @@ condor_submit Configuration File Entries
     specify how much it needs using the
     :subcom:`request_disk[and JOB_DEFAULT_REQUESTDISK]`
     submit command. If the job defines the value, then that value takes
-    precedence. If not set, then then the default is the maximum of 1 GB
-    and the 125% of the transfer input size which is the expression.
+    precedence. If not set, then the default is the maximum of 1 GB
+    and 125% of the transfer input size, which is the expression
     :ad-attr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
