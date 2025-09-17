@@ -271,17 +271,17 @@ test_cases = {
     },
     "itemdata_dict": {
         "subtext":  test26_subtext,
-        "expected": "{ClusterID} {ProcID} 0 20 b\n"
-                    "{ClusterID} {ProcID} 1 20 b\n"
-                    "{ClusterID} {ProcID} 0 30 c\n"
-                    "{ClusterID} {ProcID} 1 30 c\n"
-                    "{ClusterID} {ProcID} 0 40 d\n"
-                    "{ClusterID} {ProcID} 1 40 d\n",
+        "expected": "{ClusterID} {ProcID} 0 20 x - z b\n"
+                    "{ClusterID} {ProcID} 1 20 x - z b\n"
+                    "{ClusterID} {ProcID} 0 30 y - z c\n"
+                    "{ClusterID} {ProcID} 1 30 y - z c\n"
+                    "{ClusterID} {ProcID} 0 40 z - z d\n"
+                    "{ClusterID} {ProcID} 1 40 z - z d\n",
         "count":    2,
         "itemdata": iter([
-            {"y": "20", "x": "b"},
-            {"y": "30", "x": "c"},
-            {"y": "40", "x": "d"},
+            {"y": "20 x - z", "x": "b"},
+            {"y": "30 y - z", "x": "c"},
+            {"y": "40 z - z", "x": "d"},
         ]),
     },
     "itemdata_priority": {
@@ -381,7 +381,7 @@ def results(test_case, the_condor, test_dir, the_test_dir):
 
 class TestScheddSubmit:
 
-    def test_condor_submit(self, results, expected):
+    def test_schedd_submit(self, results, expected):
         (actual, jobIDs) = results
 
         i = 0
@@ -399,4 +399,3 @@ class TestScheddSubmit:
     # FIXME: We should also test that submit object does NOT have the
     # queue argument variables in it after a submission (original text,
     # setQArgs(), and both kinds of itemdata).
-
