@@ -1,5 +1,9 @@
 *** 24.0.14 bugs
 
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
+
 *** 24.0.12 features
 
 - Updated :tool:`condor_upgrade_check` to test for well known gotchas
