@@ -296,7 +296,7 @@ Singularity::setup(ClassAd &machineAd,
 			sing_args.AppendArg(pwd);
 		}
 		// Update the environment variables
-		retargetEnvs(job_env, target_dir, execute_dir);
+		retargetEnvs(job_env, target_dir, slot_dir);
 
 	} else {
 		sing_args.AppendArg("--pwd");
@@ -498,7 +498,7 @@ envToList(void *list, const std::string & name, const std::string & /*value*/) {
 }
 
 bool
-Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
+Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &slot_dir) {
 
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
@@ -518,12 +518,12 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	for (const std::string & name : envNames) {
 		std::string value;
 		job_env.GetEnv(name, value);
-		auto index_execute_dir = value.find(execute_dir);
+		auto index_execute_dir = value.find(slot_dir);
 		if (index_execute_dir != std::string::npos) {
 			std::string new_name = environmentPrefix() + name;
 			job_env.SetEnv(
 				new_name,
-				value.replace(index_execute_dir, execute_dir.length(), target_dir)
+				value.replace(index_execute_dir, slot_dir.length(), target_dir)
 			);
 		}
 	}
