@@ -357,24 +357,27 @@ def results(test_case, the_condor, test_dir, the_test_dir):
     if queue is not None:
         submit.setQArgs(queue)
 
+    r = None
     with the_condor.use_config():
         schedd = htcondor2.Schedd()
         # We can't just pass None, because Schedd.submit() has defaults.
         if count is None and itemdata is None:
-            schedd.submit(submit)
+            r = schedd.submit(submit)
         elif count is None and itemdata is not None:
-            schedd.submit(submit, itemdata=itemdata)
+            r = schedd.submit(submit, itemdata=itemdata)
         elif count is not None and itemdata is None:
-            schedd.submit(submit, count=count)
+            r = schedd.submit(submit, count=count)
         else:
-            schedd.submit(submit, count=count, itemdata=itemdata)
+            r = schedd.submit(submit, count=count, itemdata=itemdata)
+    clusterID = r.cluster()
 
-    ads = schedd.query(projection=['ClusterID', 'ProcID', 'args'])
+    ads = schedd.query(
+        projection=['ClusterID', 'ProcID', 'args'],
+        constraint=f'ClusterID == {clusterID}',
+    )
     ads.sort(key=lambda ad: f"{ad['ClusterID']}.{ad['ProcID']}")
     actual = "\n".join([ad['args'] for ad in ads]) + "\n"
     jobIDs = [{ "ClusterID": ad['ClusterId'], "ProcID": ad['ProcID'] } for ad in ads]
-
-    schedd.act(htcondor2.JobAction.Remove, 'true')
 
     return actual, jobIDs
 
