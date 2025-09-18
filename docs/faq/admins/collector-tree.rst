@@ -31,9 +31,9 @@ should forwarded to the top level Collector.
     $(LOCALNAME).ALLOW_ADVERTISE_MASTER = *
     $(LOCALNAME).ALLOW_ADVERTISE_STARTD = *
 
-    # Prevent EPs from taking directly to top level Collector
-    COLLECTOR.ALLOW_ADVERTISE_MASTER = */$(HOSTNAME)
-    COLLECTOR.ALLOW_ADVERTISE_STARTD = */$(HOSTNAME)
+    # Prevent EPs from talking directly to top level Collector
+    COLLECTOR.ALLOW_ADVERTISE_MASTER = */$(FULL_HOSTNAME)
+    COLLECTOR.ALLOW_ADVERTISE_STARTD = */$(FULL_HOSTNAME)
 
     # Create N child Collectors
 
