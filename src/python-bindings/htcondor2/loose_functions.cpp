@@ -78,6 +78,32 @@ _reload_config( PyObject *, PyObject * ) {
 	Py_RETURN_NONE;
 }
 
+static PyObject *
+_reload_config_usermaps( PyObject *, PyObject * ) {
+
+	// reload the config specified usermaps for this process
+	reconfig_user_maps();
+
+	Py_RETURN_NONE;
+}
+
+static PyObject *
+_load_a_config_usermap_file( PyObject *, PyObject * args ) {
+
+	const char * name = NULL;
+	const char * mapfile_path = NULL;
+
+	if(! PyArg_ParseTuple( args, "ss", &name, &mapfile_path )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+	// load or reload the given usermap file
+	add_user_map(name, mapfile_path, nullptr);
+
+	Py_RETURN_NONE;
+}
+
 
 static PyObject *
 _enable_debug( PyObject *, PyObject * ) {
