@@ -674,6 +674,8 @@ CONFIG_VALUE_SHARED = [
         r"\b(required|optional|never|preferred|password|fs|kerberos)\b",
         token.Keyword,
     ),
+    # Highlight macro dereferencing
+    (r"\$\(([^)]+)\)", token.Name.Variable.Magic),
     # catch-all
     (r".|\s", token.Text),
 ]
@@ -719,7 +721,7 @@ class CondorConfigLexer(lexer.RegexLexer):
                 "multi-line",
             ),
             (
-                r"([\w\.]+)( *)(=)( *)",
+                r"([\$\(\)\w\.]+)( *)(=)( *)",
                 lexer.bygroups(
                     token.Name.Builtin, token.Text, token.Operator, token.Text,
                 ),

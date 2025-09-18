@@ -1376,6 +1376,13 @@ incorporates.
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
 
+    -  :config-template:`ChildCollector(Number [, Port])<FEATURE>`
+
+        Sets up a child Collector daemon with the ``Number`` as part of the
+        identity. The optional ``Port`` option sets which port the child
+        Collector listens on. Otherwise communication occurs through the
+        Shared Port Daemon with the ``collector<Number>`` socket.
+
 .. _CommonCloudAttributesConfiguration:
 
     - :config-template:`CommonCloudAttributesAWS<FEATURE>`
