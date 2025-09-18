@@ -299,6 +299,12 @@ test_cases = {
 }
 
 
+# There doesn't appear to any native PyTest support for skipping particular
+# test cases, instead of particular tests.
+if platform.system() == 'Darwin':
+    del test_cases['matching_dirs']
+
+
 @config(params=test_cases)
 def test_case(request):
     return request.param
