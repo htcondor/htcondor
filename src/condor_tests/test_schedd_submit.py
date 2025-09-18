@@ -2,6 +2,7 @@
 
 import os
 import logging
+import platform
 import htcondor2
 
 from ornithology import (
