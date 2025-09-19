@@ -58,14 +58,13 @@ class TestClassAds:
         d["bar"] = c["bar"]
         assert d["bar"] == c["bar"]
 
-        # Some day, we'll be more specific in classad2 with exceptions.
-        with pytest.raises(RuntimeError):
+        with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("foo = 2 + i")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("[ 7, 8, 9 ]")
 
 

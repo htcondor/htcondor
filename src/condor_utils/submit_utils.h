@@ -1010,7 +1010,7 @@ struct SubmitStepFromQArgs {
 		m_hash.optimize();
 	}
 
-	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string errmsg)
+	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string & errmsg)
 	{
 		int rval = m_hash.load_inline_q_foreach_items(ms_inline_items, m_fea, errmsg);
 		if (rval == 1) { // items are external

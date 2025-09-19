@@ -630,7 +630,7 @@ _submit_itemdata( PyObject *, PyObject * args ) {
         for( const auto & item : itemdata->items ) {
             std::vector< std::string_view > items;
             itemdata->split_item( item, items, itemdata->vars.size() );
-            formatstr_cat( values, "%s\n", join(items, "\0x1F").c_str() );
+            formatstr_cat( values, "%s\n", join(items, "\x1F").c_str() );
         }
         values.pop_back();
         py_values = PyUnicode_FromString(values.c_str());

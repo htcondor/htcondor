@@ -2,6 +2,7 @@
 
 import os
 import logging
+import platform
 import htcondor2
 
 from ornithology import (
@@ -271,17 +272,17 @@ test_cases = {
     },
     "itemdata_dict": {
         "subtext":  test26_subtext,
-        "expected": "{ClusterID} {ProcID} 0 20 b\n"
-                    "{ClusterID} {ProcID} 1 20 b\n"
-                    "{ClusterID} {ProcID} 0 30 c\n"
-                    "{ClusterID} {ProcID} 1 30 c\n"
-                    "{ClusterID} {ProcID} 0 40 d\n"
-                    "{ClusterID} {ProcID} 1 40 d\n",
+        "expected": "{ClusterID} {ProcID} 0 20 x - z b\n"
+                    "{ClusterID} {ProcID} 1 20 x - z b\n"
+                    "{ClusterID} {ProcID} 0 30 y - z c\n"
+                    "{ClusterID} {ProcID} 1 30 y - z c\n"
+                    "{ClusterID} {ProcID} 0 40 z - z d\n"
+                    "{ClusterID} {ProcID} 1 40 z - z d\n",
         "count":    2,
         "itemdata": iter([
-            {"y": "20", "x": "b"},
-            {"y": "30", "x": "c"},
-            {"y": "40", "x": "d"},
+            {"y": "20 x - z", "x": "b"},
+            {"y": "30 y - z", "x": "c"},
+            {"y": "40 z - z", "x": "d"},
         ]),
     },
     "itemdata_priority": {
@@ -297,6 +298,12 @@ test_cases = {
         "count":    2,
     },
 }
+
+
+# There doesn't appear to any native PyTest support for skipping particular
+# test cases, instead of particular tests.
+if platform.system() == 'Darwin':
+    del test_cases['matching_dirs']
 
 
 @config(params=test_cases)
@@ -357,31 +364,34 @@ def results(test_case, the_condor, test_dir, the_test_dir):
     if queue is not None:
         submit.setQArgs(queue)
 
+    r = None
     with the_condor.use_config():
         schedd = htcondor2.Schedd()
         # We can't just pass None, because Schedd.submit() has defaults.
         if count is None and itemdata is None:
-            schedd.submit(submit)
+            r = schedd.submit(submit)
         elif count is None and itemdata is not None:
-            schedd.submit(submit, itemdata=itemdata)
+            r = schedd.submit(submit, itemdata=itemdata)
         elif count is not None and itemdata is None:
-            schedd.submit(submit, count=count)
+            r = schedd.submit(submit, count=count)
         else:
-            schedd.submit(submit, count=count, itemdata=itemdata)
+            r = schedd.submit(submit, count=count, itemdata=itemdata)
+    clusterID = r.cluster()
 
-    ads = schedd.query(projection=['ClusterID', 'ProcID', 'args'])
+    ads = schedd.query(
+        projection=['ClusterID', 'ProcID', 'args'],
+        constraint=f'ClusterID == {clusterID}',
+    )
     ads.sort(key=lambda ad: f"{ad['ClusterID']}.{ad['ProcID']}")
     actual = "\n".join([ad['args'] for ad in ads]) + "\n"
     jobIDs = [{ "ClusterID": ad['ClusterId'], "ProcID": ad['ProcID'] } for ad in ads]
-
-    schedd.act(htcondor2.JobAction.Remove, 'true')
 
     return actual, jobIDs
 
 
 class TestScheddSubmit:
 
-    def test_condor_submit(self, results, expected):
+    def test_schedd_submit(self, results, expected):
         (actual, jobIDs) = results
 
         i = 0
@@ -399,4 +409,3 @@ class TestScheddSubmit:
     # FIXME: We should also test that submit object does NOT have the
     # queue argument variables in it after a submission (original text,
     # setQArgs(), and both kinds of itemdata).
-
