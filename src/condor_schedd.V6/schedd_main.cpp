@@ -62,7 +62,6 @@ void usage(char* name)
 	exit( 1 );
 }
 
-
 void
 main_init(int argc, char* argv[])
 {
@@ -88,6 +87,13 @@ main_init(int argc, char* argv[])
 			usage(argv[0]);
 		}
 	}
+
+	// add the Credd address to our address file info and drop an address file
+	// we do this early to indicate we are alive, but we will do it again later
+	// to have a better chance of picking up the address of a local CREDD.
+	// TODO: the schedd should know if a credd is expected or required and
+	//   wait for it to write an address file.
+	locate_and_advertise_local_credd(true);
 
 #ifdef UNIX
 	ClassAdLogPluginManager::Load();
@@ -147,6 +153,9 @@ main_init(int argc, char* argv[])
 	InitJobQueue(job_queue_name.c_str(),max_historical_logs);
 	PostInitJobQueue();
 
+	// refresh the credd address in our own address file if it changed
+	locate_and_advertise_local_credd(false);
+
 		// Initialize the dedicated scheduler stuff
 	dedicated_scheduler.initialize();
 
@@ -192,6 +201,11 @@ int
 main( int argc, char **argv )
 {
 	set_mySubSystem( "SCHEDD", true, SUBSYSTEM_TYPE_SCHEDD );
+
+	// disable automatic dropping of the schedd address file during early initialization
+	// The schedd initalization will re-enable the address file and write the first one
+	// after it has had a chance to discover if there is a credd running
+	DC_Disable_Addr_File();
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

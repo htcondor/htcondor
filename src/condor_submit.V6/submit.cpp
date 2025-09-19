@@ -1618,6 +1618,7 @@ int submit_jobs (
 			int cred_result = process_job_credentials(
 				submit_hash,
 				DashDryRun,
+				MySchedd,
 				URL,
 				error_string
 			);
