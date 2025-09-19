@@ -7,9 +7,24 @@
 #include <filesystem>
 #include <ctime>
 #include "JobRecord.h"
-#include "FileSet.h"
 
 namespace fs = std::filesystem;
+
+// TODO: Move/Improve file discovery and tracking code
+
+struct FileSet {
+   std::string historyNameConfig{};     // The prefix/identifier for this set of history files
+   std::string historyDirectoryPath{};  // The directory path where these history files are located
+   std::unordered_map<int, FileInfo> fileMap; // The int here is for FileId
+   std::time_t lastStatusTime{0};
+   long lastFileReadId{-1};
+
+   void Init(const std::string& path) {
+      fs::path p(path);
+      historyNameConfig = p.stem().string();
+      historyDirectoryPath = p.parent_path().string();
+   }
+};
 
 struct ArchiveChange {
     // If a rotation was detected:
