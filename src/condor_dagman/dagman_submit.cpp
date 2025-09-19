@@ -375,13 +375,13 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	SubmitHash submitHash;
 	SubmitStepFromQArgs ssi(submitHash);
 
-	DCSchedd schedd;
+	DCSchedd schedd; schedd.locate(); // TODO: use locate_local() ?
 	CondorError errstack; // errstack for general qmgr commands
 	AbstractScheddQ* MyQ = nullptr;
 
 	submitHash.init(JSM_DAGMAN);
 	submitHash.setDisableFileChecks(true);
-	submitHash.setScheddVersion(CondorVersion());
+	submitHash.setScheddVersion(CondorVersion()); // TODO: use schedd.version() ?
 	submitHash.init_base_ad(time(nullptr), owner);
 
 	auto vars = init_vars(dm, *node);
@@ -440,7 +440,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
 	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
-		cred_result = process_job_credentials(submitHash, 0, URL, errmsg);
+		cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
 		if (cred_result != 0) {
 			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
 			rval = -1;

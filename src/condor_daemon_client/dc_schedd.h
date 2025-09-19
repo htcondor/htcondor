@@ -92,6 +92,9 @@ public:
 		*/
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
+		// return the address of the CREDD associated with this schedd
+		// do not call this method until after locate() or equivalent.
+	bool getCreddAddress(std::string & address);
 
 		/** Hold all jobs that match the given constraint.
 			Set ATTR_HOLD_REASON to the given reason.
