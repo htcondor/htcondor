@@ -330,7 +330,7 @@ SYSTEM_TABLE = {
 
     "spark": System( **{
         "pretty_name":      "Spark",
-        "host_name":        "hpclogin3.chtc.wisc.edu",
+        "host_name":        "spark-login.chtc.wisc.edu",
         "default_queue":    "shared",
         "batch_system":     "SLURM",
         "executable":       "spark.sh",
@@ -339,24 +339,24 @@ SYSTEM_TABLE = {
 
         "queues": {
             "shared": {
-                "max_duration":         7* 24 * 60 * 60,
+                "max_duration":         7 * 24 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       64,             # or 128
-                "ram_per_node":         512,
+                "ram_per_node":         512 * 1024,
                 "max_nodes_per_job":    2,              # "max 320 cores/job"
             },
             "int": {
                 "max_duration":         4 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
-                "cores_per_node":       64,             # or 128
-                "ram_per_node":         512,            # "max 64 per job"
-                "max_nodes_per_job":    1,              # "max 16 cores/job"
+                "cores_per_node":       16,             # "max 16 cores/job"
+                "ram_per_node":         512 * 1024,     # "max 64 per job"
+                "max_nodes_per_job":    1,
             },
             "pre": {
                 "max_duration":         24 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       64,             # or 128
-                "ram_per_node":         512,
+                "ram_per_node":         512 * 1024,
                 "max_nodes_per_job":    2,              # "max 320 cores/job"
             },
         },
