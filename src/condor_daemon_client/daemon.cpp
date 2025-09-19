@@ -1872,7 +1872,7 @@ Daemon::readAddressFile( const char* subsys )
 	// how to interpret the first lines of the address file when it is
 	// not all key value pairs.
 	std::string addr;
-	static const struct _meaning { const char * attr; std::string & val; } line_meaning[] = {
+	struct _meaning { const char * attr; std::string & val; } line_meaning[] = {
 		{ ATTR_MY_ADDRESS, addr },
 		{ ATTR_VERSION, _version },
 		{ ATTR_PLATFORM, _platform },
