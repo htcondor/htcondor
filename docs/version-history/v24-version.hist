@@ -2,6 +2,10 @@
 
 *** 24.0.14 bugs
 
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
+
 - Fixed a bug where space and comma would be included in the list of
   separators for itemdata even if the itemdata had been supplied with
   the ASCII "unit separator".  This would cause itemdata entries containing
