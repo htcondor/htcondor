@@ -1,0 +1,52 @@
+myList -user aanand37 -clusterId 4152901
+20 ms
+
+
+myList -user rrmoreno -clusterId 4155130
+10 ms
+
+
+myList -user mherrmann4 -clusterId 4155345
+15416 ms
+
+
+myList -user dolfi -clusterId 4155370
+1734 ms
+
+
+myList -user hwhitson -clusterId 4155859
+1154 ms
+
+
+myList -user peng69 -clusterId 4112165
+33 ms
+
+
+myList -user nwcollier -clusterId 4108118
+73 ms
+
+
+myList -user jdregney -clusterId 4155508
+9 ms
+
+
+myList -user appillai -clusterId 4102683
+8107 ms
+
+
+myList -user jlblank -clusterId 4103337
+5679 ms
+
+
+myList -user ruotti -clusterId 4027421
+7327 ms
+
+
+myList -user mchen277 -clusterId 4103344
+4176 ms
+
+
+myList -user jgasick -clusterId 4154149
+3169 ms
+
+

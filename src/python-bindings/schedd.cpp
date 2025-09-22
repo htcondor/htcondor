@@ -1545,8 +1545,8 @@ struct Schedd {
         }
         session_id = command_pair->second;
 
-        auto itr = (SecMan::session_cache)->find(session_id);
-        if (itr == (SecMan::session_cache)->end())
+        auto itr = (SecMan::session_cache).find(session_id);
+        if (itr == (SecMan::session_cache).end())
         {
             return false;
         }
@@ -1736,7 +1736,7 @@ struct Schedd {
         ClassAd * result_ad = nullptr;
         {
             condor::ModuleLock ml;
-            result_ad = schedd.addOrEnableUsers(&userads[0], num_users, add_if_not, &errstack);
+            result_ad = schedd.addOrEnableUserRecs(&userads[0], num_users, add_if_not, false, &errstack);
         }
         if ( ! result_ad) {
             std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
@@ -4457,7 +4457,7 @@ void export_schedd()
             :param int match: A limit on the number of jobs to include; the
                 default (``-1``) indicates to return all matching jobs.
                 The schedd may return fewer than ``match`` jobs because of its
-                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 2,000,000,000).
             :param since: A cluster ID, job ID, or expression.  If a cluster ID
                 (passed as an `int`) or job ID (passed a `str` in the format
                 ``{clusterID}.{procID}``), only jobs recorded in the history
@@ -4498,7 +4498,7 @@ void export_schedd()
             :param int match: A limit on the number of jobs to include; the
                 default (``-1``) indicates to return all matching jobs.
                 The schedd may return fewer than ``match`` jobs because of its
-                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 2,000,000,000).
             :param since: A cluster ID, job ID, or expression.  If a cluster ID
                 (passed as an `int`) or job ID (passed a `str` in the format
                 ``{clusterID}.{procID}``), only jobs recorded in the history

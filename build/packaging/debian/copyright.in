@@ -41,8 +41,6 @@ Files:  build/cmake/CondorConfigure.cmake
         build/cmake/macros/FindMultiple.cmake
         build/cmake/macros/SystemSpecificInformations.cmake
         CMakeLists.txt
-        externals/bundles/boost/1.66.0/CMakeLists.txt
-        externals/bundles/boost/1.68.0/CMakeLists.txt
         externals/bundles/voms/2.1.0/CMakeLists.txt
         src/ccb/CMakeLists.txt
         src/classad/classadCache.cpp

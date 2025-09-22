@@ -14,17 +14,10 @@ Build-Depends: cmake (>= 3.16),
 #else
                debhelper-compat (= 13),
 #endif
-#if ! defined(PPC64LE)
+#if !defined(PPC64LE)
                default-jdk,
 #endif
                dh-python,
-               libboost-filesystem-dev,
-               libboost-program-options-dev,
-               libboost-python-dev,
-               libboost-regex-dev,
-               libboost-system-dev,
-               libboost-test-dev,
-               libboost-thread-dev,
                libcgroup-dev,
                libcurl4-openssl-dev,
                libkrb5-dev,
@@ -39,7 +32,6 @@ Build-Depends: cmake (>= 3.16),
                libsystemd-dev,
                libvirt-dev,
                libx11-dev,
-               libxml2-dev,
                libxss-dev,
                python3-dev,
                python3-setuptools,
@@ -80,8 +72,8 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.15.1),
-         pelican-osdf-compat (>= 7.15.1),
+         pelican (>= 7.18.1),
+         pelican-osdf-compat (>= 7.18.1),
 #endif
          libjs-bootstrap,
          libjs-jquery,

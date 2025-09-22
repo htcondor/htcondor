@@ -50,7 +50,12 @@ UniShadow::~UniShadow() {
 	if ( producer_keep_alive != -1 ) {
 		daemonCore->Cancel_Timer( producer_keep_alive );
 	}
-	if ( cfLock ) delete cfLock;
+	// This makes me sad, but the SingleProviderSyndicate can't be
+	// default-constructed.  FIXME: could we get value semantics
+	// with a different kind of data structure?
+	for( const auto & [cifName, sps] : cfLocks ) {
+	    delete sps;
+	}
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 
@@ -728,6 +733,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 				}
 			}
 		}
+
+		// Increment (or set) number of job input transfer starts
+		int num_input_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers)) {
+			num_input_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers);
 	} else if( (!tq) && (!ti) && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
@@ -747,6 +759,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
 			te.setQueueingDelay( now - then );
 		}
+
+		// Increment (or set) number of job output transfer starts
+		int num_output_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers)) {
+			num_output_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers);
 	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );

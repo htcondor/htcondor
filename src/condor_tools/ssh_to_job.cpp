@@ -621,6 +621,16 @@ bool SSHToJob::execute_ssh()
 		temp_dir = "/tmp";
 	}
 
+	// We put a unix domain socket under the temp dir, and there is
+	// a limit on the path length of 104 characters. We add about 30
+	// characters of path after the temp dir, but conservatively
+	// change the temp dir from the requested one to /tmp if we
+	// will be close to exceeding our limit.
+
+	if (strlen(temp_dir) > 50) {
+		temp_dir = "/tmp";
+	}
+
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
 		unsigned int r = get_random_uint_insecure();

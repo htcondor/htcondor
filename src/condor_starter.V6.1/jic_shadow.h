@@ -265,7 +265,7 @@ private:
 
     void _remove_files_from_output();
 
-	void updateShadowWithPluginResults( const char * which );
+	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
 
 	void recordSandboxContents( const char * filename, bool add_to_output = true );
 
@@ -480,6 +480,8 @@ private:
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
+	void doneWithInputTransfer();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -581,6 +583,10 @@ private:
 	bool transferredFailureFiles = false;
 
 	std::map< std::string, std::filesystem::path > cifNameToLocationMap;
+
+    // Because of stupidity in how the file transfer object handles
+    // notifications, we can get a completion notice more than once.
+    bool first_completion_notice = true;
 };
 
 

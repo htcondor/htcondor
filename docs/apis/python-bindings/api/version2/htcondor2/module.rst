@@ -5,6 +5,8 @@
 
 .. autofunction:: enable_debug
 
+.. autofunction:: disable_debug
+
 .. autofunction:: enable_log
 
 .. autofunction:: log
@@ -15,6 +17,8 @@
    configuration.  Changes are reflected in the current process's memory
    immediately, but are never written to disk.  To change another process's
    configuration (e.g., a running daemon's), use :class:`RemoteParam`.
+
+.. autofunction:: ping
 
 .. autofunction:: platform
 

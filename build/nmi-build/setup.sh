@@ -22,6 +22,16 @@ VERSION_CODENAME='none'
 echo "Building on $NAME $VERSION"
 VERSION_ID=${VERSION_ID%%.*}
 ARCH=$(arch)
+REPO_ARCH='noarch'
+
+if [ $ID = 'almalinux' ]; then
+    if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+        ARCH='x86_64_v2'
+        REPO_ARCH='x86_64_v2'
+        echo '%__cflags_arch_x86_64_level -v2' > /etc/rpm/macros.gcc-arch-level-v2
+    fi
+fi
+
 echo "ID=$ID VERSION_ID=$VERSION_ID VERSION_CODENAME=$VERSION_CODENAME ARCH=$ARCH"
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
@@ -30,7 +40,7 @@ else
     SUDO_GROUP='wheel'
 fi
 
-if [ $ID = debian ] || [ $ID = 'ubuntu' ]; then
+if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     apt-get update
     export DEBIAN_FRONTEND='noninteractive'
     INSTALL='apt-get install --yes'
@@ -88,22 +98,27 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
     fi
 fi
 
+# Setup RPM based repositories (include alpha repositories)
 if [ $ID = 'amzn' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 if [ $ID = 'fedora' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.noarch.rpm"
+    zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
     done
@@ -115,21 +130,26 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     mkdir -p /etc/apt/keyrings
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
     curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/$ID/htcondor-${REPO_VERSION}-${VERSION_CODENAME}.list" -o /etc/apt/sources.list.d/htcondor.list
+    # Include alpha repositories
+    sed -i "/-alpha/s/^#//" /etc/apt/sources.list.d/htcondor.list
     apt-get update
 fi
 
 # Use the testing repositories for unreleased software
+# Debian/Ubuntu, select on codename
 if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt-get update
 fi
-if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ]; then
+# Enterprise Linux, select on version
+if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
     # ] ] Help out vim syntax highlighting
 fi
+# SUSE is special
 if [ $ID = 'future-opensuse-leap' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
@@ -185,13 +205,19 @@ else
     $INSTALL ninja-build
 fi
 
+exists() {
+    [ -e "$1" ]
+}
+
 # Make the gcc-toolset compiler the default on AlmaLinux
 if [ $ID = 'almalinux' ]; then
-    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
-    # shellcheck disable=SC2016 # we want this expanded at runtime
-    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
-    # shellcheck disable=SC2016 # we want this expanded at runtime
-    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
+    if exists /opt/rh/gcc-toolset-*/enable; then
+        echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+        # shellcheck disable=SC2016 # we want this expanded at runtime
+        echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+        # shellcheck disable=SC2016 # we want this expanded at runtime
+        echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
+    fi
 fi
 
 # Container users can sudo
@@ -199,7 +225,7 @@ echo "%$SUDO_GROUP ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$SUDO_GROUP
 
 # Install HTCondor to build and test BaTLab style
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    $INSTALL htcondor libnss-myhostname openssh-server
+    $INSTALL condor libnss-myhostname openssh-server
     # Ensure that gethostbyaddr() returns our hostname
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
@@ -224,11 +250,16 @@ fi
 # Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    if [ $VERSION_CODENAME = 'trixie' ]; then
+        TRIXIE='-trixie+'
+    else
+        TRIXIE=''
+    fi
     $INSTALL wget
-    APPTAINER_VERSION=1.4.0
-    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
-    $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
-    rm ./apptainer_${APPTAINER_VERSION}_amd64.deb
+    APPTAINER_VERSION=1.4.2
+    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -245,17 +276,19 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 pelican pelican-osdf-compat
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
+    elif [ $VERSION_CODENAME = 'trixie' ]; then
+        apt-get download libscitokens0t64 libvomsapi1t64
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt-get download libboost-python1.71.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'noble' ]; then
-        apt-get download libboost-python1.83.0 libvomsapi1t64
+        apt-get download libscitokens0t64 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
@@ -268,17 +301,11 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
-    if [ $ID = 'centos' ] && [ $VERSION_ID -eq 7 ]; then
-        yumdownloader --downloadonly --destdir="$externals_dir" \
-            boost169-python3 python36-chardet python36-idna python36-pysocks python36-requests python36-six python36-urllib3
-    else
-        yumdownloader --downloadonly --destdir="$externals_dir" boost-python3
-    fi
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 pelican pelican-osdf-compat
 fi
 
 # Clean up package caches
@@ -304,7 +331,7 @@ if [ $ID != 'amzn' ]; then
         fi
         curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
             bash -s - "$externals_dir/apptainer"
-        rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+        rm -r "$externals_dir/apptainer/$(arch)/libexec/apptainer/cni"
         # Move apptainer out of the default path
         mv "$externals_dir/apptainer/bin" "$externals_dir/apptainer/libexec"
     fi

@@ -187,44 +187,32 @@ Node::SetStatus(status_t newStatus) {
 //---------------------------------------------------------------------------
 bool
 Node::GetProcIsIdle(int proc) {
-	if (GetNoop()) { proc = 0; }
-
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
-	return (_gotEvents[proc] & IDLE_MASK) != 0;
+	CheckTrackingJob(proc);
+	return (jobs[proc].events & IDLE_MASK) != 0;
 }
 
 //---------------------------------------------------------------------------
 void
 Node::SetProcIsIdle(int proc, bool isIdle) {
-	if (GetNoop()) { proc = 0; }
-
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
+	CheckTrackingJob(proc);
 
 	if (isIdle) {
-		_gotEvents[proc] |= IDLE_MASK;
+		jobs[proc].events |= IDLE_MASK;
 	} else {
-		_gotEvents[proc] &= ~IDLE_MASK;
+		jobs[proc].events &= ~IDLE_MASK;
 	}
 }
 
 //---------------------------------------------------------------------------
 void
 Node::SetProcEvent(int proc, int event) {
-	if (GetNoop()) { proc = 0; }
-
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-			_gotEvents.resize(proc + 1, 0);
-	}
+	CheckTrackingJob(proc);
 
-	_gotEvents[proc] |= event;
+	jobs[proc].events |= event;
 }
 
 //---------------------------------------------------------------------------
@@ -238,7 +226,7 @@ Node::CheckBatchFailed(int tolerance) {
 void
 Node::PrintProcIsIdle() {
 	int proc = 0;
-	for (auto state : _gotEvents) {
+	for (auto [state, _] : jobs) {
 		debug_printf(DEBUG_QUIET, "Node(%s)::_isIdle[%d]: %d\n",
 		             GetNodeName(), proc++, (state & IDLE_MASK) != 0);
 	}
@@ -859,12 +847,10 @@ bool
 Node::Hold(int proc) {
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
+	CheckTrackingJob(proc);
 
-	if ((_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
-		_gotEvents[proc] |= HOLD_MASK;
+	if ((jobs[proc].events & HOLD_MASK) != HOLD_MASK) {
+		jobs[proc].events |= HOLD_MASK;
 
 		++_jobProcsOnHold;
 		++_timesHeld;
@@ -882,7 +868,7 @@ bool
 Node::Release(int proc, bool warn) {
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size()) || (_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
+	if (proc >= static_cast<int>(jobs.size()) || (jobs[proc].events & HOLD_MASK) != HOLD_MASK) {
 		if (warn) {
 			dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d is not on hold\n",
 			        GetNodeName(), GetCluster(), GetProc());
@@ -890,7 +876,7 @@ Node::Release(int proc, bool warn) {
 		return false; // We never marked this as being on hold
 	}
 
-	_gotEvents[proc] &= ~HOLD_MASK;
+	jobs[proc].events &= ~HOLD_MASK;
 	--_jobProcsOnHold;
 	return true;
 }
@@ -904,16 +890,16 @@ void
 Node::Cleanup()
 {
 	int proc = 0;
-	for (auto state : _gotEvents) {
+	for (auto [state, _] : jobs) {
 		if (state != (EXEC_MASK | ABORT_TERM_MASK)) {
-			debug_printf(DEBUG_NORMAL, "Warning for node %s: unexpected _gotEvents value for proc %d: %d!\n",
+			debug_printf(DEBUG_NORMAL, "Warning for node %s: unexpected job event value for proc %d: %d!\n",
 			             GetNodeName(), proc, (int)state);
 			check_warning_strictness(DAG_STRICT_2);
 		}
 		++ proc;
 	}
 
-	_gotEvents.clear();
+	jobs.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -930,13 +916,13 @@ Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	int cluster = GetCluster();
 	const char* nodeName = GetNodeName();
 
-	if (_gotEvents.size() == 0) {
+	if (jobs.size() == 0) {
 		debug_printf(DEBUG_NORMAL, "ERROR: Node %s is internally in submitted state with no recorded job events!\n",
 		             nodeName);
 		return false;
 	}
 
-	for (auto& state : _gotEvents) {
+	for (auto& [state, _] : jobs) {
 		if (queuedJobs.contains(proc)) {
 			if (state & ABORT_TERM_MASK) {
 				debug_printf(DEBUG_NORMAL,

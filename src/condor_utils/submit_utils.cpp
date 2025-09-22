@@ -3356,9 +3356,12 @@ int SubmitHash::SetNotification()
 	else if( strcasecmp(how, "ERROR") == 0 ) {
 		notification = NOTIFY_ERROR;
 	} 
+	else if( strcasecmp(how, "START") == 0 ) {
+		notification = NOTIFY_START;
+	} 
 	else {
 		push_error(stderr, "Notification must be 'Never', "
-				 "'Always', 'Complete', or 'Error'\n" );
+				 "'Always', 'Complete', 'Start', or 'Error'\n" );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3535,7 +3538,7 @@ int SubmitHash::SetArguments()
 	bool args_success = true;
 	std::string error_msg;
 
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
 		std::string value;
@@ -3908,6 +3911,262 @@ int SubmitHash::SetJobRetries()
 	return 0;
 }
 
+// parse a string which can contain a sequence of numbers with units
+// and can end with a number + unit or an expression.
+// return is a vector of intermediate numbers in the sequence, and the final value
+// stored in the given ad as attr.
+//
+static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, ConstraintHolder & last, int scale)
+{
+	int64_t number = 0;
+	char unit = 0;
+	const char * endp = nullptr;
+	const char * p = line;
+	// loop parsing the numbers in the sequence
+	while (parse_int64_bytes(p, number, scale, &unit, ",", &endp)) {
+		seq.push_back(number);
+		p = endp;
+		while (isspace(*p)) ++p;
+		if (*p == ',') {
+			++p;
+			continue;
+		}
+		break;
+	}
+	while (isspace(*p)) ++p;
+	// if there is more after the last number, parse it as an expression
+	if (*p) {
+		if ( ! last.parse(p)) {
+			last.set(strdup(p)); // so we can report the parse error on the correct substring
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char * line, const char * incr /*=nullptr*/)
+{
+	ClassAd tmp;
+	std::string set_attr_body;
+	std::vector<int64_t> seq;
+	ConstraintHolder last;
+	if (line && 0 != parse_expr_sequence(line, seq, last, scale)) {
+		if ( ! last.empty()) {
+			push_error(stderr, "%s=%s is invalid. must be an expression or number\n", attr, last.c_str());
+		} else {
+			// we don't expect to get here unless new error returns are added to parse_expr_sequence
+			push_error(stderr, "could not parse %s\n", line);
+		}
+		ABORT_AND_RETURN(1);
+	}
+
+	// if there is a sequence, make sure that is an increasing sequence
+	if (seq.size() > 1) {
+		int64_t v1 = 0;
+		for (auto v2 : seq) {
+			if (v2 <= v1) {
+				push_error(stderr, "%s must have an increasing sequence of values, but %lld is not greater than %lld\n",
+					attr, (long long)v2, (long long)v1); // long long cast needed by gcc..
+				ABORT_AND_RETURN(1);
+			}
+			v1 = v2;
+		}
+	}
+
+	// set the max/last value into the ad.  it is allowed to be an expression
+	bool last_is_expr = false;
+	if ( ! last.empty()) {
+	#if 0 // do we need a self-ref check for some cases?
+		tmp.Assign(attr, 0);
+		classad::References refs;
+		GetExprReferences(last.c_str(), tmp, &refs, nullptr) ;
+		if (refs.count(attr)) {
+			push_error(stderr, "%s=%s is invalid. self reference is not allowed\n", attr, last.c_str());
+			ABORT_AND_RETURN(1);
+		}
+	#endif
+
+		tmp.Insert(attr, last.detach());
+		last_is_expr = true;
+	} else if ( ! seq.empty()) {
+		tmp.Assign(attr, seq.back());
+		seq.pop_back();
+	} else if ( ! incr) {
+		// no sequence, no max, no increment, nothing to do.
+		return 0;
+	}
+
+	// At this point, if there is only a max/last value, there will be no sequence
+	// if the sequence has only initial and final elements, then seq will be empty.
+	// So if there is a sequence, we have to use a strategy of iterating over the sequence
+	if ( ! seq.empty()) {
+		std::string seqlist("{");
+		for (auto num : seq) {
+			seqlist += std::to_string(num);
+			seqlist += ",";
+		}
+		seqlist += ExprTreeToString(tmp.Lookup(attr));
+		seqlist += "}";
+
+		std::string retry_attr = std::string("Retry") + attr;
+		AssignJobExpr(retry_attr.c_str(), seqlist.c_str());
+		std::string index_attr = retry_attr + "Index";
+		//AssignJobVal(index_attr.c_str(), 0);
+
+		// submit sets job[RetryRequestMemory] = {a, b, last}
+		// EVALSET RequestMemory RetryRequestMemory[RetryRequestMemoryIndex?:0]
+		// EVALSET RetryRequestMemoryIndex MIN({size(RetryRequestMemory)-1, (RetryRequestMemoryIndex?:0)+1})
+
+		formatstr(set_attr_body, "EVALSET %s %s[%s?:0]\x1e", attr, retry_attr.c_str(), index_attr.c_str());
+		formatstr_cat(set_attr_body, "EVALSET %s MIN({size(%s)-1, (%s?:0)+1})",
+			index_attr.c_str(), retry_attr.c_str(), index_attr.c_str());
+
+	} else if (incr) {
+		// if no sequence, but there is an increment, we use a strategy of
+		// applying the increment on each retry with a cap of the max value
+		// the increment may either be a constant, in which case we make Request* + <incr>
+		// or it may be an expression that already references Requst*
+		// TODO: handle the case where it is an expression that defines a constant?
+		int64_t inclit;
+		std::string inc_expr;
+		if (parse_int64_bytes(incr, inclit, scale)) {
+			if (inclit <= 0) {
+				push_error(stderr, "%s retry increment must be a positive number or an expression that references %s\n", attr, attr);
+				ABORT_AND_RETURN(1);
+			}
+			formatstr(inc_expr, "%s + %lld", attr, (long long)inclit);
+			tmp.AssignExpr("Increment", inc_expr.c_str());
+		} else {
+			// If the increment is not a constant, it can be an expression that references Request*
+			classad::References refs;
+			bool has_max = tmp.Lookup(attr);
+			if ( ! has_max) tmp.Assign(attr, 0); // inject max for use by GetExprReferences
+			if ( ! GetExprReferences(incr, tmp, &refs, nullptr) || ! refs.count(attr)) {
+				push_error(stderr, "%s retry increment must be a positive number or an expression that references %s\n", attr, attr);
+				ABORT_AND_RETURN(1);
+			}
+			if ( ! has_max) tmp.Delete(attr); // remove attr to avoid confusing the code below.
+			tmp.AssignExpr("Increment", incr);
+		}
+
+		// If we were invoked with an increment, then max was passed in as the line
+		ExprTree * maxval = tmp.Lookup(attr);
+		if (maxval) {
+			std::string max_attr = std::string("Max") + attr;
+			std::string next_attr = std::string("Next") + attr;
+			AssignJobExpr(max_attr.c_str(), ExprTreeToString(maxval));
+			AssignJobExpr(next_attr.c_str(), ExprTreeToString(tmp.Lookup("Increment")));
+
+			// NextRequestMemory is a growing expression that references RequestMemory
+			// so we evalset it with an upper limit
+			//
+			// submit sets job[MaxRequestMemory] = <maxval>
+			// submit sets job[NextRequestMemory] = <increment-expr>
+			//   EVALSET RequestMemory MIN({NextRequestMemory, MaxRequestMemory});
+			formatstr(set_attr_body, "EVALSET %s MIN({Next%s, Max%s})", attr, attr, attr);
+
+		} else {
+			// got an increment, but no max. so we just evaluate the increment against
+			// the initial value of Request* to get the value to set when the transform triggers
+			long long ival;
+			if (job->LookupInt(attr, ival)) { tmp.Assign(attr, ival); }
+			if ( ! tmp.LookupInteger("Increment", ival)) {
+				push_error(stderr, "%s retry increment (%s) must evaluate to an integer at submit time\n", attr, incr);
+				ABORT_AND_RETURN(1);
+			}
+
+			// no maximum, so we just SET the incremented value
+			formatstr(set_attr_body, "SET %s ", attr); set_attr_body += std::to_string(ival);
+		}
+
+	} else {
+		// SET RequestMemory 1000
+		// or
+		// EVALSET RequestMemory <expr> (for instance: MAX({RequestMemory, MemoryUsage}) * 2)
+		const char * verb = last_is_expr ? "EVALSET" : "SET";
+		formatstr(set_attr_body, "%s %s %s", verb , attr, ExprTreeToString(tmp.Lookup(attr)));
+	}
+
+	std::string evict_req_param = std::string("ON_EVICT_CHECK_") + attr + "_REQUIREMENTS";
+	auto_free_ptr evict_require(param(evict_req_param.c_str()));
+
+	// build the transform body
+	std::string lines("REQUIREMENTS ");
+	if (evict_require) {
+		lines += evict_require.ptr();
+	} else if (YourStringNoCase(ATTR_REQUEST_MEMORY) == attr) {
+		lines += "(VacateReasonCode==21 || VacateReasonCode == 34) && VacateReasonSubCode == 102";
+	} else if (YourStringNoCase(ATTR_REQUEST_DISK) == attr) {
+		lines += "(VacateReasonCode==21 || VacateReasonCode == 34) && VacateReasonSubCode == 104";
+	} else {
+		lines.clear();
+	}
+
+	if ( ! lines.empty()) lines += "\x1e";
+	lines += set_attr_body;
+	//lines += "\x1e";
+
+	// write the submit transform body, we put this only into the cluster ad
+	// since it can never vary by proc. NextRequestMemory and MaxRequestMemory can vary by proc
+	// but the transform body never will.
+	if ( ! clusterAd) {
+		std::string bodyattr = std::string(ATTR_TRANSFORM_BODY_PREFIX) + attr;
+		AssignJobString(bodyattr.c_str(), lines.c_str());
+	}
+
+	std::string evck_list;
+	job->LookupString(ATTR_TRANSFORM_ON_EVICT, evck_list);
+	if ( ! is_attr_in_attr_list(attr, evck_list.c_str())) {
+		if ( ! evck_list.empty()) evck_list += " ";
+		evck_list += attr;
+		AssignJobString(ATTR_TRANSFORM_ON_EVICT, evck_list.c_str());
+	}
+
+	return 0;
+}
+
+// like PERIODIC, but trigger is job being Vacated rather than time
+//
+int SubmitHash::SetOnEvictExpressions()
+{
+	RETURN_IF_ABORT();
+
+	auto_free_ptr evck_defined(submit_param(SUBMIT_KEY_OnEvictChecks, ATTR_TRANSFORM_ON_EVICT));
+	if (evck_defined) {
+		char * evck = evck_defined.ptr();
+
+		std::string evck_list;
+		std::vector<std::string> body_list;
+
+		for (auto & tag : StringTokenIterator(evck)) {
+			std::string bodyparam = SUBMIT_KEY_TransformBodyPrefix + tag;
+			std::string bodyattr = ATTR_TRANSFORM_BODY_PREFIX + tag;
+			const char * body = lookup(bodyparam.c_str());
+			if ( ! body) body = lookup(bodyattr.c_str());
+			if (body) {
+				// got a body, so add the transform nametag to the list of tags
+				if ( ! evck_list.empty()) evck_list += " ";
+				evck_list += tag;
+
+				auto & lines = body_list.emplace_back();
+				for (std::string line : StringTokenIterator(body, "\n")) {
+					expand_defined_macros(line, SubmitMacroSet, mctx);
+					if (line.empty() || line.starts_with('#')) continue;
+					if ( ! lines.empty()) lines += "\x1e"; // use 0x1e instead of \n for job queue
+					lines += line;
+				}
+				// TODO: parse and validate the transform here, extract requirements?
+
+				AssignJobString(bodyattr.c_str(), lines.c_str());
+			}
+		}
+
+		AssignJobString(ATTR_TRANSFORM_ON_EVICT, evck_list.c_str());
+	}
+
+
+	return 0;
+}
 
 /** Given a universe in string form, return the number
 
@@ -4048,7 +4307,7 @@ int SubmitHash::SetExecutable()
 	}
 
 	char *shell = submit_param(SUBMIT_KEY_Shell);
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			return 0;
@@ -4474,6 +4733,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_WantJobNetworking, ATTR_WANT_JOB_NETWORKING, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_StarterDebug, ATTR_JOB_STARTER_DEBUG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_StarterLog, ATTR_JOB_STARTER_LOG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes | SimpleSubmitKeyword::f_logfile},
+	// FIXME: Strictly speaking, only the submit utils need to know about this
+	// bool.  Can we make its value available without adding to the job ad?
+	{SUBMIT_KEY_ContainerIsCommon, ATTR_CONTAINER_IS_COMMON, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -4756,6 +5018,13 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_MaxRetries, ATTR_JOB_MAX_RETRIES, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_retries },
 	{SUBMIT_KEY_SuccessExitCode, ATTR_JOB_SUCCESS_EXIT_CODE, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_retries },
 	{SUBMIT_KEY_RetryUntil, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
+	// invoke SetOnEvictExpressions
+	{SUBMIT_KEY_OnEvictChecks, ATTR_TRANSFORM_ON_EVICT, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
+	{SUBMIT_KEY_RetryRequestMemory, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
+// comment out for now so make digest will never prune this pair of submit commands.
+// TODO: have a mechanism so that late mat can handle the case where only one of these is pruned from the digest
+	{SUBMIT_KEY_RetryRequestMemoryMax, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
+	{SUBMIT_KEY_RetryRequestMemoryIncrease, NULL, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_retries },
 	// invoke SetKillSig
 	{SUBMIT_KEY_KillSig, ATTR_KILL_SIG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_killsig },
 	{SUBMIT_KEY_RmKillSig, ATTR_REMOVE_KILL_SIG, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_killsig },
@@ -5018,7 +5287,8 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
 		char unit = 0;
-		if (parse_int64_bytes(mem, req_memory_mb, 1024 * 1024, &unit)) {
+		const char * endp = nullptr;
+		if (parse_int64_bytes(mem, req_memory_mb, 1024 * 1024, &unit, ",", &endp)) {
 			auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
 			if (missingUnitsIs && ! unit) {
 				// If all characters in string are numeric (with no unit suffix)
@@ -5029,6 +5299,25 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
 			}
 			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
+
+			// check for a second memory value for when request_meory = a, b
+			if (endp && endp[0] == ',' && endp[1]) {
+				SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, ++endp);
+			} else {
+				// check for retry_request_memory, retry_request_memory_max and retry_request_memory_increase
+				// may either use retry_request_memory=<list> OR retry_request_memory_max=<val> and/or retry_request_memory_increase=<val>
+				auto_free_ptr rrm(submit_param(SUBMIT_KEY_RetryRequestMemory));
+				auto_free_ptr rrmax(submit_param(SUBMIT_KEY_RetryRequestMemoryMax));
+				auto_free_ptr rrmincr(submit_param(SUBMIT_KEY_RetryRequestMemoryIncrease));
+				if (rrm) {
+					if (rrmincr) {
+						push_warning(stderr, "\nWARNING: retry_request_memory_increase will be ignored because retry_request_memory was used");
+					}
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, rrm);
+				} else if (rrmax || rrmincr) {
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, rrmax, rrmincr);
+				}
+			}
 		} else if (YourStringNoCase("undefined") == mem) {
 			// no value of request memory is desired
 		} else {
@@ -5063,7 +5352,8 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 		// and insert it as text into the jobAd.
 		char unit=0;
 		int64_t req_disk_kb = 0;
-		if (parse_int64_bytes(disk, req_disk_kb, 1024, &unit)) {
+		const char * endp = nullptr;
+		if (parse_int64_bytes(disk, req_disk_kb, 1024, &unit, ",", &endp)) {
 			auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
 			if (missingUnitsIs && ! unit) {
 				// If all characters in string are numeric (with no unit suffix)
@@ -5074,6 +5364,11 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 					push_warning(stderr, "\nWARNING: request_disk=%s defaults to kilobytes, should contain a units suffix (i.e K, M, or B)\n", disk.ptr());
 			}
 			AssignJobVal(ATTR_REQUEST_DISK, req_disk_kb);
+
+			// check for a second memory value for when request_meory = a, b
+			if (endp && endp[0] == ',' && endp[1]) {
+				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, 1024, ++endp);
+			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
 			AssignJobExpr(ATTR_REQUEST_DISK, disk);
@@ -6572,9 +6867,28 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image.ptr())  {
-		input_files.emplace_back(container_image.ptr());
-		if (accumulate_size_kb) {
-			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+		bool userRequestedCommonContainer = true;
+		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
+		if(! userRequestedCommonContainer) {
+			input_files.emplace_back(container_image.ptr());
+			if (accumulate_size_kb) {
+				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+			}
+		} else {
+			// FIXME: This does not check to see if the container image varies
+			// per-proc, which it must not for this code to work.
+			AssignJobString( "_x_catalog_condor_container_image", container_image.ptr() );
+
+			std::string xcip;
+			job->LookupString( "_x_common_input_catalogs", xcip );
+			// Don't duplicate entries.  This can't be the right way to do
+			// this; this function may be in the wrong place (unless we want
+			// to allow a different container image per proc).
+			if( xcip.find( "condor_container_image" ) == std::string::npos ) {
+				if(! xcip.empty()) { xcip += ", "; }
+				xcip += "condor_container_image";
+				AssignJobString( "_x_common_input_catalogs", xcip.c_str() );
+			}
 		}
 
 		// Now that we've sure that we're transfering the container, set
@@ -6699,7 +7013,7 @@ int SubmitHash::SetTransferFiles()
 
 		// docker creds are always stored in a file named "config.json"
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
-		
+
 		struct stat buf;
 		int r = stat(docker_creds_file.c_str(), &buf);
 		if (r != 0) {
@@ -6749,7 +7063,7 @@ int SubmitHash::SetTransferFiles()
 		//
 		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
 		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
-		// 
+		//
 		// Error if:
 		//  (A) bad user input - getShouldTransferFilesNum fails
 		//  (B) bas user input - getFileTransferOutputNum fails
@@ -6765,7 +7079,7 @@ int SubmitHash::SetTransferFiles()
 	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
-	// if they didn't check to see if the admin did. 
+	// if they didn't check to see if the admin did.
 	auto_free_ptr should_param(submit_param(ATTR_SHOULD_TRANSFER_FILES, SUBMIT_KEY_ShouldTransferFiles));
 	if (! should_param) {
 		if (job->LookupString(ATTR_SHOULD_TRANSFER_FILES, tmp)) {
@@ -7010,7 +7324,7 @@ int SubmitHash::SetTransferFiles()
 	} else if (pInputFilesSizeKb) {
 		long long exe_size_kb = 0;
 		job->LookupInt(ATTR_EXECUTABLE_SIZE, exe_size_kb);
-		AssignJobVal(ATTR_TRANSFER_INPUT_SIZE_MB, (exe_size_kb + *pInputFilesSizeKb) / 1024);
+		AssignJobVal(ATTR_TRANSFER_INPUT_SIZE_MB, (exe_size_kb + *pInputFilesSizeKb + 1023) / 1024);
 		long long disk_usage_kb = exe_size_kb + *pInputFilesSizeKb;
 		AssignJobVal(ATTR_DISK_USAGE, disk_usage_kb);
 	}
@@ -7284,6 +7598,12 @@ int SubmitHash::SetProtectedURLTransferLists() {
 					           ATTR_TRANSFER_Q_URL_IN_LIST);
 					ABORT_AND_RETURN( 1 );
 				}
+			} else {
+				// We didn't transfer ownership of the queue_xfer_lists, so delete them
+				for (auto& tree : queue_xfer_lists) {
+					delete tree;
+				}
+				queue_xfer_lists.clear(); // Clear the vector to remove dangling pointers
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string
@@ -7886,6 +8206,7 @@ ClassAd* SubmitHash::make_job_ad (
 	SetPeriodicExpressions(); /* factory:ok */
 	SetLeaveInQueue(); /* factory:ok */
 	SetJobRetries(); /* factory:ok */
+	SetOnEvictExpressions(); /* factory TODO */
 	SetKillSig(); /* factory:ok  */
 
 	// Orthogonal to all other functions.  This position is arbitrary.
@@ -8587,6 +8908,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 
 	// empty table options gets original split behavior.  (basically standard_foreach_table_opts)
 	bool legacy_split = table_opts.empty();
+	bool split_on_ws = table_opts.ws_sep; // capture the split-on-whitespace flag in case we need to turn it off
 
 	// setup token seps
 	const char* token_seps = ", \t";
@@ -8596,6 +8918,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 	char sep_char = 0;
 	if (legacy_split && item.find_first_of('\x1f') != std::string_view::npos) {
 		sep_char = '\x1f'; // autodetected US separator
+		split_on_ws = false; // turnoff whitespace splitting.
 	} else {
 		sep_char = table_opts.sep_char;
 	}
@@ -8603,7 +8926,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 		// build a dynamic token_seps string
 		char* seps = table_token_seps;
 		*seps++ = sep_char;
-		if (table_opts.ws_sep) { *seps++ = ' '; *seps++ = '\t'; }
+		if (split_on_ws) { *seps++ = ' '; *seps++ = '\t'; }
 		*seps = 0;
 
 		token_seps = table_token_seps;
@@ -9368,6 +9691,19 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		// omit user specified requirements because we set FACTORY.Requirements
 		// we set FACTORY.Requirements because we cannot afford to generate requirements using a pruned digest
 		omit_knobs.insert(SUBMIT_KEY_Requirements);
+
+		// For now, never put on_evict_checks in the digest. In order to do so correctly
+		// we would need to coordinate the $() expansion of the list with $() expansion with in the body
+		// TODO: evaluate on_evict_checks so that they can vary by proc for late materialization.
+		omit_knobs.insert(SUBMIT_KEY_OnEvictChecks);
+		omit_knobs.insert(ATTR_TRANSFORM_ON_EVICT);
+		auto_free_ptr evck_defined(submit_param(SUBMIT_KEY_OnEvictChecks, ATTR_TRANSFORM_ON_EVICT));
+		if (evck_defined) {
+			for (auto & tag : StringTokenIterator(evck_defined.ptr())) {
+				omit_knobs.insert(SUBMIT_KEY_TransformBodyPrefix + tag);
+				omit_knobs.insert(ATTR_TRANSFORM_BODY_PREFIX + tag);
+			}
+		}
 	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet, flags);
@@ -9400,8 +9736,15 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 		}
 		if (has_pending_expansions || !key_is_prunable(key)) {
 			out += key;
-			out += "=";
-			out += rhs;
+			if (rhs.find('\n') != std::string::npos) {
+				out += "@=end\n";
+				out += rhs;
+				if (out.back() != '\n') out += "\n";
+				out += "@end";
+			} else {
+				out += "=";
+				out += rhs;
+			}
 			out += "\n";
 		}
 	}
@@ -9556,8 +9899,12 @@ process_job_credentials(
 		}
 
 		if (call_storer) {
-			if( my_system(storer_args) != 0 ) {
-				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
+			int rc = my_system(storer_args);
+			if (rc < 0) {
+				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
+				return 1;
+			} else if (rc > 0) {
+				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
 				return 1;
 			}
 		}

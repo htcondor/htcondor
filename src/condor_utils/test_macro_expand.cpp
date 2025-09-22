@@ -224,6 +224,9 @@ static void insert_testing_macros(const char * local, const char * subsys)
 		{"fileUp1Rel", "../file"},
 		{"fileOver1Rel", "../peer/file.dat"},
 		{"fileCurRel2", "./uno/dos.tres"},
+		{"fileMultiDot", "/dir/b.o.x"},
+		{"fileDoubleDot", "/dir/boo..ox"},
+		{"fileTarGz", "stuff.tar.gz"},
 		{"wfileAbs", "c:\\one\\two\\three.for"},
 		{"wfileAbsDeep", "c:\\six\\five\\four\\three\\two\\one\\file.ext"},
 		{"wUNCfileAbs", "\\\\server\\share\\one\\two\\file.ext"},
@@ -749,6 +752,20 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fpnxf(fileCurRel2)") == "/home/testing/uno/dos.tres" );
 	REQUIRE( expand("$Fdnxf(fileCurRel2)") == "uno/dos.tres" );
 	REQUIRE( expand("$Fpf(fileCurRel2)") == "/home/testing/uno/" );
+
+	REQUIRE( expand("$Fnx(fileDoubleDot)") == "boo..ox" );
+	REQUIRE( expand("$Fn(fileDoubleDot)") == "boo." );
+	REQUIRE( expand("$BASENAME(fileDoubleDot, ..ox)") == "boo" );
+	REQUIRE( expand("$Fn(fileTarGz)") == "stuff.tar" );
+	REQUIRE( expand("$BASENAME(fileTarGz)") == "stuff.tar.gz" );
+	REQUIRE( expand("$BASENAME(fileTarGz,.gz)") == "stuff.tar" );
+	REQUIRE( expand("$BASENAME(fileTarGz, .TAR.GZ)") == "stuff" );
+	REQUIRE( expand("$BASENAME(fileTarGz,.tar)") == "stuff.tar.gz" );
+	REQUIRE( expand("$BASENAME(fileMultiDot,.x)") == "b.o" );
+	REQUIRE( expand("$BASENAME(fileMultiDot,b.o.x)") == "" );
+	REQUIRE( expand("$BASENAME(fileLong, all good men)") == "Now is the time for all good men." );
+	REQUIRE( expand("$BASENAME(fileLong,.)") == "Now is the time for all good men" );
+	REQUIRE( expand("$BASENAME(fileLong, all good men.)") == "Now is the time for " );
 
 	REQUIRE( expand("$Ff(wfileRel)") == "/home/testing/ein\\zwei\\drei.fir" );
 	REQUIRE( expand("$Ffw(wfileRel)") == "\\home\\testing\\ein\\zwei\\drei.fir" );

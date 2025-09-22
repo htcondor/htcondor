@@ -29,14 +29,14 @@ namespace classad {
 class ExprList : public ExprTree
 {
 	public:
-		ExprList();
+		ExprList() :parentScope(nullptr) {};
 		ExprList(const std::vector<ExprTree*>& exprs);
 
         /// Copy Constructor
         ExprList(const ExprList &other_list);
 
 		/// Destructor
-		virtual ~ExprList();
+		virtual ~ExprList() {Clear();}
 
         ExprList &operator=(const ExprList &other_list);
 

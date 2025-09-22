@@ -33,7 +33,8 @@ class KeyCacheEntry {
 			std::vector<KeyInfo> key,
 			const ClassAd & policy,
 			time_t expiration,
-			int session_lease
+			int session_lease,
+			const std::string& context_tag = ""
 			);
 
 	const std::string&    id() const { return _id; }
@@ -49,6 +50,7 @@ class KeyCacheEntry {
 	bool                  setPreferredProtocol(Protocol preferred);
 	void                  setLastPeerVersion(const std::string& version) { _last_peer_version = version; }
 	std::string           getLastPeerVersion() const { return _last_peer_version; }
+	const std::string&    contextTag() const { return _context_tag; }
 
 	void                  renewLease();
  private:
@@ -64,6 +66,7 @@ class KeyCacheEntry {
 	                                 // to catch lingering communication
 	Protocol             _preferred_protocol;
 	std::string          _last_peer_version;
+	std::string          _context_tag;
 };
 
 

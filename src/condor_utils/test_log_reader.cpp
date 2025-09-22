@@ -383,6 +383,7 @@ ReadEvents(Options &opts, int &totalEvents)
 		if ( fd >= 0 ) {
 			if ( read( fd, state.buf, state.size ) != state.size ) {
 				fprintf( stderr, "Failed reading persistent file\n" );
+				ReadUserLog::UninitFileState( state );
 				return STATUS_ERROR;
 			}
 			close( fd );
@@ -400,6 +401,7 @@ ReadEvents(Options &opts, int &totalEvents)
 			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
 				ReportError( reader );
+				ReadUserLog::UninitFileState( state );
 				return STATUS_ERROR;
 			}
 			printf( "Initialized log reader from state %s\n",
@@ -445,6 +447,7 @@ ReadEvents(Options &opts, int &totalEvents)
 		}
 		if ( !istatus ) {
 			fprintf( stderr, "Failed to initialize with %s\n", type );
+			ReadUserLog::UninitFileState( state );
 			return STATUS_ERROR;
 		}
 		printf( "Initialized with %s\n", type );
@@ -453,6 +456,7 @@ ReadEvents(Options &opts, int &totalEvents)
 	// --init-only ?
 	if ( opts.exitAfterInit ) {
 		printf( "Exiting after init (due to --init-only)\n" );
+		ReadUserLog::UninitFileState( state );
 		return STATUS_OK;
 	}
 

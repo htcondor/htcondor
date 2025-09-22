@@ -313,9 +313,9 @@ def which(program):
 #    h,m,s = re.split(':',cpu_string)
 #    return int(h) * 3600 + int(m) * 60 + int(s)
 
-cpu_time_re = re.compile("CPU time used is ([0-9.]+) seconds")
-max_mem_re = re.compile("MAX MEM: ([0-9.]+) (\w+);")
-exit_status_re = re.compile("Exited [\w ]+ (-?[0-9]+). The CPU")
+cpu_time_re = re.compile(r"CPU time used is ([0-9.]+) seconds")
+max_mem_re = re.compile(r"MAX MEM: ([0-9.]+) (\w+);")
+exit_status_re = re.compile(r"Exited [\w ]+ (-?[0-9]+). The CPU")
 _cluster_type_cache = None
 def get_finished_job_stats(jobid):
     """
@@ -398,10 +398,10 @@ def get_bjobs_location():
     _bjobs_location_cache = location
     return location
 
-job_id_re = re.compile("Job <([0-9]+)>")
-exec_host_re = re.compile("Started [0-9]+ Task\(s\) on Host\(s\) ([\w< >]+),")
-status_re = re.compile("Status <(\w+)>")
-exit_status_re = re.compile("Exited [\w ]+ (-?[0-9]+). The CPU")
+job_id_re = re.compile(r"Job <([0-9]+)>")
+exec_host_re = re.compile(r"Started [0-9]+ Task\(s\) on Host\(s\) ([\w< >]+),")
+status_re = re.compile(r"Status <(\w+)>")
+exit_status_re = re.compile(r"Exited [\w ]+ (-?[0-9]+). The CPU")
 status_mapping = {"PEND": 1, "RUN": 2, "EXIT": 4, "DONE": 4, "PSUSP": 5, "USUSP": 5, "SSUSP": 5}
 
 def parse_bjobs_fd(fd):
@@ -497,7 +497,7 @@ def fill_cache(cache_location):
     global launchtime
     launchtime = time.time()
 
-cache_line_re = re.compile("([0-9]+[\.\w\-]+):\s+(.+)")
+cache_line_re = re.compile(r"([0-9]+[\.\w\-]+):\s+(.+)")
 def cache_to_status(jobid, fd):
     reader = csv.reader(fd, delimiter='\t')
     for row in reader:

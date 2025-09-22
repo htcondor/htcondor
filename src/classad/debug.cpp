@@ -21,9 +21,6 @@
 #include "classad/debug.h"
 #include <stdarg.h>
 
-using std::string;
-using std::pair;
-
 namespace classad {
 
 int  _except_line_number = -1;

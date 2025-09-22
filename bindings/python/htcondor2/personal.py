@@ -627,9 +627,6 @@ class PersonalPool:
         )
 
     def _kill_condor_system(self):
-        if self._condor_master_is_alive():
-            return
-
         pids = self._daemon_pids()
         for pid in pids:
             os.kill(pid, signal.SIGKILL)
