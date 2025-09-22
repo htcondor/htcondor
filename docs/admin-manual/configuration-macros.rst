@@ -6882,7 +6882,7 @@ condor_submit Configuration File Entries
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then the default is the maximum of 1 GB
     and 125% of the transfer input size, which is the expression
-    :ad-attr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`.
+    ``MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024``.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify
