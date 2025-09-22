@@ -1492,6 +1492,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.29-1
+- Fix flocking to pools when there are intermittent network issues
+- HTCondor tarballs now contain Pelican 7.19.3
+
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.11-1
 - Initial support for Debian 13 (trixie)
 
