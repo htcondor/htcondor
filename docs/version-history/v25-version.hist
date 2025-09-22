@@ -9,3 +9,7 @@
 
 *** 25.0.1 bugs
 
+- Fixed a bug where *condor_qusers* would treat the ``add`` option as ``enable``
+  when the leading dash was omitted.
+  :jira:`3284`
+
