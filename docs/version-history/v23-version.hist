@@ -1,5 +1,9 @@
 *** 23.10.29 features
 
+- HTCondor tarballs now contain `Pelican 7.19.3 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.19.3.
+
 - The condor RPM package now requires at least apptainer version 1.4.2.
 
 *** 23.10.29 bugs
