@@ -32,6 +32,11 @@ Bugs Fixed:
   when the leading dash was omitted.
   :jira:`3284`
 
+- Fixed a very longstanding bug where extremely fast machines would
+  overflow a 32 bit counter and return -1 for the :ad-attr:Kflops`
+  slot attribute.
+  :jira:`3288`
+
 Version 24.12.13
 ----------------
 
