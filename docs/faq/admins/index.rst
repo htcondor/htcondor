@@ -5,6 +5,7 @@ Answers for Admins
     :maxdepth: 1
     :glob:
 
+    submit-requirements
     breadth-first
     slot-attrs
     interactive-containers-x11
