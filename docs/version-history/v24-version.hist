@@ -1,5 +1,17 @@
 *** 24.12.14 bugs
 
+- Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
+  truncated to its first character.
+  :jira:`3272`
+
+- Fixed a bug in :meth:`Schedd.submit` where the `$(step)` submit variable
+  wasn't being set.
+  :jira:`3272`
+
+- Fixed a bug in :meth:`Submit.itemdata` causing multi-entry itemdata to be
+  returned incorrectly.
+  :jira:`3272`
+
 *** 24.0.14 bugs
 
 - Fixed false positive reporting of ClassAd unit specifier test in
