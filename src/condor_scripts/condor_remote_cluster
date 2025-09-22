@@ -831,7 +831,7 @@ fi
 if [ -z "${release_url}" ]; then
     url_base=`condor_config_val BOSCO_URL_BASE 2>/dev/null`
     if [ -z "${url_base}" ] ; then
-        url_base="https://research.cs.wisc.edu/htcondor/tarball/"
+        url_base="https://htcss-downloads.chtc.wisc.edu/tarball/"
     fi
 
     ver_str=(`condor_version`)
