@@ -383,6 +383,7 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
             "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
+            "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
         yield the_container_condor
