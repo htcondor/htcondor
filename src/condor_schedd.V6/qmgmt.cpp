@@ -5212,10 +5212,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// name given here must match.
 			if (Q_SOCK && Q_SOCK->getReliSock()) {
 				std::string sess_project;
-				ClassAd policy_ad;
 				const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
-				daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
-				policy_ad.LookupString(ATTR_TOKEN_PROJECT, sess_project);
+				const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
+				if (policy_ad) {
+					policy_ad->LookupString(ATTR_TOKEN_PROJECT, sess_project);
+				}
 				if (!sess_project.empty() && strcasecmp(sess_project.c_str(), project_buf.c_str()) != 0) {
 					formatstr(err_str, "Setting ProjectName to \"%s\" when token project is \"%s\"", project_buf.c_str(), sess_project.c_str());
 					dprintf(D_ERROR, "SetAttribute security violation: %s\n", err_str.c_str());
@@ -6685,22 +6686,24 @@ static bool AddImplicitProjectRecords(std::vector<JobQueueKey> &new_keys)
 static int
 AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errstack)
 {
-	ClassAd policy_ad;
+	const ClassAd* policy_ad = nullptr;
 	if (Q_SOCK && Q_SOCK->getReliSock()) {
 		const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
-		daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+		policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	}
 
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
 	// See if the values have already been set
-	ClassAd *x509_attrs = &policy_ad;
+	const ClassAd *x509_attrs = policy_ad;
 	std::string last_proxy_file;
 	ClassAd proxy_file_attrs;
 
 	std::string session_project;
-	policy_ad.LookupString(ATTR_TOKEN_PROJECT, session_project);
+	if (policy_ad) {
+		policy_ad->LookupString(ATTR_TOKEN_PROJECT, session_project);
+	}
 
 	// Put X509 credential information in cluster ads (from either the
 	// job's proxy or the GSI authentication on the CEDAR socket).
@@ -6809,7 +6812,7 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 		if (jid.proc == CLUSTERID_qkey2 && x509up.empty()) {
 			// A cluster ad with no proxy file. If the client authenticated
 			// with GSI, use the attributes from that credential.
-			x509_attrs = &policy_ad;
+			x509_attrs = policy_ad;
 		} else {
 			// We have a cluster ad with a proxy file or a proc ad with a
 			// proxy file that may be different than in its cluster's ad.
@@ -6860,16 +6863,33 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 				// Failed to read proxy for a cluster ad.
 				// If the client authenticated with GSI, use the attributes
 				// from that credential.
-				x509_attrs = &policy_ad;
+				x509_attrs = policy_ad;
 			}
 		}
 
-		for (const auto & x509_attr : *x509_attrs)
-		{
-			std::string attr_value_buf;
-			unparse.Unparse(attr_value_buf, x509_attr.second);
-			SetSecureAttribute(jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
-			dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
+		if (x509_attrs) {
+			size_t prefix_len = strlen(ATTR_X509_USER_prefix);
+			for (const auto & x509_attr : *x509_attrs) {
+				if (strncasecmp(x509_attr.first.c_str(), ATTR_X509_USER_prefix, prefix_len) != 0) {
+					continue;
+				}
+				std::string attr_value_buf;
+				unparse.Unparse(attr_value_buf, x509_attr.second);
+				SetSecureAttribute(jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
+				dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
+			}
+		}
+		if (policy_ad) {
+			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
+			for (const auto & token_attr : *policy_ad) {
+				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+					continue;
+				}
+				std::string attr_value_buf;
+				unparse.Unparse(attr_value_buf, token_attr.second);
+				SetSecureAttribute(jid.cluster, jid.proc, token_attr.first.c_str(), attr_value_buf.c_str());
+				dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, token_attr.first.c_str(), attr_value_buf.c_str());
+			}
 		}
 	}
 

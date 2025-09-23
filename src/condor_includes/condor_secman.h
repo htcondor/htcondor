@@ -151,7 +151,7 @@ public:
 	static int authenticate_sock(Sock *s,DCpermission perm, CondorError* errstack);
 	static int authenticate_sock(Sock *s,KeyInfo *&ki, DCpermission perm, CondorError* errstack);
 
-	bool getSessionPolicy(const char *sess_id, classad::ClassAd &policy);
+	const ClassAd* getSessionPolicy(const char *sess_id);
 
 	bool getSessionStringAttribute(const char *sess_id, const char *attr_name, std::string &attr_value);
 

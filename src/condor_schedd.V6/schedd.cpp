@@ -8679,10 +8679,9 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		// pool name sent out with the session is identical to the one
 		// which came back from the negotiator.  Prevent negotiator fraud!
 	const std::string &sess_id = static_cast<ReliSock*>(s)->getSessionID();
-	classad::ClassAd policy_ad;
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	std::string policy_remote_pool;
-	if (policy_ad.EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
+	if (policy_ad && policy_ad->EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
 		submitter_tag = policy_remote_pool;
 	}
 
@@ -15789,10 +15788,9 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 {
 		// Check: is this my session?
 	const auto &sess_id = static_cast<ReliSock*>(stream)->getSessionID();
-	classad::ClassAd policy_ad;
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	bool is_my_session = false;
-	if (!policy_ad.EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
+	if (!policy_ad || !policy_ad->EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
 		dprintf(D_ALWAYS, "Ignoring a collector token request from an unknown session.\n");
 		return false;
 	}
