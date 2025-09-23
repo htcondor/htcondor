@@ -1,3 +1,13 @@
+condor (24.12.4-1) stable; urgency=medium
+
+  * Add the ability to enforce memory and CPU limits on local universe jobs
+  * Add the ability for condor_chirp to work within a Docker universe job
+  * condor_watch_q now exits with any keyboard input
+  * The shell submit keyword now works with interactive jobs
+  * All changes in 24.0.12
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 23 Sep 2025 06:32:00 -0500
+
 condor (24.0.12-1) stable; urgency=medium
 
   * Update condor_upgrade_check to warn about v1 Python bindings retirement

@@ -1295,6 +1295,13 @@ fi
 # configuration
 
 %changelog
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.4-1
+- Add the ability to enforce memory and CPU limits on local universe jobs
+- Add the ability for condor_chirp to work within a Docker universe job
+- condor_watch_q now exits with any keyboard input
+- The shell submit keyword now works with interactive jobs
+- All changes in 24.0.12
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
 - Update condor_upgrade_check to warn about v1 Python bindings retirement
 - Update condor_upgrade_check to look for old syntax job transforms
