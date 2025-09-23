@@ -23,4 +23,4 @@ x86_64_Windows9
 x86_64_Windows10
 
 # We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora41-24001200
+docker://htcondor/nmi-build:x86_64_Fedora42-24001200
