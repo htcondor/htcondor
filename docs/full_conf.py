@@ -23,7 +23,7 @@ import re
 master_doc = 'index'
 
 # Patterns/files to exclude from build source
-exclude_patterns = ['_build', 'extensions', 'utils']
+exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store']
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom

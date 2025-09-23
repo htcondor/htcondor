@@ -861,7 +861,7 @@ COMMANDS FOR MATCHMAKING
 
     The increase can be either a quantity to add to the memory request, or
     an expression that uses :ad-attr:`RequestMemory`.
-    For example, and note that because `RequestMemory * 4` is a classad
+    For example, and note that because :ad-expr:`RequestMemory * 4` is a classad
     expression, a unit suffix is not allowed after the `4`:
 
     .. code-block:: condor-submit

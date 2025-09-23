@@ -51,7 +51,7 @@ clean:
 	rm -rf $(BUILDDIR)/*
 
 auto:
-	sphinx-autobuild . _build/html
+	sphinx-autobuild -E . _build/html
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
