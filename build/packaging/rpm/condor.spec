@@ -273,8 +273,8 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 %endif
 
 %if 0%{?rhel} <= 10
-# upgrade-checks package discontinued as of 24.8.0
-Obsoletes: %{name}-upgrade-checks < 24.8.0
+# upgrade-checks package discontinued as of 24.9.0
+Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
