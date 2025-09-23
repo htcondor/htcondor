@@ -42,7 +42,7 @@ in order to successfully pass this rule.  This is done by defining
 
 The above two knobs are sufficient to enforce the policy.  However, the
 error message that the user will see when they violate this policy is
-generia,lly not very helpful.  We can improve this by defining a custom
+generally not very helpful.  We can improve this by defining a custom
 error message to be shown when this rule is violated.  This is done by
 defining a macro named :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`, where
 ``<Name>`` is the name of the rule we defined above.
