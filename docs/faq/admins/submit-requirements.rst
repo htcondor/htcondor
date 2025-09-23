@@ -59,5 +59,5 @@ can make this a warning by setting the :macro:`SUBMIT_REQUIREMENT_<Name>_IS_WARN
 
     SUBMIT_REQUIREMENT_MinimalRequestMemory_IS_WARNING = True
 
-Changing these will require a ``condor_reconfig`` of the *condor_schedd* to take
+Changing these will require a :tool:`condor_reconfig` of the *condor_schedd* to take
 effect.
