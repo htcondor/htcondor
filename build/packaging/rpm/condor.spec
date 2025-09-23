@@ -1295,6 +1295,15 @@ fi
 # configuration
 
 %changelog
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
+- Update condor_upgrade_check to warn about v1 Python bindings retirement
+- Update condor_upgrade_check to look for old syntax job transforms
+- All changes in 23.10.29
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.29-1
+- Fix flocking to pools when there are intermittent network issues
+- HTCondor tarballs now contain Pelican 7.19.3
+
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.11.2-1
 - Add job attributes to track why and how often a job is vacated
 - Add the ability to notify a user when their job first starts
