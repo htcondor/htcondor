@@ -20,13 +20,13 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
     Documentation for :mod:`htcondor`.
 
 :doc:`api/htchirp`
-    Documentation for :mod:`htcondor.htchirp`.
+    Documentation for :mod:`htcondor2.htchirp`.
 
 :doc:`api/dags`
-    Documentation for :mod:`htcondor.dags`.
+    Documentation for :mod:`htcondor2.dags`.
 
 :doc:`api/personal`
-     Documentation for :mod:`htcondor.personal`.
+     Documentation for :mod:`htcondor2.personal`.
 
 
 .. toctree::
