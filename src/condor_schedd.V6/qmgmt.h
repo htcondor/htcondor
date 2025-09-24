@@ -244,6 +244,8 @@ public:
 #define JQU_F_DIRTY    0x01   // PopulateFromAd needed 
 #define JQU_F_PENDING  0x80   // JobQueueUserRec is in the pendingOwners collection
 
+#define GENERIC_AP_USER_PLACEHOLDER "<tmp_ap_user>"
+
 class JobQueueUserRec : public JobQueueBase {
 public:
 	struct CountJobsCounters {
@@ -302,6 +304,10 @@ public:
 	bool IsEnabled() const { return enabled; }
 	bool IsLocalUser() const { return local; }
 	bool OsUserDiffers() const { return os_user_differs; }
+
+	// used to assign a specific OS user to a userrec when the Owner is not a local user
+	// or when you don't want to use the local user account that matches the Owner
+	bool assignOsUser(const std::string & os_user);
 
 	// The super member has 4 possible values
 	// super == 0 is not super

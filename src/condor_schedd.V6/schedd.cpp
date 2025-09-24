@@ -4443,17 +4443,7 @@ Scheduler::insert_ownerinfo(const char * owner, CondorError* errstack)
 	}
 
 	if (m_useGenericOsUsers && JobQueueInitDone()) {
-		auto acct_itr = m_openGenericOsUsers.begin();
-		if (acct_itr == m_openGenericOsUsers.end()) {
-			dprintf(D_ERROR, "No generic OS users left for new AP user\n");
-			if (errstack) {
-				errstack->pushf("SCHEDD", ENOSPC, "No OS user available for AP user %s", owner);
-			}
-			return nullptr;
-		}
-		os_user = *acct_itr;
-		m_claimedGenericOsUsers.insert(*acct_itr);
-		m_openGenericOsUsers.erase(acct_itr);
+		os_user = GENERIC_AP_USER_PLACEHOLDER;
 	}
 
 	int userrec_id = nextUnusedUserRecId();
@@ -4465,6 +4455,52 @@ Scheduler::insert_ownerinfo(const char * owner, CondorError* errstack)
 	OwnersInfo[Owner->Name()] = Owner;
 	ASSERT(Owner);
 	return Owner;
+}
+
+const char * Scheduler::solidify_os_user(const OwnerInfo * owni, CondorError * errstack)
+{
+	if ( ! owni) {
+		if (errstack) {
+			errstack->pushf("SCHEDD", EINVAL, "No user record specified");
+		}
+		return nullptr;
+	}
+
+	// schedd is allowed to de-constify the OwnerInfo
+	JobQueueUserRec * urec = const_cast<JobQueueUserRec *>(owni);
+	if ( ! urec->OsUser() || YourString(GENERIC_AP_USER_PLACEHOLDER) == urec->OsUser()) {
+		if (m_useGenericOsUsers) {
+			auto acct_itr = m_openGenericOsUsers.begin();
+			if (acct_itr == m_openGenericOsUsers.end()) {
+				dprintf(D_ERROR, "No generic OS users left for new AP user\n");
+				if (errstack) {
+					errstack->pushf("SCHEDD", ENOSPC, "No OS user available for AP user %s", urec->Name());
+				}
+				return nullptr;
+			}
+			urec->assignOsUser(*acct_itr);
+			m_claimedGenericOsUsers.insert(*acct_itr);
+			m_openGenericOsUsers.erase(acct_itr);
+		}
+	}
+
+	// TODO: check to see if the OsUser is valid 
+	if (urec->OsUser()) {
+	  #ifdef WIN32
+		// TODO: verify OS user for windows?
+	  #else
+		uid_t user_uid = 0;
+		if ( ! pcache->get_user_uid(urec->OsUser(), user_uid)) {
+			if (errstack) {
+				errstack->pushf("SCHEDD", EACCES, "AP user has OS user value %s, which is not a "
+				"valid OS account", urec->OsUser());
+			}
+			return nullptr;
+		}
+	  #endif
+	}
+
+	return urec->OsUser();
 }
 
 const OwnerInfo *

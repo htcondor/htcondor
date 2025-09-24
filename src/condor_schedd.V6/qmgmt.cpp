@@ -1839,6 +1839,38 @@ bool JobQueueBase::UpdateSecureAttribute(const char * attr)
 static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * defaults);
 static bool MakeProjectRec(const JobQueueKey & key, const char * name, const ClassAd * defaults);
 
+// Used to assign a specific OS user to a userrec that does not yet have one.
+// i.e. When the User rec was created without an OS user assignment.
+bool JobQueueUserRec::assignOsUser(const std::string & _os_user)
+{
+	os_user = _os_user;
+	if ( ! os_user.empty() && this->LookupExpr(ATTR_OS_USER)) {
+		this->Assign(ATTR_OS_USER, os_user);
+	}
+
+#ifdef WIN32
+	std::string ntdomain;
+	if (this->LookupString(ATTR_NT_DOMAIN, ntdomain)) {
+		std::string buf;
+		std::string derived_user = name_of_user(name.c_str(), buf);
+		if ( ! ntdomain.empty()) {
+			derived_user += '@';
+			derived_user += ntdomain;
+		}
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_FULL | CASELESS_USER);
+		os_user_differs = ! is_same_user(os_user.c_str(), derived_user.c_str(), opt, "~");
+	} else {
+		// effective NT domain is a prefix of the uid domain (i.e. hostname rather than full_hostname)
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | CASELESS_USER);
+		os_user_differs = ! is_same_user(os_user.c_str(), name.c_str(), opt, "~");
+	}
+#else
+	CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_FULL | ASSUME_UID_DOMAIN);
+	os_user_differs = ! is_same_user(os_user.c_str(), name.c_str(), opt, scheduler.uidDomain());
+#endif
+	return OsUser();
+}
+
 void JobQueueUserRec::PopulateFromAd()
 {
 	if (this->name.empty()) {
@@ -3622,7 +3654,7 @@ NewCluster(CondorError* errstack)
 					// the insert_owner_const will make a pending user record
 					// which we then add to the current transaction by calling MakeUserRec
 					urec = scheduler.insert_owner_const(user, errstack);
-					if (urec == nullptr) {
+					if (urec == nullptr || ! scheduler.solidify_os_user(urec, errstack)) {
 						errno = ENOSPC;
 						return NEWJOB_ERR_INTERNAL;
 					}
@@ -3652,6 +3684,10 @@ NewCluster(CondorError* errstack)
 				}
 				errno = EACCES;
 				return NEWJOB_ERR_DISABLED_USER;
+			}
+			if ( ! scheduler.solidify_os_user(urec, errstack)) {
+				errno = ENOSPC;
+				return NEWJOB_ERR_INTERNAL;
 			}
 			ASSERT(urec);
 		}
@@ -6507,11 +6543,15 @@ bool UserRecCreate(int userrec_id, bool is_project, const char * name, const Cla
 			os_user = owner;
 			os_user += '@';
 			os_user += ntdomain;
+		} else {
+			os_user = username;
 		}
 	#else
 		os_user = owner;
 	#endif
-
+		if (scheduler.m_useGenericOsUsers) {
+			os_user = GENERIC_AP_USER_PLACEHOLDER;
+		}
 		rval = MakeUserRec(key, ap_user.c_str(), os_user.c_str(), enabled, &scheduler.getUserRecDefaultsAd());
 	}
 

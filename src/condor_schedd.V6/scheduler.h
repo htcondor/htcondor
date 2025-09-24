@@ -714,6 +714,8 @@ class Scheduler : public Service
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*, CondorError* errstack=nullptr);
 	const OwnerInfo * lookup_owner_const(const char*);
+	// make sure that the ownerInfo has a valid OsUser, assiging a generic one if needed.
+	const char *    solidify_os_user(const OwnerInfo *, CondorError* errstack=nullptr);
 	// make sure that a job object has a submitter record pointer
 	const SubmitterData * get_submitter(JobQueueJob * job) {
 		SubmitterData * subdat = nullptr;
