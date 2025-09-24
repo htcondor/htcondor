@@ -99,7 +99,7 @@ def the_test_result(the_test_name, the_test_case):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         input=subtext,
-        text=True,
+        universal_newlines=True,
         env=env,
         timeout=2,
     )
