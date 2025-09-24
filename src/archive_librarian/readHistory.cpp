@@ -169,11 +169,11 @@ void collectJob(
 /**
  * A helper function to make sure we're looking at the file we expect
 */
-bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
+bool verifyFileMatch(const std::string& historyFilePath, FileInfo &fileInfo) {
     auto [inodeMatch, hashMatch] = ArchiveMonitor::checkFileEquals(historyFilePath, fileInfo);
 
-    if(!inodeMatch) dprintf(D_FULLDEBUG, "Inode doesn't match expected for file at %s\n", historyFilePath);
-    if(!hashMatch) dprintf(D_FULLDEBUG, "Hash doesn't match expected for file at %s\n", historyFilePath);
+    if(!inodeMatch) dprintf(D_FULLDEBUG, "Inode doesn't match expected for file at %s\n", historyFilePath.c_str());
+    if(!hashMatch) dprintf(D_FULLDEBUG, "Hash doesn't match expected for file at %s\n", historyFilePath.c_str());
 
     return inodeMatch && hashMatch;
 }
@@ -187,10 +187,10 @@ bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
  * @param fileInfo File metadata (last offset, FileId).
  * @return Last read offset or error code.
  */
-long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> &out, FileInfo &fileInfo) {
+long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobRecord> &out, FileInfo &fileInfo) {
     BackwardFileReader reader(historyFilePath);
     if (reader.LastError()) {
-        dprintf(D_ERROR, "Error opening history file: %s\n", historyFilePath);
+        dprintf(D_ERROR, "Error opening history file: %s\n", historyFilePath.c_str());
         return 0;
     }
 

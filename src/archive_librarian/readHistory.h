@@ -19,7 +19,7 @@
  * - Verifies file identity before parsing.
  * - Does not write to the database — only reads and returns parsed data.
  */
-long readHistoryIncremental(const char *historyFile,
+long readHistoryIncremental(const std::string& historyFile,
                             std::vector<JobRecord> &out,
                             FileInfo &fileInfoOut);
 

@@ -169,7 +169,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
     }
 
     // Helper function to get all history files modified after a certain time
-    std::vector<fs::path> getHistoryFilesModifiedAfter(const std::string& directory,
+    std::vector<fs::path> getHistoryFilesModifiedAfter(const fs::path& directory,
                                                   const std::string& historyPrefix,
                                                   std::time_t afterTime) {
         std::vector<fs::path> historyFiles;
@@ -200,7 +200,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
     // Function to perform Step 1 for one history file set:
     // Find last file we were working on and identifies untracked files
-    std::vector<fs::path> detectRotationAndGetUntrackedFiles(const std::string& directory,
+    std::vector<fs::path> detectRotationAndGetUntrackedFiles(const fs::path& directory,
                                             const std::string& historyPrefix,
                                             std::time_t lastStatusTime,
                                             const FileInfo& lastFileRead,
@@ -252,7 +252,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
 
     // Step 3: Look for deleted files that are in the cache but no longer in the directory
-    void checkDeletedFiles(const std::string& directory,
+    void checkDeletedFiles(const fs::path& directory,
                         const std::string& historyPrefix,
                         const std::unordered_map<int, FileInfo>& fileCache,
                         ArchiveChange& changes) {
@@ -267,7 +267,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         std::ranges::sort(sortedCache, std::ranges::less(), &FileInfo::LastModified);
 
         for (const FileInfo& fi : sortedCache) {
-            std::string fullPath = directory + "/" + fi.FileName;
+            fs::path fullPath = directory / fi.FileName;
 
             // Double-check that this cached file should belong to our history set
             // (defensive programming in case cache gets corrupted)
@@ -287,7 +287,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
     }
 
     // Helper function for very first startup
-    std::vector<fs::path> getAllHistoryFiles(const std::string& directory, const std::string& historyPrefix) {
+    std::vector<fs::path> getAllHistoryFiles(const fs::path& directory, const std::string& historyPrefix) {
         std::vector<fs::path> historyFiles;
         
         try {
@@ -386,15 +386,15 @@ namespace ArchiveMonitor{
      */
     ArchiveChange trackHistoryFileSet(FileSet& historyFileSet) {
         ArchiveChange changes;
-        std::string directory = historyFileSet.historyDirectoryPath;
+        fs::path directory = historyFileSet.GetDirectory();
         
         // Is this our first startup? 
         if (historyFileSet.lastFileReadId == -1) {
             // This is our very first read! Discover all files and add them as new files
-            std::vector<fs::path> allHistoryFiles = getAllHistoryFiles(directory, historyFileSet.historyNameConfig);
+            std::vector<fs::path> allHistoryFiles = getAllHistoryFiles(directory, historyFileSet.GetFileName());
 
             dprintf(D_ALWAYS, "First startup: discovered %zu files with prefix '%s'\n",
-                    allHistoryFiles.size(), historyFileSet.historyNameConfig.c_str());
+                    allHistoryFiles.size(), historyFileSet.GetFileName().c_str());
 
             // Use the existing trackUntrackedFiles function to properly process all discovered files
             trackUntrackedFiles(allHistoryFiles, changes);
@@ -414,7 +414,7 @@ namespace ArchiveMonitor{
         // Step 1: Find untracked files and check for rotation
         std::vector<fs::path> untrackedPaths = detectRotationAndGetUntrackedFiles(
             directory,
-            historyFileSet.historyNameConfig,
+            historyFileSet.GetFileName(),
             historyFileSet.lastStatusTime,
             lastFileRead,
             changes
@@ -424,7 +424,7 @@ namespace ArchiveMonitor{
         trackUntrackedFiles(untrackedPaths, changes);
 
         // Step 3: Detect deleted files in cache that no longer exist
-        checkDeletedFiles(directory, historyFileSet.historyNameConfig, historyFileSet.fileMap, changes);
+        checkDeletedFiles(directory, historyFileSet.GetFileName(), historyFileSet.fileMap, changes);
 
         return changes;
     }

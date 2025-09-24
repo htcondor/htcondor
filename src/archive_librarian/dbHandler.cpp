@@ -113,15 +113,27 @@ bool DBHandler::initialize() {
     // Switch to run version modification statments of database
     // Note: Use case fall throughs adding newer versions lower
     //       Also, don't forget to change the new version in the database!!!
-    switch (version) {
-        case 0: // Initializing new database
-            [[fallthrough]];
-        default:
-            if (sqlite3_exec(db_, "PRAGMA user_version = 1;", nullptr, nullptr, &errMsg) != SQLITE_OK) {
-                dprintf(D_ERROR, "Failed to commit schema transaction: %s\n", errMsg ? errMsg : "Unknown");
-                sqlite3_free(errMsg);
-                ROLLBACK_AND_RETURN();
-            }
+    constexpr int SCHEMA_VERSION = 1;
+
+    // If the detected database version is newer then what we can handle fail
+    // since we are likely to be incompatable and fail later or muck up the database
+    if (version > SCHEMA_VERSION) {
+        dprintf(D_ALWAYS, "Database schema version (%d) is newer then my version (%d).\n", version, SCHEMA_VERSION);
+        ROLLBACK_AND_RETURN();
+    } else if (version < SCHEMA_VERSION) { // Database schema is older so update databse appropriately
+        std::string version_stmt;
+        formatstr(version_stmt, "PRAGMA user_version = %d;", SCHEMA_VERSION);
+
+        switch (version) {
+            case 0: // Initializing new database
+                [[fallthrough]];
+            default:
+                if (sqlite3_exec(db_, version_stmt.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+                    dprintf(D_ERROR, "Failed to set new schema version in database: %s\n", errMsg ? errMsg : "Unknown");
+                    sqlite3_free(errMsg);
+                    ROLLBACK_AND_RETURN();
+                }
+        }
     }
 
     // Commit the transaction
@@ -942,7 +954,7 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
 		fileInfo.FileSize = -1;      // No size in table
 		fileInfo.LastModified = 0;   // Not available
 
-		if (fileInfo.FileName.rfind(historyFileSet_.historyNameConfig, 0) == 0) {
+		if (fileInfo.FileName.rfind(historyFileSet_.GetFileName(), 0) == 0) {
 			historyFileSet_.fileMap[fileInfo.FileId] = fileInfo;
 		}
 	}

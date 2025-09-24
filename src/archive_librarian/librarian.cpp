@@ -35,8 +35,8 @@ namespace fs = std::filesystem;
  */
 bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& fileInfo) {
 
-    std::string fullPath = historyFileSet_.historyDirectoryPath + "/" + fileInfo.FileName;
-    long newOffset = readHistoryIncremental(fullPath.c_str(), newJobRecords, fileInfo);
+    fs::path fullPath = historyFileSet_.GetDirectory() / fileInfo.FileName;
+    long newOffset = readHistoryIncremental(fullPath.string().c_str(), newJobRecords, fileInfo);
     if (newOffset < 0) {
         dprintf(D_ERROR, "Failed to read job records.\n");
         return false;
@@ -59,7 +59,7 @@ bool Librarian::readJobRecords(std::vector<JobRecord>& newJobRecords, FileInfo& 
 // EstimatedBytesPerJobInArchive_ as the byte size from file start to first "***" line
 bool Librarian::calculateEstimatedBytesPerJob() {
     std::error_code ec;
-    std::filesystem::path historyDir(historyFileSet_.historyDirectoryPath);
+    std::filesystem::path historyDir = historyFileSet_.GetDirectory();
 
     // Check if directory exists
     if (!std::filesystem::exists(historyDir, ec) || ec) {
@@ -75,9 +75,10 @@ bool Librarian::calculateEstimatedBytesPerJob() {
         if (entry.is_regular_file(ec) && !ec) {
             std::string filename = entry.path().filename().string();
 
-            // Check if filename starts with historyNameConfig and has more content after it
-            if (filename.length() > historyFileSet_.historyNameConfig.length() &&
-                filename.substr(0, historyFileSet_.historyNameConfig.length()) == historyFileSet_.historyNameConfig) {
+            auto setFileNameLen = historyFileSet_.GetFileName().length();
+
+            // Check if filename starts with archive file root filename and has more content after it
+            if (filename.length() > setFileNameLen && filename.substr(0, setFileNameLen) == historyFileSet_.GetFileName()) {
 
                 std::ifstream file(entry.path(), std::ios::binary);
                 if (!file.is_open()) {
@@ -145,7 +146,7 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
         const FileInfo& lastFileInfo = lastFileIt->second;
 
         // Construct full path to the history file
-        std::filesystem::path fullFilePath = std::filesystem::path(historyFileSet_.historyDirectoryPath) / lastFileInfo.FileName;
+        std::filesystem::path fullFilePath = historyFileSet_.GetDirectory() / lastFileInfo.FileName;
 
         // Check if file exists and get its size without exceptions
         std::error_code ec;
@@ -170,7 +171,7 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
     for (const auto& [fileId, fileInfo] : historyFileSet_.fileMap) {
         if (fileInfo.LastOffset == 0) {
             // Construct full path to the history file
-            std::filesystem::path fullFilePath = std::filesystem::path(historyFileSet_.historyDirectoryPath) / fileInfo.FileName;
+            std::filesystem::path fullFilePath = historyFileSet_.GetDirectory() / fileInfo.FileName;
 
             // Check if file exists and get its size without exceptions
             std::error_code ec;
@@ -272,31 +273,6 @@ void Librarian::updateStatusData(Status status) {
 // ================================
 // ARCHIVE MANAGEMENT (PRIVATE HELPERS)
 // ================================
-
-// Testing function to see what has actually been saved to a FileSet struct
-/*void PrintFileSetInfo(const FileSet& fs) {
-    std::cout << "\n[Librarian] Printing FileSet Info: \n" ;
-    std::cout << "------------------------------------------------- \n" ;
-    std::cout << "History Name Config: " << fs.historyNameConfig << "\n";
-    std::cout << "History Directory Path: " << fs.historyDirectoryPath << "\n";
-    std::cout << "Last Status Time: " << fs.lastStatusTime << "\n";
-    std::cout << "Last File Read ID: " << fs.lastFileReadId << "\n";
-
-    std::cout << "\nFile Map:\n";
-    std::cout << std::left << std::setw(10) << "FileId"
-              << std::setw(20) << "FileName"
-              << std::setw(15) << "Inode"
-              << std::setw(40) << "Hash" << "\n";
-    std::cout << std::string(85, '-') << "\n";
-
-    for (const auto& [id, info] : fs.fileMap) {
-        std::cout << std::left << std::setw(10) << id
-                  << std::setw(20) << info.FileName
-                  << std::setw(15) << info.FileInode
-                  << std::setw(40) << info.FileHash << "\n";
-    }
-    std::cout << "------------------------------------------------- \n" ;
-}*/
 
 /**
  * @brief Applies detected archive changes to the in-memory FileSet
@@ -560,7 +536,7 @@ bool Librarian::update() {
             break;
         }
 
-        dprintf(D_STATUS, "Processing history file: %sf (offset: %ld)\n",
+        dprintf(D_STATUS, "Processing history file: %s (offset: %ld)\n",
                 fileInfo.FileName.c_str(), fileInfo.LastOffset);
         
         std::vector<JobRecord> fileRecords;
