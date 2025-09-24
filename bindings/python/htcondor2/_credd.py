@@ -16,6 +16,7 @@ from .htcondor2_impl import (
     HTCondorException,
 )
 
+import htcondor2
 
 class Credd():
 
