@@ -64,6 +64,7 @@ ARCH=$(arch)
     buildimage x86_64_Debian11 linux/x86_64 debian:bullseye &
     buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &
     buildimage x86_64_Debian13 linux/x86_64 debian:trixie &
+    buildimage x86_64_Fedora42 linux/x86_64 fedora:42 &
     buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
     buildimage x86_64_Ubuntu20 linux/x86_64 ubuntu:focal &
     buildimage x86_64_Ubuntu22 linux/x86_64 ubuntu:jammy &

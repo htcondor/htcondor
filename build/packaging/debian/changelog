@@ -1,3 +1,18 @@
+condor (24.0.12-1) stable; urgency=medium
+
+  * Update condor_upgrade_check to warn about v1 Python bindings retirement
+  * Update condor_upgrade_check to look for old syntax job transforms
+  * All changes in 23.10.29
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 22 Sep 2025 21:41:00 -0500
+
+condor (23.10.29-1) stable; urgency=medium
+
+  * Fix flocking to pools when there are intermittent network issues
+  * HTCondor tarballs now contain Pelican 7.19.3
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 22 Sep 2025 07:44:00 -0500
+
 condor (24.0.11-1) stable; urgency=medium
 
   * Initial support for Debian 13 (trixie)
