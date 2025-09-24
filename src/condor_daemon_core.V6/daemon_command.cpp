@@ -1883,6 +1883,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		ClassAd q_response;
 		q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
 
+		// Include token-related attributes
+		// Can m_policy be NULL in practice?
+		if (m_policy) {
+			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
+			for (const auto& token_attr: *m_policy) {
+				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+					continue;
+				}
+				q_response.Insert(token_attr.first, token_attr.second->Copy());
+			}
+		}
+
 		if (!putClassAd(m_sock, q_response) ||
 			!m_sock->end_of_message()) {
 			dprintf (D_ERROR, "SECMAN: Error sending DC_SEC_QUERY reply to %s!\n", m_sock->peer_description());
