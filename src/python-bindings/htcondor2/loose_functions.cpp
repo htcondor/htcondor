@@ -99,7 +99,12 @@ _load_a_config_usermap_file( PyObject *, PyObject * args ) {
 	}
 
 	// load or reload the given usermap file
-	add_user_map(name, mapfile_path, nullptr);
+	int rval = add_user_map(name, mapfile_path, nullptr);
+	if (rval != 0) {
+		std::string msg("Failed to load userMap file: "); msg += mapfile_path;
+		PyErr_SetString(PyExc_HTCondorException, msg.c_str());
+		return NULL;
+	}
 
 	Py_RETURN_NONE;
 }
