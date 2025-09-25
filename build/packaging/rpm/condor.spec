@@ -285,8 +285,8 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 %endif
 
 %if 0%{?rhel} <= 10
-# upgrade-checks package discontinued as of 24.8.0
-Obsoletes: %{name}-upgrade-checks < 24.8.0
+# upgrade-checks package discontinued as of 24.9.0
+Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
@@ -1295,6 +1295,22 @@ fi
 # configuration
 
 %changelog
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.4-1
+- Add the ability to enforce memory and CPU limits on local universe jobs
+- Add the ability for condor_chirp to work within a Docker universe job
+- condor_watch_q now exits with any keyboard input
+- The shell submit keyword now works with interactive jobs
+- All changes in 24.0.12
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
+- Update condor_upgrade_check to warn about v1 Python bindings retirement
+- Update condor_upgrade_check to look for old syntax job transforms
+- All changes in 23.10.29
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.29-1
+- Fix flocking to pools when there are intermittent network issues
+- HTCondor tarballs now contain Pelican 7.19.3
+
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.11.2-1
 - Add job attributes to track why and how often a job is vacated
 - Add the ability to notify a user when their job first starts
