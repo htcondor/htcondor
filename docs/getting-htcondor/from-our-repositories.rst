@@ -31,11 +31,12 @@ For Enterprise Linux 10, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
-* `Amazon Linux 2023 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.amzn2023.noarch.rpm>`_
-* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.el8.noarch.rpm>`_
-* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.el9.noarch.rpm>`_
-* `Enterprise Linux 10 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.el10.noarch.rpm>`_
-* `openSUSE LEAP 15 <https://research.cs.wisc.edu/htcondor/repo/24.x/htcondor-release-current.leap15.noarch.rpm>`_
+* `Amazon Linux 2023 <https://htcss-downloads.chtc.wisc.edu/repo/24.x/htcondor-release-current.amzn2023.noarch.rpm>`_
+* `Enterprise Linux 8 <https://htcss-downloads.chtc.wisc.edu/repo/24.x/htcondor-release-current.el8.noarch.rpm>`_
+* `Enterprise Linux 9 <https://htcss-downloads.chtc.wisc.edu/repo/24.x/htcondor-release-current.el9.noarch.rpm>`_
+* `Enterprise Linux 10 <https://htcss-downloads.chtc.wisc.edu/repo/24.x/htcondor-release-current.el10.noarch.rpm>`_
+* `Enterprise Linux 10 (x86_64_v2) <https://htcss-downloads.chtc.wisc.edu/repo/24.x/htcondor-release-current.el10.x86_64_v2.rpm>`_
+* `openSUSE LEAP 15 <https://htcss-downloads.chtc.wisc.edu/repo/24.x/htcondor-release-current.leap15.noarch.rpm>`_
 
 The Enterprise Linux HTCondor packages depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -57,18 +58,18 @@ These repositories also include the source packages.
 Debian 11, and 12
 #################
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Add our `Debian signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-24.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bullseye main``
-* Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x bookworm main``
-* Debian 13: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/24.x trixie main``
+* Debian 11: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/24.x bullseye main``
+* Debian 12: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/24.x bookworm main``
+* Debian 13: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/24.x trixie main``
 
 Ubuntu 22.04 and 24.04
 ######################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Add our `Ubuntu signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-24.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x jammy main``
-* Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/24.x noble main``
+* Ubuntu 22.04: ``deb https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/24.x jammy main``
+* Ubuntu 24.04: ``deb https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/24.x noble main``
