@@ -7,6 +7,11 @@
   variables that pointed into the job's execute directory were not correct.
   :jira:`3265`
 
+- Fixed a bug where *condor_history* could take many minutes to read a single line
+  from the history file when the line is many megabytes long. This was causing
+  ingestion of epoch ads into a database to timeout.
+  :jira:`2399`
+
 *** 25.0.1 bugs
 
 - Fixed a bug where *condor_qusers* would treat the ``add`` option as ``enable``
