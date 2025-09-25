@@ -1888,7 +1888,7 @@ Daemon::readAddressFile( const char* subsys )
 	// just add it to the daemon ad, if not, interpret it as a string
 	// value for the next "meaning" line until we run out of meanings
 	while (readLine(buf, addr_fp)) {
-		chomp(buf); trim(buf);
+		trim(buf); // trim removes trailing \r\n along with other whitespace, so no need to chomp(buf);
 		if (buf.empty()) continue;
 		if (buf.front() == '#') continue;
 
