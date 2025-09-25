@@ -940,10 +940,6 @@ protected:
 	friend struct StartCommandConnectCallback;
 	friend class DCMessenger;
 
-protected:
-	bool LookupLocationString(const std::string attr, std::string & val) {
-	}
-	
 private:
 
 	// Note: we want to keep the m_daemon_ad_ptr data member private!
