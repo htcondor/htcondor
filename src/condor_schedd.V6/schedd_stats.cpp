@@ -233,6 +233,8 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_VAL(Pool, SCGetAutoClusterType, IF_VERBOSEPUB);
 
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_VAL(Pool, CurrentTransfersOSDF, IF_BASICPUB);
 }
 
 void ScheddStatistics::Clear()

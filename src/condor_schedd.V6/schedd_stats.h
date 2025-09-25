@@ -133,6 +133,8 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    //stats_entry_recent<int> ShadowExceptions;     // number of times shadows have excepted
    stats_entry_recent<int> ShadowsReconnections; // number of times shadows have reconnected
 
+   // glorious hack
+   stats_entry_abs<int> CurrentTransfersOSDF;
 
    // non-published values
    time_t InitTime;            // last time we init'ed the structure
