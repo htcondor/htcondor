@@ -670,7 +670,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_output_transfer_active = true;
-				m_ft_rval = filetrans->UploadFailureFiles(false);
+				m_ft_rval = filetrans->UploadFailureFiles(false); // do not block
 				// We would otherwise not send any UnreadyReasons we
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
@@ -678,7 +678,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 			}
 		} else {
 			m_output_transfer_active = true;
-			m_ft_rval = filetrans->UploadFiles(false, final_transfer);
+			m_ft_rval = filetrans->UploadFiles(false, final_transfer); // do not block
 		}
 
 		if (m_output_transfer_active) {
@@ -686,6 +686,19 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 				in_progress = true;
 			} else {
 				m_output_transfer_active = false;
+				if (filetrans->GetInfo().xfer_status == XFER_STATUS_UNKNOWN) {
+					// The transfer failed to launch, so our callback on
+					// completion hasn't been called.
+					// Register a timer to call allJobsDone() like the
+					// callback does.
+					std::ignore = daemonCore->Register_Timer(
+						0,
+						[](int /* timerID */) -> void {
+							starter->allJobsDone();
+						},
+						"allJobsDone"
+					);
+				}
 			}
 			return false;
 		}
