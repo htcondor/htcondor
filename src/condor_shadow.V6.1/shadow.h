@@ -212,6 +212,10 @@ class UniShadow : public BaseShadow
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
+	std::optional<std::string> uniqueCIFName(
+		const std::string & cifName, const std::string & content
+	);
+
  protected:
 
 	virtual void logReconnectedEvent( void );
@@ -261,10 +265,6 @@ class UniShadow : public BaseShadow
 	// At some point we'll figure out nesting our coroutines and
 	// we won't need this any more.
 	bool resume_job_setup = false;
-
-	std::optional<std::string> uniqueCIFName(
-		const std::string & cifName, const std::string & content
-	);
 };
 
 #endif
