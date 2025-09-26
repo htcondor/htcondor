@@ -30,7 +30,7 @@ struct BannerInfo {
 
 struct FileInfo {
     long FileId{0};
-    long FileInode{0};
+    ino_t FileInode{0};
     std::string FileHash{};
     std::string FileName{};
     long LastOffset{0};

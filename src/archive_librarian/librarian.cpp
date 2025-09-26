@@ -192,7 +192,7 @@ int Librarian::calculateBacklogFromBytes(const Status& status) {
     int estimatedBacklog = static_cast<int>(std::round(static_cast<double>(totalUnreadBytes) / EstimatedBytesPerJobInArchive_));
 
     dprintf(D_ALWAYS, "Backlog calculation: %lld total unread bytes, estimated %d jobs remaining\n",
-            totalUnreadBytes, estimatedBacklog);
+            (long long) totalUnreadBytes, estimatedBacklog);
 
     return estimatedBacklog;
 }
