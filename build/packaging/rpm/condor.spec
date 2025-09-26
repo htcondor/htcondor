@@ -735,17 +735,6 @@ for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
-# htcondor/dags only works with Python3
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
-
-# htcondor/personal.py only works with Python3
-rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
-
-# New fangled stuff does not work with Python2
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad2
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad3
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor2
-
 # classad3 shouldn't be distributed yet
 rm -rf %{buildroot}/usr/lib*/python%{python3_version}/site-packages/classad3
 
@@ -1189,8 +1178,6 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-/usr/lib64/python%{python3_version}/site-packages/classad/
-/usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 /usr/lib64/python%{python3_version}/site-packages/classad2/
