@@ -6,12 +6,12 @@
 // #include <string>
 // #include <optional>
 // #include "compat_classad.h"
-// #include "shadow.h"
+// #include "baseshadow.h"
 
-typedef std::pair< std::string, std::string > FileCatalog;
+using ListOfCatalogs = std::vector< std::pair< std::string, std::string > >;
 
-std::optional<std::vector<FileCatalog>> computeCommonInputFileCatalogs( ClassAd * jobAd, UniShadow * self );
-bool computeCommonInputFiles( ClassAd * jobAd, UniShadow * self, std::vector<FileCatalog> & commonFileCatalogs, int & required_version );
+std::optional<ListOfCatalogs> computeCommonInputFileCatalogs( ClassAd * jobAd, BaseShadow * shadow );
+bool computeCommonInputFiles( ClassAd * jobAd, BaseShadow * shadow, ListOfCatalogs & commonFileCatalogs, int & required_version );
 
 
 #endif /* _CONDOR_CATALOG_UTILS_H */

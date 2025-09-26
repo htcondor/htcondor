@@ -28,8 +28,7 @@
 
 #include <optional>
 #include "guidance.h"
-
-using ListOfCatalogs = std::vector< std::pair< std::string, std::string > >;
+#include "catalog_utils.h"
 
 class ShadowHookMgr;
 
@@ -212,7 +211,7 @@ class UniShadow : public BaseShadow
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
-	std::optional<std::string> uniqueCIFName(
+	virtual std::optional<std::string> uniqueCIFName(
 		const std::string & cifName, const std::string & content
 	);
 

@@ -5,14 +5,14 @@
 #include <string>
 #include <optional>
 #include "compat_classad.h"
-#include "shadow.h"
+#include "baseshadow.h"
 #include "catalog_utils.h"
 
 #include "stl_string_utils.h"
 
-std::optional<std::vector<FileCatalog>>
-computeCommonInputFileCatalogs( ClassAd * jobAd, UniShadow * self ) {
-	std::vector<FileCatalog> common_file_catalogs;
+std::optional<ListOfCatalogs>
+computeCommonInputFileCatalogs( ClassAd * jobAd, BaseShadow * shadow ) {
+	ListOfCatalogs common_file_catalogs;
 
 	//
 	// Which common files, if any, were we asked for?
@@ -23,7 +23,7 @@ computeCommonInputFileCatalogs( ClassAd * jobAd, UniShadow * self ) {
 		std::string commonInputFiles;
 		jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
 
-		auto internal_catalog_name = self->uniqueCIFName(cifName, commonInputFiles);
+		auto internal_catalog_name = shadow->uniqueCIFName(cifName, commonInputFiles);
 		if(! internal_catalog_name) {
 			return {};
 		}
@@ -40,7 +40,7 @@ computeCommonInputFileCatalogs( ClassAd * jobAd, UniShadow * self ) {
 
 
 bool
-computeCommonInputFiles( ClassAd * jobAd, UniShadow * self, std::vector<FileCatalog> & common_file_catalogs, int & required_version ) {
+computeCommonInputFiles( ClassAd * jobAd, BaseShadow * shadow, ListOfCatalogs & common_file_catalogs, int & required_version ) {
 	std::string common_input_files;
 	bool found_htc25_plumbing =
 		jobAd->LookupString( ATTR_COMMON_INPUT_FILES, common_input_files );
@@ -55,7 +55,7 @@ computeCommonInputFiles( ClassAd * jobAd, UniShadow * self, std::vector<FileCata
 		long long int clusterID = 0;
 		ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
 		formatstr( default_name, "clusterID_%lld", clusterID );
-		auto internal_catalog_name = self->uniqueCIFName(default_name, common_input_files);
+		auto internal_catalog_name = shadow->uniqueCIFName(default_name, common_input_files);
 		if(! internal_catalog_name) {
 			return false;
 		}

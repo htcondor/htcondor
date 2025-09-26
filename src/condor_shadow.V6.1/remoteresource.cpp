@@ -41,6 +41,9 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include "catalog_utils.h"
+#include "condor_holdcodes.h"
+#include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -838,6 +841,13 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// This seems like the obvious place to change the job ad so that we
+	// can properly initialize the FTO if the starter we're talking to is too
+	// old to handle common file transfer.  However, the FTO is actually
+	// initialized by checkInputFileTransfer(), which deliberately happens
+	// before we contact the starter.  Oops.
+	//
+	// Try using addInputFile() instead, I guess.
 
 	std::string buf;
 	dprintf(D_MACHINE, "StarterInfo ad:\n%s", formatAd(buf, *ad, "\t")); // formatAt guarantees a newline.
@@ -870,7 +880,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				free(machineName);
 				machineName = strdup( buf.c_str() );
 			}
-		}	
+		}
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	} else if( ad->LookupString(ATTR_MACHINE, buf) ) {
 		if( machineName ) {
@@ -878,7 +888,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				free(machineName);
 				machineName = strdup( buf.c_str() );
 			}
-		}	
+		}
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
@@ -904,6 +914,61 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				 ATTR_HAS_RECONNECT );
 	}
 
+
+	//
+	// If the starter is too old for common file transfer, fall back on
+	// per-proc file transfer.
+	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
+	// actually released as part of 25.2.FIXME.
+	//
+	// I am, for now, OK with ignoring CFT_VERSION = 1 starters, which first
+	// set in HTCONDOR-3051, and released as 24.9.0.
+	if(! cvi.built_since_version( 25, 2, 0 )) {
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+		if(! common_file_catalogs) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			return;
+		}
+
+		int required_version = 2;
+		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			return;
+		}
+
+		if( common_file_catalogs->empty() ) {
+			return;
+		}
+
+		std::string whole_list;
+		for( const auto & [cifName, commonInputFiles] : *common_file_catalogs ) {
+			dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+
+			std::set< std::string > pathsAlreadyPreserved;
+			for( const auto & source : split(commonInputFiles) ) {
+				dprintf( D_ZKM, "adding %s ...\n", source.c_str() );
+				// I'm not happy about this logic leaking out to here.
+				std::string destination = condor_basename(source.c_str());
+				filetrans.addInputFile( source, destination, pathsAlreadyPreserved );
+			}
+		}
+	}
 }
 
 void
