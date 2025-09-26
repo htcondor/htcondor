@@ -922,7 +922,21 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	memset(&sa, 0, sizeof(sa));
 
 	sa.sun_family = AF_UNIX;
-	strncpy(sa.sun_path, "/var/run/docker.sock",sizeof(sa.sun_path) - 1);
+	// Default docker socket path location
+	std::string docker_socket_path = "/var/run/docker.sock";
+	// unless overridden by env var
+	std::string docker_host;
+	if (getenv("DOCKER_HOST")) {
+		docker_host = getenv("DOCKER_HOST");
+		if (docker_host.starts_with("unix://")) {
+			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
+		} else {
+			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			return -1;
+		}
+	}
+
+	strncpy(sa.sun_path, docker_socket_path.c_str(), sizeof(sa.sun_path) - 1);
 
 	{
 	TemporaryPrivSentry sentry(PRIV_ROOT);
