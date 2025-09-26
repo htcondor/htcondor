@@ -23,7 +23,7 @@ is a list of items that administrators should be aware of.
   :jira:`2259`
 
 - The old syntax for job transforms is deprecated and will be removed during the
-  lifetime of the **V24** feature series.
+  lifetime of the **V25** feature series.
 
 - The use of multiple :subcom:`queue` statements in a single submit description
   file is now deprecated. This functionality is planned to be removed during the
