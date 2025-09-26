@@ -85,7 +85,7 @@ class Check:
         return self.version > other.version
 
 
-NEXT_MAJOR_VERSION = (25, 0, 0)
+NEXT_MAJOR_VERSION = (26, 0, 0)
 CURRENT_VERSION = tuple(int(x) for x in htcondor.param["CONDOR_VERSION"].split("."))
 IS_WINDOWS = os.name == "nt"
 VERBOSITY = Debug.BASE
@@ -436,15 +436,24 @@ def check_for_classad_unit_specifier(*args, **kwargs):
     CHECK_GANGLIA = False
     warn_macros = list()
 
+    cron_period = re.compile(r".*_CRON_.*_PERIOD", re.IGNORECASE)
+    benchmark_period = re.compile(r"BENCHMARKS_.*_PERIOD", re.IGNORECASE)
+
     # Check Configuration for numbers with unit suffixes
     # Note: false positives are possible
     for macro, value in htcondor.param.items():
         # Skip if value is not a string literal
         if type(value) is not str:
             continue
+
         # Well known false positives we can ignore
-        if macro in ["DCSTATISTICS_TIMESPANS", "TRANSFER_IO_REPORT_TIMESPANS", "JAVA_MAXHEAP_ARGUMENT"]:
+        if macro in ["DCSTATISTICS_TIMESPANS", "TRANSFER_IO_REPORT_TIMESPANS", "JAVA_MAXHEAP_ARGUMENT", "IPV6_ADDRESS"]:
             continue
+        if macro.upper().startswith("FILE_TRANSFER_DISK_LOAD_THROTTLE_"):
+            continue
+        if cron_period.match(macro) or benchmark_period.match(macro):
+            continue
+
         # Check daemon list for GangliaD
         if macro == "DAEMON_LIST":
             CHECK_GANGLIA = "GANGLIAD" in value.upper()

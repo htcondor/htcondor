@@ -796,6 +796,86 @@ COMMANDS FOR MATCHMAKING
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
 
+ :subcom-def:`request_memory` = <quantity>
+    The amount of memory this job needs in Mb. If not specified, the value is set 
+    by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
+    The actual amount of memory used by a job is represented by the job ClassAd attribute
+    :ad-attr:`MemoryUsage`.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ :sup:`40` numbers of bytes.
+
+    The expression
+
+    .. code-block:: condor-classad-expr
+
+          && (RequestMemory <= Target.Memory)
+
+    is appended to the **requirements** expression for the job.
+
+ :subcom-def:`retry_request_memory` = <quantity> [, <quantity2> [...]]
+    The amount of memory in Mb the job should request if it is evicted from
+    a slot for using more than the original ``request_memory`` value.
+
+    The value can be a single quantity, or a comma separated list of quantities.
+    If more than one quantity is specified, each must be larger than the previous one.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ :sup:`40` numbers of bytes.
+
+    When ``retry_request_memory`` is specified, when the job
+    is evicted from a slot for using too much memory, the memory request
+    of the job will be adjusted to the next quantity and the job will run again
+    rather than being held. When the job is already requesting the last
+    quantity in the list, it will be held if it uses too much memory.
+
+    In the case where a cluster of jobs usually uses a smaller amount of memory,
+    but occasionally needs a larger amount of memory, this command will
+    allow the majority of jobs to match with smaller memory slots, and perhaps
+    allow more of them to match and start, without wasting the larger amount
+    of memory only seldomly needed.  So, if most jobs in a cluster can
+    run with 1 GB of memory, but some need 4 GB, then a submit file with:
+
+    .. code-block:: condor-submit
+
+      request_memory = 1 GB
+      retry_request_memory = 4 GB
+
+    will start every job with 1 Gb of memory, and those that fail due to 
+    exceeding the memory will be automatically restarted with 4 GB of memory.
+
+ :subcom-def:`retry_request_memory_increase` = <quantity or expression>
+    The amount of memory in Mb that should be added to the current memory
+    request when the job is evicted from a slot for using too much memory.
+    When used along with ``retry_request_memory_max``, the memory request
+    will continue to increase util it hits the max value.  If a job that
+    is at the max value is evicted for using too much memory it will be 
+    put on hold.  If this submit command is used without ``retry_request_memory_max``,
+    the memory request will only be increased once.
+
+    The increase can be either a quantity to add to the memory request, or
+    an expression that uses :ad-attr:`RequestMemory`.
+    For example, and note that because :ad-expr:`RequestMemory * 4` is a classad
+    expression, a unit suffix is not allowed after the `4`:
+
+    .. code-block:: condor-submit
+
+        request_memory = 1 GB
+        retry_request_memory_increase = RequestMemory * 4
+        retry_request_memory_max = 16 GB
+
+ :subcom-def:`retry_request_memory_max` = <quantity>
+    The maximum amount of memory in Mb that should be requested by the job
+    when a ``retry_request_memory_increase`` is specified.  If this command
+    is used without ``retry_request_memory_increase`` it behaves the same
+    as ``retry_request_memory`` with a single quantity.
+
  :subcom-def:`request_gpus` = <num-gpus>
     A requested number of GPUs. If not specified, no GPUs will be requested.
     If specified one of the expressions below
@@ -833,26 +913,6 @@ COMMANDS FOR MATCHMAKING
     For pools that enable dynamic *condor_startd* provisioning and are at least version 9.8.0,
     the constraint will be tested against the properties of AvailableGPUs and only those that match
     will be assigned to the dynamic slot.
-
- :subcom-def:`request_memory` = <quantity>
-    The amount of memory this job needs in Mb. If not specified, the value is set 
-    by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
-    The actual amount of memory used by a job is represented by the job ClassAd attribute
-    :ad-attr:`MemoryUsage`.
-
-    Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
-
-    The expression
-
-    .. code-block:: condor-classad-expr
-
-          && (RequestMemory <= Target.Memory)
-
-    is appended to the **requirements** expression for the job.
 
     :subcom-def:`request_GPUs`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`

@@ -4597,6 +4597,10 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 {
 	JobQueueJob    *job = nullptr;
 
+	// Note: (flags & SetAttribute_UserTransform) indicates a post-submit transform defined by the user
+	// these transforms are unable to even attempt to change other users jobs, but should not
+	// be able to change secure, immutable or protected attributes
+
 	const char *func_name = (flags & SetAttribute_Delete) ? "DeleteAttribute" : "SetAttribute";
 
 	// Only an authenticated user or the schedd itself can modify an attribute.
@@ -4646,12 +4650,15 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
 		// should we fail or silently succeed?  (old submits set secure attrs)
-		const CondorVersionInfo *vers = nullptr;
+		bool fail_quietly = (flags & SetAttribute_UserTransform) != 0; // internal calls should fail quietly
 		if ( Q_SOCK && ! Ignore_Secure_SetAttr_Attempts) {
-			vers = Q_SOCK->get_peer_version();
+			const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
+			if (vers && vers->built_since_version( 8, 5, 8 )) {
+				// new versions should know better!  fail!
+				fail_quietly = false;
+			}
 		}
-		if (vers && vers->built_since_version( 8, 5, 8 ) ) {
-			// new versions should know better!  fail!
+		if ( ! fail_quietly) {
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Failing!\n",
 				func_name, attr_name, key.cluster, key.proc);
@@ -4718,7 +4725,7 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		const JobQueueUserRec * auth_user = EffectiveUserRec(Q_SOCK);
 		if ( Q_SOCK && 
 			 ( (!isQueueSuperUser(auth_user) && !qmgmt_all_users_trusted) ||
-			    !Q_SOCK->getAllowProtectedAttrChanges() ) &&
+			    !Q_SOCK->getAllowProtectedAttrChanges() || (flags & SetAttribute_UserTransform) ) &&
 			 protected_attrs.find(attr_name) != protected_attrs.end() )
 		{
 			dprintf(D_ALWAYS,

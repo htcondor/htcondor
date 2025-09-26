@@ -57,7 +57,13 @@ metric_units( double bytes )
 // passing the expression on to the classad code to be parsed to preserve the
 // assumption that the base units of the output is not bytes.
 //
-bool parse_int64_bytes(const char * input, int64_t & value, int base, char * parsed_unit /*=nullptr*/)
+bool parse_int64_bytes(
+    const char * input,
+    int64_t & value,
+    int base,
+    char * parsed_unit /*=nullptr*/,
+    const char* separators /*=nullptr*/,
+    const char ** endp /*=nullptr*/)
 {
         const char * tmp = input;
         while (isspace(*tmp)) ++tmp;
@@ -90,7 +96,7 @@ bool parse_int64_bytes(const char * input, int64_t & value, int base, char * par
         // parse the multiplier postfix
         int64_t mult = 1;
         if (parsed_unit) { *parsed_unit = *p; }
-        if (!*p) { mult = base; }
+        if (!*p || (separators && strchr(separators, *p))) { mult = base; }
         else if (*p == 'k' || *p == 'K') mult = 1024;
         else if (*p == 'm' || *p == 'M') mult = 1024*1024;
         else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;
@@ -102,6 +108,7 @@ bool parse_int64_bytes(const char * input, int64_t & value, int base, char * par
         // if we to here and we are at the end of the string
         // then the input is valid, return true;
         if (!*p || !p[1]) {
+                if (endp) *endp = p;
                 value = val;
                 return true;
         }
@@ -109,7 +116,16 @@ bool parse_int64_bytes(const char * input, int64_t & value, int base, char * par
         // Tolerate a b (as in Kb) and whitespace at the end, anything else and return false)
         if (p[1] == 'b' || p[1] == 'B') p += 2;
         while (isspace(*p)) ++p;
+        // If optional separator and endp are passed, the input is valid if we are on
+        // a separator character
+        if (endp && separators && strchr(separators, *p)) {
+            if (endp) *endp = p;
+            value = val;
+            return true;
+        }
+        // otherwise the input is valid if we are on a \0 char
         if (!*p) {
+                if (endp) *endp = p;
                 value = val;
                 return true;
         }

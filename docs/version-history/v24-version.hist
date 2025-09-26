@@ -1,15 +1,30 @@
+*** 24.12.14 bugs
+
+*** 24.0.14 bugs
+
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
+
+- Fixed a bug where space and comma would be included in the list of
+  separators for itemdata even if the itemdata had been supplied with
+  the ASCII "unit separator".  This would cause itemdata entries containing
+  spaces (or commas) to be incorrectly interpreted as multiple items, which
+  could manifest as parse errors.  You can work around this bug if only one
+  of your entries has spaces and/or commas by moving that entry to the end
+  of the line (or dictionary, if you're submitting itemdata via Python).
+  :jira:`3272`
+
 *** 24.12.13 bugs
 
 - Fixed bug where the message ``Processing new events...`` would briefly
   flash while running :tool:`condor_watch_q`
   :jira:`3244`
 
-*** 24.0.13 bugs
-
 *** 24.12.3 features
 
 - :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
-  (instead of :attr:`Name`) when trying to find *condor_startd* daemons, if
+  (instead of :attr:`Name`) when trying to find *condor_startd* daemons,
   if the ``name`` argument is not the name of a slot.  This allows programmers
   to call :meth:`htcondor2.Collector.locate` using the fully-qualified domain
   name and get a result from a collector whether or not
@@ -18,11 +33,11 @@
 
 - Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
   defaults to false.  When true, and running on a cgroup enable system, local
-  universe jobs must specify :subcom:`request_memory`, and the job exceeds that
+  universe jobs must specify :subcom:`request_memory`, and if the job exceeds that
   limit, it will be put on hold.
   :jira:`3170`
 
-- :macro:`HISTORY_HELPER_MAX_HISTORY` defalt raise from 10,000 to 2,000,000,000
+- :macro:`HISTORY_HELPER_MAX_HISTORY` default raised from 10,000 to 2,000,000,000
   effectively removing the limit.  We now believe that running large
   remote history queries will not have a negative impact on the *condor_schedd*
   :jira:`3215`
@@ -33,7 +48,7 @@
 
 - Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
   which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
-  and htchirp.py to work correctly inside a docker universe job.
+  and :obj:`htcondor.htchirp` to work correctly inside a docker universe job.
   :jira:`3197`
 
 - :tool:`condor_watch_q` will now exit upon key press from keyboard.
@@ -64,9 +79,9 @@
   :jira:`3122`
 
 - On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
-  be updated in the startd as frequently as :ad-attr:`ImageSize` is so that the default
-  :macro:`PREEMPT` and `:macro:`WANT_HOLD` policy expressions that evict
-  jobs which go over :ad-attr:`Memory` in a timely manner.
+  be updated in the startd as frequently as :ad-attr:`ImageSize` so that the default
+  :macro:`PREEMPT` and :macro:`WANT_HOLD` policy expressions will evict jobs
+  that go over :ad-attr:`Memory` in a timely manner.
   :jira:`3224`
 
 *** 24.12.3 bugs
@@ -82,8 +97,8 @@
   on hold and :subcom:`notification` was set to error.
   :jira:`3219`
 
-- Fixed bug introduced in 24.11 that caused the schedd to 
-  occassionally crash when dagman completed.
+- Fixed bug introduced in 24.11 that caused the *condor_schedd* to
+  occasionally crash when DAGMan completed.
   :jira:`3250`
 
 *** 24.0.12 features
