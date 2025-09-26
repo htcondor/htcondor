@@ -769,6 +769,24 @@ bool GceRequest::SendRequest()
 		goto error_return;
 	}
 
+	rv = curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, 15 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_CONNECTTIMEOUT ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CONNECTTIMEOUT ) failed (%d): '%s', failing.\n",
+		         rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
+	rv = curl_easy_setopt( curl, CURLOPT_TIMEOUT, 60 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_TIMEOUT ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_TIMEOUT ) failed (%d): '%s', failing.\n",
+		         rv, curl_easy_strerror( rv ) );
+		goto error_return;
+	}
+
 /*  // Useful for debuggery.  Could be rewritten with CURLOPT_DEBUGFUNCTION
 	// and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
 	rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
