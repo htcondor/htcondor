@@ -13,12 +13,6 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
 :doc:`api/version2/index`
     Documentation for :mod:`htcondor2` and :mod:`classad2`.
 
-:doc:`api/classad`
-    Documentation for :mod:`classad`.
-
-:doc:`api/htcondor`
-    Documentation for :mod:`htcondor`.
-
 :doc:`api/htchirp`
     Documentation for :mod:`htcondor2.htchirp`.
 
@@ -36,8 +30,6 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
    install
    tutorials/index
    api/version2/index
-   api/classad
-   api/htcondor
    api/htchirp
    api/dags
    api/personal
