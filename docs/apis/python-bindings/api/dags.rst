@@ -1,9 +1,9 @@
-:mod:`htcondor.dags` API Reference
+:mod:`htcondor2.dags` API Reference
 ==================================
 
-.. module:: htcondor.dags
+.. module:: htcondor2.dags
 
-.. py:currentmodule:: htcondor.dags
+.. py:currentmodule:: htcondor2.dags
 
 .. attention::
     This is not documentation for DAGMan itself! If you run into DAGMan jargon
@@ -108,7 +108,7 @@ DAG Configuration
 Rescue DAGs
 -----------
 
-:mod:`htcondor.dags` can read information from a DAGMan rescue file and apply
+:mod:`htcondor2.dags` can read information from a DAGMan rescue file and apply
 it to your DAG as it is being constructed.
 
 See :ref:`Rescue DAG` for more information on Rescue DAGs.

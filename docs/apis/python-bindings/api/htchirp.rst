@@ -1,23 +1,23 @@
-:mod:`htcondor.htchirp` API Reference
+:mod:`htcondor2.htchirp` API Reference
 =====================================
 
-.. module:: htcondor.htchirp
+.. module:: htcondor2.htchirp
 
-.. py:currentmodule:: htcondor.htchirp
+.. py:currentmodule:: htcondor2.htchirp
 
-:mod:`htcondor.htchirp` is a Python Chirp client compatible with the
+:mod:`htcondor2.htchirp` is a Python Chirp client compatible with the
 *condor_starter* Chirp proxy server. It is intended for use inside a running
 HTCondor job to access files on the submit machine or to query and modify job
 ClassAd attributes. Files can be read, written, or removed. Job attributes can
 be read, and most attributes can be updated.
 
-Jobs that use :mod:`htcondor.htchirp` module must have the attribute
+Jobs that use :mod:`htcondor2.htchirp` module must have the attribute
 ``WantIOProxy`` set to ``true`` in the job ClassAd
 (``want_io_proxy = true`` in the submit description).
-:mod:`htcondor.htchirp` only works for jobs run in the
+:mod:`htcondor2.htchirp` only works for jobs run in the
 vanilla, paralllel, and java universes.
 
-:mod:`htcondor.htchirp` provides two objects for interacting with the
+:mod:`htcondor2.htchirp` provides two objects for interacting with the
 *condor_starter* Chirp proxy server, :class:`HTChirp` and
 :func:`condor_chirp`.
 
@@ -27,7 +27,7 @@ to the *condor_starter* Chirp proxy server:
 
 .. code-block:: python
 
-   from htcondor.htchirp import HTChirp
+   from htcondor2.htchirp import HTChirp
 
    with HTChirp() as chirp:
        # inside this block, the connection is open
