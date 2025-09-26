@@ -48,9 +48,15 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 /* #define ROLL   */
 #define UNROLL
 
+// So std::numeric_limits<>::max works on windows
+#ifdef WIN32
+#define NOMINMAX
+#endif
+
 #include <stdio.h>
 #include <stdlib.h> // for malloc & free
 #include <math.h>
+#include <algorithm>
 #if !defined(WIN32)
 # include <unistd.h>
 #endif
@@ -1069,8 +1075,10 @@ kflops_raw( void )
 		quick_kflops = kflops;
 	}
 
-	// For faster machines, run with more loops.
-	loops = (int) floor( 0.9999 + (QUICK_RUNS * quick_kflops * LOOP_CONST) );
+	// For faster machines, run with more loops. But no more than INT_MAX
+	loops = (int)
+            std::clamp(0.9999 + (QUICK_RUNS * quick_kflops * LOOP_CONST),
+                      0.0, (double) std::numeric_limits<int>::max());
 # if(ENABLE_TIMING)
 	double t1 = condor_gettimestamp_double( );
 # endif
