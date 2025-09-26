@@ -572,7 +572,7 @@ JICShadow::transferOutput(bool& transient_failure, bool& in_progress)
 		return true;
 	}
 
-	if (m_output_transfer_active == false) {
+	if (!m_output_transfer_active) {
 		return transferOutputStart(transient_failure, in_progress);
 	} else {
 		return transferOutputFinish(transient_failure, in_progress);
@@ -664,13 +664,17 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
 		filetrans->setClientSocketTimeout(timeout);
 
+		// Warning! On unix, the following file transfer call returns
+		// immediately after creating a child process to perform the transfer.
+		// On windows, the transfer is done in-process and the function
+		// returns only after the transfer is complete.
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
 		if( job_failed && final_transfer ) {
 			// Only attempt failure file upload if we have failure files
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_output_transfer_active = true;
-				m_ft_rval = filetrans->UploadFailureFiles(false); // do not block
+				m_ft_rval = filetrans->UploadFailureFiles(false);
 				// We would otherwise not send any UnreadyReasons we
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
@@ -678,7 +682,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 			}
 		} else {
 			m_output_transfer_active = true;
-			m_ft_rval = filetrans->UploadFiles(false, final_transfer); // do not block
+			m_ft_rval = filetrans->UploadFiles(false, final_transfer);
 		}
 
 		if (m_output_transfer_active) {
@@ -2698,8 +2702,13 @@ JICShadow::beginInputTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
-		if( ! filetrans->DownloadFiles(false) ) { // do not block (i.e. fork)
-				// Error starting the non-blocking file transfer.  For
+		// Warning! On unix, this calls returns immeidately after creating
+		// a child process to perform the transfer.
+		// On windows, the transfer is done in-process and this function
+		// returns only after the transfer is complete.
+		if( ! filetrans->DownloadFiles(false) ) {
+				// Error starting the non-blocking file transfer, or the
+				// transfer itself failed on windows.  For
 				// now, consider this a fatal error
 			EXCEPT( "Could not initiate file transfer" );
 		}
