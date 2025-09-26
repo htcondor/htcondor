@@ -14,6 +14,9 @@
   of the line (or dictionary, if you're submitting itemdata via Python).
   :jira:`3272`
 
+- Add a timeout for all HTTP operations in the grid universe (affects
+  **arc**, **ec2**, and **gce** grid types).
+  :jira:`3300`
 
 *** 24.0.12 features
 
