@@ -9833,6 +9833,7 @@ int
 process_job_credentials(
 	SubmitHash & submit_hash,
 	int DashDryRun,
+	Daemon* schedd_or_credd,
 
 	std::string & URL,
 	std::string & error_string
@@ -9976,18 +9977,40 @@ process_job_credentials(
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
-			Daemon my_credd(DT_CREDD);
-			if (my_credd.locate()) {
-				// this version check will fail if CredD is not
-				// local.  the version is not exchanged over
-				// the wire until calling startCommand().  if
-				// we want to support remote submit we should
-				// just send the command anyway, after checking
-				// to make sure older CredDs won't completely
-				// choke on the new protocol.
-				bool new_credd = true; // assume new credd
-				if (my_credd.version()) {
-					CondorVersionInfo cvi(my_credd.version());
+
+			Daemon credd(DT_CREDD);
+
+			// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+			// in either case we want to initialize our credd object from the passed-in one if we can.
+			if (schedd_or_credd) {
+				DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+				if (schedd) {
+					std::string credd_address;
+					if (schedd->getCreddAddress(credd_address)) {
+						// when we init the credd from the schedd's locationAd,
+						// it will pick up the CreddIpAddr in the locationAd and
+						// use it to set the addr field of the daemon object
+						// And it will use the name, machine, and version of the schedd
+						// TODO: does the location ad need to know the name of the credd?
+						credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+					} else {
+						if (schedd->name() && ! schedd->isLocal()) {
+							// this is a Hail Mary, if the address of the credd is not known,
+							// and the schedd is remote we hope that the credd name and the schedd name are the same.
+							// if this is a local schedd, we are better off using a default credd.
+							credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+						}
+					}
+				} else if (schedd_or_credd->type() == DT_CREDD) {
+					credd = *schedd_or_credd;
+				}
+			}
+
+			// if we did not init the credd object from an ad, we need to locate now.
+			if (credd.locate()) {
+				bool new_credd = true; // assume new credd if version is not known.
+				if (credd.version()) {
+					CondorVersionInfo cvi(credd.version());
 					new_credd = (cvi.getMajorVer() <= 0) || cvi.built_since_version(8, 9, 7);
 				}
 				if (new_credd) {
@@ -9995,18 +10018,18 @@ process_job_credentials(
 					const char * err = NULL;
 					ClassAd return_ad;
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
-					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
 						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
 						return 1;
 					}
 				} else {
 					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
-							"  Credd version: %s", my_credd.version() );
+							"  Credd version: %s", credd.version());
 					return 1;
 				}
 			} else {
-				formatstr( error_string, "ERROR: locate(credd) failed!\n" );
+				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
 				return 1;
 			}
 		}

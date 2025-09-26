@@ -1229,6 +1229,7 @@ int process_job_credentials(
     // Input parameters.
     SubmitHash & submit_hash,
     int DashDryRun /* should default to 0 */,
+    Daemon * schedd_or_credd,
 
     // Output parameters.
     std::string & URL,
