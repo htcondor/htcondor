@@ -1,2 +1,14 @@
+*** 25.0.1 features
+
+- New implementations of the Python bindings, ``htcondor2`` and ``classad2``. This
+  re-implementation of the Python bindings fixes short-comings in the original
+  implementation and eases future maintenance.
+  :jira:`2153`
+
+- The original implementation of the Python bindings has been removed.
+  To use the new Python bindings, please read the
+  :doc:`migration guide <../apis/python-bindings/api/version2/migration-guide>`.
+  :jira:`3240`
+
 *** 25.0.1 bugs
 
