@@ -3176,6 +3176,7 @@ bool
 Starter::transferOutput( void )
 {
 	bool transient_failure = false;
+	bool in_progress = false;
 
 	dprintf(D_ZKM, "Starter::transferOutput()\n");
 
@@ -3192,7 +3193,11 @@ Starter::transferOutput( void )
 	// output-transfer failures in the case of a setup failure; we can only
 	// really report one thing, and that should be the setup failure,
 	// which happens as a result of calling cleanupJobs().
-	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
+	bool transfer_done = jic->transferOutput(transient_failure, in_progress);
+	if (transfer_done == false && in_progress == true) {
+		return false;
+	}
+	if (transfer_done == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
 				// we will retry the transfer when (if) the shadow reconnects
