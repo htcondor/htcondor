@@ -9267,14 +9267,6 @@ int SubmitHash::load_external_q_foreach_items (
 			expand_options &= ~(EXPAND_GLOBS_TO_FILES|EXPAND_GLOBS_TO_DIRS);
 		}
 		citems = submit_expand_globs(o.items, expand_options, errmsg);
-		if ( ! errmsg.empty()) {
-			if (citems >= 0) {
-				push_warning(stderr, "%s", errmsg.c_str());
-			} else {
-				push_error(stderr, "%s", errmsg.c_str());
-			}
-			errmsg.clear();
-		}
 		if (citems < 0) return citems;
 		break;
 

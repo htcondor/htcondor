@@ -1086,7 +1086,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 
         // Generate the job ClassAd
-        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, 0, false, spool, NULL, NULL);
+        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, step, false, spool, NULL, NULL);
         if(! procAd) {
             std::string error = "Failed to create job ad";
             if (isFactoryJob) error += " (late materialization)";
