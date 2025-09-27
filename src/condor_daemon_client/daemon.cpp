@@ -1036,6 +1036,7 @@ Daemon::locate( Daemon::LocateType method )
 		}
 	}
 	_tried_locate = true;
+	bool query_collector = _locate_local_only ? false : true;
 
 		// First call a subsystem-specific helper to get everything we
 		// have to.  What we do is mostly different between regular
@@ -1048,23 +1049,23 @@ Daemon::locate( Daemon::LocateType method )
 		rval = true;
 		break;
 	case DT_GENERIC:
-		rval = getDaemonInfo( GENERIC_AD, true, method );
+		rval = getDaemonInfo( GENERIC_AD, query_collector, method );
 		break;
 	case DT_CLUSTER:
 		setSubsystem( "CLUSTER" );
-		rval = getDaemonInfo( CLUSTER_AD, true, method );
+		rval = getDaemonInfo( CLUSTER_AD, query_collector, method );
 		break;
 	case DT_SCHEDD:
 		setSubsystem( "SCHEDD" );
-		rval = getDaemonInfo( SCHEDD_AD, true, method );
+		rval = getDaemonInfo( SCHEDD_AD, query_collector, method );
 		break;
 	case DT_STARTD:
 		setSubsystem( "STARTD" );
-		rval = getDaemonInfo( STARTD_AD, true, method );
+		rval = getDaemonInfo( STARTD_AD, query_collector, method );
 		break;
 	case DT_MASTER:
 		setSubsystem( "MASTER" );
-		rval = getDaemonInfo( MASTER_AD, true, method );
+		rval = getDaemonInfo( MASTER_AD, query_collector, method );
 		break;
 	case DT_COLLECTOR:
 		do {
@@ -1073,11 +1074,11 @@ Daemon::locate( Daemon::LocateType method )
 		break;
 	case DT_NEGOTIATOR:
 	  	setSubsystem( "NEGOTIATOR" );
-		rval = getDaemonInfo ( NEGOTIATOR_AD, true, method );
+		rval = getDaemonInfo ( NEGOTIATOR_AD, query_collector, method );
 		break;
 	case DT_CREDD:
 	  setSubsystem( "CREDD" );
-	  rval = getDaemonInfo( CREDD_AD, true, method );
+	  rval = getDaemonInfo( CREDD_AD, query_collector, method );
 	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
@@ -1092,15 +1093,15 @@ Daemon::locate( Daemon::LocateType method )
 		break;
 	case DT_TRANSFERD:
 		setSubsystem( "TRANSFERD" );
-		rval = getDaemonInfo( ANY_AD, true, method );
+		rval = getDaemonInfo( ANY_AD, query_collector, method );
 		break;
 	case DT_HAD:
 		setSubsystem( "HAD" );
-		rval = getDaemonInfo( HAD_AD, true, method );
+		rval = getDaemonInfo( HAD_AD, query_collector, method );
 		break;
 	case DT_KBDD:
 		setSubsystem( "KBDD" );
-		rval = getDaemonInfo( NO_AD, true, method );
+		rval = getDaemonInfo( NO_AD, query_collector, method );
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::locate", (int)_type );
@@ -1150,9 +1151,10 @@ bool
 Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 {
 	std::string			buf;
-	char				*tmp, *my_name;
+	char				*my_name;
 	char				*host = NULL;
 	bool				nameHasPort = false;
+	bool				usedHostKnob = false;
 
 	if( ! _addr.empty() && is_valid_sinful(_addr.c_str()) ) {
 		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
@@ -1174,6 +1176,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			dprintf( D_HOSTNAME, 
 					 "No name given, but %s defined to \"%s\"\n",
 					 buf.c_str(), _name.c_str() );
+			usedHostKnob = true;
 		}
 	}
 	if( ! _name.empty() ) {
@@ -1234,11 +1237,11 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
-	} else if( ! _name.empty() ) {
+	} else if( ! _name.empty() && query_collector) {
 			// We were passed a name, so try to look it up in DNS to
 			// get the full hostname.
 
-		tmp = get_daemon_name( _name.c_str() );
+		auto_free_ptr tmp(get_daemon_name( _name.c_str() ));
 		if( ! tmp ) {
 				// we failed to contruct the daemon name.  the only
 				// possible reason for this is being given faulty
@@ -1252,10 +1255,9 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// name (and the full hostname, since that's just the
 			// "host part" of the "name"...
 		_alias = get_host_part(_name.c_str());
-		_name = tmp;
-		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
-				 tmp );
-		free(tmp);
+		_name = tmp.ptr();
+		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n", _name.c_str());
+
 			// now, grab the fullhost from the name we just made...
 		_full_hostname = get_host_part(_name.c_str());
 		dprintf( D_HOSTNAME,
@@ -1287,13 +1289,16 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// we'll still query the collector even if we don't have the 
             // name
 		_is_local = true;
-		tmp = localName();
-		_name = tmp;
-		free(tmp);
-		_full_hostname = get_local_fqdn();
-		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
-				 "values - name: \"%s\", full host: \"%s\"\n", 
-				 _name.c_str(), _full_hostname.c_str() );
+		if ( ! usedHostKnob) {
+			auto_free_ptr tmp(localName());
+			if (tmp) {
+				_name = tmp.ptr();
+				_full_hostname = get_local_fqdn();
+				dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
+						 "values - name: \"%s\", full host: \"%s\"\n", 
+						 _name.c_str(), _full_hostname.c_str() );
+			}
+		}
 	}
 
 		// Now that we have the real, full names, actually find the
@@ -1830,23 +1835,24 @@ Daemon::useSuperPort()
 bool
 Daemon::readAddressFile( const char* subsys )
 {
-	char* addr_file = NULL;
+	auto_free_ptr addr_file;
 	FILE* addr_fp;
 	std::string param_name;
 	std::string buf;
 	bool rval = false;
 	bool use_superuser = false;
+	bool file_is_classad = false;
 
 	if ( useSuperPort() )
 	{
 		formatstr( param_name, "%s_SUPER_ADDRESS_FILE", subsys );
 		use_superuser = true;
-		addr_file = param( param_name.c_str() );
+		addr_file.set(param(param_name.c_str()));
 	}
 	if ( ! addr_file ) {
 		formatstr( param_name, "%s_ADDRESS_FILE", subsys );
 		use_superuser = false;
-		addr_file = param( param_name.c_str() );
+		addr_file.set(param(param_name.c_str()));
 		if( ! addr_file ) {
 			return false;
 		}
@@ -1854,51 +1860,122 @@ Daemon::readAddressFile( const char* subsys )
 
 	dprintf( D_HOSTNAME, "Finding %s address for local daemon, "
 			 "%s is \"%s\"\n", use_superuser ? "superuser" : "local",
-			 param_name.c_str(), addr_file );
+			 param_name.c_str(), addr_file.ptr() );
 
 	if( ! (addr_fp = safe_fopen_wrapper_follow(addr_file, "r")) ) {
 		dprintf( D_HOSTNAME,
 				 "Failed to open address file %s: %s (errno %d)\n",
-				 addr_file, strerror(errno), errno );
-		free( addr_file );
+				 addr_file.ptr(), strerror(errno), errno );
 		return false;
 	}
-		// now that we've got a FILE*, we should free this so we don't
-		// leak it.
-	free( addr_file );
-	addr_file = NULL;
+
+	// how to interpret the first lines of the address file when it is
+	// not all key value pairs.
+	std::string addr;
+	struct _meaning { const char * attr; std::string & val; } line_meaning[] = {
+		{ ATTR_MY_ADDRESS, addr },
+		{ ATTR_VERSION, _version },
+		{ ATTR_PLATFORM, _platform },
+		{ nullptr, addr }, // nullptr is a sintinel value for end-of-meaning table
+	};
+	auto * meaning = &line_meaning[0];
+
+	int lines_of_data = 0;
+	bool file_has_keys = false;
+
+	// read lines from the file until we get one that isn't valid
+	// or we get to one we cannot interpret, if line is key=value
+	// just add it to the daemon ad, if not, interpret it as a string
+	// value for the next "meaning" line until we run out of meanings
+	while (readLine(buf, addr_fp)) {
+		trim(buf); // trim removes trailing \r\n along with other whitespace, so no need to chomp(buf);
+		if (buf.empty()) continue;
+		if (buf.front() == '#') continue;
+
+		// At the start of the file, we don't know for sure whether we are parsing key=val or raw lines
+		// but we do know that the first key=value must be a string value, so we can detect whether
+		// the first line is a raw sinful or a MyAddress="<sinful>" and then act appropriately
+		std::string attr;
+		const char * rhs = nullptr;
+		if (SplitLongFormAttrValue(buf.c_str(), attr, rhs)
+			&& (file_has_keys || (*rhs == '"' && IsValidAttrName(attr.c_str())))) {
+			if ( ! m_location_ad.AssignExpr(attr, rhs)) {
+				dprintf( D_HOSTNAME, "Could not parse %s=%s from address file %s\n", attr.c_str(), rhs, addr_file.ptr());
+				break;
+			}
+			file_has_keys = true; // require that the remainder of the file is classad key=value pairs
+		} else if (meaning->attr) {
+			if (0 == lines_of_data) {
+				// the address (first) field needs special handling, it is the only required field
+				// and it must be a sinful address. or the whole file is invalid
+				if ( ! is_valid_sinful(buf.c_str())) {
+					break;
+				}
+			}
+			meaning->val = buf;
+			m_location_ad.Assign(meaning->attr, meaning->val);
+			++meaning;
+		} else {
+			// don't know how to interpret this line so quit.
+			break;
+		}
+		++lines_of_data;
+	}
 
 		// Read out the sinful string.
-	if( ! readLine(buf, addr_fp) ) {
+	if ( ! lines_of_data) {
 		dprintf( D_HOSTNAME, "address file contained no data\n" );
 		fclose( addr_fp );
 		return false;
 	}
-	chomp(buf);
-	if( is_valid_sinful(buf.c_str()) ) {
-		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
-				 "%s address file\n", buf.c_str(), use_superuser ? "superuser" : "local" );
-		Set_addr(buf);
-		rval = true;
-	}
 
-		// Let's see if this is new enough to also have a
-		// version string and platform string...
-	if( readLine(buf, addr_fp) ) {
-			// chop off the newline
-		chomp(buf);
-		_version = buf;
-		dprintf( D_HOSTNAME,
-				 "Found version string \"%s\" in address file\n",
-				 buf.c_str() );
-		if( readLine(buf, addr_fp) ) {
-			chomp(buf);
-			_platform = buf;
-			dprintf( D_HOSTNAME,
-					 "Found platform string \"%s\" in address file\n",
-					 buf.c_str() );
+	// if the file had keys, populate some stuff from the location ad into this object
+	if (file_has_keys) {
+		if (addr.empty()) m_location_ad.LookupString(ATTR_MY_ADDRESS, addr);
+		if (_version.empty()) m_location_ad.LookupString(ATTR_VERSION, _version);
+		if (_platform.empty()) m_location_ad.LookupString(ATTR_PLATFORM, _platform);
+		if (_name.empty()) m_location_ad.LookupString(ATTR_NAME, _name);
+		if (m_location_ad.LookupString(ATTR_MACHINE, _full_hostname)) {
+			initHostnameFromFull();
+			_tried_init_hostname = false;
 		}
 	}
+
+	// make sure the location ad is fully populated for the case when the address file
+	// did not have a Name= or Machine= value
+	if ( ! _name.empty() && ! m_location_ad.Lookup(ATTR_NAME)) {
+		m_location_ad.InsertAttr(ATTR_NAME, _name);
+	}
+	if ( ! _full_hostname.empty() && ! m_location_ad.Lookup(ATTR_MACHINE)) {
+		m_location_ad.InsertAttr(ATTR_MACHINE, _full_hostname);
+	}
+	AdTypes ad_type;
+	if (convert_daemon_type_to_ad_type(_type, ad_type)) {
+		const char * mytype = AdTypeToString(ad_type);
+		if (mytype) m_location_ad.InsertAttr(ATTR_MY_TYPE, mytype);
+	}
+
+	if ( ! addr.empty()) {
+		dprintf( D_HOSTNAME, "Found valid address \"%s\" in %s address file for %s %s\n",
+			addr.c_str(), use_superuser ? "superuser" : "local",
+			subsys, _name.c_str());
+		Set_addr(addr);
+		rval = true;
+	}
+	if ( ! _version.empty()) {
+		dprintf( D_HOSTNAME,
+			"Found version string \"%s\" in address file\n",
+			_version.c_str() );
+	}
+
+	/* does anyone care?
+	if ( ! _platform.empty()) {
+		dprintf( D_HOSTNAME,
+			"Found platform string \"%s\" in address file\n",
+			buf.c_str() );
+	}
+	*/
+
 	fclose( addr_fp );
 	return rval;
 }
@@ -1975,6 +2052,9 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	initStringFromAd( ad, ATTR_NAME, _name );
 
 		// construct the IP_ADDR attribute
+		// lookup the  <Daemon>IpAddr first, it will likely fail
+		// but when we are using the Schedd ad to get the address of the Credd
+		// we *must* look at CreddIpAddr before MyAddress to get the right answer
 	if (!_subsys.empty()) {
 		formatstr(buf, "%sIpAddr", _subsys.c_str());
 		if ( ad->LookupString(buf, buf2) ) {

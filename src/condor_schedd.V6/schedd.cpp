@@ -13795,6 +13795,41 @@ size_t pidHash(const int &pid)
 	return pid;
 }
 
+// look for a local CREDD and and include it's address in our address file
+//
+bool locate_and_advertise_local_credd(bool force) {
+
+	Daemon local_credd(DT_CREDD);
+	local_credd.locate_local();
+	if ( ! force) {
+		// look to see if the credd address has changed
+		// if it has not then we are done
+		std::string credd_addr;
+		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
+		if ( ! local_credd.addr()) {
+			if (credd_addr.empty())
+				return false;
+		} else {
+			if (credd_addr == local_credd.addr())
+				return false;
+		}
+	}
+
+	// update the extra contact info, and tell daemon core to write a new address file.
+	if (local_credd.addr()) {
+		daemonCore->ContactInfoExtra().Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		if (scheduler.getScheddAd()) {
+			scheduler.getScheddAd()->Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		}
+	} else {
+		// TODO: do we want to clear?
+		// daemonCore->ContactInfoExtra().Delete(ATTR_CREDD_IP_ADDR);
+	}
+	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
+	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	DC_Enable_And_Drop_Addr_File();
+	return true;
+}
 
 // initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
@@ -13810,7 +13845,7 @@ Scheduler::Init()
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
 
-    stats.Reconfig();
+	stats.Reconfig();
 
 	if (first_time_in_init) {
 		if (param_boolean("USE_JOBSETS", false)) {
@@ -13888,6 +13923,8 @@ Scheduler::Init()
 			}
 		}
 	}
+	// now that we know our daemon name, refresh our address file
+	locate_and_advertise_local_credd(true);
 
 	m_include_default_flock_param = param_boolean("FLOCK_BY_DEFAULT", true);
 
@@ -14377,6 +14414,7 @@ Scheduler::Init()
 	}
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
+	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
