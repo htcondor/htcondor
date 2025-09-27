@@ -14,6 +14,14 @@
 
 *** 24.0.14 bugs
 
+*** 24.12.13 bugs
+
+- Fixed bug where the message ``Processing new events...`` would briefly
+  flash while running :tool:`condor_watch_q`
+  :jira:`3244`
+
+*** 24.0.13 bugs
+
 - Fixed false positive reporting of ClassAd unit specifier test in
   :tool:`condor_upgrade_check`.
   :jira:`3276`
@@ -26,14 +34,6 @@
   of your entries has spaces and/or commas by moving that entry to the end
   of the line (or dictionary, if you're submitting itemdata via Python).
   :jira:`3272`
-
-*** 24.12.13 bugs
-
-- Fixed bug where the message ``Processing new events...`` would briefly
-  flash while running :tool:`condor_watch_q`
-  :jira:`3244`
-
-*** 24.0.13 bugs
 
 *** 24.12.4 features
 
