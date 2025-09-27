@@ -610,7 +610,7 @@ do_download() {
 
 # Set global defaults
 CHANNEL="feature"
-DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
+DOWNLOAD_URL="https://htcss-downloads.chtc.wisc.edu"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
