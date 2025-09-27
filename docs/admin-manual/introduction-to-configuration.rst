@@ -79,7 +79,7 @@ is:
    defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
    if HTCondor daemons are not running as Local System on Windows
-   platforms, the file %USERPROFILE\\.condor\\user_config if it exists,
+   platforms, the file %USERPROFILE%\\.condor\\user_config if it exists,
    or the file defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
 #. specific environment variables whose names are prefixed with
