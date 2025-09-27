@@ -329,11 +329,11 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration. Relevant only if HTCondor daemons are not run as root
     on Unix platforms or Local System on Windows platforms. The default
     is ``$(HOME)/.condor/user_config`` on Unix platforms. The default is
-    %USERPROFILE\\.condor\\user_config on Windows platforms. If a fully
+    %USERPROFILE%\\.condor\\user_config on Windows platforms. If a fully
     qualified path is given, that is used. If a fully qualified path is
     not given, then the Unix path ``$(HOME)/.condor/`` prefixes the file
     name given on Unix platforms, or the Windows path
-    %USERPROFILE\\.condor\\ prefixes the file name given on Windows
+    %USERPROFILE%\\.condor\\ prefixes the file name given on Windows
     platforms.
 
     The ability of a user to use this user-specified configuration file
@@ -9862,13 +9862,16 @@ macros are described in the :doc:`/admin-manual/security` section.
     and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    daemon-to-daemon authentication with the token method.  Defaults to
-    ``/etc/condor/tokens.d``.
+    The path to the directory containing tokens for
+    daemon-to-daemon authentication with the token method.
+    Defaults to ``/etc/condor/tokens.d`` on unix and
+    ``$(RELEASE_DIR)\tokens.d`` on Windows.
 
 :macro-def:`SEC_TOKEN_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+    The path to the directory containing tokens for
+    user authentication with the token method.
+    Defaults to ``~/.condor/tokens.d`` on unix and
+    %USERPROFILE%\\.condor\\tokens.d on Windows.
 
 :macro-def:`SEC_TOKEN_REVOCATION_EXPR[SECURITY]`
     A ClassAd expression evaluated against tokens during authentication;

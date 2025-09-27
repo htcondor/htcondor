@@ -17,14 +17,6 @@
   based on previous usage.
   :jira:`3227`
 
-- Container images (see :subcom:`container_image`) that are neither on
-  shared filesystems nor transferred by the container service (*e.g.*,
-  ``docker://`` URLs) are now considered common files by default, meaning
-  that jobs from the same cluster (or DAG) that run on the same machine at
-  overlapping times may not need to all individually transfer the container
-  image.
-  :jira:`3168`
-
 - Improved DAGMan to allow :dag-cmd:`SUBMIT-DESCRIPTION`\'s to be declared
   after nodes that reference the named inline submit description.
   :jira:`3230`
@@ -72,6 +64,18 @@
 *** 25.1.0 features
 
 *** 25.1.0 bugs
+
+*** 25.0.1 features
+
+- New implementations of the Python bindings, ``htcondor2`` and ``classad2``. This
+  re-implementation of the Python bindings fixes short-comings in the original
+  implementation and eases future maintenance.
+  :jira:`2153`
+
+- The original implementation of the Python bindings has been removed.
+  To use the new Python bindings, please read the
+  :doc:`migration guide <../apis/python-bindings/api/version2/migration-guide>`.
+  :jira:`3240`
 
 *** 25.0.1 bugs
 

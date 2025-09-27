@@ -2,6 +2,14 @@
 
 *** 24.0.14 bugs
 
+*** 24.12.13 bugs
+
+- Fixed bug where the message ``Processing new events...`` would briefly
+  flash while running :tool:`condor_watch_q`
+  :jira:`3244`
+
+*** 24.0.13 bugs
+
 - Fixed false positive reporting of ClassAd unit specifier test in
   :tool:`condor_upgrade_check`.
   :jira:`3276`
@@ -15,13 +23,7 @@
   of the line (or dictionary, if you're submitting itemdata via Python).
   :jira:`3272`
 
-*** 24.12.13 bugs
-
-- Fixed bug where the message ``Processing new events...`` would briefly
-  flash while running :tool:`condor_watch_q`
-  :jira:`3244`
-
-*** 24.12.3 features
+*** 24.12.4 features
 
 - :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
   (instead of :attr:`Name`) when trying to find *condor_startd* daemons,
@@ -84,7 +86,7 @@
   that go over :ad-attr:`Memory` in a timely manner.
   :jira:`3224`
 
-*** 24.12.3 bugs
+*** 24.12.4 bugs
 
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`

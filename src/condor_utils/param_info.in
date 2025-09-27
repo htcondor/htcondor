@@ -6109,6 +6109,11 @@ description=Location of the checkpoint destination map file
 default=$(LOCAL_DIR)/checkpoint-destination-mapfile
 type=path
 
+[CONTAINER_IMAGES_COMMON_BY_DEFAULT]
+description=Should countainer images be treated as common files by default?
+type=bool
+default=false
+
 ######
 ## add metaknobs below this banner
 ##

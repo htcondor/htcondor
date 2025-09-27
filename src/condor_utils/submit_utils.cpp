@@ -6867,7 +6867,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image.ptr())  {
-		bool userRequestedCommonContainer = true;
+		bool userRequestedCommonContainer = param_boolean(
+			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
+			false
+		);
 		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
 		if(! userRequestedCommonContainer) {
 			input_files.emplace_back(container_image.ptr());

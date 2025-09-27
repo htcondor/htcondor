@@ -1,33 +1,9 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor2/htchirp" "htcondor2/dags" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils" "htcondor2/_utils")
+set(PACKAGES      "classad3" "classad2" "htcondor2" "htcondor2/htchirp" "htcondor2/dags" "htcondor2/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
-htcondor/_wrap.py
-htcondor/__init__.py
-htcondor/_lock.py
-htcondor/personal.py
-htcondor/htchirp/__init__.py
-htcondor/htchirp/htchirp.py
-htcondor/dags/writer.py
-htcondor/dags/exceptions.py
-htcondor/dags/__init__.py
-htcondor/dags/formatter.py
-htcondor/dags/dag.py
-htcondor/dags/walk_order.py
-htcondor/dags/edges.py
-htcondor/dags/utils.py
-htcondor/dags/rescue.py
-htcondor/dags/node.py
-htcondor/_deprecation.py
-htcondor/_job_status.py
-
-classad/__init__.py
-
-# Private python utilities
-htcondor/_utils/__init__.py
-htcondor/_utils/ansi.py
 
 # Version 2.
 htcondor2/_negotiator.py
@@ -111,14 +87,10 @@ if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
     configure_file(${SETUP_PY_IN} ${SETUP_PY})
 
 	# Make the target directories for python source tree
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/htchirp)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/dags)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad2)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
 

@@ -21,6 +21,7 @@ import os
 import shlex
 import signal
 import subprocess
+import sys
 import textwrap
 import time
 from pathlib import Path
@@ -384,8 +385,8 @@ class PersonalPool:
             "SEC_PASSWORD_DIRECTORY": self.passwords_dir.as_posix(),
             "SEC_TOKEN_DIRECTORY": self.tokens_dir.as_posix(),
             "SEC_TOKEN_SYSTEM_DIRECTORY": self.system_tokens_dir.as_posix(),
-            "MAIL": "/bin/true",
-            "SENDMAIL": "/bin/true",
+            "MAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
+            "SENDMAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
         }
 
         param_lines += ["# BASE PARAMS"]
