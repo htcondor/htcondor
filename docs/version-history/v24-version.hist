@@ -6,7 +6,7 @@
 
 *** 24.0.13 bugs
 
-*** 24.12.3 features
+*** 24.12.4 features
 
 - :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
   (instead of :attr:`Name`) when trying to find *condor_startd* daemons,
@@ -69,7 +69,7 @@
   that go over :ad-attr:`Memory` in a timely manner.
   :jira:`3224`
 
-*** 24.12.3 bugs
+*** 24.12.4 bugs
 
 - Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
   :jira:`3208`
