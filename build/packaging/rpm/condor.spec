@@ -1261,6 +1261,10 @@ fi
 # configuration
 
 %changelog
+* Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.1.0-1
+- New and improved Python bindings: classad2 and htcondor2
+- The original Python bindings have been removed
+
 * Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.1-1
 - New and improved Python bindings: classad2 and htcondor2
 - The original Python bindings have been removed
