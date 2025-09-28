@@ -1,3 +1,10 @@
+condor (25.0.1-1) stable; urgency=medium
+
+  * New and improved Python bindings: classad2 and htcondor2
+  * The original Python bindings have been removed
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 28 Sep 2025 07:57:00 -0500
+
 condor (24.12.4-1) stable; urgency=medium
 
   * Add the ability to enforce memory and CPU limits on local universe jobs
