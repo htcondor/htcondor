@@ -1871,8 +1871,8 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-
-		if( common_file_catalogs->empty() ) {
+		bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+		if( disallowed || common_file_catalogs->empty() ) {
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else {
 			int hasCommonFilesTransfer = 0;

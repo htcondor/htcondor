@@ -928,7 +928,8 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
-	if(! cvi.built_since_version( 25, 2, 0 )) {
+	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
 		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
