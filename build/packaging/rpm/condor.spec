@@ -1261,6 +1261,10 @@ fi
 # configuration
 
 %changelog
+* Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.1-1
+- New and improved Python bindings: classad2 and htcondor2
+- The original Python bindings have been removed
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.4-1
 - Add the ability to enforce memory and CPU limits on local universe jobs
 - Add the ability for condor_chirp to work within a Docker universe job
