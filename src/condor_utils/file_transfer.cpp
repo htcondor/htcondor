@@ -6202,6 +6202,15 @@ FileTransfer::Continue() const
 
 
 void
+FileTransfer::addInputFile( const char* filename )
+{
+	if( !file_contains(InputFiles, filename) ) {
+		InputFiles.emplace_back(filename);
+	}
+}
+
+
+void
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( !file_contains(OutputFiles, filename) ) {
@@ -8445,7 +8454,7 @@ FileTransfer::addSandboxRelativePath(
 }
 
 void
-FileTransfer::addCheckpointFile(
+FileTransfer::addCheckpointFileEx(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {
@@ -8453,7 +8462,7 @@ FileTransfer::addCheckpointFile(
 }
 
 void
-FileTransfer::addInputFile(
+FileTransfer::addInputFileEx(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {

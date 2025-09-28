@@ -923,8 +923,11 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
 	// actually released as part of 25.2.FIXME.
 	//
-	// I am, for now, OK with ignoring CFT_VERSION = 1 starters, which first
-	// set in HTCONDOR-3051, and released as 24.9.0.
+	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
+	// can successfully do common file transfer if and only if there were no
+	// catalogs specified and the job ad has the test syntax from HTC25.  As
+	// a result, those will be treated as needing the fall-back as well.
+	//
 	if(! cvi.built_since_version( 25, 2, 0 )) {
 		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
 		if(! common_file_catalogs) {
@@ -963,9 +966,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 			std::set< std::string > pathsAlreadyPreserved;
 			for( const auto & source : split(commonInputFiles) ) {
 				dprintf( D_ZKM, "adding %s ...\n", source.c_str() );
-				// I'm not happy about this logic leaking out to here.
-				std::string destination = condor_basename(source.c_str());
-				filetrans.addInputFile( source, destination, pathsAlreadyPreserved );
+				filetrans.addInputFile( source.c_str() );
 			}
 		}
 	}
@@ -2389,7 +2390,7 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 	// because those are applied on the starter side and aren't transferred
 	// from the shadow (except as part of the job ad, which we've already
 	// sent).
-	filetrans.addInputFile( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
+	filetrans.addInputFileEx( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
 
 	//
 	// Transfer every file listed in the MANIFEST file.  It could be quite
@@ -2417,7 +2418,7 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 		std::string checkpointFile = manifest::FileFromLine( manifestLine );
 		formatstr( checkpointURL, "%s/%s/%.4d/%s", checkpointDestination.c_str(),
 		  globalJobID.c_str(), manifestNumber, checkpointFile.c_str() );
-		filetrans.addCheckpointFile( checkpointURL, checkpointFile, pathsAlreadyPreserved );
+		filetrans.addCheckpointFileEx( checkpointURL, checkpointFile, pathsAlreadyPreserved );
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );
