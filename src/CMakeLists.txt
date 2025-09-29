@@ -18,6 +18,7 @@
 
 
 add_subdirectory(annex)
+add_subdirectory(archive_librarian)
 add_subdirectory(arc_gahp)
 add_subdirectory(azure_gahp)
 add_subdirectory(bash_completion.d)

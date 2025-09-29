@@ -1601,7 +1601,8 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 			// Note:  I'm not sure why we don't just use the default
 			// constructor here.  wenger 2015-09-25
 			CondorID condorID(0, 0, 0);
-			submit_result_t submit_result = SubmitNodeJob(dm, node, condorID);
+			std::string error;
+			submit_result_t submit_result = SubmitNodeJob(dm, node, condorID, error);
 	
 			// Note: if instead of switch here so we can use break
 			// to break out of while loop.
@@ -1610,7 +1611,7 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 				numSubmitsThisCycle++;
 
 			} else if (submit_result == SUBMIT_RESULT_FAILED || submit_result == SUBMIT_RESULT_NO_SUBMIT) {
-				ProcessFailedSubmit(node, config[conf::i::MaxSubmitAttempts]);
+				ProcessFailedSubmit(node, config[conf::i::MaxSubmitAttempts], error);
 				break; // break out of while loop
 			} else {
 				EXCEPT("Illegal submit_result_t value: %d", submit_result);
@@ -2334,6 +2335,7 @@ void Dag::PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bo
 	trim(timestr);
 
 	if (node) {
+		// NOTE: Keep inline with ProcessFailedSubmit debug message
 		debug_printf(level, "Event: %s for HTCondor Node %s (%d.%d.%d) {%s}%s\n", event->eventName(),
 		             node->GetNodeName(), event->cluster, event->proc, event->subproc, timestr.c_str(), recovStr);
 	} else {
@@ -3582,7 +3584,7 @@ Dag::GetEventIDHash(bool isNoop) const
 
 //---------------------------------------------------------------------------
 Dag::submit_result_t
-Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
+Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err)
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
 
@@ -3614,6 +3616,7 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
 			debug_printf(DEBUG_QUIET, "ERROR: condor_submit_dag -no_submit failed for node %s.\n", node->GetNodeName());
 			// Hmm -- should this be a node failure, since it probably
 			// won't work on retry?  wenger 2010-03-26
+			err = "Failed to submit Sub-DAG";
 			return SUBMIT_RESULT_NO_SUBMIT;
 		}
 	}
@@ -3627,7 +3630,7 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
 	if (node->GetNoop()) {
 		submit_success = fake_condor_submit(condorID, 0, node->GetNodeName(), node->GetDirectory(), logFile.c_str());
 	} else {
-		submit_success = condor_submit(dm, node, condorID);
+		submit_success = condor_submit(dm, node, condorID, err);
 	}
 
 	result = submit_success ? SUBMIT_RESULT_OK : SUBMIT_RESULT_FAILED;
@@ -3674,7 +3677,7 @@ Dag::ProcessSuccessfulSubmit(Node *node, const CondorID &condorID)
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts)
+Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err)
 {
 	// This function should never be called when the Dag object is being used
 	// to parse a splice.
@@ -3682,12 +3685,25 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts)
 
 	_jobstateLog.WriteSubmitFailure(node);
 
+	time_t now = time(nullptr);
+	std::string timestr;
+	time_to_str(now, timestr);
+	trim(timestr);
+
+	// Remove any newlines from submit failure reason
+	std::ranges::transform(err, err.begin(), [](unsigned char c) { return c == '\n' ? ' ' : c; });
+
+	// NOTE: Keep inline with PrintEvent() message
+	// NOTE: The ULOG_ prefix is a lie asked for directly by pegasus *sigh*
+	debug_printf(DEBUG_VERBOSE, "Event: ULOG_SUBMIT_FAILURE for HTCondor Node %s (-1.-1.-1) {%s} %s\n",
+	             node->GetNodeName(), timestr.c_str(), err.c_str());
+
 	// Flag the status file as outdated so it gets updated soon.
 	_statusFileOutdated = true;
 
 	// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;
-	_nextSubmitTime = time(nullptr) + thisSubmitDelay;
+	_nextSubmitTime = now + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
 
 	if (_dagStatus == DagStatus::DAG_STATUS_RM && node->GetType() != NodeType::FINAL) {

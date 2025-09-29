@@ -71,6 +71,8 @@ my $firstappend_condor_config = "
 	NUM_CPUS = 8
 	use FEATURE : StaticSlots
 	SUSPEND = FALSE
+	# in case the test platforms don't have much disk, default to a minimal request
+	JOB_DEFAULT_REQUESTDISK = (TransferInputSizeMB+1) * (1024+256)
 ";
  
 my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"$version");

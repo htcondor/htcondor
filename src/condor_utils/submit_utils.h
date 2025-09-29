@@ -79,6 +79,9 @@
 #define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 #define SUBMIT_KEY_RequirePrefix "require_"
+#define SUBMIT_KEY_RetryRequestMemory "retry_request_memory"
+#define SUBMIT_KEY_RetryRequestMemoryMax "retry_request_memory_max"
+#define SUBMIT_KEY_RetryRequestMemoryIncrease "retry_request_memory_increase"
 // GPU property constraint values
 #define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
 #define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
@@ -164,6 +167,8 @@
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
 #define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
+#define SUBMIT_KEY_CommonInputFiles "common_input_files"
+#define SUBMIT_KEY_ContainerIsCommon "container_is_common"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -201,6 +206,8 @@
 #define SUBMIT_KEY_OnExitHoldReason "on_exit_hold_reason"
 #define SUBMIT_KEY_OnExitHoldSubCode "on_exit_hold_subcode"
 #define SUBMIT_KEY_OnExitRemoveCheck "on_exit_remove"
+#define SUBMIT_KEY_OnEvictChecks "on_evict_checks"
+#define SUBMIT_KEY_TransformBodyPrefix "transform_body_"
 #define SUBMIT_KEY_Noop "noop_job"
 #define SUBMIT_KEY_NoopExitSignal "noop_job_exit_signal"
 #define SUBMIT_KEY_NoopExitCode "noop_job_exit_code"
@@ -864,6 +871,7 @@ protected:
 	int SetPeriodicExpressions();  /* factory:ok */
 	int SetLeaveInQueue();  /* factory:ok */
 	int SetJobRetries();  /* factory:ok */
+	int SetOnEvictExpressions(); /* factory TODO */
 	int SetKillSig();  /* run once if */
 	char *fixupKillSigName(char* sig);
 
@@ -931,6 +939,7 @@ private:
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
 	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
+	int SetBuiltInOnEvictCheck(const char * attr, int scale, const char * line, const char * incr=nullptr);
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,
@@ -1010,7 +1019,7 @@ struct SubmitStepFromQArgs {
 		m_hash.optimize();
 	}
 
-	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string errmsg)
+	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string & errmsg)
 	{
 		int rval = m_hash.load_inline_q_foreach_items(ms_inline_items, m_fea, errmsg);
 		if (rval == 1) { // items are external
@@ -1220,6 +1229,7 @@ int process_job_credentials(
     // Input parameters.
     SubmitHash & submit_hash,
     int DashDryRun /* should default to 0 */,
+    Daemon * schedd_or_credd,
 
     // Output parameters.
     std::string & URL,

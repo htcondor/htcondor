@@ -498,6 +498,7 @@ CondorQuery::setLocationLookup(const std::string &location, bool want_one_result
 	if (queryType == SCHEDD_AD)
 	{
 		attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+		attrs.push_back(ATTR_CREDD_IP_ADDR);
 	}
 
 	setDesiredAttrs(attrs);

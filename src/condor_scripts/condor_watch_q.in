@@ -477,6 +477,7 @@ def watch_q(
 
     (
         cluster_ids,
+        num_procs,
         constraint,
         event_logs,
         batch_names,
@@ -492,7 +493,7 @@ def watch_q(
     else:
         filter_ids.extend(batch_filter_ids)
 
-    tracker = JobStateTracker(event_logs, batch_names, filter_ids, since_cid)
+    tracker = JobStateTracker(event_logs, batch_names, filter_ids, since_cid, num_procs)
     if len(event_logs) == 0:
         warning("No jobs found, exiting...")
         sys.exit(0)
@@ -689,6 +690,7 @@ PROJECTION = [
     "Iwd",
     "DAG_NodesTotal",
     "OtherJobRemoveRequirements",
+    "TotalSubmitProcs",
 ]
 
 
@@ -733,6 +735,7 @@ def find_job_event_logs(
     )
 
     clusters = set()
+    num_procs = dict()
     event_logs = dict()
     batch_names = {}
     batch_filter_ids = []
@@ -746,6 +749,7 @@ def find_job_event_logs(
     for ad in get_ads(constraint, collector, schedd):
         cluster_id = ad["ClusterId"]
         clusters.add(cluster_id)
+        num_procs[cluster_id] = ad["TotalSubmitProcs"]
 
         # Don't do ad.get() because we call str() on the return
         batch_names[cluster_id] = str(ad["JobBatchName"]) if "JobBatchName" in ad else None
@@ -783,6 +787,7 @@ def find_job_event_logs(
 
     return (
         clusters,
+        num_procs,
         constraint,
         event_logs,
         batch_names,
@@ -837,12 +842,17 @@ def get_schedd(collector=None, schedd=None):
 class Cluster:
     """Holds the job state for a singe cluster."""
 
-    def __init__(self, cluster_id, event_log_path, batch_name):
+    def __init__(self, cluster_id, event_log_path, batch_name, proc_count):
         self.cluster_id = cluster_id
         self.event_log_path = event_log_path
         self._batch_name = batch_name
+        self._proc_count = proc_count
 
         self.job_to_state = {}
+
+    @property
+    def num_jobs(self):
+        return self._proc_count if self._proc_count is not None else len(self.job_to_state)
 
     @property
     def batch_name(self):
@@ -868,7 +878,7 @@ class JobStateTracker:
     (available as the state attribute).
     """
 
-    def __init__(self, event_log_paths, batch_names, filter_ids, since_cid):
+    def __init__(self, event_log_paths, batch_names, filter_ids, since_cid, num_procs):
         self.event_readers = dict()
         self.deferred_logs = self.open_readers(event_log_paths)
         self.state = collections.defaultdict(lambda: collections.defaultdict(dict))
@@ -878,6 +888,7 @@ class JobStateTracker:
         self.since = since_cid
 
         self.cluster_id_to_cluster = {}
+        self.num_procs_by_cluster = num_procs
 
     def open_readers(self, logs: dict) -> list:
         deferred_logs = dict()
@@ -944,6 +955,7 @@ class JobStateTracker:
                         cluster_id=event.cluster,
                         event_log_path=event_log_path,
                         batch_name=self.batch_names.get(event.cluster),
+                        proc_count=self.num_procs_by_cluster.get(event.cluster),
                     ),
                 )
 
@@ -1068,14 +1080,16 @@ def row_data_from_job_state(clusters, expected_total_jobs=None):
     row_data = {js: 0 for js in JobStatus}
     active_job_ids = []
 
+    total_jobs = 0
     for cluster in clusters:
+        total_jobs += cluster.num_jobs
         for proc_id, job_state in cluster:
             row_data[job_state] += 1
 
             if job_state in ACTIVE_STATES:
                 active_job_ids.append(JobId(cluster.cluster_id, proc_id))
 
-    row_data[TOTAL] = max(expected_total_jobs, sum(row_data.values()))
+    row_data[TOTAL] = max(expected_total_jobs, total_jobs)
     active_job_ids.sort()
 
     if len(active_job_ids) > 2:

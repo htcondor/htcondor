@@ -177,13 +177,11 @@ file transfer event in a log to date:
 Using :data:`htcondor2.DaemonType.Startd` to find Daemons
 ---------------------------------------------------------
 
-Prior to :ref:`version-history/feature-versions-23-x:Version 23.9.6`,
-the *condor_startd* advertised one ad for each slot.  If you called
-:meth:`htcondor2.Collector.locate` with the name of a slot, you would
-get the address of that *condor_startd*.
+Prior to Version 23.9.6, the *condor_startd* advertised one ad for each
+slot.  If you called :meth:`htcondor2.Collector.locate` with the name of
+a slot, you would get the address of that *condor_startd*.
 
-In :ref:`version-history/feature-versions-23-x:Version 23.9.6`,
-:macro:`ENABLE_STARTD_DAEMON_AD` became enabled by default, and the
+In Version 23.9.6, :macro:`ENABLE_STARTD_DAEMON_AD` became enabled by default, and the
 *condor_startd* now also advertises an ad about the whole machine.  When
 talking to collectors so configured, the ``name`` parameter must be name of
 the daemon, which defaults to the full-qualified domain name; the query will
@@ -194,7 +192,7 @@ domain name of the host on which the *condor_startd* is runinng, so you can
 use that to look for *condor_startd*\ s without knowing the precise configuration
 of the collector(s) you're asking.
 
-As of :ref:`version-history/feature-versions-24-x:Version 24.12.2`, this is
+As of :ref:`version-history/feature-versions-24-x:Version 24.12.4`, this is
 done for you if the ``name`` parameter does not contain an ``@`` character.
 
 For earlier versions, something like the following will work.

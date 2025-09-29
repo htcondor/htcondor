@@ -92,6 +92,9 @@ public:
 		*/
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
+		// return the address of the CREDD associated with this schedd
+		// do not call this method until after locate() or equivalent.
+	bool getCreddAddress(std::string & address);
 
 		/** Hold all jobs that match the given constraint.
 			Set ATTR_HOLD_REASON to the given reason.
@@ -489,10 +492,11 @@ public:
 		const char * constraint,  // expression
 		CondorError *errstack);
 
-	ClassAd * addOrEnableUsers(
+	ClassAd * addOrEnableUserRecs(
 		const ClassAd * userads[],   // ads must have ATTR_USER attribute, if create_if may have other attributes as well
 		int num_usernames,
-		bool create_if,           // true if we want to create users that don't already exist
+		bool create_if,            // true if we want to create users that don't already exist
+		bool is_project,           // true if project ad or mixed user and project ads
 		CondorError *errstack);
 
 	ClassAd * disableUsers(
@@ -524,6 +528,12 @@ public:
 	ClassAd * addProjects(
 		const char * names[],   // project names
 		int num_names,          // number of project names
+		CondorError *errstack);
+
+	ClassAd * enableProjects(
+		const char * names[],   // project names
+		int num_names,          // number of project names
+		bool create_if,         // true if we want to create projects that don't already exist
 		CondorError *errstack);
 
 	ClassAd * addProjects(

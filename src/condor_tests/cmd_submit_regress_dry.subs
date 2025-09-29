@@ -363,6 +363,55 @@ success_exit_code = 5
 
 queue
 
+==retry_mem1.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB
+retry_request_memory = 2GB
+queue
+
+==retry_mem_max.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB
+retry_request_memory_max = 2GB
+queue
+
+==retry_mem_incr.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB
+retry_request_memory_increase = 500 MB
+queue
+
+==retry_mem_incr2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB
+retry_request_memory_increase = RequestMemory*2
+queue
+
+==retry_mem_incr_max.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB
+retry_request_memory_increase = 512MB
+retry_request_memory_max = 2GB
+queue
+
+==retry_mem2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB
+retry_request_memory = 2GB, 8GB
+queue
+
+==retry_mem3.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_memory = 1GB, 2GB, 8GB
+queue
+
 ==parallel.sub
 universe=parallel
 machine_count = 5

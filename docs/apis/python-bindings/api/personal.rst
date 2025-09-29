@@ -1,9 +1,9 @@
-:mod:`htcondor.personal` API Reference
+:mod:`htcondor2.personal` API Reference
 ======================================
 
-.. module:: htcondor.personal
+.. module:: htcondor2.personal
 
-.. py:currentmodule:: htcondor.personal
+.. py:currentmodule:: htcondor2.personal
 
 .. autoclass:: PersonalPool
    :members:

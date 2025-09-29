@@ -641,6 +641,7 @@ typedef unsigned int SetAttributeFlags_t;
 const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
 const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
 const SetAttributeFlags_t SetAttribute_Delete              = (1 << 18);
+const SetAttributeFlags_t SetAttribute_UserTransform       = (1 << 19); // a post-submit transform defined by the user
 
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);

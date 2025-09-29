@@ -201,7 +201,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 }
 
 //-------------------------------------------------------------------------
-static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
+static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID, std::string& err) {
 	std::string cmdFile = node->GetCmdFile();
 	auto vars = init_vars(dm, *node);
 
@@ -217,6 +217,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 		if ( ! temp_fp) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to create temporary submit file '%s'\n",
 			             cmdFile.c_str());
+			err = "Failed to create temporary submit file";
 			return false;
 		}
 
@@ -225,6 +226,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 			             cmdFile.c_str(), desc.data());
 			if (dm.config[conf::b::RemoveTempSubFiles]) { dagmanUtils.tolerant_unlink(cmdFile); }
 			fclose(temp_fp);
+			err = "Failed to write temporary submit file";
 			return false;
 		}
 
@@ -300,6 +302,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 			debug_printf(DEBUG_QUIET, "ERROR (%d): Failed to run condor_submit for node %s: %s\n",
 			             errno, node->GetNodeName(), strerror(errno));
 		}
+		err = "Failed to run condor_submit";
 		return false;
 	}
 
@@ -328,6 +331,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	if ( ! successful_submit) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s:\n%s\n",
 		             node->GetNodeName(), output.ptr());
+		err = "condor_submit failed : " + std::string(output.ptr());
 		return false;
 	}
 
@@ -335,8 +339,9 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	if (jobProcCount > 1) {
 		if (dm.config[conf::b::ProhibitMultiJobs]) {
 			// Other nodes may be single proc so fail and make forward progress
-			debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
-			             jobProcCount);
+			err = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
+			debug_printf(DEBUG_NORMAL, "%s (TotalProcs = %d)\n",
+			             err.c_str(), jobProcCount);
 			return false;
 		} else if (node->GetType() == NodeType::PROVISIONER) {
 			// Required first node so abort (note: debug_error calls DC_EXIT)
@@ -353,7 +358,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 
 //-------------------------------------------------------------------------
 // TJ's new direct submit w/ late-materialization.
-static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID) {
+static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID, std::string& err) {
 	int rval = 0;
 	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
@@ -377,13 +382,13 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	SubmitHash submitHash;
 	SubmitStepFromQArgs ssi(submitHash);
 
-	DCSchedd schedd;
+	DCSchedd schedd; schedd.locate(); // TODO: use locate_local() ?
 	CondorError errstack; // errstack for general qmgr commands
 	AbstractScheddQ* MyQ = nullptr;
 
 	submitHash.init(JSM_DAGMAN);
 	submitHash.setDisableFileChecks(true);
-	submitHash.setScheddVersion(CondorVersion());
+	submitHash.setScheddVersion(CondorVersion()); // TODO: use schedd.version() ?
 	submitHash.init_base_ad(time(nullptr), owner);
 
 	auto vars = init_vars(dm, *node);
@@ -411,6 +416,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 		if ( ! msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
 			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
+			err = "Failed to open submit file: " + errmsg;
 			goto finis;
 		}
 		ms = &msf;
@@ -442,7 +448,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
 	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
-		cred_result = process_job_credentials(submitHash, 0, URL, errmsg);
+		cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
 		if (cred_result != 0) {
 			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
 			rval = -1;
@@ -665,9 +671,11 @@ finis:
 	if (rval < 0) {
 		debug_printf(DEBUG_QUIET, "ERROR: on Line %d of submit file: %s\n", ms->source().line, errmsg.c_str());
 		if (submitHash.error_stack()) {
+			err = errmsg;
 			std::string errstk(submitHash.error_stack()->getFullText());
 			if ( ! errstk.empty()) {
 				debug_printf(DEBUG_QUIET, "submit error: %s", errstk.c_str());
+				err += ": " + errstk;
 			}
 			submitHash.error_stack()->clear();
 		}
@@ -687,7 +695,7 @@ finis:
 }
 
 
-bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
+bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID, std::string& err) {
 	bool success = false;
 	const char* directory = node->GetDirectory();
 	TmpDir tmpDir;
@@ -701,10 +709,10 @@ bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
 	DagSubmitMethod method = static_cast<DagSubmitMethod>(dm.options[deep::i::SubmitMethod]);
 	switch (method) {
 		case DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
-			success = shell_condor_submit(dm, node, condorID);
+			success = shell_condor_submit(dm, node, condorID, err);
 			break;
 		case DagSubmitMethod::DIRECT: // direct submit
-			success = direct_condor_submitV2(dm, node, condorID);
+			success = direct_condor_submitV2(dm, node, condorID, err);
 			break;
 		default:
 			// We have unknown submission method requested so jobs will never be submitted abort

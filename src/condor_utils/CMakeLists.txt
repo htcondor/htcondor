@@ -808,3 +808,4 @@ condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
+condor_exe_test(test_transform_undo "test_transform_undo.cpp" "${CONDOR_TOOL_LIBS}" )

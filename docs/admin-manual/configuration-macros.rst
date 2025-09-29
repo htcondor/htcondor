@@ -329,11 +329,11 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration. Relevant only if HTCondor daemons are not run as root
     on Unix platforms or Local System on Windows platforms. The default
     is ``$(HOME)/.condor/user_config`` on Unix platforms. The default is
-    %USERPROFILE\\.condor\\user_config on Windows platforms. If a fully
+    %USERPROFILE%\\.condor\\user_config on Windows platforms. If a fully
     qualified path is given, that is used. If a fully qualified path is
     not given, then the Unix path ``$(HOME)/.condor/`` prefixes the file
     name given on Unix platforms, or the Windows path
-    %USERPROFILE\\.condor\\ prefixes the file name given on Windows
+    %USERPROFILE%\\.condor\\ prefixes the file name given on Windows
     platforms.
 
     The ability of a user to use this user-specified configuration file
@@ -6873,15 +6873,16 @@ condor_submit Configuration File Entries
 
     .. code-block:: text
 
-          ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
+          128
 
 :macro-def:`JOB_DEFAULT_REQUESTDISK[SUBMIT]`
     The amount of disk in KiB to acquire for a job, if the job does not
     specify how much it needs using the
     :subcom:`request_disk[and JOB_DEFAULT_REQUESTDISK]`
     submit command. If the job defines the value, then that value takes
-    precedence. If not set, then then the default is defined as
-    :ad-attr:`DiskUsage`.
+    precedence. If not set, then the default is the maximum of 1 GB
+    and 125% of the transfer input size, which is the expression
+    :ad-expr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify
@@ -8269,6 +8270,15 @@ These macros affect the *condor_credd* and its credmon plugin.
 :macro-def:`LOCAL_CREDMON_TOKEN_VERSION[CREDD]`
     A string valued macro that defines what the local issuer should put into
     the "ver" field of the token.  Defaults to ``scitoken:2.0``.
+
+:macro-def:`LOCAL_CREDMON_PRIVATE_KEY_ALGORITHM[CREDD]`
+    A string valued macro that defines which crypt algorithm the local credmon
+    should use.  Defaults to ES256.  Supported values are ES256, RS256.
+
+:macro-def:`LOCAL_CREDMON_AUTHZ_TEMPLATE_EXPR[CREDD]`
+    A classad expression evaluated in the context of a ClassAd containing the 
+    submitter's system username in the ``Username`` attribute.  This should
+    evaluate to a classad string type that contains the authorization template.
 
 :macro-def:`SEC_CREDENTIAL_DIRECTORY[CREDD]`
     A string valued macro that defines a path directory where
@@ -9852,13 +9862,16 @@ macros are described in the :doc:`/admin-manual/security` section.
     and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    daemon-to-daemon authentication with the token method.  Defaults to
-    ``/etc/condor/tokens.d``.
+    The path to the directory containing tokens for
+    daemon-to-daemon authentication with the token method.
+    Defaults to ``/etc/condor/tokens.d`` on unix and
+    ``$(RELEASE_DIR)\tokens.d`` on Windows.
 
 :macro-def:`SEC_TOKEN_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+    The path to the directory containing tokens for
+    user authentication with the token method.
+    Defaults to ``~/.condor/tokens.d`` on unix and
+    %USERPROFILE%\\.condor\\tokens.d on Windows.
 
 :macro-def:`SEC_TOKEN_REVOCATION_EXPR[SECURITY]`
     A ClassAd expression evaluated against tokens during authentication;

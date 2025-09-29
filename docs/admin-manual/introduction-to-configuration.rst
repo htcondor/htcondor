@@ -79,7 +79,7 @@ is:
    defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
    if HTCondor daemons are not running as Local System on Windows
-   platforms, the file %USERPROFILE\\.condor\\user_config if it exists,
+   platforms, the file %USERPROFILE%\\.condor\\user_config if it exists,
    or the file defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
 #. specific environment variables whose names are prefixed with
@@ -1375,6 +1375,13 @@ incorporates.
        ``UWCS_Desktop_Policy_Values`` template. For example,
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
+
+    -  :config-template:`ChildCollector(Number [, Port])<FEATURE>`
+
+        Sets up a child Collector daemon with the ``Number`` as part of the
+        identity. The optional ``Port`` option sets which port the child
+        Collector listens on. Otherwise communication occurs through the
+        Shared Port Daemon with the ``collector<Number>`` socket.
 
 .. _CommonCloudAttributesConfiguration:
 

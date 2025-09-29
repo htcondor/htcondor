@@ -1771,6 +1771,8 @@ Scheduler::count_jobs()
 
 	cad->Assign(ATTR_NUM_JOB_STARTS_DELAYED, RunnableJobQueue.size());
 	cad->Assign(ATTR_NUM_PENDING_CLAIMS, startdContactQueue.size() + num_pending_startd_contacts);
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS_IN_Q, startdContactQueue.size());
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS_IN_CONTACT, num_pending_startd_contacts);
 
 	m_xfer_queue_mgr.publish(cad);
 
@@ -2415,6 +2417,22 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 			if (IsQueryConstraintMatch(constr, &queryAd, urec)) {
 				ClassAd ad;
 				urec->live.publish(ad,"Num");
+
+			#if 1 // speed test for Miron
+				struct _urec_test { JobQueueUserRec* ptr; int hits; } refs = {urec, 0};
+				schedd_runtime_probe runtime;
+				WalkJobQueue3(
+					[](JobQueueJob * job, const JOB_ID_KEY & /*jid*/, void * pv) -> int {
+						auto & refs = *(struct _urec_test*)pv;
+						if (refs.ptr == job->ownerinfo) { ++refs.hits; }
+						return 0;
+					},
+					&refs,
+					runtime);
+				ad.Assign("LiveHits", refs.hits);
+				runtime.Publish(ad,"Scan",IF_RT_SUM);
+			#endif
+
 				ad.ChainToAd(urec);
 				if ( !putClassAd(stream, ad, put_opts, proj)) {
 					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
@@ -12394,6 +12412,34 @@ mark_job_running(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc,
 						ATTR_NUM_JOB_STARTS, num);
 	}
+
+	match_rec *mrec = scheduler.FindMrecByJobID(*job_id);
+
+	// Update some ocu-centric statistics if using an ocu resource
+	if (mrec && mrec->is_ocu) {
+		int ocu_cluster = mrec->ocu_originator.cluster;
+		int ocu_proc = mrec->ocu_originator.proc;
+		bool ocu_wanted = false;
+		bool ocu_willing = false;
+		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWanted",&ocu_wanted);
+		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWilling", &ocu_willing);
+
+		std::string ocu_attr_name;
+		if (ocu_wanted) {
+			ocu_attr_name = ATTR_OCU_OWNER_ACTIVATIONS;
+		} else if (ocu_willing) {
+			ocu_attr_name = ATTR_OCU_BORROWER_ACTIVATIONS;
+		}
+		
+		if (!ocu_attr_name.empty()) {
+			int ocu_num_uses = 0;
+			GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_num_uses);
+			ocu_num_uses++;
+			SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_num_uses);
+			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIM_START_TIME, time(nullptr));
+		}
+	}
+
 	MarkJobClean(*job_id);
 }
 
@@ -12449,6 +12495,9 @@ _mark_job_stopped(PROC_ID* job_id)
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING || status == TRANSFERRING_OUTPUT || status == SUSPENDED) {
 
+
+		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
+				 job_id->proc );
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_ENTERED_CURRENT_STATUS, time(0) );
@@ -12461,8 +12510,6 @@ _mark_job_stopped(PROC_ID* job_id)
 		}
 		DeleteAttribute( job_id->cluster, job_id->proc, ATTR_REMOTE_POOL );
 
-		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
-				 job_id->proc );
 	}	
 }
 
@@ -12921,6 +12968,32 @@ Scheduler::child_exit(int pid, int status)
 	ASSERT(srec);
 
 	if( srec->match ) {
+		// Update OCU stats, if any
+		if (srec->match->is_ocu) {
+			int ocu_cluster = srec->match->ocu_originator.cluster;
+			int ocu_proc = srec->match->ocu_originator.proc;
+			bool ocu_wanted = false;
+			bool ocu_willing = false;
+			GetAttributeBool(srec->job_id.cluster, srec->job_id.proc, "OCUWanted",&ocu_wanted);
+			GetAttributeBool(srec->job_id.cluster, srec->job_id.proc, "OCUWilling", &ocu_willing);
+
+			std::string ocu_attr_name;
+			if (ocu_wanted) {
+				ocu_attr_name = "OCUOwnerActivationTime";
+			} else if (ocu_willing) {
+				ocu_attr_name = "OCUBorrowerActivationTime";
+			}
+			time_t ocu_start_time = 0;
+			time_t now = time(nullptr);
+			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIM_START_TIME, &ocu_start_time);
+			if ((now > ocu_start_time) && (ocu_start_time > 0)) {
+				time_t ocu_time = now - ocu_start_time;
+				time_t ocu_total_time = 0;
+				GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_total_time);
+				ocu_total_time += ocu_time;
+				SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_total_time);
+			}
+		}
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 			DelMrec( srec->match );
 			srec->match = NULL;
@@ -13083,6 +13156,114 @@ Scheduler::child_exit(int pid, int status)
 	}
 }
 
+// Apply a single Eviction transform to a job and return a shadow code that indicates
+// whether the transform was successful in curing the problem that caused the eviction
+// if the input shadow_code is JOB_SHOULD_HOLD and the transform was successful, the
+// the return will be JOB_SHOULD_REQUEUE. otherwise the input shadow_code will be the return value
+//
+int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_body, int shadow_code)
+{
+	JOB_ID_KEY_BUF job_id(job->jid);
+	XFormHash mset;
+	mset.init();
+
+	MacroStreamXFormSource xfm(name);
+	std::string errmsg;
+	int rval = xfm.set_simple_transform(xform_body); // returns -1 for bad requirements and -2 for empty transform
+	if (rval < 0) {
+		if (rval == -1) {
+			dprintf(D_ERROR, "TransformOnEvict %s invalid requirements in %s\n", job_id.c_str(), name);
+		}
+		return shadow_code;
+	}
+	errmsg.clear();
+	if ( ! xfm.matches(job)) {
+		dprintf(D_STATUS, "TransformOnEvict %s does not match %s requirements\n", job_id.c_str(), name);
+		return shadow_code;
+	} else {
+		if (xfm.getRequirements()) {
+			dprintf(D_STATUS, "TransformOnEvict %s MATCHES %s requirements\n", job_id.c_str(), name);
+		}
+	}
+
+	XFormAdUndo undo;
+	int flags = XFORM_UTILS_LOG_ERRORS | XFORM_UTILS_LOG_TO_DPRINTF;
+	if (IsFulldebug(D_ALWAYS)) { flags |= XFORM_UTILS_LOG_STEPS; }
+	rval = TransformClassAd(job, xfm, mset, errmsg, flags, &undo);
+	if (rval < 0) {
+		// Transformation failed; errmsg should say why.
+		dprintf(D_ERROR, "TransformOnEvict %s error %d applying transform %s : %s\n",
+			job_id.c_str(), rval, xfm.getName(), errmsg.c_str());
+		undo.Revert(*job);
+		return shadow_code;
+	}
+
+	bool already_in_transaction = InTransaction();
+	if( !already_in_transaction ) {
+		BeginTransaction();
+	}
+
+	bool autocluster_changing = false;
+
+	// examine the transform undo.  the keys in the undo act as dirty keys
+	// we want to convert the current value for each key to a SetAttribute call
+	for (auto &[key,oldval] : undo.list) {
+		ExprTree * tree = job->Lookup(key);
+		if (tree && oldval && *SkipExprEnvelope(tree) == *SkipExprEnvelope(oldval)) continue;
+		const char * attr = key.c_str();
+		const char *rhstr = nullptr;
+
+		if (tree) {
+			rhstr = ExprTreeToString(tree);
+		} else {
+			// If an attribute is marked as dirty but Lookup() on this
+			// attribute fails, it means that attribute was deleted.
+			// We handle this by inserting into the transaction log a
+			// SetAttribute to UNDEFINED, which will work properly even if we
+			// are dealing with a chained job ad that has the attribute set differently
+			// in the cluster ad.
+			rhstr = "UNDEFINED";
+		}
+		if ( ! rhstr) {
+			dprintf(D_ALWAYS,"TransformOnEvict %s: Problem with transformed classad attribute %s aborting transform\n",
+				job_id.c_str(), attr);
+			return shadow_code;
+		}
+
+		if (SetAttribute(job_id.cluster, job_id.proc, attr, rhstr, SetAttribute_UserTransform) == -1) {
+			dprintf(D_ERROR,"(%s) job_transforms: Failed to set %s = %s\n", job_id.c_str(), attr, rhstr);
+			return -2;
+		}
+
+		if (shadow_code == JOB_SHOULD_HOLD) {
+			// The SetAttribute above will have set the autocluster_id to -1 if an attribute
+			// in the autocluster was changed, (the autocluster might have been dirty already).
+			// We further check to see if it appears to be a resource request attr, this should insure that if we
+			// go back to idle it will be with a new resource request
+			// TODO: better way of recognizing that it is safe to skip the hold?
+			if (starts_with_ignore_case(key, ATTR_REQUEST_PREFIX) && job->autocluster_id < 0) {
+				autocluster_changing = true;
+			}
+		}
+	}
+
+	// revert the direct changes to the job classad
+	// since they are now part of the transaction
+	// they will happen when the transaction is applied
+	undo.Revert(*job);
+
+	if ( ! already_in_transaction) {
+		CommitTransactionOrDieTrying();
+	}
+	// if the job was going to go on hold, but we had a successful transform
+	// and the autocluster might be changing, let the job requeue instead.
+	if (shadow_code == JOB_SHOULD_HOLD && autocluster_changing) {
+		shadow_code = JOB_SHOULD_REQUEUE;
+	}
+
+	return shadow_code;
+}
+
 /**
  * Based on the exit status code for a job, we will preform
  * an appropriate action on the job in the queue. If an exception
@@ -13107,7 +13288,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// If we are unable to get the srec, then we need to be careful
 		// down in the logic below
 	shadow_rec *srec = this->FindSrecByProcID( job_id );
-	
+	JobQueueJob * job_ad = GetJobAd( job_id );
+
 		// Get job status.  Note we only except if there is no job status AND the job
 		// is still in the queue, since we do not want to except if the job ad is gone
 		// perhaps due to condor_rm -f.
@@ -13115,7 +13297,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	if (GetAttributeInt(job_id.cluster,job_id.proc,
 						ATTR_JOB_STATUS,&q_status) < 0)	
 	{
-		if ( GetJobAd(job_id.cluster,job_id.proc) ) {
+		if ( job_ad ) {
 			// job exists, but has no status.  impossible!
 			EXCEPT( "ERROR no job status for %d.%d in Scheduler::jobExitCode()!",
 				job_id.cluster, job_id.proc );
@@ -13134,10 +13316,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 
 	ScheddOtherStats * other_stats = NULL;
 	if (OtherPoolStats.AnyEnabled()) {
-		ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		if (job_ad) {
 			other_stats = OtherPoolStats.Matches(*job_ad, updateTime);
-			FreeJobAd(job_ad);
 		}
 		OtherPoolStats.Tick(updateTime);
 	}
@@ -13175,6 +13355,22 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		//
 	bool reportException = false;
 
+	// if job is *going* to go on hold, we first check to see if there is an
+	// eviction transform that might prevent the need to hold it.
+	// TODO: rework the hold/cooldown code below so that we can make the flow
+	// clearer and less hacky.
+	bool check_eviction_transforms = false;
+	bool successful_eviction_transform = false;
+	if (exit_code == JOB_SHOULD_HOLD) {
+		check_eviction_transforms = true;
+	} else if (exit_code == JOB_SHOULD_REQUEUE) {
+		int code = 0;
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
+		if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+			check_eviction_transforms = true;
+		}
+	}
+
 		//
 		// Based on the job's exit code, we will perform different actions
 		// on the job
@@ -13197,11 +13393,36 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
 			srec->reconnect_done = true;
 		}
+	} else if (check_eviction_transforms) {
+		std::string xform_names;
+		if (job_ad->EvaluateAttrString(ATTR_TRANSFORM_ON_EVICT, xform_names)) {
+			for (auto const & tag : StringTokenIterator(xform_names)) {
+				std::string xform_body;
+				if (job_ad->LookupString(ATTR_TRANSFORM_BODY_PREFIX + tag, xform_body)) {
+					dprintf(D_FULLDEBUG, "checking TransformOnEvict=%s for job %d.%d\n",
+						tag.c_str(), job_id.cluster, job_id.proc);
+
+					//std::string adbuf;
+					//dprintf(D_ZKM, "jobad : %s\n", formatAd(adbuf,*job_ad,"\t"));
+
+					int code = TransformOnEvict(job_ad, tag.c_str(), xform_body.c_str(), JOB_SHOULD_HOLD);
+					successful_eviction_transform = (code == JOB_SHOULD_REQUEUE);
+					if (successful_eviction_transform) {
+						dprintf(D_ALWAYS, "TransformOnEvict=%s applied to job %d.%d, skipping other transforms\n",
+							tag.c_str(), job_id.cluster, job_id.proc);
+						break;
+					}
+				}
+			}
+		}
 	}
+	if (successful_eviction_transform) {
+		exit_code = JOB_SHOULD_REQUEUE;
+		dprintf(D_ALWAYS, "not holding job %d.%d because of successful eviction transform\n", job_id.cluster, job_id.proc);
+	} else
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
 		long long ival = 0;
 		classad::Value val;
-		JobQueueJob * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
@@ -13828,6 +14049,41 @@ size_t pidHash(const int &pid)
 	return pid;
 }
 
+// look for a local CREDD and and include it's address in our address file
+//
+bool locate_and_advertise_local_credd(bool force) {
+
+	Daemon local_credd(DT_CREDD);
+	local_credd.locate_local();
+	if ( ! force) {
+		// look to see if the credd address has changed
+		// if it has not then we are done
+		std::string credd_addr;
+		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
+		if ( ! local_credd.addr()) {
+			if (credd_addr.empty())
+				return false;
+		} else {
+			if (credd_addr == local_credd.addr())
+				return false;
+		}
+	}
+
+	// update the extra contact info, and tell daemon core to write a new address file.
+	if (local_credd.addr()) {
+		daemonCore->ContactInfoExtra().Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		if (scheduler.getScheddAd()) {
+			scheduler.getScheddAd()->Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		}
+	} else {
+		// TODO: do we want to clear?
+		// daemonCore->ContactInfoExtra().Delete(ATTR_CREDD_IP_ADDR);
+	}
+	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
+	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	DC_Enable_And_Drop_Addr_File();
+	return true;
+}
 
 // initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
@@ -13843,7 +14099,7 @@ Scheduler::Init()
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
 
-    stats.Reconfig();
+	stats.Reconfig();
 
 	if (first_time_in_init) {
 		if (param_boolean("USE_JOBSETS", false)) {
@@ -13921,6 +14177,8 @@ Scheduler::Init()
 			}
 		}
 	}
+	// now that we know our daemon name, refresh our address file
+	locate_and_advertise_local_credd(true);
 
 	m_include_default_flock_param = param_boolean("FLOCK_BY_DEFAULT", true);
 
@@ -14150,6 +14408,9 @@ Scheduler::Init()
 	tmp = param("SYSTEM_ON_VACATE_COOL_DOWN");
 	if (tmp) {
 		ParseClassAdRvalExpr(tmp, m_jobCoolDownExpr);
+		if( m_jobCoolDownExpr == nullptr ) {
+		    dprintf( D_ALWAYS, "Failed to parse SYSTEM_ON_VACATE_COOL_DOWN expression, ignoring it.\n" );
+		}
 		free(tmp);
 	}
 
@@ -14387,6 +14648,7 @@ Scheduler::Init()
 	}
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
+	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
