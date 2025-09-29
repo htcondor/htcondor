@@ -68,7 +68,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         fclose(file);
 
         std::string hash;
-        formatstr(hash, "%x", std::hash<std::string>{}(buffer));
+        formatstr(hash, "%lx", std::hash<std::string>{}(buffer));
         return hash;
         //return std::format("{:X}", std::hash<std::string>{}(buffer));
     }
