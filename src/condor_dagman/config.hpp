@@ -1,0 +1,141 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2026, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+#pragma once
+
+const int MAX_SUBMITS_PER_INT_DEFAULT = 100;
+const int LOG_SCAN_INT_DEFAULT = 5;
+
+namespace DagmanConfigOptions {
+	enum class b { // DAGMan boolean config options
+		DepthFirst = 0,                // Submit DAG depth first as opposed to breadth first
+		DetectCycle,                   // Peform expensive cycle-detection at startup
+		UseJoinNodes,                  // Use join nodes to reduce dependency counts
+		AggressiveSubmit,              // Override timer interval allowing submit cycle to keep submitting until no more available jobs or max_submit_attempts exceeded
+		RetrySubmitFirst,              // Retry a node that failed job submission before other nodes in ready queue
+		RetryNodeFirst,                // Retry a failed node with retries before other nodes in the ready queue
+		MungeNodeNames,                // Munge node names for multi-DAG runs to make unique node names
+		AllowIllegalChars,             // Allow Node names to contain illegal characters
+		PartialRescue,                 // Write partial rescue DAG
+		RescueResetRetry,              // Reset Node Retries when writing rescue file
+		GenerateSubdagSubmit,          // Generate the *.condor.sub file for sub-DAGs at run time
+		RemoveTempSubFiles,            // Remove temporary inline desc node submit files created for shell condor_submit
+		RemoveJobs,                    // DAGMan will condor_rm all submitted jobs when removed itself
+		HoldFailedJobs,                // Put failed jobs on hold
+		AbortDuplicates,               // Abort duplicates of DAGMan running the same DAG at the same time
+		AbortOnScarySubmit,            // Abort on submit event with HTCondor ID that doesn't match expected value
+		AppendVars,                    // Determine if VARS are naturally appended or prepended to job submit descriptions
+		JobInsertRetry,                // Insert Node retry value to job ad at submission time
+		SuppressJobLogs,               // Suppress specified job log files (see gittrac #4353)
+		EnforceNewJobLimits,           // Have DAG enforce the a newly set MaxJobs limit by removing node batch jobs
+		ProduceJobCreds,               // Have DAGMan direct submit run produce_credentials
+		ProhibitMultiJobs,             // Prohibit nodes that queue more than 1 job
+		NfsLogError,                   // Error if nodes log is on NFS
+		CacheDebug,                    // Cache DAGMan debugging
+		ReportGraphMetrics,            // Report DAG metrics (hight, width, etc)
+		_SIZE // MUST BE FINAL ITEM
+	};
+
+	enum class i { // DAGMan integer config options
+		SubmitDelay = 0,               // Seconds delay between consecutive job submissions
+		SubmitsPerInterval,            // Max number of job submits per cycle
+		MaxSubmitAttempts,             // Max number of job submit attempts before giving up
+		LogScanInterval,               // Interval of time between checking for new log events
+		PendingReportInverval,         // Time interval to report pending nodes
+		VerifyScheddInterval,          // Time in pending state before querying the schedd queue for verification
+		MaxRescueNum,                  // Maximum rescue DAG number
+		MaxJobHolds,                   // Maximum number of holds a node job can have before being declared failed; 0 = infinite
+		HoldClaimTime,                 // Time schedd should hold match claim see submit command keep_claim_idle
+		AllowEvents,                   // What BAD job events to not treat as fatal
+		DebugCacheSize,                // Size of debug cache prior to writing messages
+		MetricsVersion,                // DAGMan metrics file version (1 or 2)
+		JobStateTableInterval,         // Seconds delay between outputting Job State Table to debug log (0 disables printing)
+		BatchFailureTolerance,          // Number of job failures (inclusive) that nodes will tolerate before declaring job list failed
+		_SIZE // MUST BE FINAL ITEM
+	};
+
+	enum class dbl { // DAGMan double config options
+		ScheddUpdateInterval = 0,      // Time interval between DAGMan job Ad updates to/from Schedd
+		_SIZE // MUST BE FINAL ITEM
+	};
+
+	enum class str { // DAGMan string config options
+		SubmitExe = 0,                  // Path to condor_submit executable
+		RemoveExe,                      // Path to condor_rm executable
+		InheritAttrsPrefix,             // String prefix to add to all inherited job attrs
+		NodesLog,                       // Shared *.nodes.log file
+		MachineAttrs,                   // Comma separated list of machine attrs to add to Job Ad
+		UlogMachineAttrs,               // Comma separated list of machine attrs to add to the nodes.log
+		DagConfig,                      // User specified DAGMan config file (pulled from config ironically)
+		_SIZE // MUST BE FINAL ITEM
+	};
+}
+
+class DagmanConfig {
+public:
+	DagmanConfig() {
+		using namespace DagmanConfigOptions;
+
+		boolOpts[static_cast<size_t>(b::RetrySubmitFirst)] = true;
+		boolOpts[static_cast<size_t>(b::MungeNodeNames)] = true;
+		boolOpts[static_cast<size_t>(b::AbortDuplicates)] = true;
+		boolOpts[static_cast<size_t>(b::AbortOnScarySubmit)] = true;
+		boolOpts[static_cast<size_t>(b::PartialRescue)] = true;
+		boolOpts[static_cast<size_t>(b::RescueResetRetry)] = true;
+		boolOpts[static_cast<size_t>(b::GenerateSubdagSubmit)] = true;
+		boolOpts[static_cast<size_t>(b::RemoveJobs)] = true;
+		boolOpts[static_cast<size_t>(b::ProduceJobCreds)] = true;
+		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
+		boolOpts[static_cast<size_t>(b::RemoveTempSubFiles)] = true;
+
+		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
+		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;
+		intOpts[static_cast<size_t>(i::LogScanInterval)] = LOG_SCAN_INT_DEFAULT;
+		intOpts[static_cast<size_t>(i::AllowEvents)] = CheckEvents::ALLOW_NONE;
+		intOpts[static_cast<size_t>(i::VerifyScheddInterval)] = 28'800; // 8 hours (in seconds)
+		intOpts[static_cast<size_t>(i::PendingReportInverval)] = 600;
+		intOpts[static_cast<size_t>(i::JobStateTableInterval)] = 900; // 15 min
+		intOpts[static_cast<size_t>(i::MaxRescueNum)] = MAX_RESCUE_DAG_DEFAULT;
+		intOpts[static_cast<size_t>(i::MaxJobHolds)] = 100;
+		intOpts[static_cast<size_t>(i::HoldClaimTime)] = 20;
+		intOpts[static_cast<size_t>(i::DebugCacheSize)] = (1024 * 1024) * 5; // 5MB
+		intOpts[static_cast<size_t>(i::MetricsVersion)] = 2;
+
+		doubleOpts[static_cast<size_t>(dbl::ScheddUpdateInterval)] = 120.0;
+	}
+
+	bool operator[](DagmanConfigOptions::b opt) const { return boolOpts[static_cast<size_t>(opt)]; }
+	bool& operator[](DagmanConfigOptions::b opt) { return boolOpts[static_cast<size_t>(opt)]; }
+
+	int operator[](DagmanConfigOptions::i opt) const { return intOpts[static_cast<size_t>(opt)]; }
+	int& operator[](DagmanConfigOptions::i opt) { return intOpts[static_cast<size_t>(opt)]; }
+
+	double operator[](DagmanConfigOptions::dbl opt) const { return doubleOpts[static_cast<size_t>(opt)]; }
+	double& operator[](DagmanConfigOptions::dbl opt) { return doubleOpts[static_cast<size_t>(opt)]; }
+
+	std::string& operator[](DagmanConfigOptions::str opt) { return strOpts[static_cast<size_t>(opt)]; }
+	const std::string& operator[](DagmanConfigOptions::str opt) const { return strOpts[static_cast<size_t>(opt)]; }
+
+private:
+	std::array<bool, static_cast<size_t>(DagmanConfigOptions::b::_SIZE)> boolOpts;
+	std::array<int, static_cast<size_t>(DagmanConfigOptions::i::_SIZE)> intOpts;
+	std::array<double, static_cast<size_t>(DagmanConfigOptions::dbl::_SIZE)> doubleOpts;
+	std::array<std::string, static_cast<size_t>(DagmanConfigOptions::str::_SIZE)> strOpts;
+};
+
