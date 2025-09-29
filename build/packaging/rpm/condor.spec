@@ -273,8 +273,8 @@ Provides: %{name}-classads-devel = %{version}-%{release}
 %endif
 
 %if 0%{?rhel} <= 10
-# upgrade-checks package discontinued as of 24.8.0
-Obsoletes: %{name}-upgrade-checks < 24.8.0
+# upgrade-checks package discontinued as of 24.9.0
+Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
@@ -735,17 +735,6 @@ for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
-# htcondor/dags only works with Python3
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
-
-# htcondor/personal.py only works with Python3
-rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
-
-# New fangled stuff does not work with Python2
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad2
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad3
-rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor2
-
 # classad3 shouldn't be distributed yet
 rm -rf %{buildroot}/usr/lib*/python%{python3_version}/site-packages/classad3
 
@@ -969,6 +958,7 @@ rm -rf %{buildroot}
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
 %_bindir/condor_version
+%_bindir/condor_librarian
 %_bindir/condor_history
 %_bindir/condor_status
 %_bindir/condor_wait
@@ -1189,8 +1179,6 @@ rm -rf %{buildroot}
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
-/usr/lib64/python%{python3_version}/site-packages/classad/
-/usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 /usr/lib64/python%{python3_version}/site-packages/classad2/
@@ -1274,6 +1262,30 @@ fi
 # configuration
 
 %changelog
+* Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.1.0-1
+- New and improved Python bindings: classad2 and htcondor2
+- The original Python bindings have been removed
+
+* Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.1-1
+- New and improved Python bindings: classad2 and htcondor2
+- The original Python bindings have been removed
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.4-1
+- Add the ability to enforce memory and CPU limits on local universe jobs
+- Add the ability for condor_chirp to work within a Docker universe job
+- condor_watch_q now exits with any keyboard input
+- The shell submit keyword now works with interactive jobs
+- All changes in 24.0.12
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
+- Update condor_upgrade_check to warn about v1 Python bindings retirement
+- Update condor_upgrade_check to look for old syntax job transforms
+- All changes in 23.10.29
+
+* Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.29-1
+- Fix flocking to pools when there are intermittent network issues
+- HTCondor tarballs now contain Pelican 7.19.3
+
 * Thu Aug 21 2025 Tim Theisen <tim@cs.wisc.edu> - 24.11.2-1
 - Add job attributes to track why and how often a job is vacated
 - Add the ability to notify a user when their job first starts

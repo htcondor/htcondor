@@ -22,7 +22,7 @@ set -x
 yum install -y \
     yum-utils \
     epel-release \
-    https://research.cs.wisc.edu/htcondor/repo/9.x/htcondor-release-current.el8.noarch.rpm \
+    https://htcss-downloads.chtc.wisc.edu/repo/9.x/htcondor-release-current.el8.noarch.rpm \
     || fail 65 "YUM repo installation failed"
 yum-config-manager --set-enabled powertools
 yum-config-manager --setopt install_weak_deps=False --save
