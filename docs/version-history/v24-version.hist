@@ -14,6 +14,10 @@
 
 *** 24.0.14 bugs
 
+- Add a timeout for all HTTP operations in the grid universe (affects
+  **arc**, **ec2**, and **gce** grid types).
+  :jira:`3300`
+
 *** 24.12.13 bugs
 
 - Fixed bug where the message ``Processing new events...`` would briefly
