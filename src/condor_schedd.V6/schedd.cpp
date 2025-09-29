@@ -4378,7 +4378,7 @@ void Scheduler::clearPendingOwners()
 // or (windows only) a partially qualified owner@ntdomain name
 // this will lookup the OwnerInfo record, and return it, creating a new (pending) one if needed
 OwnerInfo *
-Scheduler::insert_ownerinfo(const char * owner, CondorError* errstack)
+Scheduler::insert_ownerinfo(const char * owner, CondorError* /*errstack*/)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
@@ -4490,7 +4490,7 @@ const char * Scheduler::solidify_os_user(const OwnerInfo * owni, CondorError * e
 		// TODO: verify OS user for windows?
 	  #else
 		uid_t user_uid = 0;
-		if ( ! pcache->get_user_uid(urec->OsUser(), user_uid)) {
+		if ( ! pcache()->get_user_uid(urec->OsUser(), user_uid)) {
 			if (errstack) {
 				errstack->pushf("SCHEDD", EACCES, "AP user has OS user value %s, which is not a "
 				"valid OS account", urec->OsUser());
