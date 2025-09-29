@@ -917,17 +917,15 @@ void main_init(int argc, char ** const argv) {
 	// takes care of adding jobs and dependencies to the DagMan
 
 	if ( ! dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
-	parseSetDoNameMunge(dagman.config[conf::b::MungeNodeNames]);
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
-	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
-	// of the parsing, copies of the dagman.dagFile string list happen which
-	// mess up the iteration of this list.
-	str_list sl(dagOpts.dagFiles());
-	for (const auto & file : sl) {
+	DagProcessor dp(dagman.config);
+	int dag_id = 0;
+
+	for (const auto & file : dagOpts.dagFiles()) {
 		debug_printf(DEBUG_VERBOSE, "Parsing %s ...\n", file.c_str());
 
-		if( ! parse(dagman, dagman.dag, file.c_str())) {
+		if ( ! dp.process(dagman, *(dagman.dag), file, dag_id++)) {
 			if (dagman.options[shallow::b::DumpRescueDag]) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.
@@ -979,13 +977,12 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_QUIET, "Loading saved progress from %s for DAG.\n", loadSaveFile.c_str());
 		debug_printf(DEBUG_QUIET, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 		auto [saveFile, _] = dagmanUtils.ResolveSaveFile(dagman.options.primaryDag(), loadSaveFile);
-		//Don't munge node names because save files written via rescue code already munged
-		parseSetDoNameMunge(false);
+
 		//Attempt to parse the save file. Run parse with useDagDir = false because
 		//there is no point risking changing directories just to read save file (i.e. partial rescue)
 		auto saveUseDadDir = dagman.options[deep::b::UseDagDir];
 		dagman.options[deep::b::UseDagDir] = false;
-		if ( ! parse(dagman, dagman.dag, saveFile.c_str())) {
+		if ( ! dp.process(dagman, *(dagman.dag), saveFile)) {
 			std::string rm_reason;
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse save file (%s).",
 			          saveFile.c_str());
@@ -1007,11 +1004,7 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_QUIET, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 		debug_printf(DEBUG_QUIET, "USING RESCUE DAG %s\n", dagman.rescueFileToRun.c_str());
 
-		// Turn off node name munging for the rescue DAG, because
-		// it will already have munged node names.
-		parseSetDoNameMunge(false);
-
-		if( ! parse(dagman, dagman.dag, dagman.rescueFileToRun.c_str())) {
+		if ( ! dp.process(dagman, *(dagman.dag), dagman.rescueFileToRun)) {
 			if (dagOpts[shallow::b::DumpRescueDag]) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.

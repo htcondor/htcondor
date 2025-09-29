@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -21,7 +21,11 @@
 #ifndef PARSE_H
 #define PARSE_H
 
+#include "vector"
+#include "string"
+
 #include "dag.h"
+#include "config.hpp"
 #include "dagman_main.h"
 
 /**
@@ -49,5 +53,19 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
  */
 bool isReservedWord( const char *token );
 //void DFSVisit (Job * job);
+
+// TODO: Process Splices inline with DAG (i.e. remove creating splice objects)
+class DagProcessor {
+public:
+	DagProcessor() = delete;
+	DagProcessor(const DagmanConfig& c) : config(c) {}
+
+	// Note: dag_munge_id is the number to use for name munging. Negative #'s = no munge
+	bool process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id = -1);
+private:
+	const DagmanConfig& config;
+};
+
+
 #endif
 

@@ -2876,3 +2876,17 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 
 	return true;
 }
+
+
+bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id) {
+	if (true) {
+		bool is_main_dag = (dag_munge_id >= 0);
+		parseSetDoNameMunge(is_main_dag ? config[conf::b::MungeNodeNames] : false);
+		return parse(dm, &dag, file.c_str(), is_main_dag);
+	}
+	/*static istring_view all_nodes_keyword(DAG::ALL_NODES.c_str());
+	std::vector<DagCmd> commands{};*/
+	return true;
+}
+
+
