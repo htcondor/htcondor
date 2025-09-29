@@ -1,5 +1,9 @@
 *** 24.0.14 bugs
 
+- Add a timeout for all HTTP operations in the grid universe (affects
+  **arc**, **ec2**, and **gce** grid types).
+  :jira:`3300`
+
 *** 24.0.13 bugs
 
 - Fixed false positive reporting of ClassAd unit specifier test in
