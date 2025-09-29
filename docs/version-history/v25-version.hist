@@ -4,7 +4,7 @@
   clusters using late materialization.
   :jira:`3164`
 
-- Docker universe jobs now correctly show CPU and memory usage when the
+- Docker universe jobs now correctly report CPU and memory usage when the
   docker server is installed in a non-standard place, pointed at with 
   the DOCKER_HOST environment variable, such as with a docker-in-docker setup.
   :jira:`3280`
