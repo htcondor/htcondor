@@ -643,6 +643,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
+	req.m_force_auth = m_force_auth;
 
 	return startCommand_internal( req, timeout, &_sec_man );
 }
@@ -666,6 +667,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
+	req.m_force_auth = m_force_auth;
 
 	auto rc = startCommand_internal(req, timeout, &_sec_man);
 
@@ -762,6 +764,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
+	req.m_force_auth = m_force_auth;
 
 	return startCommand_internal(req, timeout, &_sec_man);
 }
@@ -784,6 +787,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
+	req.m_force_auth = m_force_auth;
 
 	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {
@@ -1356,7 +1360,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		}
 
 		if (method == LOCATE_FOR_ADMIN) {
-			query.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+			query.requestPrivateAttrs();
 		}
 
 			// We need to query the collector
