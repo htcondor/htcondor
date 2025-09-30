@@ -1879,7 +1879,14 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			request.LookupInteger(
 				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
 			);
-			if( hasCommonFilesTransfer < required_version ) {
+			// Even if the job only uses the HTC25 (version 1) syntax,
+			// the version check presently precludes using the version 1
+			// protocol.  This is probably a good thing, since this is
+			// the only place we actually check, meaning that the rest of
+			// the code presumes that multiple common transfers won't
+			// collide.  (The only difference between v1 and v2 is that
+			// a v2 client puts each catalog in its own subdirectory.)
+			if( hasCommonFilesTransfer < 2 ) {
 				// Then, in all cases, we should have already modified the
 				// proc-specific FTO to transfer the common files; see
 				// setStarterInfo().
