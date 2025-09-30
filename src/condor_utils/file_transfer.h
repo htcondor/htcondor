@@ -381,7 +381,7 @@ class FileTransfer final: public Service {
 	// Add the given filename to the list of "failure" files.
 	void addFailureFile( const char* filename );
 
-	// Add the given filename to the list of "input"files.
+	// Add the given filename to the list of "input" files.
 	void addInputFile( const char* filename );
 
 
