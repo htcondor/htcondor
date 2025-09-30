@@ -63,7 +63,8 @@ DEFAULT_PARAMS = {
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
-    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
+    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}",
+    "SINGULARITY": "/usr/bin/false"
 }
 
 
