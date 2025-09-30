@@ -4,6 +4,10 @@
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
 
+- Fixed a bug where administrative tools (e.g. condor_drain) can fail if
+  authentication is not required for queries to the condor_collector.
+  :jira:`3301`
+
 *** 24.0.13 bugs
 
 - Fixed false positive reporting of ClassAd unit specifier test in
