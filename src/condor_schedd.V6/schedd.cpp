@@ -12380,7 +12380,16 @@ mark_job_running(PROC_ID* job_id)
 			GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_num_uses);
 			ocu_num_uses++;
 			SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_num_uses);
-			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIM_START_TIME, time(nullptr));
+			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_ACTIVATION_START_TIME, time(nullptr));
+		}
+
+		// if the ocu was claimed/idle, increment the total claimed time
+		// otherwise, the total running 
+		if (mrec->status == M_CLAIMED) {
+			time_t ocu_claimed_time = 0;
+			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, &ocu_claimed_time);
+			ocu_claimed_time += time(0) - mrec->entered_current_status;
+			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
 		}
 	}
 
@@ -12929,13 +12938,19 @@ Scheduler::child_exit(int pid, int status)
 			}
 			time_t ocu_start_time = 0;
 			time_t now = time(nullptr);
-			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIM_START_TIME, &ocu_start_time);
+			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_ACTIVATION_START_TIME, &ocu_start_time);
+
+			// Update various OCU claim time statistics
 			if ((now > ocu_start_time) && (ocu_start_time > 0)) {
 				time_t ocu_time = now - ocu_start_time;
 				time_t ocu_total_time = 0;
 				GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_total_time);
 				ocu_total_time += ocu_time;
 				SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_total_time);
+				time_t ocu_claimed_time = 0;
+				GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, &ocu_claimed_time);
+				ocu_claimed_time += now - srec->match->entered_current_status;
+				SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
 			}
 		}
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
@@ -15687,10 +15702,11 @@ Scheduler::unlinkMrec(match_rec* match)
 	jobId.cluster = match->cluster;
 	jobId.proc = match->proc;
 
-	// If this match is an ocu holder, make sure to update the
+	// If this match was an ocu holder, make sure to update the
 	// correct job.
 	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
 		jobId = match->ocu_originator;
+		SetAttributeInt(jobId.cluster, jobId.proc, ATTR_OCU_CLAIMED_TIME, time(nullptr) - match->entered_current_status);
 		dirtyJobQueue();
 	}
 
