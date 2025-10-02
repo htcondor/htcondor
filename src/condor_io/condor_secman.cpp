@@ -980,7 +980,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol, bool resume_response,
+		int cmd,Sock *sock,bool raw_protocol, bool force_auth, bool resume_response,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
@@ -989,6 +989,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_subcmd(subcmd),
 		m_sock(sock),
 		m_raw_protocol(raw_protocol),
+		m_force_auth(force_auth),
 		m_errstack(errstack),
 		m_callback_fn(callback_fn),
 		m_misc_data(misc_data),
@@ -1077,6 +1078,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	std::string m_cmd_description;
 	Sock *m_sock;
 	bool m_raw_protocol;
+	bool m_force_auth;
 	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
 	CondorError m_internal_errstack;
 	StartCommandCallbackType *m_callback_fn;
@@ -1185,6 +1187,7 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_cmd,
 		req.m_sock,
 		req.m_raw_protocol,
+		req.m_force_auth,
 		req.m_resume_response,
 		req.m_errstack,
 		req.m_subcmd,
@@ -1615,7 +1618,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	} else {
 		if( !m_sec_man.FillInSecurityPolicyAd(
 				CLIENT_PERM, &m_auth_info,
-				m_raw_protocol,	m_use_tmp_sec_session) )
+				m_raw_protocol,	m_use_tmp_sec_session, m_force_auth) )
 		{
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
@@ -2753,6 +2756,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
 		m_raw_protocol,
+		m_force_auth,
 		m_want_resume_response,
 		m_errstack,
 		m_cmd,
