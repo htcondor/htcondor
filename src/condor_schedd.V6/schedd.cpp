@@ -15706,7 +15706,10 @@ Scheduler::unlinkMrec(match_rec* match)
 	// correct job.
 	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
 		jobId = match->ocu_originator;
-		SetAttributeInt(jobId.cluster, jobId.proc, ATTR_OCU_CLAIMED_TIME, time(nullptr) - match->entered_current_status);
+		time_t ocu_claimed_time = 0;
+		GetAttributeInt(jobId.cluster, jobId.proc, ATTR_OCU_CLAIMED_TIME, &ocu_claimed_time);
+		ocu_claimed_time += time(0) - match->entered_current_status;
+		SetAttributeInt(jobId.cluster, jobId.proc, ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
 		dirtyJobQueue();
 	}
 
