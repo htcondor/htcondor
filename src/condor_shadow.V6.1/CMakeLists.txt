@@ -31,6 +31,7 @@ ShadowHookMgr.cpp
 shadow_user_policy.cpp
 shadow_v61_main.cpp
 uuid_stubs.cpp
+catalog_utils.cpp
 )
 
 
