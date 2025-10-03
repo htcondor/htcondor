@@ -273,7 +273,6 @@ class match_rec
 	bool			is_ocu {false}; // when true, hold forever, hand out to others
     PROC_ID         ocu_originator;  // procid of the ocu claimer job
 									
-	bool m_startd_sends_alives{false}; // in practice, actual default is true since 7.5.4
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
@@ -1133,7 +1132,6 @@ struct JOB_ID_KEY;
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
-extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
