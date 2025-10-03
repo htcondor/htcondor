@@ -766,7 +766,13 @@ JICShadow::transferOutputMopUp(void)
 
 		// We hit some "transient" error, but we've retried too many times,
 		// so tell the shadow we are giving up.
-		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
+		// If necessary, alter the subcode so that we're not indicating
+		// that the job should be held.
+		int subcode = m_ft_info.hold_subcode;
+		if (shouldHoldJobBasedOnCodes(m_ft_info.hold_code, m_ft_info.hold_subcode)) {
+			subcode = -1000;
+		}
+		notifyStarterError(m_ft_info.error_desc.c_str(), true, m_ft_info.hold_code, subcode);
 		return false;
 	} else if( ! m_ft_rval ) {
 	    //
