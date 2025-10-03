@@ -29,10 +29,7 @@ computeCommonInputFileCatalogs( ClassAd * jobAd, BaseShadow * shadow ) {
 		}
 
 		common_file_catalogs.push_back({* internal_catalog_name, commonInputFiles});
-		dprintf( D_ZKM,
-			"Found common file catalog '%s' = '%s'\n",
-			cifName.c_str(), commonInputFiles.c_str()
-		);
+		// dprintf( D_ZKM, "Found common file catalog '%s' = '%s'\n", cifName.c_str(), commonInputFiles.c_str() );
 	}
 
 	return common_file_catalogs;

@@ -962,10 +962,10 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 		std::string whole_list;
 		for( const auto & [cifName, commonInputFiles] : *common_file_catalogs ) {
-			dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+			// dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
 			for( const auto & source : split(commonInputFiles) ) {
-				dprintf( D_ZKM, "adding %s ...\n", source.c_str() );
+				// dprintf( D_ZKM, "adding %s ...\n", source.c_str() );
 				filetrans.addInputFile( source.c_str() );
 			}
 		}
