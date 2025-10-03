@@ -288,6 +288,28 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	return true;
 }
 
+void
+Starter::SetVacateReason(const std::string& msg, int code, int subcode)
+{
+	// Don't overwrite an existing vacate reason
+	if (m_vacateCode == 0) {
+		m_vacateReason = msg;
+		m_vacateCode = code;
+		m_vacateSubcode = subcode;
+	}
+}
+
+void
+Starter::ExceptHandler(const char* errmsg)
+{
+	if (m_vacateCode != 0) {
+		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
+	} else {
+		jic->notifyStarterError(errmsg, true, 0, 0);
+	}
+	RemoteShutdownFast(0);
+	FinalCleanup(STARTER_EXIT_EXCEPTION);
+}
 
 void
 Starter::StarterExit( int code )
