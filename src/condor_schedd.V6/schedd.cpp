@@ -15958,10 +15958,16 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 			// commit it to disk in a big transaction batch via the timer
 			// handler method sendAlives().  We do this for scalability; we
 			// may have thousands of startds sending us updates...
+
+		// If the match is merely CLAIMED (e.g. CLAIMED/IDLE), there is no 
+		// job ad, but we want to mark this in the claim record itself
+		time_t now          = time(nullptr);
+		match->last_alive	= now;
+
 		if ( match->status == M_ACTIVE ) {
 			job_ad = GetJobAd(match->cluster, match->proc);
 			if (job_ad) {
-				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, time(nullptr));
+				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, now);
 			}
 		}
 	} else {
@@ -16196,9 +16202,6 @@ Scheduler::sendAlives( int /* timerID */ )
 		// If we have a shadow and are using the new alive protocol,
 		// check whether the lease has expired. If it has, kill the match
 		// and the shadow.
-		// TODO Kill the match if the lease is expired when there is no
-		//   shadow. This is low priority, since we'll notice the lease
-		//   expiration when we try to start another job.
 		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE &&
 			 mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
 			int lease_duration = -1;
@@ -16227,6 +16230,16 @@ Scheduler::sendAlives( int /* timerID */ )
 				srec->exit_already_handled = true;
 				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}
+		}
+
+		// If the match rec is merely claimed/idle, there is no Job
+		// or shadow
+		if (mrec->status == M_CLAIMED) {
+			int lease_duration = 6 * alive_interval;
+			if ((mrec->last_alive + lease_duration) < now ) {
+				mrec->needs_release_claim = false;
+				DelMrec( mrec );
+			} 
 		}
 	}
 	if( numsent ) { 

@@ -259,6 +259,7 @@ class match_rec
 	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
 	time_t idle_timer_deadline{0}; // if the above is nonzero, abstime to hold claim
 	time_t entered_current_status{0};
+	time_t last_alive{time(0)};
 	PROC_ID m_now_job{0,0};
 
 	ClassAd * my_match_ad{nullptr};
