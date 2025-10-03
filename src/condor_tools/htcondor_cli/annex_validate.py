@@ -363,47 +363,6 @@ SYSTEM_TABLE = {
     }
     ),
 
-    "stampede2": System( **{
-        "pretty_name":      "Stampede 2",
-        "host_name":        "stampede2.tacc.utexas.edu",
-        "default_queue":    "normal",
-        "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
-        "allocation_reqd":  False,
-
-        "queues": {
-            "normal": {
-                "max_nodes_per_job":    256,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       68,
-                "ram_per_node":         96 * 1024,
-
-                "max_jobs_in_queue":    50,
-            },
-            "development": {
-                "max_nodes_per_job":    16,
-                "max_duration":         2 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       68,
-                "ram_per_node":         96 * 1024,
-
-                "max_jobs_in_queue":    1,
-            },
-            "skx-normal": {
-                "max_nodes_per_job":    128,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       48,
-                "ram_per_node":         192 * 1024,
-
-                "max_jobs_in_queue":    20,
-            },
-        },
-    },
-    ),
-
     "expanse": System( **{
         "pretty_name":      "Expanse",
         "host_name":        "login.expanse.sdsc.edu",
