@@ -200,7 +200,8 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	StartdReleaseCommand = 1017,
 	StartdPreemptingClaimRank = 1018,
 	StartdPreemptingClaimUserPrio = 1019,
-	VMError = 1020
+	VMError = 1020,
+	ContainerError = 1021
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
