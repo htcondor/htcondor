@@ -509,7 +509,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert successful_staging_commands == count
 
     keyfile_touches = count_shadow_log_lines(
-        the_condor, "Elected producer touch"
+        the_condor, "Producer elected"
     )
     assert keyfile_touches == count
 
