@@ -1390,7 +1390,7 @@ UniShadow::set_provider_keep_alive( const std::string & cifName ) {
 						SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
 						if( cfLock == NULL ) { continue; }
 
-						dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
+						// dprintf( D_ZKM, "Elected producer touch()ing keyfile.\n" );
 						if(! cfLock->touch()) {
 							// I boldly claim that the global destructor will delete
 							// the corresponding cfLock.
@@ -1478,6 +1478,7 @@ UniShadow::start_common_input_conversation(
 			//
 
 			case SingleProviderSyndicate::PROVIDER:
+				dprintf( D_TEST, "Producer elected.\n" );
 				set_provider_keep_alive( cifName );
 
 				// This would be cleaner as a nested coroutine, but not
@@ -1572,6 +1573,7 @@ UniShadow::start_common_input_conversation(
 			dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 			switch( status ) {
 				case SingleProviderSyndicate::PROVIDER:
+					dprintf( D_TEST, "Producer elected.\n" );
 					set_provider_keep_alive( cifName );
 
 					// This would be cleaner as a nested coroutine, but not
