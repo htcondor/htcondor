@@ -24,7 +24,12 @@ if [ -d lib ]; then
 fi
 # Make compatabilty links to conform to the old tarball layout
 ln -s usr/bin bin
-ln -s usr/sbin sbin
+# Check for Fedora's unified usr/bin
+if [ -d usr/sbin ]; then
+    ln -s usr/sbin sbin
+else
+    ln -s usr/bin sbin
+fi
 ln -s usr/lib lib
 if [ -d usr/lib64 ]; then
     ln -s usr/lib64 lib64
