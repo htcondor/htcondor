@@ -511,36 +511,6 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 			}
 		}
 	}
-
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
-	if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		m_startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		m_startd_sends_alives = true;
-	} else if ( my_match_ad &&
-				my_match_ad->LookupString( ATTR_VERSION, value ) ) {
-		CondorVersionInfo ver( value.c_str() );
-		if ( ver.built_since_version( 7, 5, 4 ) ) {
-			m_startd_sends_alives = true;
-		} else {
-			m_startd_sends_alives = false;
-		}
-	} else {
-		// Don't know the version of the startd, assume false
-		// unless STARTER_HANDLES_ALIVES is true.  If STARTER_HANDLES_ALIVES
-		// is true, we want to assume startd will send alives otherwise
-		// on a schedd restart the schedd will keep sending alives to all
-		// reconnected jobs because it will never actually receive an alive
-		// from the startd.  The downside of this logic is a v8.3.2+ schedd can
-		// no longer successfully reconnect to a startd older than v7.5.5
-		// assuming STARTER_HANDLES_ALIVES is set to the default of true.
-		// I think this is a reasonable compromise.  -Todd Tannenbaum 10/2014
-		m_startd_sends_alives = false;
-		if ( param_boolean("STARTER_HANDLES_ALIVES",true) ) {
-			m_startd_sends_alives = true;
-		}
-	}
 }
 
 void
@@ -9037,11 +9007,12 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
     CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
 
+	// CRUFT Starting in 25.3, the startd assumes true if these
+	//   attributes aren't set.
 	// Tell the startd side who should send alives... startd or schedd
-	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );	
+	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, true );
 	// Tell the startd if to should not send alives if starter is alive
-	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, 
-					param_boolean("STARTER_HANDLES_ALIVES",true) );
+	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, true);
 
 	// Tell the startd our name, which will go into the slot ad
 	jobAd->Assign(ATTR_SCHEDD_NAME, Name);
@@ -9559,6 +9530,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	mrec->setStatus( M_CLAIMED );  // it's claimed now.  we'll set
 								   // this to active as soon as we
 								   // spawn the reconnect shadow.
+
+	GetAttributeInt(mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, &mrec->last_alive);
 
 		/*
 		  We don't want to use the version of add_shadow_rec() that
@@ -10576,8 +10549,9 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		  that we already wrote out the job ClassAd to the shadow's
 		  pipe.
 		*/
+		mrec->last_alive = time(nullptr);
 		SetAttributeInt( job_id->cluster, job_id->proc, 
-						 ATTR_LAST_JOB_LEASE_RENEWAL, time(0) );
+						 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 	}
 
 		// if this is a shadow for an MPI job, we need to tell the
@@ -11925,8 +11899,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claim_id.claimId() );
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
+		mrec->last_alive = time(nullptr);
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
-						 time(0) );
+		                 mrec->last_alive );
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
@@ -15869,49 +15844,6 @@ int Scheduler::AlreadyMatched(PROC_ID* id)
 	return AlreadyMatched(job, universe);
 }
 
-/*
- * go through match reords and send alive messages to all the startds.
- */
-
-bool
-sendAlive( match_rec* mrec )
-{
-	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claim_id.claimId() );
-	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claim_id.claimId() );
-
-	msg->setSuccessDebugLevel(D_PROTOCOL);
-	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
-	// since we send these messages periodically, we do not want
-	// any single attempt to hang around forever and potentially pile up
-	msg->setDeadlineTimeout( 300 );
-	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-	msg->setStreamType( st );
-	if (mrec->use_sec_session) {
-		msg->setSecSessionId( mrec->claim_id.secSessionId() );
-	}
-
-	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
-
-	startd->sendMsg( msg.get() );
-
-	if( msg->deliveryStatus() == DCMsg::DELIVERY_FAILED ) {
-			// Status may also be DELIVERY_PENDING, in which case, we
-			// do not know whether it will succeed or not.  Since the
-			// return code from this function is not terribly
-			// important, we just return true in that case.
-		return false;
-	}
-
-		/* TODO: Someday, espcially once the accountant is done, 
-		   the startd should send a keepalive ACK back to the schedd.  
-		   If there is no shadow to this machine, and we have not 
-		   had a startd keepalive ACK in X amount of time, then we 
-		   should relinquish the match.  Since the accountant is 
-		   not done and we are in fire mode, leave this 
-		   for V6.1.  :^) -Todd 9/97
-		*/
-	return true;
-}
 
 int
 Scheduler::receive_startd_alive(int cmd, Stream *s) const
@@ -15948,10 +15880,6 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 	}
 
 	if ( match ) {
-			// If we're sending keep-alives, stop it, since the startd
-			// wants to send them.
-		match->m_startd_sends_alives = true;
-
 		ret_value = alive_interval;
 			// If this match is active, i.e. we have a shadow, then
 			// update the ATTR_LAST_JOB_LEASE_RENEWAL in RAM.  We will
@@ -16126,9 +16054,6 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 void
 Scheduler::sendAlives( int /* timerID */ )
 {
-	int		  	numsent=0;
-	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
-
 		/*
 		  we need to timestamp any job ad with the last time we sent a
 		  keepalive if the claim is active (i.e. there's a shadow for
@@ -16156,32 +16081,24 @@ Scheduler::sendAlives( int /* timerID */ )
 	time_t now = time(nullptr);
 	BeginTransaction();
 	for (const auto& [id, mrec]: matches) {
-		if( mrec->status == M_ACTIVE ) {
-			time_t renew_time = 0;
-			if ( starter_handles_alives && 
-				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+		if( mrec->status == M_ACTIVE && mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
+			if ( mrec->shadowRec && mrec->shadowRec->pid > 0 )
 			{
-				// If we're trusting the existance of the shadow to 
+				// If we're trusting the existance of the shadow to
 				// keep the claim alive (because of kernel sockopt keepalives),
 				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
-				renew_time = now;
-			} else if ( mrec->m_startd_sends_alives ) {
+				mrec->last_alive = now;
+			} else {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
-				// ping from the startd.  So here
+				// ping from the startd (in the mrec and in the in-memory job ad).  So here
 				// we just want to read it out of RAM and set it via SetAttributeInt
 				// so it is written to disk.  Doing things this way allows us
 				// to update the queue persistently all in one transaction, even
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
-				GetAttributeInt(mrec->cluster,mrec->proc,
-								ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
-			} else {
-				// If we're sending the alives, then we need to set
-				// ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
-				renew_time = now;
 			}
 			SetAttributeInt( mrec->cluster, mrec->proc, 
-							 ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
+							 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 		}
 	}
 	CommitNonDurableTransactionOrDieTrying();
@@ -16191,25 +16108,15 @@ Scheduler::sendAlives( int /* timerID */ )
 	while (it != matches.end()) {
 		match_rec* mrec = it->second;
 		it++;
-		if( mrec->m_startd_sends_alives == false &&
-			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
 
-			if( sendAlive( mrec ) ) {
-				numsent++;
-			}
-		}
-
-		// If we have a shadow and are using the new alive protocol,
-		// check whether the lease has expired. If it has, kill the match
-		// and the shadow.
-		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE &&
+		// If we have a shadow, check whether the lease has expired.
+		// If it has, kill the match and the shadow.
+		if ( mrec->status == M_ACTIVE &&
 			 mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
 			int lease_duration = -1;
-			time_t last_lease_renewal = -1;
+			time_t last_lease_renewal = mrec->last_alive;
 			GetAttributeInt( mrec->cluster, mrec->proc,
 							 ATTR_JOB_LEASE_DURATION, &lease_duration );
-			GetAttributeInt( mrec->cluster, mrec->proc,
-							 ATTR_LAST_JOB_LEASE_RENEWAL, &last_lease_renewal );
 
 			// If the job has no lease attribute, the startd sets the
 			// claim lease to 6 times the alive_interval we sent when we
@@ -16241,10 +16148,6 @@ Scheduler::sendAlives( int /* timerID */ )
 				DelMrec( mrec );
 			} 
 		}
-	}
-	if( numsent ) { 
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d startds)\n", numsent );
 	}
 
 	// Just so we don't have to deal with a seperate DC timer for
