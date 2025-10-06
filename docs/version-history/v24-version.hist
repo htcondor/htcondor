@@ -1,3 +1,12 @@
+*** 24.12.14 features
+
+- Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
+  which defaults to false.  Setting this to true allows users to run
+  docker images which have been prestages in the EPs docker cache even
+  if the image does not exist in a repository, or if the user does not
+  have permission to pull from that repository.
+  :jira:`3315`
+
 *** 24.12.14 bugs
 
 - Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
