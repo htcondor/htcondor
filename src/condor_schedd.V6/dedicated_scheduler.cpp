@@ -917,30 +917,21 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 
 void
-DedicatedScheduler::sendAlives( )
+DedicatedScheduler::checkClaimLeases( )
 {
 	match_rec	*mrec = nullptr;
-	int		  	numsent=0;
 	time_t now = time(nullptr);
-	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
 	all_matches->startIterations();
 	while( all_matches->iterate(mrec) == 1 ) {
-		if( mrec->m_startd_sends_alives == false &&
-			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
-			if( sendAlive( mrec ) ) {
-				numsent++;
-			}
-		}
 
-		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
+		if (mrec->status == M_ACTIVE) {
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			time_t renew_time = 0;
-			if ( starter_handles_alives && 
-				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			if ( mrec->shadowRec && mrec->shadowRec->pid > 0 )
 			{
 				// If we're trusting the existance of the shadow to 
 				// keep the claim alive (because of kernel sockopt keepalives),
@@ -954,11 +945,6 @@ DedicatedScheduler::sendAlives( )
 	}
 
 	CommitTransactionOrDieTrying();
-
-	if( numsent ) {
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d dedicated startds)\n", numsent );
-	}
 }
 
 int

@@ -5113,16 +5113,6 @@ These macros control the *condor_schedd*.
     user priority in the system). The macro is defined in terms of seconds
     and defaults to 300, which is 5 minutes.
 
-:macro-def:`STARTD_SENDS_ALIVES[SCHEDD]`
-    Note: This setting is deprecated, and may go away in a future
-    version of HTCondor. This setting is mainly useful when running
-    mixing very old *condor_schedd* daemons with newer pools. A boolean
-    value that defaults to ``True``, causing keep alive messages to be
-    sent from the *condor_startd* to the *condor_schedd* by TCP during
-    a claim. When ``False``, the *condor_schedd* daemon sends keep
-    alive signals to the *condor_startd*, reversing the direction.
-    This variable is only used by the *condor_schedd* daemon.
-
 :macro-def:`REQUEST_CLAIM_TIMEOUT[SCHEDD]`
     This macro sets the time (in seconds) that the *condor_schedd* will
     wait for a claim to be granted by the *condor_startd*. The default
