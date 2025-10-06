@@ -9012,7 +9012,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	// Tell the startd side who should send alives... startd or schedd
 	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, true );
 	// Tell the startd if to should not send alives if starter is alive
-	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, true);
+	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, true );
 
 	// Tell the startd our name, which will go into the slot ad
 	jobAd->Assign(ATTR_SCHEDD_NAME, Name);
