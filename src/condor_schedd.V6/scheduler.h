@@ -548,7 +548,7 @@ class Scheduler : public Service
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
-	void			sendAlives( int timerID = -1 );
+	void			checkClaimLeases( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler( int timerID = -1 );
 	void			addRunnableJob( shadow_rec* );
@@ -1057,7 +1057,7 @@ private:
 		// leaseAliveInterval is the minimum interval we need to send
 		// keepalives based upon ATTR_JOB_LEASE_DURATION...
 	int				leaseAliveInterval;  
-	int				aliveid;	// timer id for sending keepalives to startd
+	int				aliveid;	// timer id for checking claim leases
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 
 		// get connection info for creating sec session to a running job

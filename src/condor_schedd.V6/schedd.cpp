@@ -15093,7 +15093,7 @@ Scheduler::RegisterTimers()
 	startjobsid = daemonCore->Register_Timer( start_jobs_timeslice,
 		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
-		(TimerHandlercpp)&Scheduler::sendAlives,"sendAlives", this);
+		(TimerHandlercpp)&Scheduler::checkClaimLeases,"checkClaimLeases", this);
     // Preset the job queue clean timer only upon cold start, or if the timer
     // value has been changed.  If the timer period has not changed, leave the
     // timer alone.  This will avoid undesirable behavior whereby timer is
@@ -15884,8 +15884,8 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 			// If this match is active, i.e. we have a shadow, then
 			// update the ATTR_LAST_JOB_LEASE_RENEWAL in RAM.  We will
 			// commit it to disk in a big transaction batch via the timer
-			// handler method sendAlives().  We do this for scalability; we
-			// may have thousands of startds sending us updates...
+			// handler method checkClaimLeases().  We do this for scalability;
+			// we may have thousands of startds sending us updates...
 
 		// If the match is merely CLAIMED (e.g. CLAIMED/IDLE), there is no 
 		// job ad, but we want to mark this in the claim record itself
@@ -16052,7 +16052,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 }
 
 void
-Scheduler::sendAlives( int /* timerID */ )
+Scheduler::checkClaimLeases( int /* timerID */ )
 {
 		/*
 		  we need to timestamp any job ad with the last time we sent a
@@ -16153,7 +16153,7 @@ Scheduler::sendAlives( int /* timerID */ )
 	// Just so we don't have to deal with a seperate DC timer for
 	// this, just call the dedicated_scheduler's version of the
 	// same thing so we keep all of those claims alive, too.
-	dedicated_scheduler.sendAlives();
+	dedicated_scheduler.checkClaimLeases();
 }
 
 void

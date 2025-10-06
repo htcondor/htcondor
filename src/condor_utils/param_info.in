@@ -1863,17 +1863,6 @@ type=int
 tags=startd
 description=Rate at which the Startd sends updates to the Collector
 
-[STARTD_SENDS_ALIVES]
-default=peer
-type=string
-tags=startd,command
-
-[STARTER_HANDLES_ALIVES]
-default=true
-type=bool
-description=Startd should only send alives when slot idle
-tags=schedd,claim
-
 [VM_GAHP_CONFIG]
 default=
 type=string

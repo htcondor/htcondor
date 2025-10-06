@@ -917,7 +917,7 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 
 void
-DedicatedScheduler::sendAlives( )
+DedicatedScheduler::checkClaimLeases( )
 {
 	match_rec	*mrec = nullptr;
 	time_t now = time(nullptr);
