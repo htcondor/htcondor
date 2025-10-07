@@ -1,5 +1,9 @@
 *** 25.0.3 bugs
 
+- Calling ``classad2.ExprTree(None)`` no longer results in an invalid
+  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :jira:`3319`
+
 *** 25.0.2 bugs
 
 - Fixed a very longstanding bug where extremely fast machines would
