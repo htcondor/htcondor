@@ -8,6 +8,12 @@
   daemon can't be contacted will no longer cause a segfault.
   :jira:`3314`
 
+*** 24.0.13 features
+
+- HTCondor tarballs now contain `Pelican 7.20.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.20.2.
+
 *** 24.0.13 bugs
 
 - Fixed false positive reporting of ClassAd unit specifier test in
