@@ -37,6 +37,10 @@ Bugs Fixed:
   slot attribute.
   :jira:`3288`
 
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
+
 Version 24.12.13
 ----------------
 
