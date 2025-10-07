@@ -1,11 +1,11 @@
 *** 25.0.3 bugs
 
-*** 25.0.2 bugs
-
 - Fixed a very longstanding bug where extremely fast machines would
-  overflow a 32 bit counter and return -1 for the :ad-attr:Kflops`
+  overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
   slot attribute.
   :jira:`3288`
+
+*** 25.0.2 bugs
 
 - Fixed bug where when :macro:`SINGULARITY_TARGET_DIR` was set and
   :macro:`STARTER_NESTED_SCRATCH` was also set, then some environment
