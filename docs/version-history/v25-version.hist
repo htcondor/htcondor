@@ -17,6 +17,10 @@
   ingestion of epoch ads into a database to timeout.
   :jira:`2399`
 
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
+
 *** 25.0.1 features
 
 - New implementations of the Python bindings, ``htcondor2`` and ``classad2``. This
