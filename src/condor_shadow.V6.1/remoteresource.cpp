@@ -960,7 +960,6 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 			return;
 		}
 
-		std::string whole_list;
 		for( const auto & [cifName, commonInputFiles] : *common_file_catalogs ) {
 			// dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
