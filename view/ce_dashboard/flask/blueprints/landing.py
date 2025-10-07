@@ -11,6 +11,7 @@ from dataclasses import dataclass, fields, astuple
 from math import floor
 import time
 import threading
+import re
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 # from . import overview  # Import the overview module
 
@@ -53,12 +54,10 @@ def is_hosted_fqdn(fqdn):
     """
     Return True if the FQDN is that of a hosted CE
     """
-    return (
-        fqdn.startswith("hosted-ce")
-        and (
-            fqdn.endswith(".grid.uchicago.edu") or fqdn.endswith(".opensciencegrid.org")
-        )
-    ) or fqdn.endswith(".svc.opensciencegrid.org")
+    return bool(
+        re.match(r'^.*\.svc\.(osg-htc|opensciencegrid)\.org$', fqdn)
+        or re.match(r'^hosted-ce.*\.(grid\.uchicago\.edu|opensciencegrid\.org|osg-htc\.org)$', fqdn)
+    )
 
 @dataclass
 class ResourceInfo:
