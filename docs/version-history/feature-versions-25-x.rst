@@ -15,11 +15,11 @@ Release Notes:
 
 New Features:
 
-.. include-history:: features 25.2.0 25.0.1 24.12.13 24.0.13
+.. include-history:: features 25.2.0 25.0.2 24.12.13 24.0.13
 
 Bugs Fixed:
 
-.. include-history:: bugs 25.2.0 25.0.1 24.12.13 24.0.13
+.. include-history:: bugs 25.2.0 25.0.2 24.12.13 24.0.13
 
 Version 25.1.0
 --------------
