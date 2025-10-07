@@ -31,6 +31,10 @@
   into the job hold reason.
   :jira:`3327`
 
+- Calling ``classad2.ExprTree(None)`` no longer results in an invalid
+  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :jira:`3319`
+
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
