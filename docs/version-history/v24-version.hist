@@ -1,8 +1,8 @@
 *** 24.0.13 features
 
-- HTCondor tarballs now contain `Pelican 7.20.1 <https://pelicanplatform.org/releases>`_
+- HTCondor tarballs now contain `Pelican 7.20.2 <https://pelicanplatform.org/releases>`_
 
-- The condor package now requires pelican-7.20.1.
+- The condor package now requires pelican-7.20.2.
 
 *** 24.0.13 bugs
 
