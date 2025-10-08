@@ -1295,6 +1295,9 @@ fi
 # configuration
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.13-1
+- Fix annoying momentary text status flash in condor_watch_q
+
 * Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
 - Fix bug that could cause Python job submission to crash
 - HTCondor tarballs now contain Pelican 7.20.2
