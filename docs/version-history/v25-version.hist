@@ -12,7 +12,7 @@
 - Removed option to have the *condor_schedd* send claim lease keep-alives.
   Now, the *condor_startd* always sends the keep-alives, which was the
   default.
-  :jira:``3312
+  :jira:`3312`
 
 - Add a python bindings function to reload the ClassAd usermaps and to load
   a specific usermap for use with the ``userMap`` ClassAd function.
