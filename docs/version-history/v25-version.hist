@@ -12,7 +12,7 @@
 - Removed option to have the *condor_schedd* send claim lease keep-alives.
   Now, the *condor_startd* always sends the keep-alives, which was the
   default.
-  :jire:``3312
+  :jira:``3312
 
 *** 25.3.0 bugs
 
