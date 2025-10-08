@@ -33,8 +33,12 @@ COPY tmp/ /tmp/
 RUN /tmp/setup.sh $CONDOR_VERSION
 EOF
     cp -pr setup.sh ../packaging/{debian,rpm} "$platform/tmp/"
-    docker build "$platform" --platform="$base_docker_platform" --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
+    docker build "$platform" --platform="$base_docker_platform" --network=host --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
     if grep -q 'Successfully tagged htcondor/nmi-build:' "$platform.out"; then
+        docker push "htcondor/nmi-build:$platform-$CONTAINER_VERSION"
+        true
+    fi
+    if grep -q 'naming to docker.io/htcondor/nmi-build:' "$platform.out"; then
         docker push "htcondor/nmi-build:$platform-$CONTAINER_VERSION"
         true
     fi
@@ -50,11 +54,11 @@ PATCH_VER=${AVERSION[2]}
 CONTAINER_VERSION=$(printf "%02d%02d%02d%02d" "$MAJOR_VER" "$MINOR_VER" "$PATCH_VER" "$SERIAL")
 
 ARCH=$(arch)
-# if [ "$ARCH" = 'aarch64' ]; then
+if [ "$ARCH" = 'aarch64' ]; then
     buildimage aarch64_AlmaLinux8 linux/arm64 arm64v8/almalinux:8 &
     buildimage aarch64_AlmaLinux9 linux/arm64 arm64v8/almalinux:9 &
     buildimage aarch64_AlmaLinux10 linux/arm64 arm64v8/almalinux:10 &
-# else
+else
     buildimage ppc64le_AlmaLinux8 linux/ppc64le ppc64le/almalinux:8 &
     buildimage x86_64_AlmaLinux8 linux/x86_64 almalinux:8 &
     buildimage x86_64_AlmaLinux9 linux/x86_64 almalinux:9 &
@@ -68,6 +72,6 @@ ARCH=$(arch)
     buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
     buildimage x86_64_Ubuntu22 linux/x86_64 ubuntu:jammy &
     buildimage x86_64_Ubuntu24 linux/x86_64 ubuntu:noble &
-# fi
+fi
 wait
-tail -n 1 ./*.out
+tail -n 2 ./*.out
