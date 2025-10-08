@@ -1,5 +1,9 @@
 *** 25.0.3 bugs
 
+- Calling ``classad2.ExprTree(None)`` no longer results in an invalid
+  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :jira:`3319`
+
 - Fixed a very longstanding bug where extremely fast machines would
   overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
   slot attribute.

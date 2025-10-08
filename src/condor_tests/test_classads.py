@@ -67,6 +67,13 @@ class TestClassAds:
         with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("[ 7, 8, 9 ]")
 
+        # We don't -- presently -- actually care what the results are,
+        # just that they don't cause segfaults or throw exceptions.
+        e = classad.ExprTree()
+        e == e
+        e.eval()
+        e.simplify()
+
 
     def test_data_types(self):
         c = classad.ClassAd()
