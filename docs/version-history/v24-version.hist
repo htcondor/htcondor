@@ -12,10 +12,6 @@
 
 *** 24.0.13 bugs
 
-- Fixed false positive reporting of ClassAd unit specifier test in
-  :tool:`condor_upgrade_check`.
-  :jira:`3276`
-
 - Fixed a bug where space and comma would be included in the list of
   separators for itemdata even if the itemdata had been supplied with
   the ASCII "unit separator".  This would cause itemdata entries containing
@@ -24,6 +20,10 @@
   of your entries has spaces and/or commas by moving that entry to the end
   of the line (or dictionary, if you're submitting itemdata via Python).
   :jira:`3272`
+
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
 
 *** 24.12.4 features
 
