@@ -1261,6 +1261,12 @@ fi
 # configuration
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.2.1-1
+- Support for re-running a job with an increased memory request
+- Several DAGMan Improvements
+- Several local credmon Improvements
+- Fix problem that could prevent logging of hung file transfer plugins
+
 * Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.2-1
 - Update Python file transfer plugins to use the new Python bindings
 - Fix incorrect environment when using Singularity and nested scratch

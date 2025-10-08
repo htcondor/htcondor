@@ -1,3 +1,12 @@
+condor (25.2.0-1) stable; urgency=medium
+
+  * Support for re-running a job with an increased memory request
+  * Several DAGMan Improvements
+  * Several local credmon Improvements
+  * Fix problem that could prevent logging of hung file transfer plugins
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 13:10:00 -0500
+
 condor (25.0.2-1) stable; urgency=medium
 
   * Update Python file transfer plugins to use the new Python bindings
