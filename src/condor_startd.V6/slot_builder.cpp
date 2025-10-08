@@ -66,20 +66,19 @@ _checkInvalidParam( const char* name, bool except ) {
 
 // param for the execute dir and check to see if it exists, returns empty string on success
 // and error string on failure
-std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::string &partition_id )
+std::string paramExecuteDir( int slot_id, std::string &execute_dir, std::string &param_name )
 {
 	std::string ret;
 
-	std::string slot_param;
-	formatstr(slot_param,"SLOT%d_EXECUTE",slot_id);
-	const char * execute_param = slot_param.c_str();
+	formatstr(param_name,"SLOT%d_EXECUTE",slot_id);
+	const char * execute_param = param_name.c_str();
 	auto_free_ptr execute_value(param(execute_param));
 	if ( ! execute_value) {
-		execute_param = "EXECUTE";
+		param_name = "EXECUTE";
 		execute_value.set(param("EXECUTE"));
 	}
 	if ( ! execute_value) {
-		formatstr(ret, "EXECUTE (or %s) is not defined in the configuration.", slot_param.c_str());
+		formatstr(ret, "EXECUTE (or %s) is not defined in the configuration.", param_name.c_str());
 		return ret;
 	}
 
@@ -91,9 +90,15 @@ std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::str
 #endif
 
 	execute_dir = execute_value.ptr();
+	return ret;
+}
+
+std::string GetExecuteDirPartitionId(const std::string &execute_dir, std::string &partition_id, const char * execute_param)
+{
+	std::string ret;
 	dprintf(D_FULLDEBUG, "Got execute_dir = %s\n",execute_dir.c_str());
 
-		// Get a unique identifier for the partition containing the execute dir
+	// Get a unique identifier for the partition containing the execute dir
 	auto_free_ptr partition_value;
 	char * ptr = nullptr;
 	bool partition_rc = sysapi_partition_id( execute_dir.c_str(), &ptr );
@@ -104,7 +109,7 @@ std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::str
 		if( stat(execute_dir.c_str(), &statbuf)!=0 ) {
 			int stat_errno = errno;
 			formatstr(ret, "Error accessing execute directory %s specified in the configuration setting %s: (errno=%d) %s",
-				   execute_dir.c_str(), execute_param, stat_errno, strerror(stat_errno) );
+				execute_dir.c_str(), execute_param, stat_errno, strerror(stat_errno) );
 			return ret;
 		}
 		formatstr(ret, "Failed to get partition id for %s=%s", execute_param, execute_dir.c_str());
@@ -117,8 +122,80 @@ std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::str
 
 	ASSERT( partition_value );
 	partition_id = partition_value.ptr();
+	// remove trailing windows path separator if the partition id has one
+	// The classad parser has difficulty with a trailing windows path separator.
+	if ( ! partition_id.empty() && partition_id.back() == '\\') {
+		partition_id.pop_back();
+	}
 	return ret;
 }
+
+#ifdef PROVISION_FRACTIONAL_DISK
+#else
+// called by ResMgr::init_resources during startup to build the initial list of volumes for EXECUTE
+// this iterates the configured slot type definitions in the same way that buildCpuAttrs does
+// to insure it ends up with the same number of slots.
+// TODO: use a class per slot type to hold the initial slot config so this is less fragile
+bool initExecutePartitionTable (
+	MachAttributes *m_attr,
+	int max_types,
+	int num_res,
+	int *type_num_array,
+	bool * /*backfill_types*/,
+	BuildSlotFailureMode failmode,
+	std::vector<bool>& fail_types)
+{
+	// This code only handles the case when we do not have a volume manager
+	ASSERT( ! m_attr->using_volume_manager());
+
+	// And when config has DISK, we behave as if the execute volume does not matter
+	// the "<from-config>" volume is created by the MachAttributes constructor.
+	if (m_attr->total_disk_from_config()) {
+		ASSERT(m_attr->has_disk_volume("<from-config>"));
+		return true;
+	}
+
+	std::map<std::string, std::string> exec_dir_to_partition_id;
+
+	int num = 0;
+	for (int type_id = 0; type_id < max_types; ++type_id) {
+		if (num >= num_res) break;
+
+		for (int j=0; j < type_num_array[type_id]; j++) {
+			if (num >= num_res) break;
+
+			std::string execute_dir, param_name;
+			std::string edir_errstr = paramExecuteDir(num+1, execute_dir, param_name);
+			if (edir_errstr.empty()) {
+				auto & partition_id = exec_dir_to_partition_id[execute_dir];
+				if (partition_id.empty()) {
+					edir_errstr = GetExecuteDirPartitionId(execute_dir, partition_id, param_name.c_str());
+					if (partition_id.empty()) { partition_id = "<none>"; }
+				}
+			}
+			if ( ! edir_errstr.empty()) {
+				if (failmode == BuildSlotFailureMode::Except) {
+					EXCEPT("%s",edir_errstr.c_str());
+				}
+				dprintf(D_ERROR, "%s\n", edir_errstr.c_str());
+
+				if (failmode == BuildSlotFailureMode::AllOrNothing) {
+					fail_types[type_id] = true;
+					return false;
+				}
+			}
+			else {
+				long long total_disk = 0;
+				long long free_disk = sysapi_total_disk_space(execute_dir.c_str(), &total_disk);
+				auto partition_id = exec_dir_to_partition_id[execute_dir].c_str();
+				m_attr->add_disk_volume(partition_id, free_disk, total_disk, total_disk - free_disk);
+			}
+		}
+	}
+
+	return true;
+}
+#endif
 
 // called by ResMgr::init_resources during startup to build the initial slots
 // 
@@ -141,6 +218,9 @@ CpuAttributes** buildCpuAttrs(
 	AvailAttributes avail( m_attr );
 	AvailAttributes bkavail( m_attr );
 
+	// for the non LVM case, we need a map of execute dir to partition id
+	std::map<std::string, std::string> exec_dir_to_partition_id;
+
 	int d_except = (failmode == BuildSlotFailureMode::Except) ? D_EXCEPT : 0;
 
 	cap_array = new CpuAttributes* [total];
@@ -154,21 +234,24 @@ CpuAttributes** buildCpuAttrs(
 
 		for (int j=0; j < type_num_array[type_id]; j++) {
 			if (num >= total) break;
-			std::string execute_dir, partition_id;
-			CpuAttributes::_slot_request request;
-			if ( ! CpuAttributes::buildSlotRequest(request, m_attr, type_strings[type_id], type_id, failmode)) {
-				// the failure has already been logged.
-				fail_types[type_id] = true;
-				if (failmode == BuildSlotFailureMode::AllOrNothing) {
-					// Gracefully cleanup and abort
-					for(int ii=0; ii<num; ii++ ) { delete cap_array[ii]; }
-					delete [] cap_array;
-					return NULL;
-				}
-				continue; // mode is not except or all-or-nothing so keep going.
 
+			std::string execute_dir, execute_param_name;
+			std::string edir_errstr = paramExecuteDir(num+1, execute_dir, execute_param_name);
+			if (edir_errstr.empty()) {
+				// the first time we see an exec dir we have to fill in the partition id value
+				// this ends up populating the exec_dir_to_partition_id map
+				auto & partition_id = exec_dir_to_partition_id[execute_dir];
+				if (partition_id.empty()) {
+					if (m_attr->using_volume_manager()) {
+						// TODO: get real name of LVM volume here...
+						partition_id = "LVM";
+					} else {
+						edir_errstr = GetExecuteDirPartitionId(execute_dir, partition_id, execute_param_name.c_str());
+						if (partition_id.empty()) { partition_id = "<none>"; }
+						if (m_attr->total_disk_from_config()) { partition_id = "<from-config>"; }
+					}
+				}
 			}
-			std::string edir_errstr = GetConfigExecuteDir(num+1, execute_dir, partition_id);
 			if ( ! edir_errstr.empty()) {
 				if (failmode == BuildSlotFailureMode::Except) {
 					EXCEPT("%s",edir_errstr.c_str());
@@ -182,7 +265,22 @@ CpuAttributes** buildCpuAttrs(
 					return NULL;
 				}
 			}
-			cap = new CpuAttributes(type_id, request, execute_dir, partition_id);
+			auto partition_id = exec_dir_to_partition_id[execute_dir].c_str();
+
+			CpuAttributes::_slot_request request;
+			if ( ! CpuAttributes::buildSlotRequest(request, m_attr, type_strings[type_id], type_id, partition_id, failmode)) {
+				// the failure has already been logged.
+				fail_types[type_id] = true;
+				if (failmode == BuildSlotFailureMode::AllOrNothing) {
+					// Gracefully cleanup and abort
+					for(int ii=0; ii<num; ii++ ) { delete cap_array[ii]; }
+					delete [] cap_array;
+					return NULL;
+				}
+				continue; // mode is not except or all-or-nothing so keep going.
+
+			}
+			cap = new CpuAttributes(type_id, request, *m_attr, execute_dir, partition_id);
 			bool fits = false;
 			if (backfill_types[type_id]) {
 				fits = bkavail.decrement(cap);
@@ -221,12 +319,12 @@ CpuAttributes** buildCpuAttrs(
 					logbuf = "Not enough ";
 					if (backfill_types[type_id]) {
 						logbuf += "backfill ";
-						bkavail.trim_request_to_fit(request, partition_id.c_str(), logbuf);
-						cap = new CpuAttributes(type_id, request, execute_dir, partition_id);
+						bkavail.trim_request_to_fit(request, partition_id, logbuf);
+						cap = new CpuAttributes(type_id, request, *m_attr, execute_dir, partition_id);
 						fits = bkavail.decrement(cap);
 					} else {
-						avail.trim_request_to_fit(request, partition_id.c_str(), logbuf);
-						cap = new CpuAttributes(type_id, request, execute_dir, partition_id);
+						avail.trim_request_to_fit(request, partition_id, logbuf);
+						cap = new CpuAttributes(type_id, request, *m_attr, execute_dir, partition_id);
 						fits = avail.decrement(cap);
 					}
 
@@ -412,8 +510,9 @@ typedef enum { SPECIAL_SHARE_NONE=0, SPECIAL_SHARE_AUTO=1, SPECIAL_SHARE_MINIMAL
    or it's a regular value, like "64"
    auto and fraction/percent are returned as negative values
 */
-static double parse_share_value(const char* str, int type, BuildSlotFailureMode failmode, special_share_t & special)
+static double parse_share_value(const char* str, int type, BuildSlotFailureMode failmode, special_share_t & special, int & scale)
 {
+	scale = 0;
 	if( strcasecmp(str,"auto") == 0 || strcasecmp(str,"automatic") == 0 ) {
 		special = SPECIAL_SHARE_AUTO;
 		return AUTO_SHARE;
@@ -446,16 +545,27 @@ static double parse_share_value(const char* str, int type, BuildSlotFailureMode 
 		return -(atof(str) / denom);
 	}
 
-		// This must just be an absolute value.  Return it as a negative
-		// value, so the caller knows it's not a fraction.
-	return atof(str);
+	// This must just be an absolute value.  Return it as a positive
+	// value, so the caller knows it's not a fraction.
+	char * endp = nullptr;
+	double value = strtod(str, &endp);
+
+	// check for a scale suffix. and return a scale factor if one was supplied
+	while (isspace(*endp)) ++endp;
+	if (*endp == 'k' || *endp == 'K') scale = 1;
+	else if (*endp == 'm' || *endp == 'M') scale = 2;
+	else if (*endp == 'g' || *endp == 'G') scale = 3;
+	else if (*endp == 't' || *endp == 'T') scale = 4;
+	else if (*endp == 'p' || *endp == 'P') scale = 5;
+
+	return value;
 }
 
 
 /*
   convert share value into a quantity if possible, positive values are
-  absolute quantities, they are truncated to an int, but otherwise pass
-  through this function.  Negative values should be between -1.0 and 0.0
+  absolute quantities, the pass through this function but may be scaled.
+  Negative values should be between -1.0 and 0.0
   and are interpreted as a proportion of the total.
 
   a CPU.  However, we never want to advertise less than 1.
@@ -463,10 +573,16 @@ static double parse_share_value(const char* str, int type, BuildSlotFailureMode 
   Positive values are absolute values.
 */
 template <class t>
-static t compute_local_resource(t num_res, double share, t min_res = 0)
+static t compute_local_resource(t num_res, double share, t min_res = 0, int scale=0, int native_scale=0)
 {
 	if (IS_AUTO_SHARE(share)) return AUTO_RES;
 	t res = (share < 0) ? t(-share * num_res) : t(share);
+	if (share > 0) {
+		while (scale > native_scale) {
+			res *= 1024;
+			--scale;
+		}
+	}
 	return MAX(res, min_res);
 }
 
@@ -478,19 +594,30 @@ const int UNSET_SHARE = -9998;
 	MachAttributes *m_attr,
 	const std::string& list,
 	unsigned int type_id,
+	const char * partition_id,
 	BuildSlotFailureMode failmode)
 {
 	typedef CpuAttributes::slotres_map_t slotres_map_t;
 	special_share_t default_share_special = SPECIAL_SHARE_AUTO;
 	double default_share = AUTO_SHARE;
 
+	const double minimum_cpus = 1.0;
+	const int minimum_mem = 1;           // 1 MB
+	const long long minimum_swap = 0;
+	const long long minimum_disk = 1024; // 1 MB in KB
+
 	if ( list.empty()) {
 		// give everything the default share and return
 
-		request.num_cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1.0);
-		request.num_phys_mem = compute_local_resource(m_attr->phys_mem(), default_share, 1);
+		request.num_cpus = compute_local_resource(m_attr->num_cpus(), default_share, minimum_cpus);
+		request.num_phys_mem = compute_local_resource(m_attr->phys_mem(), default_share, minimum_mem);
+	#ifdef PROVISION_FRACTIONAL_DISK
 		request.virt_mem_fraction = AUTO_SHARE;
 		request.disk_fraction = AUTO_SHARE;
+	#else
+		request.num_swap = compute_local_resource(m_attr->num_swap(), default_share, minimum_swap);
+		request.num_disk = compute_local_resource(m_attr->num_disk(partition_id), default_share, minimum_disk);
+	#endif
 
 		for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
 			request.slotres[j->first] = default_share;
@@ -501,8 +628,13 @@ const int UNSET_SHARE = -9998;
 
 	double cpus = UNSET_SHARE;
 	int ram = UNSET_SHARE; // this is in MB so an int is enough
+#ifdef PROVISION_FRACTIONAL_DISK
 	double disk_fraction = UNSET_SHARE;
 	double swap_fraction = UNSET_SHARE;
+#else
+	long long swap = UNSET_SHARE; // in KB
+	long long disk = UNSET_SHARE; // in KB
+#endif
 
 	// For this parsing code, deal with the following example
 	// string list:
@@ -515,8 +647,12 @@ const int UNSET_SHARE = -9998;
 		request.slotres[j->first] = UNSET_SHARE;
 	}
 
-	// In a multi-line value, '\n' is the only delimiter
-	const char* delim = strchr(list.c_str(), '\n') ? "\n" : ", \t\r\n";
+	const char* delim = ", \t\r\n"; // default delim is whitespace or ,
+	if (list.find('\n') != std::string::npos) {
+		delim = "\n"; // In a multi-line value, '\n' is the only delimiter
+	} else if (list.find(',') != std::string::npos) {
+		delim = ",\r\n"; // if commas are used, then only commas and newlines are the delimiter
+	}
 
 	for (const auto& attr_expr: StringTokenIterator(list, delim)) {
 		std::string::size_type eqpos = attr_expr.find('=');
@@ -525,7 +661,8 @@ const int UNSET_SHARE = -9998;
 			// percentage or fraction for all attributes.
 			// For example "1/4" or "25%".  So, we can just parse
 			// it as a percentage and use that for everything.
-			default_share = parse_share_value(attr_expr.c_str(), type_id, failmode, default_share_special);
+			int scale;
+			default_share = parse_share_value(attr_expr.c_str(), type_id, failmode, default_share_special, scale);
 			if (default_share_special == SPECIAL_SHARE_NONE && (default_share < -1 || default_share > 0)) {
 				::dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: "
 					"\"%s\" is invalid.\n"
@@ -568,8 +705,9 @@ const int UNSET_SHARE = -9998;
 			val = val.substr(0, colonpos);
 			trim(val);
 		}
+		int scale = 0; // set to 1 or more if there was a K suffix, etc.
 		special_share_t share_special = SPECIAL_SHARE_NONE;
-		double share = parse_share_value(val.c_str(), type_id, failmode, share_special);
+		double share = parse_share_value(val.c_str(), type_id, failmode, share_special, scale);
 
 		// Figure out what attribute we're dealing with.
 		std::string attr = attr_expr.substr(0, eqpos);
@@ -592,17 +730,18 @@ const int UNSET_SHARE = -9998;
 		int cattr = int(attr.length());
 		if (MATCH == strncasecmp(attr.c_str(), "cpus", cattr))
 		{
-			double lower_bound = (request.allow_fractional_cpus) ? 0.0 : 1.0;
+			double lower_bound = (request.allow_fractional_cpus) ? 0.0 : minimum_cpus;
 			cpus = compute_local_resource(m_attr->num_cpus(), share, lower_bound);
 		} else if (
 			MATCH == strncasecmp(attr.c_str(), "ram", cattr) ||
 			MATCH == strncasecmp(attr.c_str(), "memory", cattr))
 		{
-			ram = compute_local_resource(m_attr->phys_mem(), share, 1);
+			ram = compute_local_resource(m_attr->phys_mem(), share, minimum_mem, scale, 2);
 		} else if (
 			MATCH == strncasecmp(attr.c_str(), "swap", cattr) ||
 			MATCH == strncasecmp(attr.c_str(), "virtualmemory", cattr))
 		{
+		#ifdef PROVISION_FRACTIONAL_DISK
 			// for now, we can only tolerate swap expressed a 'auto' or a proportion
 			// because we don't know how much swap is available until later.
 			if (share <= 0 || IS_AUTO_SHARE(share)) {
@@ -617,9 +756,13 @@ const int UNSET_SHARE = -9998;
 					return false;
 				}
 			}
+		#else
+			swap = compute_local_resource(m_attr->num_swap(), share, minimum_swap, scale, 1);
+		#endif
 		} else if (
 			MATCH == strncasecmp(attr.c_str(), "disk", cattr))
 		{
+		#ifdef PROVISION_FRACTIONAL_DISK
 			// for now, we can only tolerate disk expressed a 'auto' or a proportion
 			// because we don't know how much disk is available until later.
 			if (share <= 0 || IS_AUTO_SHARE(share)) {
@@ -634,6 +777,9 @@ const int UNSET_SHARE = -9998;
 					return false;
 				}
 			}
+		#else
+			disk = compute_local_resource(m_attr->num_disk(partition_id), share, minimum_disk, scale, 1); // 1 MB minimum
+		#endif
 
 		} else {
 
@@ -669,6 +815,7 @@ const int UNSET_SHARE = -9998;
 	}
 	request.num_phys_mem = ram;
 
+#ifdef PROVISION_FRACTIONAL_DISK
 	if (IS_UNSET_SHARE(swap_fraction)) {
 		swap_fraction = compute_local_resource(1.0, default_share);
 	}
@@ -678,6 +825,17 @@ const int UNSET_SHARE = -9998;
 		disk_fraction = compute_local_resource(1.0, default_share);
 	}
 	request.disk_fraction = disk_fraction;
+#else
+	if (IS_UNSET_SHARE(swap)) {
+		swap = compute_local_resource(m_attr->num_swap(), default_share);
+	}
+	request.num_swap = swap;
+
+	if (IS_UNSET_SHARE(disk)) {
+		disk = compute_local_resource(m_attr->num_disk(partition_id), default_share);
+	}
+	request.num_disk = disk;
+#endif
 
 	for (slotres_map_t::iterator j(request.slotres.begin());  j != request.slotres.end();  ++j) {
 		if (IS_UNSET_SHARE(j->second)) {
