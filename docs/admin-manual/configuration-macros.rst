@@ -6003,6 +6003,13 @@ These macros control the *condor_schedd*.
     permissions as the main :macro:`SPOOL` directory. Care must be taken that
     the value won't change during the lifetime of each job.
 
+:macro-def:`UNUSED_CLAIM_TIMEOUT[SCHEDD]`
+    An integer value that is only used by the dedicated scheduler when
+    scheduling parallel universe jobs. It specifies the number of
+    seconds the schedd will keep a claimed slot, even when idle.  Zero
+    seconds means the schedd will keep a claim for an unbounded amount
+    of time.  Default is 300 seconds.
+
 :macro-def:`<OAuth2Service>_CLIENT_ID[SCHEDD]`
     The client ID string for an OAuth2 service named ``<OAuth2Service>``.
     The client ID is passed on to the *condor_credmon_oauth*
