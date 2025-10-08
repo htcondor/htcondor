@@ -1261,6 +1261,10 @@ fi
 # configuration
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.2-1
+- Update Python file transfer plugins to use the new Python bindings
+- Fix incorrect environment when using Singularity and nested scratch
+
 * Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.13-1
 - Fix annoying momentary text status flash in condor_watch_q
 

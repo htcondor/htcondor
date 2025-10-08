@@ -1,13 +1,13 @@
 *** 25.0.2 bugs
 
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
+
 - Fixed bug where when :macro:`SINGULARITY_TARGET_DIR` was set and
   :macro:`STARTER_NESTED_SCRATCH` was also set, then some environment
   variables that pointed into the job's execute directory were not correct.
   :jira:`3265`
-
-- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
-  to fail immediately on start-up.
-  :jira:`3317`
 
 *** 25.0.1 features
 
