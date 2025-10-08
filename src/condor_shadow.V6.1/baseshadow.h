@@ -329,8 +329,6 @@ class BaseShadow : public Service
 
 	virtual struct rusage getRUsage( void ) = 0;
 
-	virtual bool setMpiMasterInfo( char* str ) = 0;
-
 		/** Connect to the job queue and update all relevent
 			attributes of the job class ad.  This checks our job
 			classad to find any dirty attributes, and compares them
