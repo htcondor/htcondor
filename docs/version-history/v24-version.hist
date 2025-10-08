@@ -28,6 +28,12 @@
   flash while running :tool:`condor_watch_q`
   :jira:`3244`
 
+*** 24.0.13 features
+
+- HTCondor tarballs now contain `Pelican 7.20.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.20.2.
+
 *** 24.0.13 bugs
 
 - Fixed false positive reporting of ClassAd unit specifier test in
