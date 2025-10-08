@@ -510,7 +510,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "max_jobs_in_queue":    None,
 
-                "allocation_type":      "node",
+                "allocation_type":      "cores_or_ram",
 
                 "cores_per_node":       128,
                 "ram_per_node":         512000,
@@ -522,7 +522,7 @@ SYSTEM_TABLE = {
                 "max_duration":         30 * 60,
                 "max_jobs_in_queue":    1,
 
-                "allocation_type":      "node",
+                "allocation_type":      "cores_or_ram",
 
                 "cores_per_node":       128,
                 "ram_per_node":         512000,
