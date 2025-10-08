@@ -1,3 +1,16 @@
+condor (24.12.13-1) stable; urgency=medium
+
+  * Fix annoying momentary text status flash in condor_watch_q
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 09:55:00 -0500
+
+condor (24.0.13-1) stable; urgency=medium
+
+  * Fix bug that could cause Python job submission to crash
+  * HTCondor tarballs now contain Pelican 7.20.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 09:41:00 -0500
+
 condor (24.12.4-1) stable; urgency=medium
 
   * Add the ability to enforce memory and CPU limits on local universe jobs
