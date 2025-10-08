@@ -12,6 +12,11 @@
   returned incorrectly.
   :jira:`3272`
 
+- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
+  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
+  "whole node" would have 4 GPUs and only 1 CPU.
+  :jira:`3324`
+
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
