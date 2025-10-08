@@ -47,6 +47,10 @@
   variables that pointed into the job's execute directory were not correct.
   :jira:`3265`
 
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
+
 *** 25.1.0 features
 
 *** 25.1.0 bugs

@@ -8,7 +8,7 @@ To make this a functional plugin, change everything in this file that comes
 after a #CHANGE ME HERE comment.
 """
 
-import classad
+import classad2 as classad
 import json
 import os
 import posixpath
