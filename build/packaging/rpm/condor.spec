@@ -1492,6 +1492,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
+- Fix bug that could cause Python job submission to crash
+- HTCondor tarballs now contain Pelican 7.20.2
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
 - Update condor_upgrade_check to warn about v1 Python bindings retirement
 - Update condor_upgrade_check to look for old syntax job transforms
