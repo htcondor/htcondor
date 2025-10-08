@@ -1295,6 +1295,10 @@ fi
 # configuration
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
+- Fix bug that could cause Python job submission to crash
+- HTCondor tarballs now contain Pelican 7.20.2
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.4-1
 - Add the ability to enforce memory and CPU limits on local universe jobs
 - Add the ability for condor_chirp to work within a Docker universe job
