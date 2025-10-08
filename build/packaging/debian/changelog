@@ -1,3 +1,10 @@
+condor (24.0.13-1) stable; urgency=medium
+
+  * Fix bug that could cause Python job submission to crash
+  * HTCondor tarballs now contain Pelican 7.20.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 09:41:00 -0500
+
 condor (24.0.12-1) stable; urgency=medium
 
   * Update condor_upgrade_check to warn about v1 Python bindings retirement
