@@ -73,7 +73,7 @@ std::string Base64::zkm_base64_encode(BYTE const* buf, unsigned int bufLen) {
   return ret;
 }
 
-std::vector<BYTE> Base64::zkm_base64_decode(std::string encoded_string) {
+std::vector<BYTE> Base64::zkm_base64_decode(const std::string& encoded_string) {
   int in_len = encoded_string.size();
   int i = 0;
   int j = 0;

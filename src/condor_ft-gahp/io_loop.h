@@ -65,7 +65,7 @@ SandboxMap sandbox_map;
 
 
 int stdin_pipe_handler(int);
-void handle_results( std::string line );
+void handle_results(const std::string& line);
 
 
 void gahp_output_return (const char ** , const int );
@@ -88,12 +88,11 @@ int ftgahp_reaper(FileTransfer *);
 void enqueue_result (const std::string &req_id, const char ** results, const int argc);
 void enqueue_result (int req_id, const char ** results, const int argc);
 
-void define_sandbox_path(std::string sid, std::string &path);
+void define_sandbox_path(const std::string& sid, std::string &path);
 
-void define_path(std::string sid, std::string &path);
-bool create_sandbox_dir (std::string sid, std::string &iwd);
+bool create_sandbox_dir(const std::string& sid, std::string &iwd);
 bool download_proxy(const std::string &sid, const ClassAd &ad, std::string &err);
-bool destroy_sandbox(std::string sid, std::string &err);
+bool destroy_sandbox(const std::string& sid, std::string &err);
 
 int do_command_download_sandbox(void *arg, Stream*);
 int do_command_upload_sandbox(void *arg, Stream*);
