@@ -35,9 +35,11 @@
 #include <stdint.h>
 #include <string>
 #include <stack>
-//using std::string;
 
 // fractional disk is the old way of doing disk provisioning.
+// just in case, we leave this as an ifdef for a bit so we can revert
+// that part of the code without reverting the code that moves the disk
+// partition table into the MachAttribute class and the bug fixes for the DISK param
 // #define PROVISION_FRACTIONAL_DISK 1
 
 enum BuildSlotFailureMode { 
@@ -366,8 +368,6 @@ private:
 	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
 #else
 	long long		m_num_swap{0};
-	//long long		m_num_disk{-1};
-	//long long		m_last_disk_free{0}; // when RECOMPUTE_DISK_FREE is true, this tracks free space on the disk (aka total_disk)
 	std::map<std::string, _disk_volume_res> m_disk_volumes;
 	bool			m_recompute_disk_free{false}; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
 #endif
@@ -673,19 +673,6 @@ protected:
 	MachAttributes::slotres_map_t resmap;
 	friend class CpuAttributes;
 };
-
-#if 0
-class AvailDiskPartition
-{
- public:
-#ifdef PROVISION_FRACTIONAL_DISK
-	double m_disk_fraction{1.0}; // share of this partition that is not taken yet
-#else
-	long long m_disk{0}; // disk not taken yet
-#endif
-	int m_auto_count{0}; // number of slots using "auto" share of this partition
-};
-#endif
 
 // Available machine-wide attributes
 class AvailAttributes
