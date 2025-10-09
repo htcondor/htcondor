@@ -727,6 +727,15 @@ DagParser::ParseEnv(DagLexer& details) {
 	trim(vars);
 	if (vars.empty()) { return "No environment variables provided"; }
 
+	if ( ! set) {
+		std::string delimited;
+		for (const auto& v : StringTokenIterator(vars)) {
+			if ( ! delimited.empty()) { delimited += ","; }
+			delimited += v;
+		}
+		vars = delimited;
+	}
+
 	data.reset(new EnvCommand(vars, set));
 	return "";
 }
@@ -811,20 +820,9 @@ DagParser::next() {
 			if (filter_ignore.contains(cmd) || (! filter_only.empty() && ! filter_only.contains(cmd))) {
 				// If ignored command is potentially multilined then parse the command
 				if (cmd >= DAG::CMD::JOB && cmd <= DAG::CMD::SERVICE) {
-					parse_error = ParseNodeTypes(fs, details, cmd);
+					std::ignore = ParseNodeTypes(fs, details, cmd);
 				} else if (cmd == DAG::CMD::SUBMIT_DESCRIPTION) {
-					parse_error = ParseSubmitDesc(fs, details);
-				}
-
-				if (details.failed()) {
-					parse_error = details.error();
-				}
-
-				if ( ! parse_error.empty()) {
-					auto& ref = all_errors.emplace_back(GetFile(), command_line_no, parse_error);
-					ref.SetCommand(cmd);
-
-					return false;
+					std::ignore = ParseSubmitDesc(fs, details);
 				}
 
 				continue;
@@ -950,6 +948,7 @@ DagParser::next() {
 					break;
 				default:
 					parse_error = "Parser not implemented";
+					break;
 			} // End switch statement on DAG commands
 
 			// Handle line lexer error (overrides specific parse failure because this was likely the cause)

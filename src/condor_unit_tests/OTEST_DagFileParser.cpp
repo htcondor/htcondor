@@ -95,8 +95,8 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"DOT visual-2.dot UPDATE OVERWRITE\n"
 		"DOT visual-3.dot DONT-UPDATE DONT-OVERWRITE INCLUDE ../path/to/header.dot\n"
 		"NODE_STATUS_FILE foo 82 ALWAYS-UPDATE 1000\n"
-		"ENV SET   foo bar baz \n"
-		"ENV GET  foo=bar;baz=10;      \n"
+		"ENV GET   foo bar baz \n"
+		"ENV SET  foo=bar;baz=10;      \n"
 		"CONNECT S1 S2\n"
 		"PIN_IN A 2\n"
 		"PIN_OUT A 3\n"
@@ -299,8 +299,8 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
 		"NODE_STATUS_FILE > foo 1000 T",
-		"ENV > SET foo bar baz",
-		"ENV > GET foo=bar;baz=10;",
+		"ENV > GET foo,bar,baz",
+		"ENV > SET foo=bar;baz=10;",
 		"CONNECT > [S1]--[S2]",
 		"PIN_IN > A 2 IN",
 		"PIN_OUT > A 3 OUT",

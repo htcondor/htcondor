@@ -32,6 +32,7 @@
 #include "tokener.h"
 #include "which.h"
 #include "directory.h"
+#include "dag_parser.h"
 
 namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
@@ -517,6 +518,7 @@ bool
 DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std::string &errMsg)
 {
 	bool result = true;
+	bool use_old_parser = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
 	// Note: destructor will change back to original directory.
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
@@ -535,89 +537,148 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 			newDagFile = dagFile;
 		}
 
-		// Note: destructor will close file.
-		MultiLogFiles::FileReader reader;
-		errMsg = reader.Open( newDagFile );
-		if ( ! errMsg.empty()) {
-			return false;
-		}
+		if (use_old_parser) {
+			// Note: destructor will close file.
+			MultiLogFiles::FileReader reader;
+			errMsg = reader.Open( newDagFile );
+			if ( ! errMsg.empty()) {
+				return false;
+			}
 
-		//Read DAG file
-		std::string logicalLine;
-		while (reader.NextLogicalLine(logicalLine)) {
-			if ( ! logicalLine.empty()) {
-				StringTokenIterator tokens(logicalLine, " \t\r");
-				const char* cmd = tokens.first();
-				if ( ! cmd) { continue; }
+			//Read DAG file
+			std::string logicalLine;
+			while (reader.NextLogicalLine(logicalLine)) {
+				if ( ! logicalLine.empty()) {
+					StringTokenIterator tokens(logicalLine, " \t\r");
+					const char* cmd = tokens.first();
+					if ( ! cmd) { continue; }
 
-				// Parse CONFIG command
-				if (strcasecmp(cmd, "CONFIG") == MATCH) {
-					const char* newFile = tokens.remain();
-					while (newFile && isspace(*newFile) && *newFile != '\0') { newFile++; }
-					if ( ! newFile || *newFile == '\0') {
-						AppendError(errMsg, "Improperly-formatted file: value missing after keyword CONFIG");
-						result = false;
-					} else {
-						std::string conf(newFile), tmpErr;
-						if (MakePathAbsolute(conf, tmpErr)) {
-							configFiles.insert(conf);
-						} else {
-							AppendError(errMsg, tmpErr);
-							result = false;
-						}
-					}
-
-				// Parse SET_JOB_ATTR command
-				} else if (strcasecmp(cmd, "SET_JOB_ATTR") == MATCH) {
-					const char* attr = tokens.remain();
-					while (attr && isspace(*attr) && *attr != '\0') { attr++; }
-					if (!attr || *attr == '\0') {
-						AppendError(errMsg, "Improperly-formatted file: value missing after keyword SET_JOB_ATTR");
-						result = false;
-					} else {
-						attrLines.emplace_back(attr);
-					}
-
-				// Parse ENV command
-				} else if (strcasecmp(cmd, "ENV") == MATCH) {
-					const char* type = tokens.next();
-					// Parse GET option
-					if (strcasecmp(type, "GET") == MATCH) {
-						const char* remain = tokens.remain();
-						while (remain && isspace(*remain) && *remain != '\0') { remain++; }
-						if (!remain || *remain == '\0') {
-							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV GET");
+					// Parse CONFIG command
+					if (strcasecmp(cmd, "CONFIG") == MATCH) {
+						const char* newFile = tokens.remain();
+						while (newFile && isspace(*newFile) && *newFile != '\0') { newFile++; }
+						if ( ! newFile || *newFile == '\0') {
+							AppendError(errMsg, "Improperly-formatted file: value missing after keyword CONFIG");
 							result = false;
 						} else {
-							StringTokenIterator vars(remain);
-							std::string delimVars;
-							for (const auto& var : vars) {
-								if ( ! delimVars.empty()) { delimVars += ","; }
-								delimVars += var;
+							std::string conf(newFile), tmpErr;
+							if (MakePathAbsolute(conf, tmpErr)) {
+								configFiles.insert(conf);
+							} else {
+								AppendError(errMsg, tmpErr);
+								result = false;
 							}
-							options.extend("GetFromEnv", delimVars);
 						}
-					// Parse SET option
-					} else if (strcasecmp(type, "SET") == MATCH) {
-						const char* info = tokens.remain();
-						while (info && isspace(*info) && *info != '\0') { info++; }
-						if (!info || *info == '\0') {
-							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
+
+					// Parse SET_JOB_ATTR command
+					} else if (strcasecmp(cmd, "SET_JOB_ATTR") == MATCH) {
+						const char* attr = tokens.remain();
+						while (attr && isspace(*attr) && *attr != '\0') { attr++; }
+						if (!attr || *attr == '\0') {
+							AppendError(errMsg, "Improperly-formatted file: value missing after keyword SET_JOB_ATTR");
 							result = false;
 						} else {
-							std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
-							options.extend("AddToEnv", kv_pairs);
+							attrLines.emplace_back(attr);
 						}
-					// Else error
-					} else {
-						AppendError(errMsg, "Improperly-formatted file: sub-command (SET or GET) missing after keyword ENV");
-						result = false;
+
+					// Parse ENV command
+					} else if (strcasecmp(cmd, "ENV") == MATCH) {
+						const char* type = tokens.next();
+						// Parse GET option
+						if (strcasecmp(type, "GET") == MATCH) {
+							const char* remain = tokens.remain();
+							while (remain && isspace(*remain) && *remain != '\0') { remain++; }
+							if (!remain || *remain == '\0') {
+								AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV GET");
+								result = false;
+							} else {
+								StringTokenIterator vars(remain);
+								std::string delimVars;
+								for (const auto& var : vars) {
+									if ( ! delimVars.empty()) { delimVars += ","; }
+									delimVars += var;
+								}
+								options.extend("GetFromEnv", delimVars);
+							}
+						// Parse SET option
+						} else if (strcasecmp(type, "SET") == MATCH) {
+							const char* info = tokens.remain();
+							while (info && isspace(*info) && *info != '\0') { info++; }
+							if (!info || *info == '\0') {
+								AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
+								result = false;
+							} else {
+								std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
+								options.extend("AddToEnv", kv_pairs);
+							}
+						// Else error
+						} else {
+							AppendError(errMsg, "Improperly-formatted file: sub-command (SET or GET) missing after keyword ENV");
+							result = false;
+						}
 					}
 				}
 			}
-		}
 
-		reader.Close();
+			reader.Close();
+		} else {
+			static const std::set<DAG::CMD> filter_commands {
+				DAG::CMD::CONFIG,
+				DAG::CMD::SET_JOB_ATTR,
+				DAG::CMD::ENV,
+			};
+
+			DagParser parser(newDagFile);
+			if (parser.failed()) {
+				errMsg = parser.error();
+				return false;
+			}
+
+			parser.SearchFor(filter_commands);
+
+			for (const auto cmd : parser) {
+				if ( ! cmd) { continue; }
+
+				// TODO: Handle reject here so user knows at submit time not once DAGMan notices
+				switch (cmd->GetCommand()) {
+					case DAG::CMD::CONFIG:
+						{
+							std::string conf = ((FileCommand*)cmd.get())->GetFile();
+							std::string error;
+							if (MakePathAbsolute(conf, error)) {
+								configFiles.insert(conf);
+							} else {
+								AppendError(errMsg, error);
+								result = false;
+							}
+						}
+						break;
+					case DAG::CMD::SET_JOB_ATTR:
+						attrLines.emplace_back(((SetAttrCommand*)cmd.get())->GetAttrLine());
+						break;
+					case DAG::CMD::ENV:
+						{
+							const EnvCommand* env = (EnvCommand*)cmd.get();
+							if (env->IsSet()) {
+								std::string kv_pairs = options.processOptionArg("AddToEnv", env->GetEnvVariables());
+								options.extend("AddToEnv", kv_pairs);
+							} else {
+								options.extend("GetFromEnv", env->GetEnvVariables());
+							}
+						}
+						break;
+					default:
+						print_msg("WARNING: DAGMan Utils does not know how to process %s command...\n",
+						        DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+						break;
+				}
+			}
+
+			if (parser.failed()) {
+				AppendError(errMsg, parser.error());
+				result = false;
+			}
+		}
 
 		// Switch back to original directory
 		std::string tmpErrMsg;
