@@ -2880,7 +2880,7 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 
 
 bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id, std::vector<DagCmd>* defer_include) {
-	if (false /* TODO Add config variable */) { // Use old parser/processing :(
+	if (config[conf::b::UseOldDagParser]) { // Use old parser/processing :(
 		bool is_main_dag = (dag_munge_id >= 0);
 		parseSetDoNameMunge(is_main_dag ? config[conf::b::MungeNodeNames] : false);
 		return parse(dm, &dag, file.c_str(), is_main_dag);

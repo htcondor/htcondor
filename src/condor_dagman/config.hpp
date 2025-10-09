@@ -49,6 +49,7 @@ namespace DagmanConfigOptions {
 		NfsLogError,                   // Error if nodes log is on NFS
 		CacheDebug,                    // Cache DAGMan debugging
 		ReportGraphMetrics,            // Report DAG metrics (hight, width, etc)
+		UseOldDagParser,               // Use old DAG file parser and processing
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -103,6 +104,7 @@ public:
 		boolOpts[static_cast<size_t>(b::ProduceJobCreds)] = true;
 		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveTempSubFiles)] = true;
+		boolOpts[static_cast<size_t>(b::UseOldDagParser)] = false;
 
 		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
 		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;

@@ -91,6 +91,9 @@ bool Dagman::Config() {
 		process_config_source(config[conf::str::DagConfig].c_str(), 0, "DAGMan config", nullptr, true);
 	}
 
+	config[conf::b::UseOldDagParser] = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_OLD_FILE_PARSER setting: %s\n", config[conf::b::UseOldDagParser] ? "True" : "False");
+
 	_strict = (strict_level_t)param_integer("DAGMAN_USE_STRICT", _strict, DAG_STRICT_0, DAG_STRICT_3);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_STRICT setting: %d\n", _strict);
 
