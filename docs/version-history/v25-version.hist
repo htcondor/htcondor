@@ -74,6 +74,11 @@
   logging of output for hung file-transfer plug-ins.
   :jira:`3202`
 
+- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
+  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
+  "whole node" would have 4 GPUs and only 1 CPU.
+  :jira:`3324`
+
 *** 25.0.2 bugs
 
 - Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
