@@ -152,6 +152,10 @@ public:
 	virtual DAG::CMD GetCommand() const = 0;
 	virtual std::string _getDetails() const = 0;
 
+	virtual std::string Location() const {
+		return source + ":" + std::to_string(line);
+	}
+
 	virtual void SetSource(const std::string& src, const uint64_t line_no) {
 		source = src;
 		line = line_no;
@@ -453,6 +457,9 @@ public:
 	void Prepend() { when = DAG::VarsPlacement::PREPEND; }
 	void Append() { when = DAG::VarsPlacement::APPEND; }
 	DAG::VarsPlacement GetPlacement() const { return when; }
+
+	bool ExplicitPlacement() const { return when != DAG::VarsPlacement::DEFAULT; }
+	bool WantPrepend() const { return when == DAG::VarsPlacement::PREPEND; }
 private:
 	std::map<std::string, std::string> kv_pairs{}; // Map of key -> value pairs to add
 	DAG::VarsPlacement when{DAG::VarsPlacement::DEFAULT}; // Specify when to add info (before/after parsing submit description)
@@ -658,21 +665,12 @@ public:
 // REJECT Command
 class RejectCommand : public BaseDagCommand {
 public:
-	RejectCommand() = delete;
-	RejectCommand(const std::string& f, const int n) : file(f), line_no(n) {}
+	RejectCommand() = default;
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::REJECT; };
 	virtual std::string _getDetails() const {
-		std::string ret;
-		formatstr(ret, "%s:%d", file.c_str(), line_no);
-		return ret;
+		return this->Location();
 	}
-
-	std::string GetFile() const { return file; }
-	int GetLine() const { return line_no; }
-private:
-	std::string file{};
-	int line_no{0};
 };
 
 // SET_JOB_ATTR Command

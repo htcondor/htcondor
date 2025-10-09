@@ -701,29 +701,31 @@ Node::AddScript(Script* script) {
 	script->SetNode(this);
 
 	// Check if a script of the same type has already been assigned to this node
-	const char *old_script_name = nullptr;
 	const char *type_name;
+	Script* old_script = nullptr;
 	switch(script->GetType()) {
 		case ScriptType::PRE:
-			old_script_name = GetPreScriptName();
 			type_name = "PRE";
+			old_script = _scriptPre;
 			_scriptPre = script;
 			break;
 		case ScriptType::POST:
-			old_script_name = GetPostScriptName();
 			type_name = "POST";
+			old_script = _scriptPost;
 			_scriptPost = script;
 			break;
 		case ScriptType::HOLD:
-			old_script_name = GetHoldScriptName();
 			type_name = "HOLD";
+			old_script = _scriptHold;
 			_scriptHold = script;
 			break;
 	}
 
-	if (old_script_name) {
+	if (old_script) {
 		debug_printf(DEBUG_NORMAL, "Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
-		             GetNodeName(), type_name, old_script_name, script->GetCmd());
+		             GetNodeName(), type_name, old_script->GetCmd(), script->GetCmd());
+		delete old_script;
+		old_script = nullptr;
 	}
 
 	return true;

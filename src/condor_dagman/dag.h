@@ -33,6 +33,8 @@
 #include "jobstate_log.h"
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
+#include "dag_commands.h"
+#include <ranges>
 #include <filesystem>
 
 #include <queue>
@@ -67,9 +69,42 @@ static const char * DAG_STATUS_NAMES[] = {
 	"DAG_STATUS_HALTED"
 };
 
-namespace DAG {
-	extern const char *ALL_NODES;
-}
+// Find All Nodes Type Specifiers (i.e. ALL_NODES includes node types)
+const int ALL_NODES_REGULAR = (1 << 0);               // Regular worker nodes
+const int ALL_NODES_SERVICE = (1 << 1);               // Include service nodes (currently does nothing as service nodes are stored sperately)
+const int ALL_NODES_FINAL   = (1 << 2);               // Include the final node
+const int ALL_NODES_PROVISIONER = (1 << 3);           // Include the provisioner node
+
+// Handle finding a node by name or ALL_NODES (based on type)
+// TODO: Add name prefix matching and category handling
+struct AllNodesMatcher {
+	AllNodesMatcher() = delete;
+	AllNodesMatcher(const std::string n, int m) : name(n), mask(m) {};
+	AllNodesMatcher(const std::string n) : name(n), mask(ALL_NODES_REGULAR) {};
+
+	bool operator()(const Node* node) {
+		static const istring_view all_nodes(DAG::ALL_NODES.c_str());
+		if (name.c_str() == all_nodes) {
+			switch (node->GetType()) {
+				case NodeType::JOB:
+					return mask & ALL_NODES_REGULAR;
+				case NodeType::SERVICE: // Note: Currently we will never see since service nodes are not in main vector (FIX ME)
+					return mask & ALL_NODES_SERVICE;
+				case NodeType::FINAL:
+					return mask & ALL_NODES_FINAL;
+				case NodeType::PROVISIONER:
+					return mask & ALL_NODES_PROVISIONER;
+			}
+			return false;
+		}
+
+		return name == node->GetNodeName();
+	}
+
+private:
+	std::string name{};
+	int mask{ALL_NODES_REGULAR};
+};
 
 class Dagman;
 class DagmanMetrics;
@@ -127,7 +162,7 @@ public:
 	int HoldScriptReaper(Node *node);
 
 	// Add a node to be managed by this DAG
-	bool Add(Node& node);
+	bool Add(Node* node);
 	void PrefixAllNodeNames(const std::string &prefix);
 	// Defer setting node status to DONE when parsed from node line in file
 	void AddPreDoneNode(Node* node) { m_userDefinedDoneNodes.push_back(node); }
@@ -135,7 +170,7 @@ public:
 	void SetReject(const std::string &location); // Mark a DAG as rejected
 	bool GetReject(std::string &firstLocation); // Check if DAG was rejected
 	// Set the DAGs working directory from DIR subcommand
-	void SetDirectory(std::string &dir) { m_directory = dir; }
+	void SetDirectory(const std::string &dir) { m_directory = dir; }
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
@@ -174,6 +209,9 @@ public:
 	Node* FindNodeByName(const char * nodeName) const;
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
+	auto FindAllNodes(const std::string& name, const int mask = ALL_NODES_REGULAR) const {
+		return _nodes | std::views::filter(AllNodesMatcher(name, mask));
+	};
 	bool NodeExists(const char *nodeName) const; // Check if node with provided name exists in DAG
 
 	inline void SetStatus(DagStatus status, bool force = false) {

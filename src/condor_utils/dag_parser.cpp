@@ -481,14 +481,14 @@ DagParser::ParseVars(DagLexer& details) {
 	assert(cmd != nullptr);
 
 	// Possibly APPEND or PREPEND keyword
-	token = details.next();
+	token = details.next(TRIM_QUOTES);
 
 	if (strcasecmp(token.c_str(), "PREPEND") == 0) {
 		cmd->Prepend();
-		token = details.next();
+		token = details.next(TRIM_QUOTES);
 	} else if (strcasecmp(token.c_str(), "APPEND") == 0) {
 		cmd->Append();
-		token = details.next();
+		token = details.next(TRIM_QUOTES);
 	}
 
 	int num_pairs = 0;
@@ -512,7 +512,7 @@ DagParser::ParseVars(DagLexer& details) {
 		num_pairs++;
 		cmd->AddPair(key, val);
 
-		token = details.next();
+		token = details.next(TRIM_QUOTES);
 	}
 
 	return (num_pairs == 0) ? "No key=value pairs specified" : "";
@@ -568,6 +568,9 @@ std::string
 DagParser::ParseSavePoint(DagLexer& details) {
 	std::string token = details.next();
 	if (token.empty()) { return "No node name specified"; }
+	else if (strcasecmp(token.c_str(), DAG::ALL_NODES.c_str()) == 0) {
+		return "ALL_NODES cannot be used for save point file command";
+	}
 
 	data.reset(new SavePointCommand(token));
 	SavePointCommand* cmd = (SavePointCommand*)data.get();
@@ -773,8 +776,20 @@ DagParser::next() {
 
 	while (std::getline(fs, line)) {
 		uint64_t command_line_no = ++line_no;
+
 		trim(line);
 		if (skip_line(line)) { continue; }
+
+		// Handle multiline via backslash
+		while (line.back() == '\\') {
+			line.pop_back();
+
+			std::string tmp;
+			if (std::getline(fs, tmp)) {
+				++line_no;
+				line += tmp;
+			} else { break; }
+		}
 
 		bool parse_success = true;
 
@@ -924,7 +939,7 @@ DagParser::next() {
 					check = details.next();
 					if ( ! check.empty()) {
 						parse_error = "Unexpected token '" + check + "'";
-					} else { data.reset(new RejectCommand(GetFile(), line_no)); }
+					} else { data.reset(new RejectCommand()); }
 					break;
 				case DAG::CMD::CONNECT:
 					parse_error = ParseConnect(details);

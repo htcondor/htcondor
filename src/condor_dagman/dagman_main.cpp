@@ -919,7 +919,7 @@ void main_init(int argc, char ** const argv) {
 	if ( ! dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
-	DagProcessor dp(dagman.config);
+	DagProcessor dp(dagman);
 	int dag_id = 0;
 
 	for (const auto & file : dagOpts.dagFiles()) {

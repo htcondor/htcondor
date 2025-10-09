@@ -32,6 +32,7 @@
 #include "parse.h"
 #include "debug.h"
 #include "dagman_commands.h"
+#include "dag_parser.h"
 #include "tmp_dir.h"
 #include "basename.h"
 #include "condor_getcwd.h"
@@ -124,7 +125,7 @@ void exampleSyntax (const char * example) {
 bool
 isReservedWord( const char *token )
 {
-    static const char * keywords[] = { "PARENT", "CHILD", DAG::ALL_NODES };
+    static const char * keywords[] = { "PARENT", "CHILD", DAG::ALL_NODES.c_str() };
     for (auto & keyword : keywords) {
         if (!strcasecmp (token, keyword)) {
     		debug_printf( DEBUG_QUIET,
@@ -961,7 +962,7 @@ parse_script(
 		}
 	}
 
-	DagScriptOutput debugType = DagScriptOutput::NONE;
+	DAG::ScriptOutput debugType = DAG::ScriptOutput::NONE;
 	std::string debugFile;
 	if (strcasecmp(type_name, "DEBUG") == MATCH) {
 		const char* token = strtok(NULL, DELIMITERS);
@@ -980,11 +981,11 @@ parse_script(
 			return false;
 		}
 		if (strcasecmp(token, "STDOUT") == MATCH) {
-			debugType = DagScriptOutput::STDOUT;
+			debugType = DAG::ScriptOutput::STDOUT;
 		} else if (strcasecmp(token, "STDERR") == MATCH) {
-			debugType = DagScriptOutput::STDERR;
+			debugType = DAG::ScriptOutput::STDERR;
 		} else if (strcasecmp(token, "ALL") == MATCH) {
-			debugType = DagScriptOutput::ALL;
+			debugType = DAG::ScriptOutput::ALL;
 		} else {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unknown Script output stream type (%s) expected STDOUT, STDERR, or ALL\n",
 			            filename, lineNumber, token);
@@ -1094,7 +1095,7 @@ parse_script(
 			debug_printf(DEBUG_SILENT, "ERROR: Failed to make script object: out of memory!\n");
 			return false;
 		}
-		if (debugType != DagScriptOutput::NONE)
+		if (debugType != DAG::ScriptOutput::NONE)
 			script->SetDebug(debugFile, debugType);
 		if(! node->AddScript(script)) {
 			debug_printf(DEBUG_SILENT, "ERROR: %s (line %d): failed to add %s script to node %s\n",
@@ -2255,7 +2256,7 @@ parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
 					 filename, lineNumber);
 		exampleSyntax(example.c_str());
 		return false;
-	} else if (strcasecmp(nodeName, DAG::ALL_NODES) == MATCH) { //It is redundant to use all nodes for save files
+	} else if (strcasecmp(nodeName, DAG::ALL_NODES.c_str()) == MATCH) { //It is redundant to use all nodes for save files
 		debug_printf(DEBUG_NORMAL, "ERROR: %s (line %d): SAVE_POINT_FILE does not allow ALL_NODES option.\n",
 					 filename, lineNumber);
 		exampleSyntax(example.c_str());
@@ -2878,15 +2879,732 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 }
 
 
-bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id) {
-	if (true) {
+bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id, std::vector<DagCmd>* defer_include) {
+	if (false /* TODO Add config variable */) { // Use old parser/processing :(
 		bool is_main_dag = (dag_munge_id >= 0);
 		parseSetDoNameMunge(is_main_dag ? config[conf::b::MungeNodeNames] : false);
 		return parse(dm, &dag, file.c_str(), is_main_dag);
 	}
-	/*static istring_view all_nodes_keyword(DAG::ALL_NODES.c_str());
-	std::vector<DagCmd> commands{};*/
+
+	// DAG Commands only parsed at DAG submit time (in DAGManUtils)
+	static const std::set<DAG::CMD> ignore_commands {
+		DAG::CMD::CONFIG,
+		DAG::CMD::SET_JOB_ATTR,
+		DAG::CMD::ENV,
+	};
+
+	// Change into DAG directory if UseDagDir is specified
+	const char* file_to_parse = file.c_str();
+	TmpDir dagDir;
+	if (useDagDir) {
+		std::string tmpDir = condor_dirname(file.c_str());
+		std::string error;
+		if ( ! dagDir.Cd2TmpDir(tmpDir.c_str(), error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to change into DAG directory %s: %s\n",
+			             tmpDir.c_str(), error.c_str());
+			return false;
+		}
+
+		// The DAG file to parse is now relative to use so just use the file name
+		file_to_parse = condor_basename(file.c_str());
+	}
+
+	std::vector<DagCmd> commands{}; // Parsed DAG commands to defer processing
+	DagParser parser(file_to_parse);
+
+	if (parser.failed()) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to open %s: %s\n", file.c_str(), parser.c_error());
+		return false;
+	}
+
+	parser.Ignore(ignore_commands);
+	if (config[conf::b::AllowIllegalChars]) { parser.AllowIllegalChars(); }
+
+	bool success = false;
+	std::string location; // Save 'file:line' of command in case error occurs
+
+	// Initial Parse Loop
+	for (auto cmd : parser) {
+		if ( ! cmd) { continue; }
+
+		location = cmd->Location();
+
+		switch (cmd->GetCommand()) {
+			case DAG::CMD::SUBMIT_DESCRIPTION:
+				{
+					const SubmitDescCommand* desc = (SubmitDescCommand*)(cmd.get());
+					std::ignore = dag.add_inline_desc(desc->GetName(), desc->GetInlineDesc());
+				}
+				break;
+			case DAG::CMD::SUBDAG:
+			case DAG::CMD::JOB:
+			case DAG::CMD::FINAL:
+			case DAG::CMD::PROVISIONER:
+			case DAG::CMD::SERVICE:
+				if ( ! ProcessNode((NodeCommand*)(cmd.get()), dag, dag_munge_id)) { goto processing_failed; }
+				break;
+			case DAG::CMD::SPLICE:
+				if ( ! ProcessSplice(dm, dag, (SpliceCommand*)(cmd.get()), dag_munge_id)) { goto processing_failed; }
+				break;
+			case DAG::CMD::DOT:
+				{
+					const DotCommand* dot = (DotCommand*)(cmd.get());
+					dag.SetDotFileUpdate(dot->Update());
+					dag.SetDotFileOverwrite(dot->Overwrite());
+					if (dot->HasInclude()) {
+						dag.SetDotIncludeFileName(dot->GetInclude().c_str());
+					}
+					dag.SetDotFileName(dot->GetFile().c_str());
+				}
+				break;
+			case DAG::CMD::INCLUDE:
+				{
+					std::vector<DagCmd>* defer_include_cmds = defer_include ? defer_include : &commands;
+					if ( ! process(dm, dag, ((FileCommand*)cmd.get())->GetFile(), dag_munge_id, defer_include_cmds)) {
+						goto processing_failed;
+					}
+				}
+				break;
+			case DAG::CMD::NODE_STATUS_FILE:
+				{
+					const NodeStatusCommand* status = (NodeStatusCommand*)(cmd.get());
+					dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
+				}
+				break;
+			case DAG::CMD::JOBSTATE_LOG:
+				dag.SetJobstateLogFileName(((FileCommand*)cmd.get())->GetFile().c_str());
+				break;
+			case DAG::CMD::REJECT:
+				debug_printf(DEBUG_NORMAL, "DAG marked as rejected at %s\n", cmd->Location().c_str());
+				location.clear(); // We already marked where this is rejected
+				goto processing_failed;
+				break;
+			default: // Defer processing command
+				if (defer_include) { defer_include->emplace_back(cmd.release()); }
+				else { commands.emplace_back(cmd.release()); }
+				break;
+		} // End switch statement
+	} // End parser for loop
+
+	if (parser.failed()) {
+		const auto error = parser.ParseError();
+		if (error) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s\n", error->c_str());
+			debug_printf(DEBUG_QUIET, "       Example sytanx: %s\n", error->syntax().c_str());
+		} else {
+			debug_printf(DEBUG_QUIET, "ERROR: Unknown file parse failure for %s\n", file.c_str());
+		}
+		location.clear(); // Error message already contains file:line thus clear so later message is not displayed
+
+		goto processing_failed;
+	}
+
+	// Process deferred commands and lift splices into DAG if not in include processing
+	if ( ! defer_include) {
+		// Sort deferred commands in desired processing order (i.e. ENUM DAG::CMD value)
+		std::ranges::stable_sort(commands, [](const DagCmd& l, const DagCmd& r) { return l->GetCommand() < r->GetCommand(); });
+
+		// Note: The vector will be empty for include file parsing since
+		//       the processor will inherit the commands vector to defer via a pointer
+		for (const auto& cmd : commands) {
+			location = cmd->Location();
+			if ( ! ProcessDeferred(cmd, dag, dag_munge_id)) { goto processing_failed; }
+		}
+
+		// If we were successful then inherit splice information
+		dag.LiftSplices(SELF);
+		// Also track initial and terminal nodes of graph
+		dag.RecordInitialAndTerminalNodes();
+	}
+
+	success = true;
+
+processing_failed:
+	if ( ! success && location.size()) {
+		debug_printf(DEBUG_QUIET, "Processing error at %s\n", location.c_str());
+	}
+
+	if (useDagDir) {
+		std::string	error;
+		if ( ! dagDir.Cd2MainDir(error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to change back to original directory: %s\n",
+			             error.c_str());
+			success = false;
+		}
+	}
+
+	return success;
+}
+
+
+bool DagProcessor::ProcessDeferred(const DagCmd& cmd, Dag& dag, int dag_munge_id) {
+	bool all_good = true;
+
+	switch (cmd->GetCommand()) {
+		case DAG::CMD::CATEGORY:
+			all_good = ProcessCategory((CategoryCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::PARENT_CHILD:
+			all_good = ProcessDependencies((ParentChildCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::SCRIPT:
+			all_good = ProcessScript((ScriptCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::RETRY:
+			all_good = ProcessRetry((RetryCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::ABORT_DAG_ON:
+			all_good = ProcessAbortDagOn((AbortDagCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::VARS:
+			all_good = ProcessVars((VarsCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::PRIORITY:
+			all_good = ProcessPriority((PriorityCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::PRE_SKIP:
+			all_good = ProcessPreSkip((PreSkipCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::DONE:
+			all_good = ProcessDone((DoneCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::SAVE_POINT_FILE:
+			all_good = ProcessSaveFile((SavePointCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::MAXJOBS:
+			{
+				const MaxJobsCommand* mjc = (MaxJobsCommand*)(cmd.get());
+				std::string category = mjc->GetCategory();
+				dag._catThrottles.SetThrottle(&category, mjc->GetLimit());
+			}
+			break;
+		case DAG::CMD::CONNECT:
+			{
+				const auto& [s1, s2] = ((ConnectCommand*)(cmd.get()))->GetSplices();
+				Dag* parent = dag.LookupSplice(MakeFullName(s1, dag_munge_id));
+				Dag* child = dag.LookupSplice(MakeFullName(s2, dag_munge_id));
+
+				if ( ! parent) {
+					debug_printf(DEBUG_QUIET, "ERROR: Connect parent splice %s does not exist\n", s1.c_str());
+				}
+				if ( ! child) {
+					debug_printf(DEBUG_QUIET, "ERROR: Connect child splice %s does not exist\n", s2.c_str());
+				}
+
+				all_good = (parent && child) ? Dag::ConnectSplices(parent, child) : false;
+			}
+			break;
+		case DAG::CMD::PIN_IN:
+		case DAG::CMD::PIN_OUT:
+			{
+				const PinCommand* pin = (PinCommand*)(cmd.get());
+				std::string node = MakeFullName(pin->GetNode(), dag_munge_id);
+				all_good = dag.SetPinInOut( ! pin->IsPinOut(), node.c_str(), pin->GetPinNum());
+			}
+			break;
+		default:
+			// TODO: Fail or ignore?
+			debug_printf(DEBUG_NORMAL, "DAGMan does not know how to process %s command yet...\n",
+			             DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+			break;
+	} // End switch statement
+
+	return all_good;
+}
+
+
+bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_id) {
+	static const std::map<DAG::CMD, NodeType> CMD_TO_NODE_TYPE = {
+		{DAG::CMD::SUBDAG, NodeType::JOB},
+		{DAG::CMD::JOB, NodeType::JOB},
+		{DAG::CMD::FINAL, NodeType::FINAL},
+		{DAG::CMD::PROVISIONER, NodeType::PROVISIONER},
+		{DAG::CMD::SERVICE, NodeType::SERVICE}
+	};
+
+	ASSERT(CMD_TO_NODE_TYPE.contains(cmd->GetCommand()));
+
+	std::string name = MakeFullName(cmd->GetName(), dag_munge_id);
+	if (dag.NodeExists(name.c_str())) {
+		debug_printf(DEBUG_QUIET, "ERROR: Node %s already exists in DAG.\n", name.c_str());
+		return false;
+	}
+
+	if (dag.LookupSplice(name)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Node name %s already associated with a splice in DAG\n",
+		             name.c_str());
+		return false;
+	}
+
+	std::string desc = cmd->GetSubmit();
+	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
+		desc += DAG_SUBMIT_FILE_SUFFIX;
+	} else if (strstr(desc.c_str(), DAG_SUBMIT_FILE_SUFFIX)) {
+		debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
+		return false;
+	} else if (cmd->HasInlineDesc()) {
+		static uint32_t inline_count = 0;
+		desc = name + "-InlineDesc" + std::to_string(inline_count++);
+		std::ignore = dag.add_inline_desc(desc, cmd->GetInlineDesc());
+	}
+
+	std::string directory;
+	if (useDagDir) {
+		if (cmd->HasDir()) {
+			debug_printf(DEBUG_QUIET, "ERROR: Node DIR <directory> sub-command can not be used with -UseDagDir\n");
+			return false;
+		}
+		condor_getcwd(directory);
+	} else if (cmd->HasDir()) {
+		directory = cmd->GetDir();
+	}
+
+	// TODO: hold nodes by value
+	std::unique_ptr<Node> node(new Node(name.c_str(), directory.c_str(), desc.c_str()));
+	if ( ! node) {
+		EXCEPT("Out of memory!");
+	}
+
+	node->SetType(CMD_TO_NODE_TYPE.at(cmd->GetCommand()));
+
+	node->SetNoop(cmd->IsNoop());
+
+	if (cmd->IsDone()) {
+		if (node->GetType() != NodeType::JOB) {
+			debug_printf(DEBUG_QUIET, "WARNING: %s node %s can not be marked as DONE\n",
+			             DAG::GET_KEYWORD_STRING(cmd->GetCommand()), name.c_str());
+			std::ignore = check_warning_strictness(DAG_STRICT_1, false);
+		} else {
+			dag.AddPreDoneNode(node.get());
+		}
+	}
+
+	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
+		node->SetDagFile(cmd->GetSubmit().c_str());
+	}
+
+	if ( ! dag.Add(node.release())) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to add node %s to DAG.\n", name.c_str());
+		return false;
+	}
+
 	return true;
 }
 
+
+bool DagProcessor::ProcessSplice(const Dagman& dm, Dag& dag, const SpliceCommand* cmd, int dag_munge_id) {
+	std::string name = MakeFullName(cmd->GetName(), dag_munge_id);
+
+	if (dag.NodeExists(name.c_str()) ) {
+		debug_printf(DEBUG_QUIET, "ERROR: Splice name %s already associated with a node in DAG.\n",
+		             cmd->GetName().c_str());
+		return false;
+	}
+
+	if (dag.LookupSplice(name)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Splice named %s already exists in DAG.\n",
+		             cmd->GetName().c_str());
+		return false;
+	}
+
+	// TODO: Have DAG hold splice DAG's by value and return reference to act upon
+	std::string scope = name + "+";
+	std::unique_ptr<Dag> splice_dag(new Dag(dm, true, scope));
+	if ( ! splice_dag) {
+		EXCEPT("Out of memory!\n");
+	}
+
+	if (cmd->HasDir()) { splice_dag->SetDirectory(cmd->GetDir()); }
+
+	std::string error;
+	TmpDir spliceDir;
+	if (cmd->HasDir() && ! spliceDir.Cd2TmpDir(cmd->GetDir().c_str(), error)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to change to directory %s: %s\n",
+		             cmd->GetDir().c_str(), error.c_str());
+		return false;
+	}
+
+	debug_printf(DEBUG_VERBOSE, "Parsing Splice %s in directory %s with file %s\n",
+	            cmd->GetName().c_str(), cmd->HasDir() ? cmd->GetDir().c_str() : ".",
+	            cmd->GetDagFile().c_str());
+
+	if ( ! process(dm, *splice_dag, cmd->GetDagFile(), dag_munge_id)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to parse splice %s's DAG file %s\n",
+		             cmd->GetName().c_str(), cmd->GetDagFile().c_str());
+		return false;
+	}
+
+	if (cmd->HasDir() && ! spliceDir.Cd2MainDir(error)) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to return to original directory: %s\n", error.c_str());
+		return false;
+	}
+
+	if (splice_dag->HasFinalNode()) {
+		debug_printf(DEBUG_QUIET, "ERROR: Splice %s has a FINAL node. This is not permitted.\n",
+		             cmd->GetName().c_str());
+		return false;
+	}
+
+	splice_dag->PrefixAllNodeNames(scope);
+	splice_dag->_catThrottles.PrefixAllCategoryNames(scope);
+
+	// Print out a useful piece of debugging...
+	if (DEBUG_LEVEL(DEBUG_DEBUG_1)) {
+		splice_dag->PrintNodeList();
+	}
+
+	// Add splice to current DAG
+	if ( ! dag.InsertSplice(name, splice_dag.release())) {
+		debug_printf(DEBUG_QUIET, "ERROR: Failed to insert splice %s into DAG\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+size_t DagProcessor::join_node_id = 0;
+
+bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, int dag_munge_id) {
+	std::vector<Node*> parents;
+	std::vector<Node*> children;
+
+	for (const auto& n : cmd->parents) {
+		std::string name = MakeFullName(n, dag_munge_id);
+		Dag* splice = dag.LookupSplice(name);
+		if (splice) {
+			for (auto node : *(splice->FinalRecordedNodes())) {
+				parents.push_back(node);
+			}
+		} else {
+			Node* node = dag.FindNodeByName(name.c_str());
+			if ( ! node) {
+				debug_printf(DEBUG_QUIET, "ERROR: Unknown parent node %s specified\n", n.c_str());
+				return false;
+			}
+			parents.push_back(node);
+		}
+	}
+
+	for (const auto& n : cmd->children) {
+		std::string name = MakeFullName(n, dag_munge_id);
+		Dag* splice = dag.LookupSplice(name);
+		if (splice) {
+			for (auto node : *(splice->InitialRecordedNodes())) {
+				children.push_back(node);
+			}
+		} else {
+			Node* node = dag.FindNodeByName(name.c_str());
+			if ( ! node) {
+				debug_printf(DEBUG_QUIET, "ERROR: Unknown child node %s specified\n", n.c_str());
+				return false;
+			}
+			children.push_back(node);
+		}
+	}
+
+	const auto GetID = [](const Node* n) -> NodeID_t { return n->GetNodeID(); };
+
+	std::ranges::sort(parents, std::less{}, GetID);
+	const auto duplicate_parents = std::ranges::unique(parents, std::equal_to{}, GetID);
+	parents.erase(duplicate_parents.begin(), duplicate_parents.end());
+
+	std::ranges::sort(children, std::less{}, GetID);
+	const auto duplicate_children = std::ranges::unique(children, std::equal_to{}, GetID);
+	children.erase(duplicate_children.begin(), duplicate_children.end());
+
+	std::string error;
+	const char* parent_type = "parent";
+
+	// If this statement has multiple parent nodes and multiple child nodes, we
+	// can optimize the dag structure by creating an intermediate "join node"
+	// connecting the two sets.
+	if (config[conf::b::UseJoinNodes] && more_than_one(parents) && more_than_one(children)) {
+		std::string name = "_condor_join_node" + std::to_string(join_node_id++);
+		if (dag.NodeExists(name.c_str()) || dag.LookupSplice(name)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Join node name %s already in use in DAG!!!\n", name.c_str());
+			return false;
+		}
+
+		std::unique_ptr<Node> node(new Node(name.c_str(), "", "DNE.sub"));
+		if ( ! node) {
+			EXCEPT("Out of memory!");
+		}
+
+		node->SetNoop(true);
+
+		if ( ! dag.Add(node.release())) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to add join node %s to DAG.\n", name.c_str());
+			return false;
+		}
+
+		Node* join = dag.FindNodeByName(name.c_str());
+
+		// Now connect all parents and children to the join node
+		for (auto parent : parents) {
+			std::vector<Node*> lst = { join };
+			if ( ! parent->AddChildren(lst, error)) {
+				debug_printf(DEBUG_QUIET, "ERROR: Failed to make join node %s a child of %s: %s\n",
+				             name.c_str(), parent->GetNodeName(), error.c_str());
+				return false;
+			}
+		}
+
+		// reset parent list to the join node and fall through to build the child edges
+		parents.clear();
+		parents.push_back(join);
+		parent_type = "join";
+	}
+
+	for (auto parent : parents) {
+			if ( ! parent->AddChildren(children, error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to add dependencies between %s node %s and children nodes: %s\n",
+			             parent_type, parent->GetNodeName(), error.c_str());
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessDone(const DoneCommand* cmd, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(cmd->GetNodeName(), dag_munge_id);
+
+	Node* node = dag.FindNodeByName(name.c_str());
+	if (node) {
+		if (node->GetType() != NodeType::JOB) {
+			debug_printf(DEBUG_QUIET, "WARNING: %s node(s) can not be referenced by the DONE command\n",
+			             DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+			return !check_warning_strictness(DAG_STRICT_1, false);
+		}
+		node->SetStatus(Node::STATUS_DONE);
+	} else {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessSaveFile(const SavePointCommand* sp, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(sp->GetNodeName(), dag_munge_id);
+	bool all_good = false;
+
+	Node* node = dag.FindNodeByName(name.c_str());
+	if ( ! node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
+	} else if (node->GetType() != NodeType::JOB) {
+		debug_printf(DEBUG_QUIET, "ERROR: Save file can not be applied to %s node(s)\n",
+		             DAG::GET_KEYWORD_STRING(sp->GetCommand()));
+	} else {
+		node->SetSaveFile(sp->GetFilename());
+		all_good = true;
+	}
+
+	return all_good;
+}
+
+
+bool DagProcessor::ProcessVars(const VarsCommand* vars, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(vars->GetNodeName(), dag_munge_id);
+
+	bool prepend = ! config[conf::b::AppendVars];
+	if (vars->ExplicitPlacement()) { prepend = vars->WantPrepend(); }
+
+	auto [file, line] = vars->GetSource();
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+		for (const auto& [key, value] : vars->GetPairs()) {
+			std::ignore = node->AddVar(key.c_str(), value.c_str(), file.c_str(), line, prepend);
+			debug_printf(DEBUG_DEBUG_1, "Adding %s='%s' to %s\n",
+			             key.c_str(), value.c_str(), node->GetNodeName());
+		}
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessScript(const ScriptCommand* cmd, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(cmd->GetNodeName(), dag_munge_id);
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+
+		// TODO: Just use the dag_command.h enum class for script type every where in DAGMan
+		//       I am deferring this work for now since that will touch a lot of code
+		ScriptType type = static_cast<ScriptType>((int)(cmd->GetType()));
+
+		std::unique_ptr<Script> script(new Script(type, cmd->GetScript()));
+		if ( ! script) {
+			EXCEPT("Out of memory!");
+		}
+
+		if (cmd->HasDeferal()) {
+			const auto [status, defer] = cmd->GetDeferal();
+			script->SetDeferal(status, defer);
+		}
+
+		if (cmd->WantsDebug()) {
+			const auto [file, when] = cmd->GetDebugInfo();
+			script->SetDebug(file, when);
+		}
+
+		if ( ! node->AddScript(script.release())) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to add %s script to node %s\n",
+			             cmd->GetTypeStr(), node->GetNodeName());
+			return false;
+		}
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessRetry(const RetryCommand* retry, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(retry->GetNodeName(), dag_munge_id);
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+
+		if (node->GetType() != NodeType::JOB) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not have a retry specification\n",
+			             DAG::GET_KEYWORD_STRING(retry->GetCommand()), node->GetNodeName());
+			return false;
+		}
+
+		node->SetMaxRetries(retry->GetMaxRetries(), retry->GetBreakCode());
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessAbortDagOn(const AbortDagCommand* ado, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(ado->GetNodeName(), dag_munge_id);
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+
+		if (node->GetType() == NodeType::FINAL) {
+			debug_printf(DEBUG_QUIET, "ERROR: FINAL node %s cannot have an ABORT-DAG-ON specification.\n",
+			             node->GetNodeName());
+			return false;
+		}
+
+		node->SetAbortDagOn(ado->GetCondition(), ado->GetExitValue());
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced.\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessPreSkip(const PreSkipCommand* skip, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(skip->GetNodeName(), dag_munge_id);
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+
+		std::string error;
+		if ( ! node->AddPreSkip(skip->GetExitCode(), error)) {
+			debug_printf(DEBUG_QUIET, "ERROR: Failed to add pre skip to %s: %s\n",
+			             node->GetNodeName(), error.c_str());
+			return false;
+		}
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessPriority(const PriorityCommand* prio, Dag& dag, int dag_munge_id) {
+	std::string name = MakeFullName(prio->GetNodeName(), dag_munge_id);
+
+	bool found_a_node = false;
+	for (Node* node : dag.FindAllNodes(name)) {
+		found_a_node = true;
+
+		if (node->GetType() != NodeType::JOB) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not have a priority\n",
+			             DAG::GET_KEYWORD_STRING(prio->GetCommand()), node->GetNodeName());
+			return false;
+		}
+
+		int current = node->GetExplicitPrio();
+		if (current && current != prio->GetPriority()) {
+			debug_printf(DEBUG_NORMAL, "WARNING: New priority %d for node %s overrides old value %d\n",
+			             prio->GetPriority(), node->GetNodeName(), current);
+			check_warning_strictness(DAG_STRICT_2);
+		}
+
+		node->SetPrio(prio->GetPriority());
+	}
+
+	if ( ! found_a_node) {
+		debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+
+bool DagProcessor::ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag_munge_id) {
+	for (const auto& n : cat->nodes) {
+		std::string name = MakeFullName(n, dag_munge_id);
+
+		bool found_a_node = false;
+		for (Node* node : dag.FindAllNodes(name)) {
+			found_a_node = true;
+
+			if (node->GetType() != NodeType::JOB) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s node %s can not be added to a category\n",
+				             DAG::GET_KEYWORD_STRING(cat->GetCommand()), node->GetNodeName());
+				return false;
+			}
+
+			node->SetCategory(cat->GetCategory().c_str(), dag._catThrottles);
+		}
+
+		if ( ! found_a_node) {
+			debug_printf(DEBUG_QUIET, "ERROR: Unknown node %s referenced\n", name.c_str());
+			return false;
+		}
+	}
+
+	return true;
+}
 

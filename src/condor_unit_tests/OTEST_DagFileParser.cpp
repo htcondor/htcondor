@@ -103,7 +103,11 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"DONE A\n"
 		"INCLUDE include.dag\n"
 		"JOBSTATE_LOG some.log\n"
-		"SET_JOB_ATTR foo=bar\n",
+		"SET_JOB_ATTR foo=bar\n"
+		// Check that multiline backslash escapes work
+		"DONE \\\n"
+		"     \\\n"
+		"B\n",
 	},
 	{
 		// Each command in this file is invalid/produces an error
@@ -206,6 +210,7 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"PIN_OUT A\n"
 		"PIN_IN A foo\n"
 		"PIN_OUT A 1 garbage\n"
+		"SAVE_POINT_FILE ALL_NODES\n"
 	},
 	{
 		// DAG with missing final newline
@@ -277,7 +282,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"ABORT_DAG_ON > B 32 8",
 		"ABORT_DAG_ON > C 5 " + int_max_str,
 		"VARS > A PREPEND [a=32] [baz=foo] [foo=Bar] [k=v]",
-		"VARS > B APPEND [a=\"woah =!= UNDEFINED\"] [test='12'34']",
+		"VARS > B APPEND [a=woah =!= UNDEFINED] [test=12'34]",
 		"VARS > C [country=USA]",
 		"PRIORITY > D -82",
 		"PRE_SKIP > E 12",
@@ -303,6 +308,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"INCLUDE > include.dag",
 		"JOBSTATE_LOG > some.log",
 		"SET_JOB_ATTR > foo=bar",
+		"DONE > B",
 	},
 	{
 		// *All expected command parsing failures (note some internal developer errors not included)
@@ -405,6 +411,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":94 Failed to parse PIN_OUT command: No pin number specified",
 		FAILURE_DAG + ":95 Failed to parse PIN_IN command: Invalid pin number 'foo'",
 		FAILURE_DAG + ":96 Failed to parse PIN_OUT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":97 Failed to parse SAVE_POINT_FILE command: ALL_NODES cannot be used for save point file command",
 	},
 };
 
