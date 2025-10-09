@@ -543,7 +543,7 @@ stdin_pipe_handler(int) {
 
 
 void
-handle_results( std::string line ) {
+handle_results(const std::string& line) {
 		// Add this to the list
 	result_list.emplace_back (line);
 
@@ -769,7 +769,7 @@ enqueue_result (int req_id, const char ** results, const int argc)
 
 
 bool
-create_sandbox_dir(std::string sid, std::string &iwd)
+create_sandbox_dir(const std::string& sid, std::string &iwd)
 {
 	define_sandbox_path(sid, iwd);
 
@@ -877,7 +877,7 @@ download_proxy( const std::string &sid, const ClassAd &ad,
 // memory leaks.  this means looking it up in our map, which should be O(1),
 // and then removing the actual filesystem portion.
 bool
-destroy_sandbox(std::string sid, std::string &err)
+destroy_sandbox(const std::string& sid, std::string &err)
 {
 	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox id: %s\n", sid.c_str());
 
@@ -926,7 +926,7 @@ destroy_sandbox(std::string sid, std::string &err)
 // in/output:
 //   &path: the path it would result in
 void
-define_sandbox_path(std::string sid, std::string &path)
+define_sandbox_path(const std::string& sid, std::string &path)
 {
 
 	// find a suitable path for our sandbox
@@ -960,7 +960,7 @@ define_sandbox_path(std::string sid, std::string &path)
 	// too many files.  in the year 2040, when 2^16 files exist in a single
 	// directory, feel free to extend this to 3, or (log_v2 n)
 	unsigned char hash_buf[SHA256_DIGEST_LENGTH];
-	SHA256((unsigned char*)const_cast<char*>(sid.c_str()), sid.length(), hash_buf);
+	SHA256((const unsigned char*)sid.c_str(), sid.length(), hash_buf);
 
 	char c_hex_sha256[SHA256_DIGEST_LENGTH*2+1];
 	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {

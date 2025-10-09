@@ -105,17 +105,13 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_read: return "read";
         case CONDOR_write: return "write";
         case CONDOR_lseek: return "lseek";
-        case CONDOR_lseek64: return "lseek64";
-        case CONDOR_llseek: return "llseek";
         case CONDOR_unlink: return "unlink";
         case CONDOR_rename: return "rename";
-        case CONDOR_register_mpi_master_info: return "register_mpi_master_info";
         case CONDOR_mkdir: return "mkdir";
         case CONDOR_rmdir: return "rmdir";
         case CONDOR_fsync: return "fsync";
         case CONDOR_get_file_info_new: return "get_file_info_new";
         case CONDOR_ulog: return "ulog";
-        case CONDOR_phase: return "phase";
         case CONDOR_get_job_attr: return "get_job_attr";
         case CONDOR_set_job_attr: return "set_job_attr";
         case CONDOR_constrain: return "constrain";
@@ -552,8 +548,6 @@ do_REMOTE_syscall()
 	}
 
 	case CONDOR_lseek:
-	case CONDOR_lseek64:
-	case CONDOR_llseek:
 	  {
 		off_t   offset;
 		int   whence;
@@ -656,31 +650,6 @@ do_REMOTE_syscall()
 		}
 		free( (char *)to );
 		free( (char *)from );
-		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
-		return 0;
-	}
-
-	case CONDOR_register_mpi_master_info:
-	{
-		ClassAd ad;
-		result = ( getClassAd(syscall_sock, ad) );
-		ASSERT( result );
-		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
-
-		errno = 0;
-		rval = pseudo_register_mpi_master_info( &ad );
-		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		result = ( syscall_sock->code(rval) );
-		ASSERT( result );
-		if( rval < 0 ) {
-			result = ( syscall_sock->code( terrno ) );
-			ASSERT( result );
-		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
 		return 0;
@@ -817,22 +786,6 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		rval = pseudo_ulog(&ad);
-		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
-
-		//NOTE: caller does not expect a response.
-
-		return 0;
-	}
-
-	case CONDOR_phase:
-	{
-		std::string phase;
-		result = ( syscall_sock->code(phase) );
-		ASSERT( result );
-		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
-
-		rval = 0;
 		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
 
 		//NOTE: caller does not expect a response.

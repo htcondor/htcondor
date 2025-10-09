@@ -213,12 +213,12 @@ protected:
     bool ReadCheckPointFile();
     void MaybeSwapOutClassAd(void);
 
-    int Max_Classad;
-    int CheckPoint;      
+    int Max_Classad{0};
+    int CheckPoint{0};
     std::map<std::string,int> DirtyClassad;
-    timeval LatestCheckpoint;
+    timeval LatestCheckpoint{0, 0};
     std::string CheckFileName;
-    int test_checkpoint;
+    int test_checkpoint{0};
     
  private:
     ClassAdCollection(const ClassAdCollection &) : ClassAdCollectionInterface(), viewTree(NULL) { return; }

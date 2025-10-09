@@ -119,7 +119,7 @@ int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, int64_t offset, in
 }
 
 
-BackwardFileReader::BackwardFileReader(std::string filename, int open_flags)
+BackwardFileReader::BackwardFileReader(const std::string& filename, int open_flags)
 	: error(0), file(NULL), cbFile(0), cbPos(0) 
 {
 #ifdef WIN32

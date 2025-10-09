@@ -159,12 +159,6 @@ class UniShadow : public BaseShadow
 
 	int exitCode( void );
 
-		/** This function is specifically used for spawning MPI jobs.
-			So, if for some bizzare reason, it gets called for a
-			non-MPI shadow, we should return falure.
-		*/
-	bool setMpiMasterInfo( char* ) { return false; };
-
 		/** If desired, send the user email now that this job has
 			terminated.  This has all the job statistics from the run,
 			and lots of other useful info.

@@ -265,27 +265,6 @@ pseudo_job_termination( ClassAd *ad )
 }
 
 
-int
-pseudo_register_mpi_master_info( ClassAd* ad ) 
-{
-	char *addr = NULL;
-
-	if( ! ad->LookupString(ATTR_MPI_MASTER_ADDR, &addr) ) {
-		dprintf( D_ALWAYS,
-				 "ERROR: mpi_master_info ClassAd doesn't contain %s\n",
-				 ATTR_MPI_MASTER_ADDR );
-		return -1;
-	}
-	if( ! Shadow->setMpiMasterInfo(addr) ) {
-		dprintf( D_ALWAYS, "ERROR: received "
-				 "pseudo_register_mpi_master_info for a non-MPI job!\n" );
-		free(addr);
-		return -1;
-	}
-	free(addr);
-	return 0;
-}
-
 /*
 If short_path is an absolute path, copy it to full path.
 Otherwise, tack the current directory on to the front
