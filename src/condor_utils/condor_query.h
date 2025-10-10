@@ -191,6 +191,8 @@ class CondorQuery
 	void setDesiredAttrs(const std::string &attrs) { extraAttrs.Assign(ATTR_PROJECTION, attrs); }
 	void setDesiredAttrsExpr(const char *expr);
 
+	void requestPrivateAttrs() { requireAuth = true; extraAttrs.Assign(ATTR_SEND_PRIVATE_ATTRIBUTES, true); }
+
 	void setResultLimit(int limit) { resultLimit = limit; }
 	int  getResultLimit() const { return resultLimit; }
 
@@ -211,6 +213,7 @@ class CondorQuery
 	GenericQuery query;
 	char*		genericQueryType;
 	int         resultLimit; // limit on number of desired results. collectors prior to 8.7.1 will ignore this.
+	bool        requireAuth{false};
 
 	std::vector<std::string> targets; // list of target types for the MULTIPLE query
 
