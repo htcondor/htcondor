@@ -31,4 +31,4 @@ lsf_confdir=`cat $conffile|grep LSF_CONFDIR| awk -F"=" '{ print $2 }'`
 [ -f ${lsf_confdir}/profile.lsf ] && . ${lsf_confdir}/profile.lsf
 
 requested=`echo $1 | sed 's/^.*\///'`
-${lsf_binpath}/bresume $requested >/dev/null 2>&1
+${lsf_binpath}bresume $requested >/dev/null 2>&1
