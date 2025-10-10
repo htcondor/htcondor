@@ -5350,6 +5350,10 @@ description=How often to query docker for the size of the image cache.  0 disabl
 default=8
 type=int
 
+[DOCKER_TRUST_LOCAL_IMAGES]
+default=false
+type=bool
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
