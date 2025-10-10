@@ -4507,7 +4507,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     container.
 
 :macro-def:`DOCKER_PERFORM_TEST[STARTD]`
-    When the *condor_startd* starts up, it runs a simple Docker
+    When the *condor_startd* starts up, and on every
+    :tool:`condor_reconfig`, it runs a simple Docker
     container to verify that Docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
