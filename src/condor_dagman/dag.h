@@ -74,35 +74,29 @@ const int ALL_NODES_REGULAR = (1 << 0);               // Regular worker nodes
 const int ALL_NODES_SERVICE = (1 << 1);               // Include service nodes (currently does nothing as service nodes are stored sperately)
 const int ALL_NODES_FINAL   = (1 << 2);               // Include the final node
 const int ALL_NODES_PROVISIONER = (1 << 3);           // Include the provisioner node
+const int ALL_NODES_EVERYTHING = std::numeric_limits<int>::max(); // All node types
 
 // Handle finding a node by name or ALL_NODES (based on type)
 // TODO: Add name prefix matching and category handling
 struct AllNodesMatcher {
 	AllNodesMatcher() = delete;
-	AllNodesMatcher(const std::string n, int m) : name(n), mask(m) {};
-	AllNodesMatcher(const std::string n) : name(n), mask(ALL_NODES_REGULAR) {};
+	AllNodesMatcher(int m) : mask(m) {};
 
 	bool operator()(const Node* node) {
-		static const istring_view all_nodes(DAG::ALL_NODES.c_str());
-		if (name.c_str() == all_nodes) {
-			switch (node->GetType()) {
-				case NodeType::JOB:
-					return mask & ALL_NODES_REGULAR;
-				case NodeType::SERVICE: // Note: Currently we will never see since service nodes are not in main vector (FIX ME)
-					return mask & ALL_NODES_SERVICE;
-				case NodeType::FINAL:
-					return mask & ALL_NODES_FINAL;
-				case NodeType::PROVISIONER:
-					return mask & ALL_NODES_PROVISIONER;
-			}
-			return false;
+		switch (node->GetType()) {
+			case NodeType::JOB:
+				return mask & ALL_NODES_REGULAR;
+			case NodeType::SERVICE: // Note: Currently we will never see since service nodes are not in main vector (FIX ME)
+				return mask & ALL_NODES_SERVICE;
+			case NodeType::FINAL:
+				return mask & ALL_NODES_FINAL;
+			case NodeType::PROVISIONER:
+				return mask & ALL_NODES_PROVISIONER;
 		}
-
-		return name == node->GetNodeName();
+		return false;
 	}
 
 private:
-	std::string name{};
 	int mask{ALL_NODES_REGULAR};
 };
 
@@ -210,7 +204,15 @@ public:
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
 	auto FindAllNodes(const std::string& name, const int mask = ALL_NODES_REGULAR) const {
-		return _nodes | std::views::filter(AllNodesMatcher(name, mask));
+		static const istring_view all_nodes(DAG::ALL_NODES.c_str());
+		if (name.c_str() == all_nodes) {
+			return _nodes | std::views::filter(AllNodesMatcher(mask));
+		} else {
+			static std::vector<Node*> lone;
+			if ( ! lone.empty()) { lone.clear(); }
+			lone.emplace_back(FindNodeByName(name.c_str()));
+			return lone | std::views::filter(AllNodesMatcher(ALL_NODES_EVERYTHING));
+		}
 	};
 	bool NodeExists(const char *nodeName) const; // Check if node with provided name exists in DAG
 
