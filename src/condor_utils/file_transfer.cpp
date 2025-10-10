@@ -1749,7 +1749,7 @@ FileTransfer::Reap(int exit_status)
 			// We can't set Info.success to false here, because 
 			// we drain the pipe below, and there might be an info
 			// message before the final update with the error.
-			// ReadTransferPipeMsg() can call a callback to The
+			// ReadTransferPipeMsg() can call a callback to the
 			// caller, which should not see the success status 
 			// as failed until we have the full error message
 			// which comes from the final message on the pipe.
