@@ -53,11 +53,16 @@ def elem_text(elem: ET.Element, path: t.Union[None, str] = None) -> str:
 def is_hosted_fqdn(fqdn):
     """
     Return True if the FQDN is that of a hosted CE
+
+    Match domains that start with hosted-ce and end with any of:
+    - grid.uchicago.edu
+    - opensciencegrid.org
+    - osg-htc.org
+    Or domains that end with:
+    - svc.opensciencegrid.org
+    - svc.osg-htc.org
     """
-    return bool(
-        re.match(r'^.*\.svc\.(osg-htc|opensciencegrid)\.org$', fqdn)
-        or re.match(r'^hosted-ce.*\.(grid\.uchicago\.edu|opensciencegrid\.org|osg-htc\.org)$', fqdn)
-    )
+    return bool(re.match(r"^hosted-ce.*\.(grid\.uchicago\.edu|opensciencegrid\.org|osg-htc\.org)|.*\.svc\.(opensciencegrid|osg-htc)\.org$", fqdn))
 
 @dataclass
 class ResourceInfo:
