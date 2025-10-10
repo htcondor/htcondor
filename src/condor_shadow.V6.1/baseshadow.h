@@ -407,6 +407,10 @@ class BaseShadow : public Service
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
+	virtual std::optional<std::string> uniqueCIFName(
+		const std::string & /* cifName */, const std::string & /* content */
+	) { return {}; }
+
  protected:
 
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
