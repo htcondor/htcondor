@@ -4562,6 +4562,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     run on the EP.  When true, if the Architecture in the image is defined
     and does not match the EP, the job is put on hold.
 
+:macro-def:`DOCKER_TRUST_LOCAL_IMAGES[STARTD]`
+    Defaults to false.  When true, docker universe jobs can use docker images
+    that have been prestaged into the local docker image cache, even if
+    that image cannot be pulled from a repository, or if it doesn't exist
+    in any repository.
+
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
