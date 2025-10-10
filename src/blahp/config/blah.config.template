@@ -5,7 +5,7 @@
 ##Blah common variables
 
 #Supported batch systems (e.g. pbs,lsf)
-supported_lrms=pbs,lsf,sge,slurm,condor
+supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes
 
 #DGAS logfile 
 BLAHPD_ACCOUNTING_INFO_LOG=
