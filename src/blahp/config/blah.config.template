@@ -90,9 +90,8 @@ blah_require_proxy_on_submit=
 
 ##PBS common variables
 
-#Path where PBS executables are located 
-# NOTE: this path is computed many times; I worry about the overhead here.  -BB, 12-13-2012
-pbs_binpath=/usr/bin
+#Path where PBS executables are located (default is to use PATH)
+#pbs_binpath=
 
 #Path where the PBS logs are located ($pbs_spoolpath/server_logs)
 #pbs_spoolpath=
@@ -119,8 +118,8 @@ pbs_maui=no
 
 ##LSF common variables
 
-#Path where LSF executables are located 
-lsf_binpath=/usr/bin
+#Path where LSF executables are located (default is to use PATH)
+#lsf_binpath=
 
 #Path where the LSF conf file is located ($lsf_confpath/lsf.conf)
 lsf_confpath=
@@ -299,8 +298,8 @@ tracejob_max_output=
 
 ##Condor
 
-#condor bin location
-condor_binpath=/usr/bin
+#condor bin location (default is to use PATH)
+#condor_binpath=
 
 #path to condor_config
 #export CONDOR_CONFIG="/etc/condor/condor_config"
@@ -318,7 +317,8 @@ bupdater_use_condor_history=
 
 ##SGE
 
-sge_binpath=
+#Path where SGE executables are located (default is to use PATH)
+#sge_binpath=
 
 sge_cellname=$SGE_CELL
 
@@ -329,9 +329,8 @@ sge_pe_policy=*
 
 ##SLURM
 
-#path to the slurm executables
-#default: /usr/bin
-slurm_binpath=/usr/bin
+#path to the slurm executables (default is to use PATH)
+#slurm_binpath=
 
 ##
 #####BNotifier subsection
