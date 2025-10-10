@@ -18,6 +18,14 @@
   a specific usermap for use with the ``userMap`` ClassAd function.
   :jira:`3274`
 
+- For **batch** grid :subcom:`universe` jobs, the PATH environment variable
+  is now used by default to locate the tools of the destination batch
+  scheduler.
+  You can specify a specific directory where the tools are located by setting
+  the appropriate binpath variable in the ``blah.config`` file
+  (e.g. ``slurm_binpath=/opt/slurm/bin``).
+  :jira:`3326`
+
 *** 25.3.0 bugs
 
 *** 25.0.3 bugs
