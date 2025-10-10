@@ -1,5 +1,10 @@
 *** 25.0.3 bugs
 
+- Fixed a bug where if input file transfer failed, occasionally no
+  descriptive error message about the failure would make it back
+  into the job hold reason.
+  :jira:`3327`
+
 - Fixed a very longstanding bug where extremely fast machines would
   overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
   slot attribute.
