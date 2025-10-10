@@ -4,6 +4,11 @@
   clusters using late materialization.
   :jira:`3164`
 
+- When a job has a :subcom:`transfer_output_remaps` that maps to an
+  absolute path, HTCondor will now create any missing intermediate
+  directories in that path, if allowed by the user's permissions.
+  :jira:`3318`
+
 - Docker universe jobs now correctly report CPU and memory usage when the
   docker server is installed in a non-standard place, pointed at with 
   the DOCKER_HOST environment variable, such as with a docker-in-docker setup.
