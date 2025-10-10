@@ -1746,7 +1746,7 @@ FileTransfer::Reap(int exit_status)
 		} else {
 			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
 					 WEXITSTATUS(exit_status) );
-			// We can't set Info.succcess to false here, because 
+			// We can't set Info.success to false here, because 
 			// we drain the pipe below, and there might be an info
 			// message before the final update with the error.
 			// ReadTransferPipeMsg() can call a callback to The
