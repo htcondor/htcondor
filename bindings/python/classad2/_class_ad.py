@@ -189,10 +189,11 @@ class ClassAd(MutableMapping):
     def matches(self, ad : "ClassAd") -> bool:
         """
         Evaluate the ``requirements`` attribute of the given *ad* in the
-        context of this one.
+        context of this one, converting :class:`int` and :class:`float`
+        results to :class:`bool`.
 
         :param ad: The ClassAd to test for matching.
-        :return:  ``True`` if and only if the evaluation returned ``True``.
+        :return:  The evaluated or converted boolean, or ``False``.
         """
         if not isinstance(ad, ClassAd):
             raise TypeError("ad must be a ClassAd")
@@ -209,7 +210,7 @@ class ClassAd(MutableMapping):
         if isinstance(result, bool):
             return result
         if isinstance(result, int):
-            return result != 0
+            return bool(result)
         if isinstance(result, float):
             return bool(result)
 
