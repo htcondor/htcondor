@@ -40,5 +40,6 @@ class _Param(MutableMapping):
 
 
     def __len__(self):
-        return len(self.keys())
+        keys = _param_keys()
+        return len(keys.split('\0'))
 
