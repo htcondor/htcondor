@@ -502,7 +502,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				job_not_started = true;
 				std::string starterErrorMessage = "Singularity test failed:";
 				starterErrorMessage += singErrorMessage;
-				EXCEPT("%s", starterErrorMessage.c_str());
+				// TODO would be nice to detect if issue is due to user-provided image
+				starter->jic->notifyStarterError(starterErrorMessage.c_str(),
+				                                 true,
+				                                 CONDOR_HOLD_CODE::SingularityTestFailed,
+				                                 -1000);
 				return 0;
 			}
 		}

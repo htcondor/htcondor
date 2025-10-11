@@ -356,6 +356,10 @@ public:
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 
+	void SetVacateReason(const std::string& msg, int code, int subcode);
+
+	void ExceptHandler(const char* errmsg);
+
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;

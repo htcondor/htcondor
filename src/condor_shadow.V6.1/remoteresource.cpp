@@ -899,7 +899,9 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	if (starter_version.empty()) {
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
-		filetrans.setPeerVersion(starter_version.c_str());
+		CondorVersionInfo vi(starter_version.c_str());
+		filetrans.setPeerVersion(vi);
+		m_use_delayed_attr = vi.built_since_version(25, 3, 0);
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
@@ -1514,10 +1516,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
 	}
 
+	ExprTree* chirp_ad_expr = update_ad->Lookup(ATTR_CHIRP_DELAYED_ATTRS);
+	ClassAd* chirp_ad = dynamic_cast<ClassAd*>(chirp_ad_expr);
+	if (chirp_ad) {
+		for (ClassAd::const_iterator it = chirp_ad->begin(); it != chirp_ad->end(); it++) {
+			if (allowRemoteWriteAttributeAccess(it->first)) {
+				classad::ExprTree *expr_copy = it->second->Copy();
+				jobAd->Insert(it->first, expr_copy);
+				shadow->watchJobAttr(it->first);
+			}
+		}
+	}
+
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
 		size_t offset = 0;
-		if (allowRemoteWriteAttributeAccess(it->first)) {
+		if (!m_use_delayed_attr && allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);

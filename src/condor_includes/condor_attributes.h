@@ -76,6 +76,7 @@
 #define ATTR_CAPABILITY  "Capability"
 #define ATTR_CGROUP_ENFORCED  "CgroupEnforced"
 #define ATTR_CE_REQUIREMENTS  "CERequirements"
+#define ATTR_CHIRP_DELAYED_ATTRS  "ChirpDelayedAttrs"
 #define ATTR_CLAIM_STARTD  "ClaimStartd"
 #define ATTR_COD_CLAIMS  "CODClaims"
 #define ATTR_COLLECTOR_HOST  "CollectorHost"
