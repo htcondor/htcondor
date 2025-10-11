@@ -8,6 +8,15 @@ CONFIG_FRAGMENT() {
         # Testing singularity sandboxes hangs right now (2024-03-28),
         # so only give the tests a few seconds to finish.
         SINGULARITY_TEST_SANDBOX_TIMEOUT = 5
+
+        # Something in Delta has _very_ high latency -- probably a shared
+        # filesystem -- and sometimes it takes 25 second to launch a
+        # file-transfer plugin (that only takes 3 seconds to run the next
+        # time, which is still rather slow).
+        FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT = 60
+
+        # ... and the same for condor_gpu_discovery, which we don't have
+        # a knob for.
     '
 }
 SHELL_FRAGMENT() {
