@@ -48,38 +48,40 @@ from typing import (
 # MutableMapping provides generic implementations for all mutable mapping
 # methods except for __[get|set|del]item__(), __iter__, and __len__.
 #
-# The version 1 documentation says "[A] ClassAd object is iterable
-# (returning the attributes) and implements the dictionary protocol.
-# The items(), keys(), values(), get(), setdefault(), and update()
-# methods have the same semantics as a dictionary."
-#
 
 class ClassAd(MutableMapping):
     R"""
-    The `ClassAd language <https://htcondor.org/classad/refman/>`_
-    defines a ClassAd as a mapping from attribute names to expressions.  A
-    :class:`ClassAd` is a :class:`collections.abc.MutableMapping` from
-    :class:`str`\ing keys to :class:`ExprTree` values.  Expressions are
-    always evaluated before being returned, and unless you call
-    :meth:`lookup`, converted into the corresponding Python type.
+    A :class:`ClassAd` is a :class:`collections.abc.MutableMapping` with
+    class:`str`\ing keys that represents a "record expression" in the
+    `ClassAd language <https://htcondor.org/classad/refman/>`_, more
+    usually called "a ClassAd".
 
-    A ClassAd expression may evaluate to (but is returned by
-    :class:`ClassAd` as):
+    Values in a ClassAd have types, and those types are represented as
+    built-in Python types --
 
+      * boolean (:class:`bool`)
+      * integer (:class:`int`)
+      * float (:class:`float`)
+      * string (:class:`str`)
+      * absolute time value (:class:`datetime.datetime`)
+      * relative time value (:class:`float`)
+      * list (:class:`list`)
+
+    -- with the following exceptions:
+
+      * ClassAd (:class:`ClassAd`)
       * undefined (:data:`classad2.Value.Undefined`)
-      * a boolean (:class:`bool`)
-      * an integer (:class:`int`)
-      * a float (:class:`float`)
-      * a string (:class:`str`)
-      * an absolute time value (:class:`datetime.datetime`)
-      * a relative time value (:class:`float`)
-      * a list (:class:`list`)
-      * a ClassAd (:class:`ClassAd`)
       * error (:data:`classad2.Value.Error`)
+      * expression (:class:`ExprTree)
 
-    When setting a value, the reverse is true.  Additionally, :py:obj:`None`
-    is converted to :data:`classad2.Value.Undefined` and :class:`dict`\s
+    When setting a value, :py:obj:`None` is converted to
+    :data:`classad2.Value.Undefined` and :class:`dict`\s
     are converted to :class:`ClassAd`\s.
+
+    Expressions are always evaluated lazily, so setting a value to
+    :class:`ExprTree` ``2 + 2`` will not result in the value being
+    the :class:`int:` ``4``; this also applies when constructing or
+    parsing :class:`ClassAd`s or :classad:`ExprTree`s.
     """
 
     def __init__(self, input : Optional[Union[str, dict]] = None):
