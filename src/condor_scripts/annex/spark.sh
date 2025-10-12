@@ -414,11 +414,13 @@ rm -f ${PASSWORD_FILE}
 #
 
 echo -e "\rStep 7 of 8: configuring software (part 3)..."
-TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
-if [[ $? != 0 ]]; then
-    echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
-    echo ${TAR_LOGGING}
-    exit 5
+if [[ -n "${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}" ]]; then
+    TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
+    if [[ $? != 0 ]]; then
+        echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
+        echo ${TAR_LOGGING}
+        exit 5
+    fi
 fi
 
 #

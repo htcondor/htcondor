@@ -15,7 +15,7 @@ CONFIG_FRAGMENT() {
         # time, which is still rather slow).
         FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT = 60
 
-        # ... and the same for condor_gpu_discovery, which we don't have
+        # ... and the same for condor_gpu_discovery, which we do not have
         # a knob for.
     '
 }
