@@ -26,6 +26,10 @@
   (e.g. ``slurm_binpath=/opt/slurm/bin``).
   :jira:`3326`
 
+- The *condor_starter* can now refresh job credentials and respond to 
+  commands while doing output file transfers.
+  :jira:`3259`
+  
 *** 25.3.0 bugs
 
 *** 25.0.3 features
