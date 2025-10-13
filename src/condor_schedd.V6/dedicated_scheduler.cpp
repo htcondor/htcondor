@@ -3854,43 +3854,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	return false;
 }
 
-void
-DedicatedScheduler::holdAllDedicatedJobs( ) 
-{
-	static bool should_notify_admin = true;
-	int i = 0, last_cluster = 0, cluster = 0;
-
-	if( ! idle_clusters ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}
-
-	last_cluster = idle_clusters->size();
-	if( ! last_cluster ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}		
-
-	for( i=0; i<last_cluster; i++ ) {
-		cluster = (*idle_clusters)[i];
-		holdJob( cluster, 0, 
-		         "No condor_shadow installed that supports parallel jobs",
-		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
-		         false, should_notify_admin );
-		if( should_notify_admin ) {
-				// only send email to the admin once per lifetime of
-				// the schedd, so we don't swamp them w/ email...
-			should_notify_admin = false;
-		}
-	}
-}
-
 /*
  * If we restart the schedd, and there are running jobs in the queue,
  * this method gets called once for each proc of each running job.

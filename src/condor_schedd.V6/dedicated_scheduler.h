@@ -380,8 +380,6 @@ class DedicatedScheduler : public Service {
 		*/
 	bool isPossibleToSatisfy( CAList* jobs, int max_hosts );
 
-	void holdAllDedicatedJobs( void );
-
 	bool satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
 
 		// // // // // // 

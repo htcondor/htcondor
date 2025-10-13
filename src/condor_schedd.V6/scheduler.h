@@ -1143,12 +1143,12 @@ extern void incrementJobAdAttr(int cluster, int proc, const char* attrName, cons
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
-					 bool email_user = false, bool email_admin = false,
+					 bool email_user = false,
 					 bool system_hold = true,
 					 bool write_to_user_log = true);
 extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
-					 bool email_user = false, bool email_admin = false,
+					 bool email_user = false,
 					 bool write_to_user_log = true);
 extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 extern bool locate_and_advertise_local_credd(bool force);
