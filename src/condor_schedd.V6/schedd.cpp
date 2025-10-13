@@ -5017,7 +5017,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 			if(status!=HELD) {
 				holdJob(cluster, proc, reason.c_str(),
 						reason_code, reason_subcode,
-						true, false, false, false);
+						true, false, false);
 			}
 			break;
 		case RELEASE_FROM_HOLD:
@@ -6036,7 +6036,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		}
 
 			// And now release the job.
-		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
+		releaseJob(cluster,proc,"Data files spooled",false,false,false);
 		CommitTransactionOrDieTrying();
 	}
 
@@ -7447,7 +7447,6 @@ Scheduler::actOnJobs(int, Stream* s)
 				hold_reason_subcode,	// hold reason subcode
 				false,	// use_transaction
 				false,	// email user?
-				false,	// email admin?
 				false,	// system hold?
 				false	// write to user log?  Set to false cause actOnJobs does not do this here...
 				) == false)
@@ -10897,31 +10896,15 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 void
 Scheduler::spawnLocalStarter( shadow_rec* srec )
 {
-	static bool notify_admin = true;
 	PROC_ID* job_id = &srec->job_id;
-	char* starter_path;
+	std::string starter_path;
 	ArgList starter_args;
 	bool rval;
 
 	dprintf( D_FULLDEBUG, "Starting local universe job %d.%d\n",
 			 job_id->cluster, job_id->proc );
 
-		// Someday, we'll probably want to use the shadow_list, a
-		// shadow object, etc, etc.  For now, we're just going to keep
-		// things a little more simple in the first pass.
-	starter_path = param( "STARTER_LOCAL" );
-	if( ! starter_path ) {
-		dprintf( D_ALWAYS, "Can't start local universe job %d.%d: "
-				 "STARTER_LOCAL not defined!\n", job_id->cluster,
-				 job_id->proc );
-		holdJob( job_id->cluster, job_id->proc,
-				 "No condor_starter installed that supports local universe",
-				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
-				 false, notify_admin, true );
-		delete_shadow_rec( srec );
-		notify_admin = false;
-		return;
-	}
+	param(starter_path, "STARTER_LOCAL");
 
 	starter_args.AppendArg("condor_starter");
 	starter_args.AppendArg("-f");
@@ -10946,7 +10929,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		std::string argstring;
 		starter_args.GetArgsStringForDisplay(argstring);
 		dprintf( D_FULLDEBUG, "About to spawn %s %s\n", 
-				 starter_path, argstring.c_str() );
+				 starter_path.c_str(), argstring.c_str() );
 	}
 
 	mark_serial_job_running( job_id );
@@ -10967,11 +10950,8 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	Env starter_env;
 	starter_env.SetEnv("_condor_EXECUTE",LocalUnivExecuteDir);
 	
-	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
+	rval = spawnJobHandlerRaw( srec, starter_path.c_str(), starter_args,
 							   &starter_env, "starter", true );
-
-	free( starter_path );
-	starter_path = NULL;
 
 	if( ! rval ) {
 		dprintf( D_ERROR, "Can't spawn local starter for "
@@ -13810,7 +13790,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				// delete_shadow_rec will do that later
 			holdJob(job_id.cluster, job_id.proc, reason.c_str(),
 					reason_code, reason_subcode,
-					true,false,false,false,false);
+					true,false,false,false);
 			break;
 
 		case RELEASE_FROM_HOLD:
@@ -13828,7 +13808,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				 job_id.cluster, job_id.proc, reason.c_str());
 			holdJob(job_id.cluster, job_id.proc, reason.c_str(),
 					reason_code, reason_subcode,
-				true,false,false,true);
+				true,false,true);
 			break;
 
 		default:
@@ -13842,7 +13822,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.c_str(),
 					CONDOR_HOLD_CODE::JobPolicyUndefined, 0,
-				true,false,false,true);
+				true,false,true);
 			break;
 	}
 
@@ -16892,7 +16872,7 @@ static bool
 holdJobRaw( int cluster, int proc, const char* reason,
 			int reason_code, int reason_subcode,
 		 bool email_user,
-		 bool email_admin, bool system_hold )
+		 bool system_hold )
 {
 	int status = -1;
 	PROC_ID tmp_id;
@@ -16989,7 +16969,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true );
 
 		// finally, email anyone our caller wants us to email.
-	if( email_user || email_admin ) {
+	if( email_user ) {
 		ClassAd* job_ad;
 		job_ad = GetJobAd( cluster, proc );
 		if( ! job_ad ) {
@@ -17001,14 +16981,8 @@ holdJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		if( email_user ) {
-			Email email;
-			email.sendHold( job_ad, reason );
-		}
-		if( email_admin ) {
-			Email email;
-			email.sendHoldAdmin( job_ad, reason );
-		}
+		Email email;
+		email.sendHold( job_ad, reason );
 		FreeJobAd( job_ad );
 	}
 	return true;
@@ -17024,7 +16998,7 @@ bool
 holdJob( int cluster, int proc, const char* reason,
 		 int reason_code, int reason_subcode,
 		 bool use_transaction, bool email_user,
-		 bool email_admin, bool system_hold, bool write_to_user_log )
+		 bool system_hold, bool write_to_user_log )
 {
 	bool result;
 
@@ -17032,7 +17006,7 @@ holdJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,email_user,email_admin,system_hold);
+	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,email_user,system_hold);
 
 	if(use_transaction) {
 		if(result) {
@@ -17063,7 +17037,7 @@ Does not start or end a transaction.
 static bool
 releaseJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
-		 bool email_admin, bool write_to_user_log )
+		 bool write_to_user_log )
 {
 	int status = -1;
 	PROC_ID tmp_id;
@@ -17128,7 +17102,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 			 reason );
 
 		// finally, email anyone our caller wants us to email.
-	if( email_user || email_admin ) {
+	if( email_user ) {
 		ClassAd* job_ad;
 		job_ad = GetJobAd( cluster, proc );
 		if( ! job_ad ) {
@@ -17140,14 +17114,8 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		if( email_user ) {
-			Email email;
-			email.sendRelease( job_ad, reason );
-		}
-		if( email_admin ) {
-			Email email;
-			email.sendReleaseAdmin( job_ad, reason );
-		}
+		Email email;
+		email.sendRelease( job_ad, reason );
 		FreeJobAd( job_ad );
 	}
 	return true;
@@ -17162,7 +17130,7 @@ Performs a complete transaction if desired.
 bool
 releaseJob( int cluster, int proc, const char* reason,
 		 bool use_transaction, bool email_user,
-		 bool email_admin, bool write_to_user_log )
+		 bool write_to_user_log )
 {
 	bool result;
 
@@ -17170,7 +17138,7 @@ releaseJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = releaseJobRaw(cluster,proc,reason,email_user,email_admin,write_to_user_log);
+	result = releaseJobRaw(cluster,proc,reason,email_user,write_to_user_log);
 
 	if(use_transaction) {
 		if(result) {
