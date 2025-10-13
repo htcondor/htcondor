@@ -42,7 +42,7 @@ Download
 The next step is to download HTCondor.
 If you want to select a specific version of HTCondor, you can download
 the corresponding file from
-`our website <https://research.cs.wisc.edu/htcondor/tarball/>`_.
+`our website <https://htcss-downloads.chtc.wisc.edu/tarball/>`_.
 Otherwise, we recommend using our download script, as follows.
 
 .. code-block:: shell

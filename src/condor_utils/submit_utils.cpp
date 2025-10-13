@@ -6867,7 +6867,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
 	if (container_image.ptr())  {
-		bool userRequestedCommonContainer = true;
+		bool userRequestedCommonContainer = param_boolean(
+			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
+			false
+		);
 		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
 		if(! userRequestedCommonContainer) {
 			input_files.emplace_back(container_image.ptr());
@@ -9264,14 +9267,6 @@ int SubmitHash::load_external_q_foreach_items (
 			expand_options &= ~(EXPAND_GLOBS_TO_FILES|EXPAND_GLOBS_TO_DIRS);
 		}
 		citems = submit_expand_globs(o.items, expand_options, errmsg);
-		if ( ! errmsg.empty()) {
-			if (citems >= 0) {
-				push_warning(stderr, "%s", errmsg.c_str());
-			} else {
-				push_error(stderr, "%s", errmsg.c_str());
-			}
-			errmsg.clear();
-		}
 		if (citems < 0) return citems;
 		break;
 

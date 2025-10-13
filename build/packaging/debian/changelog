@@ -1,3 +1,71 @@
+condor (25.2.1-1) stable; urgency=medium
+
+  * Support for re-running a job with an increased memory request
+  * Several DAGMan Improvements
+  * Several local credmon Improvements
+  * Fix problem that could prevent logging of hung file transfer plugins
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 13:10:00 -0500
+
+condor (25.0.2-1) stable; urgency=medium
+
+  * Update Python file transfer plugins to use the new Python bindings
+  * Fix incorrect environment when using Singularity and nested scratch
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 10:20:00 -0500
+
+condor (24.12.13-1) stable; urgency=medium
+
+  * Fix annoying momentary text status flash in condor_watch_q
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 09:55:00 -0500
+
+condor (24.0.13-1) stable; urgency=medium
+
+  * Fix bug that could cause Python job submission to crash
+  * HTCondor tarballs now contain Pelican 7.20.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 09:41:00 -0500
+
+condor (25.1.0-1) stable; urgency=medium
+
+  * New and improved Python bindings: classad2 and htcondor2
+  * The original Python bindings have been removed
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 28 Sep 2025 08:01:00 -0500
+
+condor (25.0.1-1) stable; urgency=medium
+
+  * New and improved Python bindings: classad2 and htcondor2
+  * The original Python bindings have been removed
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 28 Sep 2025 07:57:00 -0500
+
+condor (24.12.4-1) stable; urgency=medium
+
+  * Add the ability to enforce memory and CPU limits on local universe jobs
+  * Add the ability for condor_chirp to work within a Docker universe job
+  * condor_watch_q now exits with any keyboard input
+  * The shell submit keyword now works with interactive jobs
+  * All changes in 24.0.12
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 23 Sep 2025 06:32:00 -0500
+
+condor (24.0.12-1) stable; urgency=medium
+
+  * Update condor_upgrade_check to warn about v1 Python bindings retirement
+  * Update condor_upgrade_check to look for old syntax job transforms
+  * All changes in 23.10.29
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 22 Sep 2025 21:41:00 -0500
+
+condor (23.10.29-1) stable; urgency=medium
+
+  * Fix flocking to pools when there are intermittent network issues
+  * HTCondor tarballs now contain Pelican 7.19.3
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 22 Sep 2025 07:44:00 -0500
+
 condor (24.11.2-1) stable; urgency=medium
 
   * Add job attributes to track why and how often a job is vacated

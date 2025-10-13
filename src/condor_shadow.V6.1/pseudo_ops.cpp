@@ -48,6 +48,8 @@
 
 #include <regex>
 
+#include "catalog_utils.h"
+
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
@@ -264,27 +266,6 @@ pseudo_job_termination( ClassAd *ad )
 	return 0;
 }
 
-
-int
-pseudo_register_mpi_master_info( ClassAd* ad ) 
-{
-	char *addr = NULL;
-
-	if( ! ad->LookupString(ATTR_MPI_MASTER_ADDR, &addr) ) {
-		dprintf( D_ALWAYS,
-				 "ERROR: mpi_master_info ClassAd doesn't contain %s\n",
-				 ATTR_MPI_MASTER_ADDR );
-		return -1;
-	}
-	if( ! Shadow->setMpiMasterInfo(addr) ) {
-		dprintf( D_ALWAYS, "ERROR: received "
-				 "pseudo_register_mpi_master_info for a non-MPI job!\n" );
-		free(addr);
-		return -1;
-	}
-	free(addr);
-	return 0;
-}
 
 /*
 If short_path is an absolute path, copy it to full path.
@@ -1390,7 +1371,7 @@ UniShadow::set_provider_keep_alive( const std::string & cifName ) {
 						SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
 						if( cfLock == NULL ) { continue; }
 
-						dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
+						// dprintf( D_ZKM, "Elected producer touch()ing keyfile.\n" );
 						if(! cfLock->touch()) {
 							// I boldly claim that the global destructor will delete
 							// the corresponding cfLock.
@@ -1478,6 +1459,7 @@ UniShadow::start_common_input_conversation(
 			//
 
 			case SingleProviderSyndicate::PROVIDER:
+				dprintf( D_TEST, "Producer elected.\n" );
 				set_provider_keep_alive( cifName );
 
 				// This would be cleaner as a nested coroutine, but not
@@ -1572,6 +1554,7 @@ UniShadow::start_common_input_conversation(
 			dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 			switch( status ) {
 				case SingleProviderSyndicate::PROVIDER:
+					dprintf( D_TEST, "Producer elected.\n" );
 					set_provider_keep_alive( cifName );
 
 					// This would be cleaner as a nested coroutine, but not
@@ -1838,99 +1821,58 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// including the DAGMan job ID (if present) instead.
 		//
 		// The single-provider syndicates will no longer be one-to-one per
-		// shadow, but that's fine; it wil encourage multiple common files
+		// shadow, but that's fine; that will encourage multiple common files
 		// transfer to occur simultaneously, if possible.
 		//
 
-
-		//
-		// Which common files, if any, were we asked for?
-		//
-		std::string commonInputCatalogs;
-		std::vector< std::pair< std::string, std::string > > common_file_catalogs;
-		jobAd->LookupString("_x_common_input_catalogs", commonInputCatalogs);
-		for( const auto & cifName : StringTokenIterator(commonInputCatalogs) ) {
-			std::string commonInputFiles;
-			jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
-
-			auto internal_catalog_name = uniqueCIFName(cifName, commonInputFiles);
-			if(! internal_catalog_name) {
-				dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
-				// We don't have a mechanism to inform the submitter of internal
-				// errors like this, so for now we're stuck putting the job on hold.
-				holdJob( "Internal error: failed to construct unique name for catalog.",
-					CONDOR_HOLD_CODE::JobNotStarted, 4
-				);
-
-				guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
-				return GuidanceResult::Command;
-			}
-
-			common_file_catalogs.push_back({* internal_catalog_name, commonInputFiles});
-			dprintf( D_ZKM,
-				"Found common file catalog '%s' = '%s'\n",
-				cifName.c_str(), commonInputFiles.c_str()
-			);
-		}
-
-
-		std::string common_input_files;
-		bool found_htc25_plumbing =
-			getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, common_input_files );
-
 		int required_version = 2;
-		if( common_file_catalogs.empty() && found_htc25_plumbing ) {
-			required_version = 1;
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, this );
+		if(! common_file_catalogs) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+			return GuidanceResult::Command;
 		}
 
-		if( found_htc25_plumbing ) {
-			std::string default_name;
-			long long int clusterID = 0;
-			ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
-			formatstr( default_name, "clusterID_%lld", clusterID );
-			auto internal_catalog_name = uniqueCIFName(default_name, common_input_files);
-			if(! internal_catalog_name) {
-				dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
-				// We don't have a mechanism to inform the submitter of internal
-				// errors like this, so for now we're stuck putting the job on hold.
-				holdJob( "Internal error: failed to construct unique name for catalog.",
-					CONDOR_HOLD_CODE::JobNotStarted, 4
-				);
+		if(! computeCommonInputFiles( jobAd, this, *common_file_catalogs, required_version )) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
 
-				guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
-				return GuidanceResult::Command;
-			}
-			common_file_catalogs.push_back({* internal_catalog_name, common_input_files});
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+			return GuidanceResult::Command;
 		}
 
-
-		if( common_file_catalogs.empty() ) {
+		bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+		if( disallowed || common_file_catalogs->empty() ) {
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else {
-			// This should have been take care of by match-making, but for the
-			// first milestone, that has to be done by hand and might have been
-			// forgotten.  I'd like to check the slot ad, but the shadow doesn't
-			// have access to that; instead, the starter will send along the
-			// version number in the request ad.
-			//
-			// This doesn't help if the starter is too old to even ask for
-			// guidance, but there's nothing we can do about that if the
-			// shadow doesn't have access to the slot ad.
 			int hasCommonFilesTransfer = 0;
 			request.LookupInteger(
 				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
 			);
-			if( hasCommonFilesTransfer < required_version ) {
-				// Put the job on hold with a request to add the requirement.
-				std::string holdMessage;
-				formatstr( holdMessage,
-					"Please add `(TARGET.HasCommonFilesTransfer >= %d)` to "
-					"your requirements expression.",
-					required_version
-				);
-				holdJob( holdMessage.c_str(), 1003, 5 );
+			// Even if the job only uses the HTC25 (version 1) syntax,
+			// the version check presently precludes using the version 1
+			// protocol.  This is probably a good thing, since this is
+			// the only place we actually check, meaning that the rest of
+			// the code presumes that multiple common transfers won't
+			// collide.  (The only difference between v1 and v2 is that
+			// a v2 client puts each catalog in its own subdirectory.)
+			if( hasCommonFilesTransfer < 2 ) {
+				// Then, in all cases, we should have already modified the
+				// proc-specific FTO to transfer the common files; see
+				// setStarterInfo().
 
-				guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 				return GuidanceResult::Command;
 			}
 
@@ -1947,7 +1889,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				in_conversation = true;
 
 				the_coroutine = std::move(
-					this->start_common_input_conversation(request, common_file_catalogs)
+					this->start_common_input_conversation(request, *common_file_catalogs)
 				);
 				guidance = the_coroutine();
 			} else {

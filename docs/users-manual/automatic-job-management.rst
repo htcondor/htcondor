@@ -41,6 +41,45 @@ to the integer value that is considered successful.
     queue
 
 
+Automatically rerunning a job that used too much memory
+-------------------------------------------------------
+
+When a job users more memory that it requested, HTCondor will put the job on hold;
+but many times the amount of memory needed for a job is not well known at submit time.
+For some jobs the memory depends on the data that is being processed. In that case you
+can request that a job retry with more memory rather than being put on hold when the
+job exceeeds the inital request memory.
+By using :subcom:`retry_request_memory` a list of increasing memory values can be
+specified and the job will not go on hold until it has been run with the last value
+and still exceeds that memory request.  There is a tradeoff here between wasting
+memory in the typical case and wasting time in the worst case.  In most cases it is
+best to specify only the single worst-case value for :subcom:`retry_request_memory` rather than
+a list of gradually increasing values.
+
+.. code-block:: condor-submit
+
+    # Example submit description with retry_request_memory
+
+    executable   = myexe
+    arguments    = SomeArgument
+
+    # Most instances will need about 500 Megabytes, but sometimes as much as 2 GB
+    # so start with the lower value, and retry with the worst-case
+    request_memory = 500 MB
+    retry_request_memory = 2 GB
+
+    output       = outputfile
+    error        = errorfile
+    log          = myexe.log
+
+    request_cpus   = 1
+    request_disk   = 1 GB
+
+    should_transfer_files = yes
+
+    queue
+
+
 Automatically removing a job in the queue
 -----------------------------------------
 

@@ -212,7 +212,7 @@ class DedicatedScheduler : public Service {
 		// Used for claiming/releasing startds we control
 	bool releaseClaim( match_rec* m_rec );
 	bool deactivateClaim( match_rec* m_rec );
-	void sendAlives( void );
+	void checkClaimLeases( void );
 
 		// Reaper for the MPI shadow
 	int reaper( int pid, int status );

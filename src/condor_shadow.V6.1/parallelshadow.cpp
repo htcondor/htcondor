@@ -841,13 +841,6 @@ ParallelShadow::getExitReason( void )
 
 
 bool
-ParallelShadow::setMpiMasterInfo( char*   /*str*/ )
-{
-	return false;
-}
-
-
-bool
 ParallelShadow::exitedBySignal( void )
 {
 	if( ResourceList.size() && ResourceList[0] ) {

@@ -610,7 +610,7 @@ do_download() {
 
 # Set global defaults
 CHANNEL="feature"
-DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
+DOWNLOAD_URL="https://htcss-downloads.chtc.wisc.edu"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
@@ -729,9 +729,9 @@ done
 # to update a symlink, like we do for 'feature', because we don't
 # want to surprise other lts-channel users with new features.
 if [ "${CHANNEL}" = "lts" ]; then
-    CHANNEL_DIR=24.0
+    CHANNEL_DIR=25.0
 elif [ "${CHANNEL}" = "feature" ]; then
-    CHANNEL_DIR=24.x
+    CHANNEL_DIR=25.x
 fi
 
 # wrapped up in functions so that we have some protection against only getting

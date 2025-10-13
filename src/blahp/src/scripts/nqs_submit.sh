@@ -1,7 +1,6 @@
 #!/bin/bash
 
-blahconffile="${GLITE_LOCATION:-/}/etc/blah.config"
-binpath=`grep nqs_binpath $blahconffile|grep -v \#|awk -F"=" '{ print $2}'|sed -e 's/ //g'|sed -e 's/\"//g'`/
+. `dirname $0`/blah_load_config.sh
 
 usage_string="Usage: $0 -c <command> [-i <stdin>] [-o <stdout>] [-e <stderr>] [-x <x509userproxy>] [-v <environment>] [-s <yes | no>] [-- command_arguments]"
 
@@ -128,7 +127,7 @@ echo "exit \$user_retcode" >> $nqs_script
 ###############################################################
 cd $workdir
 
-${binpath}/qsub $nqs_script >$nqs_submit_output
+${nqs_binpath}qsub $nqs_script >$nqs_submit_output
 retcode=$?
 if [ "$retcode" != "0" ] ; then
     rm -f $nqs_script $nqs_submit_output

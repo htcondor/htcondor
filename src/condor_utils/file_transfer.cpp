@@ -1741,6 +1741,7 @@ FileTransfer::Reap(int exit_status)
 
 	Info.duration = time(nullptr) - TransferStart;
 	Info.in_progress = false;
+	bool set_success_to_failed = false;
 	if( WIFSIGNALED(exit_status) ) {
 		Info.success = false;
 		Info.try_again = true;
@@ -1757,7 +1758,14 @@ FileTransfer::Reap(int exit_status)
 		} else {
 			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
 					 WEXITSTATUS(exit_status) );
-			Info.success = false;
+			// We can't set Info.success to false here, because 
+			// we drain the pipe below, and there might be an info
+			// message before the final update with the error.
+			// ReadTransferPipeMsg() can call a callback to the
+			// caller, which should not see the success status 
+			// as failed until we have the full error message
+			// which comes from the final message on the pipe.
+			set_success_to_failed = true;
 		}
 	}
 
@@ -1781,9 +1789,15 @@ FileTransfer::Reap(int exit_status)
 		// followed by the final update message. Keep reading until we
 		// get the final message or encounter an error reading from the pipe
 		do {
-			if ( ! ReadTransferPipeMsg())
+			if ( ! ReadTransferPipeMsg()) {
 				break;
+			}
 		} while (Info.xfer_status != XFER_STATUS_DONE);
+	}
+	if (set_success_to_failed) {
+		// Now we can set success to false, so the final callback
+		// below can interpret everything correctly. 
+		Info.success = false;
 	}
 
 	if( registered_xfer_pipe ) {
@@ -6214,6 +6228,15 @@ FileTransfer::Continue() const
 
 
 void
+FileTransfer::addInputFile( const char* filename )
+{
+	if( !file_contains(InputFiles, filename) ) {
+		InputFiles.emplace_back(filename);
+	}
+}
+
+
+void
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( !file_contains(OutputFiles, filename) ) {
@@ -8457,7 +8480,7 @@ FileTransfer::addSandboxRelativePath(
 }
 
 void
-FileTransfer::addCheckpointFile(
+FileTransfer::addCheckpointFileEx(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {
@@ -8465,7 +8488,7 @@ FileTransfer::addCheckpointFile(
 }
 
 void
-FileTransfer::addInputFile(
+FileTransfer::addInputFileEx(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {
