@@ -84,10 +84,9 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 	//		seq_id 1 error_code error_string
 	//		seq_id 1
 
-	if ( result ) {
-		if( result->argc < 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+	ASSERT(result);
+	{
+		ASSERT(result->argc >= 2);
 
 		int rc = atoi( result->argv[1] );
 		if( rc == 1 ) {
@@ -113,8 +112,6 @@ int EC2GahpClient::ec2_vm_start( const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -141,7 +138,8 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed.
 		int rc = 0;
 		if (result->argc == 2) {
@@ -158,8 +156,6 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -191,7 +187,8 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed.
 		int rc = 0;
 		if (result->argc == 2) {
@@ -208,8 +205,6 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -248,22 +243,23 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		int rc = atoi(result->argv[1]);
 
 		switch( result->argc ) {
 		    case 2:
-		        if( rc != 0 ) { EXCEPT( "Bad %s result", command ); }
+				ASSERT(rc == 0);
 		        break;
 
 		    case 4:
-		        if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
+				ASSERT(rc != 0);
     		    error_code = result->argv[2];
 	    	    error_string = result->argv[3];
                 break;
 
             default:
-                if( (result->argc - 2) % 8 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                ASSERT((result->argc - 2) % 8 == 0);
                 for( int i = 2; i < result->argc; ++i ) {
                     returnStatus.emplace_back( result->argv[i] );
                 }
@@ -272,8 +268,6 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -298,22 +292,23 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		int rc = atoi(result->argv[1]);
 
 		switch( result->argc ) {
 		    case 2:
-		        if( rc != 0 ) { EXCEPT( "Bad %s result", command ); }
+				ASSERT(rc == 0);
 		        break;
 
 		    case 4:
-		        if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
+				ASSERT(rc != 0);
     		    error_code = result->argv[2];
 	    	    error_string = result->argv[3];
                 break;
 
             default:
-                if( (result->argc - 2) % 8 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                ASSERT((result->argc - 2) % 8 == 0);
                 for( int i = 2; i < result->argc; ++i ) {
                     returnStatus.emplace_back( result->argv[i] );
                 }
@@ -322,8 +317,6 @@ int EC2GahpClient::ec2_vm_status_all( const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -349,16 +342,13 @@ int EC2GahpClient::ec2_vm_server_type(	const std::string & service_url,
 	//		seq_id 0 server_type
 	//		seq_id 1
 	//		seq_id error_code error_string
-	if ( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
-			if ( rc == 0 ) {
-				EXCEPT( "Bad %s result", command );
-				rc = 1;
-			} else {
-				error_string = "";
-			}
+			ASSERT(rc != 0);
+			error_string = "";
 		} else if ( result->argc == 3 ) {
 			rc = atoi(result->argv[1]);
 			server_type = result->argv[2];
@@ -373,8 +363,6 @@ int EC2GahpClient::ec2_vm_server_type(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -413,7 +401,8 @@ int EC2GahpClient::ec2_vm_create_keypair(	const std::string & service_url,
 	//		seq_id 1
 	//		seq_id error_code error_string
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed
 		int rc = 0;
 		if (result->argc == 2) {
@@ -432,8 +421,6 @@ int EC2GahpClient::ec2_vm_create_keypair(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -466,7 +453,8 @@ int EC2GahpClient::ec2_vm_destroy_keypair(	const std::string & service_url,
 	//		seq_id 1
 	//		seq_id error_code error_string
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed
 		int rc = 0;
 		if (result->argc == 2) {
@@ -485,8 +473,6 @@ int EC2GahpClient::ec2_vm_destroy_keypair(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -516,7 +502,8 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
 
-    if ( result ) {
+	ASSERT(result);
+    {
         // command completed and the return value looks like:
         int return_code = atoi(result->argv[1]);
 
@@ -533,9 +520,8 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
 
         } else {    // return_code == 0
 
-            if ( ( (result->argc-2) % 2) != 0 ) {
-                EXCEPT("Bad %s Result",command);
-            } else {
+            ASSERT(((result->argc-2) % 2) == 0);
+            {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
                     returnStatus.emplace_back( result->argv[i] );
@@ -545,8 +531,6 @@ int EC2GahpClient::ec2_associate_address( const std::string & service_url,
 
         delete result;
 		return 0;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -575,7 +559,8 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
 
-    if (result) {
+	ASSERT(result);
+    {
         // command completed and the return value looks like:
         int return_code = atoi(result->argv[1]);
 
@@ -589,9 +574,8 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
                 EXCEPT("Bad %s Result",command);
             }
         } else {    // return_code == 0
-            if (((result->argc-2) % 2) != 0) {
-                EXCEPT("Bad %s Result", command);
-            } else {
+            ASSERT(((result->argc-2) % 2) == 0);
+            {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
                     returnStatus.emplace_back(result->argv[i]);
@@ -600,8 +584,6 @@ int EC2GahpClient::ec2_create_tags(	const std::string & service_url,
         }
         delete result;
         return 0;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -632,7 +614,8 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return 0; }
 
-    if ( result ) {
+	ASSERT(result);
+    {
         // command completed and the return value looks like:
         int result_code = atoi(result->argv[1]);
 
@@ -649,9 +632,8 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
 
         } else {    // result_code == 0
 
-            if ( ( (result->argc-2) % 2) != 0 ) {
-                EXCEPT("Bad %s Result",command);
-            } else {
+            ASSERT(((result->argc-2) % 2) == 0);
+            {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
                     returnStatus.emplace_back( result->argv[i] );
@@ -661,8 +643,6 @@ int EC2GahpClient::ec2_attach_volume( const std::string & service_url,
 
         delete result;
 		return 0;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -717,13 +697,14 @@ int EC2GahpClient::ec2_spot_start( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
 	if( cgf != 0 ) { return cgf; }
 
-    if( result ) {
+	ASSERT(result);
+    {
         int rc = 0;
         switch( result->argc ) {
             case 2:
                 rc = atoi( result->argv[1] );
-                if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
-                else { error_string = ""; }
+                ASSERT(rc != 0);
+                error_string = "";
                 break;
 
             case 3:
@@ -743,8 +724,6 @@ int EC2GahpClient::ec2_spot_start( const std::string & service_url,
         }
         delete result;
         return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -769,13 +748,14 @@ int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
-    if( result ) {
+	ASSERT(result);
+    {
         // We expect results of the form
         //      <request ID> 0
         //      <request ID> 1
         //      <request ID> 1 <error code> <error string>
 
-        if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
+        ASSERT(result->argc >= 2);
         int rc = atoi( result->argv[1] );
 
         switch( result->argc ) {
@@ -784,12 +764,9 @@ int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
                 break;
 
             case 4:
-                if( rc != 0 ) {
-                    error_code = result->argv[2];
-                    error_string = result->argv[3];
-                } else {
-                    EXCEPT( "Bad %s result", command );
-                }
+                ASSERT(rc != 0);
+                error_code = result->argv[2];
+                error_string = result->argv[3];
                 break;
 
             default:
@@ -799,8 +776,6 @@ int EC2GahpClient::ec2_spot_stop( const std::string & service_url,
 
         delete result;
         return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -821,19 +796,20 @@ int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-    if( result ) {
+	ASSERT(result);
+    {
         // We expect results of the form
         //      <request ID> 0
         //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL> <status code|NULL>)+
         //      <request ID> 1
         //      <request ID> 1 <error code> <error string>
-        if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
+        ASSERT(result->argc >= 2);
 
         int rc = atoi( result->argv[1] );
         if( result->argc == 2 ) {
             if( rc == 1 ) { error_string = ""; }
         } else if( result->argc == 4 ) {
-            if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
+            ASSERT(rc == 1);
             error_code = result->argv[2];
             error_string = result->argv[3];
         } else if( (result->argc - 2) % 5 == 0 ) {
@@ -850,8 +826,6 @@ int EC2GahpClient::ec2_spot_status_all( const std::string & service_url,
 
         delete result;
         return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -890,16 +864,13 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, low_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
-			if ( rc == 0 ) {
-				EXCEPT( "Bad %s result", command );
-				rc = 1;
-			} else {
-				error_string = "";
-			}
+			ASSERT(rc != 0);
+			error_string = "";
 		} else if ( result->argc == 3 ) {
 			rc = atoi(result->argv[1]);
 			bulkRequestID = result->argv[2];
@@ -914,8 +885,6 @@ int EC2GahpClient::bulk_start(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -937,7 +906,8 @@ int EC2GahpClient::bulk_stop(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -953,8 +923,6 @@ int EC2GahpClient::bulk_stop(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -975,7 +943,8 @@ int EC2GahpClient::bulk_query(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -986,7 +955,7 @@ int EC2GahpClient::bulk_query(	const std::string & service_url,
  			error_code = result->argv[2];
  			error_string = result->argv[3];
 		} else {
-			if( (result->argc - 2) % 3 != 0 ) { EXCEPT( "Bad %s result", command ); }
+			ASSERT((result->argc - 2) % 3 == 0);
 
 			rc = atoi( result->argv[1] );
 			for( int i = 2; i < result->argc; ++i ) {
@@ -996,8 +965,6 @@ int EC2GahpClient::bulk_query(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1024,16 +991,13 @@ int EC2GahpClient::put_rule(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
-			if ( rc == 0 ) {
-				EXCEPT( "Bad %s result", command );
-				rc = 1;
-			} else {
-				error_string = "";
-			}
+			ASSERT(rc != 0);
+			error_string = "";
 		} else if ( result->argc == 3 ) {
 			rc = atoi(result->argv[1]);
 			ruleARN = result->argv[2];
@@ -1048,8 +1012,6 @@ int EC2GahpClient::put_rule(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1071,7 +1033,8 @@ int EC2GahpClient::delete_rule(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -1087,8 +1050,6 @@ int EC2GahpClient::delete_rule(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1111,7 +1072,8 @@ int EC2GahpClient::get_function(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -1130,8 +1092,6 @@ int EC2GahpClient::get_function(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1159,7 +1119,8 @@ int EC2GahpClient::put_targets(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -1175,8 +1136,6 @@ int EC2GahpClient::put_targets(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1200,7 +1159,8 @@ int EC2GahpClient::remove_targets(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -1216,8 +1176,6 @@ int EC2GahpClient::remove_targets(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1250,7 +1208,8 @@ int EC2GahpClient::s3_upload(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed.
 		int rc = 0;
 		if (result->argc == 2) {
@@ -1267,8 +1226,6 @@ int EC2GahpClient::s3_upload(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1299,7 +1256,8 @@ int EC2GahpClient::describe_stacks(  const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed.
 		int rc = 0;
 		if (result->argc == 2) {
@@ -1327,8 +1285,6 @@ int EC2GahpClient::describe_stacks(  const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1371,7 +1327,8 @@ int EC2GahpClient::create_stack(
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if ( result ) {
+	ASSERT(result);
+	{
 		// command completed.
 		int rc = 0;
 		if (result->argc == 2) {
@@ -1391,8 +1348,6 @@ int EC2GahpClient::create_stack(
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }
 
@@ -1417,7 +1372,8 @@ int EC2GahpClient::call_function(	const std::string & service_url,
 	int cgf = callGahpFunction( command, arguments, result, high_prio );
 	if( cgf != 0 ) { return cgf; }
 
-	if( result ) {
+	ASSERT(result);
+	{
 		int rc = 0;
 		if ( result->argc == 2 ) {
 			rc = atoi(result->argv[1]);
@@ -1436,7 +1392,5 @@ int EC2GahpClient::call_function(	const std::string & service_url,
 
 		delete result;
 		return rc;
-	} else {
-		EXCEPT( "callGahpFunction() succeeded but result was NULL." );
 	}
 }

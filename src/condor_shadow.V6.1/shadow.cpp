@@ -105,9 +105,7 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 void
 UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
-	if ( !job_ad ) {
-		EXCEPT("No job_ad defined!");
-	}
+	ASSERT(job_ad);
 
 		// base init takes care of lots of stuff:
 	baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
@@ -563,9 +561,7 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	if (reason) { event.setDisconnectReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -581,9 +577,7 @@ UniShadow::logReconnectedEvent( void )
 	JobReconnectedEvent event;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -607,9 +601,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	if (reason) { event.setReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {

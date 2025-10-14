@@ -245,9 +245,7 @@ QmgrJobUpdater::startUpdateTimer( )
 		Register_Timer( q_interval, q_interval,
                         (TimerHandlercpp)&QmgrJobUpdater::periodicUpdateQ,
                         "periodicUpdateQ", this );
-    if( q_update_tid < 0 ) {
-        EXCEPT( "Can't register DC timer!" );
-    }
+	ASSERT(q_update_tid >= 0);
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater: started timer to update queue "
 			 "every %d seconds (tid=%d)\n", q_interval, q_update_tid );
 }

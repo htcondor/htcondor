@@ -2021,9 +2021,7 @@ ResMgr::start_update_timer( void )
 		(TimerHandlercpp)&ResMgr::eval_and_update_all,
 		"eval_and_update_all",
 		this );
-	if( up_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(up_tid >= 0);
 	return TRUE;
 }
 
@@ -2040,9 +2038,7 @@ ResMgr::start_poll_timer( void )
 							polling_interval,
 							(TimerHandlercpp)&ResMgr::eval_all,
 							"poll_resources", this );
-	if( poll_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(poll_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started polling timer.\n" );
 	return TRUE;
 }
@@ -2099,9 +2095,7 @@ ResMgr::reset_timers( void )
 void
 ResMgr::addResource( Resource *rip )
 {
-	if( !rip ) {
-		EXCEPT("Error: attempt to add a NULL resource");
-	}
+	ASSERT(rip);
 
 	calculateAffinityMask(rip);
 
@@ -2619,9 +2613,7 @@ ResMgr::startHibernateTimer( void )
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
 		"ResMgr::startHibernateTimer()", this );
-	if( m_hibernate_tid < 0 ) {
-		EXCEPT( "Can't register hibernation timer" );
-	}
+	ASSERT(m_hibernate_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started hibernation timer.\n" );
 	return TRUE;
 }

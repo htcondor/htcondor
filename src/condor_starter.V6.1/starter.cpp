@@ -135,9 +135,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				bool is_gsh, int stdin_fd, int stdout_fd, 
 				int stderr_fd )
 {
-	if( ! my_jic ) {
-		EXCEPT( "Starter::Init() called with no JobInfoCommunicator!" ); 
-	}
+	ASSERT(my_jic);
 	if( jic ) {
 		delete( jic );
 	}
@@ -2222,9 +2220,7 @@ Starter::skipJobImmediately() {
 	//
 	// Make sure our timer callback registered properly
 	//
-	if( this->deferral_tid < 0 ) {
-		EXCEPT( "Can't register SkipJob DaemonCore timer" );
-	}
+	ASSERT(this->deferral_tid >= 0);
 	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
 			this->jic->jobCluster(),
 			this->jic->jobProc() );
@@ -2391,9 +2387,7 @@ Starter::jobWaitUntilExecuteTime( void )
 			//
 			// Make sure our timer callback registered properly
 			//
-		if( this->deferral_tid < 0 ) {
-			EXCEPT( "Can't register Deferred Execution DaemonCore timer" );
-		}
+		ASSERT(this->deferral_tid >= 0);
 			//
 			// Our job will start in the future
 			//

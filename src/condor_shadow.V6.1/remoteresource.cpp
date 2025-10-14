@@ -2116,9 +2116,7 @@ RemoteResource::reconnect( void )
 	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
 			 (long long)remaining );
 
-	if( next_reconnect_tid >= 0 ) {
-		EXCEPT( "in reconnect() and timer for next attempt already set" );
-	}
+	ASSERT(next_reconnect_tid < 0);
 
     time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
@@ -2134,9 +2132,7 @@ RemoteResource::reconnect( void )
 						(TimerHandlercpp)&RemoteResource::attemptReconnect,
 						"RemoteResource::attemptReconnect()", this );
 
-	if( next_reconnect_tid < 0 ) {
-		EXCEPT( "Failed to register timer!" );
-	}
+	ASSERT(next_reconnect_tid >= 0);
 }
 
 
