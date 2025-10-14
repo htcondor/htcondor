@@ -47,29 +47,27 @@ struct LVMReportItem {
     bool encrypted{false}; // Only normal LVs can be encrypted (non-thinpool)
 };
 
-// Replace every hyphen w/ double hyphens as LVM does
-// i.e. '-' -> '--' & '--' -> '----'
-static std::string LVMHyphen(const std::string_view str) {
-    std::string res;
-    for (const char& c : str) {
-        res += c;
-        if (c == '-') { res += '-'; }
-    }
-    return res;
-}
-
 // All device paths are at /dev/mapper
 // Encrypt Device: <volume group>-<logical volume>-enc
 //    Note: We control this naming scheme
 // LVM LV device: <volume group>-<logical volume>
 //    Note: Any hyphens in VG/LV name are replaced w/ double hyphens
 static std::string DevicePath(const std::string& vg, const std::string& lv, bool encrypted=false) {
-    std::string base("/dev/mapper/");
+    std::string path("/dev/mapper/");
     if (encrypted) { // Hand made encrypted device name
-        return base + vg + "-" + lv + ENCRYPT_SUFFIX;
+        return path + vg + "-" + lv + ENCRYPT_SUFFIX;
     }
+
+    // Replace every hyphen w/ double hyphens as LVM does
+    // i.e. '-' -> '--' & '--' -> '----'
+    std::string modified_vg(vg);
+    replace_str(modified_vg, "-", "--");
+
+    std::string modified_lv(lv);
+    replace_str(modified_lv, "-", "--");
+
     // Return LVM LV device
-    return base + LVMHyphen(vg) + "-" + LVMHyphen(lv);
+    return path + modified_vg + "-" + modified_lv;
 }
 
 VolumeManager::VolumeManager()
