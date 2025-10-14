@@ -9,6 +9,14 @@
   hyphens.
   :jira:`3334`
 
+- Annexes no longer download a default configuration tarball, making them
+  more robust.  This required upgrading the default version of HTCondor run
+  by annexes to 25.1.0, which can figure the details out on its own.  On
+  Delta, annexes now give Delta additional time to start file-transfer plug-ins,
+  so they should be more-reliably available there.
+  :jira:`3220`
+
+*** 24.0.13 bugs
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
   daemon can't be contacted will no longer cause a segfault.
   :jira:`3314`
