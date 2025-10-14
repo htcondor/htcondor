@@ -600,12 +600,6 @@ initialize (const char *neg_name)
     daemonCore->Register_Command (GET_PRIORITY_ROLLUP, "GetPriorityRollup",
 		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_ROLLUP_commandHandler,
 			"GET_PRIORITY_ROLLUP_commandHandler", this, READ);
-	// CRUFT: The original command int for GET_PRIORITY_ROLLUP conflicted
-	//   with DRAIN_JOBS. In 7.9.6, we assigned a new command int to
-	//   GET_PRIORITY_ROLLUP. Recognize the old int here for now...
-    daemonCore->Register_Command (GET_PRIORITY_ROLLUP_OLD, "GetPriorityRollup",
-		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_ROLLUP_commandHandler,
-			"GET_PRIORITY_ROLLUP_commandHandler", this, READ);
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler,
 			"GET_RESLIST_commandHandler", this, READ);
