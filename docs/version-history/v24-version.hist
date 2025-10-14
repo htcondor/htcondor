@@ -4,6 +4,11 @@
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
 
+- Executions points using disk enforcement failed when provided backing
+  :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
+  hyphens.
+  :jira:`3334`
+
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
   daemon can't be contacted will no longer cause a segfault.
   :jira:`3314`
