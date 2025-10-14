@@ -4,6 +4,11 @@
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
 
+- Executions points using disk enforcement failed when provided backing
+  :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
+  hyphens.
+  :jira:`3334`
+
 - Annexes no longer download a default configuration tarball, making them
   more robust.  This required upgrading the default version of HTCondor run
   by annexes to 25.1.0, which can figure the details out on its own.  On
