@@ -51,8 +51,6 @@ TEST_CASES = [
     # Verify that whole-node GPU queues don't require you to pass --gpus.
     ( ['GPU@bridges2', '--gpu-type', 'v100-16'], True ),
     ( ['GPU@bridges2', '--gpu-type', 'v100-32'], True ),
-    ( ['gpu@anvil', '--nodes', '2'], True ),
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1'], True ),
     # ... and that doing so doesn't mean you don't have to supply a type
     # for queues that require types.
     ( ['GPU@bridges2'], False ),
@@ -104,21 +102,6 @@ TEST_CASES = [
     ( ['wide@anvil', '--nodes', '2', '--mem_mb', '1024'], False ),
     ( ['wide@anvil', '--nodes', '2', '--cpus', '4', '--mem_mb', '1024'], False ),
 
-    ( ['gpu@anvil', '--nodes', '2', '--gpus', '4', ], True ),
-    ( ['gpu@anvil', '--nodes', '5', '--gpus', '4', ], False ),
-    ( ['gpu@anvil', '--nodes', '2', '--gpus', '1', ], False ),
-    ( ['gpu@anvil', '--nodes', '2', '--gpus', '5', ], False ),
-    ( ['gpu@anvil', '--nodes', '2', '--gpus', '4', '--cpus', '4'], False ),
-    ( ['gpu@anvil', '--nodes', '2', '--gpus', '4', '--mem_mb', '1024'], False ),
-    ( ['gpu@anvil', '--nodes', '2', '--gpus', '4', '--cpus', '4', '--mem_mb', '1024'], False ),
-
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1', '--gpus', '2', ], True ),
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '2', '--gpus', '2', ], False ),
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1', '--gpus', '1', ], False ),
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1', '--gpus', '2', '--cpus', '4'], False ),
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1', '--gpus', '2', '--mem_mb', '1024'], False ),
-    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1', '--gpus', '2', '--cpus', '4', '--mem_mb', '1024'], False ),
-
     # Verify that shared-CPU partitions require CPUs or memory.  Also
     # verify that shared-CPU and shared-GPU partitions don't allow
     # an incorrect node count to be specified.   (It's at least possible
@@ -167,6 +150,15 @@ TEST_CASES = [
     ( ['gpu-shared@expanse', '--cpus', '4', '--mem_mb', str(1024*1024), '--gpus', '1', '--project', 'project'], False),
     ( ['gpu-shared@expanse', '--cpus', '80', '--mem_mb', '1024', '--nodes', '1', '--gpus', '1', '--project', 'project'], False ),
     ( ['gpu-shared@expanse', '--cpus', '4', '--mem_mb', str(1024*1024), '--nodes', '1', '--gpus', '1', '--project', 'project'], False),
+
+    ( ['gpu@anvil', '--cpus', '2', '--gpus', '4', ], True ),
+    ( ['gpu@anvil', '--cpus', '129', '--gpus', '4', ], False ),
+    ( ['gpu@anvil', '--cpus', '2', '--gpus', '0', ], False ),
+    ( ['gpu@anvil', '--cpus', '2', '--gpus', '5', ], False ),
+
+    ( ['gpu-debug@anvil', '--lifetime', '1800', '--cpus', '2', '--gpus', '2', ], True ),
+    ( ['gpu-debug@anvil', '--lifetime', '1800', '--cpus', '129', '--gpus', '2', ], False ),
+    ( ['gpu-debug@anvil', '--lifetime', '1800', '--cpus', '129', '--gpus', '1', ], False ),
 
     # Verify that specifying a GPU type or a GPU count for a queue without
     # GPUs fails.

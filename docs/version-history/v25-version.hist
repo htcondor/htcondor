@@ -1,8 +1,22 @@
+*** 25.0.3 features
+
+- Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
+  which defaults to false.  Setting this to true allows users to run
+  docker images which have been prestaged in the EPs docker cache even
+  if the image does not exist in a repository, or if the user does not
+  have permission to pull from that repository.
+  :jira:`3315`
+
 *** 25.0.3 bugs
 
 - Calling ``classad2.ExprTree(None)`` no longer results in an invalid
   :class:`classad2.ExprTree`, preventing segfaults when using the object.
   :jira:`3319`
+
+- Fixed a bug where if input file transfer failed, occasionally no
+  descriptive error message about the failure would make it back
+  into the job hold reason.
+  :jira:`3327`
 
 - Fixed a very longstanding bug where extremely fast machines would
   overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
@@ -14,16 +28,21 @@
   ingestion of epoch ads into a database to timeout.
   :jira:`3299`
 
+- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
+  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
+  "whole node" would have 4 GPUs and only 1 CPU.
+  :jira:`3324`
+
 *** 25.0.2 bugs
+
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
 
 - Fixed bug where when :macro:`SINGULARITY_TARGET_DIR` was set and
   :macro:`STARTER_NESTED_SCRATCH` was also set, then some environment
   variables that pointed into the job's execute directory were not correct.
   :jira:`3265`
-
-- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
-  to fail immediately on start-up.
-  :jira:`3317`
 
 *** 25.0.1 features
 
