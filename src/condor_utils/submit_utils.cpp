@@ -5760,7 +5760,7 @@ int SubmitHash::SetRequirements()
 			break;
 		default:
 			break;
-		} 
+		}
 		if ( ! append_req) {
 				// Didn't find a per-universe version, try the generic,
 				// non-universe specific one:
@@ -5827,7 +5827,7 @@ int SubmitHash::SetRequirements()
 	bool	checks_per_file_encryption = false;
 	bool	checks_hsct = false;
 
-	if( mightTransfer(JobUniverse) ) { 
+	if( mightTransfer(JobUniverse) ) {
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
 		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
 		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
@@ -6153,7 +6153,7 @@ int SubmitHash::SetRequirements()
 	}
 
 	if( mightTransfer(JobUniverse) ) {
-			/* 
+			/*
 			   This is a kind of job that might be using file transfer
 			   or a shared filesystem.  so, tack on the appropriate
 			   clause to make sure we're either at a machine that
@@ -6178,7 +6178,7 @@ int SubmitHash::SetRequirements()
 		if (should_transfer == STF_NO) {
 				// no file transfer used.  if there's nothing about
 				// the FileSystemDomain yet, tack on a clause for
-				// that. 
+				// that.
 			if( ! checks_fsdomain ) {
 				answer += " && " ;
 				answer += domain_check;
@@ -6236,6 +6236,12 @@ int SubmitHash::SetRequirements()
 				answer += " && versioncmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
 			}
 
+			bool requireCommonFilesTransfer = false;
+			if( job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer) ) {
+				if( requireCommonFilesTransfer ) {
+					answer += " && TARGET.HasCommonFilesTransfer >= 2";
+				}
+			}
 
 			// insert expressions to match on transfer plugin methods
 			{
