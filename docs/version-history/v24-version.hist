@@ -12,10 +12,17 @@
   :jira:`3220`
 
 *** 24.0.13 bugs
+- Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
+  daemon can't be contacted will no longer cause a segfault.
+  :jira:`3314`
 
-- Fixed false positive reporting of ClassAd unit specifier test in
-  :tool:`condor_upgrade_check`.
-  :jira:`3276`
+*** 24.0.13 features
+
+- HTCondor tarballs now contain `Pelican 7.20.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.20.2.
+
+*** 24.0.13 bugs
 
 - Fixed a bug where space and comma would be included in the list of
   separators for itemdata even if the itemdata had been supplied with
@@ -25,6 +32,10 @@
   of your entries has spaces and/or commas by moving that entry to the end
   of the line (or dictionary, if you're submitting itemdata via Python).
   :jira:`3272`
+
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
 
 *** 24.0.12 features
 

@@ -285,11 +285,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.18.1
+Requires: pelican >= 7.20.2
 %else
-Requires: (pelican >= 7.18.1 or pelican-debug >= 7.18.1)
+Requires: (pelican >= 7.20.2 or pelican-debug >= 7.20.2)
 %endif
-Requires: pelican-osdf-compat >= 7.18.1
+Requires: pelican-osdf-compat >= 7.20.2
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -1492,6 +1492,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
+- Fix bug that could cause Python job submission to crash
+- HTCondor tarballs now contain Pelican 7.20.2
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
 - Update condor_upgrade_check to warn about v1 Python bindings retirement
 - Update condor_upgrade_check to look for old syntax job transforms
