@@ -4743,7 +4743,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				break;
 			case JA_REMOVE_JOBS:
 				GetAttributeString(job_id.cluster, job_id.proc, ATTR_REMOVE_REASON, vacate_reason);
-				vacate_code = CONDOR_HOLD_CODE::Removed;
+				vacate_code = CONDOR_HOLD_CODE::JobRemoved;
 				break;
 			case JA_VACATE_JOBS:
 			case JA_VACATE_FAST_JOBS:

@@ -203,7 +203,8 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	VMError = 1020,
 	ContainerError = 1021,
 	ScheddVacate = 1022,
-	Removed = 1023
+	JobRemoved = 1023,
+	ScratchDirError = 1024
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
