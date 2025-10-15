@@ -25,6 +25,7 @@
 #include "condor_daemon_core.h"
 #include "slot_builder.h"
 #include "../condor_sysapi/sysapi.h"
+#include "VolumeManager.h"
 
 bool string_to_BuildSlotFailureMode(const char * str, enum BuildSlotFailureMode & failmode)
 {
@@ -243,8 +244,11 @@ CpuAttributes** buildCpuAttrs(
 				auto & partition_id = exec_dir_to_partition_id[execute_dir];
 				if (partition_id.empty()) {
 					if (m_attr->using_volume_manager()) {
-						// TODO: get real name of LVM volume here...
-						partition_id = "LVM";
+						partition_id = "<none>";
+						auto volman = m_attr->get_volume_manager();
+						if (volman && volman->is_enabled()) {
+							partition_id = volman->GetBackingDevice();
+						}
 					} else {
 						edir_errstr = GetExecuteDirPartitionId(execute_dir, partition_id, execute_param_name.c_str());
 						if (partition_id.empty()) { partition_id = "<none>"; }

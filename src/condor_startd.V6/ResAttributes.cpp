@@ -2127,11 +2127,11 @@ void initExecutePartitionTable(MachAttributes * m_attr, VolumeManager * volman)
 	if (volman && volman->is_enabled()) {
 		CondorError err;
 		if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
-			total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
+			total_disk = (total_bytes - used_bytes)/1024 - sysapi_reserve_for_fs();
 			total_disk = MAX(total_disk, 0);
-			dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %lld\n", total_disk);
-			// TODO: get real name of LVM pool here
-			volume_id = "LVM";
+			volume_id = volman->GetBackingDevice();
+			dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %lld from device %s\n",
+			        total_disk, volume_id.c_str());
 		} else {
 			dprintf(D_ERROR, "Failed to get LVM pool size: %s\n", err.getFullText().c_str());
 		}
@@ -2474,7 +2474,7 @@ CpuAttributes::recompute_disk(bool init)
 			CondorError err;
 			uint64_t used_bytes, total_bytes;
 			if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
-				c_total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
+				c_total_disk = (total_bytes - used_bytes)/1024 - sysapi_reserve_for_fs();
 				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
 				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
 				return;

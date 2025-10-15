@@ -89,7 +89,7 @@ ResMgr::ResMgr() :
 		m_attr->set_using_volume_manager(false);
 	} else {
 		m_volume_mgr.reset(new VolumeManager());
-		m_attr->set_using_volume_manager(true);
+		m_attr->set_volume_manager(m_volume_mgr.get());
 	}
 
 #if HAVE_BACKFILL

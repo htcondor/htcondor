@@ -90,6 +90,12 @@ public:
         m_queried_available_disk = true;
     }
 
+    inline std::string GetBackingDevice() const {
+        std::string dev = m_volume_group_name;
+        if (m_use_thin_provision) { dev += "/" + m_pool_lv_name; }
+        return dev;
+    }
+
     class Handle {
     public:
         Handle() = delete;
@@ -149,6 +155,7 @@ private:
 #else
     static bool is_enabled() { return false; }
     bool IsSetup() { return false; };
+    inline std::string GetBackingDevice() const { return "<none>"; }
 #endif // LINUX
     uint64_t m_total_disk{0};
     uint64_t m_non_condor_usage{0};

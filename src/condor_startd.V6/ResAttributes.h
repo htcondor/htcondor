@@ -335,6 +335,12 @@ public:
 	const char * withinLimitsExpression(); // regular WithinResourceLimits
 	const char * consumptionLimitsExpression(); // consumption policy variant
 
+	void 		set_volume_manager(VolumeManager* volman) {
+		m_volume_manager_ref = volman;
+		set_using_volume_manager(true);
+	}
+	VolumeManager*	get_volume_manager() const { return m_volume_manager_ref; }
+
 private:
 
 		// Dynamic info
@@ -426,8 +432,8 @@ private:
 	OSVERSIONINFOEX	m_window_version_info;
     char*           m_dot_Net_Versions;
 #endif
-
-};	
+	VolumeManager* m_volume_manager_ref{nullptr}; // Note: We do not own this pointer... only reference
+};
 
 #ifdef PROVISION_FRACTIONAL_DISK
 #else

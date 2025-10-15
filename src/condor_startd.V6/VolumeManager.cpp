@@ -1086,13 +1086,13 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
     }
 
     if (report.size() != 1) {
-        std::string debug_name = GetVG();
-        if (thin) { debug_name += "/" + GetPool(); }
+        std::string debug_name = GetBackingDevice();
         err.pushf("VolumeManager", 18, "LVM Report for %s returned %zu items instead of just one",
                   debug_name.c_str(), report.size());
         return false;
     }
 
+    // Set NonCondorUsage to the used bytes (total - free) until we actually count the total non-condor lv's
     LVMReportItem& provision = report[0];
     if (thin) {
         if ( ! getTotalUsedBytes(provision.size, provision.data, total_bytes, used_bytes, err)) {
@@ -1138,13 +1138,15 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
         for (const auto& lv : report) {
             try {
                 uint64_t used = std::stoll(lv.size);
-                total_bytes = (total_bytes < used) ? 0 : (total_bytes - used);
                 AddNonCondorUsage(used);
             } catch (...) {
                 dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
                         lv.size.c_str(), lv.name.c_str());
             }
         }
+
+        // True calculated NonCondorUsage (if conversions didn't fail)
+        used_bytes = m_non_condor_usage;
     }
 
     return true;
@@ -1242,8 +1244,7 @@ VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* leaked) {
     filter.SkipThinpool();
 
     if ( ! getLVMReport(report, err, filter, m_cmd_timeout)) {
-        std::string debug_name = m_volume_group_name;
-        if (m_use_thin_provision) { debug_name += "/" + m_pool_lv_name; }
+        std::string debug_name = GetBackingDevice();
         dprintf(D_ERROR, "Error: Failed to list logical volumes during cleanup of %s: %s\n",
                          debug_name.c_str(), err.getFullText().c_str());
         return false;
@@ -1342,9 +1343,7 @@ VolumeManager::AdvertiseInfo(ClassAd* ad){
     if ( ! m_loopdev_name.empty()) { ad->Assign(ATTR_LVM_USE_LOOPBACK, true); }
     if (m_use_thin_provision) { ad->Assign(ATTR_LVM_USE_THIN_PROVISION, true); }
 
-    std::string backing_store = m_volume_group_name;
-    if (m_use_thin_provision) { backing_store += "/" + m_pool_lv_name; }
-    ad->Assign(ATTR_LVM_BACKING_STORE, backing_store);
+    ad->Assign(ATTR_LVM_BACKING_STORE, GetBackingDevice());
 }
 
 
