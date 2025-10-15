@@ -350,6 +350,9 @@ Claim::publish( ClassAd* cad )
 
 	if (c_ocu) {
 		cad->Assign(ATTR_OCU, true);
+		if (!c_ocu_name.empty()) {
+			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
+		}
 	} 
 
 	publishStateTimes( cad );

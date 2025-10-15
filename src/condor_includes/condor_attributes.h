@@ -384,6 +384,7 @@
 #define ATTR_OCU_OWNER_ACTIVATIONS     "OCUOwnerActivations"
 #define ATTR_OCU_OWNER_ACTIVATION_TIME "OCUOwnerActivationTime"
 #define ATTR_OCU_HOLDER  "IsOCUHolder"
+#define ATTR_OCU_NAME  "OCUName"
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"
