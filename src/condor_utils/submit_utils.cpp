@@ -58,6 +58,7 @@
 #include <charconv>
 #include <string>
 #include <set>
+#include <regex>
 
 /* Disable gcc warnings about floating point comparisons */
 GCC_DIAG_OFF(float-equal)
@@ -6877,6 +6878,24 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
 			false
 		);
+
+		std::string r;
+		param( r, "CONTAINER_REGEX_COMMON_BY_DEFAULT" );
+		if(! r.empty()) {
+			std::regex * re = nullptr;
+			try {
+				re = new std::regex(r);
+			} catch( const std::regex_error & e ) {
+				dprintf( D_ALWAYS, "CONTAINER_REGEX_COMMON_BY_DEFAULT '%s' is not a valid regular expression, ignoring.  (%s)\n", r.c_str(), e.what() );
+			}
+			if( re != NULL ) {
+				std::cmatch match;
+				if( std::regex_match( container_image.ptr(), match, * re ) ) {
+					userRequestedCommonContainer = true;
+				}
+			}
+		}
+
 		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
 		if(! userRequestedCommonContainer) {
 			input_files.emplace_back(container_image.ptr());
