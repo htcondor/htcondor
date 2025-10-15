@@ -128,7 +128,7 @@ private:
     static bool CreateLV(const VolumeManager::Handle &handle, uint64_t size_kb, CondorError &err);
     static bool CreateVG(const std::string &vg_name, const std::string &device, CondorError &err, int timeout);
     static bool CreatePV(const std::string &device, CondorError &err, int timeout);
-    static bool CreateFilesystem(const std::string &label, const std::string &device_path, CondorError &err, int timeout);
+    static bool CreateFilesystem(const std::string &device_path, CondorError &err, int timeout);
     static bool EncryptLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static void RemoveLostAndFound(const std::string& mountpoint);
     static bool RemoveLVEncryption(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
