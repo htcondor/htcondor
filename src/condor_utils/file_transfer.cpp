@@ -969,13 +969,14 @@ FileTransfer::_Init(
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
 
+	if (ActiveTransferTid >= 0) {
+		dprintf(D_ERROR, "FileTransfer::Init called during active transfer!\n");
+		return 0;
+	}
+
 	m_use_file_catalog = use_file_catalog;
 
 	simple_init = false;
-
-	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Init called during active transfer!");
-	}
 
 	// Note: we must register commands here instead of our constructor
 	// to ensure that daemonCore object has been initialized before we
@@ -992,7 +993,8 @@ FileTransfer::_Init(
 							&FileTransfer::Reaper,
 							"FileTransfer::Reaper()");
 		if (ReaperId == 1) {
-			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
+			dprintf(D_ERROR, "FileTransfer::Reaper() can not be the default reaper!\n");
+			return 0;
 		}
 	}
 
