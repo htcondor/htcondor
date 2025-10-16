@@ -110,7 +110,7 @@ def ce_info_from_ganglia(resource_info_by_fqdn):
     import pandas as pd
     host = current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
     r = 'month'
-    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'CpusInUse' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=(svc.osg-htc.org|' + host + ')&mreg[]=%5E' + 'CpusInUse' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
     
     # Rename 'Timestamp' column to 'Date' for clarity and set it as the index
     df.rename({'Timestamp':'Date'}, axis='columns', inplace=True)
