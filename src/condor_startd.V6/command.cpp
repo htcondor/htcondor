@@ -1520,8 +1520,11 @@ accept_request_claim(
 
 	{
 		bool ocu_holder = false;
+		std::string ocu_name;
 		claim->ad()->LookupBool(ATTR_OCU_HOLDER, ocu_holder);
 		claim->setOCU(ocu_holder);
+		claim->ad()->LookupString(ATTR_OCU_NAME, ocu_name);
+		claim->setOCUName(ocu_name);
 	}
 
 	// if an array of d-slots were passed, we want to change them to claimed state also.

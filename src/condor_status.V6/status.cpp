@@ -1356,6 +1356,8 @@ main (int argc, char *argv[])
 		}
 	}
 
+	projList.insert(ATTR_OCU);
+
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
 		printf ("----------\n");
