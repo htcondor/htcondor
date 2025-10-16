@@ -30,6 +30,10 @@
   so they should be more-reliably available there.
   :jira:`3220`
 
+- :tool:`condor_adstash` no longer skips entire history files when it
+  encounters a line that cannot be decoded to UTF-8.
+  :jira:`3335`
+
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
   daemon can't be contacted will no longer cause a segfault.
   :jira:`3314`
