@@ -1672,7 +1672,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				varName = "My." + varName.substr(1);
 			}
 
-			node->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
+			node->AddVar(varName, varValue, prepend);
 			debug_printf(DEBUG_DEBUG_1,
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
@@ -3269,8 +3269,8 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 	std::vector<Node*> parents;
 	std::vector<Node*> children;
 
-	for (const auto& n : cmd->parents) {
-		std::string name = MakeFullName(n, dag_munge_id);
+	for (const auto& n : cmd->GetParents()) {
+		std::string name = MakeFullName(n.data(), dag_munge_id);
 		Dag* splice = dag.LookupSplice(name);
 		if (splice) {
 			for (auto node : *(splice->FinalRecordedNodes())) {
@@ -3279,15 +3279,15 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		} else {
 			Node* node = dag.FindNodeByName(name.c_str());
 			if ( ! node) {
-				debug_printf(DEBUG_QUIET, "ERROR: Unknown parent node %s specified\n", n.c_str());
+				debug_printf(DEBUG_QUIET, "ERROR: Unknown parent node %s specified\n", n.data());
 				return false;
 			}
 			parents.push_back(node);
 		}
 	}
 
-	for (const auto& n : cmd->children) {
-		std::string name = MakeFullName(n, dag_munge_id);
+	for (const auto& n : cmd->GetChildren()) {
+		std::string name = MakeFullName(n.data(), dag_munge_id);
 		Dag* splice = dag.LookupSplice(name);
 		if (splice) {
 			for (auto node : *(splice->InitialRecordedNodes())) {
@@ -3296,7 +3296,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		} else {
 			Node* node = dag.FindNodeByName(name.c_str());
 			if ( ! node) {
-				debug_printf(DEBUG_QUIET, "ERROR: Unknown child node %s specified\n", n.c_str());
+				debug_printf(DEBUG_QUIET, "ERROR: Unknown child node %s specified\n", n.data());
 				return false;
 			}
 			children.push_back(node);
@@ -3413,15 +3413,13 @@ bool DagProcessor::ProcessVars(const VarsCommand* vars, Dag& dag, int dag_munge_
 	bool prepend = ! config[conf::b::AppendVars];
 	if (vars->ExplicitPlacement()) { prepend = vars->WantPrepend(); }
 
-	auto [file, line] = vars->GetSource();
-
 	bool found_a_node = false;
 	for (Node* node : dag.FindAllNodes(name)) {
 		found_a_node = true;
 		for (const auto& [key, value] : vars->GetPairs()) {
-			std::ignore = node->AddVar(key.c_str(), value.c_str(), file.c_str(), line, prepend);
+			std::ignore = node->AddVar(key.data(), value.data(), prepend);
 			debug_printf(DEBUG_DEBUG_1, "Adding %s='%s' to %s\n",
-			             key.c_str(), value.c_str(), node->GetNodeName());
+			             key.data(), value.data(), node->GetNodeName());
 		}
 	}
 
@@ -3583,8 +3581,8 @@ bool DagProcessor::ProcessPriority(const PriorityCommand* prio, Dag& dag, int da
 
 
 bool DagProcessor::ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag_munge_id) {
-	for (const auto& n : cat->nodes) {
-		std::string name = MakeFullName(n, dag_munge_id);
+	for (const auto& n : cat->GetNodes()) {
+		std::string name = MakeFullName(n.data(), dag_munge_id);
 
 		bool found_a_node = false;
 		for (Node* node : dag.FindAllNodes(name)) {

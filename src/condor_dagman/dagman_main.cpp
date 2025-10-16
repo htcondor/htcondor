@@ -1032,6 +1032,9 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
+	// We have finished parsing so garbage collect DAG String Space
+	DAG::STRING_SPACE::GARBAGE_COLLECT();
+
 	dagman.dag->CheckThrottleCats();
 
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/

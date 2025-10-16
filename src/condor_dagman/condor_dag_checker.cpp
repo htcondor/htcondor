@@ -122,11 +122,11 @@ struct MockDag {
 		std::string missing_parents;
 		std::string missing_children;
 
-		for (const auto& name : pc->parents)
-			considerDependency(pc, name, true, parents, missing_parents, errors);
+		for (const auto& name : pc->GetParents())
+			considerDependency(pc, name.data(), true, parents, missing_parents, errors);
 
-		for (const auto& name : pc->children)
-			considerDependency(pc, name, false, children, missing_children, errors);
+		for (const auto& name : pc->GetChildren())
+			considerDependency(pc, name.data(), false, children, missing_children, errors);
 
 		if ( ! missing_parents.empty() || ! missing_children.empty()) {
 			std::string err = "References to undefined nodes:";
@@ -556,10 +556,10 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					const CategoryCommand* cat = (CategoryCommand*)(cmd.get());
 					std::string missing;
 
-					for (const auto& node : cat->nodes) {
-						if ( ! dag.hasNode(node) && node.c_str() != all_nodes_keyword) {
+					for (const auto& node : cat->GetNodes()) {
+						if ( ! dag.hasNode(node.data()) && node.data() != all_nodes_keyword) {
 							if ( ! missing.empty()) { missing += ","; }
-							missing += node;
+							missing += node.data();
 						}
 					}
 

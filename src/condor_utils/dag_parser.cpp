@@ -318,9 +318,9 @@ DagParser::ParseParentChild(DagLexer& details) {
 				error.clear();
 			} else { error = "No children node(s) specified"; }
 		} else if (parsing_children) {
-			cmd->children.insert(token);
+			cmd->AddChild(token);
 		} else {
-			cmd->parents.insert(token);
+			cmd->AddParent(token);
 		}
 		token = details.next();
 	} while ( ! token.empty());
@@ -602,7 +602,7 @@ DagParser::ParseCategory(DagLexer& details) {
 	if ( ! junk.empty()) { return "Unexpected token '" + junk + "'"; }
 
 	data.reset(new CategoryCommand(name));
-	((CategoryCommand*)data.get())->nodes.emplace_back(node);
+	((CategoryCommand*)data.get())->AddNode(node);
 
 	return "";
 }
