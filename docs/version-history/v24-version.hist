@@ -1,7 +1,7 @@
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
-  docker universe jobs launched by starter that have exited uncleanl.
+  docker universe jobs launched by starter that have exited uncleanly.
   :jira:`3338`
 
 - Add a timeout for all HTTP operations in the grid universe (affects
