@@ -62,9 +62,9 @@ public:
 	DagProcessor(const Dagman& dm) : config(dm.config), useDagDir(dm.options[DagmanDeepOptions::b::UseDagDir]) {}
 
 	// Note: dag_munge_id is the number to use for name munging. Negative #'s = no munge
-	bool process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id = -1, std::vector<DagCmd>* defer_include = nullptr);
+	bool process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id = -1);
 private:
-	bool ProcessDeferred(const DagCmd& cmd, Dag& dag, int dag_munge_id);
+	bool ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag, int dag_munge_id);
 	bool ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_id);
 	bool ProcessSplice(const Dagman& dm, Dag& dag, const SpliceCommand* cmd, int dag_munge_id);
 	bool ProcessCategory(const CategoryCommand* cat, Dag& dag, int dag_munge_id);

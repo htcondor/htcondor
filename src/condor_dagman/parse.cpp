@@ -2879,7 +2879,7 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 }
 
 
-bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id, std::vector<DagCmd>* defer_include) {
+bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, int dag_munge_id) {
 	if (config[conf::b::UseOldDagParser]) { // Use old parser/processing :(
 		bool is_main_dag = (dag_munge_id >= 0);
 		parseSetDoNameMunge(is_main_dag ? config[conf::b::MungeNodeNames] : false);
@@ -2891,6 +2891,21 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 		DAG::CMD::CONFIG,
 		DAG::CMD::SET_JOB_ATTR,
 		DAG::CMD::ENV,
+	};
+
+	// Commands to parse on the first pass (i.e. node types and splices)
+	static const std::set<DAG::CMD> pre_parse_commands {
+		DAG::CMD::SUBMIT_DESCRIPTION,
+		DAG::CMD::JOB,
+		DAG::CMD::FINAL,
+		DAG::CMD::PROVISIONER,
+		DAG::CMD::SERVICE,
+		DAG::CMD::SUBDAG,
+		DAG::CMD::SPLICE,
+		DAG::CMD::REJECT,
+		DAG::CMD::DOT,
+		DAG::CMD::NODE_STATUS_FILE,
+		DAG::CMD::JOBSTATE_LOG,
 	};
 
 	// Change into DAG directory if UseDagDir is specified
@@ -2909,7 +2924,6 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 		file_to_parse = condor_basename(file.c_str());
 	}
 
-	std::vector<DagCmd> commands{}; // Parsed DAG commands to defer processing
 	DagParser parser(file_to_parse);
 
 	if (parser.failed()) {
@@ -2917,74 +2931,18 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 		return false;
 	}
 
-	parser.Ignore(ignore_commands);
+	parser.SearchFor(pre_parse_commands).Ignore(ignore_commands);
 	if (config[conf::b::AllowIllegalChars]) { parser.AllowIllegalChars(); }
 
 	bool success = false;
-	std::string location; // Save 'file:line' of command in case error occurs
+	std::string location; // Save 'file:line' of command in case processing error occurs
 
-	// Initial Parse Loop
-	for (auto cmd : parser) {
+	// Pre Parse Loop
+	for (const auto cmd : parser) {
 		if ( ! cmd) { continue; }
-
 		location = cmd->Location();
-
-		switch (cmd->GetCommand()) {
-			case DAG::CMD::SUBMIT_DESCRIPTION:
-				{
-					const SubmitDescCommand* desc = (SubmitDescCommand*)(cmd.get());
-					std::ignore = dag.add_inline_desc(desc->GetName(), desc->GetInlineDesc());
-				}
-				break;
-			case DAG::CMD::SUBDAG:
-			case DAG::CMD::JOB:
-			case DAG::CMD::FINAL:
-			case DAG::CMD::PROVISIONER:
-			case DAG::CMD::SERVICE:
-				if ( ! ProcessNode((NodeCommand*)(cmd.get()), dag, dag_munge_id)) { goto processing_failed; }
-				break;
-			case DAG::CMD::SPLICE:
-				if ( ! ProcessSplice(dm, dag, (SpliceCommand*)(cmd.get()), dag_munge_id)) { goto processing_failed; }
-				break;
-			case DAG::CMD::DOT:
-				{
-					const DotCommand* dot = (DotCommand*)(cmd.get());
-					dag.SetDotFileUpdate(dot->Update());
-					dag.SetDotFileOverwrite(dot->Overwrite());
-					if (dot->HasInclude()) {
-						dag.SetDotIncludeFileName(dot->GetInclude().c_str());
-					}
-					dag.SetDotFileName(dot->GetFile().c_str());
-				}
-				break;
-			case DAG::CMD::INCLUDE:
-				{
-					std::vector<DagCmd>* defer_include_cmds = defer_include ? defer_include : &commands;
-					if ( ! process(dm, dag, ((FileCommand*)cmd.get())->GetFile(), dag_munge_id, defer_include_cmds)) {
-						goto processing_failed;
-					}
-				}
-				break;
-			case DAG::CMD::NODE_STATUS_FILE:
-				{
-					const NodeStatusCommand* status = (NodeStatusCommand*)(cmd.get());
-					dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
-				}
-				break;
-			case DAG::CMD::JOBSTATE_LOG:
-				dag.SetJobstateLogFileName(((FileCommand*)cmd.get())->GetFile().c_str());
-				break;
-			case DAG::CMD::REJECT:
-				debug_printf(DEBUG_NORMAL, "DAG marked as rejected at %s\n", cmd->Location().c_str());
-				location.clear(); // We already marked where this is rejected
-				goto processing_failed;
-				break;
-			default: // Defer processing command
-				if (defer_include) { defer_include->emplace_back(cmd.release()); }
-				else { commands.emplace_back(cmd.release()); }
-				break;
-		} // End switch statement
-	} // End parser for loop
+		if ( ! ProcessCommand(dm, cmd, dag, dag_munge_id)) { goto processing_failed; }
+	}
 
 	if (parser.failed()) {
 		const auto error = parser.ParseError();
@@ -2999,23 +2957,36 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 		goto processing_failed;
 	}
 
-	// Process deferred commands and lift splices into DAG if not in include processing
-	if ( ! defer_include) {
-		// Sort deferred commands in desired processing order (i.e. ENUM DAG::CMD value)
-		std::ranges::stable_sort(commands, [](const DagCmd& l, const DagCmd& r) { return l->GetCommand() < r->GetCommand(); });
+	// Only reparse the file if we skipped lines in pre parse
+	// (i.e. speed up for bag of nodes with no modifiers)
+	if (parser.SkippedCommands()) {
+		parser.reset().ClearSearch().Ignore(pre_parse_commands);
 
-		// Note: The vector will be empty for include file parsing since
-		//       the processor will inherit the commands vector to defer via a pointer
-		for (const auto& cmd : commands) {
+		// Second pass parse loop
+		for (const auto cmd : parser) {
+			if ( ! cmd) { continue; }
 			location = cmd->Location();
-			if ( ! ProcessDeferred(cmd, dag, dag_munge_id)) { goto processing_failed; }
+			if ( ! ProcessCommand(dm, cmd, dag, dag_munge_id)) { goto processing_failed; }
 		}
 
-		// If we were successful then inherit splice information
-		dag.LiftSplices(SELF);
-		// Also track initial and terminal nodes of graph
-		dag.RecordInitialAndTerminalNodes();
+		if (parser.failed()) {
+			const auto error = parser.ParseError();
+			if (error) {
+				debug_printf(DEBUG_QUIET, "ERROR: %s\n", error->c_str());
+				debug_printf(DEBUG_QUIET, "       Example sytanx: %s\n", error->syntax().c_str());
+			} else {
+				debug_printf(DEBUG_QUIET, "ERROR: Unknown file parse failure for %s\n", file.c_str());
+			}
+			location.clear(); // Error message already contains file:line thus clear so later message is not displayed
+
+			goto processing_failed;
+		}
 	}
+
+	// If we were successful then inherit splice information
+	dag.LiftSplices(SELF);
+	// Also track initial and terminal nodes of graph
+	dag.RecordInitialAndTerminalNodes();
 
 	success = true;
 
@@ -3037,10 +3008,53 @@ processing_failed:
 }
 
 
-bool DagProcessor::ProcessDeferred(const DagCmd& cmd, Dag& dag, int dag_munge_id) {
+bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag, int dag_munge_id) {
 	bool all_good = true;
 
 	switch (cmd->GetCommand()) {
+		case DAG::CMD::SUBMIT_DESCRIPTION:
+			{
+				const SubmitDescCommand* desc = (SubmitDescCommand*)(cmd.get());
+				std::ignore = dag.add_inline_desc(desc->GetName(), desc->GetInlineDesc());
+			}
+			break;
+		case DAG::CMD::SUBDAG:
+		case DAG::CMD::JOB:
+		case DAG::CMD::FINAL:
+		case DAG::CMD::PROVISIONER:
+		case DAG::CMD::SERVICE:
+			all_good = ProcessNode((NodeCommand*)(cmd.get()), dag, dag_munge_id);
+			break;
+		case DAG::CMD::SPLICE:
+			all_good = ProcessSplice(dm, dag, (SpliceCommand*)(cmd.get()), dag_munge_id);
+			break;
+		case DAG::CMD::DOT:
+			{
+				const DotCommand* dot = (DotCommand*)(cmd.get());
+				dag.SetDotFileUpdate(dot->Update());
+				dag.SetDotFileOverwrite(dot->Overwrite());
+				if (dot->HasInclude()) {
+					dag.SetDotIncludeFileName(dot->GetInclude().c_str());
+				}
+				dag.SetDotFileName(dot->GetFile().c_str());
+			}
+			break;
+		case DAG::CMD::INCLUDE:
+			all_good = process(dm, dag, ((FileCommand*)cmd.get())->GetFile(), dag_munge_id);
+			break;
+		case DAG::CMD::NODE_STATUS_FILE:
+			{
+				const NodeStatusCommand* status = (NodeStatusCommand*)(cmd.get());
+				dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
+			}
+			break;
+		case DAG::CMD::JOBSTATE_LOG:
+			dag.SetJobstateLogFileName(((FileCommand*)cmd.get())->GetFile().c_str());
+			break;
+		case DAG::CMD::REJECT:
+			debug_printf(DEBUG_NORMAL, "DAG marked as rejected at %s\n", cmd->Location().c_str());
+			all_good = false;
+			break;
 		case DAG::CMD::CATEGORY:
 			all_good = ProcessCategory((CategoryCommand*)(cmd.get()), dag, dag_munge_id);
 			break;
@@ -3161,9 +3175,7 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 
 	// TODO: hold nodes by value
 	std::unique_ptr<Node> node(new Node(name.c_str(), directory.c_str(), desc.c_str()));
-	if ( ! node) {
-		EXCEPT("Out of memory!");
-	}
+	ASSERT(node);
 
 	node->SetType(CMD_TO_NODE_TYPE.at(cmd->GetCommand()));
 
@@ -3210,9 +3222,7 @@ bool DagProcessor::ProcessSplice(const Dagman& dm, Dag& dag, const SpliceCommand
 	// TODO: Have DAG hold splice DAG's by value and return reference to act upon
 	std::string scope = name + "+";
 	std::unique_ptr<Dag> splice_dag(new Dag(dm, true, scope));
-	if ( ! splice_dag) {
-		EXCEPT("Out of memory!\n");
-	}
+	ASSERT(splice_dag);
 
 	if (cmd->HasDir()) { splice_dag->SetDirectory(cmd->GetDir()); }
 
@@ -3327,9 +3337,7 @@ bool DagProcessor::ProcessDependencies(const ParentChildCommand* cmd, Dag& dag, 
 		}
 
 		std::unique_ptr<Node> node(new Node(name.c_str(), "", "DNE.sub"));
-		if ( ! node) {
-			EXCEPT("Out of memory!");
-		}
+		ASSERT(node);
 
 		node->SetNoop(true);
 
