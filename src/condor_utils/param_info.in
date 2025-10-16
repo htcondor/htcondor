@@ -6107,6 +6107,11 @@ description=Should countainer images be treated as common files by default?
 type=bool
 default=false
 
+[CONTAINER_REGEX_COMMON_BY_DEFAULT]
+description=Container images matching this regex  will be treated as common files by default.
+type=string
+default=
+
 ######
 ## add metaknobs below this banner
 ##
