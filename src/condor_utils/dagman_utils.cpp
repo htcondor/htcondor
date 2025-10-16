@@ -189,9 +189,14 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	ArgList args;
 
 	if (options[shallow::b::RunValgrind]) {
+#ifdef DARWIN
+		args.AppendArg("--atExit");
+		args.AppendArg("--");
+#else
 		args.AppendArg("--tool=memcheck");
 		args.AppendArg("--leak-check=yes");
 		args.AppendArg("--show-reachable=yes");
+#endif
 		args.AppendArg(options[deep::str::DagmanPath].c_str());
 	}
 
@@ -297,6 +302,10 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 			return false;
 		}
 	}
+
+#ifdef DARWIN
+	if (options[shallow::b::RunValgrind]) { env.SetEnv("MallocStackLogging=1"); }
+#endif
 
 	env.SetEnv("_CONDOR_DAGMAN_LOG", options[shallow::str::DebugLog].c_str());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
