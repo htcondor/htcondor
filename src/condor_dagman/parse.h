@@ -93,6 +93,7 @@ private:
 	}
 
 	const DagmanConfig& config;
+	std::set<std::string> parsed_file_check{}; // Used to make sure file parse recursion is explicity checked
 	bool useDagDir{false};
 
 	static size_t join_node_id;

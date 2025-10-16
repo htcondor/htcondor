@@ -2926,13 +2926,21 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 
 	DagParser parser(file_to_parse);
 
+	parser.SearchFor(pre_parse_commands).Ignore(ignore_commands);
+	if (config[conf::b::AllowIllegalChars]) { parser.AllowIllegalChars(); }
+
 	if (parser.failed()) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to open %s: %s\n", file.c_str(), parser.c_error());
 		return false;
 	}
 
-	parser.SearchFor(pre_parse_commands).Ignore(ignore_commands);
-	if (config[conf::b::AllowIllegalChars]) { parser.AllowIllegalChars(); }
+	// Verify that we are not recursively parsing a DAG file (i.e. INCLUDE/SPLICE)
+	std::string full_file_path = parser.GetAbsolutePath();
+	auto [_, added] = parsed_file_check.insert(full_file_path);
+	if ( ! added) {
+		debug_printf(DEBUG_QUIET, "ERROR: Recursive DAG file parsing detected with %s\n", full_file_path.c_str());
+		return false;
+	}
 
 	bool success = false;
 	std::string location; // Save 'file:line' of command in case processing error occurs
@@ -2994,6 +3002,9 @@ processing_failed:
 	if ( ! success && location.size()) {
 		debug_printf(DEBUG_QUIET, "Processing error at %s\n", location.c_str());
 	}
+
+	// Once we are done parsing the file remove it from recursive checking set
+	parsed_file_check.erase(full_file_path);
 
 	if (useDagDir) {
 		std::string	error;
