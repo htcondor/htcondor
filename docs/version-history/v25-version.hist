@@ -9,6 +9,11 @@
 
 *** 25.0.3 bugs
 
+- Fixed a bug where if a *condor_starter* running a docker universe job
+  exited or was killed without being shutdown, and docker container would
+  be leaked until the *condor_startd* was restarted.
+  :jira:`3338`
+
 - Calling ``classad2.ExprTree(None)`` no longer results in an invalid
   :class:`classad2.ExprTree`, preventing segfaults when using the object.
   :jira:`3319`
