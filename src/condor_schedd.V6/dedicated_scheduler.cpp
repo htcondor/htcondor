@@ -650,7 +650,8 @@ DedicatedScheddNegotiate::scheduler_skipJob(JobQueueJob *jobad, ClassAd * /*matc
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+	char const *slot_name, _match_source)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );

@@ -2479,6 +2479,18 @@ static int handle_enable_userrec_cmd (
 				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, "by update command");
 			}
 		}
+		// update may want to change the MaxJobsRunning attribute also
+		classad::Value max_val;
+		if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+			long long ival;
+			if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+				// set the default max (i.e. remove the per-user limit)
+				// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+				DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
+			} else {
+				SetUserAttributeValue(*urec, ATTR_MAX_JOBS_RUNNING, max_val);
+			}
+		}
 	} else {
 		// if opt_update is not set, and the record exists, then we want to enable it
 		// unless the command ad says to disable it, in which case we leave it alone
@@ -2601,6 +2613,17 @@ int Scheduler::act_on_user(
 				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, reason.c_str());
 			} else {
 				// TODO set default reason string
+			}
+			classad::Value max_val;
+			if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+				long long ival;
+				if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+					// set the default max (i.e. remove the per-user limit)
+					// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+					DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
+				} else {
+					SetUserAttributeValue(*urec, ATTR_MAX_JOBS_RUNNING, max_val);
+				}
 			}
 		} else { // user does not exist, cannot be disabled
 			rval = SC_ERR_NOT_FOUND;
@@ -4888,6 +4911,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 		mrec = nullptr;
 	}
 	if( mrec ) {
+		// NOTE: this might delete the mrec...
 		scheduler.FindRunnableJobForClaim( mrec );
 	}
 
@@ -8004,7 +8028,8 @@ public:
 
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id, char const *reason);
 
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+		char const *slot_name, _match_source source);
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock );
 
@@ -8100,6 +8125,10 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 			}
 		}
 	}
+	if (powni && match_max) {
+		int max_running_per_user = MaxRunningPer(powni) - CurRunningPer(powni);
+		*match_max = MIN(max_running_per_user, *match_max);
+	}
 #else
 	if (job_id.cluster < 0 || request_ad.size() < 0) {
 		dprintf(D_ALWAYS, "unexpected arguments to scheduler_getRequestConstraints\n");
@@ -8163,13 +8192,11 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 
 
 bool
-MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
+MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+	char const *slot_name, _match_source source)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
-
-	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
-			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
 	if ( strcasecmp(claim_id,"null") == 0 ) {
 		dprintf(D_MATCH, "Rejecting match to %s because it has no claim id\n", slot_name);
@@ -8187,15 +8214,16 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
 	}
 
+	bool is_pslot = false;
+	match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+
 	// Claim pslots if we're configured to do so and this negotiator will
 	// make further matches on the claimed pslot for us.
 	// TODO Ignore the negotiator's willingness to match once we're smart
 	//   enough to fully manage the claimed pslot or will be instructing
 	//   the startd to send updates to an AP collector/negotiator.
 	bool claim_pslot = false;
-	bool is_pslot = false;
 	if (m_will_match_claimed_pslots) {
-		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
 		if (is_pslot) {
 			std::string slot_state;
 			match_ad.LookupString(ATTR_STATE, slot_state);
@@ -8203,8 +8231,24 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 				claim_pslot = true;
 			}
 		}
-	} else {
-		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+	}
+
+	// Build up a string to describe what is happening.  This function gets called when
+	// 1) The negotiator has a match for a specific job (usually a p-slot)
+	// 2) We claimed the p-slot, got back a d-slot and now we want to use the leftovers
+	// 3) A startd called and gave us itself
+	// For the first case, we usually have a job id in mind, for the second two we do not.
+	bool for_a_job = job_id.cluster != -1 || job_id.proc != -1;
+	if (IsDebugCategory(D_MATCH)) {
+		std::string match_for;
+		if (for_a_job) {
+			match_for = "for job " + (std::string)JOB_ID_KEY(job_id);
+		} else if (source == _match_source::LEFTOVER) {
+			match_for = "Leftovers";
+		} else if (source == _match_source::DIRECT) {
+			match_for = "DirectAttach";
+		}
+		dprintf(D_MATCH,"Handling match %s (delivered=%d): %s\n", match_for.c_str(), m_current_resources_delivered, slot_name);
 	}
 
 	const char* because = "";
@@ -8226,7 +8270,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 				skip_all_such = true;
 				because = "no more shadows";
 			} else {
-				dprintf(D_MATCH,"Rematched %s to job %d.%d\n", slot_name, job_id.cluster, job_id.proc );
+				dprintf(D_MATCH,"%s %s to job %d.%d\n", for_a_job ? "Rematched" : "Matched",
+					slot_name, job_id.cluster, job_id.proc );
 			}
 		}
 	}
@@ -8851,7 +8896,8 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 			// TODO handle pre-claimed slots
 			// TODO handle slots already in use
-		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str());
+		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str(),
+			ScheddNegotiate::_match_source::DIRECT);
 	}
 
 	if (!rsock->end_of_message()) {
@@ -9086,12 +9132,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	if( !msg->claimed_startd_success() ) {
 		// Re-enable the job for matching in the PrioRec array
 		// TODO: remove the PrioRec matched field and use the one in the JobQueueJob instead
-		for (auto & rec : PrioRec) {
-			if (rec.id.cluster == match->cluster && rec.id.proc == match->proc) {
-				rec.matched = false;
-				break;
-			}
-		}
+		auto * rec = findInPrioRec({match->cluster, match->proc});
+		if (rec) rec->matched = false;
 		scheduler.DelMrec(match);
 		return;
 	}
@@ -9099,6 +9141,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// if we end up moving the original job id to a different match record
 	// we will need to delete the original match record before we exit.
 	bool delete_orig_match = false;
+	bool can_use_leftovers = true;
 
 	// If we got information for the newly-claimed slot, then update our
 	// local data to match.  First check to see if we any of the returned
@@ -9113,11 +9156,32 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		slots.reserve(msg->claimed_slots().size());
 		PROC_ID job_id{match->cluster, match->proc};
 
+		// check per-user jobs running limits and per-project jobs running limits
+		// to see if there is any point in using the leftovers.
+		// TODO: give leftovers to a different user?
+		JobQueueJob * job = GetJobAd(job_id);
+		if (job) {
+			int max_jobs_to_add = MaxRunningPer(job->ownerinfo) - CurRunningPer(job->ownerinfo);
+			if (job->project) {
+				int prj_running = MaxRunningPer(job->project) - CurRunningPer(job->project);
+				max_jobs_to_add = std::min(max_jobs_to_add, prj_running);
+			}
+			can_use_leftovers = (max_jobs_to_add > (int)msg->claimed_slots().size());
+		}
+
 		for (auto & slotInfo : msg->claimed_slots()) {
 			if (slotInfo.claim_id == match->claim_id.claimId()) {
+				// ugly, but if there are leftovers, then chances are the slot name
+				// changed from when we originally got that match, so we should log the new name
+				if (IsDebugCategory(D_MATCH) && msg->have_leftovers()) {
+					std::string slot_name;
+					slotInfo.slot_ad.LookupString(ATTR_NAME, slot_name);
+					dprintf(D_MATCH, "Claiming %s returned %s\n", match->description(), slot_name.c_str());
+				}
 				// since we got an updated slot ad, refresh the ad in the match record
 				match->my_match_ad->CopyFrom(slotInfo.slot_ad);
 				match->my_match_ad->Update(match->m_added_attrs);
+				match->makeDescription();
 				match->setStatus(M_CLAIMED);
 				orig_match_index = slots.size();
 				slots.push_back(match);
@@ -9178,7 +9242,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// If the startd returned any "leftover" partitionable slot resources,
 	// we want to create a match record for it (so we can subsequently find
 	// a job to run on it). 
-	if ( msg->have_leftovers()) {
+	if (msg->have_leftovers() && can_use_leftovers) {
 
 		ScheddNegotiate *sn;
 		if (match->is_dedicated) {
@@ -9194,27 +9258,35 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
 		}
 
-			// Setting cluster.proc to -1.-1 should result in the schedd
-			// invoking FindRunnableJob to select an appropriate matching job.
-		PROC_ID jobid(-1,-1);
 
-		if (match->is_dedicated) {
-			const ClassAd *msg_ad = msg->getJobAd();
-			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
-			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
-		}
-	
+		// Need to pass handleMatch a slot name; grab from newly split slot ad
+		std::string slot_name_buf;
+		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
+		char const *slot_name = slot_name_buf.c_str();
+
 		std::string last_slot_name;
 		msg->leftover_startd_ad()->LookupString(ATTR_LAST_SLOT_NAME, last_slot_name);
-
 		if (last_slot_name.length() > 0) {
 			match->my_match_ad->Assign(ATTR_NAME, last_slot_name);
 		}
 
-			// Need to pass handleMatch a slot name; grab from newly split slot ad
-		std::string slot_name_buf;
-		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
-		char const *slot_name = slot_name_buf.c_str();
+		// Setting cluster.proc to -1.-1 should result in the schedd
+		// invoking FindRunnableJob to select an appropriate matching job.
+		PROC_ID jobid(-1,-1);
+
+		// but not when using the dedicated scheduler, in that case we want
+		// to give more slots to the same "job" since a single parallel job
+		// can use multiple matches.
+		if (match->is_dedicated) {
+			const ClassAd *msg_ad = msg->getJobAd();
+			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
+
+			// we want to pass the last d-slot name to handleMatch rather than the pslot name
+			// Since the dedicated scheduler needs a unique name for each of its matches.
+			// We use the last d-slot name as a convenient unique name.
+			if ( ! last_slot_name.empty()) { slot_name = last_slot_name.c_str(); }
+		}
 
 		// Copy attributes that were added to the original slot ad after
 		// it left the startd into the fresh pslot leftovers ad
@@ -9229,15 +9301,17 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
-		ClaimIdParser idp( msg->leftover_claim_id() );
-		dprintf( D_FULLDEBUG,
-				"Received match from startd, leftover slot ad %s claim %s\n",
-				slot_name, idp.publicClaimId()  );
+		if (IsFulldebug(D_FULLDEBUG)) {
+			ClaimIdParser idp( msg->leftover_claim_id() );
+			dprintf( D_FULLDEBUG,
+					"Received match from startd, leftover slot ad %s claim %s\n",
+					slot_name, idp.publicClaimId()  );
+		}
 
 			// Tell the schedd about the leftover resources it can go claim.
 			// Note this claiming will happen asynchronously.
-		sn->scheduler_handleMatch(jobid,msg->leftover_claim_id(), "",
-			*(msg->leftover_startd_ad()),last_slot_name.length() > 0 ? last_slot_name.c_str() : slot_name);
+		sn->scheduler_handleMatch(jobid,msg->leftover_claim_id(), "", *(msg->leftover_startd_ad()),
+			slot_name, ScheddNegotiate::_match_source::LEFTOVER);
 
 		delete sn;
 	}
@@ -9734,9 +9808,11 @@ Scheduler::StartJob(match_rec *rec)
 			dprintf(D_MATCH, "match (%s) was activated, but job %d.%d %s. searching for new job\n", 
 				rec->description(), id.cluster, id.proc, reason);
 		}
+
 			// find the job with the highest priority
-		id.proc = -1;
+			// if no job found, rec might be deleted (or may not be because of keep claim idle)
 		if( !FindRunnableJobForClaim(rec) ) {
+			// rec was probably deleted, don't try and use it again...
 			return;
 		}
 		id.cluster = rec->cluster;
@@ -9813,29 +9889,33 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 	if( mrec->my_match_ad && !ExitWhenDone ) {
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
 	}
+
 	auto job_ad = GetJobAd(new_job_id);
 	if (job_ad && !JobCanFlock(*job_ad, mrec->pool)) {
-		return false;
+		// Oops! can't switch to this job, just give up the claim.
+		// TODO: fix FindRunnableJob for this case
+		new_job_id.proc = -1;
+		job_ad = nullptr;
 	}
 
-	if ((new_job_id.proc == -1) && (!mrec->is_ocu)){
+	if (new_job_id.proc == -1) {
+		if (mrec->is_ocu) {
+			// If this is an OCU holder, we don't want to run a job, but
+			// we do want to keep the match record around so that we can
+			// hold the claim for the OCU.
+			return false;
+		}
+
 			// no more jobs to run
 		if (mrec->idle_timer_deadline < time(0))  {
-			dprintf(D_ALWAYS,
-				"match (%s) out of jobs; relinquishing\n",
-				mrec->description() );
+			int dpf_level = IsDebugCategory(D_MATCH) ? D_MATCH : D_FULLDEBUG;
+			dprintf(dpf_level, "match (%s) out of jobs; relinquishing\n", mrec->description() );
 			DelMrec(mrec);
 			return false;
 		} else {
-			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
+			dprintf(D_FULLDEBUG, "Job %d.%d requested to keep this claim idle for next job for %d seconds\n",
+				mrec->cluster, mrec->proc, mrec->keep_while_idle);
 		}
-		return false;
-	}
-
-	if (new_job_id.proc == -1 && mrec->is_ocu) {
-		// If this is an OCU holder, we don't want to run a job, but
-		// we do want to keep the match record around so that we can
-		// hold the claim for the OCU.
 		return false;
 	}
 
@@ -9984,6 +10064,33 @@ bool
 Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 
 	PROC_ID id = job->jid;
+
+	// check to see if max jobs running per user would be exceeded
+	// we treat the limit as applying independently for both scheduler and local
+	// so that a user with a limit of 1 can run a DAG and a single job.
+	// we do this early so we can skip publishing the schedd ad.
+	int max_running_per = MaxRunningPer(job->ownerinfo);
+	if (job->Universe() == CONDOR_UNIVERSE_SCHEDULER) {
+		if (job->ownerinfo->live.SchedulerJobsRunning >= max_running_per) {
+			return false;
+		}
+	} else {
+		if (CurRunningPer(job->ownerinfo) >= max_running_per) {
+			return false;
+		}
+	}
+	if (job->project) {
+		int max_running_per = MaxRunningPer(job->project);
+		if (job->Universe() == CONDOR_UNIVERSE_SCHEDULER) {
+			if (job->project->live.SchedulerJobsRunning >= max_running_per) {
+				return false;
+			}
+		} else {
+			if (CurRunningPer(job->project) >= max_running_per) {
+				return false;
+			}
+		}
+	}
 
 	// The jobs will now attempt to have their requirements
 	// evalulated. We first check to see if the requirements are defined.
@@ -18002,6 +18109,12 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
 			shadow_pid, new_job_id.cluster, new_job_id.proc );
+	if (IsDebugCategory(D_MATCH)) {
+		dprintf(D_MATCH, "Reusing match for job %d.%d%s: %s\n",
+			mrec->cluster, mrec->proc,
+			mrec->is_ocu?" (OCU)":"",
+			mrec->description());
+	}
 
     time_t now = stats.Tick();
     stats.ShadowsRecycled += 1;
@@ -18204,7 +18317,7 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		jobid.cluster = jobid.proc = -1;
 
 		sn = new MainScheddNegotiate(0, NULL, NULL, NULL);
-		sn->scheduler_handleMatch(jobid,claim_id, "", *machineAd, name);
+		sn->scheduler_handleMatch(jobid,claim_id, "", *machineAd, name, ScheddNegotiate::_match_source::DIRECT);
 		delete sn;
 
 		m_unclaimedLocalStartds[name] = machineAd;

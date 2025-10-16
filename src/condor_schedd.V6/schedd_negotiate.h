@@ -174,7 +174,9 @@ class ScheddNegotiate: public DCMsg {
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id, char const *reason) = 0;
 
 		// returns true if the match was successfully handled (so far)
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name) = 0;
+	enum _match_source { NORMAL=0, LEFTOVER, DIRECT };
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+		char const *slot_name, _match_source source) = 0;
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock ) = 0;
 
@@ -285,7 +287,8 @@ public:
 
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id,char const *reason);
 
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+		char const *slot_name, _match_source source);
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock );
 

@@ -2457,7 +2457,7 @@ int DCSchedd::queryUsers(
 }
 
 ClassAd* DCSchedd::actOnUsers (
-	int cmd, // ENABLE_USERREC or DISABLE_USERREC
+	int cmd, // ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 	bool is_project, // act on Project records rather than User records
 	const ClassAd * userads[], // either pass array of ad pointers, (constraints go here)
 	const char * usernames[], // or pass array of username pointers
@@ -2773,6 +2773,20 @@ ClassAd * DCSchedd::updateProjectAds(
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
+ClassAd * DCSchedd::generalUpdateUserRecs(
+	int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
+	bool is_project,           // set to true if ads are project ads or mixed user and project ads
+	ClassAdList & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	std::vector<const ClassAd*> ads;
+	ads.reserve(userrec_ads.Length());
+	userrec_ads.Rewind();
+	const ClassAd * cmdAd;
+	while ((cmdAd = userrec_ads.Next())) { ads.push_back(cmdAd); }
+	return actOnUsers (cmd, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+}
 
 ClassAd* DCSchedd::getDAGManContact(int cluster, CondorError& errstack) {
 	ReliSock rsock;
