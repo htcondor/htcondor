@@ -786,7 +786,7 @@ bool render_activity_or_ocu (std::string & act, ClassAd *al, Formatter &)
 		return true;
 	}
 
-	bool is_ocu;
+	bool is_ocu = false;
 	al->LookupBool(ATTR_OCU, is_ocu);
 	if (is_ocu && activity == "Idle") {
 		act = "OCU";
