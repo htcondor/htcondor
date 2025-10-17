@@ -135,12 +135,12 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://htcss-downloads.chtc.wisc.edu/tarball/23.x/23.8.1/release/condor-23.8.1-x86_64_AlmaLinux8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://htcss-downloads.chtc.wisc.edu/tarball/25.x/25.1.0/release/condor-25.1.0-x86_64_AlmaLinux8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
 # binaries and as such should contain files in local/config.d/*.
-WELL_KNOWN_LOCATION_FOR_CONFIGURATION=https://cs.wisc.edu/~tlmiller/hpc-config.tar.gz
+WELL_KNOWN_LOCATION_FOR_CONFIGURATION=
 
 # How early should HTCondor exit to make sure we have time to clean up?
 CLEAN_UP_TIME=300
@@ -212,12 +212,14 @@ MULTI_PILOT_BIN=${PILOT_DIR}/`basename ${MULTI_PILOT_BIN}`
 
 
 echo -e "\rStep 2 of 8: downloading configuration......."
-CONFIGURATION_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}`
-CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION} -o ${CONFIGURATION_FILE} 2>&1`
-if [[ $? != 0 ]]; then
-    echo "Failed to download configuration from '${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}', aborting."
-    echo ${CURL_LOGGING}
-    exit 2
+if [[ -n "${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}" ]]; then
+    CONFIGURATION_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}`
+    CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION} -o ${CONFIGURATION_FILE} 2>&1`
+    if [[ $? != 0 ]]; then
+        echo "Failed to download configuration from '${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}', aborting."
+        echo ${CURL_LOGGING}
+        exit 2
+    fi
 fi
 
 
@@ -412,11 +414,13 @@ rm -f ${PASSWORD_FILE}
 #
 
 echo -e "\rStep 7 of 8: configuring software (part 3)..."
-TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
-if [[ $? != 0 ]]; then
-    echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
-    echo ${TAR_LOGGING}
-    exit 5
+if [[ -n "${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}" ]]; then
+    TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
+    if [[ $? != 0 ]]; then
+        echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
+        echo ${TAR_LOGGING}
+        exit 5
+    fi
 fi
 
 #
