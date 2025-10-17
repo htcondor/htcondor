@@ -34,7 +34,7 @@ public:
     // See RemoveLV() for exit codes | is_encrypted: -1=Unknown, 0=false, 1=true
     int  CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted=-1);
     bool CleanupLVs(std::vector<LeakedLVInfo>* leaked = nullptr);
-    bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
+    bool GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint64_t& non_condor_bytes, CondorError& err);
     static bool DetectLVM() {
         return param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) && is_enabled();
     }

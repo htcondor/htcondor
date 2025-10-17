@@ -1067,7 +1067,7 @@ getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, u
 }
 
 bool
-VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
+VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint64_t& non_condor_bytes, CondorError& err)
 {
     if (m_volume_group_name.empty() || (m_use_thin_provision && m_pool_lv_name.empty())) {
         return false;
@@ -1095,33 +1095,33 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
     // Set NonCondorUsage to the used bytes (total - free) until we actually count the total non-condor lv's
     LVMReportItem& provision = report[0];
     if (thin) {
-        if ( ! getTotalUsedBytes(provision.size, provision.data, total_bytes, used_bytes, err)) {
+        uint64_t used_bytes = 0;
+        if ( ! getTotalUsedBytes(provision.size, provision.data, detected_bytes, used_bytes, err)) {
             return false;
         }
+        free_bytes = detected_bytes - used_bytes;
     } else {
-        uint64_t vg_bytes_free;
         try {
-            vg_bytes_free = std::stoll(provision.data);
+            free_bytes = std::stoll(provision.data);
         } catch(...) {
             err.pushf("VolumeManager", 18, "Failed to convert VG free space to integer: %s",
                       provision.data.c_str());
             return false;
         }
         try {
-            total_bytes = std::stoll(provision.size);
+            detected_bytes = std::stoll(provision.size);
         } catch(...) {
             err.pushf("VolumeManager", 18, "Failed to convert VG total size to integer: %s",
                       provision.size.c_str());
             return false;
         }
-        used_bytes = total_bytes - vg_bytes_free;
     }
 
     // NOTE: We are querying for associated non-condor LVs rather than
     //       using the used_bytes so that leaked condor LVs don't take
     //       away from the available bytes.
 
-    SetTotalDisk(total_bytes);
+    SetTotalDisk(detected_bytes);
 
     report.clear();
     err.clear();
@@ -1146,7 +1146,7 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
         }
 
         // True calculated NonCondorUsage (if conversions didn't fail)
-        used_bytes = m_non_condor_usage;
+        non_condor_bytes = m_non_condor_usage;
     }
 
     return true;
@@ -1370,7 +1370,7 @@ bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
     return true;
 }
 
-bool VolumeManager::GetPoolSize(uint64_t& /*used_bytes*/, uint64_t& /*total_bytes*/, CondorError& /*err*/) {
+bool VolumeManager::GetPoolSize(uint64_t& /*detected_bytes*/, uint64_t& /*free_bytes*/, uint64_t& /*non_condor_bytes*/, CondorError& /*err*/); {
     return false;
 }
 

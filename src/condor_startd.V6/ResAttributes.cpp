@@ -2113,10 +2113,10 @@ CpuAttributes::set_total_disk(long long total, bool refresh, VolumeManager * vol
 		// refresh disk if the flag was passed in, or we do not yet have a value
 	if (refresh) {
 		CondorError err;
-		uint64_t used_bytes, total_bytes;
+		uint64_t detected_bytes=0, free_bytes=0, non_condor_bytes=0;
 		if (volman && volman->is_enabled()) {
-			if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
-				c_total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
+			if (volman->GetPoolSize(detected_bytes, free_bytes, non_condor_bytes, err)) {
+				c_total_disk = free_bytes/1024 - sysapi_reserve_for_fs();
 				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
 				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
 				return true;
@@ -2136,11 +2136,11 @@ void initExecutePartitionTable(MachAttributes * m_attr, VolumeManager * volman)
 {
 	std::string volume_id = "<none>";
 	long long total_disk = 0;
-	uint64_t used_bytes=0, total_bytes=0;
+	uint64_t detected_bytes=0, free_bytes=0, non_condor_bytes=0;
 	if (volman && volman->is_enabled()) {
 		CondorError err;
-		if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
-			total_disk = (total_bytes - used_bytes)/1024 - sysapi_reserve_for_fs();
+		if (volman->GetPoolSize(detected_bytes, free_bytes, non_condor_bytes, err)) {
+			total_disk = free_bytes/1024 - sysapi_reserve_for_fs();
 			total_disk = MAX(total_disk, 0);
 			volume_id = volman->GetBackingDevice();
 			dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %lld from device %s\n",
@@ -2149,7 +2149,7 @@ void initExecutePartitionTable(MachAttributes * m_attr, VolumeManager * volman)
 			dprintf(D_ERROR, "Failed to get LVM pool size: %s\n", err.getFullText().c_str());
 		}
 	}
-	m_attr->add_disk_volume(volume_id.c_str(), total_disk, total_bytes/1024, used_bytes/1024);
+	m_attr->add_disk_volume(volume_id.c_str(), total_disk, detected_bytes/1024, non_condor_bytes/1024);
 }
 
 #endif
@@ -2490,9 +2490,9 @@ CpuAttributes::recompute_disk(bool init)
 		auto volman = resmgr->getVolumeManager();
 		if (volman && volman->is_enabled()) {
 			CondorError err;
-			uint64_t used_bytes, total_bytes;
-			if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
-				c_total_disk = (total_bytes - used_bytes)/1024 - sysapi_reserve_for_fs();
+			uint64_t detected_bytes=0, free_bytes=0, non_condor_bytes=0;
+			if (volman->GetPoolSize(detected_bytes, free_bytes, non_condor_bytes, err)) {
+				c_total_disk = free_bytes/1024 - sysapi_reserve_for_fs();
 				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
 				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
 				return;
