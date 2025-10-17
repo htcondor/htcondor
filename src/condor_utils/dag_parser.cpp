@@ -750,12 +750,7 @@ DagParser::ParseEnv(DagLexer& details) {
 	if (vars.empty()) { return "No environment variables provided"; }
 
 	if ( ! set) {
-		std::string delimited;
-		for (const auto& v : StringTokenIterator(vars)) {
-			if ( ! delimited.empty()) { delimited += ","; }
-			delimited += v;
-		}
-		vars = delimited;
+		vars = join(split(vars), ",");
 	}
 
 	data.reset(new EnvCommand(vars, set));

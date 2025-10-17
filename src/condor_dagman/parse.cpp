@@ -2935,7 +2935,7 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	}
 
 	// Verify that we are not recursively parsing a DAG file (i.e. INCLUDE/SPLICE)
-	std::string full_file_path = parser.GetAbsolutePath();
+	const std::string full_file_path = parser.GetAbsolutePath();
 	auto [_, added] = parsed_file_check.insert(full_file_path);
 	if ( ! added) {
 		debug_printf(DEBUG_QUIET, "ERROR: Recursive DAG file parsing detected with %s\n", full_file_path.c_str());
@@ -2943,13 +2943,14 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 	}
 
 	bool success = false;
-	std::string location; // Save 'file:line' of command in case processing error occurs
+	std::string location; // Save 'file:line#' of command in case processing error occurs
 
 	// Pre Parse Loop
 	for (const auto cmd : parser) {
-		if ( ! cmd) { continue; }
-		location = cmd->Location();
-		if ( ! ProcessCommand(dm, cmd, dag, dag_munge_id)) { goto processing_failed; }
+		if (cmd && ! ProcessCommand(dm, cmd, dag, dag_munge_id)) {
+			location = cmd->Location();
+			goto processing_failed;
+		}
 	}
 
 	if (parser.failed()) {
@@ -2960,7 +2961,6 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 		} else {
 			debug_printf(DEBUG_QUIET, "ERROR: Unknown file parse failure for %s\n", file.c_str());
 		}
-		location.clear(); // Error message already contains file:line thus clear so later message is not displayed
 
 		goto processing_failed;
 	}
@@ -2972,9 +2972,10 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 
 		// Second pass parse loop
 		for (const auto cmd : parser) {
-			if ( ! cmd) { continue; }
-			location = cmd->Location();
-			if ( ! ProcessCommand(dm, cmd, dag, dag_munge_id)) { goto processing_failed; }
+			if (cmd && ! ProcessCommand(dm, cmd, dag, dag_munge_id)) {
+				location = cmd->Location();
+				goto processing_failed;
+			}
 		}
 
 		if (parser.failed()) {
@@ -2985,7 +2986,6 @@ bool DagProcessor::process(const Dagman& dm, Dag& dag, const std::string& file, 
 			} else {
 				debug_printf(DEBUG_QUIET, "ERROR: Unknown file parse failure for %s\n", file.c_str());
 			}
-			location.clear(); // Error message already contains file:line thus clear so later message is not displayed
 
 			goto processing_failed;
 		}
