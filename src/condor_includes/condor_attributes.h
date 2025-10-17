@@ -566,6 +566,7 @@
 #define ATTR_MEMORY_USAGE  "MemoryUsage"
 #define ATTR_DETECTED_MEMORY  "DetectedMemory"
 #define ATTR_DETECTED_CPUS  "DetectedCpus"
+#define ATTR_DETECTED_DISK  "DetectedDisk"
 #define ATTR_MIN_HOSTS  "MinHosts"
 #define ATTR_MIPS  "Mips"
 #define ATTR_MPI_IS_MASTER  "MPIIsMaster"

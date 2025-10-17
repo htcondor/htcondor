@@ -55,6 +55,7 @@ enum BuildSlotFailureMode {
 #define BROKEN_CODE_UNCLEAN      4   // could not clean up after job
 #define BROKEN_CODE_UNCLEAN_LV   5   // could not clean up Logical Volume after job
 #define BROKEN_CODE_HUNG_PID     6   // could not delete all job processes after job
+#define BROKEN_CODE_HUNG_CGROUP  7   // could not clean up the cgroup (probably a hung pid)
 
 class VolumeManager;
 class Resource;
@@ -279,32 +280,44 @@ public:
 	bool			is_fractional_disk() const { return true; }
 #else
 	struct _disk_volume_res {
-		long long disk{0};              // free disk space on volume
-		long long total_disk{0};        // total disk space on volume
+		long long free_disk{0};         // free disk space on volume
+		long long detected_disk{0};     // total disk space on volume
 		long long non_condor_disk{0};   // in-use disk space on volume at startup
+		long long provisioned_disk{0};  // total disk provisioned to all slots from this volume
 	};
 	const std::map<std::string, _disk_volume_res> & disk_volumes() const { return m_disk_volumes; }
 	bool has_disk_volume(const char * volume_id) const { return m_disk_volumes.count(volume_id); }
 	void add_disk_volume(const char * volume_id,
 		long long free_disk,
-		long long total_disk,
+		long long detected_disk,
 		long long non_condor_disk)
 	{
 		auto & volume = m_disk_volumes[volume_id];
-		volume.disk = free_disk;
-		volume.total_disk = total_disk;
+		volume.free_disk = free_disk;
+		volume.detected_disk = detected_disk;
 		volume.non_condor_disk = non_condor_disk;
 	}
-	long long		num_disk(const char * volume_id) const {
-		auto it = m_disk_volumes.find(volume_id);
-		if (it != m_disk_volumes.end()) return it->second.disk;
-		return 0;
-	}
-	long long		total_disk(const char * volume_id) const {
+	void update_provisioned_disk_for_volume(const char * volume_id, long long provisioned_disk) {
 		auto it = m_disk_volumes.find(volume_id);
 		if (it != m_disk_volumes.end()) {
-			return it->second.total_disk - it->second.non_condor_disk;
+			it->second.provisioned_disk = std::max(it->second.provisioned_disk, provisioned_disk);
 		}
+	}
+	long long		free_disk(const char * volume_id) const {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) return it->second.free_disk;
+		return 0;
+	}
+	long long		detected_disk(const char * volume_id) const {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) {
+			return it->second.detected_disk;
+		}
+		return 0;
+	}
+	long long		provisioned_disk(const char * volume_id) const {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) return it->second.provisioned_disk;
 		return 0;
 	}
 	long long	num_swap()	const { return m_num_swap; };
@@ -313,7 +326,7 @@ public:
 #endif
 	bool		total_disk_from_config() const { return m_total_disk_from_config; } // Disk specified in config
 	bool		using_volume_manager() const { return m_using_volume_manager; }
-	void		set_using_volume_manager(bool using_it) { m_using_volume_manager = using_it; }
+	//void		set_using_volume_manager(bool using_it) { m_using_volume_manager = using_it; }
 	double		machine_load()			const { return m_load; };
 	double		machine_condor_load()	const { return m_condor_load; };
 	time_t		machine_keyboard_idle() const { return m_idle; };
@@ -335,10 +348,7 @@ public:
 	const char * withinLimitsExpression(); // regular WithinResourceLimits
 	const char * consumptionLimitsExpression(); // consumption policy variant
 
-	void 		set_volume_manager(VolumeManager* volman) {
-		m_volume_manager_ref = volman;
-		set_using_volume_manager(true);
-	}
+	void 		set_volume_manager(VolumeManager* volman);
 	VolumeManager*	get_volume_manager() const { return m_volume_manager_ref; }
 
 private:
@@ -498,7 +508,7 @@ public:
 	#else
 		, c_swap(req.num_swap)
 		, c_disk(req.num_disk)
-		, c_total_disk(m_attr.total_disk(execute_partition_id.c_str()))
+		, c_total_disk(m_attr.detected_disk(execute_partition_id.c_str()))
 	#endif
 		, c_phys_mem(req.num_phys_mem)
 		, c_slot_mem(req.num_phys_mem)
@@ -700,6 +710,7 @@ public:
 	void cat_totals(std::string & buf, const char * execute_partition_id);
 	// reduce request as necessary to force a fit, and report the reductions in the unfit string
 	void trim_request_to_fit( CpuAttributes::_slot_request & req, const char * execute_partition_id, std::string & unfit );
+	void update_provisioned_disk( MachAttributes * map );
 
 private:
 	int				a_num_cpus;

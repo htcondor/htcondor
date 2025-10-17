@@ -86,7 +86,7 @@ ResMgr::ResMgr() :
 	if ( ! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd disk enforcement disabled.\n");
 		m_volume_mgr.reset(nullptr);
-		m_attr->set_using_volume_manager(false);
+		m_attr->set_volume_manager(nullptr);
 	} else {
 		m_volume_mgr.reset(new VolumeManager());
 		m_attr->set_volume_manager(m_volume_mgr.get());

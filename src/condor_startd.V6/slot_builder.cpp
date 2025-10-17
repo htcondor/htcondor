@@ -420,6 +420,11 @@ CpuAttributes** buildCpuAttrs(
 		}
 	}
 
+	// update the disk partition tables in the MachAttributes instance
+	// to record how much disk total disk we provisioned.
+	avail.update_provisioned_disk(m_attr);
+	bkavail.update_provisioned_disk(m_attr);
+
 	for (int i=0; i<num; i++) {
 		bool backfill = backfill_types[cap_array[i]->type_id()];
 		if ( ! cap_array[i]->bind_DevIds(m_attr, i+1, 0, backfill, failmode == BuildSlotFailureMode::Except, 0)) {
@@ -620,7 +625,7 @@ const int UNSET_SHARE = -9998;
 		request.disk_fraction = AUTO_SHARE;
 	#else
 		request.num_swap = compute_local_resource(m_attr->num_swap(), default_share, minimum_swap);
-		request.num_disk = compute_local_resource(m_attr->num_disk(partition_id), default_share, minimum_disk);
+		request.num_disk = compute_local_resource(m_attr->free_disk(partition_id), default_share, minimum_disk);
 	#endif
 
 		for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
@@ -782,7 +787,7 @@ const int UNSET_SHARE = -9998;
 				}
 			}
 		#else
-			disk = compute_local_resource(m_attr->num_disk(partition_id), share, minimum_disk, scale, 1); // 1 MB minimum
+			disk = compute_local_resource(m_attr->free_disk(partition_id), share, minimum_disk, scale, 1); // 1 MB minimum
 		#endif
 
 		} else {
@@ -836,7 +841,7 @@ const int UNSET_SHARE = -9998;
 	request.num_swap = swap;
 
 	if (IS_UNSET_SHARE(disk)) {
-		disk = compute_local_resource(m_attr->num_disk(partition_id), default_share);
+		disk = compute_local_resource(m_attr->free_disk(partition_id), default_share);
 	}
 	request.num_disk = disk;
 #endif

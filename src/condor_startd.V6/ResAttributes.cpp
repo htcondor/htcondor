@@ -102,8 +102,8 @@ MachAttributes::MachAttributes()
 		m_recompute_disk_free = param_boolean("STARTD_RECOMPUTE_DISK_FREE", false);
 	} else {
 		auto & volume = m_disk_volumes["<from-config>"];
-		volume.total_disk = total_disk;
-		volume.disk = total_disk;
+		volume.detected_disk = total_disk;
+		volume.free_disk = total_disk;
 		volume.non_condor_disk = 0; // TODO: set this to something?
 		m_total_disk_from_config = true;
 	}
@@ -199,6 +199,13 @@ MachAttributes::~MachAttributes()
 
     release_all_WinPerf_results();
 #endif
+}
+
+void
+MachAttributes::set_volume_manager(VolumeManager* volman)
+{
+	m_volume_manager_ref = volman;
+	m_using_volume_manager = volman && volman->is_enabled();
 }
 
 void
@@ -1453,17 +1460,22 @@ MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
 	// we can't do TotalDisk here, see compute_disk()
 #else
 	if (childAttrs) {
-		// get the total disk for this execute partition.
-		long long total_disk = this->num_disk(childAttrs->executePartitionID());
-		cp->Assign( ATTR_TOTAL_DISK, total_disk);
+		// get the usable disk for this execute partition.
+		long long total_disk = this->provisioned_disk(childAttrs->executePartitionID());
+		cp->Assign(ATTR_TOTAL_DISK, total_disk);
+		// and the total detected disk
+		long long detected_disk = this->detected_disk(childAttrs->executePartitionID());
+		cp->Assign(ATTR_DETECTED_DISK, detected_disk);
 		cp->Assign("ExecuteVolume", childAttrs->executePartitionID());
 	} else {
 		// calculate total disk across all execute partitions
 		// and publish the list of execute partition ids
 		long long total_disk = 0;
+		long long detected_disk = 0;
 		std::string partition_list;
 		for (auto & [partition_id, volume] : m_disk_volumes) {
-			total_disk += volume.disk;
+			total_disk += volume.provisioned_disk;
+			detected_disk += volume.detected_disk;
 			if (partition_list.empty()) {
 				partition_list = "ExecuteVolumes = { ";
 			} else {
@@ -1473,7 +1485,8 @@ MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
 			val.SetStringValue(partition_id);
 			ClassAdValueToString(val, partition_list);
 		}
-		cp->Assign( ATTR_TOTAL_DISK, total_disk);
+		cp->Assign(ATTR_TOTAL_DISK, total_disk);
+		cp->Assign(ATTR_DETECTED_DISK, detected_disk);
 		if ( ! partition_list.empty()) {
 			partition_list.append(" }");
 			cp->Insert(partition_list);
@@ -2297,7 +2310,12 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 void
 CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
+#ifdef PROVISION_FRACTIONAL_DISK
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
+#else
+		// MachAttributes::publish_static does this now
+		// TODO: handle the case where disk free space is refreshed
+#endif
 		cp->Assign( ATTR_DISK, c_disk );
 		cp->Assign( ATTR_CONDOR_LOAD_AVG, rint(c_condor_load * 100) / 100.0 );
 		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
@@ -2482,7 +2500,7 @@ CpuAttributes::recompute_disk(bool init)
 				dprintf(D_ERROR, "Failed to get LVM pool size: %s\n", err.getFullText().c_str());
 			}
 		}
-		c_total_disk = resmgr->m_attr->total_disk(c_execute_partition_id.c_str());
+		c_total_disk = resmgr->m_attr->provisioned_disk(c_execute_partition_id.c_str());
 		c_slot_disk = c_disk; 
 	} else {
 		// TODO: refresh disk and handle the case where disk is provisioned as a percentage?
@@ -2809,7 +2827,7 @@ AvailAttributes::AvailAttributes( MachAttributes* map) {
 	// build a table of partitions and initial free space for each
 	// TODO: reserve disk?
 	for (const auto & [partition_id, volume] : map->disk_volumes()) {
-		this->init_partition(partition_id.c_str(), volume.disk);
+		this->init_partition(partition_id.c_str(), volume.free_disk);
 	}
 #endif
     a_slotres_map = map->machres();
@@ -2831,6 +2849,20 @@ AvailAttributes::GetAvailDiskPartition(std::string const &execute_partition_id)
 	return it->second;;
 }
 #endif
+
+void
+AvailAttributes::update_provisioned_disk( MachAttributes * map )
+{
+	// for each partition, the provisioned disk amount is all of the free space on the disk
+	// if 'auto' was used for any slot, otherwise, it is the some of disk that we provisioned
+	// which is equal to initial free_disk - available free disk remaining.
+	for (const auto & [partition_id, partition] : m_partitions) {
+		long long provisioned_disk = map->free_disk(partition_id.c_str());
+		if ( ! partition.m_auto_count) { provisioned_disk -= partition.m_disk; }
+		map->update_provisioned_disk_for_volume(partition_id.c_str(), provisioned_disk);
+	}
+}
+
 
 bool
 AvailAttributes::decrement( CpuAttributes* cap ) 
@@ -3130,7 +3162,6 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 
 	return true;
 }
-
 
 void
 AvailAttributes::cat_totals(std::string & buf, const char * execute_partition_id)
