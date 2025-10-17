@@ -57,6 +57,8 @@ def the_condor(test_dir, the_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            "FORBID_COMMON_FILE_TRANSFER": "TRUE",
+
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
@@ -157,6 +159,8 @@ def the_big_condor(test_dir, the_big_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            "FORBID_COMMON_FILE_TRANSFER": "TRUE",
+
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
@@ -311,6 +315,8 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            "FORBID_COMMON_FILE_TRANSFER": "TRUE",
+
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
@@ -524,7 +530,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert successful_staging_commands == count
 
     keyfile_touches = count_shadow_log_lines(
-        the_condor, "Producer elected"
+        the_condor, "Elected producer touch"
     )
     assert keyfile_touches == count
 
@@ -553,8 +559,9 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
 def lock_dir_is_clean(the_lock_dir):
     syndicate_dir = the_lock_dir / "syndicate"
 
-    files = list(syndicate_dir.iterdir())
-    assert len(files) == 0
+    if syndicate_dir.exists():
+        files = list(syndicate_dir.iterdir())
+        assert len(files) == 0
 
 
 def epoch_log_has_common_ad(the_condor):
@@ -609,23 +616,23 @@ class TestCIF:
         output_is_as_expected(
             completed_cif_job, "input A\nII input\ninput line 3\n"
         )
-        shadow_log_is_as_expected(the_condor, 1, 1, 0)
+        shadow_log_is_as_expected(the_condor, 0, 0, 0)
         lock_dir_is_clean(the_lock_dir)
         error_is_as_expected(
             completed_cif_job, "fake credential information"
         )
 
-        starter_log_is_as_expected(the_condor, 1, 0)
-        assert epoch_log_has_common_ad(the_condor)
+        starter_log_is_as_expected(the_condor, 0, 0)
+        assert not epoch_log_has_common_ad(the_condor)
 
 
     def test_many_cif_jobs(self, the_big_lock_dir, the_big_condor, completed_cif_jobs):
         output_is_as_expected(
             completed_cif_jobs, "input A\nII input\ninput line 3\n"
         )
-        shadow_log_is_as_expected(the_big_condor, 2, 2, 6)
+        shadow_log_is_as_expected(the_big_condor, 0, 0, 0)
         lock_dir_is_clean(the_big_lock_dir)
-        starter_log_is_as_expected(the_big_condor, 2, 6)
+        starter_log_is_as_expected(the_big_condor, 0, 0)
 
 
     def test_multi_cif_jobs(self, the_multi_lock_dir, the_multi_condor, completed_multi_jobs):
@@ -640,5 +647,5 @@ class TestCIF:
         # This test doesn't include the delay necessary to make sure that
         # transferring common files takes longer than starting / scheduling
         # a the next shadow, so just ignore wait lines completely.
-        shadow_log_is_as_expected(the_multi_condor, 4, 4, None)
+        shadow_log_is_as_expected(the_multi_condor, 0, 0, None)
         lock_dir_is_clean(the_multi_lock_dir)

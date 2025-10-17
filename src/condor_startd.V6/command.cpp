@@ -1520,8 +1520,11 @@ accept_request_claim(
 
 	{
 		bool ocu_holder = false;
+		std::string ocu_name;
 		claim->ad()->LookupBool(ATTR_OCU_HOLDER, ocu_holder);
 		claim->setOCU(ocu_holder);
+		claim->ad()->LookupString(ATTR_OCU_NAME, ocu_name);
+		claim->setOCUName(ocu_name);
 	}
 
 	// if an array of d-slots were passed, we want to change them to claimed state also.
@@ -2134,7 +2137,6 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	Claim* claim = NULL;
 	int rval = TRUE;
 	ClassAd reply;
-	std::string startd_sends_alives;
 
 	req_ad->LookupString(ATTR_CLAIM_ID, claimid);
 	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, global_job_id);
@@ -2158,9 +2160,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// if startd is sending keepalives to the schedd,
 		// then we _must_ be passed the address of the schedd
 		// since it likely changed.
-	param( startd_sends_alives, "STARTD_SENDS_ALIVES", "peer" );
-	if ( (schedd_addr.empty()) && 
-		 strcasecmp( startd_sends_alives.c_str(), "false" ) )
+	if ( schedd_addr.empty() )
 	{
 		std::string err_msg;
 		formatstr(err_msg, "Required %s, not found in request",

@@ -24,10 +24,6 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$slurm_binpath" ] ; then
-  slurm_binpath=/usr/bin
-fi
-
 jnr=0
 jc=0
 for job in  $@ ; do
@@ -40,7 +36,7 @@ for  job in  $@ ; do
             requested=`echo $requested | cut -f1 -d@`
             cluster_arg="-M $cluster_name"
         fi
-        cmdout=`${slurm_binpath}/scancel $cluster_arg $requested 2>&1`
+        cmdout=`${slurm_binpath}scancel $cluster_arg $requested 2>&1`
         retcode=$?
         # If the job is already completed or no longer in the queue,
         # treat it as successfully deleted.

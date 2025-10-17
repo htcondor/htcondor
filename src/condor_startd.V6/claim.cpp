@@ -350,6 +350,9 @@ Claim::publish( ClassAd* cad )
 
 	if (c_ocu) {
 		cad->Assign(ATTR_OCU, true);
+		if (!c_ocu_name.empty()) {
+			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
+		}
 	} 
 
 	publishStateTimes( cad );
@@ -974,23 +977,20 @@ Claim::startLeaseTimer()
 	// because the  job ad we get from the shadow at activation time doesn't have
 	// the necessary attributes - they are only in the job ad we get from the schedd at claim time
 	// see #6568 for more details.
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	// CRUFT Starting in 25.3, the schedd always sets this to true
 	if ( c_jobad && c_jobad->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
 		// Use value from ad
-	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		c_startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		c_startd_sends_alives = true;
 	} else {
-		// No direction from the schedd or config file.
-		c_startd_sends_alives = false;
+		// No direction from the schedd.
+		// Assume true, so future schedds can drop this ancient option.
+		c_startd_sends_alives = true;
 	}
 
 	// If startd is sending the alives, look to see if the schedd is requesting
 	// that we let only send alives when there is no starter present (i.e. when
 	// the claim is idle).
-	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	// CRUFT Starting in 25.3, the schedd always sets this to true
+	c_starter_handles_alives = true;  // default to true unless schedd tells us
 	if (c_jobad) {
 		c_jobad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
 	}

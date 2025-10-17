@@ -4569,7 +4569,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::gce_instance_delete( std::string service_url,
+int GahpClient::gce_instance_delete( const std::string &service_url,
 									 const std::string &auth_file,
 									 const std::string &account,
 									 const std::string &project,

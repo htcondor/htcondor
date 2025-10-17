@@ -1307,11 +1307,11 @@ _history_query(PyObject *, PyObject * args) {
         if( message == NULL || message[0] == '\0' ) {
             message = "Unable to connect to schedd";
             if( dt == DT_STARTD ) { message = "Unable to connect to startd"; }
-
-            // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_HTCondorException, message );
-            return NULL;
         }
+
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_HTCondorException, message );
+        return NULL;
     }
 
     if(! putClassAd( sock, commandAd )) {

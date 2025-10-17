@@ -390,7 +390,7 @@ const char * const startdPFV_Normal[] = { "SELECT",
 	ATTR_OPSYS                      " WIDTH -10 OR ??",
 	ATTR_ARCH                       " WIDTH  -8 OR ??",
 	ATTR_STATE                      " WIDTH AUTO OR ??",
-	ATTR_ACTIVITY                   " WIDTH  -8 OR ??",
+	ATTR_ACTIVITY                   " WIDTH  -8 PRINTAS ACTIVITY_OR_OCU OR ??",
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??",
 	ATTR_MEMORY          " AS Mem     WIDTH   4 PRINTF %4d OR ??",
 	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -",
@@ -410,7 +410,7 @@ const char * const startdNormal_PrintFormat = "SELECT\n"
 	ATTR_OPSYS                      " WIDTH -10 OR ??\n"
 	ATTR_ARCH                       " WIDTH  -8 OR ??\n"
 	ATTR_STATE                      " WIDTH  -9 OR ??\n"
-	ATTR_ACTIVITY                   " WIDTH  -8 OR ??\n"
+	ATTR_ACTIVITY                   " WIDTH  -8 PRINTAS ACTIVITY_OR_OCU OR ??\n"
 	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
 	ATTR_MEMORY          " AS Mem     WIDTH   4 PRINTF %4d OR ??\n"
 	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -\n"
