@@ -38,6 +38,14 @@
 - The *condor_starter* can now refresh job credentials and respond to 
   commands while doing output file transfers.
   :jira:`3259`
+
+- Added new job ClassAd attributes :ad-attr:`NumVacatesPreExecution` 
+  and :ad-attr:`NumVacatesByReasonPreExecution`.
+  These attributes provide counts about why a job was kicked off of an
+  Execution Point before the job was actually spawned (i.e. due to
+  failure to transfer input files, failure to setup the job environment,
+  etc).
+  :jira:`3339`
   
 *** 25.3.0 bugs
 
