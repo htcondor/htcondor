@@ -16824,7 +16824,7 @@ abortJobsByConstraint( const char *constraint,
 }
 
 void
-incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
+incrementJobAdAttrImplementation(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
 {
 	long long val = 0;
 	if (!attrName || !attrName[0]) return;
@@ -16861,6 +16861,31 @@ incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nest
 	}
 
 }
+
+void
+incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
+{
+	// Verify that attrName is valid
+	if (!attrName || !attrName[0]) return;
+
+	// attrName and/or nestedAttrName may be a StringList, so we need to iterate over them
+	// and invoke incrementJobAdAttrImplementation for each combination.
+
+	if (nestedAdAttrName && nestedAdAttrName[0]) {
+		// Both attrName and nestedAdAttrName are non-empty, so iterate over both
+		for (auto& attr : StringTokenIterator(attrName)) {
+			for (auto& nestedAttr : StringTokenIterator(nestedAdAttrName)) {
+				incrementJobAdAttrImplementation(cluster, proc, attr.c_str(), nestedAttr.c_str());
+			}
+		}
+	} else if (attrName && attrName[0]) {
+		// Only attrName is non-empty, so iterate over it
+		for (auto& attr : StringTokenIterator(attrName)) {
+			incrementJobAdAttrImplementation(cluster, proc, attr.c_str(), nullptr);
+		}
+	}
+}
+
 
 /*
 Hold a job by stopping the shadow, changing the job state,
