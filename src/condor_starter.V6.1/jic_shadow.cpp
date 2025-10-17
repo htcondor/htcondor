@@ -1203,9 +1203,11 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// else to go if this is a recurring problem.
 	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
 		struct stat si = {};
-		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT) {
+		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT &&
+		    shouldHoldJobBasedOnCodes(hold_reason_code, hold_reason_subcode))
+		{
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
-			hold_reason_code = 0;
+			hold_reason_code = CONDOR_HOLD_CODE::ScratchDirError;
 			hold_reason_subcode = 0;
 		}
 	}
