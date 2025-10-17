@@ -1370,7 +1370,7 @@ bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
     return true;
 }
 
-bool VolumeManager::GetPoolSize(uint64_t& /*detected_bytes*/, uint64_t& /*free_bytes*/, uint64_t& /*non_condor_bytes*/, CondorError& /*err*/); {
+bool VolumeManager::GetPoolSize(uint64_t& /*detected_bytes*/, uint64_t& /*free_bytes*/, uint64_t& /*non_condor_bytes*/, CondorError& /*err*/) {
     return false;
 }
 
