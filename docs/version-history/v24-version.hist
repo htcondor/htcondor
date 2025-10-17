@@ -35,6 +35,13 @@
   :class:`classad2.ExprTree`, preventing segfaults when using the object.
   :jira:`3319`
 
+- Changed the documentation for :meth:`classad2.ClassAd.matches` and
+  :class:`classad2.ClassAd` to match their implementations; the original
+  documentation was in error, and both are actually backwards-compatible
+  with the first version of the Python bindings.  Made other minor changes;
+  see the ticket for details.
+  :jira:`3328`
+
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
