@@ -14,6 +14,10 @@
   the DOCKER_HOST environment variable, such as with a docker-in-docker setup.
   :jira:`3280`
 
+- More accurately report the reason why a job's execution is interrupted
+  (via the evict log event and VacateReason job attribute).
+  :jira:`3295`
+
 - Removed option to have the *condor_schedd* send claim lease keep-alives.
   Now, the *condor_startd* always sends the keep-alives, which was the
   default.

@@ -819,7 +819,13 @@ JICShadow::transferOutputMopUp(void)
 
 		// We hit some "transient" error, but we've retried too many times,
 		// so tell the shadow we are giving up.
-		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
+		// If necessary, alter the subcode so that we're not indicating
+		// that the job should be held.
+		int subcode = m_ft_info.hold_subcode;
+		if (shouldHoldJobBasedOnCodes(m_ft_info.hold_code, m_ft_info.hold_subcode)) {
+			subcode = -1000;
+		}
+		notifyStarterError(m_ft_info.error_desc.c_str(), true, m_ft_info.hold_code, subcode);
 		return false;
 	} else if( ! m_ft_rval ) {
 	    //
@@ -1250,9 +1256,11 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// else to go if this is a recurring problem.
 	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
 		struct stat si = {};
-		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT) {
+		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT &&
+		    shouldHoldJobBasedOnCodes(hold_reason_code, hold_reason_subcode))
+		{
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
-			hold_reason_code = 0;
+			hold_reason_code = CONDOR_HOLD_CODE::ScratchDirError;
 			hold_reason_subcode = 0;
 		}
 	}
@@ -2333,7 +2341,13 @@ bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	// These are updates taken from Chirp
-	ad->Update(m_delayed_updates);
+	if (shadow_version && shadow_version->built_since_version(25, 3, 0)) {
+		dprintf(D_STATUS, "JEF setting ChirpDelayedAttrs\n");
+		ad->Insert(ATTR_CHIRP_DELAYED_ATTRS, new ClassAd(m_delayed_updates));
+	} else {
+		dprintf(D_STATUS, "JEF not setting ChirpDelayedAttrs\n");
+		ad->Update(m_delayed_updates);
+	}
 	m_delayed_updates.Clear();
 
 	// if there is a filetrans object, then let's send the current

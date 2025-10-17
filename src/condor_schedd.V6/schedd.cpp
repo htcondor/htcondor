@@ -4698,6 +4698,39 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			return;
 		}
 
+		// Now that we're about to interrupt the execution of the job,
+		// set appropriate vacate reason attributes in the job ad if they're
+		// not there already.
+		std::string vacate_reason;
+		int vacate_code = 0;
+		int vacate_subcode = 0;
+		if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, vacate_reason) < 0) {
+			switch(action) {
+			case JA_HOLD_JOBS:
+				GetAttributeString(job_id.cluster, job_id.proc, ATTR_HOLD_REASON, vacate_reason);
+				GetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_CODE, &vacate_code);
+				GetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, &vacate_subcode);
+				break;
+			case JA_REMOVE_JOBS:
+				GetAttributeString(job_id.cluster, job_id.proc, ATTR_REMOVE_REASON, vacate_reason);
+				vacate_code = CONDOR_HOLD_CODE::JobRemoved;
+				break;
+			case JA_VACATE_JOBS:
+			case JA_VACATE_FAST_JOBS:
+				vacate_reason = "Job vacated by schedd";
+				vacate_code = CONDOR_HOLD_CODE::ScheddVacate;
+				break;
+			default:
+				// Nothing
+				break;
+			}
+			if (!vacate_reason.empty()) {
+				SetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, vacate_reason.c_str());
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, vacate_code);
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, vacate_subcode);
+			}
+		}
+
 		if( job_universe == CONDOR_UNIVERSE_LOCAL ) {
 				/*
 				  eventually, we'll want the cases for the other
