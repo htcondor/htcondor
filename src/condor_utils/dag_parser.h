@@ -267,7 +267,7 @@ public:
 
 	protected:
 		DagParser& parser;
-		int64_t iNext;
+		int64_t iNext{0};
 		bool eof{false};
 	};
 
