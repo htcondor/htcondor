@@ -191,6 +191,7 @@ bool initExecutePartitionTable (
 				auto partition_id = exec_dir_to_partition_id[execute_dir].c_str();
 				m_attr->add_disk_volume(partition_id, free_disk, total_disk, total_disk - free_disk);
 			}
+			num++;
 		}
 	}
 
