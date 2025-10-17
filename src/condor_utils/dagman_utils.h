@@ -34,8 +34,15 @@
 #define dagman_exe "condor_dagman.exe"
 #define valgrind_exe "valgrind.exe"
 #else
+
 #define dagman_exe "condor_dagman"
+
+#ifdef LINUX
 #define valgrind_exe "valgrind"
+#else
+#define valgrind_exe "leaks"
+#endif
+
 #endif
 
 const int UTIL_MAX_LINE_LENGTH = 1024;

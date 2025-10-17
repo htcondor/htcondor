@@ -119,3 +119,53 @@ const char* DAG::GET_SCRIPT_DEBUG_CAPTURE_TYPE(const ScriptOutput type) {
 	auto it = std::ranges::find_if(SCRIPT_DEBUG_MAP, [&type](const auto& pair) { return pair.second == type; });
 	return (it == SCRIPT_DEBUG_MAP.end()) ? "NONE" : it->first.c_str();
 }
+
+std::map<std::string, int> DAG::STRING_SPACE::__string_space_map{};
+
+std::string_view DAG::STRING_SPACE::DEDUP(const std::string_view& str) {
+	return DAG::STRING_SPACE::__DEDUP(str, false);
+}
+
+std::string_view DAG::STRING_SPACE::DEDUP(const std::string& str) {
+	return DAG::STRING_SPACE::__DEDUP(str, false);
+}
+
+std::string_view DAG::STRING_SPACE::DEDUP(const char* str) {
+	std::string_view v(str);
+	return DAG::STRING_SPACE::__DEDUP(v, false);
+}
+
+std::string_view DAG::STRING_SPACE::__DEDUP(const std::string_view& str, bool internal) {
+	if ( ! str.data()) { return {}; }
+
+	auto it = __string_space_map.find(str.data());
+	if (it != __string_space_map.end()) {
+		if ( ! internal) {
+			if (it->second < 0) { it->second = 0; }
+			it->second++;
+		}
+	} else {
+		int ref_count = internal ? -1 : 1;
+		__string_space_map.insert({str.data(), ref_count});
+		it = __string_space_map.find(str.data());
+	}
+
+	return std::string_view(it->first);
+}
+
+void DAG::STRING_SPACE::FREE(const std::string_view& str) {
+	if (str.empty()) { return; }
+
+	auto it = __string_space_map.find(str.data());
+	if (it != __string_space_map.end()) {
+		if (it->second > 0) { it->second--; }
+		if (it->second == 0) { __string_space_map.erase(it); }
+	}
+}
+
+void DAG::STRING_SPACE::GARBAGE_COLLECT() {
+	std::erase_if(__string_space_map, [](const auto& pair) {
+		return pair.second <= 0;
+	});
+}
+
