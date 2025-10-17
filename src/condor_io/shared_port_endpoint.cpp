@@ -1158,7 +1158,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 
 	if( recvmsg(named_sock->get_file_desc(),&msg,0) != 1 ) {
 		dprintf(D_ALWAYS,
-				"SharedPortEndpoint: failed to receive message containing forwarded socket: errno=%d: %s",
+				"SharedPortEndpoint: failed to receive message containing forwarded socket: errno=%d: %s\n",
 				errno,strerror(errno));
 		free(buf);
 		return;

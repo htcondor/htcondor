@@ -14,9 +14,33 @@
 
 *** 24.0.14 bugs
 
+- Startd now correctly removes docker containers that have escaped from
+  docker universe jobs launched by starter that have exited uncleanly.
+  :jira:`3338`
+
 - Add a timeout for all HTTP operations in the grid universe (affects
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
+
+- Executions points using disk enforcement failed when provided backing
+  :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
+  hyphens.
+  :jira:`3334`
+
+- Annexes no longer download a default configuration tarball, making them
+  more robust.  This required upgrading the default version of HTCondor run
+  by annexes to 25.1.0, which can figure the details out on its own.  On
+  Delta, annexes now give Delta additional time to start file-transfer plug-ins,
+  so they should be more-reliably available there.
+  :jira:`3220`
+
+- :tool:`condor_adstash` no longer skips entire history files when it
+  encounters a line that cannot be decoded to UTF-8.
+  :jira:`3335`
+
+- Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
+  daemon can't be contacted will no longer cause a segfault.
+  :jira:`3314`
 
 *** 24.12.13 bugs
 
@@ -24,11 +48,13 @@
   flash while running :tool:`condor_watch_q`
   :jira:`3244`
 
-*** 24.0.13 bugs
+*** 24.0.13 features
 
-- Fixed false positive reporting of ClassAd unit specifier test in
-  :tool:`condor_upgrade_check`.
-  :jira:`3276`
+- HTCondor tarballs now contain `Pelican 7.20.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.20.2.
+
+*** 24.0.13 bugs
 
 - Fixed a bug where space and comma would be included in the list of
   separators for itemdata even if the itemdata had been supplied with
@@ -38,6 +64,10 @@
   of your entries has spaces and/or commas by moving that entry to the end
   of the line (or dictionary, if you're submitting itemdata via Python).
   :jira:`3272`
+
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
 
 *** 24.12.4 features
 

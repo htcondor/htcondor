@@ -4507,7 +4507,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     container.
 
 :macro-def:`DOCKER_PERFORM_TEST[STARTD]`
-    When the *condor_startd* starts up, it runs a simple Docker
+    When the *condor_startd* starts up, and on every
+    :tool:`condor_reconfig`, it runs a simple Docker
     container to verify that Docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
@@ -4561,6 +4562,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     in the docker image, and allows images of any architecture to attempt to 
     run on the EP.  When true, if the Architecture in the image is defined
     and does not match the EP, the job is put on hold.
+
+:macro-def:`DOCKER_TRUST_LOCAL_IMAGES[STARTD]`
+    Defaults to false.  When true, docker universe jobs can use docker images
+    that have been prestaged into the local docker image cache, even if
+    that image cannot be pulled from a repository, or if it doesn't exist
+    in any repository.
 
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
@@ -5112,16 +5119,6 @@ These macros control the *condor_schedd*.
     and the *condor_schedd* no longer pays for the resource (in terms of
     user priority in the system). The macro is defined in terms of seconds
     and defaults to 300, which is 5 minutes.
-
-:macro-def:`STARTD_SENDS_ALIVES[SCHEDD]`
-    Note: This setting is deprecated, and may go away in a future
-    version of HTCondor. This setting is mainly useful when running
-    mixing very old *condor_schedd* daemons with newer pools. A boolean
-    value that defaults to ``True``, causing keep alive messages to be
-    sent from the *condor_startd* to the *condor_schedd* by TCP during
-    a claim. When ``False``, the *condor_schedd* daemon sends keep
-    alive signals to the *condor_startd*, reversing the direction.
-    This variable is only used by the *condor_schedd* daemon.
 
 :macro-def:`REQUEST_CLAIM_TIMEOUT[SCHEDD]`
     This macro sets the time (in seconds) that the *condor_schedd* will
@@ -6012,6 +6009,13 @@ These macros control the *condor_schedd*.
     directory must already exist and have the same file ownership and
     permissions as the main :macro:`SPOOL` directory. Care must be taken that
     the value won't change during the lifetime of each job.
+
+:macro-def:`UNUSED_CLAIM_TIMEOUT[SCHEDD]`
+    An integer value that is only used by the dedicated scheduler when
+    scheduling parallel universe jobs. It specifies the number of
+    seconds the schedd will keep a claimed slot, even when idle.  Zero
+    seconds means the schedd will keep a claim for an unbounded amount
+    of time.  Default is 300 seconds.
 
 :macro-def:`<OAuth2Service>_CLIENT_ID[SCHEDD]`
     The client ID string for an OAuth2 service named ``<OAuth2Service>``.

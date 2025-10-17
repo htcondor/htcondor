@@ -67,7 +67,10 @@ def sif_file_fixture():
 def condor(test_dir):
     # Bind all the hosts's bin and lib dirs into the container, so can run /bin/cat and similar commands
     # without building a large container with lots of shared libraries
-    with Condor(test_dir / "condor", config={"SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\""}) as condor:
+    with Condor(test_dir / "condor", config={
+        "SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\"",
+        "SINGULARITY": "/usr/bin/singularity"
+        }) as condor:
         yield condor
 
 # Setup a personal condor with SINGULARITY_TARGET_DIR set
@@ -75,6 +78,7 @@ def condor(test_dir):
 def condor_with_td(test_dir):
     with Condor(test_dir / "condor_td", config={
         "SINGULARITY_BIND_EXPR": "\"/bin:/bin /usr:/usr /lib:/lib /lib64:/lib64\"",
+        "SINGULARITY":           "/usr/bin/singularity",
         "SINGULARITY_TARGET_DIR": "/td"}) as condor_with_td:
         yield condor_with_td
 

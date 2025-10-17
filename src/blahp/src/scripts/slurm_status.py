@@ -415,15 +415,13 @@ def get_slurm_location(program):
     Locate the copy of the slurm bin the blahp configuration wants to use.
     """
     global _slurm_location_cache
-    if _slurm_location_cache is not None:
-        return os.path.join(_slurm_location_cache, program)
-
-    slurm_bindir = env_expand(config.get('slurm_binpath'))
-    slurm_bin_location = os.path.join(slurm_bindir, program)
-    if not os.path.exists(slurm_bin_location):
-        raise Exception("Could not find %s in slurm_binpath=%s" % (program, slurm_bindir))
-    _slurm_location_cache = slurm_bindir
-    return slurm_bin_location
+    if _slurm_location_cache is None:
+        try:
+            slurm_bindir = env_expand(config.get('slurm_binpath'))
+        except:
+            slurm_bindir = ""
+        _slurm_location_cache = slurm_bindir
+    return os.path.join(_slurm_location_cache, program)
 
 job_id_re = re.compile(r"JobId=([0-9]+) .*")
 exec_host_re = re.compile(r"\s*BatchHost=([\w\-.]+)")
@@ -566,7 +564,7 @@ def main():
         cluster = jobid_list[1]
 
     global config
-    config = blah.BlahConfigParser(defaults={'slurm_binpath': '/usr/bin'})
+    config = blah.BlahConfigParser()
 
     log("Checking cache for jobid %s" % jobid)
     if cluster != "":
