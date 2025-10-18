@@ -60,6 +60,13 @@
 
 *** 25.0.3 bugs
 
+- Changed the documentation for :meth:`classad2.ClassAd.matches` and
+  :class:`classad2.ClassAd` to match their implementations; the original
+  documentation was in error, and both are actually backwards-compatible
+  with the first version of the Python bindings.  Made other minor changes;
+  see the ticket for details.
+  :jira:`3328`
+
 - Calling ``classad2.ExprTree(None)`` no longer results in an invalid
   :class:`classad2.ExprTree`, preventing segfaults when using the object.
   :jira:`3319`

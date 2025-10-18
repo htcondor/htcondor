@@ -61,8 +61,7 @@ with _add_dll_dir():
     from ._common_imports import classad
 
     # Module variables.
-    from ._param import _Param
-    param = _Param()
+    from ._param import _param as param
 
     # Module functions.
     from .htcondor2_impl import _version as version
