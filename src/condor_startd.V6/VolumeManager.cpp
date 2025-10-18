@@ -1085,7 +1085,7 @@ getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, u
 }
 
 bool
-VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
+VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint64_t& non_condor_bytes, CondorError& err)
 {
     if (m_volume_group_name.empty() || (m_use_thin_provision && m_pool_lv_name.empty())) {
         return false;
@@ -1104,42 +1104,42 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
     }
 
     if (report.size() != 1) {
-        std::string debug_name = GetVG();
-        if (thin) { debug_name += "/" + GetPool(); }
+        std::string debug_name = GetBackingDevice();
         err.pushf("VolumeManager", 18, "LVM Report for %s returned %zu items instead of just one",
                   debug_name.c_str(), report.size());
         return false;
     }
 
+    // Set NonCondorUsage to the used bytes (total - free) until we actually count the total non-condor lv's
     LVMReportItem& provision = report[0];
     if (thin) {
-        if ( ! getTotalUsedBytes(provision.size, provision.data, total_bytes, used_bytes, err)) {
+        uint64_t used_bytes = 0;
+        if ( ! getTotalUsedBytes(provision.size, provision.data, detected_bytes, used_bytes, err)) {
             return false;
         }
+        free_bytes = detected_bytes - used_bytes;
     } else {
-        uint64_t vg_bytes_free;
         try {
-            vg_bytes_free = std::stoll(provision.data);
+            free_bytes = std::stoll(provision.data);
         } catch(...) {
             err.pushf("VolumeManager", 18, "Failed to convert VG free space to integer: %s",
                       provision.data.c_str());
             return false;
         }
         try {
-            total_bytes = std::stoll(provision.size);
+            detected_bytes = std::stoll(provision.size);
         } catch(...) {
             err.pushf("VolumeManager", 18, "Failed to convert VG total size to integer: %s",
                       provision.size.c_str());
             return false;
         }
-        used_bytes = total_bytes - vg_bytes_free;
     }
 
     // NOTE: We are querying for associated non-condor LVs rather than
     //       using the used_bytes so that leaked condor LVs don't take
     //       away from the available bytes.
 
-    SetTotalDisk(total_bytes);
+    SetTotalDisk(detected_bytes);
 
     report.clear();
     err.clear();
@@ -1156,13 +1156,15 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
         for (const auto& lv : report) {
             try {
                 uint64_t used = std::stoll(lv.size);
-                total_bytes = (total_bytes < used) ? 0 : (total_bytes - used);
                 AddNonCondorUsage(used);
             } catch (...) {
                 dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
                         lv.size.c_str(), lv.name.c_str());
             }
         }
+
+        // True calculated NonCondorUsage (if conversions didn't fail)
+        non_condor_bytes = m_non_condor_usage;
     }
 
     return true;
@@ -1260,8 +1262,7 @@ VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* leaked) {
     filter.SkipThinpool();
 
     if ( ! getLVMReport(report, err, filter, m_cmd_timeout)) {
-        std::string debug_name = m_volume_group_name;
-        if (m_use_thin_provision) { debug_name += "/" + m_pool_lv_name; }
+        std::string debug_name = GetBackingDevice();
         dprintf(D_ERROR, "Error: Failed to list logical volumes during cleanup of %s: %s\n",
                          debug_name.c_str(), err.getFullText().c_str());
         return false;
@@ -1360,9 +1361,7 @@ VolumeManager::AdvertiseInfo(ClassAd* ad){
     if ( ! m_loopdev_name.empty()) { ad->Assign(ATTR_LVM_USE_LOOPBACK, true); }
     if (m_use_thin_provision) { ad->Assign(ATTR_LVM_USE_THIN_PROVISION, true); }
 
-    std::string backing_store = m_volume_group_name;
-    if (m_use_thin_provision) { backing_store += "/" + m_pool_lv_name; }
-    ad->Assign(ATTR_LVM_BACKING_STORE, backing_store);
+    ad->Assign(ATTR_LVM_BACKING_STORE, GetBackingDevice());
 }
 
 
@@ -1389,7 +1388,7 @@ bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
     return true;
 }
 
-bool VolumeManager::GetPoolSize(uint64_t& /*used_bytes*/, uint64_t& /*total_bytes*/, CondorError& /*err*/) {
+bool VolumeManager::GetPoolSize(uint64_t& /*detected_bytes*/, uint64_t& /*free_bytes*/, uint64_t& /*non_condor_bytes*/, CondorError& /*err*/) {
     return false;
 }
 

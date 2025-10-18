@@ -426,7 +426,7 @@ ResState::eval_policy(State & _state, Activity & _act, const Resource * rip, std
 			if (rip->is_dynamic_slot() && rip->r_attr->is_broken()) {
 				// we don't want dynamic slots with broken resources
 				// to be deleted when the claim is released instead we just stick around.broken...
-				if (continue_to_advertise_broken_dslots) break;
+				if (continue_to_advertise_broken_dslots || rip->r_do_not_delete) break;
 			}
 		#if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
@@ -480,7 +480,7 @@ ResState::eval_policy(State & _state, Activity & _act, const Resource * rip, std
 			// once a dynamic slot with broken resources transitions to owner state
 			// it should stay there if we want to advertise broken dslots
 		if (rip->r_attr && rip->r_attr->is_broken()) {
-			if (continue_to_advertise_broken_dslots) break;
+			if (continue_to_advertise_broken_dslots || rip->r_do_not_delete) break;
 		}
 
 			// If the dynamic slot is allocated in the owner state
