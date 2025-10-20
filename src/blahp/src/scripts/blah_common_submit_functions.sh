@@ -840,10 +840,17 @@ function bls_set_up_local_and_extra_args ()
       fi
       echo "source $bls_local_submit_attributes_file" >> $bls_opt_tmp_req_file
       chmod +x $bls_opt_tmp_req_file
-      $bls_opt_tmp_req_file >> $bls_tmp_file 2> /dev/null
-  fi
-  if [ -e $bls_opt_tmp_req_file ] ; then
+      if [ -d "$bls_info_dir" ]; then
+	  cp "$bls_opt_tmp_req_file" "$bls_info_dir/attributes.script"
+      fi
+      /bin/bash $bls_opt_tmp_req_file >> $bls_tmp_file
+      retcode=$?
       rm -f $bls_opt_tmp_req_file
+      if [ $retcode -ne 0 ] ; then
+          rm -f $bls_tmp_file
+          echo "ERROR: failed to run script in $bls_opt_tmp_req_file"
+          exit 1
+      fi
   fi
   
   if [ ! -z "$bls_opt_xtra_args" ] ; then
@@ -894,7 +901,5 @@ function bls_wrap_up_submit ()
   bls_fl_clear outputmove
 
   # Clean temporary files
-  cd $bls_opt_temp_dir
-  # DEBUG: cp $bls_tmp_file /tmp
   rm -f $bls_tmp_file
 }
