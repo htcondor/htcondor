@@ -1,5 +1,9 @@
 *** 24.0.14 bugs
 
+- Startd now correctly removes docker containers that have escaped from
+  docker universe jobs launched by starter that have exited uncleanly.
+  :jira:`3338`
+
 - Add a timeout for all HTTP operations in the grid universe (affects
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
@@ -8,12 +12,21 @@
   authentication is not required for queries to the condor_collector.
   :jira:`3301`
 
+- Executions points using disk enforcement failed when provided backing
+  :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
+  hyphens.
+  :jira:`3334`
+
 - Annexes no longer download a default configuration tarball, making them
   more robust.  This required upgrading the default version of HTCondor run
   by annexes to 25.1.0, which can figure the details out on its own.  On
   Delta, annexes now give Delta additional time to start file-transfer plug-ins,
   so they should be more-reliably available there.
   :jira:`3220`
+
+- :tool:`condor_adstash` no longer skips entire history files when it
+  encounters a line that cannot be decoded to UTF-8.
+  :jira:`3335`
 
 *** 24.0.13 bugs
 
