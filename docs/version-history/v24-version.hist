@@ -17,6 +17,11 @@
   "whole node" would have 4 GPUs and only 1 CPU.
   :jira:`3324`
 
+- Fixed a bug where if input file transfer failed, occasionally no
+  descriptive error message about the failure would make it back
+  into the job hold reason.
+  :jira:`3327`
+
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
