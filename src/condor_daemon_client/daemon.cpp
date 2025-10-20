@@ -1841,7 +1841,6 @@ Daemon::readAddressFile( const char* subsys )
 	std::string buf;
 	bool rval = false;
 	bool use_superuser = false;
-	bool file_is_classad = false;
 
 	if ( useSuperPort() )
 	{
