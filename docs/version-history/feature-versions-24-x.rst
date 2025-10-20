@@ -41,6 +41,11 @@ Bugs Fixed:
   to fail immediately on start-up.
   :jira:`3317`
 
+- Fixed a bug where :tool:`condor_history` could take many minutes to read a single line
+  from the history file when the line is many megabytes long. This was causing
+  ingestion of epoch ads into a database to timeout.
+  :jira:`2399`
+
 Version 24.12.13
 ----------------
 
