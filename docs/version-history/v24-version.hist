@@ -24,6 +24,9 @@
   encounters a line that cannot be decoded to UTF-8.
   :jira:`3335`
 
+- Fixed a bug in blahpd when /tmp is mounted with the noexec option.
+  :jira:`3343`
+
 *** 24.0.13 bugs
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
   daemon can't be contacted will no longer cause a segfault.
