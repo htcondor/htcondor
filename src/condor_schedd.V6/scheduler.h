@@ -755,9 +755,9 @@ class Scheduler : public Service
     // from places other than the scheduler object, necessary.
     ClassAd * getScheddAd() { return m_adSchedd; }
 
-private:
-
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
+
+private:
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.

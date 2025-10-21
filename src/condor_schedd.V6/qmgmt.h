@@ -846,7 +846,7 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
   extern std::deque<prio_rec> PrioRec;
 #endif
 
-extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr);
 //extern bool Runnable(PROC_ID*);
 enum class runnable_reason_code : int {
 	IsRunnable=0,

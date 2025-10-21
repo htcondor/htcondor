@@ -850,12 +850,8 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 	if (!pool || !pool[0]) {return true;}
 
 		// Determine whether we should flock this cluster with this pool.
-	if (m_include_default_flock_param) {
-		for (const auto &flock_entry : FlockPools) {
-			if (flock_entry == pool) {
-				return true;
-			}
-		}
+	if (m_include_default_flock_param && FlockPools.contains(pool)) {
+		return true;
 	}
 
 	std::string flock_targets;
@@ -8290,7 +8286,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if (scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
-		FindRunnableJob(job_id, &match_ad, getMatchUser());
+		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool());
 
 		// we may have found a new job. but FindRunnableJob doesn't check to see
 		// if we hit the shadow limit, so we need to do that here.
@@ -9920,16 +9916,10 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 	new_job_id.proc = -1;
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
-		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool);
 	}
 
 	auto job_ad = GetJobAd(new_job_id);
-	if (job_ad && !JobCanFlock(*job_ad, mrec->pool)) {
-		// Oops! can't switch to this job, just give up the claim.
-		// TODO: fix FindRunnableJob for this case
-		new_job_id.proc = -1;
-		job_ad = nullptr;
-	}
 
 	if (new_job_id.proc == -1) {
 		if (mrec->is_ocu) {

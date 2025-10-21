@@ -9587,8 +9587,9 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * Find the job with the highest priority that matches with
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
  * any user; o.w. only get jobs for specified user.
+ * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
@@ -9751,6 +9752,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 			// if we have a match_user, and it doesn't match the job owner
 			// keep looking.
 			if ( ! match_user.empty() && match_user != job->ownerinfo->Name()) {
+				continue;
+			}
+
+			// Check whether the job can flock to the resource's pool
+			if (!scheduler.JobCanFlock(*job, pool)) {
+				// See note below about trusting auto-cluster membership
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
 				continue;
 			}
 
