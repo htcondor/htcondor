@@ -749,9 +749,7 @@ DagParser::ParseEnv(DagLexer& details) {
 	trim(vars);
 	if (vars.empty()) { return "No environment variables provided"; }
 
-	if ( ! set) {
-		vars = join(split(vars), ",");
-	}
+	if ( ! set) { vars = join(split(vars), ","); }
 
 	data.reset(new EnvCommand(vars, set));
 	return "";

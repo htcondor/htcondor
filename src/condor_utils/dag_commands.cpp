@@ -122,20 +122,11 @@ const char* DAG::GET_SCRIPT_DEBUG_CAPTURE_TYPE(const ScriptOutput type) {
 
 std::map<std::string, int> DAG::STRING_SPACE::__string_space_map{};
 
-std::string_view DAG::STRING_SPACE::DEDUP(const std::string_view& str) {
+std::string_view DAG::STRING_SPACE::DEDUP(const std::string_view str) {
 	return DAG::STRING_SPACE::__DEDUP(str, false);
 }
 
-std::string_view DAG::STRING_SPACE::DEDUP(const std::string& str) {
-	return DAG::STRING_SPACE::__DEDUP(str, false);
-}
-
-std::string_view DAG::STRING_SPACE::DEDUP(const char* str) {
-	std::string_view v(str);
-	return DAG::STRING_SPACE::__DEDUP(v, false);
-}
-
-std::string_view DAG::STRING_SPACE::__DEDUP(const std::string_view& str, bool internal) {
+std::string_view DAG::STRING_SPACE::__DEDUP(const std::string_view str, bool internal) {
 	if ( ! str.data()) { return {}; }
 
 	auto it = __string_space_map.find(str.data());
@@ -153,7 +144,7 @@ std::string_view DAG::STRING_SPACE::__DEDUP(const std::string_view& str, bool in
 	return std::string_view(it->first);
 }
 
-void DAG::STRING_SPACE::FREE(const std::string_view& str) {
+void DAG::STRING_SPACE::FREE(const std::string_view str) {
 	if (str.empty()) { return; }
 
 	auto it = __string_space_map.find(str.data());

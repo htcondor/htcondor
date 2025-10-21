@@ -126,13 +126,11 @@ namespace DAG {
 		extern std::map<std::string, int> __string_space_map;
 
 		// Deduplicate string from string space
-		extern std::string_view DEDUP(const std::string_view& str);
-		extern std::string_view DEDUP(const std::string& str);
-		extern std::string_view DEDUP(const char* str);
-		extern std::string_view __DEDUP(const std::string_view& str, bool internal = true);
+		extern std::string_view DEDUP(const std::string_view str);
+		extern std::string_view __DEDUP(const std::string_view str, bool internal = true);
 
 		// Release reference to string in map (remove entry if no more references)
-		extern void FREE(const std::string_view& str);
+		extern void FREE(const std::string_view str);
 
 		// Do general cleanup of string space map (remove non-referenced keys)
 		// Note: This includes parse command references that haven't been handed off
