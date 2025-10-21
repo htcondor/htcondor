@@ -1,4 +1,44 @@
+*** 24.12.14 features
+
+- Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
+  which defaults to false.  Setting this to true allows users to run
+  docker images which have been prestaged in the EPs docker cache even
+  if the image does not exist in a repository, or if the user does not
+  have permission to pull from that repository.
+  :jira:`3315`
+
 *** 24.12.14 bugs
+
+- Changed the documentation for :meth:`classad2.ClassAd.matches` and
+  :class:`classad2.ClassAd` to match their implementations; the original
+  documentation was in error, and both are actually backwards-compatible
+  with the first version of the Python bindings.  Made other minor changes;
+  see the ticket for details.
+  :jira:`3328`
+
+- Calling ``classad2.ExprTree(None)`` no longer results in an invalid
+  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :jira:`3319`
+
+- Fixed a bug where if input file transfer failed, occasionally no
+  descriptive error message about the failure would make it back
+  into the job hold reason.
+  :jira:`3327`
+
+- Fixed a very longstanding bug where extremely fast machines would
+  overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
+  slot attribute.
+  :jira:`3288`
+
+- Fixed a bug where :tool:`condor_history` could take many minutes to read a single line
+  from the history file when the line is many megabytes long. This was causing
+  ingestion of epoch ads into a database to timeout.
+  :jira:`3299`
+
+- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
+  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
+  "whole node" would have 4 GPUs and only 1 CPU.
+  :jira:`3324`
 
 - Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
   truncated to its first character.
@@ -21,6 +61,10 @@
 - Add a timeout for all HTTP operations in the grid universe (affects
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
+
+- Fixed a bug where administrative tools (e.g. condor_drain) can fail if
+  authentication is not required for queries to the condor_collector.
+  :jira:`3301`
 
 - Executions points using disk enforcement failed when provided backing
   :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
