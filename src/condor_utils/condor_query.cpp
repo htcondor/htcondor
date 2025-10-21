@@ -536,21 +536,21 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
-	bool orig_auth = my_collector.getForceAuthentication();
-	my_collector.setForceAuthentication(requireAuth);
+	bool orig_auth = collector.getForceAuthentication();
+	collector.setForceAuthentication(requireAuth);
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
 	if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
 	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
-		my_collector.setForceAuthentication(orig_auth);
+		collector.setForceAuthentication(orig_auth);
 		if (sock) {
 			delete sock;
 		}
 		return Q_COMMUNICATION_ERROR;
 	}
 
-	my_collector.setForceAuthentication(orig_auth);
+	collector.setForceAuthentication(orig_auth);
 
 	// get result
 	sock->decode ();
