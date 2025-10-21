@@ -6856,6 +6856,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			}
 		}
 	} else {
+		// we get here for late-mat when the digest does not have container_image (it's a constant)
+		// but if we are building an input transfer list, we still need to add the full path of
+		// the container to it.
+		std::string container_path;
+		if (clusterAd && clusterAd->LookupString(ATTR_CONTAINER_IMAGE "FullPath", container_path)) {
+			input_files.emplace_back(container_path);
+			// when there is a clusterAd, accumulate_size_kb will be a nullptr
+		}
 		return 0;
 	}
 
@@ -6873,7 +6881,7 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr())  {
+	if (container_image)  {
 		bool userRequestedCommonContainer = param_boolean(
 			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
 			false
@@ -6900,7 +6908,7 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 		if(! userRequestedCommonContainer) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
-				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+				*accumulate_size_kb += calc_image_size_kb(container_image);
 			}
 		} else {
 			// FIXME: This does not check to see if the container image varies
@@ -6928,6 +6936,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
 		}
 		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+
+		// if we are going to change ContainerImage, we need to store the full pathname
+		// for use by late-materialization when late-mat will be building a per-job transfer input list
+		job->Assign(ATTR_CONTAINER_IMAGE "FullPath", container_image.ptr());
 
 		size_t pos = container_tmp.find(':');
 		if (pos == std::string::npos) {
