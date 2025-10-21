@@ -995,7 +995,7 @@ sub createSubmitFilesNew
 		# 15.5 GiB (utilize as much memory was we can without reducing slots)
 		# Needs a minimum of 10 GiB
 		print CMDFILE "request_memory = 15500M\n";
-		print CMDFILE "request_disk = 8G\n";
+		print CMDFILE "request_disk = 16G\n";
 
 		# Select Docker NAT network for more reliable HTCondor startup
 		print CMDFILE "+docker_network_type = nat\n";
@@ -1007,7 +1007,7 @@ sub createSubmitFilesNew
 		# Emulated plaforms need 12G memory for tests
 		# print CMDFILE "nmi-build:ppc64le_AlmaLinux8_request_memory = 12G\n";
 		# print CMDFILE "nmi-build:ppc64le_Ubuntu20_request_memory = 12G\n";
-		print CMDFILE "request_disk = 8G\n";
+		print CMDFILE "request_disk = 16G\n";
 
 		# Select Docker NAT network to avoid port exhaustion when running lots of test runs
 		print CMDFILE "+docker_network_type = nat\n";
