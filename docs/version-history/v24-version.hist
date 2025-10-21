@@ -52,6 +52,11 @@
   returned incorrectly.
   :jira:`3272`
 
+- Fixed a bug where using :subcom:`max_idle`, :subcom:`container_image` 
+  and :subcom:`transfer_input_files` could result in the container only
+  being transfered along with the first job.
+  :jira:`3092`
+
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
