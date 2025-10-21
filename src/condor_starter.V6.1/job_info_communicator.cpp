@@ -806,9 +806,7 @@ JobInfoCommunicator::initJobInfo( void )
 void
 JobInfoCommunicator::checkForStarterDebugging( void )
 {
-	if( ! job_ad ) {
-		EXCEPT( "checkForStarterDebugging() called with no job ad!" );
-	}
+	ASSERT(job_ad);
 
 		// for testing, see if there's an attribute that requests the starter return a broken exit code
 		// which we will honor, only if the knob is in a non-default state and the starter would
@@ -965,9 +963,7 @@ JobInfoCommunicator::startUpdateTimer( void )
 		Register_Timer(interval,
 	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
 		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
-	if( m_periodic_job_update_tid < 0 ) {
-		EXCEPT( "Can't register DC Timer!" );
-	}
+	ASSERT(m_periodic_job_update_tid >= 0);
 }
 
 int

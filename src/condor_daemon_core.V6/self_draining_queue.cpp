@@ -220,11 +220,7 @@ SelfDrainingQueue::registerTimer( void )
 		Register_Timer( period, 
 						(TimerHandlercpp)&SelfDrainingQueue::timerHandler,
 						timer_name, this );
-    if( tid == -1 ) {
-            // Error registering timer!
-        EXCEPT( "Can't register daemonCore timer for SelfDrainingQueue %s",
-				name );
-    }
+	ASSERT(tid >= 0);
 	dprintf( D_FULLDEBUG, "Registered timer for SelfDrainingQueue %s, "
 			 "period: %d (id: %d)\n", name, period, tid );
 }
@@ -245,9 +241,7 @@ SelfDrainingQueue::cancelTimer( void )
 void
 SelfDrainingQueue::resetTimer( void )
 {
-	if( tid == -1 ) {
-		EXCEPT( "Programmer error: resetting a timer that doesn't exist" );
-	}
+	ASSERT(tid >= 0);
 	daemonCore->Reset_Timer( tid, period, 0 );
 	dprintf( D_FULLDEBUG, "Reset timer for SelfDrainingQueue %s, "
 			 "period: %d (id: %d)\n", name, period, tid );

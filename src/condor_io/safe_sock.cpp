@@ -675,9 +675,7 @@ int SafeSock::handle_incoming_packet()
                                              _shortMsg.isDataHashed(),
                                              _shortMsg.md(), 
                                              _shortMsg.isDataEncrypted(), prev);
-            if(!prev->nextMsg) {    
-                EXCEPT("Error:handle_incomming_packet: Out of Memory");
-            }
+            ASSERT(prev->nextMsg);
             //dprintf(D_NETWORK, "new msg created\n");
             //prev->nextMsg->dumpMsg();
         } else { // first message in the bucket
@@ -685,9 +683,7 @@ int SafeSock::handle_incoming_packet()
                                               _shortMsg.isDataHashed(),
                                               _shortMsg.md(), 
                                               _shortMsg.isDataEncrypted(), NULL);
-            if(!_inMsgs[index]) {
-                EXCEPT("Error:handle_incomming_packet: Out of Memory");
-            }
+            ASSERT(_inMsgs[index]);
             //dprintf(D_NETWORK, "new msg created\n");
             //_inMsgs[index]->dumpMsg();
         }
