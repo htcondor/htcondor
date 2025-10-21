@@ -32,19 +32,9 @@ Bugs Fixed:
   when the leading dash was omitted.
   :jira:`3284`
 
-- Fixed a very longstanding bug where extremely fast machines would
-  overflow a 32 bit counter and return -1 for the :ad-attr:Kflops`
-  slot attribute.
-  :jira:`3288`
-
 - Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
   to fail immediately on start-up.
   :jira:`3317`
-
-- Fixed a bug where :tool:`condor_history` could take many minutes to read a single line
-  from the history file when the line is many megabytes long. This was causing
-  ingestion of epoch ads into a database to timeout.
-  :jira:`2399`
 
 Version 24.12.13
 ----------------
