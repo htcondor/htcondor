@@ -52,6 +52,11 @@
   returned incorrectly.
   :jira:`3272`
 
+- Fixed a bug where using :subcom:`max_idle`, :subcom:`container_image` 
+  and :subcom:`transfer_input_files` could result in the container only
+  being transfered along with the first job.
+  :jira:`3092`
+
 *** 24.0.14 bugs
 
 - Startd now correctly removes docker containers that have escaped from
@@ -81,6 +86,9 @@
 - :tool:`condor_adstash` no longer skips entire history files when it
   encounters a line that cannot be decoded to UTF-8.
   :jira:`3335`
+
+- Fixed a bug in blahpd when /tmp is mounted with the noexec option.
+  :jira:`3343`
 
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
   daemon can't be contacted will no longer cause a segfault.
