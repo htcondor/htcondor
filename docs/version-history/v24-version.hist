@@ -62,6 +62,10 @@
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
 
+- Fixed a bug where administrative tools (e.g. condor_drain) can fail if
+  authentication is not required for queries to the condor_collector.
+  :jira:`3301`
+
 - Executions points using disk enforcement failed when provided backing
   :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
   hyphens.
