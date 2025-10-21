@@ -1,3 +1,7 @@
+*** 24.12.15 bugs
+
+*** 24.0.15 bugs
+
 *** 24.12.14 features
 
 - Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
