@@ -95,15 +95,19 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"DOT visual-2.dot UPDATE OVERWRITE\n"
 		"DOT visual-3.dot DONT-UPDATE DONT-OVERWRITE INCLUDE ../path/to/header.dot\n"
 		"NODE_STATUS_FILE foo 82 ALWAYS-UPDATE 1000\n"
-		"ENV SET   foo bar baz \n"
-		"ENV GET  foo=bar;baz=10;      \n"
+		"ENV GET   foo bar baz \n"
+		"ENV SET  foo=bar;baz=10;      \n"
 		"CONNECT S1 S2\n"
 		"PIN_IN A 2\n"
 		"PIN_OUT A 3\n"
 		"DONE A\n"
 		"INCLUDE include.dag\n"
 		"JOBSTATE_LOG some.log\n"
-		"SET_JOB_ATTR foo=bar\n",
+		"SET_JOB_ATTR foo=bar\n"
+		// Check that multiline backslash escapes work
+		"DONE \\\n"
+		"     \\\n"
+		"B\n",
 	},
 	{
 		// Each command in this file is invalid/produces an error
@@ -206,6 +210,7 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"PIN_OUT A\n"
 		"PIN_IN A foo\n"
 		"PIN_OUT A 1 garbage\n"
+		"SAVE_POINT_FILE ALL_NODES\n"
 	},
 	{
 		// DAG with missing final newline
@@ -277,7 +282,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"ABORT_DAG_ON > B 32 8",
 		"ABORT_DAG_ON > C 5 " + int_max_str,
 		"VARS > A PREPEND [a=32] [baz=foo] [foo=Bar] [k=v]",
-		"VARS > B APPEND [a=\"woah =!= UNDEFINED\"] [test='12'34']",
+		"VARS > B APPEND [a=woah =!= UNDEFINED] [test=12'34]",
 		"VARS > C [country=USA]",
 		"PRIORITY > D -82",
 		"PRE_SKIP > E 12",
@@ -294,8 +299,8 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
 		"NODE_STATUS_FILE > foo 1000 T",
-		"ENV > SET foo bar baz",
-		"ENV > GET foo=bar;baz=10;",
+		"ENV > GET foo,bar,baz",
+		"ENV > SET foo=bar;baz=10;",
 		"CONNECT > [S1]--[S2]",
 		"PIN_IN > A 2 IN",
 		"PIN_OUT > A 3 OUT",
@@ -303,6 +308,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"INCLUDE > include.dag",
 		"JOBSTATE_LOG > some.log",
 		"SET_JOB_ATTR > foo=bar",
+		"DONE > B",
 	},
 	{
 		// *All expected command parsing failures (note some internal developer errors not included)
@@ -405,6 +411,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":94 Failed to parse PIN_OUT command: No pin number specified",
 		FAILURE_DAG + ":95 Failed to parse PIN_IN command: Invalid pin number 'foo'",
 		FAILURE_DAG + ":96 Failed to parse PIN_OUT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":97 Failed to parse SAVE_POINT_FILE command: ALL_NODES cannot be used for save point file command",
 	},
 };
 
