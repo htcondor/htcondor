@@ -8186,13 +8186,13 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 		return true;
 	}
 
-	if( scheduler.AlreadyMatched(job, universe) ) {
-		because = "job no longer needs a match";
-		return true;
-	}
 	runnable_reason_code runnable_code;
 	if( ! Runnable(job, runnable_code) ) {
 		because = getRunnableReason(runnable_code);
+		return true;
+	}
+	if (scheduler.FindMrecByJobID(job->jid)) {
+		because = "job no longer needs a match";
 		return true;
 	}
 
@@ -15911,49 +15911,6 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 		}
 	}
 }
-
-int Scheduler::AlreadyMatched(JobQueueJob * job, int universe)
-{
-	bool wantPS = 0;
-	job->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS);
-
-	if ( ! job || ! job->IsJob() ||
-		 (universe == CONDOR_UNIVERSE_MPI) ||
-		 (universe == CONDOR_UNIVERSE_GRID) ||
-		 (universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
-		return FALSE;
-	}
-
-	if( FindMrecByJobID(job->jid) ) {
-			// It is possible for there to be a match rec but no shadow rec,
-			// if the job is waiting in the runnable job queue before the
-			// shadow is launched.
-		return TRUE;
-	}
-	if( FindSrecByProcID(job->jid) ) {
-			// It is possible for there to be a shadow rec but no match rec,
-			// if the match was deleted but the shadow has not yet gone away.
-		return TRUE;
-	}
-	return FALSE;
-
-}
-int Scheduler::AlreadyMatched(PROC_ID* id)
-{
-	int universe = CONDOR_UNIVERSE_MIN;
-	const OwnerInfo * powni = NULL;
-	JobQueueJob * job = GetJobAndInfo(*id, universe, powni);
-
-		// Failing to find the job or get the JOB_UNIVERSE is common 
-		// because the job may have left the queue.
-		// So in this case, just return FALSE, since a job
-		// not in the queue is most certainly not matched :)
-	if ( ! job || ! job->IsJob() || ! universe)
-		return FALSE;
-
-	return AlreadyMatched(job, universe);
-}
-
 
 int
 Scheduler::receive_startd_alive(int cmd, Stream *s) const

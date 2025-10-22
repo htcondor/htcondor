@@ -8869,7 +8869,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		return 0;
 	} else {
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			return 0;
 		}
@@ -9011,7 +9011,7 @@ int update_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * p
 	} else {
 		// assume runnable, but we still need to check to see if we have a match record already
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			++info.num_matched;
 			++info.num_skipped;
@@ -9689,13 +9689,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			// we get to this function, so we will force it to be correct here, but not trust it.
 			//bool matched_flag = p->matched;
 			p->matched = false;
-			if (scheduler.AlreadyMatched(job, job->Universe())) {
-				p->matched = true;
-				runnable_code = runnable_reason_code::AlreadyMatched;
-			}
-			else if ( ! Runnable(job, runnable_code)) {
+			if ( ! Runnable(job, runnable_code)) {
 				// TODO: special case for cooldown here??
 				p->not_runnable = runnable_code != runnable_reason_code::MaxRunningAlready;
+			} else if (scheduler.FindMrecByJobID(job->jid)) {
+				p->matched = true;
+				runnable_code = runnable_reason_code::AlreadyMatched;
 			}
 
 		#if 0 // code for debugging stale matched flag
