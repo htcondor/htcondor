@@ -895,6 +895,8 @@ reinitialize ()
 		slotWeightStr = strdup("Cpus");
 	}
 
+	force_my_slot_weight = param_boolean("FORCE_NEGOTIATOR_SLOT_WEIGHT", false);
+
 
 	// done
 	return TRUE;
@@ -3165,7 +3167,7 @@ obtainAdsFromCollector (
 
 			// If startd didn't set a slot weight expression, add in our own
 			double slot_weight;
-			if (!ad->LookupFloat(ATTR_SLOT_WEIGHT, slot_weight)) {
+			if (force_my_slot_weight || ! ad->LookupFloat(ATTR_SLOT_WEIGHT, slot_weight)) {
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
 			}
 

@@ -535,6 +535,8 @@ class Matchmaker : public Service
         bool accept_surplus;
         bool autoregroup;
 
+		bool force_my_slot_weight{false};
+
         // true if resource ads with consumption policies are present
         // for the current negotiation cycle
         bool cp_resources;
