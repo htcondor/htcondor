@@ -9919,8 +9919,6 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool);
 	}
 
-	auto job_ad = GetJobAd(new_job_id);
-
 	if (new_job_id.proc == -1) {
 		if (mrec->is_ocu) {
 			// If this is an OCU holder, we don't want to run a job, but
