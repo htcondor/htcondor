@@ -22,7 +22,6 @@ New Features:
 Bugs Fixed:
 
 .. include-history:: bugs 24.12.14 24.0.14
-
 - Fixed bug where when :macro:`SINGULARITY_TARGET_DIR` was set and
   :macro:`STARTER_NESTED_SCRATCH` was also set, then some environment
   variables that pointed into the job's execute directory were not correct.
