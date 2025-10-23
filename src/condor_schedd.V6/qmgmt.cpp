@@ -258,7 +258,6 @@ Timeslice   PrioRecArrayTimeslice;
  std::deque<prio_rec> PrioRec;
 #endif
 time_t      PrioRecMinCoolDownTime = 0;
-std::map<int,int> PrioRecAutoClusterRejected;
 int BuildPrioRecArrayTid = -1;
 int DirtyPrioRecTid = -1;
 
@@ -8870,7 +8869,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		return 0;
 	} else {
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			return 0;
 		}
@@ -9012,7 +9011,7 @@ int update_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * p
 	} else {
 		// assume runnable, but we still need to check to see if we have a match record already
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			++info.num_matched;
 			++info.num_skipped;
@@ -9501,9 +9500,6 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
-		// caller expects PrioRecAutoClusterRejected to be cleared
-	PrioRecAutoClusterRejected.clear();
-
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list because nothing has "
@@ -9587,8 +9583,9 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * Find the job with the highest priority that matches with
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
  * any user; o.w. only get jobs for specified user.
+ * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
@@ -9656,7 +9653,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 	// Iterate through the most recently constructed list of
 	// jobs, nicely pre-sorted first by submitter, then by job priority
 
-	bool rebuilt_prio_rec_array = BuildPrioRecArray(); // this clears PrioRecAutoClusterRejected 
+	std::set<int> PrioRecAutoClusterRejected;
+	bool rebuilt_prio_rec_array = BuildPrioRecArray();
 
 	do {
 		auto first = PrioRec.begin();
@@ -9691,13 +9689,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 			// we get to this function, so we will force it to be correct here, but not trust it.
 			//bool matched_flag = p->matched;
 			p->matched = false;
-			if (scheduler.AlreadyMatched(job, job->Universe())) {
-				p->matched = true;
-				runnable_code = runnable_reason_code::AlreadyMatched;
-			}
-			else if ( ! Runnable(job, runnable_code)) {
+			if ( ! Runnable(job, runnable_code)) {
 				// TODO: special case for cooldown here??
 				p->not_runnable = runnable_code != runnable_reason_code::MaxRunningAlready;
+			} else if (scheduler.FindMrecByJobID(job->jid)) {
+				p->matched = true;
+				runnable_code = runnable_reason_code::AlreadyMatched;
 			}
 
 		#if 0 // code for debugging stale matched flag
@@ -9754,6 +9751,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 				continue;
 			}
 
+			// Check whether the job can flock to the resource's pool
+			if (!scheduler.JobCanFlock(*job, pool)) {
+				// See note below about trusting auto-cluster membership
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
+				continue;
+			}
+
 				// Now check if the job and the claimed resource match.
 				// NOTE : we must do this AFTER we ensure the job is still runnable, which
 				// is why we invoke Runnable() above first.
@@ -9763,7 +9767,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 					// THIS IS A DANGEROUS ASSUMPTION - what if this job is no longer
 					// part of this autocluster?  TODO perhaps we should verify this
 					// job is still part of this autocluster here.
-				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					// Move along to the next job in the prio rec array
 				continue;
 			}
@@ -9825,7 +9829,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 					dprintf(D_FULLDEBUG,
 							"ConcurrencyLimits do not match ('%s' in job vs '%s' in startd), autocluster %d "
 							"cannot reuse claim\n",jobLimits.c_str(),recordedLimits.c_str(), p->auto_cluster_id);
-					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
+					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					continue;
 				}
 			}
@@ -9860,6 +9864,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 			// Try to force a rebuild of the job list, since we
 			// are about to throw away a match.
 		rebuilt_prio_rec_array = BuildPrioRecArray(true /*no match found*/);
+		PrioRecAutoClusterRejected.clear();
 
 	} while( rebuilt_prio_rec_array );
 

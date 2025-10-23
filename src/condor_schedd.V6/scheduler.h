@@ -543,8 +543,6 @@ class Scheduler : public Service
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
-	int				AlreadyMatched(PROC_ID*);
-	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
@@ -755,9 +753,9 @@ class Scheduler : public Service
     // from places other than the scheduler object, necessary.
     ClassAd * getScheddAd() { return m_adSchedd; }
 
-private:
-
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
+
+private:
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
