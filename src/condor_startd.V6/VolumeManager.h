@@ -34,7 +34,7 @@ public:
     // See RemoveLV() for exit codes | is_encrypted: -1=Unknown, 0=false, 1=true
     int  CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted=-1);
     bool CleanupLVs(std::vector<LeakedLVInfo>* leaked = nullptr);
-    bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
+    bool GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint64_t& non_condor_bytes, CondorError& err);
     static bool DetectLVM() {
         return param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) && is_enabled();
     }
@@ -64,6 +64,16 @@ public:
     // Return the number of system devices currently existing for LV
     int CountLVDevices(const std::string& lv);
 
+    // Add disk info to ClassAd
+    void PublishDiskInfo(ClassAd& ad) {
+        if (m_queried_available_disk) {
+            ad.Assign(ATTR_LVM_DETECTED_DISK, (long long)m_total_disk);
+            if (m_total_disk > 0) {
+                ad.Assign(ATTR_LVM_NON_CONDOR_USAGE, (long long)m_non_condor_usage);
+            }
+        }
+    }
+
 #ifdef LINUX
     static bool is_enabled() { return true; }
     bool IsSetup();
@@ -74,6 +84,17 @@ public:
     inline std::string GetLoopFile() const { return m_loopback_filename; }
     inline int GetTimeout() const { return m_cmd_timeout; }
     inline bool IsThin() const { return m_use_thin_provision; }
+    inline void AddNonCondorUsage(uint64_t used) { m_non_condor_usage += used; }
+    inline void SetTotalDisk(uint64_t total) {
+        m_total_disk = total;
+        m_queried_available_disk = true;
+    }
+
+    inline std::string GetBackingDevice() const {
+        std::string dev = m_volume_group_name;
+        if (m_use_thin_provision) { dev += "/" + m_pool_lv_name; }
+        return dev;
+    }
 
     class Handle {
     public:
@@ -113,7 +134,7 @@ private:
     static bool CreateLV(const VolumeManager::Handle &handle, uint64_t size_kb, CondorError &err);
     static bool CreateVG(const std::string &vg_name, const std::string &device, CondorError &err, int timeout);
     static bool CreatePV(const std::string &device, CondorError &err, int timeout);
-    static bool CreateFilesystem(const std::string &label, const std::string &device_path, CondorError &err, int timeout);
+    static bool CreateFilesystem(const std::string &device_path, CondorError &err, int timeout);
     static bool EncryptLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static void RemoveLostAndFound(const std::string& mountpoint);
     static bool RemoveLVEncryption(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
@@ -124,8 +145,6 @@ private:
     static bool RemoveVG(const std::string &vg_name, CondorError &err, int timeout);
     static bool RemovePV(const std::string &pv_name, CondorError &err, int timeout);
     static bool RemoveLoopDev(const std::string &loopdev_name, const std::string &backing_file, CondorError &err, int timeout);
-    static bool GetPoolSize(const VolumeManager &info, uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
-
 
     bool m_use_thin_provision{true};
     std::string m_pool_lv_name;
@@ -136,7 +155,11 @@ private:
 #else
     static bool is_enabled() { return false; }
     bool IsSetup() { return false; };
+    inline std::string GetBackingDevice() const { return "<none>"; }
 #endif // LINUX
+    uint64_t m_total_disk{0};
+    uint64_t m_non_condor_usage{0};
+    bool m_queried_available_disk{false};
 };
 
 

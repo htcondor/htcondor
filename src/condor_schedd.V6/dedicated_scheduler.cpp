@@ -650,7 +650,8 @@ DedicatedScheddNegotiate::scheduler_skipJob(JobQueueJob *jobad, ClassAd * /*matc
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+	char const *slot_name, _match_source)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
@@ -770,17 +771,12 @@ DedicatedScheduler::negotiate( int command, Sock* sock, char const* remote_pool 
 		// Now, we've just got to handle the per-job negotiation
 		// protocol itself.
 
+	// create a ResourceRequestList with one entry for each job
+	// using a fake autocluster id for each entry. 
 	auto *requests = new ResourceRequestList;
 	int next_cluster = 0;
-	std::list<PROC_ID>::iterator id;
-
-	for( id = resource_requests.begin();
-		 id != resource_requests.end();
-		 id++ )
-	{
-		auto *cluster = new ResourceRequestCluster( ++next_cluster );
-		requests->push_back( cluster );
-		cluster->addJob( *(id) );
+	for (auto & jid : resource_requests) {
+		requests->add(++next_cluster, jid);
 	}
 
 	classy_counted_ptr<DedicatedScheddNegotiate> neg_handler =
@@ -922,30 +918,21 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 
 void
-DedicatedScheduler::sendAlives( )
+DedicatedScheduler::checkClaimLeases( )
 {
 	match_rec	*mrec = nullptr;
-	int		  	numsent=0;
 	time_t now = time(nullptr);
-	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
 	all_matches->startIterations();
 	while( all_matches->iterate(mrec) == 1 ) {
-		if( mrec->m_startd_sends_alives == false &&
-			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
-			if( sendAlive( mrec ) ) {
-				numsent++;
-			}
-		}
 
-		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
+		if (mrec->status == M_ACTIVE) {
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			time_t renew_time = 0;
-			if ( starter_handles_alives && 
-				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			if ( mrec->shadowRec && mrec->shadowRec->pid > 0 )
 			{
 				// If we're trusting the existance of the shadow to 
 				// keep the claim alive (because of kernel sockopt keepalives),
@@ -959,11 +946,6 @@ DedicatedScheduler::sendAlives( )
 	}
 
 	CommitTransactionOrDieTrying();
-
-	if( numsent ) {
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d dedicated startds)\n", numsent );
-	}
 }
 
 int
@@ -1799,10 +1781,12 @@ DedicatedScheduler::sortResources( )
 	// scheduler, do so here
 
 	if (param_boolean("DEDICATED_SCHEDULER_USE_SERIAL_CLAIMS", false)) {
+		// unlinkMrec() will erase the matches entry, so be careful here...
 		match_rec *mr = nullptr;
-		std::string id;
-		scheduler.matches->startIterations();
-		while (scheduler.matches->iterate(id, mr) == 1) {
+		auto it = scheduler.matches.begin();
+		while (it != scheduler.matches.end()) {
+			mr = it->second;
+			it++;
 			if (mr->status == M_CLAIMED) {
 				// this match rec is claimed/idle, steal it for the ded sched
 				mr->needs_release_claim = false;
@@ -3260,7 +3244,7 @@ DedicatedScheduler::AddMrec(
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
 		// owner() here...
-	auto *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
+	auto *mrec = new match_rec( claim_id, startd_addr, empty_job_id,
 									 match_ad,owner(),remote_pool,true);
 
 	// Next, insert this match_rec into our hashtables
@@ -3871,43 +3855,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	return false;
 }
 
-void
-DedicatedScheduler::holdAllDedicatedJobs( ) 
-{
-	static bool should_notify_admin = true;
-	int i = 0, last_cluster = 0, cluster = 0;
-
-	if( ! idle_clusters ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}
-
-	last_cluster = idle_clusters->size();
-	if( ! last_cluster ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}		
-
-	for( i=0; i<last_cluster; i++ ) {
-		cluster = (*idle_clusters)[i];
-		holdJob( cluster, 0, 
-		         "No condor_shadow installed that supports parallel jobs",
-		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
-		         false, should_notify_admin );
-		if( should_notify_admin ) {
-				// only send email to the admin once per lifetime of
-				// the schedd, so we don't swamp them w/ email...
-			should_notify_admin = false;
-		}
-	}
-}
-
 /*
  * If we restart the schedd, and there are running jobs in the queue,
  * this method gets called once for each proc of each running job.
@@ -4142,7 +4089,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, cid.publicClaimId());
 
 			auto *mrec = 
-				new match_rec(claim, sinful, &id,
+				new match_rec(claim, sinful, id,
 						  machineAd, owner(), nullptr, true);
 
 			mrec->setStatus(M_CLAIMED);

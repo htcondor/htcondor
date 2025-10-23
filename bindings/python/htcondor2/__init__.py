@@ -61,20 +61,25 @@ with _add_dll_dir():
     from ._common_imports import classad
 
     # Module variables.
-    from ._param import _Param
-    param = _Param()
+    from ._param import _param as param
 
     # Module functions.
     from .htcondor2_impl import _version as version
     from .htcondor2_impl import _platform as platform
     from .htcondor2_impl import _set_subsystem as set_subsystem
     from .htcondor2_impl import _reload_config as reload_config
+    from .htcondor2_impl import _reload_config_usermaps as reload_config_usermaps
+    from .htcondor2_impl import _load_a_config_usermap_file as load_a_config_usermap_file
+
+    from ._security_context import SecurityContext
 
     from ._loose_functions import send_command
+    from ._loose_functions import ping
     from ._loose_functions import send_alive
     from ._loose_functions import set_ready_state
 
     from .htcondor2_impl import _enable_debug as enable_debug
+    from .htcondor2_impl import _disable_debug as disable_debug
     from .htcondor2_impl import _enable_log as enable_log
     from ._logging import _log as log
 
@@ -94,6 +99,7 @@ with _add_dll_dir():
     from ._daemon_command import DaemonCommand
     from ._submit_method import SubmitMethod
     from ._history_src import HistorySrc
+    from ._common_files_event_type import CommonFilesEventType
 
     # Classes.
     from ._collector import Collector

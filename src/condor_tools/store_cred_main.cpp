@@ -32,6 +32,7 @@
 #include "secure_file.h"
 #include "match_prefix.h"
 #include "iso_dates.h"
+#include "condor_attributes.h"
 
 #if defined(WIN32)
 #include "lsa_mgr.h"  // for CONFIG_MODE
@@ -61,6 +62,7 @@ struct StoreCredOptions {
 	const char *audience; // audience from the -A argument
 	const char *credential_file;
 	const char *pool_password_file;
+	bool plain;
 	bool help;
 };
 
@@ -190,6 +192,9 @@ int main(int argc, const char *argv[]) {
 	}
 	if (options.audience) {
 		cred_info.Assign("audience", options.audience);
+	}
+	if (cred_type == STORE_CRED_USER_OAUTH) {
+		cred_info.Assign(ATTR_NEED_REFRESH, !options.plain);
 	}
 
 	// determine where to direct our command
@@ -391,6 +396,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 	opts->handle = NULL;
 	opts->scopes = NULL;
 	opts->audience = NULL;
+	opts->plain = false;
 	opts->help = false;
 	SecureZeroMemory(opts->username, sizeof(opts->username));
 
@@ -675,6 +681,9 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 						dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 					}
 					break;
+				case 'P':
+					opts->plain = true;
+					break;
 				case 'h':
 					opts->help = true;
 					break;
@@ -764,6 +773,7 @@ usage()
 	fprintf( stderr, "    -S <scopes>       Add the given OAuth2 comma-separated scopes, or make sure\n" );
 	fprintf( stderr, "                         a Query matches\n" );
 	fprintf( stderr, "    -A <audience>     Add the given OAuth2 audience, or make sure a Query matches\n" );
+	fprintf( stderr, "    -P                The given OAuth2 credential is an access token\n" );
 	fprintf( stderr, "    -n <name>         Manage credentials on the named machine\n" );
 #if !defined(WIN32)
 	fprintf( stderr, "    -f <filename>     Write password to a pool password file\n" );

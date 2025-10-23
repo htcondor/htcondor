@@ -1159,6 +1159,12 @@ FileTransfer::DownloadFiles(bool blocking)
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles(%s)\n", blocking?"blocking":"");
 
+	// Set this now to let the caller distinguish between a transfer that
+	// failed to launch and a blocking transfer that launched and
+	// completed in failure. In the latter case, xfer_status will be set
+	// to XFER_STATUS_DONE before we return.
+	Info.xfer_status = XFER_STATUS_UNKNOWN;
+
 	if (ActiveTransferTid >= 0) {
 		EXCEPT("FileTransfer::DownloadFiles called during active transfer!");
 	}
@@ -1504,6 +1510,12 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	ReliSock *sock_to_use;
 	FileTransferInfo & Info = r_Info;
 
+	// Set this now to let the caller distinguish between a transfer that
+	// failed to launch and a blocking transfer that launched and
+	// completed in failure. In the latter case, xfer_status will be set
+	// to XFER_STATUS_DONE before we return.
+	Info.xfer_status = XFER_STATUS_UNKNOWN;
+
 	dprintf(D_FULLDEBUG,
 		"entering FileTransfer::UploadFiles (%sfinal_transfer=%d)\n",
 		blocking?"blocking, ":"",
@@ -1729,6 +1741,7 @@ FileTransfer::Reap(int exit_status)
 
 	Info.duration = time(nullptr) - TransferStart;
 	Info.in_progress = false;
+	bool set_success_to_failed = false;
 	if( WIFSIGNALED(exit_status) ) {
 		Info.success = false;
 		Info.try_again = true;
@@ -1745,7 +1758,14 @@ FileTransfer::Reap(int exit_status)
 		} else {
 			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
 					 WEXITSTATUS(exit_status) );
-			Info.success = false;
+			// We can't set Info.success to false here, because 
+			// we drain the pipe below, and there might be an info
+			// message before the final update with the error.
+			// ReadTransferPipeMsg() can call a callback to the
+			// caller, which should not see the success status 
+			// as failed until we have the full error message
+			// which comes from the final message on the pipe.
+			set_success_to_failed = true;
 		}
 	}
 
@@ -1769,9 +1789,15 @@ FileTransfer::Reap(int exit_status)
 		// followed by the final update message. Keep reading until we
 		// get the final message or encounter an error reading from the pipe
 		do {
-			if ( ! ReadTransferPipeMsg())
+			if ( ! ReadTransferPipeMsg()) {
 				break;
+			}
 		} while (Info.xfer_status != XFER_STATUS_DONE);
+	}
+	if (set_success_to_failed) {
+		// Now we can set success to false, so the final callback
+		// below can interpret everything correctly. 
+		Info.success = false;
 	}
 
 	if( registered_xfer_pipe ) {
@@ -1837,6 +1863,11 @@ FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
 		int nread = daemonCore->Read_Pipe(TransferPipe[0],
 		                                  tmp_buf,
 		                                  nleft);
+
+		if (nread < 0) {
+			delete [] tmp_buf;
+			return false;
+		}
 
 		buf.insert(buf.size(), tmp_buf, nread);
 		nleft -= nread;
@@ -2061,30 +2092,33 @@ FileTransfer::UpdateXferStatus(FileTransferStatus status)
 	// No transfer pipe, I am either forked child or pretending to be (windows)
 	// I must not touch r_Info, but use the internal i_Info instead
 
-	if( i_Info.xfer_status != status ) {
-		bool write_failed = false;
-		if( TransferPipe[1] != -1 ) {
-			int n;
-			char cmd = IN_PROGRESS_UPDATE_XFER_PIPE_CMD;
+	// We could filter based on `status` not being different than
+	// `i_Info.xfer_status`, but then we'd have to add an unfiltered
+	// pipe command for the "keepalives" we send while waiting for a plug-in.
 
+	bool write_failed = false;
+	if( TransferPipe[1] != -1 ) {
+		int n;
+		char cmd = IN_PROGRESS_UPDATE_XFER_PIPE_CMD;
+
+		n = daemonCore->Write_Pipe( TransferPipe[1],
+									&cmd,
+									sizeof(cmd) );
+		if(n != sizeof(cmd)) write_failed = true;
+
+		if(!write_failed) {
+			int i = status;
 			n = daemonCore->Write_Pipe( TransferPipe[1],
-										&cmd,
-										sizeof(cmd) );
-			if(n != sizeof(cmd)) write_failed = true;
-
-			if(!write_failed) {
-				int i = status;
-				n = daemonCore->Write_Pipe( TransferPipe[1],
-											(char *)&i,
-											sizeof(int) );
-				if(n != sizeof(int)) write_failed = true;
-			}
-		}
-
-		if( !write_failed ) {
-			i_Info.xfer_status = status;
+										(char *)&i,
+										sizeof(int) );
+			if(n != sizeof(int)) write_failed = true;
 		}
 	}
+
+	if( !write_failed ) {
+		i_Info.xfer_status = status;
+	}
+
 }
 
 int
@@ -6194,6 +6228,15 @@ FileTransfer::Continue() const
 
 
 void
+FileTransfer::addInputFile( const char* filename )
+{
+	if( !file_contains(InputFiles, filename) ) {
+		InputFiles.emplace_back(filename);
+	}
+}
+
+
+void
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( !file_contains(OutputFiles, filename) ) {
@@ -6579,7 +6622,14 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	}
 
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	p_timer.wait_and_close(timeout);
+	p_timer.wait_for_output(
+		timeout,
+		[](void) -> void {
+			dprintf( D_TEST, "wait_for_output() callback (single)\n" );
+			return;
+		}
+	);
+	p_timer.close_program(1);
 	int rc = p_timer.exit_status();
 
 	bool exit_by_signal;
@@ -6945,7 +6995,18 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	p_timer.wait_and_close(timeout);
+	p_timer.wait_for_output(
+		timeout,
+		[this](void) -> void {
+			dprintf( D_TEST, "wait_for_output() callback (multi)\n" );
+
+			// This doesn't look like it calls the client callback if
+			// we're not the forked child, which seems wrongly inconsistent.
+			this->UpdateXferStatus( XFER_STATUS_ACTIVE );
+			return;
+		}
+	);
+	p_timer.close_program(1);
 	int rc = p_timer.exit_status();
 	time_t plugin_finished = time(nullptr);
 	pi.duration_in_seconds = plugin_finished - plugin_started;
@@ -7491,7 +7552,7 @@ FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool en
 	args.AppendArg(path);
 	args.AppendArg("-classad");
 
-	const int timeout = 20; // max time to allow the plugin to run
+	int timeout = param_integer( "FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT", 20 );
 
 	MyPopenTimer pgm;
 
@@ -8419,7 +8480,7 @@ FileTransfer::addSandboxRelativePath(
 }
 
 void
-FileTransfer::addCheckpointFile(
+FileTransfer::addCheckpointFileEx(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {
@@ -8427,7 +8488,7 @@ FileTransfer::addCheckpointFile(
 }
 
 void
-FileTransfer::addInputFile(
+FileTransfer::addInputFileEx(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {

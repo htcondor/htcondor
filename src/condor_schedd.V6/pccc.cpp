@@ -481,7 +481,7 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 			// We ignore the remote pool attribute because we've
 			// already checked if the job is running.
 			match_rec * coalescedMatch = scheduler.AddMrec(
-				claimID.c_str(), startd.addr(), & nowJob,
+				claimID.c_str(), startd.addr(), nowJob,
 				& slotAd, owner.c_str(), NULL
 			);
 			if(! coalescedMatch) {
@@ -556,23 +556,23 @@ int accounting_single( PROC_ID nowJob ) {
 	ClassAd matchAd;
 
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchA = scheduler.AddMrec( "A", "peerA", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchA = scheduler.AddMrec( "A", "peerA", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchB = scheduler.AddMrec( "B", "peerB", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchB = scheduler.AddMrec( "B", "peerB", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchC = scheduler.AddMrec( "C", "peerC", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchC = scheduler.AddMrec( "C", "peerC", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchD = scheduler.AddMrec( "D", "peerD", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchD = scheduler.AddMrec( "D", "peerD", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchE = scheduler.AddMrec( "E", "peerE", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchE = scheduler.AddMrec( "E", "peerE", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchF = scheduler.AddMrec( "F", "peerF", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchF = scheduler.AddMrec( "F", "peerF", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchG = scheduler.AddMrec( "G", "peerG", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchG = scheduler.AddMrec( "G", "peerG", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchH = scheduler.AddMrec( "H", "peerH", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchH = scheduler.AddMrec( "H", "peerH", jobID, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchI = scheduler.AddMrec( "I", "peerI", & jobID, & matchAd, "tlmiller", NULL );
+	match_rec * matchI = scheduler.AddMrec( "I", "peerI", jobID, & matchAd, "tlmiller", NULL );
 
 	if(! pcccNew( nowJob ) ) { return __LINE__; }
 	if(! pcccSatisfied( nowJob )) { return __LINE__; }
@@ -627,11 +627,11 @@ int accounting_multiple( PROC_ID jobA, PROC_ID jobB, PROC_ID jobC ) {
 	ClassAd matchAd;
 
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchA = scheduler.AddMrec( "A", "peerA", & jobA, & matchAd, "tlmiller", NULL );
+	match_rec * matchA = scheduler.AddMrec( "A", "peerA", jobA, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchB = scheduler.AddMrec( "B", "peerB", & jobB, & matchAd, "tlmiller", NULL );
+	match_rec * matchB = scheduler.AddMrec( "B", "peerB", jobB, & matchAd, "tlmiller", NULL );
 	jobID = PROC_ID( ++clusterID, 0 );
-	match_rec * matchC = scheduler.AddMrec( "C", "peerC", & jobC, & matchAd, "tlmiller", NULL );
+	match_rec * matchC = scheduler.AddMrec( "C", "peerC", jobC, & matchAd, "tlmiller", NULL );
 
 	if(! pcccNew( jobA )) { return __LINE__; }
 	if(! pcccNew( jobB )) { return __LINE__; }

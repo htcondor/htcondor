@@ -79,7 +79,7 @@ is:
    defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
    if HTCondor daemons are not running as Local System on Windows
-   platforms, the file %USERPROFILE\\.condor\\user_config if it exists,
+   platforms, the file %USERPROFILE%\\.condor\\user_config if it exists,
    or the file defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
 #. specific environment variables whose names are prefixed with
@@ -838,6 +838,11 @@ as given in these definitions.
 
 ``$BASENAME(filename)`` is the same as ``$Fnx(filename)``
 
+``$BASENAME(filename, suffix-to-remove)`` expands to the basename without
+    the file extension or extensions when the filename ends with suffix-to-remove.
+    It bahaves like ``$Fnx(filename)`` when the filename does not end with
+    suffix-to-remove.  Use this to remove nested suffixes like ``.tar.gz``.
+
 ``$INT(item-to-convert)`` or ``$INT(item-to-convert, format-specifier)``
     Expands, evaluates, and returns a string version of
     ``item-to-convert``. The ``format-specifier`` has the same syntax as
@@ -1370,6 +1375,13 @@ incorporates.
        ``UWCS_Desktop_Policy_Values`` template. For example,
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
+
+    -  :config-template:`ChildCollector(Number [, Port])<FEATURE>`
+
+        Sets up a child Collector daemon with the ``Number`` as part of the
+        identity. The optional ``Port`` option sets which port the child
+        Collector listens on. Otherwise communication occurs through the
+        Shared Port Daemon with the ``collector<Number>`` socket.
 
 .. _CommonCloudAttributesConfiguration:
 

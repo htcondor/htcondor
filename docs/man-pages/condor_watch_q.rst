@@ -75,6 +75,10 @@ Behavior Options
             ``JOB_STATUS`` ``active`` status represents all jobs the AP
             (``idle``, ``running``, and ``held``)
 
+ **-exit-on-key-press/-no-exit-on-key-press**
+    Enable/disable tool exit via key press from keyboard.
+    Enabled by default if connected to a ``tty``.
+
 Display Options
 '''''''''''''''
 

@@ -59,7 +59,7 @@ struct GeneralRecord {
 
 //---------------------------------------------------
 
-typedef HashTable<std::string, GeneralRecord*> AccHash;
+typedef std::map<std::string, GeneralRecord*> AccHash;
 typedef std::vector< time_t > ExtIntArray;
 typedef std::vector< fpos_t* > ExtOffArray;
 

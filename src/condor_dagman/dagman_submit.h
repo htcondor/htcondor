@@ -23,7 +23,7 @@
 
 #include "condor_id.h"
 
-bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID);
+bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID, std::string& err);
 
 bool send_reschedule(const Dagman &dm);
 

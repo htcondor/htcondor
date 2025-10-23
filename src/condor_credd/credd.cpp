@@ -209,8 +209,9 @@ cred_get_token_handler(int /*i*/, Stream *s)
         // so this code is a little dodgy.
 		ExprTree * tokenExpr = replyAd.Remove( ATTR_SEC_TOKEN );
 		classad::StringLiteral * tokenLiteral = dynamic_cast<classad::StringLiteral *>(tokenExpr);
-		ASSERT(tokenLiteral != NULL );
+		ASSERT(tokenLiteral != nullptr );
 		SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
+		delete tokenLiteral;
 
 		std::string m;
 		formatstr( m, "cred_get_token_handler(): failed to send reply ad." );
@@ -242,8 +243,9 @@ cred_get_token_handler(int /*i*/, Stream *s)
     // so this code is a little dodgy.
 	ExprTree * tokenExpr = replyAd.Remove( ATTR_SEC_TOKEN );
 	classad::StringLiteral * tokenLiteral = dynamic_cast<classad::StringLiteral *>(tokenExpr);
-	ASSERT(tokenLiteral != NULL );
+	ASSERT(tokenLiteral != nullptr );
 	SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
+	delete tokenLiteral;
 
 	return CLOSE_STREAM;
 }

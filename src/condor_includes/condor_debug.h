@@ -68,7 +68,7 @@ enum {
    D_TEST,  // messages with this category are parsed by various tests.
    D_STATS,       // tcp STATS for file transfer, used by the C_GAHP
    D_MATERIALIZE, // materialization of jobs in the schedd
-   D_BUG,   // messages that indicate the daemon is going down.
+   D_DYE,   // messages that indicate the daemon is going down.
 
    // NOTE: can't go beyond 31 categories so long as DebugOutputChoice is just an unsigned int.
 
@@ -165,6 +165,7 @@ int dprintf_config(
 	const char* log2arg = nullptr); // in: number of entries in p_info array on input.
 
 int dprintf_config_tool(const char* subsys, const char * flags, const char * logfile = nullptr);
+int dprintf_deconfig_tool();
 int dprintf_config_tool_on_error(const char * flags);
 
 // parse a string of the form "NNN Unit" where NNN is an integer, and Unit is b, Kb, Mb, Gb, or Tb (size units) or s, m, h, d, or w (time units)

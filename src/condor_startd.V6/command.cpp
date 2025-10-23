@@ -456,7 +456,10 @@ command_release_claim(int cmd, Stream* stream )
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
+			// The shadow is either gone and not coming back, or it no
+			// longer cares what the starter has to say; make sure we don't
+			// tie up a slot waiting out the job lease period for a reconnect.
+			rip->kill_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto success_exit;
 		}
 	}
@@ -1515,6 +1518,15 @@ accept_request_claim(
 	}
 	claim->rip()->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 
+	{
+		bool ocu_holder = false;
+		std::string ocu_name;
+		claim->ad()->LookupBool(ATTR_OCU_HOLDER, ocu_holder);
+		claim->setOCU(ocu_holder);
+		claim->ad()->LookupString(ATTR_OCU_NAME, ocu_name);
+		claim->setOCUName(ocu_name);
+	}
+
 	// if an array of d-slots were passed, we want to change them to claimed state also.
 	// The claim passed above may or may not be attached to the first d-slot here
 	// It will have a bunch of info from the request ad stuffed into it.  the claims
@@ -2125,7 +2137,6 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	Claim* claim = NULL;
 	int rval = TRUE;
 	ClassAd reply;
-	std::string startd_sends_alives;
 
 	req_ad->LookupString(ATTR_CLAIM_ID, claimid);
 	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, global_job_id);
@@ -2149,9 +2160,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// if startd is sending keepalives to the schedd,
 		// then we _must_ be passed the address of the schedd
 		// since it likely changed.
-	param( startd_sends_alives, "STARTD_SENDS_ALIVES", "peer" );
-	if ( (schedd_addr.empty()) && 
-		 strcasecmp( startd_sends_alives.c_str(), "false" ) )
+	if ( schedd_addr.empty() )
 	{
 		std::string err_msg;
 		formatstr(err_msg, "Required %s, not found in request",

@@ -133,6 +133,10 @@ public:
 		*/
 	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP, LOCATE_FOR_ADMIN};
 	virtual bool locate( LocateType method=LOCATE_FOR_LOOKUP );
+	bool locate_local( LocateType method=LOCATE_FOR_LOOKUP ) {
+		_locate_local_only = true; // tell locate not to query the collector, better to fail instead.
+		return locate(method);
+	}
 
 		/** Return the error string.  If there's ever a problem
 		  enountered in the Daemon object, this will start returning a
@@ -661,16 +665,22 @@ public:
 
 		// Set the owner for this daemon; if possible, always
 		// authenticate with the remote daemon as this owner.
-	void setOwner(const std::string &owner) {m_owner = owner;}
+	void setOwner(const std::string &owner) {m_owner = owner; m_use_new_sec_context_id = true;}
 	const std::string &getOwner() const {return m_owner;}
 
 		// Set the authentication methods to use with this daemon object;
 		// overrides those built-in to the param table.
-	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
+	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods; m_use_new_sec_context_id = true;}
 	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
 
 	void setSecSessionId(const std::string& sess_id) { m_sec_session_id = sess_id; }
 	const std::string& getSecSessionId() { return m_sec_session_id; }
+
+	void setPreferredToken(const std::string& token) { m_preferred_token = token; m_use_new_sec_context_id = true; }
+	const std::string& getPreferredToken() { return m_preferred_token; }
+
+	void setForceAuthentication(bool force) { m_force_auth = force; }
+	bool getForceAuthentication() { return m_force_auth; }
 
 protected:
 	// Data members
@@ -695,7 +705,9 @@ protected:
 	bool _tried_init_hostname;
 	bool _tried_init_version;
 	bool _is_configured;
+	bool _locate_local_only{false};
 	bool m_should_try_token_request{false};
+	bool m_force_auth{false};
 	SecMan _sec_man;
 	// If our target daemon is the default collector
 	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
@@ -915,7 +927,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man );
+	StartCommandResult startCommand_internal( SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -932,7 +944,6 @@ protected:
 	friend struct StartCommandConnectCallback;
 	friend class DCMessenger;
 
-	
 private:
 
 	// Note: we want to keep the m_daemon_ad_ptr data member private!
@@ -943,11 +954,15 @@ private:
 	// and folks who try to do something different will get a compile-time error
 	// unless they use DaemonAllowLocateFull::locate().
 
-	ClassAd *m_daemon_ad_ptr;
+	ClassAd m_daemon_ad;
 
-	ClassAd * m_location_ad_ptr = NULL;
+	ClassAd m_location_ad;
 
 	std::string m_trust_domain;
+
+	static int m_next_sec_context_id;
+	int m_sec_context_id{0};
+	bool m_use_new_sec_context_id{false};
 
 		// The virtual 'owner' of this collector object
 	std::string m_owner;
@@ -955,6 +970,10 @@ private:
 		// The security session to use for each command.
 		// If empty, find/create a session automatically
 	std::string m_sec_session_id;
+
+		// When authenticating with IDTokens, use this token if possible
+		// (i.e. issuer and signing key match the server),
+	std::string m_preferred_token;
 
 		// Authentication method overrides
 	std::vector<std::string> m_methods;
@@ -985,7 +1004,7 @@ public:
 			should be prepared for this method to return NULL.
 			The caller must copy the classad it gets back!
 		  */
-	ClassAd *daemonAd() { locate(LOCATE_FULL); return m_daemon_ad_ptr; }
+	ClassAd *daemonAd() { locate(LOCATE_FULL); return &m_daemon_ad; }
 
 };
 

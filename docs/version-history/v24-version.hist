@@ -1,4 +1,345 @@
-*** 24.9.0 features
+*** 24.12.15 bugs
+
+*** 24.0.15 bugs
+
+*** 24.12.14 features
+
+- Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
+  which defaults to false.  Setting this to true allows users to run
+  docker images which have been prestaged in the EPs docker cache even
+  if the image does not exist in a repository, or if the user does not
+  have permission to pull from that repository.
+  :jira:`3315`
+
+*** 24.12.14 bugs
+
+- Changed the documentation for :meth:`classad2.ClassAd.matches` and
+  :class:`classad2.ClassAd` to match their implementations; the original
+  documentation was in error, and both are actually backwards-compatible
+  with the first version of the Python bindings.  Made other minor changes;
+  see the ticket for details.
+  :jira:`3328`
+
+- Calling ``classad2.ExprTree(None)`` no longer results in an invalid
+  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :jira:`3319`
+
+- Fixed a bug where if input file transfer failed, occasionally no
+  descriptive error message about the failure would make it back
+  into the job hold reason.
+  :jira:`3327`
+
+- Fixed a very longstanding bug where extremely fast machines would
+  overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
+  slot attribute.
+  :jira:`3288`
+
+- Fixed a bug where :tool:`condor_history` could take many minutes to read a single line
+  from the history file when the line is many megabytes long. This was causing
+  ingestion of epoch ads into a database to timeout.
+  :jira:`3299`
+
+- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
+  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
+  "whole node" would have 4 GPUs and only 1 CPU.
+  :jira:`3324`
+
+- Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
+  truncated to its first character.
+  :jira:`3272`
+
+- Fixed a bug in :meth:`Schedd.submit` where the `$(step)` submit variable
+  wasn't being set.
+  :jira:`3272`
+
+- Fixed a bug in :meth:`Submit.itemdata` causing multi-entry itemdata to be
+  returned incorrectly.
+  :jira:`3272`
+
+- Fixed a bug where using :subcom:`max_idle`, :subcom:`container_image` 
+  and :subcom:`transfer_input_files` could result in the container only
+  being transfered along with the first job.
+  :jira:`3092`
+
+*** 24.0.14 bugs
+
+- Startd now correctly removes docker containers that have escaped from
+  docker universe jobs launched by starter that have exited uncleanly.
+  :jira:`3338`
+
+- Add a timeout for all HTTP operations in the grid universe (affects
+  **arc**, **ec2**, and **gce** grid types).
+  :jira:`3300`
+
+- Fixed a bug where administrative tools (e.g. condor_drain) can fail if
+  authentication is not required for queries to the condor_collector.
+  :jira:`3301`
+
+- Executions points using disk enforcement failed when provided backing
+  :macro:`LVM_VOLUME_GROUP_NAME` and :macro:`LVM_THINPOOL_NAME` contained
+  hyphens.
+  :jira:`3334`
+
+- Annexes no longer download a default configuration tarball, making them
+  more robust.  This required upgrading the default version of HTCondor run
+  by annexes to 25.1.0, which can figure the details out on its own.  On
+  Delta, annexes now give Delta additional time to start file-transfer plug-ins,
+  so they should be more-reliably available there.
+  :jira:`3220`
+
+- :tool:`condor_adstash` no longer skips entire history files when it
+  encounters a line that cannot be decoded to UTF-8.
+  :jira:`3335`
+
+- Fixed a bug in blahpd when /tmp is mounted with the noexec option.
+  :jira:`3343`
+
+- Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
+  daemon can't be contacted will no longer cause a segfault.
+  :jira:`3314`
+
+*** 24.12.13 bugs
+
+- Fixed bug where the message ``Processing new events...`` would briefly
+  flash while running :tool:`condor_watch_q`
+  :jira:`3244`
+
+*** 24.0.13 features
+
+- HTCondor tarballs now contain `Pelican 7.20.2 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.20.2.
+
+*** 24.0.13 bugs
+
+- Fixed a bug where space and comma would be included in the list of
+  separators for itemdata even if the itemdata had been supplied with
+  the ASCII "unit separator".  This would cause itemdata entries containing
+  spaces (or commas) to be incorrectly interpreted as multiple items, which
+  could manifest as parse errors.  You can work around this bug if only one
+  of your entries has spaces and/or commas by moving that entry to the end
+  of the line (or dictionary, if you're submitting itemdata via Python).
+  :jira:`3272`
+
+- Fixed false positive reporting of ClassAd unit specifier test in
+  :tool:`condor_upgrade_check`.
+  :jira:`3276`
+
+*** 24.12.4 features
+
+- :meth:`htcondor2.Collector.locate` now checks the :attr:`Machine` attribute
+  (instead of :attr:`Name`) when trying to find *condor_startd* daemons,
+  if the ``name`` argument is not the name of a slot.  This allows programmers
+  to call :meth:`htcondor2.Collector.locate` using the fully-qualified domain
+  name and get a result from a collector whether or not
+  :macro:`ENABLE_STARTD_DAEMON_AD` is set.
+  :jira:`2911`
+
+- Add new configuration knob, :macro:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT`, which
+  defaults to false.  When true, and running on a cgroup enable system, local
+  universe jobs must specify :subcom:`request_memory`, and if the job exceeds that
+  limit, it will be put on hold.
+  :jira:`3170`
+
+- :macro:`HISTORY_HELPER_MAX_HISTORY` default raised from 10,000 to 2,000,000,000
+  effectively removing the limit.  We now believe that running large
+  remote history queries will not have a negative impact on the *condor_schedd*
+  :jira:`3215`
+
+- :tool:`condor_userprio` now no longer needs the negotiator to be running
+  if it only needs the collector to get userprio data.
+  :jira:`3221`
+
+- Docker universe jobs now support the config parameter :macro:`DOCKER_NETWORK_NAME`
+  which defaults to "docker0".  Setting this appropriately allows :tool:`condor_chirp` 
+  and :obj:`htcondor.htchirp` to work correctly inside a docker universe job.
+  :jira:`3197`
+
+- :tool:`condor_watch_q` will now exit upon key press from keyboard.
+  :jira:`3199`
+
+- Added new :ad-attr:`NumInputTransferStarts` and :ad-attr:`NumOutputTransferStarts`
+  counters to the job record.
+  :jira:`3194`
+
+- If the file listed in :subcom:`log` is in a directory that does not exist, HTCondor
+  will now try to create that directory (as the user).  Previously, it ran the
+  job without a user log file.
+  :jira:`3210`
+
+- Added new knob, :macro:`STARTER_NESTED_SCRATCH`, which defaults to false.  When false,
+  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  directory.  When true, the job's scratch directory is a subdirectory thereof, named
+  "scratch", with the intention that all condor metadata files will be moved to peer 
+  directories, and not pollute the job's scratch directory with condor control files.
+  :jira:`3080`
+
+- Added optional second argument for the macro expansion function ``$BASENAME()`` that
+  specifies the file extension or suffix to remove.
+  :jira:`3206`
+
+- :tool:`condor_adstash` now parses and stores per-attempt transfer error data when
+  reading transfer epoch history.
+  :jira:`3122`
+
+- On Windows, :ad-attr:`ResidentSetSize` and thus :ad-attr:`MemoryUsage` will now
+  be updated in the startd as frequently as :ad-attr:`ImageSize` so that the default
+  :macro:`PREEMPT` and :macro:`WANT_HOLD` policy expressions will evict jobs
+  that go over :ad-attr:`Memory` in a timely manner.
+  :jira:`3224`
+
+*** 24.12.4 bugs
+
+- Allow :tool:`condor_submit` -i to work with :subcom:`shell`.
+  :jira:`3208`
+
+- Fixed bug when :macro:`STARTER_NESTED_SCRATCH` is true and
+  :macro:`SINGULARITY_TARGET_DIR` was also set.
+  :jira:`3243`
+
+- Fixed bug that prevented emails being sent to users when jobs went
+  on hold and :subcom:`notification` was set to error.
+  :jira:`3219`
+
+- Fixed bug introduced in 24.11 that caused the *condor_schedd* to
+  occasionally crash when DAGMan completed.
+  :jira:`3250`
+
+*** 24.0.12 features
+
+- Updated :tool:`condor_upgrade_check` to test for well known gotchas
+  between v24 and v25 of HTCondor installations.
+  :jira:`3209`
+
+*** 24.0.12 bugs
+
+- Fixed a bug where the *blahpd* would fail when using Python 3.12 or later.
+  :jira:`3225`
+
+- Fixed bug where jobs held due to exceeding disk usage had the same
+  :ad-attr:`HoldReasonCode` and :ad-attr:`HoldReasonSubCode` as jobs
+  that exceeded memory usage.
+  :jira:`3248`
+
+*** 24.11.2 features
+
+- Added new job ClassAd attributes :ad-attr:`NumVacates` and :ad-attr:`NumVacatesByReason`.
+  These attributes provide counts about why a job left the running state without
+  completing (i.e. was vacated from the execution point).
+  :jira:`3204`
+
+- Added new "notification = start" option to *condor_submit*, which
+  sends an email when the job starts for the first time.
+  :jira:`3133`
+
+- New configuration parameter :macro:`TRUSTED_VAULT_HOSTS` can be used to
+  restrict which Vault servers the *condor_credd* will accept credentials for.
+  :jira:`3136`
+
+- The new Python API now includes `htcondor2.ping()`, which operates like
+  `htcondor.SecMan.ping()` in the old API.
+  :jira:`3180`
+
+- The :tool:`htcondor annex` tool now has (limited) support for AWS' EC2 annexes.
+  The ``condor_annex`` tool has been withdrawn; use :tool:`htcondor annex`
+  instead.
+  :jira:`1630`
+
+- Added new python method "get_claims" to the schedd object, which returns
+  the classads of the claimed slots.
+  :jira:`3181`
+
+- Add --version flag to the :tool:`htcondor` tool.
+  :jira:`3091`
+
+*** 24.11.2 bugs
+
+- When responding to a ping request for the ALLOW authorization level,
+  daemons no longer require authentication.
+  :jira:`3195`
+
+*** 24.0.11 features
+
+- Initial support for Debian 13 (trixie).
+  :jira:`3212`
+
+*** 24.0.11 bugs
+
+*** 24.10.3 bugs
+
+- Fixed a bug introduced in version 24.10.2 that caused
+  `condor_store_cred add` to fail.
+  :jira:`3213`
+
+*** 24.10.2 features
+
+- In the *condor_job_router*, the old ClassAd-based route syntax
+  (specified using ``JOB_ROUTER_ENTRIES`` and ``JOB_ROUTER_DEFAULTS``)
+  is no longer supported.
+  :jira:`3118`
+
+- Added new :tool:`condor_dag_checker` tool for users to check DAG files
+  for syntactical and logical errors prior to submission.
+  :jira:`3088`
+
+- Improvements to :tool:`condor_q` for held jobs. The hold code and subcode are
+  now displayed as part of the ``-hold`` option. A new option ``-hold-codes``
+  displays the first job for each unique hold code and subcode.
+  :jira:`3127`
+
+- Added new ``-lvm`` option to :tool:`condor_status` to view current disk usage
+  of slots enforcing disk limits. This option can be paired with ``-startd`` to
+  show information about execution points enforcing disk limits.
+  :jira:`3119`
+
+- The new Python API now includes :py:meth:`htcondor2.disable_debug`, which is
+  intended interactive use (after debugging a problem).
+  :jira:`3003`
+
+- Some errors on the EP that occurred after the AP had released the
+  corresponding claim could cause a slot to remain claimed until the job lease
+  timeout had expired.  This change should reduce incidents of this behavior.
+  :jira:`3028`
+
+- Improvements to observability of common files transfer, including new entries
+  in the shadow and starter daemon logs; a new CommonFiles event in the
+  job/user event log; and a new transfer entry in the epoch history.
+  :jira:`3052`
+
+*** 24.10.2 bugs
+
+- Fixed a bug in :tool:`condor_q` default output where counts of jobs could be truncated to 6 digits.
+  :jira:`3106`
+
+- Fixed a bug introduced in HTCondor version 24.8.0 where a job in Suspended
+  status wouldn't change to Idle status when evicted from an EP.
+  This resulted in the job not being considered for scheduling, among other
+  problems.
+  :jira:`3174`
+
+- Execution Points enforcing disk limits will now subtract the size of
+  pre-existing logical volumes from the advertised available disk. Any
+  logical volumes associated with HTCondor are not subtracted.
+  :jira:`3119`
+
+- Fixed a bug where the *condor_credd* mistakenly thought a Vault-managed
+  OAuth2 credential was a plain user-provided access token.
+  :jira:`3084`
+
+- Attempting to send common files to startds whose sinful string is more than
+  256 characters will no longer cause a shadow exception.
+  :jira:`3128`
+
+- Fixed a memory leak in the *condor_schedd* that could be triggered by checkpointing.
+  :jira:`3104`
+
+- Fixed an issue where a job may take an additional 20 minutes to be scheduled to run after leaving cool-down mode.
+  See configuration knob :macro:`SYSTEM_ON_VACATE_COOL_DOWN` for more information about job cool-down mode.
+  :jira:`3059`
+
+*** 24.0.10 bugs
+
+*** 24.9.2 features
 
 - Added new job ClassAd attribute :ad-attr:`TransferInputFileCounts`.
   :jira:`3024`
@@ -17,7 +358,7 @@
   expression will be written to the ``StartLog``.
   :jira:`3033`
 
-*** 24.9.0 bugs
+*** 24.9.2 bugs
 
 - Fixed a bug which could cause unnecessary activation failures if the previous
   job in the slot failed to transfer its output.  This would manifest as slots
@@ -34,9 +375,19 @@
   without a proc ID, or in a list of such strings.
   :jira:`2979`
 
+*** 24.0.9 features
+
+- Initial Support for Enterprise Linux 10, including the x86_64_v2 platform.
+  :jira:`3090`
+
 *** 24.0.9 bugs
 
-*** 24.8.0 features
+- The results of ``key in htcondor2.param`` and
+  ``key in htcondor2.param.keys()`` now match for keys which are defined to
+  have no value.  (Previously, such keys would be returned by ``keys()``.)
+  :jira:`3085`
+
+*** 24.8.1 features
 
 - On Linux systems with cgroups enabled, jobs are now put in a ".scope"
   sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
@@ -97,7 +448,7 @@
 - The :tool:`condor_upgrade_check` script has been folded into the main condor package.
   :jira:`2995`
 
-*** 24.8.0 bugs
+*** 24.8.1 bugs
 
 - Fixed a bug in the EP preventing a claimed slot from being re-used to run multiple jobs.
   The ability for an AP to run multiple jobs on the same claimed slot (i.e. without needing
@@ -105,11 +456,11 @@
   when running large numbers of short-running jobs.  The bug fixed here was introduced in 
   HTCondor version 24.5.1, so if you are running HTCondor v24.5.x, v24.6.x, or v24.7.x,
   and run large numbers of short jobs, please consider upgrading.  See the JIRA ticket
-  for addtional workarounds if you cannot upgrade.
+  for additional workarounds if you cannot upgrade.
   :jira:`3045`
 
 - On Linux and macOS, when using dataflow jobs, HTCondor now checks the modification
-  times of dataflow nodes with subsecond accuracy.  Previously, it just
+  times of dataflow nodes with sub-second accuracy.  Previously, it just
   used seconds, which means that it might incorrectly not skip a dataflow
   job that it should have skipped if the output file was written in the
   same second as the input file.
@@ -142,6 +493,11 @@
   :jira:`3026`
 
 *** 24.0.8 bugs
+
+- Fixed a bug introduced in 24.0.7 and 24.7.3 when running on Linux cgroup v1
+  systems, jobs that were killed by the out-of-memory killer were
+  considered completed instead of being put on hold.
+  :jira:`3094`
 
 - The :class:`htcondor2.Credd` initializer now properly raised
   a :class:`TypeError` if the location argument isn't

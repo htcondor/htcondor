@@ -502,7 +502,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				job_not_started = true;
 				std::string starterErrorMessage = "Singularity test failed:";
 				starterErrorMessage += singErrorMessage;
-				EXCEPT("%s", starterErrorMessage.c_str());
+				// TODO would be nice to detect if issue is due to user-provided image
+				starter->jic->notifyStarterError(starterErrorMessage.c_str(),
+				                                 true,
+				                                 CONDOR_HOLD_CODE::SingularityTestFailed,
+				                                 -1000);
 				return 0;
 			}
 		}
@@ -739,6 +743,14 @@ OsProc::JobReaper( int pid, int status )
 				}
 			}
 
+			// The shadow doesn't properly handle a job whose state goes
+			// from Suspended to Exited. If we send an update now, the
+			// shadow sees a transition from Suspended to Running.
+			// It'll then see an transition from Running to Exited from
+			// the final update we send shortly therearfter.
+			ClassAd updateAd;
+			starter->publishUpdateAd(&updateAd);
+			starter->jic->periodicJobUpdate(&updateAd);
 		}
 
 			// clear out num_pids... everything under this process

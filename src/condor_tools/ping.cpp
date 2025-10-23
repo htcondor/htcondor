@@ -764,8 +764,8 @@ void print_info(bool rv, const char* dname, const char * addr, Sock* s, const st
 		session_id = result_pair->second;
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		auto itr = (SecMan::session_cache)->find(session_id);
-		if (itr == (SecMan::session_cache)->end()) {
+		auto itr = SecMan::session_cache.find(session_id);
+		if (itr == SecMan::session_cache.end()) {
 			printf("no session!\n");
 			return;
 		}

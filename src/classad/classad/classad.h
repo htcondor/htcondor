@@ -103,6 +103,12 @@ class ClassAd : public ExprTree
 		*/
 		bool Insert( const std::string& attrName, ExprTree* expr);   // (ignores cache)
 		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
+		/*
+			Swap() is just like Insert() except it returns the old exprtree rather than
+			deleting it.  If there was no old exprtree, the old_expr is set to nullptr
+			i.e Swap is like Remove followed by Insert.
+		*/
+		bool Swap(const std::string& attrName, ExprTree* expr, ExprTree* & old_expr);
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
@@ -575,6 +581,7 @@ class ClassAd : public ExprTree
         /** Return the number of attributes at the root level of this ClassAd.
          */
         int size(void) const { return (int)attrList.size(); }
+		bool empty() const { return attrList.empty(); }
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
@@ -611,20 +618,42 @@ class ClassAd : public ExprTree
          */
 		virtual ExprTree* Copy( ) const;
 
-        /** Make a deep copy of the ClassAd, via the == operator. 
+        /** Make a deep copy of the ClassAd, via the = operator.
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
 		ClassAd &operator=(ClassAd &&rhs)  noexcept {
-			this->do_dirty_tracking = rhs.do_dirty_tracking;
-			this->chained_parent_ad = rhs.chained_parent_ad;
+			// In the order listed in the header, so that we don't miss any.
 			this->alternateScope = rhs.alternateScope;
 
-			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
 			this->attrList = std::move(rhs.attrList);
+			for( auto & entry : attrList ) {
+				// I wonder what other invariants were forgotten?
+				entry.second->SetParentScope(this);
+			}
+			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
+
+			this->do_dirty_tracking = rhs.do_dirty_tracking;
+			this->chained_parent_ad = rhs.chained_parent_ad;
+			this->parentScope = rhs.parentScope;
 
 			return *this;
 		}
+
+		ClassAd(ClassAd &&rhs) : 
+   				alternateScope(rhs.alternateScope),
+				attrList(std::move(rhs.attrList)),
+				dirtyAttrList(std::move(rhs.dirtyAttrList)),
+				do_dirty_tracking(rhs.do_dirty_tracking),
+				chained_parent_ad(rhs.chained_parent_ad),
+				parentScope(rhs.parentScope)
+		{
+				for(auto &entry: attrList ) {
+					// I wonder what other invariants were forgotten?
+					entry.second->SetParentScope(this);
+			}
+		}
+
         /** Fill in this ClassAd with the contents of the other ClassAd.
          *  This ClassAd is cleared of its contents before the copy happens.
          *  @return true if the copy succeeded, false otherwise.

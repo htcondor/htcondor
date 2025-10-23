@@ -950,12 +950,18 @@ kill_daemon_ad_file()
 	free(ad_file);
 }
 
+static bool disable_drop_addr_file = false;
+void DC_Disable_Addr_File() { disable_drop_addr_file = true; }
+
 void
 drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
 	const char* addr[2];
+
+	if (disable_drop_addr_file)
+		return;
 
 	// build up a prefix as LOCALNAME.SUBSYSTEM or just SUBSYSTEM if no localname
 	// that way, daemons that have a localname will never stomp the address file of the
@@ -990,9 +996,14 @@ drop_addr_file()
 			std::string newAddrFile;
 			formatstr(newAddrFile,"%s.new",addrFile[i]);
 			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
-				fprintf( ADDR_FILE, "%s\n", addr[i] );
-				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
-				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
+				std::string adbuf;
+				formatstr(adbuf, "%s\n%s\n%s\n", addr[i], CondorVersion(), CondorPlatform());
+				// append extra contact info
+				if ( ! daemonCore->ContactInfoExtra().empty()) {
+					formatAd(adbuf, daemonCore->ContactInfoExtra());
+					if (adbuf.back() != '\n') adbuf += "\n";
+				}
+				fputs( adbuf.c_str(), ADDR_FILE );
 				fclose( ADDR_FILE );
 				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
 					dprintf( D_ALWAYS,
@@ -1007,6 +1018,11 @@ drop_addr_file()
 			}
 		}
 	}	// end of for loop
+}
+
+void DC_Enable_And_Drop_Addr_File() {
+	disable_drop_addr_file = false;
+	drop_addr_file();
 }
 
 void

@@ -329,11 +329,11 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     configuration. Relevant only if HTCondor daemons are not run as root
     on Unix platforms or Local System on Windows platforms. The default
     is ``$(HOME)/.condor/user_config`` on Unix platforms. The default is
-    %USERPROFILE\\.condor\\user_config on Windows platforms. If a fully
+    %USERPROFILE%\\.condor\\user_config on Windows platforms. If a fully
     qualified path is given, that is used. If a fully qualified path is
     not given, then the Unix path ``$(HOME)/.condor/`` prefixes the file
     name given on Unix platforms, or the Windows path
-    %USERPROFILE\\.condor\\ prefixes the file name given on Windows
+    %USERPROFILE%\\.condor\\ prefixes the file name given on Windows
     platforms.
 
     The ability of a user to use this user-specified configuration file
@@ -516,7 +516,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`HISTORY_HELPER_MAX_HISTORY[Global]`
     Specifies the maximum number of ClassAds to parse on behalf of
-    remote history clients. The default is 10,000. This allows the
+    remote history clients. The default is 2,000,000,000. This allows the
     system administrator to indirectly manage the maximum amount of CPU
     time spent on each client. Setting this option to 0 disables remote
     history access.
@@ -2514,6 +2514,20 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     HTCondor will set HOME to the home directory of the user
     on the EP system.
 
+:macro-def:`STARTER_NESTED_SCRATCH[FileSystem]`
+    A boolean value that defaults to true.  When false, the job's scratch
+    directory hierarchy is created in the same way as it was previous
+    to HTCondor 24.9.  That is, the job's scratch directory is a 
+    direct subdirectory of :macro:`EXECUTE` named *dir_<starter_pid>*,
+    and owned by the user.  When true, the scratch directory is 
+    a subdirectory of that directory named scratch.  There are other
+    subdirectories named "user", where user-owned HTCondor files
+    will go, such as credentials, the .job.ad and other metadata.
+    There is also an htcondor subdirectory, where files owned by
+    the HTCondor system will go.  The idea is the scratch directory
+    should not be polluted with system files, and only contain files
+    the job expects to be there.
+
 :macro-def:`FILESYSTEM_DOMAIN[FileSystem]`
     An arbitrary string that is used to decide if the two machines, a
     access point and an execute machine, share a file system. Although
@@ -4493,7 +4507,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     container.
 
 :macro-def:`DOCKER_PERFORM_TEST[STARTD]`
-    When the *condor_startd* starts up, it runs a simple Docker
+    When the *condor_startd* starts up, and on every
+    :tool:`condor_reconfig`, it runs a simple Docker
     container to verify that Docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
@@ -4514,6 +4529,11 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     An optional, comma-separated list of admin-defined networks that a job
     may request with the ``docker_network_type`` submit file command.
     Advertised into the slot attribute DockerNetworks.
+
+:macro-def:`DOCKER_NETWORK_NAME[STARTD]`
+    A string that defaults to "docker0".  This is the name of the network
+    that a docker universe job can use to talk to the host machine.  This
+    is used by :tool:`condor_chirp`.
 
 :macro-def:`DOCKER_SHM_SIZE[STARTD]`
     An optional knob that can be configured to adapt the ``--shm-size`` Docker
@@ -4542,6 +4562,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     in the docker image, and allows images of any architecture to attempt to 
     run on the EP.  When true, if the Architecture in the image is defined
     and does not match the EP, the job is put on hold.
+
+:macro-def:`DOCKER_TRUST_LOCAL_IMAGES[STARTD]`
+    Defaults to false.  When true, docker universe jobs can use docker images
+    that have been prestaged into the local docker image cache, even if
+    that image cannot be pulled from a repository, or if it doesn't exist
+    in any repository.
 
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
@@ -4621,6 +4647,11 @@ These macros control the *condor_schedd*.
     A boolean value that defaults to true.  When true, local universe
     jobs on Linux are put into their own cgroup, for monitoring and
     cleanup.
+
+:macro-def:`LOCAL_UNIVERSE_CGROUP_ENFORCEMENT[SCHEDD]`
+    When the above is true, if this boolean value which defaults to false
+    is true, then local universe jobs need to have a :subcom:`request_memory`
+    and if the local universe job exceeds that, it will be put on hold.
 
 :macro-def:`START_SCHEDULER_UNIVERSE[SCHEDD]`
     A boolean value that defaults to
@@ -5088,16 +5119,6 @@ These macros control the *condor_schedd*.
     and the *condor_schedd* no longer pays for the resource (in terms of
     user priority in the system). The macro is defined in terms of seconds
     and defaults to 300, which is 5 minutes.
-
-:macro-def:`STARTD_SENDS_ALIVES[SCHEDD]`
-    Note: This setting is deprecated, and may go away in a future
-    version of HTCondor. This setting is mainly useful when running
-    mixing very old *condor_schedd* daemons with newer pools. A boolean
-    value that defaults to ``True``, causing keep alive messages to be
-    sent from the *condor_startd* to the *condor_schedd* by TCP during
-    a claim. When ``False``, the *condor_schedd* daemon sends keep
-    alive signals to the *condor_startd*, reversing the direction.
-    This variable is only used by the *condor_schedd* daemon.
 
 :macro-def:`REQUEST_CLAIM_TIMEOUT[SCHEDD]`
     This macro sets the time (in seconds) that the *condor_schedd* will
@@ -5989,6 +6010,13 @@ These macros control the *condor_schedd*.
     permissions as the main :macro:`SPOOL` directory. Care must be taken that
     the value won't change during the lifetime of each job.
 
+:macro-def:`UNUSED_CLAIM_TIMEOUT[SCHEDD]`
+    An integer value that is only used by the dedicated scheduler when
+    scheduling parallel universe jobs. It specifies the number of
+    seconds the schedd will keep a claimed slot, even when idle.  Zero
+    seconds means the schedd will keep a claim for an unbounded amount
+    of time.  Default is 300 seconds.
+
 :macro-def:`<OAuth2Service>_CLIENT_ID[SCHEDD]`
     The client ID string for an OAuth2 service named ``<OAuth2Service>``.
     The client ID is passed on to the *condor_credmon_oauth*
@@ -6849,15 +6877,16 @@ condor_submit Configuration File Entries
 
     .. code-block:: text
 
-          ifThenElse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
+          128
 
 :macro-def:`JOB_DEFAULT_REQUESTDISK[SUBMIT]`
     The amount of disk in KiB to acquire for a job, if the job does not
     specify how much it needs using the
     :subcom:`request_disk[and JOB_DEFAULT_REQUESTDISK]`
     submit command. If the job defines the value, then that value takes
-    precedence. If not set, then then the default is defined as
-    :ad-attr:`DiskUsage`.
+    precedence. If not set, then the default is the maximum of 1 GB
+    and 125% of the transfer input size, which is the expression
+    :ad-expr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify
@@ -8246,6 +8275,15 @@ These macros affect the *condor_credd* and its credmon plugin.
     A string valued macro that defines what the local issuer should put into
     the "ver" field of the token.  Defaults to ``scitoken:2.0``.
 
+:macro-def:`LOCAL_CREDMON_PRIVATE_KEY_ALGORITHM[CREDD]`
+    A string valued macro that defines which crypt algorithm the local credmon
+    should use.  Defaults to ES256.  Supported values are ES256, RS256.
+
+:macro-def:`LOCAL_CREDMON_AUTHZ_TEMPLATE_EXPR[CREDD]`
+    A classad expression evaluated in the context of a ClassAd containing the 
+    submitter's system username in the ``Username`` attribute.  This should
+    evaluate to a classad string type that contains the authorization template.
+
 :macro-def:`SEC_CREDENTIAL_DIRECTORY[CREDD]`
     A string valued macro that defines a path directory where
     the credmon looks for credential files.
@@ -8257,6 +8295,11 @@ These macros affect the *condor_credd* and its credmon plugin.
 :macro-def:`SEC_CREDENTIAL_GETTOKEN_OPTS[CREDD]` configuration option to
     pass additional command line options to gettoken.  Mostly
     used for vault, where this should be set to "-a vault_name".
+
+:macro-def:`TRUSTED_VAULT_HOSTS[CREDD]`
+    A space-and/or-comma-separated list of hostnames of Vault servers
+    that the *condor_credd* will accept Vault credentials for.
+    The default (unset) means accept credentials for any Vault server.
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
@@ -9823,13 +9866,16 @@ macros are described in the :doc:`/admin-manual/security` section.
     and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    daemon-to-daemon authentication with the token method.  Defaults to
-    ``/etc/condor/tokens.d``.
+    The path to the directory containing tokens for
+    daemon-to-daemon authentication with the token method.
+    Defaults to ``/etc/condor/tokens.d`` on unix and
+    ``$(RELEASE_DIR)\tokens.d`` on Windows.
 
 :macro-def:`SEC_TOKEN_DIRECTORY[SECURITY]`
-    For Unix machines, the path to the directory containing tokens for
-    user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
+    The path to the directory containing tokens for
+    user authentication with the token method.
+    Defaults to ``~/.condor/tokens.d`` on unix and
+    %USERPROFILE%\\.condor\\tokens.d on Windows.
 
 :macro-def:`SEC_TOKEN_REVOCATION_EXPR[SECURITY]`
     A ClassAd expression evaluated against tokens during authentication;
@@ -11701,14 +11747,6 @@ has.
     in terms of HTCondor ClassAd attributes to be published. All files
     in this directory are read, to define the metrics. The default
     directory ``/etc/condor/ganglia.d/`` is used when not specified.
-
-condor_annex Configuration File Macros
---------------------------------------
-
-:index:`condor_annex configuration variables<single: condor_annex configuration variables; configuration>`
-
-See :doc:`/cloud-computing/annex-configuration` for :tool:`condor_annex`
-configuration file macros.
 
 ``htcondor annex`` Configuration File Macros
 --------------------------------------------

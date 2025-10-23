@@ -89,6 +89,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_badput_caused_by_preemption(false)
 	, c_schedd_closed_claim(false)
 	, c_schedd_reported_job_done(false)
+	, c_ocu(false)
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
@@ -314,6 +315,20 @@ Claim::publish( ClassAd* cad )
 		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
 		// also the CpusUsage value
 		cad->Assign(ATTR_CPUS_USAGE, c_cpus_usage);
+
+		// when we are using the procd for memory usage reporting, the STARTD only sees
+		// update for memory usage when the starter updates both the shadow and the STARTD
+		// which happens about every 5 Minutes.  this is far too slow for policy evaluation.
+		// 
+		// We want to refresh RSS in the ad whenever we refresh ImageSize in the ad if
+		// we are getting RSS updates from the procd. Right now, we only know for sure
+		// that we are getting updates from the proc on windows. thus #ifdef WIN32
+	#ifdef WIN32
+		// TODO: make this conditional on cgroup memory tracking, instead of WIN32
+		cad->Assign(ATTR_RESIDENT_SET_SIZE, c_peak_rss);
+	#endif
+		//TODO: fix it so that c_cur_rss is not a peak value, then advertise it.
+		//cad->Assign("Cur" ATTR_RESIDENT_SET_SIZE, c_cur_rss);
 	}
 
 	// If this claim is for vm universe, update some info about VM
@@ -332,6 +347,13 @@ Claim::publish( ClassAd* cad )
 			cad->Assign(ATTR_IS_SPLITTABLE, true);
 		}
 	}
+
+	if (c_ocu) {
+		cad->Assign(ATTR_OCU, true);
+		if (!c_ocu_name.empty()) {
+			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
+		}
+	} 
 
 	publishStateTimes( cad );
 
@@ -955,23 +977,20 @@ Claim::startLeaseTimer()
 	// because the  job ad we get from the shadow at activation time doesn't have
 	// the necessary attributes - they are only in the job ad we get from the schedd at claim time
 	// see #6568 for more details.
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	// CRUFT Starting in 25.3, the schedd always sets this to true
 	if ( c_jobad && c_jobad->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
 		// Use value from ad
-	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		c_startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		c_startd_sends_alives = true;
 	} else {
-		// No direction from the schedd or config file.
-		c_startd_sends_alives = false;
+		// No direction from the schedd.
+		// Assume true, so future schedds can drop this ancient option.
+		c_startd_sends_alives = true;
 	}
 
 	// If startd is sending the alives, look to see if the schedd is requesting
 	// that we let only send alives when there is no starter present (i.e. when
 	// the claim is idle).
-	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	// CRUFT Starting in 25.3, the schedd always sets this to true
+	c_starter_handles_alives = true;  // default to true unless schedd tells us
 	if (c_jobad) {
 		c_jobad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
 	}
@@ -1512,6 +1531,8 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 {
 	percentCpuUsage = 0.0;
 	imageSize = 0;
+	long long cur_rss = 0;
+	long long peak_rss = 0;
 	if (c_starter_pid) {
 		Starter *starter = findStarterByPid(c_starter_pid);
 		if ( ! starter) {
@@ -1520,10 +1541,19 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 		const ProcFamilyUsage & usage = starter->updateUsage();
 		percentCpuUsage = usage.percent_cpu;
 		imageSize = usage.total_image_size;
+		cur_rss = usage.total_resident_set_size; // TJ: v24.12 procd seems to be returning peak RSS on Windows
+		peak_rss = usage.max_image_size;
+		//dprintf(D_ZKM, "Claim::updateUsage (%u) TotImageSize=%lld, TotRss=%lld, max=%llu\n",
+		//	c_starter_pid, imageSize, cur_rss, peak_rss);
+	} else if (c_rip && ! c_rip->is_partitionable_slot()) {
+		//dprintf(D_ZKM, "Claim::updateUsage (no starter pid) ImageSize=%lld\n", imageSize);
 	}
+
 	// save off the last values so we can use them in the ::publish method
 	c_cpus_usage = percentCpuUsage / 100;
 	c_image_size = imageSize;
+	c_cur_rss = cur_rss;
+	c_peak_rss = peak_rss;
 }
 
 
@@ -1745,6 +1775,7 @@ Claim::starterExited( Starter* starter, int status)
 	if (orphanedJob || (IsBrokenExitCode(status) && still_broken)) {
 
 		int code = BROKEN_CODE_UNCLEAN;
+		bool do_not_delete_slot = false; // set to true if the broken code indicates that the slot should not be deleted.
 		const char * reason = "Could not clean up after job";
 		switch (WEXITSTATUS(status)) {
 		case STARTER_EXIT_IMMORTAL_LVM:
@@ -1754,6 +1785,11 @@ Claim::starterExited( Starter* starter, int status)
 		case STARTER_EXIT_IMMORTAL_JOB_PROCESS:
 			code = BROKEN_CODE_HUNG_PID;
 			reason = "Could not terminate all job processes";
+			break;
+		case STARTER_EXIT_CGROUP_LOCKED:
+			code = BROKEN_CODE_HUNG_CGROUP;
+			reason = "Could not cleanup CGroup for slot";
+			do_not_delete_slot = true;
 			break;
 		default:
 			if (orphanedJob) {
@@ -1767,6 +1803,7 @@ Claim::starterExited( Starter* starter, int status)
 		if ( ! c_rip->r_attr->is_broken()) {
 			dprintf(D_ERROR,"Starter exit code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
+			if (do_not_delete_slot) { c_rip->r_do_not_delete = true; }
 			auto & brit = c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
 			if (ep_eventlog.isEnabled()) {
 				// write a RESOURCE_BREAK event reporting break reason and resources
@@ -2300,6 +2337,8 @@ Claim::resetClaim( void )
 	c_starter_pid = 0;
 	c_image_size = 0;
 	c_cpus_usage = 0;
+	c_peak_rss = 0;
+	c_cur_rss = 0;
 
 	if( c_jobad && c_type == CLAIM_COD ) {
 		delete( c_jobad );

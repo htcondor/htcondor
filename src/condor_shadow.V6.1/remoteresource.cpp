@@ -41,6 +41,9 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include "catalog_utils.h"
+#include "condor_holdcodes.h"
+#include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -165,8 +168,6 @@ RemoteResource::~RemoteResource()
 	if ( next_reconnect_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer( next_reconnect_tid );
 	}
-
-	if( starter_version ) { free( starter_version ); }
 }
 
 
@@ -841,6 +842,13 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// This seems like the obvious place to change the job ad so that we
+	// can properly initialize the FTO if the starter we're talking to is too
+	// old to handle common file transfer.  However, the FTO is actually
+	// initialized by checkInputFileTransfer(), which deliberately happens
+	// before we contact the starter.  Oops.
+	//
+	// Try using addInputFile() instead, I guess.
 
 	std::string buf;
 	dprintf(D_MACHINE, "StarterInfo ad:\n%s", formatAd(buf, *ad, "\t")); // formatAt guarantees a newline.
@@ -873,7 +881,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				free(machineName);
 				machineName = strdup( buf.c_str() );
 			}
-		}	
+		}
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	} else if( ad->LookupString(ATTR_MACHINE, buf) ) {
 		if( machineName ) {
@@ -881,19 +889,20 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				free(machineName);
 				machineName = strdup( buf.c_str() );
 			}
-		}	
+		}
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
-	starter_version = NULL;
-	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
+	if( ad->LookupString(ATTR_VERSION, starter_version) ) {
+		dprintf(D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version.c_str()); 
 	}
 
-	if ( starter_version == NULL ) {
+	if (starter_version.empty()) {
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
-		filetrans.setPeerVersion( starter_version );
+		CondorVersionInfo vi(starter_version.c_str());
+		filetrans.setPeerVersion(vi);
+		m_use_delayed_attr = vi.built_since_version(25, 3, 0);
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
@@ -908,6 +917,61 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				 ATTR_HAS_RECONNECT );
 	}
 
+
+	//
+	// If the starter is too old for common file transfer, fall back on
+	// per-proc file transfer.
+	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
+	// actually released as part of 25.2.FIXME.
+	//
+	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
+	// can successfully do common file transfer if and only if there were no
+	// catalogs specified and the job ad has the test syntax from HTC25.  As
+	// a result, those will be treated as needing the fall-back as well.
+	//
+	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+		if(! common_file_catalogs) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			return;
+		}
+
+		int required_version = 2;
+		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			return;
+		}
+
+		if( common_file_catalogs->empty() ) {
+			return;
+		}
+
+		for( const auto & [cifName, commonInputFiles] : *common_file_catalogs ) {
+			// dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+
+			for( const auto & source : split(commonInputFiles) ) {
+				// dprintf( D_ZKM, "adding %s ...\n", source.c_str() );
+				filetrans.addInputFile( source.c_str() );
+			}
+		}
+	}
 }
 
 void
@@ -1365,6 +1429,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
 
+	if( update_ad->LookupString(ATTR_VACATE_REASON, string_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON, string_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_CODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_CODE, long_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_SUBCODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, long_value);
+	}
 
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 4 > prefixes( { "Common", "Input", "Checkpoint", "Output" } );
@@ -1382,6 +1455,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		if( resultAttr != NULL ) {
 			resultList = dynamic_cast<classad::ExprList *>(resultAttr);
 
+			bool updateAdOwnsResultList = true;
 			if( resultList != nullptr ) {
 				std::vector<ExprTree *> results;
 				std::vector<ExprTree *> invocations;
@@ -1401,6 +1475,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
 
+				updateAdOwnsResultList = false;
 				resultList = new classad::ExprList( results );
 				invocationList = new classad::ExprList( invocations );
 			}
@@ -1419,8 +1494,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// This sets the value in the header.
 			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
 			c.Delete( "TransferClass" );
-			std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
-			//writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
+			if (updateAdOwnsResultList) {
+				std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
+			} else {
+				c.Delete(attributeName);
+			}
+			// This is actually the match ad, which is mostly useless.
+			// writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 
@@ -1437,10 +1517,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
 	}
 
+	ExprTree* chirp_ad_expr = update_ad->Lookup(ATTR_CHIRP_DELAYED_ATTRS);
+	ClassAd* chirp_ad = dynamic_cast<ClassAd*>(chirp_ad_expr);
+	if (chirp_ad) {
+		for (ClassAd::const_iterator it = chirp_ad->begin(); it != chirp_ad->end(); it++) {
+			if (allowRemoteWriteAttributeAccess(it->first)) {
+				classad::ExprTree *expr_copy = it->second->Copy();
+				jobAd->Insert(it->first, expr_copy);
+				shadow->watchJobAttr(it->first);
+			}
+		}
+	}
+
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
 		size_t offset = 0;
-		if (allowRemoteWriteAttributeAccess(it->first)) {
+		if (!m_use_delayed_attr && allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
@@ -1482,6 +1574,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
+			// TODO This code doesn't properly handle a job that goes
+			//   from Suspended to Exited. The starter sends an extra
+			//   update currently so the the state goes to Executing
+			//   first on an eviction, but the shadow shouldn't be
+			//   relying on that.
 		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
 		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
@@ -2318,7 +2415,7 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 	// because those are applied on the starter side and aren't transferred
 	// from the shadow (except as part of the job ad, which we've already
 	// sent).
-	filetrans.addInputFile( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
+	filetrans.addInputFileEx( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
 
 	//
 	// Transfer every file listed in the MANIFEST file.  It could be quite
@@ -2346,7 +2443,7 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 		std::string checkpointFile = manifest::FileFromLine( manifestLine );
 		formatstr( checkpointURL, "%s/%s/%.4d/%s", checkpointDestination.c_str(),
 		  globalJobID.c_str(), manifestNumber, checkpointFile.c_str() );
-		filetrans.addCheckpointFile( checkpointURL, checkpointFile, pathsAlreadyPreserved );
+		filetrans.addCheckpointFileEx( checkpointURL, checkpointFile, pathsAlreadyPreserved );
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );

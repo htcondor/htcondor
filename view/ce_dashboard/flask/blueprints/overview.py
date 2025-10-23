@@ -93,7 +93,7 @@ def get_data_from_ganglia():
     # Grab data as a raw csv from ganglia, which was stashed there by the condor_gangliad
     import pandas as pd
     # If host is not fully qualified, add the default domain
-    if not host.endswith('.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']):
+    if not '.' in host:
         host = host + '.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
     df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
 
@@ -140,6 +140,11 @@ def get_data_from_ganglia():
     # Get rid of columns that are not needed; specifically, we don't want info per user, just per project   
     df.drop(columns=['Cpus_User'],inplace=True,errors='ignore')
     df.drop(columns=['Memory_User'],inplace=True,errors='ignore')
+    # Remove projects where all rows with Type="P" have Cpus=0.0
+    projects_to_remove = df[(df['Type'] == 'P') & (df['Cpus'] == 0.0)]['Project'].unique()
+    projects_with_nonzero_cpus = df[(df['Type'] == 'P') & (df['Cpus'] > 0.0)]['Project'].unique()
+    projects_to_remove = set(projects_to_remove) - set(projects_with_nonzero_cpus)
+    df = df[~df['Project'].isin(projects_to_remove)]
     # Insert Field and Organization columns, which we can figure out from the project name via Topology
     df['Field'] = df['Project'].apply(field_of_science_from_project)
     df['Organization'] = df['Project'].apply(organization_from_project)
@@ -167,13 +172,36 @@ overview_linkmap = {
     'Contributed': 'contributed.html',
 }
 
+@overview_bp.route('/allocated_graph_<resource>.html')
+def handle_allocated_graph(resource):
+    host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
+    from blueprints.landing import get_ce_facility_site_descrip
+    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    title = facility if facility!='Unknown' else host
+    return render_template('allocated_graph.html', resource=resource,
+                           linkmap=overview_linkmap,
+                           page_title=title, ce_facility_name=facility, ce_site_name=site)
+
+@overview_bp.route('/contributed.html')
+def handle_contributed():
+    time_range = request.args.get('r','week')
+    if time_range not in ['hour','day','week','month','year']:
+        time_range = 'week'
+    host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
+    from blueprints.landing import get_ce_facility_site_descrip
+    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    title = facility if facility!='Unknown' else host
+    return render_template('contributed.html', host=host, 
+                           linkmap=overview_linkmap, time_range=time_range,
+                           page_title=title, ce_facility_name=facility, ce_site_name=site)
+
 @overview_bp.route('/overview.html')
 def overview():
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
     from blueprints.landing import get_ce_facility_site_descrip
     facility, site, descrip, health = get_ce_facility_site_descrip(host)
     title = facility if facility!='Unknown' else host
-    return render_template('overview.html.j2', page_title=title, ce_facility_name=facility, ce_site_name=site,
+    return render_template('overview.html', page_title=title, ce_facility_name=facility, ce_site_name=site,
                            ce_description=descrip, ce_health=health, linkmap=overview_linkmap)
 
 @overview_bp.route('/data/ce_overview')
@@ -186,4 +214,4 @@ def error_no_data():
     from blueprints.landing import get_ce_facility_site_descrip
     facility, site, descrip, health = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
     msg = request.args.get('msg','No data available')
-    return render_template('error_no_data.html.j2', page_title=facility, ce_name=site, errMsg=msg, linkmap={})
+    return render_template('error_no_data.html', page_title=facility, ce_name=site, errMsg=msg, linkmap={})

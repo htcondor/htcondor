@@ -201,20 +201,26 @@ Define slot types.
         SLOT_TYPE_1 = mem=50%
 
         SLOT_TYPE_1 = mem=auto
+        NUM_SLOTS_TYPE_1 = 2
 
-    Amounts of disk space and swap space are dynamic, as they change
-    over time. For these, specify a percentage or fraction of the total
-    value that is allocated to each slot, instead of specifying absolute
+    Amounts of disk space and swap space are detected at startup and
+    may be different each time that the EP starts up. The the EP will
+    use the detected free space as the amount that can be provisioned
+    to the slots.  So for disk, it is may be better to specify a percentage
+    or fraction of the available space that is allocated to each slot, instead of specifying absolute
     values. As the total values of these resources change on the
     machine, each slot will take its fraction of the total and report
-    that as its available amount.
+    that as its available amount.  Prior to HTCondor version 25.4,
+    Disk could only be provisioned as a fraction or percentage.
 
     The disk space allocated to each slot is taken from the disk
     partition containing the slot's :macro:`EXECUTE` or 
-    :macro:`SLOT<N>_EXECUTE` directory. If every slot is in a
+    :macro:`SLOT<N>_EXECUTE` directory unless :macro:`STARTD_ENFORCE_DISK_LIMITS`
+    is configured. If every slot is in a
     different partition, then each one may be defined with up to
     100% for its disk share. If some slots are in the same partition,
-    then their total is not allowed to exceed 100%.
+    then their total is not allowed to exceed 100% of the free
+    space on that partition.
 
     The four predefined attribute names are case insensitive when
     defining slot types. The first letter of the attribute name
@@ -226,6 +232,11 @@ Define slot types.
     -  disk, Disk, D, d
     -  swap, SWAP, S, s, VirtualMemory, V, v
 
+    Swap is treated as a resouce for backward compatibility, but in
+    modern computers, Swap should be be disabled for jobs and so
+    there is no need to explicitly provision the Swap resource to slots.
+    On Windows, provisioning Swap has no effect.
+
     As an example, consider a machine with 4 cores and 256 Mbytes of
     RAM. Here are valid example slot type definitions. Types 1-3 are all
     equivalent to each other, as are types 4-6. Note that in a real
@@ -236,13 +247,13 @@ Define slot types.
 
     .. code-block:: condor-config
 
-          SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
+          SLOT_TYPE_1 = cpus=2, ram=128, disk=1/2
 
-          SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
+          SLOT_TYPE_2 = cpus=1/2, memory=128, disk=50%
 
-          SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
+          SLOT_TYPE_3 = c=1/2, m=50%, disk=1/2
 
-          SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
+          SLOT_TYPE_4 = c=25%, m=64, d=25%
 
           SLOT_TYPE_5 = 25%
 
@@ -262,15 +273,15 @@ Define slot types.
 
     .. code-block:: condor-config
 
-        SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
+        SLOT_TYPE_1 = cpus=1, ram=1/2
 
         SLOT_TYPE_1 = cpus=1, disk=auto, 50%
 
     Note that it is possible to set the configuration variables such
     that they specify an impossible configuration. If this occurs, the
-    *condor_startd* daemon fails after writing a message to its log
-    attempting to indicate the configuration requirements that it could
-    not implement.
+    *condor_startd* daemon will create as many slots as it can without
+    running out of resources, and report a summary of slots that it could
+    not create to the collector in its daemon ad.
 
     In addition to the standard resources of CPUs, memory, disk, and
     swap, the administrator may also define custom resources on a
@@ -594,9 +605,8 @@ values for these variables, should they not be set are
 .. code-block:: condor-config
 
     JOB_DEFAULT_REQUESTCPUS = 1
-    JOB_DEFAULT_REQUESTMEMORY = \
-        ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)
-    JOB_DEFAULT_REQUESTDISK = DiskUsage
+    JOB_DEFAULT_REQUESTMEMORY = 128
+    JOB_DEFAULT_REQUESTDISK = MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024
 
 Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
@@ -3615,6 +3625,14 @@ files and machine descriptions to command line options, an administrator may
 want additional options passed to the docker container create command. To do
 so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
 append these to the docker container create command.
+
+Docker universe jobs may use the chirp protoocl to read or write files
+and job ad attributes to or from the Access Point.  By default, HTCondor
+assumes that the network named "docker0" can communicate from inside
+the container to the starter outside the container.  If the docker runtime
+is configured to use a different network, the administrator can set
+the configuation know :macro:`DOCKER_NETWORK_NAME` to the appropriate
+network name.
 
 Docker universe jobs may fail to start on certain Linux machines when
 SELinux is enabled. The symptom is a permission denied error when

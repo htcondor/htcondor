@@ -43,7 +43,7 @@ class CredCheck():
             return self._url
         if self._error is not None:
             return self._error
-        return self._service
+        return self._services
 
 
     def __bool__(self):

@@ -604,6 +604,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			} else {
 				dprintf(D_ERROR,"    Container %s remove failed -- does it even exist? If so, startd will remove on next boot.\n", containerName.c_str());
 			}
+			starter->SetVacateReason("Cannot inspect exited container", CONDOR_HOLD_CODE::ContainerError, 0);
 			EXCEPT("Cannot inspect exited container");
 		}
 
@@ -635,7 +636,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Memory);
 			DockerAPI::rm( containerName, error );
 
 			if ( starter->Hold( ) ) {
@@ -1037,7 +1038,11 @@ bool DockerProc::PublishUpdateAd( ClassAd * ad ) {
 
 
 // TODO: Implement.
-void DockerProc::PublishToEnv( Env * /* env */ ) {
+void DockerProc::PublishToEnv(Env *env) {
+	// Publish an vanilla universe job to the environment.
+	// this also takes care of pre/post scripts
+	VanillaProc::PublishToEnv(env);
+
 	dprintf( D_FULLDEBUG, "DockerProc::PublishToEnv()\n" );
 	return;
 }

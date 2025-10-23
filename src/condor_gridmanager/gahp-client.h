@@ -505,7 +505,7 @@ class GahpClient : public GenericGahpClient {
 								 const std::vector< std::pair< std::string, std::string > > & labels,
 								 std::string &instance_id );
 
-		int gce_instance_delete( std::string service_url,
+		int gce_instance_delete( const std::string &service_url,
 								 const std::string &auth_file,
 								 const std::string &account,
 								 const std::string &project,

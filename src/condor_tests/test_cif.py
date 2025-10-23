@@ -57,11 +57,18 @@ def the_condor(test_dir, the_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
-            "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
+            # Test for long sinful strings.
+            "HOST_ALIAS":       "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz"
+                              + "abcdefghijlmnopqrstuvwxyzabcdefghijlmnopqrstuvwxyz",
         },
     ) as the_condor:
         yield the_condor
@@ -87,7 +94,6 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     (user_dir / "input3.txt").write_text("input line 3\n" );
 
     # Make sure that credential propogation works, too.
-    # FIXME: this needs to be done as the submitter.
     credential_path = user_dir / "the_credential"
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
@@ -112,7 +118,9 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"d"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
+
         "transfer_input_files":     "input3.txt",
         "use_oauth_services":       "the_credential",
 
@@ -149,8 +157,8 @@ def the_big_condor(test_dir, the_big_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
-            "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_ALLOW_RUNAS_OWNER":    False,
@@ -210,7 +218,12 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"big_input1.txt, big_input2.txt"',
+        # Force a delay; the constant is to ensure that we would print out
+        # the waiting message at least twice (if the delay remains at five
+        # seconds each time).
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"big_input1.txt, big_input2.txt, debug://sleep/15"',
+
         "transfer_input_files":     "big_input3.txt",
 
         "leave_in_queue":           True,
@@ -234,13 +247,33 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         fail_condition=ClusterState.any_terminal
     )
 
-    # Release the other four jobs.
-    jobIDs = [ f"{job_handle.clusterid}.{x}" for x in range(4,8) ]
-    the_big_condor.act( htcondor2.JobAction.Release, jobIDs )
-
     # Touch the kill files on the first four jobs, causing them to finish.
     for i in range(0,4):
         (user_dir / f"kill-many-{job_handle.clusterid}.{i}").touch(exist_ok=True)
+
+    # Wait for them to finish.
+    assert job_handle.wait(
+        timeout=60,
+        condition=lambda self: self.status_exactly(4, JobStatus.COMPLETED),
+        fail_condition=ClusterState.any_held
+    )
+
+    # This test used to overlap releasing some jobs while others were still
+    # running, to make sure that "delayed" concurrent re-use worked properly.
+    # We could stagger the start of either (or both) halves of the jobs,
+    # but we're also using this test to verify obseverability, which means
+    # we need to check for a specific number of times what jobs wait for
+    # common file transfer to happen.  That leads to a race, because we don't
+    # know that the common file transfer has completed by the time wait()
+    # returns (which only knows about shadow start-up).
+    #
+    # Of course, we intend to add common files transfer events to the job
+    # event log later on in this PR, so maybe using those (after checking
+    # them after the fact in test_one_cif_job) would work well.
+
+    # Release the other four jobs.
+    jobIDs = [ f"{job_handle.clusterid}.{x}" for x in range(4,8) ]
+    the_big_condor.act( htcondor2.JobAction.Release, jobIDs )
 
     # Wait for the last four jobs to start.
     assert job_handle.wait(
@@ -278,8 +311,8 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
-            "STARTER_DEBUG":    "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
-            "SHADOW_DEBUG":     "D_CATEGORY D_ZKM D_SUB_SECOND D_PID",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
             "STARTER_NESTED_SCRATCH":   True,
@@ -342,7 +375,9 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"multi_input1.txt, multi_input2.txt"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"multi_input1.txt, multi_input2.txt"',
+
         "transfer_input_files":     "multi_input3.txt",
 
         "leave_in_queue":           True,
@@ -357,7 +392,8 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     job_description_b = { ** job_description_a,
         "arguments":
             f'{kill_file} multi_input4.txt multi_input5.txt multi_input6.txt',
-        "MY.CommonInputFiles":      '"multi_input4.txt, multi_input5.txt"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"multi_input4.txt, multi_input5.txt"',
         "transfer_input_files":     "multi_input6.txt",
     }
 
@@ -476,7 +512,7 @@ def count_shadow_log_lines(the_condor, the_phrase):
     return len(lines)
 
 
-def shadow_log_is_as_expected(the_condor, count):
+def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     staging_commands_sent = count_shadow_log_lines(
         the_condor, "StageCommonFiles"
     )
@@ -488,7 +524,7 @@ def shadow_log_is_as_expected(the_condor, count):
     assert successful_staging_commands == count
 
     keyfile_touches = count_shadow_log_lines(
-        the_condor, "Elected producer touch"
+        the_condor, "Producer elected"
     )
     assert keyfile_touches == count
 
@@ -497,12 +533,71 @@ def shadow_log_is_as_expected(the_condor, count):
     )
     assert job_evictions == 0
 
+    common_transfer_begins = count_shadow_log_lines(
+        the_condor, "Starting common files transfer."
+    )
+    assert common_transfer_begins == cf_xfers
+
+    common_transfer_ends = count_shadow_log_lines(
+        the_condor, "Finished common files transfer: success."
+    )
+    assert common_transfer_ends == cf_xfers
+
+    if cf_waits is not None:
+        common_transfer_waits = count_shadow_log_lines(
+            the_condor, "Waiting for common files to be transferred"
+        )
+        assert common_transfer_waits == cf_waits
+
 
 def lock_dir_is_clean(the_lock_dir):
     syndicate_dir = the_lock_dir / "syndicate"
 
     files = list(syndicate_dir.iterdir())
     assert len(files) == 0
+
+
+def epoch_log_has_common_ad(the_condor):
+    with the_condor.use_config():
+        JOB_EPOCH_HISTORY = htcondor2.param["JOB_EPOCH_HISTORY"]
+
+    epoch_log = Path(JOB_EPOCH_HISTORY)
+    for line in epoch_log.read_text().split('\n'):
+        if '*** COMMON ClusterId' in line:
+            return True
+
+    return False
+
+
+def count_starter_log_lines(the_condor, the_phrase):
+    with the_condor.use_config():
+        LOG = htcondor2.param["LOG"]
+
+    count = 0
+    for log in Path(LOG).iterdir():
+        if log.name.startswith("StarterLog.slot1_"):
+            for line in log.read_text().split("\n"):
+                if the_phrase in line:
+                    count = count + 1
+
+    return count
+
+
+def starter_log_is_as_expected(the_condor, cf_xfers, cf_waits):
+    common_transfer_begins = count_starter_log_lines(
+        the_condor, "Starting common files transfer."
+    )
+    assert common_transfer_begins == cf_xfers
+
+    common_transfer_ends = count_starter_log_lines(
+        the_condor, "Finished common files transfer: success."
+    )
+    assert common_transfer_ends == cf_xfers
+
+    common_transfer_waits = count_starter_log_lines(
+        the_condor, "Waiting for common files to be transferred"
+    )
+    assert common_transfer_waits == cf_waits
 
 
 # ---- the tests --------------------------------------------------------------
@@ -514,19 +609,23 @@ class TestCIF:
         output_is_as_expected(
             completed_cif_job, "input A\nII input\ninput line 3\n"
         )
-        shadow_log_is_as_expected(the_condor, 1)
+        shadow_log_is_as_expected(the_condor, 1, 1, 0)
         lock_dir_is_clean(the_lock_dir)
         error_is_as_expected(
             completed_cif_job, "fake credential information"
         )
+
+        starter_log_is_as_expected(the_condor, 1, 0)
+        assert epoch_log_has_common_ad(the_condor)
 
 
     def test_many_cif_jobs(self, the_big_lock_dir, the_big_condor, completed_cif_jobs):
         output_is_as_expected(
             completed_cif_jobs, "input A\nII input\ninput line 3\n"
         )
-        shadow_log_is_as_expected(the_big_condor, 2)
+        shadow_log_is_as_expected(the_big_condor, 2, 2, 6)
         lock_dir_is_clean(the_big_lock_dir)
+        starter_log_is_as_expected(the_big_condor, 2, 6)
 
 
     def test_multi_cif_jobs(self, the_multi_lock_dir, the_multi_condor, completed_multi_jobs):
@@ -538,5 +637,8 @@ class TestCIF:
             completed_multi_jobs[1],
             "-- input A\n-- II input\n-- input line 3\n"
         )
-        shadow_log_is_as_expected(the_multi_condor, 4)
+        # This test doesn't include the delay necessary to make sure that
+        # transferring common files takes longer than starting / scheduling
+        # a the next shadow, so just ignore wait lines completely.
+        shadow_log_is_as_expected(the_multi_condor, 4, 4, None)
         lock_dir_is_clean(the_multi_lock_dir)

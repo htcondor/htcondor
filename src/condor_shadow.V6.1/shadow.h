@@ -28,7 +28,7 @@
 
 #include <optional>
 #include "guidance.h"
-
+#include "catalog_utils.h"
 
 class ShadowHookMgr;
 
@@ -96,8 +96,10 @@ class UniShadow : public BaseShadow
 	void hookTimerCancel();
 
 	const char * getStarterVersion() {
-		if( remRes ) { return remRes->starter_version; }
-		return NULL;
+		if (remRes && !remRes->starter_version.empty()) { 
+			return remRes->starter_version.c_str();
+		}
+		return nullptr;
 	}
 
 		/** Shadow should attempt to reconnect to a disconnected
@@ -156,12 +158,6 @@ class UniShadow : public BaseShadow
 
 	int exitCode( void );
 
-		/** This function is specifically used for spawning MPI jobs.
-			So, if for some bizzare reason, it gets called for a
-			non-MPI shadow, we should return falure.
-		*/
-	bool setMpiMasterInfo( char* ) { return false; };
-
 		/** If desired, send the user email now that this job has
 			terminated.  This has all the job statistics from the run,
 			and lots of other useful info.
@@ -208,27 +204,16 @@ class UniShadow : public BaseShadow
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
-	virtual ClassAd do_common_file_transfer( const ClassAd & request, const std::string & commonInputFiles, const std::string & cifName );
+
+	virtual std::optional<std::string> uniqueCIFName(
+		const std::string & cifName, const std::string & content
+	);
 
  protected:
 
 	virtual void logReconnectedEvent( void );
 
 	virtual void logReconnectFailedEvent( const char* reason );
-
-
-	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName);
-
-	FileTransfer * commonFTO = NULL;
-	SingleProviderSyndicate * cfLock = NULL;
-	bool resume_job_setup = false;
-
-
-	bool _cifNameInitialized = false;
-	virtual bool hasCIFName();
-	std::string _cifName;
-	virtual const std::string & getCIFName();
-	int producer_keep_alive = -1;
 
  private:
 
@@ -239,6 +224,40 @@ class UniShadow : public BaseShadow
 	int delayedExitReason;
 
 	void requestJobRemoval();
+
+
+	//
+	// Internal implementation details specific to pseudo_request_guidance().
+	//
+
+	ClassAd before_common_file_transfer(
+		const std::string & cifName, const std::string & commonInputFiles
+	);
+	bool after_common_file_transfer(
+	    const ClassAd & request,
+	    const std::string & cifName,
+	    std::string & stagingDir
+	);
+
+	ClassAd handle_wiring_failure();
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
+	    ClassAd request,
+	    ListOfCatalogs common_file_catalogs,
+	    bool print_waiting=true
+	);
+
+	void set_provider_keep_alive( const std::string & cifName );
+	int producer_keep_alive = -1;
+
+	// We only transfer one catalog at a time.
+	FileTransfer * commonFTO = NULL;
+
+	// The SingleProviderSyndicate can't be default-constructed.
+	std::map< std::string, SingleProviderSyndicate * > cfLocks;
+	// At some point we'll figure out nesting our coroutines and
+	// we won't need this any more.
+	bool resume_job_setup = false;
 };
 
 #endif
