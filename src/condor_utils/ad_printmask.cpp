@@ -622,7 +622,7 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 			}
 			if (fmt_type ==  PFT_RAW) {
 				// special case for attr_is_expr when the expression is really an attribute reference.
-				if (tree->GetKind() == classad::ExprTree::NodeKind::ATTRREF_NODE) {
+				if (attr_is_expr && (tree->GetKind() == classad::ExprTree::NodeKind::ATTRREF_NODE)) {
 					pval->SetStringValue("undefined");
 				} else {
 					std::string buff;
