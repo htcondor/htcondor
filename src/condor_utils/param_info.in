@@ -3025,6 +3025,12 @@ type=bool
 description=Negotiator should use slot weights
 tags=negotiator,matchmaker
 
+[FORCE_NEGOTIATOR_SLOT_WEIGHT]
+default=false
+type=bool
+description=Negotiator should ignore the slot value for SLOT_WEIGHT and use its own value
+tags=negotiator,matchmaker
+
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
 default=true
 type=bool
