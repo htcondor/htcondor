@@ -142,7 +142,7 @@ ShadowHookMgr::tryHookPrepareJob()
 		formatstr(err_msg, "failed to execute %s (%s)", hook_name, m_hook_prepare_job.c_str());
 		dprintf(D_ERROR, "ERROR in ShadowHookMgr::tryHookPrepareJob: %s\n",
 			err_msg.c_str());
-		Shadow->shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailureRetryable);
+		Shadow->shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 	}
 
 	dprintf(D_ALWAYS, "%s (%s) invoked.\n", hook_name, m_hook_prepare_job.c_str());
@@ -215,7 +215,8 @@ HookShadowPrepareJobClient::hookExited(int exit_status) {
 		if (exit_status < 300) {
 			Shadow->holdJobAndExit(log_msg.c_str(), CONDOR_HOLD_CODE::HookShadowPrepareJobFailure, exit_status);
 		} else {
-			Shadow->shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailureRetryable);
+			// Abort launch, but don't put job on hold
+			Shadow->shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure, -1000);
 		}
 		return;
 	}

@@ -165,7 +165,7 @@ UniShadow::spawn()
 		auto rval = m_hook_mgr->tryHookPrepareJob();
 		if (rval == -1) {
 			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
-			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailureRetryable);
+			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 		} else if (rval == 0) {
 			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
 			spawnFinish();
@@ -186,7 +186,7 @@ void
 UniShadow::hookTimeout( int /* timerID */ )
 {
 	dprintf(D_ERROR, "Timed out waiting for a hook to exit\n");
-	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out", CONDOR_HOLD_CODE::HookShadowPrepareJobFailureRetryable);
+	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 }
 
 
