@@ -86,8 +86,10 @@ ResMgr::ResMgr() :
 	if ( ! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd disk enforcement disabled.\n");
 		m_volume_mgr.reset(nullptr);
+		m_attr->set_volume_manager(nullptr);
 	} else {
 		m_volume_mgr.reset(new VolumeManager());
+		m_attr->set_volume_manager(m_volume_mgr.get());
 	}
 
 #if HAVE_BACKFILL
@@ -434,7 +436,7 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 		volman->PublishDiskInfo(ad);
 	}
 
-	m_attr->publish_static(&ad);
+	m_attr->publish_static(&ad, nullptr);
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
@@ -720,6 +722,15 @@ ResMgr::init_resources( void )
 		id_disp = new IdDispenser( 1 );
 		return;
 	}
+
+#ifdef PROVISION_FRACTIONAL_DISK
+#else
+	if (m_volume_mgr && m_volume_mgr->is_enabled()) {
+		initExecutePartitionTable(m_attr, m_volume_mgr.get());
+	} else {
+		initExecutePartitionTable(m_attr, max_types, num_res, type_nums, bkfill_bools, failmode, bad_slot_types);
+	}
+#endif
 
 	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, failmode, bad_slot_types );
 	if ( ! new_cpu_attrs || ! new_cpu_attrs[0]) {
@@ -1544,12 +1555,21 @@ void ResMgr::compute_static()
 	// static machine attributes and per-slot config that depends on resource allocation
 	m_attr->compute_config();
 
+#ifdef PROVISION_FRACTIONAL_DISK
 	long long virt_mem = m_attr->virt_mem();
+#else
+#endif
 	for(Resource* rip : slots) {
 		if (rip) {
+		#ifdef PROVISION_FRACTIONAL_DISK
 			// TODO: change disk and vir_mem so that they are allocated as % 
 			rip->r_attr->compute_virt_mem_share(virt_mem);
 			rip->r_attr->compute_disk();
+		#else
+			// init of Disk and Swap quantities now happens in initDiskVolumes() on startup
+			// set values for TotalDisk and TotalSlotDisk
+			rip->r_attr->recompute_disk(false);
+		#endif
 			rip->reqexp_config();
 		}
 	}
@@ -1576,6 +1596,8 @@ ResMgr::compute_and_refresh(Resource * rip)
 	}
 	compute_resource_conflicts();
 
+#ifdef PROVISION_FRACTIONAL_DISK
+
 #if 0 // TJ: these recompute things which we don't need/want to refresh on slot creation or activation
 	compute_draining_attrs();
 	// for updates, we recompute some machine attributes (like virtual mem)
@@ -1587,6 +1609,10 @@ ResMgr::compute_and_refresh(Resource * rip)
 	long long virt_mem = m_attr->virt_mem();
 	rip->r_attr->compute_virt_mem_share(virt_mem);
 	if (parent) parent->r_attr->compute_virt_mem_share(virt_mem);
+#else
+	// Swap quantities are initialized when global MachineAttrs is created
+	// basically the same time that Memory is initialized
+#endif
 
 	// update global machine load and idle values, also dynamic WinReg attributes
 	m_attr->compute_for_policy();
@@ -1681,10 +1707,17 @@ ResMgr::compute_dynamic(bool for_update)
 
 	// And last, do some logging
 	//
+#ifdef PROVISION_FRACTIONAL_DISK
 	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->always_recompute_disk()) {
 		// on update (~10min) we report the new value of DISK 
 		walk(&Resource::display_total_disk);
 	}
+#else
+	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->recompute_disk_free()) {
+		// on update (~10min) we report the new value of DISK 
+		walk(&Resource::display_total_disk);
+	}
+#endif
 	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
 		// for updates, we want to log this on normal, all other times, we log at VERBOSE 

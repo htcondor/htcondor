@@ -114,6 +114,7 @@ public:
 		int m_cmd{-1};
 		Sock *m_sock{nullptr};
 		bool m_raw_protocol{false};
+		bool m_force_auth{false};
 		bool m_resume_response{true};
 		CondorError *m_errstack{nullptr};
 		int m_subcmd{-1};

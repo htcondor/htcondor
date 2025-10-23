@@ -78,10 +78,13 @@ Edit Options
     Set the ceiling for the submitter specified by *submitter* to the
     specified *value*. Where *value* is the sum of the SlotWeight
     of all running jobs (See :macro:`SLOT_WEIGHT`).
+    Setting the ceiling to -1 clears any previously set ceiling, and
+    sets the effective ceiling to unlimited.
  **-setfloor** *submitter* *value*
     Set the floor for the submitter specified by *submitter* to the
     specified *value*. Where *value* is the sum of the SlotWeight
     of all running jobs (See :macro:`SLOT_WEIGHT`).
+    Setting the floor to 0 clears any previously set floor.
 
 Display Options
 ~~~~~~~~~~~~~~~

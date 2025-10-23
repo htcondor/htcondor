@@ -212,8 +212,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.18.1 or pelican-debug >= 7.18.1)
-Requires: pelican-osdf-compat >= 7.18.1
+Requires: (pelican >= 7.20.2 or pelican-debug >= 7.20.2)
+Requires: pelican-osdf-compat >= 7.20.2
 
 %if ! 0%{?amzn}
 # Require tested Apptainer
@@ -1264,6 +1264,23 @@ fi
 # configuration
 
 %changelog
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.2.1-1
+- Support for re-running a job with an increased memory request
+- Several DAGMan Improvements
+- Several local credmon Improvements
+- Fix problem that could prevent logging of hung file transfer plugins
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.2-1
+- Update Python file transfer plugins to use the new Python bindings
+- Fix incorrect environment when using Singularity and nested scratch
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.13-1
+- Fix annoying momentary text status flash in condor_watch_q
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
+- Fix bug that could cause Python job submission to crash
+- HTCondor tarballs now contain Pelican 7.20.2
+
 * Mon Sep 29 2025 Tim Theisen <tim@cs.wisc.edu> - 25.1.0-1
 - New and improved Python bindings: classad2 and htcondor2
 - The original Python bindings have been removed

@@ -34,7 +34,7 @@ public:
     // See RemoveLV() for exit codes | is_encrypted: -1=Unknown, 0=false, 1=true
     int  CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted=-1);
     bool CleanupLVs(std::vector<LeakedLVInfo>* leaked = nullptr);
-    bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
+    bool GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint64_t& non_condor_bytes, CondorError& err);
     static bool DetectLVM() {
         return param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) && is_enabled();
     }
@@ -90,6 +90,12 @@ public:
         m_queried_available_disk = true;
     }
 
+    inline std::string GetBackingDevice() const {
+        std::string dev = m_volume_group_name;
+        if (m_use_thin_provision) { dev += "/" + m_pool_lv_name; }
+        return dev;
+    }
+
     class Handle {
     public:
         Handle() = delete;
@@ -128,7 +134,7 @@ private:
     static bool CreateLV(const VolumeManager::Handle &handle, uint64_t size_kb, CondorError &err);
     static bool CreateVG(const std::string &vg_name, const std::string &device, CondorError &err, int timeout);
     static bool CreatePV(const std::string &device, CondorError &err, int timeout);
-    static bool CreateFilesystem(const std::string &label, const std::string &device_path, CondorError &err, int timeout);
+    static bool CreateFilesystem(const std::string &device_path, CondorError &err, int timeout);
     static bool EncryptLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static void RemoveLostAndFound(const std::string& mountpoint);
     static bool RemoveLVEncryption(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
@@ -149,6 +155,7 @@ private:
 #else
     static bool is_enabled() { return false; }
     bool IsSetup() { return false; };
+    inline std::string GetBackingDevice() const { return "<none>"; }
 #endif // LINUX
     uint64_t m_total_disk{0};
     uint64_t m_non_condor_usage{0};

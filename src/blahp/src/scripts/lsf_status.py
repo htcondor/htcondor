@@ -386,7 +386,7 @@ def get_bjobs_location():
         return _bjobs_location_cache
     load_config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'blah_load_config.sh')
     if os.path.exists(load_config_path) and os.access(load_config_path, os.R_OK):
-        cmd = "/bin/bash -c 'source %s && echo $lsf_binpath/bjobs'" % load_config_path
+        cmd = "/bin/bash -c 'source %s && echo ${lsf_binpath}bjobs'" % load_config_path
     else:
         cmd = 'which bjobs'
     child_stdout = os.popen(cmd)

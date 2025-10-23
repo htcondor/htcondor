@@ -114,6 +114,10 @@ Options
     (Query option) Query *condor_startd* ClassAds of slots current
     enforced disk usage. Ues with **-startd** to see which *condor_startd*\s
     are enforcing disk usage.
+ **-snapshot** *[details]*
+    (Query option) Can only be used if the **-direct** option has been
+    specified. Requests a full snapshot of the internal state, also including
+    *Machine.Extras* from cron jobs or resource monitors.
  **-statistics** *WhichStatistics*
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
