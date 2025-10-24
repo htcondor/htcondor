@@ -3584,6 +3584,10 @@ Starter::PublishToEnv( Env* proc_env )
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long
+					// so we just force CUDA_VISIBLE_DEVICES to be the same value as NVIDIA_VISIBLE_DEVICES
+					proc_env->SetEnv("CUDA_VISIBLE_DEVICES", env_value);
+					dprintf(D_ALWAYS, "AvailableGPUs forcing env CUDA_VISIBLE_DEVICES=%s\n", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
 				}
