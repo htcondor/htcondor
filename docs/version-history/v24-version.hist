@@ -94,6 +94,12 @@
   daemon can't be contacted will no longer cause a segfault.
   :jira:`3314`
 
+- To work around issues with updated CUDA runtime, When the *condor_starter*
+  sets the environment variable ``NVIDIA_VISIBLE_DEVICES`` for a job, it now
+  forces ``CUDA_VISIBLE_DEVICES`` to have the same value.  The values will
+  always have the long form GPU ids if any GPUs are assigned to the job.
+  :jira:`3350`
+
 *** 24.12.13 bugs
 
 - Fixed bug where the message ``Processing new events...`` would briefly
