@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 196> makeCommandTable() {
+std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -383,6 +383,9 @@ std::array<std::pair<int, const char *>, 196> makeCommandTable() {
 		{DELETE_USERREC, "DELETE_USERREC"},
 #define GET_CONTACT_INFO  (SCHED_VERS+150) // Ask Schedd for child daemons contact information (addr and secret) Note: Used for DAGMan
 		{GET_CONTACT_INFO, "GET_CONTACT_INFO"},
+
+#define	 DEACTIVATE_CLAIM_JOB_RESTARTING (SCHED_VERS+151)
+		{DEACTIVATE_CLAIM_JOB_RESTARTING, "DEACTIVATE_CLAIM_JOB_RESTARTING"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

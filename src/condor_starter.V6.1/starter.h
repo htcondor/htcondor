@@ -360,6 +360,13 @@ public:
 
 	void ExceptHandler(const char* errmsg);
 
+		/*
+		  @param result Buffer in which to store claim id string from job.
+		  Returns false if no claim id could be found.
+		 */
+	bool getJobClaimId(std::string &result) const;
+
+
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
@@ -421,12 +428,6 @@ private:
 		  If no job owner can be found, substitute a suitable dummy user name.
 		 */
 	void getJobOwnerFQUOrDummy(std::string &result) const;
-
-		/*
-		  @param result Buffer in which to store claim id string from job.
-		  Returns false if no claim id could be found.
-		 */
-	bool getJobClaimId(std::string &result) const;
 
 
 	bool WriteAdFiles() const;

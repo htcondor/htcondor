@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
+#include "condor_daemon_client.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
 #include "vanilla_proc.h"
@@ -951,6 +952,37 @@ void VanillaProc::restartCheckpointedJob() {
 			dprintf( D_ALWAYS, "Failed to transfer checkpoint.\n" );
 			notifyFailedPeriodicCheckpoint(checkpointNumber);
 	}
+
+	//
+	// New semantic: restarting a checkpointed job is now considered
+	// equivalent to reactivating a claim, so ask the startd if a claim
+	// reactivation would succeed.
+	//
+	DCStartd startd((const char *)nullptr);
+	if(! startd.locate()) {
+		dprintf( D_ERROR, "Unable to locate startd while attempting to determine if the checkpointed job should restart: %s\n", startd.error() );
+		// ...?
+	}
+	std::string claimID;
+	if(! starter->getJobClaimId(claimID)) {
+		dprintf( D_ERROR, "Unable to get my job's claim ID?!\n" );
+	}
+	startd.setClaimId(claimID);
+
+	bool graceful = false;
+	bool got_job_done = false;
+	bool claim_is_closing = false;
+	bool job_is_restarting = true;
+	bool OK = startd.deactivateClaim( graceful, got_job_done, & claim_is_closing, job_is_restarting );
+	if(! OK) {
+		dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
+		// ...?
+	}
+	if( claim_is_closing ) {
+		dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
+		// ...?
+	}
+
 
 	// While it's arguably sensible to kill the process family
 	// before we restart the job, that would mean that checkpointing
