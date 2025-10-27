@@ -2291,6 +2291,15 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! cad->ownerinfo) {
 				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
+			// Enforce that OsUser matches the user record.
+			// Before 24.X, OsUser could be set to anything.
+			if (cad->ownerinfo && cad->LookupString(ATTR_OS_USER, name1)) {
+				const char* urec_user = cad->ownerinfo->OsUser();
+				if (urec_user == nullptr) urec_user = "";
+				if (strcmp(urec_user, name1.c_str()) != 0) {
+					JobQueue->SetAttribute(key, ATTR_OS_USER, QuoteAdStringValue(urec_user, buffer));
+				}
+			}
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
 				cad->LookupString(ATTR_PROJECT_NAME, project_name);
@@ -2319,6 +2328,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->set_id = 0;
 			ad->Delete(ATTR_JOB_SET_ID);
 			ad->Delete(ATTR_JOB_SET_NAME);
+			ad->Delete(ATTR_OS_USER);
 
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
