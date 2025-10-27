@@ -401,8 +401,7 @@ class Schedd():
              When a constraint is used, only User records that match
              the constraint will be removed.
         :param reason: A free-form justification that is used when
-             the record cannot be removed.  Defaults to
-            "Python-initiated action".
+             the record cannot be removed.  Defaults to "Python-initiated action".
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """
@@ -449,8 +448,7 @@ class Schedd():
              When a constraint is used, only User records that match
              the constraint will be removed.
         :param reason: A free-form justification that is used when
-             the record cannot be removed.  Defaults to
-            "Python-initiated action".
+             the record cannot be removed.  Defaults to "Python-initiated action".
         :return:  A ClassAd describing the changes made.  This
                   ClassAd is currently undocumented.
         """

@@ -35,7 +35,7 @@
   :jira:`3327`
 
 - Fixed a very longstanding bug where extremely fast machines would
-  overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
+  overflow a 32 bit counter and return -1 for the :ad-attr:`KFlops`
   slot attribute.
   :jira:`3288`
 
