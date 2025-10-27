@@ -45,13 +45,13 @@ Bugs Fixed:
   variables that pointed into the job's execute directory were not correct.
   :jira:`3265`
 
-- Fixed a bug where *condor_qusers* would treat the ``add`` option as ``enable``
-  when the leading dash was omitted.
-  :jira:`3284`
-
 - Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
   to fail immediately on start-up.
   :jira:`3317`
+
+- Fixed a bug where *condor_qusers* would treat the ``add`` option as ``enable``
+  when the leading dash was omitted.
+  :jira:`3284`
 
 Version 24.12.13
 ----------------
