@@ -1,5 +1,5 @@
 :mod:`htcondor2.dags` API Reference
--==================================
+===================================
 
 .. module:: htcondor2.dags
 
