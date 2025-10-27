@@ -1,5 +1,5 @@
 :mod:`htcondor2.htchirp` API Reference
-=====================================
+======================================
 
 .. module:: htcondor2.htchirp
 
