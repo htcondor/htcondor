@@ -1,5 +1,13 @@
 *** 25.3.0 features
 
+- The *condor_startd* will now provision :ad-attr:`Disk` to slots as a specific quantity in KiB
+  rather than as a percentage of free disk space.  :ad-attr:`Disk` provisioned to dynamic slots
+  will now be much closer in size to the request. Provisioning statements in the
+  configuration files are no longer required to be expressed as a percentage, but a percentage
+  will still work as before.  The *condor_startd* now reports both :ad-attr:`TotalDisk`
+   and :ad-attr:`DetectedDisk` in each slot and in the daemon ad.
+  :jira:`3302`
+
 - Changed the default value of :macro:`STARTER_NESTED_SCRATCH` to true.  When false,
   the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
   directory.  When true, the job's scratch directory is a subdirectory thereof, named
