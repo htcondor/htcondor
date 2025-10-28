@@ -41,6 +41,28 @@ command_handler(int cmd, Stream* stream )
 	Resource* rip;
 	if( ! (rip = stream_to_rip(stream)) ) {
 		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)\n", cmd, getCommandString(cmd));
+
+		// Let's not just hang up if we failed to find the claim ID.
+		switch( cmd ) {
+			case ALIVE:
+				// This isn't KEEP_STREAM and therefore meaningless?
+				return FALSE;
+				break;
+			case DEACTIVATE_CLAIM:
+			case DEACTIVATE_CLAIM_FORCIBLY:
+			case DEACTIVATE_CLAIM_JOB_DONE:
+			case DEACTIVATE_CLAIM_JOB_RESTARTING:
+				stream->encode();
+
+				ClassAd response_ad;
+				response_ad.Assign(ATTR_START, false /* the claim has closed */ );
+				if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
+					dprintf(D_FULLDEBUG, "Failed to send response ClassAd after receiving invalid claim ID..\n");
+				}
+				return FALSE;
+				break;
+		}
+
 		return FALSE;
 	}
 	State s = rip->state();

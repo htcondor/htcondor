@@ -915,7 +915,7 @@ void VanillaProc::killFamilyIfWarranted() {
 	}
 }
 
-void VanillaProc::restartCheckpointedJob() {
+bool VanillaProc::restartCheckpointedJob() {
 
 	// daemoncore unregisters the family
 	// after it calls the reaper, if it was registered.
@@ -958,31 +958,43 @@ void VanillaProc::restartCheckpointedJob() {
 	// equivalent to reactivating a claim, so ask the startd if a claim
 	// reactivation would succeed.
 	//
-	DCStartd startd((const char *)nullptr);
-	if(! startd.locate()) {
-		dprintf( D_ERROR, "Unable to locate startd while attempting to determine if the checkpointed job should restart: %s\n", startd.error() );
-		// ...?
-	}
-	std::string claimID;
-	if(! starter->getJobClaimId(claimID)) {
-		dprintf( D_ERROR, "Unable to get my job's claim ID?!\n" );
-	}
-	startd.setClaimId(claimID);
+	{
+		DCStartd startd((const char *)nullptr);
+		if(! startd.locate()) {
+			dprintf( D_ERROR, "Unable to locate startd while attempting to determine if the checkpointed job should restart: %s\n", startd.error() );
 
-	bool graceful = false;
-	bool got_job_done = false;
-	bool claim_is_closing = false;
-	bool job_is_restarting = true;
-	bool OK = startd.deactivateClaim( graceful, got_job_done, & claim_is_closing, job_is_restarting );
-	if(! OK) {
-		dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
-		// ...?
-	}
-	if( claim_is_closing ) {
-		dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
-		// ...?
-	}
+	        // Fall back to the semantics from before this check was added.
+	        goto restart_job;
+		}
+		std::string claimID;
+		if(! starter->getJobClaimId(claimID)) {
+			dprintf( D_ERROR, "Unable to get my job's claim ID.\n" );
 
+	        // Fall back to the semantics from before this check was added.
+	        goto restart_job;
+		}
+		startd.setClaimId(claimID);
+
+		bool graceful = false;
+		bool got_job_done = false;
+		bool claim_is_closing = false;
+		bool job_is_restarting = true;
+		bool OK = startd.deactivateClaim( graceful, got_job_done, & claim_is_closing, job_is_restarting );
+		if(! OK) {
+			dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
+
+	        // Fall back to the semantics from before this check was added.
+	        goto restart_job;
+		}
+		if( claim_is_closing ) {
+			dprintf( D_ALWAYS, "This checkpointed job should NOT restart.\n" );
+
+			// We didn't restart the job (and didn't want to).
+			return false;
+		}
+    }
+
+    restart_job:;
 
 	// While it's arguably sensible to kill the process family
 	// before we restart the job, that would mean that checkpointing
@@ -991,6 +1003,9 @@ void VanillaProc::restartCheckpointedJob() {
 
 	m_proc_exited = false;
 	StartJob();
+
+	// We started the job.
+	return true;
 }
 
 
@@ -1127,9 +1142,45 @@ VanillaProc::JobReaper(int pid, int status)
 				return true;
 			}
 
-			restartCheckpointedJob();
-			isCheckpointing = false;
-			return false;
+			if( restartCheckpointedJob() ) {
+				isCheckpointing = false;
+				return false;
+			} else {
+				// We need to prevent (final) output transfer from happening
+				// as well as ensure that the job is requeued.  The latter
+				// should happen automatically as a result of the former,
+				// but doesn't.
+				starter->jic->setOutputTransfer(true);
+				starter->SetVacateReason(
+					"Rescheduling self-checkpoint job after checkpoint upload because reactivating the claim would have failed.",
+					CONDOR_HOLD_CODE::SuccessfulCheckpoint, 0
+				);
+				starter->jicNotifyStarterError( true );
+				requested_exit = true;
+
+				// At this point, the shadow will ask the startd to deactivate
+				// the claim, but the startd will block waiting for the starter
+				// to exit, so we'll just exit first.  (Arguably, we should
+				// schedule a zero-second timer here to exit so that we can
+				// exit through the event loop.)
+				starter->StarterExit( JOB_SHOULD_REQUEUE );
+
+				// This job is done, but we want to avoid reporting a job
+				// exit here, because it will be misinterpreted as a job
+				// termination, and we need the job rescheduled.
+				return false;
+
+
+
+				// FIXME: but doesn't.
+
+
+
+				starter->jic->setOutputTransfer(true);
+
+				// This job is done.
+				return true;
+			}
 		} else {
 			// The job exited without taking a checkpoint.  If we don't do
 			// anything, it will be reported as if the error code or signal
@@ -1170,8 +1221,33 @@ VanillaProc::JobReaper(int pid, int status)
 			notifySuccessfulEvictionCheckpoint();
 			return true;
 		} else {
-			restartCheckpointedJob();
-			return false;
+			if( restartCheckpointedJob() ) {
+				return false;
+			} else {
+				// We need to prevent (final) output transfer from happening
+				// as well as ensure that the job is requeued.  The latter
+				// should happen automatically as a result of the former,
+				// but doesn't.
+				starter->jic->setOutputTransfer(true);
+				starter->SetVacateReason(
+					"Rescheduling self-checkpoint job after checkpoint upload because reactivating the claim would have failed.",
+					CONDOR_HOLD_CODE::SuccessfulCheckpoint, 0
+				);
+				starter->jicNotifyStarterError( true );
+				requested_exit = true;
+
+				// At this point, the shadow will ask the startd to deactivate
+				// the claim, but the startd will block waiting for the starter
+				// to exit, so we'll just exit first.  (Arguably, we should
+				// schedule a zero-second timer here to exit so that we can
+				// exit through the event loop.)
+				starter->StarterExit( JOB_SHOULD_REQUEUE );
+
+				// This job is done, but we want to avoid reporting a job
+				// exit here, because it will be misinterpreted as a job
+				// termination, and we need the job rescheduled.
+				return false;
+			}
 		}
 	} else {
 		// If the parent job process died, clean up all of the job's processes.

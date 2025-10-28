@@ -357,6 +357,7 @@ public:
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 
 	void SetVacateReason(const std::string& msg, int code, int subcode);
+	void jicNotifyStarterError( bool critical );
 
 	void ExceptHandler(const char* errmsg);
 
