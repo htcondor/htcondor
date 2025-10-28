@@ -6753,7 +6753,7 @@ TransferPluginResult
 FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			int & exit_status, bool & exit_by_signal, int & exit_signal,
 			FileTransferPlugin & plugin,
-			const std::string &transfer_files_string,
+			const std::string &tfs,
 			std::vector<ClassAd> & resultAds,
 			const char* proxy_filename, bool do_upload ) {
 
@@ -6835,6 +6835,30 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		// e.pushf(...)
 		return TransferPluginResult::Error;
 	}
+
+
+	//
+	// FIXME: We should really refactor the transfer_files_string parameter
+	// into a list of ClassAds.
+	//
+
+	//
+	// For protocol version 3, insert a "nonfile" ad at the beginning.
+	//
+	std::string transfer_files_string;
+	if( plugin.protocol_version == 3 ) {
+		ClassAd nonfile_ad;
+		nonfile_ad.InsertAttr( "NonFile", true );
+		// `CopyAttribute()` uses the `strcpy()` order, not the `cp` order.
+		CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
+
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( transfer_files_string, & nonfile_ad );
+		transfer_files_string += tfs;
+	} else {
+		transfer_files_string = tfs;
+	}
+
 
 	// Create an input file for the plugin.
 	// Input file consists of the transfer_files_string data (list of classads)
