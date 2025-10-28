@@ -3009,6 +3009,18 @@ tags=negotiator,matchmaker
 default=
 type=string
 
+[REMOVE_SIGNIFICANT_ATTRIBUTES]
+default=CpusUsage,DiskUsage,GPUsUsage,MemoryUsage,ResidentSetSize
+type=string
+description=Attributes that the Negotiator should assume are slot attributes
+tags=negotiator,matchmaker,schedd
+
+[REMOVE_SIGNIFICANT_ATTRIBUTES_REGEX]
+default=^Slot[0-9]*_
+type=string
+description=Regular expression pattern that the Negotiator should assume identifies slot attributes
+tags=negotiator,matchmaker
+
 [GROUP_AUTOREGROUP]
 default=false
 type=bool
