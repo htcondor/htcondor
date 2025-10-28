@@ -7,11 +7,25 @@
   have permission to pull from that repository.
   :jira:`3315`
 
+- The *condor_schedd* will now include the address of a *condor_credd*
+  that is running under the same *condor_master* in its ClassAd and
+  address file. This allows the submission process to get the the address
+  of the *condor_credd* from the *condor_schedd* for some situations
+  where credentials must be stored as part of job submission.  The
+  Kerberos local issuer will now use this mechanism and no longer query
+  the collector for the address of the credd.
+  :jira:`3281`
+
 *** 24.12.14 bugs
+
+- Fixed a bug that caused the Job Router to abort after an upgrade from
+  version 24.0, if the job queue contained jobs submitted by a client
+  running 24.X or later.
+  :jira:`3355`
 
 - Fixed a bug where using :subcom:`max_idle`, :subcom:`container_image` 
   and :subcom:`transfer_input_files` could result in the container only
-  being transfered along with the first job.
+  being transferred along with the first job.
   :jira:`3092`
 
 - Changed the documentation for :meth:`classad2.ClassAd.matches` and
