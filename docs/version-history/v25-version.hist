@@ -1,4 +1,4 @@
-*** 25.3.0 features
+*** 25.4.0 features
 
 - Changed the default value of :macro:`STARTER_NESTED_SCRATCH` to true.  When false,
   the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
@@ -67,7 +67,7 @@
   (e.g. ``slurm_binpath=/opt/slurm/bin``).
   :jira:`3326`
 
-*** 25.3.0 bugs
+*** 25.4.0 bugs
 
 *** 25.0.3 bugs
 
