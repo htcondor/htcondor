@@ -66,6 +66,11 @@
   "whole node" would have 4 GPUs and only 1 CPU.
   :jira:`3324`
 
+- Fixed a bug that caused the Job Router to abort after an upgrade from
+  version 24.0, if the job queue contained jobs submitted by a client
+  running 24.X or later.
+  :jira:`3355`
+
 *** 24.0.14 bugs
 
 - To work around issues with updated CUDA runtime, When the *condor_starter*
