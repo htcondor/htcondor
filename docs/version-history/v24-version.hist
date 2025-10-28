@@ -1,5 +1,10 @@
 *** 24.12.15 bugs
 
+- Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
+  keys will no longer mangle the values (and instead ignore the extra keys,
+  as implied by the documentation).
+  :jira:`3351`
+
 *** 24.0.15 bugs
 
 - Fixed a bug where tools like *condor_status* would print an incorrect
