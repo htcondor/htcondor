@@ -6670,14 +6670,6 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 				#endif
 				}
 			}
-
-				// ...
-			std::string ap_user;
-			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
-			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
-			if (ownerinfo && ownerinfo->OsUser()) {
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
-			}
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
