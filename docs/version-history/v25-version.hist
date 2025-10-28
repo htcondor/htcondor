@@ -28,6 +28,14 @@
   directories in that path, if allowed by the user's permissions.
   :jira:`3318`
 
+- The *condor_startd* will now provision :ad-attr:`Disk` to slots as a specific quantity in KiB
+  rather than as a percentage of free disk space.  :ad-attr:`Disk` provisioned to dynamic slots
+  will now be much closer in size to the request. Provisioning statements in the
+  configuration files are no longer required to be expressed as a percentage, but a percentage
+  will still work as before.  The *condor_startd* now reports both :ad-attr:`TotalDisk`
+   and :ad-attr:`DetectedDisk` in each slot and in the daemon ad.
+  :jira:`3302`
+
 - The *condor_schedd* can now limit the number of running jobs on a per-user basis.
   When a User record in the schedd has :ad-attr:`MaxJobsRunning` the schedd will not
   allow more jobs that than limit to begin running.
