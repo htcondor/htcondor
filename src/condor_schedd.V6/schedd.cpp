@@ -2529,12 +2529,47 @@ int Scheduler::act_on_project(
 		} else { // project does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE_PROJECT, add_if_not) && add_if_not) {
+				bool enabled = true;
+				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enabled);
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
-				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, true);
+				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, enabled);
 			} else {
 				rval = SC_ERR_NOT_FOUND;
 			}
+		}
+		break;
+	case DISABLE_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			SetUserAttributeInt(*pjad, ATTR_ENABLED, 0);
+			std::string reason;
+			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*pjad, ATTR_DISABLE_REASON, reason.c_str());
+			} else {
+				// TODO set default reason string
+			}
+			classad::Value max_val;
+			if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+				long long ival;
+				if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+					// set the default max (i.e. remove the per-project limit)
+					// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+					DeleteUserAttribute(*pjad, ATTR_MAX_JOBS_RUNNING);
+				} else {
+					SetUserAttributeValue(*pjad, ATTR_MAX_JOBS_RUNNING, max_val);
+				}
+			}
+		} else { // user does not exist, cannot be disabled
+			rval = SC_ERR_NOT_FOUND;
+		}
+		break;
+	case RESET_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			DeleteUserAttribute(*pjad, ATTR_MAX_JOBS_RUNNING);
+		} else {
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 	case EDIT_USERREC:
@@ -2640,8 +2675,7 @@ int Scheduler::act_on_user(
 	case RESET_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			// TODO: this should be a DeleteSecureAttribute
-			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
+			DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
 		} else {
 			rval = SC_ERR_NOT_FOUND;
 		}
