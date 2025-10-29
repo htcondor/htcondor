@@ -2,7 +2,7 @@
 
 - Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
   which defaults to false.  Setting this to true allows users to run
-  docker images which have been prestaged in the EPs docker cache even
+  docker images which have been pre-staged in the EPs docker cache even
   if the image does not exist in a repository, or if the user does not
   have permission to pull from that repository.
   :jira:`3315`
@@ -13,7 +13,7 @@
   of the *condor_credd* from the *condor_schedd* for some situations
   where credentials must be stored as part of job submission.  The
   Kerberos local issuer will now use this mechanism and no longer query
-  the collector for the address of the credd.
+  the collector for the address of the *condor_credd*.
   :jira:`3281`
 
 *** 24.12.14 bugs
@@ -36,14 +36,14 @@
   :jira:`3328`
 
 - Calling ``classad2.ExprTree(None)`` no longer results in an invalid
-  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :class:`classad2.ExprTree`, preventing segmentation faults when using the object.
   :jira:`3319`
 
 - Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
   truncated to its first character.
   :jira:`3272`
 
-- Fixed a bug in :meth:`Schedd.submit` where the `$(step)` submit variable
+- Fixed a bug in :meth:`Schedd.submit` where the ``$(step)`` submit variable
   wasn't being set.
   :jira:`3272`
 
@@ -62,7 +62,7 @@
   :jira:`3327`
 
 - Fixed a very longstanding bug where extremely fast machines would
-  overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
+  overflow a 32 bit counter and return -1 for the :ad-attr:`KFlops`
   slot attribute.
   :jira:`3288`
 
@@ -73,14 +73,14 @@
 
 *** 24.0.14 bugs
 
-- To work around issues with updated CUDA runtime, When the *condor_starter*
+- To work around issues with updated CUDA runtime, when the *condor_starter*
   sets the environment variable ``NVIDIA_VISIBLE_DEVICES`` for a job, it now
   forces ``CUDA_VISIBLE_DEVICES`` to have the same value.  The values will
   always have the long form GPU ids if any GPUs are assigned to the job.
   :jira:`3350`
 
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
-  daemon can't be contacted will no longer cause a segfault.
+  daemon can't be contacted will no longer cause a segmentation fault.
   :jira:`3314`
 
 - Executions points using disk enforcement failed when provided backing
@@ -92,12 +92,12 @@
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
 
-- Fixed a bug where administrative tools (e.g. condor_drain) can fail if
-  authentication is not required for queries to the condor_collector.
+- Fixed a bug where administrative tools (e.g. :tool:`condor_drain`) can fail if
+  authentication is not required for queries to the *condor_collector*.
   :jira:`3301`
 
-- Startd now correctly removes docker containers that have escaped from
-  docker universe jobs launched by starter that have exited uncleanly.
+- The *condor_startd* now correctly removes docker containers that have escaped from
+  docker universe jobs launched by *condor_starter*\'s that have exited uncleanly.
   :jira:`3338`
 
 - Annexes no longer download a default configuration tarball, making them
@@ -111,7 +111,7 @@
   encounters a line that cannot be decoded to UTF-8.
   :jira:`3335`
 
-- Fixed a bug in blahpd when /tmp is mounted with the noexec option.
+- Fixed a bug in *blahpd* when ``/tmp`` is mounted with the ``noexec`` option.
   :jira:`3343`
 
 *** 24.12.13 bugs
