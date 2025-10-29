@@ -297,6 +297,18 @@ test_cases = {
         "itemdata": iter([ 'b', 'c', 'd' ]),
         "count":    2,
     },
+    "itemdata_dict_key_mismatch": {
+        "subtext":  test26_subtext,
+        "expected": "{ClusterID} {ProcID} 0 a b\n"
+                    "{ClusterID} {ProcID} 1 a b\n"
+                    "{ClusterID} {ProcID} 0 c d\n"
+                    "{ClusterID} {ProcID} 1 c d\n",
+        "count":    2,
+        "itemdata": iter([
+            {"y": "a", "x": "b"},
+            {"y": "c", "x": "d", "z": "e" },
+        ]),
+    },
 }
 
 
