@@ -2,7 +2,7 @@
 
 - Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`
   which defaults to false.  Setting this to true allows users to run
-  docker images which have been prestaged in the EPs docker cache even
+  docker images which have been pre-staged in the EPs docker cache even
   if the image does not exist in a repository, or if the user does not
   have permission to pull from that repository.
   :jira:`3315`
@@ -13,7 +13,7 @@
   of the *condor_credd* from the *condor_schedd* for some situations
   where credentials must be stored as part of job submission.  The
   Kerberos local issuer will now use this mechanism and no longer query
-  the collector for the address of the credd.
+  the collector for the address of the *condor_credd*.
   :jira:`3281`
 
 *** 24.12.14 bugs
@@ -36,14 +36,14 @@
   :jira:`3328`
 
 - Calling ``classad2.ExprTree(None)`` no longer results in an invalid
-  :class:`classad2.ExprTree`, preventing segfaults when using the object.
+  :class:`classad2.ExprTree`, preventing segmentation faults when using the object.
   :jira:`3319`
 
 - Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
   truncated to its first character.
   :jira:`3272`
 
-- Fixed a bug in :meth:`Schedd.submit` where the `$(step)` submit variable
+- Fixed a bug in :meth:`Schedd.submit` where the ``$(step)`` submit variable
   wasn't being set.
   :jira:`3272`
 
@@ -62,7 +62,7 @@
   :jira:`3327`
 
 - Fixed a very longstanding bug where extremely fast machines would
-  overflow a 32 bit counter and return -1 for the :ad-attr:`Kflops`
+  overflow a 32 bit counter and return -1 for the :ad-attr:`KFlops`
   slot attribute.
   :jira:`3288`
 
