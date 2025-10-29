@@ -8,6 +8,8 @@
 
 *** 25.5.0 bugs
 
+*** 25.0.5 bugs
+
 *** 25.4.0 features
 
 - Changed the default value of :macro:`STARTER_NESTED_SCRATCH` to true.  When false,
