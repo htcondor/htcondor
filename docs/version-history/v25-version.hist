@@ -25,8 +25,8 @@
   :jira:`3302`
 
 - The *condor_schedd* can now limit the number of running jobs on a per-user basis.
-  When a user record in the schedd has :ad-attr:`MaxJobsRunning`, the schedd will not
-  allow more jobs that than limit to begin running.
+  The *condor_schedd* will not allow more jobs than the :ad-attr:`MaxJobsRunnng` in
+  the user record to begin running.
   :jira:`3325`
 
 - Add a python bindings function to reload the ClassAd usermaps and to load
