@@ -491,6 +491,7 @@ CondorQuery::setLocationLookup(const std::string &location, bool want_one_result
 	if (queryType == SCHEDD_AD)
 	{
 		attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+		attrs.push_back(ATTR_CREDD_IP_ADDR);
 	}
 
 	setDesiredAttrs(attrs);
@@ -535,16 +536,21 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
+	bool orig_auth = collector.getForceAuthentication();
+	collector.setForceAuthentication(requireAuth);
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
 	if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
 	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
+		collector.setForceAuthentication(orig_auth);
 		if (sock) {
 			delete sock;
 		}
 		return Q_COMMUNICATION_ERROR;
 	}
+
+	collector.setForceAuthentication(orig_auth);
 
 	// get result
 	sock->decode ();

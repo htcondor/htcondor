@@ -1086,7 +1086,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 
         // Generate the job ClassAd
-        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, 0, false, spool, NULL, NULL);
+        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, step, false, spool, NULL, NULL);
         if(! procAd) {
             std::string error = "Failed to create job ad";
             if (isFactoryJob) error += " (late materialization)";
@@ -1307,11 +1307,11 @@ _history_query(PyObject *, PyObject * args) {
         if( message == NULL || message[0] == '\0' ) {
             message = "Unable to connect to schedd";
             if( dt == DT_STARTD ) { message = "Unable to connect to startd"; }
-
-            // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_HTCondorException, message );
-            return NULL;
         }
+
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_HTCondorException, message );
+        return NULL;
     }
 
     if(! putClassAd( sock, commandAd )) {

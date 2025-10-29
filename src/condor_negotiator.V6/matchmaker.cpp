@@ -2941,7 +2941,7 @@ obtainAdsFromCollector (
     //
 #if 1
 	CondorQuery publicQuery(QUERY_MULTIPLE_PVT_ADS);
-	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	publicQuery.requestPrivateAttrs();
 
 	if (!m_SubmitterConstraintStr.empty()) {
 		publicQuery.addORConstraint(m_SubmitterConstraintStr.c_str());
@@ -2980,8 +2980,8 @@ obtainAdsFromCollector (
         publicQuery.addORConstraint(slot_ad_constraint);
     }
 
-	privateQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
-	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	privateQuery.requestPrivateAttrs();
+	publicQuery.requestPrivateAttrs();
 
 	// If preemption is disabled, we only need a handful of attrs from claimed ads.
 	// Ask for that projection.

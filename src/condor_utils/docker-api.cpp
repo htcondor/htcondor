@@ -1832,30 +1832,39 @@ void build_env_for_docker_cli(Env &env) {
 }
 std::string 
 DockerAPI::toAnnotatedImageName(const std::string &rawImageName, const ClassAd &job) {
-	std::string user;
-	job.LookupString(ATTR_USER, user);
+	if (!param_boolean("DOCKER_TRUST_LOCAL_IMAGES", false)) {
+		std::string user;
+		job.LookupString(ATTR_USER, user);
 
-	if (user.empty()) {
-		return "";
+		if (user.empty()) {
+			return "";
+		}
+
+		// tags cannot have @ in them (dots are ok, though)
+		replace_str(user, "@", "_at_");
+
+		return std::string("htcondor.org/" + user + "/" + rawImageName);
+	} else {
+		return rawImageName;
 	}
-
-	// tags cannot have @ in them (dots are ok, though)
-	replace_str(user, "@", "_at_");
-
-	return std::string("htcondor.org/" + user + "/" + rawImageName);
 }
 
 std::string 
 DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
-	if (!annotatedName.starts_with("htcondor.org/")) {
-		return "";
-	}
+	if (!param_boolean("DOCKER_TRUST_LOCAL_IMAGES", false)) {
+		if (!annotatedName.starts_with("htcondor.org/")) {
+			return "";
+		}
 
-	size_t firstSlash = annotatedName.find('/');
-	size_t secondSlash = annotatedName.find('/', firstSlash + 1);
-	std::string raw_name = annotatedName.substr(secondSlash + 1);;
-	return raw_name;
+		size_t firstSlash = annotatedName.find('/');
+		size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+		std::string raw_name = annotatedName.substr(secondSlash + 1);;
+		return raw_name;
+	} else {
+		return annotatedName;
+	}
 }
+
 static
 size_t convert_number_with_suffix(std::string size) {
 	size_t result = 0;

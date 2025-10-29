@@ -51,9 +51,27 @@ struct LVMReportItem {
     bool encrypted{false}; // Only normal LVs can be encrypted (non-thinpool)
 };
 
-static std::string DevicePath(const std::string& vg, const std::string& lv, bool add_suffix=false) {
-    std::string suffix = add_suffix ? ENCRYPT_SUFFIX : "";
-    return std::string("/dev/mapper/") + vg + "-" + lv + suffix;
+// All device paths are at /dev/mapper
+// Encrypt Device: <volume group>-<logical volume>-enc
+//    Note: We control this naming scheme
+// LVM LV device: <volume group>-<logical volume>
+//    Note: Any hyphens in VG/LV name are replaced w/ double hyphens
+static std::string DevicePath(const std::string& vg, const std::string& lv, bool encrypted=false) {
+    std::string path("/dev/mapper/");
+    if (encrypted) { // Hand made encrypted device name
+        return path + vg + "-" + lv + ENCRYPT_SUFFIX;
+    }
+
+    // Replace every hyphen w/ double hyphens as LVM does
+    // i.e. '-' -> '--' & '--' -> '----'
+    std::string modified_vg(vg);
+    replace_str(modified_vg, "-", "--");
+
+    std::string modified_lv(lv);
+    replace_str(modified_lv, "-", "--");
+
+    // Return LVM LV device
+    return path + modified_vg + "-" + modified_lv;
 }
 
 static bool DeviceExists(const std::string& vg, const std::string& lv, bool encrypted = false) {
@@ -193,7 +211,7 @@ VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, 
 
     // Create filesystem in LV
     std::string device_path = DevicePath(m_vg_name, m_volume, m_encrypt);
-    if ( ! VolumeManager::CreateFilesystem(m_volume, device_path, err, m_timeout)) {
+    if ( ! VolumeManager::CreateFilesystem(device_path, err, m_timeout)) {
         return false;
     }
 
@@ -357,7 +375,7 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
 
 
 bool
-VolumeManager::CreateFilesystem(const std::string &label, const std::string &devname, CondorError &err, int timeout)
+VolumeManager::CreateFilesystem(const std::string &devname, CondorError &err, int timeout)
 {
     dprintf(D_FULLDEBUG, "Creating new filesystem for device %s.\n", devname.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -373,7 +391,7 @@ VolumeManager::CreateFilesystem(const std::string &label, const std::string &dev
     args.AppendArg("-m");
     args.AppendArg("0");
     args.AppendArg("-L");
-    args.AppendArg(label);
+    args.AppendArg("HTCondorLV_FS");
     args.AppendArg(devname);
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);

@@ -2,7 +2,7 @@ import sys
 import enum
 
 
-class TransactionFlag(enum.IntEnum):
+class TransactionFlag(enum.IntFlag):
     """
     An enumeration of the flags affecting the characteristics of a transaction.
 

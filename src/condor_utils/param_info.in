@@ -3220,7 +3220,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -5360,6 +5360,10 @@ description=How often to query docker for the size of the image cache.  0 disabl
 [DOCKER_IMAGE_CACHE_SIZE]
 default=8
 type=int
+
+[DOCKER_TRUST_LOCAL_IMAGES]
+default=false
+type=bool
 
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi

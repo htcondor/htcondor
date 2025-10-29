@@ -133,6 +133,10 @@ public:
 		*/
 	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP, LOCATE_FOR_ADMIN};
 	virtual bool locate( LocateType method=LOCATE_FOR_LOOKUP );
+	bool locate_local( LocateType method=LOCATE_FOR_LOOKUP ) {
+		_locate_local_only = true; // tell locate not to query the collector, better to fail instead.
+		return locate(method);
+	}
 
 		/** Return the error string.  If there's ever a problem
 		  enountered in the Daemon object, this will start returning a
@@ -675,6 +679,9 @@ public:
 	void setPreferredToken(const std::string& token) { m_preferred_token = token; m_use_new_sec_context_id = true; }
 	const std::string& getPreferredToken() { return m_preferred_token; }
 
+	void setForceAuthentication(bool force) { m_force_auth = force; }
+	bool getForceAuthentication() { return m_force_auth; }
+
 protected:
 	// Data members
 	std::string _name;
@@ -698,7 +705,9 @@ protected:
 	bool _tried_init_hostname;
 	bool _tried_init_version;
 	bool _is_configured;
+	bool _locate_local_only{false};
 	bool m_should_try_token_request{false};
+	bool m_force_auth{false};
 	SecMan _sec_man;
 	// If our target daemon is the default collector
 	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
@@ -935,7 +944,6 @@ protected:
 	friend struct StartCommandConnectCallback;
 	friend class DCMessenger;
 
-	
 private:
 
 	// Note: we want to keep the m_daemon_ad_ptr data member private!
