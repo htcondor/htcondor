@@ -1,13 +1,13 @@
 *** 24.0.14 bugs
 
-- To work around issues with updated CUDA runtime, When the *condor_starter*
+- To work around issues with updated CUDA runtime, when the *condor_starter*
   sets the environment variable ``NVIDIA_VISIBLE_DEVICES`` for a job, it now
   forces ``CUDA_VISIBLE_DEVICES`` to have the same value.  The values will
   always have the long form GPU ids if any GPUs are assigned to the job.
   :jira:`3350`
 
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
-  daemon can't be contacted will no longer cause a segfault.
+  daemon can't be contacted will no longer cause a segmentation fault.
   :jira:`3314`
 
 - Executions points using disk enforcement failed when provided backing
@@ -19,12 +19,12 @@
   **arc**, **ec2**, and **gce** grid types).
   :jira:`3300`
 
-- Fixed a bug where administrative tools (e.g. condor_drain) can fail if
-  authentication is not required for queries to the condor_collector.
+- Fixed a bug where administrative tools (e.g. :tool:`condor_drain`) can fail if
+  authentication is not required for queries to the *condor_collector*.
   :jira:`3301`
 
-- Startd now correctly removes docker containers that have escaped from
-  docker universe jobs launched by starter that have exited uncleanly.
+- The *condor_startd* now correctly removes docker containers that have escaped from
+  docker universe jobs launched by *condor_starter*\'s that have exited uncleanly.
   :jira:`3338`
 
 - Annexes no longer download a default configuration tarball, making them
@@ -38,7 +38,7 @@
   encounters a line that cannot be decoded to UTF-8.
   :jira:`3335`
 
-- Fixed a bug in blahpd when /tmp is mounted with the noexec option.
+- Fixed a bug in *blahpd* when ``/tmp`` is mounted with the ``noexec`` option.
   :jira:`3343`
 
 *** 24.0.13 bugs
