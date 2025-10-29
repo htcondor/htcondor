@@ -620,7 +620,7 @@ this file named job_queue.log is written to the :macro:`SPOOL` directory.
 However, the configuration option :macro:`JOB_QUEUE_LOG` will override this path.  Setting
 :macro:`JOB_QUEUE_LOG` to point to a file on a solid state or nvme drive will
 make the schedd faster.  Ideally, this path should be on a filesystem that only
-holds this file.  Even if this file on is a fast disk, if that disk also holds
+holds this file.  Even if this file is on a fast disk, if that disk also holds
 user data, the fsync call the schedd must run to ensure data is written to disk
 may be delayed by other user activity on that disk.
 
