@@ -54,7 +54,7 @@ spawnCheckpointCleanupProcess(
 	}
 
 	std::string owner;
-	if(! jobAd->LookupString( ATTR_OS_USER, owner )) {
+	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no %s attribute found!\n", cluster, proc, ATTR_OS_USER );
 		return false;
 	}

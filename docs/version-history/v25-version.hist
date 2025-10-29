@@ -1,4 +1,4 @@
-*** 25.4.0 features
+*** 25.5.0 features
 
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
   an administrator to configure the *condor_negotiator* so it uses its
@@ -6,11 +6,7 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
-*** 25.4.0 bugs
-
-*** 25.0.4 bugs
-
-*** 25.3.0 features
+*** 25.4.0 features
 
 - Changed the default value of :macro:`STARTER_NESTED_SCRATCH` to true.  When false,
   the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
@@ -79,7 +75,9 @@
   (e.g. ``slurm_binpath=/opt/slurm/bin``).
   :jira:`3326`
 
-*** 25.3.0 bugs
+*** 25.4.0 bugs
+
+*** 25.3.1 bugs
 
 *** 25.0.3 bugs
 
@@ -124,11 +122,6 @@
   to longer than :macro:`STARTER_FILE_XFER_STALL_TIMEOUT` would prevent the
   logging of output for hung file-transfer plug-ins.
   :jira:`3202`
-
-- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
-  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
-  "whole node" would have 4 GPUs and only 1 CPU.
-  :jira:`3324`
 
 *** 25.0.2 bugs
 
