@@ -14,64 +14,68 @@ from datetime import datetime
 from pathlib import Path
 
 import htcondor2 as htcondor
+import classad2 as classad
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli import TMP_DIR
 from htcondor_cli.utils import readable_time, readable_size, s
 
+
 class Create(Verb):
     """
-    Creates an OCU when given a submit file
+    Creates an OCU when given an OCU request file.
+    OCU request file should contain an Owner = and Request_* lines.
     """
 
     options = {
-        "submit_file": {
-            "args": ("submit_file",),
+        "request_file": {
+            "args": ("request_file",),
             "help": "Submit file",
         },
     }
 
-    def __init__(self, logger, submit_file, **options):
-        # Make sure the specified submit file exists and is readable
-        submit_file = Path(submit_file)
-        if not submit_file.exists():
-            raise FileNotFoundError(f"Could not find file: {str(submit_file)}")
-        if os.access(submit_file, os.R_OK) is False:
-            raise PermissionError(f"Could not access file: {str(submit_file)}")
+    def __init__(self, logger, request_file, **options):
+        # Make sure the specified request file exists and is readable
+        request_file = Path(request_file)
+        if not request_file.exists():
+            raise FileNotFoundError(f"Could not find file: {str(request_file)}")
+        if os.access(request_file, os.R_OK) is False:
+            raise PermissionError(f"Could not access file: {str(request_file)}")
 
         # Get schedd
         schedd = htcondor.Schedd()
 
         # place ocu on the local schedd
-        with submit_file.open() as f:
-            submit_data = f.read()
-        submit_description = htcondor.Submit(submit_data)
-
-        # Set s_method to HTC_JOB_SUBMIT
-        JSM_HTC_JOB_SUBMIT = 3
-        submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT, True)
-
-        # The Job class can only submit a single job at a time
-        submit_qargs = submit_description.getQArgs()
-        if submit_qargs != "" and submit_qargs != "1":
-            raise ValueError("Can only place one OCU at a time")
-
-        # Behave like condor_submit, to minimize astonishment.
-        submit_description.issue_credentials()
-
-        # Turn this job into an OCU holder
-        submit_description["+IsOCUHolder"] = "true"
-
-        # Allow an empty Executable line
-        submit_description["Executable"] = "ocu"
+        with request_file.open() as f:
+            ocu_ad = classad.parseOne(f)
 
         try:
-            result = schedd.submit(submit_description, count=1)
-            cluster_id = result.cluster()
-            print(f"OCU placed with Id {cluster_id}.")
+            result_ad = schedd.create_ocu(ocu_ad)
+            ocu_id = result_ad["OCUId"]
+            name = result_ad["OCUName"]
+            print(f"OCU created with Id {ocu_id} and name {name}.")
         except Exception as e:
-            raise RuntimeError(f"Error placing ocu:\n{str(e)}")
+            raise RuntimeError(f"Error creating ocu: {str(e)}")
+
+class Query(Verb):
+    """
+    Queries the existing OCUs in the system.
+    """
+
+    def __init__(self, logger):
+        # Get schedd
+        schedd = htcondor.Schedd()
+
+        try:
+            ad = classad.ClassAd()
+            results = schedd.query_ocu(ad)
+
+            for ad in results:
+                print(ad)
+
+        except Exception as e:
+            raise RuntimeError(f"Error querying ocu: {str(e)}")
 
 class Status(Verb):
     """
@@ -116,19 +120,12 @@ class Remove(Verb):
         schedd = htcondor.Schedd()
 
         try:
-            remove_ad = schedd.act(
-                htcondor.JobAction.Remove,
-                job_spec=f"(ClusterId == {ocu_id})",
-                reason=f"via htcondor ocu remove (by user {getpass.getuser()})"
-            )
+            remove_ad = schedd.remove_ocu(int(ocu_id))
         except Exception as e:
             logger.error(f"Error while trying to remove ocu {ocu_id}:\n{str(e)}")
             raise RuntimeError(f"Error removing ocu: {str(e)}")
 
         logger.info(f"Removed {ocu_id}.")
-        if remove_ad.get("TotalError", 0) > 0:
-            logger.warning(f"Warning: Could not remove {remove_ad['TotalError']} ocu.")
-
 
 class OCU(Noun):
     """
@@ -136,6 +133,9 @@ class OCU(Noun):
     """
 
     class create(Create):
+        pass
+
+    class query(Query):
         pass
 
     class status(Status):
@@ -146,4 +146,4 @@ class OCU(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.status, cls.remove]
+        return [cls.create, cls.query, cls.status, cls.remove]
