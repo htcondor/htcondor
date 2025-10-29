@@ -2291,6 +2291,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! cad->ownerinfo) {
 				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
+			cad->Delete(ATTR_OS_USER);
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
 				cad->LookupString(ATTR_PROJECT_NAME, project_name);
@@ -2319,6 +2320,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->set_id = 0;
 			ad->Delete(ATTR_JOB_SET_ID);
 			ad->Delete(ATTR_JOB_SET_NAME);
+			ad->Delete(ATTR_OS_USER);
 
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
@@ -6694,14 +6696,6 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 				#endif
 				}
 			}
-
-				// ...
-			std::string ap_user;
-			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
-			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
-			if (ownerinfo && ownerinfo->OsUser()) {
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
-			}
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
@@ -7780,6 +7774,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// so if parent is deleted before caller is finished with this
 		// ad, things will still be ok.
 		ChainCollapse(*expanded_ad);
+
+		JobQueueJob* job = dynamic_cast<JobQueueJob*>(ad);
+		if (job->ownerinfo->OsUser()) {
+			expanded_ad->Assign(ATTR_OS_USER, job->ownerinfo->OsUser());
+		}
 
 		// before $$ expansion, we may need to convert the Environment from v1 to v2
 		// or switch the v1 delimiter to match the target OS. We do this so that if the 
