@@ -1004,7 +1004,6 @@ class Schedd():
         """
         return _schedd_query_ocu(self._addr, request._handle)
 
-def _add_line_from_itemdata(submit_file, item, separator):
 def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):
         if "\n" in item:
