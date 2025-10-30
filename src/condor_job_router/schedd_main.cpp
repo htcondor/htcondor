@@ -24,10 +24,10 @@
 #include "subsystem_info.h"
 
 #include "ClassAdLogReader.h"
+#include "NewClassAdJobLogConsumer.h"
+#include "JobLogMirror.h"
 #include "Scheduler.h"
 #include "JobRouter.h"
-#include "JobLogMirror.h"
-#include "NewClassAdJobLogConsumer.h"
 
 
 JobRouter *job_router;
@@ -57,7 +57,7 @@ Scheduler::Scheduler(int id)
 	// if we found a log to follow, then create consumer and mirror classes
 	if ( ! job_queue.empty()) {
 		m_follow_log = job_queue;
-		m_consumer = new NewClassAdJobLogConsumer();
+		m_consumer = new NewClassAdJobLogConsumer(m_jobs);
 		m_mirror = new JobLogMirror(m_consumer, m_follow_log.c_str());
 	}
 }
@@ -69,10 +69,9 @@ Scheduler::~Scheduler()
 	m_consumer = NULL;
 }
 
-classad::ClassAdCollection *Scheduler::GetClassAds() const
-{
-	return m_consumer->GetClassAds();
-}
+UserRecord * Scheduler::GetUserAd(const std::string & username) { return m_consumer->GetUserAd(username); }
+UserRecord * Scheduler::GetJobUser(ClassAd * jobad) { return m_consumer->GetJobUser(jobad); }
+
 
 void Scheduler::init() { m_mirror->init(); }
 void Scheduler::config() { m_mirror->config(); }
