@@ -8345,7 +8345,6 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 	runnable_reason_code runnable_code;
 	if( ! Runnable(job, runnable_code) ) {
 		because = getRunnableReason(runnable_code);
-		because = "no more shadows";
 		return true;
 	}
 	if (scheduler.FindMrecByJobID(job->jid)) {
@@ -8365,7 +8364,6 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 			runnable = scheduler.jobCanNegotiate(job, because);
 			dprintf(D_MATCH | D_VERBOSE, "jobCanNegotiate returns %d for job %d.%d (%s)\n", runnable, job->jid.cluster, job->jid.proc, because);
 		}
-		return true;
 		return ! runnable;
 	}
 #else
