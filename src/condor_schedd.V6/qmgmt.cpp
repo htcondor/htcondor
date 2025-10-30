@@ -1837,7 +1837,7 @@ bool JobQueueBase::UpdateSecureAttribute(const char * attr)
 }
 
 static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * defaults);
-static bool MakeProjectRec(const JobQueueKey & key, const char * name, const ClassAd * defaults);
+static bool MakeProjectRec(const JobQueueKey & key, const char * name, bool enabled, const ClassAd * defaults);
 
 // Used to assign a specific OS user to a userrec that does not yet have one.
 // i.e. When the User rec was created without an OS user assignment.
@@ -1887,7 +1887,11 @@ void JobQueueUserRec::PopulateFromAd()
 
 	if (this->flags & JQU_F_DIRTY) {
 		if ( ! this->LookupBool(ATTR_ENABLED, this->enabled)) {
-			if (IsProject()) { this->enabled = true; } // project records are default enabled
+			if (IsProject()) {
+				// fixup project records that were created before Enabled was part of the schema
+				this->enabled = true;
+				this->Assign(ATTR_ENABLED, this->enabled?1:0);
+			}
 		}
 		this->flags &= ~JQU_F_DIRTY;
 	}
@@ -3876,7 +3880,7 @@ static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 	FILL(ATTR_NT_DOMAIN,          -1), // forced into cluster ad
 	FILL(ATTR_OWNER,              -1), // forced into cluster ad
 	FILL(ATTR_PROC_ID,            1),  // forced into proc ad
-// TODO: make ProjectName a forced cluster attr?
+// TODO: make ProjectName a forced cluster attr? (cannot until persistent project records cannot be disabled)
 //	FILL(ATTR_PROJECT_NAME,       -1), // forced into the cluster ad
 	FILL(ATTR_USER,              -1), // forced into cluster ad
 };
@@ -5232,6 +5236,32 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					return -1;
 				}
 			}
+
+			// if there is an existing persistent project record
+			// we have to check it's Enabled status.
+			JobQueueProjectRec * prj = scheduler.find_projectinfo(project_buf.c_str());
+			if (prj) {
+				// Attempt to submit a job for a disabled project will fail here rather than in NewCluster
+				// except possibly when the session indicates the project
+				if ( ! prj->IsEnabled()) {
+					std::string reason;
+					prj->LookupString(ATTR_DISABLE_REASON, reason);
+
+					dprintf(D_ALWAYS, "SetAttribute(): rejecting attempt to attach a job to suspended project %s. %s\n", prj->Name(), reason.c_str());
+					if (!reason.empty()) {
+						err->pushf("SCHEDD",EACCES,"Project %s is suspended : %s", prj->Name(), reason.c_str());
+					} else {
+						err->pushf("SCHEDD",EACCES,"Project %s is suspended", prj->Name());
+					}
+					errno = EACCES;
+					return NEWJOB_ERR_DISABLED_USER;
+				}
+				// if there is an existing project record, use the name of the project record
+				// instead of the current attr_value to canonicalize the capitalization
+				formatstr(new_value, "\"%s\"", prj->Name());
+				attr_value = new_value.c_str();
+			}
+
 			// when there are project records, ProjectName is a cluster only attribute
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
@@ -6414,10 +6444,12 @@ static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * de
 static bool MakeProjectRec(
 	const JobQueueKey & key,
 	const char * name,
+	bool enabled,
 	const ClassAd * defaults)
 {
 	bool rval = JobQueue->NewClassAd(key, PROJECT_ADTYPE) &&
-		0 == SetSecureAttributeString(key, ATTR_NAME, name)
+		0 == SetSecureAttributeString(key, ATTR_NAME, name) &&
+		0 == SetSecureAttributeInt(key, ATTR_ENABLED, enabled?1:0)
 		;
 	if (rval) {
 		// if there is a defaults ad, store those attributes as well
@@ -6426,6 +6458,7 @@ static bool MakeProjectRec(
 			ClassAd pjad;
 			pjad.Assign(ATTR_MY_TYPE, PROJECT_ADTYPE);
 			pjad.Assign(ATTR_NAME, name);
+			pjad.Assign(ATTR_ENABLED, enabled?1:0);
 			// TODO: this instead?
 			// JobQueue->AddAttrsFromTransaction(key, pjad);
 
@@ -6468,7 +6501,7 @@ CreateNeededUserRecs(const std::map<int, JobQueueUserRec*> &needed)
 	const bool enabled = true;
 	for (auto & [id,urec] : needed) {
 		if (urec->IsProject()) {
-			if ( ! MakeProjectRec(urec->jid, urec->Name(), &scheduler.getProjectRecDefaultsAd())) {
+			if ( ! MakeProjectRec(urec->jid, urec->Name(), enabled, &scheduler.getProjectRecDefaultsAd())) {
 				++fail_count;
 				break;
 			}
@@ -6539,7 +6572,7 @@ bool UserRecCreate(int userrec_id, bool is_project, const char * name, const Cla
 
 	int rval = -1;
 	if (is_project) {
-		rval = MakeProjectRec(key, name, &scheduler.getProjectRecDefaultsAd());
+		rval = MakeProjectRec(key, name, enabled, &scheduler.getProjectRecDefaultsAd());
 	} else {
 
 		const char * username  = name;
@@ -6695,7 +6728,7 @@ static bool AddImplicitProjectRecords(std::vector<JobQueueKey> &new_keys)
 				// MakeProjectRec adds it to the transaction
 				JobQueueProjectRec * prjad = scheduler.insert_projectinfo(name.c_str());
 				if (prjad->isPending()) {
-					MakeProjectRec(prjad->jid, name.c_str(), &scheduler.getProjectRecDefaultsAd());
+					MakeProjectRec(prjad->jid, name.c_str(), true, &scheduler.getProjectRecDefaultsAd());
 					implicit_projects.emplace_back(prjad->jid);
 				}
 			}

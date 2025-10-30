@@ -273,6 +273,7 @@
 // Accounting Group parameters
 #define SUBMIT_KEY_AcctGroup "accounting_group"
 #define SUBMIT_KEY_AcctGroupUser "accounting_group_user"
+#define SUBMIT_KEY_ProjectName "project_name"
 
 //
 // docker "universe" Parameters
