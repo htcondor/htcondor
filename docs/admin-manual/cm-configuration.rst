@@ -2075,7 +2075,7 @@ on disk.  However, as some sites are scaling out beyond this size, there
 are some additional considerations and configurations to keep in mind.
 
 Scaling up the Collector
-'''''''''''''''''''''''
+''''''''''''''''''''''''
 
 For pools of the largest size, it may be necessary to set up a 
 tree of collectors.  This is described here: 
@@ -2092,5 +2092,5 @@ of ten minutes.  If the cycle is longer than that, consider sharding the
 negotiator as described above.  To the first degree, the cycle time scales
 by the product of the number of autoclusters in all the *condor_schedd*
 and the number of idle slots.  If you do not need preemption of running
-jobs in your system, setting the knob :macro:`NEGOTIATOR_CONIDER_PREEMPTION`
+jobs in your system, setting the knob :macro:`NEGOTIATOR_CONSIDER_PREEMPTION`
 to false can dramatically speed up the negotiation cycle.
