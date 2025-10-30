@@ -2060,3 +2060,37 @@ is unset, to prevent them from inheriting the global value of
 :macro:`CONDOR_VIEW_HOST` and attempting to report to themselves or each other. If
 the HTCondorView servers are running on different machines where there is no
 global value for :macro:`CONDOR_VIEW_HOST`, this precaution is not required.
+
+Scaling and Performance Considerations for the CM
+-------------------------------------------------
+
+:index:`performance of the CM`
+
+The central manager (CM), as the central point of an HTCondor system, is
+designed to be scalable out of the box to large systems.  As long as it 
+is installed on dedicated, reasonable hardware, it should be able to 
+manage a local pool of 100,000 cores.  One reason for the scalability is
+that the CM is mostly stateless, meaning that it does not keep many records
+on disk.  However, as some sites are scaling out beyond this size, there
+are some additional considerations and configurations to keep in mind.
+
+Scaling up the Collector
+'''''''''''''''''''''''
+
+For pools of the largest size, it may be necessary to set up a 
+tree of collectors.  This is described here: 
+:ref:`faq/admins/collector-tree:Recipe: Setting up a Collector Tree`
+
+
+Scaling up the Negotiator
+'''''''''''''''''''''''''
+
+The metric to measure the performance of the negotiator is the negotiator
+cycle time, which is the time it takes for the negotiator to complete one
+complete matchmaking cycle.  In a healthy pool, this may take on the order
+of ten minutes.  If the cycle is longer than that, consider sharding the
+negotiator as described above.  To the first degree, the cycle time scales
+by the product of the number of autoclusters in all the *condor_schedd*
+and the number of idle slots.  If you do not need preemption of running
+jobs in your system, setting the knob :macro:`NEGOTIATOR_CONIDER_PREEMPTION`
+to false can dramatically speed up the negotiation cycle.
