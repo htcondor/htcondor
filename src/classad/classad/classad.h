@@ -276,9 +276,9 @@ class ClassAd : public ExprTree
 		//@}
 
 
-//		bool InsertAttr( const std::string & attrName, ExprTree * invalid ) = delete;
-//		bool Assign( const std::string & name, ExprTree * invalid ) = delete;
-//		bool DeepInsertAttr( ExprTree * scopeExpr, const std::string &attrName, ExprTree * invalid ) = delete;
+		bool InsertAttr( const std::string & attrName, ExprTree * invalid ) = delete;
+		bool Assign( const std::string & name, ExprTree * invalid ) = delete;
+		bool DeepInsertAttr( ExprTree * scopeExpr, const std::string &attrName, ExprTree * invalid ) = delete;
 
 
 		/**@name Lookup Methods */
@@ -368,7 +368,7 @@ class ClassAd : public ExprTree
 				successfully removed, false otherwise.
 		*/
 		bool DeepDelete( ExprTree *scopeExpr, const std::string &attrName );
-	
+
 		/** Similar to Delete, but the expression is returned rather than 
 		  		deleted from the classad.
 			@param attrName The name of the attribute to be extricated.
