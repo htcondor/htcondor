@@ -791,10 +791,10 @@ COMMANDS FOR MATCHMAKING
     dynamic slot will be created with at least this much disk space.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
  :subcom-def:`request_memory` = <quantity>
     The amount of memory this job needs in Mb. If not specified, the value is set 
@@ -803,10 +803,10 @@ COMMANDS FOR MATCHMAKING
     :ad-attr:`MemoryUsage`.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     The expression
 
@@ -824,10 +824,10 @@ COMMANDS FOR MATCHMAKING
     If more than one quantity is specified, each must be larger than the previous one.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     When ``retry_request_memory`` is specified, when the job
     is evicted from a slot for using too much memory, the memory request
@@ -935,10 +935,10 @@ COMMANDS FOR MATCHMAKING
     The mininum quantity of GPU memory in MiB that a GPU must have in order to run the job.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     Use of this command will create or modify the :subcom:`require_gpus` expression
     unless that expression already references the GPU property ``GlobalMemoryMB``.

@@ -154,7 +154,7 @@ Collector ClassAd Attributes
     An integer value representing the sum of all
     ``MaxJobsRunning<universe>`` values.
 
-:classad-attribute-def:`MaxJobsRunning`
+:classad-attribute-def:`MaxJobsRunning<universe>`
     An integer value representing largest number of currently running
     jobs ever seen under the universe which forms the attribute name,
     over the life of this *condor_collector* process. For example
