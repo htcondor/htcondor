@@ -132,9 +132,10 @@ class Schedd():
 
     def __init__(self, location : classad.ClassAd = None):
         '''
-        :param location:  A :class:`classad2.ClassAd` specifying a remote
-            *condor_schedd* daemon, as returned by :meth:`Collector.locate`.
-            If `None`, the client will connect to the local *condor_schedd*.
+        :param location:  A :class:`classad2.ClassAd` specifying a
+            remote *condor_schedd* daemon, as returned
+            by :meth:`Collector.locate`.  If `None`, the client will connect
+            to the local *condor_schedd*.
         '''
         if location is None:
             c = Collector()
