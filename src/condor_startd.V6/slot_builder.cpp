@@ -226,9 +226,7 @@ CpuAttributes** buildCpuAttrs(
 	int d_except = (failmode == BuildSlotFailureMode::Except) ? D_EXCEPT : 0;
 
 	cap_array = new CpuAttributes* [total];
-	if( ! cap_array ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(cap_array);
 
 	num = 0;
 	for (int type_id = 0; type_id < max_types; ++type_id) {
@@ -473,9 +471,7 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool** bkfill_ptr,
 	int* my_type_nums = new int[max_types];
 	bool* my_bkfill_bools = new bool[max_types];
 
-	if( ! array_ptr ) {
-		EXCEPT( "ResMgr:countTypes() called with NULL array_ptr!" );
-	}
+	ASSERT(array_ptr);
 
 		// Type 0 is special, user's shouldn't define it.
 	_checkInvalidParam("NUM_SLOTS_TYPE_0", failmode == BuildSlotFailureMode::Except);

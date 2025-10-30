@@ -607,9 +607,7 @@ Claim::start_match_timer()
 								   (TimerHandlercpp)
 								   &Claim::match_timed_out,
 								   "match_timed_out", this );
-	if( c_match_tid == -1 ) {
-		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
+	ASSERT(c_match_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started match timer (%d) for %d seconds.\n", 
 			 c_match_tid, match_timeout );
 }
@@ -968,9 +966,7 @@ Claim::startLeaseTimer()
 		daemonCore->Register_Timer( when, 0,
 				(TimerHandlercpp)&Claim::leaseExpired,
 				"Claim::leaseExpired", this );
-	if( c_lease_tid == -1 ) {
-		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
+	ASSERT(c_lease_tid >= 0);
 
 	// Figure out who should sending keep alives
 	// note that the job-ad lookups MUST be here rather than in cacheJobInfo
