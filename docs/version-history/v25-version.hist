@@ -10,7 +10,7 @@
   after a job self-checkpoints and the checkpoint is uploaded, if
   :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
   be reactivated, and evict the job (with its own
-  :doc:`../codes-other-values/vacate-reason-codes <vacate reason>`
+  :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`
   ) if not.
   :jira:`3222`
 
