@@ -4232,18 +4232,9 @@ However, this approach does simplify monitoring for the owner/administrator
 of the GPUs, because usage is reported by the *condor_startd* in addition
 to the jobs themselves.
 
-:index:`DeviceGPUsAverageUsage<single: DeviceGPUsAverageUsage; machine attribute>`
-
-  ``DeviceGPUsAverageUsage``
-    The number of seconds executed by GPUs assigned to this slot,
-    divided by the number of seconds since the startd started up.
-
-:index:`DeviceGPUsMemoryPeakUsage<single: DeviceGPUsMemoryPeakUsage; machine attribute>`
-
-  ``DeviceGPUsMemoryPeakUsage``
-    The largest amount of GPU memory used GPUs assigned to this slot,
-    since the startd started up.
-
+When ``condor_gpu_utilization`` is running, it reports the following
+attributes to the slot ad, :ad-attr:`DeviceGPUsAverageUsage` and
+:ad-attr:`DeviceGPUsMemoryPeakUsage`.
 
 .. _consumption-policy:
 

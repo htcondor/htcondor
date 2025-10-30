@@ -1445,6 +1445,14 @@ substituted with the *prefix string* assigned for the GPU.
 :classad-attribute-def:`<name>RuntimeVersion`
     For CUDA devices, a string representing the manufacturer's version
     number.
+    
+:classad-attribute-def:`DeviceGPUsAverageUsage`
+    The number of seconds executed by GPUs assigned to this slot,
+    divided by the number of seconds since the startd started up.
+
+:classad-attribute-def:`DeviceGPUsMemoryPeakUsage`
+    The largest amount of GPU memory used GPUs assigned to this slot,
+    since the startd started up.
 
 
 The following attributes are advertised for a machine in which
