@@ -6,6 +6,14 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
+- EP administrators may now alter the semantics of self-checkpointing jobs:
+  after a job self-checkpoints and the checkpoint is uploaded, if
+  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
+  be reactivated, and evict the job (with its own
+  :doc:`../codes-other-values/vacate-reason-codes <vacate reason>`
+  ) if not.
+  :jira:`3222`
+
 *** 25.4.0 bugs
 
 *** 25.0.4 bugs

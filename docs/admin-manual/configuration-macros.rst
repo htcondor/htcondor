@@ -6350,10 +6350,10 @@ These settings affect the *condor_starter*.
     :macro:`STARTER_UPDATE_INTERVAL`.
 
 :macro-def:`STARTER_UPDATE_INTERVAL_MAX[STARTER]`
-    An integer value representing an upper bound on the number of 
+    An integer value representing an upper bound on the number of
     seconds between updates controlled by :macro:`STARTER_UPDATE_INTERVAL` and
     :macro:`STARTER_UPDATE_INTERVAL_TIMESLICE`.  It is recommended to leave this parameter
-    at its default value, which is calculated 
+    at its default value, which is calculated
     as :macro:`STARTER_UPDATE_INTERVAL` * ( 1 / :macro:`STARTER_UPDATE_INTERVAL_TIMESLICE` )
 
 :macro-def:`USER_JOB_WRAPPER[STARTER]`
@@ -6491,7 +6491,7 @@ These settings affect the *condor_starter*.
     permissions.  The ``nvidia-smi`` command will not report them as being available.
     Setting this macro to false returns to the previous functionality (of allowing jobs
     to access NVidia GPUs not assigned to them).
-   
+
 :macro-def:`USE_VISIBLE_DESKTOP[STARTER]`
     This boolean variable is only meaningful on Windows machines. If
     ``True``, HTCondor will allow the job to create windows on the
@@ -6510,7 +6510,7 @@ These settings affect the *condor_starter*.
     the submit file, the user's setting takes precedence.
 
 :macro-def:`JOB_INHERITS_STARTER_ENVIRONMENT[STARTER]`
-    A matchlist or boolean value that defaults to ``False``. When set to 
+    A matchlist or boolean value that defaults to ``False``. When set to
     a matchlist it causes jobs to inherit all environment variables from the
     *condor_starter* that are selected by the match list and not already defined
     in the job ClassAd or by the :macro:`STARTER_JOB_ENVIRONMENT` configuration variable.
@@ -6786,10 +6786,8 @@ These settings affect the *condor_starter*.
     the job proper after dropping a file indicating that the shell wrapper
     has successfully run inside the container.  When HTCondor sees this file
     exists, it knows the container runtime has successfully launched the image.
-    If the job exits without this file, HTCondor assumes there is some problem 
+    If the job exits without this file, HTCondor assumes there is some problem
     with the runtime, and retries the job.
-
-    
 
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed
@@ -6836,6 +6834,10 @@ These settings affect the *condor_starter*.
     A string value that when :macro:`USE_DEFAULT_CONTAINER` is true, contains the container
     image to use, either starting with docker:, ending in .sif for a sif file, or otherwise
     an exploded directory for singularity/apptainer to run.
+
+:macro-def:`REACTIVATE_ON_RESTART`
+    A boolean value.  If true, self-checkpointing jobs will not restart after
+    uploading a checkpoint if the slot would not otherwise be reactivatable.
 
 condor_submit Configuration File Entries
 -----------------------------------------
