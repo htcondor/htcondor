@@ -162,8 +162,6 @@ int main(int argc, const char *argv[])
 	//bool dash_d_fulldebug = false;
 	const char * route_jobs_filename = NULL;
 
-	g_jobs = new classad::ClassAdCollection();
-
 	for (int i = 1; i < argc; ++i) {
 
 		const char * pcolon = NULL;
@@ -223,6 +221,7 @@ int main(int argc, const char *argv[])
 	// before we call init() for the router, we need to install a pseudo-schedd object
 	// so that init() doesn't install a real schedd object.
 	Scheduler* schedd = new Scheduler(0);
+	g_jobs = schedd->GetClassAds();
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
 	g_save_dprintfs = true;
@@ -496,14 +495,6 @@ Scheduler::~Scheduler()
 	delete m_mirror;
 	m_mirror = NULL;
 	m_consumer = NULL;
-}
-
-classad::ClassAdCollection *Scheduler::GetClassAds() const
-{
-	if (m_id == 0) {
-		return g_jobs;
-	}
-	return NULL;
 }
 
 void Scheduler::init() {  if (m_mirror) m_mirror->init(); }
