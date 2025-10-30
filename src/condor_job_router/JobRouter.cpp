@@ -1366,7 +1366,7 @@ JobRouter::AdoptOrphans() {
 		if(!src_ad) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): removing orphaned destination job with no matching source job.\n",src_key.c_str(),dest_key.c_str());
 			std::string err_desc;
-			if(!remove_job(*dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
+			if(!remove_job(dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): failed to remove dest job: %s\n",src_key.c_str(),dest_key.c_str(),err_desc.c_str());
 			}
 			continue;
@@ -1414,7 +1414,7 @@ JobRouter::AdoptOrphans() {
 		if(!AddJob(job)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to add orphaned job to my routed job list; aborting it.\n",job->JobDesc().c_str());
 			std::string err_desc;
-			if(!remove_job(job->dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
+			if(!remove_job(dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.c_str());
 			}
 			delete job;
@@ -1460,7 +1460,7 @@ JobRouter::AdoptOrphans() {
 
 		std::string error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
-		if(!yield_job(*src_ad,m_schedd1_name,m_schedd1_pool,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(),true,m_release_on_hold)) {
+		if(!yield_job(*src_ad, m_schedd1_name, m_schedd1_pool, false, src_proc_id.cluster, src_proc_id.proc, error_details, JobRouterName().c_str(), m_release_on_hold)) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.c_str());
@@ -1761,7 +1761,7 @@ JobRouter::TakeOverJob(RoutedJob *job) {
 	}
 
 	std::string error_details;
-	ClaimJobResult cjr = claim_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str(), job->is_sandboxed);
+	ClaimJobResult cjr = claim_job(job->src_ad, m_schedd1_name, m_schedd1_pool, job->src_proc_id.cluster, job->src_proc_id.proc, error_details, JobRouterName().c_str());
 
 	switch(cjr) {
 	case CJR_ERROR: {
@@ -2565,7 +2565,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {
 		// Remove (abort) destination job.
 		std::string err_desc;
-		if(!remove_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",m_schedd2_name,m_schedd2_pool,err_desc)) {
+		if(!remove_job(job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",m_schedd2_name,m_schedd2_pool,err_desc)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.c_str());
 		}
 		else {
@@ -2583,7 +2583,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
 			WriteEvictEventToUserLog( job->src_ad );
 		}
-		if(!yield_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
+		if(!yield_job(job->src_ad, m_schedd1_name, m_schedd1_pool, job->is_done, job->src_proc_id.cluster, job->src_proc_id.proc, error_details, JobRouterName().c_str(), m_release_on_hold, &keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),

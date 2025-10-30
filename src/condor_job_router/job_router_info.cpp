@@ -540,14 +540,7 @@ JobRouterHookMgr::getHookKeyword(const classad::ClassAd &ad)
 
 
 
-ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, const char * my_identity)
-{
-	return CJR_OK;
-}
-
-
-
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string& error_details, const char * my_identity)
 {
 	classad::ClassAd * job = const_cast<classad::ClassAd*>(&ad);
 	job->InsertAttr(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
@@ -557,20 +550,16 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 	return CJR_OK;
 }
 
-bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, std::string * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
-	return true;
-}
-
 
 bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
-	std::string * error_details, const char * my_identity, bool target_is_sandboxed,
+	std::string& error_details, const char * my_identity,
         bool release_on_hold, bool *keep_trying)
 {
 	return true;
 }
 
-bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed,int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	fprintf(stdout, "submit_job as %s@%s to %s pool:%s%s:\n", owner.c_str(), domain.c_str(),
 		schedd_name ? schedd_name : "local",
@@ -628,7 +617,7 @@ bool finalize_job(const std::string &owner, const std::string &domain, classad::
 	return true;
 }
 
-bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
+bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
 {
 	return true;
 }
