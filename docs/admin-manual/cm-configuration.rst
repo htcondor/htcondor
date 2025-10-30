@@ -1942,43 +1942,6 @@ instead of invalidated, set :macro:`EXPIRE_INVALIDATED_ADS` to ``True``.
 Invalidated ClassAds will instead be treated as if they expired, including when
 evaluating :macro:`ABSENT_REQUIREMENTS`.
 
-GPUs
-----
-
-:index:`monitoring GPUS`
-:index:`GPU monitoring`
-
-HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
-is enabled by default if you set ``use feature : GPUs`` in your configuration
-file.
-
-Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
-This tool polls the (NVidia) GPU device(s) in the system and records their
-utilization and memory usage values.  At regular intervals, the tool reports
-these values to the *condor_startd*, assigning them to each device's usage
-to the slot(s) to which those devices have been assigned.
-
-Please note that ``condor_gpu_utilization`` can not presently assign GPU
-utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
-device, or a GPU device being used by from outside HTCondor, will result
-in GPU usage and utilization being misreported accordingly.
-
-However, this approach does simplify monitoring for the owner/administrator
-of the GPUs, because usage is reported by the *condor_startd* in addition
-to the jobs themselves.
-
-:index:`DeviceGPUsAverageUsage<single: DeviceGPUsAverageUsage; machine attribute>`
-
-  ``DeviceGPUsAverageUsage``
-    The number of seconds executed by GPUs assigned to this slot,
-    divided by the number of seconds since the startd started up.
-
-:index:`DeviceGPUsMemoryPeakUsage<single: DeviceGPUsMemoryPeakUsage; machine attribute>`
-
-  ``DeviceGPUsMemoryPeakUsage``
-    The largest amount of GPU memory used GPUs assigned to this slot,
-    since the startd started up.
-
 Elasticsearch
 -------------
 
