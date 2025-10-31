@@ -1,3 +1,22 @@
+condor (24.12.14-1) stable; urgency=medium
+
+  * Fix interoperability problem between HTCondor-CE 24 and 25 which
+    manifests as a Job Router crash when upgrading the CE to HTCondor 25
+  * Fix several issues when submitting jobs with itemdata in
+    the htcondor2 Python bindings
+  * Fix bug when using max_idle and transfer_input_files that could result
+    in the container_image to be only transferred with the first job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 21 Oct 2025 11:09:00 -0500
+
+condor (24.0.14-1) stable; urgency=medium
+
+  * Fix problem running PyTorch jobs on multiple GPUs with
+    newer versions of the CUDA library by providing long GPU IDs
+    in the CUDA_VISIBLE_DEVICES environment variable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 21 Oct 2025 11:03:00 -0500
+
 condor (24.12.13-1) stable; urgency=medium
 
   * Fix annoying momentary text status flash in condor_watch_q
