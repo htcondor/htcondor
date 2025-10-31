@@ -1295,6 +1295,19 @@ fi
 # configuration
 
 %changelog
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.14-1
+- Fix interoperability problem between HTCondor-CE 24 and 25 which
+  manifests as a Job Router crash when upgrading the CE to HTCondor 25
+- Fix several issues when submitting jobs with itemdata in
+  the htcondor2 Python bindings
+- Fix bug when using max_idle and transfer_input_files that could result
+  in the container_image to be only transferred with the first job
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the CUDA_VISIBLE_DEVICES environment variable
+
 * Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.13-1
 - Fix annoying momentary text status flash in condor_watch_q
 
