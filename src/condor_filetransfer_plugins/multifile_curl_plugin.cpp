@@ -744,6 +744,10 @@ MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, st
 
         int count = 0;
         while ( adFileIter.next( transfer_file_ad ) > 0 ) {
+            bool nonfile_ad = false;
+            transfer_file_ad.LookupBool( "nonfile", nonfile_ad );
+            if( nonfile_ad ) { continue; }
+
             transfer_file_ad.EvaluateAttrString( "LocalFileName", local_file_name );
             transfer_file_ad.EvaluateAttrString( "Url", url );
             request_details.local_file_name = local_file_name;
@@ -1172,7 +1176,7 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"" PLUGIN_VERSION "\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "ProtocolVersion = 2\n"
+                "ProtocolVersion = 3\n"
             );
             printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
 
