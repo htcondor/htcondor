@@ -1492,6 +1492,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the CUDA_VISIBLE_DEVICES environment variable
+
 * Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
 - Fix bug that could cause Python job submission to crash
 - HTCondor tarballs now contain Pelican 7.20.2

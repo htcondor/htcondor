@@ -1,3 +1,11 @@
+condor (24.0.14-1) stable; urgency=medium
+
+  * Fix problem running PyTorch jobs on multiple GPUs with
+    newer versions of the CUDA library by providing long GPU IDs
+    in the CUDA_VISIBLE_DEVICES environment variable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 21 Oct 2025 11:03:00 -0500
+
 condor (24.0.13-1) stable; urgency=medium
 
   * Fix bug that could cause Python job submission to crash
