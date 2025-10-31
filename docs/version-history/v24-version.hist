@@ -7,10 +7,9 @@
 
 *** 24.0.14 bugs
 
-- To work around issues with updated CUDA runtime, when the *condor_starter*
-  sets the environment variable ``NVIDIA_VISIBLE_DEVICES`` for a job, it now
-  forces ``CUDA_VISIBLE_DEVICES`` to have the same value.  The values will
-  always have the long form GPU ids if any GPUs are assigned to the job.
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the ``CUDA_VISIBLE_DEVICES`` environment variable
   :jira:`3350`
 
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
