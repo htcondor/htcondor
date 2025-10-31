@@ -117,6 +117,19 @@ Contribution of compute capacity from the
             </div>
 		</div>
 
+		<div class="row">
+            <div class="col-6 htcv-col-6" id="network-col-chart">
+                <script>
+                    new HTCondorView({
+                        dst_id: "network-col-chart",
+                        title: "Network Transfers per Day",
+						data_url: "/data/ce_overview?r=week",
+						graph_query: "filter=Type=P&filter=Cpus>0&extract_regexp=Date=-(.*) .*&group=Date;TotalTransferInputMB,TotalTransferOutputMB&rename=TotalTransferInputMB=Input Transfers&rename=TotalTransferOutputMB=Output Transfers&order=Date&addRowIfEmpty=No Transfers This Week&vAxis.maxValue=2&chart=column&legend.position=in",
+                    });
+                </script>
+            </div>
+        </div>
+
 
 		<p><p>
         <div class="row">
