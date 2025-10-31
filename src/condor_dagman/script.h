@@ -23,6 +23,7 @@
 
 #include <string>
 #include "condor_debug.h" // For ASSERT
+#include "dag_commands.h"
 
 static const int SCRIPT_DEFER_STATUS_NONE = -1;
 
@@ -32,21 +33,13 @@ enum ScriptType {
 	HOLD
 };
 
-enum class DagScriptOutput {
-	NONE = 0,
-	STDOUT,
-	STDERR,
-	ALL,
-};
-
 class Node;
 class Dag;
 
 class Script {
 public:
 	Script() = delete;
-	Script(ScriptType type, const char* cmd, int deferStatus, time_t deferTime) {
-		ASSERT(cmd != nullptr);
+	Script(ScriptType type, const std::string& cmd, int deferStatus = SCRIPT_DEFER_STATUS_NONE, time_t deferTime = 0) {
 		_type = type;
 		_cmd = cmd;
 		_deferStatus = deferStatus;
@@ -56,7 +49,7 @@ public:
 	int BackgroundRun(const Dag& dag, int reaperId);
 
 	void WriteDebug(int status);
-	inline void SetDebug(std::string& file, DagScriptOutput type) { _debugFile = file; _output = type; }
+	inline void SetDebug(const std::string& file, DAG::ScriptOutput type) { _debugFile = file; _output = type; }
 
 	const char* GetNodeName();
 	inline const char* GetCmd() const { return _cmd.c_str(); }
@@ -74,13 +67,18 @@ public:
 		return "";
 	}
 
+	void SetDeferal(int status, time_t t) {
+		_deferStatus = status;
+		_deferTime = t;
+	}
+
 	time_t _deferTime{0}; // How long to sleep when deferred.
 	time_t _nextRunTime{0}; // The next time at which we're eligible to run (0 means any time).
 
 	int _retValScript{-1}; // PRE Script exit code (Only valid for POST Script)
 	int _retValJob{-1}; // First failed job exit code or 0 for success (Only valid for POST script)
 	int _pid{0}; // Running script pid: 0 is not currently running
-	int _deferStatus{0}; // Return value that prompts deferred execution
+	int _deferStatus{SCRIPT_DEFER_STATUS_NONE}; // Return value that prompts deferred execution
 
 	ScriptType _type{}; // Script Type (PRE, POST, HOLD)
 
@@ -93,7 +91,7 @@ private:
 	std::string _debugFile{}; // Path/Name of script debug file relative to node dir
 	std::string _executedCMD{}; // Exact command ran w/ replaced macro info
 
-	DagScriptOutput _output{DagScriptOutput::NONE}; // STD output stream to catch: None, stdout, stderr, all
+	DAG::ScriptOutput _output{DAG::ScriptOutput::NONE}; // STD output stream to catch: None, stdout, stderr, all
 };
 
 #endif
