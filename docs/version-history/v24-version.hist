@@ -32,10 +32,21 @@
 
 *** 24.12.14 bugs
 
-- Fixed a bug that caused the Job Router to abort after an upgrade from
-  version 24.0, if the job queue contained jobs submitted by a client
-  running 24.X or later.
+- Fix interoperability problem between HTCondor-CE 24 and 25 which
+  manifests as a Job Router crash when upgrading the CE to HTCondor 25
   :jira:`3355`
+
+- Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
+  truncated to its first character.
+  :jira:`3272`
+
+- Fixed a bug in :meth:`Schedd.submit` where the ``$(step)`` submit variable
+  wasn't being set.
+  :jira:`3272`
+
+- Fixed a bug in :meth:`Submit.itemdata` causing multi-entry itemdata to be
+  returned incorrectly.
+  :jira:`3272`
 
 - Fixed a bug where using :subcom:`max_idle`, :subcom:`container_image` 
   and :subcom:`transfer_input_files` could result in the container only
@@ -52,18 +63,6 @@
 - Calling ``classad2.ExprTree(None)`` no longer results in an invalid
   :class:`classad2.ExprTree`, preventing segmentation faults when using the object.
   :jira:`3319`
-
-- Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
-  truncated to its first character.
-  :jira:`3272`
-
-- Fixed a bug in :meth:`Schedd.submit` where the ``$(step)`` submit variable
-  wasn't being set.
-  :jira:`3272`
-
-- Fixed a bug in :meth:`Submit.itemdata` causing multi-entry itemdata to be
-  returned incorrectly.
-  :jira:`3272`
 
 - Fixed a bug where :tool:`condor_history` could take many minutes to read a single line
   from the history file when the line is many megabytes long. This was causing
@@ -87,10 +86,9 @@
 
 *** 24.0.14 bugs
 
-- To work around issues with updated CUDA runtime, when the *condor_starter*
-  sets the environment variable ``NVIDIA_VISIBLE_DEVICES`` for a job, it now
-  forces ``CUDA_VISIBLE_DEVICES`` to have the same value.  The values will
-  always have the long form GPU ids if any GPUs are assigned to the job.
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the ``CUDA_VISIBLE_DEVICES`` environment variable
   :jira:`3350`
 
 - Calling :meth:`htcondor2.Schedd.history` on an object whose corresponding
