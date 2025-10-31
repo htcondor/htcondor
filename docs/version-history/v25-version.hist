@@ -6,6 +6,13 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
+- The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
+  list to the attributes it will be sending to the *condor_schedd* for resource requests.
+  The *condor_negotiator* now also has a more complete set of known slot attributes which it
+  will remove as well.  These changes should help make the schedd more efficient when building
+  resource requests for matchmaking.
+  :jira:`3358`
+
 *** 25.5.0 bugs
 
 *** 25.0.5 bugs
