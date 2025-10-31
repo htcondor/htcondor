@@ -391,45 +391,6 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 }
 
 
-// <<<<<<< HEAD
-bool
-Starter::handleJobSetupCommand(
-  Starter * s,
-  const ClassAd & guidance,
-  std::function<void(void)> /* continue_conversation */
-) {
-	std::string command;
-	if(! guidance.LookupString( ATTR_COMMAND, command )) {
-		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
-		dPrintAd( D_ALWAYS, guidance );
-
-		return false;
-	} else {
-		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
-
-		if( command == COMMAND_CARRY_ON ) {
-			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
-
-			return false;
-		} else if( command == COMMAND_START_NEW_FILE_TRANSFER ) {
-		    s->jic->newSetupJobEnvironment();
-
-			return true;
-		} else {
-			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
-
-			return false;
-		}
-	}
-}
-
-
-void
-Starter::requestGuidanceSetupJobEnvironment( Starter * s ) {
-	ClassAd request;
-	ClassAd guidance;
-	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
-// =======
 //
 // Assume ownership is correct, but make each file 0444 and each
 // directory (including the root) 0500.
@@ -678,6 +639,10 @@ Starter::handleJobSetupCommand(
 			dprintf( D_ZKM, "Carrying on according to guidance...\n" );
 
 			return false;
+		} else if( command == COMMAND_START_NEW_FILE_TRANSFER ) {
+		    s->jic->newSetupJobEnvironment();
+
+			return true;
 		} else if( command == COMMAND_RETRY_REQUEST ) {
 			int retry_delay = 20 /* seconds of careful research */;
 			guidance.LookupInteger( ATTR_RETRY_DELAY, retry_delay );
@@ -910,7 +875,6 @@ Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & contex
 	// locals, because then their destructor will be called twice.  *sigh*
 	ClassAd * my_context = new ClassAd(context);
 	request.Insert(ATTR_CONTEXT_AD, my_context);
-// >>>>>>> main
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {

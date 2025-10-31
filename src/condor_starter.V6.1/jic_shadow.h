@@ -132,15 +132,12 @@ public:
 			not be called directly by outside code. They are helpers
 			for transferOutput().
 		*/
-// <<<<<<< HEAD
-	bool transferOutput( bool &transient_failure );
-	bool realTransferOutput( bool &transient_failure );
-	bool nullTransferOutput( bool &transient_failure );
-// =======
+
 	bool transferOutput(bool& transient_failure, bool& in_progress);
 	bool transferOutputStart(bool& transient_failure, bool& in_progress);
-	bool transferOutputFinish(bool& transient_failure, bool& in_progress);
-// >>>>>>> main
+	bool transferOutputFinish(bool &transient_failure, bool& in_progress);
+	bool newTransferOutput(bool& transient_failure, bool& in_progress);
+	bool oldTransferOutput(bool& transient_failure, bool& in_progress);
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the
@@ -324,13 +321,10 @@ private:
 			If we don't have to transfer anything, return false.
 			@return true if transfer was begun, false if not
 		*/
-// <<<<<<< HEAD
-	bool beginFileTransfer( void );
-	bool beginNullFileTransfer( void );
-	bool beginRealFileTransfer( void );
-// =======
+
 	bool beginInputTransfer( void );
-// >>>>>>> main
+	bool beginNewInputTransfer( void );
+	bool beginOldInputTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferStatusCallback(FileTransfer * ftrans) {

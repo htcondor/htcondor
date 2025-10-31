@@ -427,6 +427,7 @@ JICShadow::setupJobEnvironment(void)
 	setupJobEnvironment_part2();
 }
 
+
 void
 JICShadow::setupJobEnvironment_part2(void)
 {
@@ -443,10 +444,12 @@ JICShadow::setupJobEnvironment_part2(void)
 	doneWithInputTransfer();
 }
 
+
 void
 JICShadow::newSetupJobEnvironment(void) {
-	beginNullFileTransfer();
+	beginNewInputTransfer();
 }
+
 
 bool
 JICShadow::streamInput()
@@ -577,14 +580,14 @@ JICShadow::transferOutput(bool& transient_failure, bool& in_progress)
 	}
 
 	if( useNullFileTransfer ) {
-		return nullTransferOutput(transient_failure);
+		return newTransferOutput(transient_failure, in_progress);
 	} else {
-		return realTransferOutput(transient_failure);
+		return oldTransferOutput(transient_failure, in_progress);
 	}
 }
 
 bool
-JICShadow::realTransferOutput( bool &transient_failure )
+JICShadow::oldTransferOutput( bool &transient_failure, bool& in_progress )
 {
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutput(void)\n");
 
@@ -729,6 +732,8 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 			}
 			return false;
 		}
+	} else {
+		dprintf( D_FULLDEBUG, "JICShadow::transferOutput(): not sending output\n" );
 	}
 
 	// The job doesn't need transfer.
@@ -806,16 +811,21 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 			m_did_output_transfer = false;
 			return false;
 		}
-	} else {
-		dprintf( D_FULLDEBUG, "JICShadow::transferOutput(): not sending output\n" );
 	}
 
 	m_did_output_transfer = true;
 	return true;
 }
 
+
+//
+// This was written before oldTransferOutput() forked a child and could thus
+// be asynchronous.  We could undoubtedly do a lot better if we redesigned
+// this to match (with a coroutine).
+//
+
 bool
-JICShadow::nullTransferOutput( bool & transient_failure ) {
+JICShadow::newTransferOutput( bool & transient_failure, bool& in_progress ) {
     //
     // Returning false from this function with transient_failure true
     // _should_ send the starter back into the event loop (to wait for
@@ -873,13 +883,30 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     for( auto & entry : entries ) {
         dprintf( D_FULLDEBUG, "JICShadow::nullTransferOutput(): handle output entry '%s'\n", entry.c_str() );
 
-        auto * c = FileTransferCommands::make(
-            TransferCommand::XferFile,
-            entry, /* source */
-            condor_basename(entry.c_str()) /* destination */
-        );
-        c->execute( gas, sock.get() );
-        delete(c);
+        std::error_code ec;
+        std::filesystem::path p(entry);
+        if( std::filesystem::is_directory(p, ec) ) {
+
+
+            // FIXME: recursion...
+            auto * c = FileTransferCommands::make(
+                TransferCommand::Mkdir,
+                entry,
+                condor_basename(entry.c_str())
+            );
+            c->execute( gas, sock.get() );
+            delete(c);
+
+
+        } else {
+            auto * c = FileTransferCommands::make(
+                TransferCommand::XferFile,
+                entry, /* source */
+                condor_basename(entry.c_str()) /* destination */
+            );
+            c->execute( gas, sock.get() );
+            delete(c);
+        }
     }
 
     //
@@ -907,7 +934,7 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
 bool
 JICShadow::transferOutputMopUp(void)
 {
-	// This will need to be conditionalized on which FTO we're using.
+	// FIXME: This will need to be conditionalized on which FTO we're using.
 
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
 
@@ -2781,22 +2808,22 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
    otherwise, the caller will return to the event loop
    and wait for setupComplete(0) to be called. */
 bool
-JICShadow::beginFileTransfer( void ) {
+JICShadow::beginInputTransfer( void ) {
     bool useNullFileTransfer = param_boolean(
         "STARTER_USES_NULL_FILE_TRANSFER", false
     );
 
     if( useNullFileTransfer ) {
-        return beginNullFileTransfer();
+        return beginNewInputTransfer();
     } else {
-        return beginRealFileTransfer();
+        return beginOldInputTransfer();
     }
 
 }
 
 
 bool
-JICShadow::beginRealFileTransfer( void )
+JICShadow::beginOldInputTransfer( void )
 {
 
 		// if requested in the jobad, transfer files over.  
@@ -2873,7 +2900,7 @@ JICShadow::beginRealFileTransfer( void )
 	}
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
 	else if ( wants_x509_proxy ) {
-		
+
 			// Get scratch directory path
 		const char* scratch_dir = starter->GetWorkingDir(0);
 
@@ -2905,8 +2932,9 @@ JICShadow::beginRealFileTransfer( void )
 	return false;
 }
 
+
 bool
-JICShadow::beginNullFileTransfer( void ) {
+JICShadow::beginNewInputTransfer( void ) {
     //
     // The starter, receiving the input sandbox from the shadow, needs
     // only the transfer key, the socket address (a Sinful string), and
@@ -2961,6 +2989,7 @@ JICShadow::beginNullFileTransfer( void ) {
     //
     return true;
 }
+
 
 int
 JICShadow::handleFileTransferCommand( Stream * s ) {
