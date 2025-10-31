@@ -336,6 +336,10 @@ main_init( int, char* argv[] )
 								  "DEACTIVATE_CLAIM_JOB_DONE",
 								  command_handler,
 								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_JOB_RESTARTING,
+								  "DEACTIVATE_CLAIM_JOB_RESTARTING",
+								  command_handler,
+								  "command_handler", DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands

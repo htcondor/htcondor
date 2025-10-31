@@ -4376,3 +4376,12 @@ Starter::CheckLVUsage( int /* timerID */ )
 	}
 }
 #endif // LINUX
+
+
+void
+Starter::jicNotifyStarterError( bool critical ) {
+    jic->notifyStarterError(
+        m_vacateReason.c_str(), critical,
+        m_vacateCode, m_vacateSubcode
+    );
+}

@@ -100,6 +100,7 @@ def job_spec_hack(
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
+
 # helper method that routes various types of userrec_spec
 # to the correct userrec act function
 def userrec_act_dispatcher(
@@ -190,6 +191,7 @@ class Schedd():
             )
         )
 
+
     def queryUserAds(self,
         constraint : Union[str, classad.ExprTree] = "",
         projection : List[str] = [],
@@ -228,6 +230,7 @@ class Schedd():
                 (callback(result) for result in results)
             )
         )
+
 
     def queryProjectAds(self,
         constraint : Union[str, classad.ExprTree] = "",
@@ -320,6 +323,7 @@ class Schedd():
 
         return pyResult
 
+
     def addUserRec(self,
         user_spec : Union[List[str], str, List[classad.ClassAd] ],
     ) -> classad.ClassAd:
@@ -339,6 +343,7 @@ class Schedd():
             (0x10000 + 541, None)
         )
         return result;
+
 
     def enableUserRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -360,6 +365,7 @@ class Schedd():
             (541, None)
         )
         return result;
+
 
     def disableUserRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -387,6 +393,7 @@ class Schedd():
             (542, reason)
         )
         return result;
+
 
     def removeUserRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -434,6 +441,7 @@ class Schedd():
             (0x10000 + 0x80000 + 541, None)
         )
         return result;
+
 
     def removeProjectRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -580,7 +588,7 @@ class Schedd():
     #
     # This can certainly be done in version 2, but I'd like to see where
     # else we'd like to keep a socket open before implementing anything.
-
+    #
     # `match` should be `limit` for consistency with `query()`.
     def history(self,
         constraint : Optional[Union[str, classad.ExprTree]] = None,
@@ -944,12 +952,14 @@ class Schedd():
             (),
         )
 
+
     def _get_dag_contact_info(self,
         cluster: int
     ) -> classad.ClassAd:
         if not isinstance(cluster, int):
             raise TypeError("cluster must be an integer")
         return _schedd_get_dag_contact_info(self._addr, cluster)
+
 
     def get_claims(self,
         constraint : Optional[Union[str, classad.ExprTree]] = None,
@@ -965,6 +975,7 @@ class Schedd():
         """
         projection_string = ",".join(projection)
         return _schedd_get_claims(self._addr, str(constraint), projection_string)
+
 
 def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):

@@ -1087,7 +1087,7 @@ bool DockerProc::Version( std::string & version ) {
 
 	return foundVersion;
 }
-void 
+bool
 DockerProc::restartCheckpointedJob() {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	CondorError error;
@@ -1097,7 +1097,7 @@ DockerProc::restartCheckpointedJob() {
 		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
 	}
 
-	VanillaProc::restartCheckpointedJob();
+	return VanillaProc::restartCheckpointedJob();
 }
 
 // Generate a list of strings that are suitable arguments to

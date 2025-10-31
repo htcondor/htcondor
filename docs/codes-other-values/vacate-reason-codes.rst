@@ -81,3 +81,7 @@ Vacate Reason Codes
     | | 1024                            | An error occurred with the scratch  |                          |
     | | [ScratchDirError]               | directory on the EP.                |                          |
     +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1025                            | A self-checkpoint job would have    |                          |
+    | | [SuccessfulCheckpoint]          | restarted but could not reactivate  |                          |
+    | |                                 | its claim.                          |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+

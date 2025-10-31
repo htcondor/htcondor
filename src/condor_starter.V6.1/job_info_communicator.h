@@ -241,6 +241,7 @@ public:
 	virtual bool transferOutput(bool &transient_failure, bool& in_progress) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 	void setJobFailed() { job_failed = true; }
+	virtual void setOutputTransfer(bool) { }
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to

@@ -42,7 +42,7 @@ class DockerProc : public VanillaProc {
 		static bool Version( std::string & version );
 
 	protected:
-		virtual void restartCheckpointedJob();
+		virtual bool restartCheckpointedJob();
 	private:
 
 		ReliSock listener;
