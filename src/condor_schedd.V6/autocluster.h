@@ -38,6 +38,7 @@ public:
 	~JobCluster();
 
 	bool setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, bool replace_attrs);
+	const char * getSigAttrs() { return significant_attrs; }
 #ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
 	void keepJobIds(bool keep) { keep_job_ids = keep; }
 #endif

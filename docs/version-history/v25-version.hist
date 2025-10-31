@@ -14,6 +14,15 @@
   ) if not.
   :jira:`3222`
 
+- The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
+  list to the attributes it will be sending to the *condor_schedd* for resource requests.
+  The *condor_negotiator* now also has a more complete set of known slot attributes which it
+  will remove as well.  These changes should help make the schedd more efficient when building
+  resource requests for matchmaking.
+  :jira:`3358`
+
+*** 25.5.0 bugs
+
 *** 25.0.5 bugs
 
 *** 25.4.0 features
@@ -43,7 +52,7 @@
   :jira:`3302`
 
 - The *condor_schedd* can now limit the number of running jobs on a per-user basis.
-  The *condor_schedd* will not allow more jobs than the :ad-attr:`MaxJobsRunnng` in
+  The *condor_schedd* will not allow more jobs than the :ad-attr:`MaxJobsRunning` in
   the user record to begin running.
   :jira:`3325`
 
