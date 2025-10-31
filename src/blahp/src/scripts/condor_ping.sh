@@ -18,7 +18,7 @@
 
 . `dirname $0`/blah_load_config.sh
 
-out=`$condor_binpath/condor_q -total 2>&1`
+out=`${condor_binpath}condor_q -total 2>&1`
 
 if [ "$?" == "0" ]; then
     echo "0 No error"

@@ -46,6 +46,16 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
+	if ( commonFTO ) delete commonFTO;
+	if ( producer_keep_alive != -1 ) {
+		daemonCore->Cancel_Timer( producer_keep_alive );
+	}
+	// This makes me sad, but the SingleProviderSyndicate can't be
+	// default-constructed.  FIXME: could we get value semantics
+	// with a different kind of data structure?
+	for( const auto & [cifName, sps] : cfLocks ) {
+	    delete sps;
+	}
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 
@@ -113,14 +123,8 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 	// Before we even try to claim, or activate the claim, check to see if
 	// it's even possible for file transfer to succeed.
-	bool shouldCheckInputFileTransfer = param_boolean( "CHECK_INPUT_FILE_TRANSFER", false );
-	if( shouldCheckInputFileTransfer ) {
-		int numShadowStarts = -1;
-		jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts );
-		if( numShadowStarts == 1 ) {
-			checkInputFileTransfer();
-		}
-	}
+	checkInputFileTransfer();
+
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->
@@ -729,6 +733,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 				}
 			}
 		}
+
+		// Increment (or set) number of job input transfer starts
+		int num_input_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers)) {
+			num_input_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers);
 	} else if( (!tq) && (!ti) && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
@@ -748,6 +759,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
 			te.setQueueingDelay( now - then );
 		}
+
+		// Increment (or set) number of job output transfer starts
+		int num_output_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers)) {
+			num_output_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers);
 	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );
@@ -764,13 +782,27 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 void UniShadow::checkInputFileTransfer() {
 	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): entry.\n" );
 
+	// Check if we want to verify input files: Stat file for existence and size bytes
+	bool verify_inputs = param_boolean( "CHECK_INPUT_FILE_TRANSFER", false );
+	if (verify_inputs) {
+		// Only do stats/verifications of input files the first execution
+		// TODO: Use first class epoch counter when/if we implement one
+		int numShadowStarts = -1;
+		jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts );
+		if( numShadowStarts != 1 ) {
+			verify_inputs = false;
+		}
+	}
+
 
 	// Make the job's credentials available to the check commands.
 	Env env;
 
 	bool made_cred_dir = false;
 	std::string cred_dir = getCredDir();
-	if( cred_dir.empty()) {
+	if ( ! verify_inputs) {
+		// Don't set up temp creds directory if we aren't actually doing input file verification
+	} else if( cred_dir.empty()) {
 		dprintf( D_FULLDEBUG, "checkInputFileTransfer(): getCredDir() failed, continuing without credentials.\n" );
 	} else {
 		htcondor::ShadowHookCredDirCreator creds( * jobAd, cred_dir );
@@ -824,13 +856,22 @@ void UniShadow::checkInputFileTransfer() {
 	}
 
 
+	// Tracker for counts of requests for objects per protocol
+	std::map<std::string, size_t> requests;
+	if (! paths.empty()) { requests["CEDAR"] = paths.size(); }
+
+
 	// ENTRY EXISTS SIZE_IN_BYTES SIZE_IS_KNOWN
 	//
 	// This presumes that EXISTS is "CONFIRMED" and "UNKNOWN", because
 	// there's no "COULDN'T TELL" enumeration.
 	std::vector<std::tuple< std::string, bool, size_t, bool >> results;
 
+
 	for( const auto & path : paths ) {
+		// Don't stat CEDAR input files if we aren't doing verification
+		if (! verify_inputs) { continue; }
+
 		std::error_code errorCode;
 
 		bool got_size = false;
@@ -853,11 +894,17 @@ void UniShadow::checkInputFileTransfer() {
 		results.emplace_back( path.string(), exists, size, got_size );
 	}
 
-
 	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): checking URLs.\n" );
 	for( const auto & fullURL : URLs ) {
 		std::string URL = fullURL;
 		std::string scheme = getURLType(fullURL.c_str(), true);
+
+		std::string key = scheme;
+		upper_case(key);
+		requests[key]++; // Note: First reference will add <key:0> then increment count
+
+		// Don't run commands to verify input files
+		if ( ! verify_inputs) { continue; }
 
 		if( scheme == "http" || scheme == "https" ) {
 			std::string token;
@@ -987,6 +1034,15 @@ void UniShadow::checkInputFileTransfer() {
 	}
 
 
+	ClassAd* counts = new ClassAd;
+	if (counts) {
+		// Add counts of requested objects by protocol/scheme to sub ClassAd
+		for (const auto& [protocol, num] : requests) { counts->Assign(protocol, num); }
+		jobAd->Insert(ATTR_TRANSFER_INPUT_OBJECT_COUNTS, counts);
+		job_updater->watchAttribute(ATTR_TRANSFER_INPUT_OBJECT_COUNTS);
+	}
+
+
 	for( const auto & result : results ) {
 		dprintf( D_TEST, "checkInputFileTransfer():\t%s\t%s\t%zu\t%s\n",
 			std::get<0>(result).c_str(),
@@ -1014,7 +1070,6 @@ void UniShadow::checkInputFileTransfer() {
 			// latter, for simplicity.
 		}
 	}
-
 
 	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): exit.\n" );
 }

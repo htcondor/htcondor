@@ -37,8 +37,26 @@ public:
 	}
 	void	change(Activity new_act) { change( r_state, new_act ); }
 	void	change( State, Activity );
+	void	revert(State, Activity);
 
-	int 	eval_policy( void ); // evaluate policy expressions like PREEMPT, etc
+	// evaluate policy expressions like PREEMPT, etc and change state
+	// as needed, or do periodic actions.
+	int 	eval_policy_periodic( void );
+	void	do_periodic_actions();
+
+	struct suggest {
+		State _state;
+		Activity _act;
+		std::string _reason;
+		suggest(ResState & that) : _state(that.r_state), _act(that.r_act) {};
+	};
+	int eval_policy(suggest & sug) {
+		return eval_policy(sug._state, sug._act, rip, sug._reason);
+	}
+	void change(suggest & sug, int xa_code) {
+		change_to_suggested_state(sug._state, sug._act, sug._reason, xa_code);
+	}
+
 	void	set_destination( State );
 	int		starterExited( void );
 	State	destination( void ) const { return r_destination; };
@@ -59,6 +77,36 @@ private:
 						  bool statechange );
 
 	Activity	_preempting_activity();
+
+	// return enum from eval_policy
+	// some of these will trigger special behaviors in change_to_suggested_state
+	enum {
+		xa_simple = 1,            // simple transistion, no special action
+		xa_retirement_expired,    // claim retirement ended/expired - calulate badput
+		xa_retirement_expired2,   // claim retirement ended/expired - calulate badput and set preempt is true
+		xa_preempt,               // setBadputCausedByPreemption
+		xa_preempt_and_retire,    // call rip->retire_claim()
+		xa_preempt_may_vacate,    // check and maybe set a vacate reason
+		xa_suspend,               // SUSPEND is TRUE
+		xa_continue,              // CONTINUE is TRUE
+		xa_preclaim_vacate,       // retiring due to preempting claim
+		xa_preclaim,              // preempting an idle claim
+		xa_false_start,           // START is false
+		xa_end_of_worklife,       // idle claim shutting down due to CLAIM_WORKLIFE
+		xa_idle_drain,            // idle claim shutting down due to draining of this slot
+		xa_killing_time,          // KILL is TRUE
+		xa_owner,                 // IS_OWNER is TRUE
+		xa_backfill,              // START_BACKFILL is TRUE
+		xa_draining,              // entering Drained state
+		xa_evict_backfill,        // EVICT_BACKFILL is TRUE
+		xa_stopped_drain,         // slot is no longer draining (because it was cancelled)
+		xa_drain_complete,        // slot is no longer draining (because it completed)
+	};
+
+	// evaluate policy expression like PREEMPT and return what state we should be in
+	// with a code to indicate other actions that should be taken before the state change
+	static int eval_policy(State & new_state, Activity & new_act, const Resource * rip, std::string & reason);
+	void 	change_to_suggested_state(State new_state, Activity new_activity, const std::string & reason, int xa_code);
 
 	time_t	m_stime;	// time we entered the current state
 	time_t	m_atime;	// time we entered the current activitiy

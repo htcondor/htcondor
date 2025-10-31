@@ -13,4 +13,3 @@ Codes and Other Needed Values
    daemoncore-daemon-exit-codes
    hold-reason-codes
    vacate-reason-codes
-      

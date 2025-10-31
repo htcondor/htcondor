@@ -68,7 +68,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual uint64_t bytesReceived( void ) { EXCEPT("MOCK"); return (uint64_t)-1; }
         virtual void Suspend( void ) { EXCEPT("MOCK"); }
         virtual void Continue( void ) { EXCEPT("MOCK"); }
-        virtual bool transferOutput( bool & ) { EXCEPT("MOCK"); return false; }
+        virtual bool transferOutput( bool &, bool & ) { EXCEPT("MOCK"); return false; }
         virtual bool transferOutputMopUp( void ) { EXCEPT("MOCK"); return false; }
         virtual void allJobsGone( void ) { EXCEPT("MOCK"); }
         virtual int reconnect( ReliSock*, ClassAd* ) { EXCEPT("MOCK"); return -1; }
@@ -321,8 +321,8 @@ main( int argc, char * argv[] ) {
 
 // Additional mocks.  Stubbing these out dramatically decreases the
 // number of source files required to build this test, and its complexity.
-Starter::Starter() { }
-Starter::~Starter() { }
+Starter::Starter() = default;
+Starter::~Starter() = default;
 
 bool Starter::Init(JobInfoCommunicator*, char const*, bool, int, int, int) { EXCEPT("MOCK"); return false; }
 void Starter::StarterExit(int code) { EXCEPT("MOCK"); exit(code); }
@@ -360,15 +360,15 @@ int Starter::Reaper(int, int) { EXCEPT("MOCK"); }
 bool Starter::transferOutput() { EXCEPT("MOCK"); return false; }
 bool Starter::cleanupJobs() { EXCEPT("MOCK"); return false; }
 void Starter::RecordJobExitStatus(int) { EXCEPT("MOCK"); }
-bool Starter::removeTempExecuteDir(int&) { EXCEPT("MOCK"); return false; }
+bool Starter::removeTempExecuteDir(int&,const char*) { EXCEPT("MOCK"); return false; }
 
 #if       defined(LINUX)
 VolumeManager::Handle::~Handle() { }
 #endif /* defined(LINUX) */
 
 
-JobInfoCommunicator::JobInfoCommunicator() { }
-JobInfoCommunicator::~JobInfoCommunicator() { }
+JobInfoCommunicator::JobInfoCommunicator() = default;
+JobInfoCommunicator::~JobInfoCommunicator() = default;
 
 const char* JobInfoCommunicator::jobInputFilename() { EXCEPT("MOCK"); return NULL; }
 const char* JobInfoCommunicator::jobOutputFilename() { EXCEPT("MOCK"); return NULL; }

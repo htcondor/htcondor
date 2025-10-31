@@ -42,6 +42,7 @@
 #include <expat.h>
 #include "stl_string_utils.h"
 #include "subsystem_info.h"
+#include "condor_url.h"
 
 // Statistics of interest.
 int NumRequests = 0;
@@ -305,24 +306,6 @@ std::string AmazonRequest::canonicalizeQueryString() {
     return AWSv4Impl::canonicalizeQueryString( query_parameters );
 }
 
-bool parseURL(	const std::string & url,
-				std::string & protocol,
-				std::string & host,
-				std::string & path ) {
-    Regex r; int errCode = 0; int errOffset = 0;
-    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", &errCode, &errOffset);
-    ASSERT( patternOK );
-	std::vector<std::string> groups;
-    if(! r.match( url, & groups )) {
-		return false;
-	}
-
-    protocol = groups[1];
-    host     = groups[3];
-    if (groups.size() > 4) path     = groups[4];
-    return true;
-}
-
 void convertMessageDigestToLowercaseHex(
 		const unsigned char * messageDigest,
 		unsigned int mdLength,
@@ -433,7 +416,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 	// normalized according to RFC 3986 (removing redundant and relative
 	// path components), with each path segment being URI-encoded.
 	std::string protocol, host, canonicalURI;
-	if(! parseURL( serviceURL, protocol, host, canonicalURI )) {
+	if(! ParseURL( serviceURL, &protocol, &host, &canonicalURI )) {
 		this->errorCode = "E_INVALID_SERVICE_URL";
 		this->errorMessage = "Failed to parse service URL.";
 		dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
@@ -685,7 +668,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 
 bool AmazonRequest::sendV4Request( const std::string & payload, bool sendContentSHA ) {
     std::string protocol, host, path;
-    if(! parseURL( serviceURL, protocol, host, path )) {
+    if(! ParseURL( serviceURL, &protocol, &host, &path )) {
         this->errorCode = "E_INVALID_SERVICE_URL";
         this->errorMessage = "Failed to parse service URL.";
         dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
@@ -736,7 +719,7 @@ bool AmazonRequest::sendV2Request() {
     // and the "HTTP Request URI" from the service URL.  The service URL must
     // be of the form '[http[s]|x509|euca3[s]]://hostname[:port][/path]*'.
     std::string protocol, host, httpRequestURI;
-    if(! parseURL( serviceURL, protocol, host, httpRequestURI )) {
+    if(! ParseURL( serviceURL, &protocol, &host, &httpRequestURI )) {
         this->errorCode = "E_INVALID_SERVICE_URL";
         this->errorMessage = "Failed to parse service URL.";
         dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
@@ -1022,6 +1005,23 @@ bool AmazonRequest::sendPreparedRequest(
         return false;
     }
 
+	rv = curl_easy_setopt( curl.get(), CURLOPT_CONNECTTIMEOUT, 15 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_CONNECTTIMEOUT ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CONNECTTIMEOUT ) failed (%d): '%s', failing.\n",
+		         rv, curl_easy_strerror( rv ) );
+		return false;
+	}
+
+	rv = curl_easy_setopt( curl.get(), CURLOPT_TIMEOUT, 60 );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_TIMEOUT ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_TIMEOUT ) failed (%d): '%s', failing.\n",
+		         rv, curl_easy_strerror( rv ) );
+		return false;
+	}
 
 /*
     rv = curl_easy_setopt( curl.get(), CURLOPT_DEBUGFUNCTION, debug_callback );
@@ -4072,7 +4072,7 @@ bool AmazonS3Upload::workerFunction(char **argv, int argc, std::string &result_s
 	std::string fileName = argv[6];
 
 	std::string protocol, host, canonicalURI;
-	if(! parseURL( serviceURL, protocol, host, canonicalURI )) {
+	if(! ParseURL( serviceURL, &protocol, &host, &canonicalURI )) {
 		uploadRequest.errorCode = "E_INVALID_SERVICE_URL";
 		uploadRequest.errorMessage = "Failed to parse service URL.";
 		dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );

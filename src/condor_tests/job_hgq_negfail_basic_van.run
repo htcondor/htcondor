@@ -50,6 +50,9 @@ NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
 NUM_CPUS = 40
 use FEATURE : StaticSlots
 
+# in case the test platforms don't have much disk, default to a minimal request
+JOB_DEFAULT_REQUESTDISK = (TransferInputSizeMB+1) * (1024+256)
+
 # turn on round-robin for this test, since we are testing
 # an overlapping-effective-pool scenario
 HFS_ROUND_ROBIN_RATE = 1.0

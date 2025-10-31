@@ -27,7 +27,7 @@
 #endif
 
 // if you enable limited api, then you have to also change the cmake to link with python3.lib
-//#define Py_LIMITED_API 0x03090000
+#define Py_LIMITED_API 0x03090000
 #include <Python.h>
 
 #if defined(_MSC_VER)
@@ -58,8 +58,11 @@ int main(const int argc, char * argv[]) {
 
 	PySys_SetArgvEx(argc, wargv, 1);
 
+#if 0
 	// docs say use PyMem_RawFree, but that does not seem to be defined
-	for (int ii=0; ii < argc; ++ii) { free(wargv[ii]); }
+	// and just using free() aborts, so we have no choice but to leak the args strings....
+	for (int ii=0; ii < argc; ++ii) { PyMem_RawFree(wargv[ii]); }
+#endif
 	free(wargv); wargv = NULL;
 
 #else

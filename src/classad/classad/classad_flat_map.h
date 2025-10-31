@@ -105,6 +105,7 @@ class ClassAdFlatMap {
 		const_iterator end() const { return _theVector.cend(); }
 
 		size_t size() const { return _theVector.size();}
+		bool empty() const { return _theVector.empty();}
 
 		// This is named rehash for comptibility with the earlier hashtable based implementation
 		void rehash(size_t capacity) { _theVector.reserve(capacity); return;}

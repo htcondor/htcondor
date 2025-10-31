@@ -28,7 +28,6 @@ int pseudo_get_job_info(ClassAd *&ad, bool &delete_ad);
 int pseudo_get_user_info(ClassAd *&ad);
 int pseudo_job_exit(int status, int reason, ClassAd* ad);
 int pseudo_job_termination( ClassAd *ad );
-int pseudo_register_mpi_master_info( ClassAd* ad );
 int pseudo_begin_execution( void );
 int pseudo_get_file_info_new( const char *path, char *&url );
 int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out );
@@ -47,8 +46,5 @@ int pseudo_get_sec_session_info(
 	std::string &filetrans_session_info,
 	std::string &filetrans_session_key);
 int pseudo_event_notification( const ClassAd & ad );
-
-// #include "guidance.h"
-GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
 #endif

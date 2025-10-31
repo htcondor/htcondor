@@ -59,8 +59,11 @@
 #endif
 #include "authentication.h"
 #include "to_string_si_units.h"
-#include "guidance.h"
 #include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+
 
 extern void main_shutdown_fast();
 
@@ -165,7 +168,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	} else {
 		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				(long)daemonCore->getpid() );
-		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
 			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
 			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
 		} else {
@@ -233,10 +236,10 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  (CommandHandlercpp)&Starter::updateX509Proxy,
 						  "Starter::updateX509Proxy", this, WRITE );
 	daemonCore->
-		Register_Command( STARTER_HOLD_JOB,
-						  "STARTER_HOLD_JOB",
-						  (CommandHandlercpp)&Starter::remoteHoldCommand,
-						  "Starter::remoteHoldCommand", this, DAEMON );
+		Register_Command( STARTER_VACATE_JOB,
+						  "STARTER_VACATE_JOB",
+						  (CommandHandlercpp)&Starter::remoteVacateCommand,
+						  "Starter::remoteVacateCommand", this, DAEMON );
 	daemonCore->
 		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
 						  "CREATE_JOB_OWNER_SEC_SESSION",
@@ -260,6 +263,8 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	if( ! jic->init() ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize JobInfoCommunicator, aborting\n" );
+		SetVacateReason("Starter failed to initialize", CONDOR_HOLD_CODE::StarterError, 0);
+		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
 		return false;
 	}
 
@@ -275,14 +280,36 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 
 	//
 	// Now ask the shadow what to do.  If we carry on, we'll call
-	// jic->setupJobEnvironment(), which will enventually call us
-	// back with jobEnvironmentReady() when it's done, which will
-	// (eventually) spawn the job.
 	//
-	requestGuidanceSetupJobEnvironment(this);
+	ClassAd context;
+	requestGuidanceSetupJobEnvironment(this, context);
+
+
 	return true;
 }
 
+void
+Starter::SetVacateReason(const std::string& msg, int code, int subcode)
+{
+	// Don't overwrite an existing vacate reason
+	if (m_vacateCode == 0) {
+		m_vacateReason = msg;
+		m_vacateCode = code;
+		m_vacateSubcode = subcode;
+	}
+}
+
+void
+Starter::ExceptHandler(const char* errmsg)
+{
+	if (m_vacateCode != 0) {
+		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
+	} else {
+		jic->notifyStarterError(errmsg, true, 0, 0);
+	}
+	RemoteShutdownFast(0);
+	FinalCleanup(STARTER_EXIT_EXCEPTION);
+}
 
 void
 Starter::StarterExit( int code )
@@ -309,7 +336,8 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir(code)) {
+	const char *move_to = m_move_working_dir_on_exit.empty() ? nullptr : m_move_working_dir_on_exit.c_str();
+	if ( ! removeTempExecuteDir(code, move_to)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -347,6 +375,9 @@ Starter::Config()
 			EXCEPT("Execute directory not specified in config file.");
 		}
 	}
+
+	// Testing hack, move the working dir instead of deleting it.
+	param(m_move_working_dir_on_exit, "STARTER_MOVE_WORKING_DIR_ON_EXIT");
 
 #ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
@@ -1663,45 +1694,45 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 }
 
 /**
- * Hold Job Command (sent by startd)
- * Unlike the DC signal, this includes a hold reason and hold code.
- * Also unlike the DC signal, this _puts_ the job on hold, rather than
+ * Vacate Job Command (sent by startd)
+ * Unlike the DC signal, this includes a reason string and code.
+ * Also unlike the DC signal, this can _put_ the job on hold, rather than
  * just passively informing the JIC of the hold.
  * 
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
 int 
-Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
+Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 {
-	std::string hold_reason;
-	int hold_code;
-	int hold_subcode;
+	std::string vacate_reason;
+	int vacate_code;
+	int vacate_subcode;
 	int soft;
 
 	s->decode();
-	if( !s->get(hold_reason) ||
-		!s->get(hold_code) ||
-		!s->get(hold_subcode) ||
+	if( !s->get(vacate_reason) ||
+		!s->get(vacate_code) ||
+		!s->get(vacate_subcode) ||
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteVacateCommand()\n", s->peer_description());
 		return FALSE;
 	}
 
-	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", hold_code, hold_subcode, hold_reason.c_str());
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", vacate_code, vacate_subcode, vacate_reason.c_str());
 
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
+		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
-	if (hold_code >= CONDOR_HOLD_CODE::VacateBase) {
-		m_vacateReason = hold_reason;
-		m_vacateCode =hold_code;
-		m_vacateSubcode = hold_subcode;
+	if (shouldVacateJobBasedOnCodes(vacate_code, vacate_subcode)) {
+		m_vacateReason = vacate_reason;
+		m_vacateCode = vacate_code;
+		m_vacateSubcode = vacate_subcode;
 		if (soft) {
 			return this->RemoteShutdownGraceful(0);
 		} else {
@@ -1711,7 +1742,7 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 
 		// Put the job on hold on the remote side.
 	if( jic ) {
-		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
+		jic->holdJob(vacate_reason.c_str(), vacate_code, vacate_subcode);
 	}
 
 	if( !soft ) {
@@ -1883,6 +1914,7 @@ Starter::createTempExecuteDir( void )
 						SlotDir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 			// The "htcondor" subdir is always owned by condor, mode 0755
@@ -1893,6 +1925,7 @@ Starter::createTempExecuteDir( void )
 						condor_dir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 
@@ -1905,6 +1938,7 @@ Starter::createTempExecuteDir( void )
 						JobHomeDir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 
@@ -1921,6 +1955,7 @@ Starter::createTempExecuteDir( void )
 						JobHomeDir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 #endif
@@ -1932,6 +1967,7 @@ Starter::createTempExecuteDir( void )
 			         WorkingDir.c_str(),
 			         strerror(errno) );
 			set_priv( priv );
+			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 	}
@@ -1943,6 +1979,7 @@ Starter::createTempExecuteDir( void )
 		if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested) && requested) {
 			dprintf(D_ERROR,
 			        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+			SetVacateReason("Can't create encrypted scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 	}
@@ -1964,6 +2001,7 @@ Starter::createTempExecuteDir( void )
 		if ( !ret_val ) {
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
+			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 
@@ -1972,6 +2010,7 @@ Starter::createTempExecuteDir( void )
 			if ( !ret_val ) {
 				dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON USER DIRECTORY\n");
 				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 		}
@@ -2085,6 +2124,7 @@ Starter::createTempExecuteDir( void )
 		}
 		if ( ! lvm_setup_successful) {
 			m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
+			SetVacateReason("Failed to create LV for scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
@@ -2100,13 +2140,9 @@ Starter::createTempExecuteDir( void )
 	if ( ! dirMonitor || ! dirMonitor->IsValid()) {
 		dprintf(D_ERROR, "Failed to initialize job working directory monitor object: %s\n",
 		                 dirMonitor ? "Out of memory" : "Failed initialization");
+		SetVacateReason("Failed to create LV for scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 		return false;
 	}
-
-	dprintf_open_logs_in_directory(WorkingDir.c_str());
-
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
 
 #if !defined(WIN32)
 	if (use_chown) {
@@ -2115,6 +2151,7 @@ Starter::createTempExecuteDir( void )
 					get_user_uid(),
 					get_user_gid()) == -1)
 		{
+			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			EXCEPT("chown error on %s: %s",
 					WorkingDir.c_str(),
 					strerror(errno));
@@ -2126,12 +2163,19 @@ Starter::createTempExecuteDir( void )
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
 	int chdir_result = chdir(WorkingDir.c_str());
+
+	dprintf_open_logs_in_directory(WorkingDir.c_str());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
+
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
 		dprintf( D_ERROR, "couldn't move to %s: %s\n", WorkingDir.c_str(),
 				 strerror(errno) ); 
 		set_priv( priv );
+		SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
@@ -3166,6 +3210,7 @@ bool
 Starter::transferOutput( void )
 {
 	bool transient_failure = false;
+	bool in_progress = false;
 
 	dprintf(D_ZKM, "Starter::transferOutput()\n");
 
@@ -3177,12 +3222,16 @@ Starter::transferOutput( void )
 		}
 	}
 
-    // Try to transfer output (the failure files) even if we didn't succeed
-    // in job setup (e.g., transfer input files), but just ignore any
-    // output-transfer failures in the case of a setup failure; we can only
-    // really report one thing, and that should be the setup failure,
-    // which happens as a result of calling cleanupJobs().
-	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
+	// Try to transfer output (the failure files) even if we didn't succeed
+	// in job setup (e.g., transfer input files), but just ignore any
+	// output-transfer failures in the case of a setup failure; we can only
+	// really report one thing, and that should be the setup failure,
+	// which happens as a result of calling cleanupJobs().
+	bool transfer_done = jic->transferOutput(transient_failure, in_progress);
+	if (transfer_done == false && in_progress == true) {
+		return false;
+	}
+	if (transfer_done == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
 				// we will retry the transfer when (if) the shadow reconnects
@@ -3209,25 +3258,16 @@ Starter::transferOutput( void )
 			}
 		}
 
-		jic->transferOutputMopUp();
-
-			/*
-			  there was an error with the JIC in this step.  at this
-			  point, the only possible reason is if we're talking to a
-			  shadow and file transfer failed to send back the files.
-			  in this case, just return to DaemonCore and wait for
-			  other events (like the shadow reconnecting or the startd
-			  deciding the job lease expired and killing us)
-			*/
-		dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
-				 "lease to expire or for a reconnect attempt\n" );
-		return false;
-	}
+		// If we've lost the syscall socket at this point, there's no point
+		// in doing the output transfer mop-up, but the shadow might reconnect.
+		if( /* FIXME */ false ) {
+			dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
+			                 "lease to expire or for a reconnect attempt\n" );
+			return false;
+		}
+ 	}
 
 	jic->transferOutputMopUp();
-
-		// If we're here, the JIC successfully transfered output.
-		// We're ready to move on to the next cleanup stage.
 	return cleanupJobs();
 }
 
@@ -3542,8 +3582,29 @@ Starter::PublishToEnv( Env* proc_env )
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long
+					// so we just force CUDA_VISIBLE_DEVICES to be the same value as NVIDIA_VISIBLE_DEVICES
+					proc_env->SetEnv("CUDA_VISIBLE_DEVICES", env_value);
+					dprintf(D_ALWAYS, "AvailableGPUs forcing env CUDA_VISIBLE_DEVICES=%s\n", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
+				}
+			}
+		}
+
+		const ClassAd * msec = jic->getMachineSecetsAd();
+		if (msec) {
+			// give the job access to the split claim id, (if there is one)
+			// we unparse so that the value will have "" and internal "" will be escaped
+			classad::Value val;
+			if (msec->EvaluateAttr(ATTR_SPLIT_CLAIM_ID, val, classad::Value::STRING_VALUE)) {
+				auto_free_ptr envname(param("STARTER_SET_SLOT_SPLIT_CLAIM_IN_JOB_ENV"));
+				if (envname) {
+					std::string split_claim;
+					classad::ClassAdUnParser unparser;
+					unparser.SetOldClassAd(true, true);
+					unparser.Unparse(split_claim, val);
+					proc_env->SetEnv(envname.ptr(), split_claim);
 				}
 			}
 		}
@@ -4009,7 +4070,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir(int& exit_code)
+Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -4070,9 +4131,14 @@ Starter::removeTempExecuteDir(int& exit_code)
 			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
 			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
 
-			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
-			if (!execute_dir.Remove_Current_File()) {
-				has_failed = true;
+			if (it->second == "/" && move_to) {
+				dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
+				rename(execute_dir.GetFullPath(), move_to);
+			} else {
+				dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
+				if (!execute_dir.Remove_Current_File()) {
+					has_failed = true;
+				}
 			}
 		}
 	}
@@ -4286,7 +4352,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 		std::string limit_str = to_string_byte_units(limit);
 		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
 		         limit_str.c_str());
-		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Disk);
 		m_lvm_held_job = true;
 	}
 

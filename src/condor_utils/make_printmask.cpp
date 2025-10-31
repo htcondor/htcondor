@@ -62,6 +62,7 @@ enum {
 	kw_AUTO,
 	kw_PRINTF,
 	kw_PRINTAS,
+	kw_RENDERAS,
 	kw_NOPREFIX,
 	kw_NOSUFFIX,
 	kw_TRUNCATE,
@@ -85,6 +86,7 @@ static const Keyword SelectKeywordItems[] = {
 	KW(OR),
 	KW(PRINTAS),
 	KW(PRINTF),
+	KW(RENDERAS),
 	KW(RIGHT),
 	KW(TRUNCATE),
 	KW(WIDTH),
@@ -294,6 +296,7 @@ int SetAttrListPrintMaskFromStream (
 						expected_token(error_message, "format after PRINTF", "SELECT", stream, toke);
 					}
 				} break;
+				case kw_RENDERAS: // RENDERAS is used when you want to specify a PRINTF format also
 				case kw_PRINTAS: {
 					if (toke.next()) {
 						const CustomFormatFnTableItem * pcffi = NULL;
@@ -302,8 +305,10 @@ int SetAttrListPrintMaskFromStream (
 
 						if (pcffi) {
 							cust = pcffi->cust;
-							fmt = pcffi->printfFmt;
-							if (fmt) fmt = mask->store(fmt);
+							if (kw == kw_PRINTAS || (fmt == def_fmt && pcffi->printfFmt != nullptr)) {
+								fmt = pcffi->printfFmt;
+								if (fmt) fmt = mask->store(fmt);
+							}
 							//cust_type = pcffi->cust;
 							const char * pszz = pcffi->extra_attribs;
 							if (pszz) {
@@ -315,10 +320,13 @@ int SetAttrListPrintMaskFromStream (
 							}
 						} else {
 							std::string aa; toke.copy_token(aa);
-							formatstr_cat(error_message, "Unknown argument %s for PRINTAS\n", aa.c_str());
+							formatstr_cat(error_message, "Unknown argument %s for %s\n", aa.c_str(),
+								(kw == kw_RENDERAS) ? "RENDERAS" : "PRINTAS");
 						}
 					} else {
-						expected_token(error_message, "function name after PRINTAS", "SELECT", stream, toke);
+						expected_token(error_message, 
+							(kw == kw_RENDERAS) ? "function name after RENDERAS" : "function name after PRINTAS",
+							"SELECT", stream, toke);
 					}
 				} break;
 				case kw_OR: {
@@ -349,7 +357,7 @@ int SetAttrListPrintMaskFromStream (
 					opts &= ~FormatOptionLeftAlign;
 				} break;
 				case kw_FIT: {
-					opts &= ~FormatOptionFitToData;
+					opts |= FormatOptionFitToData | FormatOptionNoTruncate;
 				} break;
 				case kw_TRUNCATE: {
 					opts &= ~FormatOptionNoTruncate;
@@ -366,7 +374,10 @@ int SetAttrListPrintMaskFromStream (
 							def_opts |= (FormatOptionAutoWidth | FormatOptionNoTruncate);
 						} else {
 							wid = atoi(val.c_str());
-							def_opts &= ~(FormatOptionAutoWidth | FormatOptionNoTruncate);
+							def_opts &= ~FormatOptionAutoWidth;
+							if (pmms.fixed_width_implies_truncate) {
+								def_opts &= ~FormatOptionNoTruncate;
+							}
 							width_from_label = false;
 							//PRAGMA_REMIND("TJ: decide how LEFT & RIGHT interact with pos and neg widths."
 							if (fmt == def_fmt) {
@@ -419,7 +430,7 @@ int SetAttrListPrintMaskFromStream (
 					// a width was specified, but no custom or printf format. so we
 					// need to manufacture a printf format based on the given width.
 					if ( ! wid) { fmt = def_fmt; }
-					else {
+					else if (pmms.generate_printf_from_width) {
 						char tmp[40] = "%"; char *p = tmp+1;
 						if (wid < 0) { opts |= FormatOptionLeftAlign; wid = -wid; *p++ = '-'; }
 						auto [end, ec] = std::to_chars(p, p + 12, wid);
@@ -601,7 +612,8 @@ static int PrintPrintMaskWalkFunc(void*pv, int /*index*/, Formatter*fmt, const c
 	if (fmt->sf) {
 		for (int ii = 0; ii < (int)args.FnTable.cItems; ++ii) {
 			if ((StringCustomFormat)ptable[ii].cust == fmt->sf) {
-				if (fmt->printfFmt) {
+				// use PRINTF and RENDERAS when the format in the ptable is not the same as the format being used.
+				if (fmt->printfFmt && YourString(fmt->printfFmt) != ptable[ii].printfFmt) {
 					printas = "PRINTF "; printas += fmt->printfFmt;
 					printas += " RENDERAS ";
 				} else {
@@ -647,6 +659,9 @@ static int PrintPrintMaskWalkFunc(void*pv, int /*index*/, Formatter*fmt, const c
 		or_val[0] = alt_chars[((fmt->options&AltMask)/AltQuestion)];
 		if (fmt->options & AltWide) { or_val[1] = or_val[0]; }
 		printas += or_val;
+	} else if (fmt->options & AltWide) {
+		// if AltWide is set, but AltMask is not, that means that the alt character is space
+		printas += " OR '  '";
 	}
 
 	size_t pos = fout.size();

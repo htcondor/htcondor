@@ -86,8 +86,10 @@ ResMgr::ResMgr() :
 	if ( ! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd disk enforcement disabled.\n");
 		m_volume_mgr.reset(nullptr);
+		m_attr->set_volume_manager(nullptr);
 	} else {
 		m_volume_mgr.reset(new VolumeManager());
+		m_attr->set_volume_manager(m_volume_mgr.get());
 	}
 
 #if HAVE_BACKFILL
@@ -387,10 +389,9 @@ ClassAd * BrokenItem::new_context_ad() const
 void BrokenItem::publish_resources(ClassAd& ad, const char * prefix) const
 {
 	b_res.Publish(ad, prefix);
-	int broken_sub_id = (1000*1000) + b_id;
 	for (const auto & [tag,quan] : b_res.nfrmap()) {
 		MachAttributes::slotres_assigned_ids_t devids;
-		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, broken_sub_id)) {
+		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, this->sub_id())) {
 			std::string idlist = join(devids, ",");
 			std::string attr = "Assigned" + tag;
 			ad.Assign(attr, idlist);
@@ -430,7 +431,12 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 	publish_static(&ad); // publish stuff we learned from the Starter
 
-	m_attr->publish_static(&ad);
+	auto volman = getVolumeManager();
+	if (volman && volman->is_enabled()) {
+		volman->PublishDiskInfo(ad);
+	}
+
+	m_attr->publish_static(&ad, nullptr);
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
@@ -716,6 +722,15 @@ ResMgr::init_resources( void )
 		id_disp = new IdDispenser( 1 );
 		return;
 	}
+
+#ifdef PROVISION_FRACTIONAL_DISK
+#else
+	if (m_volume_mgr && m_volume_mgr->is_enabled()) {
+		initExecutePartitionTable(m_attr, m_volume_mgr.get());
+	} else {
+		initExecutePartitionTable(m_attr, max_types, num_res, type_nums, bkfill_bools, failmode, bad_slot_types);
+	}
+#endif
 
 	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, failmode, bad_slot_types );
 	if ( ! new_cpu_attrs || ! new_cpu_attrs[0]) {
@@ -1050,6 +1065,9 @@ ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 					return rip;
 				}
 			}
+		} else if (rip->is_split_claim_id(id)) {
+			// d-slots can have split claim ids in the r_claims collection
+			return rip;
 		}
 	}
 	return NULL;
@@ -1443,20 +1461,18 @@ ResMgr::directAttachToSchedd()
 		return;
 	}
 
-	std::vector<Resource*> offer_resources;
-
-	for (auto resource: slots) {
-		if ( resource->state() != unclaimed_state ) {
-			continue;
+	int offer_size = 0;
+	for (auto *rip: slots) {
+		if (rip && rip->state() == unclaimed_state) {
+			++offer_size;
 		}
-		offer_resources.push_back(resource);
 	}
 
-	if ( offer_resources.empty() ) {
+	if ( 0 == offer_size ) {
 		dprintf(D_FULLDEBUG, "No unclaimed slots, nothing to offer to schedd\n");
 		return;
 	}
-	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", (int)offer_resources.size());
+	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", offer_size);
 
 	// Do we need this if we only trigger when updating the collector?
 	compute_dynamic(true);
@@ -1465,68 +1481,27 @@ ResMgr::directAttachToSchedd()
 
 	int timeout = 30;
 	DCSchedd schedd(schedd_name.c_str(), schedd_pool.empty() ? nullptr : schedd_pool.c_str());
-	ReliSock *sock = schedd.reliSock(timeout);
-	if ( ! sock ) {
-		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
-		return;
-	}
-	if (!schedd.startCommand(DIRECT_ATTACH, sock, timeout)) {
-		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n",
-		        schedd_name.c_str());
-		delete sock;
-		return;
-	}
 
-	sock->encode();
-	ClassAd cmd_ad;
-	cmd_ad.InsertAttr(ATTR_NUM_ADS, (long)offer_resources.size());
-	if (!offer_submitter.empty()) {
-		cmd_ad.InsertAttr(ATTR_SUBMITTER, offer_submitter);
-	}
-	if ( !putClassAd(sock, cmd_ad) ) {
-		dprintf(D_FULLDEBUG, "Failed to send GIVE_ADS ad to %s\n",
-		        schedd_name.c_str());
-		delete sock;
-		return;
-	}
+	std::vector<ClassAd> slotads; // collection to hold and delete the slot ads
+	slotads.reserve(offer_size);
+	std::vector< std::pair<std::string, const ClassAd*> > resources; // collection to pass to DCSChedd
+	resources.reserve(offer_size);
 
-	for ( auto slot: offer_resources ) {
-		ClassAd offer_ad;
-		slot->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+	for (auto *rip : slots) {
+		if (rip && rip->state() == unclaimed_state) {
+			ClassAd & offer_ad = slotads.emplace_back();
+			rip->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+
 			// TODO This assumes the resource has no preempting claimids,
 			//   because we're only looking at unclaimed slots.
-		std::string claimid = slot->r_cur->id();
-
-		if ( !sock->put_secret(claimid) ||
-		     !putClassAd(sock, offer_ad) )
-		{
-			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n",
-			        schedd_name.c_str());
-			delete sock;
-			return;
+			resources.emplace_back(rip->r_cur->id(), &offer_ad);
 		}
 	}
 
-	if ( !sock->end_of_message() ) {
-		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n",
-		        schedd_name.c_str());
-	}
-
-	sock->decode();
-	ClassAd reply_ad;
-	if (!getClassAd(sock, reply_ad) || !sock->end_of_message()) {
-		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", schedd_name.c_str());
-		delete sock;
-		return;
-	}
-
-	int reply_code = NOT_OK;
-	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	int reply_code = schedd.offerResources(resources, offer_submitter, timeout);
 	if (reply_code != OK) {
 		dprintf(D_FULLDEBUG, "Schedd returned error\n");
 	}
-
-	delete sock;
 }
 
 bool
@@ -1580,12 +1555,21 @@ void ResMgr::compute_static()
 	// static machine attributes and per-slot config that depends on resource allocation
 	m_attr->compute_config();
 
+#ifdef PROVISION_FRACTIONAL_DISK
 	long long virt_mem = m_attr->virt_mem();
+#else
+#endif
 	for(Resource* rip : slots) {
 		if (rip) {
+		#ifdef PROVISION_FRACTIONAL_DISK
 			// TODO: change disk and vir_mem so that they are allocated as % 
 			rip->r_attr->compute_virt_mem_share(virt_mem);
 			rip->r_attr->compute_disk();
+		#else
+			// init of Disk and Swap quantities now happens in initDiskVolumes() on startup
+			// set values for TotalDisk and TotalSlotDisk
+			rip->r_attr->recompute_disk(false);
+		#endif
 			rip->reqexp_config();
 		}
 	}
@@ -1612,6 +1596,8 @@ ResMgr::compute_and_refresh(Resource * rip)
 	}
 	compute_resource_conflicts();
 
+#ifdef PROVISION_FRACTIONAL_DISK
+
 #if 0 // TJ: these recompute things which we don't need/want to refresh on slot creation or activation
 	compute_draining_attrs();
 	// for updates, we recompute some machine attributes (like virtual mem)
@@ -1623,6 +1609,10 @@ ResMgr::compute_and_refresh(Resource * rip)
 	long long virt_mem = m_attr->virt_mem();
 	rip->r_attr->compute_virt_mem_share(virt_mem);
 	if (parent) parent->r_attr->compute_virt_mem_share(virt_mem);
+#else
+	// Swap quantities are initialized when global MachineAttrs is created
+	// basically the same time that Memory is initialized
+#endif
 
 	// update global machine load and idle values, also dynamic WinReg attributes
 	m_attr->compute_for_policy();
@@ -1717,10 +1707,17 @@ ResMgr::compute_dynamic(bool for_update)
 
 	// And last, do some logging
 	//
+#ifdef PROVISION_FRACTIONAL_DISK
 	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->always_recompute_disk()) {
 		// on update (~10min) we report the new value of DISK 
 		walk(&Resource::display_total_disk);
 	}
+#else
+	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->recompute_disk_free()) {
+		// on update (~10min) we report the new value of DISK 
+		walk(&Resource::display_total_disk);
+	}
+#endif
 	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
 		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
@@ -2893,6 +2890,23 @@ ResMgr::compute_resource_conflicts()
 	primary_res_in_use.reset();
 	backfill_res_in_use.reset();
 
+	// build a map of state of top level slots and their claimedness
+	// so we can update the NFT map active field.
+	// This is used by has_nft_conflicts in the loop below.
+	std::map<int,bool> claimed_slotids_map;
+	for (Resource * rip : slots) {
+		if ( ! rip) continue;
+		State state = rip->state();
+		bool is_claimed = state == claimed_state || state == preempting_state;
+		if ( ! rip->is_dynamic_slot()) {
+			claimed_slotids_map[rip->r_id] = is_claimed;
+		}
+	}
+	// update the active state in the NFT map for claimed p-slots and static slots
+	if ( ! claimed_slotids_map.empty()) {
+		resmgr->m_attr->set_nft_activity(claimed_slotids_map);
+	}
+
 	// Build up a bag of unclaimed resources
 	// and a list of active backfill slots
 	// TODO: fix for claimed p-slots when that changes
@@ -3109,7 +3123,7 @@ ResMgr::cancelDraining(std::string request_id,bool reconfig,std::string &error_m
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/) const
+ResMgr::isSlotDraining(const Resource * /*rip*/) const
 {
 	// NOTE: passed in rip will be NULL when building the daemon ad
 	return draining;
@@ -3122,7 +3136,7 @@ ResMgr::gracefulDrainingTimeRemaining()
 }
 
 time_t
-ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
+ResMgr::gracefulDrainingTimeRemaining(const Resource * /*rip*/)
 {
 	if( !draining || !draining_is_graceful ) {
 		return 0;
@@ -3153,7 +3167,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 }
 
 bool
-ResMgr::drainingIsComplete(Resource * /*rip*/)
+ResMgr::drainingIsComplete(const Resource * /*rip*/) const
 {
 	if( !draining ) {
 		return false;

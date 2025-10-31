@@ -87,7 +87,7 @@ BaseShadow::BaseShadow() {
 BaseShadow::~BaseShadow() {
 	myshadow_ptr = NULL;
 	if (jobAd) FreeJobAd(jobAd);
-	if (gjid) free(gjid); 
+	if (gjid) free(gjid);
 	if (scheddAddr) free(scheddAddr);
 	if( job_updater ) delete job_updater;
 	if (m_cleanup_retry_tid != -1) daemonCore->Cancel_Timer(m_cleanup_retry_tid);
@@ -277,6 +277,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	if (wantClaiming) {
 		std::string startdSinful;
 		std::string claimid;
+		DCStartd::requestClaimOptions opts;
 
 			// Pull startd addr and claimid out of the jobad
 		jobAd->LookupString(ATTR_STARTD_IP_ADDR, startdSinful);
@@ -295,7 +296,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 											   "description", 
 											   daemonCore->InfoCommandSinfulString(), 
 											   1200 /*alive interval*/,
-											   false, /* don't claim pslot */
+											   opts, /* don't claim pslot */
 											   20 /* net timeout*/, 
 											   100 /*total timeout*/, 
 											   cb);
@@ -445,7 +446,8 @@ BaseShadow::reconnectFailed( const char* reason )
 }
 
 std::string
-BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_code, int & /*reason_subcode*/ )
+BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_code, int & /*reason_subcode*/,
+	std::string& url_file_type)
 {
 	/* This method is invokved by the shadow when we are putting a job on hold or back to idle, and allow us to
 	   change/edit the Hold/EvictReason attribute and Hold/EvictReason codes before the shadow sends the info
@@ -502,7 +504,7 @@ BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_co
 
 		// If transfer failure involved an URL (via transfer plugin), try to parse out the URL
 		std::string url_file;
-		std::string url_file_type;
+		// This is now passed as a method parameter - std::string url_file_type;
 		pos = old_reason.find("URL file = ");
 		if (pos != std::string::npos) {
 			pos += strlen("URL file = ");
@@ -933,13 +935,36 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		}
 	}
 
-	// Note: improveReasonAttributescan change the reason_code and subcode,
+	// Note: improveReasonAttributes can change the reason_code and subcode,
 	// and will pass back a potentially improved reason string.
+	std::string url_file_type; // This will be used to store the protocol used for file transfer.
 	std::string improved_reason_str =
-		improveReasonAttributes(reason_str, reason_code, reason_subcode);
+		improveReasonAttributes(reason_str, reason_code, reason_subcode, url_file_type);
 	// If we have an improved reason string, use it instead.
 	if (!improved_reason_str.empty()) {
 		reason_str = improved_reason_str.c_str();
+	}
+
+	// If we had a problem moving files, we want to record the protocol used
+	// for the file transfer, so that we can update the Evict Num Reasons
+	// attributes by protocol in the schedd.
+	if (reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError ||
+		reason_code == FILETRANSFER_HOLD_CODE::UploadFileError)
+	{
+		if (url_file_type.empty()) {
+			// If we don't have a URL file type, then we don't know what protocol was used.
+			// So just set the protocol to "unknown".
+			url_file_type = "Cedar";
+		} else {
+			// Make url_file_type camel case, so that it is consistent with the
+			// other protocols we use in the Additional Hold/Evict Num Reasons attributes.
+			title_case(url_file_type);
+			// Consider osdf to be the Pelican protocol.
+			if (url_file_type == "Osdf") {
+				url_file_type = "Pelican";
+			}
+		}
+		jobAd->Assign(ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL, url_file_type);
 	}
 
 	if( getMachineName(machine) ) {
@@ -959,6 +984,23 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
+	// update the job ad in the queue with some important final
+	// attributes so we know what happened to the job when using
+	// condor_history...
+	// If the schedd initiated the vacate, this will update the vacate
+	// attributes in our ad from the schedd's ad.
+	if( !updateJobInQueue(U_EVICT) ) {
+		// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+	// In case we got updated vacate attributes from the schedd, set our
+	// local variables from the job ad
+	jobAd->LookupString(ATTR_VACATE_REASON, job_ad_reason);
+	reason_str = job_ad_reason.c_str();
+	jobAd->LookupInteger(ATTR_VACATE_REASON_CODE, reason_code);
+	jobAd->LookupInteger(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+
 	writeAdToEpoch(getJobAd());
 
 	if (exit_reason != JOB_RECONNECT_FAILED) {
@@ -967,14 +1009,6 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 
 		// write stuff to user log:
 		logEvictEvent(exit_reason, reason_str, reason_code, reason_subcode);
-	}
-
-		// update the job ad in the queue with some important final
-		// attributes so we know what happened to the job when using
-		// condor_history...
-	if( !updateJobInQueue(U_EVICT) ) {
-			// trouble!  TODO: should we do anything else?
-		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
 	exitAfterEvictingJob( exit_reason );
@@ -1027,6 +1061,12 @@ BaseShadow::emailRemoveEvent( const char* reason )
 	mailer.sendRemove( jobAd, reason );
 }
 
+void
+BaseShadow::emailStartEvent( ClassAd *jobAd, const char* reason ) 
+{
+	Email mailer;
+	mailer.sendStart( jobAd, reason );
+}
 
 void BaseShadow::initUserLog()
 {
@@ -1570,6 +1610,8 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 			// They want it now, so do an update right here.
 		updateJobInQueue(U_STATUS);
 	}
+
+	emailStartEvent(jobAd, "");
 }
 
 

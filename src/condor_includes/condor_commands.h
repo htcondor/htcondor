@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 197> makeCommandTable() {
+std::array<std::pair<int, const char *>, 196> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -322,13 +322,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{RECYCLE_SHADOW, "RECYCLE_SHADOW"},
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 		{CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS"},
-		// These two commands originally used the same command int by mistake.
-		// In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
-		// List DRAIN_JOBS first, so that lower_bound finds it first
 #define DRAIN_JOBS (SCHED_VERS+112)
 		{DRAIN_JOBS, "DRAIN_JOBS"},
-#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
-		{GET_PRIORITY_ROLLUP_OLD, "GET_PRIORITY_ROLLUP_OLD"},
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
 		{CANCEL_DRAIN_JOBS, "CANCEL_DRAIN_JOBS"},
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
@@ -470,8 +465,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 */
 
 #define STARTER_COMMANDS_BASE 1500
-#define STARTER_HOLD_JOB    (STARTER_COMMANDS_BASE+0)
-		{STARTER_HOLD_JOB, "STARTER_HOLD_JOB"},
+#define STARTER_VACATE_JOB    (STARTER_COMMANDS_BASE+0)
+		{STARTER_VACATE_JOB, "STARTER_VACATE_JOB"},
 #define CREATE_JOB_OWNER_SEC_SESSION (STARTER_COMMANDS_BASE+1)
 		{CREATE_JOB_OWNER_SEC_SESSION, "CREATE_JOB_OWNER_SEC_SESSION"},
 #define START_SSHD (STARTER_COMMANDS_BASE+2)

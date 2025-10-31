@@ -329,6 +329,19 @@ Scheduler ClassAd Attributes
     *condor_schedd* daemon, which this *condor_schedd* knows about,
     but has not yet managed to claim.
 
+:classad-attribute-def:`NumPendingClaimsInQueue`
+    The number of machines (*condor_startd* daemons) matched to this
+    *condor_schedd* daemon that are waiting in a queue to be claimed.
+
+:classad-attribute-def:`NumPendingClaimsInContact`
+    The number of machines (*condor_startd* daemons) matched to this
+    *condor_schedd* daemon that have been contacted to claim.
+
+.. note::
+
+    The sum of :ad-attr:`NumPendingClaimsInQueue` and :ad-attr:`NumPendingClaimsInContact`
+    is equal to :ad-attr:`NumPendingClaims`.
+
 :classad-attribute-def:`NumUsers`
     The integer number of distinct users with jobs in this
     *condor_schedd* 's queue.
@@ -871,10 +884,10 @@ once a full time span has accumulated.
     The published user name is actually the file transfer queue name, as
     defined by configuration variable :macro:`TRANSFER_QUEUE_USER_EXPR`
 
-:classad-attribute-def:`TransferQueueMBWaitingToDownload`
+:classad-attribute-def:`FileTransferMBWaitingToDownload`
     Number of megabytes of output files waiting to be downloaded.
 
-:classad-attribute-def:`TransferQueueMBWaitingToUpload`
+:classad-attribute-def:`FileTransferMBWaitingToUpload`
     Number of megabytes of input files waiting to be uploaded.
 
 :classad-attribute-def:`TransferQueueDownloadWaitTime`

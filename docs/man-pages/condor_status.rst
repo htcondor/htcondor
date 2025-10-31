@@ -110,6 +110,14 @@ Options
     (Query option) Query *condor_startd* ClassAds of broken slots or
     broken machines and display a reason. Use with **-startd** to see
     broken machines.
+ **-lvm**
+    (Query option) Query *condor_startd* ClassAds of slots current
+    enforced disk usage. Ues with **-startd** to see which *condor_startd*\s
+    are enforcing disk usage.
+ **-snapshot** *[details]*
+    (Query option) Can only be used if the **-direct** option has been
+    specified. Requests a full snapshot of the internal state, also including
+    *Machine.Extras* from cron jobs or resource monitors.
  **-statistics** *WhichStatistics*
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
@@ -492,6 +500,29 @@ To do the same with the **autoformat** option, run
 .. code-block:: console
 
     $ condor_status -autoformat Name Memory
+
+To see current disk usage of all slots enforcing disk limits run
+
+.. code-block:: console
+
+   $ condor_status -lvm
+
+   NAME                       PROVISION ALLOCATED   USAGE
+
+   slot1_1@ep1.chtc.wisc.edu  thick        2.0 MB   1.81%
+   slot1_2@ep1.chtc.wisc.edu  thick       10.0 GB  74.54%
+   slot1_8@ep2.chtc.wisc.edu  thin       600.0 MB  18.84%
+
+To see which *condor_startd*\s are enforcing disk limits run
+
+.. code-block:: console
+
+    $ condor_status -lvm -startd
+
+    HOST              DEVICE              PROVISION     DISK  LOOPBACK
+
+    ep1.chtc.wisc.edu htc_vg              thick      100.0 GB    false
+    ep2.chtc.wisc.edu htc_vg/htc_thinpool thin       100.0 GB    false
 
 Exit Status
 -----------

@@ -212,7 +212,7 @@ class DedicatedScheduler : public Service {
 		// Used for claiming/releasing startds we control
 	bool releaseClaim( match_rec* m_rec );
 	bool deactivateClaim( match_rec* m_rec );
-	void sendAlives( void );
+	void checkClaimLeases( void );
 
 		// Reaper for the MPI shadow
 	int reaper( int pid, int status );
@@ -379,8 +379,6 @@ class DedicatedScheduler : public Service {
 			@return true if possible, false if not
 		*/
 	bool isPossibleToSatisfy( CAList* jobs, int max_hosts );
-
-	void holdAllDedicatedJobs( void );
 
 	bool satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
 

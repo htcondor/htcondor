@@ -27,6 +27,11 @@ import textwrap
 import os
 import sys
 
+from .try_os_set import (
+    try_os_setegid,
+    try_os_seteuid,
+)
+
 import htcondor2 as htcondor
 
 from . import job_queue, env, cmd, daemons, handles, scripts
@@ -58,7 +63,8 @@ DEFAULT_PARAMS = {
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
-    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
+    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}",
+    "SINGULARITY": "/usr/bin/false"
 }
 
 
@@ -104,6 +110,8 @@ class Condor:
         config: Optional[Mapping[str, str]] = None,
         raw_config: Optional[str] = None,
         clean_local_dir_before: bool = True,
+        submit_user : str = None,
+        condor_user : str = None,
     ):
         """
         Parameters
@@ -118,7 +126,13 @@ class Condor:
         clean_local_dir_before
             If ``True``, any existing directory at ``local_dir`` will be removed
             before trying to stand up the new instance.
+        submit_user
+            If set, the user to switch to when submitting a job.
+        condor_user
+            If set, the user that HTCondor will run as.
         """
+        self.submit_user = submit_user
+        self.condor_user = condor_user
         self.local_dir = local_dir
 
         self.execute_dir = self.local_dir / "execute"
@@ -198,6 +212,13 @@ class Condor:
         ):
             dir.mkdir(parents=True, exist_ok=not self.clean_local_dir_before)
             # logger.debug("Created dir {}".format(dir))
+            if self.condor_user:
+                try:
+                    shutil.chown(
+                        dir, user=self.condor_user, group=self.condor_user
+                    )
+                except PermissionError:
+                    pass
 
     def _write_config(self):
         # TODO: how to ensure that this always hits the right config?
@@ -230,6 +251,19 @@ class Condor:
             "SEC_TOKEN_SYSTEM_DIRECTORY": self.tokens_dir.as_posix(),
             "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND",
         }
+
+        if self.condor_user:
+            try:
+                from pwd import getpwnam
+                from grp import getgrnam
+
+                uid = getpwnam(self.condor_user).pw_uid
+                gid = getgrnam(self.condor_user).gr_gid
+                base_config["CONDOR_IDS"] = f"{uid}.{gid}"
+            except ModuleNotFoundError:
+                # This should arguably be a setup error if this process
+                # has user-switching privileges.
+                pass
 
         # The need to do this is arguably a HTCondor bug.
         global unique_identifier
@@ -688,10 +722,19 @@ class Condor:
                 sub, count, itemdata
             )
         )
+
+        if self.submit_user:
+            euid = os.geteuid()
+            egid = os.getegid()
+            try_os_setegid( name=self.submit_user )
+            try_os_seteuid( name=self.submit_user )
         with self.use_config():
             schedd = self.get_local_schedd()
             result = schedd.submit(sub, count=count, itemdata=itemdata)
             logger.debug("Got submit result:\n{}".format(result))
+        if self.submit_user:
+            try_os_setegid( number=egid )
+            try_os_seteuid( number=euid )
 
         return handles.ClusterHandle(self, result)
 

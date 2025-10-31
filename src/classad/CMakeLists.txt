@@ -91,7 +91,6 @@ endif()
 
 set( Headers
 classad/attrrefs.h
-classad/cclassad.h
 classad/classadCache.h
 classad/classad_containers.h
 classad/classad_distribution.h

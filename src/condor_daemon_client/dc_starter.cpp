@@ -197,28 +197,28 @@ DCStarter::delegateX509Proxy( const char * filename, time_t expiration_time, cha
 	return XUS_Error;
 }
 
-StarterHoldJobMsg::StarterHoldJobMsg( char const *hold_reason, int hold_code, int hold_subcode, bool soft ):
-	DCMsg(STARTER_HOLD_JOB),
-	m_hold_reason(hold_reason),
-	m_hold_code(hold_code),
-	m_hold_subcode(hold_subcode),
+StarterVacateJobMsg::StarterVacateJobMsg( char const *vacate_reason, int vacate_code, int vacate_subcode, bool soft ):
+	DCMsg(STARTER_VACATE_JOB),
+	m_vacate_reason(vacate_reason),
+	m_vacate_code(vacate_code),
+	m_vacate_subcode(vacate_subcode),
 	m_soft(soft)
 {
 }
 
 bool
-StarterHoldJobMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
+StarterVacateJobMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-		// send hold job command to starter
+		// send vacate job command to starter
 	return
-		sock->put(m_hold_reason) &&
-		sock->put(m_hold_code) &&
-		sock->put(m_hold_subcode) &&
+		sock->put(m_vacate_reason) &&
+		sock->put(m_vacate_code) &&
+		sock->put(m_vacate_subcode) &&
 		sock->put((int)m_soft);
 }
 
 DCMsg::MessageClosureEnum
-StarterHoldJobMsg::messageSent( DCMessenger *messenger, Sock *sock )
+StarterVacateJobMsg::messageSent( DCMessenger *messenger, Sock *sock )
 {
 		// now wait for reply
 	messenger->startReceiveMsg(this,sock);
@@ -226,13 +226,13 @@ StarterHoldJobMsg::messageSent( DCMessenger *messenger, Sock *sock )
 }
 
 bool
-StarterHoldJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
+StarterVacateJobMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
 		// read reply from starter
 	int success=0;
 	int r = sock->get(success);
 	if (!r) {
-		dprintf(D_ALWAYS, "Error reading hold message reply from starter\n");
+		dprintf(D_ALWAYS, "Error reading vacate message reply from starter\n");
 	}
 
 	return success!=0;

@@ -33,6 +33,7 @@ from time import time
 import os
 import sys
 import htcondor2 as htcondor
+import re
 
 
 #Custom class to help build job ads for history files
@@ -41,7 +42,7 @@ class HistAdsViaCluster():
         self.owner = ownr
         self.clusterId = clust
         #Procs = number of job procs for this cluster
-        self.numProcs = procs
+        self.procs = procs
         self.QDate = qdate
         #cust_attrs = dictionary of key value pairs to add/change attrs for this cluster
         self.attrs = cust_attrs
@@ -71,8 +72,8 @@ STD_HEADER = ["ID","OWNER","SUBMITTED","RUN_TIME","ST","COMPLETED","CMD"];
 #Any test command that uses the flags -file, -userlog, or -search should put those last
 #because the test structure checks for those flags and adds the appropriate file to the end of the command
 TEST_CASES = {
-    "base_history"      : TestReqs("condor_history", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
-    "startd_history"    : TestReqs("condor_history -startd", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
+    "base_history"      : TestReqs("condor_history", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4","123456789.1","123456789.55555"], STD_HEADER),
+    "startd_history"    : TestReqs("condor_history -startd", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4","123456789.1","123456789.55555"], STD_HEADER),
     "search_cluster"    : TestReqs("condor_history 2", ["2.0","2.1","2.2"], STD_HEADER),
     "search_clust.proc" : TestReqs("condor_history 5.1", ["5.1"], STD_HEADER),
     "search_owner"      : TestReqs("condor_history unclegreg",["4.0","4.1"], STD_HEADER),
@@ -90,8 +91,8 @@ TEST_CASES = {
     "af_headers"        : TestReqs("condor_history -af:jh Owner QDate DAGManJobId CMD -limit 1", ["5.4"], ["ID","Owner","QDate","DAGManJobId","CMD"]),
     "no_match_af_const" : TestReqs("condor_history -af:j Beers -const Beers>10 -file"),
     # Remote history checks
-    "remote_schedd"     : TestReqs("condor_history -name TEST_SCHEDD@", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
-    "remote_startd"     : TestReqs("condor_history -name TEST_STARTD@ -startd", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
+    "remote_schedd"     : TestReqs("condor_history -name TEST_SCHEDD@", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4","123456789.1","123456789.55555"], STD_HEADER),
+    "remote_startd"     : TestReqs("condor_history -name TEST_STARTD@ -startd", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4","123456789.1","123456789.55555"], STD_HEADER),
     "remote_cluster"    : TestReqs("condor_history 5 -name TEST_SCHEDD@", ["5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
     "remote_clust.proc" : TestReqs("condor_history 5.3 -name TEST_SCHEDD@", ["5.3"], STD_HEADER),
     "remote_match"      : TestReqs("condor_history 5 -name TEST_SCHEDD@ -limit 2", ["5.4","5.3"], STD_HEADER),
@@ -149,6 +150,11 @@ TEST_ERROR_CASES = {
         "err": "Unknown -transfer-history extra attribute 'q'",
         "config": {},
     },
+    "fail_unknown_daemon_history" : {
+        "cmd": "condor_history -daemon:foo",
+        "err": "No daemon history to read: FOO_DAEMON_HISTORY undefined",
+        "config": {},
+    }
 }
 #===============================================================================================
 # Reconfig condor to how we want
@@ -171,6 +177,20 @@ def reconfig(condor, test_name, test_dir, config={}):
             f.write(f"{knob}={value}\n")
     #Reconfig
     p = condor.run_command(reconfig_cmd)
+
+
+#-----------------------------------------------------------------------------------------------
+def iter_procs(procs):
+    if isinstance(procs, list):
+        for p in procs:
+            yield p
+    elif isinstance(procs, int):
+        for p in range(procs):
+            yield p
+    else:
+        raise TypeError(f"History Creation Expects Procs to be a count (int) or explicit list (list)")
+
+
 #-----------------------------------------------------------------------------------------------
 #Write cluster(s) job history to specified file
 def writeAdToHistory(filename, clusters, ad, is_schedd=True):
@@ -201,7 +221,7 @@ def writeAdToHistory(filename, clusters, ad, is_schedd=True):
                 ad[key] = value
                 changed_attrs.append(key)
         #For each desired proc in cluster
-        for i in range(clust.numProcs):
+        for i in iter_procs(clust.procs):
             #Update clusterid, owner, and proc id
             ad["ClusterId"] = clust.clusterId
             ad["Owner"] = f"\"{clust.owner}\""
@@ -287,6 +307,7 @@ def writeHistoryFile(default_condor, test_dir, jobAd):
         HistAdsViaCluster("cole",1,1,t),
         HistAdsViaCluster("tj",2,3,t+10),
         HistAdsViaCluster("tj",3,1,t+15,{"CustAttr":True}),
+        HistAdsViaCluster("andrew", 123456789, [55555, 1], t),
         HistAdsViaCluster("unclegreg",4,2,t+20),
         HistAdsViaCluster("cole",5,5,t+25),
     ]
@@ -568,6 +589,22 @@ Bar=1
     return p
 
 #===============================================================================================
+@action
+def getDaemonHistory(default_condor):
+    # NOTE: This (by default) gets Schedd records from daemon history
+    p = default_condor.run_command(["condor_history", "-daemon"])
+    with default_condor.use_config():
+        hist = htcondor.param.get("SCHEDD_DAEMON_HISTORY")
+    return (hist, p)
+
+#===============================================================================================
+@action
+def pyBindGetScheddHist(default_condor):
+    with default_condor.use_config():
+        ads = htcondor.Schedd().daemonHistory(match=1, projection=["RecordWriteDate"])
+    return ads
+
+#===============================================================================================
 class TestCondorHistory:
 
     def test_condor_history(self, testName, testInfo, testOutputFile):
@@ -676,3 +713,46 @@ class TestCondorHistory:
         for line in runEmptyBanner.stdout.split("\n"):
             assert line == "2 true" or line == "1 false"
 
+    def test_daemon_history(self, getDaemonHistory):
+        path, cmd = getDaemonHistory
+
+        # Check daemon history file exists
+        assert path is not None
+        assert os.path.exists(path)
+
+        # Assert no errors written
+        assert cmd.stderr == ""
+
+        # Schedd Ad Sample: ' 5/13 09:14     67.11%         832       1903          67       145      13   632.10       4      1      13.05'
+        check = re.compile(r"\s*(\d+)/(\d+) *(\d+):(\d+)\s*(\d+).(\d+)%\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)\s*(\d+)\s*(\d+)\s*(\d+).(\d+)")
+        line_no = 0
+
+        # Check all stdout lines for matching header and regex pattern
+        for line in cmd.stdout.split("\n"):
+            if line_no == 0:
+                headings = line.strip().split()
+                assert headings == [
+                    "TIMESTAMP",
+                    "DUTY_CYCLE",
+                    "RunningJobs",
+                    "IdleJobs",
+                    "HeldJobs",
+                    "Download",
+                    "Waiting",   # download statistic
+                    "WaitingMB", # download statistic
+                    "Upload",
+                    "Waiting",   # upload statistic
+                    "WaitingMB"  # upload statistic
+                ]
+            else:
+                assert check.match(line)
+
+            line_no += 1
+
+    def test_py_schedd_hist(self, pyBindGetScheddHist):
+        assert pyBindGetScheddHist is not None
+        assert len(pyBindGetScheddHist) == 1
+
+        record = pyBindGetScheddHist[0]
+        # Make sure DaemonCore wrote write date attribute to record
+        assert "RecordWriteDate" in record

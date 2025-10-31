@@ -33,8 +33,6 @@
 DCStartd::DCStartd( const char* tName, const char* tPool ) 
 	: Daemon( DT_STARTD, tName, tPool )
 {
-	claim_id = NULL;
-	extra_ids = NULL;
 }
 
 
@@ -47,33 +45,19 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	}
 		// claim_id isn't initialized by Daemon's constructor, so we
 		// have to treat it slightly differently 
-	claim_id = NULL;
 	if( tId ) {
-		claim_id = strdup( tId );
+		claim_id = tId;
 	}
 
-	extra_ids = NULL;
-	if( ids && (strlen(ids) > 0)) {
-		extra_ids = strdup( ids );
+	if( ids ) {
+		extra_ids = ids;
 	}
 }
 
 DCStartd::DCStartd( const ClassAd *ad, const char *tPool )
-	: Daemon(ad,DT_STARTD,tPool),
-	  claim_id(NULL), extra_ids(NULL)
+	: Daemon(ad,DT_STARTD,tPool)
 {
 }
-
-DCStartd::~DCStartd( void )
-{
-	if( claim_id ) {
-		free(claim_id);
-	}
-	if( extra_ids ) {
-		free(extra_ids);
-	}
-}
-
 
 bool
 DCStartd::setClaimId( const char* id ) 
@@ -81,11 +65,7 @@ DCStartd::setClaimId( const char* id )
 	if( ! id ) {
 		return false;
 	}
-	if( claim_id ) {
-		free(claim_id);
-		claim_id = NULL;
-	}
-	claim_id = strdup( id );
+	claim_id = id;
 	return true;
 }
 
@@ -314,7 +294,13 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim(
+	ClassAd const *req_ad,
+	char const *description,
+	char const *scheduler_addr,
+	int alive_interval,
+	requestClaimOptions & opts,
+	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -322,12 +308,12 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	ASSERT( checkClaimId() );
 	ASSERT( checkAddr() );
 
-	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, extra_ids, req_ad, description, scheduler_addr, alive_interval );
+	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id.c_str(), extra_ids.c_str(), req_ad, description, scheduler_addr, alive_interval );
 
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
 
-	if (claim_pslot) {
+	if (opts.claim_pslot) {
 		// TODO Currently, we always request the pslot's max lease time
 		//   (msg->m_pslot_claim_lease=0).
 		//   Consider adding option to let client request shorter lease time.
@@ -340,12 +326,14 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	req_ad->LookupString("WorkingCM", working_cm);
 	if (!working_cm.empty()) {
 		msg->m_num_dslots = 0;
+	} else {
+		msg->m_num_dslots = opts.num_dslots;
 	}
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
 
 		// if this claim is associated with a security session
-	ClaimIdParser cid(claim_id);
+	ClaimIdParser cid(claim_id.c_str());
 	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) &&
 		cid.secSessionInfo()[0] != '\0')
 	{
@@ -376,7 +364,7 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 		return false;
 	}
 
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 
 	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
 	if (got_job_done) {
@@ -479,14 +467,14 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	}
 	else { replyAd = &dummyAd; }
 
-	if( ! claim_id ) {
+	if( claim_id.empty() ) {
 		newError( CA_INVALID_REQUEST,
-				  "DCStartd::activateClaim: called with NULL claim_id, failing" );
+				  "DCStartd::activateClaim: called with empty claim_id, failing" );
 		return CONDOR_ERROR;
 	}
 
 		// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 	char const *sec_session = cidp.secSessionId();
 
 	Sock* tmp;
@@ -774,14 +762,14 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 
 	setCmdStr( "delegateX509Proxy" );
 
-	if( ! claim_id ) {
+	if( claim_id.empty() ) {
 		newError( CA_INVALID_REQUEST,
-				  "DCStartd::delegateX509Proxy: Called with NULL claim_id" );
+				  "DCStartd::delegateX509Proxy: Called with empty claim_id" );
 		return CONDOR_ERROR;
 	}
 
 		// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 
 	//
 	// 1) begin the DELEGATE_GSI_CRED_STARTD command
@@ -948,7 +936,7 @@ DCStartd::_suspendClaim( )
 	}
 
 	// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 	char const *sec_session = cidp.secSessionId();
 	
 	if (IsDebugLevel(D_COMMAND)) {
@@ -1006,7 +994,7 @@ DCStartd::_continueClaim( )
 	}
 
 	// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 	char const *sec_session = cidp.secSessionId();
 	
 	if (IsDebugLevel(D_COMMAND)) {
@@ -1093,7 +1081,7 @@ DCStartd::getAds( ClassAdList &adsList )
 bool
 DCStartd::checkClaimId( void )
 {
-	if( claim_id ) {
+	if( !claim_id.empty() ) {
 		return true;
 	}
 	std::string err_msg;

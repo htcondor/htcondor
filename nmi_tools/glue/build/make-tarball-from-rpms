@@ -64,14 +64,8 @@ elif [[ $dist == el9 ]]; then
     arch_dist="${arch}_AlmaLinux9"
 elif [[ $dist == el10 ]]; then
     arch_dist="${arch}_AlmaLinux10"
-elif [[ $dist == fc38 ]]; then
-    arch_dist="${arch}_Fedora38"
-elif [[ $dist == fc39 ]]; then
-    arch_dist="${arch}_Fedora39"
-elif [[ $dist == fc40 ]]; then
-    arch_dist="${arch}_Fedora40"
-elif [[ $dist == fc41 ]]; then
-    arch_dist="${arch}_Fedora41"
+elif [[ $dist == fc42 ]]; then
+    arch_dist="${arch}_Fedora42"
 elif [[ $dist == leap15 ]]; then
     arch_dist="${arch}_openSUSE15"
 else
@@ -95,6 +89,15 @@ fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
+$cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
+
+# Move configuration files back to example directory
+mv tarball/etc/condor/config.d/* tarball/examples/
+
 # Extract external RPMs
 for path in $(find /usr/local/condor/externals -name \*.rpm); do
     file=${path##*/}
@@ -103,19 +106,11 @@ for path in $(find /usr/local/condor/externals -name \*.rpm); do
     extract_rpm $path tarball
 done
 
-$cmd_dir/make-tarball-links tarball
-if [ $? -ne 0 ];then
-    echo 'ERROR: tarball link script failed'
-    exit 1
-fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64:$ORIGIN/../lib64/condor'
 if [ $? -ne 0 ];then
     echo 'ERROR: set rpath script failed'
     exit 1
 fi
-
-# Move configuration files back to example directory
-mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Fixup directory permissions for the tarball
 chmod 700 tarball/etc/condor/passwords.d

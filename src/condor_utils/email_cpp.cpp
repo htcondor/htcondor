@@ -191,32 +191,33 @@ Email::sendRemove( ClassAd* ad, const char* reason)
 }
 
 void
+Email::sendStart( ClassAd* ad, const char* reason)
+{
+	int notification = NOTIFY_NEVER;
+	ad->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
+	if (notification != NOTIFY_START) {
+		// If the job ad does not request a START notification, we
+		// don't send one.
+		return;
+	}
+
+	std::string full_subject = build_subject_line(ad, reason);
+	fp = email_user_open_id( ad, cluster, proc, full_subject.c_str() );
+	writeJobId( ad );
+
+	std::string remote_host;
+	ad->LookupString( ATTR_REMOTE_HOST, remote_host );
+	fprintf( fp, "\nhas started on %s\n\n", remote_host.c_str() );
+	fprintf( fp, "%s", reason );
+
+	send();
+}
+
+void
 Email::sendRelease( ClassAd* ad, const char* reason)
 {
 	sendAction( ad, reason, "released from hold", -1);
 }
-
-void
-Email::sendHoldAdmin( ClassAd* ad, const char* reason)
-{
-	email_admin = true;
-	sendAction( ad, reason, "put on hold", JOB_SHOULD_HOLD);
-}
-
-void
-Email::sendRemoveAdmin( ClassAd* ad, const char* reason )
-{
-	email_admin = true;
-	sendAction( ad, reason, "removed", -1);
-}
-
-void
-Email::sendReleaseAdmin( ClassAd* ad, const char* reason )
-{
-	email_admin = true;
-	sendAction( ad, reason, "released from hold", -1);
-}
-
 
 void
 Email::sendAction( ClassAd* ad, const char* reason,
@@ -250,6 +251,20 @@ Email::sendError( ClassAd* ad, const char* err_summary,
 */
 
 
+std::string 
+Email::build_subject_line( ClassAd *ad, const char *subject ) {
+	std::string full_subject;
+	ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	formatstr(full_subject, "Condor Job %d.%d", cluster, proc);
+	if( subject ) {
+		full_subject += " ";
+		full_subject += subject;
+	}
+	return full_subject;
+}
+
 FILE*
 Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 {
@@ -258,15 +273,7 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 		return NULL;
 	}
 
-	ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	std::string full_subject;
-	formatstr(full_subject, "Condor Job %d.%d", cluster, proc);
-	if( subject ) {
-		full_subject += " ";
-		full_subject += subject;
-	}
+	std::string full_subject = build_subject_line(ad, subject);
 	if(email_admin) {
 		fp = email_admin_open( full_subject.c_str() );
 	} else {
@@ -560,6 +567,9 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 			}
 			break;
 
+		case NOTIFY_START:
+			// Always handled earlier.
+			break;
 		default:
 			ad->LookupInteger( ATTR_CLUSTER_ID, ad_cluster );
 			ad->LookupInteger( ATTR_PROC_ID, ad_proc );

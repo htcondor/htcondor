@@ -2,6 +2,9 @@
 
 import os
 
+from htcondor2 import Schedd
+from classad2 import ClassAd
+
 from pytest_httpserver import HTTPServer
 from werkzeug.wrappers import Response
 
@@ -105,6 +108,10 @@ def the_held_job(the_condor, test_dir, path_to_sleep, the_URLs):
             absentURL,
             presentURL,
             presentSizelessURL,
+            # These are not verified but should be counted in TransferInputFileCounts
+            "null://bar",
+            "null://foo",
+            "debug://success",
         ]),
     }
     job_handle = the_condor.submit(the_description, count=1)
@@ -116,6 +123,27 @@ def the_held_job(the_condor, test_dir, path_to_sleep, the_URLs):
     )
 
     return job_handle
+
+
+@action
+def the_job_ad(the_condor, the_held_job):
+    ads = None
+    with the_condor.use_config():
+        ads = Schedd().query(
+            constraint=f"ClusterId=={the_held_job.clusterid}",
+            projection=["TransferInputFileCounts"]
+        )
+    return ads
+
+
+@action
+def the_expected_count_ad():
+    return ClassAd({
+        "CEDAR": 1,
+        "HTTP": 3,
+        "NULL": 2,
+        "DEBUG": 1,
+    })
 
 
 class TestInputFileCheck:
@@ -138,3 +166,10 @@ class TestInputFileCheck:
                     logger.debug(f"expected = {expected}")
 
                     assert actual == expected
+
+    def test_check_protocol_counts(self, the_job_ad, the_expected_count_ad):
+        assert the_job_ad is not None
+        assert len(the_job_ad) == 1
+        ad = the_job_ad[0]
+        assert "TransferInputFileCounts" in ad
+        assert the_expected_count_ad == ad["TransferInputFileCounts"]

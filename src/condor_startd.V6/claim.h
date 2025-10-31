@@ -108,6 +108,7 @@ public:
 	void alive( bool alive_from_schedd = false );	// Process a keep alive for this claim
 
 	void publish( ClassAd* );
+	void unpublish( ClassAd* );
 	void publishPreemptingClaim( ClassAd* ad );
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
@@ -119,7 +120,11 @@ public:
 		/** We finally accepted a claim, so change our state, and if
 			we're opportunistic, start a timer.
 		*/
-	void beginClaim( void );	
+	void beginClaim( void );
+
+		/* We went back to unclaimed, so clear out the client info
+		*/
+	void clearClientInfo(void);
 
 		/** Copy info about the client and resource request from another claim object.
 			Used when claiming multiple slots in a single request_claim call
@@ -185,6 +190,7 @@ public:
 	int			cluster() const		{return c_cluster;};
 	int			proc() const			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
+	bool		hasRequestStream() const {return c_request_stream != nullptr;};
 	Stream*		deactivateStream()	{return c_deactivate_stream;};
 	int			getaliveint() const	{return c_aliveint;};
 	time_t		getLeaseEndtime() const {return c_lease_endtime;};
@@ -234,7 +240,7 @@ public:
 	bool starterKillFamily();
 	bool starterKillSoft();
 	bool starterKillHard();
-	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
+	void starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft );
 	void starterVacateJob(bool soft);
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
@@ -282,6 +288,8 @@ public:
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update );
 
+	void receiveUpdateCommand(int cmd, ClassAd &payload_ad, ClassAd &reply_ad);
+
 		// registered callback for premature closure of connection from
 		// schedd requesting this claim
 	int requestClaimSockClosed(Stream *s);
@@ -291,6 +299,9 @@ public:
 	bool sendDeactivateReply();
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
+
+	void setOCU( bool ocu ) { c_ocu = ocu; }
+	void setOCUName(const std::string &name) { c_ocu_name = name; }
 
 	bool waitingForActivation() const;
 	void invalidateID();
@@ -354,11 +365,15 @@ private:
 	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
 	bool        c_schedd_reported_job_done;
+	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
+	std::string c_ocu_name;
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
-	long long c_image_size;	// ImageSize from last call to updateUsage
+	long long c_image_size;	// ImageSize (total_image_size) from last call to updateUsage
+	long long c_cur_rss{0}; // current (not peak) ResidentSetSize from updateUsage
+	long long c_peak_rss{0};// peak ResidentSetSize from updateUsage
 
 	std::string c_vacate_reason;
 	int c_vacate_code{0};

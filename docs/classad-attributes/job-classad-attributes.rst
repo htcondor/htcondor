@@ -670,6 +670,10 @@ all attributes.
     job attribute in order to constrain which slots containing GPUs a job is matched to.
     Set this attribute in a job by using the submit description file command :subcom:`gpus_minimum_runtime`
 
+:classad-attribute-def:`GridJobId`
+    A string containing the job's ID as reported by the remote job management
+    system.
+
 :classad-attribute-def:`GridJobStatus`
     A string containing the job's status as reported by the remote job
     management system.
@@ -703,6 +707,7 @@ all attributes.
     attributes :ad-attr:`HoldReasonCode`, :ad-attr:`NumHoldsByReason`, and :ad-attr:`HoldReasonSubCode`. 
 
     .. include:: ../codes-other-values/hold-reason-codes.rst
+        :start-line: 3
 
 :classad-attribute-def:`HoldReasonSubCode`
     An integer value that represents further information to go along
@@ -811,6 +816,24 @@ all attributes.
     :ref:`users-manual/special-environment-considerations:job leases`
     for details on job leases.
 
+:classad-attribute-def:`JobMaterializePaused`
+    An integer value representing the reason a late materialization factory
+    is paused.
+
+    +---------+-----------------------+
+    | Value   |  Pause Reason         |
+    +=========+=======================+
+    | -1      | Invalid Submit        |
+    +---------+-----------------------+
+    | 0       | Running               |
+    +---------+-----------------------+
+    | 1       | Held                  |
+    +---------+-----------------------+
+    | 2       | Done                  |
+    +---------+-----------------------+
+    | 3       | Removed               |
+    +---------+-----------------------+
+
 :classad-attribute-def:`JobMaxVacateTime`
     An integer expression that specifies the time in seconds requested
     by the job for being allowed to gracefully shut down.
@@ -858,6 +881,7 @@ all attributes.
     Integer which indicates the current status of the job.
 
     .. include:: ../codes-other-values/job-status-codes.rst
+        :start-line: 3
 
 :classad-attribute-def:`JobSubmitFile`
     String which names the submit file the job came from,
@@ -908,6 +932,7 @@ all attributes.
     Integer which indicates the job universe.
 
     .. include:: ../codes-other-values/job-universe-numbers.rst
+        :start-line: 3
 
 :classad-attribute-def:`KeepClaimIdle`
     An integer value that represents the number of seconds that the
@@ -1103,8 +1128,17 @@ all attributes.
     that can reconnected: those in the **vanilla** and **java**
     universes.
 
+:classad-attribute-def:`NumInputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the input sandbox. This number will always be between :ad-attr:`NumShadowStarts`
+    and :ad-attr:`NumJobStarts` inclusive.
+
 :classad-attribute-def:`NumJobStarts`
     An integer count of the number of times the job started executing.
+
+:classad-attribute-def:`NumOutputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the output sandbox.
 
 :classad-attribute-def:`NumPids`
     A count of the number of child processes that this job has.
@@ -1138,6 +1172,46 @@ all attributes.
     since HTCondor-G will always place a job on hold when it gives up on
     some error condition. Note that if the user places the job on hold
     using the :tool:`condor_hold` command, this attribute is not incremented.
+
+:classad-attribute-def:`NumVacates`
+    An integer value that will increment every time a job leaves the running state and returns to the idle state.
+    It may be undefined until the job has been vacated at least once.
+
+:classad-attribute-def:`NumVacatesPreExecution`
+    An integer value that will increment every time a job leaves the running state and returns to the idle state,
+    but only in the period before the job has started executing (e.g., during input file transfer).
+    It may be undefined until the job has been vacated at least once.
+
+:classad-attribute-def:`NumVacatesByReason`
+    The value of this attribute is a (nested) classad containing a count of how many times a job has been
+    vacated (left running state and returned to the idle state) grouped by the reason the job was vacated.
+    It may be undefined until the job has been vacated
+    at least once. Each attribute name in this classad is
+    a NumVacateByReason label; see the table above under 
+    the documentation for job attribute :ad-attr:`VacateReasonCode` for a table of possible values. Each attribute
+    value is an integer stating how many times the job was vacated for that specific reason.
+    In addition, if the job was vacated due to TransferInputError or TransferOuputError, an additional
+    attribute count is added with the file transfer protocol appended that was responsible for the error.
+    For example, if a job was vacated four times, once due to a startd shutdown, once due to a claim deactivation,
+    and twice due to a transfer input error both involving the CEDAR protocol (the protocol used by HTCondor to move files between the AP and the
+    EP), the value of this attribute would look like this:
+
+    .. code-block:: condor-classad
+
+        NumVacates = 4
+        NumVacatesByReason = [ StartdShutdown = 1; ClaimDeactivated = 1; TransferInputError = 2; TransferInputErrorCedar = 2 ]
+
+    Note in the above example there is both TransferInputError (count across all protocols) and TransferInputErrorCedar (count specific to the CEDAR protocol).
+    Possible values for the protocol depend upon the file transfer plug-ins that are configured in the HTCondor pool, but may include
+    ``Cedar``, ``Http``, ``S3``, ``Pelican``, ``Ftp``, and others.
+
+:classad-attribute-def:`NumVacatesByReasonPreExecution`
+    The value of this attribute is a (nested) classad containing a count of how many times a job has been
+    vacated (left running state and returned to the idle state) grouped by the reason the job was vacated,
+    but only in the period before the job has started executing (e.g., during input file transfer).
+    It may be undefined until the job has been vacated
+    at least once in that pre-execution period. 
+    See the similar attribute :ad-attr:`NumVacatesByReason` for more details.
 
 :classad-attribute-def:`OSHomeDir`
     This attribute is only set in the starter's copy of the job ad, and expands
@@ -1433,6 +1507,10 @@ all attributes.
 :classad-attribute-def:`ReleaseReason`
     A string containing a human-readable message about why the job was
     released from hold.
+
+:classad-attribute-def:`RemoteHost`
+    A string containing the host name of the remote machine running
+    the job.
 
 :classad-attribute-def:`RemoteIwd`
     The path to the directory in which a job is to be executed on a
@@ -1771,7 +1849,7 @@ all attributes.
     this attribute. 
 
 :classad-attribute-def:`TransferInputStats`
-    The value of this classad attribute is a nested classad, whose values
+    The value of this ClassAd attribute is a nested ClassAd, whose values
     contain several attributes about HTCondor-managed file transfer.
     These refer to the transfer of the sandbox from the AP submit point
     to the worker node, or the EP.
@@ -1780,12 +1858,20 @@ all attributes.
     built-in file transfer method, or the prefix of the file transfer
     plugin method (such as HTTP).  For each of these types of file transfer
     there is an attribute with that prefix whose body is "FilesCount", 
-    the number of files transfered by that method during the last
+    the number of files transferred by that method during the last
     transfer, and "FilesCountTotal", the sum of FilesCount over all
     execution attempts.  In addition, for container universe jobs, there
     is a sub-attribute ```ContainerDuration```, the number of seconds
-    it took to transfer the container image (if transfered), and
+    it took to transfer the container image (if transferred), and
     ```ContainerDurationTotal```, the sum over all execution attempts.
+
+:classad-attribute-def:`TransferInputFileCounts`
+    A nested ClassAd value containing the count of files/objects to be
+    transferred for input file transfer by protocol/scheme.
+
+    .. code:: condor-classad
+
+        TransferInputFileCounts = [ CEDAR = 10; OSDF = 3; HTTPS = 5; ]
 
 :classad-attribute-def:`TransferOut`
     An attribute utilized only for grid universe jobs. The default value
@@ -1869,9 +1955,11 @@ all attributes.
     The below table defines values used by
     attributes :ad-attr:`VacateReasonCode` and
     :ad-attr:`VacateReasonSubCode`.
-    Values defined for :ad-attr:`HoldReasonCode` are also valid here
+    Values defined for :ad-attr:`HoldReasonCode` are also valid values for
+    :ad-attr:`VacateReasonCode`.
 
     .. include:: ../codes-other-values/vacate-reason-codes.rst
+        :start-line: 3
 
 :classad-attribute-def:`VacateReasonSubCode`
     An integer value that represents further information to go along

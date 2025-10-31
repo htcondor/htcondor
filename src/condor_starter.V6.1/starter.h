@@ -26,6 +26,14 @@
 #include "execute_dir_monitor.h"
 #include "exit.h"
 
+#if defined(LINUX) || defined(DARWIN)
+    // We don't test on BSD, so don't claim the hardlink code works there.
+    #define CFT_VERSION 2
+#else
+    #define CFT_VERSION 0
+#endif
+
+
 #if defined(LINUX)
 #include "../condor_startd.V6/VolumeManager.h"
 #endif
@@ -116,7 +124,7 @@ public:
 	virtual bool Remove( void );
 
 		/** Call Hold() on all elements in m_job_list */
-	int remoteHoldCommand( int cmd, Stream* s );
+	int remoteVacateCommand( int cmd, Stream* s );
 	virtual int RemoteHold(int);
 	virtual bool Hold( void );
 
@@ -162,11 +170,12 @@ public:
 
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
-	static void requestGuidanceJobEnvironmentReady( Starter * s );
 
+	static void requestGuidanceJobEnvironmentReady( Starter * s );
 	static void requestGuidanceJobEnvironmentUnready( Starter * s );
 
-	static void requestGuidanceSetupJobEnvironment( Starter * s );
+	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
+	static void requestGuidanceCommandJobSetup( Starter * s, const ClassAd & context, std::function<void(void)> continue_conversation );
 
 		/**
 		 *
@@ -347,6 +356,10 @@ public:
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 
+	void SetVacateReason(const std::string& msg, int code, int subcode);
+
+	void ExceptHandler(const char* errmsg);
+
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
@@ -363,6 +376,12 @@ protected:
 		std::function<void(void)> continue_conversation
 	);
 
+	static bool handleJobSetupCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
+	);
+
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
 	// we want to report *after* we finish transfer of FailureFiles
 	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
@@ -376,6 +395,7 @@ protected:
 
 	bool recorded_job_exit_status{false};
 	int job_exit_status;
+
 private:
 
 		// // // // // // // //
@@ -384,7 +404,7 @@ private:
 
 		/// Remove the execute/dir_<pid> directory
 		/// Argument exit_code: override Starter exit code with value
-	virtual bool removeTempExecuteDir(int& exit_code);
+	virtual bool removeTempExecuteDir(int& exit_code, const char * move_to);
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
@@ -437,6 +457,7 @@ private:
 	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
 	std::string m_recoveryFile;
+	std::string m_move_working_dir_on_exit; // if non-empty move/rename the WorkingDir to this instead of deleting it
 	bool is_gridshell;
 	bool job_requests_broken_exit{false};
 	bool m_workingDirExists;

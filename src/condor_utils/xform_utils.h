@@ -25,6 +25,22 @@
 class MacroStreamXFormSource;
 class XFormHash;
 
+// holds backup values for the transformed input ad
+// which acts as both a record of changed attributes and
+// the information necessary to undo the transform
+class XFormAdUndo {
+public:
+	classad::AttrList list;
+	classad::ReferencesBySize deletions; // attr is added here when Delete or Rename is used, so we know how to revert correctly
+	XFormAdUndo() {}
+	~XFormAdUndo() { for (auto & [k,v] : list) { if (v) delete v; } }
+
+	// use this class to revert changes to the given ad
+	// note that Revert has the side effect of changing all of the
+	// list values to nullptr, so after a revert, only the keys remain
+	int Revert(ClassAd & ad);
+};
+
 // in-place transform of a single ad 
 // using the transform rules in xfm,
 // variables live in the hashtable mset.
@@ -38,7 +54,9 @@ int TransformClassAd (
 	MacroStreamXFormSource & xfm, // the set of transform rules
 	XFormHash & mset,             // the hashtable used as temporary storage
 	std::string & errmsg,
-	unsigned int  flags=0);  // One or move of XFORM_UTILS_* flags
+	unsigned int  flags=0,        // One or move of XFORM_UTILS_* flags
+	XFormAdUndo * undo=nullptr);  // optional undo collection
+
 
 /*
 Basic workflow for classad transformation is 
@@ -72,8 +90,9 @@ Transform a set of ads
 
 // declare enough of the condor_params structure definitions so that we can define hashtable defaults
 namespace condor_params {
-	typedef struct string_value { const char * psz; int flags; } string_value;
-	struct key_value_pair { const char * key; const string_value * def; };
+	typedef struct nodef_value { const char * psz; int flags; } nodef_value;
+	typedef nodef_value string_value;
+	struct key_value_pair { const char * key; const nodef_value * def; };
 }
 
 
@@ -90,6 +109,11 @@ public:
 	// 
 	int load(FILE* fp, MACRO_SOURCE & source, std::string & errmsg);
 	int open(const char * statements, int & offset, std::string & errmsg);
+	// use to initialize with simple transform statements
+	// caller must keep statements pointer valid for the life of this class
+	// if requirements are included, they must be before any transform statements
+	// returns -1 if transform has requirements that do not parse, no other checks are made
+	int set_simple_transform(const char * statements);
 private:
 	int open(std::vector<std::string> & statements, const MACRO_SOURCE & source, std::string & errmsg);
 public:

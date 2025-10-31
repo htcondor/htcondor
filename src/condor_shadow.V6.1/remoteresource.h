@@ -419,10 +419,11 @@ class RemoteResource : public Service {
 	// return true if job should be allowed to write to attribute
 	bool allowRemoteWriteAttributeAccess( const std::string & name );
 
-    void recordActivationExitExecutionTime( time_t when );
+	void recordActivationExitExecutionTime( time_t when );
 
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
+	std::string starter_version;
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -446,6 +447,7 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
+	bool m_use_delayed_attr{true};
 	std::vector<std::string> m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 

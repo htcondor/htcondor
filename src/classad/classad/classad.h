@@ -103,6 +103,12 @@ class ClassAd : public ExprTree
 		*/
 		bool Insert( const std::string& attrName, ExprTree* expr);   // (ignores cache)
 		bool InsertLiteral(const std::string& attrName, Literal* lit); // (ignores cache)
+		/*
+			Swap() is just like Insert() except it returns the old exprtree rather than
+			deleting it.  If there was no old exprtree, the old_expr is set to nullptr
+			i.e Swap is like Remove followed by Insert.
+		*/
+		bool Swap(const std::string& attrName, ExprTree* expr, ExprTree* & old_expr);
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
@@ -113,13 +119,13 @@ class ClassAd : public ExprTree
 		 *  InsertViaCache() is used to do the actual insertion, so the
 		 *    value is parsed into an ExprTree in old ClassAds syntax.
 		 */
-	bool Insert(const char *str);
-	bool Insert(const std::string &str);
+		bool Insert(const char *str);
+		bool Insert(const std::string &str);
 
 		/* Insert an attribute/value into the Classad.
 		 * The value is parsed into an ExprTree using old ClassAds syntax.
 		 */
-	bool AssignExpr(const std::string &name, const char *value);
+		bool AssignExpr(const std::string &name, const char *value);
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -131,7 +137,7 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool DeepInsert( ExprTree *scopeExpr, const std::string &attrName, 
+		bool DeepInsert( ExprTree *scopeExpr, const std::string &attrName,
 				ExprTree *expr );
 
 		/** Inserts an attribute into the ClassAd.  The integer value is
@@ -140,9 +146,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
 		*/
-		bool InsertAttr( const std::string &attrName,int value );
-		bool InsertAttr( const std::string &attrName,long value );
-		bool InsertAttr( const std::string &attrName,long long value );
+		bool InsertAttr( const std::string &attrName, int value );
+		bool InsertAttr( const std::string &attrName, long value );
+		bool InsertAttr( const std::string &attrName, long long value );
+
 		bool Assign(const std::string &name, int value)
 		{ return InsertAttr(name, value); }
 		bool Assign(const std::string &name, unsigned int value)
@@ -156,7 +163,7 @@ class ClassAd : public ExprTree
 		bool Assign(const std::string &name, unsigned long long value)
 		{ return InsertAttr(name, (long long)value); }
 
-		/** Inserts an attribute into a nested classad.  The scope expression 
+		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the attribute is
 		        inserted into this subclassad.  The integer value is
 				converted into a Literal expression, and then inserted into
@@ -179,7 +186,7 @@ class ClassAd : public ExprTree
 			@param value The real value of the attribute.
             @return true on success, false otherwise
 		*/
-		bool InsertAttr( const std::string &attrName,double value);
+		bool InsertAttr( const std::string &attrName, double value);
 		bool Assign(const std::string &name, float value)
 		{ return InsertAttr(name, (double)value); }
 		bool Assign(const std::string &name, double value)
@@ -264,9 +271,15 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The string attribute
 		*/
-		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				const std::string &value );
 		//@}
+
+
+		bool InsertAttr( const std::string & attrName, ExprTree * invalid ) = delete;
+		bool Assign( const std::string & name, ExprTree * invalid ) = delete;
+		bool DeepInsertAttr( ExprTree * scopeExpr, const std::string &attrName, ExprTree * invalid ) = delete;
+
 
 		/**@name Lookup Methods */
 		//@{
@@ -355,7 +368,7 @@ class ClassAd : public ExprTree
 				successfully removed, false otherwise.
 		*/
 		bool DeepDelete( ExprTree *scopeExpr, const std::string &attrName );
-	
+
 		/** Similar to Delete, but the expression is returned rather than 
 		  		deleted from the classad.
 			@param attrName The name of the attribute to be extricated.
@@ -575,6 +588,7 @@ class ClassAd : public ExprTree
         /** Return the number of attributes at the root level of this ClassAd.
          */
         int size(void) const { return (int)attrList.size(); }
+		bool empty() const { return attrList.empty(); }
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
@@ -611,20 +625,42 @@ class ClassAd : public ExprTree
          */
 		virtual ExprTree* Copy( ) const;
 
-        /** Make a deep copy of the ClassAd, via the == operator. 
+        /** Make a deep copy of the ClassAd, via the = operator.
          */
 		ClassAd &operator=(const ClassAd &rhs);
 
 		ClassAd &operator=(ClassAd &&rhs)  noexcept {
-			this->do_dirty_tracking = rhs.do_dirty_tracking;
-			this->chained_parent_ad = rhs.chained_parent_ad;
+			// In the order listed in the header, so that we don't miss any.
 			this->alternateScope = rhs.alternateScope;
 
-			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
 			this->attrList = std::move(rhs.attrList);
+			for( auto & entry : attrList ) {
+				// I wonder what other invariants were forgotten?
+				entry.second->SetParentScope(this);
+			}
+			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
+
+			this->do_dirty_tracking = rhs.do_dirty_tracking;
+			this->chained_parent_ad = rhs.chained_parent_ad;
+			this->parentScope = rhs.parentScope;
 
 			return *this;
 		}
+
+		ClassAd(ClassAd &&rhs) : 
+   				alternateScope(rhs.alternateScope),
+				attrList(std::move(rhs.attrList)),
+				dirtyAttrList(std::move(rhs.dirtyAttrList)),
+				do_dirty_tracking(rhs.do_dirty_tracking),
+				chained_parent_ad(rhs.chained_parent_ad),
+				parentScope(rhs.parentScope)
+		{
+				for(auto &entry: attrList ) {
+					// I wonder what other invariants were forgotten?
+					entry.second->SetParentScope(this);
+			}
+		}
+
         /** Fill in this ClassAd with the contents of the other ClassAd.
          *  This ClassAd is cleared of its contents before the copy happens.
          *  @return true if the copy succeeded, false otherwise.

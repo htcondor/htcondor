@@ -26,7 +26,7 @@
 
 extern class Starter *starter;
 
-/* static */ std::list< StreamHandler * > StreamHandler::handlers;
+/* static */ std::list<std::unique_ptr<StreamHandler>> StreamHandler::handlers;
 
 StreamHandler::StreamHandler() : is_output(false), job_pipe(-1), handler_pipe(-1), remote_fd(-1), offset(0), flags(0), done(false), connected(0), pending(0)
 {
@@ -109,7 +109,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 
 	done = false;
 	connected = true;
-	handlers.push_back( this );
+	handlers.emplace_back( this );
 
 	return true;
 }
@@ -169,7 +169,10 @@ int StreamHandler::Handler( int  /* fd */)
 			// i/o error, so punt.
 
 			if (errno != 0) {
-				EXCEPT("StreamHandler: %s: couldn't lseek on %s to %d: %s",streamname.c_str(),filename.c_str(),(int)offset, strerror(errno));
+				std::string err_msg;
+				formatstr(err_msg, "StreamHandler: %s: couldn't lseek on %s to %d: %s", streamname.c_str(), filename.c_str(), (int)offset, strerror(errno));
+				starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
+				EXCEPT("%s", err_msg.c_str());
 			}
 
 			errno = 0;
@@ -180,7 +183,10 @@ int StreamHandler::Handler( int  /* fd */)
 			}
 
 			if(actual!=result) {
-				EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,result);
+				std::string err_msg;
+				formatstr(err_msg, "StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,result);
+				starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
+				EXCEPT("%s", err_msg.c_str());
 			}
 			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.c_str(),result,filename.c_str());
 			offset+=actual;
@@ -198,13 +204,16 @@ int StreamHandler::Handler( int  /* fd */)
 				// to recover, as we haven't saved the data.
 				// just punt
 
-				EXCEPT("StreamHandler:: %s: couldn't fsync %s: %s", streamname.c_str(), filename.c_str(), strerror(errno));
+				std::string err_msg;
+				formatstr(err_msg, "StreamHandler:: %s: couldn't fsync %s: %s", streamname.c_str(), filename.c_str(), strerror(errno));
+				starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
+				EXCEPT("%s", err_msg.c_str());
 			}
 
 				// If close fails, that's OK, we know the bytes are on disk
 			REMOTE_CONDOR_close(remote_fd);
 
-			handlers.remove( this );
+			handlers.remove_if([this](const std::unique_ptr<StreamHandler>& h) { return h.get() == this; });
 		} else if(result<0) {
 			dprintf(D_SYSCALLS,"StreamHandler: %s: unable to read: %s\n",streamname.c_str(),strerror(errno));
 			// Why don't we EXCEPT here?
@@ -241,9 +250,12 @@ int StreamHandler::Handler( int  /* fd */)
 			daemonCore->Cancel_Pipe(handler_pipe);
 			daemonCore->Close_Pipe(handler_pipe);
 			REMOTE_CONDOR_close(remote_fd);
-			handlers.remove( this );
+			handlers.remove_if([this](const std::unique_ptr<StreamHandler>& h) { return h.get() == this; });
 		} else if(result<0) {
-			EXCEPT("StreamHandler: %s: unable to read from %s: %s",streamname.c_str(),filename.c_str(),strerror(errno));
+			std::string err_msg;
+			formatstr(err_msg, "StreamHandler: %s: unable to read from %s: %s",streamname.c_str(),filename.c_str(),strerror(errno));
+			starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenInputStream, errno);
+			EXCEPT("%s", err_msg.c_str());
 		}
 	}
 
@@ -257,9 +269,7 @@ int StreamHandler::GetJobPipe() const
 
 /* static */ int
 StreamHandler::ReconnectAll() {
-	std::list< StreamHandler * >::iterator i = handlers.begin();
-	for( ; i != handlers.end(); ++i ) {
-		StreamHandler * handler = * i;
+	for( const auto &handler: handlers ) {
 		if( ! handler->done ) {
 			if( handler->connected ) {
 				// Do NOT call Disconnect().  This reconnect only happens
@@ -279,13 +289,16 @@ StreamHandler::ReconnectAll() {
 bool
 StreamHandler::Reconnect() {
 	HandlerType handler_mode;
+	int hold_code;
 
 	dprintf(D_ALWAYS, "Streaming i/o handler reconnecting %s to shadow\n", filename.c_str());
 
 	if(is_output) {
 		handler_mode = HANDLE_READ;
+		hold_code = CONDOR_HOLD_CODE::UnableToOpenOutputStream;
 	} else {
 		handler_mode = HANDLE_WRITE;
+		hold_code = CONDOR_HOLD_CODE::UnableToOpenInputStream;
 	}
 
 	// Never permit truncation on a reconnect; what sense does that make?
@@ -293,7 +306,10 @@ StreamHandler::Reconnect() {
 
 	remote_fd = REMOTE_CONDOR_open(filename.c_str(),(open_flags_t)flags,0666);
 	if(remote_fd<0) {
-		EXCEPT("Couldn't reopen %s to stream %s: %s",filename.c_str(),streamname.c_str(),strerror(errno));
+		std::string err_msg;
+		formatstr(err_msg, "Couldn't reopen %s to stream %s: %s",filename.c_str(),streamname.c_str(),strerror(errno));
+		starter->SetVacateReason(err_msg.c_str(), hold_code, errno);
+		EXCEPT("%s", err_msg.c_str());
 	}
 
 	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
@@ -322,7 +338,10 @@ StreamHandler::Reconnect() {
 			return false;
 		}
 		if(actual!=pending) {
-			EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,pending);
+			std::string err_msg;
+			formatstr(err_msg, "StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,pending);
+			starter->SetVacateReason(err_msg.c_str(), hold_code, errno);
+			EXCEPT("%s", err_msg.c_str());
 		}
 		dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.c_str(),pending,filename.c_str());
 		offset+=actual;
@@ -354,7 +373,10 @@ StreamHandler::VerifyOutputFile() {
 	off_t size = REMOTE_CONDOR_lseek(remote_fd,0,SEEK_END);
 
 	if (size == (off_t)-1) {
-		EXCEPT("StreamHandler: cannot lseek to output file %s on reconnect: %d", filename.c_str(), errno);
+		std::string err_msg;
+		formatstr(err_msg, "StreamHandler: cannot lseek to output file %s on reconnect: %d", filename.c_str(), errno);
+		starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
+		EXCEPT("%s", err_msg.c_str());
 		return false;
 	}
 
@@ -362,7 +384,10 @@ StreamHandler::VerifyOutputFile() {
 		// Damn.  Older writes that returned successfully didn't actually
 		// survive the reboot (or maybe someone else mucked with the file
 		// in the interim.  Rerun the whole job
-		EXCEPT("StreamHandler: output file %s is length %d, expected at least %d", filename.c_str(), (int)size, (int)offset);
+		std::string err_msg;
+		formatstr(err_msg, "StreamHandler: output file %s is length %d, expected at least %d", filename.c_str(), (int)size, (int)offset);
+		starter->SetVacateReason(err_msg.c_str(), CONDOR_HOLD_CODE::UnableToOpenOutputStream, errno);
+		EXCEPT("%s", err_msg.c_str());
 		return false;
 	}
 	return true;

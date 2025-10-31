@@ -103,18 +103,18 @@ public:
 
 };
 
-class StarterHoldJobMsg: public DCMsg {
+class StarterVacateJobMsg: public DCMsg {
 public:
-	StarterHoldJobMsg( char const *hold_reason, int hold_code, int hold_subcode, bool soft );
+	StarterVacateJobMsg( char const *vacate_reason, int vacate_code, int vacate_subcode, bool soft );
 
 	bool writeMsg( DCMessenger *messenger, Sock *sock );
 	bool readMsg( DCMessenger *messenger, Sock *sock );
 	MessageClosureEnum messageSent( DCMessenger *messenger, Sock *sock );
 
 private:
-	std::string m_hold_reason;
-	int m_hold_code;
-	int m_hold_subcode;
+	std::string m_vacate_reason;
+	int m_vacate_code;
+	int m_vacate_subcode;
 	bool m_soft;
 };
 

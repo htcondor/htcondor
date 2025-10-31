@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block style %}
+{% endblock style %}
+
+{% block body %}
+
+<div class="container-fluid">
+
+<div class="row">
+<div class="col">
+<h3 class="display-4">No Data Available</h3>
+<p style="text-align: left">
+Data is missing for the CE you are trying to access named "{{ ce_name }}". This could be due to a variety of reasons, such as:
+<ul>
+    <li>The CE has not contributed any resources in over a week.</li>
+    <li>The CE is new and data has not been collected yet.</li>
+    <li>There was an error in data collection or the database is temporarily down.</li>
+    <li>The CE has been deleted or is no longer available.</li>
+</ul>
+Please check back later or contact support for more information.    
+</p>
+<p style="text-align: left">
+    The specific error message is: <br>
+    <code>{{ errMsg }}<code>
+</div>
+</div>
+
+
+</div>
+
+{% endblock body %}

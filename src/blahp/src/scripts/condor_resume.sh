@@ -41,7 +41,7 @@ else
     fi
 fi
 
-$condor_binpath/condor_release $target $id >&/dev/null
+${condor_binpath}condor_release $target $id >&/dev/null
 
 if [ "$?" == "0" ]; then
     echo " 0 No\\ error"

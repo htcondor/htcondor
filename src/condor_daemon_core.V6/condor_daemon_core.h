@@ -58,6 +58,7 @@
 #include "generic_stats.h"
 #include "filesystem_remap.h"
 #include "daemon_keep_alive.h"
+#include "classadHistory.h"
 
 #include <vector>
 #include <memory>
@@ -102,6 +103,12 @@ bool dc_args_is_background(int argc, char** argv); // return true if we should r
 bool dc_args_default_to_background(bool background);
 // Disable default log setup and ignore -l log directory. Must be called before dc_main()
 void DC_Disable_Default_Log();
+
+// functions to temporarily disable the address file
+// and then to re-enable it and drop a fresh one.
+// Used by the Schedd to prevent early dropping of incomplete address files
+void DC_Disable_Addr_File();
+void DC_Enable_And_Drop_Addr_File();
 
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
@@ -1656,7 +1663,9 @@ class DaemonCore : public Service
     SelfMonitorData monitor_data;
 
 	char 	*localAdFile;
-	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL); 
+	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL);
+
+	ClassAd & ContactInfoExtra() { return m_contact_info_extra; }
 
 		/**
 		   Publish all DC-specific attributes into the given ClassAd.
@@ -1667,6 +1676,10 @@ class DaemonCore : public Service
 		   automatically just when the ad is sent to the collector.
 		*/
 	void	publish(ClassAd *ad);
+
+
+		// Append provided Daemon ClassAd to the daemon history file.
+	void AppendDaemonHistory(ClassAd* ad);
 
 		/**
 		   @return A pointer to the CollectorList object that holds
@@ -2373,6 +2386,7 @@ class DaemonCore : public Service
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
 	bool m_dirty_command_sock_sinfuls; // true if m_command_sock_sinfuls needs to be reinitialized.
+	ClassAd m_contact_info_extra; // has extra attributes that should be included in our daemon address files
 
 	//
 	// For compabitility with existing configurations and code, when we
@@ -2399,6 +2413,9 @@ class DaemonCore : public Service
 	bool m_enable_remote_admin{false};
 	time_t m_remote_admin_last_time{0};
 	std::string m_remote_admin_last;
+
+	std::string m_daemon_history{};
+	HistoryFileRotationInfo m_hist_rotation_info{};
 };
 
 /**

@@ -36,6 +36,20 @@
 
 BaseShadow *Shadow = NULL;
 
+class InvokeTheGlobalDestructor {
+	public:
+		InvokeTheGlobalDestructor(BaseShadow * & bsp) : ptr(bsp) { }
+		~InvokeTheGlobalDestructor() {
+			if( ptr != NULL ) {
+				dprintf( D_ZKM, "Calling ~BaseShadow()...\n" );
+				delete ptr;
+			}
+		}
+	private:
+		BaseShadow * & ptr;
+};
+InvokeTheGlobalDestructor itgd(Shadow);
+
 // settings we're given on the command-line
 static const char* schedd_addr = NULL;
 const char* public_schedd_addr = NULL;
@@ -317,6 +331,8 @@ void startShadow( ClassAd *ad )
 		filter.insert(ATTR_NUM_SHADOW_STARTS);
 		filter.insert(ATTR_OWNER);
 		filter.insert(ATTR_SHADOW_BIRTHDATE);
+		filter.insert(ATTR_RUN_INSTANCE_ID);
+		filter.insert(ATTR_EPOCH_AD_TYPE);
 		// Configured attributes for 'SPAWN' ad in epoch history
 		for (auto &attr : StringTokenIterator(spawn_ad_filter)) { filter.insert(attr); }
 	}
@@ -554,6 +570,13 @@ recycleShadow(int previous_job_exit_reason)
 		new_job_ad = readJobAd();
 	}
 
+	// Make sure to trigger the cfLock destructor even if we're not
+	// re-using this shadow.
+	delete Shadow;
+	Shadow = NULL;
+	is_reconnect = false;
+	BaseShadow::myshadow_ptr = NULL;
+
 	if( !new_job_ad ) {
 		dprintf(D_FULLDEBUG,"No new job found to run under this shadow.\n");
 		return false;
@@ -562,11 +585,6 @@ recycleShadow(int previous_job_exit_reason)
 	new_job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
 	new_job_ad->LookupInteger(ATTR_PROC_ID,proc);
 	dprintf(D_ALWAYS,"Switching to new job %d.%d\n",cluster,proc);
-
-	delete Shadow;
-	Shadow = NULL;
-	is_reconnect = false;
-	BaseShadow::myshadow_ptr = NULL;
 
 	startShadow( new_job_ad );
 	return true;

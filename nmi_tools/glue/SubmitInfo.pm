@@ -287,6 +287,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Debian10' => 'x86_64_Debian9',
 	'nmi-build:x86_64_Debian11' => 'x86_64_Debian9',
 	'nmi-build:x86_64_Debian12' => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian13' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
@@ -314,6 +315,7 @@ our %submit_info = (
 	'nmi-build:x86_64_AlmaLinux9' => 'x86_64_CentOS8',
 	'nmi-build:aarch64_AlmaLinux10' => 'x86_64_CentOS8',
 	'nmi-build:x86_64_AlmaLinux10' => 'x86_64_CentOS8',
+	'nmi-build:x86_64_v2_AlmaLinux10' => 'x86_64_CentOS8',
 	'nmi-build:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################
@@ -562,6 +564,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Fedora39'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora40'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora41'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora42'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_AmazonLinux2023' => 'x86_64_Fedora',
 	'nmi-build:x86_64_openSUSE15'   => 'x86_64_Fedora',
 	

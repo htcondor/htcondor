@@ -19,6 +19,7 @@
 condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( test_user_mapping "test_user_mapping.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+condor_exe( test_offer_resources "test_offer_resources.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
 if( NOT BUILD_DATE )
 	GET_DATE( BUILD_DATE )
@@ -68,6 +69,7 @@ file_lock.cpp
 FileTransferControlBlock.cpp
 filename_tools.cpp
 get_random_num.cpp
+guidance.cpp
 HashTable.cpp
 HashTable.h
 iso_dates.cpp
@@ -85,6 +87,8 @@ read_user_log_state.cpp
 read_user_log_state.h
 setenv.cpp
 setenv.h
+single_provider_syndicate.cpp
+single_provider_syndicate.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp
@@ -807,3 +811,4 @@ condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
+condor_exe_test(test_transform_undo "test_transform_undo.cpp" "${CONDOR_TOOL_LIBS}" )

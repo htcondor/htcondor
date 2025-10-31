@@ -1,297 +1,312 @@
-
-
 *condor_userprio*
-==================
+=================
 
-Manage user priorities
-:index:`condor_userprio<single: condor_userprio; HTCondor commands>`\ :index:`condor_userprio command`
+Manage submitter priorities.
+
+:index:`condor_userprio<double: condor_userprio; HTCondor commands>`
 
 Synopsis
 --------
 
-**condor_userprio** **-help**
+**condor_userprio** [**-help**]
 
-**condor_userprio** [**-name** *negotiatorname*]
-[**-pool** *centralmanagerhostname[:portnumber]*] [**Edit option** ]
-| [**Display options** [*username*] ] [**-inputfile** *filename*]
+**condor_userprio** [**-name** *negotiatorname*] [**-inputfile** *filename*]
+[**-pool** *hostname[:port]*] [**Edit Option** | **Display Options** [*submitter*]]
+
 
 Description
 -----------
 
-*condor_userprio* either modifies priority-related information or
-displays priority-related information. Displayed information comes from
-the accountant log, where the *condor_negotiator* daemon stores
-historical usage information in the file at
-``$(SPOOL)``/Accountantnew.log. Which fields are displayed changes based
-on command line arguments. *condor_userprio* with no arguments, lists
-the active users along with their priorities, in increasing priority
-order. The **-all** option can be used to display more detailed
-information about each user, resulting in a rather wide display, and
-includes the following columns:
+Modify or display priority information for submitters and/or groups from
+HTCondor's accounting. By default, only display active submitters (i.e.
+submitters whose usage was recorded in the last 24 hours).
 
- Effective Priority
-    The effective priority value of the user, which is used to calculate
-    the user's share when allocating resources. A lower value means a
-    higher priority, and the minimum value (highest priority) is 0.5.
-    The effective priority is calculated by multiplying the real
-    priority by the priority factor.
- Real Priority
-    The value of the real priority of the user. This value follows the
-    user's resource usage.
- Priority Factor
-    The system administrator can set this value for each user, thus
-    controlling a user's effective priority relative to other users.
-    This can be used to create different classes of users.
- Res Used
-    The number of resources currently used.
- Accumulated Usage
-    The accumulated number of resource-hours used by the user since the
-    usage start time.
- Usage Start Time
-    The time since when usage has been recorded for the user. This time
-    is set when a user job runs for the first time. It is reset to the
-    present time when the usage for the user is reset.
- Last Usage Time
-    The most recent time a resource usage has been recorded for the
-    user.
+.. note::
 
-By default only users for whom usage was recorded in the last 24 hours,
-or whose priority is greater than the minimum are listed.
-
-The **-pool** option can be used to contact a different central manager
-than the local one (the default).
-
-Options that do not begin with a - are treated as a username and results
-will restricted to users that match the given name. More than one username
-can be specified.
-
-For security purposes of authentication and authorization, specifying an
-Edit Option requires the ADMINISTRATOR level of access.
+    For the purposes of accounting and fair share, HTCondor "charges" usage
+    to a submitter. A submitter, by default, is the same as the operating
+    system user. This means one user of HTCondor, such as ``Taylor``, may have
+    multiple submitter accounts on different Access Points i.e. ``taylor@ap1.chtc.wisc.edu``
+    and ``taylor@ap2.chtc.wisc.edu``.
 
 Options
 -------
 
+General
+~~~~~~~
+
+ **-debug[:level]**
+    Causes debugging information to be sent to ``stderr``, based on the
+    value of the configuration variable :macro:`TOOL_DEBUG`. Optional
+    debug *level*\s can be specified.
  **-help**
-    Display usage information and exit.
- **-name** *negotiatorname*
-    When querying ads from the *condor_collector*, only retrieve ads
-    that came from the negotiator with the given name.
- **-pool** *centralmanagerhostname[:portnumber]*
-    Contact the specified *centralmanagerhostname* with an optional port
-    number, instead of the local central manager. This can be used to
-    check other pools. NOTE: The host name (and optional port) specified
-    refer to the host name (and port) of the *condor_negotiator* to
-    query for user priorities. This is slightly different than most
-    HTCondor tools that support a **-pool** option, and instead expect
-    the host name (and port) of the *condor_collector*.
+    Display tool usage information.
  **-inputfile** *filename*
-    Introduced for debugging purposes, read priority information from
-    *filename*. The contents of *filename* are expected to be the same
-    as captured output from running a ``condor_userprio      -long``
-    command.
- **-delete** *username*
-    (Edit option) Remove the specified *username* from HTCondor's
-    accounting.
+    Read priority information from *filename*.
+ **-name** *negotiatorname*
+    Send the command to a machine identified by *negotiatorname*.
+ **-pool** *hostname[:port]*
+    Specify a pool by giving the central manager's host name and an
+    optional port number.
+
+Edit Options
+~~~~~~~~~~~~
+
+ **-delete** *submitter*
+    Remove the specified *submitter* from HTCondor's accounting.
  **-resetall**
-    (Edit option) Reset the accumulated usage of all the users to zero.
- **-resetusage** *username*
-    (Edit option) Reset the accumulated usage of the user specified by
-    *username* to zero.
- **-setaccum** *username value*
-    (Edit option) Set the accumulated usage of the user specified by
-    *username* to the specified floating point *value*.
- **-setbegin** *username value*
-    (Edit option) Set the begin usage time of the user specified by
-    *username* to the specified *value*.
- **-setfactor** *username value*
-    (Edit option) Set the priority factor of the user specified by
-    *username* to the specified *value*.
- **-setlast** *username value*
-    (Edit option) Set the last usage time of the user specified by
-    *username* to the specified *value*.
- **-setprio** *username value*
-    (Edit option) Set the real priority of the user specified by
-    *username* to the specified *value*.
- **-setfloor** *username value*
-    (Edit option) Set the floor for the user specified by
-    *username* to the specified *value*.
-    This value is the sum of the SlotWeight 
-    (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
-    of all running jobs.  By default, the slot weight of a running job is the number of 
-    cores allocated to that job.
- **-setceil** *username value*
-    (Edit option) Set the ceiling for the user specified by
-    *username* to the specified *value*.  
-    This value is the sum of the SlotWeight 
-    (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
-    of all running jobs.  By default, the slot weight of a running job is the number of 
-    cores allocated to that job.
- **-activefrom** *month day year*
-    (Display option) Display information for users who have some
-    recorded accumulated usage since the specified date.
+    Reset the accumulated usage of all the submitters to zero.
+ **-resetusage** *submitter*
+    Reset the accumulated usage of the submitter specified by *submitter*
+    to zero.
+ **-setaccum** *submitter* *value*
+    Set the accumulated usage of the submitter specified by *submitter*
+    to the specified floating point *value*.
+ **-setbegin** *submitter* *value*
+    Set the begin usage time of the submitter specified by *submitter*
+    to the specified *value*.
+ **-setlast** *submitter* *value*
+    Set the last usage time of the submitter specified by *submitter*
+    to the specified *value*.
+ **-setfactor** *submitter* *value*
+    Set the priority factor of the submitter specified by *submitter*
+    to the specified *value*.
+ **-setprio** *submitter* *value*
+    Set the real priority of the submitter specified by *submitter*
+    to the specified *value*.
+ **-setceiling** *submitter* *value*
+    Set the ceiling for the submitter specified by *submitter* to the
+    specified *value*. Where *value* is the sum of the SlotWeight
+    of all running jobs (See :macro:`SLOT_WEIGHT`).
+    Setting the ceiling to -1 clears any previously set ceiling, and
+    sets the effective ceiling to unlimited.
+ **-setfloor** *submitter* *value*
+    Set the floor for the submitter specified by *submitter* to the
+    specified *value*. Where *value* is the sum of the SlotWeight
+    of all running jobs (See :macro:`SLOT_WEIGHT`).
+    Setting the floor to 0 clears any previously set floor.
+
+Display Options
+~~~~~~~~~~~~~~~
+
+ **-activefrom** *month* *day* *year*
+    Display information for submitters who have some recorded accumulated usage
+    since the specified date.
  **-all**
-    (Display option) Display all available fields about each group or
-    user.
+    Display all available fields about each group or submitters (active).
  **-allusers**
-    (Display option) Display information for all the users who have some
-    recorded accumulated usage.
+    Display information for all the submitters (active and inactive) who have
+    some recorded accumulated usage.
+ **-collector**
+    Force the query to come from the collector.
  **-negotiator**
-    (Display option) Force the query to come from the negotiator instead
-    of the collector.
- **-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]* or **-af[:jlhVr,tng]** *attr1 [attr2 ...]*
-    (Display option) Display attribute(s) or expression(s) formatted in
-    a default way according to attribute types. This option takes an
-    arbitrary number of attribute names as arguments, and prints out
-    their values, with a space between each value and a newline
-    character after the last value. It is like the **-format** option
-    without format strings.
+    Force the query to come from the negotiator instead of the collector.
+ **-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*
+     Display attribute(s) or expression(s) formatted in a default way depending
+     on the type of each *Attribute* specified after the option. It is assumed
+     that no *Attribute*\s begin with a dash character so that the next word
+     that begins with a dash is considered another option. This option may be
+     followed by a colon character and formatting qualifiers to deviate the
+     output formatting from the default:
 
-    It is assumed that no attribute names begin with a dash character,
-    so that the next word that begins with dash is the start of the next
-    option. The **autoformat** option may be followed by a colon
-    character and formatting qualifiers to deviate the output formatting
-    from the default:
+     - **j** print the ClassAds associated JobID as the first field.
+     - **l** label each field.
+     - **h** print column headings before the first line of output.
+     - **V** use **%V** rather than **%v** for formatting (string values are
+       quoted).
+     - **r** print "raw", or unevaluated values.
+     - **,** add a comma character after each field.
+     - **t** add a tab character before each field instead of the default
+       space character.
+     - **n** add a newline character after each field.
+     - **g** add a newline character between ClassAds, and suppress spaces
+       before each field.
 
-    **j** print the job ID as the first field,
+     .. warning::
 
-    **l** label each field,
+         The **n** and **,** qualifiers may not be used together.
 
-    **h** print column headings before the first line of output,
-
-    **V** use %V rather than %v for formatting (string values are
-    quoted),
-
-    **r** print "raw", or unevaluated values,
-
-    **,** add a comma character after each field,
-
-    **t** add a tab character before each field instead of the default
-    space character,
-
-    **n** add a newline character after each field,
-
-    **g** add a newline character between ClassAds, and suppress spaces
-    before each field.
-
-    Use **-af:h** to get tabular values with headings.
-
-    Use **-af:lrng** to get -long equivalent format.
-
-    The newline and comma characters may not be used together. The
-    **l** and **h** characters may not be used together.
-
- **-constraint** *<expr>*
-    (Display option) To be used in conjunction with the **-long**
-    **-modular** or the **-autoformat** options. Displays users and
-    groups that match the ``<expr>``.
- **-debug[:<opts>]**
-    (Display option) Without **:<opts>** specified, use configured debug
-    level to send debugging output to ``stderr``. With **:<opts>**
-    specified, these options are debug levels that override any
-    configured debug levels for this command's execution to send
-    debugging output to ``stderr``.
+         The **l** and **h** qualifiers may not be used together.
+ **-constraint** *expr*
+     Display submitters and groups that satisfy the expression.
  **-flat**
-    (Display option) Display information such that users within
-    hierarchical groups are not listed with their group.
- **-getreslist** *username*
-    (Display option) Display all the resources currently allocated to
-    the user specified by *username*.
+    Display information such that submitters within hierarchical groups are not
+    listed with their group.
+ **-groupid**
+    Display group ID.
+ **-getreslist** *submitter*
+    Display all the resources currently allocated to the submitter specified
+    by *submitter*.
  **-grouporder**
-    (Display option) Display submitter information with accounting group
-    entries at the top of the list, and in breadth-first order within
-    the group hierarchy tree.
+    Display submitter information with accounting group entries at the top
+    of the list, and in breadth-first order within the group hierarchy tree.
  **-grouprollup**
-    (Display option) For hierarchical groups, the display shows sums as
-    computed for groups, and these sums include sub groups.
+    For hierarchical groups, the display shows sums as computed for groups,
+    and these sums include sub groups.
  **-hierarchical**
-    (Display option) Display information such that users within
-    hierarchical groups are listed with their group.
+    Display information such that submitters within hierarchical groups are
+    listed with their group.
  **-legacy**
-    (Display option) For use with the **-long** option, displays
-    attribute names and values as a single ClassAd.
+    For use with the **-long** option, displays attribute names and
+    values as a single ClassAd.
  **-long**
-    (Display option) A verbose output which displays entire ClassAds.
+    Display ClassAds in long format.
  **-modular**
-    (Display option) Modifies the display when using the **-long**
-    option, such that attribute names and values are shown as distinct
-    ClassAds.
- **-most**
-    (Display option) Display fields considered to be the most useful.
-    This is the default set of fields displayed.
+    Modifies the display when using the **-long** option, such that
+    attribute names and values are shown as distinct ClassAds.
+ **-order**
+    Display group order.
  **-priority**
-    (Display option) Display fields with user priority information.
+   Display fields with submitter priority information.
+ **-most**
+    Display fields considered to be the most useful. This is the default
+    set of fields displayed.
  **-quotas**
-    (Display option) Display fields relevant to hierarchical group
-    quotas.
+    Display fields relevant to hierarchical group quotas.
+ **-sortkey**
+    Display group sort key.
+ **-surplus**
+    Display usage surplus.
  **-usage**
-    (Display option) Display usage information for each group or user.
+    Display usage information for each group or submitter.
+ *submitter*
+    Display information only for the specified submitter.
 
-Examples
---------
+General Remarks
+---------------
 
-Example 1 Since the output varies due to command line arguments, here is
-an example of the default output for a pool that does not use
-Hierarchical Group Quotas. This default output is the same as given with
-the **-most** Display option.
+The default tool output will display the following information for each active
+submitter
 
-.. code-block:: text
+ Effective Priority
+    The effective priority value of the submitter, which is used to calculate
+    the submitter's share when allocating resources. A lower value means a
+    higher priority, and the minimum value (highest priority) is 0.5.
+    The effective priority is calculated by multiplying the real
+    priority by the priority factor.
+ Priority Factor
+    The system administrator can set this value for each submitter, thus
+    controlling a submitter's effective priority relative to other submitters.
+    This can be used to create different classes of submitters.
+ Weighted In Use
+    The number of resources currently used.
+ Total Usage (Weighted hours)
+    The accumulated number of resource-hours used by the submitter since the
+    usage start time.
+ Time Since Last Usage
+    Elapsed time since the specific submitter last had claimed resources.
+ Submitter Floor
+    The minimum guaranteed number of CPU cores assigned to the specific submitter.
+ Submitter Ceiling
+    Maximum number of CPU cores assigned to the specific submitter.
 
-    Last Priority Update:  1/19 13:14
-                            Effective   Priority   Res   Total Usage  Time Since
-    User Name                Priority    Factor   In Use (wghted-hrs) Last Usage
-    ---------------------- ------------ --------- ------ ------------ ----------
-    www-cndr@cs.wisc.edu           0.56      1.00      0    591998.44    0+16:30
-    joey@cs.wisc.edu               1.00      1.00      1       990.15 <now>
-    suzy@cs.wisc.edu               1.53      1.00      0       261.78    0+09:31
-    leon@cs.wisc.edu               1.63      1.00      2     12597.82 <now>
-    raj@cs.wisc.edu                3.34      1.00      0      8049.48    0+01:39
-    jose@cs.wisc.edu               3.62      1.00      4     58137.63 <now>
-    betsy@cs.wisc.edu             13.47      1.00      0      1475.31    0+22:46
-    petra@cs.wisc.edu            266.02    500.00      1    288082.03 <now>
-    carmen@cs.wisc.edu           329.87     10.00    634   2685305.25 <now>
-    carlos@cs.wisc.edu           687.36     10.00      0     76555.13    0+14:31
-    ali@proj1.wisc.edu          5000.00  10000.00      0      1315.56    0+03:33
-    apu@nnland.edu              5000.00  10000.00      0       482.63    0+09:56
-    pop@proj1.wisc.edu         26688.11  10000.00      1     49560.88 <now>
-    franz@cs.wisc.edu          29352.06    500.00    109    600277.88 <now>
-    martha@nnland.edu          58030.94  10000.00      0     48212.79    0+12:32
-    izzi@nnland.edu            62106.40  10000.00      0      6569.75    0+02:26
-    marta@cs.wisc.edu          62577.84    500.00     29    193706.30 <now>
-    kris@proj1.wisc.edu       100597.94  10000.00      0     20814.24    0+04:26
-    boss@proj1.wisc.edu       318229.25  10000.00      3    324680.47 <now>
-    ---------------------- ------------ --------- ------ ------------ ----------
-    Number of users: 19                              784   4969073.00    0+23:59
+When executed with the **-all** option, the following additional columns of
+information will be displayed
 
-Example 2 This is an example of the default output for a pool that uses
-hierarchical groups, and the groups accept surplus. This leads to a very
-wide display.
+ Real Priority
+    The value of the real priority of the submitter. This value follows the
+    submitter's resource usage.
+ Usage Start Time
+    The time since when usage has been recorded for the submitter. This time
+    is set when a submitter job runs for the first time. It is reset to the
+    present time when the usage for the submitter is reset.
+ Last Usage Time
+    The most recent time a resource usage has been recorded for the
+    submitter.
 
-.. code-block:: console
+For security purposes of authentication and authorization, specifying an
+Edit Option requires the ADMINISTRATOR level of access.
 
-    $ condor_userprio -pool crane.cs.wisc.edu -allusers
-    Last Priority Update:  1/19 13:18
-    Group                                 Config     Use    Effective   Priority   Res   Total Usage  Time Since
-      User Name                            Quota   Surplus   Priority    Factor   In Use (wghted-hrs) Last Usage
-    ------------------------------------ --------- ------- ------------ --------- ------ ------------ ----------
-    <none>                                    0.00     yes                   1.00      0         6.78    9+03:52
-      johnsm@crane.cs.wisc.edu                                     0.50      1.00      0         6.62    9+19:42
-      John.Smith@crane.cs.wisc.edu                                 0.50      1.00      0         0.02    9+03:52
-      Sedge@crane.cs.wisc.edu                                      0.50      1.00      0         0.05   13+03:03
-      Duck@crane.cs.wisc.edu                                       0.50      1.00      0         0.02   31+00:28
-      other@crane.cs.wisc.edu                                      0.50      1.00      0         0.04   16+03:42
-    Duck                                      2.00      no                   1.00      0         0.02   13+02:57
-      goose@crane.cs.wisc.edu                                      0.50      1.00      0         0.02   13+02:57
-    Sedge                                     4.00      no                   1.00      0         0.17    9+03:07
-      johnsm@crane.cs.wisc.edu                                     0.50      1.00      0         0.13    9+03:08
-      Half@crane.cs.wisc.edu                                       0.50      1.00      0         0.02   31+00:02
-      John.Smith@crane.cs.wisc.edu                                 0.50      1.00      0         0.05    9+03:07
-      other@crane.cs.wisc.edu                                      0.50      1.00      0         0.01   28+19:34
-    ------------------------------------ --------- ------- ------------ --------- ------ ------------ ----------
-    Number of users: 10                            ByQuota                             0         6.97
 
 Exit Status
 -----------
 
-*condor_userprio* will exit with a status value of 0 (zero) upon
-success, and it will exit with the value 1 (one) upon failure.
+0  -  Success
 
+1  -  Failure has occurred
+
+Examples
+--------
+
+Display default information about active submitters
+
+.. code-block:: console
+
+    $ condor_userprio
+
+Display all information about active submitters
+
+.. code-block:: console
+
+    $ condor_userprio -all
+
+Display default information for active submitters Bill and Ted associated
+with Access Point ``excellent.host.machine``
+
+.. code-block:: console
+
+    $ condor_userprio bill@excellent.host.machine ted@excellent.host.machine
+
+Display default information for every submitter
+
+.. code-block:: console
+
+    $ condor_userprio -allusers
+
+Display usage information for all active submitters
+
+.. code-block:: console
+
+    $ condor_userprio -usage
+
+Remove submitter ``taylor@ap2.chtc.wisc.edu`` from HTCondor's accounting
+
+.. code-block:: console
+
+    $ condor_userprio -delete taylor@ap2.chtc.wisc.edu
+
+Reset accumulated usages for all submitters to zero
+
+.. code-block:: console
+
+    $ condor_userprio -resetall
+
+Reset accumulated usage for submitter ``jfk@white.house.gov`` to zero
+
+.. code-block:: console
+
+    $ condor_userprio -resetusage jfk@white.house.gov
+
+Set submitter ``frodo@mount.doom.mordor`` accumulated usage to ``6.0``
+
+.. code-block:: console
+
+    $ condor_userprio -setaccum frodo@mount.doom.mordor 6.0
+
+Set submitter ``taylor@ap1.cthc.wisc.edu`` priority to ``100``
+
+.. code-block:: console
+
+    $ condor_userprio -setprio taylor@ap1.cthc.wisc.edu 100
+
+Set submitter ``taylor@ap1.cthc.wisc.edu`` usage ceiling to ``50``
+
+.. code-block:: console
+
+    $ condor_userprio -setceiling taylor@ap1.cthc.wisc.edu 50
+
+Set submitter ``taylor@ap1.cthc.wisc.edu`` usage floor floor to ``5``
+
+.. code-block:: console
+
+    $ condor_userprio -setfloor taylor@ap1.cthc.wisc.edu 5
+
+See Also
+--------
+
+None.
+
+Availability
+------------
+
+Linux, MacOS, Windows

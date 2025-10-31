@@ -1256,7 +1256,6 @@ main (int argc, char *argv[])
 		mode_constraint = nullptr;
 	}
 
-
 	if(javaMode) {
 		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_JAVA); }
 		query->addANDConstraint (ATTR_HAS_JAVA);
@@ -1267,7 +1266,7 @@ main (int argc, char *argv[])
 	}
 
 	if(offlineMode) {
-		const char * constr = "size( OfflineUniverses ) != 0";
+		const char * constr = "size(OfflineUniverses) != 0";
 		if (diagnose) { printf( "Adding constraint [%s]\n", constr ); }
 		query->addANDConstraint(constr);
 
@@ -1356,6 +1355,8 @@ main (int argc, char *argv[])
 			mode_constraint = nullptr;
 		}
 	}
+
+	projList.insert(ATTR_OCU);
 
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
@@ -1521,10 +1522,6 @@ main (int argc, char *argv[])
 			const char *adtypeName = mainPP.adtypeNameFromPPMode();
 			if (adtypeName) { pmms.select_from = mainPP.adtypeNameFromPPMode(); }
 			pmms.headfoot = mainPP.pmHeadFoot;
-			std::vector<const char *> * pheadings = NULL;
-			if ( ! mainPP.pm.has_headings()) {
-				if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
-			}
 			std::string requirements;
 			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
 				ConstraintHolder constrRaw(strdup(requirements.c_str()));
@@ -1536,7 +1533,7 @@ main (int argc, char *argv[])
 
 			temp.clear();
 			temp.reserve(4096);
-			PrintPrintMask(temp, *pFnTable, mainPP.pm, pheadings, pmms, group_by_keys, NULL);
+			PrintPrintMask(temp, *pFnTable, mainPP.pm, nullptr, pmms, group_by_keys, NULL);
 			fprintf(fout, "%s\n", temp.c_str());
 		}
 
@@ -1557,11 +1554,7 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-		std::vector<const char *> * pheadings = NULL;
-		if ( ! mainPP.pm.has_headings()) {
-			if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
-		}
-		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
+		mainPP.pm.dump(style_text, &GlobalFnTable);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -2352,44 +2345,29 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
 
-int PrettyPrinter::set_status_print_mask_from_stream (
-	const char * streamid,
-	bool is_filename,
+int PrettyPrinter::set_print_mask_from_stream (
+	SimpleInputStream & stream,
 	const char ** pconstraint)
 {
 	PrintMaskMakeSettings pmopt;
 	std::string messages;
 
 	pmopt.headfoot = pmHeadFoot;
+	pmopt.fixed_width_implies_truncate = false;
+	pmopt.generate_printf_from_width = false;
 
-	SimpleInputStream * pstream = NULL;
-	*pconstraint = NULL;
-
-	FILE *file = NULL;
-	if (MATCH == strcmp("-", streamid)) {
-		pstream = new SimpleFileInputStream(stdin, false);
-	} else if (is_filename) {
-		file = safe_fopen_wrapper_follow(streamid, "r");
-		if (file == NULL) {
-			fprintf(stderr, "Can't open select file: %s\n", streamid);
-			return -1;
-		}
-		pstream = new SimpleFileInputStream(file, true);
-	} else {
-		pstream = new StringLiteralInputStream(streamid);
-	}
-	ASSERT(pstream);
+	*pconstraint = nullptr;
 
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
+	AttrListPrintMask * sumymask = nullptr;
 	int err = SetAttrListPrintMaskFromStream(
-					*pstream,
-					&LocalPrintFormatsTable,
-					pm,
-					pmopt,
-					group_by_keys,
-					NULL,
-					messages);
-	delete pstream; pstream = NULL;
+		stream,
+		&LocalPrintFormatsTable,
+		pm,
+		pmopt,
+		group_by_keys,
+		sumymask,
+		messages);
 	if ( ! err) {
 		if (pmopt.aggregate != PR_NO_AGGREGATION) {
 			fprintf(stderr, "print-format aggregation not supported\n");
@@ -2409,6 +2387,35 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
 }
+
+int PrettyPrinter::set_status_print_mask_from_stream (
+	const char * streamid,
+	bool is_filename,
+	const char ** pconstraint)
+{
+	*pconstraint = nullptr;
+	if ( ! is_filename) {
+		StringLiteralInputStream slis(streamid);
+		return set_print_mask_from_stream(slis, pconstraint);
+	}
+
+	FILE *file = NULL;
+	bool close_file = false;
+	if (MATCH == strcmp("-", streamid)) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(streamid, "r");
+		if ( ! file) {
+			fprintf(stderr, "Can't open select file: %s\n", streamid);
+			return -1;
+		}
+		close_file = true;
+	}
+	SimpleFileInputStream sfis(file, close_file);
+	return set_print_mask_from_stream(sfis, pconstraint);
+}
+
 
 static void init_internal_printmask(AttrListPrintMask & prmask, const char * format)
 {
@@ -2927,6 +2934,13 @@ firstPass (int argc, char *argv[])
 			}
 			dash_broken = true;
 		} else
+		if (is_dash_arg_colon_prefix(argv[i], "lvm", &pcolon, 3)) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_LvUsage, i, argv[i]);
+			}
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -2950,6 +2964,8 @@ firstPass (int argc, char *argv[])
 				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_Broken) {
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots_LvUsage) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}
@@ -3202,11 +3218,11 @@ secondPass (int argc, char *argv[])
 				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-				if (fheadings || mainPP.pm_head.size() > 0) { 
+				if (fheadings || mainPP.pm.has_headings()) {
 					const char * hd = fheadings ? argv[i] : "(expr)";
-					wid = 0 - (int)strlen(hd); 
-					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					mainPP.pm_head.emplace_back(hd);
+					wid = 0 - (int)strlen(hd);
+					opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
+					mainPP.pm.set_heading(hd);
 				}
 				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");

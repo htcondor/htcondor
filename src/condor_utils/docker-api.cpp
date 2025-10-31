@@ -922,7 +922,21 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	memset(&sa, 0, sizeof(sa));
 
 	sa.sun_family = AF_UNIX;
-	strncpy(sa.sun_path, "/var/run/docker.sock",sizeof(sa.sun_path) - 1);
+	// Default docker socket path location
+	std::string docker_socket_path = "/var/run/docker.sock";
+	// unless overridden by env var
+	std::string docker_host;
+	if (getenv("DOCKER_HOST")) {
+		docker_host = getenv("DOCKER_HOST");
+		if (docker_host.starts_with("unix://")) {
+			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
+		} else {
+			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			return -1;
+		}
+	}
+
+	strncpy(sa.sun_path, docker_socket_path.c_str(), sizeof(sa.sun_path) - 1);
 
 	{
 	TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -1832,30 +1846,39 @@ void build_env_for_docker_cli(Env &env) {
 }
 std::string 
 DockerAPI::toAnnotatedImageName(const std::string &rawImageName, const ClassAd &job) {
-	std::string user;
-	job.LookupString(ATTR_USER, user);
+	if (!param_boolean("DOCKER_TRUST_LOCAL_IMAGES", false)) {
+		std::string user;
+		job.LookupString(ATTR_USER, user);
 
-	if (user.empty()) {
-		return "";
+		if (user.empty()) {
+			return "";
+		}
+
+		// tags cannot have @ in them (dots are ok, though)
+		replace_str(user, "@", "_at_");
+
+		return std::string("htcondor.org/" + user + "/" + rawImageName);
+	} else {
+		return rawImageName;
 	}
-
-	// tags cannot have @ in them (dots are ok, though)
-	replace_str(user, "@", "_at_");
-
-	return std::string("htcondor.org/" + user + "/" + rawImageName);
 }
 
 std::string 
 DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
-	if (!annotatedName.starts_with("htcondor.org/")) {
-		return "";
-	}
+	if (!param_boolean("DOCKER_TRUST_LOCAL_IMAGES", false)) {
+		if (!annotatedName.starts_with("htcondor.org/")) {
+			return "";
+		}
 
-	size_t firstSlash = annotatedName.find('/');
-	size_t secondSlash = annotatedName.find('/', firstSlash + 1);
-	std::string raw_name = annotatedName.substr(secondSlash + 1);;
-	return raw_name;
+		size_t firstSlash = annotatedName.find('/');
+		size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+		std::string raw_name = annotatedName.substr(secondSlash + 1);;
+		return raw_name;
+	} else {
+		return annotatedName;
+	}
 }
+
 static
 size_t convert_number_with_suffix(std::string size) {
 	size_t result = 0;
