@@ -37,6 +37,21 @@ namespace FileTransferCommands {
             virtual ~TransferFile() = default;
     };
 
+    class MakeDirectory : public Command {
+        public:
+            MakeDirectory(
+                const std::string & src,
+                const std::string & dest
+            );
+
+            virtual void execute(
+                FileTransferFunctions::GoAheadState & gas,
+                ReliSock * sock
+            );
+
+            virtual ~MakeDirectory() = default;
+    };
+
     Command * make(
                 TransferCommand command,
                 const std::string & source,

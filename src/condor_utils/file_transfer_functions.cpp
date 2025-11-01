@@ -58,7 +58,7 @@ FileTransferFunctions::handleOneCommand(
     //
     // FIXME: We need to move this out one layer of code, because
     // the original code set the crypto at the top of the command loop,
-    // it didn't _resest_ it until the command loop was done.  It
+    // it didn't _reset_ it until the command loop was done.  It
     // works in testing anyway because in practice, we start in crypto
     // mode and never leave.
     //
@@ -84,7 +84,7 @@ FileTransferFunctions::handleOneCommand(
     //
     // If the command protocol is done, return after letting our caller know.
     //
-    dprintf( D_ALWAYS, "FileTransferFunctions: ignoring command %i\n", static_cast<int>(command) );
+    dprintf( D_ALWAYS, "FileTransferFunctions: received command %i\n", static_cast<int>(command) );
     if( command == TransferCommand::Finished ) {
         receivedFinishedCommand = true;
         return true;
@@ -120,7 +120,7 @@ FileTransferFunctions::handleOneCommand(
     //
     std::string fileName;
     sock->get( fileName );
-    dprintf( D_ALWAYS, "FileTransferFunctions: ignoring filename %s\n", fileName.c_str() );
+    dprintf( D_ALWAYS, "FileTransferFunctions: received filename %s\n", fileName.c_str() );
 
     //
     // In the original code, this only happens if the other peer "does
@@ -270,7 +270,7 @@ FileTransferFunctions::sendGoAhead(
     sock->decode();
     sock->get(theirKeepaliveInterval);
     sock->end_of_message();
-    dprintf( D_ALWAYS, "FileTransferFunctions: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
+    dprintf( D_ALWAYS, "FileTransferFunctions: received their keepalive interval %d\n", theirKeepaliveInterval );
 
     ClassAd outMessage;
     outMessage.Assign(ATTR_RESULT, myGoAhead);
