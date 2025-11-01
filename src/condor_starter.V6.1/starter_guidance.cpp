@@ -34,6 +34,8 @@
 
 #include "jic_shadow.h"
 
+#include "jic_shadow.h"
+
 
 #define SEND_REPLY_AND_CONTINUE_CONVERSATION \
 	int ignored = -1; \
@@ -637,6 +639,10 @@ Starter::handleJobSetupCommand(
 			dprintf( D_ZKM, "Carrying on according to guidance...\n" );
 
 			return false;
+		} else if( command == COMMAND_START_NEW_FILE_TRANSFER ) {
+		    s->jic->newSetupJobEnvironment();
+
+			return true;
 		} else if( command == COMMAND_RETRY_REQUEST ) {
 			int retry_delay = 20 /* seconds of careful research */;
 			guidance.LookupInteger( ATTR_RETRY_DELAY, retry_delay );

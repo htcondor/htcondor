@@ -31,6 +31,8 @@ enum class GuidanceResult : int {
 #define COMMAND_MAP_COMMON_FILES    "MapCommonFiles"
 #define COMMAND_JOB_SETUP           "DoJobSetup"
 
+#define COMMAND_START_NEW_FILE_TRANSFER     "StartNewFileTransfer"
+
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 
 #define RTYPE_JOB_ENVIRONMENT       "JobEnvironment"
@@ -49,5 +51,6 @@ std::optional<std::string> makeCIFName(
     const std::string & startdAddress,
     const std::string & content
 );
+
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */
