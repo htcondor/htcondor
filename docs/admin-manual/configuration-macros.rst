@@ -8892,6 +8892,16 @@ General
     This option is set by :tool:`condor_submit_dag` automatically and should not be
     set explicitly by the user. Defaults to an empty string.
 
+:macro-def:`DAGMAN_USE_OLD_FILE_PARSER[DAGMan]`
+    A boolean that defaults to ``False``, when ``True`` *condor_dagman* will use
+    the old file parser to process DAG files.
+
+.. note::
+
+    This option is intended to be a fall back to the known working DAG file parser
+    while transitioning to the new style parser. This will be deprecated in the
+    future.
+
 :macro-def:`DAGMAN_USE_STRICT[DAGMan]`
     An integer defining the level of strictness :tool:`condor_dagman` will
     apply when turning warnings into fatal errors, as follows:
