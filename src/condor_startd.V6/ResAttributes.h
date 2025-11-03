@@ -35,7 +35,12 @@
 #include <stdint.h>
 #include <string>
 #include <stack>
-using std::string;
+
+// fractional disk is the old way of doing disk provisioning.
+// just in case, we leave this as an ifdef for a bit so we can revert
+// that part of the code without reverting the code that moves the disk
+// partition table into the MachAttribute class and the bug fixes for the DISK param
+// #define PROVISION_FRACTIONAL_DISK 1
 
 enum BuildSlotFailureMode { 
 	AllOrNothing, // do nothing if you can't do everything
@@ -50,9 +55,11 @@ enum BuildSlotFailureMode {
 #define BROKEN_CODE_UNCLEAN      4   // could not clean up after job
 #define BROKEN_CODE_UNCLEAN_LV   5   // could not clean up Logical Volume after job
 #define BROKEN_CODE_HUNG_PID     6   // could not delete all job processes after job
+#define BROKEN_CODE_HUNG_CGROUP  7   // could not clean up the cgroup (probably a hung pid)
 
 class VolumeManager;
 class Resource;
+class CpuAttributes;
 
 // we cast share to int before comparison, because it might be a float
 // and we don't want the compiler to complain
@@ -205,12 +212,12 @@ class MachAttributes
 {
 public:
 	// quantity (double) of resource for each resource tag
-	typedef std::map<string, double, classad::CaseIgnLTStr> slotres_map_t;
+	typedef std::map<std::string, double, classad::CaseIgnLTStr> slotres_map_t;
 
 	// these are used for non-fungible ids to track resource IDs that cannot be assigned
 	// for each resource tag, which resource IDs are offline. note that this is a SET rather than a VECTOR
 	typedef std::set<std::string> slotres_offline_ids_t;
-	typedef std::map<string, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
+	typedef std::map<std::string, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
 
 	// some slots may have constraints on which non-fungible resources they can use, this is handled
 	// by having an optional property classad for each unique non-fungible id, and a optional constraint
@@ -220,7 +227,7 @@ public:
 	typedef std::map<std::string, NonFungibleType, classad::CaseIgnLTStr> slotres_nft_map_t;
 	// these are used as lists of non-fungible ids for various purposes
 	typedef std::vector<std::string> slotres_assigned_ids_t;
-	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	typedef std::map<std::string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
 
 	MachAttributes();
 	~MachAttributes();
@@ -230,7 +237,7 @@ public:
                                // creating data structure needed in compute and publish
     void init_machine_resources();
 
-	void publish_static(ClassAd*);     // things that can only change on reconfig
+	void publish_static(ClassAd*, const CpuAttributes * childAttrs);     // things that can only change on reconfig
 	void publish_common_dynamic(ClassAd*, bool global=false); // things that can change at runtime
 	void publish_slot_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill, const std::string & res_conflict); // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
@@ -266,9 +273,60 @@ public:
 	double			num_cpus()	const { return m_num_cpus; };
 	double			num_real_cpus()	const { return m_num_real_cpus; };
 	int				phys_mem()	const { return m_phys_mem; };
-	long long		virt_mem()	const { return m_virt_mem; };
+#ifdef PROVISION_FRACTIONAL_DISK
 	long long		total_disk() const { return m_total_disk; }
+	long long		virt_mem()	const { return m_virt_mem; };
 	bool			always_recompute_disk() const { return m_always_recompute_disk; }
+	bool			is_fractional_disk() const { return true; }
+#else
+	struct _disk_volume_res {
+		long long free_disk{0};         // free disk space on volume
+		long long detected_disk{0};     // total disk space on volume
+		long long non_condor_disk{0};   // in-use disk space on volume at startup
+		long long provisioned_disk{0};  // total disk provisioned to all slots from this volume
+	};
+	const std::map<std::string, _disk_volume_res> & disk_volumes() const { return m_disk_volumes; }
+	bool has_disk_volume(const char * volume_id) const { return m_disk_volumes.count(volume_id); }
+	void add_disk_volume(const char * volume_id,
+		long long free_disk,
+		long long detected_disk,
+		long long non_condor_disk)
+	{
+		auto & volume = m_disk_volumes[volume_id];
+		volume.free_disk = free_disk;
+		volume.detected_disk = detected_disk;
+		volume.non_condor_disk = non_condor_disk;
+	}
+	void update_provisioned_disk_for_volume(const char * volume_id, long long provisioned_disk) {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) {
+			it->second.provisioned_disk = std::max(it->second.provisioned_disk, provisioned_disk);
+		}
+	}
+	long long		free_disk(const char * volume_id) const {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) return it->second.free_disk;
+		return 0;
+	}
+	long long		detected_disk(const char * volume_id) const {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) {
+			return it->second.detected_disk;
+		}
+		return 0;
+	}
+	long long		provisioned_disk(const char * volume_id) const {
+		auto it = m_disk_volumes.find(volume_id);
+		if (it != m_disk_volumes.end()) return it->second.provisioned_disk;
+		return 0;
+	}
+	long long	num_swap()	const { return m_num_swap; };
+	bool		is_fractional_disk() const { return false; }
+	bool		recompute_disk_free() const { return m_recompute_disk_free; } // old Desktop policy where Disk is free space
+#endif
+	bool		total_disk_from_config() const { return m_total_disk_from_config; } // Disk specified in config
+	bool		using_volume_manager() const { return m_using_volume_manager; }
+	//void		set_using_volume_manager(bool using_it) { m_using_volume_manager = using_it; }
 	double		machine_load()			const { return m_load; };
 	double		machine_condor_load()	const { return m_condor_load; };
 	time_t		machine_keyboard_idle() const { return m_idle; };
@@ -290,13 +348,15 @@ public:
 	const char * withinLimitsExpression(); // regular WithinResourceLimits
 	const char * consumptionLimitsExpression(); // consumption policy variant
 
+	void 		set_volume_manager(VolumeManager* volman);
+	VolumeManager*	get_volume_manager() const { return m_volume_manager_ref; }
+
 private:
 
 		// Dynamic info
 	double			m_load;
 	double			m_condor_load;
 	double			m_owner_load;
-	long long		m_virt_mem;
 	time_t			m_idle;
 	time_t			m_console_idle;
 	int				m_mips;
@@ -317,9 +377,18 @@ private:
 	double			m_num_cpus;
 	double			m_num_real_cpus;
 	int				m_phys_mem;
-	bool			m_always_recompute_disk; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
 	bool			m_no_job_networking_aware{false}; // include expressions for NO_JOB_NETWORKING
+#ifdef PROVISION_FRACTIONAL_DISK
+	bool			m_always_recompute_disk; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
+	long long		m_virt_mem;
 	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
+#else
+	long long		m_num_swap{0};
+	std::map<std::string, _disk_volume_res> m_disk_volumes;
+	bool			m_recompute_disk_free{false}; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
+#endif
+	bool			m_total_disk_from_config{false}; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
+	bool			m_using_volume_manager{false};
 	slotres_map_t   m_machres_map;
 	slotres_nft_map_t m_machres_nft_map;
 	slotres_devIds_map_t m_machres_offline_devIds_map; // startup list of offline ids
@@ -373,8 +442,13 @@ private:
 	OSVERSIONINFOEX	m_window_version_info;
     char*           m_dot_Net_Versions;
 #endif
+	VolumeManager* m_volume_manager_ref{nullptr}; // Note: We do not own this pointer... only reference
+};
 
-};	
+#ifdef PROVISION_FRACTIONAL_DISK
+#else
+void initExecutePartitionTable(MachAttributes * m_attr, VolumeManager * volman);
+#endif
 
 class ResBag;
 
@@ -394,8 +468,13 @@ public:
 
 	struct _slot_request {
 		double num_cpus=0;
+	#ifdef PROVISION_FRACTIONAL_DISK
 		double virt_mem_fraction=0;
 		double disk_fraction=0;
+	#else
+		long long num_swap=0; // in KB
+		long long num_disk=0; // in KB
+	#endif
 		int num_phys_mem=0;
 		bool allow_fractional_cpus=false;
 		MachAttributes::slotres_map_t slotres;
@@ -403,33 +482,34 @@ public:
 		const char * dump(std::string & buf) const;
 	};
 
-	CpuAttributes( unsigned int slot_type, double num_cpus,
-				   int num_phys_mem, double virt_mem_fraction,
-				   double disk_fraction,
-				   const slotres_map_t& slotres_map,
-				   const slotres_constraint_map_t& slotres_req_map,
-				   const std::string &execute_dir, const std::string &execute_partition_id );
-
 	// init a slot_request from config strings
 	static bool buildSlotRequest(
 		_slot_request & request,
 		MachAttributes *m_attr,
 		const std::string& list,
 		unsigned int type_id,
+		const char * partition_id,
 		BuildSlotFailureMode failmode);
 
 	// construct from a _slot_request
 	CpuAttributes(unsigned int slot_type,
 		const struct _slot_request & req,
+		const MachAttributes & m_attr,
 		const std::string &execute_dir, const std::string &execute_partition_id )
 		: rip(nullptr)
 		, c_condor_load(-1.0)
 		, c_owner_load(-1.0)
 		, c_idle(-1)
 		, c_console_idle(-1)
+	#ifdef PROVISION_FRACTIONAL_DISK
 		, c_virt_mem(0)
 		, c_disk(0)
-		, c_total_disk(0)
+		, c_total_disk(m_attr.total_disk())
+	#else
+		, c_swap(req.num_swap)
+		, c_disk(req.num_disk)
+		, c_total_disk(m_attr.detected_disk(execute_partition_id.c_str()))
+	#endif
 		, c_phys_mem(req.num_phys_mem)
 		, c_slot_mem(req.num_phys_mem)
 		, c_allow_fractional_cpus(req.allow_fractional_cpus)
@@ -438,9 +518,14 @@ public:
 		, c_slottot_map(req.slotres)
 		, c_slotres_constraint_map(req.slotres_constr)
 		, c_num_slot_cpus(req.num_cpus)
+	#ifdef PROVISION_FRACTIONAL_DISK
 		, c_virt_mem_fraction(req.virt_mem_fraction)
 		, c_disk_fraction(req.disk_fraction)
 		, c_slot_disk(0)
+	#else
+		, c_slot_swap(req.num_swap)
+		, c_slot_disk(req.num_disk)
+	#endif
 		, c_execute_dir(execute_dir)
 		, c_execute_partition_id(execute_partition_id)
 		, c_type_id(slot_type)
@@ -459,8 +544,12 @@ public:
 
 	void publish_static(ClassAd*, const ResBag * inuse, const ResBag * broken) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
+#ifdef PROVISION_FRACTIONAL_DISK
 	void compute_virt_mem_share(double virt_mem);
 	void compute_disk();
+#else
+	void recompute_disk(bool init);
+#endif
 	void set_condor_load(double load) { c_condor_load = load; }
 
 		// Load average methods
@@ -484,22 +573,27 @@ public:
 	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
 	long long get_disk() const { return c_disk; }
+#ifdef PROVISION_FRACTIONAL_DISK
 	double get_disk_fraction() const { return c_disk_fraction; }
+#endif
+	char const *executeDir() const { return c_execute_dir.c_str(); }
+	char const *executePartitionID() const { return c_execute_partition_id.c_str(); }
 	long long get_total_disk() const { return c_total_disk; }
-	char const *executeDir() { return c_execute_dir.c_str(); }
-	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
-    const slotres_map_t& get_slotres_map() { return c_slotres_map; }
-    const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
-
-	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
-	unsigned int is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
-
 	void init_total_disk(const CpuAttributes* r_attr) {
 		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
 			c_total_disk = r_attr->c_total_disk;
 		}
 	}
+	void init_total_disk(long long total) { c_total_disk = total; }
+#ifdef PROVISION_FRACTIONAL_DISK
 	bool set_total_disk(long long total, bool refresh, VolumeManager * volman);
+#endif
+
+	const slotres_map_t& get_slotres_map() { return c_slotres_map; }
+	const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
+
+	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
+	unsigned int is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
@@ -512,7 +606,11 @@ private:
 	double			c_owner_load;
 	time_t			c_idle;
 	time_t			c_console_idle;
+#ifdef PROVISION_FRACTIONAL_DISK
 	long long c_virt_mem;
+#else
+	long long c_swap;
+#endif
 	long long c_disk;
 		// total_disk here means total disk space on the partition containing
 		// this slot's execute directory.  Since each slot may have an
@@ -537,10 +635,15 @@ private:
 
 		// These hold the fractions of shared, dynamic resources
 		// that are allocated to this CPU.
+#ifdef PROVISION_FRACTIONAL_DISK
 	double			c_virt_mem_fraction;
 
 	double			c_disk_fraction; // share of execute dir partition
 	double			c_slot_disk; // share of execute dir partition
+#else
+	long long		c_slot_swap;
+	long long		c_slot_disk;
+#endif
 	std::string     c_execute_dir;
 	std::string     c_execute_partition_id;  // unique id for partition
 
@@ -587,17 +690,6 @@ protected:
 	friend class CpuAttributes;
 };
 
-class AvailDiskPartition
-{
- public:
-	AvailDiskPartition() {
-		m_disk_fraction = 1.0;
-		m_auto_count = 0;
-	}
-	double m_disk_fraction; // share of this partition that is not taken yet
-	int m_auto_count; // number of slots using "auto" share of this partition
-};
-
 // Available machine-wide attributes
 class AvailAttributes
 {
@@ -606,28 +698,46 @@ public:
 
 	AvailAttributes( MachAttributes* map );
 
+#ifdef PROVISION_FRACTIONAL_DISK
+	void init_partition(const char * id, long long) { m_partitions[id].m_disk_fraction = 1.0; }
+#else
+	void init_partition(const char * id, long long disk) { m_partitions[id].m_disk = disk; }
+#endif
+
 	bool decrement( CpuAttributes* cap );
 	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	void cat_totals(std::string & buf, const char * execute_partition_id);
 	// reduce request as necessary to force a fit, and report the reductions in the unfit string
 	void trim_request_to_fit( CpuAttributes::_slot_request & req, const char * execute_partition_id, std::string & unfit );
+	void update_provisioned_disk( MachAttributes * map );
 
 private:
 	int				a_num_cpus;
 	int             a_num_cpus_auto_count; // number of slots specifying "auto"
 	int				a_phys_mem;
 	int             a_phys_mem_auto_count; // number of slots specifying "auto"
+#ifdef PROVISION_FRACTIONAL_DISK
 	float			a_virt_mem_fraction;
 	int             a_virt_mem_auto_count; // number of slots specifying "auto"
+#else
+	long long		a_num_swap{0};
+	int             a_swap_auto_count{0}; // number of slots specifying "auto"
+#endif
 
     slotres_map_t a_slotres_map;
     slotres_map_t a_autocnt_map;
 
-		// number of slots using "auto" for disk share in each partition
-	std::map<std::string,AvailDiskPartition> m_execute_partitions;
 
-	AvailDiskPartition &GetAvailDiskPartition(std::string const &execute_partition_id);
+	struct _avail_disk_partition {
+	#ifdef PROVISION_FRACTIONAL_DISK
+		double m_disk_fraction{1.0}; // share of this partition that is not taken yet
+	#else
+		long long m_disk{0}; // disk KB not taken yet
+	#endif
+		int m_auto_count{0}; // number of slots using "auto" share of this partition
+	};
+	std::map<std::string, _avail_disk_partition> m_partitions;
 };
 
 #endif /* _RES_ATTRIBUTES_H */

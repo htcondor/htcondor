@@ -58,6 +58,7 @@
 #include <charconv>
 #include <string>
 #include <set>
+#include <regex>
 
 /* Disable gcc warnings about floating point comparisons */
 GCC_DIAG_OFF(float-equal)
@@ -5760,7 +5761,7 @@ int SubmitHash::SetRequirements()
 			break;
 		default:
 			break;
-		} 
+		}
 		if ( ! append_req) {
 				// Didn't find a per-universe version, try the generic,
 				// non-universe specific one:
@@ -5827,7 +5828,7 @@ int SubmitHash::SetRequirements()
 	bool	checks_per_file_encryption = false;
 	bool	checks_hsct = false;
 
-	if( mightTransfer(JobUniverse) ) { 
+	if( mightTransfer(JobUniverse) ) {
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
 		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
 		checks_file_transfer_plugin_methods = machine_refs.count(ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS);
@@ -6153,7 +6154,7 @@ int SubmitHash::SetRequirements()
 	}
 
 	if( mightTransfer(JobUniverse) ) {
-			/* 
+			/*
 			   This is a kind of job that might be using file transfer
 			   or a shared filesystem.  so, tack on the appropriate
 			   clause to make sure we're either at a machine that
@@ -6178,7 +6179,7 @@ int SubmitHash::SetRequirements()
 		if (should_transfer == STF_NO) {
 				// no file transfer used.  if there's nothing about
 				// the FileSystemDomain yet, tack on a clause for
-				// that. 
+				// that.
 			if( ! checks_fsdomain ) {
 				answer += " && " ;
 				answer += domain_check;
@@ -6236,6 +6237,12 @@ int SubmitHash::SetRequirements()
 				answer += " && versioncmp( split(TARGET." ATTR_CONDOR_VERSION ")[1], \"8.9.7\" ) >= 0";
 			}
 
+			bool requireCommonFilesTransfer = false;
+			if( job->LookupBool("RequireCommonFilesTransfer", requireCommonFilesTransfer) ) {
+				if( requireCommonFilesTransfer ) {
+					answer += " && TARGET.HasCommonFilesTransfer >= 2";
+				}
+			}
 
 			// insert expressions to match on transfer plugin methods
 			{
@@ -6849,6 +6856,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			}
 		}
 	} else {
+		// we get here for late-mat when the digest does not have container_image (it's a constant)
+		// but if we are building an input transfer list, we still need to add the full path of
+		// the container to it.
+		std::string container_path;
+		if (clusterAd && clusterAd->LookupString(ATTR_CONTAINER_IMAGE "FullPath", container_path)) {
+			input_files.emplace_back(container_path);
+			// when there is a clusterAd, accumulate_size_kb will be a nullptr
+		}
 		return 0;
 	}
 
@@ -6866,16 +6881,34 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr())  {
+	if (container_image)  {
 		bool userRequestedCommonContainer = param_boolean(
 			"CONTAINER_IMAGES_COMMON_BY_DEFAULT",
 			false
 		);
+
+		std::string r;
+		param( r, "CONTAINER_REGEX_COMMON_BY_DEFAULT" );
+		if(! r.empty()) {
+			std::regex * re = nullptr;
+			try {
+				re = new std::regex(r);
+			} catch( const std::regex_error & e ) {
+				dprintf( D_ALWAYS, "CONTAINER_REGEX_COMMON_BY_DEFAULT '%s' is not a valid regular expression, ignoring.  (%s)\n", r.c_str(), e.what() );
+			}
+			if( re != NULL ) {
+				std::cmatch match;
+				if( std::regex_match( container_image.ptr(), match, * re ) ) {
+					userRequestedCommonContainer = true;
+				}
+			}
+		}
+
 		job->LookupBool(ATTR_CONTAINER_IS_COMMON, userRequestedCommonContainer);
 		if(! userRequestedCommonContainer) {
 			input_files.emplace_back(container_image.ptr());
 			if (accumulate_size_kb) {
-				*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+				*accumulate_size_kb += calc_image_size_kb(container_image);
 			}
 		} else {
 			// FIXME: This does not check to see if the container image varies
@@ -6903,6 +6936,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
 		}
 		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+
+		// if we are going to change ContainerImage, we need to store the full pathname
+		// for use by late-materialization when late-mat will be building a per-job transfer input list
+		job->Assign(ATTR_CONTAINER_IMAGE "FullPath", container_image.ptr());
 
 		size_t pos = container_tmp.find(':');
 		if (pos == std::string::npos) {

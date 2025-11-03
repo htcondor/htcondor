@@ -2786,7 +2786,7 @@ type=string
 tags=starter
 
 [STARTER_NESTED_SCRATCH]
-default=false
+default=true
 type=bool
 tags=starter
 
@@ -3009,6 +3009,18 @@ tags=negotiator,matchmaker
 default=
 type=string
 
+[REMOVE_SIGNIFICANT_ATTRIBUTES]
+default=CpusUsage,DiskUsage,GPUsUsage,MemoryUsage,ResidentSetSize
+type=string
+description=Attributes that the Negotiator should assume are slot attributes
+tags=negotiator,matchmaker,schedd
+
+[REMOVE_SIGNIFICANT_ATTRIBUTES_REGEX]
+default=^Slot[0-9]*_
+type=string
+description=Regular expression pattern that the Negotiator should assume identifies slot attributes
+tags=negotiator,matchmaker
+
 [GROUP_AUTOREGROUP]
 default=false
 type=bool
@@ -3023,6 +3035,12 @@ tags=negotiator,matchmaker
 default=true
 type=bool
 description=Negotiator should use slot weights
+tags=negotiator,matchmaker
+
+[FORCE_NEGOTIATOR_SLOT_WEIGHT]
+default=false
+type=bool
+description=Negotiator should ignore the slot value for SLOT_WEIGHT and use its own value
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
@@ -3209,7 +3227,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -6106,6 +6124,11 @@ type=path
 description=Should countainer images be treated as common files by default?
 type=bool
 default=false
+
+[CONTAINER_REGEX_COMMON_BY_DEFAULT]
+description=Container images matching this regex  will be treated as common files by default.
+type=string
+default=
 
 ######
 ## add metaknobs below this banner

@@ -8091,6 +8091,12 @@ The following configuration macros affect negotiation for group users.
     :ad-attr:`SlotWeight`. When ``False``, each slot effectively has a weight
     of 1.
 
+:macro-def:`FORCE_NEGOTIATOR_SLOT_WEIGHT[NEGOTIATOR]`
+    A boolean value with a default of ``False``. When ``True``, the
+    *condor_negotiator* will ignore the machine ClassAd attribute
+    :ad-attr:`SlotWeight` and use the expression in :macro:`SLOT_WEIGHT`
+    of the negotiator config as the weight of the slot instead.
+
 :macro-def:`NEGOTIATOR_USE_WEIGHTED_DEMAND[NEGOTIATOR]`
     A boolean value that defaults to ``True``. When ``False``, the
     behavior is the same as for HTCondor versions prior to 7.9.6. If

@@ -6,14 +6,29 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
 24.12.y versions. New features will be added in the 25.x.y feature versions.
 
+Version 24.12.15
+----------------
+
+Release Notes:
+
+.. HTCondor version 24.12.15 released on December 11, 2025.
+
+- HTCondor version 24.12.15 planned release date is December 11, 2025.
+
+New Features:
+
+.. include-history:: features 24.12.15 24.0.15
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.12.15 24.0.15
+
 Version 24.12.14
 ----------------
 
 Release Notes:
 
-.. HTCondor version 24.12.14 released on November 13, 2025.
-
-- HTCondor version 24.12.14 planned release date is November 13, 2025.
+- HTCondor version 24.12.14 released on November 3, 2025.
 
 New Features:
 
@@ -22,6 +37,19 @@ New Features:
 Bugs Fixed:
 
 .. include-history:: bugs 24.12.14 24.0.14
+
+- Fixed bug where when :macro:`SINGULARITY_TARGET_DIR` was set and
+  :macro:`STARTER_NESTED_SCRATCH` was also set, then some environment
+  variables that pointed into the job's execute directory were not correct.
+  :jira:`3265`
+
+- Fixed a bug causing some file-transfer plug-ins (box, gdrive, and onedrive)
+  to fail immediately on start-up.
+  :jira:`3317`
+
+- Fixed a bug where *condor_qusers* would treat the ``add`` option as ``enable``
+  when the leading dash was omitted.
+  :jira:`3284`
 
 Version 24.12.13
 ----------------

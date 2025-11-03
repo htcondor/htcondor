@@ -258,7 +258,6 @@ Timeslice   PrioRecArrayTimeslice;
  std::deque<prio_rec> PrioRec;
 #endif
 time_t      PrioRecMinCoolDownTime = 0;
-std::map<int,int> PrioRecAutoClusterRejected;
 int BuildPrioRecArrayTid = -1;
 int DirtyPrioRecTid = -1;
 
@@ -2291,6 +2290,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! cad->ownerinfo) {
 				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
+			cad->Delete(ATTR_OS_USER);
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
 				cad->LookupString(ATTR_PROJECT_NAME, project_name);
@@ -2319,6 +2319,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->set_id = 0;
 			ad->Delete(ATTR_JOB_SET_ID);
 			ad->Delete(ATTR_JOB_SET_NAME);
+			ad->Delete(ATTR_OS_USER);
 
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
@@ -5278,12 +5279,30 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 	}
 	else if (attr_id == idATTR_VACATE_REASON_CODE) {
-		// Update count per hold reason in the job ad.
-		// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
+		// Update counts per vacate reason in the job ad.
 		int vacate_reason = (int)strtol( attr_value, nullptr, 10 );
+
+		std::string attrNumVacates = ATTR_NUM_VACATES;
+		std::string attrNumVacatesByReason = ATTR_NUM_VACATES_BY_REASON;
+
+		time_t beganExecuting = 0;
+		time_t birthday = 0;
+		GetAttributeInt(cluster_id, proc_id, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &beganExecuting);
+		GetAttributeInt(cluster_id, proc_id, ATTR_SHADOW_BIRTHDATE, &birthday);
+		// If ATR_JOB_CURRENT_START_EXECUTING_DATE is not set, it has not started executing.
+		// If it has started executing, but the shadow birthdate is later than the start executing date,
+		// then it is just leftover from a previous attempt and consider this a pre-execution vacate as well.
+		bool pre_execution_vacate = (beganExecuting == 0) || (birthday > beganExecuting);
+
+		// If the job is being vacated before it started executing, we want to
+		// also update ATTR_NUM_VACATES_PRE_EXECUTION and ATTR_NUM_VACATES_BY_REASON_PRE_EXECUTION
+		if (pre_execution_vacate) {
+			attrNumVacates.append(" ").append(ATTR_NUM_VACATES_PRE_EXECUTION);
+			attrNumVacatesByReason.append(" ").append(ATTR_NUM_VACATES_BY_REASON_PRE_EXECUTION);
+		}
 				
 		// Update count in job ad of how many times job was vacated
-		incrementJobAdAttr(cluster_id, proc_id, ATTR_NUM_VACATES);
+		incrementJobAdAttr(cluster_id, proc_id, attrNumVacates.c_str());
 
 		// If the vacate reason is a file transfer error, the shadow will set an attribute
 		// ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL to indicate the protocol used for the
@@ -5298,19 +5317,20 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			DeleteAttribute(cluster_id, proc_id, ATTR_JOB_LAST_FILE_TRANSFER_ERROR_PROTOCOL);
 		}
 
+		// If the vacate_reason int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
 		try {
 			std::string attr_name = (CONDOR_HOLD_CODE::_from_integral(vacate_reason))._to_string();
-			incrementJobAdAttr(cluster_id, proc_id, attr_name.c_str(), ATTR_NUM_VACATES_BY_REASON);
+			incrementJobAdAttr(cluster_id, proc_id, attr_name.c_str(), attrNumVacatesByReason.c_str());
 			if (!protocol.empty()) {
 				// If we had a protocol, then this is a file transfer vacate
 				// and we want to also count the number of vacates by protocol.
 				attr_name += protocol;
-				incrementJobAdAttr(cluster_id, proc_id, attr_name.c_str(), ATTR_NUM_VACATES_BY_REASON);
+				incrementJobAdAttr(cluster_id, proc_id, attr_name.c_str(), attrNumVacatesByReason.c_str());
 			}
 		}
 		catch (std::runtime_error const&) {
 			// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
-			incrementJobAdAttr(cluster_id, proc_id, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_VACATES_BY_REASON);
+			incrementJobAdAttr(cluster_id, proc_id, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), attrNumVacatesByReason.c_str());
 		}
 	}
 	else if (attr_id == idATTR_HOLD_REASON_CODE || attr_id == idATTR_HOLD_REASON) {
@@ -6675,14 +6695,6 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 				#endif
 				}
 			}
-
-				// ...
-			std::string ap_user;
-			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
-			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
-			if (ownerinfo && ownerinfo->OsUser()) {
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
-			}
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
@@ -7762,6 +7774,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// ad, things will still be ok.
 		ChainCollapse(*expanded_ad);
 
+		JobQueueJob* job = dynamic_cast<JobQueueJob*>(ad);
+		if (job->ownerinfo->OsUser()) {
+			expanded_ad->Assign(ATTR_OS_USER, job->ownerinfo->OsUser());
+		}
+
 		// before $$ expansion, we may need to convert the Environment from v1 to v2
 		// or switch the v1 delimiter to match the target OS. We do this so that if the 
 		// environment has $$ expansions we are using the target OS's expected delim
@@ -8840,8 +8857,10 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 	// TODO: trust that the job->run code is already up-to-date here....
 	// Figure out if we should contine and put this job into the PrioRec array
 	// or not. 
+	// For now we want to put jobs that would cause the user to exceed MaxJobsRunning
+	// into the prio-rec array anyway, so treat them as runnable here..
 	runnable_reason_code code;
-	if ( ! Runnable(job, code)) {
+	if ( ! Runnable(job, code) && code != runnable_reason_code::MaxRunningAlready) {
 		job->run = JobRunnableState::NotRunnable;
 		if (code == runnable_reason_code::IsNoopJob) {
 			job->run = JobRunnableState::Noop;
@@ -8849,7 +8868,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		return 0;
 	} else {
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			return 0;
 		}
@@ -8981,15 +9000,17 @@ int update_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * p
 	// Figure out if we should put this job into the PrioRec array
 	// or not, only jobs that end up in state Runnable will go into the prio rec array
 	// todo maybe also put short cooldown jobs in the array?
+	// For now we want to put jobs that would cause the user to exceed MaxJobsRunning
+	// into the prio-rec array anyway, so treat them as runnable here..
 	runnable_reason_code code;
-	if ( ! Runnable(job, code)) {
+	if ( ! Runnable(job, code) && code != runnable_reason_code::MaxRunningAlready) {
 		job->run = mapRunnableReasonCode(code);
 		++info.num_skipped;
 		if (code == runnable_reason_code::InShortCooldown) { ++info.num_cooldown; }
 	} else {
 		// assume runnable, but we still need to check to see if we have a match record already
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			++info.num_matched;
 			++info.num_skipped;
@@ -9403,6 +9424,17 @@ void DirtyPrioRecArray(int tid /*default -1 which means we were not called from 
 	}
 }
 
+prio_rec * findInPrioRec(const PROC_ID & jid)
+{
+	if (jid.cluster < 0 || jid.proc < 0) return nullptr;
+	for (auto & rec : PrioRec) {
+		if (rec.id.cluster == jid.cluster && rec.id.proc == jid.proc) {
+			return &rec;
+		}
+	}
+	return nullptr;
+}
+
 // runtime stats for count & time spent building the priorec array
 //
 schedd_runtime_probe BuildPrioRec_runtime;
@@ -9466,9 +9498,6 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  *   true if the array was rebuilt; false otherwise
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
-
-		// caller expects PrioRecAutoClusterRejected to be cleared
-	PrioRecAutoClusterRejected.clear();
 
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
@@ -9553,12 +9582,16 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * Find the job with the highest priority that matches with
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
  * any user; o.w. only get jobs for specified user.
+ * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
-					 char const * user)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
+
+	// indicate failure by setting proc to -1.  do this now
+	// so if we bail out early anywhere, we say we failed.
+	jobid.proc = -1;	
 
 	if (user && (strlen(user) == 0)) {
 		user = nullptr;
@@ -9567,6 +9600,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	// this is true only when we are claiming the local startd
 	// because the negotiator went missing for too long.
 	bool match_any_user = (user == nullptr) ? true : false;
+	// Stringify the user to make comparison faster
+	std::string user_str = user ? user : "";
 
 	ASSERT(my_match_ad);
 
@@ -9577,11 +9612,22 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		my_match_ad->LookupString(ATTR_AUTHENTICATED_IDENTITY, match_user);
 	}
 
-		// indicate failure by setting proc to -1.  do this now
-		// so if we bail out early anywhere, we say we failed.
-	jobid.proc = -1;	
+	bool consider_concurrency_limits = param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true);
+	std::string claimLimits, jobLimits;
+	YourStringNoCase recordedLimits; // so we can do case-insensitive compares
+	if (consider_concurrency_limits) {
+		my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS, claimLimits);
+		recordedLimits = YourStringNoCase(claimLimits);
+	}
 
-	// we want to use fully qualified username to do OwnerInfo lookup
+	double current_startd_rank = 0.0;
+	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
+
+	bool ocu = false;
+	my_match_ad->LookupBool("OCUClaim", ocu);
+
+	std::string remoteOwner;
+	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
 
 #ifdef USE_VANILLA_START
 	std::string job_attr("JOB");
@@ -9603,19 +9649,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	}
 #endif
 
+	// Iterate through the most recently constructed list of
+	// jobs, nicely pre-sorted first by submitter, then by job priority
+
+	std::set<int> PrioRecAutoClusterRejected;
 	bool rebuilt_prio_rec_array = BuildPrioRecArray();
-
-	bool ocu = false;
-	my_match_ad->LookupBool("OCUClaim", ocu);
-
-		// Iterate through the most recently constructed list of
-		// jobs, nicely pre-sorted first by submitter, then by job priority
-
-	// Stringify the user to make comparison faster
-	std::string user_str = user ? user : "";
-
-	std::string remoteOwner;
-	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
 
 	do {
 		auto first = PrioRec.begin();
@@ -9627,9 +9665,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		}
 
 		for (auto p = first; p != end; p++) {
-			if ( p->not_runnable || p->matched ) {
-					// This record has been disabled, because it is no longer
-					// runnable or already matched.
+			if ( p->not_runnable /* || p->matched */ ) {
+					// This record has been disabled, because it is no longer runnable
+					// (can't trust the matched flag here like we can in ::negotiate)
 				continue;
 			}
 
@@ -9638,7 +9676,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// This ad must have been deleted since we last built
 					// runnable job list.
 				continue;
-			}	
+			}
 
 			if (PrioRecAutoClusterRejected.contains(p->auto_cluster_id)) {
 					// We have already failed to match a job from this same
@@ -9646,20 +9684,33 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			if (scheduler.AlreadyMatched(job, job->Universe())) {
+			// the matched flag is used by Scheduler::negotiate, but is often stale when
+			// we get to this function, so we will force it to be correct here, but not trust it.
+			//bool matched_flag = p->matched;
+			p->matched = false;
+			if ( ! Runnable(job, runnable_code)) {
+				// TODO: special case for cooldown here??
+				p->not_runnable = runnable_code != runnable_reason_code::MaxRunningAlready;
+			} else if (scheduler.FindMrecByJobID(job->jid)) {
 				p->matched = true;
 				runnable_code = runnable_reason_code::AlreadyMatched;
 			}
-			else if ( ! Runnable(job, runnable_code)) {
-				// TODO: special case for cooldown here??
-				p->not_runnable = true;
+
+		#if 0 // code for debugging stale matched flag
+			if (matched_flag != p->matched) {
+				std::string jobid = (std::string)JOB_ID_KEY(p->id);
+				if (matched_flag) {
+					dprintf(D_MATCH, "BAD prio_rec matched=1 but AlreadyMatched=0 !! for job %d.%d (fixing)\n",
+						p->id.cluster, p->id.proc);
+				} else {
+					//dprintf(D_MATCH, "prio_rec matched flag %d disagrees with AlreadyMatched %d for job %d.%d\n",
+					//	matched_flag, p->matched, p->id.cluster, p->id.proc);
+				}
 			}
+		#endif
 
 			if (ocu) {
-				std::string jobOwner;
-				job->LookupString(ATTR_USER, jobOwner);
-
-				if (remoteOwner == jobOwner) {
+				if (remoteOwner == job->ownerinfo->Name()) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
@@ -9685,24 +9736,25 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// this job from being considered in any
 					// future iterations through the list.
 				const char * reason = getRunnableReason(runnable_code);
-				dprintf(D_FULLDEBUG, "record for job %d.%d skipped until PrioRec rebuild - %s\n",
+				int dpf_level = (runnable_code == runnable_reason_code::MaxRunningAlready) ? D_ZKM : D_FULLDEBUG;
+				dprintf(dpf_level, "record for job %d.%d skipped until PrioRec rebuild - %s\n",
 					job->jid.cluster, job->jid.proc, reason);
 
 					// Move along to the next job in the prio rec array
 				continue;
 			}
 
-			dprintf (D_FULLDEBUG, "Job %d.%d: is runnable\n", job->jid.cluster, job->jid.proc);
+			// if we have a match_user, and it doesn't match the job owner
+			// keep looking.
+			if ( ! match_user.empty() && match_user != job->ownerinfo->Name()) {
+				continue;
+			}
 
-			if (!match_user.empty()) {
-				// TODO Get the owner from the JobQueueJob object.
-				//   Need to be careful about whether UID_DOMAIN is included.
-				// fix as part of user_is_the_new_owner cleanup...
-				std::string job_user;
-				job->LookupString(ATTR_USER, job_user);
-				if (match_user != job_user) {
-					continue;
-				}
+			// Check whether the job can flock to the resource's pool
+			if (!scheduler.JobCanFlock(*job, pool)) {
+				// See note below about trusting auto-cluster membership
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
+				continue;
 			}
 
 				// Now check if the job and the claimed resource match.
@@ -9714,7 +9766,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// THIS IS A DANGEROUS ASSUMPTION - what if this job is no longer
 					// part of this autocluster?  TODO perhaps we should verify this
 					// job is still part of this autocluster here.
-				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					// Move along to the next job in the prio rec array
 				continue;
 			}
@@ -9743,10 +9795,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				// of the claim with lower RANK, but future versions
 				// very well may.)
 
-			double current_startd_rank = 0.0;
-			if( my_match_ad &&
-				my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
-			{
+			if (consider_startd_rank) {
 				double new_startd_rank = 0;
 				if( EvalFloat(ATTR_RANK, my_match_ad, job, new_startd_rank) )
 				{
@@ -9767,22 +9816,19 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				// jobs with a subset of the limits given to
 				// the current match to reuse it.
 
-			std::string jobLimits, recordedLimits;
-			if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
+			if (consider_concurrency_limits) {
+				jobLimits.clear();
 				EvalString(ATTR_CONCURRENCY_LIMITS, job, my_match_ad, jobLimits);
-				my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
-										  recordedLimits);
-				lower_case(jobLimits);
-				lower_case(recordedLimits);
 
-				if (jobLimits == recordedLimits) {
-					dprintf(D_FULLDEBUG,
-							"ConcurrencyLimits match ('%s'), can reuse claim\n",jobLimits.c_str());
+				if (recordedLimits == jobLimits) {
+					if ( ! recordedLimits.empty()) {
+						dprintf(D_FULLDEBUG, "ConcurrencyLimits match ('%s'), can reuse claim\n",jobLimits.c_str());
+					}
 				} else {
 					dprintf(D_FULLDEBUG,
-							"ConcurrencyLimits do not match ('%s' in job vs '%s' in startd), cannot "
-							"reuse claim\n",jobLimits.c_str(),recordedLimits.c_str());
-					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
+							"ConcurrencyLimits do not match ('%s' in job vs '%s' in startd), autocluster %d "
+							"cannot reuse claim\n",jobLimits.c_str(),recordedLimits.c_str(), p->auto_cluster_id);
+					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					continue;
 				}
 			}
@@ -9817,10 +9863,23 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			// Try to force a rebuild of the job list, since we
 			// are about to throw away a match.
 		rebuilt_prio_rec_array = BuildPrioRecArray(true /*no match found*/);
+		PrioRecAutoClusterRejected.clear();
 
 	} while( rebuilt_prio_rec_array );
 
 	// no more jobs to run anywhere.  nothing more to do.  failure.
+}
+
+int  MaxRunningPer(const JobQueueUserRec * urec)
+{
+	int max_running = INT_MAX;
+	urec->LookupInteger(ATTR_MAX_JOBS_RUNNING, max_running);
+	return max_running;
+}
+
+int  CurRunningPer(const JobQueueUserRec * urec)
+{
+	return urec->live.JobsRunning + urec->live.JobsSuspended;
 }
 
 bool Runnable(JobQueueJob *job, runnable_reason_code & reason)
@@ -9879,6 +9938,17 @@ bool Runnable(JobQueueJob *job, runnable_reason_code & reason)
 	if (cur < max)
 	{
 		reason = runnable_reason_code::IsRunnable;
+		if (CurRunningPer(job->ownerinfo) >= MaxRunningPer(job->ownerinfo))
+		{
+			reason = runnable_reason_code::MaxRunningAlready;
+			return false;
+		}
+
+		if (job->project && (CurRunningPer(job->project) >= MaxRunningPer(job->project)))
+		{
+			reason = runnable_reason_code::MaxRunningAlready;
+			return false;
+		}
 		return true;
 	}
 	
@@ -9898,6 +9968,7 @@ const char * getRunnableReason(runnable_reason_code code)
 		"not runnable (in cool-down > 5min)", //InLongCooldown,
 		"not runnable (in cool-down < 5min)", //InShortCooldown,
 		"not runnable (already matched)", //AlreadyMatched,
+		"not runnable (max jobs running already)", //MaxRunningAlready
 	};
 	ASSERT((size_t)code < COUNTOF(aReason));
 	return aReason[(size_t)code];

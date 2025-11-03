@@ -2,7 +2,7 @@ import sys
 import enum
 
 
-class QueryOpt(enum.IntEnum):
+class QueryOpt(enum.IntFlag):
     """
     An enumeration of the flags that may be sent to the *condor_schedd*
     during a query to alter its behavior.

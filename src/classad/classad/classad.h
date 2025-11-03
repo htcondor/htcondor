@@ -119,13 +119,13 @@ class ClassAd : public ExprTree
 		 *  InsertViaCache() is used to do the actual insertion, so the
 		 *    value is parsed into an ExprTree in old ClassAds syntax.
 		 */
-	bool Insert(const char *str);
-	bool Insert(const std::string &str);
+		bool Insert(const char *str);
+		bool Insert(const std::string &str);
 
 		/* Insert an attribute/value into the Classad.
 		 * The value is parsed into an ExprTree using old ClassAds syntax.
 		 */
-	bool AssignExpr(const std::string &name, const char *value);
+		bool AssignExpr(const std::string &name, const char *value);
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -137,7 +137,7 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool DeepInsert( ExprTree *scopeExpr, const std::string &attrName, 
+		bool DeepInsert( ExprTree *scopeExpr, const std::string &attrName,
 				ExprTree *expr );
 
 		/** Inserts an attribute into the ClassAd.  The integer value is
@@ -146,9 +146,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
 		*/
-		bool InsertAttr( const std::string &attrName,int value );
-		bool InsertAttr( const std::string &attrName,long value );
-		bool InsertAttr( const std::string &attrName,long long value );
+		bool InsertAttr( const std::string &attrName, int value );
+		bool InsertAttr( const std::string &attrName, long value );
+		bool InsertAttr( const std::string &attrName, long long value );
+
 		bool Assign(const std::string &name, int value)
 		{ return InsertAttr(name, value); }
 		bool Assign(const std::string &name, unsigned int value)
@@ -162,7 +163,7 @@ class ClassAd : public ExprTree
 		bool Assign(const std::string &name, unsigned long long value)
 		{ return InsertAttr(name, (long long)value); }
 
-		/** Inserts an attribute into a nested classad.  The scope expression 
+		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the attribute is
 		        inserted into this subclassad.  The integer value is
 				converted into a Literal expression, and then inserted into
@@ -185,7 +186,7 @@ class ClassAd : public ExprTree
 			@param value The real value of the attribute.
             @return true on success, false otherwise
 		*/
-		bool InsertAttr( const std::string &attrName,double value);
+		bool InsertAttr( const std::string &attrName, double value);
 		bool Assign(const std::string &name, float value)
 		{ return InsertAttr(name, (double)value); }
 		bool Assign(const std::string &name, double value)
@@ -270,9 +271,15 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The string attribute
 		*/
-		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				const std::string &value );
 		//@}
+
+
+		bool InsertAttr( const std::string & attrName, ExprTree * invalid ) = delete;
+		bool Assign( const std::string & name, ExprTree * invalid ) = delete;
+		bool DeepInsertAttr( ExprTree * scopeExpr, const std::string &attrName, ExprTree * invalid ) = delete;
+
 
 		/**@name Lookup Methods */
 		//@{
@@ -361,7 +368,7 @@ class ClassAd : public ExprTree
 				successfully removed, false otherwise.
 		*/
 		bool DeepDelete( ExprTree *scopeExpr, const std::string &attrName );
-	
+
 		/** Similar to Delete, but the expression is returned rather than 
 		  		deleted from the classad.
 			@param attrName The name of the attribute to be extricated.
