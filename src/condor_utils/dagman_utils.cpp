@@ -652,7 +652,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 				switch (cmd->GetCommand()) {
 					case DAG::CMD::CONFIG:
 						{
-							std::string conf = ((FileCommand*)cmd.get())->GetFile();
+							std::string conf = DAG::DERIVE_CMD<FileCommand>(cmd)->GetFile();
 							std::string error;
 							if (MakePathAbsolute(conf, error)) {
 								configFiles.insert(conf);
@@ -663,11 +663,11 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 						}
 						break;
 					case DAG::CMD::SET_JOB_ATTR:
-						attrLines.emplace_back(((SetAttrCommand*)cmd.get())->GetAttrLine());
+						attrLines.emplace_back(DAG::DERIVE_CMD<SetAttrCommand>(cmd)->GetAttrLine());
 						break;
 					case DAG::CMD::ENV:
 						{
-							const EnvCommand* env = (EnvCommand*)cmd.get();
+							const EnvCommand* env = DAG::DERIVE_CMD<EnvCommand>(cmd);
 							if (env->IsSet()) {
 								std::string kv_pairs = options.processOptionArg("AddToEnv", env->GetEnvVariables());
 								options.extend("AddToEnv", kv_pairs);

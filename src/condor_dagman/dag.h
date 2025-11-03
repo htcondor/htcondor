@@ -209,7 +209,7 @@ public:
 			return _nodes | std::views::filter(AllNodesMatcher(mask));
 		} else {
 			static std::vector<Node*> lone;
-			if ( ! lone.empty()) { lone.clear(); }
+			if (lone.size()) { lone.clear(); }
 			lone.emplace_back(FindNodeByName(name.c_str()));
 			return lone | std::views::filter(AllNodesMatcher(ALL_NODES_EVERYTHING));
 		}
