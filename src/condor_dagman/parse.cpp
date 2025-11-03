@@ -3463,9 +3463,7 @@ bool DagProcessor::ProcessScript(const ScriptCommand* cmd, Dag& dag, int dag_mun
 		ScriptType type = static_cast<ScriptType>((int)(cmd->GetType()));
 
 		std::unique_ptr<Script> script(new Script(type, cmd->GetScript()));
-		if ( ! script) {
-			EXCEPT("Out of memory!");
-		}
+		ASSERT(script);
 
 		if (cmd->HasDeferal()) {
 			const auto [status, defer] = cmd->GetDeferal();
