@@ -18,7 +18,7 @@
 
 . `dirname $0`/blah_load_config.sh
 
-out=`${slurm_binpath}squeue 2>&1`
+out=`$slurm_binpath/squeue 2>&1`
 
 if [ "$?" == "0" ]; then
     echo "0 No error"

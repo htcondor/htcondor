@@ -40,7 +40,7 @@ import os
 import time
 
 two_hundred_meg = bytearray(200 * 1024 * 1024)
-for i in range(10):
+for i in range(30):
     time.sleep(1)
 exit(0)
 """)
@@ -244,35 +244,6 @@ def hook_test_job(condor_with_hook, hook_test_job_hash):
     )
     return htj
 
-@action
-def retry_memory_job_hash(test_dir, path_to_python, test_script):
-    return {
-            "executable": path_to_python,
-            "arguments": test_script,
-            "universe": "vanilla",
-            "output": "output",
-            "error": "error",
-            "log": "retry_log",
-            "keep_claim_idle": "300",
-            "request_memory": "50mb",
-            "retry_request_memory": "400mb",
-            "request_cpus": "1",
-            "request_disk": "200mb"
-            }
-
-@action
-def retry_memory_job(condor, retry_memory_job_hash):
-    ctj = condor.submit(
-        {**retry_memory_job_hash}, count=1
-    )
-    assert ctj.wait(
-        condition=ClusterState.all_complete,
-        timeout=120,
-        verbose=True,
-        fail_condition=ClusterState.any_held,
-    )
-    return ctj
-
 # These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
@@ -332,6 +303,3 @@ class TestCgroupOOM:
 
     def test_cgroup_with_hook(self, hook_test_job):
         assert hook_test_job.state.all_held()
-
-    def test_cgroup_with_retry_memory(self, retry_memory_job):
-        assert retry_memory_job.state.all_complete()

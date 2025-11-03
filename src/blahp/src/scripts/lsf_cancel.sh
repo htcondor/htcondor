@@ -37,7 +37,7 @@ for job in  $@ ; do
 done
 for  job in  $@ ; do
         requested=`echo $job | sed 's/^.*\///'`
-        cmdout=`${lsf_binpath}bkill $requested 2>&1`
+        cmdout=`${lsf_binpath}/bkill $requested 2>&1`
         retcode=$?
         if [ "$retcode" == "0" ] ; then
                 if [ "$jnr" == "1" ]; then

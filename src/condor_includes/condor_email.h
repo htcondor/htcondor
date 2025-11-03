@@ -100,6 +100,9 @@ public:
 	void sendRemove( ClassAd* ad, const char* reason );
 	void sendStart( ClassAd* ad, const char* reason );
 	void sendRelease( ClassAd* ad, const char* reason );
+	void sendHoldAdmin( ClassAd* ad, const char* reason );
+	void sendRemoveAdmin( ClassAd* ad, const char* reason );
+	void sendReleaseAdmin( ClassAd* ad, const char* reason );
 
 private:
 		// // // // // //

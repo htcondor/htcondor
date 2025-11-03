@@ -997,7 +997,9 @@ extern "C"
 int exception_cleanup(int,int,const char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
-	starter->ExceptHandler(errmsg);
+	starter->jic->notifyStarterError(errmsg,true,0,0);
+	starter->RemoteShutdownFast(0);
+	starter->FinalCleanup(STARTER_EXIT_EXCEPTION);
 	return 0;
 }
 

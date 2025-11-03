@@ -984,23 +984,6 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
-	// update the job ad in the queue with some important final
-	// attributes so we know what happened to the job when using
-	// condor_history...
-	// If the schedd initiated the vacate, this will update the vacate
-	// attributes in our ad from the schedd's ad.
-	if( !updateJobInQueue(U_EVICT) ) {
-		// trouble!  TODO: should we do anything else?
-		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
-	}
-
-	// In case we got updated vacate attributes from the schedd, set our
-	// local variables from the job ad
-	jobAd->LookupString(ATTR_VACATE_REASON, job_ad_reason);
-	reason_str = job_ad_reason.c_str();
-	jobAd->LookupInteger(ATTR_VACATE_REASON_CODE, reason_code);
-	jobAd->LookupInteger(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
-
 	writeAdToEpoch(getJobAd());
 
 	if (exit_reason != JOB_RECONNECT_FAILED) {
@@ -1009,6 +992,14 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 
 		// write stuff to user log:
 		logEvictEvent(exit_reason, reason_str, reason_code, reason_subcode);
+	}
+
+		// update the job ad in the queue with some important final
+		// attributes so we know what happened to the job when using
+		// condor_history...
+	if( !updateJobInQueue(U_EVICT) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
 	exitAfterEvictingJob( exit_reason );

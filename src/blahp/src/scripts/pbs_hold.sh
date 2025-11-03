@@ -28,17 +28,17 @@
 
 requested=`echo $1 | sed 's/^.*\///'`
 requestedshort=`expr match "$requested" '\([0-9]*\)'`
-result=`${pbs_binpath}qstat | awk -v jobid="$requestedshort" '
+result=`${pbs_binpath}/qstat | awk -v jobid="$requestedshort" '
 $0 ~ jobid {
 	print $5
 }
 '`
 #currently only holding idle or waiting jobs is supported
 if [ "$2" ==  "1" ] ; then
-	${pbs_binpath}qhold $requested
+	${pbs_binpath}/qhold $requested
 else
 	if [ "$result" == "W" ] ; then
-		${pbs_binpath}qhold $requested
+		${pbs_binpath}/qhold $requested
 	else
 		echo "unsupported for this job status" >&2
 		exit 1

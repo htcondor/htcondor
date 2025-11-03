@@ -605,9 +605,6 @@ bool UserCheck(const JobQueueBase *ad, const JobQueueUserRec * test_owner);
 // when not_super is true, behave as if test_owner is not a superuser even if it is one.
 bool UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_owner, bool not_super=false);
 
-int  MaxRunningPer(const JobQueueUserRec * urec);
-int  CurRunningPer(const JobQueueUserRec * urec);
-
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray(int tid=-1);
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
@@ -858,12 +855,11 @@ enum class runnable_reason_code : int {
 	InLongCooldown,  // cooldown > 5min
 	InShortCooldown, // cooldown <= 5min
 	AlreadyMatched,
-	MaxRunningAlready,
 };
 //extern bool Runnable(JobQueueJob *job, const char *& reason);
 extern bool Runnable(JobQueueJob *job, runnable_reason_code & code);
 extern const char * getRunnableReason(runnable_reason_code code);
-extern prio_rec * findInPrioRec(const PROC_ID & jobid);
+
 
 extern class ForkWork schedd_forker;
 

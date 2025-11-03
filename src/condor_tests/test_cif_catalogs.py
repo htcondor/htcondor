@@ -232,7 +232,6 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
-            "SINGULARITY":              "/usr/bin/singularity",
         },
     ) as the_dagman_condor:
         yield the_dagman_condor
@@ -383,7 +382,6 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
-            "SINGULARITY":              "/usr/bin/singularity",
             "SINGULARITY_BIND_EXPR":    f'"{the_container_kill_dir.as_posix()}:{the_container_kill_dir.as_posix()}"',
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
@@ -511,7 +509,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert successful_staging_commands == count
 
     keyfile_touches = count_shadow_log_lines(
-        the_condor, "Producer elected"
+        the_condor, "Elected producer touch"
     )
     assert keyfile_touches == count
 

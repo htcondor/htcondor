@@ -11,7 +11,6 @@ from dataclasses import dataclass, fields, astuple
 from math import floor
 import time
 import threading
-import re
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 # from . import overview  # Import the overview module
 
@@ -53,16 +52,13 @@ def elem_text(elem: ET.Element, path: t.Union[None, str] = None) -> str:
 def is_hosted_fqdn(fqdn):
     """
     Return True if the FQDN is that of a hosted CE
-
-    Match domains that start with hosted-ce and end with any of:
-    - grid.uchicago.edu
-    - opensciencegrid.org
-    - osg-htc.org
-    Or domains that end with:
-    - svc.opensciencegrid.org
-    - svc.osg-htc.org
     """
-    return bool(re.match(r"^hosted-ce.*\.(grid\.uchicago\.edu|opensciencegrid\.org|osg-htc\.org)|.*\.svc\.(opensciencegrid|osg-htc)\.org$", fqdn))
+    return (
+        fqdn.startswith("hosted-ce")
+        and (
+            fqdn.endswith(".grid.uchicago.edu") or fqdn.endswith(".opensciencegrid.org")
+        )
+    ) or fqdn.endswith(".svc.opensciencegrid.org")
 
 @dataclass
 class ResourceInfo:
@@ -110,7 +106,7 @@ def ce_info_from_ganglia(resource_info_by_fqdn):
     import pandas as pd
     host = current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
     r = 'month'
-    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=(svc.osg-htc.org|' + host + ')&mreg[]=%5E' + 'CpusInUse' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'CpusInUse' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
     
     # Rename 'Timestamp' column to 'Date' for clarity and set it as the index
     df.rename({'Timestamp':'Date'}, axis='columns', inplace=True)

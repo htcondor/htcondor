@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 196> makeCommandTable() {
+std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -322,8 +322,13 @@ std::array<std::pair<int, const char *>, 196> makeCommandTable() {
 		{RECYCLE_SHADOW, "RECYCLE_SHADOW"},
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 		{CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS"},
+		// These two commands originally used the same command int by mistake.
+		// In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
+		// List DRAIN_JOBS first, so that lower_bound finds it first
 #define DRAIN_JOBS (SCHED_VERS+112)
 		{DRAIN_JOBS, "DRAIN_JOBS"},
+#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
+		{GET_PRIORITY_ROLLUP_OLD, "GET_PRIORITY_ROLLUP_OLD"},
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
 		{CANCEL_DRAIN_JOBS, "CANCEL_DRAIN_JOBS"},
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator

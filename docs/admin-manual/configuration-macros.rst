@@ -4507,8 +4507,7 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     container.
 
 :macro-def:`DOCKER_PERFORM_TEST[STARTD]`
-    When the *condor_startd* starts up, and on every
-    :tool:`condor_reconfig`, it runs a simple Docker
+    When the *condor_startd* starts up, it runs a simple Docker
     container to verify that Docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
@@ -5119,6 +5118,16 @@ These macros control the *condor_schedd*.
     and the *condor_schedd* no longer pays for the resource (in terms of
     user priority in the system). The macro is defined in terms of seconds
     and defaults to 300, which is 5 minutes.
+
+:macro-def:`STARTD_SENDS_ALIVES[SCHEDD]`
+    Note: This setting is deprecated, and may go away in a future
+    version of HTCondor. This setting is mainly useful when running
+    mixing very old *condor_schedd* daemons with newer pools. A boolean
+    value that defaults to ``True``, causing keep alive messages to be
+    sent from the *condor_startd* to the *condor_schedd* by TCP during
+    a claim. When ``False``, the *condor_schedd* daemon sends keep
+    alive signals to the *condor_startd*, reversing the direction.
+    This variable is only used by the *condor_schedd* daemon.
 
 :macro-def:`REQUEST_CLAIM_TIMEOUT[SCHEDD]`
     This macro sets the time (in seconds) that the *condor_schedd* will
@@ -6010,13 +6019,6 @@ These macros control the *condor_schedd*.
     permissions as the main :macro:`SPOOL` directory. Care must be taken that
     the value won't change during the lifetime of each job.
 
-:macro-def:`UNUSED_CLAIM_TIMEOUT[SCHEDD]`
-    An integer value that is only used by the dedicated scheduler when
-    scheduling parallel universe jobs. It specifies the number of
-    seconds the schedd will keep a claimed slot, even when idle.  Zero
-    seconds means the schedd will keep a claim for an unbounded amount
-    of time.  Default is 300 seconds.
-
 :macro-def:`<OAuth2Service>_CLIENT_ID[SCHEDD]`
     The client ID string for an OAuth2 service named ``<OAuth2Service>``.
     The client ID is passed on to the *condor_credmon_oauth*
@@ -6886,7 +6888,7 @@ condor_submit Configuration File Entries
     submit command. If the job defines the value, then that value takes
     precedence. If not set, then the default is the maximum of 1 GB
     and 125% of the transfer input size, which is the expression
-    :ad-expr:`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024`
+    ``MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024``.
 
 :macro-def:`JOB_DEFAULT_REQUESTCPUS[SUBMIT]`
     The number of CPUs to acquire for a job, if the job does not specify
@@ -8274,15 +8276,6 @@ These macros affect the *condor_credd* and its credmon plugin.
 :macro-def:`LOCAL_CREDMON_TOKEN_VERSION[CREDD]`
     A string valued macro that defines what the local issuer should put into
     the "ver" field of the token.  Defaults to ``scitoken:2.0``.
-
-:macro-def:`LOCAL_CREDMON_PRIVATE_KEY_ALGORITHM[CREDD]`
-    A string valued macro that defines which crypt algorithm the local credmon
-    should use.  Defaults to ES256.  Supported values are ES256, RS256.
-
-:macro-def:`LOCAL_CREDMON_AUTHZ_TEMPLATE_EXPR[CREDD]`
-    A classad expression evaluated in the context of a ClassAd containing the 
-    submitter's system username in the ``Username`` attribute.  This should
-    evaluate to a classad string type that contains the authorization template.
 
 :macro-def:`SEC_CREDENTIAL_DIRECTORY[CREDD]`
     A string valued macro that defines a path directory where

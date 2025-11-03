@@ -128,14 +128,6 @@ Machine ClassAd Attributes
 :classad-attribute-def:`DetectedCpus`
     Set by the value of configuration variable ``DETECTED_CORES``
 
-:classad-attribute-def:`DetectedDisk`
-    Total size of the disk volumes in KiB that are used for :macro:`EXECUTE`. 
-    In the `StartD` ClassAd this will be the sum of all volumes used for any slot :macro:`EXECUTE`.
-    In the slot ClassAd this will be the size of the volume used by that slot.
-    if :macro:`DISK` is configured, then this attribute, as well as :ad-attr:`TotalDisk` will
-    have the value given by :macro:`DISK` regardless of the size of the volume.
-    See :ad-attr:`TotalDisk`.
-
 :classad-attribute-def:`DetectedMemory`
     Set by the value of configuration variable :macro:`DETECTED_MEMORY`
     Specified in MiB.
@@ -1024,13 +1016,10 @@ Machine ClassAd Attributes
     contrast with :ad-attr:`Cpus`, which is the number of CPUs in the slot.
 
 :classad-attribute-def:`TotalDisk`
-    The quantity of disk space in KiB available for provisioning slots across the machine (not
-    the slot) on the disk volume that holds the :macro:`EXECUTE` directory.
-    For partitionable slots, where there is one partitionable
+    The quantity of disk space in KiB available across the machine (not
+    the slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute :ad-attr:`TotalSlotDisk`.  In the StartD ClassAd, when more than
-    a single disk volume is used for :macro:`EXECUTE`, this will be the sum
-    of `TotalDisk` across all disk volumes.
+    attribute :ad-attr:`TotalSlotDisk`.
 
 :classad-attribute-def:`TotalLoadAvg`
     A floating point number representing the current load average summed

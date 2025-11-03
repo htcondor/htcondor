@@ -62,7 +62,7 @@ public:
 	 * @param dest: A destination directory
 	 * @returns: 0 on success, -1 if the directories were not mappable.
 	 */
-	int AddMapping(const std::string& source, const std::string& dest);
+	int AddMapping(std::string source, std::string dest);
 
 	/**
 	 * Make /dev/shm a private mount

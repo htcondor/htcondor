@@ -252,7 +252,7 @@ fi
 now=`date +%s`
 let now=$now-1
 
-full_result=$(${condor_binpath}condor_submit $target $submit_file)
+full_result=$($condor_binpath/condor_submit $target $submit_file)
 return_code=$?
 
 if [ "$return_code" == "0" ] ; then

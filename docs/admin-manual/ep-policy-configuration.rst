@@ -201,26 +201,20 @@ Define slot types.
         SLOT_TYPE_1 = mem=50%
 
         SLOT_TYPE_1 = mem=auto
-        NUM_SLOTS_TYPE_1 = 2
 
-    Amounts of disk space and swap space are detected at startup and
-    may be different each time that the EP starts up. The the EP will
-    use the detected free space as the amount that can be provisioned
-    to the slots.  So for disk, it is may be better to specify a percentage
-    or fraction of the available space that is allocated to each slot, instead of specifying absolute
+    Amounts of disk space and swap space are dynamic, as they change
+    over time. For these, specify a percentage or fraction of the total
+    value that is allocated to each slot, instead of specifying absolute
     values. As the total values of these resources change on the
     machine, each slot will take its fraction of the total and report
-    that as its available amount.  Prior to HTCondor version 25.4,
-    Disk could only be provisioned as a fraction or percentage.
+    that as its available amount.
 
     The disk space allocated to each slot is taken from the disk
     partition containing the slot's :macro:`EXECUTE` or 
-    :macro:`SLOT<N>_EXECUTE` directory unless :macro:`STARTD_ENFORCE_DISK_LIMITS`
-    is configured. If every slot is in a
+    :macro:`SLOT<N>_EXECUTE` directory. If every slot is in a
     different partition, then each one may be defined with up to
     100% for its disk share. If some slots are in the same partition,
-    then their total is not allowed to exceed 100% of the free
-    space on that partition.
+    then their total is not allowed to exceed 100%.
 
     The four predefined attribute names are case insensitive when
     defining slot types. The first letter of the attribute name
@@ -232,11 +226,6 @@ Define slot types.
     -  disk, Disk, D, d
     -  swap, SWAP, S, s, VirtualMemory, V, v
 
-    Swap is treated as a resouce for backward compatibility, but in
-    modern computers, Swap should be be disabled for jobs and so
-    there is no need to explicitly provision the Swap resource to slots.
-    On Windows, provisioning Swap has no effect.
-
     As an example, consider a machine with 4 cores and 256 Mbytes of
     RAM. Here are valid example slot type definitions. Types 1-3 are all
     equivalent to each other, as are types 4-6. Note that in a real
@@ -247,13 +236,13 @@ Define slot types.
 
     .. code-block:: condor-config
 
-          SLOT_TYPE_1 = cpus=2, ram=128, disk=1/2
+          SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
 
-          SLOT_TYPE_2 = cpus=1/2, memory=128, disk=50%
+          SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
 
-          SLOT_TYPE_3 = c=1/2, m=50%, disk=1/2
+          SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
 
-          SLOT_TYPE_4 = c=25%, m=64, d=25%
+          SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
 
           SLOT_TYPE_5 = 25%
 
@@ -273,15 +262,15 @@ Define slot types.
 
     .. code-block:: condor-config
 
-        SLOT_TYPE_1 = cpus=1, ram=1/2
+        SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
 
         SLOT_TYPE_1 = cpus=1, disk=auto, 50%
 
     Note that it is possible to set the configuration variables such
     that they specify an impossible configuration. If this occurs, the
-    *condor_startd* daemon will create as many slots as it can without
-    running out of resources, and report a summary of slots that it could
-    not create to the collector in its daemon ad.
+    *condor_startd* daemon fails after writing a message to its log
+    attempting to indicate the configuration requirements that it could
+    not implement.
 
     In addition to the standard resources of CPUs, memory, disk, and
     swap, the administrator may also define custom resources on a

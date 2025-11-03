@@ -67,7 +67,7 @@ static std::string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 	entryHashName[0] = '\0';
 	char letter[3];
 	for (int i = 0; i < HASHNAMELEN - 1; ++i) {
-		snprintf(letter, sizeof(letter), "%x", hashResult[i]);
+		sprintf(letter, "%x", hashResult[i]);
 		strcat(entryHashName, letter);
 	}
 	delete [] hashSource;

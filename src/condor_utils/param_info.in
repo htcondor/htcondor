@@ -1863,6 +1863,17 @@ type=int
 tags=startd
 description=Rate at which the Startd sends updates to the Collector
 
+[STARTD_SENDS_ALIVES]
+default=peer
+type=string
+tags=startd,command
+
+[STARTER_HANDLES_ALIVES]
+default=true
+type=bool
+description=Startd should only send alives when slot idle
+tags=schedd,claim
+
 [VM_GAHP_CONFIG]
 default=
 type=string
@@ -2786,7 +2797,7 @@ type=string
 tags=starter
 
 [STARTER_NESTED_SCRATCH]
-default=true
+default=false
 type=bool
 tags=starter
 
@@ -3209,7 +3220,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -6106,11 +6117,6 @@ type=path
 description=Should countainer images be treated as common files by default?
 type=bool
 default=false
-
-[CONTAINER_REGEX_COMMON_BY_DEFAULT]
-description=Container images matching this regex  will be treated as common files by default.
-type=string
-default=
 
 ######
 ## add metaknobs below this banner

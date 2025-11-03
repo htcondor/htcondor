@@ -56,7 +56,7 @@ lsf_base_path=`cat $conffile|grep LSB_SHAREDIR| awk -F"=" '{ print $2 }'`
 lsf_confdir=`cat $conffile|grep LSF_CONFDIR| awk -F"=" '{ print $2 }'`
 [ -f ${lsf_confdir}/profile.lsf ] && . ${lsf_confdir}/profile.lsf
 
-lsf_clustername=`${lsf_binpath}lsid | grep 'My cluster name is'|awk -F" " '{ print $5 }'`
+lsf_clustername=`${lsf_binpath}/lsid | grep 'My cluster name is'|awk -F" " '{ print $5 }'`
 logpath=$lsf_base_path/$lsf_clustername/logdir
 
 logfilename=lsb.events
@@ -207,7 +207,7 @@ sleep 1
 ###############################################################
 
 datenow=`date +%Y%m%d`
-bsub_out=`cd && ${lsf_binpath}bsub -o /dev/null -e /dev/null -i /dev/null < $bls_tmp_file`
+bsub_out=`cd && ${lsf_binpath}/bsub -o /dev/null -e /dev/null -i /dev/null < $bls_tmp_file`
 retcode=$?
 if [ "$retcode" != "0" ] ; then
         rm -f $bls_tmp_file
@@ -251,7 +251,7 @@ while [ "x$logfile" == "x" -a "x$jobID_log" == "x" ]; do
  fi
  
  if [ "$cliretcode" == "1" -a "x$lsf_fallback" == "xno" ] ; then
-   ${lsf_binpath}bkill $jobID
+   ${lsf_binpath}/bkill $jobID
    echo "Error: not able to talk with logparser on ${lsf_BLPserver}:${lsf_BLPport}" >&2
    echo Error # for the sake of waiting fgets in blahpd
    rm -f $bls_tmp_file
@@ -269,7 +269,7 @@ while [ "x$logfile" == "x" -a "x$jobID_log" == "x" ]; do
  fi
  
  if (( log_check_retry_count++ >= 12 )); then
-     ${lsf_binpath}bkill $jobID
+     ${lsf_binpath}/bkill $jobID
      echo "Error: job not found in logs" >&2
      echo Error # for the sake of waiting fgets in blahpd
      rm -f $bls_tmp_file

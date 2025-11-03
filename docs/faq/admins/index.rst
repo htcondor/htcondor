@@ -5,11 +5,9 @@ Answers for Admins
     :maxdepth: 1
     :glob:
 
-    submit-requirements
     breadth-first
     slot-attrs
     interactive-containers-x11
-    collector-tree
 
 Which platforms does HTCondor support?
 --------------------------------------

@@ -7,29 +7,9 @@
 #include <filesystem>
 #include <ctime>
 #include "JobRecord.h"
+#include "FileSet.h"
 
 namespace fs = std::filesystem;
-
-// TODO: Move/Improve file discovery and tracking code
-
-struct FileSet {
-   fs::path rootFilePath{}; // Full archive file (path/name) to identify archives in a directory
-   std::unordered_map<int, FileInfo> fileMap; // The int here is for FileId
-   std::time_t lastStatusTime{0};
-   long lastFileReadId{-1};
-
-   fs::path GetDirectory() const {
-      return rootFilePath.parent_path();
-   }
-
-   std::string GetFileName() const {
-      return rootFilePath.stem().string();
-   }
-
-   void Init(const std::string& path) {
-      rootFilePath = path;
-   }
-};
 
 struct ArchiveChange {
     // If a rotation was detected:

@@ -33,6 +33,7 @@ struct CredData;
 }
 
 	int REMOTE_CONDOR_register_job_info(const ClassAd& ad);
+	int REMOTE_CONDOR_register_mpi_master_info( ClassAd *ad );
 	int REMOTE_CONDOR_register_starter_info(const ClassAd& ad );
 	int REMOTE_CONDOR_get_job_info( ClassAd *ad );
 	int REMOTE_CONDOR_get_user_info( ClassAd *ad );
@@ -50,6 +51,7 @@ struct CredData;
 	int REMOTE_CONDOR_rmdir( char *path );
 	int REMOTE_CONDOR_fsync( int fd );
 	int REMOTE_CONDOR_get_file_info_new( char *path, char *&url );
+	int REMOTE_CONDOR_ulog_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... ) CHECK_PRINTF_FORMAT(3,4);
 	int REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str );
 	int REMOTE_CONDOR_ulog(const ClassAd& ad);
 	int REMOTE_CONDOR_get_job_attr( char *name, char *&expr );

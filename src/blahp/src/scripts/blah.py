@@ -37,8 +37,13 @@ class BlahConfigParser(RawConfigParser, object):
                 config += f.read() + "\n"
         vfile = StringIO('[%s]\n%s' % (self.header, config))
 
-        super(BlahConfigParser, self).__init__(defaults=defaults, strict=False)
-
+        # In Python 2, there is no 'strict' option, but it behaves like
+        # strict=False.
+        if sys.version_info[0] == 2:
+            super(BlahConfigParser, self).__init__(defaults=defaults)
+        else:
+            super(BlahConfigParser, self).__init__(defaults=defaults, strict=False)
+        # TODO: readfp() is replaced by read_file() in Python 3.2+
         self.read_file(vfile)
 
     def items(self):

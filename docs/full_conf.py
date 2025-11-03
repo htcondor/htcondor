@@ -23,7 +23,7 @@ import re
 master_doc = 'index'
 
 # Patterns/files to exclude from build source
-exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store']
+exclude_patterns = ['_build', 'extensions', 'utils']
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -674,8 +674,6 @@ CONFIG_VALUE_SHARED = [
         r"\b(required|optional|never|preferred|password|fs|kerberos)\b",
         token.Keyword,
     ),
-    # Highlight macro dereferencing
-    (r"\$\(([^)]+)\)", token.Name.Variable.Magic),
     # catch-all
     (r".|\s", token.Text),
 ]
@@ -721,7 +719,7 @@ class CondorConfigLexer(lexer.RegexLexer):
                 "multi-line",
             ),
             (
-                r"([\$\(\)\w\.]+)( *)(=)( *)",
+                r"([\w\.]+)( *)(=)( *)",
                 lexer.bygroups(
                     token.Name.Builtin, token.Text, token.Operator, token.Text,
                 ),

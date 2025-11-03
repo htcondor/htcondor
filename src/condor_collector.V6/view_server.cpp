@@ -117,10 +117,10 @@ void ViewServer::Init()
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
-			DataSet[i][j].AccData=new AccHash;
+			DataSet[i][j].AccData=new AccHash(hashFunction);
 		}
 	}
-	GroupHash = new AccHash;
+	GroupHash = new AccHash(hashFunction);
 	FileHash = new HashTable< std::string, int >(hashFunction);
 	OffsetsArray = new std::vector< ExtOffArray*>;
 	TimesArray = new std::vector<ExtIntArray*>;
@@ -707,6 +707,8 @@ time_t ViewServer::ReadTimeChkName(const std::string &line, const std::string& N
 
 void ViewServer::WriteHistory(int /* tid */)
 {
+	std::string Key;
+	GeneralRecord* GenRec;
 	FILE* DataFile;
 	struct stat statbuf;
 	std::string outline;
@@ -753,7 +755,8 @@ void ViewServer::WriteHistory(int /* tid */)
 
 			// Iterate through accumulated values
 
-			for (auto& [Key, GenRec]: *DataSet[i][j].AccData) {
+			DataSet[i][j].AccData->startIterations();
+			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
 				formatstr(outline,DataFormat[i].c_str(),TimeStamp,Key.c_str(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7], GenRec->Data[8]);
 				delete GenRec;
 				fputs(outline.c_str(), DataFile);
@@ -877,10 +880,13 @@ int ViewServer::SubmittorTotalFunc(void)
 {
 	// Add to Accumulated Data
 
+	std::string GroupName;
+	GeneralRecord* CurValue;
 	GeneralRecord* AccValue;
 	int NumSamples;
 
-	for (const auto& [GroupName, CurValue]: *GroupHash) {
+	GroupHash->startIterations();
+	while(GroupHash->iterate(GroupName,CurValue)) {
 		for (int j=0; j<HistoryLevels; j++) {
 			AccValue=GetAccData(DataSet[SubmittorGroupsData][j].AccData, GroupName);
 			NumSamples=DataSet[SubmittorGroupsData][j].NumSamples;
@@ -1003,10 +1009,13 @@ int ViewServer::StartdTotalFunc(void)
 {
 	// Add to Accumulated Data
 
+	std::string GroupName;
+	GeneralRecord* CurValue;
 	GeneralRecord* AccValue;
 	int NumSamples;
 
-	for (const auto& [GroupName, CurValue]: *GroupHash) {
+	GroupHash->startIterations();
+	while(GroupHash->iterate(GroupName,CurValue)) {
 		for (int j=0; j<HistoryLevels; j++) {
 			AccValue=GetAccData(DataSet[GroupsData][j].AccData, GroupName);
 			NumSamples=DataSet[GroupsData][j].NumSamples;
@@ -1068,22 +1077,23 @@ int ViewServer::CkptScanFunc(CollectorRecord* record)
 GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const std::string& Key)
 {
 	GeneralRecord* GenRec = NULL;
+	int rval;
 
-	auto itr = AccData->find(Key);
-	if (itr == AccData->end() || itr->second == nullptr) {
-		if ( itr != AccData->end() ) {
+	rval = AccData->lookup( Key, GenRec );
+	if ( ( rval < 0 ) || ( GenRec == NULL ) ) {
+		if ( rval >= 0 ) {
 			dprintf( D_ALWAYS,
-					 "Hash lookup %s, but NULL record!\n",
-					 Key.c_str() );
+					 "Hash %p lookup returned %d, but NULL record!\n",
+					 AccData, rval );
 			EXCEPT( "Bad lookup" );
 		}
 		GenRec=new GeneralRecord;
 		if ( GenRec == NULL ) {
 			EXCEPT( "Failed to allocate a GeneralRecord" );
 		}
-		AccData->emplace(Key, GenRec);
-	} else {
-		GenRec = itr->second;
+		if ( AccData->insert(Key,GenRec) < 0 ) {
+			EXCEPT( "Insert failed: Key=%s", Key.c_str() );
+		}
 	}
 	return GenRec;
 }

@@ -1159,12 +1159,6 @@ FileTransfer::DownloadFiles(bool blocking)
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles(%s)\n", blocking?"blocking":"");
 
-	// Set this now to let the caller distinguish between a transfer that
-	// failed to launch and a blocking transfer that launched and
-	// completed in failure. In the latter case, xfer_status will be set
-	// to XFER_STATUS_DONE before we return.
-	Info.xfer_status = XFER_STATUS_UNKNOWN;
-
 	if (ActiveTransferTid >= 0) {
 		EXCEPT("FileTransfer::DownloadFiles called during active transfer!");
 	}
@@ -1509,12 +1503,6 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	ReliSock sock;
 	ReliSock *sock_to_use;
 	FileTransferInfo & Info = r_Info;
-
-	// Set this now to let the caller distinguish between a transfer that
-	// failed to launch and a blocking transfer that launched and
-	// completed in failure. In the latter case, xfer_status will be set
-	// to XFER_STATUS_DONE before we return.
-	Info.xfer_status = XFER_STATUS_UNKNOWN;
 
 	dprintf(D_FULLDEBUG,
 		"entering FileTransfer::UploadFiles (%sfinal_transfer=%d)\n",
@@ -6228,15 +6216,6 @@ FileTransfer::Continue() const
 
 
 void
-FileTransfer::addInputFile( const char* filename )
-{
-	if( !file_contains(InputFiles, filename) ) {
-		InputFiles.emplace_back(filename);
-	}
-}
-
-
-void
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( !file_contains(OutputFiles, filename) ) {
@@ -8480,7 +8459,7 @@ FileTransfer::addSandboxRelativePath(
 }
 
 void
-FileTransfer::addCheckpointFileEx(
+FileTransfer::addCheckpointFile(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {
@@ -8488,7 +8467,7 @@ FileTransfer::addCheckpointFileEx(
 }
 
 void
-FileTransfer::addInputFileEx(
+FileTransfer::addInputFile(
   const std::string & source, const std::string & destination,
   std::set< std::string > & pathsAlreadyPreserved
 ) {

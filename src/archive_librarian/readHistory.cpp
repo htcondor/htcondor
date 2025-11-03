@@ -17,10 +17,6 @@
  * - long readEpochIncremental(const char* file, std::vector<EpochRecord>& out, FileInfo& fileInfoOut)
  */
 
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-
 #include <string>
 #include <vector>
 #include <fstream>
@@ -33,7 +29,11 @@
 #include <stdlib.h>
 #include "JobRecord.h"  
 #include "archiveMonitor.h"
+extern "C" {
+    #include "sha256.h"
+}
 
+#define SHA256_BLOCK_SIZE 32
 
 // -------------------------
 // Lightweight backward file reader – optimized with chunked reads
@@ -124,7 +124,24 @@ private:
 // -------------------------
 static const std::regex offsetRegex(
     R"(\*\*\* Offset = (\d+) ClusterId = (\d+) ProcId = (\d+) Owner = \"([^\"]+)\" CompletionDate = ([-]?\d+))");
+static const std::regex epochHistoryRegex(
+    R"(\*\*\*\s+(\w+)\s+ClusterId=(\d+)\s+ProcId=(\d+)\s+RunInstanceId=(\d+)\s+Owner=\"([^\"]+)\"\s+CurrentTime=(\d+))"
+);
 
+
+bool parseEpochHistoryBanner(const std::string &line, EpochRecord &out) {
+    std::smatch m;
+    if (std::regex_search(line, m, epochHistoryRegex)) {
+        out.RecordType         = m[1];
+        out.ClusterId    = std::stoi(m[2]);
+        out.ProcId       = std::stoi(m[3]);
+        out.RunInstanceId = std::stoi(m[4]);
+        out.Owner        = m[5];
+        out.CurrentTime  = std::stol(m[6]);
+        return true;
+    }
+    return false;
+}
 
 bool parseBanner(BannerInfo &out, const std::string &line) {
     std::smatch m;
@@ -136,9 +153,9 @@ bool parseBanner(BannerInfo &out, const std::string &line) {
         out.completionDate = std::stol(m[5]);
         return true;
     } else {
-        dprintf(D_ERROR, "Failed to match banner line: %s\n", line.c_str());
-        return false;
-    }
+    std::cerr << "[WARN] Failed to match banner line: " << line << "\n";
+    return false;
+    }   
 }
 
 // Check whether line starts with *** to find offset banners
@@ -150,6 +167,7 @@ static inline bool starts_with(const char *str, const char *prefix) {
 * A helper function to populate a JobRecord struct and put it into the output vector
 */
 void collectJob(
+    const std::vector<std::string> &exprs, // right now unused because we're looking purely at the banner info
     const BannerInfo &banner,
     std::vector<JobRecord> &jobs,
     long fileId) {
@@ -169,11 +187,11 @@ void collectJob(
 /**
  * A helper function to make sure we're looking at the file we expect
 */
-bool verifyFileMatch(const std::string& historyFilePath, FileInfo &fileInfo) {
+bool verifyFileMatch(const char *historyFilePath, FileInfo &fileInfo) {
     auto [inodeMatch, hashMatch] = ArchiveMonitor::checkFileEquals(historyFilePath, fileInfo);
 
-    if(!inodeMatch) dprintf(D_FULLDEBUG, "Inode doesn't match expected for file at %s\n", historyFilePath.c_str());
-    if(!hashMatch) dprintf(D_FULLDEBUG, "Hash doesn't match expected for file at %s\n", historyFilePath.c_str());
+    if(!inodeMatch) printf("Inode doesn't match expected for file at %s \n", historyFilePath);
+    if(!hashMatch) printf("Hash doesn't match expected for file at %s \n", historyFilePath);
 
     return inodeMatch && hashMatch;
 }
@@ -187,16 +205,16 @@ bool verifyFileMatch(const std::string& historyFilePath, FileInfo &fileInfo) {
  * @param fileInfo File metadata (last offset, FileId).
  * @return Last read offset or error code.
  */
-long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobRecord> &out, FileInfo &fileInfo) {
+long readHistoryIncremental(const char *historyFilePath, std::vector<JobRecord> &out, FileInfo &fileInfo) {
     BackwardFileReader reader(historyFilePath);
     if (reader.LastError()) {
-        dprintf(D_ERROR, "Error opening history file: %s\n", historyFilePath.c_str());
+        std::cerr << "Error opening history file: " << historyFilePath << "\n";
         return 0;
     }
 
     // Verify that filepath still points to a file w/ all the expected FileInfo
     if (!verifyFileMatch(historyFilePath, fileInfo)) {
-        dprintf(D_STATUS, "File has changed or rotated.\n");
+        std::cerr << "File has changed or rotated.\n";
         return -1;
     }
 
@@ -207,6 +225,7 @@ long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobR
     bool done = false;
     long lastOffset = -1;
     long stopOffset = fileInfo.LastOffset;
+    std::vector<std::string> exprs; // TODO: Will hold parsed info from the body of JobAd, right now its empty
 
     bool firstLineRead = false;  // Flag to check if it's the first line being read
 
@@ -237,7 +256,8 @@ long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobR
                 if (std::regex_search(lines.front(), match, offsetRegex)) {
                     lastOffset = std::stol(match[1].str());  // Store the offset number
                 } else {
-                    dprintf(D_ERROR, "Failed to extract offset from the first line: %s\n", lines.front().c_str());
+                    std::cerr << "[WARN] Failed to extract offset from the first line." << std::endl;
+                    std::cerr << "Line is: " << lines.front() <<std::endl;
                 }
 
                 firstLineRead = true;  // Set the flag to prevent further checks 
@@ -245,7 +265,7 @@ long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobR
 
         if(lastOffset == stopOffset) {
             done = true; //We've already processed up to this point
-            dprintf(D_FULLDEBUG, "No new entries have been added to this file.\n");
+            std::cerr << "No new entries have been added to this file." << std::endl;
             continue;
         }
 
@@ -260,12 +280,16 @@ long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobR
                     if (stopOffset && banner.offset == stopOffset) {
                         done = true;
                     } else {
-                        collectJob(banner, out, fileInfo.FileId);
+                        collectJob(exprs, banner, out, fileInfo.FileId);
                     }
                 } else {
-                    dprintf(D_ERROR, "Failed to parse banner: %s\n", l.c_str());
+                    std::cerr << "[WARN] Failed to parse banner: " << l << "\n";
                 }
+                exprs.clear(); // Clear exprs after processing the banner
+            } else {
+                exprs.push_back(l); // Fill exprs with non-banner lines
             }
+
         }
 
         lines.clear();  // Clear lines for next chunk
@@ -274,3 +298,104 @@ long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobR
     return lastOffset;
 }
 
+
+/**
+ * Reads new epoch records from the epoch history file incrementally (forward).
+ * Finds the last banner line and reads from last offset to there.
+ * Currently only records Spawn ads from the epoch file 
+ *
+ * @param historyFilePath Path to the epoch history file.
+ * @param out Vector to store parsed EpochRecords.
+ * @param fileInfo File metadata (last offset, FileId).
+ * @return Last read offset or error code.
+*/
+long readEpochIncremental(const char *historyFilePath, std::vector<EpochRecord> &out, FileInfo &fileInfo) {
+    std::ifstream file(historyFilePath, std::ios::binary | std::ios::ate);
+    if (!file) {
+        std::cerr << "[ERROR] Failed to open file: " << historyFilePath << "\n";
+        return -1;
+    }
+
+    if (!verifyFileMatch(historyFilePath, fileInfo)) {
+        std::cerr << "[ERROR] File verification failed (rotated or modified).\n";
+        return -1;
+    }
+
+    long fileSize = file.tellg();
+    if (fileSize <= 0) {
+        file.close();
+        return 0;
+    }
+
+    // Step 1: Scan backward to find the last "***" banner
+    long lastBannerOffset = -1;
+    const long scanWindow = 4096;
+    std::string buffer;
+    std::string remainder;
+    long cursor = fileSize;
+
+    while (cursor > 0 && lastBannerOffset == -1) {
+        long readSize = std::min(scanWindow, cursor);
+        cursor -= readSize;
+        file.seekg(cursor);
+        std::string chunk(readSize, '\0');
+        file.read(&chunk[0], readSize);
+        chunk += remainder;
+
+        std::istringstream stream(chunk);
+        std::string line;
+        long localOffset = cursor;
+
+        while (std::getline(stream, line)) {
+            localOffset += line.size() + 1;
+            if (starts_with(line.c_str(), "***")) {
+                lastBannerOffset = localOffset;
+            }
+        }
+
+        remainder = chunk.substr(chunk.rfind('\n') + 1);
+    }
+
+    if (lastBannerOffset == -1 || lastBannerOffset <= fileInfo.LastOffset) {
+        file.close();
+        return fileInfo.LastOffset;
+    }
+
+    // Step 2: Forward parse from LastOffset to lastBannerOffset
+    file.clear();
+    file.seekg(fileInfo.LastOffset);
+    long offset = fileInfo.LastOffset;
+    std::string line;
+
+    while (std::getline(file, line)) {
+        long lineStart = offset;
+        offset += line.size() + 1;
+
+        if (lineStart >= lastBannerOffset) {
+            break;
+        }
+
+        if (starts_with(line.c_str(), "*** SPAWN")) { // For now, only looks at Spawn ads from the epoch file
+            std::istringstream iss(line);
+            std::string stars, recordType;
+            iss >> stars >> recordType;
+
+            EpochRecord record;
+            record.RecordType = recordType;  // EPOCH, SPAWN, etc.
+            record.Offset = lineStart;
+            record.FileId = fileInfo.FileId;
+
+            if (parseEpochHistoryBanner(line, record)) {
+                out.push_back(record);
+            } else {
+                std::cerr << "[WARNING] Failed to parse " << recordType << " banner at offset: " << lineStart << "\n";
+            }
+        }
+    }
+
+    file.close();
+    std::cerr << "[HistoryReader] Done. Returning new offset: " << lastBannerOffset << "\n";
+    return lastBannerOffset;
+}
+
+  

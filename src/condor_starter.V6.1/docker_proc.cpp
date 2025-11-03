@@ -604,7 +604,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			} else {
 				dprintf(D_ERROR,"    Container %s remove failed -- does it even exist? If so, startd will remove on next boot.\n", containerName.c_str());
 			}
-			starter->SetVacateReason("Cannot inspect exited container", CONDOR_HOLD_CODE::ContainerError, 0);
 			EXCEPT("Cannot inspect exited container");
 		}
 

@@ -81,25 +81,8 @@ static const struct Translation MyCommandTranslation[] = {
 	{ "", 0 }
 };
 
-// properties of the command being executed, so we know how to
-// interpret the results
-struct _cmd_properties {
-	int cmd{0};
-	bool has_constraint{false};
-	bool names_only{false};
-	const char * name{"?"};
-	const char * rectype{"users"};
-	size_t num_ads{0};
-
-	_cmd_properties(int _cmd=0, const char * _name=nullptr, const char * _rectype="users")
-		: cmd(_cmd)
-		, name(_name ? _name : getNameFromNum(_cmd, MyCommandTranslation))
-		, rectype(_rectype)
-		{};
-};
-
 static int str_to_cmd(const char * str) { return getNumFromName(str, MyCommandTranslation); }
-static int print_results(int rval, ClassAd * ad, struct _cmd_properties & op, bool raw=false);
+static int print_results(int rval, int cmd, ClassAd * ad, const char * op);
 
 typedef std::map<std::string, MyRowOfValues> ROD_MAP_BY_KEY;
 typedef std::map<std::string, ClassAd*> AD_MAP_BY_KEY;
@@ -285,74 +268,6 @@ int render_ads(void* pv, ClassAd* ad)
 	return done_with_ad;
 }
 
-// Suspend users is a composite operation where we both disable and edit
-// with a single command.  This can be done with a USERREC_EDIT command
-// if we supply ATTR_ENABLED and ATTR_DISABLE_REASON in the edit list
-ClassAd *  suspendUsers(
-	DCSchedd &schedd,
-	_cmd_properties & op,
-	std::vector<const char*> &usernames,
-	const char * constraint,
-	std::vector<const char *> &edit_args,
-	const char * disableReason,
-	CondorError &errstack)
-{
-	ClassAd edits; // make sure this gets freed.
-	for (auto & line : edit_args) {
-		if ( ! edits.Insert(line)) {
-			fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
-			return nullptr;
-		}
-	}
-
-	// we expect the edit_args to have set MaxJobsRunning=0
-	// but make sure that enabled is false and a disable reason is given
-	if (op.cmd == DISABLE_USERREC) {
-		edits.Assign(ATTR_ENABLED, false);
-		if (disableReason) edits.Assign(ATTR_DISABLE_REASON, disableReason);
-	} else if (op.cmd == ENABLE_USERREC) {
-		edits.Assign(ATTR_ENABLED, true);
-		edits.Assign(ATTR_USERREC_OPT_UPDATE, true);
-	}
-
-	ClassAd * resultAd = nullptr;
-	if (edits.size() > 0) {
-		ClassAdList adlist;
-
-		if (constraint) {
-			if (edits.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
-				adlist.Insert(new ClassAd(edits));
-			} else {
-				fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
-				return nullptr;
-			}
-		} else if (usernames.size()) {
-			// we need a separate ad for each user, each should contain all of the edit_args
-			for (auto & name : usernames) {
-				// make a copy of the edit_args attributes for each user beyond the first
-				ClassAd * ad = new ClassAd(edits);
-				ad->Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
-				adlist.Insert(ad);
-			}
-		} else {
-			fprintf(stderr, "Error: no name or constraint - don't know which users or projects to %s\n", op.name);
-			return nullptr;
-		}
-
-		// if we got to here with a valid adlist, send it on to the schedd
-		if (dash_projects) {
-			if (dash_projects == 2) {
-				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects:also is not implemented");
-			} else {
-				resultAd = schedd.generalUpdateUserRecs(op.cmd, true, adlist, &errstack);
-			}
-		} else {
-			resultAd = schedd.generalUpdateUserRecs(op.cmd, false, adlist, &errstack);
-		}
-	}
-	return resultAd;
-}
-
 /*********************************************************************
    main()
 *********************************************************************/
@@ -366,7 +281,6 @@ main( int argc, const char *argv[] )
 	const char* pool = nullptr;
 	const char* name = nullptr;
 	const char* disableReason = nullptr;
-	bool raw_results_ad = false;
 	int cmd = 0;
 	int rval = 0;
 	classad::References attrs;
@@ -421,10 +335,6 @@ main( int argc, const char *argv[] )
 			dash_verbose = 1;
 		} 
 		else
-		if (is_dash_arg_prefix(argv[i], "raw-results", 3)) {
-			raw_results_ad = 1;
-		} 
-		else
 		if (is_dash_arg_prefix(argv[i], "user", 1)) {
 			if( i+1 >= argc ) {
 				fprintf( stderr, "Error: -user requires a username argument\n"); 
@@ -448,24 +358,6 @@ main( int argc, const char *argv[] )
 				exit(1);
 			}
 			cmd = DISABLE_USERREC;
-		}
-		else
-		if (is_dash_arg_prefix(argv[i], "suspend", 3)) {
-			if (cmd && cmd != DISABLE_USERREC) {
-				usage(stderr, my_name);
-				exit(1);
-			}
-			cmd = DISABLE_USERREC;
-			edit_args.push_back("MaxJobsRunning=0");
-		}
-		else
-		if (is_dash_arg_prefix(argv[i], "unsuspend", 3)) {
-			if (cmd && cmd != ENABLE_USERREC) {
-				usage(stderr, my_name);
-				exit(1);
-			}
-			cmd = ENABLE_USERREC;
-			edit_args.push_back("MaxJobsRunning=undefined");
 		}
 		else
 		if (is_dash_arg_prefix(argv[i], "reason", 2)) {
@@ -606,8 +498,8 @@ main( int argc, const char *argv[] )
 
 	if (!cmd) cmd = QUERY_USERREC_ADS;
 
-	if ( ! edit_args.empty() && cmd != EDIT_USERREC && cmd != DISABLE_USERREC && cmd != ENABLE_USERREC) {
-		fprintf(stderr, "<attr>=<expr> arguments only work with -edit, -suspend and -unsuspend\n");
+	if ( ! edit_args.empty() && cmd != EDIT_USERREC) {
+		fprintf(stderr, "<attr>=<expr> arguments only work with -edit\n");
 		usage(stderr, my_name);
 		exit(2);
 	}
@@ -744,39 +636,31 @@ main( int argc, const char *argv[] )
 		}
 
 	} else if (cmd == ENABLE_USERREC) {
-		struct _cmd_properties op(cmd, dash_add ? "add" : "enable", dash_projects ? "projects" : "users");
-		op.num_ads = usernames.size();
+		const char * opname = dash_add ? "add" : "enable";
 		if (usernames.empty()) {
-			fprintf(stderr, "Error: %s %s - no names specified\n", op.name, op.rectype);
+			fprintf(stderr, "Error: %s %s - no names specified\n", opname, dash_projects ? "projects" : "users");
 			return 1;
 		}
 		CondorError errstack;
 		ClassAd * ad = nullptr;
 		if (dash_projects) {
+			opname = "add project";
 			if (dash_projects == 2) {
-				op.rectype = "users and projects";
+				opname = dash_add ? "add user and project" : "enable user and project";
 				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "Not Implemented");
 			} else {
 				ad = schedd.addProjects(&usernames[0], (int)usernames.size(), &errstack);
 			}
 		} else {
 			const bool create_if = dash_add;
-			if ( ! edit_args.empty() && ! create_if) {
-				op.cmd = cmd;
-				op.name = "unsuspend";
-				op.has_constraint = constraint;
-				op.num_ads = usernames.size();
-				ad = suspendUsers(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
-			} else {
-				ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
-			}
+			ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
 		}
 		if ( ! ad) {
-			fprintf(stderr, "Error: %s failed - %s\n", op.name, errstack.getFullText().c_str());
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
 			rval = errstack.code();
 			if ( ! rval) rval = 1;
 		} else {
-			rval = print_results(0, ad, op, raw_results_ad);
+			rval = print_results(0, cmd, ad, opname);
 			delete ad;
 		}
 	} else if (cmd == DISABLE_USERREC) {
@@ -786,29 +670,21 @@ main( int argc, const char *argv[] )
 		}
 		CondorError errstack;
 		ClassAd * ad = nullptr;
-		struct _cmd_properties op(cmd, "disable", dash_projects ? "projects" : "users");
+		const char * opname = "disable";
 		if (dash_projects) {
 			errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects is not implemented");
 		} else {
-			if ( ! edit_args.empty()) {
-				op.cmd = cmd;
-				op.name = "suspend";
-				op.has_constraint = constraint;
-				op.num_ads = usernames.size();
-				ad = suspendUsers(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
-			} else if (constraint) {
-				op.has_constraint = true;
+			if (constraint) {
 				ad = schedd.disableUsers(constraint, disableReason, &errstack);
 			} else {
-				op.num_ads = usernames.size();
 				ad = schedd.disableUsers(&usernames[0], (int)usernames.size(), disableReason, &errstack);
 			}
 		}
 		if ( ! ad) {
-			fprintf(stderr, "Error: %s failed - %s\n", op.name, errstack.getFullText().c_str());
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
 			rval = 1;
 		} else {
-			rval = print_results(0, ad, op, raw_results_ad);
+			rval = print_results(0, cmd, ad, opname);
 			delete ad;
 		}
 	} else if (cmd == DELETE_USERREC) {
@@ -818,33 +694,29 @@ main( int argc, const char *argv[] )
 		}
 		CondorError errstack;
 		ClassAd * ad = nullptr;
-		struct _cmd_properties op(cmd, "remove", dash_projects ? "projects" : "users");
+		const char * opname = "remove";
 		if (dash_projects) {
 			if (dash_projects == 2) {
 				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects:also is not implemented");
 			} else {
 				if (constraint) {
-					op.has_constraint = true;
 					ad = schedd.removeProjects(constraint, disableReason, &errstack);
 				} else {
-					op.num_ads = usernames.size();
 					ad = schedd.removeProjects(&usernames[0], (int)usernames.size(), disableReason, &errstack);
 				}
 			}
 		} else {
 			if (constraint) {
-				op.has_constraint = true;
 				ad = schedd.removeUsers(constraint, disableReason, &errstack);
 			} else {
-				op.num_ads = usernames.size();
 				ad = schedd.removeUsers(&usernames[0], (int)usernames.size(), disableReason, &errstack);
 			}
 		}
 		if ( ! ad) {
-			fprintf(stderr, "Error: %s failed - %s\n", op.name, errstack.getFullText().c_str());
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
 			rval = 1;
 		} else {
-			rval = print_results(0, ad, op, raw_results_ad);
+			rval = print_results(0, cmd, ad, opname);
 			delete ad;
 		}
 	} else if (cmd == EDIT_USERREC) {
@@ -853,17 +725,15 @@ main( int argc, const char *argv[] )
 			if ( ! ad->Insert(line)) {
 				fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
 				rval = 1;
-				delete ad; ad = nullptr;
+				ad->Clear();
 				break;
 			}
 		}
 		if (ad && ad->size() > 0) {
-			struct _cmd_properties op(cmd, "edit", dash_projects ? "projects" : "users");
 			ClassAdList adlist;
 			rval = 1; // assume failure
 
 			if (constraint) {
-				op.has_constraint = true;
 				if (ad->AssignExpr(ATTR_REQUIREMENTS, constraint)) {
 					adlist.Insert(ad);
 					rval = 0;
@@ -871,7 +741,6 @@ main( int argc, const char *argv[] )
 					fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
 				}
 			} else if (usernames.size()) {
-				op.num_ads = usernames.size();
 				// we need a separate ad for each user, each should contain all of the edit_args
 				for (auto & name : usernames) {
 					// make a copy of the edit_args attributes for each user beyond the first
@@ -902,7 +771,7 @@ main( int argc, const char *argv[] )
 					fprintf(stderr, "Error: edit failed - %s\n", errstack.getFullText().c_str());
 					rval = 1;
 				} else {
-					rval = print_results(0, resultAd, op, raw_results_ad);
+					rval = print_results(0, cmd, resultAd, "edit");
 					delete resultAd;
 				}
 			}
@@ -916,7 +785,7 @@ main( int argc, const char *argv[] )
 	return rval;
 }
 
-static int print_results(int rval, ClassAd * ad, struct _cmd_properties & op, bool raw)
+static int print_results(int rval, int /*cmd*/, ClassAd * ad, const char * op)
 {
 	std::string buf; buf.reserve(200);
 
@@ -938,14 +807,14 @@ static int print_results(int rval, ClassAd * ad, struct _cmd_properties & op, bo
 
 	if (rval == 0) {
 		if (0 == num_ads) {
-			fprintf(stdout, "%s did nothing: %s\n", op.name, buf.c_str());
+			fprintf(stdout, "%s did nothing: %s\n", op, buf.c_str());
 		} else {
-			fprintf(stdout, "%s succeeded: %s\n", op.name, buf.c_str());
+			fprintf(stdout, "%s succeeded: %s\n", op, buf.c_str());
 		}
 	} else {
-		fprintf(stdout, "%s failed: %s\n", op.name, buf.c_str());
+		fprintf(stdout, "%s failed: %s\n", op, buf.c_str());
 	}
-	if (ad->size() > 0 && raw) {
+	if (ad->size() > 0) {
 		buf.clear();
 		fprintf(stdout, "%s", formatAd(buf, *ad, "    ", nullptr, false));
 	}

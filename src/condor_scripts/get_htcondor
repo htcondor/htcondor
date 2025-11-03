@@ -729,9 +729,9 @@ done
 # to update a symlink, like we do for 'feature', because we don't
 # want to surprise other lts-channel users with new features.
 if [ "${CHANNEL}" = "lts" ]; then
-    CHANNEL_DIR=25.0
+    CHANNEL_DIR=24.0
 elif [ "${CHANNEL}" = "feature" ]; then
-    CHANNEL_DIR=25.x
+    CHANNEL_DIR=24.x
 fi
 
 # wrapped up in functions so that we have some protection against only getting

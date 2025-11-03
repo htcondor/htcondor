@@ -366,30 +366,21 @@ class FileTransfer final: public Service {
 	uint64_t TotalBytesSent() const { return bytesSent; }
 
 	uint64_t TotalBytesReceived() const { return bytesRcvd; };
-
-
 	//
 	// Add the given filename to the list of "output" files.  Will
 	// create the empty list of output files if necessary; never
 	// fails (unless the sytem is out of memory).
-	//
-	// The "filename" passed to these three functions may be any
-	// entry valid in their respective transfer_*_files submit command.
 	//
 	void addOutputFile( const char* filename );
 
 	// Add the given filename to the list of "failure" files.
 	void addFailureFile( const char* filename );
 
-	// Add the given filename to the list of "input" files.
-	void addInputFile( const char* filename );
-
-
 	// Check if we have failure files
 	bool hasFailureFiles() const { return !FailureFiles.empty(); }
 
 	//
-	// Add the given file or URL to the list of checkpoint files.  The file
+	// Add the given path or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
 	//
 	// *: At present, the basename of the destination must be the same
@@ -401,17 +392,15 @@ class FileTransfer final: public Service {
 	// The caller must ensure that pathsAlreadyPreserved is empty the
 	// first time and is preserved between calls.
 	//
-	// The file may be relative path, but may not be a directory.
-	//
-	void addCheckpointFileEx(
+	void addCheckpointFile(
 		const std::string & source, const std::string & destination,
 		std::set< std::string > & pathsAlreadyPreserved
 	);
 
 	//
-	// As addCheckpointFileEx(), but for input files.
+	// As addCheckpointFile(), but for input files.
 	//
-	void addInputFileEx(
+	void addInputFile(
 		const std::string & source, const std::string & destination,
 		std::set< std::string > & pathsAlreadyPreserved
 	);

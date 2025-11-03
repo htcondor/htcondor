@@ -97,7 +97,7 @@ function update_cache {
 	fi
     fi
 
-    local data=$(echo $FORMAT | xargs ${condor_binpath}condor_q $target)
+    local data=$(echo $FORMAT | xargs $condor_binpath/condor_q $target)
 
     if [ "$?" == "0" ]; then
 	set +o noclobber
@@ -253,7 +253,7 @@ for job in $* ; do
     # Caching of condor_q output doesn't appear to work properly in
     # HTCondor builds of the blahp. So do an explicit condor_q for
     # this job before trying condor_history, which can take a long time.
-    line=$(echo $FORMAT | xargs ${condor_binpath}condor_q $target $id)
+    line=$(echo $FORMAT | xargs $condor_binpath/condor_q $target $id)
     if  [ -n "$line" ] ; then
 	echo "0$(make_ad $job "$line")"
 	exit 0
@@ -268,9 +268,9 @@ for job in $* ; do
     # NOTE: In Condor 7.7.6-7.8.1, the -f option to condor_history was
     #   broken. To work around that, we set HISTORY via the environment
     #   instead of using -f.
-    history_file=$(${condor_binpath}condor_config_val $target -schedd history)
+    history_file=$($condor_binpath/condor_config_val $target -schedd history)
     if [ "$?" == "0" ]; then
-	line=$(echo $FORMAT | _condor_HISTORY="$history_file" xargs ${condor_binpath}condor_history -f $history_file -backwards -match 1 $id)
+	line=$(echo $FORMAT | _condor_HISTORY="$history_file" xargs $condor_binpath/condor_history -f $history_file -backwards -match 1 $id)
 	if  [ ! -z "$line" ] ; then
 	    echo "0$(make_ad $job "$line")"
 	    exit 0
@@ -281,7 +281,7 @@ for job in $* ; do
     # condition masked the status, in which case we want to directly
     # query the Schedd to make absolutely sure there is no status to
     # be found.
-    line=$(echo $FORMAT | xargs ${condor_binpath}condor_q $target $id)
+    line=$(echo $FORMAT | xargs $condor_binpath/condor_q $target $id)
     if  [ -z "$line" ] ; then
 	echo " 1 Status\\ not\\ found"
 	exit 1

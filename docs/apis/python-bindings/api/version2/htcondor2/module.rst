@@ -24,10 +24,6 @@
 
 .. autofunction:: reload_config
 
-.. autofunction:: reload_config_usermaps
-
-.. autofunction:: load_a_config_usermap_file
-
 .. autofunction:: send_alive
 
 .. autofunction:: send_command

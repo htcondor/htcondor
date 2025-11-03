@@ -834,21 +834,12 @@ COMMANDS FOR MATCHMAKING
     of the job will be adjusted to the next quantity and the job will run again
     rather than being held. When the job is already requesting the last
     quantity in the list, it will be held if it uses too much memory.
+    For example,
 
-    In the case where a cluster of jobs usually uses a smaller amount of memory,
-    but occasionally needs a larger amount of memory, this command will
-    allow the majority of jobs to match with smaller memory slots, and perhaps
-    allow more of them to match and start, without wasting the larger amount
-    of memory only seldomly needed.  So, if most jobs in a cluster can
-    run with 1 GB of memory, but some need 4 GB, then a submit file with:
+      code-block:: condor-submit
 
-    .. code-block:: condor-submit
-
-      request_memory = 1 GB
-      retry_request_memory = 4 GB
-
-    will start every job with 1 Gb of memory, and those that fail due to 
-    exceeding the memory will be automatically restarted with 4 GB of memory.
+        request_memory = 1 GB
+        retry_request_memory = 4 GB, 16 GB
 
  :subcom-def:`retry_request_memory_increase` = <quantity or expression>
     The amount of memory in Mb that should be added to the current memory
@@ -861,10 +852,9 @@ COMMANDS FOR MATCHMAKING
 
     The increase can be either a quantity to add to the memory request, or
     an expression that uses :ad-attr:`RequestMemory`.
-    For example, and note that because :ad-expr:`RequestMemory * 4` is a classad
-    expression, a unit suffix is not allowed after the `4`:
+    For example,
 
-    .. code-block:: condor-submit
+      code-block:: condor-submit
 
         request_memory = 1 GB
         retry_request_memory_increase = RequestMemory * 4

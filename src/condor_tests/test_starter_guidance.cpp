@@ -68,7 +68,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual uint64_t bytesReceived( void ) { EXCEPT("MOCK"); return (uint64_t)-1; }
         virtual void Suspend( void ) { EXCEPT("MOCK"); }
         virtual void Continue( void ) { EXCEPT("MOCK"); }
-        virtual bool transferOutput( bool &, bool & ) { EXCEPT("MOCK"); return false; }
+        virtual bool transferOutput( bool & ) { EXCEPT("MOCK"); return false; }
         virtual bool transferOutputMopUp( void ) { EXCEPT("MOCK"); return false; }
         virtual void allJobsGone( void ) { EXCEPT("MOCK"); }
         virtual int reconnect( ReliSock*, ClassAd* ) { EXCEPT("MOCK"); return -1; }

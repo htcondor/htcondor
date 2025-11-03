@@ -301,7 +301,6 @@ public:
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
 	void setOCU( bool ocu ) { c_ocu = ocu; }
-	void setOCUName(const std::string &name) { c_ocu_name = name; }
 
 	bool waitingForActivation() const;
 	void invalidateID();
@@ -367,7 +366,6 @@ private:
 	bool        c_schedd_reported_job_done;
 	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
-	std::string c_ocu_name;
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage

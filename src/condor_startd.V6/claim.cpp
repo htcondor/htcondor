@@ -350,9 +350,6 @@ Claim::publish( ClassAd* cad )
 
 	if (c_ocu) {
 		cad->Assign(ATTR_OCU, true);
-		if (!c_ocu_name.empty()) {
-			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
-		}
 	} 
 
 	publishStateTimes( cad );
@@ -977,20 +974,23 @@ Claim::startLeaseTimer()
 	// because the  job ad we get from the shadow at activation time doesn't have
 	// the necessary attributes - they are only in the job ad we get from the schedd at claim time
 	// see #6568 for more details.
-	// CRUFT Starting in 25.3, the schedd always sets this to true
+	std::string value;
+	param( value, "STARTD_SENDS_ALIVES", "peer" );
 	if ( c_jobad && c_jobad->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
 		// Use value from ad
-	} else {
-		// No direction from the schedd.
-		// Assume true, so future schedds can drop this ancient option.
+	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
+		c_startd_sends_alives = false;
+	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
 		c_startd_sends_alives = true;
+	} else {
+		// No direction from the schedd or config file.
+		c_startd_sends_alives = false;
 	}
 
 	// If startd is sending the alives, look to see if the schedd is requesting
 	// that we let only send alives when there is no starter present (i.e. when
 	// the claim is idle).
-	// CRUFT Starting in 25.3, the schedd always sets this to true
-	c_starter_handles_alives = true;  // default to true unless schedd tells us
+	c_starter_handles_alives = false;  // default to false unless schedd tells us
 	if (c_jobad) {
 		c_jobad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
 	}
@@ -1775,7 +1775,6 @@ Claim::starterExited( Starter* starter, int status)
 	if (orphanedJob || (IsBrokenExitCode(status) && still_broken)) {
 
 		int code = BROKEN_CODE_UNCLEAN;
-		bool do_not_delete_slot = false; // set to true if the broken code indicates that the slot should not be deleted.
 		const char * reason = "Could not clean up after job";
 		switch (WEXITSTATUS(status)) {
 		case STARTER_EXIT_IMMORTAL_LVM:
@@ -1785,11 +1784,6 @@ Claim::starterExited( Starter* starter, int status)
 		case STARTER_EXIT_IMMORTAL_JOB_PROCESS:
 			code = BROKEN_CODE_HUNG_PID;
 			reason = "Could not terminate all job processes";
-			break;
-		case STARTER_EXIT_CGROUP_LOCKED:
-			code = BROKEN_CODE_HUNG_CGROUP;
-			reason = "Could not cleanup CGroup for slot";
-			do_not_delete_slot = true;
 			break;
 		default:
 			if (orphanedJob) {
@@ -1803,7 +1797,6 @@ Claim::starterExited( Starter* starter, int status)
 		if ( ! c_rip->r_attr->is_broken()) {
 			dprintf(D_ERROR,"Starter exit code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
-			if (do_not_delete_slot) { c_rip->r_do_not_delete = true; }
 			auto & brit = c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
 			if (ep_eventlog.isEnabled()) {
 				// write a RESOURCE_BREAK event reporting break reason and resources

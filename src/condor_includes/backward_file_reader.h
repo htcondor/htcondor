@@ -68,7 +68,7 @@ protected:
 	BWReaderBuffer buf; // buffer to help with backward reading.
 
 public:
-	BackwardFileReader(const std::string& filename, int open_flags);
+	BackwardFileReader(std::string filename, int open_flags);
 	BackwardFileReader(int fd, const char * open_options);
 	~BackwardFileReader() {
 		if (file) fclose(file);

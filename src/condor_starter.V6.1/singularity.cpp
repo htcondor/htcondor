@@ -658,8 +658,7 @@ Singularity::canRunSIF() {
 	std::string libexec_dir;
 	param(libexec_dir, "LIBEXEC");
 	std::string ignored;
-	int timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
-	return Singularity::canRun(libexec_dir + "/exit_37.sif", "/exit_37", ignored, timeout);
+	return Singularity::canRun(libexec_dir + "/exit_37.sif", "/exit_37", ignored);
 }
 
 bool

@@ -53,7 +53,7 @@ FilesystemRemap::FilesystemRemap() :
 	FixAutofsMounts();
 }
 
-int FilesystemRemap::AddMapping(const std::string& source, const std::string& dest) {
+int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 	if (fullpath(source.c_str()) && fullpath(dest.c_str())) {
 		std::list<pair_strings>::const_iterator it;
 		for (it = m_mappings.begin(); it != m_mappings.end(); it++) {

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-. `dirname $0`/blah_load_config.sh
+blahconffile="${GLITE_LOCATION:-/}/etc/blah.config"
+binpath=`grep nqs_binpath $blahconffile|grep -v \#|awk -F"=" '{ print $2}'|sed -e 's/ //g'|sed -e 's/\"//g'`
 
 ###############################################################
 # Parse parameters
@@ -26,7 +27,7 @@ requestedshort=`expr match "$requested" '\([0-9]*\)'`
 # We're looking for a line like one of these:
 #    1:    .nqs_submit     20106.gridhpc          condor1  61  RUNNING     17831
 #    1:.nqs_submit.185     20107.gridhpc          condor1  61  RUNNING     18594
-#result=`${nqs_binpath}qstat | awk -v jobid="$requestedshort" '
+#result=`${binpath}/qstat | awk -v jobid="$requestedshort" '
 #$2 ~ jobid {
 #	print $5
 #}
@@ -34,7 +35,7 @@ requestedshort=`expr match "$requested" '\([0-9]*\)'`
 #	print $6
 #}
 #'`
-result=`${nqs_binpath}qstat | grep " ${requestedshort}[.]" | sed -e 's/.*'${requestedshort}'//' | awk '{ print $4 }'`
+result=`${binpath}/qstat | grep " ${requestedshort}[.]" | sed -e 's/.*'${requestedshort}'//' | awk '{ print $4 }'`
 if [ "$result" == "" ] ; then
 	# Job completed, get exit status
 	# TODO get real exit code

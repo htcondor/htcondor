@@ -659,8 +659,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			break;
 		}
 
-		auto normal = ScheddNegotiate::_match_source::NORMAL;
-		if( scheduler_handleMatch(m_current_job_id,m_claim_id.c_str(),m_extra_claims.c_str(), m_match_ad, slot_name, normal) )
+		if( scheduler_handleMatch(m_current_job_id,m_claim_id.c_str(),m_extra_claims.c_str(), m_match_ad,slot_name) )
 		{
 			m_jobs_matched++;
 		}

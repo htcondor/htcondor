@@ -159,7 +159,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	shadow = NULL;
 	shadow_version = NULL;
 	filetrans = NULL;
-	m_did_output_transfer = false;
+	m_did_transfer = false;
 	m_filetrans_sec_session = NULL;
 	m_reconnect_sec_session = NULL;
 	
@@ -431,7 +431,7 @@ JICShadow::setupJobEnvironment_part2(void)
 {
 		// call our helper method to see if we want to do a file
 		// transfer at all, and if so, initiate it.
-	if( beginInputTransfer() ) {
+	if( beginFileTransfer() ) {
 			// We started a transfer, so we just want to return to
 			// DaemonCore asap and wait for the file transfer callback
 			// that was registered
@@ -549,7 +549,7 @@ bool JICShadow::allJobsDone( void )
 	bool r1 = JobInfoCommunicator::allJobsDone();
 
 	// Tell shadow job is done, and moving to job state transfer output
-	if (!m_did_output_transfer) {
+	if (!m_did_transfer) {
 		publishJobExitAd( &update_ad );
 		// Note if updateShadow() fails, it will dprintf into the log.
 		updateShadow( &update_ad );
@@ -561,28 +561,15 @@ bool JICShadow::allJobsDone( void )
 
 
 bool
-JICShadow::transferOutput(bool& transient_failure, bool& in_progress)
+JICShadow::transferOutput( bool &transient_failure )
 {
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutput(void)\n");
 
 	transient_failure = false;
-	in_progress = false;
 
-	if (m_did_output_transfer) {
+	if (m_did_transfer) {
 		return true;
 	}
-
-	if (!m_output_transfer_active) {
-		return transferOutputStart(transient_failure, in_progress);
-	} else {
-		return transferOutputFinish(transient_failure, in_progress);
-	}
-}
-
-bool
-JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
-{
-	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputStart()\n");
 
 	// if we are writing a sandbox starter log, flush and temporarily close it before we make the manifest
 	if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
@@ -651,7 +638,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		if (final_transfer) {
 			if ( !filetrans->InitDownloadFilenameRemaps(job_ad) ) {
 				dprintf( D_ALWAYS, "Failed to setup output file remaps.\n" );
-				m_did_output_transfer = false;
+				m_did_transfer = false;
 				return false;
 			}
 		}
@@ -664,72 +651,28 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
 		filetrans->setClientSocketTimeout(timeout);
 
-		// Warning! On unix, the following file transfer call returns
-		// immediately after creating a child process to perform the transfer.
-		// On windows, the transfer is done in-process and the function
-		// returns only after the transfer is complete.
+			// The user job may have created files only readable
+			// by the user, so set_user_priv here.
+		priv_state saved_priv = set_user_priv();
+
 		dprintf( D_FULLDEBUG, "Begin transfer of sandbox to shadow.\n");
+			// this will block
 		if( job_failed && final_transfer ) {
 			// Only attempt failure file upload if we have failure files
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
-				m_output_transfer_active = true;
-				m_ft_rval = filetrans->UploadFailureFiles(false);
+				m_ft_rval = filetrans->UploadFailureFiles( true );
 				// We would otherwise not send any UnreadyReasons we
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
+				updateShadowWithPluginResults("Output", filetrans);
 			}
 		} else {
-			m_output_transfer_active = true;
-			m_ft_rval = filetrans->UploadFiles(false, final_transfer);
+			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+			updateShadowWithPluginResults("Output", filetrans);
 		}
-
-		if (m_output_transfer_active) {
-			if (m_ft_rval) {
-				in_progress = true;
-			} else {
-				m_output_transfer_active = false;
-				if (filetrans->GetInfo().xfer_status == XFER_STATUS_UNKNOWN) {
-					// The transfer failed to launch, so our callback on
-					// completion hasn't been called.
-					// Register a timer to call allJobsDone() like the
-					// callback does.
-					std::ignore = daemonCore->Register_Timer(
-						0,
-						[](int /* timerID */) -> void {
-							starter->allJobsDone();
-						},
-						"allJobsDone"
-					);
-				}
-			}
-			return false;
-		}
-	}
-
-	// The job doesn't need transfer.
-	// We should record that we were successful so
-	// that if we ever come through here again to retry the whole
-	// job cleanup process we don't attempt to transfer again.
-	m_did_output_transfer = true;
-	return true;
-}
-
-bool
-JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
-{
-	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputFinish()\n");
-
-	if (filetrans->transferIsInProgress()) {
-		in_progress = true;
-		return false;
-	} else {
-		m_output_transfer_active = false;
-		updateShadowWithPluginResults("Output", filetrans);
-
 		m_ft_info = filetrans->GetInfo();
-		m_ft_rval = m_ft_info.success;
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
 
 
@@ -743,6 +686,7 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 				REMOTE_CONDOR_dprintf_stats(full_stats.c_str());
 			}
 		}
+		set_priv(saved_priv);
 
 		if( m_ft_rval ) {
 			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
@@ -780,12 +724,15 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 				}
 			}
 
-			m_did_output_transfer = false;
+			m_did_transfer = false;
 			return false;
 		}
 	}
-
-	m_did_output_transfer = true;
+		// Either the job doesn't need transfer, or we just succeeded.
+		// In both cases, we should record that we were successful so
+		// that if we ever come through here again to retry the whole
+		// job cleanup process we don't attempt to transfer again.
+	m_did_transfer = true;
 	return true;
 }
 
@@ -795,7 +742,7 @@ JICShadow::transferOutputMopUp(void)
 
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
 
-	if (m_did_output_transfer) {
+	if (m_did_transfer) {
 		/* nothing was marked wrong if we were able to do the transfer */
 		return true;
 	}
@@ -819,13 +766,7 @@ JICShadow::transferOutputMopUp(void)
 
 		// We hit some "transient" error, but we've retried too many times,
 		// so tell the shadow we are giving up.
-		// If necessary, alter the subcode so that we're not indicating
-		// that the job should be held.
-		int subcode = m_ft_info.hold_subcode;
-		if (shouldHoldJobBasedOnCodes(m_ft_info.hold_code, m_ft_info.hold_subcode)) {
-			subcode = -1000;
-		}
-		notifyStarterError(m_ft_info.error_desc.c_str(), true, m_ft_info.hold_code, subcode);
+		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
 	} else if( ! m_ft_rval ) {
 	    //
@@ -1256,11 +1197,9 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// else to go if this is a recurring problem.
 	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
 		struct stat si = {};
-		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT &&
-		    shouldHoldJobBasedOnCodes(hold_reason_code, hold_reason_subcode))
-		{
+		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT) {
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
-			hold_reason_code = CONDOR_HOLD_CODE::ScratchDirError;
+			hold_reason_code = 0;
 			hold_reason_subcode = 0;
 		}
 	}
@@ -2307,7 +2246,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		formatstr( updateAdPath, "%s/%s",
 			starter->GetWorkingDir(0), ".update.ad"
 		);
-		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
 			formatstr( updateAdPath, "%s/%s",
 				starter->GetWorkingDir(0), "../htcondor/.update.ad"
 			);
@@ -2341,13 +2280,7 @@ bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	// These are updates taken from Chirp
-	if (shadow_version && shadow_version->built_since_version(25, 3, 0)) {
-		dprintf(D_STATUS, "JEF setting ChirpDelayedAttrs\n");
-		ad->Insert(ATTR_CHIRP_DELAYED_ATTRS, new ClassAd(m_delayed_updates));
-	} else {
-		dprintf(D_STATUS, "JEF not setting ChirpDelayedAttrs\n");
-		ad->Update(m_delayed_updates);
-	}
+	ad->Update(m_delayed_updates);
 	m_delayed_updates.Clear();
 
 	// if there is a filetrans object, then let's send the current
@@ -2661,7 +2594,7 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 }
 
 bool
-JICShadow::beginInputTransfer( void )
+JICShadow::beginFileTransfer( void )
 {
 
 		// if requested in the jobad, transfer files over.  
@@ -2716,13 +2649,8 @@ JICShadow::beginInputTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
-		// Warning! On unix, this calls returns immeidately after creating
-		// a child process to perform the transfer.
-		// On windows, the transfer is done in-process and this function
-		// returns only after the transfer is complete.
-		if( ! filetrans->DownloadFiles(false) ) {
-				// Error starting the non-blocking file transfer, or the
-				// transfer itself failed on windows.  For
+		if( ! filetrans->DownloadFiles(false) ) { // do not block (i.e. fork)
+				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
 			EXCEPT( "Could not initiate file transfer" );
 		}
@@ -3009,45 +2937,6 @@ JICShadow::doneWithInputTransfer() {
 	setupCompleted(0);
 }
 
-// FileTransfer callback for status messages of output transfer
-int
-JICShadow::transferOutputStatus(FileTransfer *ftrans)
-{
-	if (!m_output_transfer_active) {
-		// This must be a checkpoint transfer, which is still done blocking.
-		// The caller of the blocking function handles everything.
-		return 1;
-	}
-
-	const FileTransfer::FileTransferInfo &info = ftrans->GetInfo();
-	if (IsDebugCategory(D_ZKM)) {
-		std::string buf;
-		info.dump(buf,"\t");
-		if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
-		dprintf(D_ZKM /* | (info.in_progress ? 0 : D_BACKTRACE) */, "starter transferOutputStatus: %s", buf.c_str());
-	}
-	if (info.in_progress) {
-		// a status ping message. xfer is still making progress!
-		//this->file_xfer_last_alive_time = time(nullptr);
-		return 1;
-	}
-
-	dprintf(D_ZKM,"transferOutputCompleted(%p) success=%d try_again=%d\n", ftrans,
-		ftrans->GetInfo().success,
-		ftrans->GetInfo().try_again);
-
-	// Call allJobsDone() via a timer, since we may be inside allJobsDone()
-	// already (e.g. blocking transfer on windows).
-	std::ignore = daemonCore->Register_Timer(
-		0,
-		[](int /* timerID */) -> void {
-			starter->allJobsDone();
-		},
-		"allJobsDone"
-	);
-
-	return 1;
-}
 
 bool
 JICShadow::getJobAdFromShadow( void )

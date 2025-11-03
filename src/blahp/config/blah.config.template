@@ -5,7 +5,7 @@
 ##Blah common variables
 
 #Supported batch systems (e.g. pbs,lsf)
-supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes
+supported_lrms=pbs,lsf,sge,slurm,condor
 
 #DGAS logfile 
 BLAHPD_ACCOUNTING_INFO_LOG=
@@ -93,8 +93,9 @@ blah_require_proxy_on_submit=
 
 ##PBS common variables
 
-#Path where PBS executables are located (default is to use PATH)
-#pbs_binpath=
+#Path where PBS executables are located 
+# NOTE: this path is computed many times; I worry about the overhead here.  -BB, 12-13-2012
+pbs_binpath=/usr/bin
 
 #Path where the PBS logs are located ($pbs_spoolpath/server_logs)
 #pbs_spoolpath=
@@ -121,8 +122,8 @@ pbs_maui=no
 
 ##LSF common variables
 
-#Path where LSF executables are located (default is to use PATH)
-#lsf_binpath=
+#Path where LSF executables are located 
+lsf_binpath=/usr/bin
 
 #Path where the LSF conf file is located ($lsf_confpath/lsf.conf)
 lsf_confpath=
@@ -301,8 +302,8 @@ tracejob_max_output=
 
 ##Condor
 
-#condor bin location (default is to use PATH)
-#condor_binpath=
+#condor bin location
+condor_binpath=/usr/bin
 
 #path to condor_config
 #export CONDOR_CONFIG="/etc/condor/condor_config"
@@ -320,8 +321,7 @@ bupdater_use_condor_history=
 
 ##SGE
 
-#Path where SGE executables are located (default is to use PATH)
-#sge_binpath=
+sge_binpath=
 
 sge_cellname=$SGE_CELL
 
@@ -332,8 +332,9 @@ sge_pe_policy=*
 
 ##SLURM
 
-#path to the slurm executables (default is to use PATH)
-#slurm_binpath=
+#path to the slurm executables
+#default: /usr/bin
+slurm_binpath=/usr/bin
 
 ##
 #####BNotifier subsection

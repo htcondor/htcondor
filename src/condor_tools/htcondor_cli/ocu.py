@@ -69,7 +69,7 @@ class Create(Verb):
         try:
             result = schedd.submit(submit_description, count=1)
             cluster_id = result.cluster()
-            print(f"OCU placed with Id {cluster_id}.")
+            print(f"OCU placed with ClusterId {cluster_id}.")
         except Exception as e:
             raise RuntimeError(f"Error placing ocu:\n{str(e)}")
 

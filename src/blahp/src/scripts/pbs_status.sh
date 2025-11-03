@@ -46,7 +46,7 @@ usage_string="Usage: $0 [-w] [-n]"
 
 logpath=${pbs_spoolpath}/server_logs
 if [ ! -d $logpath -o ! -x $logpath ]; then
- pbs_spoolpath=`${pbs_binpath}tracejob | grep 'default prefix path'|awk -F" " '{ print $5 }'`
+ pbs_spoolpath=`${pbs_binpath}/tracejob | grep 'default prefix path'|awk -F" " '{ print $5 }'`
  logpath=${pbs_spoolpath}/server_logs
 fi
 
@@ -78,7 +78,7 @@ function search_wn(){
 		workernode=`grep $reqjob $qstatcache|awk -F":" '{ print $2 }'`
 	fi
 	if [ "x$workernode" == "x" ] ; then
-		result=`${pbs_binpath}qstat -f 2> /dev/null | awk -v cqstat=$qstattmp '
+		result=`${pbs_binpath}/qstat -f 2> /dev/null | awk -v cqstat=$qstattmp '
 BEGIN {
     current_job = ""
     current_wn = ""
@@ -175,7 +175,7 @@ for  reqfull in $pars ; do
 
         staterr=/tmp/${reqjob}_staterr
 	
-result=`${pbs_binpath}qstat -f $reqjob 2>$staterr`
+result=`${pbs_binpath}/qstat -f $reqjob 2>$staterr`
 qstat_exit_code=$?
 result=`echo "$result" | awk -v jobId=$reqjob '
 BEGIN {

@@ -168,7 +168,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	} else {
 		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				(long)daemonCore->getpid() );
-		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
 			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
 			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
 		} else {
@@ -263,8 +263,6 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	if( ! jic->init() ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize JobInfoCommunicator, aborting\n" );
-		SetVacateReason("Starter failed to initialize", CONDOR_HOLD_CODE::StarterError, 0);
-		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
 		return false;
 	}
 
@@ -290,28 +288,6 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	return true;
 }
 
-void
-Starter::SetVacateReason(const std::string& msg, int code, int subcode)
-{
-	// Don't overwrite an existing vacate reason
-	if (m_vacateCode == 0) {
-		m_vacateReason = msg;
-		m_vacateCode = code;
-		m_vacateSubcode = subcode;
-	}
-}
-
-void
-Starter::ExceptHandler(const char* errmsg)
-{
-	if (m_vacateCode != 0) {
-		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
-	} else {
-		jic->notifyStarterError(errmsg, true, 0, 0);
-	}
-	RemoteShutdownFast(0);
-	FinalCleanup(STARTER_EXIT_EXCEPTION);
-}
 
 void
 Starter::StarterExit( int code )
@@ -1916,7 +1892,6 @@ Starter::createTempExecuteDir( void )
 						SlotDir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
-				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 			// The "htcondor" subdir is always owned by condor, mode 0755
@@ -1927,7 +1902,6 @@ Starter::createTempExecuteDir( void )
 						condor_dir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
-				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 
@@ -1940,7 +1914,6 @@ Starter::createTempExecuteDir( void )
 						JobHomeDir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
-				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 
@@ -1957,7 +1930,6 @@ Starter::createTempExecuteDir( void )
 						JobHomeDir.c_str(),
 						strerror(errno) );
 				set_priv( priv );
-				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 #endif
@@ -1969,7 +1941,6 @@ Starter::createTempExecuteDir( void )
 			         WorkingDir.c_str(),
 			         strerror(errno) );
 			set_priv( priv );
-			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 	}
@@ -1981,7 +1952,6 @@ Starter::createTempExecuteDir( void )
 		if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested) && requested) {
 			dprintf(D_ERROR,
 			        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
-			SetVacateReason("Can't create encrypted scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 	}
@@ -2003,7 +1973,6 @@ Starter::createTempExecuteDir( void )
 		if ( !ret_val ) {
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
-			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 
@@ -2012,7 +1981,6 @@ Starter::createTempExecuteDir( void )
 			if ( !ret_val ) {
 				dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON USER DIRECTORY\n");
 				set_priv( priv );
-				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 				return false;
 			}
 		}
@@ -2126,7 +2094,6 @@ Starter::createTempExecuteDir( void )
 		}
 		if ( ! lvm_setup_successful) {
 			m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
-			SetVacateReason("Failed to create LV for scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
@@ -2142,7 +2109,6 @@ Starter::createTempExecuteDir( void )
 	if ( ! dirMonitor || ! dirMonitor->IsValid()) {
 		dprintf(D_ERROR, "Failed to initialize job working directory monitor object: %s\n",
 		                 dirMonitor ? "Out of memory" : "Failed initialization");
-		SetVacateReason("Failed to create LV for scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 		return false;
 	}
 
@@ -2153,7 +2119,6 @@ Starter::createTempExecuteDir( void )
 					get_user_uid(),
 					get_user_gid()) == -1)
 		{
-			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			EXCEPT("chown error on %s: %s",
 					WorkingDir.c_str(),
 					strerror(errno));
@@ -2177,7 +2142,6 @@ Starter::createTempExecuteDir( void )
 		dprintf( D_ERROR, "couldn't move to %s: %s\n", WorkingDir.c_str(),
 				 strerror(errno) ); 
 		set_priv( priv );
-		SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
@@ -3212,7 +3176,6 @@ bool
 Starter::transferOutput( void )
 {
 	bool transient_failure = false;
-	bool in_progress = false;
 
 	dprintf(D_ZKM, "Starter::transferOutput()\n");
 
@@ -3229,11 +3192,7 @@ Starter::transferOutput( void )
 	// output-transfer failures in the case of a setup failure; we can only
 	// really report one thing, and that should be the setup failure,
 	// which happens as a result of calling cleanupJobs().
-	bool transfer_done = jic->transferOutput(transient_failure, in_progress);
-	if (transfer_done == false && in_progress == true) {
-		return false;
-	}
-	if (transfer_done == false && m_setupStatus == 0) {
+	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
 				// we will retry the transfer when (if) the shadow reconnects

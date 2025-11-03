@@ -1177,11 +1177,6 @@ all attributes.
     An integer value that will increment every time a job leaves the running state and returns to the idle state.
     It may be undefined until the job has been vacated at least once.
 
-:classad-attribute-def:`NumVacatesPreExecution`
-    An integer value that will increment every time a job leaves the running state and returns to the idle state,
-    but only in the period before the job has started executing (e.g., during input file transfer).
-    It may be undefined until the job has been vacated at least once.
-
 :classad-attribute-def:`NumVacatesByReason`
     The value of this attribute is a (nested) classad containing a count of how many times a job has been
     vacated (left running state and returned to the idle state) grouped by the reason the job was vacated.
@@ -1204,14 +1199,6 @@ all attributes.
     Note in the above example there is both TransferInputError (count across all protocols) and TransferInputErrorCedar (count specific to the CEDAR protocol).
     Possible values for the protocol depend upon the file transfer plug-ins that are configured in the HTCondor pool, but may include
     ``Cedar``, ``Http``, ``S3``, ``Pelican``, ``Ftp``, and others.
-
-:classad-attribute-def:`NumVacatesByReasonPreExecution`
-    The value of this attribute is a (nested) classad containing a count of how many times a job has been
-    vacated (left running state and returned to the idle state) grouped by the reason the job was vacated,
-    but only in the period before the job has started executing (e.g., during input file transfer).
-    It may be undefined until the job has been vacated
-    at least once in that pre-execution period. 
-    See the similar attribute :ad-attr:`NumVacatesByReason` for more details.
 
 :classad-attribute-def:`OSHomeDir`
     This attribute is only set in the starter's copy of the job ad, and expands

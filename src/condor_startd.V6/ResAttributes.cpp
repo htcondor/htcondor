@@ -66,11 +66,7 @@ MachAttributes::MachAttributes()
 	m_idle = 0;
 	m_load = -1.0;
 	m_owner_load = -1.0;
-#ifdef PROVISION_FRACTIONAL_DISK
 	m_virt_mem = 0;
-#else
-	m_num_swap = 0;
-#endif
 	m_docker_cached_image_size = -1;
 	m_docker_cached_image_size_time = time(nullptr) - docker_cached_image_size_interval;
 
@@ -83,7 +79,6 @@ MachAttributes::MachAttributes()
 	m_num_real_cpus = count_hyper ? nhyper_cpus : ncpus;
 	m_num_cpus = param_integer("NUM_CPUS");
 
-#ifdef PROVISION_FRACTIONAL_DISK
 	// recompute disk is false if DISK is configured to a static value
 	// otherwise we recompute based on a knob. the actual live disk computation
 	// happens in the Resource class if recompute_disk is true
@@ -92,24 +87,7 @@ MachAttributes::MachAttributes()
 	auto_free_ptr disk(param("DISK"));
 	if (!disk || ! string_is_long_param(disk, m_total_disk)) {
 		m_always_recompute_disk = param_boolean("STARTD_RECOMPUTE_DISK_FREE", false);
-	} else {
-		m_total_disk_from_config = true;
 	}
-#else
-	long long total_disk = -1;
-	auto_free_ptr disk(param("DISK"));
-	if (!disk || ! string_is_long_param(disk, total_disk)) {
-		m_recompute_disk_free = param_boolean("STARTD_RECOMPUTE_DISK_FREE", false);
-	} else {
-		auto & volume = m_disk_volumes["<from-config>"];
-		volume.detected_disk = total_disk;
-		volume.free_disk = total_disk;
-		volume.non_condor_disk = 0; // TODO: set this to something?
-		m_total_disk_from_config = true;
-	}
-	m_num_swap = sysapi_swap_space();
-	dprintf( D_FULLDEBUG, "Swap space: %lld\n", m_num_swap );
-#endif
 
 		// The same is true of physical memory.  If we had an error in
 		// sysapi_phys_memory(), we need to just EXCEPT with a message
@@ -199,13 +177,6 @@ MachAttributes::~MachAttributes()
 
     release_all_WinPerf_results();
 #endif
-}
-
-void
-MachAttributes::set_volume_manager(VolumeManager* volman)
-{
-	m_volume_manager_ref = volman;
-	m_using_volume_manager = volman && volman->is_enabled();
 }
 
 void
@@ -313,7 +284,7 @@ MachAttributes::init_user_settings()
     char* detected_versions = param("DOT_NET_VERSIONS");
     if( ! detected_versions)
     {
-        std::string s_dot_Net_Versions;
+        string s_dot_Net_Versions;
 
         static const struct {
             const char * pszKey;
@@ -484,10 +455,8 @@ MachAttributes::compute_for_update()
 
 	{  // formerly IS_UPDATE(how_much) && IS_SHARED(how_much)
 
-#ifdef PROVISION_FRACTIONAL_DISK
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lld\n", m_virt_mem );
-#endif
 
 		time_t now = resmgr->now();
 		time_t interval = (now - m_docker_cached_image_size_time);
@@ -1383,7 +1352,7 @@ static rotational_result hasRotationalScratch() {
 #endif
 
 void 
-MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
+MachAttributes::publish_static(ClassAd* cp)
 {
 	// STARTD_IP_ADDR
 	cp->Assign( ATTR_STARTD_IP_ADDR, daemonCore->InfoCommandSinfulString() );
@@ -1455,44 +1424,6 @@ MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
 	// publish resource totals
 	cp->Assign( ATTR_TOTAL_CPUS, m_num_cpus );
 	cp->Assign( ATTR_TOTAL_MEMORY, m_phys_mem );
-
-#ifdef PROVISION_FRACTIONAL_DISK
-	// we can't do TotalDisk here, see compute_disk()
-#else
-	if (childAttrs) {
-		// get the usable disk for this execute partition.
-		long long total_disk = this->provisioned_disk(childAttrs->executePartitionID());
-		cp->Assign(ATTR_TOTAL_DISK, total_disk);
-		// and the total detected disk
-		long long detected_disk = this->detected_disk(childAttrs->executePartitionID());
-		cp->Assign(ATTR_DETECTED_DISK, detected_disk);
-		cp->Assign("ExecuteVolume", childAttrs->executePartitionID());
-	} else {
-		// calculate total disk across all execute partitions
-		// and publish the list of execute partition ids
-		long long total_disk = 0;
-		long long detected_disk = 0;
-		std::string partition_list;
-		for (auto & [partition_id, volume] : m_disk_volumes) {
-			total_disk += volume.provisioned_disk;
-			detected_disk += volume.detected_disk;
-			if (partition_list.empty()) {
-				partition_list = "ExecuteVolumes = { ";
-			} else {
-				partition_list += ", ";
-			}
-			classad::Value val;
-			val.SetStringValue(partition_id);
-			ClassAdValueToString(val, partition_list);
-		}
-		cp->Assign(ATTR_TOTAL_DISK, total_disk);
-		cp->Assign(ATTR_DETECTED_DISK, detected_disk);
-		if ( ! partition_list.empty()) {
-			partition_list.append(" }");
-			cp->Insert(partition_list);
-		}
-	}
-#endif
 
 	std::string machine_resources = "Cpus Memory Disk Swap";
 	// publish any local resources
@@ -1598,14 +1529,10 @@ MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
 
 	}
 #endif
-	// HACK: we don't want to use an actual path here because we don't want to
-	// allow $$() as long as the scratch dir path has the starter pid.
-	// Any $$() would refer to an obsolete path.
-	// Instead, $$() will expand to this magic string, which
-	// the Starter will replace with the actual value before it launches the job
-	if (childAttrs) {
-		cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
-	}
+	// Temporary Hack until this is a fixed path
+	// the Starter will expand this magic string to the
+	// actual value
+	cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
 }
 
 // set the dyn_id of NFT ownership using the claimed state for static slots
@@ -1691,7 +1618,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 				ids = join(k->second, ",");
 			}
 		}
-		std::string attr = ATTR_OFFLINE_PREFIX + j->first;
+		string attr(ATTR_OFFLINE_PREFIX); attr += j->first;
 		if (ids.empty()) {
 			if (cp->Lookup(attr)) {
 				cp->Assign(attr, "");
@@ -1730,11 +1657,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp, bool global /*=false*/)
 		}
 	}
 
-#ifdef PROVISION_FRACTIONAL_DISK
 	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
-#else
-	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_num_swap );
-#endif
 	cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
 	cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
 	cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
@@ -1947,7 +1870,7 @@ const char * MachAttributes::consumptionLimitsExpression()
                 for (auto j(assets.begin());  j != assets.end();  ++j) {
                     //string rname(*j);
                     //*(rname.begin()) = toupper(*(rname.begin()));
-                    std::string te;
+                    string te;
                     // The logic here is that if the target job ad is in a mode where its RequestXxx have
                     // already been temporarily overridden with the consumption policy values, then we want
                     // to use RequestXxx (note, this will include any overrides by _condor_RequestXxx).
@@ -2090,6 +2013,38 @@ MachAttributes::credd_test()
 }
 #endif
 
+CpuAttributes::CpuAttributes(
+							  unsigned int slot_type,
+							  double num_cpus_arg,
+							  int num_phys_mem,
+							  double virt_mem_fraction,
+							  double disk_fraction,
+							  const slotres_map_t& slotres_map,
+							  const slotres_constraint_map_t & slotres_req_map,
+							  const std::string &execute_dir,
+							  const std::string &execute_partition_id )
+{
+	c_type_id = slot_type;
+	c_num_slot_cpus = c_num_cpus = num_cpus_arg;
+	c_allow_fractional_cpus = num_cpus_arg > 0 && num_cpus_arg < 0.9;
+	c_slot_mem = c_phys_mem = num_phys_mem;
+	c_virt_mem_fraction = virt_mem_fraction;
+	c_disk_fraction = disk_fraction;
+	c_slotres_map = slotres_map;
+	c_slotres_constraint_map = slotres_req_map;
+	c_slottot_map = slotres_map;
+	c_execute_dir = execute_dir;
+	c_execute_partition_id = execute_partition_id;
+	c_idle = -1;
+	c_console_idle = -1;
+	c_slot_disk = c_disk = 0;
+	c_total_disk = 0;
+
+	c_condor_load = -1.0;
+	c_owner_load = -1.0;
+	c_virt_mem = 0;
+	rip = NULL;
+}
 
 void
 CpuAttributes::attach( Resource* res_ip )
@@ -2097,7 +2052,6 @@ CpuAttributes::attach( Resource* res_ip )
 	this->rip = res_ip;
 }
 
-#ifdef PROVISION_FRACTIONAL_DISK
 
 bool
 CpuAttributes::set_total_disk(long long total, bool refresh, VolumeManager * volman) {
@@ -2113,10 +2067,10 @@ CpuAttributes::set_total_disk(long long total, bool refresh, VolumeManager * vol
 		// refresh disk if the flag was passed in, or we do not yet have a value
 	if (refresh) {
 		CondorError err;
-		uint64_t detected_bytes=0, free_bytes=0, non_condor_bytes=0;
+		uint64_t used_bytes, total_bytes;
 		if (volman && volman->is_enabled()) {
-			if (volman->GetPoolSize(detected_bytes, free_bytes, non_condor_bytes, err)) {
-				c_total_disk = free_bytes/1024 - sysapi_reserve_for_fs();
+			if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
+				c_total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
 				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
 				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
 				return true;
@@ -2129,30 +2083,6 @@ CpuAttributes::set_total_disk(long long total, bool refresh, VolumeManager * vol
 	}
 	return false;
 }
-#else
-
-
-void initExecutePartitionTable(MachAttributes * m_attr, VolumeManager * volman)
-{
-	std::string volume_id = "<none>";
-	long long total_disk = 0;
-	uint64_t detected_bytes=0, free_bytes=0, non_condor_bytes=0;
-	if (volman && volman->is_enabled()) {
-		CondorError err;
-		if (volman->GetPoolSize(detected_bytes, free_bytes, non_condor_bytes, err)) {
-			total_disk = free_bytes/1024 - sysapi_reserve_for_fs();
-			total_disk = MAX(total_disk, 0);
-			volume_id = volman->GetBackingDevice();
-			dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %lld from device %s\n",
-			        total_disk, volume_id.c_str());
-		} else {
-			dprintf(D_ERROR, "Failed to get LVM pool size: %s\n", err.getFullText().c_str());
-		}
-	}
-	m_attr->add_disk_volume(volume_id.c_str(), total_disk, detected_bytes/1024, non_condor_bytes/1024);
-}
-
-#endif
 
 // bind non-fungable resource ids to a slot
 bool
@@ -2310,12 +2240,7 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 void
 CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
-#ifdef PROVISION_FRACTIONAL_DISK
 		cp->Assign( ATTR_TOTAL_DISK, c_total_disk );
-#else
-		// MachAttributes::publish_static does this now
-		// TODO: handle the case where disk free space is refreshed
-#endif
 		cp->Assign( ATTR_DISK, c_disk );
 		cp->Assign( ATTR_CONDOR_LOAD_AVG, rint(c_condor_load * 100) / 100.0 );
 		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
@@ -2402,11 +2327,7 @@ CpuAttributes::publish_static(
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(slot_cpus + 0.1) );
 		}
 		
-#ifdef PROVISION_FRACTIONAL_DISK
 		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
-#else
-		cp->Assign( ATTR_VIRTUAL_MEMORY, c_swap );
-#endif
 
 		// publish local resource quantities for this slot
 		for (auto j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
@@ -2414,7 +2335,7 @@ CpuAttributes::publish_static(
 			int quantity = broken ? 0 : int(j->second);
 			cp->Assign(j->first, quantity);
 
-			std::string attr = ATTR_TOTAL_SLOT_PREFIX + j->first;
+			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
 			long long tot = 0;
 			auto tt = c_slottot_map.find(j->first);
 			if (tt != c_slottot_map.end()) { tot = (long long)tt->second; }
@@ -2430,7 +2351,8 @@ CpuAttributes::publish_static(
 
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
-				attr = "Assigned" + j->first;
+				attr = "Assigned";
+				attr += j->first;
 				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
@@ -2454,7 +2376,6 @@ CpuAttributes::publish_static(
 		}
 }
 
-#ifdef PROVISION_FRACTIONAL_DISK
 void
 CpuAttributes::compute_virt_mem_share(double virt_mem)
 {
@@ -2478,35 +2399,7 @@ CpuAttributes::compute_disk()
 		c_slot_disk = c_disk; 
 	}
 }
-#else
 
-void
-CpuAttributes::recompute_disk(bool init)
-{
-	// if total disk has not yet been initialized, do that now, either by 
-	// getting the size from the volumeManager, or from the total disk
-	// for the partition that we saw at startup.
-	if (init) {
-		auto volman = resmgr->getVolumeManager();
-		if (volman && volman->is_enabled()) {
-			CondorError err;
-			uint64_t detected_bytes=0, free_bytes=0, non_condor_bytes=0;
-			if (volman->GetPoolSize(detected_bytes, free_bytes, non_condor_bytes, err)) {
-				c_total_disk = free_bytes/1024 - sysapi_reserve_for_fs();
-				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
-				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
-				return;
-			} else {
-				dprintf(D_ERROR, "Failed to get LVM pool size: %s\n", err.getFullText().c_str());
-			}
-		}
-		c_total_disk = resmgr->m_attr->provisioned_disk(c_execute_partition_id.c_str());
-		c_slot_disk = c_disk; 
-	} else {
-		// TODO: refresh disk and handle the case where disk is provisioned as a percentage?
-	}
-}
-#endif
 
 void
 CpuAttributes::display_load(int dpf_flags) const
@@ -2541,7 +2434,6 @@ CpuAttributes::cat_totals(std::string & buf) const
 		formatstr_cat(buf, "%d", c_phys_mem);
 	}
 
-#ifdef PROVISION_FRACTIONAL_DISK
 	buf += ", Swap: ";
 	if (IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		buf += "auto";
@@ -2557,23 +2449,6 @@ CpuAttributes::cat_totals(std::string & buf) const
 	else {
 		formatstr_cat(buf, "%.2f%%", 100*c_disk_fraction );
 	}
-#else
-	buf += ", Swap: ";
-	if (IS_AUTO_SHARE(c_swap)) {
-		buf += "auto";
-	}
-	else {
-		formatstr_cat(buf, "%lld", c_swap );
-	}
-
-	buf += ", Disk: ";
-	if (IS_AUTO_SHARE(c_disk)) {
-		buf += "auto";
-	}
-	else {
-		formatstr_cat(buf, "%lld", c_disk );
-	}
-#endif
 
 	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
 		if (IS_AUTO_SHARE(j->second)) {
@@ -2605,7 +2480,6 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 {
 	c_num_cpus += rhs.c_num_cpus;
 	c_phys_mem += rhs.c_phys_mem;
-#ifdef PROVISION_FRACTIONAL_DISK
 	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction += rhs.c_virt_mem_fraction;
@@ -2617,16 +2491,11 @@ CpuAttributes::operator+=( CpuAttributes& rhs )
 		c_disk_fraction += rhs.c_disk_fraction;
 	}
 
-	compute_disk();
-#else
-	c_swap += rhs.c_swap;
-	c_disk += rhs.c_disk;
-#endif
-
 	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
 		j->second += rhs.c_slotres_map[j->first];
 	}
 
+	compute_disk();
 
 	return *this;
 }
@@ -2636,7 +2505,6 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 {
 	c_num_cpus -= rhs.c_num_cpus;
 	c_phys_mem -= rhs.c_phys_mem;
-#ifdef PROVISION_FRACTIONAL_DISK
 	if (!IS_AUTO_SHARE(rhs.c_virt_mem_fraction) &&
 		!IS_AUTO_SHARE(c_virt_mem_fraction)) {
 		c_virt_mem_fraction -= rhs.c_virt_mem_fraction;
@@ -2647,15 +2515,11 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 		c_disk_fraction -= rhs.c_disk_fraction;
 	}
 
-	compute_disk();
-#else
-	c_swap -= rhs.c_swap;
-	c_disk -= rhs.c_disk;
-#endif
-
 	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
 		j->second -= rhs.c_slotres_map[j->first];
 	}
+
+	compute_disk();
 
 	return *this;
 }
@@ -2663,18 +2527,10 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 const char * CpuAttributes::_slot_request::dump(std::string & buf) const
 {
 	buf.clear();
-	formatstr(buf, "Cpus=%f, Memory=%d", num_cpus, num_phys_mem);
-#ifdef PROVISION_FRACTIONAL_DISK
-	formatstr_cat(buf, ", Disk=%f/1", disk_fraction);
+	formatstr(buf, "Cpus=%f, Memory=%d, Disk=%f/1", num_cpus, num_phys_mem, disk_fraction);
 	if (virt_mem_fraction > 0) {
 		formatstr_cat(buf, ", Swap=%f/1", virt_mem_fraction);
 	}
-#else
-	formatstr_cat(buf, ", Disk=%lld", num_disk);
-	if (num_swap > 0) {
-		formatstr_cat(buf, ", Swap=%lld", num_swap);
-	}
-#endif
 	for (auto &[tag,val] : slotres) {
 		formatstr_cat(buf, " ,%s=%f", tag.c_str(), val);
 		auto found = slotres_constr.find(tag);
@@ -2817,26 +2673,14 @@ AvailAttributes::AvailAttributes( MachAttributes* map) {
 	a_num_cpus_auto_count = 0;
 	a_phys_mem = map->phys_mem();
 	a_phys_mem_auto_count = 0;
-#ifdef PROVISION_FRACTIONAL_DISK
 	a_virt_mem_fraction = 1.0;
 	a_virt_mem_auto_count = 0;
-#else
-	a_num_swap = map->num_swap();
-	a_swap_auto_count = 0;
-
-	// build a table of partitions and initial free space for each
-	// TODO: reserve disk?
-	for (const auto & [partition_id, volume] : map->disk_volumes()) {
-		this->init_partition(partition_id.c_str(), volume.free_disk);
-	}
-#endif
     a_slotres_map = map->machres();
     for (auto & j : a_slotres_map) {
         a_autocnt_map[j.first] = 0;
     }
 }
 
-#if 0
 AvailDiskPartition &
 AvailAttributes::GetAvailDiskPartition(std::string const &execute_partition_id)
 {
@@ -2848,27 +2692,12 @@ AvailAttributes::GetAvailDiskPartition(std::string const &execute_partition_id)
 	}
 	return it->second;;
 }
-#endif
-
-void
-AvailAttributes::update_provisioned_disk( MachAttributes * map )
-{
-	// for each partition, the provisioned disk amount is all of the free space on the disk
-	// if 'auto' was used for any slot, otherwise, it is the some of disk that we provisioned
-	// which is equal to initial free_disk - available free disk remaining.
-	for (const auto & [partition_id, partition] : m_partitions) {
-		long long provisioned_disk = map->free_disk(partition_id.c_str());
-		if ( ! partition.m_auto_count) { provisioned_disk -= partition.m_disk; }
-		map->update_provisioned_disk_for_volume(partition_id.c_str(), provisioned_disk);
-	}
-}
-
 
 bool
 AvailAttributes::decrement( CpuAttributes* cap ) 
 {
 	int new_cpus, new_phys_mem;
-	double floor = -0.000001f;
+	double new_virt_mem, new_disk, floor = -0.000001f;
 	
 	new_cpus = a_num_cpus;
 	if ( ! IS_AUTO_SHARE(cap->c_num_cpus)) {
@@ -2884,29 +2713,16 @@ AvailAttributes::decrement( CpuAttributes* cap )
 		new_phys_mem -= cap->c_phys_mem;
 	}
 
-#ifdef PROVISION_FRACTIONAL_DISK
-	double new_virt_mem = a_virt_mem_fraction;
+	new_virt_mem = a_virt_mem_fraction;
 	if( !IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
 		new_virt_mem -= cap->c_virt_mem_fraction;
 	}
 
-	auto &partition = m_partitions[cap->executePartitionID()];
-	double new_disk = partition.m_disk_fraction;
+	AvailDiskPartition &partition = GetAvailDiskPartition( cap->executePartitionID() );
+	new_disk = partition.m_disk_fraction;
 	if( !IS_AUTO_SHARE(cap->c_disk_fraction) ) {
 		new_disk -= cap->c_disk_fraction;
 	}
-#else
-	long long new_swap = a_num_swap;
-	if( !IS_AUTO_SHARE(cap->c_swap) ) {
-		new_swap -= cap->c_swap;
-	}
-
-	auto &partition = m_partitions[cap->executePartitionID()];
-	long long new_disk = partition.m_disk;
-	if( !IS_AUTO_SHARE(cap->c_disk) ) {
-		new_disk -= cap->c_disk;
-	}
-#endif
 
 	bool resfloor = false;
 	slotres_map_t new_res(a_slotres_map);
@@ -2919,12 +2735,8 @@ AvailAttributes::decrement( CpuAttributes* cap )
 		}
 	}
 
-	if (resfloor || new_cpus < floor || new_phys_mem < floor ||
-#ifdef PROVISION_FRACTIONAL_DISK
+	if (resfloor || new_cpus < floor || new_phys_mem < floor || 
 		new_virt_mem < floor || new_disk < floor) {
-#else
-		new_swap < floor || new_disk < floor) {
-#endif
 	    return false;
     }
 
@@ -2938,8 +2750,7 @@ AvailAttributes::decrement( CpuAttributes* cap )
         a_phys_mem_auto_count += 1;
     }
 
-#ifdef PROVISION_FRACTIONAL_DISK
-	a_virt_mem_fraction = new_virt_mem;
+    a_virt_mem_fraction = new_virt_mem;
     if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
         a_virt_mem_auto_count += 1;
     }
@@ -2948,17 +2759,6 @@ AvailAttributes::decrement( CpuAttributes* cap )
     if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
         partition.m_auto_count += 1;
     }
-#else
-	a_num_swap = new_swap;
-	if( IS_AUTO_SHARE(cap->c_swap) ) {
-		a_swap_auto_count += 1;
-	}
-
-	partition.m_disk = new_disk;
-	if( IS_AUTO_SHARE(cap->c_disk) ) {
-		partition.m_auto_count += 1;
-	}
-#endif
 
 	for (auto j(a_slotres_map.begin()); j != a_slotres_map.end(); ++j) {
 		j->second = new_res[j->first];
@@ -2990,13 +2790,12 @@ AvailAttributes::trim_request_to_fit( CpuAttributes::_slot_request & req, const 
 
 	if ( ! IS_AUTO_SHARE(req.num_phys_mem)) {
 		int new_phys_mem = a_phys_mem - req.num_phys_mem;
-		if (new_phys_mem < 0) {
+		if (new_phys_mem < floor) {
 			formatstr_cat(unfit, "Memory (%d short) ", -new_phys_mem);
 			req.num_phys_mem = a_phys_mem;
 		}
 	}
 
-#ifdef PROVISION_FRACTIONAL_DISK
 	if( !IS_AUTO_SHARE(req.virt_mem_fraction) ) {
 		double new_virt_mem = a_virt_mem_fraction - req.virt_mem_fraction;
 		if (new_virt_mem < floor) {
@@ -3006,7 +2805,7 @@ AvailAttributes::trim_request_to_fit( CpuAttributes::_slot_request & req, const 
 	}
 
 	if (execute_partition_id && *execute_partition_id) {
-		auto &partition = m_partitions[execute_partition_id];
+		AvailDiskPartition &partition = GetAvailDiskPartition( execute_partition_id );
 		if( !IS_AUTO_SHARE(req.disk_fraction) ) {
 			double new_disk = partition.m_disk_fraction - req.disk_fraction;
 			if (new_disk < floor) {
@@ -3015,26 +2814,6 @@ AvailAttributes::trim_request_to_fit( CpuAttributes::_slot_request & req, const 
 			}
 		}
 	}
-#else
-	if( !IS_AUTO_SHARE(req.num_swap) ) {
-		long long new_swap = a_num_swap - req.num_swap;
-		if (new_swap < 0) {
-			formatstr_cat(unfit, "Swap (%lld short) ", -new_swap);
-			req.num_swap = a_num_swap;
-		}
-	}
-
-	if (execute_partition_id && *execute_partition_id) {
-		auto &partition = m_partitions[execute_partition_id];
-		if( !IS_AUTO_SHARE(req.num_disk) ) {
-			long long new_disk = partition.m_disk - req.num_disk;
-			if (new_disk < 0) {
-				formatstr_cat(unfit, "Disk (%lld short) ", -new_disk);
-				req.num_disk = partition.m_disk;
-			}
-		}
-	}
-#endif
 
 	slotres_map_t new_res(a_slotres_map);
 	for (auto j(new_res.begin()); j != new_res.end(); ++j) {
@@ -3100,7 +2879,6 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 		cap->c_slot_mem = cap->c_phys_mem = new_value;
 	}
 
-#ifdef PROVISION_FRACTIONAL_DISK
 	if( IS_AUTO_SHARE(cap->c_virt_mem_fraction) ) {
 		ASSERT( a_virt_mem_auto_count > 0 );
 		double new_value = a_virt_mem_fraction / a_virt_mem_auto_count;
@@ -3111,7 +2889,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 	}
 
 	if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
-		auto &partition = m_partitions[cap->c_execute_partition_id];
+		AvailDiskPartition &partition = GetAvailDiskPartition ( cap->c_execute_partition_id );
 		ASSERT( partition.m_auto_count > 0 );
 		double new_value = partition.m_disk_fraction / partition.m_auto_count;
 		if( new_value <= 0 ) {
@@ -3119,26 +2897,6 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 		}
 		cap->c_disk_fraction = new_value;
 	}
-#else
-	if( IS_AUTO_SHARE(cap->c_swap) ) {
-		ASSERT( a_swap_auto_count > 0 );
-		long long new_value = a_num_swap / a_swap_auto_count;
-		if( new_value <= 0 ) {
-			return false;
-		}
-		cap->c_slot_swap = cap->c_swap = new_value;
-	}
-
-	if( IS_AUTO_SHARE(cap->c_disk) ) {
-		auto &partition = m_partitions[cap->c_execute_partition_id];
-		ASSERT( partition.m_auto_count > 0 );
-		long long new_value = partition.m_disk / partition.m_auto_count;
-		if( new_value <= 0 ) {
-			return false;
-		}
-		cap->c_slot_disk = cap->c_disk = new_value;
-	}
-#endif
 
 	for (auto j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
 		if (IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
@@ -3163,18 +2921,14 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 	return true;
 }
 
+
 void
 AvailAttributes::cat_totals(std::string & buf, const char * execute_partition_id)
 {
-	auto &partition = m_partitions[execute_partition_id];
-	formatstr_cat(buf, "Cpus: %d, Memory: %d", a_num_cpus, a_phys_mem);
-#ifdef PROVISION_FRACTIONAL_DISK
-	formatstr_cat(buf, ", Swap: %.2f%%, Disk: %.2f%%",
-		100*a_virt_mem_fraction,
+	AvailDiskPartition &partition = GetAvailDiskPartition( execute_partition_id );
+	formatstr_cat(buf, "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
+		a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
 		100*partition.m_disk_fraction );
-#else
-	formatstr_cat(buf, ", Swap: %lld, Disk: %lld", a_num_swap, partition.m_disk );
-#endif
 	for (auto & j : a_slotres_map) {
 		formatstr_cat(buf, ", %s: %d", j.first.c_str(), int(j.second));
 	}

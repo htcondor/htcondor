@@ -36,7 +36,7 @@
 #include <limits.h>
 
 long long
-sysapi_total_disk_space_raw(const char *filename, long long * total)
+sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
 	unsigned int t_hi, t_lo, temp;
@@ -50,7 +50,6 @@ sysapi_total_disk_space_raw(const char *filename, long long * total)
 		&TotalNumberOfFreeBytes) == 0) {
 		return -1;
 	} else {
-		if (total) { *total = TotalNumberOfBytes.QuadPart / 1024; }
 		return FreeBytesAvailableToCaller.QuadPart / 1024;
 	}
 }
@@ -74,17 +73,15 @@ sysapi_reserve_for_fs()
 
 #if defined(__STDC__)
 long long sysapi_disk_space_raw( const char *filename);
-long long sysapi_total_disk_space_raw( const char *filename, long long * total);
 #else
 long long sysapi_disk_space_raw();
-long long sysapi_total_disk_space_raw();
 #endif
 
 #if defined(LINUX) || defined(Darwin) || defined(CONDOR_FREEBSD)
 
 #include <limits.h>
 
-long long sysapi_total_disk_space_raw(const char * filename, long long * total)
+long long sysapi_disk_space_raw(const char * filename)
 {
 	struct statfs statfsbuf;
 	long long free_kbytes;
@@ -98,7 +95,6 @@ long long sysapi_total_disk_space_raw(const char * filename, long long * total)
 													filename, &statfsbuf );
 			dprintf(D_ALWAYS, "errno = %d\n", errno );
 
-			if (total) *total = 0;
 			return(0);
 		}
 
@@ -119,19 +115,9 @@ long long sysapi_total_disk_space_raw(const char * filename, long long * total)
 
 	free_kbytes = (long long)(statfsbuf.f_bavail * kbytes_per_block);
 
-	if (total) {
-		*total = (long long)(statfsbuf.f_blocks * kbytes_per_block);
-	}
-
 	return free_kbytes;
 }
-
 #endif
-
-long long sysapi_disk_space_raw(const char * filename) {
-	long long total;
-	return sysapi_total_disk_space_raw(filename, &total);
-}
 
 /*
   Return number of kbytes condor may play with in the named file
@@ -150,23 +136,5 @@ sysapi_disk_space(const char *filename)
 	return answer < 0 ? 0 : answer;
 
 }
-
-/*
-  Return both number of kbytes condor may play with in the named file
-  system, and the total bytes.  System administrators may reserve space from the free bytes
-*/
-long long
-sysapi_total_disk_space(const char *filename, long long * total)
-{
-	long long answer;
-
-	sysapi_internal_reconfig();
-
-	answer =  sysapi_total_disk_space_raw(filename, total)
-		- sysapi_reserve_for_fs();
-	return answer < 0 ? 0 : answer;
-
-}
-
 
 

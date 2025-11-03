@@ -387,18 +387,6 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			dprintf(D_FULLDEBUG, "Job already held, not updating hold reason code\n");
 			job_queue_attrs = nullptr;
 		}
-	} else if (type == U_EVICT) {
-		if (!ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, nullptr, m_owner.c_str()) ) {
-			return false;
-		}
-		is_connected = true;
-		for (const auto& attr: evict_job_queue_attrs) {
-			if ( GetAttributeExprNew(cluster, proc, attr.c_str(), &value) >= 0 ) {
-				job_ad->AssignExpr(attr, value);
-				job_ad->MarkAttributeClean(attr);
-			}
-			free( value );
-		}
 	}
 
 	for ( auto itr = job_ad->dirtyBegin(); itr != job_ad->dirtyEnd(); itr++ ) {

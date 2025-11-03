@@ -73,7 +73,6 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
         { "ShouldRefresh" ,                 Value::BOOLEAN_VALUE },
         { "ErrorCode",                      Value::INTEGER_VALUE },
         { "ErrorString",                    Value::STRING_VALUE },
-        { "Retryable",                      Value::INTEGER_VALUE },
         // Reserved for plug-in developers.
         { "DeveloperData",                  Value::CLASSAD_VALUE },
     };

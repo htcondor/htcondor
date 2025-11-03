@@ -259,7 +259,6 @@ class match_rec
 	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
 	time_t idle_timer_deadline{0}; // if the above is nonzero, abstime to hold claim
 	time_t entered_current_status{0};
-	time_t last_alive{time(0)};
 	PROC_ID m_now_job{0,0};
 
 	ClassAd * my_match_ad{nullptr};
@@ -273,6 +272,7 @@ class match_rec
 	bool			is_ocu {false}; // when true, hold forever, hand out to others
     PROC_ID         ocu_originator;  // procid of the ocu claimer job
 									
+	bool m_startd_sends_alives{false}; // in practice, actual default is true since 7.5.4
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
@@ -548,7 +548,7 @@ class Scheduler : public Service
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
-	void			checkClaimLeases( int timerID = -1 );
+	void			sendAlives( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler( int timerID = -1 );
 	void			addRunnableJob( shadow_rec* );
@@ -1057,7 +1057,7 @@ private:
 		// leaseAliveInterval is the minimum interval we need to send
 		// keepalives based upon ATTR_JOB_LEASE_DURATION...
 	int				leaseAliveInterval;  
-	int				aliveid;	// timer id for checking claim leases
+	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 
 		// get connection info for creating sec session to a running job
@@ -1132,6 +1132,7 @@ struct JOB_ID_KEY;
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
+extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
@@ -1143,12 +1144,12 @@ extern void incrementJobAdAttr(int cluster, int proc, const char* attrName, cons
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
-					 bool email_user = false,
+					 bool email_user = false, bool email_admin = false,
 					 bool system_hold = true,
 					 bool write_to_user_log = true);
 extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
-					 bool email_user = false,
+					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
 extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
 extern bool locate_and_advertise_local_credd(bool force);

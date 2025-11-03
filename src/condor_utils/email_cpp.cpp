@@ -220,6 +220,28 @@ Email::sendRelease( ClassAd* ad, const char* reason)
 }
 
 void
+Email::sendHoldAdmin( ClassAd* ad, const char* reason)
+{
+	email_admin = true;
+	sendAction( ad, reason, "put on hold", JOB_SHOULD_HOLD);
+}
+
+void
+Email::sendRemoveAdmin( ClassAd* ad, const char* reason )
+{
+	email_admin = true;
+	sendAction( ad, reason, "removed", -1);
+}
+
+void
+Email::sendReleaseAdmin( ClassAd* ad, const char* reason )
+{
+	email_admin = true;
+	sendAction( ad, reason, "released from hold", -1);
+}
+
+
+void
 Email::sendAction( ClassAd* ad, const char* reason,
 						const char* action, int exit_code)
 {

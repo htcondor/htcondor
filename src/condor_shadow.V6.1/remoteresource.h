@@ -439,7 +439,6 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
-	bool m_use_delayed_attr{true};
 	std::vector<std::string> m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 

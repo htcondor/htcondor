@@ -26,4 +26,4 @@
 . `dirname $0`/blah_load_config.sh
 
 requested=`echo $1 | sed 's/^.*\///'`
-${pbs_binpath}qrls $requested >/dev/null 2>&1
+${pbs_binpath}/qrls $requested >/dev/null 2>&1

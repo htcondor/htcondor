@@ -48,10 +48,6 @@ int sysapi_phys_memory_raw_no_param(void);
 long long sysapi_reserve_for_fs();
 long long sysapi_disk_space_raw(const char *filename);
 long long sysapi_disk_space(const char *filename);
-/* how to get total and free disk blocks from a full pathname, answers in KB */
-long long sysapi_total_disk_space_raw(const char *filename, long long * total);
-long long sysapi_total_disk_space(const char *filename, long long * total);
-
 
 /* get ncpus without making any calls to config system, this uses cached values */
 void sysapi_ncpus_raw(int * num_cpus, int * num_hyperthreads);

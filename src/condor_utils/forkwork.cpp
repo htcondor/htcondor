@@ -54,7 +54,7 @@ ForkWorker::Fork( void )
 	pid = fork( );
 
 	if ( pid < 0 ) {
-		dprintf( D_ERROR, "ForkWorker::Fork: Fork failed\n" );
+		dprintf( D_ALWAYS, "ForkWorker::Fork: Fork failed\n" );
 		return FORK_FAILED;
 	} else if ( 0 == pid ) {
 			// We should really be using DC::Create_Thread() for this.
@@ -169,7 +169,7 @@ ForkWork::KillAll( bool force )
 
 	// If we killed some, log it...
 	if ( num_killed ) {
-		dprintf( D_FULLDEBUG, "ForkWork %d: Killed %zu jobs\n",
+		dprintf( D_ALWAYS, "ForkWork %d: Killed %zu jobs\n",
 				 mypid, workerList.size() );
 	}
 	return 0;
@@ -184,7 +184,7 @@ ForkWork::NewJob( void )
 	// Any open slots?
 	if ( (int) workerList.size() >= maxWorkers ) {
 		if ( maxWorkers ) {
-			dprintf( D_FULLDEBUG, "ForkWork: not forking because reached max workers %d\n", maxWorkers );
+			dprintf( D_ALWAYS, "ForkWork: not forking because reached max workers %d\n", maxWorkers );
 		}
 	}
 	else
@@ -195,7 +195,7 @@ ForkWork::NewJob( void )
 
 	  // Ok, let's see what happenned..
 	  if ( FORK_PARENT == status ) {
-		  dprintf( D_FULLDEBUG, "Number of Active Workers %zu\n", workerList.size());
+		  dprintf( D_ALWAYS, "Number of Active Workers %zu\n", workerList.size());
 		  workerList.push_back( worker );
 		  peakWorkers = std::max( peakWorkers, (int)workerList.size() );
 	  } else if ( FORK_FAILED == status ) {

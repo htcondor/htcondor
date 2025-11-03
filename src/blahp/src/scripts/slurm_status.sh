@@ -23,6 +23,10 @@ if [ -x ${blah_libexec_directory}/slurm_status.py ] ; then
     exec ${blah_libexec_directory}/slurm_status.py "$@"
 fi
 
+if [ -z "$slurm_binpath" ] ; then
+  slurm_binpath=/usr/bin
+fi
+
 usage_string="Usage: $0 [-w] [-n]"
 
 ###############################################################
@@ -56,7 +60,7 @@ for  reqfull in $pars ; do
 
   staterr=/tmp/${reqjob}_staterr
 
-  result=`${slurm_binpath}scontrol $cluster_arg show job $reqjob 2>$staterr`
+  result=`${slurm_binpath}/scontrol $cluster_arg show job $reqjob 2>$staterr`
   stat_exit_code=$?
   result=`echo "$result" | awk -v job_id=$reqjob '
 BEGIN {

@@ -421,9 +421,6 @@ endif()
 			condor_pl_test(test_default_checkpoint_destination "Test use feature:DefaultCheckpointDestination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_unspecified_checkpoint "Test self-checkpointing jobs which specify their checkpoint" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-			condor_pl_test(test_fallback_override "Test fallback override knob" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_container_image_common_regex "Test marking container images common by default via regex" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
 			condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_plugins_dont_see_directories "Plug-ins shouldn't see directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -477,9 +474,7 @@ endif()
 
 			# This tests a feature that's presently only expected to work on Linux.
 			condor_pl_test(test_cif "Test common input files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_cif_fallback "Test common input files fallback" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_catalogs "Test common input catalogs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/busybox.sif")
-			condor_pl_test(test_cif_catalogs_fallback "Test common input catalogs fallback" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/busybox.sif")
 			condor_pl_test(test_cif_preen "Test preening CIF leftovers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_knob "Test cif/container image knob" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 

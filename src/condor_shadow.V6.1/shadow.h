@@ -28,7 +28,8 @@
 
 #include <optional>
 #include "guidance.h"
-#include "catalog_utils.h"
+
+using ListOfCatalogs = std::vector< std::pair< std::string, std::string > >;
 
 class ShadowHookMgr;
 
@@ -158,6 +159,12 @@ class UniShadow : public BaseShadow
 
 	int exitCode( void );
 
+		/** This function is specifically used for spawning MPI jobs.
+			So, if for some bizzare reason, it gets called for a
+			non-MPI shadow, we should return falure.
+		*/
+	bool setMpiMasterInfo( char* ) { return false; };
+
 		/** If desired, send the user email now that this job has
 			terminated.  This has all the job statistics from the run,
 			and lots of other useful info.
@@ -204,10 +211,6 @@ class UniShadow : public BaseShadow
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
-
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & cifName, const std::string & content
-	);
 
  protected:
 
@@ -258,6 +261,10 @@ class UniShadow : public BaseShadow
 	// At some point we'll figure out nesting our coroutines and
 	// we won't need this any more.
 	bool resume_job_setup = false;
+
+	std::optional<std::string> uniqueCIFName(
+		const std::string & cifName, const std::string & content
+	);
 };
 
 #endif

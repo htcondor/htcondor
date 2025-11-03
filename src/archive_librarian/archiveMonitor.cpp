@@ -17,18 +17,12 @@
  * - std::vector<std::string> listHistoryFiles(const std::string& directory)
  */
 
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-#include "stl_string_utils.h"
-
 #include <iostream>
 #include <string>
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <functional>
 #include <filesystem>
 #include <chrono>
 #include <algorithm>
@@ -36,12 +30,14 @@
 #include <optional>
 #include <regex>
 #include <system_error>
-//#include <format>
 
+
+#include "sha256.h"
 #include "JobRecord.h"  
 #include "readHistory.h"  
 #include "dbHandler.h"
 #include "archiveMonitor.h"
+#include "FileSet.h"
 
 
 namespace fs = std::filesystem; // where am i?
@@ -67,10 +63,19 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
         fclose(file);
 
-        std::string hash;
-        formatstr(hash, "%lx", std::hash<std::string>{}(buffer));
-        return hash;
-        //return std::format("{:X}", std::hash<std::string>{}(buffer));
+        uint8_t outputHash[32];
+        SHA256_CTX ctx;
+        sha256_init(&ctx);
+        sha256_update(&ctx, reinterpret_cast<const uint8_t*>(buffer.c_str()), buffer.size());
+        sha256_final(&ctx, outputHash);
+
+        // Inline hashToHex logic
+        char hexBuf[65];
+        for (int i = 0; i < 32; ++i)
+            snprintf(hexBuf + (i * 2), 3, "%02x", outputHash[i]);
+        hexBuf[64] = 0;
+
+        return std::string(hexBuf);
     }
 
 
@@ -92,10 +97,10 @@ namespace { // Helper functions for ArchiveMonitor utility functions
 
         // Check if file exists before getting stats
         if (!std::filesystem::exists(filePath, ec)) {
-            dprintf(D_ERROR, "File does not exist: '%s'\n", historyFilePath.c_str());
+            printf("[ERROR] File does not exist: '%s'\n", historyFilePath.c_str());
             return std::nullopt;
         } else if (ec) {
-            dprintf(D_ERROR, "Error checking file existence for '%s': %s\n",
+            printf("[ERROR] Error checking file existence for '%s': %s\n", 
                 historyFilePath.c_str(), ec.message().c_str());
             return std::nullopt;
         }
@@ -103,7 +108,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         // Get file size using std::filesystem
         fileInfo.FileSize = std::filesystem::file_size(filePath, ec);
         if (ec) {
-            dprintf(D_ERROR, "Could not get file size for '%s': %s\n",
+            printf("[ERROR] Could not get file size for '%s': %s\n", 
                 historyFilePath.c_str(), ec.message().c_str());
             return std::nullopt;
         }
@@ -111,7 +116,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         // Get last write time
         auto ftime = std::filesystem::last_write_time(filePath, ec);
         if (ec) {
-            dprintf(D_ERROR, "Could not get last write time for '%s': %s\n",
+            printf("[ERROR] Could not get last write time for '%s': %s\n", 
                 historyFilePath.c_str(), ec.message().c_str());
             return std::nullopt;
         }
@@ -131,7 +136,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
             if (stat(historyFilePath.c_str(), &file_stat) == 0) {
                 fileInfo.FileInode = static_cast<long>(file_stat.st_ino);
             } else {
-                dprintf(D_ERROR, "Could not get inode for '%s'\n", historyFilePath.c_str());
+                printf("[ERROR] Could not get inode for '%s'\n", historyFilePath.c_str());
                 return std::nullopt;
             }
         #endif
@@ -139,7 +144,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         // Get .FileHash
         fileInfo.FileHash = getHash(historyFilePath.c_str());
         if (fileInfo.FileHash.empty()) {
-            dprintf(D_ERROR, "Failed to compute hash for file '%s'\n", historyFilePath.c_str());
+            printf("[ERROR] Failed to compute hash for file '%s'\n", historyFilePath.c_str());
             return std::nullopt;
         }
 
@@ -169,7 +174,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
     }
 
     // Helper function to get all history files modified after a certain time
-    std::vector<fs::path> getHistoryFilesModifiedAfter(const fs::path& directory,
+    std::vector<fs::path> getHistoryFilesModifiedAfter(const std::string& directory,
                                                   const std::string& historyPrefix,
                                                   std::time_t afterTime) {
         std::vector<fs::path> historyFiles;
@@ -191,16 +196,16 @@ namespace { // Helper functions for ArchiveMonitor utility functions
                 }
             }
         } catch (const std::exception& e) {
-            dprintf(D_ERROR, "Error reading directory %s for modified files: %s\n", directory.c_str(), e.what());
-
+            std::cerr << "[getHistoryFilesModifiedAfter] Error reading directory " 
+                    << directory << ": " << e.what() << "\n";
         }
-
+        
         return historyFiles;
     }
 
     // Function to perform Step 1 for one history file set:
     // Find last file we were working on and identifies untracked files
-    std::vector<fs::path> detectRotationAndGetUntrackedFiles(const fs::path& directory,
+    std::vector<fs::path> detectRotationAndGetUntrackedFiles(const std::string& directory,
                                             const std::string& historyPrefix,
                                             std::time_t lastStatusTime,
                                             const FileInfo& lastFileRead,
@@ -245,14 +250,15 @@ namespace { // Helper functions for ArchiveMonitor utility functions
                 changes.newFiles.push_back(newFileInfo);
 
             } catch (const std::exception& e) {
-                dprintf(D_ERROR, "Failed to process file %s: %s\n", filePath.c_str(), e.what());
+                std::cerr << "[ArchiveMonitor] Failed to process file " << filePath
+                        << ": " << e.what() << "\n";
             }
         }
     }
 
 
     // Step 3: Look for deleted files that are in the cache but no longer in the directory
-    void checkDeletedFiles(const fs::path& directory,
+    void checkDeletedFiles(const std::string& directory,
                         const std::string& historyPrefix,
                         const std::unordered_map<int, FileInfo>& fileCache,
                         ArchiveChange& changes) {
@@ -267,27 +273,28 @@ namespace { // Helper functions for ArchiveMonitor utility functions
         std::ranges::sort(sortedCache, std::ranges::less(), &FileInfo::LastModified);
 
         for (const FileInfo& fi : sortedCache) {
-            fs::path fullPath = directory / fi.FileName;
+            std::string fullPath = directory + "/" + fi.FileName;
 
             // Double-check that this cached file should belong to our history set
             // (defensive programming in case cache gets corrupted)
             if (!isHistoryFile(fs::path(fi.FileName), historyPrefix)) {
-                dprintf(D_FULLDEBUG, "Skipping cached file that doesn't match prefix: %s\n", fi.FileName.c_str());
+                std::cout << "[checkDeletedFiles] Skipping cached file that doesn't match prefix: " 
+                         << fi.FileName << "\n";
                 continue;
             }
 
             if (!fs::exists(fullPath)) {
-                dprintf(D_FULLDEBUG, "File missing: %s\n", fi.FileName.c_str());
+                std::cout << "[checkDeletedFiles] File missing: " << fi.FileName << "\n";
                 changes.deletedFileIds.push_back(fi.FileId);  // Push only the FileId
             } else {
-                dprintf(D_FULLDEBUG, "Found file: %s - stopping scan\n", fi.FileName.c_str());
+                std::cout << "[checkDeletedFiles] Found file: " << fi.FileName << " — stopping scan.\n";
                 break;  // Stop at first file that still exists
             }
         }
     }
 
     // Helper function for very first startup
-    std::vector<fs::path> getAllHistoryFiles(const fs::path& directory, const std::string& historyPrefix) {
+    std::vector<fs::path> getAllHistoryFiles(const std::string& directory, const std::string& historyPrefix) {
         std::vector<fs::path> historyFiles;
         
         try {
@@ -300,7 +307,7 @@ namespace { // Helper functions for ArchiveMonitor utility functions
                 }
             }
         } catch (const std::exception& e) {
-            dprintf(D_ERROR, "Error reading directory %s: %s\n", directory.c_str(), e.what());
+            std::cerr << "[getAllHistoryFiles] Error reading directory " << directory << ": " << e.what() << "\n";
         }
         
         // Sort by modification time (oldest first)
@@ -339,7 +346,7 @@ namespace ArchiveMonitor{
         // Get the inode of the file at the filepath
         struct stat file_stat_check;
         if (stat(historyFilePath.c_str(), &file_stat_check) != 0) {
-            dprintf(D_ERROR, "Failed to stat file: %s\n", historyFilePath.c_str());
+            printf("[ERROR] Failed to stat file: %s\n", historyFilePath.c_str());
             return {false, false}; // Can't stat file; both checks fail
         }
 
@@ -356,7 +363,7 @@ namespace ArchiveMonitor{
     FileInfo collectNewFileInfo(const std::string& path, long defaultOffset) {
         auto maybe = maybeCollectNewFileInfo(path);
         if (!maybe) {
-            dprintf(D_ERROR, "Couldn't collect file info for: %s\n", path.c_str());
+            printf("[ERROR] Couldn't collect file info for: %s\n", path.c_str());
             FileInfo dummy;
             dummy.FileName = path.substr(path.find_last_of("/\\") + 1);
             dummy.LastOffset = defaultOffset;
@@ -386,19 +393,19 @@ namespace ArchiveMonitor{
      */
     ArchiveChange trackHistoryFileSet(FileSet& historyFileSet) {
         ArchiveChange changes;
-        fs::path directory = historyFileSet.GetDirectory();
+        std::string directory = historyFileSet.historyDirectoryPath;
         
         // Is this our first startup? 
         if (historyFileSet.lastFileReadId == -1) {
             // This is our very first read! Discover all files and add them as new files
-            std::vector<fs::path> allHistoryFiles = getAllHistoryFiles(directory, historyFileSet.GetFileName());
-
-            dprintf(D_ALWAYS, "First startup: discovered %zu files with prefix '%s'\n",
-                    allHistoryFiles.size(), historyFileSet.GetFileName().c_str());
-
+            std::vector<fs::path> allHistoryFiles = getAllHistoryFiles(directory, historyFileSet.historyNameConfig);
+        
+            printf("[ArchiveMonitor] First startup: discovered %zu files with prefix '%s'\n", 
+                allHistoryFiles.size(), historyFileSet.historyNameConfig.c_str());
+            
             // Use the existing trackUntrackedFiles function to properly process all discovered files
             trackUntrackedFiles(allHistoryFiles, changes);
-
+            
             return changes;
         }
 
@@ -406,7 +413,8 @@ namespace ArchiveMonitor{
         // Lookup lastFileRead FileInfo from fileMap using lastFileReadId
         auto it = historyFileSet.fileMap.find(historyFileSet.lastFileReadId);
         if (it == historyFileSet.fileMap.end()) {
-            dprintf(D_ERROR, "Error: Last file read id (%ld) not found\n", historyFileSet.lastFileReadId);
+            std::cerr << "[ArchiveMonitor] Error: lastFileReadId " << historyFileSet.lastFileReadId
+                    << " not found in fileMap.\n";
             return changes;
         }
         const FileInfo& lastFileRead = it->second;
@@ -414,7 +422,7 @@ namespace ArchiveMonitor{
         // Step 1: Find untracked files and check for rotation
         std::vector<fs::path> untrackedPaths = detectRotationAndGetUntrackedFiles(
             directory,
-            historyFileSet.GetFileName(),
+            historyFileSet.historyNameConfig,
             historyFileSet.lastStatusTime,
             lastFileRead,
             changes
@@ -424,11 +432,16 @@ namespace ArchiveMonitor{
         trackUntrackedFiles(untrackedPaths, changes);
 
         // Step 3: Detect deleted files in cache that no longer exist
-        checkDeletedFiles(directory, historyFileSet.GetFileName(), historyFileSet.fileMap, changes);
+        checkDeletedFiles(directory, historyFileSet.historyNameConfig, historyFileSet.fileMap, changes);
 
         return changes;
     }
 
 }
+
+
+
+
+
 
 

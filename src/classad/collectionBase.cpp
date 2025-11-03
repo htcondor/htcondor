@@ -57,6 +57,7 @@ void ClassAdCollection::
 Setup(bool cacheOn)
 {
 	Cache = cacheOn;
+	test_checkpoint=0;
 	// create "root" view
 	viewTree.SetViewName( "root" );
 	RegisterView( "root", &viewTree );

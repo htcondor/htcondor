@@ -28,6 +28,9 @@
 
 . `dirname $0`/blah_common_submit_functions.sh
 
+# Default values for configuration variables
+slurm_binpath=${slurm_binpath:-/usr/bin}
+
 bls_submit_args_prefix="#SBATCH"
 
 bls_parse_submit_options "$@"
@@ -131,7 +134,7 @@ bls_save_submit
 ###############################################################
 
 datenow=`date +%Y%m%d`
-jobID=`${slurm_binpath}sbatch $bls_tmp_file` # actual submission
+jobID=`${slurm_binpath}/sbatch $bls_tmp_file` # actual submission
 retcode=$?
 
 if [ "$retcode" != "0" ] ; then

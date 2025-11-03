@@ -329,6 +329,8 @@ class BaseShadow : public Service
 
 	virtual struct rusage getRUsage( void ) = 0;
 
+	virtual bool setMpiMasterInfo( char* str ) = 0;
+
 		/** Connect to the job queue and update all relevent
 			attributes of the job class ad.  This checks our job
 			classad to find any dirty attributes, and compares them
@@ -406,10 +408,6 @@ class BaseShadow : public Service
 	void logDataflowJobSkippedEvent();
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
-
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & /* cifName */, const std::string & /* content */
-	) { return {}; }
 
  protected:
 

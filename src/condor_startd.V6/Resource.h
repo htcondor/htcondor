@@ -447,7 +447,6 @@ public:
 	bool            r_suspended_by_command;	// true when the claim was suspended by a SUSPEND_CLAIM command
 	bool            r_no_collector_updates; // true for HIDDEN slots
 	bool            r_acceptedWhileDraining;// true when the job was started while draining
-	bool            r_do_not_delete{false}; // true when slot is broken and should not be deleted
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource

@@ -48,8 +48,8 @@ bls_submit_args_prefix="#PBS"
 
 logpath=${pbs_spoolpath}/server_logs
 if [ ! -d $logpath -o ! -x $logpath ]; then
-  if [ -x "${pbs_binpath}tracejob" ]; then
-    pbs_spoolpath=`${pbs_binpath}tracejob | grep 'default prefix path'|awk -F" " '{ print $5 }'`
+  if [ -x "${pbs_binpath}/tracejob" ]; then
+    pbs_spoolpath=`${pbs_binpath}/tracejob | grep 'default prefix path'|awk -F" " '{ print $5 }'`
     logpath=${pbs_spoolpath}/server_logs
   else
     # EPEL defaults for torque
@@ -241,7 +241,7 @@ sleep 1
 ###############################################################
 
 datenow=`date +%Y%m%d`
-jobID=`${pbs_binpath}qsub $bls_tmp_file` # actual submission
+jobID=`${pbs_binpath}/qsub $bls_tmp_file` # actual submission
 retcode=$?
 if [ "$retcode" != "0" ] ; then
 	rm -f $bls_tmp_file
@@ -289,7 +289,7 @@ while [ "x$logfile" == "x" -a "x$jobID_log" == "x" ]; do
  fi
  
  if [ "$cliretcode" == "1" -a "x$pbs_fallback" == "xno" ] ; then
-  ${pbs_binpath}qdel $jobID
+  ${pbs_binpath}/qdel $jobID
   echo "Error: not able to talk with logparser on ${pbs_BLPserver}:${pbs_BLPport}" >&2
   echo Error # for the sake of waiting fgets in blahpd
   rm -f $bls_tmp_file
@@ -306,7 +306,7 @@ while [ "x$logfile" == "x" -a "x$jobID_log" == "x" ]; do
  fi
 
  if (( log_check_retry_count++ >= 12 )); then
-     ${pbs_binpath}qdel $jobID
+     ${pbs_binpath}/qdel $jobID
      echo "Error: job not found in logs" >&2
      echo Error # for the sake of waiting fgets in blahpd
      rm -f $bls_tmp_file

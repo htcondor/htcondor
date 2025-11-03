@@ -3,9 +3,6 @@
 
 #include <string>
 
-// TODO: Remove Namespace
-// TODO: Move DBHandler statments here
-
 namespace SavedQueries {
     
     // Database schema initialization query
@@ -26,7 +23,6 @@ CREATE INDEX IF NOT EXISTS idx_date_of_deletion ON Files(DateOfDeletion);
 CREATE TABLE IF NOT EXISTS Users (
     UserId INTEGER PRIMARY KEY, 
     UserName TEXT, 
-    DateOfLastJob INTEGER,    -- Not Used currently: TODO use for garbage collection (i.e. keep user entry for time N after last job entry removed)
     UNIQUE (UserName)
 );
 
@@ -75,10 +71,14 @@ CREATE TABLE IF NOT EXISTS Status (
     StatusId INTEGER PRIMARY KEY AUTOINCREMENT,
     TimeOfUpdate INTEGER NOT NULL,                     -- Timestamp for this status record
 
-    FileIdLastRead INTEGER,                            -- FK to Files table (history)
-    FileOffsetLastRead INTEGER,                        -- Byte offset in that history file
+    HistoryFileIdLastRead INTEGER,                     -- FK to Files table (history)
+    HistoryFileOffsetLastRead INTEGER,                 -- Byte offset in that history file
 
-    TotalRecordsRead INTEGER DEFAULT 0,                -- Records processed
+    EpochFileIdLastRead INTEGER,                       -- FK to Files table (epoch)
+    EpochFileOffsetLastRead INTEGER,                   -- Byte offset in that epoch file
+
+    TotalJobsRead INTEGER DEFAULT 0,                   -- From history files
+    TotalEpochsRead INTEGER DEFAULT 0,                 -- From epoch files
     DurationMs INTEGER DEFAULT 0,                      -- Duration of update cycle
     JobBacklogEstimate INTEGER DEFAULT 0,              -- Estimated number of unprocessed ads
     HitMaxIngestLimit BOOLEAN DEFAULT 0,               -- Whether this ingestion cycle hit the max ingest limit
@@ -103,15 +103,22 @@ CREATE TABLE IF NOT EXISTS StatusData (
     TimeOfLastUpdate INTEGER              -- Timestamp of most recent update
 );
 
+CREATE TABLE IF NOT EXISTS SchemaVersion (
+    VersionId REAL PRIMARY KEY CHECK (VersionId = 1.0),
+    VersionNotes TEXT,
+    SingleRow INTEGER DEFAULT 1 UNIQUE CHECK (SingleRow = 1)
+);
+
+-- Insert the value in
+INSERT OR IGNORE INTO SchemaVersion (VersionId, VersionNotes) 
+VALUES (1.0, 'Initial Archive Librarian schema');
 )";
 
-// TODO: Break this up and do logic/steps in librarian code
-// TODO: Make Status table clean out time configurable
     // Garbage collection query
     const std::string GC_QUERY_SQL = R"(
 -- 1. Find files to delete (ordered by deletion date, limited by job count target that we calculate)
       -- Creates a temporary table with the FileIds of only the Files that we want to delete
-CREATE TEMP TABLE IF NOT EXISTS FilesToDelete AS 
+CREATE TEMP TABLE FilesToDelete AS 
 SELECT FileId FROM Files 
 WHERE DateOfDeletion IS NOT NULL 
 ORDER BY DateOfDeletion ASC 
@@ -119,14 +126,14 @@ LIMIT ?; -- calculated based on job count needed
 
 -- 2. Collect JobIds 
       -- Finds all JobIds that are in those selected Files 
-CREATE TEMP TABLE IF NOT EXISTS JobsToDelete AS
+CREATE TEMP TABLE JobsToDelete AS
 SELECT DISTINCT JobId 
 FROM JobRecords 
 WHERE FileId IN (SELECT FileId FROM FilesToDelete);
 
 -- 3. Collect JobListIds that might become empty
      -- Finds any associated JobListIds to the jobs we're about to delete and saves them to check later
-CREATE TEMP TABLE IF NOT EXISTS JobListsToCheck AS
+CREATE TEMP TABLE JobListsToCheck AS
 SELECT DISTINCT JobListId 
 FROM JobRecords 
 WHERE JobId IN (SELECT JobId FROM JobsToDelete);
@@ -146,14 +153,9 @@ AND JobListId NOT IN (SELECT DISTINCT JobListId FROM Jobs WHERE JobListId IS NOT
     -- Delete the File entries that we had previously marked
 DELETE FROM Files WHERE FileId IN (SELECT FileId FROM FilesToDelete);
 
--- 7. Delete all Status updates that are more than 5 minutes old
+-- 7. Delete all Status updates that are more than 7 days old
 DELETE FROM Status
-WHERE TimeOfUpdate < strftime('%s','now') - (60 * 5);
-
--- 8. Drop temporary tables
-DROP TABLE IF EXISTS FilesToDelete;
-DROP TABLE IF EXISTS JobsToDelete;
-DROP TABLE IF EXISTS JobListsToCheck;
+WHERE TimeOfUpdate < strftime('%s','now') - (7 * 86400);
 )";
 }
 

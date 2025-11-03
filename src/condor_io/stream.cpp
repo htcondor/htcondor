@@ -496,7 +496,7 @@ Stream::code(condor_errno_t &errno_num)
 int
 Stream::code(condor_mode_t &m)
 {
-	int mask = 0, y = 0;
+	mode_t mask = 0, y = 0;
 #if !defined(WIN32)
 	mask |= (S_IRUSR|S_IWUSR|S_IXUSR|
 			 S_IRGRP|S_IWGRP|S_IXGRP|
