@@ -101,6 +101,15 @@ namespace DAG {
 	// Map of DAG Command to exampe syntax
 	extern const std::map<CMD, const char*> COMMAND_SYNTAX;
 
+	// Convert a DagCmd unique_ptr (see below) to specified derived class: DAG::DERIVE_CMD<JobCommand>(cmd)
+	// Typename D is the Derived Command Type and Typename B is the base command Type (normally implicitly disccovered)
+	template<typename D, typename B>
+	D* DERIVE_CMD(const std::unique_ptr<B>& cmd) {
+		D* derived = dynamic_cast<D*>(cmd.get());
+		ASSERT(derived);
+		return derived;
+	}
+
 	// DAG file constants
 	extern const std::string ALL_NODES;
 	// Reserved words that node names cannot use

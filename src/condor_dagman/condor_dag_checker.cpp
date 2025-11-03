@@ -432,7 +432,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				case DAG::CMD::PROVISIONER:
 				case DAG::CMD::SERVICE:
 					{
-						const NodeCommand* node = (NodeCommand*)(cmd.get());
+						const NodeCommand* node = DAG::DERIVE_CMD<NodeCommand>(cmd);
 
 						std::string err = dag.addNode(node->GetName(), cmd_val);
 						if ( ! err.empty()) {
@@ -442,7 +442,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					break;
 				case DAG::CMD::SPLICE:
 					{
-						const SpliceCommand* splice = (SpliceCommand*)(cmd.get());
+						const SpliceCommand* splice = DAG::DERIVE_CMD<SpliceCommand>(cmd);
 
 						std::string err;
 						MockDag* splice_dag = dag.addSplice(splice->GetName(), err);
@@ -479,7 +479,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 					break;
 				case DAG::CMD::INCLUDE:
 					{
-						const IncludeCommand* include = (IncludeCommand*)(cmd.get());
+						const IncludeCommand* include = DAG::DERIVE_CMD<IncludeCommand>(cmd);
 						std::string file = include->GetFile();
 
 						DagParser ip(file);
@@ -529,7 +529,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 			case DAG::CMD::PRE_SKIP:
 			case DAG::CMD::DONE:
 				{
-					const NodeModifierCommand* mod = (NodeModifierCommand*)(cmd.get());
+					const NodeModifierCommand* mod = DAG::DERIVE_CMD<NodeModifierCommand>(cmd);
 					const std::string node_name = mod->GetNodeName();
 
 					std::string error;
@@ -549,11 +549,11 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				}
 				break;
 			case DAG::CMD::PARENT_CHILD:
-				dag.makeDependencies((ParentChildCommand*)(cmd.get()), errors);
+				dag.makeDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), errors);
 				break;
 			case DAG::CMD::CATEGORY:
 				{
-					const CategoryCommand* cat = (CategoryCommand*)(cmd.get());
+					const CategoryCommand* cat = DAG::DERIVE_CMD<CategoryCommand>(cmd);
 					std::string missing;
 
 					for (const auto& node : cat->GetNodes()) {
@@ -570,7 +570,7 @@ void parseDAG(DagParser& parser, MockDag& dag, std::vector<DagParseError>& error
 				break;
 			case DAG::CMD::CONFIG:
 				{
-					const ConfigCommand* config = (ConfigCommand*)(cmd.get());
+					const ConfigCommand* config = DAG::DERIVE_CMD<ConfigCommand>(cmd);
 					std::filesystem::path conf(config->GetFile());
 					std::string error;
 

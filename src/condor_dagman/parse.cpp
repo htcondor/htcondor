@@ -3025,7 +3025,7 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 	switch (cmd->GetCommand()) {
 		case DAG::CMD::SUBMIT_DESCRIPTION:
 			{
-				const SubmitDescCommand* desc = (SubmitDescCommand*)(cmd.get());
+				const SubmitDescCommand* desc = DAG::DERIVE_CMD<SubmitDescCommand>(cmd);
 				std::ignore = dag.add_inline_desc(desc->GetName(), desc->GetInlineDesc());
 			}
 			break;
@@ -3034,14 +3034,14 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 		case DAG::CMD::FINAL:
 		case DAG::CMD::PROVISIONER:
 		case DAG::CMD::SERVICE:
-			all_good = ProcessNode((NodeCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessNode(DAG::DERIVE_CMD<NodeCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::SPLICE:
-			all_good = ProcessSplice(dm, dag, (SpliceCommand*)(cmd.get()), dag_munge_id);
+			all_good = ProcessSplice(dm, dag, DAG::DERIVE_CMD<SpliceCommand>(cmd), dag_munge_id);
 			break;
 		case DAG::CMD::DOT:
 			{
-				const DotCommand* dot = (DotCommand*)(cmd.get());
+				const DotCommand* dot = DAG::DERIVE_CMD<DotCommand>(cmd);
 				dag.SetDotFileUpdate(dot->Update());
 				dag.SetDotFileOverwrite(dot->Overwrite());
 				if (dot->HasInclude()) {
@@ -3051,61 +3051,61 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 			}
 			break;
 		case DAG::CMD::INCLUDE:
-			all_good = process(dm, dag, ((FileCommand*)cmd.get())->GetFile(), dag_munge_id);
+			all_good = process(dm, dag, (DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile(), dag_munge_id);
 			break;
 		case DAG::CMD::NODE_STATUS_FILE:
 			{
-				const NodeStatusCommand* status = (NodeStatusCommand*)(cmd.get());
+				const NodeStatusCommand* status = DAG::DERIVE_CMD<NodeStatusCommand>(cmd);
 				dag.SetNodeStatusFileName(status->GetFile().c_str(), status->GetMinUpdateTime(), status->AlwaysUpdate());
 			}
 			break;
 		case DAG::CMD::JOBSTATE_LOG:
-			dag.SetJobstateLogFileName(((FileCommand*)cmd.get())->GetFile().c_str());
+			dag.SetJobstateLogFileName((DAG::DERIVE_CMD<FileCommand>(cmd))->GetFile().c_str());
 			break;
 		case DAG::CMD::REJECT:
 			debug_printf(DEBUG_NORMAL, "DAG marked as rejected at %s\n", cmd->Location().c_str());
 			all_good = false;
 			break;
 		case DAG::CMD::CATEGORY:
-			all_good = ProcessCategory((CategoryCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessCategory(DAG::DERIVE_CMD<CategoryCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::PARENT_CHILD:
-			all_good = ProcessDependencies((ParentChildCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessDependencies(DAG::DERIVE_CMD<ParentChildCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::SCRIPT:
-			all_good = ProcessScript((ScriptCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessScript(DAG::DERIVE_CMD<ScriptCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::RETRY:
-			all_good = ProcessRetry((RetryCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessRetry(DAG::DERIVE_CMD<RetryCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::ABORT_DAG_ON:
-			all_good = ProcessAbortDagOn((AbortDagCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessAbortDagOn(DAG::DERIVE_CMD<AbortDagCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::VARS:
-			all_good = ProcessVars((VarsCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessVars(DAG::DERIVE_CMD<VarsCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::PRIORITY:
-			all_good = ProcessPriority((PriorityCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessPriority(DAG::DERIVE_CMD<PriorityCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::PRE_SKIP:
-			all_good = ProcessPreSkip((PreSkipCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessPreSkip(DAG::DERIVE_CMD<PreSkipCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::DONE:
-			all_good = ProcessDone((DoneCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessDone(DAG::DERIVE_CMD<DoneCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::SAVE_POINT_FILE:
-			all_good = ProcessSaveFile((SavePointCommand*)(cmd.get()), dag, dag_munge_id);
+			all_good = ProcessSaveFile(DAG::DERIVE_CMD<SavePointCommand>(cmd), dag, dag_munge_id);
 			break;
 		case DAG::CMD::MAXJOBS:
 			{
-				const MaxJobsCommand* mjc = (MaxJobsCommand*)(cmd.get());
+				const MaxJobsCommand* mjc = DAG::DERIVE_CMD<MaxJobsCommand>(cmd);
 				std::string category = mjc->GetCategory();
 				dag._catThrottles.SetThrottle(&category, mjc->GetLimit());
 			}
 			break;
 		case DAG::CMD::CONNECT:
 			{
-				const auto& [s1, s2] = ((ConnectCommand*)(cmd.get()))->GetSplices();
+				const auto& [s1, s2] = (DAG::DERIVE_CMD<ConnectCommand>(cmd))->GetSplices();
 				Dag* parent = dag.LookupSplice(MakeFullName(s1, dag_munge_id));
 				Dag* child = dag.LookupSplice(MakeFullName(s2, dag_munge_id));
 
@@ -3122,7 +3122,7 @@ bool DagProcessor::ProcessCommand(const Dagman& dm, const DagCmd& cmd, Dag& dag,
 		case DAG::CMD::PIN_IN:
 		case DAG::CMD::PIN_OUT:
 			{
-				const PinCommand* pin = (PinCommand*)(cmd.get());
+				const PinCommand* pin = DAG::DERIVE_CMD<PinCommand>(cmd);
 				std::string node = MakeFullName(pin->GetNode(), dag_munge_id);
 				all_good = dag.SetPinInOut( ! pin->IsPinOut(), node.c_str(), pin->GetPinNum());
 			}

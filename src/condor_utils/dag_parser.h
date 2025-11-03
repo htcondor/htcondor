@@ -363,6 +363,7 @@ private:
 	std::string ParseConnect(DagLexer& details);
 	std::string ParsePin(DagLexer& details, DAG::CMD type);
 
+	// WARNING: This function clears the passed reference variable regardless of successfully reading a line
 	bool getnextline(std::string& line, bool raw = false);
 
 	void _reset(bool new_file = false) {

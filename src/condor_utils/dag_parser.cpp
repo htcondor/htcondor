@@ -110,6 +110,7 @@ skip_line(const std::string& line) {
 }
 
 //--------------------------------------------------------------------------------------------
+// WARNING: This function clears the passed reference variable regardless of successfully reading a line
 bool
 DagParser::getnextline(std::string& line, bool raw) {
 	std::string curr;
@@ -121,7 +122,7 @@ DagParser::getnextline(std::string& line, bool raw) {
 		++line_no;
 
 		trim(curr);
-		if (skip_line(curr)) { curr.clear(); }
+		if (skip_line(curr)) { /* DO NOTHING */ }
 		else if (raw) { line = curr; break; }
 		else {
 			if ( ! line.empty()) { line += " "; }
