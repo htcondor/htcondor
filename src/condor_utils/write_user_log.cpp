@@ -131,7 +131,6 @@ bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 // ***************************
 WriteUserLog::WriteUserLog()
 {
-	log_file_cache = NULL;
 	Reset( );
 }
 
@@ -229,18 +228,6 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 		for(std::vector<const char*>::const_iterator it = file.begin();
 				it != file.end(); ++it) {
 
-			if (log_file_cache != NULL) {
-				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: looking up log file %s in cache\n", *it);
-				log_file_cache_map_t::iterator f(log_file_cache->find(*it));
-				if (f != log_file_cache->end()) {
-					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: found log file %s in cache, re-using\n", *it);
-					logs.push_back(f->second);
-					logs.back()->refset.insert(std::make_pair(c,p));
-					first = false;
-					continue;
-				}
-			}
-
 			log_file* log = new log_file(*it);
 			if (first) {
 				// The first entry in the vector is the user's userlog, which we rarely want to fsync
@@ -284,12 +271,6 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 						m_set_user_priv = true;
 						log->set_user_priv_flag(true);
 					}
-				}
-
-				if (log_file_cache != NULL) {
-					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: caching log file %s\n", *it);
-					(*log_file_cache)[*it] = log;
-					log->refset.insert(std::make_pair(c,p));
 				}
 			}
 		}
@@ -454,7 +435,6 @@ WriteUserLog::Reset( void )
 
     freeLogs();
    	logs.clear();
-    log_file_cache = NULL;
 
 	m_enable_locking = true;
 	m_skip_fsync_this_event = false;
@@ -600,8 +580,6 @@ WriteUserLog::log_file::~log_file()
 }
 
 void WriteUserLog::freeLogs() {
-    // we do this only if local log files aren't being cached
-    if (log_file_cache != NULL) return;
     for (std::vector<log_file*>::iterator j(logs.begin());  j != logs.end();  ++j) {
         delete *j;
     }

@@ -1198,37 +1198,6 @@ subsystem corresponding to the daemon.
     to the user's job event log are sync-ed to disk before releasing the
     lock.
 
-:macro-def:`USERLOG_FILE_CACHE_MAX[Global]`
-    The integer number of job event log files that the *condor_schedd*
-    will keep open for writing during an interval of time (specified by
-    :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`). The default value is 0,
-    causing no files to remain open; when 0, each job event log is
-    opened, the event is written, and then the file is closed.
-    Individual file descriptors are removed from this count when the
-    *condor_schedd* detects that no jobs are currently using them.
-    Opening a file is a relatively time consuming operation on a
-    networked file system (NFS), and therefore, allowing a set of files
-    to remain open can improve performance. The value of this variable
-    needs to be set low enough such that the *condor_schedd* daemon
-    process does not run out of file descriptors by leaving these job
-    event log files open. The Linux operating system defaults to
-    permitting 1024 assigned file descriptors per process; the
-    *condor_schedd* will have one file descriptor per running job for
-    the *condor_shadow*.
-
-:macro-def:`USERLOG_FILE_CACHE_CLEAR_INTERVAL[Global]`
-    The integer number of seconds that forms the time interval within
-    which job event logs will be permitted to remain open when
-    :macro:`USERLOG_FILE_CACHE_MAX` is greater than zero. The default is 60
-    seconds. When the interval has passed, all job event logs that the
-    *condor_schedd* has permitted to stay open will be closed, and the
-    interval within which job event logs may remain open between writes
-    of events begins anew. This time interval may be set to a longer
-    duration if the administrator determines that the *condor_schedd*
-    will not exceed the maximum number of file descriptors; a longer
-    interval may yield higher performance due to fewer files being
-    opened and closed.
-
 :macro-def:`CREATE_LOCKS_ON_LOCAL_DISK[Global]`
     A boolean value utilized only for Unix operating systems, that
     defaults to ``True``. This variable is only relevant if
