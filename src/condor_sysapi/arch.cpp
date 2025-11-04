@@ -500,7 +500,11 @@ sysapi_get_darwin_info(void)
 	opsys_major_version = major;
 
 	const char *osname = "Unknown";
-	if ( major == 14 ) {
+	if ( major == 26 ) {
+		osname = "Tahoe";
+	} else if ( major == 15 ) {
+		osname = "Sequoia";
+	} else if ( major == 14 ) {
 		osname = "Sonoma";
 	} else if ( major == 13 ) {
 		osname = "Ventura";

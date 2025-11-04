@@ -1,267 +1,106 @@
 #!/usr/bin/env pytest
 
-#Job Ad attribute: JobSubmitMethod assignment testing
-#
-#Each sub-test submits job(s) and waits till all are hopefully finished.
-#Then it collects the recent job ads from schedd history and returns
-#them for evaluation.
-#
-
-
 from ornithology import *
+import htcondor2
 import os
-from glob import glob as find
-from shutil import move
+import pytest
+from time import time as now
 from time import sleep
-from time import time
+from pathlib import Path
+from shutil import rmtree
+from typing import Callable, Optional, Any
 
-# Setup a personal condor 
+#-----------------------------------------------------------------------------------------
+class SubmissionError(Exception):
+        """Custom exception to raise in job submission helper functions upon failure."""
+        def __init__(self, message="Failed to submit job(s)"):
+            self.message = message
+            super().__init__(self.message)
+
+#-----------------------------------------------------------------------------------------
+TEST_CASE_ATTR = "TestCase"
+TEST_CASE_ENV = "TEST_CASE"
+
+FILENAME_SUB = "sleep.sub"
+FILENAME_DAG = "test.dag"
+FILENAME_JOBSET = "job.set"
+
+JOB_LOG = "job.log"
+
+KEY_VAL = "value"
+KEY_OVERRIDE = "override"
+KEY_NOUN = "noun"
+
+#-----------------------------------------------------------------------------------------
 @standup
-def condor(test_dir):
-    with Condor(test_dir / "condor", config={"USE_JOBSETS": True}) as condor:
+def the_condor(test_dir):
+    dagman_append = test_dir / f".{FILENAME_DAG}.append"
+    with open(dagman_append, "w") as f:
+        f.write(f"""
+submit_event_user_notes = $ENV({TEST_CASE_ENV})
+My.{TEST_CASE_ATTR} = "$ENV({TEST_CASE_ENV})"
+""")
+
+    with Condor(test_dir / "the_condor", config={"USE_JOBSETS": True, "DAGMAN_INSERT_SUB_FILE": dagman_append}) as condor:
         yield condor
 
 #-----------------------------------------------------------------------------------------
-#Function to wait until schedd has no jobs
-def wait(schedd):
-     t_end = time() + 180 #Give a 2 minute maximum for waiting
-     while any(schedd.query(constraint='true',projection=["JobSubmitMethod"])) == True:
-          sleep(0.1)
-          if time() >= t_end:
-               print("Job took longer than 2 minutes to complete")
-               break
-#-----------------------------------------------------------------------------------------
-#Function to clean up files created by dags
-def clean_up(t_dir, dir_name, dag_fname="simple.dag."):
-     regex = dag_fname + "*"
-     dir_path = os.path.join(str(t_dir),dir_name)
-     #make directory dag submission tests to avoid errors
-     os.mkdir(dir_path)
-     #move test files into dag_test# directory
-     for file_name in find(os.path.join(str(t_dir),regex)):
-          move(os.path.join(str(t_dir),file_name),dir_path)
-#-----------------------------------------------------------------------------------------
-#Fixture to write simple .sub file for general use
-@action
-def write_sub_file(test_dir,path_to_sleep):
-     submit_file = open( test_dir / "simple_submit.sub","w")
-     submit_file.write("""executable={0}
-arguments=1
-should_transfer_files=Yes
+def write_submit(sleep: Path) -> Path:
+    path = Path(FILENAME_SUB)
+    with open(path, "w") as f:
+        f.write(f"""# Simple sleep job
+executable = {sleep}
+arguments  = 0
+log = {JOB_LOG}
+
+submit_event_user_notes = $ENV({TEST_CASE_ENV})
+
+My.{TEST_CASE_ATTR} = "$ENV({TEST_CASE_ENV})"
+
 queue
-""".format(path_to_sleep))
-     submit_file.close()
-     return test_dir / "simple_submit.sub"
-#-----------------------------------------------------------------------------------------
-#Fixture to write simple .dag file using write_sub_file fixture for general dag use
-@action
-def write_dag_file(test_dir,write_sub_file):
-     dag_file = open( test_dir / "simple.dag", "w")
-     dag_file.write("""JOB A {0}
-JOB B {0}
+""")
 
-PARENT A CHILD B
-""".format(write_sub_file))
-     dag_file.close()
-     return test_dir / "simple.dag"
-#-----------------------------------------------------------------------------------------
-#Fixture to test if an unknown submission doesn't add JobSubmitMethod Attribute
-@action
-def test_unknown_submission(condor,test_dir,path_to_sleep):
-     #This test works by making a fake unknown job submission via python bindings
-     #To do this the python file uses the non-documented _setSubmitMethod()
-     #for internal use to set the submit method value to -1 thus indicating 
-     #an unknown submission method
-     python_file = open(test_dir / "test_unknown.py", "w")
-     python_file.write(
-     """import htcondor2 as htcondor
-import classad2 as classad
+    return path
 
-job = htcondor.Submit({{
-     "executable":"{0}"
-}})
+def write_dag(sleep: Path, sleep_submit: Path) -> Path:
+    path = Path(FILENAME_DAG)
+    with open(path, "w") as f:
+        f.write(f"""# Simple DAG file
+ENV GET {TEST_CASE_ENV}
 
-job.setSubmitMethod(-1,True)
-schedd = htcondor.Schedd()
-submit_result = schedd.submit(job)
-""".format(path_to_sleep))
-     python_file.close()
-     #^^^Make python file for submission^^^
-
-     #Submit file to run job
-     p = condor.run_command(["python3",test_dir / "test_unknown.py"])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     t_end = time() + 180 #Give a 2 minute maximum for waiting
-     while any(schedd.query(constraint='true',projection=["JobStatus"])) == True:
-          sleep(0.1)
-          if time() >= t_end:
-               print("Job took longer than 2 minutes to complete")
-               break
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=1,
-     )
-     
-     return job_ad
-#-----------------------------------------------------------------------------------------
-#Fixture to run condor_submit and check the JobSubmitMethod attr
-@action
-def run_condor_submit(condor,write_sub_file):
-     #Submit job
-     p = condor.run_command(["condor_submit", write_sub_file])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=1,
-     )
-     
-     return job_ad
-#-----------------------------------------------------------------------------------------
-#Fixture to run condor_submit_dag and check the JobSubmitMethod attr
-@action
-def run_dagman_submission(condor,test_dir,write_dag_file):
-     #Submit job 
-     p = condor.run_command(["condor_submit_dag",write_dag_file])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=3,
-     )
-     
-     clean_up(test_dir,"submit_command")
-
-     return job_ad
-#-----------------------------------------------------------------------------------------
-#Fixture to run condor_submit_dag on inline submit description dag and check the JobSubmitMethod attr
-@action
-def run_dagman_inline_submission(condor,test_dir,path_to_sleep):
-     #Submit job
-     dag_filename = "inline.dag"
-     with open(dag_filename, "w") as f:
-         f.write(f"""
-SUBMIT-DESCRIPTION sleep {{
-    executable = {path_to_sleep}
+SUBMIT-DESCRIPTION sleep @=desc
+    executable = {sleep}
     arguments  = 0
-    log        = $(JOB).log
-}}
+    submit_event_user_notes = $ENV({TEST_CASE_ENV})
+    My.{TEST_CASE_ATTR} = "$ENV({TEST_CASE_ENV})"
+    queue
+@desc
 
 JOB DESC sleep
-JOB INLINE {{
-    executable = {path_to_sleep}
+JOB INLINE @=desc
+    executable = {sleep}
     arguments  = 0
-    log        = $(JOB).log
-}}
+    submit_event_user_notes = $ENV({TEST_CASE_ENV})
+    My.{TEST_CASE_ATTR} = "$ENV({TEST_CASE_ENV})"
+    queue
+@desc
+JOB EXTERNAL {sleep_submit}
 """)
-     p = condor.run_command(["condor_submit_dag",dag_filename])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=3,
-     )
 
-     clean_up(test_dir,"dagman_inline",dag_filename)
+    return path
 
-     return job_ad
+def prepare_job(sleep: Path) -> Path:
+    return write_submit(sleep)
 
-#-----------------------------------------------------------------------------------------
-#Fixture to run condor_submit_dag with direct submission off and check the JobSubmitMethod attr
-@action
-def run_dagman_direct_false_submission(condor,test_dir,write_dag_file):
-     # Write custom DAG config to turn of direct submit
-     config = "custom.conf"
-     with open(config, "w") as f:
-         f.write("DAGMAN_USE_DIRECT_SUBMIT = False\n")
-     # Add custom config file to DAG description
-     with open(str(write_dag_file), "a") as f:
-         f.write(f"CONFIG {config}\n")
-     #Submit job
-     p = condor.run_command(["condor_submit_dag",write_dag_file])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=3,
-     )
-     # Stop gap: Empty config to not effect other tests
-     with open(config, "w") as f:
-         f.write("")
-     clean_up(test_dir,"no_direct_submit")
+def prepare_dag(sleep: Path) -> Path:
+    sub = write_submit(sleep)
+    return write_dag(sleep, sub)
 
-     return job_ad
-#-----------------------------------------------------------------------------------------
-subTestNum = 0
-#Fixture to run python bindings with and without user set value and check the JobSubmitMethod attr
-@action(params={
-"normal":'pass',
-"user_set(1)":"job.setSubmitMethod(-3)",
-"user_set(2)":"job.setSubmitMethod(69)",
-"user_set(3)":"job.setSubmitMethod(69,True)",
-"user_set(4)":"job.setSubmitMethod(100)",
-"user_set(5)":"job.setSubmitMethod(666)",
-})#Parameter tests: Standard, User-set(-3), User-set(53), User-set(100), and User-set(666)
-def run_python_bindings(condor,test_dir,path_to_sleep,request):
-     global subTestNum
-     filename = "test{}.py".format(subTestNum)
-     python_file = open(test_dir / filename, "w")
-     subTestNum += 1
-     python_file.write(
-     """import htcondor2 as htcondor
-import classad2 as classad
-
-job = htcondor.Submit({{
-     "executable":"{0}"
-}})
-
-try:
-    {1}
-except ValueError:
-    pass
-schedd = htcondor.Schedd()
-submit_result = schedd.submit(job)
-print(job.getSubmitMethod())
-""".format(path_to_sleep,request.param))
-     python_file.close()
-     #^^^Make python file for submission^^^
-
-     #Submit file to run job
-     p = condor.run_command(["python3",test_dir / filename])
-
-     return p
-#-----------------------------------------------------------------------------------------
-#Fixture to run 'htcondor job submit' and check the JobSubmitMethod attr
-@action
-def run_htcondor_job_submit(condor,write_sub_file):
-     p = condor.run_command(["htcondor","job","submit",write_sub_file])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=1,
-     )
-     
-     return job_ad
-#-----------------------------------------------------------------------------------------
-#Fixture to run 'htcondor jobset submit' and check the JobSubmitMethod attr
-@action
-def run_htcondor_jobset_submit(condor,test_dir,path_to_sleep):
-     jobset_file = open(test_dir / "job.set", "w")
-     jobset_file.write(
-     """name = JobSubmitMethodTest
+def prepare_jobset(sleep: Path) -> Path:
+    path = Path(FILENAME_JOBSET)
+    with open(path, "w") as f:
+        f.write(f"""
+name = JobSubmitMethodTest
 
 iterator = table var {{
      Job1
@@ -269,165 +108,226 @@ iterator = table var {{
 }}
 
 job {{
-     executable = {}
+     executable = {sleep}
+     arguments  = 0
+     log        = {JOB_LOG}
+
+     submit_event_user_notes = $ENV({TEST_CASE_ENV})
+     My.{TEST_CASE_ATTR} = "$ENV({TEST_CASE_ENV})"
+
      queue
 }}
-""".format(path_to_sleep))
-     jobset_file.close()
+""")
 
-     p = condor.run_command(["htcondor","jobset","submit",test_dir / "job.set"])
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=f"JobSetName == \"JobSubmitMethodTest\"",
-          projection=["JobSubmitMethod"],
-          match=2,
-     )
-     
-     return job_ad
+    return path
+
 #-----------------------------------------------------------------------------------------
-#Fixture to run 'htcondor dag submit' and check the JobSubmitMethod attr
+def check_undefined(condor: Condor, test: Path, **kwargs) -> None:
+    try:
+        with condor.use_config():
+            with open(test, "r") as f:
+                desc = htcondor2.Submit(f.read())
+            desc.setSubmitMethod(-1, True)
+            schedd = htcondor2.Schedd()
+            result = schedd.submit(desc)
+    except Exception as e:
+        raise SubmissionError(f"Failed to submit via python API: {e}")
+
+def check_condor_submit(condor: Condor, test: Path, **kwargs) -> None:
+    p = condor.run_command(["condor_submit", test])
+    if p.returncode != 0:
+        raise SubmissionError(f"Failed to submit via condor_submit:\n{p.stdout}\n{p.stderr}")
+
+def check_submit_dag_direct(condor: Condor, test: Path, **kwargs) -> None:
+    p = condor.run_command(["condor_submit_dag", "-SubmitMethod", "1", test])
+    if p.returncode != 0:
+        raise SubmissionError(f"Failed to submit via condor_dag_submit:\n{p.stdout}\n{p.stderr}")
+
+def check_submit_dag_shell(condor: Condor, test: Path, **kwargs) -> None:
+    p = condor.run_command(["condor_submit_dag", "-SubmitMethod", "0", test])
+    if p.returncode != 0:
+        raise SubmissionError(f"Failed to submit via condor_dag_submit:\n{p.stdout}\n{p.stderr}")
+
+def check_dag_py_submit(condor: Condor, test: Path, **kwargs) -> None:
+    try:
+        with condor.use_config():
+            desc = htcondor2.Submit.from_dag(str(test))
+            schedd = htcondor2.Schedd()
+            result = schedd.submit(desc)
+    except Exception as e:
+        raise SubmissionError(f"Failed to submit via python API: {e}")
+
+def check_py_submit(condor: Condor, test: Path, **kwargs) -> str:
+    ret = "UhOh..."
+
+    try:
+        with condor.use_config():
+            with open(test, "r") as f:
+                desc = htcondor2.Submit(f.read())
+            try:
+                val = kwargs.get(KEY_VAL)
+                override = kwargs.get(KEY_OVERRIDE, False)
+                if val is not None:
+                    desc.setSubmitMethod(val, override)
+                ret = str(desc.getSubmitMethod())
+            except ValueError as e:
+                ret = str(e)
+
+            schedd = htcondor2.Schedd()
+            result = schedd.submit(desc)
+    except Exception as e:
+        raise SubmissionError(f"Failed to submit via python API: {e}")
+
+    return ret
+
+def check_htc_submit(condor: Condor, test: Path, **kwargs) -> None:
+    noun = kwargs.get(KEY_NOUN, "NO-NOUN")
+    p = condor.run_command(["htcondor", noun, "submit", test])
+    if p.returncode != 0:
+        raise SubmissionError(f"Failed to submit via htcondor {noun} submit:\n{p.stdout}\n{p.stderr}")
+
+#-----------------------------------------------------------------------------------------
+class Details():
+    def __init__(self, prep: Callable[[Path], Path], exe: Callable[[Condor, str], Optional[str]], result: dict, extra: dict = {}, out: Optional[str] = None, is_dag: bool = False):
+        self.prepare = prep
+        self.execute = exe
+        self.expected = result
+        self.log = f"{FILENAME_DAG}.dagman.log" if is_dag else JOB_LOG
+        self.check = out
+        self.details = extra
+
+TEST_CASES = {
+    "UNDEFINED": Details(prepare_job, check_undefined, {None:1}),
+    "CONDOR_SUBMIT": Details(prepare_job, check_condor_submit, {0:1}),
+    "DAGMAN_DIRECT": Details(prepare_dag, check_submit_dag_direct, {0:1, 1:3}, is_dag=True),
+    "DAGMAN_SHELL": Details(prepare_dag, check_submit_dag_shell, {0:4}, is_dag=True),
+    "PY_DAG": Details(prepare_dag, check_dag_py_submit, {1:3, 2:1}, is_dag=True),
+    "PY_DEFAULT": Details(prepare_job, check_py_submit, {2:1}, out="2"),
+    "PY_INVALID": Details(prepare_job, check_py_submit, {2:1}, extra={KEY_VAL:69}, out="Submit method value must be 100 or greater, or allowed_reserved_values must be True."),
+    "PY_OVERRIDE": Details(prepare_job, check_py_submit, {69:1}, extra={KEY_VAL:69, KEY_OVERRIDE:True}, out="69"),
+    "PY_SET_100": Details(prepare_job, check_py_submit, {100:1}, extra={KEY_VAL:100}, out="100"),
+    "PY_SET": Details(prepare_job, check_py_submit, {666:1}, extra={KEY_VAL:666}, out="666"),
+    "HTC_JOB_SUBMIT": Details(prepare_job, check_htc_submit, {3:1}, extra={KEY_NOUN:"job"}),
+    "HTC_DAG_SUBMIT": Details(prepare_dag, check_htc_submit, {4:1, 1:3}, extra={KEY_NOUN:"dag"}, is_dag=True),
+    "HTC_JOBSET_SUBMIT": Details(prepare_jobset, check_htc_submit, {5:2}, extra={KEY_NOUN:"jobset"}),
+}
+
+#-----------------------------------------------------------------------------------------
 @action
-def run_htcondor_dag_submit(condor,write_dag_file,test_dir):
+def run_dags(the_condor, test_dir, path_to_sleep):
+    TESTS = dict()
 
-     #run second dag submission test 
-     p = condor.run_command(["htcondor","dag","submit", write_dag_file])
+    for TEST, SETUP in TEST_CASES.items():
+        case_dir = test_dir / TEST
+        if case_dir.exists():
+            rmtree(case_dir)
 
-     #Get the job ad for completed job
-     schedd = condor.get_local_schedd()
-     wait(schedd)
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["JobSubmitMethod"],
-          match=3,
-     )
+        os.mkdir(case_dir)
 
-     clean_up(test_dir,"htcondor_cli")
-     
-     return job_ad
+        with ChangeDir(TEST):
+            try:
+                test_file = SETUP.prepare(path_to_sleep)
+                os.environ[TEST_CASE_ENV] = TEST
+                output = SETUP.execute(the_condor, test_file, **SETUP.details)
+                del os.environ[TEST_CASE_ENV]
+
+                TESTS[TEST] = (SETUP.log, SETUP.expected, SETUP.check, output)
+            except SubmissionError as e:
+                TESTS[TEST] = e
+
+    yield TESTS
+
+#-----------------------------------------------------------------------------------------
+@action(params={name: name for name in TEST_CASES})
+def test_info(request, run_dags):
+    details = run_dags[request.param]
+
+    if isinstance(details, SubmissionError):
+        pytest.fail(str(details))
+
+    assert isinstance(details, tuple)
+
+    return (
+        request.param,    # Test name
+        details[0],       # Test log to follow
+        details[1],       # Test expected JobSubmitMethod values -> Count
+        details[2],       # Test expected output (None == skip)
+        details[3],       # Test output
+    )
+
+@action
+def test_case(test_info):
+    return test_info[0]
+
+@action
+def test_log(test_info):
+    return test_info[1]
+
+@action
+def test_expected(test_info):
+    return test_info[2]
+
+@action
+def test_check(test_info):
+    return test_info[3]
+
+@action
+def test_output(test_info):
+    return test_info[4]
+
+#-----------------------------------------------------------------------------------------
+@action
+def test_wait(test_case, test_log) -> None:
+    with ChangeDir(test_case):
+        jel = htcondor2.JobEventLog(test_log)
+        start = now()
+        counts = [0, 0]
+        while True:
+            assert now() - start <= 90, f"ERROR: Test case {test_case} job(s) timed out"
+            for event in jel.events(stop_after=0):
+                if event.type == htcondor2.JobEventType.SUBMIT:
+                    assert event.get("LogNotes") == test_case
+                    counts[0] += 1
+                elif event.type == htcondor2.JobEventType.JOB_TERMINATED:
+                    assert event.get("ReturnValue") == 0
+                    counts[1] += 1
+                    if len(set(counts)) == 1:
+                        return
+
+@action
+def test_get_counts(the_condor, test_case, test_wait) -> dict:
+    schedd = the_condor.get_local_schedd()
+
+    attempts = 0
+    history = []
+
+    while len(history) == 0:
+        if attempts > 0:
+            sleep(2)
+
+        attempts += 1
+        assert attempts <= 5, f"ERROR: Failed to get history records for test case {test_case}"
+        history = schedd.history(
+            constraint=f'TestCase=="{test_case}"',
+            projection=["JobSubmitMethod"],
+        )
+
+    results = dict()
+    for ad in history:
+        jsm = ad.get("JobSubmitMethod")
+        if jsm in results:
+            results[jsm] += 1
+        else:
+            results.update({jsm : 1})
+
+    return results
 
 #=========================================================================================
-#JobSubmitMethod Tests
 class TestJobSubmitMethod:
+    def test_check_value_counts(self, test_get_counts, test_expected):
+        assert test_get_counts == test_expected
 
-#-----------------------------------------------------------------------------------------
-     #Test that a job submited with value < Minimum doestn't add JobSubmitMethod attr
-     def test_job_submit_unknown_doesnt_define_attribute(self,test_unknown_submission):
-          passed = False
-          if any(test_unknown_submission) == False:
-               passed = True
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test condor_submit yields 0
-     def test_condor_submit_method_value(self,run_condor_submit):
-          i = 0
-          passed = False
-          #Check that returned job ads have a submission value of 0
-          for ad in run_condor_submit:
-               i += 1
-               #If job ad submit method is not 0 then fail test
-               if ad["JobSubmitMethod"] == 0:
-                    passed = True
-          if i != 1:
-               passed = False
-          #If made it this far then the test passed
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test condor_submit yields 0 for dag and 1 for dag submitted jobs
-     def test_dagman_submit_job_value(self,run_dagman_submission):
-          countDAG = 0
-          countJobs = 0
-          passed = False
-          #Check that returned job ads 
-          for ad in run_dagman_submission:
-               if ad["JobSubmitMethod"] == 0:
-                    countDAG += 1
-               if ad["JobSubmitMethod"] == 1:
-                    countJobs += 1
-          if countDAG == 1 and countJobs == 2:
-               passed = True
-
-          #If made it this far then the test passed
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test condor_submit yields 0 for dag and 1 for dag submitted jobs test inline submit descriptions
-     def test_dagman_inline_submit_job_value(self,run_dagman_inline_submission):
-          countDAG = 0
-          countJobs = 0
-          #Check that returned job ads
-          for ad in run_dagman_inline_submission:
-               if ad["JobSubmitMethod"] == 0:
-                    countDAG += 1
-               if ad["JobSubmitMethod"] == 1:
-                    countJobs += 1
-          assert countDAG == 1 and countJobs == 2
-
-#-----------------------------------------------------------------------------------------
-     #Test condor_submit with direct submit false yields 0 for all jobs in dag
-     def test_dagman_direct_false_job_value(self,run_dagman_direct_false_submission):
-          count = 0
-          passed = False
-          #Check that returned job ads 
-          for ad in run_dagman_direct_false_submission:
-               if ad["JobSubmitMethod"] == 0:
-                    count += 1
-          if count == 3:
-               passed = True
-
-          #If made it this far then the test passed
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test python bindings job submission yields 2 for normal submission and sets user set values correctly
-     def test_python_bindings_submit_method_value(self,run_python_bindings):
-          passed = False
-          if run_python_bindings.stdout == '2':#Check normal
-               passed = True
-          elif run_python_bindings.stdout == "-3":#Check user-set(1)
-               passed = True
-          elif run_python_bindings.stdout == "69":#Check user-set(3)
-               passed = True
-          elif run_python_bindings.stdout == "100":#Check user-set(4)
-               passed = True
-          elif run_python_bindings.stdout == "666":#Check user-set(5)
-               passed = True
-          elif "htcondor.HTCondorValueError: Submit Method value must be" in run_python_bindings.stderr:#Check user-set(2)
-               if "or greater. Or allow_reserved_values must be set to True." in run_python_bindings.stderr:
-                    passed = True
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test 'htcondor job submit' yields 3
-     def test_htcondor_job_submit_method_value(self,run_htcondor_job_submit):
-          i = 0
-          passed = False
-          #Check that returned job ads have a submission value of 3
-          for ad in run_htcondor_job_submit:
-               i += 1
-               #If job ad submit method is not 3 then fail test
-               if ad["JobSubmitMethod"] == 3:
-                    passed = True
-          if i != 1:
-               passed = False
-          #If made it this far then the test passed
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test 'htcondor dag submit yields 4
-     def test_htcondor_dag_submit_method_value(self,run_htcondor_dag_submit):
-          countDAG = 0
-          countJobs = 0
-          passed = False
-          #Check that returned job ads 
-          for ad in run_htcondor_dag_submit:
-               if ad["JobSubmitMethod"] == 4:
-                    countDAG += 1
-               if ad["JobSubmitMethod"] == 1:
-                    countJobs += 1
-          if countDAG == 1 and countJobs == 2:
-               passed = True
-
-          #If made it this far then the test passed
-          assert passed
-#-----------------------------------------------------------------------------------------
-     #Test 'htcondor jobset submit yields 5
-     def test_htcondor_jobset_submit_method_value(self,run_htcondor_jobset_submit):
-          assert [5, 5] == [ad["JobSubmitMethod"] for ad in run_htcondor_jobset_submit]
+    def test_check_output(self, test_check, test_output):
+        if test_check is None:
+            pytest.skip("Test case does not check output")
+        assert test_check == test_output

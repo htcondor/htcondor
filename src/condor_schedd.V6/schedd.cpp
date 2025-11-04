@@ -2154,6 +2154,10 @@ int Scheduler::make_ad_list(
    for(auto const& [user, value]: this->FsyncRuntimes)
 		cad->Assign("DIAG_CFS" + user, value.Total());
 
+   // publish negotiator defined significant attributes
+   const char * sig_attrs = this->autocluster.getSigAttrs();
+   if (sig_attrs) { cad->Assign("SignificantAttributes", sig_attrs); }
+
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
    // publish daemon core stats
