@@ -671,6 +671,9 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	ResBag& operator+=(const ResBag& rhs);
+	ResBag& operator-=(const ResBag& rhs);
+
 	bool empty() const {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
 	bool underrun(std::string * names) const;
@@ -680,6 +683,7 @@ public:
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
 	const MachAttributes::slotres_map_t & nfrmap() const { return resmap; }
+	void convert_to_request(CpuAttributes::_slot_request& req) const;
 
 protected:
 	double     cpus{0};

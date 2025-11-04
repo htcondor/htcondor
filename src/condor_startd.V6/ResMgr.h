@@ -58,6 +58,7 @@
 #endif
 
 #include "VolumeManager.h"
+#include "util.h"
 
 typedef double (Resource::*ResourceFloatMember)();
 typedef void (Resource::*VoidResourceMember)();
@@ -150,15 +151,24 @@ public:
 	}
 };
 
+enum class ResourceLockType {
+	HUNG_PID = 0,       // Resources broken from hung PID
+	CGROUP,             // Resources broken from locked cgroup
+	LV,                 // Recources broken from leaked LV
+};
+
 // holds a broken resource, slot of slot_type
 class BrokenItem {
 public:
-	//BrokenItem() = default;
+	BrokenItem() { b_refid = monotonic_id++; }
 	//~BrokenItem() = default;
 	//BrokenItem(const BrokenItem &) = default;
 	//BrokenItem(BrokenItem &&) = default;
 	//BrokenItem & operator=(const BrokenItem &) = default;
 
+	ResourceLockType b_lock{};      // Locking reason for broken resources
+	int          b_srcid{-1};       // Source slot ID (p-slot) to restore resources
+	unsigned int b_refid{0};        // Unique identifying ID for each broken item
 	unsigned int b_id{0};   // an id that we can bind GPUs to
 	unsigned int b_code{0}; // a reason code
 	time_t       b_time{0}; // the time we logged the brokenness
@@ -182,6 +192,7 @@ public:
 	// publish the broken resources into the given ad, for use by ep_eventlog
 	void publish_resources(ClassAd& ad, const char * prefix="") const;
 
+	static unsigned int monotonic_id; // Monotonically increasing counter for refid's
 };
 
 class ResMgr : public Service
@@ -262,6 +273,9 @@ public:
 		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
 	}
 
+	// Locate a specific cleanup reminder. Return nullptr if DNE
+	CleanupReminder* findCleanupReminder(CleanupReminder::category cat, const std::string& name);
+
 private:
 	int in_walk = 0;
 
@@ -320,6 +334,7 @@ public:
 	State		state( void );			// Return the machine state
 
 	BrokenItem & get_broken_context(Resource * rip); // find or allocate a broken context for this slot
+	void RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids); // Restore broken resources from successfully cleaned up things (i.e. logical volumes)
 
 	void report_updates( void ) const;	// Log updates w/ dprintf()
 

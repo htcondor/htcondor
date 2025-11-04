@@ -945,12 +945,16 @@ Resource::hackLoadForCOD( void )
 }
 
 const BrokenItem &
-Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job)
+Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job, ResourceLockType lock)
 {
 	// we save only the *first* broken context we get for each slot
 	// so here we find or create a BrokenItem object and initialize it
 	// if it is not empty
 	auto & brit = resmgr->get_broken_context(this);
+
+	brit.b_lock = lock;
+	r_broken_id = brit.b_refid;
+	brit.b_srcid = r_id;
 
 	// if we don't have a broken reason yet, copy the one in the r_attr
 	if (brit.b_reason.empty() && r_attr) {
@@ -972,6 +976,38 @@ Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & jo
 	}
 
 	return brit;
+}
+
+
+void
+Resource::remove_broken_context()
+{
+	if (r_attr) { r_attr->set_broken(0, ""); }
+	r_broken_id = std::numeric_limits<unsigned int>::max();
+	r_do_not_delete = false;
+}
+
+
+void
+Resource::restore_broken_resources(const ResBag& broken, const int sub_id)
+{
+	// No broken resources then return immediately
+	if (broken.empty()) { return; }
+
+	// Remove broken amounts from internal broken bag
+	if (r_lost_child_res) { *r_lost_child_res -= broken; }
+
+	// Make slot request with resources in broken ResBag
+	CpuAttributes::_slot_request request;
+	broken.convert_to_request(request);
+
+	// Make temporary CpuAttrs to restore to this slot
+	CpuAttributes restore(type_id(), request, *(resmgr->m_attr), executeDir(), m_execute_partition_id);
+	restore.attach(this); // Prevent CpuAttributes::dprintf EXCEPT
+	restore.unbind_DevIds(resmgr->m_attr, r_id, sub_id, 0);
+
+	// Finally restore resources to parent slot
+	*r_attr += restore;
 }
 
 

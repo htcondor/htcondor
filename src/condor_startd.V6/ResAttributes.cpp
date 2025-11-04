@@ -2708,6 +2708,43 @@ ResBag::operator-=(const CpuAttributes& rhs)
 	return *this;
 }
 
+
+ResBag&
+ResBag::operator+=(const ResBag& rhs)
+{
+        cpus += rhs.cpus;
+        disk += rhs.disk;
+        mem += rhs.mem;
+        slots += rhs.slots;
+        for (auto & res : rhs.resmap) { resmap[res.first] += res.second; }
+        return *this;
+}
+
+ResBag&
+ResBag::operator-=(const ResBag& rhs)
+{
+        cpus -= rhs.cpus;
+        disk -= rhs.disk;
+        mem -= rhs.mem;
+        slots -= rhs.slots;
+        for (auto & res : rhs.resmap) { resmap[res.first] -= res.second; }
+        return *this;
+}
+
+
+void
+ResBag::convert_to_request(CpuAttributes::_slot_request& req) const
+{
+	req.num_disk = disk;
+	req.num_cpus = cpus;
+	req.num_phys_mem = mem;
+
+	for (const auto& res : resmap) {
+		req.slotres[res.first] += res.second;
+	}
+}
+
+
 void ResBag::reset()
 {
 	cpus = 0; disk = 0; mem = 0; slots = 0;
