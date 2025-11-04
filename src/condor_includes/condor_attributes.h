@@ -114,6 +114,7 @@
 #define ATTR_MATCHED_PSG  "Matched_PSG"
 #define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"
 #define ATTR_PREEMPTING_CONCURRENCY_LIMITS  "PreemptingConcurrencyLimits"
+#define ATTR_CLEANUP_CATEGORY_COUNTS  "CleanupCategoryCounts"
 #define ATTR_CONDOR_LOAD_AVG			"CondorLoadAvg"
 #define ATTR_CONDOR_SCRATCH_DIR			"CondorScratchDir"
 #define ATTR_CONDOR_ADMIN				"CondorAdmin"

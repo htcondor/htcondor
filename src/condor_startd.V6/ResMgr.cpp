@@ -436,7 +436,28 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 		volman->PublishDiskInfo(ad);
 	}
 
+	// Publish the number of leaked resources (that we are still periodically attempting cleanup)
+	std::map<std::string, size_t> cleanup_counts;
+	for (const auto& [reminder, _] : cleanup_reminders) {
+		std::string key(reminder.Type());
+		title_case(key);
+		key.push_back('s');
+		auto [start, end] = std::ranges::remove_if(key, ::isspace);
+		key.erase(start, end);
+		cleanup_counts[key]++;
+	}
+
+	if ( ! cleanup_counts.empty()) {
+		std::string value = "[";
+		for (const auto& [key, count] : cleanup_counts) {
+			formatstr_cat(value, " %s=%zu;", key.c_str(), count);
+		}
+		value += " ]";
+		ad.AssignExpr(ATTR_CLEANUP_CATEGORY_COUNTS, value.c_str());
+	}
+
 	m_attr->publish_static(&ad, nullptr);
+
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 

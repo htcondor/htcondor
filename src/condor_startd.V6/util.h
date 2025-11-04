@@ -101,7 +101,7 @@ public:
 		switch (cat) {
 			case category::exec_dir: { return "directory"; }
 			case category::account: { return "account"; }
-			case category::logical_volume: { return "LV"; }
+			case category::logical_volume: { return "logical volume"; }
 			default: { return "unknown"; }
 		}
 	}
