@@ -13,6 +13,13 @@
   resource requests for matchmaking.
   :jira:`3358`
 
+- The option for the *condor_schedd* to keep job event log files open for
+  a period of time has been removed.
+  This was controlled by configuration parameters
+  :macro:`USERLOG_FILE_CACHE_MAX` and
+  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
+  :jira:`3367`
+
 *** 25.5.0 bugs
 
 *** 25.0.5 bugs
