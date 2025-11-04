@@ -488,13 +488,9 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 {
 	ExprTree* tree;
 
-	if( !attr ) {
-		EXCEPT( "caInsert called with NULL attribute" );
-	}
-	if( !target || !source ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caInsert called with NULL classad\n");
-		EXCEPT( "caInsert called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
+	ASSERT(source);
 
 	std::string new_attr;
 	if( prefix ) {
@@ -518,13 +514,8 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 
 bool caRevertToParent(ClassAd* target, const char * attr)
 {
-	if( !attr ) {
-		EXCEPT( "caRevertToParent called with NULL attribute" );
-	}
-	if( !target ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caRevertToParent called with NULL classad\n");
-		EXCEPT( "caRevertToParent called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
 
 	ClassAd * parent = target->GetChainedParentAd();
 	if ( ! parent) {
@@ -540,13 +531,8 @@ bool caRevertToParent(ClassAd* target, const char * attr)
 
 void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
 {
-	if( !attr ) {
-		EXCEPT( "caDeleteThruParent called with NULL attribute" );
-	}
-	if( !target ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caDeleteThruParent called with NULL classad\n");
-		EXCEPT( "caDeleteThruParent called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
 
 	std::string new_attr;
 	if (prefix) {
