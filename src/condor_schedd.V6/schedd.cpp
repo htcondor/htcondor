@@ -13799,6 +13799,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		num_excepts++;
 		SetAttributeInt(job_id.cluster, job_id.proc,
 						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts, NONDURABLE);
+		int dummy;
+		if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &dummy) < 0) {
+			SetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, "Shadow Exception");
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, 0);
+		}
 		if (!srec->removed && srec->match) {
 				// Record that we had an exception.  This function will
 				// relinquish the match if we get too many exceptions 
