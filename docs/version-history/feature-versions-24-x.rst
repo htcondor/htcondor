@@ -49,6 +49,12 @@ Bugs Fixed:
 
 .. include-history:: bugs 24.12.13 24.0.13
 
+Version 24.x Feature Releases
+=============================
+
+We release new features in these releases of HTCondor. The details of each
+version are described below.
+
 Version 24.12.4
 ---------------
 
