@@ -251,6 +251,12 @@ Bugs Fixed:
   to block indefinitely.
   :jira:`2644`
 
+Version 23.x Feature Releases
+=============================
+
+We release new features in these releases of HTCondor. The details of each
+version are described below.
+
 Version 23.10.2
 ---------------
 
