@@ -68,3 +68,7 @@ This branch also includes code for the shadow and starter to agree at run-time
 which file-transfer protocol to use.
 
 - [ ] (This isn't tested yet.)
+
+I'm attempting to purge this from the code, but since the first pass at this
+implementation was just to create an empty shim, the new and old FTOs might
+occasionally be referred to as "null" and "real."
