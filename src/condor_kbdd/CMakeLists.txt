@@ -18,19 +18,30 @@
 
 if (HAVE_KBDD)
 
-set(kbdSrcs
-kbdd.cpp
-)
+   set(kbdSrcs
+        kbdd.cpp
+   )
 
-if (NOT WINDOWS)
-	list(APPEND kbdSrcs XInterface.unix.cpp)
-endif()
+   if (NOT WINDOWS)
+      list(APPEND kbdSrcs XInterface.unix.cpp)
+   endif()
 
-  if (HAVE_XSS)
-	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11};${HAVE_XSS}" ON )
-  else()
-	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11}" ON )
-  endif()
+   if (HAVE_XSS)
+      set(KBDD_LIBS "${CONDOR_LIBS};${HAVE_X11};${HAVE_XSS}")
+   else()
+      set(KBDD_LIBS "${CONDOR_LIBS};${HAVE_X11}")
+   endif()
+
+   if (HAVE_DBUS)
+      set(KBDD_LIBS "${KBDD_LIBS};-l${DBus1_LIBRARIES}")
+      list(APPEND kbdSrcs MutterInterface.unix.cpp)
+   endif()
+
+   if (HAVE_LIBSYSTEMD)
+      set(KBDD_LIBS "${KBDD_LIBS};-l${LIBSYSTEMD_LIBRARIES}")
+   endif()
+
+   condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${KBDD_LIBS}" ON )
 
 else()
     message(STATUS "NOTE: *condor_kbdd* will not be built, HAVE_KBDD doesn't exist")
