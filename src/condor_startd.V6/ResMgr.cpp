@@ -1186,6 +1186,21 @@ ResMgr::get_broken_context(Resource * rip)
 }
 
 
+static void
+log_resource_restore(const BrokenItem& brit, Resource* rip)
+{
+	if (ep_eventlog.isEnabled()) {
+		auto & event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_RESTORE, rip);
+		if ( ! brit.b_res.empty()) {
+			ClassAd* resad = new ClassAd();
+			brit.publish_resources(*resad, "");
+			event.Ad().Insert("Resources", resad);
+		}
+		ep_eventlog.flush();
+	}
+}
+
+
 void
 ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids)
 {
@@ -1201,6 +1216,9 @@ ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsig
 				// TODO: Handle/check for broken and partitionable slots?
 				Resource* slot = (Resource*)(item.b_refptr);
 				slot->remove_broken_context();
+
+				log_resource_restore(item, slot);
+
 				if (slot->is_dynamic_slot()) { // dynamic slot
 					ASSERT(source == slot->get_parent());
 					removeResource(slot);
@@ -1210,6 +1228,9 @@ ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsig
 				}
 			} else { // Associated dynaminc slot is already gone
 				ASSERT(source->r_lost_child_res);
+
+				log_resource_restore(item, source);
+
 				source->restore_broken_resources(item.b_res, item.sub_id());
 
 				item.b_res.reset();
