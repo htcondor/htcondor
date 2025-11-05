@@ -13,6 +13,14 @@
   resource requests for matchmaking.
   :jira:`3358`
 
+- Added configuration variables :macro:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE` and
+  :macro:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE`. When configured, the *condor_job_router*
+  will first use the address file to locate the source or destination Schedd and
+  only query the Collector if the file does not contain an address. Use of these
+  configuration variables improves the efficiency of the job router and eliminates
+  one source of failure when routing.
+  :jira:`1736`
+
 *** 25.5.0 bugs
 
 *** 25.0.5 bugs

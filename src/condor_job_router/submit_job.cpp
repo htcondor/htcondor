@@ -18,7 +18,6 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "submit_job.h"
 #include "condor_classad.h"
 #include "condor_qmgr.h"
 #include "dc_schedd.h"
@@ -39,32 +38,21 @@
 #include "spooled_job_files.h"
 #include "classad_helpers.h"
 #include "condor_config.h"
+#include "JobRouter.h"
+#include "submit_job.h"
 
 	// Simplify my error handling and reporting code
 class FailObj {
 public:
-	FailObj() : cluster(-1), proc(-1), qmgr(0), save_error_msg(0) { }
+	FailObj() = default;
+	FailObj(const ScheddContactInfo & scci) : names(scci.label()) {};
 
 	void SetCluster(int c) { cluster = c; }
 	void SetProc(int p) { proc = p; }
 
 	void SetSaveErrorMsg(std::string *s) { save_error_msg = s; }
 
-	void SetNames(const char * schedd_name, const char * pool_name) {
-		if(schedd_name) {
-			names = "schedd ";
-			names += schedd_name;
-		} else {
-			names = "local schedd";
-		}
-		names += " at ";
-		if(pool_name) {
-			names += "pool ";
-			names += pool_name;
-		} else {
-			names += "local pool";
-		}
-	}
+	void SetNames(const ScheddContactInfo & scci) { names = scci.label(); }
 
 	void SetQmgr(Qmgr_connection * q) { qmgr = q; }
 
@@ -106,10 +94,10 @@ public:
 	}
 private:
 	std::string names;
-	int cluster;
-	int proc;
-	Qmgr_connection * qmgr;
-	std::string *save_error_msg;
+	int cluster{-1};
+	int proc{-1};
+	Qmgr_connection * qmgr{nullptr};
+	std::string *save_error_msg{nullptr};
 };
 
 
@@ -199,10 +187,10 @@ static Qmgr_connection *open_job(classad::ClassAd const &job,DCSchedd &schedd,Fa
 	return open_q_as_owner(effective_owner.c_str(),schedd,failobj);
 }
 
-static Qmgr_connection *open_job(classad::ClassAd const &job,const char *schedd_name, const char *pool_name,FailObj &failobj)
+static Qmgr_connection *open_job(classad::ClassAd const &job,const ScheddContactInfo & scci,FailObj &failobj)
 {
-	failobj.SetNames(schedd_name,pool_name);
-	DCSchedd schedd(schedd_name,pool_name);
+	failobj.SetNames(scci);
+	DCSchedd schedd(scci.name,scci.pool,scci.address_file);
 	if( ! schedd.locate() ) {
 		failobj.fail("Can't find address of schedd\n");
 		return NULL;
@@ -212,13 +200,13 @@ static Qmgr_connection *open_job(classad::ClassAd const &job,const char *schedd_
 }
 
 
-static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity,classad::ClassAd const &job)
+static ClaimJobResult claim_job_with_current_privs(const ScheddContactInfo & scci, int cluster, int proc, std::string * error_details, const char * my_identity,classad::ClassAd const &job)
 {
 	// Open a qmgr
 	FailObj failobj;
 	failobj.SetSaveErrorMsg( error_details );
 
-	Qmgr_connection * qmgr = open_job(job,schedd_name,pool_name,failobj);
+	Qmgr_connection * qmgr = open_job(job,scci,failobj);
 	if( !qmgr ) {
 		return CJR_ERROR;
 	}
@@ -235,9 +223,7 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res == CJR_OK) {
-			formatstr(*error_details, "Failed to commit job claim for schedd %s in pool %s",
-				schedd_name ? schedd_name : "local schedd",
-				pool_name ? pool_name : "local pool");
+			formatstr(*error_details, "Failed to commit job claim for %s", scci.label());
 		}
 		return CJR_ERROR;
 	}
@@ -245,11 +231,13 @@ static ClaimJobResult claim_job_with_current_privs(const char * pool_name, const
 	return res;
 }
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
+	int cluster, int proc,
+	std::string * error_details, const char * my_identity, bool target_is_sandboxed)
 {
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	ClaimJobResult result = claim_job_with_current_privs(pool_name,schedd_name,cluster,proc,error_details,my_identity,ad);
+	ClaimJobResult result = claim_job_with_current_privs(scci,cluster,proc,error_details,my_identity,ad);
 
 	set_priv(priv);
 	uninit_user_ids();
@@ -261,7 +249,7 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 				if( error_details ) {
 					formatstr(*error_details, "Failed to create/chown source job spool directory to the user.");
 				}
-				yield_job(ad,pool_name,schedd_name,true,cluster,proc,error_details,my_identity,false);
+				yield_job(ad,scci,true,cluster,proc,error_details,my_identity,false);
 				return CJR_ERROR;
 			}
 		}
@@ -361,7 +349,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 
 
 static bool yield_job_with_current_privs(
-	const char * pool_name, const char * schedd_name,
+	const ScheddContactInfo & scci,
 	bool done, int cluster, int proc, std::string * error_details,
 	const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying,
 	classad::ClassAd const &job)
@@ -374,7 +362,7 @@ static bool yield_job_with_current_privs(
 	if(!keep_trying) keep_trying = &junk_keep_trying;
 	*keep_trying = true;
 
-	Qmgr_connection *qmgr = open_job(job,schedd_name,pool_name,failobj);
+	Qmgr_connection *qmgr = open_job(job,scci,failobj);
 	if( !qmgr ) {
 		return false;
 	}
@@ -390,9 +378,7 @@ static bool yield_job_with_current_privs(
 	if( ! DisconnectQ(qmgr, true /* commit */)) {
 		failobj.fail("Failed to commit job claim\n");
 		if(error_details && res) {
-			formatstr(*error_details, "Failed to commit job claim for schedd %s in pool %s",
-				schedd_name ? schedd_name : "local schedd",
-				pool_name ? pool_name : "local pool");
+			formatstr(*error_details, "Failed to commit job claim for %s", scci.label());
 		}
 		return false;
 	}
@@ -401,15 +387,15 @@ static bool yield_job_with_current_privs(
 }
 
 
-bool yield_job(classad::ClassAd const &ad,const char * pool_name,
-	const char * schedd_name, bool done, int cluster, int proc,
-	std::string * error_details, const char * my_identity, bool target_is_sandboxed,
-        bool release_on_hold, bool *keep_trying)
+bool yield_job(classad::ClassAd const &ad,const ScheddContactInfo & scci,
+	bool done, int cluster, int proc,
+	std::string * error_details, const char * my_identity,
+	bool target_is_sandboxed, bool release_on_hold, bool *keep_trying)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = yield_job_with_current_privs(pool_name,schedd_name,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
+	success = yield_job_with_current_privs(scci,done,cluster,proc,error_details,my_identity,target_is_sandboxed,release_on_hold,keep_trying,ad);
 
 	set_priv(priv);
 	uninit_user_ids();
@@ -418,12 +404,11 @@ bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 }
 
 
-static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+static bool submit_job_with_current_priv( ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
-	FailObj failobj;
-	failobj.SetNames(schedd_name, pool_name);
+	FailObj failobj(scci);
 
-	DCSchedd schedd(schedd_name,pool_name);
+	DCSchedd schedd(scci.name,scci.pool,scci.address_file);
 	if( ! schedd.locate() ) {
 		failobj.fail("Can't find address of schedd\n");
 		return false;
@@ -573,7 +558,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	return true;
 }
 
-bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	bool success;
 
@@ -586,7 +571,7 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	}
 	TemporaryPrivSentry sentry(PRIV_USER);
 
-	success = submit_job_with_current_priv(src,schedd_name,pool_name,is_sandboxed,cluster_out,proc_out);
+	success = submit_job_with_current_priv(src,scci,is_sandboxed,cluster_out,proc_out);
 
 	uninit_user_ids();
 
@@ -644,10 +629,10 @@ bool push_dirty_attributes(classad::ClassAd & src)
 	return true;
 }
 
-static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, const ScheddContactInfo & scci)
 {
 	FailObj failobj;
-	Qmgr_connection *qmgr = open_job(src,schedd_name,pool_name,failobj);
+	Qmgr_connection *qmgr = open_job(src,scci,failobj);
 	if( !qmgr ) {
 		return false;
 	}
@@ -668,12 +653,12 @@ static bool push_dirty_attributes_with_current_priv(classad::ClassAd & src, cons
 	the dirty attributes.
 	Establishes (and tears down) a qmgr connection.
 */
-bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+bool push_dirty_attributes(classad::ClassAd & src, const ScheddContactInfo & scci)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(src);
 
-	success = push_dirty_attributes_with_current_priv(src,schedd_name,pool_name);
+	success = push_dirty_attributes_with_current_priv(src,scci);
 
 	set_priv(priv);
 	uninit_user_ids();
@@ -758,10 +743,10 @@ bool push_classad_diff(classad::ClassAd & src,classad::ClassAd & dest)
 	return true;
 }
 
-static bool push_classad_diff_with_current_priv(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+static bool push_classad_diff_with_current_priv(classad::ClassAd & src, classad::ClassAd & dest, const ScheddContactInfo & scci)
 {
 	FailObj failobj;
-	Qmgr_connection *qmgr = open_job(src,schedd_name,pool_name,failobj);
+	Qmgr_connection *qmgr = open_job(src,scci,failobj);
 	if( !qmgr ) {
 		return false;
 	}
@@ -782,28 +767,25 @@ static bool push_classad_diff_with_current_priv(classad::ClassAd & src, classad:
     This handles attribute deletion as well as change of value.
 	Establishes (and tears down) a qmgr connection.
 */
-bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ScheddContactInfo & scci)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(src);
 
-	success = push_classad_diff_with_current_priv(src,dest,schedd_name,pool_name);
+	success = push_classad_diff_with_current_priv(src,dest,scci);
 
 	set_priv(priv);
 	uninit_user_ids();
 	return success;
 }
 
-static bool finalize_job_with_current_privs(classad::ClassAd const &job,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+static bool finalize_job_with_current_privs(classad::ClassAd const &job,int cluster, int proc, const ScheddContactInfo & scci, bool is_sandboxed)
 {
-	FailObj failobj;
-	failobj.SetNames(schedd_name,pool_name);
+	FailObj failobj(scci);
 
-	DCSchedd schedd(schedd_name,pool_name);
+	DCSchedd schedd(scci.name,scci.pool,scci.address_file);
 	if( ! schedd.locate() ) {
-		if(!schedd_name) { schedd_name = "local schedd"; }
-		if(!pool_name) { pool_name = "local pool"; }
-		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
+		dprintf(D_ALWAYS, "Unable to find address of %s\n", scci.label());
 		return false;
 	}
 
@@ -847,7 +829,7 @@ static bool finalize_job_with_current_privs(classad::ClassAd const &job,int clus
 	return true;
 }
 
-bool finalize_job(const std::string & owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+bool finalize_job(const std::string & owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const ScheddContactInfo & scci, bool is_sandboxed)
 {
 	bool success;
 
@@ -860,23 +842,21 @@ bool finalize_job(const std::string & owner, const std::string &domain, classad:
 	}
 	TemporaryPrivSentry sentry(PRIV_USER);
 
-	success = finalize_job_with_current_privs(ad,cluster,proc,schedd_name,pool_name,is_sandboxed);
+	success = finalize_job_with_current_privs(ad,cluster,proc,scci,is_sandboxed);
 
 	uninit_user_ids();
 	return success;
 }
 
-static bool remove_job_with_current_privs(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
+static bool remove_job_with_current_privs(int cluster, int proc, char const *reason, const ScheddContactInfo & scci, std::string &error_desc)
 {
-	DCSchedd schedd(schedd_name,pool_name);
+	DCSchedd schedd(scci.name,scci.pool,scci.address_file);
 	bool success = true;
 	CondorError errstack;
 
 	if( ! schedd.locate() ) {
-		if(!schedd_name) { schedd_name = "local schedd"; }
-		if(!pool_name) { pool_name = "local pool"; }
-		dprintf(D_ALWAYS, "Unable to find address of %s at %s\n", schedd_name, pool_name);
-		formatstr(error_desc, "Unable to find address of %s at %s", schedd_name, pool_name);
+		dprintf(D_ALWAYS, "Unable to find address of %s\n", scci.label());
+		formatstr(error_desc, "Unable to find address of %s", scci.label());
 		return false;
 	}
 
@@ -911,12 +891,12 @@ static bool remove_job_with_current_privs(int cluster, int proc, char const *rea
 	return success;
 }
 
-bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
+bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const ScheddContactInfo & scci, std::string &error_desc)
 {
 	bool success;
 	priv_state priv = set_user_priv_from_ad(ad);
 
-	success = remove_job_with_current_privs(cluster,proc,reason,schedd_name,pool_name,error_desc);
+	success = remove_job_with_current_privs(cluster,proc,reason,scci,error_desc);
 
 	set_priv(priv);
 	uninit_user_ids();
