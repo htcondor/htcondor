@@ -18,30 +18,30 @@ logger.setLevel(logging.DEBUG)
 TEST_CASES = {
     "new_both": {
         "config": {
-            "STARTER_USES_NULL_FILE_TRANSFER":  "TRUE",
-            "SHADOW_USES_NULL_FILE_TRANSFER":   "TRUE",
+            "STARTER_USES_NEW_FILE_TRANSFER":  "TRUE",
+            "SHADOW_USES_NEW_FILE_TRANSFER":   "TRUE",
         },
         "expected": None,
     },
     "new_starter": {
         "config": {
-            "STARTER_USES_NULL_FILE_TRANSFER":  "TRUE",
-            "SHADOW_USES_NULL_FILE_TRANSFER":   "FALSE",
+            "STARTER_USES_NEW_FILE_TRANSFER":  "TRUE",
+            "SHADOW_USES_NEW_FILE_TRANSFER":   "FALSE",
         },
         "expected": None,
     },
     "new_shadow": {
         "config": {
-            "STARTER_USES_NULL_FILE_TRANSFER":  "FALSE",
-            "SHADOW_USES_NULL_FILE_TRANSFER":   "TRUE",
+            "STARTER_USES_NEW_FILE_TRANSFER":  "FALSE",
+            "SHADOW_USES_NEW_FILE_TRANSFER":   "TRUE",
         },
         "expected": None,
     },
     # This should only be useful for testing the test.
     "new_neither": {
         "config": {
-            "STARTER_USES_NULL_FILE_TRANSFER":  "FALSE",
-            "SHADOW_USES_NULL_FILE_TRANSFER":   "FALSE",
+            "STARTER_USES_NEW_FILE_TRANSFER":  "FALSE",
+            "SHADOW_USES_NEW_FILE_TRANSFER":   "FALSE",
         },
         "expected": None,
     },

@@ -278,8 +278,8 @@ class RemoteResource : public Service {
 	ClassAd m_download_file_stats;
 
 	void initFileTransfer();
-	void initRealFileTransfer();
-	void initNullFileTransfer();
+	void initOldFileTransfer();
+	void initNewFileTransfer();
 
 	int handleInputSandboxTransfer( int command, Stream * s );
 	int handleOutputSandboxTransfer( int command, Stream * s );

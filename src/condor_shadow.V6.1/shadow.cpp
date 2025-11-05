@@ -127,14 +127,14 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 	//
 	// If the shadow will be using the new file transfer implementation,
 	// this (presently) doesn't work.
-	bool useNullFileTransfer = param_boolean(
-		"SHADOW_USES_NULL_FILE_TRANSFER", false
+	bool shadowUsesNewFileTransfer = param_boolean(
+		"SHADOW_USES_NEW_FILE_TRANSFER", false
 	);
 	bool useNewFileTransfer = param_boolean(
 		"USE_NEW_FILE_TRANSFER", false
 	);
 
-	if(! (useNullFileTransfer || useNewFileTransfer)) {
+	if(! (shadowUsesNewFileTransfer || useNewFileTransfer)) {
 		checkInputFileTransfer();
 	}
 

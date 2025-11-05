@@ -2447,7 +2447,7 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 
 
 void
-RemoteResource::initRealFileTransfer()
+RemoteResource::initOldFileTransfer()
 {
 	if(doneInitFileTransfer) { return; }
 	doneInitFileTransfer = true;
@@ -2502,7 +2502,7 @@ RemoteResource::initRealFileTransfer()
 
 
 void
-RemoteResource::initNullFileTransfer()
+RemoteResource::initNewFileTransfer()
 {
 	//
 	// Generate and assign the transfer key.
@@ -2544,17 +2544,17 @@ RemoteResource::initNullFileTransfer()
 void
 RemoteResource::initFileTransfer()
 {
-	bool useNullFileTransfer = param_boolean(
-		"SHADOW_USES_NULL_FILE_TRANSFER", false
+	bool shadowUsesNewFileTransfer = param_boolean(
+		"SHADOW_USES_NEW_FILE_TRANSFER", false
 	);
 	bool useNewFileTransfer = param_boolean(
 		"USE_NEW_FILE_TRANSFER", false
 	);
 
-	if( useNullFileTransfer || useNewFileTransfer ) {
-		initNullFileTransfer();
+	if( shadowUsesNewFileTransfer || useNewFileTransfer ) {
+		initNewFileTransfer();
 	} else {
-		initRealFileTransfer();
+		initOldFileTransfer();
 	}
 }
 

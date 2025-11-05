@@ -572,14 +572,14 @@ bool JICShadow::allJobsDone( void )
 bool
 JICShadow::transferOutput(bool& transient_failure, bool& in_progress)
 {
-	bool useNullFileTransfer = param_boolean(
-		"STARTER_USES_NULL_FILE_TRANSFER", false
+	bool useNewFileTransfer = param_boolean(
+		"STARTER_USES_NEW_FILE_TRANSFER", false
 	);
 	if( param_boolean( "USE_NEW_FILE_TRANSFER", false ) ) {
-	    useNullFileTransfer = true;
+	    useNewFileTransfer = true;
 	}
 
-	if( useNullFileTransfer ) {
+	if( useNewFileTransfer ) {
 		return newTransferOutput(transient_failure, in_progress);
 	} else {
 		return oldTransferOutput(transient_failure, in_progress);
@@ -2809,11 +2809,14 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
    and wait for setupComplete(0) to be called. */
 bool
 JICShadow::beginInputTransfer( void ) {
-    bool useNullFileTransfer = param_boolean(
-        "STARTER_USES_NULL_FILE_TRANSFER", false
+    bool useNewFileTransfer = param_boolean(
+        "STARTER_USES_NEW_FILE_TRANSFER", false
     );
+	if( param_boolean( "USE_NEW_FILE_TRANSFER", false ) ) {
+	    useNewFileTransfer = true;
+	}
 
-    if( useNullFileTransfer ) {
+    if( useNewFileTransfer ) {
         return beginNewInputTransfer();
     } else {
         return beginOldInputTransfer();
