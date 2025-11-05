@@ -2308,6 +2308,24 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 }
 
 void
+CpuAttributes::claim_broken_DevIds(MachAttributes* map, int broken_sub_id)
+{
+	if ( ! map) { return; }
+
+	for (const auto& [tag, _] : c_slotres_map) {
+		// Locate devids associated with broken item subid
+		slotres_assigned_ids_t devids;
+		int claimed = map->ReportBrokenDevIds(tag, devids, broken_sub_id);
+		dprintf(D_FULLDEBUG, "Claiming %d %s device ids from broken item %d\n",
+		        claimed, tag.c_str(), broken_sub_id);
+
+		// Update our list of devids
+		auto& currids = c_slotres_ids_map[tag];
+		currids.insert(currids.end(), devids.begin(), devids.end());
+	}
+}
+
+void
 CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
 #ifdef PROVISION_FRACTIONAL_DISK

@@ -541,6 +541,8 @@ public:
 	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id);
 	// check for offline changes for non-fungible resource ids
 	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id);
+	// Add broken non-fungible resource ids to this objects mapping
+	void claim_broken_DevIds(MachAttributes* map, int broken_sub_id);
 
 	void publish_static(ClassAd*, const ResBag * inuse, const ResBag * broken) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA

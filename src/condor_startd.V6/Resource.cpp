@@ -1004,6 +1004,7 @@ Resource::restore_broken_resources(const ResBag& broken, const int sub_id)
 	// Make temporary CpuAttrs to restore to this slot
 	CpuAttributes restore(type_id(), request, *(resmgr->m_attr), executeDir(), m_execute_partition_id);
 	restore.attach(this); // Prevent CpuAttributes::dprintf EXCEPT
+	restore.claim_broken_DevIds(resmgr->m_attr, sub_id);
 	restore.unbind_DevIds(resmgr->m_attr, r_id, sub_id, 0);
 
 	// Finally restore resources to parent slot
