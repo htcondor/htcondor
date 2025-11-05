@@ -795,9 +795,7 @@ void register_cleanup_reminder_timer()
 								cleanup_reminder_timer_interval,
 								(TimerHandler)CleanupReminderTimerCallback,
 								"CleanupReminderTimerCallback");
-		if  (id < 0) {
-			EXCEPT( "Can't register DaemonCore timer for cleanup reminders" );
-		}
+		ASSERT(id >= 0);
 		cleanup_reminder_timer_id = id;
 	}
 }

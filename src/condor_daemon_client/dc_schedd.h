@@ -92,6 +92,10 @@ public:
 		*/
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
+		/* Constructor, used by job router */
+	DCSchedd( std::string_view name, std::string_view pool, std::string_view address_file );
+
+
 		// return the address of the CREDD associated with this schedd
 		// do not call this method until after locate() or equivalent.
 	bool getCreddAddress(std::string & address);

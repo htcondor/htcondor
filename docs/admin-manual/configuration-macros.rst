@@ -8679,6 +8679,26 @@ These macros affect the *condor_job_router* daemon.
     *condor_job_router* does not attempt to reset the original job
     ClassAd to a pre-claimed state upon yielding control of the job.
 
+:macro-def:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE[JOB ROUTER]`
+    The path to the address file file for the *condor_schedd*
+    serving as the source of jobs for routing.  If specified,
+    this must point to the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
+    When configured, the *condor_job_router* will first look in this
+    address file to get the address of the source schedd and will only
+    query the collector specified in :macro:`JOB_ROUTER_SCHEDD1_POOL`
+    if it does not find an address in that file.
+
+:macro-def:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the destination of jobs for routing.  If specified,
+    this must point to the the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHED2_NAME`.
+    When configured, the *condor_job_router* will first look in this
+    address file to get the address of the destination schedd and will only
+    query the collector specified in :macro:`JOB_ROUTER_SCHEDD2_POOL`
+    if it does not find an address in that file.
+
 :macro-def:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG[JOB ROUTER]`
     The path to the job_queue.log file for the *condor_schedd*
     serving as the source of jobs for routing.  If specified,

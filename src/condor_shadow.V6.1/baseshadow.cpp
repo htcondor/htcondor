@@ -101,9 +101,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	const char * owner = nullptr; // bare username, even when USERREC_NAME_IS_FULLY_QUALIFIED
 	std::string ownerbuf;
 
-	if( ! job_ad ) {
-		EXCEPT("baseInit() called with NULL job_ad!");
-	}
+	ASSERT(job_ad);
 	jobAd = job_ad;
 
 	if (sendUpdatesToSchedd && ! is_valid_sinful(schedd_addr)) {
@@ -161,9 +159,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
-    if ( !jobAd->Assign( ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString() )) {
-        EXCEPT( "Failed to insert %s!", ATTR_MY_ADDRESS );
-    }
+	jobAd->Assign(ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString());
 
 	DebugId = display_dprintf_header;
 	
@@ -1082,8 +1078,7 @@ void BaseShadow::initUserLog()
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
 				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does
-			// EXCEPT
+		// holdJobAndExit() should not return, but just in case it does
 		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
 	}
 }
@@ -1392,8 +1387,8 @@ BaseShadow::checkSwap( void )
 void
 BaseShadow::log_except(const char *msg_str)
 {
-	if ( BaseShadow::myshadow_ptr == NULL ) {
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg_str ? msg_str : "");
+	if (BaseShadow::myshadow_ptr == nullptr || BaseShadow::myshadow_ptr->getJobAd() == nullptr) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object or no job ad): %s\n", msg_str ? msg_str : "");
 		return;
 	}
 
@@ -1405,6 +1400,7 @@ BaseShadow::log_except(const char *msg_str)
 	if (msg_str && msg_str[0]) { event.setMessage(msg_str); }
 
 	BaseShadow *shadow = BaseShadow::myshadow_ptr;
+	ClassAd* job_ad = shadow->getJobAd();
 
 	// we want to log the events from the perspective of the
 	// user job, so if the shadow *sent* the bytes, then that
@@ -1417,8 +1413,18 @@ BaseShadow::log_except(const char *msg_str)
 		event.began_execution = TRUE;
 	}
 
-	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
-	Shadow->updateJobInQueue(U_STATUS);
+	// If we don't have a vacate reason set yet, set it to ShadowException
+	int dummy;
+	if (!job_ad->LookupInteger(ATTR_VACATE_REASON_CODE, dummy)) {
+		std::string vacate_str = "Shadow Exception: ";
+		vacate_str += msg_str;
+		job_ad->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
+		job_ad->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+		job_ad->Assign(ATTR_VACATE_REASON, vacate_str);
+		job_ad->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
+		job_ad->Assign(ATTR_VACATE_REASON_SUBCODE, 0);
+	}
+	Shadow->updateJobInQueue(U_EVICT);
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
 		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", event.getMessage());
