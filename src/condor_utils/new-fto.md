@@ -13,26 +13,26 @@ File Transfer in the Shadow
 
 In `remoteresouce.cpp`, the new code demonstrates:
 
-    * better naming: `handleInputSandboxTransfer()` and `handleOutputSandboxTransfer()`,
-      which are unambigious because they're (only) in the shadow.  And then
-      the implementations of those command handlers, `sendFilesToStarter()`
-      and `receiveFilesFromStarter()`.
-    * The ability to have nonblocking file transfer without forking, and still
-      retain straight-line functions, by making both `sendFilesToStarter()` and
-      `receiveFilesFromStarter()` coroutines.
+ * better naming: `handleInputSandboxTransfer()` and `handleOutputSandboxTransfer()`,
+   which are unambigious because they're (only) in the shadow.  And then
+   the implementations of those command handlers, `sendFilesToStarter()`
+   and `receiveFilesFromStarter()`.
+ * The ability to have nonblocking file transfer without forking, and still
+   retain straight-line functions, by making both `sendFilesToStarter()` and
+   `receiveFilesFromStarter()` coroutines.
 
-      (These coroutines are called once and manage their own lifecycle
-      thereafter; the convention from the starter guidance code is that they
-      should instead be `start_*()`, but I'm not sure that'd be helpful in
-      that case, or if it is generally...)
-    * Those coroutines make use of the utilities in the `FileTransferFunctions`
-      namespace to avoid code duplication and simplify/clarify their flow.
-    * They _do_ use a hack to wibble in and out of the event loop, but it
-      would not be difficult to regularize.
-    * `sendFilesToStarter()` uses the factory-style `FileTransferCommands`
-      utilities to actually operate the protocol itself.
-    * Conversely, `receiveFilesFromStarter()` uses the `handleOneCommand()`
-      utility to do just that, and implements no transfer code itself.
+   (These coroutines are called once and manage their own lifecycle
+   thereafter; the convention from the starter guidance code is that they
+   should instead be `start_*()`, but I'm not sure that'd be helpful in
+   that case, or if it is generally...)
+ * Those coroutines make use of the utilities in the `FileTransferFunctions`
+   namespace to avoid code duplication and simplify/clarify their flow.
+ * They _do_ use a hack to wibble in and out of the event loop, but it
+   would not be difficult to regularize.
+ * `sendFilesToStarter()` uses the factory-style `FileTransferCommands`
+   utilities to actually operate the protocol itself.
+ * Conversely, `receiveFilesFromStarter()` uses the `handleOneCommand()`
+   utility to do just that, and implements no transfer code itself.
 
 
 File Transfer in the Starter
@@ -68,3 +68,7 @@ This branch also includes code for the shadow and starter to agree at run-time
 which file-transfer protocol to use.
 
 - [ ] (This isn't tested yet.)
+
+I'm attempting to purge this from the code, but since the first pass at this
+implementation was just to create an empty shim, the new and old FTOs might
+occasionally be referred to as "null" and "real."
