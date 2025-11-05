@@ -649,10 +649,7 @@ void _condorPacket::dumpPacket()
 _condorOutMsg::_condorOutMsg()
 {
 	headPacket = lastPacket = new _condorPacket();
-	if(!headPacket) {
-		dprintf(D_ALWAYS, "new Packet failed. out of memory\n");
-		EXCEPT("new Packet failed. out of memory");
-	}
+	ASSERT(headPacket);
 	noMsgSent = 0;
 	avgMsgSize = 0;
 	m_mtu = DEFAULT_SAFE_MSG_FRAGMENT_SIZE;
@@ -948,15 +945,11 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 
 	// make directory entries as needed
 	headDir = curDir = new _condorDirPage(NULL, 0);
-	if(!curDir) {
-		EXCEPT( "::InMsg, new DirPage failed. out of mem" );
-	}
+	ASSERT(curDir);
 	destDirNo = seq / SAFE_MSG_NO_OF_DIR_ENTRY;
 	while(curDir->dirNo != destDirNo) {
 		curDir->nextDir = new _condorDirPage(curDir, curDir->dirNo + 1);
-		if(!curDir->nextDir) {
-		    EXCEPT("::InMsg, new DirPage failed. out of mem");
-		}
+		ASSERT(curDir->nextDir);
 		curDir = curDir->nextDir;
 	}
 
@@ -964,9 +957,7 @@ _condorInMsg::_condorInMsg(const _condorMsgID mID,// the id of this message
 	index = seq % SAFE_MSG_NO_OF_DIR_ENTRY;
 	curDir->dEntry[index].dLen = len;
 	curDir->dEntry[index].dGram = (char *)malloc(len);
-	if(!curDir->dEntry[index].dGram) {
-		EXCEPT( "::InMsg, new char[%d] failed. out of mem", len );
-	}
+	ASSERT(curDir->dEntry[index].dGram);
 	memcpy(curDir->dEntry[index].dGram, data, len);
 
 	// initialize temporary buffer to NULL

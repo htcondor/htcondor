@@ -46,6 +46,15 @@ DCSchedd::DCSchedd( const ClassAd& ad, const char* the_pool )
 {
 }
 
+DCSchedd::DCSchedd( std::string_view the_name, std::string_view the_pool, std::string_view address_file )
+	: Daemon( DT_SCHEDD, the_name.empty()?nullptr:the_name.data(), the_pool.empty()?nullptr:the_pool.data() )
+{
+	if ( ! address_file.empty()) {
+		this->specify_address_file(address_file);
+	}
+}
+
+
 bool DCSchedd::getCreddAddress(std::string & address) {
 	ClassAd * ad = locationAd();
 	if ( ! ad) return false;

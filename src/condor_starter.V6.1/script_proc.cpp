@@ -40,11 +40,8 @@ extern class Starter *starter;
 ScriptProc::ScriptProc( ClassAd* ad, const char* proc_name )
 {
     dprintf ( D_FULLDEBUG, "In ScriptProc::ScriptProc()\n" );
-	if( proc_name ) {
-		name = strdup( proc_name );
-	} else {
-		EXCEPT( "Can't instantiate a ScriptProc without a name!" );
-	}
+	ASSERT(proc_name);
+	name = strdup( proc_name );
 	JobAd = ad;
 	is_suspended = false;
 	UserProc::initialize();

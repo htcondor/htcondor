@@ -1,4 +1,4 @@
-*** 25.4.0 features
+*** 25.5.0 features
 
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
   an administrator to configure the *condor_negotiator* so it uses its
@@ -6,16 +6,31 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
-*** 25.4.0 bugs
+- The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
+  list to the attributes it will be sending to the *condor_schedd* for resource requests.
+  The *condor_negotiator* now also has a more complete set of known slot attributes which it
+  will remove as well.  These changes should help make the schedd more efficient when building
+  resource requests for matchmaking.
+  :jira:`3358`
 
-*** 25.0.4 bugs
+- Added configuration variables :macro:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE` and
+  :macro:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE`. When configured, the *condor_job_router*
+  will first use the address file to locate the source or destination Schedd and
+  only query the Collector if the file does not contain an address. Use of these
+  configuration variables improves the efficiency of the job router and eliminates
+  one source of failure when routing.
+  :jira:`1736`
 
-*** 25.3.0 features
+*** 25.5.0 bugs
+
+*** 25.0.5 bugs
+
+*** 25.4.0 features
 
 - Changed the default value of :macro:`STARTER_NESTED_SCRATCH` to true.  When false,
-  the job scratch directory (named dir_XXX) is the immediate child of the :macro:`EXECUTE`
+  the job scratch directory (named ``dir_XXX``) is the immediate child of the :macro:`EXECUTE`
   directory.  When true, the job's scratch directory is a subdirectory thereof, named
-  "scratch", with the intention that all condor metadata files will be moved to peer 
+  ``scratch``, with the intention that all condor metadata files will be moved to peer
   directories, and not pollute the job's scratch directory with condor control files.
   :jira:`3080`
 
@@ -33,12 +48,12 @@
   will now be much closer in size to the request. Provisioning statements in the
   configuration files are no longer required to be expressed as a percentage, but a percentage
   will still work as before.  The *condor_startd* now reports both :ad-attr:`TotalDisk`
-   and :ad-attr:`DetectedDisk` in each slot and in the daemon ad.
+  and :ad-attr:`DetectedDisk` in each slot and in the daemon ad.
   :jira:`3302`
 
 - The *condor_schedd* can now limit the number of running jobs on a per-user basis.
-  When a User record in the schedd has :ad-attr:`MaxJobsRunning` the schedd will not
-  allow more jobs that than limit to begin running.
+  The *condor_schedd* will not allow more jobs than the :ad-attr:`MaxJobsRunning` in
+  the user record to begin running.
   :jira:`3325`
 
 - Add a python bindings function to reload the ClassAd usermaps and to load
@@ -51,19 +66,18 @@
 
 - Docker universe jobs now correctly report CPU and memory usage when the
   docker server is installed in a non-standard place, pointed at with 
-  the DOCKER_HOST environment variable, such as with a docker-in-docker setup.
+  the ``DOCKER_HOST`` environment variable, such as with a docker-in-docker setup.
   :jira:`3280`
 
 - More accurately report the reason why a job's execution is interrupted
-  (via the evict log event and VacateReason job attribute).
+  (via the evict log event and :ad-attr:`VacateReason` job attribute).
   :jira:`3295`
 
 - Added new job ClassAd attributes :ad-attr:`NumVacatesPreExecution` 
-  and :ad-attr:`NumVacatesByReasonPreExecution`.
-  These attributes provide counts about why a job was kicked off of an
-  Execution Point before the job was actually spawned (i.e. due to
-  failure to transfer input files, failure to setup the job environment,
-  etc).
+  and :ad-attr:`NumVacatesByReasonPreExecution`. These attributes provide
+  counts about why a job was kicked off of an Execution Point before the
+  job was actually spawned (i.e. due to failure to transfer input files,
+  failure to setup the job environment, etc).
   :jira:`3339`
   
 - Removed option to have the *condor_schedd* send claim lease keep-alives.
@@ -71,15 +85,15 @@
   default.
   :jira:`3312`
 
-- For **batch** grid :subcom:`universe` jobs, the PATH environment variable
-  is now used by default to locate the tools of the destination batch
-  scheduler.
+- For **batch** grid :subcom:`universe` jobs, the ``PATH`` environment variable
+  is now used by default to locate the tools of the destination batch scheduler.
   You can specify a specific directory where the tools are located by setting
-  the appropriate binpath variable in the ``blah.config`` file
-  (e.g. ``slurm_binpath=/opt/slurm/bin``).
+  the appropriate binpath variable in the ``blah.config`` file (e.g. ``slurm_binpath=/opt/slurm/bin``).
   :jira:`3326`
 
-*** 25.3.0 bugs
+*** 25.4.0 bugs
+
+*** 25.3.1 bugs
 
 *** 25.0.3 bugs
 
@@ -124,11 +138,6 @@
   to longer than :macro:`STARTER_FILE_XFER_STALL_TIMEOUT` would prevent the
   logging of output for hung file-transfer plug-ins.
   :jira:`3202`
-
-- The ``gpu`` and ``gpu-debug`` queues at Anvil are no longer represented in
-  :tool:`htcondor annex` as whole-node queues, fixing a problem where the
-  "whole node" would have 4 GPUs and only 1 CPU.
-  :jira:`3324`
 
 *** 25.0.2 bugs
 

@@ -2154,6 +2154,10 @@ int Scheduler::make_ad_list(
    for(auto const& [user, value]: this->FsyncRuntimes)
 		cad->Assign("DIAG_CFS" + user, value.Total());
 
+   // publish negotiator defined significant attributes
+   const char * sig_attrs = this->autocluster.getSigAttrs();
+   if (sig_attrs) { cad->Assign("SignificantAttributes", sig_attrs); }
+
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
    // publish daemon core stats
@@ -7274,10 +7278,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		buf[sizeof(buf)-1] = 0; // snprintf won't null terminate if it runs out of space.
 		int size = strlen(buf) + strlen(value) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
-		if( ! constraint ) {
-				// Maybe change EXCEPT to print to the audit log with D_AUDIT
-			EXCEPT( "Out of memory!" );
-		}
+		ASSERT(constraint);
 			// we need to terminate the ()'s after their constraint
 		snprintf( constraint, size, "%s%s)", buf, value );
 	} else {
@@ -9410,10 +9411,7 @@ Scheduler::rescheduleContactQueue()
 			(TimerHandlercpp)&Scheduler::checkContactQueue,
 			"checkContactQueue", this );
 	}
-	if( checkContactQueue_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer!" );
-	}
+	ASSERT(checkContactQueue_tid >= 0);
 }
 
 void
@@ -9463,10 +9461,7 @@ Scheduler::enqueueReconnectJob( PROC_ID job )
 			(TimerHandlercpp)&Scheduler::checkReconnectQueue,
 			"checkReconnectQueue", this );
 	}
-	if( checkReconnectQueue_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer!" );
-	}
+	ASSERT(checkReconnectQueue_tid >= 0);
 	return true;
 }
 
@@ -11000,9 +10995,7 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 void
 Scheduler::addRunnableJob( shadow_rec* srec )
 {
-	if( ! srec ) {
-		EXCEPT( "Scheduler::addRunnableJob called with NULL srec!" );
-	}
+	ASSERT(srec);
 
 	dprintf( D_FULLDEBUG, "Queueing job %d.%d in runnable job queue\n",
 			 srec->job_id.cluster, srec->job_id.proc );
@@ -13795,6 +13788,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		num_excepts++;
 		SetAttributeInt(job_id.cluster, job_id.proc,
 						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts, NONDURABLE);
+		int dummy;
+		if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &dummy) < 0) {
+			SetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, "Shadow Exception");
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, 0);
+		}
 		if (!srec->removed && srec->match) {
 				// Record that we had an exception.  This function will
 				// relinquish the match if we get too many exceptions 
@@ -14745,9 +14744,8 @@ Scheduler::Init()
 		shadowCommandrsock = new ReliSock;
 		shadowCommandssock = new SafeSock;
 
-		if ( !shadowCommandrsock || !shadowCommandssock ) {
-			EXCEPT("Failed to create Shadow Command socket");
-		}
+		ASSERT(shadowCommandrsock);
+		ASSERT(shadowCommandssock);
 		// Note: BindAnyLocalCommandPort() is in daemon core
 		if ( !BindAnyLocalCommandPort(shadowCommandrsock,shadowCommandssock)) {
 			EXCEPT("Failed to bind Shadow Command socket");
@@ -15648,10 +15646,7 @@ Scheduler::AddMrec(
 
 
 	rec = new match_rec(id, peer, jid, my_match_ad, user, pool, false);
-	if(!rec)
-	{
-		EXCEPT("Out of memory!");
-	} 
+	ASSERT(rec);
 
 	auto [it2, success] = matches.emplace(id, rec);
 	if (!success) {
@@ -18360,9 +18355,7 @@ Scheduler::launch_local_startd() {
 						"localStartdReaper",
 						this);
 
-	if (rid < 0) {
-		EXCEPT("Can't register reaper for local startd" );
-	}
+	ASSERT(rid >= 0);
 
 	  // The arguments for our startd
 	ArgList args;

@@ -39,15 +39,16 @@
 #include "spooled_job_files.h"
 #include "classad_helpers.h"
 #include "condor_config.h"
+#include "submit_job.h"
 
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * schedd_name, const char * pool_name, int cluster, int proc, std::string& error_details, const char * my_identity)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const ScheddContactInfo & scci, int cluster, int proc, std::string& error_details, const char * my_identity)
 {
 	ClaimJobResult result = CJR_ERROR;
 	int status = 0;
 	char* managed = nullptr;
 
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		error_details = "Can't find address of schedd";
 		return CJR_ERROR;
@@ -115,8 +116,8 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * schedd_name, c
 }
 
 
-bool yield_job(classad::ClassAd const &ad,const char * schedd_name,
-	const char * pool_name, bool done, int cluster, int proc,
+bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
+	bool done, int cluster, int proc,
 	std::string& error_details, const char * my_identity,
         bool release_on_hold, bool *keep_trying)
 {
@@ -126,7 +127,7 @@ bool yield_job(classad::ClassAd const &ad,const char * schedd_name,
 
 	if (keep_trying) *keep_trying = true;
 
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		error_details = "Can't find address of schedd";
 		return false;
@@ -218,7 +219,7 @@ bool yield_job(classad::ClassAd const &ad,const char * schedd_name,
 }
 
 
-bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	bool success = false;
 	int cluster;
@@ -229,7 +230,7 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	const char *lhstr = 0;
 	const char *rhstr = 0;
 
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		dprintf(D_ERROR, "Can't find address of schedd\n");
 		return false;
@@ -261,6 +262,7 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 
 	// Schedd clients can't set X509- or token-related attributes
 	// other than the name of the proxy file.
+	std::set<std::string, classad::CaseIgnLTStr> filter_attrs;
 	filter_attrs.insert( ATTR_X509_USER_PROXY_SUBJECT );
 	filter_attrs.insert( ATTR_X509_USER_PROXY_EXPIRATION );
 	filter_attrs.insert( ATTR_X509_USER_PROXY_EMAIL );
@@ -379,11 +381,11 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	Push the dirty attributes in src into the queue.  Does _not_ clear
 	the dirty attributes.
 */
-bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+bool push_dirty_attributes(classad::ClassAd & src, const ScheddContactInfo & scci)
 {
 	bool success = false;
 
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		dprintf(D_ERROR, "Can't find address of schedd\n");
 		return false;
@@ -459,11 +461,11 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	Update src in the queue so that it ends up looking like dest.
     This handles attribute deletion as well as change of value.
 */
-bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ScheddContactInfo & scci)
 {
 	bool success = false;
 
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		dprintf(D_ERROR, "Can't find address of schedd\n");
 		return false;
@@ -562,14 +564,14 @@ bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ch
 	return success;
 }
 
-bool finalize_job(const std::string & owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+bool finalize_job(const std::string & owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const ScheddContactInfo & scci, bool is_sandboxed)
 {
 	bool success = false;
 	std::string effective_owner;
 	CondorError errstack;
 	Qmgr_connection * qmgr = nullptr;
 
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		dprintf(D_ERROR, "Can't find address of schedd\n");
 		return false;
@@ -632,12 +634,12 @@ bool finalize_job(const std::string & owner, const std::string &domain, classad:
 	return success;
 }
 
-bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
+bool remove_job(int cluster, int proc, char const *reason, const ScheddContactInfo & scci, std::string &error_desc)
 {
 	bool success = false;
 	CondorError errstack;
  
-	DCSchedd schedd(schedd_name, pool_name);
+	DCSchedd schedd(scci.name, scci.pool, scci.address_file);
 	if( ! schedd.locate() ) {
 		dprintf(D_ERROR, "Can't find address of schedd\n");
 		return false;

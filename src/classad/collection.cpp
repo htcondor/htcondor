@@ -149,7 +149,7 @@ _CreatePartition( const ViewName &viewName, const ViewName &parentViewName,
 		return( NULL );
 	}
 	rec->InsertAttr( "OpType", ClassAdCollOp_CreatePartition );
-	rec->InsertAttr( "Representative", rep );
+	rec->Insert( "Representative", rep );
 	return( rec );
 }
 

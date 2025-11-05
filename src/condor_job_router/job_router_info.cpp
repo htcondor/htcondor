@@ -162,8 +162,6 @@ int main(int argc, const char *argv[])
 	//bool dash_d_fulldebug = false;
 	const char * route_jobs_filename = NULL;
 
-	g_jobs = new classad::ClassAdCollection();
-
 	for (int i = 1; i < argc; ++i) {
 
 		const char * pcolon = NULL;
@@ -223,6 +221,7 @@ int main(int argc, const char *argv[])
 	// before we call init() for the router, we need to install a pseudo-schedd object
 	// so that init() doesn't install a real schedd object.
 	Scheduler* schedd = new Scheduler(0);
+	g_jobs = schedd->GetClassAds();
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
 	g_save_dprintfs = true;
@@ -476,7 +475,6 @@ public:
 	JobLogMirror(char const *job_queue=NULL) {}
 	~JobLogMirror() {}
 
-	void init() {}
 	void config() {}
 	void stop() {}
 
@@ -498,15 +496,7 @@ Scheduler::~Scheduler()
 	m_consumer = NULL;
 }
 
-classad::ClassAdCollection *Scheduler::GetClassAds() const
-{
-	if (m_id == 0) {
-		return g_jobs;
-	}
-	return NULL;
-}
-
-void Scheduler::init() {  if (m_mirror) m_mirror->init(); }
+void Scheduler::init() {  config(); }
 void Scheduler::config() { if (m_mirror) m_mirror->config(); }
 void Scheduler::stop()  { if (m_mirror) m_mirror->stop(); }
 void Scheduler::poll()  { }
@@ -540,7 +530,7 @@ JobRouterHookMgr::getHookKeyword(const classad::ClassAd &ad)
 
 
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string& error_details, const char * my_identity)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const ScheddContactInfo & scci, int cluster, int proc, std::string& error_details, const char * my_identity)
 {
 	classad::ClassAd * job = const_cast<classad::ClassAd*>(&ad);
 	job->InsertAttr(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
@@ -551,19 +541,18 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 }
 
 
-bool yield_job(classad::ClassAd const &ad,const char * pool_name,
-	const char * schedd_name, bool done, int cluster, int proc,
+bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
+	bool done, int cluster, int proc,
 	std::string& error_details, const char * my_identity,
         bool release_on_hold, bool *keep_trying)
 {
 	return true;
 }
 
-bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed,int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
+bool submit_job( const std::string & owner, const std::string & domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed,int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
-	fprintf(stdout, "submit_job as %s@%s to %s pool:%s%s:\n", owner.c_str(), domain.c_str(),
-		schedd_name ? schedd_name : "local",
-		pool_name ? pool_name : "local",
+	fprintf(stdout, "submit_job as %s@%s to %s%s:\n", owner.c_str(), domain.c_str(),
+		scci.label(),
 		is_sandboxed ? " (sandboxed)" : "");
 	if (submitted_jobs_fh) {
 		fPrintAd(submitted_jobs_fh, src);
@@ -587,7 +576,7 @@ bool push_dirty_attributes(classad::ClassAd & src)
 	the dirty attributes.
 	Establishes (and tears down) a qmgr connection.
 */
-bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name)
+bool push_dirty_attributes(classad::ClassAd & src, const ScheddContactInfo & scci)
 {
 	return true;
 }
@@ -607,17 +596,17 @@ bool push_classad_diff(classad::ClassAd & src,classad::ClassAd & dest)
     This handles attribute deletion as well as change of value.
 	Establishes (and tears down) a qmgr connection.
 */
-bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name)
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ScheddContactInfo & scci)
 {
 	return true;
 }
 
-bool finalize_job(const std::string &owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed)
+bool finalize_job(const std::string &owner, const std::string &domain, classad::ClassAd const &ad,int cluster, int proc, const ScheddContactInfo & scci, bool is_sandboxed)
 {
 	return true;
 }
 
-bool remove_job(int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
+bool remove_job(int cluster, int proc, char const *reason, const ScheddContactInfo & scci, std::string &error_desc)
 {
 	return true;
 }

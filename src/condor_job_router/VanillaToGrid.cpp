@@ -28,6 +28,7 @@
 #include "classad/classad_distribution.h"
 #include "condor_config.h"
 
+#include "JobRouter.h"
 #include "submit_job.h"
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
