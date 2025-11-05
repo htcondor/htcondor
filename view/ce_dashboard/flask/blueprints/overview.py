@@ -95,7 +95,9 @@ def get_data_from_ganglia():
     # If host is not fully qualified, add the default domain
     if not host.endswith('.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']):
         host = host + '.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
-    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    
+    metricsd_url = current_app.config['CE_DASHBOARD_METRICSD_URL']
+    df=pd.read_csv(f'{metricsd_url}/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
 
     # Transpose the data received from ganglia into the format we need for the CE Dashboard frontend
 
