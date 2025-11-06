@@ -49,6 +49,9 @@ from .htcondor2_impl import (
     _schedd_refresh_gsi_proxy,
     _schedd_get_dag_contact_info,
     _schedd_get_claims,
+    _schedd_create_ocu,
+    _schedd_remove_ocu,
+    _schedd_query_ocu,
 )
 
 
@@ -965,6 +968,41 @@ class Schedd():
         """
         projection_string = ",".join(projection)
         return _schedd_get_claims(self._addr, str(constraint), projection_string)
+
+    def create_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing an OCU claim request to the schedd 
+
+        :param request: ClassAd representing the OCU claim request
+            must contain Owner, and RequestCpu, Memory, maybe disk
+        :return:  A ClassAd containing information about the create operation.
+        """
+        return _schedd_create_ocu(self._addr, request._handle)
+
+    def remove_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing an existing OCU id request to be removed
+
+        :param request: ClassAd representing the OCU claim request
+            must contain the OCU id
+        :return:  A ClassAd containing information about the remove operation.
+        """
+        return _schedd_remove_ocu(self._addr, request)
+
+    def query_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Query the schedd for all the OCU ads
+
+        :param request: ClassAd representing the query
+        :return:  A list of OCU ClassAds
+        """
+        return _schedd_query_ocu(self._addr, request._handle)
 
 def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):

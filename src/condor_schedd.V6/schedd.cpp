@@ -19,6 +19,8 @@
 
 
 #include "condor_common.h"
+#include "classad/classad.h"
+#include "condor_commands.h"
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "condor_config.h"
@@ -865,6 +867,18 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 	return false;
 }
 
+// Brute force search.  Will improve performance later if needed.
+OCU *
+Scheduler::getOCU(int ocu_id) {
+		for (const auto &[_, oi]: OwnersInfo) {
+			for (auto &ocu: oi->ocus) {
+				if (ocu.ocu_id == ocu_id) {
+					return &ocu;
+				}
+			}
+		}
+		return nullptr;
+	}
 
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
@@ -1135,7 +1149,7 @@ Scheduler::check_claim_request_timeouts()
 
 /*
   Helper method to create a submitter ad, called by Scheduler::count_jobs().
-  Given an index owner_num in the Owners array and a flock_level, insert a common
+  Given a reference Owner & to the SubmitterData array and a flock_level, insert a common
   set of submitter ad attributes into pAd.
   Return true if attributes filled in, false if not (because this submitter should
   no longer flock and/or be advertised).
@@ -1145,10 +1159,25 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
+	int weighted_jobs_idle = pool_name.empty() ? Counters.WeightedJobsIdle : 0;
 
 	int jobs_idle = pool_name.empty() ? Counters.JobsIdle : 0;
+
+	// If there are any OCUs that need this submitter to generate
+	// a request for them, bump up "jobs_idle".
+	for (const std::string &owner_str: Owner.owners) {
+		OwnerInfo *oi = find_ownerinfo(owner_str.c_str());
+		if (oi) {
+			auto unmatched = [](const OCU &ocu) {
+				return ocu.mrec == nullptr;
+			};
+			jobs_idle += std::ranges::count_if(oi->ocus, unmatched);
+
+			// Not correct, but close enough
+			weighted_jobs_idle += std::ranges::count_if(oi->ocus, unmatched);
+		}
+	}
 	if ((Owner.FlockLevel >= flock_level) || (flock_level == INT_MAX)) {
-		int weighted_jobs_idle = pool_name.empty() ? Counters.WeightedJobsIdle : 0;
 		const auto iter = Owner.flock.find(pool_name);
 		if (iter != Owner.flock.end()) {
 			jobs_idle = iter->second.JobsIdle;
@@ -1384,7 +1413,9 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 				owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			return;
 		}
-		if (!fill_submitter_ad(pAd, SubDat, col_name, flock_level)) return;
+		if (!fill_submitter_ad(pAd, SubDat, col_name, flock_level)) {
+			return;
+		}
 
 #ifdef UNIX
 		if (col == nullptr) {
@@ -2835,6 +2866,144 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+ClassAd
+Scheduler::act_on_ocu_create(const ClassAd &request) {
+	ClassAd result;
+	std::string ocu_owner;
+	if (!request.LookupString(ATTR_OWNER, ocu_owner)) {
+		result.Assign(ATTR_RESULT, -1);
+		result.Assign(ATTR_ERROR_STRING, "Missing required attribute: " ATTR_OWNER);
+		return result;
+	}
+
+	OwnerInfo *oi = find_ownerinfo(ocu_owner.c_str());
+	if (!oi) {
+		result.Assign(ATTR_RESULT, -1);
+		result.Assign(ATTR_ERROR_STRING, "Owner not found: " + ocu_owner);
+		return result;
+	}
+
+	result = oi->addOCU(request);
+	std::string submitter;
+	request.LookupString(ATTR_SUBMITTER, submitter);
+	if (!submitter.empty()) {
+		SubmitterData *subdat = insert_submitter(submitter.c_str());
+		subdat->owners.insert(ocu_owner);
+		subdat->num.JobsIdle++;
+		subdat->num.Hits++;
+	}
+
+	return result;
+}
+
+ClassAd
+Scheduler::act_on_ocu_remove(const ClassAd &request) {
+	ClassAd result;
+	int ocu_id_to_remove = -1;
+	request.LookupInteger(ATTR_OCU_ID, ocu_id_to_remove);
+
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (const auto &ocu: oi->ocus) {
+			int ocu_id = 0;
+			ocu.ad.LookupInteger(ATTR_OCU_ID, ocu_id);
+			if (ocu_id == ocu_id_to_remove) {
+				result = oi->removeOCU(request);
+				break;
+			}
+		}
+	}
+	return result;
+}
+
+std::vector<ClassAd>
+Scheduler::act_on_ocu_query(const ClassAd & /*request*/) {
+	std::vector<ClassAd> results;
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (const auto &ocu: oi->ocus) {
+			results.emplace_back(ocu.ad);
+		}
+	}
+	return results;
+}
+
+int 
+Scheduler::command_act_on_ocus(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	dprintf( D_FULLDEBUG, "In command_act_on_ocus for %s\n", cmd_name);
+
+	stream->decode();
+	stream->timeout(30);
+
+	// All of the OCU commands send exactly one request ClassAd
+	ClassAd requestAd;
+	if (!getClassAd(stream, requestAd)) {
+		dprintf( D_ALWAYS, "Failed to receive request ad for %s command: aborting\n", cmd_name);
+		return false;
+	}
+
+	// end of reading input command stream
+	if (!stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return false;
+	}
+
+	stream->encode();
+
+	switch (cmd) {
+		case CREATE_OCU_FOR_USERREC: {
+			ClassAd resultAd = act_on_ocu_create(requestAd);
+			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+			}
+			break;
+		case REMOVE_OCU_FROM_USERREC: {
+			ClassAd resultAd = act_on_ocu_remove(requestAd);
+			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+			}
+			break;
+		case QUERY_OCU_FROM_USERREC: {
+			std::vector<ClassAd> results = act_on_ocu_query(requestAd);
+			size_t query_size = results.size();
+			if (!stream->code(query_size)) {
+				dprintf( D_ALWAYS, "Error sending size of results for %s command\n", cmd_name );
+				return false;
+			}
+
+			for (const auto &ad: results) {
+				if (!putClassAd(stream, ad)) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+					return false;
+				}
+			}
+			if( !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending eom for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+			}
+			break;
+		default:
+			ClassAd errorAd;
+			errorAd.Assign(ATTR_RESULT, -1);
+			errorAd.Assign(ATTR_ERROR_STRING, std::string("Invalid Command: ") + cmd_name);
+			if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+	}
+
+	return true;
 }
 
 static bool
@@ -8284,7 +8453,14 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	const char* because = "";
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
-	if (scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
+
+	// Maybe it isn't a job at all, but an OCU request
+	bool is_ocu_request = false;
+	if (job == nullptr) {
+		is_ocu_request = scheduler.getOCU(job_id.cluster) != nullptr;
+	} 
+
+	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
 		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool());
@@ -8324,6 +8500,10 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		return false;
 	}
 
+	if (job_id.proc == OCU_qkey2) {
+		match_ad.Assign(ATTR_OCU, true);
+	}
+
 	match_rec *mrec = scheduler.AddMrec(
 		claim_id, startd.addr(), job_id, &match_ad,
 		getMatchUser(), getRemotePool() );
@@ -8331,6 +8511,10 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if( !mrec ) {
 			// There is already a match for this claim id.
 		return false;
+	}
+
+	if (job_id.proc == OCU_qkey2) {
+		mrec->is_ocu = true;
 	}
 
 	mrec->m_claim_pslot = claim_pslot;
@@ -8852,6 +9036,21 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		resource_requests->add(auto_cluster_id, prec->id);
 	}
 
+	// OCUs represent requests for match_recs (slots) that have no jobs associated With
+	// them.  Add them into the resource_requests list now.
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (auto &ocu: oi->ocus) {
+			if (ocu.mrec == nullptr) {
+			
+				int ocu_id = 0;
+				ocu.ad.LookupInteger(ATTR_OCU_ID, ocu_id);
+				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+				resource_requests->add(ocu_id, ocu_request);
+			}
+		}
+	}
+	
+
 	classy_counted_ptr<MainScheddNegotiate> sn =
 		new MainScheddNegotiate(
 			NEGOTIATE,
@@ -8968,12 +9167,19 @@ Scheduler::release_claim(int, Stream *sock)
 		dedicated_scheduler.DelMrec( claim_id );
 	}
 	else {
-			// The startd has sent us RELEASE_CLAIM because it has
-			// destroyed the claim.  There is therefore no need for us
-			// to send RELEASE_CLAIM to the startd.
+		// The startd has sent us RELEASE_CLAIM because it has
+		// destroyed the claim.  There is therefore no need for us
+		// to send RELEASE_CLAIM to the startd.
 		mrec = it->second;
 		mrec->needs_release_claim = false;
 
+		// If this is an OCU request, need to unlink it from the OCU
+		if (mrec->is_ocu) {
+			OCU *ocu = getOCU(mrec->ocu_originator.cluster);
+			if (ocu) {
+				ocu->mrec = nullptr;
+			} 
+		}
 		DelMrec( mrec );
 	}
 	free(claim_id);
@@ -9018,6 +9224,18 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	else {
 		jobAd = GetExpandedJobAd(JOB_ID_KEY(mrec->cluster, mrec->proc), false);
 	}
+
+	if (! jobAd ) {
+		// if this request is an OCU, get the OCU request ad.
+		// not really a job ad, but close enough for claiming purposes
+
+		// We delete this later, so dup it up here.
+		OCU *ocu = scheduler.getOCU(mrec->cluster);
+		if (ocu) {
+			jobAd = new ClassAd(ocu->ad);
+		}
+	}
+
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
 			// was put on hold in GetJobAd().
@@ -9355,9 +9573,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			bool is_ocu_holder = false;
-			GetAttributeBool(slot->cluster,slot->proc,ATTR_OCU_HOLDER, &is_ocu_holder);
-			if (is_ocu_holder) {
+			OCU *ocu = scheduler.getOCU(slot->cluster);
+			if (ocu != nullptr) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
 				// another job could start here.
@@ -9365,7 +9582,15 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				slot->is_ocu = true;
 				slot->ocu_originator = {slot->cluster, slot->proc};
 				slot->cluster = slot->proc = -1;
-				slot->my_match_ad->Assign("OCUClaim", true);
+
+				// If we already have a match for this OCU, then delete this match
+				if (ocu->mrec) {
+					dprintf(D_ALWAYS, "OCU %d already has a match record (%s), deleting new match record %s\n", ocu->ocu_id, ocu->mrec->description(), slot->description());
+					DelMrec(slot);
+				} else {
+					dprintf(D_FULLDEBUG, "Assigning match %s to OCU %d\n", slot->description(), ocu->ocu_id);
+					ocu->mrec = slot;
+				}
 			} else {
 				scheduler.StartJob(slot);
 			}
@@ -9793,11 +10018,24 @@ Scheduler::StartJob(match_rec *rec)
 
 	ASSERT( rec );
 
+	id.cluster = rec->cluster;
+	id.proc = rec->proc;
+	JobQueueJob * job = GetJobAd(id);
+
+	// Don't try to start a "job" if we are claiming an OCU holder claim
+	if (job == nullptr) {
+		if (getOCU(id.cluster) != nullptr) {
+			return;
+		} 
+	}
+
+	/*
 	bool is_ocu_holder = false;
 	GetAttributeBool(rec->cluster,rec->proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (is_ocu_holder) {
 		return;
 	}
+	*/
 
 	switch(rec->status) {
 	case M_UNCLAIMED:
@@ -9820,9 +10058,6 @@ Scheduler::StartJob(match_rec *rec)
 		EXCEPT( "Unknown status in match rec (%d)", rec->status );
 	}
 
-	id.cluster = rec->cluster;
-	id.proc = rec->proc;
-	JobQueueJob * job = GetJobAd(id);
 	const char * reason = nullptr;
 	runnable_reason_code runnable_code = runnable_reason_code::NotFound;
 	if ( ! Runnable(job, runnable_code) || ! jobCanUseMatch(job, rec->my_match_ad, rec->pool, reason)) {
@@ -9911,7 +10146,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 	new_job_id.proc = -1;
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
-		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool);
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu);
 	}
 
 	if (new_job_id.proc == -1) {
@@ -15080,6 +15315,17 @@ Scheduler::Register()
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 
+	// commands for creating/deleting/querying OCUs
+	daemonCore->Register_CommandWithPayload(CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC",
+		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC",
+		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC",
+		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
@@ -15619,6 +15865,11 @@ Scheduler::AddMrec(
 	const ClassAd* extraAttrs /* = nullptr*/, // extra attrs sent by negotiator
 	match_rec **pre_existing /* = nullptr*/)  // return claim id colliding match rec
 {
+	bool is_ocu = false;
+	if (jid.proc == OCU_qkey2) {
+		is_ocu = true;
+	}
+
 	match_rec *rec = nullptr;
 
 	if( pre_existing ) {
@@ -15647,6 +15898,12 @@ Scheduler::AddMrec(
 
 	rec = new match_rec(id, peer, jid, my_match_ad, user, pool, false);
 	ASSERT(rec);
+
+	if (is_ocu) {
+		rec->is_ocu = true;
+		rec->ocu_originator.cluster = jid.cluster;
+		rec->ocu_originator.proc = jid.proc;
+	}
 
 	auto [it2, success] = matches.emplace(id, rec);
 	if (!success) {
