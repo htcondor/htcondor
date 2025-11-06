@@ -5,6 +5,12 @@
   attribute reference.
   :jira:`3347`
 
+- Fixed a bug where the *condor_negotiator* would fail to contact the
+  *condor_schedd* to perform matchmaking if its :macro:`ALLOW_CLIENT`
+  configuration parameter didn't authorize the identity
+  ``submit-side@matchsession``.
+  :jira:`3378`
+
 *** 24.0.14 bugs
 
 - Fix problem running PyTorch jobs on multiple GPUs with
