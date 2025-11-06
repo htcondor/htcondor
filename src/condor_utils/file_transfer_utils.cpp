@@ -48,7 +48,6 @@ FileTransferUtils::sendFilesToStarter(
     //
     FileTransferFunctions::GoAheadState gas;
     for( auto [source, destination] : entries ) {
-dprintf( D_ALWAYS, "%s -> %s\n", source.c_str(), destination.c_str() );
         auto * c = FileTransferCommands::make(
             TransferCommand::XferFile,
             source,

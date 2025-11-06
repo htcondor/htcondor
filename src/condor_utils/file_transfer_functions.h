@@ -11,7 +11,7 @@
 
 namespace FileTransferFunctions {
 
-        typedef struct {
+        typedef struct _GoAheadState {
             int local_go_ahead {GO_AHEAD_UNDEFINED};
             int remote_go_ahead {GO_AHEAD_UNDEFINED};
         } GoAheadState;
