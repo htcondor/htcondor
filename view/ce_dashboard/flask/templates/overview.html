@@ -55,7 +55,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Cpus&order=Date&pivot=Date;Project;Cpus&legend.position=in&add=CpusAllocated,CpusUnallocated,CpusContributed&unselect=CpusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=CpusAllocated,CpusUnallocated&order=Date&pivot=Date;Project;Cpus&legend.position=in&add=CpusAllocated,CpusUnallocated,CpusContributed&unselect=CpusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
 			                    });
 			                </script>
 			</div>
@@ -65,7 +65,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project2",
 			                       title: "Memory Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Memory&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=MemoryAllocated,MemoryUnallocated&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
 			                    });
 			                </script>
 			</div>
@@ -78,7 +78,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Disk&order=Date&pivot=Date;Project;Disk&legend.position=in&add=DiskAllocated,DiskUnallocated,DiskContributed&unselect=DiskUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=DiskAllocated,DiskUnallocated&order=Date&pivot=Date;Project;Disk&legend.position=in&add=DiskAllocated,DiskUnallocated,DiskContributed&unselect=DiskUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
 			                    });
 			                </script>
 			</div>
@@ -116,7 +116,19 @@ Contribution of compute capacity from the
                 </script>
             </div>
 		</div>
-
+  
+		<div class="row">
+            <div class="col-6 htcv-col-6" id="glidein-limits">
+                <script>
+                    new HTCondorView({
+                        dst_id: "glidein-limits",
+                        title: "Maximum Concurrent Resource-Limited Glideins per Day",
+						data_url: "/data/ce_overview?r=week",
+                        graph_query: "filter=Type=R&q=Glideins&group=Date;GlideinsCpuLimited,GlideinsMemoryLimited,GlideinsDiskLimited&extract_regexp=Date=-(.*) .*&group=Date;max(GlideinsCpuLimited),max(GlideinsMemoryLimited),max(GlideinsDiskLimited)&rename=maxGlideinsCpuLimited=CPU Limited&rename=maxGlideinsMemoryLimited=Memory Limited&rename=maxGlideinsDiskLimited=Disk Limited&order=Date&legend.position=in&vAxis.format=short&vAxes.0.title=Glidein Count&chart=column",
+                    });
+                </script>
+            </div>
+        </div>
 
 		<p><p>
         <div class="row">
