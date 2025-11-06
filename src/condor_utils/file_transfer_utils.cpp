@@ -47,7 +47,7 @@ FileTransferUtils::sendFilesToStarter(
     // transferred everything.
     //
     FileTransferFunctions::GoAheadState gas;
-    for( auto [source, destination] : entries ) {
+    for( const auto & [source, destination] : entries ) {
         auto * c = FileTransferCommands::make(
             TransferCommand::XferFile,
             source,
