@@ -283,7 +283,7 @@ class RemoteResource : public Service {
 
 	int handleInputSandboxTransfer( int command, Stream * s );
 	int handleOutputSandboxTransfer( int command, Stream * s );
-	condor::cr::void_coroutine sendFilesToStarter( ReliSock * sock );
+	void sendFilesToStarter( ReliSock * sock );
 	condor::cr::void_coroutine receiveFilesFromStarter( ReliSock * sock );
 
 	virtual void resourceExit( int reason_for_exit, int exit_status );

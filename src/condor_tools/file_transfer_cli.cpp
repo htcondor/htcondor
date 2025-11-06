@@ -11,6 +11,8 @@
 #include "file_transfer_constants.h"
 #include "file_transfer_functions.h"
 #include "file_transfer_commands.h"
+#include "dc_coroutines.h"
+#include "file_transfer_utils.h"
 
 #include "dc_coroutines.h"
 #include "basename.h"
@@ -22,74 +24,6 @@ std::string destination;
 
 // wtaf is daemon core doing?
 std::string _cwd;
-
-condor::cr::void_coroutine
-sendFilesToStarter( ReliSock * sock ) {
-    chdir( _cwd.c_str() );
-
-    int sandbox_size = 0;
-    ClassAd transferInfoAd;
-    transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
-    FileTransferFunctions::sendTransferInfo( sock,
-        0 /* definitely not the final transfer */,
-        transferInfoAd
-    );
-
-    // The idea of this hack is that the reaper for PID can't ever be
-    // called, so co_await() just goes in and out of the event loop
-    // via a 0-second timer every time we call it.
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
-
-    FileTransferFunctions::GoAheadState gas;
-
-        auto * c = FileTransferCommands::make(
-            TransferCommand::XferFile,
-            source.c_str(),
-            condor_basename(destination.c_str())
-        );
-        c->execute( gas, sock );
-        delete(c);
-
-        {
-            condor::dc::AwaitableDeadlineReaper hack;
-            hack.born( 1, 0 );
-            auto [pid, timed_out, status] = co_await(hack);
-            ASSERT(pid == 1);
-            ASSERT(timed_out);
-        }
-
-
-    FileTransferFunctions::sendFinishedCommand( sock );
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
-
-    ClassAd myFinalReport;
-    myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
-    FileTransferFunctions::sendFinalReport( sock, myFinalReport );
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
-
-    ClassAd peerFinalReport;
-    FileTransferFunctions::receiveFinalReport( sock, peerFinalReport );
-
-    delete sock;
-}
 
 int
 shadow_input_command_handler( int command, Stream * s ) {
@@ -103,7 +37,19 @@ shadow_input_command_handler( int command, Stream * s ) {
 
     assert( command == FILETRANS_UPLOAD );
 
-    sendFilesToStarter( sock );
+
+    //
+    // Decide what we're going to transfer.
+    //
+    std::map<std::string, std::string> entries;
+    entries[source] = destination;
+
+    //
+    // Transfer it.
+    //
+    chdir( _cwd.c_str() );
+    FileTransferUtils::sendFilesToStarter( sock, entries );
+
 
     return KEEP_STREAM;
 }

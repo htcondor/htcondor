@@ -76,6 +76,8 @@ iso_dates.cpp
 iso_dates.h
 MyString.cpp
 MyString.h
+file_transfer_utils.cpp
+file_transfer_utils.h
 file_transfer_functions.cpp
 file_transfer_functions.h
 file_transfer_commands.cpp

@@ -49,6 +49,7 @@
 #include "file_transfer_constants.h"
 #include "file_transfer_functions.h"
 #include "file_transfer_commands.h"
+#include "file_transfer_utils.h"
 #include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
@@ -3012,45 +3013,14 @@ RemoteResource::handleInputSandboxTransfer( int command, Stream * s ) {
     }
 }
 
-condor::cr::void_coroutine
+void
 RemoteResource::sendFilesToStarter( ReliSock * sock ) {
-    //
-    // Which files are we going to send?  (We can't decide this on the
-    // fly unless we're willing to lie to the receiver about  the
-    // size of the input sandbox.  I'm not sure how that works with
-    // the ability to send URLs, but we can experiment later.)
-    //
-    int sandbox_size = 0;
-
-    //
-    // Send transfer info.
-    //
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending transfer info.\n" );
-    ClassAd transferInfoAd;
-    transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
-    FileTransferFunctions::sendTransferInfo( sock,
-        0 /* definitely not the final transfer */,
-        transferInfoAd
-    );
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent transfer info.\n" );
-
-    // The idea of this hack is that the reaper for PID can't ever be
-    // called, so co_await() just goes in and out of the event loop
-    // via a 0-second timer every time we call it.
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
-
     //
     // Decide what we're going to transfer.
     //
     std::string tifAttribute;
     jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tifAttribute );
-    auto entries = split( tifAttribute, "," );
+    auto files = split( tifAttribute, "," );
 
     bool transferExecutable = true;
     jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
@@ -3058,77 +3028,18 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     if( transferExecutable ) {
         std::string executable;
         jobAd->LookupString( ATTR_JOB_CMD, executable );
-        entries.push_back( executable );
+        files.push_back( executable );
+    }
+
+    std::map<std::string, std::string> entries;
+    for( const auto & file : files ) {
+        entries[file] = condor_basename(file.c_str());
     }
 
     //
-    // Then we send the starter one command at a time until we've
-    // transferred everything.
+    // Transfer it.
     //
-    FileTransferFunctions::GoAheadState gas;
-    for( auto & entry : entries ) {
-        auto * c = FileTransferCommands::make(
-            TransferCommand::XferFile,
-            entry /* source */,
-            condor_basename(entry.c_str()) /* destination */
-        );
-        c->execute( gas, sock );
-        delete(c);
-
-        {
-            condor::dc::AwaitableDeadlineReaper hack;
-            hack.born( 1, 0 );
-            auto [pid, timed_out, status] = co_await(hack);
-            ASSERT(pid == 1);
-            ASSERT(timed_out);
-        }
-    }
-
-    //
-    // After sending the last file, send the finish command.
-    //
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending finished command.\n" );
-    FileTransferFunctions::sendFinishedCommand( sock );
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent finished command.\n" );
-
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
-
-    //
-    // After the finish command, send our final report.
-    //
-    ClassAd myFinalReport;
-    myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending final report.\n" );
-    FileTransferFunctions::sendFinalReport( sock, myFinalReport );
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent final report.\n" );
-
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
-
-    //
-    // After sending our final report, receive our peer's final report.
-    //
-    ClassAd peerFinalReport;
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): receiving final report.\n" );
-    FileTransferFunctions::receiveFinalReport( sock, peerFinalReport );
-    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): received final report.\n" );
-
-    //
-    // In the command handler, we returned KEEP_STREAM, so I think
-    // nobody else will do this for us.
-    //
-    delete sock;
+    FileTransferUtils::sendFilesToStarter( sock, entries );
 }
 
 int
