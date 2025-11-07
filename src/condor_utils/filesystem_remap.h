@@ -48,7 +48,6 @@
  */
 typedef std::pair<std::string, std::string> pair_strings;
 typedef std::pair<std::string, bool> pair_str_bool;
-typedef std::vector<pair_strings> pair_strings_vector;
 
 class FilesystemRemap {
 

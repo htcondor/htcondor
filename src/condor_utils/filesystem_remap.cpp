@@ -188,14 +188,7 @@ int FilesystemRemap::PerformMappings() {
 
 	// do bind mounts (or chroots) for AddMapping() entries
 	for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
-		if (strcmp(it->second.c_str(), "/") == 0) {
-			if ((retval = chroot(it->first.c_str()))) {
-				break;
-			}
-			if ((retval = chdir("/"))) {
-				break;
-			}
-		} else if ((retval = mount(it->first.c_str(), it->second.c_str(), NULL, MS_BIND, NULL))) {
+		if ((retval = mount(it->first.c_str(), it->second.c_str(), NULL, MS_BIND, NULL))) {
 			break;
 		}
 	}
