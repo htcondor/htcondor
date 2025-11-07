@@ -167,7 +167,9 @@ ScheddNegotiate::nextJob()
 			size_t clusterSize = cluster.size();
 			for (auto & jid : cluster) {
 				--clusterSize; // decrement as we iterate so we know how many jobs remain
-				if (!jid.isJobKey() && !jid.isOCUKey()) {
+
+					// if this is not a job (i.e. an OCU request), skip it
+				if (!jid.isJobKey() && (jid.proc != OCU_qkey2)) {
 					continue;
 				}
 				m_current_job_id = jid;

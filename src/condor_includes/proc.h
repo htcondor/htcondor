@@ -54,7 +54,6 @@ typedef struct PROC_ID {
 	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
 	bool isJobKey() const { return cluster > 0 && proc >= 0; }
 	bool isClusterKey() const { return cluster > 0 && proc == -1; }
-	bool isOCUKey() const { return cluster > 0 && proc == -3; }
 	bool isJobsetKey() const { return cluster > 0 && proc == -100; }
 	void invalidate() { cluster = proc = -1; }
 } PROC_ID;
