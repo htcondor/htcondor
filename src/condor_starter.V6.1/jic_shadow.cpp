@@ -823,9 +823,11 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 // be asynchronous.  We could undoubtedly do a lot better if we redesigned
 // this to match (with a coroutine).
 //
+// The above is intended to explain why we ignore the in_progress parameter.
+//
 
 bool
-JICShadow::newTransferOutput( bool & transient_failure, bool& in_progress ) {
+JICShadow::newTransferOutput( bool & transient_failure, bool & /* in_progress */ ) {
     //
     // Returning false from this function with transient_failure true
     // _should_ send the starter back into the event loop (to wait for
