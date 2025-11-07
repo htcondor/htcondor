@@ -21,6 +21,11 @@
   one source of failure when routing.
   :jira:`1736`
 
+- Removed the ``NAMED_CHROOT`` configuration parameter for the
+  *condor_starter*. It was an inferior form of containerization that was
+  never fully supported.
+  :jira:`3380`
+
 *** 25.5.0 bugs
 
 *** 25.0.5 bugs

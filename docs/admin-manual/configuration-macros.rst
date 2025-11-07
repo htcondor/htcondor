@@ -6525,14 +6525,6 @@ These settings affect the *condor_starter*.
     has no effect on the result.  For backward compatibility a single value of ``True`` behaves as if the value
     was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
-:macro-def:`NAMED_CHROOT[STARTER]`
-    A comma and/or space separated list of full paths to one or more
-    directories, under which the *condor_starter* may run a chroot-ed
-    job. This allows HTCondor to invoke chroot() before launching a job,
-    if the job requests such by defining the job ClassAd attribute
-    :ad-attr:`RequestedChroot` with a directory that matches one in this list.
-    There is no default value for this variable.
-
 :macro-def:`STARTER_UPLOAD_TIMEOUT[STARTER]`
     An integer value that specifies the network communication timeout to
     use when transferring files back to the access point. The default
