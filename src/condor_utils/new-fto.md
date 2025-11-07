@@ -60,9 +60,9 @@ for interop testing, but presently doesn't.  The input mode code appears to
 have just been copied from the shadow and starter sources; it should be
 refactored, if at all possible, so that both call the _same_ code.
 
-- [ ] Add output flag implementations.
+- [x] Add output flag implementations.
 - [ ] Add ability to spin up, at least approximately, old FTOs.
-- [ ] Refactor.
+- [x] Refactor.
 
 This branch also includes code for the shadow and starter to agree at run-time
 which file-transfer protocol to use.
