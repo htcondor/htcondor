@@ -8457,7 +8457,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	// Maybe it isn't a job at all, but an OCU request
 	bool is_ocu_request = false;
 	if (job == nullptr) {
-		is_ocu_request = scheduler.getOCU(job_id.cluster) != nullptr;
+		is_ocu_request = job_id.proc == OCU_qkey2;
 	} 
 
 	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
@@ -9042,8 +9042,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		for (auto &ocu: oi->ocus) {
 			if (ocu.mrec == nullptr) {
 			
-				int ocu_id = 0;
-				ocu.ad.LookupInteger(ATTR_OCU_ID, ocu_id);
+				int ocu_id = ocu.ocu_id;
 				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
 				resource_requests->add(ocu_id, ocu_request);
 			}

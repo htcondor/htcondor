@@ -172,7 +172,11 @@ inline int USERRECID_to_qkey2(unsigned int userrec_id) {
 const int JOBSETID_qkey2 = -100;
 const int CLUSTERID_qkey2 = -1;
 const int CLUSTERPRIVATE_qkey2 = -2;
-const int OCU_qkey2 = -3;
+
+// The magic procid value for OCUs.  OCUs are not jobs, but almost
+// have the job nature, as they are sent to the negotiator.
+// OCU_qkey2 identifies an OCU record.
+const int OCU_qkey2 = -99;
 
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {

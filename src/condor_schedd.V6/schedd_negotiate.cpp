@@ -183,7 +183,7 @@ ScheddNegotiate::nextJob()
 
 						// negotiator has to see clusterid and procid or it will not be happy.  Sad but true.
 						m_current_job_ad.Assign(ATTR_CLUSTER_ID, m_current_job_id.cluster);
-						m_current_job_ad.Assign(ATTR_PROC_ID, -3);
+						m_current_job_ad.Assign(ATTR_PROC_ID, OCU_qkey2);
 						m_current_job_ad.Assign(ATTR_REQUIREMENTS, true);
 						return true;
 					} 
