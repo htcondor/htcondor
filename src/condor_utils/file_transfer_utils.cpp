@@ -12,10 +12,14 @@
 #include "file_transfer_functions.h"
 #include "file_transfer_commands.h"
 
+// For exit_when_done_hack, should remove.
+#include "condor_daemon_core.h"
+
 condor::cr::void_coroutine
-FileTransferUtils::sendFilesToStarter(
+FileTransferUtils::sendFilesToPeer(
     ReliSock * sock,
-    std::map<std::string, std::string> entries
+    std::map<std::string, std::string> entries,
+    bool exit_when_done_hack
 ) {
     int sandbox_size = 0;
 
@@ -110,4 +114,12 @@ FileTransferUtils::sendFilesToStarter(
     // nobody else will do this for us.
     //
     delete sock;
+
+    // If this should be a boolean parameter, we'd normally make it an enum
+    // instead so that the calls would be `..., EXIT_WHEN_DONE)` and
+    // `..., STAY_ALIVE)`, but since the _proper_ thing to do would be to
+    // make this coroutine awaitable(), instead...
+    if( exit_when_done_hack ) {
+        DC_Exit(0);
+    }
 }

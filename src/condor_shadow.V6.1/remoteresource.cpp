@@ -3039,7 +3039,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     //
     // Transfer it.
     //
-    FileTransferUtils::sendFilesToStarter( sock, entries );
+    FileTransferUtils::sendFilesToPeer( sock, entries );
 }
 
 int

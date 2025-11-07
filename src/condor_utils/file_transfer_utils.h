@@ -11,10 +11,11 @@
 
 namespace FileTransferUtils {
 
-    condor::cr::void_coroutine sendFilesToStarter(
+    condor::cr::void_coroutine sendFilesToPeer(
         ReliSock * sock,
         // Force a copy for lifetime management reasons.
-        std::map<std::string, std::string> entries
+        std::map<std::string, std::string> entries,
+        bool exit_when_done_hack = false
     );
 
 }
