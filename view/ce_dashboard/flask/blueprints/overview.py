@@ -99,10 +99,17 @@ def get_data_from_ganglia():
     metricsd_url = current_app.config['CE_DASHBOARD_METRICSD_URL']
 
     # Retrieve any metrics from Ganglia that start with any of the following phrases
-    metric_exprs = ['Cpus','Gpus','Memory','Disk','Bcus','Glideins']
+    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','Glideins']
     metric_args = '&'.join([f'mreg[]=%5E{expr}' for expr in metric_exprs])
 
     df=pd.read_csv(f'{metricsd_url}/ganglia/graph.php?r={r}&hreg[]={host}&{metric_args}&aggregate=1&csv=1',skipfooter=1,engine='python')
+
+    # Convert resource-limited glidein counts from raw values to percentage of running glideins
+    # TODO is there a way to do this in HtCondorView (eg. via a computed column)?
+    glidein_limit_columns = [c for c in df.columns if 'Limit' in c]
+    glidein_count_column = [c for c in df.columns if 'GlideinsRunning' in c]
+    if glidein_limit_columns and glidein_count_column:
+        df[glidein_limit_columns] = df[glidein_limit_columns].div(df[glidein_count_column[0]], axis=0) * 100
 
     # Transpose the data received from ganglia into the format we need for the CE Dashboard frontend
 

@@ -124,7 +124,7 @@ Contribution of compute capacity from the
                         dst_id: "glidein-limits",
                         title: "Maximum Concurrent Resource-Limited Glideins per Day",
 						data_url: "/data/ce_overview?r=week",
-                        graph_query: "filter=Type=R&q=Glideins&group=Date;GlideinsCpuLimited,GlideinsMemoryLimited,GlideinsDiskLimited&extract_regexp=Date=-(.*) .*&group=Date;max(GlideinsCpuLimited),max(GlideinsMemoryLimited),max(GlideinsDiskLimited)&rename=maxGlideinsCpuLimited=CPU Limited&rename=maxGlideinsMemoryLimited=Memory Limited&rename=maxGlideinsDiskLimited=Disk Limited&order=Date&legend.position=in&vAxis.format=short&vAxes.0.title=Glidein Count&chart=column",
+                        graph_query: "filter=Type=R&q=Glideins&group=Date;GlideinsCpuLimited,GlideinsMemoryLimited,GlideinsDiskLimited&extract_regexp=Date=-(.*) .*&group=Date;max(GlideinsCpuLimited),max(GlideinsMemoryLimited),max(GlideinsDiskLimited)&rename=maxGlideinsCpuLimited=CPU Limited&rename=maxGlideinsMemoryLimited=Memory Limited&rename=maxGlideinsDiskLimited=Disk Limited&order=Date&legend.position=in&vAxis.format=short&vAxes.0.title=%25 Running Glideins&chart=column",
                     });
                 </script>
             </div>
