@@ -127,14 +127,4 @@ private:
 	bool m_remap_proc;
 };
 
-/**
- * Get a list of the named chroots
- */
-pair_strings_vector root_dir_list();
-
-/**
- * Given a chroot directory, make sure it isn't equivalent to "/"
- */
-bool is_trivial_rootdir(const std::string &root_dir);
-
 #endif

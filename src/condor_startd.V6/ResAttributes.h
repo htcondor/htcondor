@@ -436,7 +436,6 @@ private:
 	std::vector<std::string> m_user_specified;
 	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
-	std::string		m_named_chroot;
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;
 	OSVERSIONINFOEX	m_window_version_info;

@@ -38,7 +38,7 @@
 #include "docker-api.h"
 
 MachAttributes::MachAttributes()
-   : m_user_settings_init(false), m_named_chroot()
+   : m_user_settings_init(false)
 {
 	m_mips = -1;
 	m_kflops = -1;
@@ -458,23 +458,6 @@ MachAttributes::compute_config()
 				 m_filesystem_domain );
 
 		m_idle_interval = param_integer( "IDLE_INTERVAL", -1 );
-
-		pair_strings_vector root_dirs = root_dir_list();
-		std::stringstream result;
-		unsigned int chroot_count = 0;
-		for (pair_strings_vector::const_iterator it=root_dirs.begin();
-				it != root_dirs.end(); 
-				++it, ++chroot_count) {
-			if (chroot_count) {
-				result << ", ";
-			}
-			result << it->first;
-		}
-		if (chroot_count > 1) {
-			std::string result_str = result.str();
-			dprintf(D_FULLDEBUG, "Named chroots: %s\n", result_str.c_str() );
-			m_named_chroot = result_str;
-		}
 	}
 }
 
@@ -1515,11 +1498,6 @@ MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
 		machine_resources += j.first;
 	}
 	cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources);
-
-	// Advertise chroot information
-	if ( m_named_chroot.size() > 0 ) {
-		cp->Assign( "NamedChroot", m_named_chroot );
-	}
 
 	// Advertise Docker Volumes
 	char *dockerVolumes = param("DOCKER_VOLUMES");
