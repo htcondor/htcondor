@@ -267,22 +267,14 @@ cleanup_execute_dirs(const std::string &exec_path)
 
 		execute_dir.Remove_Entire_Directory();
 #else
-		std::string dirbuf;
-		pair_strings_vector root_dirs = root_dir_list();
-		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-			const char * exec_path_full = dirscat(it->second.c_str(), exec_path.c_str(), dirbuf);
-			if(exec_path_full) {
-				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
-				Directory execute_dir( exec_path_full, PRIV_ROOT );
+		Directory execute_dir(exec_path.c_str(), PRIV_ROOT);
 
-				execute_dir.Rewind();
-				while ( execute_dir.Next() ) {
-					check_recovery_file( execute_dir.GetFullPath(), true );
-				}
-
-				execute_dir.Remove_Entire_Directory();
-			}
+		execute_dir.Rewind();
+		while (execute_dir.Next()) {
+			check_recovery_file(execute_dir.GetFullPath(), true);
 		}
+
+		execute_dir.Remove_Entire_Directory();
 #endif
 	}
 }
@@ -417,22 +409,17 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 #else /* UNIX */
 
 	// Instantiate a directory object pointing at the execute directory
-	pair_strings_vector root_dirs = root_dir_list();
-	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
+	Directory execute_dir( exec_path, PRIV_ROOT );
 
-		Directory execute_dir( exec_path_full, PRIV_ROOT );
-
-		if (remove_exec_path) {
-			// Remove entire subdirectory; used to remove
-			// an encrypted execute directory
-			execute_dir.Remove_Full_Path(exec_path_full);
-		} else {
-			// Look for specific pid_dir subdir
-			if ( execute_dir.Find_Named_Entry( pid_dir.c_str() ) ) {
-				// Remove the execute directory
-				execute_dir.Remove_Current_File();
-			}
+	if (remove_exec_path) {
+		// Remove entire subdirectory; used to remove
+		// an encrypted execute directory
+		execute_dir.Remove_Full_Path(exec_path);
+	} else {
+		// Look for specific pid_dir subdir
+		if (execute_dir.Find_Named_Entry(pid_dir.c_str())) {
+			// Remove the execute directory
+			execute_dir.Remove_Current_File();
 		}
 	}
 #endif  /* UNIX */

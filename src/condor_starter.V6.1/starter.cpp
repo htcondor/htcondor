@@ -4103,38 +4103,20 @@ Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 	}
 #endif /* LINUX */
 
-	// Remove the directory from all possible chroots.
-	// On Windows, we expect the root_dir_list to have only a single entry - "/"
-	std::string full_exec_dir(Execute);
-	pair_strings_vector root_dirs = root_dir_list();
-	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		if (it->second == "/") {
-			// if the root is /, just use the execute dir.  we do this because dircat doesn't work
-			// correctly on windows when cat'ing  / + c:\condor\execute
-			full_exec_dir = Execute;
+	// Remove the scratch directory.
+	Directory execute_dir(Execute, PRIV_ROOT);
+	if (execute_dir.Find_Named_Entry(dir_name.c_str())) {
+
+		int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
+		if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
+
+		if (move_to) {
+			dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
+			rename(execute_dir.GetFullPath(), move_to);
 		} else {
-			// for chroots other than the trivial one, cat the chroot to the configured execute dir
-			// we don't expect to ever get here on Windows.
-			// If we do get here on Windows, Find_Named_Entry will just fail to find a match
-			if ( ! dircat(it->second.c_str(), Execute, full_exec_dir)) {
-				continue;
-			}
-		}
-
-		Directory execute_dir( full_exec_dir.c_str(), PRIV_ROOT );
-		if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
-
-			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
-			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
-
-			if (it->second == "/" && move_to) {
-				dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
-				rename(execute_dir.GetFullPath(), move_to);
-			} else {
-				dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
-				if (!execute_dir.Remove_Current_File()) {
-					has_failed = true;
-				}
+			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
+			if (!execute_dir.Remove_Current_File()) {
+				has_failed = true;
 			}
 		}
 	}
