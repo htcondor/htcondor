@@ -36,7 +36,7 @@ shadow_input_command_handler( int command, Stream * s ) {
     FileTransferFunctions::receiveTransferKey( sock, peerTransferKey );
     assert( transferKey == peerTransferKey );
 
-    assert( command == FILETRANS_UPLOAD );
+    ASSERT( command == FILETRANS_UPLOAD );
 
 
     //
@@ -48,7 +48,7 @@ shadow_input_command_handler( int command, Stream * s ) {
     //
     // Transfer it.
     //
-    chdir( _cwd.c_str() );
+    std::ignore = chdir( _cwd.c_str() );
     bool exit_when_done = false;
     FileTransferUtils::sendFilesToPeer( sock, entries, exit_when_done );
 
@@ -83,7 +83,7 @@ int
 starter_input_socket_handler( Stream * s ) {
     static FileTransferFunctions::GoAheadState gas;
 
-    chdir( _cwd.c_str() );
+    std::ignore = chdir( _cwd.c_str() );
 
     assert( s != NULL );
     ReliSock * rs = dynamic_cast<ReliSock *>(s);
@@ -143,7 +143,7 @@ int
 shadow_output_socket_handler( Stream * s ) {
     static FileTransferFunctions::GoAheadState gas;
 
-    chdir( _cwd.c_str() );
+    std::ignore = chdir( _cwd.c_str() );
 
     assert( s != NULL );
     ReliSock * rs = dynamic_cast<ReliSock *>(s);
@@ -186,7 +186,7 @@ shadow_output_command_handler( int command, Stream * s ) {
     FileTransferFunctions::receiveTransferKey( sock, peerTransferKey );
     assert( transferKey == peerTransferKey );
 
-    assert( command == FILETRANS_DOWNLOAD );
+    ASSERT( command == FILETRANS_DOWNLOAD );
 
 
     int finalTransfer;
@@ -247,7 +247,7 @@ do_starter_output( const char * addr, const char * key, const char * source, con
     //
     // Transfer it.
     //
-    chdir( _cwd.c_str() );
+    std::ignore = chdir( _cwd.c_str() );
     bool exit_when_done = true;
     FileTransferUtils::sendFilesToPeer( sock.release(), entries, exit_when_done );
 }
