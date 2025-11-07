@@ -13,6 +13,10 @@
   resource requests for matchmaking.
   :jira:`3358`
 
+- Fixup the *condor_credmon_oauth* to support Python 3.14.  With this, we believe that
+  all of HTCondor will work with Python 3.14.
+  :jira:`3365`
+
 - Added configuration variables :macro:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE` and
   :macro:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE`. When configured, the *condor_job_router*
   will first use the address file to locate the source or destination Schedd and
