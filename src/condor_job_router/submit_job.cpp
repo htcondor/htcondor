@@ -222,11 +222,11 @@ bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
 bool submit_job(const std::string & owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out /*= 0*/, int * proc_out /*= 0 */)
 {
 	bool success = false;
-	int cluster;
-	int proc;
+	int cluster = -1;
+	int proc = -1;
 	std::string leaveinqueue;
 	bool put_in_proc = false;
-	ExprTree * tree;
+	ExprTree * tree = nullptr;
 	const char *lhstr = 0;
 	const char *rhstr = 0;
 
