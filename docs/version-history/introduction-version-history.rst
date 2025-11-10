@@ -86,7 +86,7 @@ Types of Releases
 .. mermaid::
 
    %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': '23'}} }%%
-   gitGraph TB:
+   gitGraph LR:
     commit tag:"23.0.1 LTS"
     branch "23.x"
     commit tag:"23.1.0"
