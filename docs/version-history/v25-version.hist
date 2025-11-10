@@ -30,6 +30,9 @@
   never fully supported.
   :jira:`3380`
 
+- Improved DAGMan's debugging for executed scripts.
+  :jira:`3381`
+
 *** 25.5.0 bugs
 
 *** 25.0.5 bugs
