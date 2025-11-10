@@ -5,6 +5,12 @@
   attribute reference.
   :jira:`3347`
 
+- Fixed a bug where the *condor_negotiator* would fail to contact the
+  *condor_schedd* to perform matchmaking if its :macro:`ALLOW_CLIENT`
+  configuration parameter didn't authorize the identity
+  ``submit-side@matchsession``.
+  :jira:`3378`
+
 - Fixed a bug that could cause the AP to fail to read job credential files.
   :jira:`3377`
 
