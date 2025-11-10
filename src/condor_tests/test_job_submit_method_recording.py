@@ -295,18 +295,19 @@ def test_wait(test_case, test_log) -> None:
                         return
 
 @action
-def test_get_counts(the_condor, test_case, test_wait) -> dict:
+def test_get_counts(the_condor, test_case, test_wait, test_expected) -> dict:
     schedd = the_condor.get_local_schedd()
 
+    expected_num_ads = sum(test_expected.values())
     attempts = 0
     history = []
 
-    while len(history) == 0:
+    while len(history) != expected_num_ads:
         if attempts > 0:
             sleep(2)
 
         attempts += 1
-        assert attempts <= 5, f"ERROR: Failed to get history records for test case {test_case}"
+        assert attempts <= 10, f"ERROR: Failed to get history all {expected_num_ads} records for test case {test_case}"
         history = schedd.history(
             constraint=f'TestCase=="{test_case}"',
             projection=["JobSubmitMethod"],
