@@ -120,7 +120,7 @@ are directly related to the release dates.
    :header-rows: 1
 
    * - Version
-     - Release
+     - Release Date
      - End of Support
    * - 25.x
      - September 29, 2025
