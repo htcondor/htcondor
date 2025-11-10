@@ -1813,6 +1813,7 @@ Claim::starterExited( Starter* starter, int status)
 				auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_BREAK, c_rip);
 				ep_event.Ad().Assign("Code", code);
 				ep_event.Ad().Assign("Reason", reason);
+				ep_event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
 				if ( ! brit.b_res.empty()) {
 					ClassAd * resad = new ClassAd();
 					brit.publish_resources(*resad, "");

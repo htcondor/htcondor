@@ -734,6 +734,7 @@
 #define ATTR_SLOT_DYNAMIC  "DynamicSlot"
 #define ATTR_SLOT_BROKEN_CODE "SlotBrokenCode"
 #define ATTR_SLOT_BROKEN_REASON "SlotBrokenReason"
+#define ATTR_SLOT_BROKEN_REFID "BrokenItemId"
 #define ATTR_SOURCE  "Source"
 #define ATTR_STAGE_IN_START  "StageInStart"
 #define ATTR_STAGE_IN_FINISH  "StageInFinish"

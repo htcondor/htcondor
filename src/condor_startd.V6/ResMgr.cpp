@@ -1190,7 +1190,8 @@ static void
 log_resource_restore(const BrokenItem& brit, Resource* rip)
 {
 	if (ep_eventlog.isEnabled()) {
-		auto & event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_RESTORE, rip);
+		auto & event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_MEND, rip);
+		event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
 		if ( ! brit.b_res.empty()) {
 			ClassAd* resad = new ClassAd();
 			brit.publish_resources(*resad, "");
@@ -1210,7 +1211,13 @@ ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsig
 		// Only attempt restoration of specifc broken items reference by ID w/ specific lock type
 		if (lock == item.b_lock && borked_ids.contains(item.b_refid)) {
 			Resource* source = get_by_slot_id(item.b_srcid);
-			ASSERT(source);
+
+			// If we fail to find a source log message and skip
+			if ( ! source) {
+				dprintf(D_ERROR, "ERROR: Failed to locate slot by id=%d associated with broken item %u\n",
+				        item.b_srcid, item.b_refid);
+				return false;
+			}
 
 			if (item.b_refptr) { // Broken slot still around
 				// TODO: Handle/check for broken and partitionable slots?

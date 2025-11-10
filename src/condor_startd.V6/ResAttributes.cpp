@@ -2319,9 +2319,9 @@ CpuAttributes::claim_broken_DevIds(MachAttributes* map, int broken_sub_id)
 		dprintf(D_FULLDEBUG, "Claiming %d %s device ids from broken item %d\n",
 		        claimed, tag.c_str(), broken_sub_id);
 
-		// Update our list of devids
-		auto& currids = c_slotres_ids_map[tag];
-		currids.insert(currids.end(), devids.begin(), devids.end());
+		// Add claimed device ids to appropriate list of assigned device ids for this CpuAttrs
+		slotres_assigned_ids_t& ref_assigned_devids = c_slotres_ids_map[tag];
+		ref_assigned_devids.insert(ref_assigned_devids.end(), devids.begin(), devids.end());
 	}
 }
 
@@ -2756,10 +2756,7 @@ ResBag::convert_to_request(CpuAttributes::_slot_request& req) const
 	req.num_disk = disk;
 	req.num_cpus = cpus;
 	req.num_phys_mem = mem;
-
-	for (const auto& res : resmap) {
-		req.slotres[res.first] += res.second;
-	}
+	req.slotres = resmap;
 }
 
 

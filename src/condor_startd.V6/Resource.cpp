@@ -983,7 +983,7 @@ void
 Resource::remove_broken_context()
 {
 	if (r_attr) { r_attr->set_broken(0, ""); }
-	r_broken_id = std::numeric_limits<unsigned int>::max();
+	r_broken_id = 0;
 	r_do_not_delete = false;
 }
 
@@ -1003,7 +1003,7 @@ Resource::restore_broken_resources(const ResBag& broken, const int sub_id)
 
 	// Make temporary CpuAttrs to restore to this slot
 	CpuAttributes restore(type_id(), request, *(resmgr->m_attr), executeDir(), m_execute_partition_id);
-	restore.attach(this); // Prevent CpuAttributes::dprintf EXCEPT
+	restore.attach(this); // Enable dprintf with slot context
 	restore.claim_broken_DevIds(resmgr->m_attr, sub_id);
 	restore.unbind_DevIds(resmgr->m_attr, r_id, sub_id, 0);
 

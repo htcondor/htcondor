@@ -749,7 +749,7 @@ void CleanupReminderTimerCallback()
 				success = retry_cleanup_logical_volume(cr.name, cr.opt, err);
 				// If LV was removed and the CR had an associated broken item ID
 				// then add to set of broken item IDs to restore
-				if (success && cr.broken_id != std::numeric_limits<unsigned int>::max()) {
+				if (success && cr.broken_id) {
 					broken_item_ids.insert(cr.broken_id);
 				}
 				break;

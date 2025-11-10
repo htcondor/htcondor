@@ -152,7 +152,8 @@ public:
 };
 
 enum class ResourceLockType {
-	HUNG_PID = 0,       // Resources broken from hung PID
+	NONE = 0,
+	HUNG_PID,           // Resources broken from hung PID
 	CGROUP,             // Resources broken from locked cgroup
 	LV,                 // Recources broken from leaked LV
 };
@@ -160,7 +161,7 @@ enum class ResourceLockType {
 // holds a broken resource, slot of slot_type
 class BrokenItem {
 public:
-	BrokenItem() { b_refid = monotonic_id++; }
+	BrokenItem() { b_refid = ++monotonic_id; }
 	//~BrokenItem() = default;
 	//BrokenItem(const BrokenItem &) = default;
 	//BrokenItem(BrokenItem &&) = default;

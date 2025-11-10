@@ -460,7 +460,7 @@ public:
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
-	unsigned int		r_broken_id{std::numeric_limits<unsigned int>::max()}; // Reference ID for broken item slot is associated with
+	unsigned int		r_broken_id{0}; // Reference ID for broken item slot is associated with
 
 	unsigned int type_id( void ) { return r_attr->type_id(); };
 
