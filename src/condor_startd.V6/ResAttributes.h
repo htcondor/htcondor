@@ -540,6 +540,8 @@ public:
 	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id);
 	// check for offline changes for non-fungible resource ids
 	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id);
+	// Add broken non-fungible resource ids to this objects mapping
+	void claim_broken_DevIds(MachAttributes* map, int broken_sub_id);
 
 	void publish_static(ClassAd*, const ResBag * inuse, const ResBag * broken) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
@@ -670,6 +672,9 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	ResBag& operator+=(const ResBag& rhs);
+	ResBag& operator-=(const ResBag& rhs);
+
 	bool empty() const {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
 	bool underrun(std::string * names) const;
@@ -679,6 +684,7 @@ public:
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
 	const MachAttributes::slotres_map_t & nfrmap() const { return resmap; }
+	void convert_to_request(CpuAttributes::_slot_request& req) const;
 
 protected:
 	double     cpus{0};

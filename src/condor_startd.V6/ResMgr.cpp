@@ -36,6 +36,9 @@
 
 #include "strcasestr.h"
 
+// Initialize broken item reference ID counter
+unsigned int BrokenItem::monotonic_id = 0;
+
 struct slotOrderSorter {
    bool operator()(const Resource *r1, const Resource *r2) {
 		if (r1->r_id < r2->r_id) {
@@ -436,7 +439,28 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 		volman->PublishDiskInfo(ad);
 	}
 
+	// Publish the number of leaked resources (that we are still periodically attempting cleanup)
+	std::map<std::string, size_t> cleanup_counts;
+	for (const auto& [reminder, _] : cleanup_reminders) {
+		std::string key(reminder.Type());
+		title_case(key);
+		key.push_back('s');
+		auto [start, end] = std::ranges::remove_if(key, ::isspace);
+		key.erase(start, end);
+		cleanup_counts[key]++;
+	}
+
+	if ( ! cleanup_counts.empty()) {
+		std::string value = "[";
+		for (const auto& [key, count] : cleanup_counts) {
+			formatstr_cat(value, " %s=%zu;", key.c_str(), count);
+		}
+		value += " ]";
+		ad.AssignExpr(ATTR_CLEANUP_CATEGORY_COUNTS, value.c_str());
+	}
+
 	m_attr->publish_static(&ad, nullptr);
+
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
@@ -1126,6 +1150,22 @@ ResMgr::get_by_slot_id( int id )
 	return NULL;
 }
 
+
+CleanupReminder*
+ResMgr::findCleanupReminder(CleanupReminder::category cat, const std::string& name)
+{
+	if (name.empty()) { return nullptr; }
+
+	auto it = std::ranges::find_if(cleanup_reminders, [cat, name](const auto& pair) {
+		return pair.first.cat == cat && pair.first.name == name;
+	});
+
+	if (it == cleanup_reminders.end()) { return nullptr; }
+
+	return const_cast<CleanupReminder*>(&(it->first));
+}
+
+
 BrokenItem &
 ResMgr::get_broken_context(Resource * rip)
 {
@@ -1137,12 +1177,86 @@ ResMgr::get_broken_context(Resource * rip)
 	}
 
 	// no broken record, make a new one and partially initialize it
-	BrokenItem & brit = broken_things.emplace_back(BrokenItem());
+	BrokenItem & brit = broken_things.emplace_back();
 	brit.b_id = (int)broken_things.size();
 	brit.b_time = time(nullptr);
 	brit.b_refptr = rip;
 	brit.b_tag = rip->r_id_str;
 	return brit;
+}
+
+
+static void
+log_resource_restore(const BrokenItem& brit, Resource* rip)
+{
+	if (ep_eventlog.isEnabled()) {
+		auto & event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_MEND, rip);
+		event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
+		if ( ! brit.b_res.empty()) {
+			ClassAd* resad = new ClassAd();
+			brit.publish_resources(*resad, "");
+			event.Ad().Insert("Resources", resad);
+		}
+		ep_eventlog.flush();
+	}
+}
+
+
+void
+ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids)
+{
+	auto restore = [this, lock, &borked_ids](BrokenItem& item) -> bool {
+		bool restored = false;
+
+		// Only attempt restoration of specifc broken items reference by ID w/ specific lock type
+		if (lock == item.b_lock && borked_ids.contains(item.b_refid)) {
+			Resource* source = get_by_slot_id(item.b_srcid);
+
+			// If we fail to find a source log message and skip
+			if ( ! source) {
+				dprintf(D_ERROR, "ERROR: Failed to locate slot by id=%d associated with broken item %u\n",
+				        item.b_srcid, item.b_refid);
+				return false;
+			}
+
+			if (item.b_refptr) { // Broken slot still around
+				// TODO: Handle/check for broken and partitionable slots?
+				Resource* slot = (Resource*)(item.b_refptr);
+				slot->remove_broken_context();
+
+				log_resource_restore(item, slot);
+
+				if (slot->is_dynamic_slot()) { // dynamic slot
+					ASSERT(source == slot->get_parent());
+					removeResource(slot);
+					slot = nullptr;
+				} else { // static slot
+					slot->update_needed(Resource::WhyFor::wf_refreshRes);
+				}
+			} else { // Associated dynaminc slot is already gone
+				ASSERT(source->r_lost_child_res);
+
+				log_resource_restore(item, source);
+
+				source->restore_broken_resources(item.b_res, item.sub_id());
+
+				item.b_res.reset();
+
+				refresh_classad_resources(source);
+				source->update_needed(Resource::WhyFor::wf_refreshRes);
+			}
+
+			restored = true;
+		}
+
+		return restored;
+	};
+
+	size_t num_restored = std::erase_if(broken_things, restore);
+	if (num_restored) {
+		dprintf(D_ALWAYS, "Restored %zu broken items\n", num_restored);
+		resmgr->rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+	}
 }
 
 

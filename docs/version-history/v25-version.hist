@@ -13,6 +13,16 @@
   resource requests for matchmaking.
   :jira:`3358`
 
+- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``true``
+  causing failure to cleanup ephemeral Logical Volumes to break slot resources.
+  If the logical volume is later successfully cleaned up then the associated
+  broken resources will be restored.
+  :jira:`3352`
+
+- Added :ad-attr:`CleanupCategoryCounts` to record the number of cleanup
+  reminders a *condor_startd* is tracking.
+  :jira:`3352`
+
 - Fixup the *condor_credmon_oauth* to support Python 3.14.  With this, we believe that
   all of HTCondor will work with Python 3.14.
   :jira:`3365`

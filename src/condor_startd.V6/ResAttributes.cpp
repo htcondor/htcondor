@@ -2286,6 +2286,24 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 }
 
 void
+CpuAttributes::claim_broken_DevIds(MachAttributes* map, int broken_sub_id)
+{
+	if ( ! map) { return; }
+
+	for (const auto& [tag, _] : c_slotres_map) {
+		// Locate devids associated with broken item subid
+		slotres_assigned_ids_t devids;
+		int claimed = map->ReportBrokenDevIds(tag, devids, broken_sub_id);
+		dprintf(D_FULLDEBUG, "Claiming %d %s device ids from broken item %d\n",
+		        claimed, tag.c_str(), broken_sub_id);
+
+		// Add claimed device ids to appropriate list of assigned device ids for this CpuAttrs
+		slotres_assigned_ids_t& ref_assigned_devids = c_slotres_ids_map[tag];
+		ref_assigned_devids.insert(ref_assigned_devids.end(), devids.begin(), devids.end());
+	}
+}
+
+void
 CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
 #ifdef PROVISION_FRACTIONAL_DISK
@@ -2685,6 +2703,40 @@ ResBag::operator-=(const CpuAttributes& rhs)
 	for (auto & res : rhs.c_slottot_map) { resmap[res.first] -= res.second; }
 	return *this;
 }
+
+
+ResBag&
+ResBag::operator+=(const ResBag& rhs)
+{
+        cpus += rhs.cpus;
+        disk += rhs.disk;
+        mem += rhs.mem;
+        slots += rhs.slots;
+        for (auto & res : rhs.resmap) { resmap[res.first] += res.second; }
+        return *this;
+}
+
+ResBag&
+ResBag::operator-=(const ResBag& rhs)
+{
+        cpus -= rhs.cpus;
+        disk -= rhs.disk;
+        mem -= rhs.mem;
+        slots -= rhs.slots;
+        for (auto & res : rhs.resmap) { resmap[res.first] -= res.second; }
+        return *this;
+}
+
+
+void
+ResBag::convert_to_request(CpuAttributes::_slot_request& req) const
+{
+	req.num_disk = disk;
+	req.num_cpus = cpus;
+	req.num_phys_mem = mem;
+	req.slotres = resmap;
+}
+
 
 void ResBag::reset()
 {

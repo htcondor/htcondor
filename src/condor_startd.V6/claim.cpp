@@ -1655,6 +1655,7 @@ Claim::starterExited( Starter* starter, int status)
 {
 	int orphanedJob = 0;
 	bool still_broken = true;
+	CleanupReminder* reminder = nullptr;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -1712,6 +1713,8 @@ Claim::starterExited( Starter* starter, int status)
 			if ( ! still_broken) {
 				dprintf(D_STATUS, "Broken resources successfully cleaned up. Ignoring exit code %d\n",
 				        WEXITSTATUS(status));
+			} else if (WEXITSTATUS(status) == STARTER_EXIT_IMMORTAL_LVM) {
+				reminder = resmgr->findCleanupReminder(CleanupReminder::category::logical_volume, starter->logicalVolumeName());
 			}
 		}
 
@@ -1773,10 +1776,12 @@ Claim::starterExited( Starter* starter, int status)
 		int code = BROKEN_CODE_UNCLEAN;
 		bool do_not_delete_slot = false; // set to true if the broken code indicates that the slot should not be deleted.
 		const char * reason = "Could not clean up after job";
+		ResourceLockType lock = ResourceLockType::HUNG_PID;
 		switch (WEXITSTATUS(status)) {
 		case STARTER_EXIT_IMMORTAL_LVM:
 			code = BROKEN_CODE_UNCLEAN_LV;
 			reason = "Could not clean up Logical Volume";
+			lock = ResourceLockType::LV;
 			break;
 		case STARTER_EXIT_IMMORTAL_JOB_PROCESS:
 			code = BROKEN_CODE_HUNG_PID;
@@ -1786,6 +1791,7 @@ Claim::starterExited( Starter* starter, int status)
 			code = BROKEN_CODE_HUNG_CGROUP;
 			reason = "Could not cleanup CGroup for slot";
 			do_not_delete_slot = true;
+			lock = ResourceLockType::CGROUP;
 			break;
 		default:
 			if (orphanedJob) {
@@ -1800,12 +1806,14 @@ Claim::starterExited( Starter* starter, int status)
 			dprintf(D_ERROR,"Starter exit code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
 			if (do_not_delete_slot) { c_rip->r_do_not_delete = true; }
-			auto & brit = c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
+			auto & brit = c_rip->set_broken_context(c_client, job, lock); // save client info, and give ownership of the job ad
+			if (reminder) { reminder->broken_id = brit.b_refid; }
 			if (ep_eventlog.isEnabled()) {
 				// write a RESOURCE_BREAK event reporting break reason and resources
 				auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_BREAK, c_rip);
 				ep_event.Ad().Assign("Code", code);
 				ep_event.Ad().Assign("Reason", reason);
+				ep_event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
 				if ( ! brit.b_res.empty()) {
 					ClassAd * resad = new ClassAd();
 					brit.publish_resources(*resad, "");

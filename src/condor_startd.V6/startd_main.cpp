@@ -116,6 +116,8 @@ int		lv_name_uniqueness = 0;
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
 
+bool	aggressive_cleanup = false; // Ignore cleanup reminder backoff intervals
+
 char* Name = NULL;
 
 #define DEFAULT_PID_SNAPSHOT_INTERVAL 15
@@ -634,6 +636,9 @@ init_params( int first_time)
 		system_want_exec_encryption = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
 	}
 
+	// Skip cleanup reminder backoff and always attempt cleanup: Note for internal testing
+	aggressive_cleanup = param_boolean("AGGRESSIVE_CLEANUP_REMINDER", false);
+
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
 	// for compatibility
 #ifdef LINUX
@@ -719,11 +724,14 @@ void CleanupReminderTimerCallback()
 {
 	dprintf(D_FULLDEBUG, "In CleanupReminderTimerCallback() there are %d reminders\n", (int)cleanup_reminders.size());
 
-	auto done = [](auto& pair) {
+	// Set of broken item IDs to restore if successfully cleaned up issue thing (logical volume)
+	std::set<unsigned int> broken_item_ids;
+
+	auto done = [&broken_item_ids](auto& pair) -> bool {
 		const CleanupReminder& cr = pair.first;
 		const int iteration = ++cleanup_reminders[cr];
 
-		if ( ! retry_on_this_iter(iteration, cr.cat)) { return false; }
+		if ( ! aggressive_cleanup && ! retry_on_this_iter(iteration, cr.cat)) { return false; }
 
 		dprintf(D_FULLDEBUG, "cleanup_reminder for %s iteration %d\n", cr.name.c_str(), iteration);
 
@@ -739,6 +747,11 @@ void CleanupReminderTimerCallback()
 				break;
 			case CleanupReminder::category::logical_volume:
 				success = retry_cleanup_logical_volume(cr.name, cr.opt, err);
+				// If LV was removed and the CR had an associated broken item ID
+				// then add to set of broken item IDs to restore
+				if (success && cr.broken_id) {
+					broken_item_ids.insert(cr.broken_id);
+				}
 				break;
 			default:
 				EXCEPT("Unknown CleanupReminder Category: %d\n", cr.cat);
@@ -756,6 +769,10 @@ void CleanupReminderTimerCallback()
 	};
 
 	std::erase_if(cleanup_reminders, done);
+
+	if ( ! broken_item_ids.empty()) {
+		resmgr->RestoreBrokenResources(ResourceLockType::LV, broken_item_ids);
+	}
 
 	// if the collection of things to try and clean up is empty, turn off the timer
 	// it will get turned back on the next time an item is added to the collection
