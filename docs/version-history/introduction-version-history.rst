@@ -85,33 +85,46 @@ Types of Releases
 
 .. mermaid::
 
-   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': 'lts-23'}} }%%
+   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': 'lts 23'}} }%%
    gitGraph TB:
     commit tag:"23.0.0"
     branch "feature 23.x"
-    checkout "lts-23"
+    checkout "lts 23"
     commit tag:"23.0.1"
     checkout "feature 23.x"
-    merge "lts-23"
+    merge "lts 23"
     commit tag:"23.1.0"
     commit tag:"23.1.1"
     commit tag:"23.1.2"
-    checkout "lts-23"
+    checkout "lts 23"
     commit tag:"23.0.2"
     checkout "feature 23.x"
-    merge "lts-23"
+    merge "lts 23"
     commit tag:"23.2.0"
     commit tag:"23.2.1"
-    branch "lts-24"
+    branch "lts 23.x"
+    branch "lts 24"
     commit tag:"24.0.0"
     branch "feature 24.x"
-    checkout "lts-24"
+    checkout "lts 24"
     commit tag:"24.0.1"
     checkout "feature 24.x"
-    merge "lts-24"
+    merge "lts 24"
     commit tag:"24.1.0"
     commit tag:"24.1.1"
     commit tag:"24.1.2"
+    checkout "lts 23"
+    commit tag:"23.0.13"
+    checkout "lts 23.x"
+    merge "lts 23"
+    commit tag:"23.12.13"
+    checkout "lts 24"
+    merge "lts 23.x"
+    commit tag:"24.0.2"
+    checkout "feature 24.x"
+    merge "lts 24"
+    commit tag:"24.2.0"
+
 
 Support Life Cycle
 ^^^^^^^^^^^^^^^^^^
