@@ -7,7 +7,7 @@
   directories, and not pollute the job's scratch directory with condor control files.
   :jira:`3080`
 
-- The *condor_starter* can now refresh job credentials and respond to 
+- The *condor_starter* can now refresh job credentials and respond to
   commands while doing output file transfers.
   :jira:`3259`
 
@@ -25,7 +25,7 @@
   the user record to begin running.
   :jira:`3325`
 
-- Added new job ClassAd attributes :ad-attr:`NumVacatesPreExecution` 
+- Added new job ClassAd attributes :ad-attr:`NumVacatesPreExecution`
   and :ad-attr:`NumVacatesByReasonPreExecution`. These attributes provide
   counts about why a job was kicked off of an Execution Point before the
   job was actually spawned (i.e. due to failure to transfer input files,
@@ -40,7 +40,7 @@
   and :ad-attr:`DetectedDisk` in each slot and in the daemon ad.
   :jira:`3302`
 
-- Add a python bindings function to reload the ClassAd usermaps and to load
+- Added new python binding functions to reload the ClassAd usermaps and to load
   a specific usermap for use with the ``userMap`` ClassAd function.
   :jira:`3274`
 
@@ -49,7 +49,7 @@
   the ``DOCKER_HOST`` environment variable, such as with a docker-in-docker setup.
   :jira:`3280`
 
-- More accurately report the reason why a job's execution is interrupted
+- More accurately report the reason why a jobs execution was interrupted
   (via the evict log event and :ad-attr:`VacateReason` job attribute).
   :jira:`3295`
 
