@@ -41,8 +41,10 @@ Types of Releases
 
 -   A new **LTS** release is numbered **X.0.1**. When the new LTS version is
     released, the **X-1** feature versions transition to LTS versions (bug
-    fixes only). The previous LTS releases are supported for approximately
-    one year after a new LTS version is released.
+    fixes only). This LTS release will be supported for approximately two
+    years. The previous LTS release and newly minted LTS release from the
+    latest feature release are supported for approximately one year after
+    a new LTS version is released.
     The final feature release undergoes a stabilization effort where the
     software is run through multiple code quality tools (such as Valgrind)
     to assure the best possible LTS release.  The MAJOR.0.1 version is not
@@ -75,7 +77,7 @@ Types of Releases
 
 -   By default, each MAJOR version is compatible with adjacent MAJOR versions.
     That is, versions **X.y.z** will be compatible with **X-1.y.z** and
-    **X+1.y.z** version, such that nodes in a cluster may be upgraded without
+    **X+1.y.z** versions, such that nodes in a cluster may be upgraded without
     losing state information. There may be a pause in operation during upgrade.
     **Check the release notes** for exceptions prior to updating nodes.
 
