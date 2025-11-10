@@ -11,6 +11,9 @@
   ``submit-side@matchsession``.
   :jira:`3378`
 
+- Fixed a bug that could cause the AP to fail to read job credential files.
+  :jira:`3377`
+
 *** 24.0.14 bugs
 
 - Fix problem running PyTorch jobs on multiple GPUs with
