@@ -121,24 +121,19 @@ are directly related to the release dates.
 
    * - Version
      - Release
-     - End of Regular Support
-     - End of Security Support
-   * - 24.x
+     - End of Support
+   * - 25.x
+     - September 29, 2025
+     - August 2027
+   * - 25.0 LTS
+     - September 29, 2025
+     - August 2027
+   * - 24.x LTS
      - October 31, 2024
      - August 2026
-     - August 2026
-   * - 24.0
+   * - 24.0 LTS
      - October 31, 2024
      - August 2026
-     - August 2026
-   * - 23.x
-     - September 29, 2023
-     - August 2025
-     - August 2025
-   * - 23.0
-     - September 29, 2023
-     - August 2025
-     - August 2025
 
 Repositories
 ^^^^^^^^^^^^
