@@ -54,12 +54,14 @@ bool ScriptQ::Run(Script *script) {
 			maxScripts = _dag->dagOpts[shallow::i::MaxHold];
 			break;
 	}
+
 	if (maxScripts != 0 && _numScriptsRunning >= maxScripts) {
 		// max scripts already running
 		debug_printf(DEBUG_DEBUG_1, "Max %s scripts (%d) already running; deferring %s script of node %s\n",
 		             prefix, maxScripts, prefix, script->GetNodeName());
 		deferScript = true;
 	}
+
 	if (deferScript) {
 		_scriptDeferredCount++;
 		_waitingQueue.push(script);
@@ -72,9 +74,10 @@ bool ScriptQ::Run(Script *script) {
 		_numScriptsRunning++;
 		auto insertResult = _scriptPidTable.insert(std::make_pair(pid, script));
 		ASSERT(insertResult.second == true);
-		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->GetCmd());
+		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->GetExecuted());
 		return true;
 	}
+
 	// BackgroundRun() returned pid 0
 	debug_printf(DEBUG_NORMAL, "Error: Failed to execute %s for Node %s\n",
 	             prefix, script->GetNodeName());

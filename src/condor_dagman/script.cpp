@@ -42,13 +42,20 @@ void Script::WriteDebug(int status) {
 			             _node->GetDirectory(), errMsg.c_str());
 		}
 
+		int return_value = WEXITSTATUS(status);
+		const char* return_type = "ExitCode";
+		if (WIFSIGNALED(status)) {
+			return_value = status;
+			return_type = "Signal";
+		}
+
 		std::string output;
 		std::string *buffer;
 
 		time_t now = time(nullptr);
-		formatstr(output, "*** Node=%s Type=%s Status=%d Completion=%lld Cmd='%s'\n",
-		          _node->GetNodeName(), GetScriptName(), status, (long long)now,
-		          _executedCMD.c_str());
+		formatstr(output, "*** Node=%s Type=%s %s=%d Completion=%lld Cmd='%s'\n",
+		          _node->GetNodeName(), GetScriptName(), return_type, return_value,
+		         (long long)now, _executedCMD.c_str());
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
 		if (buffer) { output += *buffer; }
