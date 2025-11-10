@@ -89,8 +89,6 @@ Types of Releases
    gitGraph TB:
     commit tag:"23.0.1"
     branch "feature 23.x"
-    checkout "lts 23"
-    checkout "feature 23.x"
     merge "lts 23"
     commit tag:"23.1.0"
     commit tag:"23.1.1"
