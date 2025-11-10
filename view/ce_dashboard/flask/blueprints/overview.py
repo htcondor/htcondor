@@ -99,7 +99,7 @@ def get_data_from_ganglia():
     metricsd_url = current_app.config['CE_DASHBOARD_METRICSD_URL']
 
     # Retrieve any metrics from Ganglia that start with any of the following phrases
-    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','Glideins']
+    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','EPs']
     metric_args = '&'.join([f'mreg[]=%5E{expr}' for expr in metric_exprs])
 
     df=pd.read_csv(f'{metricsd_url}/ganglia/graph.php?r={r}&hreg[]={host}&{metric_args}&aggregate=1&csv=1',skipfooter=1,engine='python')
@@ -144,9 +144,10 @@ def get_data_from_ganglia():
                               ['DiskNotIn', 'DiskUnallocated'],
                               ['BcusIn', 'BcusAllocated'],
                               ['BcusNotIn', 'BcusUnallocated'],
-                              ['GlideinsCpuLimited', 'GlideinsCpuLimited'],
-                              ['GlideinsMemoryLimited', 'GlideinsMemoryLimited'],
-                              ['GlideinsDiskLimited', 'GlideinsDiskLimited']):
+                              ['EPsRunning', 'EPsRunning'],
+                              ['EPsCpuLimited', 'EPsCpuLimited'],
+                              ['EPsMemoryLimited', 'EPsMemoryLimited'],
+                              ['EPsDiskLimited', 'EPsDiskLimited']):
         df['Project'] = df['Project'].str.replace(f'____meta_{oldname}', newname)
     # Get rid of columns that are not needed; specifically, we don't want info per user, just per project   
     df.drop(columns=['Cpus_User'],inplace=True,errors='ignore')

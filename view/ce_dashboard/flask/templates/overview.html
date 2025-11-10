@@ -240,16 +240,16 @@ Contribution of compute capacity from the
 						data_url: "/data/ce_overview?r=week",
                         graph_query: fmtGraphQuery(`
                             filter=Type=R
-                            q=Glideins
-                            group=Date;GlideinsCpuLimited,GlideinsMemoryLimited,GlideinsDiskLimited,GlideinsRunning
+                            q=EPs
+                            group=Date;EPsCpuLimited,EPsMemoryLimited,EPsDiskLimited,EPsRunning
 
-                            div=GlideinsCpuLimited,GlideinsRunning,FractionCpuLimited
+                            div=EPsCpuLimited,EPsRunning,FractionCpuLimited
                             mult=FractionCpuLimited,100,PercentCpuLimited
 
-                            div=GlideinsMemoryLimited,GlideinsRunning,FractionMemoryLimited
+                            div=EPsMemoryLimited,EPsRunning,FractionMemoryLimited
                             mult=FractionMemoryLimited,100,PercentMemoryLimited
 
-                            div=GlideinsDiskLimited,GlideinsRunning,FractionDiskLimited
+                            div=EPsDiskLimited,EPsRunning,FractionDiskLimited
                             mult=FractionDiskLimited,100,PercentDiskLimited
 
                             extract_regexp=Date=-(.*) .*
@@ -262,7 +262,7 @@ Contribution of compute capacity from the
 
                             legend.position=in
                             vAxis.format=short
-                            vAxes.0.title=% Running Glideins
+                            vAxes.0.title=% Running EPs
                             chart=column
                         `)
                     });
