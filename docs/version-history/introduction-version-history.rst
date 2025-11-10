@@ -116,7 +116,7 @@ We plan to release a new LTS version every August. The support life cycles
 are directly related to the release dates.
 
 .. list-table:: HTCondor Support Life Cycle
-   :widths: 10 30 30 30
+   :widths: 20 40 40
    :header-rows: 1
 
    * - Version
