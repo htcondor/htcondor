@@ -390,6 +390,37 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 }
 };
 
+ClassAd 
+JobQueueUserRec::removeOCU(const ClassAd &ocu) {
+		int ocu_id = -1;
+		ocu.LookupInteger(ATTR_OCU_ID, ocu_id);
+		if (ocu_id < 0) {
+			ClassAd result;
+			result.Assign(ATTR_RESULT, -1);
+			return result;
+		}
+
+		auto match = [ocu_id] (const OCU &ocu) {
+			int id = -1;
+			ocu.ad.LookupInteger(ATTR_OCU_ID, id);
+			if (id == ocu_id) {
+				if (ocu.mrec) {
+					scheduler.DelMrec(ocu.mrec);
+				}
+				return true;
+			}
+			return false;
+		};
+		std::erase_if(ocus, match);
+		//
+		syncOCUs();
+
+		ClassAd result;
+		result.Assign(ATTR_OCU_ID, ocu_id);
+		result.Assign(ATTR_RESULT, 0);
+
+		return result;
+}
 
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
@@ -1903,6 +1934,40 @@ void JobQueueUserRec::PopulateFromAd()
 	}
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
 		this->Assign(ATTR_OS_USER, os_user);
+	}
+
+	// Now reconstitue the ocus list from the ad.
+	// the ad should contain an attribute "ocus" which is a list of nested classads
+	classad::ExprTree *expr = this->Lookup("ocus");
+	if (expr) {
+		classad::ExprList *list = dynamic_cast<classad::ExprList*>(expr);
+		if (list) {
+			std::vector<classad::ExprTree *> components;
+			list->GetComponents(components);
+			ocus.clear();
+			for (auto & component : components) {
+				// Each component better be a classad, but let's be sure
+				auto *ad = dynamic_cast<ClassAd *>(component);
+				if (ad) {
+					int ocu_id;
+					ad->LookupInteger(ATTR_OCU_ID, ocu_id);
+					ocus.emplace_back(*(ClassAd *)component, ocu_id);
+
+					std::string submitter;
+					ad->LookupString(ATTR_SUBMITTER, submitter);
+					if (!submitter.empty()) {
+						SubmitterData *subdat = scheduler.insert_submitter(submitter.c_str());
+						subdat->num.Hits++;
+						subdat->num.JobsIdle++;
+						std::string owner;
+						ad->LookupString(ATTR_OWNER, owner);
+						subdat->owners.insert(owner);
+					}
+				}
+
+			}
+
+		}
 	}
 }
 
@@ -9584,7 +9649,7 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * any user; o.w. only get jobs for specified user.
  * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
@@ -9622,10 +9687,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	double current_startd_rank = 0.0;
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
-
-	bool ocu = false;
-	my_match_ad->LookupBool("OCUClaim", ocu);
-
 	std::string remoteOwner;
 	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
 
@@ -9709,8 +9770,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 		#endif
 
-			if (ocu) {
-				if (remoteOwner == job->ownerinfo->Name()) {
+			if (is_ocu) {
+
+				// OCU ad should have ATTR_OWNER set to the owner of the OCU claim
+				std::string owner;
+				my_match_ad->LookupString(ATTR_OWNER, owner);
+
+				if (owner == job->ownerinfo->Name()) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
@@ -9834,7 +9900,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 
 			jobid = job->jid; // success!
-			if (ocu) {
+			if (is_ocu) {
 				if (my_match_ad) {
 					int ocu_claims = 0;
 					std::string ocu_claim_stat_attr = 
@@ -9850,7 +9916,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 		// If we got here and ocu true and match_any_user is false, then
 		// no job from our priority user matched.  Try again for someone else.
-		if (ocu && !match_any_user) {
+		if (is_ocu && !match_any_user) {
 			match_any_user = true;
 			continue;
 		}
@@ -10052,5 +10118,15 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName)
 	}
 
 	return rval;
+}
+
+int get_next_cluster_num() {
+	int cluster = next_cluster_num++;
+
+	// And persistent the max cluster number
+	char tmp[PROC_ID_STR_BUFLEN];
+	snprintf(tmp, sizeof(tmp), "%d", next_cluster_num);
+	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, tmp);
+	return cluster;
 }
 
