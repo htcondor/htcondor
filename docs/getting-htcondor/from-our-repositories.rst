@@ -55,21 +55,18 @@ Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
 
-Debian 11, and 12
-#################
+Place our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+in ``/etc/apt/keyrings/htcondor.asc``
 
-Add our `Debian signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-24.x-Key>`_
-with ``apt-key add`` before adding the repositories below.
+Debian 11, 12, and 13
+#####################
 
-* Debian 11: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/24.x bullseye main``
-* Debian 12: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/24.x bookworm main``
-* Debian 13: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/24.x trixie main``
+* Debian 11 (bullseye): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-24.x-bullseye.list>`_
+* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-24.x-bookworm.list>`_
+* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-24.x-trixie.list>`_
 
 Ubuntu 22.04 and 24.04
 ######################
 
-Add our `Ubuntu signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-24.x-Key>`_
-with ``apt-key add`` before adding the repositories below.
-
-* Ubuntu 22.04: ``deb https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/24.x jammy main``
-* Ubuntu 24.04: ``deb https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/24.x noble main``
+* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-24.x-jammy.list>`_
+* Ubuntu 24.04 (noble numbat): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-24.x-noble.list>`_
