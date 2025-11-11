@@ -136,6 +136,12 @@ specified here. In order:
    :macro:`LOCAL_CONFIG_DIR`, then :macro:`LOCAL_CONFIG_DIR` is processed for a
    second time, using the changed list of directories.
 
+.. note::
+
+    All files that do not match :macro:`LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`
+    within the :macro:`LOCAL_CONFIG_DIR` will be processed. Any file matching
+    the exclusion regular expression will be ignored.
+
 The parsing and use of configuration files may be bypassed by setting
 environment variable ``CONDOR_CONFIG`` with the string ``ONLY_ENV``.
 With this setting, there is no attempt to locate or read configuration
