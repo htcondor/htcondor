@@ -87,33 +87,33 @@ Types of Releases
 
    %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': '23'}} }%%
    gitGraph LR:
-    commit tag:"23.0.1 LTS"
-    branch "23.x" order:1
-    commit tag:"23.1.0"
-    commit tag:"23.1.1"
+    commit tag: "23.0.1 LTS"
+    branch "23.x" order: 1
+    commit tag: "23.1.0"
+    commit tag: "23.1.1"
     checkout "23"
-    commit tag:"23.0.2 LTS"
+    commit tag: "23.0.2 LTS"
     checkout "23.x"
     merge "23"
-    commit tag:"23.2.0"
-    commit tag:"23.2.1"
-    branch "24" order:2
-    commit tag:"24.0.1 LTS"
-    branch "24.x" order:3
-    commit tag:"24.1.0"
-    commit tag:"24.1.1"
+    commit tag: "23.2.0"
+    commit tag: "23.2.1"
+    branch "24" order: 2
+    commit tag: "24.0.1 LTS"
+    branch "24.x" order: 3
+    commit tag: "24.1.0"
+    commit tag: "24.1.1"
     checkout "23"
-    commit tag:"23.0.13 LTS"
+    commit tag: "23.0.13 LTS"
     checkout "23.x"
     merge "23"
-    commit tag:"23.12.13 LTS"
+    commit tag: "23.12.13 LTS"
     checkout "24"
     merge "23.x"
-    commit tag:"24.0.2 LTS"
+    commit tag: "24.0.2 LTS"
     checkout "24.x"
     merge "24"
-    commit tag:"24.2.0"
-    commit tag:"24.2.1"
+    commit tag: "24.2.0"
+    commit tag: "24.2.1"
 
 
 Support Life Cycle
