@@ -51,7 +51,7 @@ command_handler(int cmd, Stream* stream )
 			case DEACTIVATE_CLAIM:
 			case DEACTIVATE_CLAIM_FORCIBLY:
 			case DEACTIVATE_CLAIM_JOB_DONE:
-			case DEACTIVATE_CLAIM_JOB_RESTARTING:
+			case DEACTIVATE_CLAIM_CHECK:
 				stream->encode();
 
 				ClassAd response_ad;
@@ -79,7 +79,7 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM:
 	case DEACTIVATE_CLAIM_FORCIBLY:
 	case DEACTIVATE_CLAIM_JOB_DONE:
-	case DEACTIVATE_CLAIM_JOB_RESTARTING:
+	case DEACTIVATE_CLAIM_CHECK:
 		rval = deactivate_claim(stream, rip, cmd);
 		break;
 	}
@@ -153,7 +153,7 @@ deactivate_claim(Stream *stream, Resource *rip, int cmd)
 	// from here on down appears to support that assertion.  So, this is
 	// the right place to exit if this is just the starter asking if it
 	// should restart a self-checkpointing job.
-	if( cmd == DEACTIVATE_CLAIM_JOB_RESTARTING ) { return rval; }
+	if( cmd == DEACTIVATE_CLAIM_CHECK ) { return rval; }
 
 	if( rip->r_cur && ! job_done) {
 		if(graceful) {

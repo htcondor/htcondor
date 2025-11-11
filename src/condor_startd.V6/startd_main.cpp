@@ -338,8 +338,8 @@ main_init( int, char* argv[] )
 								  "DEACTIVATE_CLAIM_JOB_DONE",
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( DEACTIVATE_CLAIM_JOB_RESTARTING,
-								  "DEACTIVATE_CLAIM_JOB_RESTARTING",
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_CHECK,
+								  "DEACTIVATE_CLAIM_CHECK",
 								  command_handler,
 								  "command_handler", DAEMON );
 

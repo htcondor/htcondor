@@ -380,7 +380,7 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 		}
 	}
 	if (job_is_restarting) {
-		cmd = DEACTIVATE_CLAIM_JOB_RESTARTING;
+		cmd = DEACTIVATE_CLAIM_CHECK;
 	}
 
 		// if this claim is associated with a security session
