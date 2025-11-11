@@ -77,7 +77,7 @@ Set up the log directory and default configuration files.
 .. code-block:: shell
 
     cd /usr/local/condor
-    mkdir -p local
+    mkdir -p local/log
     mkdir -p local/config.d
     cp etc/examples/condor_config etc/condor_config
     cp etc/examples/00-security local/config.d
