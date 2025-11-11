@@ -92,6 +92,10 @@ public:
 		*/
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
+		/* Constructor, used by job router */
+	DCSchedd( std::string_view name, std::string_view pool, std::string_view address_file );
+
+
 		// return the address of the CREDD associated with this schedd
 		// do not call this method until after locate() or equivalent.
 	bool getCreddAddress(std::string & address);
@@ -581,6 +585,13 @@ public:
 	// get all the claimed slot ads from schedd
     bool getClaims(std::vector<std::unique_ptr<ClassAd>> &claims, ClassAd &queryAd, CondorError &errstack);
 
+	// The OCU ad must have the various Request_Memory, etc. 
+	// The OCU ad should have an OCU_NAME
+	ClassAd createOCU(const ClassAd &ocu_ad, CondorError *errstack);
+
+	ClassAd removeOCU(const ClassAd &ocu_ad, CondorError *errstack);
+	std::vector<ClassAd> queryOCU(const ClassAd &ocu_ad, CondorError *errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -638,7 +649,6 @@ private:
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );
 	DCSchedd& operator = ( const DCSchedd& );
-
 };
 
 

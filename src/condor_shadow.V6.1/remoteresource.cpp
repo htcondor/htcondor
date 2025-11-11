@@ -647,14 +647,15 @@ RemoteResource::disconnectClaimSock(const char *err_msg)
 		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
 			Shadow->gracefulShutDown();
-			EXCEPT( "%s", my_err_msg.c_str() );
+			Shadow->reconnectFailed("This job cannot reconnect");
 		}
 			// tell the shadow to start trying to reconnect
 		Shadow->reconnect();
 	} else {
 			// The remote starter doesn't support it, so give up
 			// like we always used to.
-		EXCEPT( "%s", my_err_msg.c_str() );
+		dprintf(D_ERROR, "%s\n", my_err_msg.c_str());
+		Shadow->reconnectFailed("Reconnect is not supported");
 	}
 }
 
@@ -2130,9 +2131,7 @@ RemoteResource::reconnect( void )
 	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
 			 (long long)remaining );
 
-	if( next_reconnect_tid >= 0 ) {
-		EXCEPT( "in reconnect() and timer for next attempt already set" );
-	}
+	ASSERT(next_reconnect_tid < 0);
 
     time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
@@ -2148,9 +2147,7 @@ RemoteResource::reconnect( void )
 						(TimerHandlercpp)&RemoteResource::attemptReconnect,
 						"RemoteResource::attemptReconnect()", this );
 
-	if( next_reconnect_tid < 0 ) {
-		EXCEPT( "Failed to register timer!" );
-	}
+	ASSERT(next_reconnect_tid >= 0);
 }
 
 
@@ -2264,20 +2261,31 @@ RemoteResource::locateReconnectStarter( void )
 	case CA_INVALID_STATE:
 	case CA_INVALID_REQUEST:
 	case CA_INVALID_REPLY:
-		EXCEPT( "impossible: startd returned %s for locateStarter",
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
 				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_LOCATE_FAILED:
 			// remember, this means we couldn't even find the address
 			// of the startd, not the starter.  we already know the
 			// startd's addr from the ClaimId...
-		EXCEPT( "impossible: startd address already known" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_SUCCESS:
-		EXCEPT( "impossible: success already handled" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_UNKNOWN_ERROR:
-		EXCEPT( "impossible: Unknown error code from startd" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 
 	}
@@ -2589,18 +2597,25 @@ RemoteResource::requestReconnect( void )
 		case CA_INVALID_STATE:
 		case CA_INVALID_REQUEST:
 		case CA_INVALID_REPLY:
-			EXCEPT( "impossible: starter returned %s for %s",
-					getCAResultString(dc_startd->errorCode()),
-					getCommandString(CA_RECONNECT_JOB) );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		case CA_LOCATE_FAILED:
 				// we couldn't even find the address of the starter, but
 				// we already know it or we wouldn't be trying this
 				// method...
-			EXCEPT( "impossible: starter address already known" );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		case CA_SUCCESS:
-			EXCEPT( "impossible: success already handled" );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		}
 	}

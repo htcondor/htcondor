@@ -304,29 +304,19 @@ init_utsname(void)
 	}
 
 	utsname_sysname = strdup( buf.sysname );
-	if( !utsname_sysname ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_sysname);
 
 	utsname_nodename = strdup( buf.nodename );
-	if( !utsname_nodename ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_nodename);
 
 	utsname_release = strdup( buf.release );
-	if( !utsname_release ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_release);
 
 	utsname_version = strdup( buf.version );
-	if( !utsname_version ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_version);
 
 	utsname_machine = strdup( buf.machine );
-	if( !utsname_machine ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(utsname_machine);
         
 	if ( utsname_sysname && utsname_nodename && utsname_release ) {
 		utsname_inited = true;
@@ -343,14 +333,10 @@ init_arch(void)
 	}
 
 	uname_arch = strdup( buf.machine );
-	if( !uname_arch ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(uname_arch);
 
 	uname_opsys = strdup( buf.sysname );
-	if( !uname_opsys ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(uname_opsys);
 
 	// 02-14-2012 bgietzel
 	// New section for determining OpSys related params
@@ -493,9 +479,7 @@ sysapi_get_darwin_info(void)
     snprintf( tmp_info, sizeof(tmp_info), "%s%d.%d", os_name, major, minor);
     opsys_long_name = strdup( tmp_info );
 
-    if( !opsys_long_name ) {
-    	EXCEPT( "Out of memory!" );
-    }
+	ASSERT(opsys_long_name);
 
 	opsys_major_version = major;
 
@@ -522,9 +506,7 @@ sysapi_get_darwin_info(void)
 
 	opsys_name = strdup(osname);
 
-	if (!opsys_name) {
-		EXCEPT("Out of memory!");
-	}
+	ASSERT(opsys_name);
 }
 
 #elif defined( CONDOR_FREEBSD )
@@ -538,9 +520,7 @@ sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release)
     snprintf( tmp_info, sizeof(tmp_info), "%s%s", tmp_opsys_short_name, tmp_release);
     info_str = strdup( tmp_info );
 
-    if( !info_str ) {
-    	EXCEPT( "Out of memory!" );
-    }
+	ASSERT(info_str);
 
     return info_str;
 }
@@ -632,9 +612,7 @@ sysapi_get_linux_info(void)
 		info_str = strdup( "Unknown" );
 	}
 
-	if( !info_str ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(info_str);
 
 	return info_str;
 }
@@ -709,10 +687,8 @@ sysapi_find_linux_name( const char *info_str )
 	{
                 distro = strdup("LINUX");
  	}
-	
-  	if( !distro ) {
-                EXCEPT( "Out of memory!" );
-        }
+
+	ASSERT(distro);
 	free( distro_name_lc );
 	return distro;
 }
@@ -787,9 +763,7 @@ sysapi_get_unix_info( const char *sysname,
         }
 
 	tmpopsys = strdup( tmp );
-	if( !tmpopsys ) {
-		EXCEPT( "Out of memory!" );
-	}
+	ASSERT(tmpopsys);
 	return( tmpopsys );
 }
 
@@ -833,10 +807,8 @@ sysapi_find_opsys_versioned( const char *tmp_opsys, int tmp_opsys_major_version 
         snprintf( tmp_opsys_versioned, sizeof(tmp_opsys_versioned), "%s%d", tmp_opsys, tmp_opsys_major_version);
 
 	my_opsys_versioned = strdup( tmp_opsys_versioned );
-        if( !my_opsys_versioned ) {
-                EXCEPT( "Out of memory!" );
-        }
-        return my_opsys_versioned;
+	ASSERT(my_opsys_versioned);
+	return my_opsys_versioned;
 }
 
 int

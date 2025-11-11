@@ -90,7 +90,7 @@ public:
 				       config[i::MetricsVersion]);
 		}
 
-		if ( ! metrics) { EXCEPT("ERROR: out of memory!"); }
+		ASSERT(metrics);
 	}
 	void ReportMetrics(const int exitCode);
 	void LocateSchedd();

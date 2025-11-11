@@ -53,6 +53,7 @@ public:
 
 	const char* GetNodeName();
 	inline const char* GetCmd() const { return _cmd.c_str(); }
+	inline const char* GetExecuted() const { return _executedCMD.c_str(); }
 
 	Node* GetNode() { return _node; }
 	inline void SetNode(Node* node) { _node = node; }

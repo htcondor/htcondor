@@ -914,7 +914,7 @@ void main_init(int argc, char ** const argv) {
 	// wenger 2010-03-25
 	dagman.dag = new Dag(dagman); /* toplevel dag! */
 
-	if ( ! dagman.dag) { EXCEPT("ERROR: out of memory!"); }
+	ASSERT(dagman.dag);
 
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan

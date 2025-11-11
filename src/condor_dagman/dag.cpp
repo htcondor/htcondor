@@ -72,9 +72,8 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 
 	_readyQ = new DagPriorityQ;
 	_submitQ = new std::queue<Node*>;
-	if (!_readyQ || !_submitQ) {
-		EXCEPT("ERROR: out of memory (%s:%d)!", __FILE__, __LINE__);
-	}
+	ASSERT(_readyQ);
+	ASSERT(_submitQ);
 
 	/* The ScriptQ object allocates daemoncore reapers, which are a
 		regulated and precious resource. Since we *know* we will never need
@@ -85,9 +84,9 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 		_preScriptQ = new ScriptQ(this);
 		_postScriptQ = new ScriptQ(this);
 		_holdScriptQ = new ScriptQ(this);
-		if (!_preScriptQ || !_postScriptQ) {
-			EXCEPT("ERROR: out of memory (%s:%d)!", __FILE__, __LINE__);
-		}
+		ASSERT(_preScriptQ);
+		ASSERT(_postScriptQ);
+		ASSERT(_holdScriptQ);
 	}
 
 	debug_printf(DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, MaxPreScripts = %d, MaxPostScripts = %d\n",
