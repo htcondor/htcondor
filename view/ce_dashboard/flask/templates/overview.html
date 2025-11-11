@@ -30,7 +30,7 @@
  * Util to format graph query strings by replacing newlines between parameters with '&' characters, 
  * and escaping '%' characters.
  */
-function fmtGraphQuery(query) {
+function urlEscapeGraphQuery(query) {
     return query.replace(/\n\s*/g,'&').replace(/^\&|\&$/,'').replace(/%/g, '%25');
 }
 </script>
@@ -51,7 +51,7 @@ Contribution of compute capacity from the
                         dst_id: "table-now",
 						has_fullscreen_link: false,
 						data_url: "/data/ce_overview?r=day",
-						graph_query: fmtGraphQuery(`
+						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             limit=lastDate
                             filter=Cpus>0
@@ -82,7 +82,30 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: fmtGraphQuery(`
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=Cpus
+                                        order=Date
+                                        pivot=Date;Project;Cpus
+                                        legend.position=in
+                                        add=CpusAllocated,CpusUnallocated,CpusContributed
+                                        unselect=CpusUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                   `)
+			                    });
+			                </script>
+			</div>
+            <div class="col-6 htcv-col-6" id="cpu-by-project2">
+			                <script>
+			                    new HTCondorView({
+			                       dst_id: "cpu-by-project2",
+			                       title: "Memory Past Week (in GBs)",
+			                       data_url: "/data/ce_overview?r=week",
+			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
                                         q=MemoryAllocated,MemoryUnallocated
@@ -101,16 +124,6 @@ Contribution of compute capacity from the
 			                    });
 			                </script>
 			</div>
-            <div class="col-6 htcv-col-6" id="cpu-by-project2">
-			                <script>
-			                    new HTCondorView({
-			                       dst_id: "cpu-by-project2",
-			                       title: "Memory Past Week (in GBs)",
-			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=MemoryAllocated,MemoryUnallocated&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
-			                    });
-			                </script>
-			</div>
         </div>
 
 		<div class="row">
@@ -120,7 +133,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: fmtGraphQuery(`
+			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
                                         q=DiskAllocated,DiskUnallocated
@@ -143,7 +156,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project4",
 			                       title: "BCUs Past Week (1core/4GB Mem/4GB Disk)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: fmtGraphQuery(`
+			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
                                         q=Bcus
@@ -169,7 +182,7 @@ Contribution of compute capacity from the
                         dst_id: "col-chart",
                         title: "Groups Served per Day",
 						data_url: "/data/ce_overview?r=week",
-						graph_query: fmtGraphQuery(`
+						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             filter=Cpus>0
                             extract_regexp=Date=-(.*) .*
@@ -192,7 +205,7 @@ Contribution of compute capacity from the
                         dst_id: "cpu-by-day",
                         title: "CPU (l), Memory (r), Disk (r) Allocated per Day",
 						data_url: "/data/ce_overview?r=week",
-						graph_query: fmtGraphQuery(`
+						graph_query: urlEscapeGraphQuery(`
                             vAxis.maxValue=3
                             filter=Type=R
                             q=Allocated
@@ -238,7 +251,7 @@ Contribution of compute capacity from the
                         dst_id: "glidein-limits",
                         title: "Maximum Concurrent Resource-Limited Glideins per Day",
 						data_url: "/data/ce_overview?r=week",
-                        graph_query: fmtGraphQuery(`
+                        graph_query: urlEscapeGraphQuery(`
                             filter=Type=R
                             q=EPs
                             group=Date;EPsCpuLimited,EPsMemoryLimited,EPsDiskLimited,EPsRunning
@@ -278,7 +291,7 @@ Contribution of compute capacity from the
                         dst_id: "pie-by-project",
                         title: "CPU Allocation Percentage by Project",
 						data_url: "/data/ce_overview",
-						graph_query: fmtGraphQuery(`
+						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             group=Project;Cpus
                             filter=Cpus>0
@@ -288,7 +301,7 @@ Contribution of compute capacity from the
                             tooltip.isHtml=false
                             sliceVisibilityThreshold=0
                         `),
-						table_query: fmtGraphQuery(`
+						table_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             group=Project,Field,Organization;avg(Cpus),max(Cpus)
                             filter=maxCpus>0
