@@ -6856,6 +6856,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// file ads if any file-specific plugin data was specified.
 	//
 	if( plugin.protocol_version == 3 ) {
+		// FIXME
+/*
 		ClassAd nonfile_ad;
 		nonfile_ad.InsertAttr( "NonFile", true );
 		// `CopyAttribute()` uses the `strcpy()` order, not the `cp` order.
