@@ -6855,6 +6855,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// For protocol version 3, insert some "nonfile" ads and adjust the
 	// file ads if any file-specific plugin data was specified.
 	//
+	// The insert()s in this loop will be wildly inefficient, but we should
+	// be able to make sure that we only copy once with a little bit of care.
+	//
 	if( plugin.protocol_version == 3 ) {
 		// FIXME
 /*
@@ -6862,10 +6865,20 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		nonfile_ad.InsertAttr( "NonFile", true );
 		// `CopyAttribute()` uses the `strcpy()` order, not the `cp` order.
 		CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
-
 		pluginInputAds.insert( pluginInputAds.begin(), nonfile_ad );
 
-		// ...
+		for( const auto & schema : schemes ) {
+			std::string attrName;
+			formatstr( attrName, "%s_PluginData", schema.c_str() );
+			ExprTree * e = this->_fix_me_copy_.Lookup( attrName );
+			if(e == NULL) { continue; }
+
+			ClassAd schema_ad;
+			schema_ad.InsertAttr( "NonFile", true );
+			schema_ad.InsertAttr( "Protocol", schema );
+			CopyAttribute( attrName.c_str(), schema_ad, this->_fix_me_copy_ );
+			pluginInputAds.insert( pluginInputAds.begin(), schema_ad );
+		}
 	}
 
 
