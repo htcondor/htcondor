@@ -88,7 +88,7 @@ Types of Releases
    %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': 'lts 23'}} }%%
    gitGraph LR:
     commit tag:"23.0.1"
-    branch "feature 23.x" order:2
+    branch "feature 23.x"
     commit tag:"23.1.0"
     commit tag:"23.1.1"
     checkout "lts 23"
@@ -97,14 +97,14 @@ Types of Releases
     merge "lts 23"
     commit tag:"23.2.0"
     commit tag:"23.2.1"
-    branch "lts 24" order:4
+    branch "lts 24"
     commit tag:"24.0.1"
-    branch "feature 24.x" order:5
+    branch "feature 24.x"
     commit tag:"24.1.0"
     commit tag:"24.1.1"
     checkout "lts 23"
     commit tag:"23.0.13"
-    branch "lts 23.x" order:3
+    branch "lts 23.x"
     commit tag:"23.12.13"
     checkout "lts 24"
     merge "lts 23.x"
