@@ -33,6 +33,7 @@
 
 #define USE_STARTD_LATCHES 1
 
+enum class ResourceLockType;
 class BrokenItem;
 
 class SlotType
@@ -280,7 +281,9 @@ public:
 	void	starterExited( Claim* cur_claim );
 
 		// save context for broken slots, this will take ownership of the job classad
-	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job, ResourceLockType lock);
+	void	remove_broken_context();
+	void	restore_broken_resources(const ResBag& broken, const int sub_id);
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
@@ -457,6 +460,7 @@ public:
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
+	unsigned int		r_broken_id{0}; // Reference ID for broken item slot is associated with
 
 	unsigned int type_id( void ) { return r_attr->type_id(); };
 

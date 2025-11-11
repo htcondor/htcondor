@@ -164,6 +164,7 @@ enum ULogEPEventNumber {
 	ULOG_EP_VACATE_CLAIM     = ULOG_EP_FIRST + 8,
 	ULOG_EP_DRAIN            = ULOG_EP_FIRST + 9,
 	ULOG_EP_RESOURCE_BREAK   = ULOG_EP_FIRST + 10,
+	ULOG_EP_RESOURCE_MEND    = ULOG_EP_FIRST + 11,
 	// when you add an event, also update ULogEPEventNumberNames, EPEventTypeNames,
 	ULOG_EP_FUTURE_EVENT
 };

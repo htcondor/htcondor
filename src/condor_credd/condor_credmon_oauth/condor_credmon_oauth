@@ -61,6 +61,13 @@ def signal_handler(logger, send_queue, signum, frame):
 
 def main():
 
+    # As of python 3.14, the default start method for multiprocessing
+    # on Unix systems is 'forkserver', which breaks the credmon,
+    # because we assume that environment variables and the 
+    # htcondor config knob settings are inherited by child processes.
+    # So we explicitly set it back to 'fork'.
+    multiprocessing.set_start_method('fork')
+
     # Set up logging and the credential directory
     args = parse_args()
     htcondor.set_subsystem(args.daemon_name, htcondor.SubsystemType.Daemon)

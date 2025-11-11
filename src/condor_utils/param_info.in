@@ -4615,12 +4615,6 @@ version=7.7.5
 type=string
 tags=starter
 
-[NAMED_CHROOT]
-default=
-version=7.7.5
-type=string
-tags=starter
-
 [MEMORY_USAGE_METRIC]
 default=((ResidentSetSize+1023)/1024)
 version=7.7.6

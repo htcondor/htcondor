@@ -3816,7 +3816,7 @@ prevent the job from using more scratch space than provisioned.
         Docker and VM Universe jobs are not compatible with mount namespaces.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
-    A boolean value that defaults to ``False``. When ``True`` EP slots
+    A boolean value that defaults to ``True``. When ``True`` EP slots
     will be marked as broken if the associated ephemeral logical volume
     is failed to be cleaned up.
 
@@ -6525,14 +6525,6 @@ These settings affect the *condor_starter*.
     has no effect on the result.  For backward compatibility a single value of ``True`` behaves as if the value
     was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
-:macro-def:`NAMED_CHROOT[STARTER]`
-    A comma and/or space separated list of full paths to one or more
-    directories, under which the *condor_starter* may run a chroot-ed
-    job. This allows HTCondor to invoke chroot() before launching a job,
-    if the job requests such by defining the job ClassAd attribute
-    :ad-attr:`RequestedChroot` with a directory that matches one in this list.
-    There is no default value for this variable.
-
 :macro-def:`STARTER_UPLOAD_TIMEOUT[STARTER]`
     An integer value that specifies the network communication timeout to
     use when transferring files back to the access point. The default
@@ -8681,6 +8673,26 @@ These macros affect the *condor_job_router* daemon.
     *condor_job_router* does not attempt to reset the original job
     ClassAd to a pre-claimed state upon yielding control of the job.
 
+:macro-def:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE[JOB ROUTER]`
+    The path to the address file file for the *condor_schedd*
+    serving as the source of jobs for routing.  If specified,
+    this must point to the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
+    When configured, the *condor_job_router* will first look in this
+    address file to get the address of the source schedd and will only
+    query the collector specified in :macro:`JOB_ROUTER_SCHEDD1_POOL`
+    if it does not find an address in that file.
+
+:macro-def:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the destination of jobs for routing.  If specified,
+    this must point to the the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHED2_NAME`.
+    When configured, the *condor_job_router* will first look in this
+    address file to get the address of the destination schedd and will only
+    query the collector specified in :macro:`JOB_ROUTER_SCHEDD2_POOL`
+    if it does not find an address in that file.
+
 :macro-def:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG[JOB ROUTER]`
     The path to the job_queue.log file for the *condor_schedd*
     serving as the source of jobs for routing.  If specified,
@@ -8893,6 +8905,16 @@ General
     The path to the configuration file to be used by :tool:`condor_dagman`.
     This option is set by :tool:`condor_submit_dag` automatically and should not be
     set explicitly by the user. Defaults to an empty string.
+
+:macro-def:`DAGMAN_USE_OLD_FILE_PARSER[DAGMan]`
+    A boolean that defaults to ``False``, when ``True`` *condor_dagman* will use
+    the old file parser to process DAG files.
+
+.. note::
+
+    This option is intended to be a fall back to the known working DAG file parser
+    while transitioning to the new style parser. This will be deprecated in the
+    future.
 
 :macro-def:`DAGMAN_USE_STRICT[DAGMan]`
     An integer defining the level of strictness :tool:`condor_dagman` will

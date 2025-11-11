@@ -1271,8 +1271,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// Now that we got this far and have the correct name, see
 			// if that matches the name for the local daemon.  
 			// If we were given a pool, never assume we're local --
-			// always try to query that pool...
-		if( ! _pool.empty() ) {
+			// always try to query that pool..., unless an address file was
+			// also specified, then first look in the address file.
+		if (specified_address_file()) {
+			_is_local = true; // try the address file first
+			dprintf( D_HOSTNAME, "Address file was specified, will try that first\n" );
+		} else if( ! _pool.empty() ) {
 			dprintf( D_HOSTNAME, "Pool was specified, "
 					 "forcing collector query\n" );
 		} else {
@@ -1309,12 +1313,17 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		// address of the daemon in question.
 
 	if( _is_local ) {
-		bool foundLocalAd = readLocalClassAd( _subsys.c_str() );
-		// need to read the address file if we failed to
-		// find a local ad, or if we desire to use the super port
-		// (because the super port info is not included in the local ad)
-		if(!foundLocalAd || useSuperPort()) {
-			readAddressFile( _subsys.c_str() );
+		// need to read the address file if an address file was specified
+		// or if we desire to use the super port. (super port info is not included in the local ad)
+		if (specified_address_file() || useSuperPort()) {
+			readAddressFile(_subsys.c_str());
+		} else {
+			// we get more info from a local classad, so try that first
+			bool foundLocalAd = readLocalClassAd( _subsys.c_str() );
+			// no local ad, so go ahead an look for an address file.
+			if ( ! foundLocalAd) {
+				readAddressFile( _subsys.c_str() );
+			}
 		}
 	}
 
@@ -1851,6 +1860,11 @@ Daemon::readAddressFile( const char* subsys )
 		formatstr( param_name, "%s_SUPER_ADDRESS_FILE", subsys );
 		use_superuser = true;
 		addr_file.set(param(param_name.c_str()));
+	}
+	if ( ! _specified_address_file.empty()) {
+		use_superuser = false;
+		addr_file.set(strdup(_specified_address_file.c_str()));
+		param_name = "specified address file";
 	}
 	if ( ! addr_file ) {
 		formatstr( param_name, "%s_ADDRESS_FILE", subsys );

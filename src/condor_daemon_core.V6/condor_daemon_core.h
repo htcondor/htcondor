@@ -459,8 +459,7 @@ class DaemonCore : public Service
 	 * Typically these methods are invoked from functions inside 
 	 * of daemon_core_main.C.
 	 */
-    DaemonCore (int ComSize = 0, int SigSize = 0,
-                int SocSize = 0, int ReapSize = 0);
+    DaemonCore ();
     ~DaemonCore();
     void Driver();
 
@@ -1900,10 +1899,9 @@ class DaemonCore : public Service
 		std::shared_ptr<SafeSock> ssock() { return m_ssock; }
 
 		// Associate a ReliSock or SafeSock with this SockPair. Does nothing
-		// if one is already associated. b must always be true and always
-		// returns true.
-		bool has_relisock(bool b);
-		bool has_safesock(bool b);
+		// if one is already associated.
+		void add_relisock();
+		void add_safesock();
 	private:
 		std::shared_ptr<ReliSock> m_rsock;	// tcp command socket
 		std::shared_ptr<SafeSock> m_ssock;	// udp command socket

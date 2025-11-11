@@ -420,10 +420,8 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 		return true;
 	}
 
-	if ( submitsAllowed.size() < jobLimit &&
-		 submitsWanted.size() > 0 ) {
-		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full",resourceName);
-	}
+	// If submitsAllowed is under jobLimit, then submitsWanted must be empty
+	ASSERT(submitsAllowed.size() >= jobLimit || submitsWanted.size() == 0);
 	if ( submitsAllowed.size() < jobLimit ) {
 		submitsAllowed.insert(job);
 		SetJobPollInterval();
@@ -735,9 +733,7 @@ void BaseResource::DoUpdateSharedLease( unsigned& update_delay,
 
 void BaseResource::StartBatchStatusTimer()
 {
-	if(m_batchPollTid != TIMER_UNSET) {
-		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
-	}
+	ASSERT(m_batchPollTid == TIMER_UNSET);
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());
 	m_batchPollTid = daemonCore->Register_Timer( 0,
 		(TimerHandlercpp)&BaseResource::DoBatchStatus,
