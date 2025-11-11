@@ -40,21 +40,21 @@ TEST_CASES = {
     "true": {
         "config": {
             "CLAIM_WORKLIFE":           0,
-            "REACTIVATE_ON_RESTART":    "TRUE",
+            "CHECK_REACTIVATE_AFTER_CHECKPOINT":    "TRUE",
         },
         "expected": True,
     },
     "true_but_useless": {
         "config": {
             "CLAIM_WORKLIFE":           999999,
-            "REACTIVATE_ON_RESTART":    "TRUE",
+            "CHECK_REACTIVATE_AFTER_CHECKPOINT":    "TRUE",
         },
         "expected": False,
     },
     "false": {
         "config": {
             "CLAIM_WORKLIFE":           0,
-            "REACTIVATE_ON_RESTART":    "FALSE",
+            "CHECK_REACTIVATE_AFTER_CHECKPOINT":    "FALSE",
         },
         "expected": False,
     },
@@ -62,7 +62,7 @@ TEST_CASES = {
         "config": {
             "CLAIM_WORKLIFE":           0,
             # This can't be completely unset because it inherits from places.
-            "REACTIVATE_ON_RESTART":    "",
+            "CHECK_REACTIVATE_AFTER_CHECKPOINT":    "",
         },
         "expected": False,
     }
