@@ -85,9 +85,9 @@ Types of Releases
 
 .. mermaid::
 
-   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': '23'}} }%%
+   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': 'lts 23'}} }%%
    gitGraph LR:
-    ucommit tag:"23.0.1"
+    commit tag:"23.0.1"
     branch "feature 23.x" order:2
     commit tag:"23.1.0"
     commit tag:"23.1.1"
