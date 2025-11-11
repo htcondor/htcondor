@@ -2398,9 +2398,9 @@ FileTransfer::DoDownload(ReliSock *s)
 	bool isDeferredTransfer = false;
 	classad::ClassAdUnParser unparser;
 #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-	std::map<int, std::string> deferredTransfers;
+	std::map<int, std::vector<ClassAd>> deferredTransfers;
 #else
-	std::map<std::string, std::string> deferredTransfers;
+	std::map<std::string, std::vector<ClassAd>> deferredTransfers;
 #endif
 	std::unique_ptr<classad::ClassAd> thisTransfer( new classad::ClassAd() );
 
@@ -3098,22 +3098,22 @@ FileTransfer::DoDownload(ReliSock *s)
 					thisTransfer->Clear();
 					thisTransfer->InsertAttr( "Url", URL );
 					thisTransfer->InsertAttr( "LocalFileName", fullname );
-					std::string thisTransferString;
-					unparser.Unparse( thisTransferString, thisTransfer.get() );
 
 					// Add this result to our deferred transfers map.
 				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-					auto found = deferredTransfers.emplace(plugin.id, thisTransferString);
+					auto found = deferredTransfers.emplace(plugin.id, * thisTransfer.get());
 					if ( ! found.second) {
 						// key already existed, so append the new transfer string
 						found.first->second += thisTransferString;
 					}
 				#else
 					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
-						deferredTransfers.insert( std::pair<std::string, std::string>( pluginPath, thisTransferString ) );
+						std::vector<ClassAd> entry;
+						entry.push_back(* thisTransfer);
+						deferredTransfers.insert( std::make_pair( pluginPath, entry ) );
 					}
 					else {
-						deferredTransfers[pluginPath] += thisTransferString;
+						deferredTransfers[pluginPath].push_back( * thisTransfer );
 					}
 				#endif
 
@@ -4050,7 +4050,7 @@ FileTransfer::InvokeMultiUploadPlugin(
 	int &exit_code,
 	bool &exit_by_signal,
 	int &exit_signal,
-	const std::string &input,
+	std::vector<ClassAd> & pluginInputAds,
 	ReliSock &sock,
 	bool send_trailing_eom,
 	CondorError &err,
@@ -4059,7 +4059,7 @@ FileTransfer::InvokeMultiUploadPlugin(
 	std::vector<ClassAd> resultAds;
 	auto result = InvokeMultipleFileTransferPlugin(
 		err, exit_code, exit_by_signal, exit_signal,
-		plugin, input, resultAds,
+		plugin, pluginInputAds, resultAds,
 		LocalProxyName.c_str(), true
 	);
 
@@ -4951,7 +4951,7 @@ FileTransfer::uploadFileList(
 
 	// Aggregate multiple file uploads; we will upload them all at once
 	int currentUploadPluginId = -1;
-	std::string currentUploadRequests;
+	std::vector<ClassAd> currentUploadRequests;
 
 	// use an error stack to keep track of failures when invoke plugins,
 	// perhaps more of this can be instrumented with it later.
@@ -5171,7 +5171,7 @@ FileTransfer::uploadFileList(
 				}
 			}
 			currentUploadPluginId = -1;
-			currentUploadRequests = "";
+			currentUploadRequests.clear();
 			currentUploadDeferred = 0;
 		}
 
@@ -5341,10 +5341,8 @@ FileTransfer::uploadFileList(
 					ClassAd xfer_ad;
 					xfer_ad.InsertAttr( "Url", local_output_url );
 					xfer_ad.InsertAttr( "LocalFileName", fullname );
-					std::string xfer_str;
-					unparser.Unparse( xfer_str, &xfer_ad );
 
-					currentUploadRequests += xfer_str;
+					currentUploadRequests.push_back(xfer_ad);
 					currentUploadDeferred ++;
 
 					// If we cannot defer uploads, we must execute the plugin now -- with one file.
@@ -5361,7 +5359,7 @@ FileTransfer::uploadFileList(
 						);
 
 						currentUploadPluginId = -1;
-						currentUploadRequests = "";
+						currentUploadRequests.clear();
 						currentUploadDeferred = 0;
 
 						if( result == TransferPluginResult::Success ) {
@@ -6753,7 +6751,7 @@ TransferPluginResult
 FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			int & exit_status, bool & exit_by_signal, int & exit_signal,
 			FileTransferPlugin & plugin,
-			const std::string &tfs,
+			std::vector<ClassAd> & pluginInputAds,
 			std::vector<ClassAd> & resultAds,
 			const char* proxy_filename, bool do_upload ) {
 
@@ -6838,15 +6836,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 
 	//
-	// FIXME: We should really refactor the transfer_files_string parameter
-	// into a list of ClassAds.
+	// For protocol version 3, insert some "nonfile" ads and adjust the
+	// file ads if any file-specific plugin data was specified.
 	//
-
-	//
-	// For protocol version 3, insert a "nonfile" ad at the beginning.
-	//
-	std::string transfer_files_string;
 	if( plugin.protocol_version == 3 ) {
+		// FIXME
+/*
 		ClassAd nonfile_ad;
 		nonfile_ad.InsertAttr( "NonFile", true );
 		// `CopyAttribute()` uses the `strcpy()` order, not the `cp` order.
@@ -6855,8 +6850,15 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		classad::ClassAdUnParser unparser;
 		unparser.Unparse( transfer_files_string, & nonfile_ad );
 		transfer_files_string += tfs;
-	} else {
-		transfer_files_string = tfs;
+*/
+	}
+
+	std::string transfer_files_string;
+	for( const auto & classAd : pluginInputAds ) {
+		std::string buffer;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( buffer, & classAd );
+		transfer_files_string += buffer;
 	}
 
 
@@ -7827,9 +7829,8 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	classad::ClassAd testAd;
 	testAd.InsertAttr("Url", test_url);
 	testAd.InsertAttr("LocalFileName", fullname);
-	std::string testAdString;
-	classad::ClassAdUnParser unparser;
-	unparser.Unparse(testAdString, &testAd);
+	std::vector<ClassAd> pluginInputAds;
+	pluginInputAds.push_back(testAd);
 
 	std::vector<ClassAd> resultAds;
 	CondorError err;
@@ -7838,7 +7839,7 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	int exit_signal = 0;
 	auto result = InvokeMultipleFileTransferPlugin(
 		err, exit_code, exit_by_signal, exit_signal,
-		plugin, testAdString, resultAds,
+		plugin, pluginInputAds, resultAds,
 		nullptr, false
 	);
 	if (result != TransferPluginResult::Success) {

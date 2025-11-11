@@ -490,14 +490,16 @@ class FileTransfer final: public Service {
 
 	TransferPluginResult InvokeMultipleFileTransferPlugin(
 		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
-		FileTransferPlugin & plugin, const std::string &transfer_files_string,
+		FileTransferPlugin & plugin,
+		std::vector<ClassAd> & pluginInputAds,
 		std::vector<ClassAd> & resultAds,
 		const char* proxy_filename, bool do_upload
 	);
 	TransferPluginResult InvokeMultiUploadPlugin(
 		FileTransferPlugin & plugin,
 		int &exit_code, bool &exit_by_signal, int &exit_signal,
-		const std::string &transfer_files_string, ReliSock &sock,
+		std::vector<ClassAd> & pluginInputAds,
+		ReliSock &sock,
 		bool send_trailing_eom, CondorError &err, long long &upload_bytes
 	);
 
