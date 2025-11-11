@@ -227,7 +227,7 @@ logPythonException() {
 
 #include "dc_coroutines.h"
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 call_command_handler( Snake * snake, const char * which_python_function,
              int command, ReliSock * sock );
 
@@ -285,7 +285,7 @@ invoke_next_command_string(
 );
 
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 call_command_handler(
   Snake * snake, const char * which_python_function,
   int command, ReliSock * r
@@ -625,7 +625,7 @@ Snake::CallUpdateDaemonAd( const std::string & genus ) {
 }
 
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 call_polling_handler( const char * which_python_function, int which_signal );
 
 
@@ -645,7 +645,7 @@ GetItemStringWithError( PyObject * dict, const char * key ) {
 }
 
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 call_polling_handler( const char * which_python_function, int which_signal ) {
     ASSERT(which_python_function != NULL );
     ASSERT(which_signal != -1);
