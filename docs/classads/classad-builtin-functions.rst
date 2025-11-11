@@ -692,7 +692,7 @@ string.
 :classad-function-def:`Integer stringListSize(String list [ , String delimiter ])`
     Returns the number of elements in the string ``list``, as delimited
     by the optional ``delimiter`` string. Returns ``ERROR`` if either
-    argument is not a string.
+    argument is not a string, or ``UNDEFINED``
 
     This function returns ``ERROR`` if other than 1 or 2 arguments are
     given. 
@@ -734,7 +734,8 @@ string.
     Returns ``TRUE`` if item ``x`` is in the string ``list``, as
     delimited by the optional ``delimiter`` string. Returns ``FALSE`` if
     item ``x`` is not in the string ``list``. Comparison is done with
-    ``strcmp()``. The return value is ``ERROR``, if any of the arguments
+    ``strcmp()``. An ``UNDEFINED`` value compares to ``false``,
+    otherwise, the return value is ``ERROR``, if any of the arguments
     are not strings.
 
 :classad-function-def:`Boolean stringListIMember(String x, String list [ , String delimiter ])`
