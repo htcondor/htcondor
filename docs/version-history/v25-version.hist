@@ -1,3 +1,9 @@
+*** 25.0.5 features
+
+- *condor_submit* will now report an error when :subcom:`output_destination` is
+  not a URL and suggest an alternative.
+  :jira:`3385`
+
 *** 25.0.5 bugs
 
 *** 25.0.3 bugs
