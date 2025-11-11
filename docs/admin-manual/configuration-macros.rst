@@ -8685,7 +8685,7 @@ These macros affect the *condor_job_router* daemon.
     The path to the job_queue.log file for the *condor_schedd*
     serving as the destination of jobs for routing.  If specified,
     this must point to the the file configured as :macro:`SCHEDD_ADDRESS_FILE`
-    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHED2_NAME`.
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD2_NAME`.
     When configured, the *condor_job_router* will first look in this
     address file to get the address of the destination schedd and will only
     query the collector specified in :macro:`JOB_ROUTER_SCHEDD2_POOL`

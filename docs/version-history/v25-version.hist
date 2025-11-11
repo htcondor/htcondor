@@ -75,7 +75,7 @@
   :jira:`3164`
 
 - The *condor_schedd* can now limit the number of running jobs on a per-user basis.
-  The *condor_schedd* will not allow more jobs than the :ad-attr:`MaxJobsRunnng` in
+  The *condor_schedd* will not allow more jobs than the :ad-attr:`MaxJobsRunning` in
   the user record to begin running.
   :jira:`3325`
 
