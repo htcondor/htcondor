@@ -83,33 +83,32 @@ Types of Releases
 
 .. mermaid::
 
-   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': '23'}} }%%
+   %%{init: { 'gitGraph': {'showCommitLabel': false, 'mainBranchName': 'lts 23'}} }%%
    gitGraph LR:
-    commit tag: "23.0.1 LTS"
-    branch "23.x" order: 1
+    commit tag: "23.0.1"
+    branch "feature 23.x" order: 1
     commit tag: "23.1.0"
     commit tag: "23.1.1"
-    checkout "23"
-    commit tag: "23.0.2 LTS"
-    checkout "23.x"
-    merge "23"
+    checkout "lts 23"
+    commit tag: "23.0.2"
+    checkout "feature 23.x"
+    merge "lts 23"
     commit tag: "23.2.0"
     commit tag: "23.2.1"
-    branch "24" order: 2
-    commit tag: "24.0.1 LTS"
-    branch "24.x" order: 3
+    branch "lts 24" order: 3
+    commit tag: "24.0.1"
+    branch "feature 24.x" order: 4
     commit tag: "24.1.0"
     commit tag: "24.1.1"
-    checkout "23"
-    commit tag: "23.0.13 LTS"
-    checkout "23.x"
-    merge "23"
-    commit tag: "23.12.13 LTS"
-    checkout "24"
-    merge "23.x"
-    commit tag: "24.0.2 LTS"
-    checkout "24.x"
-    merge "24"
+    checkout "lts 23"
+    commit tag: "23.0.13"
+    branch "lts 23.x" order: 2
+    commit tag: "23.12.13"
+    checkout "lts 24"
+    merge "lts 23.x"
+    commit tag: "24.0.2"
+    checkout "feature 24.x"
+    merge "lts 24"
     commit tag: "24.2.0"
     commit tag: "24.2.1"
 
