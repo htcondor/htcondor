@@ -734,8 +734,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_cluster_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_cluster_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_cluster_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_cluster_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -748,8 +748,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_machine_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_machine_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_machine_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_machine_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -762,8 +762,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_ip_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_ip_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_ip_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_ip_expr.c_str());
 		}
 		// The classad takes ownership of expr

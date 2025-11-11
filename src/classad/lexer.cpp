@@ -480,7 +480,7 @@ tokenizeAlphaHead (void)
 				yylval.boolValue = true;;
 			} else if (strcasecmp(lexBuffer.c_str(), "isnt") == 0) {
 				tokenType = LEX_META_NOT_EQUAL;
-			} else if (jsonLex && (strcasecmp(lexBuffer.c_str(), "null"))) {
+			} else if (jsonLex && (strcasecmp(lexBuffer.c_str(), "null") == 0)) {
 				tokenType = LEX_UNDEFINED_VALUE;
 			} else {
 				tokenType = LEX_IDENTIFIER;

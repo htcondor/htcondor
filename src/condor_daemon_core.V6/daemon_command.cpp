@@ -295,8 +295,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			auto sess_itr = m_sec_man->session_cache->find(sess_id);
-			if (sess_itr == m_sec_man->session_cache->end()) {
+			auto sess_itr = m_sec_man->session_cache.find(sess_id);
+			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
@@ -390,8 +390,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			auto sess_itr = m_sec_man->session_cache->find(sess_id);
-			if (sess_itr == m_sec_man->session_cache->end()) {
+			auto sess_itr = m_sec_man->session_cache.find(sess_id);
+			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
@@ -723,8 +723,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				m_auth_info.Delete(ATTR_SEC_NONCE);
 
 				// lookup the suggested key
-				auto sess_itr = m_sec_man->session_cache->find(m_sid);
-				if (sess_itr == m_sec_man->session_cache->end()) {
+				auto sess_itr = m_sec_man->session_cache.find(m_sid);
+				if (sess_itr == m_sec_man->session_cache.end()) {
 
 					// the key id they sent was not in our cache.  this is a
 					// problem.
@@ -881,6 +881,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
 					m_sock->setTriedAuthentication(tried_authentication);
 					m_sock->setSessionID(session->id());
+					m_sock->setPolicyAd(*m_policy);
 				}
 
 				// If the cached policy doesn't have a version, then
@@ -1472,22 +1473,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					return CommandProtocolFinished;
 				}
 
-				// well, they didn't authenticate, turn on encryption,
-				// or turn on integrity.  check to see if any of those
-				// were required.
+				// Well, they didn't authenticate. See if that was required.
+				// Also, if security negotiation is required, see if they
+				// have a security session.
 
 				if (  (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_NEGOTIATION)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION)
-					   == SecMan::SEC_REQ_REQUIRED)
+					   == SecMan::SEC_REQ_REQUIRED && m_sock->getSessionID().empty())
 				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION_NEW)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_ENCRYPTION)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_INTEGRITY)
 					   == SecMan::SEC_REQ_REQUIRED) ) {
 
-					// yep, they were.  deny.
+					// yep, negotiation or authentication was required and
+					// they didn't do it.  deny.
 
 					dprintf(D_ALWAYS,
 						"DaemonCore: PERMISSION DENIED for %d (%s) via %s%s%s from host %s (access level %s)\n",
@@ -1546,7 +1542,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
-			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			const ClassAd* policy_ad = m_policy ? m_policy : m_sock->getPolicyAd();
+			if (policy_ad && policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
@@ -1799,7 +1796,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		m_sec_man->session_cache->emplace(m_sid, KeyCacheEntry(m_sid, "", keyvec, *m_policy, expiration_time, session_lease));
+		m_sec_man->session_cache.emplace(m_sid, KeyCacheEntry(m_sid, "", keyvec, *m_policy, expiration_time, session_lease));
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid.c_str(), durint, session_lease, return_addr.c_str());
 		if (IsDebugVerbose(D_SECURITY)) {
 			dPrintAd(D_SECURITY, *m_policy);

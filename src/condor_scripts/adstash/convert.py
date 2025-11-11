@@ -19,8 +19,23 @@ import time
 import logging
 from functools import lru_cache
 
-import classad
+import classad2 as classad
 
+
+# Attributes to be used in all projections to condor_history
+REQUIRED_ATTRS = {
+    "ClusterId",
+    "CompletionDate",
+    "EnteredCurrentStatus",
+    "EpochWriteDate",
+    "GlobalJobId",
+    "JobStatus",
+    "JobUniverse",
+    "LastRemoteHost",
+    "MyType",
+    "ProcId",
+    "RemoteHost",
+}
 
 # TEXT_ATTRS should only contain attrs that we want full text search on,
 # otherwise strings are stored as keywords.

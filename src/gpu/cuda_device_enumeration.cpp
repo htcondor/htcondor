@@ -226,6 +226,15 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		cuDeviceGetAttribute(&p->multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, dev);
 		cuDeviceGetAttribute(&p->ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, dev);
 		cudaDriverGetVersion(&p->driverVersion);
+
+		char driver[80];
+		if (nvmlSystemGetDriverVersion) {
+			int res = nvmlSystemGetDriverVersion(driver, 80);
+			if( NVML_SUCCESS == res ) {
+				p->driver = driver;
+			}
+		}
+
 	}
 	return res;
 }
@@ -319,6 +328,8 @@ setNVMLFunctionPointers() {
 	nvmlDeviceGetEccMode =
 		(nvml_get_eccm)dlsym( nvml_handle, "nvmlDeviceGetEccMode" );
 
+	nvmlSystemGetDriverVersion =
+		(nvml_system_get_driver_version)dlsym( nvml_handle, "nvmlSystemGetDriverVersion" );
 	return nvml_handle;
 }
 

@@ -32,9 +32,9 @@ void FileTransferStats::Init() {
     TransferTotalBytes = 0;
     TransferTries = 0;
     ConnectionTimeSeconds = 0;
-	TransferEndTime = 0;
-	TransferStartTime = 0;
-	TransferFileBytes = 0;
+    TransferEndTime = 0;
+    TransferStartTime = 0;
+    TransferFileBytes = 0;
     LibcurlReturnCode = -1;
 }
 
@@ -79,9 +79,11 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
         ad.InsertAttr("TransferUrl", TransferUrl);
     }
 
+
     // The following attributes go into the DeveloperData attribute until
     // such time as we elect to standardize them.
     ClassAd * developerAd = new ClassAd();
+
     if (!HttpCacheHitOrMiss.empty()) {
         developerAd->InsertAttr("HttpCacheHitOrMiss", HttpCacheHitOrMiss);
     }
@@ -90,8 +92,8 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
     if (!HttpCacheHost.empty()) {
         developerAd->InsertAttr("HttpCacheHost", HttpCacheHost);
     }
-    // This is standardized in the urrent TransferErrorData proposal
-    // as `IntermediateServer`.
+    // This is standardized in the current TransferErrorData proposal
+    // as `IntermediateServer`.  It's currently always set incorrectly.
     if (!TransferHostName.empty()) {
         developerAd->InsertAttr("TransferHostName", TransferHostName);
     }
@@ -112,6 +114,17 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
     if(developerAd->size() != 0) {
         ad.Insert( "DeveloperData", developerAd );
     } else {
-		delete developerAd;
-	}
+    	delete developerAd;
+    }
+
+
+    // Generate TransferErrorData.
+    if( TransferErrorData.size() > 0 ) {
+        classad::ExprList * transferErrorDataList = new classad::ExprList();
+        for( const auto & ad : TransferErrorData ) {
+            ClassAd * sigh = new ClassAd(ad);
+            transferErrorDataList->push_back(sigh);
+        }
+        ad.Insert( "TransferErrorData", transferErrorDataList );
+    }
 }

@@ -563,12 +563,7 @@ public:
 			}
 			dprintf(D_ALWAYS,"Failed to start non-blocking update to %s.\n",who);
 			if (dc_collector) {
-				while (!dc_collector->pending_update_list.empty()) {
-					// UpdateData's dtor removes this from the pending update list
-					delete(dc_collector->pending_update_list.front());
-				}
-				ud = 0;
-
+				dc_collector->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, ud);
 				dc_collector->relocate();
 			}
 		}
@@ -577,12 +572,7 @@ public:
 			if(sock) who = sock->get_sinful_peer();
 			dprintf(D_ALWAYS,"Failed to send non-blocking update to %s.\n",who);
 			if (dc_collector) {
-				while (!dc_collector->pending_update_list.empty()) {
-					// UpdateData's dtor removes this from the pending update list
-					delete(dc_collector->pending_update_list.front());
-				}
-				ud = 0;
-
+				dc_collector->clearAndNotifyUpdateQueue(sock, trust_domain, should_try_token_request, ud);
 				dc_collector->relocate();
 			}
 		}
@@ -655,6 +645,26 @@ public:
 	}
 };
 
+
+void
+DCCollector::clearAndNotifyUpdateQueue(Sock* sock, const std::string &trust_domain, bool should_try_token_request, UpdateData*& failed) {
+	for (auto& ud : pending_update_list) {
+		// Run callback function for all except for the failed (handled outside prior)
+		if (ud != failed && ud->m_callback_fn) {
+			(*(ud->m_callback_fn))(false, sock, nullptr, trust_domain, should_try_token_request, ud->m_miscdata);
+		}
+
+		delete ud;
+		ud = nullptr;
+	}
+
+	// The failed UpdateData point will have been deleted so remove dangling pointer
+	failed = nullptr;
+
+	pending_update_list.clear();
+}
+
+
 bool
 DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata )
 {
@@ -668,23 +678,16 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 			 "Attempting to send update via UDP to collector %s\n",
 			 update_destination );
 
-	bool raw_protocol = false;
-	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
-			// we *never* want to do security negotiation with the
-			// developer collector.
-		raw_protocol = true;
-	}
-
 	if(nonblocking) {
 		UpdateData *ud = new UpdateData(cmd, Sock::safe_sock, ad1, ad2, this, callback_fn, miscdata);
 		if (this->pending_update_list.size() == 1)
 		{
-			startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud, NULL, raw_protocol );
+			startCommand_nonblocking(cmd, Sock::safe_sock, 20, NULL, UpdateData::startUpdateCallback, ud);
 		}
 		return true;
 	}
 
-	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20, NULL, NULL, raw_protocol);
+	Sock *ssock = startCommand(cmd, Sock::safe_sock, 20);
 
 	if(!ssock) {
 		newError( CA_COMMUNICATION_ERROR,
@@ -889,7 +892,8 @@ DCCollector::~DCCollector( void )
 Timeslice &DCCollector::getBlacklistTimeslice()
 {
 	std::map< std::string, Timeslice >::iterator itr;
-	itr = blacklist.find(addr());
+	std::string address = (addr() == nullptr) ? "" : addr();
+	itr = blacklist.find(address);
 	if( itr == blacklist.end() ) {
 		Timeslice ts;
 
@@ -903,7 +907,7 @@ Timeslice &DCCollector::getBlacklistTimeslice()
 		ts.setMaxInterval(avoid_time);
 		ts.setInitialInterval(0);
 
-		itr = blacklist.insert( std::map< std::string, Timeslice >::value_type(addr(),ts) ).first;
+		itr = blacklist.emplace(address,ts).first;
 	}
 	return itr->second;
 }

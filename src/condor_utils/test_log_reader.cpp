@@ -383,6 +383,7 @@ ReadEvents(Options &opts, int &totalEvents)
 		if ( fd >= 0 ) {
 			if ( read( fd, state.buf, state.size ) != state.size ) {
 				fprintf( stderr, "Failed reading persistent file\n" );
+				ReadUserLog::UninitFileState( state );
 				return STATUS_ERROR;
 			}
 			close( fd );
@@ -400,6 +401,7 @@ ReadEvents(Options &opts, int &totalEvents)
 			if ( ! istatus ) {
 				fprintf( stderr, "Failed to initialize from state\n" );
 				ReportError( reader );
+				ReadUserLog::UninitFileState( state );
 				return STATUS_ERROR;
 			}
 			printf( "Initialized log reader from state %s\n",
@@ -445,6 +447,7 @@ ReadEvents(Options &opts, int &totalEvents)
 		}
 		if ( !istatus ) {
 			fprintf( stderr, "Failed to initialize with %s\n", type );
+			ReadUserLog::UninitFileState( state );
 			return STATUS_ERROR;
 		}
 		printf( "Initialized with %s\n", type );
@@ -453,6 +456,7 @@ ReadEvents(Options &opts, int &totalEvents)
 	// --init-only ?
 	if ( opts.exitAfterInit ) {
 		printf( "Exiting after init (due to --init-only)\n" );
+		ReadUserLog::UninitFileState( state );
 		return STATUS_OK;
 	}
 
@@ -554,6 +558,7 @@ ReadEvents(Options &opts, int &totalEvents)
 						diff_pos, diff_enum,
 						puniq, pseq,
 						nuniq, nseq );
+				ReadUserLog::UninitFileState( nstate );
 			}
 
 			numEvents++;
@@ -580,6 +585,16 @@ ReadEvents(Options &opts, int &totalEvents)
 					done = true;
 				}
 				missedLast = false;
+				break;
+
+			case ULOG_JOB_EVICTED:
+				if ( opts.verbosity >= VERB_ALL ) {
+					printf(" (evict)\n");
+				}
+				{
+				JobEvictedEvent *evict_event = (JobEvictedEvent*)event;
+				printf("  code=%d subcode=%d reason=%s\n", evict_event->reason_code, evict_event->reason_subcode, evict_event->getReason());
+				}
 				break;
 
 			case ULOG_JOB_TERMINATED:

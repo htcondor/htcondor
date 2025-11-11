@@ -231,6 +231,11 @@ class Env final {
 		// (IsV2QuotedString() must be true or this will EXCEPT.)
 	static bool V2QuotedToV2Raw(char const *v1_quoted, std::string& v2_raw, std::string& error_msg);
 
+		// return a malloc'd buffer containing the process environment
+		// environment may be truncated on Linux if it exceeds 64Kb (16Kb on windows)
+		// caller must free the returned buffer.
+	static char* GetProcessEnvBlock(pid_t pid, size_t size_max, int & error);
+
 	bool InputWasV1() const {return input_was_v1;}
 
 		// Import environment from process.

@@ -32,7 +32,6 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
-#include "stat_info.h"
 #include "condor_attributes.h"
 #include "directory.h"
 
@@ -169,6 +168,7 @@ Singularity::setup(ClassAd &machineAd,
 		ClassAd &jobAd,
 		std::string &exec,
 		ArgList &job_args,
+		const std::string &slot_dir,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
 		Env &job_env,
@@ -206,7 +206,7 @@ Singularity::setup(ClassAd &machineAd,
 
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
-		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
+		exec = target_dir + '/' + orig_exec_val.substr(slot_dir.length());
 		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
@@ -269,7 +269,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	sing_args.AppendArg("-W");
-	sing_args.AppendArg(execute_dir.c_str());
+	sing_args.AppendArg(execute_dir);
 
 	// Singularity and Apptainer prohibit setting HOME.  Just delete it
 	job_env.DeleteEnv("HOME");
@@ -282,17 +282,21 @@ Singularity::setup(ClassAd &machineAd,
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
-	std::string bind_spec = execute_dir;
+	std::string bind_spec = slot_dir;
 	if (has_target) {
 		bind_spec += ":";
 		bind_spec += target_dir;
 		// Only change PWD to our new target dir if that's where we should startup.
 		if (job_iwd == execute_dir) {
+			// replace the slot_dir prefix of execute dir with target_dir
+			std::string pwd{execute_dir};
+			replace_str(pwd, slot_dir, target_dir);
+
 			sing_args.AppendArg("--pwd");
-			sing_args.AppendArg(target_dir.c_str());
+			sing_args.AppendArg(pwd);
 		}
 		// Update the environment variables
-		retargetEnvs(job_env, target_dir, execute_dir);
+		retargetEnvs(job_env, target_dir, slot_dir);
 
 	} else {
 		sing_args.AppendArg("--pwd");
@@ -347,8 +351,9 @@ Singularity::setup(ClassAd &machineAd,
 			if (param_boolean("SINGULARITY_IGNORE_MISSING_BIND_TARGET", false)) {
 				// We an only check this when the image format is a directory
 				// That's OK for OSG, that's all they use
-				StatInfo si(image.c_str());
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(image.c_str(), &si);
+				if (si.st_mode & S_IFDIR) {
 					// target dir is after the colon, if it exists
 					std::string target_dir;
 					const char *colon = strchr(next_bind.c_str(),':');
@@ -365,8 +370,9 @@ Singularity::setup(ClassAd &machineAd,
 					}
 
 					std::string abs_target_dir = image + "/" + target_dir;
-					StatInfo td(abs_target_dir.c_str());
-					if (! td.IsDirectory()) {
+					struct stat td = {};
+					stat(abs_target_dir.c_str(), &td);
+					if ( !(td.st_mode & S_IFDIR) ) {
 						dprintf(D_ALWAYS, "Target directory %s does not exist in image, skipping mount\n", abs_target_dir.c_str());
 						continue;
 					}
@@ -492,7 +498,7 @@ envToList(void *list, const std::string & name, const std::string & /*value*/) {
 }
 
 bool
-Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &execute_dir) {
+Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std::string &slot_dir) {
 
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
@@ -512,12 +518,12 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	for (const std::string & name : envNames) {
 		std::string value;
 		job_env.GetEnv(name, value);
-		auto index_execute_dir = value.find(execute_dir);
+		auto index_execute_dir = value.find(slot_dir);
 		if (index_execute_dir != std::string::npos) {
 			std::string new_name = environmentPrefix() + name;
 			job_env.SetEnv(
 				new_name,
-				value.replace(index_execute_dir, execute_dir.length(), target_dir)
+				value.replace(index_execute_dir, slot_dir.length(), target_dir)
 			);
 		}
 	}
@@ -651,7 +657,9 @@ bool
 Singularity::canRunSIF() {
 	std::string libexec_dir;
 	param(libexec_dir, "LIBEXEC");
-	return Singularity::canRun(libexec_dir + "/exit_37.sif");
+	std::string ignored;
+	int timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
+	return Singularity::canRun(libexec_dir + "/exit_37.sif", "/exit_37", ignored, timeout);
 }
 
 bool
@@ -659,9 +667,35 @@ Singularity::canRunSandbox(bool &can_use_pidnamespaces) {
 	std::string sandbox_dir;
 	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
 	int sandbox_timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
-	bool result = Singularity::canRun(sandbox_dir, sandbox_timeout);  // canRun() will also set m_use_pid_namespaces
+	std::string ignored;
+	bool result = Singularity::canRun(sandbox_dir, "/exit_37", ignored, sandbox_timeout);  // canRun() will also set m_use_pid_namespaces
 	can_use_pidnamespaces = m_use_pid_namespaces;
 	return result;
+}
+
+Singularity::IsSetuid 
+Singularity::usesUserNamespaces() {
+	std::string sandbox_dir;
+	std::string sing_user_ns_str;
+	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
+	int sandbox_timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
+
+	bool result = Singularity::canRun(sandbox_dir, "/get_user_ns", sing_user_ns_str, sandbox_timeout); 
+	if (result) {
+		uint64_t  sing_user_ns = atoll(sing_user_ns_str.c_str());;
+		struct stat buf;
+		int r = stat("/proc/self/ns/user", &buf);
+		if (r == 0) {
+			if (buf.st_ino == sing_user_ns) {
+				// If the user namespaces are the same on the outside as the
+				// inside, then we are setuid
+				return SingSetuid;
+			} else {
+				return SingUserNamespaces;
+			}
+		}
+	}
+	return SingSetuidUnknown; // I guess we'll never know
 }
 
 void
@@ -687,7 +721,7 @@ Singularity::add_containment_args(ArgList & sing_args)
 
 
 bool
-Singularity::canRun(const std::string &image, int timeout) {
+Singularity::canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout) {
 #ifdef LINUX
 	bool success = true;
 	bool retry_on_fail_without_namespaces = false;
@@ -716,13 +750,12 @@ Singularity::canRun(const std::string &image, int timeout) {
 	if (!find_singularity(exec)) {
 		return false;
 	}
-	std::string exit_37 = "/exit_37";
 
 	sandboxArgs.AppendArg(exec);
 	sandboxArgs.AppendArg("exec");
 	add_containment_args(sandboxArgs);
 	sandboxArgs.AppendArg(image);
-	sandboxArgs.AppendArg(exit_37);
+	sandboxArgs.AppendArg(command);
 
 	std::string displayString;
 	sandboxArgs.GetArgsStringForLogging( displayString );
@@ -740,7 +773,7 @@ Singularity::canRun(const std::string &image, int timeout) {
 
 	MyPopenTimer pgm;
 	Env env;
-	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
+	if (pgm.start_program(sandboxArgs, false /*capture stderr*/, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
 			dprintf(D_ALWAYS, "Test launch singularity exec failed, this singularity can run some programs, but not these\n");
 			success =  false;
@@ -765,6 +798,7 @@ Singularity::canRun(const std::string &image, int timeout) {
 			}
 			success =  false;
 		}
+		pgm.output().readLine(firstLine);
 	}
 
 	if (success) {
@@ -776,7 +810,8 @@ Singularity::canRun(const std::string &image, int timeout) {
 	if (retry_on_fail_without_namespaces && m_use_pid_namespaces) {
 		m_use_pid_namespaces = false;
 		dprintf(D_ALWAYS, "Singularity exec failed, trying again without pid namespaces\n");
-		return canRun(image, timeout);	// Ooooh... recursion!  fancy!
+		std::string ignored;
+		return canRun(image, "/exit_37", ignored, timeout);	// Ooooh... recursion!  fancy!
 	}
 	else {
 		return false;

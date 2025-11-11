@@ -33,7 +33,6 @@ struct CredData;
 }
 
 	int REMOTE_CONDOR_register_job_info(const ClassAd& ad);
-	int REMOTE_CONDOR_register_mpi_master_info( ClassAd *ad );
 	int REMOTE_CONDOR_register_starter_info(const ClassAd& ad );
 	int REMOTE_CONDOR_get_job_info( ClassAd *ad );
 	int REMOTE_CONDOR_get_user_info( ClassAd *ad );
@@ -51,7 +50,6 @@ struct CredData;
 	int REMOTE_CONDOR_rmdir( char *path );
 	int REMOTE_CONDOR_fsync( int fd );
 	int REMOTE_CONDOR_get_file_info_new( char *path, char *&url );
-	int REMOTE_CONDOR_ulog_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... ) CHECK_PRINTF_FORMAT(3,4);
 	int REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str );
 	int REMOTE_CONDOR_ulog(const ClassAd& ad);
 	int REMOTE_CONDOR_get_job_attr( char *name, char *&expr );
@@ -91,6 +89,7 @@ struct CredData;
 	int REMOTE_CONDOR_dprintf_stats(const char *message);
 	int REMOTE_CONDOR_getcreds( const char *creds_receive_dir, std::unordered_map<std::string, std::unique_ptr<htcondor::CredData>> &);
 	int REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* proxy_dest_path, time_t proxy_expiration );
+	int REMOTE_CONDOR_get_docker_creds(const ClassAd &query, ClassAd &creds);
 
 	int REMOTE_CONDOR_get_sec_session_info(
 		char const *starter_reconnect_session_info,
@@ -103,6 +102,8 @@ struct CredData;
 		std::string &filetrans_session_key);
 
 	int REMOTE_CONDOR_event_notification(const ClassAd& event);
+
+	int REMOTE_CONDOR_request_guidance(const ClassAd& request, ClassAd& guidance);
 
 #endif
 

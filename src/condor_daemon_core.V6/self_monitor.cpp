@@ -116,7 +116,7 @@ void SelfMonitorData::CollectData(void)
 
 	registered_socket_count = daemonCore->RegisteredSocketCount();
 
-	cached_security_sessions = daemonCore->getSecMan()->session_cache->size();
+	cached_security_sessions = daemonCore->getSecMan()->session_cache.size();
 
 	// collect data on the udp port depth
 	if (daemonCore->wants_dc_udp_self()) {

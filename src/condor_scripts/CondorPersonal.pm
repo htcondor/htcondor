@@ -1214,6 +1214,8 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
 				print NEW "JOB_START_DELAY = 0\n";
 				print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
+				print NEW "SINGULARITY_TEST_SANDBOX_TIMEOUT = 8\n";
+				print NEW "SINGULARITY = /usr/bin/false\n";
 				print NEW "LOCK = \$(LOG)\n";
 				if($iswindows == 1) {
 				#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
@@ -1698,16 +1700,24 @@ sub CollectWhoData
 					} else {
 						#print "Master record\n";
 						if($savepid ne "no") {
-							my @psdata = `ps $savepid`;
-							my $pssize = @psdata;
-							#print "ps data on $savepid: $psdata[1]\n";
-							if($pssize >= 2) {
-								if($psdata[1] =~ /condor_master/) {
-									#Mark master alive
-									#print "Marking Master Alive*************************************************************\n";
-									#print "Before LoadWhoData:\n";
-									CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
+							# ps is kind of expensive.  Skip the wait on linux
+							my $master_name;
+							if (-f ("/proc/self/comm")) {
+								open F,"</proc/$savepid/comm";
+								$master_name = <F>;
+								close(F);
+							} else {
+								my @psdata = `ps $savepid`;
+								my $pssize = @psdata;
+								if($pssize >= 2) {
+									$master_name = $psdata[1];
 								}
+							}
+							if($master_name =~ /condor_master/) {
+								#Mark master alive
+								#print "Marking Master Alive*************************************************************\n";
+								#print "Before LoadWhoData:\n";
+								CondorTest::LoadWhoData("Master","yes",$savepid,"","","","");
 							}
 						}
 					}

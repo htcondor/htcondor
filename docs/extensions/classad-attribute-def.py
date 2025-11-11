@@ -29,7 +29,7 @@ def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={},
         attr_type = match.capitalize() + " "
 
     if text in ATTRIBUTE_DEFS.get(attr_type, []):
-        warn(f"{docname} @ {lineno} | {attr_type} ClassAd attribute '{text}' already defined")
+        warn(f"{docname}:{lineno} | {attr_type} ClassAd attribute '{text}' already defined")
         textnode = nodes.Text(text, " ")
         return [textnode], []
     elif attr_type in ATTRIBUTE_DEFS:

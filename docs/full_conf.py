@@ -19,6 +19,12 @@ import re
 
 # -- General configuration ------------------------------------------------
 
+# Root doc file
+master_doc = 'index'
+
+# Patterns/files to exclude from build source
+exclude_patterns = ['_build', 'extensions', 'utils', '.DS_Store']
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -30,7 +36,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
+    #'sphinx_autodoc_typehints', # Note: Adding this option messes up the V2 python bindings autodoc handling
     'nbsphinx',
     'ticket',
     'sphinx_copybutton',
@@ -76,7 +82,15 @@ html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
         'display_version': False
 }
- 
+
+# Enable Github edits
+html_context = {
+    "display_github": True,
+    "github_user": "htcondor",
+    "github_repo": "htcondor",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -93,7 +107,9 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-#html_js_files = []
+html_js_files = [
+    'js/anchor-ref.js',
+]
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -226,6 +242,8 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # autodoc settings
 autoclass_content = 'both'
+autodoc_typehints = 'both'
+autodoc_typehints_description_target = 'documented'
 
 
 def modify_docstring(app, what, name, obj, options, lines):
@@ -273,6 +291,28 @@ remove_types_from_signatures = re.compile(r' \([^)]*\)')
 remove_trailing_brackets = re.compile(r']*\)$')
 cleanup_commas = re.compile(r'\s*,\s*')
 
+# The following are used to remove type hints from function/method argument (not return type) signatures
+remove_type_hint_from_signatures = re.compile(r':.[^,=)]+')
+def remove_type_grouping(signature: str) -> str:
+    filtered = ""
+    nest = 0
+    before_eq = True
+    for c in signature:
+        if before_eq:
+            nest = (nest + 1) if c == "[" else nest
+
+        if before_eq and c == "=":
+            before_eq = False
+        elif not before_eq and c == ",":
+            before_eq = True
+
+        if nest == 0:
+            filtered += c
+
+        if before_eq:
+            nest = (nest - 1) if c == "]" else nest
+
+    return filtered
 
 def modify_signature(app, what, name, obj, options, signature, return_annotation):
     """
@@ -304,17 +344,22 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
     """
     if signature is not None:
         signature = re.sub(remove_types_from_signatures, ' ', signature)
-        signature = re.sub(remove_trailing_brackets, ')', signature)
+        # Only do end bracket replacement for V1 c++ docs as V2 python is valid
+        if name.split(".")[0].lower() in ["htcondor", "classad"]:
+            signature = re.sub(remove_trailing_brackets, ')', signature)
         signature = signature.replace('[,', ',')
         signature = re.sub(cleanup_commas, ', ', signature)
         signature = signature.replace('self', '')
         signature = signature.replace('( ', '(')
         signature = signature.replace('(, ', '(')
+        # Note: Do type hint removal last or else issues occur with v1 bindings
+        signature = remove_type_grouping(signature)
+        signature = re.sub(remove_type_hint_from_signatures, '', signature)
 
     if return_annotation == 'None :' and what == 'class':
         return_annotation = ''
 
-    return signature, return_annotation
+    return (signature, return_annotation)
 
 
 def setup(app):
@@ -367,6 +412,7 @@ class CondorSubmitLexer(lexer.RegexLexer):
             (r"\n\n", token.Text, "#pop"),
             (r"\n\s+", token.Text),
             (r"$", token.Text, "#pop"),
+            (r".*?$", token.String, "#pop"),
             (r".", token.String),
         ],
         "queue": [
@@ -524,7 +570,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
             ( r"(\s+\S+\s+)({|@=.+$)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
         ],
         "inline-job": [
-            ( r"([^}]+)(}|@.+$)", lexer.bygroups(token.Text, token.Keyword), ("#pop", "submit-job") ),
+            ( r"([^}]+)(}|@.+$)", lexer.bygroups(lexer.using(CondorSubmitLexer), token.Keyword), ("#pop", "submit-job") ),
         ],
         "submit-job": [
             # The option [square brackets] around the KEYWORDS are for the usage example,
@@ -628,6 +674,8 @@ CONFIG_VALUE_SHARED = [
         r"\b(required|optional|never|preferred|password|fs|kerberos)\b",
         token.Keyword,
     ),
+    # Highlight macro dereferencing
+    (r"\$\(([^)]+)\)", token.Name.Variable.Magic),
     # catch-all
     (r".|\s", token.Text),
 ]
@@ -673,7 +721,7 @@ class CondorConfigLexer(lexer.RegexLexer):
                 "multi-line",
             ),
             (
-                r"([\w\.]+)( *)(=)( *)",
+                r"([\$\(\)\w\.]+)( *)(=)( *)",
                 lexer.bygroups(
                     token.Name.Builtin, token.Text, token.Operator, token.Text,
                 ),
@@ -697,6 +745,77 @@ class CondorConfigLexer(lexer.RegexLexer):
 
 lexers["condor-config"] = CondorConfigLexer()
 
-# TODO: if I was really clever, I would re-use the classad expression fragment
-# parser for condor config values... but not all config values are classad
-# expressions, so that gets really hard.
+class PrintFormatTableLexer(lexer.RegexLexer):
+    name = "printf-table"
+
+    flags = re.MULTILINE | re.IGNORECASE
+
+    tokens = {
+        "root": [
+            (r"^select", token.Keyword, "select"),
+            #(r"^join", token.Keyword, "join"),
+            (r"^(where)(.*$)", lexer.bygroups(token.Keyword, lexer.using(CondorClassAdExpressionLexer))),
+            #(r"^and", token.Keyword, "and"),
+            (r"^group\s+by", token.Keyword, "group-by"),
+            (r"^summary", token.Keyword, "summary"),
+            (r"^#.*?$", token.Comment.Single),
+            (r"^\s+", token.Text, "format"),
+        ],
+        "select": [
+            (r"\s+from", token.Keyword, "select-from"),
+            (r"\s+unique", token.Keyword),
+            (r"\s+bare", token.Keyword),
+            (r"\s+notitle", token.Keyword),
+            (r"\s+noheader", token.Keyword),
+            (r"\s+nosummary", token.Keyword),
+            (r"(\s+label\s+separator\s+)(\S+)", lexer.bygroups(token.Keyword, token.String)),
+            (r"\s+label", token.Keyword),
+            (r"(\s+recordprefix)(\s+\S+)", lexer.bygroups(token.Keyword, token.String)),
+            (r"(\s+recordsuffix)(\s+\S+)", lexer.bygroups(token.Keyword, token.String)),
+            (r"(\s+fieldprefix)(\s+\S+)", lexer.bygroups(token.Keyword, token.String)),
+            (r"(\s+fieldsuffix)(\s+\S+)", lexer.bygroups(token.Keyword, token.String)),
+        ],
+        "select-from": [
+            (r"\s+autocluster", token.Keyword, "#pop"),
+        ],
+        "group-by": [
+            (r"(\s+\S+)(\s+)(ascending|descending)+?$", lexer.bygroups(lexer.using(CondorClassAdExpressionLexer), token.Text, token.Keyword)),
+            (r"(\s+\S+$)", lexer.using(CondorClassAdExpressionLexer)),
+        ],
+        "summary": [
+            (r"(\s+)(standard|none)", lexer.bygroups(token.Text, token.Keyword)),
+        ],
+        "format": [
+            (r"\s+as", token.Keyword, "format-as"),
+            (r"\s+printf", token.Keyword, "format-printf"),
+            (r"\s+printas", token.Keyword, "format-printas"),
+            (r"\s+width", token.Keyword, "format-width"),
+            (r"\s+fit", token.Keyword),
+            (r"\s+truncate", token.Keyword),
+            (r"\s+left", token.Keyword),
+            (r"\s+right", token.Keyword),
+            (r"\s+noprefix", token.Keyword),
+            (r"\s+nosuffix", token.Keyword),
+            (r"(\s+)(or)(\s+)(\?|\*|\.|\-|#|_|0){1,2}", lexer.bygroups(token.Text, token.Keyword, token.Text, token.Name.Variable.Magic)),
+            (r"\S+", lexer.using(CondorClassAdExpressionLexer)),
+        ],
+        "format-width": [
+            (r"\s+AUTO", token.Name.Variable.Magic, "#pop"),
+            (r"(\s+)(\-)?(\d+)", lexer.bygroups(token.Text, token.Text, token.Number.Integer), "#pop"),
+        ],
+        "format-as": [
+            (r"(\s+)(\'([^\']*\'))", lexer.bygroups(token.Text, token.String), "#pop"),
+            (r'(\s+)(\"([^\"]*\"))', lexer.bygroups(token.Text, token.String), "#pop"),
+            (r"(\s+)(\S+)", lexer.bygroups(token.Text, token.String), "#pop"),
+        ],
+        "format-printf": [
+            (r"(\s+)(\'([^\']*\'))", lexer.bygroups(token.Text, token.String), "#pop"),
+            (r'(\s+)(\"([^\"]*\"))', lexer.bygroups(token.Text, token.String), "#pop"),
+            (r"(\s+)(\S+)", lexer.bygroups(token.Text, token.String), "#pop"),
+        ],
+        "format-printas": [
+            (r"(\s+)?(\S+)", lexer.bygroups(token.Text, token.Name.Variable.Magic), "#pop"),
+        ]
+    }
+
+lexers["printf-table"] = PrintFormatTableLexer()

@@ -30,17 +30,15 @@
 // a pointer to the first unparsed character is optionally returned.
 // input may be X  or X.  or X.Y.  if no Y is specified then proc will be set to -1
 bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend);
+bool StrIsProcId(std::string_view str, int &cluster, int& proc, const char** pend=nullptr);
 
 // a handy little structure used in a lot of places it has to remain a c style struct
 // because some c code (I'm looking at you std-u) depends on it.
 typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
-	bool operator<(const PROC_ID& cp) const {
-		int diff = this->cluster - cp.cluster;
-		if ( ! diff) diff = this->proc - cp.proc;
-		return diff < 0;
-	}
+	auto operator<=>(const PROC_ID& cp) const = default; // C++20 spaceship operator
+
 	bool set(const char * job_id_str) {
 		if ( ! job_id_str) { cluster =  proc = 0; return false; }
 		return StrIsProcId(job_id_str, this->cluster, this->proc, NULL);
@@ -67,6 +65,7 @@ typedef struct PROC_ID {
 #define NOTIFY_ALWAYS		1
 #define	NOTIFY_COMPLETE		2
 #define NOTIFY_ERROR		3
+#define NOTIFY_START 		4
 
 #define READER	1
 #define WRITER	2
@@ -103,7 +102,6 @@ typedef struct PROC_ID {
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );
 
-bool operator==( const PROC_ID a, const PROC_ID b);
 size_t hashFuncPROC_ID( const PROC_ID & );
 size_t hashFunction(const PROC_ID &);
 
@@ -141,17 +139,8 @@ inline bool StrToProcIdFixMe(const char * str, PROC_ID& jid) {
 typedef struct JOB_ID_KEY {
 	int		cluster;
 	int		proc;
-	// a LessThan operator suitable for inserting into a sorted map or set
-	bool operator<(const JOB_ID_KEY& cp) const {
-		int diff = this->cluster - cp.cluster;
-		if ( ! diff) diff = this->proc - cp.proc;
-		return diff < 0;
-	}
-	bool operator<(const PROC_ID& cp) const {
-		int diff = this->cluster - cp.cluster;
-		if ( ! diff) diff = this->proc - cp.proc;
-		return diff < 0;
-	}
+	auto operator<=>(const JOB_ID_KEY& jik) const = default; // C++20 spaceship operator
+
 	JOB_ID_KEY operator+(int i) const { return {cluster, proc + i}; }
 	JOB_ID_KEY operator-(int i) const { return {cluster, proc - i}; }
 	JOB_ID_KEY &operator++() { ++proc; return *this; }
@@ -162,6 +151,7 @@ typedef struct JOB_ID_KEY {
 	// constructing JOB_ID_KEY(NULL) ends up calling this constructor because there is no single int constructor - ClassAdLog depends on that...
 	JOB_ID_KEY(const char * job_id_str) : cluster(0), proc(0) { if (job_id_str) set(job_id_str); }
 	JOB_ID_KEY(const std::string& job_id_str) : cluster(0), proc(0) { set(job_id_str.c_str()); }
+	JOB_ID_KEY(std::string_view job_id_str)  : cluster(0), proc(0) { StrIsProcId(job_id_str, this->cluster, this->proc); }
 	operator const PROC_ID&() const { return *((const PROC_ID*)this); }
 	operator std::string() const;
 	void sprint(std::string &s) const;
@@ -170,7 +160,6 @@ typedef struct JOB_ID_KEY {
 	static size_t hash(const JOB_ID_KEY &) noexcept;
 } JOB_ID_KEY;
 
-inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
 size_t hashFunction(const JOB_ID_KEY &);
 
 // Macros used to indicate how a job was submitted to htcondor

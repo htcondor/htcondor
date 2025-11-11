@@ -33,6 +33,9 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[STARTER_DIAGNOSTIC_send_ep_logs]
+default=$(LIBEXEC)/condor_diagnostic_send_ep_logs
+
 [DAEMON_CORE_KILL_ANY_PROCESS]
 default=false
 description=Allows DaemonCore to send signals to processes it didn't start.
@@ -913,12 +916,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
-default=false
-type=bool
-usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
-tags=security
-
 [SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES]
 default=true
 type=bool
@@ -1328,11 +1325,6 @@ range=1,
 type=int
 tags=daemon_core
 
-[ENABLE_STDOUT_TESTING]
-default=false
-type=bool
-tags=daemon_core
-
 [EXCEPT_ON_ERROR]
 default=
 type=string
@@ -1670,6 +1662,11 @@ default=auto
 description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
+[CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS]
+default=false
+type=bool
+description=Dynamic slots in broken state should continue to exist as slots
+useage=Set to True to advertise broken dslots as slots, set to False to mark the slot resources as broken, but allow the slot to be deleted
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
@@ -1678,6 +1675,11 @@ default="$(COLLECTOR_HOST)"
 default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
+
+[SYSTEM_MAX_RELEASES]
+default=-1
+description=The maximum number of times a user can release a single held job
+type=int
 
 [SYSTEM_STARTD_LATCH_EXPRS]
 default=NumDynamicSlots
@@ -1714,7 +1716,7 @@ type=int
 default=
 type=int
 
-[LOWPORT]
+[HIGHPORT]
 default=
 type=int
 
@@ -1849,11 +1851,6 @@ friendly_name=Sandbox location used to test Singularity
 tags=starter
 
 [SINGULARITY_USE_PID_NAMESPACES]
-default=false
-type=bool
-tags=starter
-
-[SINGULARITY_USE_PID_NAMESPACES]
 default=auto
 type=string
 customization=seldom
@@ -1865,17 +1862,6 @@ default=300
 type=int
 tags=startd
 description=Rate at which the Startd sends updates to the Collector
-
-[STARTD_SENDS_ALIVES]
-default=peer
-type=string
-tags=startd,command
-
-[STARTER_HANDLES_ALIVES]
-default=true
-type=bool
-description=Startd should only send alives when slot idle
-tags=schedd,claim
 
 [VM_GAHP_CONFIG]
 default=
@@ -1951,7 +1937,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, StdoutMtime, StderrMtime, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -1976,6 +1962,13 @@ default=
 type=string
 customization=devel
 description=Startd Slot Attrs needed by HTCondor
+tags=startd,startd_main
+
+[BROKEN_SLOT_CONTEXT_ATTRS]
+default=JobId,RemoteUser,RemoteScheddName
+type=string
+customization=normal
+description=Names of Attributes from the job or claim that should be saved when a slot becomes broken
 tags=startd,startd_main
 
 [KEYBOARD_CPUS]
@@ -2045,6 +2038,10 @@ type=string
 tags=startd
 description=Enable GPUs as a resource and set arguments for condor_gpu_discovery when USE FEATURE:GPUs is not configured
 usage=configure to empty to disable default GPU discovery
+
+[STARTD_LEFTOVER_PROCS_BREAK_SLOTS]
+default = false
+type = bool
 
 [ENVIRONMENT_FOR_AssignedGPUs]
 default=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
@@ -2571,6 +2568,18 @@ description=Default max expiration time of issued session tokens.
 type=int
 tags=condor_auth_passwd
 
+[SEC_ENABLE_TOKEN_REQUEST]
+default=true
+type=bool
+
+[SEC_ENABLE_TOKEN_FETCH]
+default=true
+type=bool
+
+[SEC_ENABLE_SCITOKEN_EXCHANGE]
+default=true
+type=bool
+
 [EMAIL_DOMAIN]
 default=
 type=string
@@ -2587,7 +2596,7 @@ type=string
 tags=io,condor_auth_claim
 
 [SEC_CLAIMTOBE_INCLUDE_DOMAIN]
-default=false
+default=true
 type=bool
 tags=io,condor_auth_claim
 
@@ -2776,6 +2785,11 @@ default=
 type=string
 tags=starter
 
+[STARTER_NESTED_SCRATCH]
+default=true
+type=bool
+tags=starter
+
 [STARTER_NUM_THREADS_ENV_VARS]
 default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS PYTHON_CPU_COUNT ROOT_MAX_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
@@ -2817,6 +2831,11 @@ tags=schedd,starter
 default=30
 type=int
 tags=schedd,starter
+
+[LOCAL_UNIVERSE_CGROUP_ENFORCEMENT]
+default=false
+type=bool
+tags=starter
 
 [STARTER_JOB_HOOK_KEYWORD]
 default=
@@ -2990,6 +3009,18 @@ tags=negotiator,matchmaker
 default=
 type=string
 
+[REMOVE_SIGNIFICANT_ATTRIBUTES]
+default=CpusUsage,DiskUsage,GPUsUsage,MemoryUsage,ResidentSetSize
+type=string
+description=Attributes that the Negotiator should assume are slot attributes
+tags=negotiator,matchmaker,schedd
+
+[REMOVE_SIGNIFICANT_ATTRIBUTES_REGEX]
+default=^Slot[0-9]*_
+type=string
+description=Regular expression pattern that the Negotiator should assume identifies slot attributes
+tags=negotiator,matchmaker
+
 [GROUP_AUTOREGROUP]
 default=false
 type=bool
@@ -3004,6 +3035,12 @@ tags=negotiator,matchmaker
 default=true
 type=bool
 description=Negotiator should use slot weights
+tags=negotiator,matchmaker
+
+[FORCE_NEGOTIATOR_SLOT_WEIGHT]
+default=false
+type=bool
+description=Negotiator should ignore the slot value for SLOT_WEIGHT and use its own value
 tags=negotiator,matchmaker
 
 [NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION]
@@ -3092,6 +3129,11 @@ default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
+[SCHEDD_DAEMON_HISTORY]
+default=$(SPOOL)/schedd_daemon_history
+type=string
+tags=daemon_core,schedd
+
 [HISTORY_CONTAINS_JOB_ENVIRONMENT]
 default = true
 
@@ -3161,10 +3203,6 @@ tags=JobRouter
 default=false
 type=bool
 
-[JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES]
-default=false
-type=bool
-
 [POLLING_PERIOD]
 default=
 type=string
@@ -3189,7 +3227,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -3209,7 +3247,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType User
+default=Owner ClusterId ProcId MyType TargetType User OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -3486,11 +3524,6 @@ tags=schedd
 default=0
 type=int
 range=0,
-
-[GRIDMANAGER_PER_JOB]
-default=false
-type=bool
-tags=schedd
 
 [GRIDMANAGER_SELECTION_EXPR]
 default=
@@ -4582,12 +4615,6 @@ version=7.7.5
 type=string
 tags=starter
 
-[NAMED_CHROOT]
-default=
-version=7.7.5
-type=string
-tags=starter
-
 [MEMORY_USAGE_METRIC]
 default=((ResidentSetSize+1023)/1024)
 version=7.7.6
@@ -4611,14 +4638,14 @@ description=Default maximum number of retries when a submit file enables retries
 tags=submit
 
 [JOB_DEFAULT_REQUESTMEMORY]
-default=ifthenelse(MemoryUsage =!= UNDEFINED,MemoryUsage,(ImageSize+1023)/1024)
+default=128
 version=7.7.6
 type=string
 description=Default RequestMemory expression if not specified in submit file
 tags=submit
 
 [JOB_DEFAULT_REQUESTDISK]
-default=DiskUsage
+default=MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024
 version=7.7.6
 type=string
 description=Default RequestDisk expression if not specified in submit file
@@ -4844,10 +4871,28 @@ type=string
 description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
+[CGROUP_HARD_MEMORY_LIMIT_EXPR]
+default=
+type=string
+description=When CGROUP_MEMORY_LIMIT_POLICY is custom, sets the cgroup hard limit
+tags=starter
+
+[CGROUP_LOW_MEMORY_LIMIT_EXPR]
+default=
+type=string
+description=When CGROUP_MEMORY_LIMIT_POLICY is custom, sets the cgroup low limit
+tags=starter
+
 [CGROUP_IGNORE_CACHE_MEMORY]
 type=bool
 default=true
 description=Whether to include kernel memory usage in job reported memory
+
+[DISABLE_SWAP_FOR_JOB]
+type=bool
+default=true
+description=Whether to configure zero swap swap for a cgroup v2 job
+
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
@@ -5151,7 +5196,7 @@ description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
-default=50000
+default=2000000000
 range=0,
 type=int
 description=History Helper max number of history ads
@@ -5287,6 +5332,10 @@ tags=starter
 default=true
 type=bool
 
+[DOCKER_PAT_PRODUCER]
+default=$(SBIN)/condor_docker_pat_producer
+type=string
+
 [DOCKER_PERFORM_TEST]
 default=true
 type=bool
@@ -5312,6 +5361,10 @@ description=How often to query docker for the size of the image cache.  0 disabl
 [DOCKER_IMAGE_CACHE_SIZE]
 default=8
 type=int
+
+[DOCKER_TRUST_LOCAL_IMAGES]
+default=false
+type=bool
 
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
@@ -5582,11 +5635,11 @@ description=Debug logging options for the gridmanager
 default=$(MAX_DEFAULT_LOG)
 
 [GRIDMANAGER_LOG]
-default=$(LOG)/GridmanagerLog.$(USERNAME)
+default=$(LOG)/GridmanagerLog
 type=path
 
 [GRIDMANAGER_LOCK]
-default=$(LOCK)/GridmanagerLock.$(USERNAME)
+default=$(LOCK)/GridmanagerLock
 type=string
 
 [MAX_C_GAHP_LOG]
@@ -5691,6 +5744,9 @@ type=string
 default=scitoken:2.0
 type=string
 
+[TRUSTED_VAULT_HOSTS]
+default=
+type=string
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -6057,6 +6113,16 @@ default=true
 description=Location of the checkpoint destination map file
 default=$(LOCAL_DIR)/checkpoint-destination-mapfile
 type=path
+
+[CONTAINER_IMAGES_COMMON_BY_DEFAULT]
+description=Should countainer images be treated as common files by default?
+type=bool
+default=false
+
+[CONTAINER_REGEX_COMMON_BY_DEFAULT]
+description=Container images matching this regex  will be treated as common files by default.
+type=string
+default=
 
 ######
 ## add metaknobs below this banner
@@ -6656,7 +6722,7 @@ default : @fin
 	PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
 	PELICANCACHE_LOWWATERMARKPERCENTAGE=85
 	# pass some args to the PELICANCACHE daemon in the environment and some in the args
-	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+	PELICANCACHE_ARGS=serve -d --module localcache -L $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
 	PELICANCACHE_ENVIRONMENT @=end
 	   PELICAN_SERVER_ENABLEUI=false
 	   PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE)

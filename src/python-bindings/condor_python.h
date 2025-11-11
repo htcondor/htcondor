@@ -56,7 +56,7 @@
 // the 3.2 libraries didn't include the the ssize_t-clean versions of all
 // functions, so for "backwards-compatibility", those functions aren't present
 // in later versions when PY_SSIZE_T_CLEAN is defined by default.
-#define Py_LIMITED_API 0x30300000
+#define Py_LIMITED_API 0x03030000
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 

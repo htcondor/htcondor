@@ -13,7 +13,7 @@ Files-Excluded: */*.class
 #endif
 
 Files: *
-Copyright: 1990-2024, Center for High Throughput Computing,
+Copyright: 1990-2025, Center for High Throughput Computing,
                       HTCondor Team, Condor Team,
                       Computer Sciences Department,
                       University of Wisconsin-Madison, WI.
@@ -36,16 +36,11 @@ Files:  build/cmake/CondorConfigure.cmake
         build/cmake/macros/CondorPlugin.cmake
         build/cmake/macros/CondorPostExternal.cmake
         build/cmake/macros/CondorPreExternal.cmake
-        build/cmake/macros/CondorSetLinkLibs.cmake
         build/cmake/macros/CondorStaticLib.cmake
         build/cmake/macros/dprint.cmake
         build/cmake/macros/FindMultiple.cmake
         build/cmake/macros/SystemSpecificInformations.cmake
         CMakeLists.txt
-        externals/bundles/boost/1.66.0/CMakeLists.txt
-        externals/bundles/boost/1.68.0/CMakeLists.txt
-        externals/bundles/libvirt/0.6.2/CMakeLists.txt
-        externals/bundles/libxml2/2.7.3/CMakeLists.txt
         externals/bundles/voms/2.1.0/CMakeLists.txt
         src/ccb/CMakeLists.txt
         src/classad/classadCache.cpp

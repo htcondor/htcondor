@@ -23,49 +23,77 @@
 #include "dc_message.h"
 #include "prio_rec.h"
 
-/*
+ /*
  * ResourceRequestCluster
  *
- * Represents a set of jobs sharing the same priority and auto cluster id.
+ * Represents a set of jobs sharing the same submitter, priority and auto cluster id.
+ * 
+ * the autocluster_id may not be an actual autocluster id, but it should be different
+ * for each entry in the ResourceRequestList. Think of it as the resource request id.
  *
- * The auto cluster ids are only assumed to be internally consistent
- * at the time the snapshot of the job queue was taken.  They are not used
- * to reference any external data structure.
  */
 class ResourceRequestCluster {
- public:
-	ResourceRequestCluster(int auto_cluster_id);
+public:
+	ResourceRequestCluster(int id=0, int capacity=0) : m_autocluster_id(id) {
+		if (capacity) m_jobs.reserve(capacity);
+	}
+	void addJob(PROC_ID jid) { m_jobs.push_back(jid); }
 
-		// appends a job to this cluster
-	void addJob(PROC_ID job_id);
+	// returns number of jobs in this cluster
+	size_t size() { return m_jobs.size(); }
 
-		// returns true if a job was found; o.w. false
-	bool popJob(PROC_ID &job_id);
+	// returns the auto cluster id for this cluster
+	int getAutoClusterId() const { return m_autocluster_id; }
 
-		// returns number of jobs in this cluster
-	size_t size() { return m_job_ids.size(); }
+	using container = std::vector<PROC_ID>;
+	using iterator = container::iterator;
+	using const_iterator = container::const_iterator;
+	iterator begin() { return m_jobs.begin(); }
+	const_iterator begin() const { return m_jobs.cbegin(); }
+	iterator end() { return m_jobs.end(); }
+	const_iterator end() const { return m_jobs.cend(); }
 
-		// returns the auto cluster id for this cluster
-	int getAutoClusterId() const { return m_auto_cluster_id; }
- private:
-
-	int m_auto_cluster_id;
-	std::list<PROC_ID> m_job_ids;
+protected:
+	std::vector<PROC_ID> m_jobs;
+	int                  m_autocluster_id{0};
 };
 
 /*
- * ResourceRequestList
- *
- * Contains an ordered list of job auto clusters for matchmaking.  All
- * jobs in the list are owned by the same user (or accounting group).
- * 
- * The ResourceRequestClusters in this list are deleted when the list
- * is deleted.
- */
-class ResourceRequestList: public std::list<ResourceRequestCluster *> {
- public:
-	~ResourceRequestList();
+* ResourceRequestList
+*
+* Contains an ordered list of job auto clusters for matchmaking.  All
+* jobs in the list are owned by the same user (or accounting group).
+* 
+* The list is owned by an instance of ScheddNegotiate and consumed (deleted) by it
+* as the conversation proceeds. Currently ResourceRequestClusters in this list
+* and are also deleted during negotiation, but planned future changes will
+* Make the resource request clusters persist, but list will not.
+*/
+class ResourceRequestList {
+public:
+	void add(int id, PROC_ID & jid) {
+		if ( ! items.empty() && items.back().getAutoClusterId() == id) {
+			items.back().addJob(jid);
+		} else {
+			items.emplace_back(id).addJob(jid);
+		}
+		largest_cluster = MAX(largest_cluster, items.back().size());
+	}
+	int currentId() {
+		if (items.empty()) return -1;
+		return items.back().getAutoClusterId();
+	}
+	bool empty() { return items.empty(); }
+	size_t size() { return items.size(); }
+	ResourceRequestCluster & front() { return items.front(); }
+	void pop_front() { items.pop_front(); }
+	void flatten();
+
+protected:
+	std::deque<ResourceRequestCluster> items;
+	size_t largest_cluster{0};
 };
+
 
 /*
  * ScheddNegotiate
@@ -97,6 +125,8 @@ class ScheddNegotiate: public DCMsg {
 	virtual ~ScheddNegotiate();
 
 	void setWillMatchClaimedPslots(bool will_match) { m_will_match_claimed_pslots = will_match; }
+	void setMatchCaps(std::string_view caps);
+	void setNegotiatorName(std::string_view name) { m_negotiator_name = name; }
 
 		// Begins asynchronously processing negotiation operations
 		// sent by the negotiator.  Assumes that the initial
@@ -109,6 +139,10 @@ class ScheddNegotiate: public DCMsg {
 
 		// returns name of remote pool or NULL if none
 	char const *getRemotePool();
+
+		// returns self-reported name of negotiator (only 24.x negotiators report a name)
+		// (for use when a pool has multiple negotiators)
+	char const *getNegotiatorName();
 
 	int getNumJobsMatched() const { return m_jobs_matched; }
 
@@ -137,10 +171,12 @@ class ScheddNegotiate: public DCMsg {
 	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max) = 0;
 
 		// a job was rejected by the negotiator
-	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason) = 0;
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id, char const *reason) = 0;
 
 		// returns true if the match was successfully handled (so far)
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name) = 0;
+	enum _match_source { NORMAL=0, LEFTOVER, DIRECT };
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+		char const *slot_name, _match_source source) = 0;
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock ) = 0;
 
@@ -156,22 +192,27 @@ class ScheddNegotiate: public DCMsg {
 	bool RRLRequestIsPending() const { return ((getNumJobsMatched() == 0) && (getNumJobsRejected() == 0));} 
 
  protected:
-	ResourceRequestList *m_jobs;
+	ResourceRequestList *m_jobs{nullptr};
+	int m_instance{0}; // instance id used for logging
 		// how many resources are we requesting with this request?
-	int m_current_resources_requested;
+	int m_current_resources_requested{1};
 		// how many resources have been delivered so far with this request?
-	int m_current_resources_delivered;
+	int m_current_resources_delivered{0};
 		// how many more resources can we offer to the matchmaker?
 		// If -1, then we don't limit the offered resources.
-	int m_jobs_can_offer;
+	int m_jobs_can_offer{-1};
 		// will matchmaker match pslots that we have claimed?
-	bool m_will_match_claimed_pslots;
+	bool m_will_match_claimed_pslots{false};
+	bool m_can_do_match_diag_3{false};
+	bool m_can_do_match_dye{false};
+	ClassAd * m_reject_ad{nullptr};   // detailed match rejection ad (24.x negotiators or later)
 
  private:
 	std::set<int> m_rejected_auto_clusters;
 
 	std::string m_owner;
 	std::string m_remote_pool;
+	std::string m_negotiator_name;
 
 	int m_current_auto_cluster_id;
 	PROC_ID m_current_job_id;
@@ -205,6 +246,9 @@ class ScheddNegotiate: public DCMsg {
 	void setAutoClusterRejected(int auto_cluster_id);
 
 	bool sendJobInfo(Sock *sock, bool just_sig_attrs=false);
+
+		// negotiator sent SEND_JOB_INFO, so it doesn't want to hear about resource requests lists
+	void notSendingResourceRequests();
 
 	bool sendResourceRequestList(Sock *sock);
 
@@ -241,9 +285,10 @@ public:
 
 	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max);
 
-	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id,char const *reason);
 
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+		char const *slot_name, _match_source source);
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock );
 

@@ -51,6 +51,7 @@ Starter *starter = &StarterObj;
 extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
 
+
 // this appears at the bottom of this file:
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 static char* dprintf_header = NULL;
@@ -95,9 +96,21 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
-    printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
-    printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
+	printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
+	printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
+	printf( "%s = True\n", ATTR_HAS_OS_USER );
 
+	// Include HasCommonFilesTransfer has an integer (version number)
+	// that therefore always also evaluates to boolean true.
+	if( CFT_VERSION != 0 ) {
+		printf( "%s = %d\n", ATTR_HAS_COMMON_FILES_TRANSFER, CFT_VERSION );
+	}
+
+	if (param_boolean("NO_JOB_NETWORKING", false)) {
+		printf("%s = False\n", ATTR_HAS_JOB_NETWORKING);
+	} else {
+		printf("%s = True\n", ATTR_HAS_JOB_NETWORKING);
+	}
 		/*
 		  Attributes describing what kinds of Job Info Communicators
 		  this starter has.  This is mostly for COD, but someday might
@@ -144,6 +157,12 @@ printClassAd( void )
 		//  done by vmuniverse manager in startd.
 		// ATTR_HAS_VM may be overwritten by vmuniverse manager in startd
 		printf( "%s = True\n",ATTR_HAS_VM );
+
+		// VM universe does not work with LVM using mount namespaces to hide mounts
+		if (VolumeManager::DetectLVM() && VolumeManager::GetHideMount() == LVM_ALWAYS_HIDE_MOUNT) {
+			printf("%s = False\n", ATTR_HAS_VM);
+			printf("%s = \"LVM configured to hide scratch dir via LVM_HIDE_MOUNT, which prohibits VM universe jobs\"\n", ATTR_VM_OFFLINE_REASON);
+		}
 	}
 
 	// Docker "universe."
@@ -174,6 +193,7 @@ printClassAd( void )
 
 		bool can_run_sandbox = false;
 		bool can_use_pidnamespaces = true;
+
 		if (htcondor::Singularity::canRunSandbox(can_use_pidnamespaces))  {
 			can_run_sandbox = true;
 		}
@@ -181,6 +201,21 @@ printClassAd( void )
 		if (htcondor::Singularity::canRunSIF())  {
 			can_run_sif = true;
 		}
+
+		htcondor::Singularity::IsSetuid isSetuid =
+			htcondor::Singularity::usesUserNamespaces();
+
+		switch (isSetuid) {
+			case htcondor::Singularity::SingSetuid:
+				printf("SingularityUserNamespaces = False\n");
+				break;
+			case htcondor::Singularity::SingUserNamespaces:
+				printf("SingularityUserNamespaces = True\n");
+				break;
+			case htcondor::Singularity::SingSetuidUnknown:
+				// Whereof one cannot speak, thereof one must be silent
+				break;
+		};
 
 		// To consider Singularity operational, we needed it to pass
 		// running something... either sandbox or sif...
@@ -962,9 +997,7 @@ extern "C"
 int exception_cleanup(int,int,const char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
-	starter->jic->notifyStarterError(errmsg,true,0,0);
-	starter->RemoteShutdownFast(0);
-	starter->FinalCleanup(STARTER_EXIT_EXCEPTION);
+	starter->ExceptHandler(errmsg);
 	return 0;
 }
 

@@ -18,7 +18,7 @@
 
 ##########################################################################
 # Set project
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(CONDOR LANGUAGES C CXX)
 
 # Exactly c++ 20 for all platforms
@@ -37,6 +37,9 @@ endif()
 # like clang-tidy use
 SET(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 
+# Quiet cmake install rules
+set(CMAKE_INSTALL_MESSAGE LAZY)
+
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
@@ -47,7 +50,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "24.4.0")
+set(VERSION "25.5.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -105,7 +108,6 @@ include (GetTimeDate)
 include (CleanString)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
-include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)
 include (CondorPrecompiledHeaders)

@@ -42,7 +42,8 @@ CONDOR_TESTREQ_CONFIG
 # for X86_64 shadows
 my %memory_data64 = (
 	"almalinux8"  => "644",
-	"almalinux9"  => "1500",
+	"almalinux9"  => "1284",
+	"almalinux10"  => "1284",
 	"amazonlinux2"  => "644",
 	"amazonlinux2023"  => "1200",
 	"centos7"  => "644",
@@ -54,6 +55,7 @@ my %memory_data64 = (
 	"debian10" => "768",
 	"debian11" => "768",
 	"debian12" => "1300",
+	"debian13" => "1500",
 	"fedora20" => "660",
 	"fedora21" => "668",
 	"fedora27" => "704",
@@ -64,6 +66,8 @@ my %memory_data64 = (
 	"fedora39" => "904",
 	"fedora40" => "904",
 	"fedora41" => "904",
+	"fedora42" => "904",
+	"fedora43" => "1064",
 	"opensuse15" => "904",
 	"redhat5"  => "448",
 	"redhat6"  => "492",
@@ -118,6 +122,8 @@ print "Platform is $arch $opsys, expecting shadow memory = $expectedmemory, will
 # run a job and look at shadow memory usage
 my $append_submit_commands = '
 want_io_proxy = true
+should_transfer_files = yes
+when_to_transfer_output = ON_EXIT
 executable = x_shadow_mem_usage.pl
 output = ' . $testname . '.out
 error  = ' . $testname . '.err

@@ -222,6 +222,7 @@ void ScheddStatistics::InitMain()
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_updateSchedDInterval,    IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_mark_idle,               IF_VERBOSEPUB);
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_get_job_prio,            IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, WalkJobQ_update_autocluster_id,   IF_VERBOSEPUB);
 
    // timings for the autocluster code
    SCHEDD_STATS_ADD_EXTERN_RUNTIME(Pool, GetAutoCluster,           IF_VERBOSEPUB);
@@ -563,9 +564,9 @@ bool ScheddOtherStatsMgr::Enable(
 	bool stats_by_trig_value, /*=false*/
 	time_t lifetime /*=0*/)
 {
-	ExprTree *tree = nullptr;
 	classad::ClassAdParser  parser;
-	if ( ! parser.ParseExpression(trig, tree)) {
+	ExprTree *tree = parser.ParseExpression(trig);
+	if ( ! tree ) {
 		EXCEPT("Schedd_stats: Invalid trigger expression for '%s' stats: '%s'", pre, trig);
 	}
 
@@ -661,9 +662,9 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 
 		// if we have not yet built a parse tree for this expression, do that now.
 		if ( ! po->trigger_expr) {
-			ExprTree *tree = nullptr;
 			classad::ClassAdParser  parser;
-			if ( ! parser.ParseExpression(po->trigger, tree)) {
+			ExprTree *tree = parser.ParseExpression(po->trigger);
+			if ( ! tree) {
 				dprintf(D_ALWAYS, "Schedd_stats: Failed to parse expression for %s stats: '%s'\n", 
 						po->prefix.c_str(), po->trigger.c_str());
 				continue;

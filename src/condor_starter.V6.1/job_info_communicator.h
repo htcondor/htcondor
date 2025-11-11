@@ -27,6 +27,12 @@
 #include "local_user_log.h"
 #include "condor_holdcodes.h"
 #include "enum_utils.h"
+#include "event_notification.h"
+
+#include <optional>
+#include "guidance.h"
+
+#include <filesystem>
 
 #if HAVE_JOB_HOOKS
 #include "StarterHookMgr.h"
@@ -82,14 +88,17 @@ public:
 	void setupCompleted(int status, const struct UnreadyReason * purea = nullptr);
 		//const char * message=nullptr, int hold_code=0, int hold_subcode=0);
 
+	virtual bool transferCommonInput( ClassAd * /* commonAd */ ) { return false; }
+	virtual void resetInputFileCatalog() { }
+
 	void setStdin( const char* path );
 	void setStdout( const char* path );
 	void setStderr( const char* path );
-	int getStackSize(void);	
+	int getStackSize(void);
 		// // // // // // // // // // // //
 		// Job Actions
 		// // // // // // // // // // // //
-		
+
 		/**
 		 * These are to perform specific actions against a job,
 		 * which is different from methods such as gotHold() which
@@ -104,23 +113,23 @@ public:
 	virtual bool requeueJob( const char* ) = 0;
 
 		// // // // // // // // // // // //
-		// Information about the job 
+		// Information about the job
 		// // // // // // // // // // // //
-	
+
 		/** Return a pointer to the filename to use for the job's
 			standard input file.
 		*/
-	virtual const char* jobInputFilename( void );	
+	virtual const char* jobInputFilename( void );
 
 		/** Return a pointer to the filename to use for the job's
 			standard output file.
 		*/
-	virtual const char* jobOutputFilename( void );	
+	virtual const char* jobOutputFilename( void );
 
 		/** Return a pointer to the filename to use for the job's
 			standard error file.
 		*/
-	virtual const char* jobErrorFilename( void );	
+	virtual const char* jobErrorFilename( void );
 
 		/** Return a string containing a copy of the full pathname of
 			the requested file.
@@ -132,7 +141,7 @@ public:
 	virtual bool streamError();
 	virtual bool streamStdFile( const char *which );
 
-		/** Return a pointer to the job's initial working directory. 
+		/** Return a pointer to the job's initial working directory.
 		*/
 	virtual const char* jobIWD( void );
 
@@ -162,15 +171,15 @@ public:
 		/// Return the job's universe integer.
 	int jobUniverse( void ) const;
 
-	int jobCluster( void ) const;
-	int jobProc( void ) const;
+	virtual int jobCluster( void ) const;
+	virtual int jobProc( void ) const;
 	int jobSubproc( void ) const;
 
-		/// Total bytes sent by this job 
-	virtual float bytesSent( void ) = 0;
+		/// Total bytes sent by this job
+	virtual uint64_t bytesSent( void ) = 0;
 
-		/// Total bytes received by this job 
-	virtual float bytesReceived( void ) = 0;
+		/// Total bytes received by this job
+	virtual uint64_t bytesReceived( void ) = 0;
 
 
 		// // // // // // // // // // // //
@@ -200,7 +209,7 @@ public:
 
 		/** The last job this starter is controlling has exited.  Do
 			whatever we have to do to cleanup and notify our
-			controller. 
+			controller.
 			@return true if it worked and the starter can continue
 			cleaning up, false if there was an error (e.g. we're
 			disconnected from our shadow) and the starter needs to go
@@ -221,14 +230,17 @@ public:
 			internal file transfer for the output.  This only makes
 			sense for JICShadow, but we need this step to be included
 			in all JICs so that the code path during cleanup is sane.
-			Returns false on failure and sets transient_failure to
-			true if the failure is deemed transient and will therefore
+			Returns true if transfer succeeded or doesn't need to happen.
+			Returns false on failure or the transfer is in progress (in
+			non-blocking mode). If the transfer is in progress, then
+			in_progress is set to true. If the transfer failed, then
+			in_progress is set to false and transient_failure is set to
+			indicate whether the failure is deemed transient and should
 			be automatically tried again (e.g. when the shadow reconnects).
 		*/
-	virtual bool transferOutput( bool &transient_failure ) = 0;
+	virtual bool transferOutput(bool &transient_failure, bool& in_progress) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 	void setJobFailed() { job_failed = true; }
-	//bool getJobFailed() { return job_failed; }
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to
@@ -285,6 +297,7 @@ public:
 
     // Better than writing a bunch of tiny wrappers?
     virtual bool notifyGenericEvent( const ClassAd &, int & /* rv */ ) { return false; }
+
 
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()
@@ -346,32 +359,32 @@ public:
 
 		/** Make sure the given filename will be included in the
 			output files of the job that are sent back to the job
-			submitter.  
-			@param filename File to add to the job's output list 
+			submitter.
+			@param filename File to add to the job's output list
 		*/
 	virtual void addToOutputFiles( const char* filename ) = 0;
 
 		/** Make sure the given filename will be excluded from the
-			list of files that the job sends back to the submitter.  
-			@param filename File to remove from the job's output list 
+			list of files that the job sends back to the submitter.
+			@param filename File to remove from the job's output list
 		*/
 	virtual void removeFromOutputFiles( const char* filename ) = 0;
 
 		/// Has user_priv been initialized yet?
-	bool userPrivInitialized( void ) const; 
+	bool userPrivInitialized( void ) const;
 
-		/** Are we currently using file transfer? 
+		/** Are we currently using file transfer?
 		    Used elsewhere to determine if we need to potentially
 			rewrite some paths from submit machine paths to
 			execute directory paths.
 
 			The default implementation always returns false.
-			jic_shadow actually comes up with a plausible answer. 
+			jic_shadow actually comes up with a plausible answer.
 		*/
 	virtual bool usingFileTransfer( void );
 
 		/* Receive new X509 proxy from the shadow
-			
+
 			Default implementation always fails.
 
 			jic_shadow knows how to do the right thing.
@@ -401,6 +414,19 @@ public:
 
 		/* Get the job ad */
 	const ClassAd * getJobAd() { return job_ad; }
+
+		/* Get optional secrets ad */
+	const ClassAd * getMachineSecetsAd() { return machine_secrets_ad; }
+
+	virtual bool genericRequestGuidance(
+		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
+	) {
+		return false;
+	}
+
+	virtual int fetch_docker_creds(const ClassAd &/*query*/, ClassAd &/*creds*/) {
+		return -1;
+	}
 
 protected:
 
@@ -525,6 +551,9 @@ protected:
 
 		// The Machine ClassAd running the job.
 	ClassAd* mach_ad;
+
+		// the machine secrets ad, contains the d-slot splitting claim id.
+	ClassAd* machine_secrets_ad{nullptr};
 
 		/// The universe of the job.
 	int job_universe;

@@ -94,6 +94,49 @@ Activity ResState::_preempting_activity()
 }
 
 void
+ResState::revert(State old_state, Activity old_act)
+{
+	bool statechange = r_state != old_state;
+	bool actchange =   r_act != old_act;
+	if ( ! statechange && ! actchange) {
+		return;
+	}
+
+	if (statechange && (r_state == claimed_state)) {
+		// undo things we did just before we tried to change to claimed state
+		rip->r_cur->changeState(CLAIM_UNCLAIMED);
+		rip->r_cur->cancelLeaseTimer();
+		rip->remove_pre();
+	}
+	// TODO: handle other revert cases as needed
+
+	if( statechange && !actchange ) {
+		dprintf( D_ALWAYS, "Reverting state: %s -> %s\n",
+			state_to_string(r_state),
+			state_to_string(old_state) );
+	} else if (actchange && !statechange ) {
+		dprintf( D_ALWAYS, "Reverting activity: %s -> %s\n",
+			activity_to_string(r_act),
+			activity_to_string(old_act) );
+	} else {
+		dprintf( D_ALWAYS,
+			"Reverting state and activity: %s/%s -> %s/%s\n", 
+			state_to_string(r_state),
+			activity_to_string(r_act),
+			state_to_string(old_state),
+			activity_to_string(old_act) );
+	}
+
+	r_state = old_state;
+	r_act = old_act;
+
+	// no need to update history totals because now() is the same as when
+	// before we reverted.
+
+	rip->state_or_activity_changed(resmgr->now(), statechange, actchange);
+}
+
+void
 ResState::change( State new_state, Activity new_act )
 {
 	bool statechange = false, actchange = false;
@@ -145,6 +188,8 @@ ResState::change( State new_state, Activity new_act )
 		// Record the time we spent in the previous state
 	updateHistoryTotals(now);
 
+	State old_state = r_state; // in case we need to unwind the state change
+	Activity old_act = r_act;
 	if( statechange ) {
 		m_stime = now;
 			// Also reset activity time
@@ -184,26 +229,50 @@ ResState::change( State new_state, Activity new_act )
 	if( r_act == retiring_act || r_act == idle_act ) {
 		// When we enter retirement or idleness, check right away to
 		// see if we should be preempting instead.
-		this->eval_policy();
+		struct suggest sug(*this);
+		int code = eval_policy(sug);
+		if (code) {
+			// If we just switched to claimed, but the suggested state is not claimed.we want to
+			// go back rather than forward, because preempting now might delete the claim object
+			// and crash the caller. HTCONDOR-3013
+			if (statechange && r_state == claimed_state && sug._state != claimed_state) {
+				dprintf(D_STATUS, "State change: %s reverting to %s/%s\n",
+					sug._reason.c_str(), state_to_string(old_state), activity_to_string(old_act));
+				// print START analysis. (Requirements for now)
+				// TODO: add rip->analyze_expr for START, PREEMPT, etc so we can do that instead.
+				std::string anabuf;
+				rip->analyze_match(anabuf, rip->r_cur ? rip->r_cur->ad() : nullptr, true, false);
+				dprintf(D_ALWAYS, "Slot Requirements Analysis:\n%s\n", anabuf.c_str());
+				// rewind to the old state, so we don't risk deleting the claim
+				revert(old_state, old_act);
+			} else if (sug._state == delete_state) {
+				// enter_action this will delete the slot or queue it for deletion
+				// this also skips logging the transition to "Delete" state (which is not a public state)
+				enter_action(sug._state, sug._act, true, false);
+			} else {
+				// otherwise, we go ahead with the suggested state transition.
+				dprintf(D_STATUS, "eval_policy state should be: %s/%s %d %s\n",
+					state_to_string(sug._state), activity_to_string(sug._act), code, sug._reason.c_str());
+				change(sug, code);
+			}
+		}
 	}
 
 	return;
 }
 
 int
-ResState::eval_policy( void )
+ResState::eval_policy(State & _state, Activity & _act, const Resource * rip, std::string & reason)
 {
 	int want_suspend;
 #if HAVE_BACKFILL
 	int kill_rval; 
 #endif /* HAVE_BACKFILL */
 
-	updateActivityAverages();
-
-	switch( r_state ) {
+	switch (_state) {
 
 	case claimed_state:
-		if( r_act == suspended_act && rip->isSuspendedForCOD() ) { 
+		if( _act == suspended_act && rip->isSuspendedForCOD() ) { 
 				// this is the special case where we do *NOT* want to
 				// evaluate any policy expressions.  so long as
 				// there's an active COD job, we want to leave the
@@ -212,6 +281,8 @@ ResState::eval_policy( void )
 		}
 		if( rip->inRetirement() ) { // have we been preempted?
 			if( rip->retirementExpired() ) {
+					// TLM: STATE TRANSITION #17
+					// STATE TRANSITION #18
 					// Normally, when we are in retirement, we will
 					// also be in the "retiring" activity.  However,
 					// it is also possible to be in the suspended
@@ -222,32 +293,23 @@ ResState::eval_policy( void )
 					// time to transition into some other state.  No
 					// matter.  Whatever activity we were in, the
 					// retirement time has expired, so it is time to
-					// change to the preempting state.
-				if( rip->isDraining() ) {
-					rip->setBadputCausedByDraining();
-				} else {
-					rip->setBadputCausedByPreemption();
-				}
-
-				// Before entering the preempting state, check to see if we
-				// would have preempted during the preceding polling interval.
-				// This allows startd policies to put jobs on hold during
-				// draining.
+					// change to the preempting state. But before
+					// entering the preempting state, we must check to see if we
+					// would have preempted during the preceding polling interval.
+					// This allows startd policies to put jobs on hold during
+					// draining.
+				reason = "claim retirement ended/expired";
+				_state = preempting_state;
 				if( 1 == rip->eval_preempt() ) {
-					rip->preemptIsTrue();
+					return xa_retirement_expired2;
 				}
-
-				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
-				// TLM: STATE TRANSITION #17
-				// STATE TRANSITION #18
-				change( preempting_state );
-				return TRUE; // XXX: change TRUE
+				return xa_retirement_expired;
 			}
 		}
 		want_suspend = rip->wants_suspend();
-		if( (r_act==busy_act && !want_suspend) ||
-			(r_act==retiring_act && !rip->preemptWasTrue() && !want_suspend) ||
-			(r_act==suspended_act && !rip->preemptWasTrue()) ) {
+		if( (_act==busy_act && !want_suspend) ||
+			(_act==retiring_act && !rip->preemptWasTrue() && !want_suspend) ||
+			(_act==suspended_act && !rip->preemptWasTrue()) ) {
 
 			//Explanation for the above conditions:
 			//The want_suspend check is there because behavior is
@@ -257,244 +319,204 @@ ResState::eval_policy( void )
 			//to keep trying to retire over and over.
 
 			if( 1 == rip->eval_preempt() ) {
-				dprintf( D_ALWAYS, "State change: PREEMPT is TRUE\n" );
 				// irreversible retirement
 				// TLM: STATE TRANSITION #12
 				// TLM: STATE TRANSITION #16
-				rip->preemptIsTrue();
-				rip->setBadputCausedByPreemption();
-				return rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
+				// we need to call retire_claim() which always changes
+				// act to retiring if we are in claimed state
+				reason = "PREEMPT is TRUE";
+				_act = retiring_act;
+				return xa_preempt_and_retire;
 			}
 		}
-		if( r_act == retiring_act ) {
+		if( _act == retiring_act ) {
 			if( rip->mayUnretire() ) {
-				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
 				// TLM: STATE TRANSITION #19
-				change( busy_act );
-				return TRUE; // XXX: change TRUE
+				reason = "unretiring because no preempting claim exists";
+				_act = busy_act;
+				return xa_simple;
 			}
 			if( rip->retirementExpired() ) {
-				dprintf( D_ALWAYS, "State change: retirement ended/expired\n" );
-				rip->setBadputCausedByPreemption();
 				// TLM: STATE TRANSITION #18
-				change( preempting_state );
-				return TRUE; // XXX: change TRUE
+				reason = "retirement ended/expired";
+				_state = preempting_state;
+				return xa_preempt;
 			}
 		}
-		if( (r_act == busy_act || r_act == retiring_act) && want_suspend ) {
+		if( (_act == busy_act || _act == retiring_act) && want_suspend ) {
 			if( 1 == rip->eval_suspend() ) {
 				// TLM: STATE TRANSITION #14
 				// TLM: STATE TRANSITION #20
-				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
-				change( suspended_act );
-				return TRUE; // XXX: change TRUE
+				reason = "SUSPEND is TRUE";
+				_act = suspended_act;
+				return xa_suspend;
 			}
 		}
-		if( r_act == suspended_act ) {
+		if( _act == suspended_act ) {
 			if( 1 == rip->eval_continue() ) {
-				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
 				if( !rip->inRetirement() ) {
 					// STATE TRANSITION #15
-					change( busy_act );
-					return TRUE; // XXX: change TRUE
+					reason = "CONTINUE is TRUE";
+					_act =  busy_act;
+					return xa_continue;
 				}
 				else {
 					// STATE TRANSITION #16
-					if (rip->hasPreemptingClaim()) {
-						if (rip->r_pre->rank() > rip->r_cur->rank()) {
-							rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
-						} else {
-							rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
-						}
-					}
-					change( retiring_act );
-					return TRUE; // XXX: change TRUE
+					reason = "CONTINUE is TRUE";
+					_act = retiring_act;
+					return xa_preempt_may_vacate;
 				}
 			}
 		}
-		if( (r_act == busy_act) && rip->hasPreemptingClaim() ) {
-			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
+		if( (_act == busy_act) && rip->hasPreemptingClaim() ) {
 			// reversible retirement (e.g. if preempting claim goes away)
 			// TLM: STATE TRANSITION #13
-			if (rip->r_pre->rank() > rip->r_cur->rank()) {
-				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
-			} else {
-				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
-			}
-			change( retiring_act );
-			return TRUE; // XXX: change TRUE
+			reason = "retiring due to preempting claim";
+			_act = retiring_act;
+			return xa_preclaim_vacate;
 		}
-		if( (r_act == idle_act) && rip->hasPreemptingClaim() ) {
-			dprintf( D_ALWAYS, "State change: preempting idle claim\n" );
+		if( (_act == idle_act) && rip->hasPreemptingClaim() ) {
 			// TLM: STATE TRANSITION #10
-			change( preempting_state );
-			return TRUE; // XXX: change TRUE
+			reason = "preempting idle claim";
+			_state = preempting_state;
+			return xa_preclaim;
 		}
-		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
-				// START evaluates to False, so return to the owner
-				// state.  In this case, we don't need to worry about
-				// START locally evaluating to FALSE due to undefined
-				// job attributes and well-placed meta-operators, b/c
-				// we're in the claimed state, so we'll have a job ad
-				// to evaluate against.
-			dprintf( D_ALWAYS, "State change: START is false\n" );
+		if( (_act == idle_act) && (rip->eval_is_owner()) ) {
+				// Be warned: we may not have a job ad here, so we don't
+				// want to just look at the START expression, as it could
+				// eval to False even if it could match a job (due to use
+				// of meta-operators or defaults for job ad values).
+				// So we explicitly wanna look at IS_OWNER here instead
+				// of checking to see if START is false. We used to think
+				// the two were equivalent, but with meta-operators they may not be
+				// TLM: STATE TRANSITION #10
+			reason = "IS_OWNER is true";
+			_state = preempting_state;
+			return xa_false_start;
+		}
+		if( (_act == idle_act) && rip->claimWorklifeExpired() ) {
 			// TLM: STATE TRANSITION #10
-			change( preempting_state );
-			return TRUE; // XXX: change TRUE
+			reason = "idle claim shutting down due to CLAIM_WORKLIFE";
+			_state = preempting_state;
+			return xa_end_of_worklife;
 		}
-		if( (r_act == idle_act) && rip->claimWorklifeExpired() ) {
-			dprintf( D_ALWAYS, "State change: idle claim shutting down due to CLAIM_WORKLIFE\n" );
+		if( (_act == idle_act) && rip->isDraining() &&
+			! rip->r_cur->waitingForActivation() ) {
 			// TLM: STATE TRANSITION #10
-			change( preempting_state );
-			return TRUE; // XXX: change TRUE
-		}
-		if( (r_act == idle_act) && rip->isDraining() &&
-				! rip->r_cur->waitingForActivation() ) {
-			dprintf( D_ALWAYS, "State change: idle claim shutting down due to draining of this slot\n" );
-			// TLM: STATE TRANSITION #10
-			change( preempting_state );
-			return TRUE;
-		}
-		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
-			rip->periodic_checkpoint();
-		}
-
-#if HAVE_JOB_HOOKS
-			// If we're compiled to support fetching work
-			// automatically and configured to do so, check now if we
-			// should try to fetch more work.
-		if (r_act != suspended_act) {
-			rip->tryFetchWork();
-		}
-#endif /* HAVE_JOB_HOOKS */
-
-		if( rip->reqexp_restore() ) {
-				// Our reqexp changed states, send an update
-			rip->update_needed(Resource::WhyFor::wf_stateChange);
+			reason = "idle claim shutting down due to draining of this slot";
+			_state = preempting_state;
+			return xa_idle_drain;
 		}
 		break;   // case claimed_state:
 
 
 	case preempting_state:
-		if( r_act == vacating_act ) {
+		if( _act == vacating_act ) {
 			if( 1 == rip->eval_kill() ) {
-				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
 				// TLM: STATE TRANSITION #21
-				rip->setBadputCausedByPreemption();
-				change( killing_act );
-				return TRUE; // XXX: change TRUE
+				reason = "KILL is TRUE";
+				_act = killing_act;
+				return xa_killing_time;
 			}
 		}
 		break;	// case preempting_state:
 
-
 	case unclaimed_state:
 		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
-#if HAVE_JOB_HOOKS
+			if (rip->is_dynamic_slot() && rip->r_attr->is_broken()) {
+				// we don't want dynamic slots with broken resources
+				// to be deleted when the claim is released instead we just stick around.broken...
+				if (continue_to_advertise_broken_dslots || rip->r_do_not_delete) break;
+			}
+		#if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
 				// be around to handle the response.
 			if( rip->isCurrentlyFetching() ) {
-				dprintf(D_ALWAYS, "State change: Unclaimed -> Deleted delayed for outstanding work fetch\n");
 				break;
 			}
-#endif
+		#endif
 			// TLM: Undocumented, hopefully on purpose.
-			change( delete_state );
-			return TRUE; // XXX: change TRUE
+			reason.clear();
+			_state = delete_state;
+			return xa_simple;
 		}
 
 		if( rip->isDraining() ) {
-			dprintf( D_ALWAYS, "State change: entering Drained state\n" );
 			// TLM: STATE TRANSITION #37
 			// TLM: Also unnumbered transition from Unclaimed/Benchmarking.
-			change( drained_state, retiring_act );
-			return TRUE;
+			reason = "entering Drained state (from unclaimed)";
+			_state = drained_state;
+			_act = retiring_act;
+			return xa_draining;
 		}
 
 		// See if we should be owner or unclaimed
 		if( rip->eval_is_owner() ) {
-			dprintf( D_ALWAYS, "State change: IS_OWNER is TRUE\n" );
 			// TLM: STATE TRANSITION #2
-			change( owner_state );
-			return TRUE; // XXX: change TRUE
+			reason = "IS_OWNER is TRUE";
+			_state = owner_state;
+			return xa_owner;
 		}
-
-			// Check to see if we should run benchmarks
-		if ( ! r_act_was_benchmark ) {
-			int num_started;
-			resmgr->m_attr->start_benchmarks( rip, num_started );
-		}
-
-#if HAVE_JOB_HOOKS
-			// If we're compiled to support fetching work
-			// automatically and configured to do so, check now if we
-			// should try to fetch more work.
-		rip->tryFetchWork();
-#endif /* HAVE_JOB_HOOKS */
 
 #if HAVE_BACKFILL
 			// check if we should go into the Backfill state.  only do
 			// so if a) we've got a BackfillMgr object configured and
 			// instantiated, and b) START_BACKFILL evals to TRUE
 		if( resmgr->m_backfill_mgr && rip->eval_start_backfill() > 0 ) {
-			dprintf( D_ALWAYS, "State change: START_BACKFILL is TRUE\n" );
 			// TLM: STATE TRANSITION #7
 			// TLM: Also unnumbered transition from Unclaimed/Benchmarking.
-			change( backfill_state, idle_act );
-			return TRUE; // XXX: change TRUE
+			reason = "START_BACKFILL is TRUE";
+			_state = backfill_state;
+			_act = idle_act;
+			return xa_backfill;
 		}
 #endif /* HAVE_BACKFILL */
-
-		if( rip->reqexp_restore() ) {
-				// Our reqexp changed states, send an update
-			rip->update_needed(Resource::WhyFor::wf_stateChange);
-		}
 
 		break; // case unclaimed_state
 
 
 	case owner_state:
+			// once a dynamic slot with broken resources transitions to owner state
+			// it should stay there if we want to advertise broken dslots
+		if (rip->r_attr && rip->r_attr->is_broken()) {
+			if (continue_to_advertise_broken_dslots || rip->r_do_not_delete) break;
+		}
+
 			// If the dynamic slot is allocated in the owner state
 			// (e.g. because of START expression contains attributes
 			// of job ClassAd), it may never go back to Unclaimed 
 			// state. So we need to delete the dynmaic slot in owner
 			// state.
 		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
-#if HAVE_JOB_HOOKS
+		#if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
 				// be around to handle the response.
 			if( rip->isCurrentlyFetching() ) {
-				dprintf(D_ALWAYS, "State change: Owner -> Deleted delayed for outstanding work fetch\n");
 				break;
 			}
-#endif
-			change( delete_state );
-			return TRUE; // XXX: change TRUE
+		#endif
+
+			reason.clear();
+			_state = delete_state;
+			return xa_simple;
 		}
 
 		if( rip->isDraining() ) {
-			dprintf( D_ALWAYS, "State change: entering Drained state\n" );
 			// TLM: STATE TRANSITION #36
-			change( drained_state, retiring_act );
-			return TRUE;
+			reason = "entering Drained state (from owner)";
+			_state = drained_state;
+			_act = retiring_act;
+			return xa_draining;
 		}
 
 		if( ! rip->eval_is_owner() ) {
-			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
 			// TLM: STATE TRANSITION #1
-			change( unclaimed_state );
-			return TRUE; // change() can delete rip
+			reason = "IS_OWNER is false";
+			_state = unclaimed_state;
+			return xa_simple;
 		}
-#if HAVE_JOB_HOOKS
-			// If we're compiled to support fetching work
-			// automatically and configured to do so, check now if we
-			// should try to fetch more work.  Even if we're in the
-			// owner state, we can still see if the expressions allow
-			// any fetched work at this point.
-		rip->tryFetchWork();
-#endif /* HAVE_JOB_HOOKS */
 
 		break; // case owner_state
 
@@ -517,7 +539,7 @@ ResState::eval_policy( void )
 		if( ! resmgr->m_backfill_mgr ) {
 			EXCEPT( "in Backfill state but m_backfill_mgr is NULL!" );
 		}
-		if( r_act == killing_act ) {
+		if( _act == killing_act ) {
 				// maybe we should have a safety-valve timeout here to
 				// prevent ourselves from staying in Backfill/Killing
 				// for too long.  however, for now, there's nothing to
@@ -527,37 +549,18 @@ ResState::eval_policy( void )
 			// see if we should leave the Backfill state
 		kill_rval = rip->eval_evict_backfill();
 		if( kill_rval > 0 ) {
-			dprintf( D_ALWAYS, "State change: EVICT_BACKFILL is TRUE\n" );
-			if( r_act == idle_act ) {
-					// no sense going to killing if we're already
-					// idle, go to owner immediately.
-				// TLM: STATE TRANSITION #30
-				change( owner_state );
-				return TRUE; // XXX: change TRUE
-			}
-				// we can change into Backfill/Killing then set our
-				// destination, since set_dest() won't take any
-				// additional action if we're already in killing_act
-			ASSERT( r_act == busy_act );
+			// TLM: STATE TRANSITION #30 (when act is idle)
 			// TLM: STATE TRANSITION #28
-			change( backfill_state, killing_act );
-			set_destination( owner_state );
-			return TRUE;
-		} else if( kill_rval < 0 ) {
-			dprintf( D_ALWAYS, "WARNING: EVICT_BACKFILL is UNDEFINED, "
-					 "staying in Backfill state\n" );
-		}
-
-#if HAVE_JOB_HOOKS
-			// If we're compiled to support fetching work
-			// automatically and configured to do so, check now if we
-			// should try to fetch more work.
-		rip->tryFetchWork();
-#endif /* HAVE_JOB_HOOKS */
-
-		if( r_act == idle_act ) {
-				// if we're in Backfill/Idle, try to spawn a backfill job
-			rip->start_backfill();
+			reason = "EVICT_BACKFILL is TRUE";
+			if (_act == idle_act) {
+				_state = owner_state;
+			} else {
+				ASSERT( _act == busy_act );
+				_state = backfill_state;
+				_act = killing_act;
+				// NOTE: xa_evict_backfill must set destination state to owner
+			}
+			return xa_evict_backfill;
 		}
 
 		break; // case backfill_state
@@ -566,30 +569,17 @@ ResState::eval_policy( void )
 
 	case drained_state:
 		if( !rip->isDraining() ) {
-			dprintf(D_ALWAYS,"State change: slot is no longer draining.\n");
 			// TLM: STATE TRANSITION #34
-			change( owner_state );
-			return TRUE;
+			reason = "slot is no longer draining";
+			_state = owner_state;
+			return xa_stopped_drain;
 		}
-		if( r_act == retiring_act ) {
+		if( _act == retiring_act ) {
 			if( resmgr->drainingIsComplete( rip ) ) {
-				resmgr->resetMaxJobRetirementTime();
-				// Only do this here if we want last drain stop time to be
-				// when the draining finished and not when it was cancelled
-				// (if it didn't auto-resume).
-				// resmgr->setLastDrainStopTime();
-				dprintf(D_ALWAYS,"State change: draining is complete.\n");
-				// TLM: STATE TRANSITION #33
-				change( drained_state, idle_act );
-				return TRUE;
-			}
-		}
-		else if( r_act == idle_act ) {
-			if( resmgr->considerResumingAfterDraining() ) {
-				// Only do this if we don't do it above, when the draining
-				// actually completes.
-				resmgr->setLastDrainStopTime();
-				return TRUE;
+				reason = "draining is complete";
+				_state = drained_state;
+				_act = idle_act;
+				return xa_drain_complete;
 			}
 		}
 		break;
@@ -599,6 +589,208 @@ ResState::eval_policy( void )
 				(int)rip->state() );
 	}
 	return 0;
+}
+
+// Do pre-state-change actions as indicated by the code
+// then change to the new state
+//
+void ResState::change_to_suggested_state(State new_state, Activity new_act, const std::string & reason, int xa_code)
+{
+	if (new_state == preempting_state && r_state != preempting_state) {
+		new_act = _preempting_activity();
+	}
+
+	if ( ! reason.empty()) {
+		dprintf(D_STATUS, "State change: %s.\n", reason.c_str());
+	}
+
+	updateActivityAverages();
+
+	// do extra actions indicated by the code
+	switch (xa_code)
+	{
+		case xa_retirement_expired2:
+			// same as xa_retirement_expired but PREEMPT evaluated to true
+			rip->setPreemptIsTrue();
+		[[fallthrough]];
+		case xa_retirement_expired:
+			// Normally, when we are in retirement, we will
+			// also be in the "retiring" activity.  However,
+			// it is also possible to be in the suspended
+			// activity.  Just to simplify things, we have one
+			// catch-all state transition here.  We may also
+			// get here in some other activity (e.g. idle or
+			// busy) if we just got preempted and haven't had
+			// time to transition into some other state.  No
+			// matter.  Whatever activity we were in, the
+			// retirement time has expired, so it is time to
+			// change to the preempting state.
+			if( rip->isDraining() ) {
+				rip->setBadputCausedByDraining();
+			} else {
+				rip->setBadputCausedByPreemption();
+			}
+			break;
+
+		case xa_preempt_and_retire: // irreversible retirement
+			rip->setPreemptIsTrue();
+			rip->setBadputCausedByPreemption();
+			rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
+			return; // retire_claim changed the state, we can leave now.
+			break;
+
+		case xa_preempt:
+			rip->setBadputCausedByPreemption();
+			break;
+
+		case xa_preempt_may_vacate:
+			if (rip->hasPreemptingClaim()) {
+				if (rip->r_pre->rank() > rip->r_cur->rank()) {
+					rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+				} else {
+					rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+				}
+			}
+			break;
+
+		case xa_preclaim_vacate:
+			if (rip->r_pre->rank() > rip->r_cur->rank()) {
+				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+			} else {
+				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+			}
+			break;
+
+		case xa_killing_time:
+			rip->setBadputCausedByPreemption();
+			break;
+
+		case xa_drain_complete:
+			resmgr->resetMaxJobRetirementTime();
+			// Only do this here if we want last drain stop time to be
+			// when the draining finished and not when it was cancelled
+			// (if it didn't auto-resume).
+			// resmgr->setLastDrainStopTime();
+			break;
+
+		case xa_evict_backfill:
+			r_destination = owner_state;
+			break;
+
+	}
+
+	// change the state, (not all codes will fall through to here)
+	change(new_state, new_act);
+
+	return;
+}
+
+// do periodic actions for eval_policy
+void
+ResState::do_periodic_actions( void )
+{
+	updateActivityAverages();
+
+	switch( r_state ) {
+
+	case claimed_state:
+		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
+			rip->periodic_checkpoint();
+		}
+
+	#if HAVE_JOB_HOOKS
+		// If we're compiled to support fetching work
+		// automatically and configured to do so, check now if we
+		// should try to fetch more work.
+		if (r_act != suspended_act) {
+			rip->tryFetchWork();
+		}
+	#endif /* HAVE_JOB_HOOKS */
+
+		if( rip->reqexp_restore() ) {
+			// Our reqexp changed states, send an update
+			rip->update_needed(Resource::WhyFor::wf_stateChange);
+		}
+		break;   // case claimed_state:
+
+	case unclaimed_state:
+		// Check to see if we should run benchmarks
+		if ( ! r_act_was_benchmark ) {
+			int num_started;
+			resmgr->m_attr->start_benchmarks( rip, num_started );
+		}
+
+	#if HAVE_JOB_HOOKS
+		// If we're compiled to support fetching work
+		// automatically and configured to do so, check now if we
+		// should try to fetch more work.
+		rip->tryFetchWork();
+	#endif /* HAVE_JOB_HOOKS */
+
+		if( rip->reqexp_restore() ) {
+			// Our reqexp changed states, send an update
+			rip->update_needed(Resource::WhyFor::wf_stateChange);
+		}
+		break; // case unclaimed_state
+
+	case owner_state:
+	#if HAVE_JOB_HOOKS
+		// If we're compiled to support fetching work
+		// automatically and configured to do so, check now if we
+		// should try to fetch more work.  Even if we're in the
+		// owner state, we can still see if the expressions allow
+		// any fetched work at this point.
+		rip->tryFetchWork();
+	#endif /* HAVE_JOB_HOOKS */
+		break; // end case owner_state
+
+#if HAVE_BACKFILL
+	case backfill_state:
+		if( r_act != killing_act ) {
+	#if HAVE_JOB_HOOKS
+		// If we're compiled to support fetching work
+		// automatically and configured to do so, check now if we
+		// should try to fetch more work.
+		rip->tryFetchWork();
+	#endif /* HAVE_JOB_HOOKS */
+		}
+
+		if( r_act == idle_act ) {
+			// if we're in Backfill/Idle, try to spawn a backfill job
+			rip->start_backfill();
+		}
+		break; // end case backfill_state
+#endif /* HAVE_BACKFILL */
+
+	case drained_state:
+		if( r_act == idle_act ) {
+			if( resmgr->considerResumingAfterDraining() ) {
+				// Only do this if we don't do it when the draining actually completes.
+				resmgr->setLastDrainStopTime();
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return;
+}
+
+int
+ResState::eval_policy_periodic( void )
+{
+	struct suggest sug(*this);
+	int code = eval_policy(sug);
+	if (code) {
+		dprintf(D_STATUS, "eval_policy state should be: %s/%s %d %s\n",
+			state_to_string(sug._state), activity_to_string(sug._act), code, sug._reason.c_str());
+		change_to_suggested_state(sug._state, sug._act, sug._reason, code);
+	} else {
+		do_periodic_actions();
+	}
+	return code;
 }
 
 
@@ -1043,7 +1235,7 @@ ResState::starterExited( void )
 	case matched_state:
 			// for all 3 of these, once the starter is gone, we can
 			// enter the destination directly.
-		dprintf( D_ALWAYS, "State change: starter exited\n" );
+		dprintf( D_ALWAYS, "State change: starter exited : %s(%d)\n", __FILE__, __LINE__ );
 		change( r_destination );
 		return TRUE; // XXX: change TRUE
 		break;
@@ -1053,7 +1245,7 @@ ResState::starterExited( void )
 			// request to claim, we can finally accept it.  if that
 			// pending request is gone for some reason, go back to
 			// the Owner state... 
-		dprintf( D_ALWAYS, "State change: starter exited\n" );
+		dprintf( D_ALWAYS, "State change: starter exited : %s(%d)\n", __FILE__, __LINE__ );
 		if (rip->acceptClaimRequest()) {
 				// Successfully accepted the claim and changed state.
 			return TRUE;

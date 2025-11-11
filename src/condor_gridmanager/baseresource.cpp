@@ -222,13 +222,13 @@ bool BaseResource::Invalidate () {
         "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
 		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
         ATTR_HASH_NAME, GetHashName (),
-        ATTR_SCHEDD_NAME, ScheddObj->name (),
+        ATTR_SCHEDD_NAME, ScheddName,
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
 		ATTR_OWNER, myUserName );
     ad.AssignExpr ( ATTR_REQUIREMENTS, line.c_str() );
 
 	ad.Assign( ATTR_HASH_NAME, GetHashName() );
-	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
+	ad.Assign( ATTR_SCHEDD_NAME, ScheddName );
 	ad.Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
 	ad.Assign( ATTR_OWNER, myUserName );
 
@@ -420,10 +420,8 @@ bool BaseResource::RequestSubmit( BaseJob *job )
 		return true;
 	}
 
-	if ( submitsAllowed.size() < jobLimit &&
-		 submitsWanted.size() > 0 ) {
-		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full",resourceName);
-	}
+	// If submitsAllowed is under jobLimit, then submitsWanted must be empty
+	ASSERT(submitsAllowed.size() >= jobLimit || submitsWanted.size() == 0);
 	if ( submitsAllowed.size() < jobLimit ) {
 		submitsAllowed.insert(job);
 		SetJobPollInterval();
@@ -735,9 +733,7 @@ void BaseResource::DoUpdateSharedLease( unsigned& update_delay,
 
 void BaseResource::StartBatchStatusTimer()
 {
-	if(m_batchPollTid != TIMER_UNSET) {
-		EXCEPT("BaseResource::StartBatchStatusTimer called more than once!");
-	}
+	ASSERT(m_batchPollTid == TIMER_UNSET);
 	dprintf(D_FULLDEBUG, "Grid type for %s will use batch status requests (DoBatchStatus).\n", ResourceName());
 	m_batchPollTid = daemonCore->Register_Timer( 0,
 		(TimerHandlercpp)&BaseResource::DoBatchStatus,

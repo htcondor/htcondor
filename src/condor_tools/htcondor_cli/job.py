@@ -40,7 +40,8 @@ def get_job_ad(logger, job_id, options):
                 "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
                 "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
                 "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
-                "RemoteWallClockTime", "Iwd", "Out", "Err", "UserLog"]
+                "RemoteWallClockTime", "Iwd", "Out", "Err", "UserLog", "TransferInStarted",
+                "TransferInFinished"]
     try:
         job = schedd.query(constraint=constraint, projection=projection, limit=1)
     except IndexError:
@@ -367,10 +368,14 @@ class Status(Verb):
                     f"{readable_size(job_ad.eval('RequestDisk')*kb)} requested"
                 )
 
+            # Transfer input sandbox times
+            transfer_input_start = job_ad.get("TransferInStarted")
+            transfer_input_finished = job_ad.get("TransferInFinished")
+
             # Print information relevant to each job status
             if job_status == htcondor.JobStatus.IDLE:
                 logger.info(f"Job {job_id} is currently idle.")
-                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.total_seconds())} ago.")
                 logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*mb)} of memory.")
                 logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*kb)} of disk space.")
                 if job_holds > 0:
@@ -382,8 +387,8 @@ class Status(Verb):
             elif job_status == htcondor.JobStatus.RUNNING:
                 job_running_time = datetime.now() - datetime.fromtimestamp(job_ad["JobStartDate"])
                 logger.info(f"Job {job_id} is currently running{annex_info}.")
-                logger.info(f"It started running {readable_time(job_running_time.seconds)} ago.")
-                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It started running {readable_time(job_running_time.total_seconds())} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.total_seconds())} ago.")
                 if memory_usage:
                     logger.info(f"Its current memory usage is {memory_usage}.")
                 if disk_usage:
@@ -395,13 +400,18 @@ class Status(Verb):
                 if job_atts > 1:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+                if transfer_input_start is not None:
+                    if transfer_input_finished is None:
+                        logger.info(f"Input file transfer is in progress.")
+                    else:
+                        logger.info(f"Input file transfer took {readable_time(transfer_input_finished - transfer_input_start)}.")
 
             elif job_status == htcondor.JobStatus.SUSPENDED:
                 job_suspended_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
                 logger.info(f"Job {job_id} is currently suspended{annex_info}.")
-                logger.info(f"It has been suspended for {readable_time(job_suspended_time.seconds)}.")
+                logger.info(f"It has been suspended for {readable_time(job_suspended_time.total_seconds())}.")
                 logger.info(f"It has been suspended {job_suspends} time{s(job_suspends)}.")
-                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.total_seconds())} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -410,7 +420,7 @@ class Status(Verb):
             elif job_status == htcondor.JobStatus.TRANSFERRING_OUTPUT:
                 job_transfer_time = datetime.now() - datetime.fromtimestamp(job_ad["JobCurrentStartTransferOutputDate"])
                 logger.info(f"Job {job_id} is currently transferring output{annex_info}.")
-                logger.info(f"It started transferring output {readable_time(job_transfer_time.seconds)} ago.")
+                logger.info(f"It started transferring output {readable_time(job_transfer_time.total_seconds())} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -419,10 +429,10 @@ class Status(Verb):
             elif job_status == htcondor.JobStatus.HELD:
                 job_held_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
                 logger.info(f"Job {job_id} is currently held.")
-                logger.info(f"It has been held for {readable_time(job_held_time.seconds)}.")
+                logger.info(f"It has been held for {readable_time(job_held_time.total_seconds())}.")
                 logger.info(f"""It was held because "{job_ad['HoldReason']}".""")
                 logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
-                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.total_seconds())} ago.")
                 if job_execs >= 1:
                     if memory_usage:
                         logger.info(f"Its last memory usage was {memory_usage}.")
@@ -431,12 +441,18 @@ class Status(Verb):
                 if job_atts >= 1:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+                if transfer_input_start is not None:
+                    if transfer_input_finished is None:
+                        logger.info(f"Input file transfer was in progress when the job was held.")
+                    else:
+                        logger.info(f"Input file transfer took {readable_time(transfer_input_finished - transfer_input_start)}.")
+
 
             elif job_status == htcondor.JobStatus.REMOVED:
                 job_removed_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
                 logger.info(f"Job {job_id} was removed.")
-                logger.info(f"It was removed {readable_time(job_removed_time.seconds)} ago.")
-                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It was removed {readable_time(job_removed_time.total_seconds())} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.total_seconds())} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -445,8 +461,8 @@ class Status(Verb):
             elif job_status == htcondor.JobStatus.COMPLETED:
                 job_completed_time = datetime.now() - datetime.fromtimestamp(job_ad["CompletionDate"])
                 logger.info(f"Job {job_id} has completed.")
-                logger.info(f"It completed {readable_time(job_completed_time.seconds)} ago.")
-                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It completed {readable_time(job_completed_time.total_seconds())} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.total_seconds())} ago.")
                 if memory_usage:
                     logger.info(f"Its last memory usage was {memory_usage}.")
                 if disk_usage:
@@ -526,7 +542,7 @@ class Status(Verb):
                 else:
                     info_str = f"Job is {job_status}"
                     if time_diff is not None:
-                        info_str = f"{info_str} since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s"
+                        info_str = f"{info_str} since {round(time_diff.total_seconds()/60)}m{(time_diff.total_seconds()%60)}s"
                     logger.info(info_str)
 
         else:
@@ -649,10 +665,10 @@ class Resources(Verb):
                 current_time = datetime.now()
                 if current_time < provisioner_job_scheduled_end_time:
                     time_diff = provisioner_job_scheduled_end_time - current_time
-                    logger.info(f"Slurm resources are reserved for another {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    logger.info(f"Slurm resources are reserved for another {round(time_diff.total_seconds()/60)}m{(time_diff.total_seconds()%60)}s")
                 else:
                     time_diff = current_time - provisioner_job_scheduled_end_time
-                    logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    logger.info(f"Slurm resources were terminated since {round(time_diff.total_seconds()/60)}m{(time_diff.total_seconds()%60)}s")
 
 def load_templates() -> list:
     """

@@ -11,6 +11,25 @@ _schedd_query_callback( void * r, ClassAd * ad ) {
     return false;
 }
 
+static int
+_schedd_userrec_query_callback( void * r, ClassAd * ad ) {
+    auto * results = static_cast<PyObject*>(r);
+
+    // py_new_classad2_classad takes ownership of the ad
+    PyObject * pyClassAd = py_new_classad2_classad(ad);
+    auto rv = PyList_Append(results, pyClassAd);
+    Py_DecRef(pyClassAd);
+
+    if (rv != 0) {
+        // pthon set an error, we need to break out of the query
+        // and return a negative code so that the caller knows.
+        return -1;
+    }
+
+    // return 0 to indicate that the results list took ownership of the ad
+    return 0;
+}
+
 
 static PyObject *
 _schedd_query(PyObject *, PyObject * args) {
@@ -108,6 +127,95 @@ _schedd_query(PyObject *, PyObject * args) {
     return list;
 }
 
+static PyObject *
+_schedd_userrec_query(PyObject *, PyObject * args) {
+    // _schedd_userrec_query(addr, constraint, projection, limit, projects_flag)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    PyObject * projection = NULL;
+    long limit = -1; // -1 is no limit
+    long projects_flag = 0; // 0=default, 1=project, 2=user, 3=both
+    if(! PyArg_ParseTuple( args, "zzOll", & addr, & constraint, & projection, & limit, & projects_flag )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    if(! PyList_Check(projection)) {
+        PyErr_SetString(PyExc_TypeError, "projection must be a list");
+        return NULL;
+    }
+
+    DCSchedd schedd(addr);
+
+    classad::References attributes;
+    int rv = py_list_to_projection(projection, attributes, "projection");
+    if( rv == -1 ) {
+        // py_list_to_projection() has already set an exception for us.
+        return NULL;
+    }
+
+    ClassAd queryAd;
+    CondorError errStack;
+    ClassAd *summaryAd = nullptr;
+
+    PyObject * results = nullptr;
+
+    rv = schedd.makeUsersQueryAd(queryAd, constraint, attributes, limit);
+    if (0 == rv) {
+        // TODO: move this into makeUsersQueryAd and handle the case of
+        // separate constraint and projection for each ad type
+        switch (projects_flag & 0x3) {
+        case 1: queryAd.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE); break;
+        case 2: queryAd.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE); break;
+        case 3: queryAd.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE "," PROJECT_ADTYPE); break;
+        }
+
+        results = PyList_New(0);
+        if( results == NULL ) {
+            PyErr_SetString( PyExc_MemoryError, "_schedd_userrec_query" );
+            return NULL;
+        }
+
+        int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
+        rv = schedd.queryUsers(
+            queryAd, _schedd_userrec_query_callback, results,
+            connect_timeout, &errStack, &summaryAd);
+    }
+
+    if (0 == rv) {
+        // success, we just want to return the results
+    } else {
+        // failure, free any results and set an error into python if needed
+        if (results) {
+            Py_DecRef(results);
+            results = nullptr;
+        }
+        switch (rv) {
+            case 0: break;  // should never get here on success, this is just for clarity.
+            case -1: break; // error already set by python (in callback)
+
+            case Q_UNSUPPORTED_OPTION_ERROR:
+                // This was HTCondorIOError in version 1.
+                PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
+                break;
+
+            case SC_ERR_BAD_CONSTRAINT:
+                PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
+                break;
+
+            default:
+                // This was HTCondorIOError in version 1.
+                std::string error = "Failed to fetch ads from schedd, errmsg="
+                                  + errStack.getFullText();
+                PyErr_SetString(PyExc_HTCondorException, error.c_str());
+                break;
+        }
+    }
+
+    return results;
+}
+
 
 static PyObject *
 _schedd_act_on_job_ids(PyObject *, PyObject * args) {
@@ -173,7 +281,10 @@ _schedd_act_on_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    // All of the functions setting `result` in the code above are documented
+    // as making the caller the owner of the returned pointer, so we can just
+    // turn around and make Python the owner.
+    return py_new_classad2_classad(result);
 }
 
 
@@ -244,7 +355,215 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    // See comment in _schedd_act_on_job_ids().
+    return py_new_classad2_classad(result);
+}
+
+static PyObject *
+_schedd_act_on_userrec_list(PyObject *, PyObject * args) {
+    // _schedd_act_on_userrec_list(addr, name_list, action, reason_string)
+
+    const char * addr = NULL;
+    PyObject * name_list;
+    long action = 0;
+    const char * reason_string = NULL;
+
+    if(! PyArg_ParseTuple( args, "zOlz", & addr, & name_list, & action, & reason_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    // action is a composite of cmd, create_if=0x10000 and is_project=0x80000
+    // if any other bit is set, then action is invalid
+    int  cmd = action & 0xFFFF;
+    bool create_if = (action & 0x10000) != 0;
+    bool list_of_ads =  (action & 0x20000) != 0;
+    bool is_project = (action & 0x80000) != 0;
+    if ((action & ~0xBFFFF) != 0 || cmd < ENABLE_USERREC || cmd > DELETE_USERREC) {
+        PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        return NULL;
+    }
+
+#if 0 // wait for debugger, then break
+#ifdef WIN32
+    fprintf(stderr, "pid=%u\_schedd_act_on_userrec_list(%s,0x%x,...%s)\n", GetCurrentProcessId(),
+        addr ? addr : "null", action, reason_string ? reason_string : "null");
+    static bool debugger_present = false;
+    while ( ! debugger_present) {
+        debugger_present = IsDebuggerPresent();
+        Sleep(1000);
+    }
+    DebugBreak();
+#endif
+#endif
+
+    int rv = 0;
+    std::vector<std::string> names;
+    int num_names = 0;
+    std::vector<const char * > name_vec;
+    std::vector<const ClassAd*> ads;
+
+
+    if (list_of_ads) {
+        Py_ssize_t size = PyList_Size(name_list);
+        for( int i = 0; i < size; ++i ) {
+            PyObject * py_s = PyList_GetItem(name_list, i);
+            if( py_s == NULL ) {
+                // PyList_GetItem() has already set an exception for us.
+                return NULL;
+            }
+            auto * handle = get_handle_from(py_s);
+            ClassAd* ad = (ClassAd *)handle->t;
+            ads.push_back(ad);
+        }
+        num_names = (int)ads.size();
+    } else {
+        rv = py_list_to_vector_of_strings(name_list, names, "name_list");
+        if( rv == -1 ) {
+            // py_list_to_vector_of_strings() has already set an exception for us.
+            return NULL;
+        }
+        num_names = (int)names.size();
+        // convert python list to an array of const char *
+        name_vec.reserve(num_names);
+        for (auto & name : names) { name_vec.emplace_back(name.c_str()); }
+    }
+
+
+    ClassAd * result = NULL;
+    DCSchedd schedd(addr);
+    CondorError errstack;
+
+    switch (cmd) {
+    case ENABLE_USERREC:
+        if (list_of_ads) {
+            result = schedd.addOrEnableUserRecs(&ads[0], num_names, create_if, is_project, &errstack);
+        } else if (is_project) {
+            result = schedd.enableProjects(&name_vec[0], num_names, create_if, &errstack);
+        } else {
+            result = schedd.enableUsers(&name_vec[0], num_names, create_if, &errstack);
+        }
+        break;
+
+    case DISABLE_USERREC:
+        if (list_of_ads) {
+            PyErr_SetString(PyExc_HTCondorException, "Disable mixed users and projects not implemented.");
+        } else if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        } else {
+            result = schedd.disableUsers(&name_vec[0], num_names, reason_string, &errstack);
+        }
+        break;
+
+    case DELETE_USERREC:
+        if (list_of_ads) {
+            PyErr_SetString(PyExc_HTCondorException, "Remove mixed users and projects not implemented.");
+        } else if (is_project) {
+            result = schedd.removeProjects(&name_vec[0], num_names, reason_string, &errstack);
+        } else {
+            result = schedd.removeUsers(&name_vec[0], num_names, reason_string, &errstack);
+        }
+        break;
+
+    default:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Project action not implemented.");
+        } else {
+            PyErr_SetString(PyExc_HTCondorException, "User action not implemented.");
+        }
+        break;
+    }
+
+    if( result == NULL ) {
+        PyErr_SetString(PyExc_HTCondorException, "Error when performing user or project action on the schedd.");
+        return NULL;
+    }
+
+    return py_new_classad2_classad(result);
+}
+
+static PyObject *
+_schedd_act_on_userrec_constraint(PyObject *, PyObject * args) {
+    // _schedd_act_on_userrec_constraint(addr, constraint, action, reason_string)
+
+    const char * addr = NULL;
+    const char * constraint = NULL;
+    long action = 0;
+    const char * reason_string = NULL;
+
+    if(! PyArg_ParseTuple( args, "zzlz", & addr, & constraint, & action, & reason_string )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    // action is a composite of cmd, create_if=0x10000 and is_project=0x80000
+    // if any other bit is set, then action is invalid
+    int  cmd = action & 0xFFFF;
+    //bool create_if = (action & 0x10000) != 0;
+    bool is_project = (action & 0x80000) != 0;
+    if ((action & ~0x9FFFF) != 0 || cmd < ENABLE_USERREC || cmd > DELETE_USERREC) {
+        PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        return NULL;
+    }
+
+#if 0 // wait for debugger, then break
+#ifdef WIN32
+    fprintf(stderr, "pid=%u\_schedd_act_on_userrec_constraint(%s,0x%x,...%s)\n", GetCurrentProcessId(),
+        addr ? addr : "null", action, reason_string ? reason_string : "null");
+    static bool debugger_present = false;
+    while ( ! debugger_present) {
+        debugger_present = IsDebuggerPresent();
+        Sleep(1000);
+    }
+    DebugBreak();
+#endif
+#endif
+
+
+    ClassAd * result = NULL;
+    DCSchedd schedd(addr);
+    CondorError errstack;
+
+    switch (cmd) {
+    case ENABLE_USERREC:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Enable Projects not implemented.");
+        } else {
+            result = schedd.enableUsers(constraint, &errstack);
+        }
+        break;
+
+    case DISABLE_USERREC:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+        } else {
+            result = schedd.disableUsers(constraint, reason_string, &errstack);
+        }
+        break;
+
+    case DELETE_USERREC:
+        if (is_project) {
+            result = schedd.removeProjects(constraint, reason_string, &errstack);
+        } else {
+            result = schedd.removeUsers(constraint, reason_string, &errstack);
+        }
+        break;
+
+    default:
+        if (is_project) {
+            PyErr_SetString(PyExc_HTCondorException, "Project action not implemented.");
+        } else {
+            PyErr_SetString(PyExc_HTCondorException, "User action not implemented.");
+        }
+        break;
+    }
+
+    if( result == NULL ) {
+        PyErr_SetString(PyExc_HTCondorException, "Error when performing user or project action on the schedd.");
+        return NULL;
+    }
+
+    return py_new_classad2_classad(result);
 }
 
 
@@ -274,7 +593,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     }
 
     long matchCount = 0;
-	for (auto& id: StringTokenIterator(job_list)) {
+        for (auto& id: StringTokenIterator(job_list)) {
         JOB_ID_KEY jobIDKey;
         if(! jobIDKey.set(id)) {
             qc.abort();
@@ -416,7 +735,7 @@ _schedd_export_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -457,7 +776,7 @@ _schedd_export_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -489,7 +808,7 @@ _schedd_import_exported_job_results(PyObject *, PyObject * args) {
     // Check for `Error` attribute in result?
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -523,7 +842,7 @@ _schedd_unexport_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -560,7 +879,7 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -621,7 +940,10 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
     // Initialize the new cluster ad.
-    if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
+	// TODO The second argument can be used to impersonate another user
+	//   in the schedd's Queue-management API (assuming we're authorized
+	//   to do that).
+    if( sb->init_base_ad( time(NULL), nullptr ) != 0 ) {
 
         std::string error = "Failed to create a cluster ad, errmsg="
             + sb->error_stack()->getFullText();
@@ -636,9 +958,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
     //
 
     //if (dry_run) {
-    //	FILE * outfile = nullptr; // FILE* to dry-run to
-    //	simQ.Connect(outfile, false, false);
-    //	myq = &SimQ;
+    //  FILE * outfile = nullptr; // FILE* to dry-run to
+    //  simQ.Connect(outfile, false, false);
+    //  myq = &SimQ;
     //} else
     {
         if (scheddQ.Connect(schedd, errstack) == 0) {
@@ -661,7 +983,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->setTransferMap(getProtectedURLMap());
     }
 
-    
+
     long long maxMaterialize = 0;
     bool isFactoryJob = sb->isFactory(maxMaterialize);
     if ( ! isFactoryJob && param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false)) {
@@ -764,9 +1086,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 
         // Generate the job ClassAd
-        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, 0, false, spool, NULL, NULL);
+        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, step, false, spool, NULL, NULL);
         if(! procAd) {
-            std::string error = "Failed to create job ad"; 
+            std::string error = "Failed to create job ad";
             if (isFactoryJob) error += " (late materialization)";
             formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
@@ -838,7 +1160,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
             PyErr_SetString(PyExc_HTCondorException, errmsg.c_str());
         }
         if (spooledProcAds) {
-            while ( ! spooledProcAds->empty()) { 
+            while ( ! spooledProcAds->empty()) {
                 delete spooledProcAds->back();
                 spooledProcAds->pop_back();
             }
@@ -871,9 +1193,32 @@ _schedd_submit( PyObject *, PyObject * args ) {
         pySpooledProcAds = py_new_htcondor2_spooled_proc_ad_list( spooledProcAds );
     }
 
+    //
+    // py_new_classad2_classad() returns a pointer to a Python object with a
+    // reference count as 1; this is good and true and proper, and means the
+    // object can safely be used as a Python variable, whether returned from
+    // a function in this interface layer ... or passed, as it is in
+    // py_new_htcondor_submit_result(), to a Python function.  That function
+    // (SubmitResult.__init__()) assigns pyClusterAd to a Python-side variable,
+    // increasing its reference count... so it will never be freed.
+    //
+    // Think of it as a malloc()/free() pair, where when you return a malloc()d
+    // malloc()d pointer, the caller is responsible for calling free(), but
+    // otherwise, you must.  In this example, py_new_htcondor2_submit_result()
+    // is (properly) "making a copy" of the pointer its given rather than
+    // assuming that it now owns it, so to avoid leaking, we have to "free"
+    // pyClusterAd.
+    //
+    // We could also have py_new_htcondor2_submit_result() "steal" a reference,
+    // but our experience with Python memory management is that magical
+    // behavior is bad for us.
+    //
     PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
     sb->cleanup_submit();
-    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
+    PyObject * rv = py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
+    Py_DecRef( pyClusterAd );
+    Py_DecRef( pySpooledProcAds );
+    return rv;
 }
 
 
@@ -909,7 +1254,7 @@ _history_query(PyObject *, PyObject * args) {
 
     std::string prefix = "";
     std::string projectionList = "{";
-	for (auto& attr : StringTokenIterator(projection)) {
+    for (auto& attr : StringTokenIterator(projection)) {
         projectionList += prefix + "\"" + attr + "\"";
         prefix = ", ";
     }
@@ -933,6 +1278,15 @@ _history_query(PyObject *, PyObject * args) {
         case 2: /* HRS_JOB_EPOCH */
             commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "JOB_EPOCH");
             break;
+        case 3: /* HRS_DAEMON_HIST */
+            if(!adFilter || adFilter[0] == '\0') {
+                PyErr_SetString( PyExc_HTCondorException, "missing subsystem for daemon history source" );
+                return NULL;
+            }
+            commandAd.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "DAEMON");
+            // Note: adFilter is expected to be just the daemon subsys
+            commandAd.InsertAttr(ATTR_DAEMON_HISTORY_SUBSYS, adFilter);
+            break;
         default:
             // This was HTCondorValueError in version 1.
             PyErr_SetString( PyExc_HTCondorException, "unknown history record source" );
@@ -953,11 +1307,11 @@ _history_query(PyObject *, PyObject * args) {
         if( message == NULL || message[0] == '\0' ) {
             message = "Unable to connect to schedd";
             if( dt == DT_STARTD ) { message = "Unable to connect to startd"; }
-
-            // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_HTCondorException, message );
-            return NULL;
         }
+
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_HTCondorException, message );
+        return NULL;
     }
 
     if(! putClassAd( sock, commandAd )) {
@@ -1212,4 +1566,189 @@ _schedd_refresh_gsi_proxy(PyObject *, PyObject * args) {
 
         return PyLong_FromLong(result_expiration - now);
     }
+}
+
+static PyObject *
+_schedd_get_dag_contact_info(PyObject *, PyObject * args) {
+    // schedd_reschedule(addr, import_dir)
+
+    const char* addr;
+    long cluster = 0;
+
+    if(! PyArg_ParseTuple( args, "sl", & addr, & cluster )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    ClassAd * result = schedd.getDAGManContact( cluster, errorStack );
+
+    if( errorStack.code() > 0 ) {
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+
+    if( result == NULL ) {
+        // Throw exception due to no result ad.
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
+        return NULL;
+    }
+
+    return py_new_classad2_classad(result);
+}
+
+static PyObject *
+_schedd_get_claims(PyObject *, PyObject * args) {
+
+    char *addr = nullptr;
+    const char * constraint = NULL;
+    const char * projection = NULL;
+
+    if (!PyArg_ParseTuple( args, "zzs", &addr, &constraint, &projection)) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return nullptr;
+    }
+
+    CondorError errStack;
+
+    DCSchedd schedd(addr);
+    std::vector<std::unique_ptr<ClassAd>> results;
+
+    ClassAd queryAd;
+    if (constraint) {
+        queryAd.AssignExpr(ATTR_REQUIREMENTS, constraint);
+    }
+
+    if (projection) {
+        queryAd.Assign(ATTR_PROJECTION, projection);
+    }
+
+    bool result = schedd.getClaims(results, queryAd, errStack);
+
+    if (!result) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot query schedd");
+        return nullptr;
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == nullptr ) {
+        PyErr_SetString( PyExc_MemoryError, "_schedd_get_claims" );
+        return nullptr;
+    }
+
+    for (auto & classAd : results ) {
+        //PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(*classAd));
+        PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        auto rv = PyList_Append(list, pyClassAd);
+        Py_DecRef(pyClassAd);
+
+        if( rv != 0 ) {
+            // PyList_Append() has already set an exception for us.
+            return nullptr;
+        }
+    }
+
+    return list;
+}
+
+// DCSchedd::createOCUs supports passing in multiple OCU ClassAds at once
+// but for now we just wrap it to create one at a time.
+// and thus return one at a time.
+static PyObject *
+_schedd_create_ocu(PyObject *, PyObject * args) {
+
+    char *addr = nullptr;
+    PyObject_Handle *ocu_ad_handle = nullptr;
+
+    if (!PyArg_ParseTuple( args, "sO", &addr, (PyObject **)&ocu_ad_handle)) {
+        return nullptr;
+    }
+
+    ClassAd *ocu_ad = (ClassAd *)ocu_ad_handle->t;
+
+    CondorError errStack;
+
+    DCSchedd schedd(addr);
+
+	ClassAd result = schedd.createOCU(*ocu_ad, &errStack);
+
+    if (result.empty()) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send OCU creation request to schedd");
+        return nullptr;
+    }
+
+	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
+    return pyClassAd;
+}
+
+static PyObject *
+_schedd_remove_ocu(PyObject *, PyObject * args) {
+
+    char *addr = nullptr;
+	long ocu_id;
+
+    if (!PyArg_ParseTuple( args, "zl", &addr, &ocu_id)) {
+        return nullptr;
+    }
+
+	ClassAd ocu_ad;
+	ocu_ad.Assign(ATTR_OCU_ID, ocu_id);
+
+    CondorError errStack;
+
+    DCSchedd schedd(addr);
+
+	ClassAd result = schedd.removeOCU(ocu_ad, &errStack);
+
+    if (result.empty()) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send OCU removal request to schedd");
+        return nullptr;
+    }
+
+	PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(result));
+    return pyClassAd;
+}
+
+static PyObject *
+_schedd_query_ocu(PyObject *, PyObject * args) {
+    char *addr = nullptr;
+    PyObject_Handle * ocu_ad_handle = nullptr;
+
+    if (!PyArg_ParseTuple( args, "zO", &addr, (PyObject **) &ocu_ad_handle)) {
+        return nullptr;
+    }
+
+    ClassAd *query_ad = (ClassAd *)ocu_ad_handle->t;
+
+    CondorError errStack;
+    DCSchedd schedd(addr);
+
+	std::vector<ClassAd> results = schedd.queryOCU(*query_ad, &errStack);
+
+    if (errStack.code() > 0) {
+        PyErr_SetString(PyExc_HTCondorException, "Cannot send OCU query request to schedd");
+        return nullptr;
+    }
+
+    PyObject * list = PyList_New(0);
+    if( list == nullptr ) {
+        PyErr_SetString( PyExc_MemoryError, "_schedd_query_ocu" );
+        return nullptr;
+    }
+
+    for (auto & classAd : results ) {
+        PyObject * pyClassAd = py_new_classad2_classad(new ClassAd(classAd));
+        //PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
+        auto rv = PyList_Append(list, pyClassAd);
+        //Py_DecRef(pyClassAd);
+
+        if( rv != 0 ) {
+            // PyList_Append() has already set an exception for us.
+            return nullptr;
+        }
+    }
+
+    return list;
 }

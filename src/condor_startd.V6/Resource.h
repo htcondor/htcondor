@@ -33,6 +33,9 @@
 
 #define USE_STARTD_LATCHES 1
 
+enum class ResourceLockType;
+class BrokenItem;
+
 class SlotType
 {
 public:
@@ -91,13 +94,13 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _parent = NULL, bool take_parent_claim = false);
+	Resource( CpuAttributes*, int id, Resource* _donor = nullptr, bool take_donor_claim = false);
 	~Resource();
 
 		// override param by slot_type
-	char * param(const char * name);
-	const char * param(std::string& out, const char * name);
-	const char * param(std::string& out, const char * name, const char * def);
+	char * param(const char * name) const;
+	const char * param(std::string& out, const char * name) const;
+	const char * param(std::string& out, const char * name, const char * def) const;
 
 		// Public methods that can be called from command handlers
 	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode);	// Gracefully finish job and release claim
@@ -114,16 +117,21 @@ public:
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
 
+		// Job is done, wait for starter to exit, keep the claim
+	int		deactivate_claim_job_done( Stream*, bool claim_closing );
+
 		// Tell the starter to put the job on hold
 	void hold_job(bool soft);
 
 	void setVacateReason(const std::string reason, int code, int subcode);
 
+#if 0
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
+#endif
 
 		// True if this slot is draining
-	bool isDraining();
+	bool isDraining() const;
 
 		// Remove the given claim from this Resource
 	void	removeClaim( Claim* );
@@ -167,7 +175,7 @@ public:
 	bool	hasOppClaim( void );
 	bool	hasAnyClaim( void );
 	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
-	bool	isSuspendedForCOD( void ) {return r_suspended_for_cod;};
+	bool	isSuspendedForCOD( void ) const {return r_suspended_for_cod;};
 	void	hackLoadForCOD( void );
 
 	void	suspendForCOD( void );
@@ -258,7 +266,7 @@ public:
 		// Return a pointer to the Claim object with the given GlobalJobId
 	Claim*	findClaimByGlobalJobId( const char* id );
 
-	bool	claimIsActive( void ); 
+	bool	claimIsActive( void ) const;
 
 	Claim*	newCODClaim( int lease_duration );
 
@@ -271,6 +279,11 @@ public:
 
 		// Called when the starter of one of our claims exits
 	void	starterExited( Claim* cur_claim );
+
+		// save context for broken slots, this will take ownership of the job classad
+	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job, ResourceLockType lock);
+	void	remove_broken_context();
+	void	restore_broken_resources(const ResBag& broken, const int sub_id);
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
@@ -304,13 +317,13 @@ public:
 	void	publish_slot_config_overrides(ClassAd * cad);
 
 	void	publish_static_resources(ClassAd * cad, const ResBag & inUse) {
-		if (r_backfill_slot && can_create_dslot()) {
+		if (r_backfill_slot && !m_parent) {
 			// deduct in-use resources from the backfill p-slot
 			// if there is more than one backfill p-slot, inuse resources will be overcounted.
 			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
-			r_attr->publish_static(cad, &inUse);
+			r_attr->publish_static(cad, &inUse, r_lost_child_res);
 		} else {
-			r_attr->publish_static(cad, nullptr);
+			r_attr->publish_static(cad, nullptr, r_lost_child_res);
 		}
 	}
 
@@ -343,16 +356,16 @@ public:
 	int	    benchmarks_finished( void );
 
  		// Helper functions to evaluate resource expressions
-	int     wants_hold( void );         // Default's to FALSE on undefined
-	int		wants_vacate( void );		// EXCEPT's on undefined
-	int		wants_suspend( void );		// EXCEPT's on undefined
-	int		wants_pckpt( void );		// Defaults to FALSE on undefined
-	int		eval_kill( void );			// EXCEPT's on undefined
-	int		eval_preempt( void );		// EXCEPT's on undefined
-	int		eval_suspend( void );		// EXCEPT's on undefined
-	int		eval_continue( void );		// EXCEPT's on undefined
-	int		eval_is_owner( void );		// EXCEPT's on undefined
-	int		eval_start( void );			// returns -1 on undefined
+	int     wants_hold( void ) const;   // Default's to FALSE on undefined
+	int		wants_vacate( void ) const; // EXCEPT's on undefined
+	int		wants_suspend( void ) const;// EXCEPT's on undefined
+	int		wants_pckpt( void ) const;  // Defaults to FALSE on undefined
+	int		eval_kill( void ) const;    // EXCEPT's on undefined
+	int		eval_preempt( void ) const; // EXCEPT's on undefined
+	int		eval_suspend( void ) const; // EXCEPT's on undefined
+	int		eval_continue( void ) const;// EXCEPT's on undefined
+	int		eval_is_owner( void ) const;// EXCEPT's on undefined
+	int		eval_start( void ) const;   // returns -1 on undefined
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
@@ -362,15 +375,15 @@ public:
 	const char * analyze_match(std::string & buf, ClassAd* request_ad, bool slot_requirements, bool job_requirements);
 
 #if HAVE_BACKFILL
-	int		eval_start_backfill( void ); 
-	int		eval_evict_backfill( void ); 
+	int		eval_start_backfill( void ) const;
+	int		eval_evict_backfill( void ) const;
 	bool	start_backfill( void );
 	bool	softkill_backfill( void );
 	bool	hardkill_backfill( void );
 #endif /* HAVE_BACKFILL */
 
 #if HAVE_JOB_HOOKS
-	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
+	bool	isCurrentlyFetching( void ) const { return m_currently_fetching; }
 	void	tryFetchWork( int timerID = -1 );
 	void	createOrUpdateFetchClaim( ClassAd* job_ad, double rank = 0 );
 	bool	spawnFetchedWork( void );
@@ -388,15 +401,15 @@ public:
 	bool	evaluateHibernate( std::string &state ) const;
 #endif /* HAVE_HIBERNATION */
 
-	time_t  evalMaxVacateTime();
-	bool    claimWorklifeExpired();
-	bool    retirementExpired();
-	time_t  evalRetirementRemaining();
-	int		mayUnretire( void );
-	bool    inRetirement( void );
-	int		hasPreemptingClaim( void );
+	time_t  evalMaxVacateTime() const;
+	bool    claimWorklifeExpired() const;
+	bool    retirementExpired() const;
+	time_t  evalRetirementRemaining() const;
+	bool	mayUnretire( void ) const;
+	bool    inRetirement( void ) const;
+	bool	hasPreemptingClaim( void ) const;
 	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
-	void    preemptIsTrue();              //records that PREEMPT was true
+	void    setPreemptIsTrue();           //records that PREEMPT evaluated to True
 	const ExprTree * getDrainingExpr();
 
 	// methods that manipulate the Requirements attributes via the Reqexp struct
@@ -437,14 +450,17 @@ public:
 	bool            r_suspended_by_command;	// true when the claim was suspended by a SUSPEND_CLAIM command
 	bool            r_no_collector_updates; // true for HIDDEN slots
 	bool            r_acceptedWhileDraining;// true when the job was started while draining
+	bool            r_do_not_delete{false}; // true when slot is broken and should not be deleted
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource
+	ResBag*			r_lost_child_res{nullptr}; // quantities of resources that were assigned to child slots and then lost or broken
 	LoadQueue		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
+	unsigned int		r_broken_id{0}; // Reference ID for broken item slot is associated with
 
 	unsigned int type_id( void ) { return r_attr->type_id(); };
 
@@ -465,16 +481,19 @@ public:
 	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
 	ResourceFeature	get_feature( void ) { return m_resource_feature; }
 
+	bool is_static_slot() const { return m_resource_feature == STANDARD_SLOT; }
 	bool is_partitionable_slot() const { return m_resource_feature == PARTITIONABLE_SLOT; }
 	bool is_dynamic_slot() const { return m_resource_feature == DYNAMIC_SLOT; }
 	bool is_broken_slot() const { return m_resource_feature == BROKEN_SLOT; }
-	bool can_create_dslot() const { return is_partitionable_slot(); } // for now, only p-slots are splitable
+	bool can_create_dslot() const { return is_partitionable_slot() || (is_dynamic_slot() && !r_claims.empty()); }
 
-	void set_parent( Resource* rip );
+	void set_parent(Resource* rip);
 	Resource* get_parent() { return m_parent; }
 	void clear_parent(); // disconnect from parent (called on deletion of dynamic slots)
 
-	std::string makeChildClaimIds();
+	Claim* is_split_claim_id(const char * id); // matches one of the slot splitting claim ids in r_claims;
+
+	std::string renderDslotClaimIdsList();
 	void add_dynamic_child(Resource *rip) { m_children.insert(rip); }
 	void remove_dynamic_child(Resource *rip) {m_children.erase(rip); }
 
@@ -485,7 +504,9 @@ public:
 	bool fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad, std::string & require);
 
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
-	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
+	bool has_nft_conflicts(MachAttributes* ma) const {
+		return ma->has_nft_conflicts(r_id, r_sub_id);
+	}
 
 	bool wasAcceptedWhileDraining() const { return r_acceptedWhileDraining; }
 	void setAcceptedWhileDraining() { r_acceptedWhileDraining = isDraining(); }
@@ -498,6 +519,8 @@ private:
 	std::set<Resource *, ResourceLess> m_children;
 	// only non-partitionable backfill slots have resource conflicts
 	std::string m_res_conflict;
+
+	std::string m_orig_assigned_gpus; // AssignedGpus at birth, to help debug HTCONDOR-3072
 
 	IdDispenser* m_id_dispenser;
 
@@ -521,7 +544,7 @@ private:
 	double	r_pre_cod_condor_load = 0.0;
 	void 	startTimerToEndCODLoadHack();
 	void	endCODLoadHack( int timerID = -1 );
-	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
+	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla ) const;
 
 	std::string m_execute_dir;
 	std::string m_execute_partition_id;

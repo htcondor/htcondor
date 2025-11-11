@@ -63,6 +63,9 @@
 
 #include <filesystem>
 
+#include <chrono>
+using namespace std::chrono_literals;
+
 #define PREEN_EXIT_STATUS_SUCCESS       0
 #define PREEN_EXIT_STATUS_FAILURE       1
 #define PREEN_EXIT_STATUS_EMAIL_FAILURE 2
@@ -98,6 +101,7 @@ void check_log_dir();
 void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
+void check_syndicate_dir();
 void bad_file( const char *, const char *, Directory &, const char * extra = NULL );
 void good_file( const char *, const char * );
 int send_email();
@@ -152,6 +156,8 @@ char ** _argv;
 
 int preen_report();
 
+std::vector<char *> freeThese;
+
 int
 preen_main( int, char ** ) {
 	// argc = _argc;
@@ -174,6 +180,10 @@ preen_main( int, char ** ) {
 	VerboseFlag = false;
 	MailFlag = false;
 	RmFlag = false;
+
+	for (char * s: freeThese) {
+		free(s);
+	}
 
 	// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -243,6 +253,7 @@ preen_main( int, char ** ) {
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	check_public_files_webroot_dir();
 #endif
+	check_syndicate_dir();
 
 	// Check to see if we need to clean up checkpoint destinations.
 	if(! check_cleanup_dir()) {
@@ -321,6 +332,10 @@ main( int argc, char * argv[] ) {
 
 	argc = 4;
 	argv = dcArgv;
+
+	for (int i = 1; i < argc; ++i) {
+		freeThese.push_back(argv[i]);
+	}
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;
@@ -477,6 +492,7 @@ check_spool_dir()
 		"HISTORY",
 		"JOB_EPOCH_HISTORY",
 		"STARTD_HISTORY",
+		"SCHEDD_DAEMON_HISTORY",
 		"COLLECTOR_PERSISTENT_AD_LOG",
 		"LVM_BACKING_FILE",
 	};
@@ -936,31 +952,33 @@ check_log_dir()
 				// Check if this is a core file
 				const char* coreFile = strstr( f, "core." );
 				if ( coreFile ) {
-					StatInfo statinfo( Log, f );
-					if( statinfo.Error() == 0 ) {
+					std::string full_path;
+					dircat(Log, f, full_path);
+					struct stat statinfo = {};
+					if (stat(full_path.c_str(), &statinfo) == 0) {
 						std::string daemonExe = get_corefile_program( f, dir.GetDirectoryPath() );
 						// If this core file is stale, flag it for removal
-						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
+						if( abs((int)( time(NULL) - statinfo.st_mtime )) > coreFileStaleAge ) {
 							std::string coreFileDetails;
 							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
-								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
+								daemonExe.c_str(), format_date_year(statinfo.st_mtime), (ssize_t)statinfo.st_size
 							);
 							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
 						}
 						// If this core file exceeds a certain size, flag for removal
-						if( statinfo.GetFileSize() > coreFileMaxSize ) {
+						if( statinfo.st_size > coreFileMaxSize ) {
 							//If core file belongs to schedd, negotiator, or collector daemon then
 							//add to data struct for later processing else flag for removal
 							if (daemonExe.find("condor_schedd") != std::string::npos ||
 								daemonExe.find("condor_negotiator") != std::string::npos ||
 								daemonExe.find("condor_collector") != std::string::npos) {
-									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.GetModifyTime(),
-															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
+									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.st_mtime,
+															std::pair<std::string,filesize_t>(std::string(f),statinfo.st_size)));
 							} else {
 								std::string coreFileDetails;
 								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
-									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
+									daemonExe.c_str(), format_date_year(statinfo.st_mtime), (ssize_t)statinfo.st_size
 								);
 								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}
@@ -975,7 +993,7 @@ check_log_dir()
 					// Add this core file plus its timestamp to a data structure linking it to its process
 					std::string program = get_corefile_program( f, dir.GetDirectoryPath() );
 					if( program != "" ) {
-						programCoreFiles[program].insert( std::make_pair( statinfo.GetModifyTime(), std::string( f ) ) );
+						programCoreFiles[program].insert( std::make_pair( statinfo.st_mtime, std::string( f ) ) );
 					}
 				}
 				// If not a core file, assume it's good
@@ -1340,13 +1358,13 @@ get_machine_state()
 bool
 touched_recently(char const *fname,time_t delta)
 {
-	StatInfo statinfo(fname);
-	if( statinfo.Error() != 0 ) {
+	struct stat statinfo = {};
+	if (stat(fname, &statinfo) != 0) {
 		return false;
 	}
 		// extend the window of what it means to have been touched "recently"
 		// both forwards and backwards in time to handle system clock jumps.
-	if( abs((int)(time(NULL)-statinfo.GetModifyTime())) > delta ) {
+	if( abs((int)(time(NULL)-statinfo.st_mtime)) > delta ) {
 		return false;
 	}
 	return true;
@@ -1436,7 +1454,7 @@ get_corefile_program( const char* corefile, const char* dir ) {
 using namespace condor;
 
 
-dc::void_coroutine
+cr::void_coroutine
 check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	int CLEANUP_TIMEOUT = param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
 	size_t MAX_CHECKPOINT_CLEANUP_PROCS = param_integer( "MAX_CHECKPOINT_CLEANUP_PROCS", 100 );
@@ -1582,4 +1600,113 @@ check_cleanup_dir() {
 
 	check_cleanup_dir_actual( checkpointCleanup );
 	return true;
+}
+
+
+bool
+lease_has_expired( const std::filesystem::path & file ) {
+	std::error_code ec;
+	auto then = std::filesystem::last_write_time( file, ec );
+	if( ec.value() != 0 ) { return false; }
+
+	auto diff = std::chrono::file_clock::now() - then;
+	if( diff >= 300s ) {
+		return true;
+	}
+
+	return false;
+}
+
+void
+check_syndicate_dir() {
+	char *LOCK_str = param("LOCK");
+	std::string LOCK;
+	if (LOCK_str != nullptr) {
+		LOCK = LOCK_str;
+		free(LOCK_str);
+	}
+	std::filesystem::path lock(LOCK);
+	std::filesystem::path syndicate = lock / "syndicate";
+
+	// The syndicate locking directory has different types of files in it:
+	//
+	//     (1)  Keyfiles, which have no extension.  All other files have
+	//			a keyfile's name as their prefix.
+	//     (2)  Remove locks, which have ".rm_<numeric-depth>" as an extension.
+	//     (3)  Hardlinks, which have the worker's PID as an extension.
+	//     (4)  Message files, with the extension ".message".
+	//     (5)  Hidden keyfiles, which have a leading "." and the provider's
+	//          PID as an extension.
+	//
+	// (1) and (2) are defined to have 300-second leases.  (4) can be removed
+	// if (1) is missing or expired.  (3) can be removed if both (1) and (5)
+	// are missing.  (5) is defined to have the same 300-second lease as (1).
+	//
+
+	std::error_code ec;
+	std::filesystem::recursive_directory_iterator rdi(
+		syndicate, {}, ec
+	);
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "check_syndicate_dir(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", syndicate.string().c_str(), ec.message().c_str(), ec.value() );
+		return;
+	}
+
+	for( const auto & entry : rdi ) {
+		if( entry.is_regular_file() ) {
+			std::string extension = entry.path().extension().string();
+
+			if( extension == "" ) {
+				// Keyfile.
+				if( lease_has_expired(entry.path()) ) {
+					std::filesystem::remove( entry.path(), ec );
+				}
+				continue;
+			}
+
+            // For some reason, extension() includes the '.' separator.
+			extension = extension.substr(1);
+
+			if( starts_with(extension, "rm_") ) {
+				// Remove lock.
+				if( lease_has_expired(entry.path()) ) {
+					std::filesystem::remove( entry.path(), ec );
+				}
+				continue;
+			}
+
+			char * endptr = NULL;
+			strtol( extension.c_str(), & endptr, 10 );
+			if( * endptr == '\0' ) {
+				if( starts_with( entry.path().filename().string(), "." ) ) {
+					// Hidden keyfile.
+					if( lease_has_expired(entry.path()) ) {
+						std::filesystem::remove( entry.path(), ec );
+					}
+				} else {
+					// Hardlink.
+					std::filesystem::path keyfile = entry.path();
+					keyfile.replace_extension();
+					std::filesystem::path message = entry.path();
+					message.replace_extension("message");
+					dprintf( D_TEST, "Found hardlink '%s', checking if '%s' or '%s' exist...\n", entry.path().filename().c_str(), keyfile.string().c_str(), message.string().c_str() );
+					if( (! std::filesystem::exists(keyfile, ec)) && (! std::filesystem::exists(message, ec)) ) {
+					    dprintf( D_TEST, "Removing hardlink '%s'\n", entry.path().string().c_str() );
+						std::filesystem::remove( entry.path(), ec );
+					}
+				}
+				continue;
+			}
+
+			if( extension == "message" ) {
+				// Message file.
+				std::filesystem::path keyfile = entry.path();
+				keyfile.replace_extension();
+				if(! std::filesystem::exists(keyfile, ec)) {
+					std::filesystem::remove( entry.path(), ec );
+				}
+				continue;
+			}
+		}
+	}
 }

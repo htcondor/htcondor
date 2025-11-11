@@ -191,7 +191,7 @@ class TestMultifileCurlTimeout:
         timeout_errors = 0
         for line in xfer_history:
             #Check found error
-            if "TransferError" in line:
+            if "TransferError =" in line:
                 #If is timeout as expected increase count
                 if "Aborted due to lack of progress" in line:
                     timeout_errors += 1

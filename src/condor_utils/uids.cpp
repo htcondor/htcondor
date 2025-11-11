@@ -828,9 +828,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			if ( dologging ) {
-				dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
-			}
+			EXCEPT( "Programmer error: unknown state (%d) in _set_priv", (int)s );
 		}
 	}
 
@@ -876,7 +874,7 @@ const char* get_condor_username()
 	if (CondorUserName == NULL) {
 		EXCEPT("Out of memory. Aborting.");
 	}
-	snprintf(CondorUserName, length, "%s/%s",szDomainName,szAccountName);
+	snprintf(CondorUserName, length, "%s@%s",szAccountName,szDomainName);
 
 	if ( hProcess )
 		CloseHandle(hProcess);

@@ -491,6 +491,7 @@ CondorQuery::setLocationLookup(const std::string &location, bool want_one_result
 	if (queryType == SCHEDD_AD)
 	{
 		attrs.push_back(ATTR_SCHEDD_IP_ADDR);
+		attrs.push_back(ATTR_CREDD_IP_ADDR);
 	}
 
 	setDesiredAttrs(attrs);
@@ -503,21 +504,26 @@ CondorQuery::setLocationLookup(const std::string &location, bool want_one_result
 QueryResult CondorQuery::
 processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * poolName, CondorError* errstack /*= NULL*/)
 {
-	Sock*    sock; 
-	QueryResult result;
-	ClassAd  queryAd(extraAttrs);
-
 	if ( !poolName ) {
 		return Q_NO_COLLECTOR_HOST;
 	}
 
+	Daemon collector(DT_COLLECTOR, poolName, nullptr);
+	return processAds(callback, pv, collector, errstack);
+}
+
+QueryResult CondorQuery::
+processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, CondorError* errstack /*= NULL*/)
+{
+	Sock*    sock;
+	QueryResult result;
+	ClassAd  queryAd(extraAttrs);
+
 	// contact collector
-	Daemon my_collector( DT_COLLECTOR, poolName, NULL );
-	if( !my_collector.locate() ) {
+	if( !collector.locate() ) {
 			// We were passed a bogus poolName, abort gracefully
 		return Q_NO_COLLECTOR_HOST;
 	}
-
 
 	// make the query ad
 	result = getQueryAd (queryAd);
@@ -525,21 +531,26 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * poolName,
 
 	if (IsDebugLevel(D_HOSTNAME)) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
-				 my_collector.addr(), my_collector.fullHostname() );
+				 collector.addr(), collector.fullHostname() );
 		dPrintAd( D_HOSTNAME, queryAd );
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
+	bool orig_auth = collector.getForceAuthentication();
+	collector.setForceAuthentication(requireAuth);
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
-	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
+	if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
 	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
+		collector.setForceAuthentication(orig_auth);
 		if (sock) {
 			delete sock;
 		}
 		return Q_COMMUNICATION_ERROR;
 	}
+
+	collector.setForceAuthentication(orig_auth);
 
 	// get result
 	sock->decode ();
@@ -581,6 +592,12 @@ QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 {
 	return processAds(fetchAds_callback, &adList, poolName, errstack);
+}
+
+QueryResult CondorQuery::
+fetchAds (ClassAdList &adList, Daemon& collector, CondorError* errstack)
+{
+	return processAds(fetchAds_callback, &adList, collector, errstack);
 }
 
 void CondorQuery::

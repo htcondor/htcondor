@@ -184,6 +184,13 @@ public:
 
 	priv_state orig_priv() const {return m_orig_state;}
 
+	void revert_priv() {
+		if (m_orig_state != PRIV_UNKNOWN) {
+			set_priv(m_orig_state);
+		}
+	}
+
+
 private:
 	// non-copyable.
 	TemporaryPrivSentry(const TemporaryPrivSentry&);

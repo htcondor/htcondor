@@ -554,10 +554,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, std::vector<pid_t>& pidFa
 		  // allocate that memory
 		  tokenData=(TOKEN_USER *) GlobalAlloc(GPTR,
 			sizeRqd);
-		  if (tokenData == NULL)
-		  {
-			EXCEPT("Unable to allocate memory.");
-		  }
+		  ASSERT(tokenData);
 
 		  // actually get the user info
 		  ret=GetTokenInformation(procToken, tic,
@@ -692,9 +689,7 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status ) {
 
         // create local copy of pids.
 	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );
-	if (localpids == NULL) {
-		EXCEPT( "ProcAPI:getProcSetInfo: Out of Memory!");
-	}
+	ASSERT(localpids);
 
 	for( int i=0 ; i<numpids ; i++ ) {
 		localpids[i] = pids[i];
@@ -749,10 +744,19 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
                 *((LARGE_INTEGER*)(ctrblk + offsets->stime));
 
 			pi->pid      =  thispid;
-			pi->imgsize  += (long) (*((long*)(ctrblk + offsets->imgsize ))) 
-				/ 1024;
-			pi->rssize   += (long) (*((long*)(ctrblk + offsets->rssize  ))) 
-				/ 1024;
+
+			int64_t rss_bytes;
+			int64_t workset_bytes;
+			if (offsets->rssize_width == 4) {
+				rss_bytes = *(long*)(ctrblk + offsets->rssize);
+				workset_bytes = *(long*)(ctrblk + offsets->workset);
+			} else {
+				rss_bytes = ((LARGE_INTEGER*)(ctrblk + offsets->rssize))->QuadPart;
+				workset_bytes = ((LARGE_INTEGER*)(ctrblk + offsets->workset))->QuadPart;
+			}
+
+			pi->rssize   += (unsigned long)(rss_bytes/1024);
+			pi->imgsize  += (unsigned long)(workset_bytes/1024);
 #if HAVE_PSS
 #error pssize not handled for this platform
 #endif

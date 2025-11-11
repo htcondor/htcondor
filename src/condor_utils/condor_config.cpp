@@ -302,6 +302,18 @@ const char * _allocation_pool::insert(const char * pbInsert, int cbInsert)
 }
 
 // copy a single null terminate string into the pool and return a pointer to the copy
+const char * _allocation_pool::insert(std::string_view str)
+{
+	if (str.empty()) return "";
+	int cb = str.size();
+	bool need_term = str.back() != 0;
+	char * pb = this->consume(cb + (need_term?1:0), 1);
+	if (pb) memcpy(pb, str.data(), str.size());
+	if (need_term) pb[str.size()] = 0;
+	return pb;
+}
+
+// copy a single null terminate string into the pool and return a pointer to the copy
 const char * _allocation_pool::insert(const char * psz)
 {
 	if ( ! psz) return NULL;
@@ -1490,10 +1502,9 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 	if( env_name && (env = getenv( env_name )) ) {
 		config_file = env;
 		config_source = config_file.c_str();
-		StatInfo si( config_source );
-		switch( si.Error() ) {
-		case SIGood:
-			if( si.IsDirectory() ) {
+		struct stat si = {};
+		if (stat(config_source, &si) == 0) {
+			if( si.st_mode & S_IFDIR ) {
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
 						 "Please specify a file.\n", env_name, env );
@@ -1503,8 +1514,7 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 			}
 				// Otherwise, we're happy
 			return config_source;
-			break;
-		case SINoFile:
+		} else if (errno == ENOENT) {
 			// Check to see if it is a pipe command, in which case we're fine.
 			if (!is_piped_command(config_source) ||
 				!is_valid_command(config_source)) {
@@ -1515,19 +1525,16 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
-				break;
 			}
 			// Otherwise, we're happy
 			return config_file.c_str();
-
-		case SIFailure:
+		} else {
 			fprintf( stderr, "Cannot stat file specified in %s "
 					 "environment variable:\n\"%s\", errno: %d\n",
-					 env_name, config_file.c_str(), si.Errno() );
+					 env_name, config_file.c_str(), errno );
 			config_file.clear(); config_source = NULL;
 			if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 			exit( 1 );
-			break;
 		}
 	}
 
@@ -1969,7 +1976,7 @@ init_global_config_table(int config_options)
 		ConfigMacroSet.options |= CONFIG_OPT_WANT_META;
 		if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->size) {
 			ConfigMacroSet.defaults->metat = new MACRO_DEFAULTS::META[ConfigMacroSet.defaults->size];
-			memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+			memset((void*)ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
 		}
 	}
 
@@ -1980,17 +1987,17 @@ void
 clear_global_config_table()
 {
 	if (ConfigMacroSet.table) {
-		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
+		memset((void*)ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
 	}
 	if (ConfigMacroSet.metat) {
-		memset(ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
+		memset((void*)ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
 	}
 	ConfigMacroSet.size = 0;
 	ConfigMacroSet.sorted = 0;
 	ConfigMacroSet.apool.clear();
 	ConfigMacroSet.sources.clear();
 	if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->metat) {
-		memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+		memset((void*)ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
 	}
 
 	/* don't want to do this here because of reconfig.

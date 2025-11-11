@@ -764,8 +764,8 @@ void print_info(bool rv, const char* dname, const char * addr, Sock* s, const st
 		session_id = result_pair->second;
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		auto itr = (SecMan::session_cache)->find(session_id);
-		if (itr == (SecMan::session_cache)->end()) {
+		auto itr = SecMan::session_cache.find(session_id);
+		if (itr == SecMan::session_cache.end()) {
 			printf("no session!\n");
 			return;
 		}
@@ -853,6 +853,7 @@ bool do_item(Daemon* d, const std::string & name, int num, int output_mode) {
 		}
 		const char* dname = d->idStr();
 		print_info(fn_success, dname, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
+		delete sock;
 	} else {
 		// we know that d->addr() is not null because we checked before
 		// calling do_item.  but i'll be paranoid and check again.

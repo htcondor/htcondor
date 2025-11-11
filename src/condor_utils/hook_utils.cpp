@@ -22,7 +22,7 @@
 #include "hook_utils.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "directory.h"
+#include "basename.h"
 
 
 bool validateHookPath( const char* hook_param, char*& hpath )
@@ -33,18 +33,17 @@ bool validateHookPath( const char* hook_param, char*& hpath )
     // an undefined hook parameter is not an error
     if (NULL == tmp) return true;
 
-	StatInfo si(tmp);
-	if (si.Error() != SIGood) {
-		int si_errno = si.Errno();
+	struct stat si = {};
+	if (stat(tmp, &si) != 0) {
 		dprintf(D_ALWAYS, "ERROR: invalid path specified for %s (%s): "
 				"stat() failed with errno %d (%s)\n",
-				hook_param, tmp, si_errno, strerror(si_errno));
+				hook_param, tmp, errno, strerror(errno));
 		free(tmp);
 		return false;
 	}
 
 #if !defined(WIN32)
-	mode_t mode = si.GetMode();
+	mode_t mode = si.st_mode;
 	if (mode & S_IWOTH) {
 		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
 				"is world-writable! Refusing to use.\n",
@@ -53,7 +52,7 @@ bool validateHookPath( const char* hook_param, char*& hpath )
 		return false;
 	}
 
-	if (!si.IsExecutable()) {
+	if (!(si.st_mode & S_IEXEC)) {
 		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
 				"is not executable.\n", hook_param, tmp);
 		free(tmp);
@@ -65,12 +64,14 @@ bool validateHookPath( const char* hook_param, char*& hpath )
 	
 	// Now, make sure the parent directory isn't world-writable.
 #if !defined(WIN32)
-	StatInfo dir_si(si.DirPath());
-	mode_t dir_mode = dir_si.GetMode();
+	std::string dir_path = condor_dirname(tmp);
+	struct stat dir_si = {};
+	stat(dir_path.c_str(), &dir_si);
+	mode_t dir_mode = dir_si.st_mode;
 	if (dir_mode & S_IWOTH) {
 		dprintf(D_ALWAYS, "ERROR: path specified for %s (%s) "
-				"is a world-writable directory (%s)! Refusing to use.\n",
-				hook_param, tmp, si.DirPath());
+				"is a world-writable directory! Refusing to use.\n",
+				hook_param, tmp);
 		free(tmp);
 		return false;
 	}

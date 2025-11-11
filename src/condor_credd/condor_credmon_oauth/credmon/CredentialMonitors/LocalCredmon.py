@@ -7,10 +7,17 @@ import tempfile
 from typing import List
 
 import scitokens
-import htcondor
+import htcondor2 as htcondor
+import classad2 as classad
 
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.utils import atomic_rename
+
+
+_KEY_ALGO_PREAMBLE = {
+    "RS256": "BEGIN RSA PRIVATE KEY",
+    "ES256": "BEGIN EC PRIVATE KEY",
+}
 
 
 class TokenInfo:
@@ -44,7 +51,8 @@ class LocalCredmon(OAuthCredmon):
         super(LocalCredmon, self).__init__(*args, **kwargs)
         self.provider = provider
         self.token_issuer = None
-        self.authz_template = "read:/user/{username} write:/user/{username}"
+        self.authz_template = r"read:/user/{username} write:/user/{username}"
+        self.authz_template_expr = None
         self.authz_group_template = None
         self.authz_group_mapfile = None
         self.authz_group_requirement = None
@@ -58,10 +66,12 @@ class LocalCredmon(OAuthCredmon):
                 with open(self._private_key_location, 'r') as private_key:
                     self._private_key = private_key.read()
                 self.private_key_id = self.get_credmon_config("KEY_ID", "local")
+                self.private_key_algo = self.get_credmon_config("PRIVATE_KEY_ALGORITHM", "ES256")
             else:
                 self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but key not found or not readable")
             self.token_issuer = self.get_credmon_config("ISSUER", self.token_issuer)
             self.authz_template = self.get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
+            self.authz_template_expr = self.get_credmon_config("AUTHZ_TEMPLATE_EXPR", self.authz_template_expr)
             self.authz_group_mapfile = self.get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
             self.authz_group_template = self.get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
             self.authz_group_requirement  = self.get_credmon_config("AUTHZ_GROUP_REQUIREMENT", self.authz_group_requirement)
@@ -73,11 +83,14 @@ class LocalCredmon(OAuthCredmon):
             self._private_key_location = None
         if not self.token_issuer and htcondor:
             self.token_issuer = 'https://{}'.format(htcondor.param["FULL_HOSTNAME"])
-        # algorithm is hardcoded to ES256, warn if private key does not appear to use EC
-        if (self._private_key_location is not None) and ("BEGIN EC PRIVATE KEY" not in self._private_key.split("\n")[0]):
-            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
-            self.log.warning("`scitokens-admin-create-key --pem-private` should be used with `--ec` option")
+        # Check that the key matches the configured algorithm
+        if (self._private_key_location is not None) and (_KEY_ALGO_PREAMBLE.get(self.private_key_algo, "") not in self._private_key.split("\n")[0]):
+            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use {self.private_key_algo} algorithm")
+            self.log.warning(f"{_KEY_ALGO_PREAMBLE.get(self.private_key_algo, '')} not found in key file")
             self.log.warning("Errors are likely to occur when attempting to serialize SciTokens")
+        elif self.private_key_algo not in _KEY_ALGO_PREAMBLE:
+            self.log.warning(f"New or unknown private key algorithm '{self.private_key_algo}'")
+            self.log.warning("Errors may occur when attempting to serialize SciTokens")
 
 
     def get_credmon_config(self, config: str, default: str="") -> str:
@@ -120,6 +133,18 @@ class LocalCredmon(OAuthCredmon):
         """
         # Create scopes from user and group templates
         scopes = [self.authz_template.format(username=username)]
+        if self.authz_template_expr:
+            try:
+                eval_context = classad.ClassAd({
+                    "Username": username,
+                    "Scopes": classad.ExprTree(self.authz_template_expr),
+                })
+                eval_scopes = eval_context.eval("Scopes")
+                if not isinstance(eval_scopes, str):
+                    raise TypeError(f"ClassAd expression '{self.authz_template_expr}' did not evaluate to a string")
+                scopes.append(eval_scopes)
+            except Exception:
+                self.log.exception(f"Not adding scopes from {self.credmon_name}_CREDMON_AUTHZ_TEMPLATE_EXPR due to exception")
         if self.authz_group_template:
             if self.authz_group_mapfile is None:
                 self.log.warning(f"{self.credmon_name}_CREDMON_AUTHZ_GROUP_MAPFILE is undefined, cannot add group authorizations")
@@ -132,6 +157,7 @@ class LocalCredmon(OAuthCredmon):
                 except IOError:
                     self.log.exception("Could not open {mapfile}, cannot add group authorizations".format(mapfile=self.authz_group_mapfile))
 
+        profile = ""
         if self.token_ver:
             profile = self.token_ver
 
@@ -179,13 +205,13 @@ class LocalCredmon(OAuthCredmon):
 
         info = self.generate_access_token_info(username, token_name)
 
-        token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self.private_key_id)
+        token = scitokens.SciToken(algorithm=self.private_key_algo, key=self._private_key, key_id=self.private_key_id)
         token.update_claims({'sub': info.sub})
         token.update_claims({'scope': " ".join(info.scopes)})
 
         # Only set the version if we have one.  No version is valid, and implies scitokens:1.0
         if info.profile == "wlcg:1.0" or info.profile == "wlcg":
-            token.update_claims({"wlcg.ver", "1.0"})
+            token.update_claims({"wlcg.ver": "1.0"})
         elif info.profile:
             token.update_claims({'ver': info.profile})
 

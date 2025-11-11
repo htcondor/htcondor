@@ -203,7 +203,7 @@ def path_to_the_job_script(test_dir, the_condor):
 
     # Evict ourselves once just before the end.
     rv = subprocess.run(
-        ["condor_q", "-jobads", ".job.ad", "-af", "NumJobStarts"],
+        ["condor_q", "-jobads", os.environ['_CONDOR_JOB_AD'], "-af", "NumJobStarts"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=20
@@ -280,7 +280,7 @@ def the_condor(test_dir, the_config, the_config_name):
             'JOB_EPOCH_HISTORY':                '$(LOG)/EpochLog',
             'SCHEDD_INTERVAL':                  '2',
             'SHADOW.FILE_TRANSFER_STATS_LOG':   '$(LOG)/shadow_transfer_history',
-            'SHADOW_DEBUG':                     'D_CATEGORY D_SUBSECOND D_STATUS D_TEST',
+            'SHADOW_DEBUG':                     'D_CATEGORY D_SUB_SECOND D_STATUS D_TEST',
             ** the_config['config'],
         }
     ) as the_condor:

@@ -34,6 +34,8 @@
 #include "condor_fsync.h"
 #include "condor_attributes.h"
 #include "CondorError.h"
+#include "set_user_priv_from_ad.h"
+#include "directory.h"
 
 #include <string>
 #include <algorithm>
@@ -41,8 +43,6 @@
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
-
-static const char SynchDelimiter[] = "...\n";
 
 // Simple class to normalize use of 64 bit ints
 class UserLogInt64_t
@@ -168,7 +168,7 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 		job_ad.LookupString(ATTR_NT_DOMAIN, domain);
 
 		uninit_user_ids();
-		if ( ! init_user_ids(owner.c_str(), domain.c_str()) ) {
+		if ( ! init_user_ids_from_ad(job_ad) ) {
 			if ( ! domain.empty()) { owner += "@"; owner += domain; }
 			dprintf(D_ALWAYS,
 				"WriteUserLog::initialize: init_user_ids(%s) failed!\n", owner.c_str());
@@ -715,6 +715,31 @@ WriteUserLog::openFile(
 	mode_t mode = 0664;
 	fd = safe_open_wrapper_follow( file, flags, mode );
 	if( fd < 0 ) {
+		// See if there's a missing intermediate directory
+		if ( errno == ENOENT ) {
+			std::string dir = file;
+			// Remove the filename from the path
+			size_t pos = dir.find_last_of( "/\\" );
+			if ( pos != std::string::npos ) {
+				dir.erase( pos );
+			}
+
+			if (!mkdir_and_parents_if_needed(dir.c_str(), 0755, PRIV_USER)) {
+				dprintf( D_ALWAYS,
+						 "WriteUserLog::initialize: "
+							 "mkdir_and_parents_if_needed(\"%s\") failed - errno %d (%s)\n",
+						 dir.c_str(),
+						 errno,
+						 strerror(errno) );
+				return false;
+			}
+			// Try to open the file again
+			fd = safe_open_wrapper_follow( file, flags, mode );
+		}
+	}
+
+	// check again 
+	if (fd < 0 ) {
 		dprintf( D_ALWAYS,
 					"WriteUserLog::initialize: "
 						"safe_open_wrapper(\"%s\") failed - errno %d (%s)\n",

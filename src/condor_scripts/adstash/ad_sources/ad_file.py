@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-import classad
+import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
@@ -36,9 +36,14 @@ class FileAdSource(GenericAdSource):
         (e.g. "**** metadataA=foo metadata2=bar")
         """
         try:
-            with open(ad_file) as f:
+            with open(ad_file, "rb") as f:
                 ad_string = ""
-                for line in f:
+                for i, line in enumerate(f):
+                    try:
+                        line = line.decode("utf-8")
+                    except UnicodeDecodeError:
+                        logging.error(f"Could not decode line {i+1} of {ad_file}, skipping")
+                        continue
                     if line.startswith("***") or line.strip() == "":
                         if ad_string == "":
                             continue
@@ -48,7 +53,7 @@ class FileAdSource(GenericAdSource):
         except IOError as e:
             logging.error(f"Could not read {ad_file}: {str(e)}")
             return
-        except Exception:
+        except Exception as e:
             logging.exception(f"Error while reading {ad_file} ({str(e)}), displaying traceback.")
             return
 

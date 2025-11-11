@@ -24,11 +24,15 @@ from ._submit import Submit
 from ._submit_result import SubmitResult
 # So that the typehints match version 1.
 from ._query_opt import QueryOpt as QueryOpts
+from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _schedd_query,
+    _schedd_userrec_query,
     _schedd_act_on_job_ids,
     _schedd_act_on_job_constraint,
+    _schedd_act_on_userrec_list,
+    _schedd_act_on_userrec_constraint,
     _schedd_edit_job_ids,
     _schedd_edit_job_constraint,
     _schedd_reschedule,
@@ -43,6 +47,11 @@ from .htcondor2_impl import (
     _schedd_retrieve_job_ids,
     _schedd_spool,
     _schedd_refresh_gsi_proxy,
+    _schedd_get_dag_contact_info,
+    _schedd_get_claims,
+    _schedd_create_ocu,
+    _schedd_remove_ocu,
+    _schedd_query_ocu,
 )
 
 
@@ -59,24 +68,64 @@ def job_spec_hack(
     if isinstance(job_spec, list):
         if not all([isinstance(i, str) for i in job_spec]):
             raise TypeError("All elements of the job_spec list must be strings.")
-        job_spec_string = ", ".join(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        if all([re.fullmatch(r'\d+\.\d+', i) for i in job_spec]):
+            job_spec_string = ", ".join(job_spec)
+            return f_job_ids(addr, job_spec_string, *args)
+
+        constraints = []
+        for i in job_spec:
+            if re.fullmatch(r'\d+', i):
+                constraints.append(f"(ClusterID == {i})")
+            elif re.fullmatch(r'\d+\.\d+', i):
+                (clusterID, procID) = i.split('.')
+                constraints.append(f"(ClusterID == {clusterID} && ProcID == {procID})")
+            else:
+                raise ValueError("All elements of the job_spec list must be strings of the form clusterID[.procID]")
+        job_spec_string = " || ".join(constraints)
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, int):
-        job_spec_string = str(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        job_spec_string = f'ClusterID == {job_spec}'
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, classad.ExprTree):
         job_spec_string = str(job_spec)
         return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, str):
-        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+        if re.fullmatch(r'\d+\.\d+', job_spec):
             return f_job_ids(addr, job_spec, *args)
+        if re.fullmatch(r'\d+', job_spec):
+            job_spec_string = f'ClusterID == {job_spec}'
+            return f_constraint(addr, job_spec_string, *args)
         try:
             job_spec_expr = classad.ExprTree(job_spec)
-            return f_constraint(addr, job_spec, *args);
-        except ValueError:
-            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        except classad.ClassAdException:
+            raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        return f_constraint(addr, job_spec, *args);
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
+
+# helper method that routes various types of userrec_spec
+# to the correct userrec act function
+def userrec_act_dispatcher(
+    addr : str,
+    userrec_spec : Union[List[str], str, classad.ExprTree, List[classad.ClassAd] ],
+    f_name_list : callable,
+    f_constraint : callable,
+    args : list,
+):
+    if isinstance(userrec_spec, list):
+        if all([isinstance(i, str) for i in userrec_spec]):
+            return f_name_list(addr, userrec_spec, *args)
+        elif all([isinstance(i, classad.ClassAd) for i in userrec_spec]):
+            return f_name_list(addr, userrec_spec, args[0] + 0x20000, args[1])
+        else:
+            raise TypeError("All elements of the userrec list must be strings or classads");
+    elif isinstance(userrec_spec, classad.ExprTree):
+        job_spec_string = str(userrec_spec)
+        return f_constraint(addr, job_spec_string, *args)
+    elif isinstance(userrec_spec, str):
+        return f_name_list(addr, [userrec_spec], *args);
+    else:
+        raise TypeError("The userrec_spec must be list of strings, a list of ClassAd, a string, or an ExprTree." );
 
 
 class Schedd():
@@ -144,6 +193,85 @@ class Schedd():
             )
         )
 
+    def queryUserAds(self,
+        constraint : Union[str, classad.ExprTree] = "",
+        projection : List[str] = [],
+        callback : Callable[[classad.ClassAd], Any] = None,
+        limit : int = -1,
+    ) -> List[classad.ClassAd]:
+        '''
+        Query the *condor_schedd* daemon for user ads.
+
+        :param constraint:  A query constraint.  Only user ads matching this
+            constraint will be returned.  The default will return all user ads
+        :param projection:  A list of classad attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param callback:  A filtering function.  It will be invoked for
+            each user ad which matches the constraint.  The value returned
+            by *callback* will replace the corresponding user ad in the
+            list returned by this method unless that value is `None`, which
+            will instead be omitted.
+        :param limit:  The maximum number of user ads to return.  The default
+            (``-1``) is to return all ads.
+        '''
+        results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), 0)
+        if callback is None:
+            return results
+
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
+
+    def queryProjectAds(self,
+        constraint : Union[str, classad.ExprTree] = "",
+        projection : List[str] = [],
+        callback : Callable[[classad.ClassAd], Any] = None,
+        limit : int = -1,
+    ) -> List[classad.ClassAd]:
+        '''
+        Query the *condor_schedd* daemon for project ads.
+
+        :param constraint:  A query constraint.  Only project ads matching this
+            constraint will be returned.  The default will return all project ads
+        :param projection:  A list of classad attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param callback:  A filtering function.  It will be invoked for
+            each project ad which matches the constraint.  The value returned
+            by *callback* will replace the corresponding project ad in the
+            list returned by this method unless that value is `None`, which
+            will instead be omitted.
+        :param limit:  The maximum number of project ads to return.  The default
+            (``-1``) is to return all ads.
+        '''
+        project_flag = 1 # 0=default/user, 1=project
+        results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), project_flag)
+        if callback is None:
+            return results
+
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
+
 
     def act(self,
         action : JobAction,
@@ -195,6 +323,148 @@ class Schedd():
 
         return pyResult
 
+    def addUserRec(self,
+        user_spec : Union[List[str], str, List[classad.ClassAd] ],
+    ) -> classad.ClassAd:
+        """
+        Add User record(s) to the *condor_schedd* daemon if a User
+        record with the given name does not already exist.
+
+        :param user_spec: Which user(s) to add.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a list of the initial User records in :class:`classad2.ClassAd` form.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x10000 + 541, None)
+        )
+        return result;
+
+    def enableUserRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+    ) -> classad.ClassAd:
+        """
+        Enable User record(s) to the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to enable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that
+             match the constraint will be enabled.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (541, None)
+        )
+        return result;
+
+    def disableUserRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Disable User record(s) in the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to disable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that match
+             the constraint will be disabled.
+        :param reason: A free-form justification.  Defaults to
+            "Python-initiated action".
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (542, reason)
+        )
+        return result;
+
+    def removeUserRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Remove User record(s) in the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to remove.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that match
+             the constraint will be removed.
+        :param reason: A free-form justification that is used when
+             the record cannot be removed.  Defaults to "Python-initiated action".
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (549, reason)
+        )
+        return result;
+
+
+    def addProjectRec(self,
+        project_spec : Union[List[str], str, List[classad.ClassAd] ],
+    ) -> classad.ClassAd:
+        """
+        Add Project record(s) to the *condor_schedd* daemon.
+
+        :param project_spec: Which projects(s) to add.  A :class:`str`
+             of the project name, a :class:`list` of such
+             strings, or a list of the initial Project records in :class:`classad2.ClassAd` form.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, project_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x10000 + 0x80000 + 541, None)
+        )
+        return result;
+
+    def removeProjectRec(self,
+        user_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Remove Project record(s) in the *condor_schedd* daemon.
+
+        :param Project_spec: Which projects(s) to remove.  A :class:`str`
+             of the project name, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only User records that match
+             the constraint will be removed.
+        :param reason: A free-form justification that is used when
+             the record cannot be removed.  Defaults to "Python-initiated action".
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, user_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 549, reason)
+        )
+        return result;
+
 
     # In version 1, edit(ClassAd) and edit_multiple() weren't documented,
     # so they're not implemented in version 2.
@@ -239,6 +509,73 @@ class Schedd():
         return match_count
 
 
+    def _history(self,
+        src: int,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = [],
+        match : int = -1,
+        since : Union[int, str, classad.ExprTree] = None,
+        **kwargs,
+    ) -> List[classad.ClassAd]:
+        """
+        Internal handler for all history queries to Schedd
+        since all queries take similar arguments.
+
+        :param src: Then enumeration value of which historical record
+            source to read from. See history.cpp
+        :param constraint: Constraint expression to return only the
+            matching ClassAds.
+        :param projection: List of specific ClassAd attributes to return
+            from each matched ClassAd. If not specified the full ClassAd
+            is returned.
+        :param match: Limit of the maximum number of matching ClassAds to
+            return. -1 represents no limit.
+        :param since: Condition to stop scanning the history file. In the
+            integer and string case, stop once job id is located. Otherwise,
+            stop if the ClassAd expression evaluates to true.
+        :return: List of ClassAds.
+
+        :meta private:
+        """
+        projection_string = ",".join(projection)
+
+        if isinstance(since, int):
+            since = f"ClusterID == {since}"
+        elif isinstance(since, str):
+            pattern = re.compile(r'(\d+).(\d+)')
+            matches = pattern.match(since)
+            if matches is None:
+                raise ValueError("since string must be in the form {clusterID}.{procID}")
+            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+        elif isinstance(since, classad.ExprTree):
+            since = str(since)
+        elif since is None:
+            since = ""
+        else:
+            raise TypeError("since must be an int, string, or ExprTree")
+
+        ad_type = kwargs.get("ad_type", None)
+        if isinstance(ad_type, list):
+            ad_type = ",".join(ad_type)
+        elif ad_type is None:
+            ad_type = ""
+        elif not isinstance(ad_type, str):
+            raise TypeError("ad_type must be a list of strings or a string")
+
+        if constraint is None:
+            constraint = ""
+
+        return _history_query(self._addr,
+            str(constraint), projection_string, int(match), since,
+            # Specific record type filter
+            ad_type,
+            # Specific history source file(s)
+            src,
+            # QUERY_SCHEDD_HISTORY (command int)
+            515
+        )
+
+
     # In version 1, history() returned a HistoryIterator which kept a
     # socket around to read results from; this was OK, because the socket
     # usually required no, and at most minimal, attention from the schedd
@@ -275,36 +612,9 @@ class Schedd():
             ``"clusterID == 1038"`` return the same set of jobs.
 
             If :py:obj:`None`, return all (matching) jobs.
+        :return: List of ClassAds.
         """
-        projection_string = ",".join(projection)
-
-        if isinstance(since, int):
-            since = f"ClusterID == {since}"
-        elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
-        elif isinstance(since, classad.ExprTree):
-            since = str(since)
-        elif since is None:
-            since = ""
-        else:
-            raise TypeError("since must be an int, string, or ExprTree")
-
-        if constraint is None:
-            constraint = ""
-
-        return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since,
-            # Ad Type Filter
-            "",
-            # HRS_JOB_HISTORY
-            0,
-            # QUERY_SCHEDD_HISTORY
-            515
-        )
+        return self._history(HistorySrc.ScheddJob, constraint, projection, match, since)
 
 
     def jobEpochHistory(self,
@@ -337,42 +647,40 @@ class Schedd():
             ``"clusterID == 1038"`` return the same set of jobs.
 
             If :py:obj:`None`, return all (matching) jobs.
+        :return: List of ClassAds.
         """
-        projection_string = ",".join(projection)
+        return self._history(HistorySrc.JobEpoch, constraint, projection, match, since, **kwargs)
 
-        if isinstance(since, int):
-            since = f"ClusterID == {since}"
-        elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
-        elif isinstance(since, classad.ExprTree):
-            since = str(since)
-        elif since is None:
-            since = ""
-        else:
-            raise TypeError("since must be an int, string, or ExprTree")
 
-        ad_type = kwargs.get("ad_type", None)
-        if isinstance(ad_type, list):
-            ad_type = ",".join(ad_type)
-        elif ad_type is None:
-            ad_type = ""
-        elif not isinstance(ad_type, str):
-            raise TypeError("ad_type must be a list of strings or a string")
+    def daemonHistory(self,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = [],
+        match : int = -1,
+        since : Optional[classad.ExprTree] = None,
+    ) -> List[classad.ClassAd]:
+        """
+        Query this schedd's historical records from its local
+        `daemon <https://htcondor.readthedocs.io/en/latest/admin-manual/configuration-macros.html#SCHEDD_DAEMON_HISTORY>`_
+        history file.
 
-        if constraint is None:
-            constraint = ""
+        :param constraint:  A query constraint.  Only ClassAds matching this
+            constraint will be returned.  :py:obj:`None` will match all ads.
+        :param projection:  A list of ClassAd attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param match:  The maximum number of ads to return.  The default
+            (``-1``) is to return all ads.
+        :param since:  A ClassAd expression representing when the query should
+            stop scanning historical ClassAd records. The query stops when the
+            expression evaluates to true.
 
-        return _history_query(self._addr,
-            str(constraint), projection_string, int(match), since, ad_type,
-            # HRS_JOB_EPOCH
-            2,
-            # QUERY_SCHEDD_HISTORY
-            515
-        )
+            If :py:obj:`None`, return all (matching) ClassAds.
+        :return: List of ClassAds.
+        """
+        if since is not None and not isinstance(since, classad.ExprTree):
+            raise TypeError("since must be an ExprTree")
+
+        return self._history(HistorySrc.Daemon, constraint, projection, match, since, ad_type="SCHEDD")
 
 
     def submit(self,
@@ -397,6 +705,7 @@ class Schedd():
         # This was undocumented in version 1, but it became necessary when
         # we removed Submit.queue_with_itemdata().
         itemdata : Optional[ Union[ Iterator[str], Iterator[dict] ] ] = DefaultItemData,
+        queue : str = None,
     ) -> SubmitResult:
         '''
         Submit one or more jobs.
@@ -427,6 +736,11 @@ class Schedd():
             Lines (and items) may not contain newlines (``\\n``) or the ASCII
             unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
+        :param queue:  Arguments to a queue statement to be used (instead
+            of the one supplied in ``description``, if any).  Mutually
+            exclusive with ``itemdata`` and/or ``count``.  (You may preface the
+            the keyword's string value with "queue ", if you
+            prefer.)
         '''
         if not isinstance(description, Submit):
             raise TypeError( "description must be an htcondor2.Submit object")
@@ -436,41 +750,75 @@ class Schedd():
             submit_file = submit_file + f"{key} = {value}\n"
         submit_file = submit_file + "\n"
 
-        if itemdata is DefaultItemData:
-            submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+        q = queue is not None
+        i = itemdata is not DefaultItemData
+        c = count != 0
+        if q and (i or c):
+            raise ValueError("queue and count/itemdata are mutually exclusive")
 
-            original_item_data = description.itemdata()
-            if original_item_data is not None:
-                for item in original_item_data:
-                    submit_file = _add_line_from_itemdata(submit_file, item)
-                submit_file = submit_file + ")\n"
+        # Currently, the unit separator works for all itemdata serializations
+        # except FROM TABLE, which is presently documented to accept
+        # only commas.  However, duplicating the C++ parser is Python is
+        # wrong, and FROM TABLE may allow the separator to be specified
+        # in the future; see HTCONDOR-2868 for when this hack can go.
+        separator = "\x1F"
+
+        if itemdata is DefaultItemData:
+            if queue is None:
+                submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+                queue_args = description.getQArgs().casefold()
+            else:
+                queue_args = queue.casefold()
+
+            first_from = queue_args.find("FROM".casefold())
+            if first_from != -1:
+                if first_from == 0 or queue_args[first_from - 1] == " ":
+                    parts = queue_args[first_from:].partition("TABLE".casefold())
+                    if parts[1] != "" and parts[0].endswith(" "):
+                        separator = ","
+
+            # If the original itemdata wasn't inline, there's not only no
+            # need to repeat it, but it's technically syntactically invalid.
+            if submit_file.strip().endswith("("):
+                projection = None
+                original_item_data = description.itemdata()
+                if original_item_data is not None:
+                    first = next(original_item_data)
+                    projection = first.keys()
+                    submit_file = _add_line_from_itemdata(submit_file, first, separator, projection)
+                    for item in original_item_data:
+                        submit_file = _add_line_from_itemdata(submit_file, item, separator, projection)
+                    submit_file = submit_file + ")\n"
 
         elif itemdata is None:
             submit_file = submit_file + "queue\n"
 
         else:
+            projection = None
             first = next(itemdata)
             if isinstance(first, str):
                 submit_file = submit_file + "QUEUE item FROM "
             elif isinstance(first, dict):
                 if any(not isinstance(x, str) for x in first.keys()):
                     raise TypeError("itemdata dictionaries must have string keys")
-                keys_list = ",".join(first.keys())
-                submit_file = submit_file + f"QUEUE {keys_list} FROM "
+                projection = first.keys()
+                submit_file = submit_file + f"QUEUE {','.join(projection)} FROM "
             else:
                 raise TypeError("itemdata must be a list of strings or dictionaries")
 
             submit_file = submit_file + "(\n"
-            submit_file = _add_line_from_itemdata(submit_file, first)
+            submit_file = _add_line_from_itemdata(submit_file, first, separator, projection)
             for item in itemdata:
-                submit_file = _add_line_from_itemdata(submit_file, item)
+                submit_file = _add_line_from_itemdata(submit_file, item, separator, projection)
             submit_file = submit_file + ")\n"
 
-        real = Submit(submit_file)
+        # This assumes that None is the default value for the queue parameter.
+        real = Submit(submit_file, queue=queue)
         real.setSubmitMethod(
             description.getSubmitMethod(),
             allow_reserved_values=True,
         )
+
         return _schedd_submit(self._addr, real._handle, count, spool)
 
 
@@ -599,8 +947,64 @@ class Schedd():
             (),
         )
 
+    def _get_dag_contact_info(self,
+        cluster: int
+    ) -> classad.ClassAd:
+        if not isinstance(cluster, int):
+            raise TypeError("cluster must be an integer")
+        return _schedd_get_dag_contact_info(self._addr, cluster)
 
-def _add_line_from_itemdata(submit_file, item):
+    def get_claims(self,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = []
+    ) -> List[classad.ClassAd]:
+        """
+        Query the schedd for the list of classads that represent claimed slots
+
+        :param constraint: Constraint expression to return only the
+            matching claims.  If empty, return all matches.
+        :param projection: List of specific ClassAd attributes to return
+            from each match. If not specified the full match is returned.
+        """
+        projection_string = ",".join(projection)
+        return _schedd_get_claims(self._addr, str(constraint), projection_string)
+
+    def create_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing an OCU claim request to the schedd 
+
+        :param request: ClassAd representing the OCU claim request
+            must contain Owner, and RequestCpu, Memory, maybe disk
+        :return:  A ClassAd containing information about the create operation.
+        """
+        return _schedd_create_ocu(self._addr, request._handle)
+
+    def remove_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing an existing OCU id request to be removed
+
+        :param request: ClassAd representing the OCU claim request
+            must contain the OCU id
+        :return:  A ClassAd containing information about the remove operation.
+        """
+        return _schedd_remove_ocu(self._addr, request)
+
+    def query_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Query the schedd for all the OCU ads
+
+        :param request: ClassAd representing the query
+        :return:  A list of OCU ClassAds
+        """
+        return _schedd_query_ocu(self._addr, request._handle)
+
+def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):
         if "\n" in item:
             raise ValueError("itemdata strings must not contain newlines")
@@ -610,7 +1014,7 @@ def _add_line_from_itemdata(submit_file, item):
             raise ValueError("itemdata keys must not contain newlines")
         if any(["\n" in x for x in item.values()]):
             raise ValueError("itemdata values must not contain newlines")
-        submit_file = submit_file + "\x1F".join(item.values()) + "\n"
+        submit_file = submit_file + separator.join([item.get(k, "") for k in projection]) + "\n"
     return submit_file
 
 

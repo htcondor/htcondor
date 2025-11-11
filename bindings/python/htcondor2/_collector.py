@@ -3,6 +3,8 @@ from typing import Optional
 from typing import List
 from typing import Tuple
 
+import socket
+
 from .htcondor2_impl import _handle as handle_t
 
 from .htcondor2_impl import _collector_init
@@ -12,6 +14,7 @@ from .htcondor2_impl import _collector_advertise
 
 from ._ad_type import AdType
 from ._daemon_type import DaemonType
+from ._security_context import SecurityContext
 
 from ._common_imports import classad
 
@@ -41,31 +44,36 @@ class Collector():
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
-    def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str], None] = None):
+    def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str, ...], None] = None, security : SecurityContext = None ):
         """
         :param pool:  A ``host::port`` string specifying the remote collector,
                       a list (or tuple) of such strings, or a ClassAd
                       with a ``MyAddress`` attribute (such as might be returned
                       by :meth:`locate`).  :py:obj:`None` means the value of the
                       configuration parameter ``COLLECTOR_HOST``.
+        :param security: SecurityContext to use for authentication.
         """
         self._handle = handle_t()
 
+        token = None
+        if security is not None:
+            token = security.preferred_token
+
         if pool is None or isinstance(pool, str):
-            _collector_init(self, self._handle, pool)
+            _collector_init(self, self._handle, pool, token)
             return
 
         if isinstance(pool, classad.ClassAd):
             addr = pool.get("MyAddress")
             if addr is None:
                 raise ValueError("if ClassAd, pool must have MyAddress attribute")
-            _collector_init(self, self._handle, addr)
+            _collector_init(self, self._handle, addr, token)
             return
 
-        if isinstance(pool, [list, tuple]):
+        if isinstance(pool, (list, tuple)):
             # For now, just assume that the elements are strings.
             str_list = ", ".join(pool)
-            _collector_init(self, self._handle, str_list)
+            _collector_init(self, self._handle, str_list, token)
             return
 
         raise TypeError("pool is not a string, list (or tuple) of strings, or a ClassAd")
@@ -138,7 +146,7 @@ class Collector():
         daemon_ad = self.locate(daemon_type, name)
         daemon = Collector(daemon_ad)
         ad_type = _ad_type_from_daemon_type(daemon_type)
-        return daemon.query(ad_type, name, projection, statistics)
+        return daemon.query(ad_type, None, projection, statistics)[0]
 
 
     _for_location = ["MyAddress", "AddressV1", "CondorVersion", "CondorPlatform", "Name", "Machine"]
@@ -163,7 +171,24 @@ class Collector():
         """
         ad_type = _ad_type_from_daemon_type(daemon_type)
         if name is not None:
-            constraint = f'stricmp(Name, "{name}") == 0'
+            constraint = f'Name == "{name}"'
+
+            # Daemon::locate() calls getDaemonInfo(), which has special
+            # code for DT_STARTD: if name does not contain an @, figure
+            # out the full hostname and match that against the `Machine`
+            # attribute, instead.
+            if daemon_type == DaemonType.Startd and "@" not in name:
+                # This is, after tracing all the scattered logic, how
+                # Daemon::locate() converts a hostname into an FQDN.
+                r = socket.getaddrinfo(
+                        name, None,
+                        socket.AF_UNSPEC, socket.SOCK_STREAM,
+                        socket.IPPROTO_TCP, socket.AI_CANONNAME
+                )
+                if len(r) == 0:
+                    return None
+                constraint = f'Machine == "{r[0][3]}"'
+
             list = _collector_query(self._handle, int(ad_type), constraint, Collector._for_location, None, name)
             if len(list) == 0:
                 return None

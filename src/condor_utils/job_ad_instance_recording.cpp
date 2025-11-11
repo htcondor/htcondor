@@ -23,7 +23,7 @@
 #include "condor_attributes.h"
 #include "basename.h"
 #include "classadHistory.h"
-#include "directory.h" // for StatInfo
+#include "condor_uid.h"
 #include "directory_util.h"
 #include "job_ad_instance_recording.h"
 #include "proc.h"
@@ -87,8 +87,9 @@ initJobEpochHistoryFiles(){
 	efi.JobEpochInstDir.set(param("JOB_EPOCH_HISTORY_DIR"));
 	if (efi.JobEpochInstDir.ptr()) {
 		// If param was found and not null check if it is a valid directory
-		StatInfo si(efi.JobEpochInstDir.ptr());
-		if (!si.IsDirectory()) {
+		struct stat si = {};
+		stat(efi.JobEpochInstDir.ptr(), &si);
+		if (!(si.st_mode & S_IFDIR)) {
 			// Not a valid directory. Log message and set data member to NULL
 			dprintf(D_ERROR, "Invalid JOB_EPOCH_HISTORY_DIR (%s): must point to a "
 					"valid directory; disabling per-job run instance recording.\n",
@@ -116,18 +117,27 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
     // For admins to explicitly specify no attributes, these three
     // parameters must NOT be in the param table.
     if(! param_defined_by_config(paramName.c_str())) {
-        if( (strcmp(banner_name, "INPUT" ) == 0) ||
-          (strcmp(banner_name, "OUTPUT" ) == 0) ||
-          (strcmp(banner_name, "CHECKPOINT" ) == 0) ) {
+        if( (strcmp(banner_name, "INPUT") == 0) ||
+          (strcmp(banner_name, "OUTPUT") == 0) ||
+          (strcmp(banner_name, "CHECKPOINT") == 0) ||
+          (strcmp(banner_name, "COMMON") == 0) ) {
             paramName = "TRANSFER_JOB_ATTRS";
         }
     }
 
+
+    if(other_ad == NULL) {
+        return new ClassAd(* job_ad);
+    }
+
     std::string attributes;
     param( attributes, paramName.c_str() );
-    if( attributes.empty() ) { return NULL; }
+    ClassAd * new_ad = new ClassAd(* other_ad);
 
-    auto * new_ad = new classad::ClassAd(* other_ad);
+    if( attributes.empty() ) {
+        return new_ad;
+    }
+
     std::vector<std::string> attributeList = split(attributes);
     for( const auto & attribute : attributeList ) {
         CopyAttribute( attribute, * new_ad, attribute, * job_ad );
@@ -142,25 +152,25 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
 *	and print ad to a buffer to write to various files
 */
 static bool
-extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classad::ClassAd * other_ad, const char * banner_name){
+extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classad::ClassAd * other_ad, const char * banner_name, const classad::References* filter){
 	//Get various information needed for writing epoch file and banner
 	std::string owner, missingAttrs;
 
-	if (!job_ad->LookupInteger("ClusterId", info.jid.cluster)) {
+	if (!job_ad->LookupInteger(ATTR_CLUSTER_ID, info.jid.cluster)) {
 		info.jid.cluster = -1;
-		missingAttrs += "ClusterId";
+		missingAttrs += ATTR_CLUSTER_ID;
 	}
-	if (!job_ad->LookupInteger("ProcId", info.jid.proc)) {
+	if (!job_ad->LookupInteger(ATTR_PROC_ID, info.jid.proc)) {
 		info.jid.cluster = -1;
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
-		missingAttrs += "ProcId";
+		missingAttrs += ATTR_PROC_ID;
 	}
-	if (!job_ad->LookupInteger("NumShadowStarts", info.runId)) {
+	if (!job_ad->LookupInteger(ATTR_NUM_SHADOW_STARTS, info.runId)) {
 		//TODO: Replace Using NumShadowStarts with a better counter for epoch
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
-		missingAttrs += "NumShadowStarts";
+		missingAttrs += ATTR_NUM_SHADOW_STARTS;
 	}
-	if (!job_ad->LookupString("Owner", owner)) {
+	if (!job_ad->LookupString(ATTR_OWNER, owner)) {
 		owner = "?";
 	}
 
@@ -173,19 +183,21 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 		return false;
 	}
 
-	if(other_ad == NULL) {
-		other_ad = job_ad;
-		sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
-	} else {
-		const classad::ClassAd * new_ad =
-			copyEpochJobAttrs( job_ad, other_ad, banner_name );
-		if( new_ad != NULL ) {
-			sPrintAd(info.buffer,*new_ad,nullptr,nullptr);
-			delete new_ad;
-		} else {
-			sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
-		}
+
+	// The record includes the other ad and (some attributes of) the job ad.
+	ClassAd * record = copyEpochJobAttrs( job_ad, other_ad, banner_name );
+
+	// Duplicate the other banner attributes into the record body.
+	if( record->Lookup( ATTR_RUN_INSTANCE_ID ) == NULL ) {
+		record->InsertAttr( ATTR_RUN_INSTANCE_ID, info.runId );
 	}
+	if( record->Lookup( ATTR_EPOCH_AD_TYPE ) == NULL ) {
+		record->InsertAttr( ATTR_EPOCH_AD_TYPE, banner_name );
+	}
+
+	sPrintAd(info.buffer, * record, filter, nullptr);
+	delete record;
+
 
 	//Buffer contains just the ad at this point
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
@@ -272,8 +284,8 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 *		1. Full Aggregate (Like history file)
 *		2. File per cluster.proc in a specified directory
 */
-void
-writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other_ad, const char * banner_name) {
+static void
+writeJobEpochFile(const classad::ClassAd* job_ad, const char* banner_name, const classad::References* filter, const classad::ClassAd* other_ad) {
 	//If not initialized then call init function
 	if (!epochHistoryIsInitialized) { initJobEpochHistoryFiles(); }
 	// If not specified to write epoch files then return
@@ -286,7 +298,7 @@ writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other
 	}
 
 	EpochAdInfo info;
-	if (extractEpochInfo(job_ad, info, other_ad, banner_name)) {
+	if (extractEpochInfo(job_ad, info, other_ad, banner_name, filter)) {
 		//For every ad recording location check/try to write.
 		if (efi.EpochHistoryFilename.ptr()) {
 			info.file_path = efi.EpochHistoryFilename.ptr();
@@ -304,4 +316,17 @@ writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other
 	}
 }
 
+void
+writeAdToEpoch(const classad::ClassAd *ad, const char* banner_name) {
+	writeJobEpochFile(ad, banner_name, nullptr, nullptr);
+}
 
+void
+writeAdProjectionToEpoch(const classad::ClassAd *ad, const classad::References* filter, const char* banner_name) {
+	writeJobEpochFile(ad, banner_name, filter, nullptr);
+}
+
+void
+writeAdWithContextToEpoch(const classad::ClassAd *ad, const classad::ClassAd *job_ad, const char* banner_name) {
+	writeJobEpochFile(job_ad, banner_name, nullptr, ad);
+}

@@ -24,6 +24,10 @@
 
 #include "env.h"
 #include "setenv.h"
+#ifdef WIN32
+  #include "ntsysinfo.WINDOWS.h"
+#endif
+
 
 // Since ';' is the PATH delimiter in Windows, we use a different
 // delimiter for V1 environment entries.
@@ -754,4 +758,57 @@ void WhiteBlackEnvFilter::ClearWhiteBlackList() {
 	m_black.clear();
 	m_white.clear();
 }
+
+/*static*/ char* Env::GetProcessEnvBlock(pid_t pid, size_t size_max, int & error)
+{
+	char * envblock = nullptr;
+	std::string filename;
+#ifdef WIN32
+	CSysinfo sysinfo;
+	DWORD dw = S_OK;
+	envblock = sysinfo.GetProcessEnvironment(pid, size_max, dw);
+	error = (int)dw;
+	return envblock;
+#else
+	filename = "/proc/" + std::to_string(pid) + "/environ";
+#endif
+
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY | _O_BINARY, 0600);
+	if (fd < 0) {
+		error = errno;
+		dprintf(D_ALWAYS, "Failed to open environment %s for read: %d %s\n", filename.c_str(), error, strerror(errno));
+		return nullptr;
+	}
+
+	char buf[4096];
+	memset(buf, 0, sizeof(buf));
+	size_t cbEnv = 0;
+	ssize_t cbRead = 0;
+	std::vector<std::string> envdata;
+
+	// read environment in 4k chunks and store in a vector of strings
+	while ((cbRead = full_read(fd, buf, sizeof(buf))) > 0) {
+		cbEnv += cbRead;
+		envdata.emplace_back(buf, cbRead);
+		if ((size_t)cbRead < sizeof(buf))
+			break;
+		if (size_max && cbEnv > size_max)
+			break;
+		memset(buf, 0, sizeof(buf));
+	}
+
+	// allocate space for the whole environment, and concat all of the strings into it
+	envblock = (char*)malloc(cbEnv+2);
+	if (envblock) {
+		memset(envblock, 0, cbEnv+2);
+		size_t off = 0;
+		for (const auto & chunk : envdata) {
+			memcpy(envblock+off, chunk.data(), chunk.size());
+			off += chunk.size();
+		}
+	}
+
+	return envblock;
+}
+
 

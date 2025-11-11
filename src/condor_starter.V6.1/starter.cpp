@@ -19,9 +19,11 @@
 
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "starter.h"
+#include "condor_uid.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "docker_proc.h"
@@ -57,6 +59,11 @@
 #endif
 #include "authentication.h"
 #include "to_string_si_units.h"
+#include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+
 
 extern void main_shutdown_fast();
 
@@ -128,9 +135,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				bool is_gsh, int stdin_fd, int stdout_fd, 
 				int stderr_fd )
 {
-	if( ! my_jic ) {
-		EXCEPT( "Starter::Init() called with no JobInfoCommunicator!" ); 
-	}
+	ASSERT(my_jic);
 	if( jic ) {
 		delete( jic );
 	}
@@ -159,8 +164,15 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		WorkingDir = Execute;
 		m_workingDirExists = true;
 	} else {
-		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
-				 (long)daemonCore->getpid() );
+		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+				(long)daemonCore->getpid() );
+		if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
+			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
+		} else {
+			WorkingDir = SlotDir;
+			JobHomeDir = SlotDir;
+		}
 	}
 
 		//
@@ -222,10 +234,10 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  (CommandHandlercpp)&Starter::updateX509Proxy,
 						  "Starter::updateX509Proxy", this, WRITE );
 	daemonCore->
-		Register_Command( STARTER_HOLD_JOB,
-						  "STARTER_HOLD_JOB",
-						  (CommandHandlercpp)&Starter::remoteHoldCommand,
-						  "Starter::remoteHoldCommand", this, DAEMON );
+		Register_Command( STARTER_VACATE_JOB,
+						  "STARTER_VACATE_JOB",
+						  (CommandHandlercpp)&Starter::remoteVacateCommand,
+						  "Starter::remoteVacateCommand", this, DAEMON );
 	daemonCore->
 		Register_Command( CREATE_JOB_OWNER_SEC_SESSION,
 						  "CREATE_JOB_OWNER_SEC_SESSION",
@@ -249,6 +261,8 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	if( ! jic->init() ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize JobInfoCommunicator, aborting\n" );
+		SetVacateReason("Starter failed to initialize", CONDOR_HOLD_CODE::StarterError, 0);
+		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
 		return false;
 	}
 
@@ -261,20 +275,50 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	sysapi_set_resource_limits(jic->getStackSize());
 	set_priv (rl_p);
 
-		// Now, ask our JobInfoCommunicator to setup the environment
-		// where our job is going to execute.  This might include
-		// doing file transfer stuff, who knows.  Whenever the JIC is
-		// done, it'll call our jobEnvironmentReady() method so we can
-		// actually spawn the job.
-	jic->setupJobEnvironment();
+
+	//
+	// Now ask the shadow what to do.  If we carry on, we'll call
+	// jic->setupJobEnvironment(), which will eventually call us
+	// back with jobEnvironmentReady() when it's done, which will
+	// (eventually) spawn the job.
+	//
+	ClassAd context;
+	requestGuidanceSetupJobEnvironment(this, context);
+
 	return true;
 }
 
+void
+Starter::SetVacateReason(const std::string& msg, int code, int subcode)
+{
+	// Don't overwrite an existing vacate reason
+	if (m_vacateCode == 0) {
+		m_vacateReason = msg;
+		m_vacateCode = code;
+		m_vacateSubcode = subcode;
+	}
+}
+
+void
+Starter::ExceptHandler(const char* errmsg)
+{
+	if (m_vacateCode != 0) {
+		jic->notifyStarterError(m_vacateReason.c_str(), true, m_vacateCode, m_vacateSubcode);
+	} else {
+		jic->notifyStarterError(errmsg, true, 0, 0);
+	}
+	RemoteShutdownFast(0);
+	FinalCleanup(STARTER_EXIT_EXCEPTION);
+}
 
 void
 Starter::StarterExit( int code )
 {
 	code = FinalCleanup(code);
+	if (job_requests_broken_exit && code == STARTER_EXIT_NORMAL){
+		code = STARTER_EXIT_BROKEN_BY_REQUEST;
+		dprintf(D_STATUS, "Job requested a broken exit code, setting code to %d\n", code);
+	}
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
@@ -292,7 +336,8 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir(code)) {
+	const char *move_to = m_move_working_dir_on_exit.empty() ? nullptr : m_move_working_dir_on_exit.c_str();
+	if ( ! removeTempExecuteDir(code, move_to)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -330,6 +375,9 @@ Starter::Config()
 			EXCEPT("Execute directory not specified in config file.");
 		}
 	}
+
+	// Testing hack, move the working dir instead of deleting it.
+	param(m_move_working_dir_on_exit, "STARTER_MOVE_WORKING_DIR_ON_EXIT");
 
 #ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
@@ -1646,43 +1694,45 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 }
 
 /**
- * Hold Job Command (sent by startd)
- * Unlike the DC signal, this includes a hold reason and hold code.
- * Also unlike the DC signal, this _puts_ the job on hold, rather than
+ * Vacate Job Command (sent by startd)
+ * Unlike the DC signal, this includes a reason string and code.
+ * Also unlike the DC signal, this can _put_ the job on hold, rather than
  * just passively informing the JIC of the hold.
  * 
  * @param command (not used)
  * @return true if ????, otherwise false
  */ 
 int 
-Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
+Starter::remoteVacateCommand( int /*cmd*/, Stream* s )
 {
-	std::string hold_reason;
-	int hold_code;
-	int hold_subcode;
+	std::string vacate_reason;
+	int vacate_code;
+	int vacate_subcode;
 	int soft;
 
 	s->decode();
-	if( !s->get(hold_reason) ||
-		!s->get(hold_code) ||
-		!s->get(hold_subcode) ||
+	if( !s->get(vacate_reason) ||
+		!s->get(vacate_code) ||
+		!s->get(vacate_subcode) ||
 		!s->get(soft) ||
 		!s->end_of_message() )
 	{
-		dprintf(D_ALWAYS,"Failed to read message from %s in Starter::remoteHoldCommand()\n", s->peer_description());
+		dprintf(D_ERROR,"Failed to read message from %s in Starter::remoteVacateCommand()\n", s->peer_description());
 		return FALSE;
 	}
+
+	dprintf(D_STATUS, "Got vacate code=%d subcode=%d reason=%s\n", vacate_code, vacate_subcode, vacate_reason.c_str());
 
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
-		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
+		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteVacateCommand()\n");
 	}
 
-	if (hold_code >= CONDOR_HOLD_CODE::VacateBase) {
-		m_vacateReason = hold_reason;
-		m_vacateCode =hold_code;
-		m_vacateSubcode = hold_subcode;
+	if (shouldVacateJobBasedOnCodes(vacate_code, vacate_subcode)) {
+		m_vacateReason = vacate_reason;
+		m_vacateCode = vacate_code;
+		m_vacateSubcode = vacate_subcode;
 		if (soft) {
 			return this->RemoteShutdownGraceful(0);
 		} else {
@@ -1692,7 +1742,7 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 
 		// Put the job on hold on the remote side.
 	if( jic ) {
-		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
+		jic->holdJob(vacate_reason.c_str(), vacate_code, vacate_subcode);
 	}
 
 	if( !soft ) {
@@ -1856,12 +1906,68 @@ Starter::createTempExecuteDir( void )
 			dir_perms = 0755;
 		free(who);
 
+		if (WorkingDir != SlotDir) {
+			// If we have a nested working dir
+			if (mkdir(SlotDir.c_str(), 0755) < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						SlotDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
+				return false;
+			}
+			// The "htcondor" subdir is always owned by condor, mode 0755
+			std::string condor_dir = SlotDir + DIR_DELIM_CHAR + "htcondor";
+			if (mkdir(condor_dir.c_str(), 0755) < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						condor_dir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
+				return false;
+			}
+
+			// The user dir (almost home dir) is owned by user, 0700
+			int r = mkdir(JobHomeDir.c_str(), 0700);
+
+			if (r < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						JobHomeDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
+				return false;
+			}
+
+#if !defined(WIN32)
+			{
+				// Made it as condor, now chown it to user
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				r = chown(JobHomeDir.c_str(),get_user_uid(), get_user_gid());
+			}
+
+			if (r < 0) {
+				dprintf( D_ERROR,
+						"couldn't chown dir %s: %s\n",
+						JobHomeDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
+				return false;
+			}
+#endif
+		}
+
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
 			dprintf( D_ERROR,
 			         "couldn't create dir %s: %s\n",
 			         WorkingDir.c_str(),
 			         strerror(errno) );
 			set_priv( priv );
+			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 	}
@@ -1873,6 +1979,7 @@ Starter::createTempExecuteDir( void )
 		if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested) && requested) {
 			dprintf(D_ERROR,
 			        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+			SetVacateReason("Can't create encrypted scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 	}
@@ -1884,6 +1991,7 @@ Starter::createTempExecuteDir( void )
 		// some of these Win32 calls might not like
 		// them.
 		canonicalize_dir_delimiters(WorkingDir);
+		canonicalize_dir_delimiters(JobHomeDir);
 
 		perm dirperm;
 		const char * nobody_login = get_user_loginname();
@@ -1893,7 +2001,18 @@ Starter::createTempExecuteDir( void )
 		if ( !ret_val ) {
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
+			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
+		}
+
+		if (JobHomeDir != WorkingDir) {
+			bool ret_val = dirperm.set_acls( JobHomeDir.c_str() );
+			if ( !ret_val ) {
+				dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON USER DIRECTORY\n");
+				set_priv( priv );
+				SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
+				return false;
+			}
 		}
 	
 		// if the admin or the user wants the execute directory encrypted,
@@ -2005,28 +2124,25 @@ Starter::createTempExecuteDir( void )
 		}
 		if ( ! lvm_setup_successful) {
 			m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
+			SetVacateReason("Failed to create LV for scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
 		has_encrypted_working_dir = m_lv_handle->IsEncrypted();
 	} else {
 		// Linux && no LVM
-		dirMonitor = new ManualExecDirMonitor(WorkingDir);
+		dirMonitor = new ManualExecDirMonitor(SlotDir);
 	}
 #else /* Non-Linux OS*/
-	dirMonitor = new ManualExecDirMonitor(WorkingDir);
+	dirMonitor = new ManualExecDirMonitor(SlotDir);
 #endif // LINUX
 
 	if ( ! dirMonitor || ! dirMonitor->IsValid()) {
 		dprintf(D_ERROR, "Failed to initialize job working directory monitor object: %s\n",
 		                 dirMonitor ? "Out of memory" : "Failed initialization");
+		SetVacateReason("Failed to create LV for scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 		return false;
 	}
-
-	dprintf_open_logs_in_directory(WorkingDir.c_str());
-
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
 
 #if !defined(WIN32)
 	if (use_chown) {
@@ -2035,6 +2151,7 @@ Starter::createTempExecuteDir( void )
 					get_user_uid(),
 					get_user_gid()) == -1)
 		{
+			SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 			EXCEPT("chown error on %s: %s",
 					WorkingDir.c_str(),
 					strerror(errno));
@@ -2046,12 +2163,19 @@ Starter::createTempExecuteDir( void )
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
 	int chdir_result = chdir(WorkingDir.c_str());
+
+	dprintf_open_logs_in_directory(WorkingDir.c_str());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
+
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
 		dprintf( D_ERROR, "couldn't move to %s: %s\n", WorkingDir.c_str(),
 				 strerror(errno) ); 
 		set_priv( priv );
+		SetVacateReason("Failed to create scratch dir", CONDOR_HOLD_CODE::ScratchDirError, 0);
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
@@ -2077,10 +2201,49 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 		return 0;
 	}
 
+	// Ask the AP what to do.
+	std::ignore = daemonCore->Register_Timer(
+		0, 0,
+		[this](int /* timerID */) -> void {
+			Starter::requestGuidanceJobEnvironmentUnready(this);
+		},
+		"ask AP what to do"
+	);
+
+	return true;
+}
+
+/**
+ * After any file transfers are complete, will enter this method
+ * to setup anything else that needs to happen in the Starter
+ * before starting a job
+ *
+ * @return true
+ **/
+int
+Starter::jobEnvironmentReady( void )
+{
+	m_job_environment_is_ready = true;
+
+	// Ask the AP what to do.
+	std::ignore = daemonCore->Register_Timer(
+		0, 0,
+		[this](int /* timerID */) -> void {
+		    Starter::requestGuidanceJobEnvironmentReady(this);
+		},
+		"ask AP what to do"
+	);
+
+	return ( true );
+}
+
+
+bool
+Starter::skipJobImmediately() {
 	//
 	// Now we will register a callback that will
 	// call the function to actually execute the job
-	// If there wasn't a deferral time then the job will 
+	// If there wasn't a deferral time then the job will
 	// be started right away. We store the timer id so that
 	// if a suspend comes in, we can cancel the job from being
 	// executed
@@ -2093,36 +2256,14 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 	//
 	// Make sure our timer callback registered properly
 	//
-	if( this->deferral_tid < 0 ) {
-		EXCEPT( "Can't register SkipJob DaemonCore timer" );
-	}
+	ASSERT(this->deferral_tid >= 0);
 	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
 			this->jic->jobCluster(),
 			this->jic->jobProc() );
 
-	return true;
+    return true;
 }
 
-/**
- * After any file transfers are complete, will enter this method
- * to setup anything else that needs to happen in the Starter
- * before starting a job
- * 
- * @return true
- **/
-int
-Starter::jobEnvironmentReady( void )
-{
-	m_job_environment_is_ready = true;
-
-		//
-		// The Starter will determine when the job 
-		// should be started. This method will always return 
-		// immediately
-		//
-	this->jobWaitUntilExecuteTime( );
-	return ( true );
-}
 
 /**
  * Calculate whether we need to wait until a certain time
@@ -2282,9 +2423,7 @@ Starter::jobWaitUntilExecuteTime( void )
 			//
 			// Make sure our timer callback registered properly
 			//
-		if( this->deferral_tid < 0 ) {
-			EXCEPT( "Can't register Deferred Execution DaemonCore timer" );
-		}
+		ASSERT(this->deferral_tid >= 0);
 			//
 			// Our job will start in the future
 			//
@@ -3046,7 +3185,7 @@ Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
-	dprintf(D_ZKM | D_BACKTRACE, "Starter::allJobsDone()\n");
+	dprintf(D_ZKM, "Starter::allJobsDone()\n");
 
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
@@ -3067,8 +3206,9 @@ bool
 Starter::transferOutput( void )
 {
 	bool transient_failure = false;
+	bool in_progress = false;
 
-	dprintf(D_ZKM | D_BACKTRACE, "Starter::transferOutput()\n");
+	dprintf(D_ZKM, "Starter::transferOutput()\n");
 
 	if( recorded_job_exit_status ) {
 		bool exitStatusSpecified = false;
@@ -3078,12 +3218,16 @@ Starter::transferOutput( void )
 		}
 	}
 
-    // Try to transfer output (the failure files) even if we didn't succeed
-    // in job setup (e.g., transfer input files), but just ignore any
-    // output-transfer failures in the case of a setup failure; we can only
-    // really report one thing, and that should be the setup failure,
-    // which happens as a result of calling cleanupJobs().
-	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
+	// Try to transfer output (the failure files) even if we didn't succeed
+	// in job setup (e.g., transfer input files), but just ignore any
+	// output-transfer failures in the case of a setup failure; we can only
+	// really report one thing, and that should be the setup failure,
+	// which happens as a result of calling cleanupJobs().
+	bool transfer_done = jic->transferOutput(transient_failure, in_progress);
+	if (transfer_done == false && in_progress == true) {
+		return false;
+	}
+	if (transfer_done == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
 				// we will retry the transfer when (if) the shadow reconnects
@@ -3110,25 +3254,16 @@ Starter::transferOutput( void )
 			}
 		}
 
-		jic->transferOutputMopUp();
-
-			/*
-			  there was an error with the JIC in this step.  at this
-			  point, the only possible reason is if we're talking to a
-			  shadow and file transfer failed to send back the files.
-			  in this case, just return to DaemonCore and wait for
-			  other events (like the shadow reconnecting or the startd
-			  deciding the job lease expired and killing us)
-			*/
-		dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
-				 "lease to expire or for a reconnect attempt\n" );
-		return false;
-	}
+		// If we've lost the syscall socket at this point, there's no point
+		// in doing the output transfer mop-up, but the shadow might reconnect.
+		if( /* FIXME */ false ) {
+			dprintf( D_ALWAYS, "JIC::transferOutput() failed, waiting for job "
+			                 "lease to expire or for a reconnect attempt\n" );
+			return false;
+		}
+ 	}
 
 	jic->transferOutputMopUp();
-
-		// If we're here, the JIC successfully transfered output.
-		// We're ready to move on to the next cleanup stage.
 	return cleanupJobs();
 }
 
@@ -3232,7 +3367,7 @@ Starter::publishPostScriptUpdateAd( ClassAd* ad )
 }
 
 FILE *
-Starter::OpenManifestFile( const char * filename )
+Starter::OpenManifestFile( const char * filename, bool add_to_output )
 {
 	// We should be passed in a filename that is a relavtive path
 	ASSERT(filename != NULL);
@@ -3283,7 +3418,7 @@ Starter::OpenManifestFile( const char * filename )
 			filename, dirname.c_str(), errno, strerror(errno));
 		return NULL;
 	}
-	jic->addToOutputFiles( dirname.c_str() );
+	if( add_to_output ) { jic->addToOutputFiles( dirname.c_str() ); }
 	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
 	FILE * file = fopen( f.c_str(), "w" );
@@ -3443,8 +3578,29 @@ Starter::PublishToEnv( Env* proc_env )
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long
+					// so we just force CUDA_VISIBLE_DEVICES to be the same value as NVIDIA_VISIBLE_DEVICES
+					proc_env->SetEnv("CUDA_VISIBLE_DEVICES", env_value);
+					dprintf(D_ALWAYS, "AvailableGPUs forcing env CUDA_VISIBLE_DEVICES=%s\n", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
+				}
+			}
+		}
+
+		const ClassAd * msec = jic->getMachineSecetsAd();
+		if (msec) {
+			// give the job access to the split claim id, (if there is one)
+			// we unparse so that the value will have "" and internal "" will be escaped
+			classad::Value val;
+			if (msec->EvaluateAttr(ATTR_SPLIT_CLAIM_ID, val, classad::Value::STRING_VALUE)) {
+				auto_free_ptr envname(param("STARTER_SET_SLOT_SPLIT_CLAIM_IN_JOB_ENV"));
+				if (envname) {
+					std::string split_claim;
+					classad::ClassAdUnParser unparser;
+					unparser.SetOldClassAd(true, true);
+					unparser.Unparse(split_claim, val);
+					proc_env->SetEnv(envname.ptr(), split_claim);
 				}
 			}
 		}
@@ -3472,18 +3628,23 @@ Starter::PublishToEnv( Env* proc_env )
 		proc_env->SetEnv( env_name.c_str(), output_ad );
 	}
 	
+		// starter pid for use mainly by condor_who
+		// CONDOR not _CONDOR so we don't pollute the config of the child
+	std::string starter_pid = std::to_string( daemonCore->getpid() );
+	proc_env->SetEnv("CONDOR_STARTER_PID", starter_pid);
+
 		// job scratch space
 	env_name = base;
 	env_name += "SCRATCH_DIR";
 	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
 
-	    // Apptainer/Singlarity scratch dir
+		// Apptainer/Singlarity scratch dir
 	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
 	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
+
 		// slot identifier
 	env_name = base;
 	env_name += "SLOT";
-	
 	proc_env->SetEnv(env_name, getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
@@ -3587,6 +3748,22 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, 
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
+
+	// Need to set HOME to the job's home directory, not the starter's.
+#ifndef WINDOWS
+	if (param_boolean("STARTER_SETS_HOME_ENV", true)) {
+		uid_t uid = get_user_uid();
+		if (uid == (uid_t) -1) {
+			// Personal. Condor.  Someone to run your jobs. Someone who cares.
+			uid = getuid();
+		}
+		struct passwd *pw = getpwuid(uid);
+		if (pw) {
+			proc_env->SetEnv("HOME", pw->pw_dir);
+		}
+	}
+#endif
+
 
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
@@ -3889,7 +4066,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir(int& exit_code)
+Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -3913,7 +4090,8 @@ Starter::removeTempExecuteDir(int& exit_code)
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
-			if (exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
+			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", true);
+			if (mark_broken && exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
 				if (exit_code != STARTER_EXIT_NORMAL) {
 					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",
 					        exit_code, STARTER_EXIT_IMMORTAL_LVM);
@@ -3925,30 +4103,17 @@ Starter::removeTempExecuteDir(int& exit_code)
 	}
 #endif /* LINUX */
 
-	// Remove the directory from all possible chroots.
-	// On Windows, we expect the root_dir_list to have only a single entry - "/"
-	std::string full_exec_dir(Execute);
-	pair_strings_vector root_dirs = root_dir_list();
-	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		if (it->second == "/") {
-			// if the root is /, just use the execute dir.  we do this because dircat doesn't work
-			// correctly on windows when cat'ing  / + c:\condor\execute
-			full_exec_dir = Execute;
+	// Remove the scratch directory.
+	Directory execute_dir(Execute, PRIV_ROOT);
+	if (execute_dir.Find_Named_Entry(dir_name.c_str())) {
+
+		int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
+		if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
+
+		if (move_to) {
+			dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
+			rename(execute_dir.GetFullPath(), move_to);
 		} else {
-			// for chroots other than the trivial one, cat the chroot to the configured execute dir
-			// we don't expect to ever get here on Windows.
-			// If we do get here on Windows, Find_Named_Entry will just fail to find a match
-			if ( ! dircat(it->second.c_str(), Execute, full_exec_dir)) {
-				continue;
-			}
-		}
-
-		Directory execute_dir( full_exec_dir.c_str(), PRIV_ROOT );
-		if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
-
-			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
-			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
-
 			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
 			if (!execute_dir.Remove_Current_File()) {
 				has_failed = true;
@@ -4165,7 +4330,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 		std::string limit_str = to_string_byte_units(limit);
 		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
 		         limit_str.c_str());
-		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Disk);
 		m_lvm_held_job = true;
 	}
 

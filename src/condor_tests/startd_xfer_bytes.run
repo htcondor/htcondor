@@ -1,0 +1,137 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+use Check::SimpleJob;
+use strict;
+use warnings;
+
+# test whether total byte transferred by jobs is reported in startd ad
+
+# request that a personal HTCondor be started before the test, and that it have
+# the following appended to its config file.
+#testreq: personal
+my $config = <<'CONDOR_TESTREQ_CONFIG';
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = "startd_xfer_bytes";
+
+# level 1 is default, level 2 will show all userlog events
+#Condor::DebugLevel(2);
+
+my $pid = $$;
+my $basefile = "$testname$pid";
+my $inputdata = "$basefile.A.input";
+
+TLOG("creating input file $inputdata\n");
+
+# create the big input datafile
+open(DF,">$inputdata") or die "Failed to open '$inputdata' : $!\n";
+my $aa = "AAAAAAAAAAAAAAA BBBBBBBBBBBBBBB CCCCCCCCCCCCCCC DDDDDDDDDDDDDDD EEEEEEEEEEEEEEE FFFFFFFFFFFFFFF GGGGGGGGGGGGGGG HHHHHHHHHHHHHHH";
+my $bb = "IIIIIIIIIIIIIII JJJJJJJJJJJJJJJ KKKKKKKKKKKKKKK LLLLLLLLLLLLLLL MMMMMMMMMMMMMMM NNNNNNNNNNNNNNN OOOOOOOOOOOOOOO PPPPPPPPPPPPPPP";
+for (my $i = 0; $i < (5*1024); $i++ ) { print DF $aa . "\t" . $bb . "\n"; }
+close(DF);
+
+my $in_ad  = '[TransferProtocol="BIB"; TransferSuccess=true; TransferTotalBytes=10000000;];';
+my $out_ad = '[TransferProtocol="BOB"; TransferSuccess=true; TransferTotalBytes=122200; TransferFileName="dummy"; TransferUrl="';
+   $out_ad .= "BOB://bar";
+   $out_ad .= '";]';
+
+# create transfer plugins
+#
+TLOG("creating transfer plugins ${basefile}_outplug.cmd and ${basefile}_inplug.cmd\n");
+open(PF, ">${basefile}_inplug.cmd") or die "Failed to create input transfer plugin : $!\n";
+if (is_windows()) {
+	print PF '@echo ' . $in_ad . ' > %~nx4' . "\n";
+} else {
+	print PF "#!/bin/sh\n";
+	print PF "echo '" . $in_ad . "' > " . '$4' . "\n";
+}
+close(PF);
+chmod 0744, "${basefile}_inplug.cmd";
+
+open(PF, ">${basefile}_outplug.cmd") or die "Failed to create output transfer plugin : $!\n";
+if (is_windows()) {
+	print PF '@echo ' . $out_ad . ' > %~nx4' . "\n";
+} else {
+	print PF "#!/bin/sh\n";
+	print PF "echo '" . $out_ad . "' > " . '$4' . "\n";
+}
+close(PF);
+chmod 0744, "${basefile}_outplug.cmd";
+
+my $num_ok = 0;
+my $on_success = sub {
+	my %info = @_;
+	my $jobid = $info{'cluster'} . '.' . $info{'job'};
+	TLOG("job $jobid completed successfully\n");
+	$num_ok += 1;
+};
+
+my $on_reconnectfailed = sub {
+	my %info = @_;
+	my $cluster_id = $info{'cluster'};
+	my $jobid = $cluster_id . '.' . $info{'job'};
+	TLOG("job $jobid failed to reconnect - aborting\n");
+	system("condor_rm $cluster_id");
+};
+
+my $result = SimpleJob::RunCheck(
+	queue_sz => 2,
+	runthis => "x_copy_binary_file.pl",
+	duration => "$inputdata result_file",
+	should_transfer_files => "YES",
+	transfer_input_files => "$inputdata, BIB://foo",
+	append_submit_commands => "BASE=$basefile"
+		. "\n" . 'transfer_output_remaps="result_file=BOB://bar"'
+		. "\n" . 'transfer_plugins = BOB=$(BASE)_outplug.cmd;BIB=$(BASE)_inplug.cmd'
+		,
+	on_success => $on_success,
+	on_reconnectfailed => $on_reconnectfailed,
+	);
+
+my $res = 0;
+$res = 1 if ($num_ok == 2);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'xfer-jobs-ran');
+
+TLOG("direct querying startd daemon ad to look for transfer totals\n");
+my @lines;
+# my $startd_addr = `condor_who -quick -af STARTD_Addr`;
+# chomp($startd_addr);
+# CondorTest::runCondorTool("condor_status -startd -direct \"$startd_addr\" -long", \@lines, 1, {emit_output => 1} );
+my $totals = `condor_who -startd -af AvgTransferInputMB TotalTransferInputMB AvgTransferOutputMB TotalTransferOutputMB`;
+
+# expected totals output is about 9.9 19.9 0.0011 0.0023
+# actual output will have more significant digits
+print "totals=$totals\n";
+print "expected (approx)=10.7 21.6 0.11 0.23\n";
+
+$res = 0;
+$res = 1 if ($totals =~ /10\.7[0-9]+\s21\.5[0-9]+\s0\.11[0-9]+\s0.23[0-9]+/);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'startd-xfer-totals-ok');
+
+
+
+CondorTest::EndTest();
+

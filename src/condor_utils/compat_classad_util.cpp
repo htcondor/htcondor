@@ -35,10 +35,10 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree)
 {
 	classad::ClassAdParser parser;
 	parser.SetOldClassAd( true );
-	if ( parser.ParseExpression( s, tree, true ) ) {
+	tree = parser.ParseExpression(s, true);
+	if ( tree ) {
 		return 0;
 	} else {
-		tree = NULL;
 		return 1;
 	}
 }
@@ -1009,8 +1009,10 @@ ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFile
 	YourString fmt(arg);
 	if (fmt == "long") { parse_type = ClassAdFileParseType::Parse_long; }
 	else if (fmt == "json") { parse_type = ClassAdFileParseType::Parse_json; }
+	else if (fmt == "jsonl") { parse_type = ClassAdFileParseType::Parse_json_lines; }
 	else if (fmt == "xml") { parse_type = ClassAdFileParseType::Parse_xml; }
 	else if (fmt == "new") { parse_type = ClassAdFileParseType::Parse_new; }
+	else if (fmt == "newl") { parse_type = ClassAdFileParseType::Parse_new_l; }
 	else if (fmt == "auto") { parse_type = ClassAdFileParseType::Parse_auto; }
 	return parse_type;
 }

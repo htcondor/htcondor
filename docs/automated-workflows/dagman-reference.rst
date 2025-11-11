@@ -319,6 +319,8 @@ Macros that can be passed to a script as optional arguments like ``$<macro>``
      successful list of jobs execution.
         **EXIT_CODES**        | An ordered comma separated list of all :ad-attr:`ExitCode`\ s returned by\
      jobs associated with the node.
+        **EXIT_CODE_LIST**    | A comma separated list of each jobs :ad-attr:`ExitCode` ordered by :ad-attr:`ProcId`\
+     Removed jobs will have no value.
         **EXIT_CODE_COUNTS**  | An ordered comma separated list of the number of jobs that exited with a particular\
      :ad-attr:`ExitCode` (``{ExitCode}:{Count}``).
         **PRE_SCRIPT_RETURN** | Return value of the associated node's PRE Script.
@@ -348,6 +350,18 @@ description file.
 
     $ condor_submit_dag diamond.dag
 
+In the case of re-executing a DAG in its entirety that had previously been
+run, forcibly re-submit the DAG.
+
+.. code-block:: console
+
+    $ condor_submit_dag -f diamond.dag
+
+.. note::
+
+    Forcibly re-executing a DAG will cause previous DAG informational files
+    to be removed and rename any Rescue Files to ``*.old`` to invalidate them.
+
 DAG Monitoring
 ^^^^^^^^^^^^^^
 
@@ -366,6 +380,45 @@ Stopping a DAG
 Pause/Restart
     A DAG can temporarily be stopped by using :tool:`condor_hold` on the DAGMan
     proper job. To restart the DAG simply use :tool:`condor_release`.
+Halt/Resume
+    A DAG can be informed to not start new work by using :tool:`htcondor dag halt`
+    on the DAGMan proper job. To resume new work in the DAG simply use
+    :tool:`htcondor dag resume`.
 Remove
     To remove a DAG simply use :tool:`condor_rm` on the DAGMan proper job.
 
+DAG Completion
+--------------
+
+DAGMan exits the Access Point upon successfully completing or when it can no longer
+make forward progress. The latter case occurs when one or more nodes in the DAG fail
+to complete successfully (see :ref:`DAGMan Node Success/Failure<DAG node success>`).
+
+Resubmitting A Failed DAG
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Upon failure, DAGMan will write a 'Rescue File' in the form of ``<DAG file>.rescueXXX``
+e.g. ``diamond.dag.rescue001`` (see :ref:`Rescue DAG`). When resubmitted, DAGMan will
+restore state from the Rescue File and skip already successfully completed nodes.
+
+Simply run the same submit command to rescue the DAG:
+
+.. code-block:: console
+
+    $ condor_submit_dag diamond.dag
+
+.. note::
+
+    DAGMan will automatically find the most recent Rescue DAG file to restore state.
+
+DAG Save Files
+^^^^^^^^^^^^^^
+
+Similar to Rescue DAGs, DAGMan can be re-executed from a :ref:`DAG save file<DAG Save Files>`
+to restore state and skip over already successfully completed nodes.
+
+Simply re-submit the DAG specifying a save file:
+
+.. code-block:: console
+
+    $ condor_submit_dag -load_save dag-progress.save diamond.dag

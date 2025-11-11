@@ -149,6 +149,25 @@ class ClaimIdParser {
 		*this = ClaimIdParser(new_claim_id.c_str());
 	}
 
+	// extract the version info from the session info
+	CondorVersionInfo secSessionInfoVersion()
+	{
+		int maj=0,min=0,sub=0;
+		// call secSessionInfo to force the m_session_info member to populate
+		if (secSessionInfo() && !m_session_info.empty()) {
+			// then we can look inside it to find the ShortVersion
+			auto ver = m_session_info.find("ShortVersion=\"");
+			if (ver != std::string::npos) {
+				const char * short_version = m_session_info.c_str() + ver + 14;
+				char *pos = NULL;
+				maj = strtol(short_version, &pos, 10);
+				min = (pos[0] == '.') ? strtol(pos+1, &pos, 10) : 0;
+				sub = (pos[0] == '.') ? strtol(pos+1, &pos, 10) : 0;
+			}
+		}
+		return {maj,min,sub};
+	}
+
  private:
 	std::string m_claim_id;
 	std::string m_public_part;

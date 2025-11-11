@@ -36,6 +36,9 @@
 
 #include "strcasestr.h"
 
+// Initialize broken item reference ID counter
+unsigned int BrokenItem::monotonic_id = 0;
+
 struct slotOrderSorter {
    bool operator()(const Resource *r1, const Resource *r2) {
 		if (r1->r_id < r2->r_id) {
@@ -86,8 +89,10 @@ ResMgr::ResMgr() :
 	if ( ! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd disk enforcement disabled.\n");
 		m_volume_mgr.reset(nullptr);
+		m_attr->set_volume_manager(nullptr);
 	} else {
 		m_volume_mgr.reset(new VolumeManager());
+		m_attr->set_volume_manager(m_volume_mgr.get());
 	}
 
 #if HAVE_BACKFILL
@@ -218,7 +223,8 @@ ResMgr::~ResMgr()
 #endif /* HAVE_HIBERNATION */
 
 
-	for (auto rip : slots) { delete rip; }
+	// disconnect slots from parent (if any still exist) and then delete them
+	for (auto rip : slots) { rip->set_parent(nullptr); delete rip; }
 	slots.clear();
 	delete [] type_nums;
 	if( new_type_nums ) {
@@ -235,17 +241,15 @@ ResMgr::init_config_classad( void )
 	config_classad = new ClassAd();
 
 		// First, bring in everything we know we need
-	configInsert( config_classad, "START", true );
-	configInsert( config_classad, "SUSPEND", true );
-	configInsert( config_classad, "CONTINUE", true );
-	configInsert( config_classad, "PREEMPT", true );
-	configInsert( config_classad, "KILL", true );
-	configInsert( config_classad, "WANT_SUSPEND", true );
-	configInsert( config_classad, "WANT_VACATE", true );
-	if( !configInsert( config_classad, "WANT_HOLD", false ) ) {
-			// default's to false if undefined
-		config_classad->AssignExpr("WANT_HOLD","False");
-	}
+	configInsert( config_classad, "START", false, "true" );
+	configInsert( config_classad, "SUSPEND", false, "false" );
+	configInsert( config_classad, "CONTINUE", false, "true" );
+	configInsert( config_classad, "PREEMPT", false, "false" );
+	configInsert( config_classad, "KILL", false, "false" );
+	configInsert( config_classad, "WANT_SUSPEND", false, "false");
+	configInsert( config_classad, "WANT_VACATE", false, "true" );
+	configInsert( config_classad, "WANT_HOLD", false, "false");
+
 	configInsert( config_classad, "WANT_HOLD_REASON", false );
 	configInsert( config_classad, "WANT_HOLD_SUBCODE", false );
 	configInsert( config_classad, "CLAIM_WORKLIFE", false );
@@ -336,20 +340,127 @@ ResMgr::final_update_daemon_ad()
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
 }
 
+// build and return a BrokenContext ad, this ad will be inserted into the StartDaemon ad
+ClassAd * BrokenItem::new_context_ad() const
+{
+	ClassAd * ad = new ClassAd();
+	ad->Assign("Id", b_tag);
+	if (b_code) ad->Assign("Code", b_code);
+	if (b_time) ad->Assign("Time", b_time);
+	if ( ! b_reason.empty()) ad->Assign("Reason", b_reason);
+	classad::References attrs;
+	param_and_insert_attrs("BROKEN_SLOT_CONTEXT_ATTRS", attrs);
+	if (b_client) {
+		if (attrs.count(ATTR_REMOTE_USER) && ! b_client->c_user.empty()) {
+			ad->Assign(ATTR_REMOTE_USER, b_client->c_user);
+			attrs.erase(ATTR_REMOTE_USER);
+		}
+		if (attrs.count(ATTR_REMOTE_SCHEDD_NAME) &&  ! b_client->c_scheddName.empty()) {
+			ad->Assign(ATTR_REMOTE_SCHEDD_NAME, b_client->c_scheddName);
+			attrs.erase(ATTR_REMOTE_SCHEDD_NAME);
+		}
+		if (attrs.count(ATTR_CLIENT_MACHINE) && ! b_client->c_host.empty() ) {
+			ad->Assign(ATTR_CLIENT_MACHINE, b_client->c_host);
+			attrs.erase(ATTR_CLIENT_MACHINE);
+		}
+	}
+	if (b_context) {
+		// special case for JobId attribute, which isn't in the client object, or as a single attribute in the job
+		if (attrs.count(ATTR_JOB_ID)) {
+			JOB_ID_KEY jid;
+			b_context->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
+			b_context->LookupInteger(ATTR_PROC_ID, jid.proc);
+			ad->Assign(ATTR_JOB_ID, std::string(jid));
+			attrs.erase(ATTR_JOB_ID);
+		}
+		for (auto const & attr : attrs) {
+			classad::Value val;
+			if (b_context->EvaluateAttr(attr, val, classad::Value::SCALAR_VALUES)) {
+				ad->InsertLiteral(attr, classad::Literal::MakeLiteral(val));
+			}
+		}
+	}
+
+	// publish resource quantities
+	if ( ! b_res.empty()) {
+		publish_resources(*ad, "");
+	}
+	return ad;
+}
+
+// publish the broken resources into the given ad
+void BrokenItem::publish_resources(ClassAd& ad, const char * prefix) const
+{
+	b_res.Publish(ad, prefix);
+	for (const auto & [tag,quan] : b_res.nfrmap()) {
+		MachAttributes::slotres_assigned_ids_t devids;
+		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, this->sub_id())) {
+			std::string idlist = join(devids, ",");
+			std::string attr = "Assigned" + tag;
+			ad.Assign(attr, idlist);
+		}
+	}
+}
+
+
+// return a,b,c etc, or aa,bb,cc, etc depending on num
+static std::string tag_uniqifier(int num) {
+	std::string aa;
+	if (--num < 1) return aa;
+	while (num > 0) {
+		int digit = num % 26;
+		aa.push_back('a' + (digit-1));
+		num -= 26;
+	}
+	return aa;
+}
+
 void
-ResMgr::publish_daemon_ad(ClassAd & ad)
+ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 {
 	SetMyTypeName(ad, STARTD_DAEMON_ADTYPE);
 	daemonCore->publish(&ad);
 	if (Name) { ad.Assign(ATTR_NAME, Name); }
 	else { ad.Assign(ATTR_NAME, get_local_fqdn()); }
 
+	// ATTR_LAST_HEARD_FROM is injected by the collector, but for a direct query we will use the given value
+	// ATTR_DAEMON_START_TIME is injected by the dc_collector object, for a direct query we ask daemonCore
+	if (last_heard_from) {
+		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	}
 
 	// cribbed from Resource::publish_static
 	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 	publish_static(&ad); // publish stuff we learned from the Starter
 
-	m_attr->publish_static(&ad);
+	auto volman = getVolumeManager();
+	if (volman && volman->is_enabled()) {
+		volman->PublishDiskInfo(ad);
+	}
+
+	// Publish the number of leaked resources (that we are still periodically attempting cleanup)
+	std::map<std::string, size_t> cleanup_counts;
+	for (const auto& [reminder, _] : cleanup_reminders) {
+		std::string key(reminder.Type());
+		title_case(key);
+		key.push_back('s');
+		auto [start, end] = std::ranges::remove_if(key, ::isspace);
+		key.erase(start, end);
+		cleanup_counts[key]++;
+	}
+
+	if ( ! cleanup_counts.empty()) {
+		std::string value = "[";
+		for (const auto& [key, count] : cleanup_counts) {
+			formatstr_cat(value, " %s=%zu;", key.c_str(), count);
+		}
+		value += " ]";
+		ad.AssignExpr(ATTR_CLEANUP_CATEGORY_COUNTS, value.c_str());
+	}
+
+	m_attr->publish_static(&ad, nullptr);
+
 	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
 	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
 
@@ -358,37 +469,40 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 	excess_backfill_res.Publish(ad, "ExcessBackfill");
 
 	// publish broken slot list and broken slot reasons
-	std::string broken_slots;
-	std::set<unsigned int> reported_types;
-	for(Resource* rip : slots) {
-		if ( ! rip) continue;
-		std::string reason;
-		if (rip->r_attr->is_broken(&reason)) {
-			if ( ! broken_slots.empty()) broken_slots += ",";
-			broken_slots += rip->r_id_str;
-			broken_slots += "BrokenReason";
-			std::string attr(rip->r_id_str); attr += "BrokenReason";
-			ad.Assign(attr, reason);
-			reported_types.insert(rip->type_id());
+	// TODO: publish contextual information along with the list of broken resources
+	std::string broken_reasons;
+	std::string broken_contexts;
+	std::map<std::string, int> broken_tags;
+	for (auto & brit : broken_things) {
+		// b_tag values in the BrokenItems aren't necessarily unique
+		// but we need the attribute names to be unique, so we append a,b,c etc to the 2nd and subsequent
+		std::string tag = brit.b_tag;
+		if (++broken_tags[tag] > 1) tag += tag_uniqifier(broken_tags[tag]);
+		std::string attr = tag + "BrokenReason";
+		if ( ! broken_reasons.empty()) broken_reasons += ",";
+		broken_reasons += attr;
+		ad.Assign(attr, brit.b_reason);
+		if (brit.b_context || brit.b_client) {
+			attr = tag + "BrokenContext";
+			if ( ! broken_contexts.empty()) broken_contexts += ",";
+			ad.Insert(attr, brit.new_context_ad());
+			broken_contexts += attr;
 		}
 	}
 
-	// check for slot types so broken there are missing slots
-	for (int type_id = 0; type_id < max_types; ++type_id) {
-		if (bad_slot_types[type_id]) {
-			std::string attr, reason;
-			formatstr(attr, "slot_type%dBrokenReason", type_id);
-			if ( ! broken_slots.empty()) broken_slots += ",";
-			broken_slots += attr;
-			formatstr(reason, "Could not create required number of type%d slots", type_id);
-			ad.Assign(attr, reason);
-		}
+	if ( ! broken_reasons.empty()) {
+		broken_reasons.insert(0,"{");
+		broken_reasons.push_back('}');
+		ad.AssignExpr("BrokenReasons", broken_reasons.c_str());
+		// for backward compat, assign a BrokenSlots attribute that just refs the new BrokenReasons attribute
+		// TODO: add add for compat with 24.2,  remove someday
+		ad.AssignExpr("BrokenSlots", "BrokenReasons");
 	}
 
-	if ( ! broken_slots.empty()) {
-		broken_slots.insert(0,"{");
-		broken_slots.push_back('}');
-		ad.AssignExpr("BrokenSlots", broken_slots.c_str());
+	if ( ! broken_contexts.empty()) {
+		broken_contexts.insert(0,"{");
+		broken_contexts.push_back('}');
+		ad.AssignExpr("BrokenContextAds", broken_contexts.c_str());
 	}
 
 	// static information about custom resources
@@ -403,6 +517,12 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 	// m_attr->publish_EP_dynamic(&ad);
 
 	publish_resmgr_dynamic(&ad, true);
+
+	// special case for the transfer bytes statistics
+	ad.Assign("AvgTransferInputMB", (double)startd_stats.bytes_recvd.Avg()/(1024*1024.0));
+	ad.Assign("TotalTransferInputMB", (double)startd_stats.bytes_recvd.Total()/(1024*1024.0));
+	ad.Assign("AvgTransferOutputMB", (double)startd_stats.bytes_sent.Avg()/(1024*1024.0));
+	ad.Assign("TotalTransferOutputMB", (double)startd_stats.bytes_sent.Total()/(1024*1024.0));
 
 	publish_draining_attrs(nullptr, &ad);
 
@@ -578,6 +698,7 @@ ResMgr::init_resources( void )
 {
 	int i=0, num_res;
 	CpuAttributes** new_cpu_attrs;
+	std::vector<bool> bad_slot_types;
 	bool *bkfill_bools = nullptr;
 
 	// See if the config file defines a valid set of CpuAttributes objects.
@@ -587,7 +708,13 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-	if (m_volume_mgr) { m_volume_mgr->CleanupLVs(); }
+	if (m_volume_mgr && m_volume_mgr->is_enabled()) {
+		std::vector<LeakedLVInfo> leaked;
+		m_volume_mgr->CleanupLVs(&leaked);
+		for (const auto& lv : leaked) {
+			add_cleanup_reminder(lv.name, CleanupReminder::category::logical_volume, (int)lv.encrypted);
+		}
+	}
 
     stats.Init();
 
@@ -620,6 +747,15 @@ ResMgr::init_resources( void )
 		return;
 	}
 
+#ifdef PROVISION_FRACTIONAL_DISK
+#else
+	if (m_volume_mgr && m_volume_mgr->is_enabled()) {
+		initExecutePartitionTable(m_attr, m_volume_mgr.get());
+	} else {
+		initExecutePartitionTable(m_attr, max_types, num_res, type_nums, bkfill_bools, failmode, bad_slot_types);
+	}
+#endif
+
 	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, failmode, bad_slot_types );
 	if ( ! new_cpu_attrs || ! new_cpu_attrs[0]) {
 		if (failmode == BuildSlotFailureMode::Except) {
@@ -630,7 +766,27 @@ ResMgr::init_resources( void )
 		// populate it.
 		for( i=0; i<num_res; i++ ) {
 			CpuAttributes * cpu_attrs = new_cpu_attrs[i];
-			if (cpu_attrs) { addResource( new Resource(cpu_attrs, i+1)); }
+			if (cpu_attrs) {
+				Resource * rip = new Resource(cpu_attrs, i+1);
+				// create a broken_things record for each resource that is born broken
+				// TODO: maybe these things should not be added to the slots array?
+				if (cpu_attrs->is_broken()) {
+					auto & brit = broken_things.emplace_back();
+					brit.b_tag = rip->r_id_str;
+					brit.b_code = rip->r_attr->is_broken(&brit.b_reason);
+					brit.b_refptr = rip;
+				}
+				addResource(rip);
+			}
+		}
+	}
+
+	// create a broken_thing for each slot type that we were unable to create all of the slots for
+	for (int type_id = 0; type_id < max_types; ++type_id) {
+		if (bad_slot_types[type_id]) {
+			auto & brit = broken_things.emplace_back();
+			brit.b_tag = "slot_type" + std::to_string(type_id);
+			formatstr(brit.b_reason, "Could not create required number of type%d slots", type_id);
 		}
 	}
 
@@ -767,6 +923,49 @@ Claim* ResMgr::getClaimByGlobalJobId(const char* id) {
 	return call_until<Claim*>(&Resource::findClaimByGlobalJobId, id);
 }
 
+bool ResMgr::hasAnyActiveClaim(bool for_shutdown)
+{
+	// TODO This check ignores claimed pslots, thus we won't send a
+	//   RELEASE_CLAIM for those before shutting down.
+	//   Today, those messages would fail, as the schedd doesn't keep
+	//   track of claimed pslots. We expect this to change in the future.
+	bool active = false;
+	bool check_starters = false;
+	for (Resource* rip : slots) {
+		if ( ! rip || rip->is_partitionable_slot()) continue;
+
+		if (rip->r_cod_mgr->hasClaims()) {
+			active = true;
+			break;
+		}
+		State s = rip->state();
+#if HAVE_BACKFILL
+		if (s == backfill_state && rip->activity() != idle_act) {
+			active = true;
+			break;
+		}
+#endif /* HAVE_BACKFILL */
+		if (s == claimed_state || s == preempting_state) {
+			if (for_shutdown) {
+				// for shutdown, we don't care about the claimed state
+				// only about whether we have unreaped starters
+				check_starters = true;
+				continue;
+			}
+			active = true;
+			break;
+		}
+	}
+
+	// if we are not yet returning true, make a check for starter processes
+	// and treat living starters as meaning that we are still active
+	if ( ! active && check_starters) {
+		active = numLivingStarters() > 0;
+	}
+
+	return active;
+}
+
 Claim *
 ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 									const char *claimId)
@@ -890,6 +1089,9 @@ ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 					return rip;
 				}
 			}
+		} else if (rip->is_split_claim_id(id)) {
+			// d-slots can have split claim ids in the r_claims collection
+			return rip;
 		}
 	}
 	return NULL;
@@ -947,6 +1149,116 @@ ResMgr::get_by_slot_id( int id )
 	}
 	return NULL;
 }
+
+
+CleanupReminder*
+ResMgr::findCleanupReminder(CleanupReminder::category cat, const std::string& name)
+{
+	if (name.empty()) { return nullptr; }
+
+	auto it = std::ranges::find_if(cleanup_reminders, [cat, name](const auto& pair) {
+		return pair.first.cat == cat && pair.first.name == name;
+	});
+
+	if (it == cleanup_reminders.end()) { return nullptr; }
+
+	return const_cast<CleanupReminder*>(&(it->first));
+}
+
+
+BrokenItem &
+ResMgr::get_broken_context(Resource * rip)
+{
+	// look for an existing broken record, and return it
+	for (BrokenItem & brit : broken_things) {
+		if (brit.b_refptr == (void*)rip) {
+			return brit;
+		}
+	}
+
+	// no broken record, make a new one and partially initialize it
+	BrokenItem & brit = broken_things.emplace_back();
+	brit.b_id = (int)broken_things.size();
+	brit.b_time = time(nullptr);
+	brit.b_refptr = rip;
+	brit.b_tag = rip->r_id_str;
+	return brit;
+}
+
+
+static void
+log_resource_restore(const BrokenItem& brit, Resource* rip)
+{
+	if (ep_eventlog.isEnabled()) {
+		auto & event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_MEND, rip);
+		event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
+		if ( ! brit.b_res.empty()) {
+			ClassAd* resad = new ClassAd();
+			brit.publish_resources(*resad, "");
+			event.Ad().Insert("Resources", resad);
+		}
+		ep_eventlog.flush();
+	}
+}
+
+
+void
+ResMgr::RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids)
+{
+	auto restore = [this, lock, &borked_ids](BrokenItem& item) -> bool {
+		bool restored = false;
+
+		// Only attempt restoration of specifc broken items reference by ID w/ specific lock type
+		if (lock == item.b_lock && borked_ids.contains(item.b_refid)) {
+			Resource* source = get_by_slot_id(item.b_srcid);
+
+			// If we fail to find a source log message and skip
+			if ( ! source) {
+				dprintf(D_ERROR, "ERROR: Failed to locate slot by id=%d associated with broken item %u\n",
+				        item.b_srcid, item.b_refid);
+				return false;
+			}
+
+			if (item.b_refptr) { // Broken slot still around
+				// TODO: Handle/check for broken and partitionable slots?
+				Resource* slot = (Resource*)(item.b_refptr);
+				slot->remove_broken_context();
+
+				log_resource_restore(item, slot);
+
+				if (slot->is_dynamic_slot()) { // dynamic slot
+					ASSERT(source == slot->get_parent());
+					removeResource(slot);
+					slot = nullptr;
+				} else { // static slot
+					slot->update_needed(Resource::WhyFor::wf_refreshRes);
+				}
+			} else { // Associated dynaminc slot is already gone
+				ASSERT(source->r_lost_child_res);
+
+				log_resource_restore(item, source);
+
+				source->restore_broken_resources(item.b_res, item.sub_id());
+
+				item.b_res.reset();
+
+				refresh_classad_resources(source);
+				source->update_needed(Resource::WhyFor::wf_refreshRes);
+			}
+
+			restored = true;
+		}
+
+		return restored;
+	};
+
+	size_t num_restored = std::erase_if(broken_things, restore);
+	if (num_restored) {
+		dprintf(D_ALWAYS, "Restored %zu broken items\n", num_restored);
+		resmgr->rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+	}
+}
+
 
 State
 ResMgr::state( void )
@@ -1021,6 +1333,12 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful);
 			classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
 			dmn->sendMsg(msg.get());
+		}
+
+		if (ep_eventlog.isEnabled()) {
+			auto & readyEvent = ep_eventlog.composeEvent(ULOG_EP_READY,nullptr);
+			readyEvent.Ad().Assign("PID", getpid());
+			ep_eventlog.flush();
 		}
 	}
 
@@ -1115,7 +1433,7 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 				}
 			}
 
-			dprintf(D_ZKM, "ENABLE_STARTD_DAEMON_AD is AUTO, collector_list has %d modern and %d/%d old/unknown collectors\n",
+			dprintf(D_FULLDEBUG, "ENABLE_STARTD_DAEMON_AD is AUTO, collector_list has %d modern and %d/%d old/unknown collectors\n",
 				num_modern, num_old, num_unknown);
 
 			if (num_modern > 0 && num_old == 0 && num_unknown == 0) {
@@ -1133,7 +1451,7 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 				// (which opens a persistent connnection) has been sent.  Instead we just set the
 				// daemon ad dirty bit, which will queue a timer for another update of just the daemon ad
 				if (whyfor_mask != (1<<Resource::WhyFor::wf_daemonAd)) {
-					dprintf(D_ZKM, "Queueing STARTD daemon ad update after slot ad updates are started\n");
+					//dprintf(D_ZKM, "Queueing STARTD daemon ad update after slot ad updates are started\n");
 					rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
 					send_daemon_ad_first = false;
 				}
@@ -1150,7 +1468,7 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 			auto * collectorList = daemonCore->getCollectorList();
 			if (collectorList) { collectorList->checkVersionBeforeSendingUpdates(false); }
 		}
-		dprintf(D_ZKM, "Sending STARTD daemon ad update to collectors\n");
+		// dprintf(D_ZKM, "Sending STARTD daemon ad update to collectors\n");
 		publish_daemon_ad(public_ad);
 		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
 	}
@@ -1257,20 +1575,18 @@ ResMgr::directAttachToSchedd()
 		return;
 	}
 
-	std::vector<Resource*> offer_resources;
-
-	for (auto resource: slots) {
-		if ( resource->state() != unclaimed_state ) {
-			continue;
+	int offer_size = 0;
+	for (auto *rip: slots) {
+		if (rip && rip->state() == unclaimed_state) {
+			++offer_size;
 		}
-		offer_resources.push_back(resource);
 	}
 
-	if ( offer_resources.empty() ) {
+	if ( 0 == offer_size ) {
 		dprintf(D_FULLDEBUG, "No unclaimed slots, nothing to offer to schedd\n");
 		return;
 	}
-	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", (int)offer_resources.size());
+	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", offer_size);
 
 	// Do we need this if we only trigger when updating the collector?
 	compute_dynamic(true);
@@ -1279,68 +1595,27 @@ ResMgr::directAttachToSchedd()
 
 	int timeout = 30;
 	DCSchedd schedd(schedd_name.c_str(), schedd_pool.empty() ? nullptr : schedd_pool.c_str());
-	ReliSock *sock = schedd.reliSock(timeout);
-	if ( ! sock ) {
-		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
-		return;
-	}
-	if (!schedd.startCommand(DIRECT_ATTACH, sock, timeout)) {
-		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n",
-		        schedd_name.c_str());
-		delete sock;
-		return;
-	}
 
-	sock->encode();
-	ClassAd cmd_ad;
-	cmd_ad.InsertAttr(ATTR_NUM_ADS, (long)offer_resources.size());
-	if (!offer_submitter.empty()) {
-		cmd_ad.InsertAttr(ATTR_SUBMITTER, offer_submitter);
-	}
-	if ( !putClassAd(sock, cmd_ad) ) {
-		dprintf(D_FULLDEBUG, "Failed to send GIVE_ADS ad to %s\n",
-		        schedd_name.c_str());
-		delete sock;
-		return;
-	}
+	std::vector<ClassAd> slotads; // collection to hold and delete the slot ads
+	slotads.reserve(offer_size);
+	std::vector< std::pair<std::string, const ClassAd*> > resources; // collection to pass to DCSChedd
+	resources.reserve(offer_size);
 
-	for ( auto slot: offer_resources ) {
-		ClassAd offer_ad;
-		slot->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+	for (auto *rip : slots) {
+		if (rip && rip->state() == unclaimed_state) {
+			ClassAd & offer_ad = slotads.emplace_back();
+			rip->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+
 			// TODO This assumes the resource has no preempting claimids,
 			//   because we're only looking at unclaimed slots.
-		std::string claimid = slot->r_cur->id();
-
-		if ( !sock->put_secret(claimid) ||
-		     !putClassAd(sock, offer_ad) )
-		{
-			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n",
-			        schedd_name.c_str());
-			delete sock;
-			return;
+			resources.emplace_back(rip->r_cur->id(), &offer_ad);
 		}
 	}
 
-	if ( !sock->end_of_message() ) {
-		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n",
-		        schedd_name.c_str());
-	}
-
-	sock->decode();
-	ClassAd reply_ad;
-	if (!getClassAd(sock, reply_ad) || !sock->end_of_message()) {
-		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", schedd_name.c_str());
-		delete sock;
-		return;
-	}
-
-	int reply_code = NOT_OK;
-	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	int reply_code = schedd.offerResources(resources, offer_submitter, timeout);
 	if (reply_code != OK) {
 		dprintf(D_FULLDEBUG, "Schedd returned error\n");
 	}
-
-	delete sock;
 }
 
 bool
@@ -1394,12 +1669,21 @@ void ResMgr::compute_static()
 	// static machine attributes and per-slot config that depends on resource allocation
 	m_attr->compute_config();
 
+#ifdef PROVISION_FRACTIONAL_DISK
 	long long virt_mem = m_attr->virt_mem();
+#else
+#endif
 	for(Resource* rip : slots) {
 		if (rip) {
+		#ifdef PROVISION_FRACTIONAL_DISK
 			// TODO: change disk and vir_mem so that they are allocated as % 
 			rip->r_attr->compute_virt_mem_share(virt_mem);
 			rip->r_attr->compute_disk();
+		#else
+			// init of Disk and Swap quantities now happens in initDiskVolumes() on startup
+			// set values for TotalDisk and TotalSlotDisk
+			rip->r_attr->recompute_disk(false);
+		#endif
 			rip->reqexp_config();
 		}
 	}
@@ -1426,6 +1710,8 @@ ResMgr::compute_and_refresh(Resource * rip)
 	}
 	compute_resource_conflicts();
 
+#ifdef PROVISION_FRACTIONAL_DISK
+
 #if 0 // TJ: these recompute things which we don't need/want to refresh on slot creation or activation
 	compute_draining_attrs();
 	// for updates, we recompute some machine attributes (like virtual mem)
@@ -1437,6 +1723,10 @@ ResMgr::compute_and_refresh(Resource * rip)
 	long long virt_mem = m_attr->virt_mem();
 	rip->r_attr->compute_virt_mem_share(virt_mem);
 	if (parent) parent->r_attr->compute_virt_mem_share(virt_mem);
+#else
+	// Swap quantities are initialized when global MachineAttrs is created
+	// basically the same time that Memory is initialized
+#endif
 
 	// update global machine load and idle values, also dynamic WinReg attributes
 	m_attr->compute_for_policy();
@@ -1531,10 +1821,17 @@ ResMgr::compute_dynamic(bool for_update)
 
 	// And last, do some logging
 	//
+#ifdef PROVISION_FRACTIONAL_DISK
 	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->always_recompute_disk()) {
 		// on update (~10min) we report the new value of DISK 
 		walk(&Resource::display_total_disk);
 	}
+#else
+	if (IsFulldebug(D_FULLDEBUG) && for_update && m_attr->recompute_disk_free()) {
+		// on update (~10min) we report the new value of DISK 
+		walk(&Resource::display_total_disk);
+	}
+#endif
 	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
 		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
@@ -1725,15 +2022,23 @@ void ResMgr::assign_load_to_slots()
 	}
 
 	// Now distribute d-slot load and load to slots that are not owner or unclaimed
-	// The slots vector puts d-slots after their parent p-slot so
-	// we don't need a separate loop for dslots
+	// The slots vector puts d-slots after their parent p-slot
+	// so we don't need a separate loop for dslots
 	for (Resource* rip : slots) {
 		if ( ! rip || rip->is_broken_slot()) continue;
 		Resource * parent = rip->get_parent();
 		if (parent) {
-			// d-slots inherit owner load from the parent clamped to the cpu count of the d-slot
+			// distribute the p-slot load between the idle cores of the p-slot and the d-slots
+			// we do this by moving the p-slot load in excess of the idle p-slot cores
+			// to the d-slots in the order that they appear in this loop.
 			double parent_load = parent->owner_load();
-			double dslot_load = MIN(parent_load, rip->r_attr->total_cpus());
+			double dslot_load = MAX(0, parent_load - parent->r_attr->num_cpus());
+			if (dslot_load > 0.05) {
+				dslot_load = MIN(dslot_load, rip->r_attr->total_cpus());
+				parent->set_owner_load(parent_load - dslot_load);
+			} else {
+				dslot_load = 0;
+			}
 			rip->set_owner_load(dslot_load);
 		} else if (rip->state() > State::unclaimed_state) {
 			total_owner_load = distribute_load(rip, total_owner_load);
@@ -1784,7 +2089,7 @@ ResMgr::got_cmd_xevent()
 	if (console_slots > 0 || keyboard_slots > 0) {
 		// machine_keyboard_idle() should still be the cached KeyboardIdle value at this point
 		if (m_attr->machine_keyboard_idle() > update_interval && poll_tid <= 0) {
-			dprintf(D_ZKM, "got_x_event during no-polling interval, refreshing slots connected to keyboard/console\n");
+			//dprintf(D_ZKM, "got_x_event during no-polling interval, refreshing slots connected to keyboard/console\n");
 			// keyboard has been idle for a while, and there are slots connected to the keyboard
 			// but we aren't currently running a policy evaluation poll timer so we won't
 			// be telling the collector about our potential change of availability for a while
@@ -1863,9 +2168,7 @@ ResMgr::start_update_timer( void )
 		(TimerHandlercpp)&ResMgr::eval_and_update_all,
 		"eval_and_update_all",
 		this );
-	if( up_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(up_tid >= 0);
 	return TRUE;
 }
 
@@ -1882,9 +2185,7 @@ ResMgr::start_poll_timer( void )
 							polling_interval,
 							(TimerHandlercpp)&ResMgr::eval_all,
 							"poll_resources", this );
-	if( poll_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(poll_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started polling timer.\n" );
 	return TRUE;
 }
@@ -1941,9 +2242,7 @@ ResMgr::reset_timers( void )
 void
 ResMgr::addResource( Resource *rip )
 {
-	if( !rip ) {
-		EXCEPT("Error: attempt to add a NULL resource");
-	}
+	ASSERT(rip);
 
 	calculateAffinityMask(rip);
 
@@ -1966,6 +2265,11 @@ void ResMgr::_remove_and_delete_slot_res(Resource * rip)
 	// remove the resource from our slot collection
 	auto last = std::remove(slots.begin(), slots.end(), rip);
 	if (last != slots.end()) { slots.erase(last, slots.end()); }
+
+	// for safety, clear a possible broken things reference (in case of pointer re-use)
+	for (auto & brit : broken_things) {
+		if (brit.b_refptr == (void*)rip) brit.b_refptr = nullptr;
+	}
 
 	// and now we can delete the object itself.
 	delete rip;
@@ -2102,7 +2406,7 @@ static void clean_private_attrs(ClassAd & ad)
 }
 
 void
-ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
+ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 {
 
 	std::string stats_config;
@@ -2119,9 +2423,28 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	if (!queryAd.LookupBool("Snapshot", snapshot)) {
 		snapshot = false;
 	}
+
+	std::set<std::string, CaseIgnLTYourString> adtype_names;
+	std::string targets;
+	if ( ! queryAd.LookupString(ATTR_TARGET_TYPE, targets) || targets.empty()) {
+		if (adtype != SLOT_AD) {
+			dprintf(D_ALWAYS,"Failed to find " ATTR_TARGET_TYPE " attribute in query ad of QUERY_MULTIPLE.\n");
+			adtype_names.insert(STARTD_DAEMON_ADTYPE);
+		}
+	} else if (snapshot && (adtype == SLOT_AD)) {
+		// target must be redundant to adtype when adtype is SLOT_AD,
+		// but snapshot is expected to return ads of the non-target type, so we leave adtype_names unset
+	} else {
+		for (auto & str : StringTokenIterator(targets)) { adtype_names.insert(str); }
+	}
+
 	int limit_results = -1;
 	if (!queryAd.LookupInteger(ATTR_LIMIT_RESULTS, limit_results)) {
 		limit_results = -1;
+	}
+	bool has_constraint = false;
+	if (queryAd.Lookup(ATTR_REQUIREMENTS)) {
+		has_constraint = true;
 	}
 
 		// Make sure everything is current unless we have been asked for a snapshot of the current internal state
@@ -2133,7 +2456,9 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		compute_dynamic(true);
 	}
 
-	// TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
+	// does the query expect to get slot ads?  we can save a lot of work if the answer is no.
+	bool include_slot_ads = snapshot || (adtype == SLOT_AD) ||
+		adtype_names.empty() || adtype_names.count(STARTD_SLOT_ADTYPE) || adtype_names.count(STARTD_OLD_ADTYPE);
 
 	// we will put the Machine ads we intend to return here temporarily
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
@@ -2142,11 +2467,19 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> cfg_ads;
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> claim_ads;
 
-		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
-		// collector normally does this, so if we're servicing a
-		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
-		// some timing stuff won't work.
 	int num_ads = 0;
+
+	if (adtype_names.count(STARTD_DAEMON_ADTYPE) && limit_results != 0) {
+		ClassAd * ad = new ClassAd;
+		publish_daemon_ad(*ad, cur_time);
+		if ( ! has_constraint || IsAConstraintMatch(&queryAd, ad)) {
+			ads["."] = ad; // this should end up sorting first
+			++num_ads;
+		} else {
+			delete ad;
+		}
+	}
+
 	for (Resource * rip : slots) {
 		if (limit_results >= 0 && num_ads >= limit_results) {
 			dprintf(D_ALWAYS, "result limit of %d reached, completing direct query\n", num_ads);
@@ -2154,7 +2487,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		}
 
 		ClassAd * res_ad = NULL;
-		if (snapshot && rip->r_classad) {
+		if (snapshot && rip->r_classad && (adtype_names.empty() || adtype_names.count("Slot.State"))) {
 			rip->r_classad->Unchain();
 			res_ad = new ClassAd(*rip->r_classad);
 			rip->r_classad->ChainToAd(rip->r_config_classad);
@@ -2162,31 +2495,62 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 			res_ad->Assign(ATTR_NAME, rip->r_name); // stuff a name because the name attribute is in the base ad
 		}
 		ClassAd * cfg_ad = NULL;
-		if (snapshot && rip->r_config_classad) {
+		if (snapshot && rip->r_config_classad && (adtype_names.empty() || adtype_names.count("Slot.Config"))) {
 			cfg_ad = new ClassAd(*rip->r_config_classad);
 			SetMyTypeName(*cfg_ad, "Slot.Config");
 		}
+
+		// we want to allow a constraint against the claim job ad to select which slots to return
+		// so we need to build a sanitized job ad if we are using a constraint even if
+		// we aren't returning job ads with the query.
+		//
 		ClassAd * claim_ad = NULL;
-		if (snapshot && rip->r_cur && rip->r_cur->ad()) {
+		bool job_matches_constraint = ! has_constraint;
+		if (snapshot && rip->r_cur && rip->r_cur->ad() &&
+			(has_constraint || adtype_names.empty() || adtype_names.count("Slot.Claim") || adtype_names.count("Job"))) {
 			claim_ad = new ClassAd(*rip->r_cur->ad());
 			clean_private_attrs(*claim_ad);
+			if (has_constraint) {
+				job_matches_constraint = IsAConstraintMatch(&queryAd, claim_ad);
+			}
 			SetMyTypeName(*claim_ad, "Slot.Claim");
 		}
 
-		ClassAd * ad = new ClassAd;
-		rip->publish_single_slot_ad(*ad, cur_time, purp);
+		// if query doesn't want slot ads, don't bother to create them
+		ClassAd * ad = nullptr;
+		if (include_slot_ads) {
+			ad = new ClassAd;
+			rip->publish_single_slot_ad(*ad, cur_time, purp);
+		}
 
-		if (IsAConstraintMatch(&queryAd, ad) /* || (claim_ad && IsAConstraintMatch(&queryAd, claim_ad))*/) {
-			ads[rip->r_name] = ad;
+		// if we produced no ads for this slot, we can't be returning any, so move on.
+		if ( ! ad && ! res_ad && ! cfg_ad && ! claim_ad) {
+			continue;
+		}
+
+		// if we are returning a slot ads, we want to return all associated ads as well
+		// we count this is as 1 num_ads for purposes of LimitResults
+		if ( ! has_constraint || (ad && IsAConstraintMatch(&queryAd, ad)) || job_matches_constraint) {
+			++num_ads;
+			if (adtype_names.empty() || adtype_names.count(STARTD_SLOT_ADTYPE) || adtype_names.count(STARTD_OLD_ADTYPE)) {
+				if (ad) { ads[rip->r_name] = ad; }
+			} else {
+				delete ad; ad = nullptr;
+			}
 			if (res_ad) { res_ads[rip->r_name] = res_ad; }
 			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }
-			if (claim_ad) { claim_ads[rip->r_name] = claim_ad; }
-			++num_ads;
+			if (claim_ad) {
+				if (snapshot && (adtype_names.empty() || adtype_names.count("Slot.Claim") || adtype_names.count("Job"))) {
+					claim_ads[rip->r_name] = claim_ad;
+				} else {
+					delete claim_ad; claim_ad = nullptr;
+				}
+			}
 		} else {
-			delete ad;
-			delete res_ad;
-			delete cfg_ad;
-			delete claim_ad;
+			delete ad; ad = nullptr;
+			delete res_ad; res_ad = nullptr;
+			delete cfg_ad; cfg_ad = nullptr;
+			delete claim_ad; claim_ad = nullptr;
 		}
 	}
 
@@ -2225,7 +2589,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	}
 
 	// also return the raw STARTD cron ads
-	if (snapshot) {
+	if (snapshot && (adtype_names.empty() || adtype_names.count("Machine.Extra"))) {
 		for (auto it = extra_ads.Enum().begin(); it != extra_ads.Enum().end(); ++it) {
 			ClassAd * named_ad = (*it)->GetAd();
 			if (named_ad) {
@@ -2396,9 +2760,7 @@ ResMgr::startHibernateTimer( void )
 		interval, interval,
 		(TimerHandlercpp)&ResMgr::checkHibernate,
 		"ResMgr::startHibernateTimer()", this );
-	if( m_hibernate_tid < 0 ) {
-		EXCEPT( "Can't register hibernation timer" );
-	}
+	ASSERT(m_hibernate_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started hibernation timer.\n" );
 	return TRUE;
 }
@@ -2634,6 +2996,23 @@ ResMgr::compute_resource_conflicts()
 	primary_res_in_use.reset();
 	backfill_res_in_use.reset();
 
+	// build a map of state of top level slots and their claimedness
+	// so we can update the NFT map active field.
+	// This is used by has_nft_conflicts in the loop below.
+	std::map<int,bool> claimed_slotids_map;
+	for (Resource * rip : slots) {
+		if ( ! rip) continue;
+		State state = rip->state();
+		bool is_claimed = state == claimed_state || state == preempting_state;
+		if ( ! rip->is_dynamic_slot()) {
+			claimed_slotids_map[rip->r_id] = is_claimed;
+		}
+	}
+	// update the active state in the NFT map for claimed p-slots and static slots
+	if ( ! claimed_slotids_map.empty()) {
+		resmgr->m_attr->set_nft_activity(claimed_slotids_map);
+	}
+
 	// Build up a bag of unclaimed resources
 	// and a list of active backfill slots
 	// TODO: fix for claimed p-slots when that changes
@@ -2850,7 +3229,7 @@ ResMgr::cancelDraining(std::string request_id,bool reconfig,std::string &error_m
 }
 
 bool
-ResMgr::isSlotDraining(Resource * /*rip*/) const
+ResMgr::isSlotDraining(const Resource * /*rip*/) const
 {
 	// NOTE: passed in rip will be NULL when building the daemon ad
 	return draining;
@@ -2863,7 +3242,7 @@ ResMgr::gracefulDrainingTimeRemaining()
 }
 
 time_t
-ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
+ResMgr::gracefulDrainingTimeRemaining(const Resource * /*rip*/)
 {
 	if( !draining || !draining_is_graceful ) {
 		return 0;
@@ -2894,7 +3273,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 }
 
 bool
-ResMgr::drainingIsComplete(Resource * /*rip*/)
+ResMgr::drainingIsComplete(const Resource * /*rip*/) const
 {
 	if( !draining ) {
 		return false;

@@ -199,7 +199,12 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	StartdHibernate = 1016,
 	StartdReleaseCommand = 1017,
 	StartdPreemptingClaimRank = 1018,
-	StartdPreemptingClaimUserPrio = 1019
+	StartdPreemptingClaimUserPrio = 1019,
+	VMError = 1020,
+	ContainerError = 1021,
+	ScheddVacate = 1022,
+	JobRemoved = 1023,
+	ScratchDirError = 1024
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
@@ -217,5 +222,36 @@ BETTER_ENUM(FILETRANSFER_HOLD_CODE, int,
 	UploadFileError = 13
 
 )
+
+// Job Out Of Resources (OOR) SubHoldCode
+BETTER_ENUM(OUT_OF_RESOURCES_SUB_CODE, int,
+	Memory = 102,
+	Disk = 104
+)
+
+/* Helper functions to decipher hold codes and subcodes.
+
+   These functions help determine if a job should be held or vacated based on its hold codes and subcodes.
+   Any code greater than or equal to 1000 means vacate instead of hold. An unspecified error is also vacate.
+   Also any subcode less than or equal to -1000 also means vacate instead of hold.
+*/
+inline bool shouldVacateJobBasedOnCodes(int code, int subcode) {
+	const int codeVacateBase = CONDOR_HOLD_CODE::VacateBase;
+	const int subcodeVacateBase = -1 * CONDOR_HOLD_CODE::VacateBase;
+	if (code <= 0) {
+		// unspecified error; vacate instead of hold.
+		return true;
+	}
+	if (code >= codeVacateBase) {
+		return true;
+	}
+	if (subcode <= subcodeVacateBase) {
+		return true;
+	}
+	return false;
+}
+inline bool shouldHoldJobBasedOnCodes(int code, int subcode) {
+	return !shouldVacateJobBasedOnCodes(code, subcode);
+}
 
 #endif

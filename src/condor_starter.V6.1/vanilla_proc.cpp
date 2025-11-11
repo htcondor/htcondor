@@ -217,45 +217,6 @@ static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
 		cgroup_controller_is_writeable("", relative_cgroup);
 }
 
-static std::string current_parent_cgroup() {
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	std::string cgroup;
-
-	int fd = open("/proc/self/cgroup", O_RDONLY);
-	if (fd < 0) {
-		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
-		return cgroup; // empty cgroup is invalid
-	}
-
-	char buf[1024];
-	int r = read(fd, buf, sizeof(buf)-1);
-	if (r < 0) {
-		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
-		close(fd);
-		return cgroup;
-	}
-	buf[r] = '\0';
-	cgroup = buf;
-	close(fd);
-
-	if (cgroup.starts_with("0::")) {
-		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
-	} else {
-		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
-		cgroup = "";
-	}
-
-	size_t lastSlash = cgroup.rfind('/');
-	if (lastSlash == std::string::npos) {
-		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
-		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
-		cgroup = "";
-	} else {
-		cgroup.erase(lastSlash); // Remove trailing slash
-	}
-	return cgroup;
-}
-
 static bool hasCgroupV2() {
 	struct stat statbuf{};
 	// Should be readable by everyone
@@ -356,15 +317,9 @@ VanillaProc::StartJob()
 	// For v2, let's put the job into the current cgroup hierarchy
 	// Because of the "no process in interior cgroups" rule, this means
 	// we create a new child of our parent. (a sibling, if you will).
-	if (hasCgroupV2()) {
-		std::string current = current_parent_cgroup();
-		cgroup_base = current + '/' + cgroup_base;
 
-		// remove leading / from cgroup_name. cgroupv2 code hates that
-		if (cgroup_base.starts_with('/')) {
-			cgroup_base = cgroup_base.substr(1, cgroup_base.size() - 1);
-		}
-		replace_str(cgroup_base, "//", "/");
+	if (hasCgroupV2()) {
+		cgroup_base = ProcFamilyDirectCgroupV2::make_full_cgroup_name(cgroup_base);
 	}
 
 	if (create_cgroup && cgroup_is_writeable(cgroup_base)) {
@@ -380,7 +335,7 @@ VanillaProc::StartJob()
 		formatstr(cgroup_uniq, "%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		replace_str(cgroup_uniq, dir_delim, "_");
-		formatstr(cgroup_str, "%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
+		formatstr(cgroup_str, "%s%c%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.c_str());
 		cgroup_str += this->CgroupSuffix();
 		
@@ -390,8 +345,14 @@ VanillaProc::StartJob()
 
 		int numCores = 1;
 		if (!starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
-			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd; assuming 1 for cgroup limit purposes.\n");
+			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd.\n");
+			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
+				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_CPUS, numCores)) {
+					dprintf(D_ALWAYS, "   Job does not have RequestCpus either, falling back to 1 cpu\n");
+				}
+			}
 		}
+
 		fi.cgroup_cpu_shares = 100 * numCores;
 
 		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
@@ -407,8 +368,15 @@ VanillaProc::StartJob()
 		}
 		int64_t memory = 0;
 		if (!starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
-			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; not setting memory limits\n");
-			memory = 0; // just to be sure
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd.\n");
+			if (param_boolean("LOCAL_UNIVERSE_CGROUP_ENFORCEMENT", false)) {
+				if (!starter->jic->jobClassAd()->LookupInteger(ATTR_REQUEST_MEMORY, memory)) {
+					dprintf(D_ALWAYS, "   Job does not have RequestMemory either, falling back to no memory limit\n");
+					memory = 0; // just to be sure
+				} else {
+					dprintf(D_ALWAYS, "   Using RequestMemory from job at of %ld Mb\n", memory);
+				}
+			}
 		}
 		fi.cgroup_memory_limit = 0; // meaning no limit
 
@@ -457,7 +425,7 @@ VanillaProc::StartJob()
 		}
 
 		// if DISABLE_SWAP_FOR_JOB is true, set swap limit to memory (meaning no swap) 
-		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", false);
+		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", true);
 		if (disable_swap && fi.cgroup_memory_limit > 0) {
 			fi.cgroup_memory_and_swap_limit = fi.cgroup_memory_limit;
 		}
@@ -467,94 +435,7 @@ VanillaProc::StartJob()
 
 #endif
 
-// The chroot stuff really only works on linux
 #ifdef LINUX
-	{
-        // Have Condor manage a chroot
-       std::string requested_chroot_name;
-       JobAd->LookupString("RequestedChroot", requested_chroot_name);
-       const char * allowed_root_dirs = param("NAMED_CHROOT");
-       if (requested_chroot_name.size()) {
-               dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
-               bool acceptable_chroot = false;
-               std::string requested_chroot;
-               for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
-                       StringTokenIterator chroot_spec(next_chroot, "=");
-                       const char* tok;
-                       tok = chroot_spec.next();
-                       if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
-                               continue;
-                       }
-                       std::string chroot_name = tok;
-                       tok = chroot_spec.next();
-                       if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
-                               continue;
-                       }
-                       std::string next_dir = tok;
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot.c_str());
-                       if (IsDirectory(next_dir.c_str()) && requested_chroot_name == chroot_name) {
-                               acceptable_chroot = true;
-                               requested_chroot = next_dir;
-                       }
-               }
-               // TODO: path to chroot MUST be all root-owned, or we have a nice security exploit.
-               // Is this the responsibility of Condor to check, or the sysadmin who set it up?
-               if (!acceptable_chroot) {
-                       return FALSE;
-               }
-               dprintf(D_FULLDEBUG, "Will attempt to set the chroot to %s.\n", requested_chroot.c_str());
-
-               std::stringstream ss;
-               std::stringstream ss2;
-               ss2 << starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
-               std::string execute_dir = ss2.str();
-               ss << requested_chroot << DIR_DELIM_CHAR << ss2.str();
-               std::string full_dir_str = ss.str();
-               if (is_trivial_rootdir(requested_chroot)) {
-                   dprintf(D_FULLDEBUG, "Requested a trivial chroot %s; this is a no-op.\n", requested_chroot.c_str());
-               } else if (IsDirectory(execute_dir.c_str())) {
-                       {
-                           TemporaryPrivSentry sentry(PRIV_ROOT);
-                           if( mkdir(full_dir_str.c_str(), S_IRWXU) < 0 ) {
-                               dprintf( D_ERROR,
-                                   "Failed to create sandbox directory in chroot (%s): %s\n",
-                                   full_dir_str.c_str(),
-                                   strerror(errno) );
-                               return FALSE;
-                           }
-                           if (chown(full_dir_str.c_str(),
-                                     get_user_uid(),
-                                     get_user_gid()) == -1)
-                           {
-                               EXCEPT("chown error on %s: %s",
-                                      full_dir_str.c_str(),
-                                      strerror(errno));
-                           }
-                       }
-                       if (!fs_remap) {
-                           fs_remap.reset(new FilesystemRemap());
-                       }
-                       dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", execute_dir.c_str(), full_dir_str.c_str());
-                       if (fs_remap->AddMapping(execute_dir, full_dir_str)) {
-                               // FilesystemRemap object prints out an error message for us.
-                               return FALSE;
-                       }
-                       dprintf(D_FULLDEBUG, "Adding mapping %s -> %s.\n", requested_chroot.c_str(), "/");
-                       std::string root_str("/");
-                       if (fs_remap->AddMapping(requested_chroot, root_str)) {
-                               return FALSE;
-                       }
-               } else {
-                       dprintf(D_ALWAYS, "Unable to do chroot because working dir %s does not exist.\n", execute_dir.c_str());
-               }
-       } else {
-               dprintf(D_FULLDEBUG, "Value of RequestedChroot is unset.\n");
-       }
-	}
-// End of chroot 
-
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
 	std::string mount_under_scratch;
@@ -720,6 +601,10 @@ VanillaProc::StartJob()
 		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
+
+	if (param_boolean("NO_JOB_NETWORKING", false)) {
+		fi.want_net_namespace = true;
+	}
 #endif
 
 
@@ -1069,7 +954,7 @@ VanillaProc::outOfMemoryEvent() {
 	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.c_str());
 
 	// This ulogs the hold event and KILLS the shadow
-	starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+	starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Memory);
 
 	return 0;
 }
@@ -1085,7 +970,7 @@ VanillaProc::JobReaper(int pid, int status)
 	}
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 #ifdef LINUX
-	if (status & DC_STATUS_OOM_KILLED) {
+	if (!isSoftKilling && (status & DC_STATUS_OOM_KILLED)) {
 		// Will put the job on hold
 		this->outOfMemoryEvent();
 		status &= ~DC_STATUS_OOM_KILLED;

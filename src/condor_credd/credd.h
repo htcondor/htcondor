@@ -22,6 +22,7 @@
 #define __WIN_CREDD__
 
 #include "condor_daemon_core.h"
+#include "store_cred.h"
 
 class CredDaemon : public Service {
 
@@ -35,6 +36,7 @@ public:
 private:
 
 	int check_creds_handler(int, Stream*);
+	void check_creds_continue(int tid);
 	int nop_handler(int, Stream*);
 	void initialize_classad();
 	void update_collector( int timerID = -1 );
@@ -50,6 +52,7 @@ private:
 	int m_cred_sweep_tid;
 
 	ClassAd m_classad;
+	CredSorter m_sorter;
 };
 
 #endif

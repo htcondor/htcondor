@@ -33,7 +33,6 @@
 #include <vector>
 #include <map>
 
-
 extern const char * const StdoutRemapName;
 extern const char * const StderrRemapName;
 
@@ -115,10 +114,51 @@ namespace htcondor {
 class DataReuseDirectory;
 }
 
+// `TransferType` is currently being used by should be `TransferDirection`.
+enum class TransferClass {
+	none = 0,
+	input = 1,
+	output = 2,
+	checkpoint = 3,
+};
+
+
+//
+// The FileTransfer object mixes control code with operational code, which
+// makes it harder to understand or to modify.  We'd like to divorce deciding
+// what do (currently a mixture of FileTransfer and shadow/starter codes)
+// from how to do it (operate the file transfer protocol).  The first step
+// in doing that is remove the job ad from the FileTransfer object.
+//
+#include "FileTransferControlBlock.h"
+
 
 class FileTransfer final: public Service {
 
   public:
+
+	typedef std::vector< ClassAd > PluginResultList;
+	struct PluginInvocation {
+		// Record our intentions.
+		TransferClass transfer_class;
+		std::string plugin_basename;
+		std::set<std::string> schemes;
+
+		// Whole-plugin results as observed by HTCondor.
+		TransferPluginResult result;
+		time_t duration_in_seconds;
+		int exit_code;
+		bool exit_by_signal;
+		int exit_signal;
+
+		// No plug-in actually outputs this yet.
+		// ClassAd wholePluginResultAd;
+
+		// The per-URL records produced by the plug-in.  These are
+		// currently stored elsewhere (pluginResultList).
+		// std::vector< ClassAd > perURLRecords;
+	};
+	// typedef std::vector< PluginInvocation > PluginResultList;
 
 	FileTransfer();
 
@@ -151,24 +191,49 @@ class FileTransfer final: public Service {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init( ClassAd *Ad, bool check_file_perms = false,
+	int Init( ClassAd * jobAd,
+			  bool check_file_perms = false,
 			  priv_state priv = PRIV_UNKNOWN,
-			  bool use_file_catalog = true);
+			  bool use_file_catalog = true) {
+		return _Init( jobAd, jobAd, check_file_perms, priv, use_file_catalog );
+	}
+	int _Init( const FileTransferControlBlock & ftcb,
+			   ClassAd * _fix_me_,
+			   bool check_file_perms = false,
+			   priv_state priv = PRIV_UNKNOWN,
+			   bool use_file_catalog = true);
 
-	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
-						 ReliSock *sock_to_use = NULL, 
-						 priv_state priv = PRIV_UNKNOWN,
-						 bool use_file_catalog = true,
-						 bool is_spool = false);
+	int SimpleInit( ClassAd * jobAd,
+					bool want_check_perms, bool is_server,
+					ReliSock *sock_to_use = NULL,
+					priv_state priv = PRIV_UNKNOWN,
+					bool use_file_catalog = true,
+					bool is_spool = false) {
+		return _SimpleInit( jobAd, jobAd, want_check_perms, is_server, sock_to_use, priv, use_file_catalog, is_spool );
+	}
+	int _SimpleInit( const FileTransferControlBlock & ftcb,
+					 ClassAd * _fix_me_,
+					 bool want_check_perms, bool is_server,
+					 ReliSock *sock_to_use = NULL,
+					 priv_state priv = PRIV_UNKNOWN,
+					 bool use_file_catalog = true,
+					 bool is_spool = false);
+
+	// The complete list of input entries, as of when the function was called.
+	// This specifically EXCLUDES entries from the job's spool directory (from
+	// intermediate files or checkpoint files), because those aren't included
+	// until the command handler is run.
+	const std::vector<std::string> & getAllInputEntries();
+
 
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
 		@return 1 on success, 0 on failure */
 	int InitDownloadFilenameRemaps(ClassAd *Ad);
 
-	/** Determine if this is a dataflow transfer (where the output files are 
+	/** Determine if this is a dataflow transfer (where the output files are
 	/ * newer than input files)
-	 * 
+	 *
 	 * @return True if newer, False otherwse
 	 */
 	static bool IsDataflowJob(ClassAd *job_ad);
@@ -185,13 +250,6 @@ class FileTransfer final: public Service {
 
 	/** @param socket The socket used to send syscall instructions */
 	void setSyscallSocket(ReliSock* socket) {m_syscall_socket = socket;}
-
-	/** @param reuse_dir: The DataReuseDirectory object to utilize for data reuse
-	 *  lookups
-	 */
-#if 1 //def HAVE_DATA_REUSE_DIR
-	void setDataReuseDirectory(htcondor::DataReuseDirectory &reuse_dir) {m_reuse_dir = &reuse_dir;}
-#endif
 
 	/** Set the location of various ads describing the runtime environment.
 	 *  Used by the file transfer plugins.
@@ -239,21 +297,36 @@ class FileTransfer final: public Service {
 	enum TransferType { NoType, DownloadFilesType, UploadFilesType };
 
 	struct FileTransferInfo {
-		FileTransferInfo() : bytes(0), duration(0), type(NoType),
-		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
-			try_again(true), hold_code(0), hold_subcode(0) {}
 
 		void addSpooledFile(char const *name_in_spool);
 
-		filesize_t bytes;
-		time_t duration;
-		TransferType type;
-		bool success;
-		bool in_progress;
-		FileTransferStatus xfer_status;
-		bool try_again;
-		int hold_code;
-		int hold_subcode;
+		const char * dump(std::string & out, const char * verbose_indent=nullptr) const {
+			const char * pre = " ", * post = ",";
+			if (verbose_indent) { pre = verbose_indent; post = "\n"; }
+			out += " "; out += (type==DownloadFilesType) ? "down" : (type==UploadFilesType ? "up" : "?"); out += post;
+			out += pre; out += "success=" + std::to_string(success); out += post;
+			out += pre; out += "in_progress=" + std::to_string(in_progress); out += post;
+			out += pre; out += "status=" + std::to_string(xfer_status); out += post;
+			out += pre; out += "bytes=" + std::to_string(bytes); out += post;
+			if (hold_code) {
+				out += pre; out += "hold=" + std::to_string(hold_code) + "/" + std::to_string(hold_subcode); out += post;
+			}
+			if ( ! error_desc.empty()) {
+				out += pre; out += "err="; out += error_desc; out += post;
+			}
+			return out.c_str();
+		}
+
+		filesize_t bytes{0};
+		time_t duration{0};
+		TransferType type{NoType};
+		bool success{true};
+		bool in_progress{false};
+		FileTransferStatus xfer_status{XFER_STATUS_UNKNOWN};
+		bool try_again{true};
+		int hold_code{0};
+		int hold_subcode{0};
+		std::map<std::string, filesize_t, classad::CaseIgnLTStr> protocol_bytes;
 		ClassAd stats;
 		std::string error_desc;
 			// List of files we created in remote spool.
@@ -263,7 +336,7 @@ class FileTransfer final: public Service {
 	};
 
 	FileTransferInfo GetInfo() {
-		return Info;
+		return r_Info;
 	}
 
 	inline bool IsServer() const {return user_supplied_key == FALSE;}
@@ -271,6 +344,7 @@ class FileTransfer final: public Service {
 	inline bool IsClient() const {return user_supplied_key == TRUE;}
 
 	static int HandleCommands(int command,Stream *s);
+	static void AddFilesFromSpoolTo( FileTransfer * transobject );
 
 	static int Reaper(int pid, int exit_status);
 
@@ -289,24 +363,33 @@ class FileTransfer final: public Service {
 
 	int Continue() const;
 
-	float TotalBytesSent() const { return bytesSent; }
+	uint64_t TotalBytesSent() const { return bytesSent; }
 
-	float TotalBytesReceived() const { return bytesRcvd; };
+	uint64_t TotalBytesReceived() const { return bytesRcvd; };
+
+
 	//
 	// Add the given filename to the list of "output" files.  Will
 	// create the empty list of output files if necessary; never
 	// fails (unless the sytem is out of memory).
+	//
+	// The "filename" passed to these three functions may be any
+	// entry valid in their respective transfer_*_files submit command.
 	//
 	void addOutputFile( const char* filename );
 
 	// Add the given filename to the list of "failure" files.
 	void addFailureFile( const char* filename );
 
+	// Add the given filename to the list of "input" files.
+	void addInputFile( const char* filename );
+
+
 	// Check if we have failure files
 	bool hasFailureFiles() const { return !FailureFiles.empty(); }
 
 	//
-	// Add the given path or URL to the list of checkpoint files.  The file
+	// Add the given file or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
 	//
 	// *: At present, the basename of the destination must be the same
@@ -318,15 +401,17 @@ class FileTransfer final: public Service {
 	// The caller must ensure that pathsAlreadyPreserved is empty the
 	// first time and is preserved between calls.
 	//
-	void addCheckpointFile(
+	// The file may be relative path, but may not be a directory.
+	//
+	void addCheckpointFileEx(
 		const std::string & source, const std::string & destination,
 		std::set< std::string > & pathsAlreadyPreserved
 	);
 
 	//
-	// As addCheckpointFile(), but for input files.
+	// As addCheckpointFileEx(), but for input files.
 	//
-	void addInputFile(
+	void addInputFileEx(
 		const std::string & source, const std::string & destination,
 		std::set< std::string > & pathsAlreadyPreserved
 	);
@@ -402,9 +487,24 @@ class FileTransfer final: public Service {
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const;
 	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, FileTransferPlugin & plugin, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
-	TransferPluginResult InvokeMultiUploadPlugin(FileTransferPlugin & plugin, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
-	int RecordFileTransferStats( ClassAd &stats );
+
+	TransferPluginResult InvokeMultipleFileTransferPlugin(
+		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
+		FileTransferPlugin & plugin, const std::string &transfer_files_string,
+		std::vector<ClassAd> & resultAds,
+		const char* proxy_filename, bool do_upload
+	);
+	TransferPluginResult InvokeMultiUploadPlugin(
+		FileTransferPlugin & plugin,
+		int &exit_code, bool &exit_by_signal, int &exit_signal,
+		const std::string &transfer_files_string, ReliSock &sock,
+		bool send_trailing_eom, CondorError &err, long long &upload_bytes
+	);
+
+	void AggregateThisTransferStats( ClassAd &stats );
+	filesize_t UpdateTransferStatsTotals(filesize_t cedar_total_bytes);
+	filesize_t GetURLSizeBytes();
+	int LogThisTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
 
@@ -426,7 +526,7 @@ class FileTransfer final: public Service {
 	// "source1 = target1; source2 = target2; ..."
 	// or in other words, the format expected by the util function
 	// filename_remap_find().
-	void AddDownloadFilenameRemaps(char const *remaps);
+	void AddDownloadFilenameRemaps(const std::string &remaps);
 
 	int GetUploadTimestamps(time_t * pStart, time_t * pEnd = NULL) const {
 		if (uploadStartTime < 0)
@@ -444,8 +544,6 @@ class FileTransfer final: public Service {
 		return true;
 	}
 
-	ClassAd *GetJobAd();
-
 	const std::vector<FileTransferPlugin>& getPlugins() const {
 		return const_cast< const std::vector<FileTransferPlugin> & >(plugin_ads);
 	}
@@ -454,9 +552,16 @@ class FileTransfer final: public Service {
 
 	const std::unordered_map< std::string, std::string > & GetProxyByMethodMap() { return proxy_by_method; }
 
-	const std::vector< ClassAd > & getPluginResultList();
+	const PluginResultList & getPluginResultList();
+
+	// called to construct the catalog of files in a direcotry
+	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
 
   protected:
+
+    bool _fix_me_copy_initialized = false;
+	ClassAd _fix_me_copy_;
+	FileTransferControlBlock ftcb;
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.
@@ -471,6 +576,7 @@ class FileTransfer final: public Service {
 
 	int Download(ReliSock *s, bool blocking);
 	int Upload(ReliSock *s, bool blocking);
+	int Reap(int exit_status); // called by the static Reaper the reaping
 	static int DownloadThread(void *arg, Stream *s);
 	static int UploadThread(void *arg, Stream *s);
 	int TransferPipeHandler(int p);
@@ -479,14 +585,14 @@ class FileTransfer final: public Service {
 	bool SendPluginOutputAd( const ClassAd & plugin_output_ad );
 
 
-		/** Actually download the files.
+		/** Actually download the files. Download and Upload above call these
 			@return -1 on failure, bytes transferred otherwise
 		*/
-	int DoDownload( filesize_t *total_bytes, ReliSock *s);
-	int DoUpload( filesize_t *total_bytes, ReliSock *s);
-	int DoCheckpointUploadFromStarter( filesize_t * total_bytes, ReliSock * s );
-	int DoCheckpointUploadFromShadow( filesize_t * total_bytes, ReliSock * s );
-	int DoNormalUpload( filesize_t * total_bytes, ReliSock * s );
+	filesize_t DoDownload(ReliSock *s);
+	filesize_t DoUpload(ReliSock *s);
+	filesize_t DoCheckpointUploadFromStarter(ReliSock * s);
+	filesize_t DoCheckpointUploadFromShadow(ReliSock * s);
+	filesize_t DoNormalUpload(ReliSock * s);
 
 	typedef struct _ft_protocol_bits_struct {
 		filesize_t peer_max_transfer_bytes = {-1};
@@ -513,13 +619,12 @@ class FileTransfer final: public Service {
 	// appropriate.
 	//
 	// This is the second half of the old DoUpload().
-	int uploadFileList(
-	    ReliSock * s, const FileTransferList & filelist,
-	    std::unordered_set<std::string> & skip_files,
-	    const filesize_t & sandbox_size,
-	    DCTransferQueue & xfer_queue,
-	    _ft_protocol_bits & protocolState,
-	    filesize_t * total_bytes_ptr
+	filesize_t uploadFileList(
+		ReliSock * s, const FileTransferList & filelist,
+		std::unordered_set<std::string> & skip_files,
+		const filesize_t & sandbox_size,
+		DCTransferQueue & xfer_queue,
+		_ft_protocol_bits & protocolState
 	);
 
 	double uploadStartTime{-1}, uploadEndTime{-1};
@@ -538,7 +643,7 @@ class FileTransfer final: public Service {
 
   private:
 
-	std::vector< ClassAd > pluginResultList;
+	PluginResultList pluginResultList;
 
 	int checkpointNumber{-1};
 	bool uploadCheckpointFiles{false};
@@ -599,7 +704,9 @@ class FileTransfer final: public Service {
 	FileTransferHandlerCpp ClientCallbackCpp{nullptr};
 	Service* ClientCallbackClass{nullptr};
 	bool ClientCallbackWantsStatusUpdates{false};
-	FileTransferInfo Info;
+	FileTransferInfo r_Info; // result info, used by top level stuff
+	FileTransferInfo i_Info; // internal info, used by worker functions talking through a pipe
+	FileTransferInfo & workInfo() { return (TransferPipe[1] < 0) ? r_Info : i_Info; }
 	FileTransferPlugin null_plugin_ad{"", false, true}; // this is returned when we need to return a & and there is no plugin
 	std::vector<FileTransferPlugin> plugin_ads;
 	// map plugin path to entries in the table of plugins above
@@ -640,19 +747,15 @@ class FileTransfer final: public Service {
 	// stores the path to the proxy after one is received
 	std::string LocalProxyName;
 
-#if 1 //def HAVE_DATA_REUSE_DIR
-	// Object to manage reuse of any data locally.
-	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
-#endif
-
-	// called to construct the catalog of files in a direcotry
-	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
+	// Read full string from pipe to prevent forked child from getting stuck on blocked Write()
+	bool PipeReadFullString(std::string& buf, const int nBytes);
 
 	// called to lookup the catalog entry of file
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
-	int ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, DCTransferQueue & xfer_queue, const filesize_t *total_bytes_ptr, UploadExitInfo& xfer_info);
+	int
+	ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, DCTransferQueue & xfer_queue, filesize_t bytes, UploadExitInfo& xfer_info);
 
 	// Send acknowledgment of success/failure after downloading files.
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
@@ -684,7 +787,6 @@ class FileTransfer final: public Service {
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
-	ClassAd jobAd;
 
 	//
 	// As of this writing, this function should only ever be called from
@@ -815,6 +917,9 @@ public:
 		hold_subcode = 0;
 		return *this;
 	}
+
+    const std::string & getErrorDescription() { return error_desc; }
+    void setErrorDescription( const std::string & desc ) { error_desc = desc; }
 
 	bool checkAck(TransferAck check) { return ack == TransferAck::BOTH || ack == check; }
 

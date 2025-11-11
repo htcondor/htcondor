@@ -5,6 +5,14 @@ from ornithology import *
 import htcondor2 as htcondor
 import os
 
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+    # Each job list contains 7 jobs so tolerate 6 failures and
+    # fail batch on 7th failure to ensure all jobs run but list fails
+    DAGMAN_NODE_JOB_FAILURE_TOLERANCE = 6
+"""
+#endtestreq
+
 @action
 def writeExecutable(test_dir):
     file = test_dir / "exit.sh"
@@ -20,7 +28,7 @@ def writeItemData(test_dir):
         f.write("""0\n0\n0\n0\n""")
     bad_data = test_dir / "bad.data"
     with open(bad_data, "w") as f:
-        f.write("""1\n1\n2\n3\n""")
+        f.write("""1\n1\n2\n3\n10\n10\n10\n""")
     return (good_data, bad_data)
 
 @action
@@ -32,6 +40,10 @@ executable = {writeExecutable}
 arguments  = "$(code)"
 log        = jobs.log
 priority   = $(code) * 100
+
+periodic_remove = $(DO_REMOVE) && $(ProcId) >= 4
+requirements    = !$(DO_REMOVE) || $(ProcId) < 4
+
 queue code from $(filename)
         """)
     return file
@@ -44,7 +56,7 @@ def writePostScript(test_dir):
 import sys
 import htcondor2 as htcondor
 
-if len(sys.argv) != 21:
+if len(sys.argv) != 22:
     print(f"Unexepected number of arguments: {len(sys.argv)}")
     sys.exit(1)
 
@@ -85,6 +97,7 @@ EXPECTED = {
         "0", # Return
         "0", # Exit codes
         "0:4", # Exit frequencies
+        "0,0,0,0", # Exit code list
         "-1", # Pre Script return
         "0", # Num jobs aborted
     ],
@@ -98,15 +111,16 @@ EXPECTED = {
         "0", # Queued count
         "2", # Num nodes
         f"{DAG_ID}", # DAGMan job id
-        f"{CLUSTER_ID}.3", # Job ID
+        {f"{CLUSTER_ID}.3", f"{CLUSTER_ID}.4", f"{CLUSTER_ID}.5", f"{CLUSTER_ID}.6"}, # Job ID
         f"{CLUSTER_ID}", # Cluster id
-        "4", # Num jobs
+        "7", # Num jobs
         "False", # Success
         {"3","2","1"}, # Return
         "1,2,3", # Exit codes
         "1:2,2:1,3:1", # Exit frequencies
+        "1,1,2,3,,,", # Exit code list
         "-1", # Pre Script return
-        "0", # Num jobs aborted
+        "3", # Num jobs aborted
     ],
 }
 
@@ -118,12 +132,16 @@ if NODE_NAME != sys.argv[1] or NODE_NAME != sys.argv[2]:
     print(f"Provided Script $NODE ({sys.argv[1]}) or $JOB ({sys.argv[2]}) does not match {NODE_NAME}")
     sys.exit(1)
 
+failed = False
 for i, script_macro in enumerate(sys.argv[3:]):
     expected_val = EXPECTED[NODE_NAME][i]
     match = script_macro in expected_val if type(expected_val) is set else script_macro == expected_val
     if not match:
         print(f"EXPECTED[{NODE_NAME}][{i}] ({expected_val}) != {script_macro}")
-        sys.exit(1)
+        failed = True
+
+if failed:
+    sys.exit(1)
 
 print("Script arguments were expected values")
 
@@ -141,14 +159,14 @@ JOB BAD {writeSubmitFile}
 
 PARENT GOOD CHILD BAD
 
-VARS GOOD PREPEND filename="{writeItemData[0]}"
-VARS BAD PREPEND filename="{writeItemData[1]}"
+VARS GOOD PREPEND filename="{writeItemData[0]}" DO_REMOVE="False"
+VARS BAD PREPEND filename="{writeItemData[1]}" DO_REMOVE="True"
 
 RETRY GOOD 1
 
-SCRIPT DEBUG script.debug ALL POST GOOD {writePostScript} $node $JOB $RETRY $MAX_RETRIES $DAG_STATUS $FAILED_COUNT $FUTILE_COUNT $DONE_COUNT $QUEUED_COUNT $NODE_COUNT $DAGID $JOBID $CLUSTERID $JOB_COUNT $SUCCESS $RETURN $EXIT_CODES $EXIT_CODE_COUNTS $PRE_SCRIPT_RETURN $JOB_ABORT_COUNT
-SCRIPT DEBUG script.debug ALL POST BAD {writePostScript} $NoDe $JOB $RETRY $MAX_RETRIES $DAG_STATUS $FAILED_COUNT $FUTILE_COUNT $DONE_COUNT $QUEUED_COUNT $NODE_COUNT $DAGID $JOBID $CLUSTERID $JOB_COUNT $SUCCESS $RETURN $EXIT_CODES $EXIT_CODE_COUNTS $PRE_SCRIPT_RETURN $JOB_ABORT_COUNT
-        """)
+SCRIPT DEBUG script.debug ALL POST GOOD {writePostScript} $node $JOB $RETRY $MAX_RETRIES $DAG_STATUS $FAILED_COUNT $FUTILE_COUNT $DONE_COUNT $QUEUED_COUNT $NODE_COUNT $DAGID $JOBID $CLUSTERID $JOB_COUNT $SUCCESS $RETURN $EXIT_CODES $EXIT_CODE_COUNTS $EXIT_CODE_LIST $PRE_SCRIPT_RETURN $JOB_ABORT_COUNT
+SCRIPT DEBUG script.debug ALL POST BAD {writePostScript} $NoDe $JOB $RETRY $MAX_RETRIES $DAG_STATUS $FAILED_COUNT $FUTILE_COUNT $DONE_COUNT $QUEUED_COUNT $NODE_COUNT $DAGID $JOBID $CLUSTERID $JOB_COUNT $SUCCESS $RETURN $EXIT_CODES $EXIT_CODE_COUNTS $EXIT_CODE_LIST $PRE_SCRIPT_RETURN $JOB_ABORT_COUNT
+""")
 
     assert os.path.exists(DAG_FILE)
     dag = htcondor.Submit.from_dag(str(DAG_FILE))

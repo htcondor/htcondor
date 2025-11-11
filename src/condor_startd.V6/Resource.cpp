@@ -35,8 +35,6 @@
 #include "StartdPlugin.h"
 #endif
 
-#include "stat_info.h"
-
 std::vector<SlotType> SlotType::types(10);
 static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
 
@@ -167,16 +165,16 @@ const char * SlotType::type_param(const char * name)
 
 // these override the param call, looking the key up first in the per-slot-type config table
 // and then in the global param table if it is not found.
-char * Resource::param(const char * name) {
+char * Resource::param(const char * name) const {
 	if (r_attr) return SlotType::param(r_attr, name);
-	return param(name);
+	return ::param(name);
 }
-const char * Resource::param(std::string& out, const char * name) {
+const char * Resource::param(std::string& out, const char * name) const {
 	if (r_attr) return SlotType::param(out, r_attr, name);
 	if ( ! ::param(out, name)) return NULL;
 	return out.c_str();
 }
-const char * Resource::param(std::string& out, const char * name, const char * def) {
+const char * Resource::param(std::string& out, const char * name, const char * def) const {
 	const char * val = NULL;
 	if (r_attr) val = SlotType::param(out, r_attr, name);
 	else if (::param(out, name)) val = out.c_str();
@@ -184,7 +182,11 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_parent_claim )
+Resource::Resource (
+	CpuAttributes* cap,
+	int rid,                 // new resource id
+	Resource* _donor,        // resource donor
+	bool _take_donor_claim)  // if creating a d-slot, take the claim id from the _parent
 	: r_state(nullptr)
 	, r_config_classad(nullptr)
 	, r_classad(nullptr)
@@ -218,6 +220,23 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 {
 	std::string tmp;
 
+	// the _donor of resources can be null, or it can be a p-slot or d-slot
+	// if it is a p-slot, then the _donor is also the _parent
+	// it it is a d-slot, then the _donor's parent is the new d-slots parent
+	Resource * _parent = nullptr;
+	if (_donor) {
+		if (_donor->is_partitionable_slot()) { _parent = _donor; }
+		else if (_donor->is_dynamic_slot()) { _parent = _donor->get_parent(); }
+		else {
+			dprintf(D_ERROR | D_BACKTRACE, "Attempting to create a new slot using an invalid donor slot %s\n", _donor->r_id_str);
+			// we can't fail a constructor, so create an unusable slot instead
+			set_feature(BROKEN_SLOT);
+			m_parent = nullptr;
+			r_cur = nullptr;
+			return;
+		}
+	}
+
 		// we need this before we instantiate any Claim objects...
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
 	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
@@ -247,10 +266,15 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	}
 
 	// can't bind until after we get a r_sub_id but must happen before creating the Reqexp
-	if (_parent) {
-		if ( ! r_attr->bind_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot, false)) {
-			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id); // give back the ids that were bound before the failure
-			_parent->m_id_dispenser->insert(r_sub_id); // give back the slot id.
+	if (_donor) {
+		// If we have a parent, we are dynamic
+		set_feature(DYNAMIC_SLOT);
+		set_parent(_parent);
+
+		// TODO: fix for sharing resources between slots
+		if ( ! r_attr->bind_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot, false, _donor->r_sub_id)) {
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, _donor->r_sub_id); // give back the ids that were bound before the failure
+			_parent->m_id_dispenser->insert(r_sub_id); // give back the new slot id.
 
 			// we can't fail a constructor, so indicate the the slot is unusable instead
 			set_feature(BROKEN_SLOT);
@@ -258,10 +282,15 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 			r_cur = nullptr;
 			return;
 		}
+
+		// take resource quantities from the resource donor (normally the parent)
+		// TODO: fix for sharing resources between slots
+		*(_donor->r_attr) -= *(r_attr);
+		resmgr->refresh_classad_resources(_donor);
+		if (_donor != _parent) { resmgr->refresh_classad_resources(_parent); }
+	} else {
+		m_parent = nullptr;
 	}
-	// set_parent will carve resource quantities out of the parent if it is not NULL
-	// this will also set feature to DYNAMIC_SLOT if _parent is non-null
-	set_parent( _parent );
 
 	r_state = new ResState( this );
 	r_cod_mgr = new CODMgr( this );
@@ -280,10 +309,26 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 		}
 	}
 
-	if (_parent && _take_parent_claim) {
-		r_cur = _parent->r_cur;
-		r_cur->setResource(this);
-		_parent->r_cur = new Claim(_parent);
+	if (_donor && _take_donor_claim) {
+		if (_donor != _parent) {
+			// This is the normal case for splitting a d-slot into two d-slots
+			// TODO: pass the claim id in here rather than using the first one?
+			// TODO: this code only works if r_claims always has only a single claim id
+			Resource::claims_t::iterator j(_donor->r_claims.begin());
+			if (j != _donor->r_claims.end()) {
+				r_cur = *j;
+				r_cur->setResource(this);
+				_donor->r_claims.erase(*j);
+				_donor->r_claims.insert(new Claim(_donor));
+			} else {
+				r_cur = new Claim(this);
+			}
+		} else {
+			// this is the normal case for creating a d-slot from a p-slot
+			r_cur = _parent->r_cur;
+			r_cur->setResource(this);
+			_parent->r_cur = new Claim(_parent);
+		}
 	} else {
 		r_cur = new Claim(this);
 	}
@@ -375,9 +420,11 @@ Resource::~Resource()
 		r_classad->Unchain();
 		delete r_classad; r_classad = NULL;
 	}
+	for (auto & claim : r_claims) { delete claim; }
 	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_attr; r_attr = NULL;
+	delete r_lost_child_res; r_lost_child_res = nullptr;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
 
@@ -396,8 +443,22 @@ Resource::clear_parent()
 
 	// If we have a parent, return our resources to it
 	if( m_parent && !m_currently_fetching ) {
-		r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
-		*(m_parent->r_attr) += *(r_attr);
+		if (r_attr->is_broken()) {
+			// we don't give broken d-slot resources back to the parent
+			// we bind the GPUs to a "broken" d-slot id
+			// the broken_context knows the resource quantities already
+			// we also accumulate the lost fungible resources in the p-slot's r_lost_child_res member
+			auto & brit = resmgr->get_broken_context(this);
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, brit.sub_id());
+			if ( ! m_parent->r_lost_child_res) {
+				m_parent->r_lost_child_res = new ResBag(*r_attr);
+			} else {
+				*(m_parent->r_lost_child_res) += *r_attr;
+			}
+		} else {
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, 0);
+			*(m_parent->r_attr) += *(r_attr);
+		}
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		resmgr->refresh_classad_resources(m_parent);
 		m_parent->update_needed(wf_dslotDelete);
@@ -409,17 +470,9 @@ Resource::clear_parent()
 }
 
 void
-Resource::set_parent( Resource* rip )
+Resource::set_parent( Resource* rip)
 {
 	m_parent = rip;
-
-		// If we have a parent, we consume its resources
-	if( m_parent ) {
-		// If we have a parent, we are dynamic
-		set_feature( DYNAMIC_SLOT );
-		*(m_parent->r_attr) -= *(r_attr);
-		resmgr->refresh_classad_resources(m_parent);
-	}
 }
 
 
@@ -444,6 +497,10 @@ Resource::retire_claim(bool reversible, const std::string& reason, int code, int
 		}
 		setVacateReason(reason, code, subcode);
 		change_state( retiring_act );
+		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
+			if (r_cur) r_cur->setVacateInfo(ep_event);
+		}
 		break;
 	case matched_state:
 		change_state( owner_state );
@@ -501,10 +558,14 @@ Resource::kill_claim(const std::string& reason, int code, int subcode)
 	switch( state() ) {
 	case claimed_state:
 	case preempting_state:
+		setVacateReason(reason, code, subcode);
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
-			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
-		setVacateReason(reason, code, subcode);
+		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
+			ep_event.Ad().Assign("Kill", true);
+			if (r_cur) r_cur->setVacateInfo(ep_event);
+		}
 		change_state( preempting_state, killing_act );
 		break;
 	case matched_state:
@@ -602,7 +663,7 @@ Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
-		return r_cur->deactivateClaim( true );
+		return r_cur->deactivateClaim( true, false, false );
 	}
 	return FALSE;
 }
@@ -613,11 +674,27 @@ Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
-		return r_cur->deactivateClaim( false );
+		return r_cur->deactivateClaim( false, false, false );
 	}
 	return FALSE;
 }
 
+int
+Resource::deactivate_claim_job_done( Stream* stream, bool claim_closing )
+{
+	dprintf(D_ALWAYS, "Called deactivate_claim_job_done()\n");
+	if( state() == claimed_state ) {
+		if (r_cur->deactivateClaim( false, true, claim_closing )) {
+			// a true return indicates that the claim is still active, so we
+			// stash the stream so we can delay the deactivate reply until after we reap the starter.
+			// Since we know the job is done, there is no point in killing the starter.
+			// It is either in the process of cleaning up already, or it is already exited but unreaped.
+			r_cur->setDeactivateStream(stream);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
 
 void
 Resource::removeClaim( Claim* c )
@@ -867,13 +944,78 @@ Resource::hackLoadForCOD( void )
 	r_classad->Assign( ATTR_CPU_BUSY_TIME, 0 );
 }
 
+const BrokenItem &
+Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job, ResourceLockType lock)
+{
+	// we save only the *first* broken context we get for each slot
+	// so here we find or create a BrokenItem object and initialize it
+	// if it is not empty
+	auto & brit = resmgr->get_broken_context(this);
+
+	brit.b_lock = lock;
+	r_broken_id = brit.b_refid;
+	brit.b_srcid = r_id;
+
+	// if we don't have a broken reason yet, copy the one in the r_attr
+	if (brit.b_reason.empty() && r_attr) {
+		brit.b_code = r_attr->is_broken(&brit.b_reason);
+	}
+	// remember the size of the resource quantities
+	if (brit.b_res.empty() && r_attr) {
+		brit.b_res += *r_attr;
+	}
+
+	// we steal the job ad here, since the only time we are passed one is
+	// from a claim that is being deleted.
+	if (job.get() && ! brit.b_context.get()) {
+		brit.b_context = std::move(job);
+	}
+	// we can't steal the client object from the claim, so make a copy here instead
+	if (client && ! brit.b_client.get()) {
+		brit.b_client.reset(new Client(*client));
+	}
+
+	return brit;
+}
+
+
+void
+Resource::remove_broken_context()
+{
+	if (r_attr) { r_attr->set_broken(0, ""); }
+	r_broken_id = 0;
+	r_do_not_delete = false;
+}
+
+
+void
+Resource::restore_broken_resources(const ResBag& broken, const int sub_id)
+{
+	// No broken resources then return immediately
+	if (broken.empty()) { return; }
+
+	// Remove broken amounts from internal broken bag
+	if (r_lost_child_res) { *r_lost_child_res -= broken; }
+
+	// Make slot request with resources in broken ResBag
+	CpuAttributes::_slot_request request;
+	broken.convert_to_request(request);
+
+	// Make temporary CpuAttrs to restore to this slot
+	CpuAttributes restore(type_id(), request, *(resmgr->m_attr), executeDir(), m_execute_partition_id);
+	restore.attach(this); // Enable dprintf with slot context
+	restore.claim_broken_DevIds(resmgr->m_attr, sub_id);
+	restore.unbind_DevIds(resmgr->m_attr, r_id, sub_id, 0);
+
+	// Finally restore resources to parent slot
+	*r_attr += restore;
+}
+
 
 void
 Resource::starterExited( Claim* cur_claim )
 {
-	if( ! cur_claim ) {
-		EXCEPT( "Resource::starterExited() called with no Claim!" );
-	}
+	ASSERT(cur_claim);
 
 	if( cur_claim->type() == CLAIM_COD ) {
  		r_cod_mgr->starterExited( cur_claim );
@@ -902,7 +1044,8 @@ Resource::starterExited( Claim* cur_claim )
 		// exiting, so let folks know that happened.  The logic in
 		// leave_preempting_state() is more complicated, and we'll
 		// describe why we make the change we do in there.
-	dprintf( D_ALWAYS, "State change: starter exited\n" );
+	dprintf( D_ALWAYS, "State change: starter exited : %s(%d) %s/%s\n",
+		__FILE__, __LINE__, state_to_string(state()), activity_to_string(activity()) );
 
 	State s = state();
 	Activity a = activity();
@@ -999,7 +1142,7 @@ Resource::findClaimByGlobalJobId( const char* id )
 
 
 bool
-Resource::claimIsActive( void )
+Resource::claimIsActive( void ) const
 {
 		// for now, just check r_cur.  once we've got multiple
 		// claims, we can walk through our list(s).
@@ -1039,7 +1182,7 @@ Resource::leave_preempting_state( void )
 {
 	bool tmp;
 
-	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
+	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim (schedd or hook)
 	delete r_cur;
 	r_cur = NULL;
 
@@ -1194,6 +1337,8 @@ Resource::init_classad()
 	r_classad = new ClassAd();
 	r_classad->ChainToAd(r_config_classad);
 
+	m_orig_assigned_gpus = "*"; // hack to help track HTCONDOR-3072
+
 		// put in slottype overrides of the config_classad
 	this->publish_slot_config_overrides(r_config_classad);
 	this->publish_static(r_config_classad);
@@ -1214,12 +1359,18 @@ Resource::init_classad()
 
 void Resource::initial_compute(Resource * pslot)
 {
+#ifdef PROVISION_FRACTIONAL_DISK
 	r_attr->compute_virt_mem_share(resmgr->m_attr->virt_mem());
 	// set dslot total disk from pslot total disk (if appropriate)
 	if ( ! resmgr->m_attr->always_recompute_disk()) {
 		r_attr->init_total_disk(pslot->r_attr);
 	}
 	r_attr->compute_disk();
+#else
+	// copy total disk from our parent
+	// TODO: handle always_recompute_disk() case here?
+	r_attr->recompute_disk(true);
+#endif
 
 	// give he new dslot the same keyboard/console and load values as the p-slot
 	r_attr->set_keyboard(pslot->r_attr->keyboard_idle());
@@ -1239,12 +1390,18 @@ void Resource::compute_unshared()
 
 	// this either sets total disk into the slot, or causes it to be recomputed.
 	// TODO: !!!! do not recompute LVM free space for each slot when always_recompute_disk is true
+#ifdef PROVISION_FRACTIONAL_DISK
 	r_attr->set_total_disk(
 		resmgr->m_attr->total_disk(),
 		resmgr->m_attr->always_recompute_disk(),
 		resmgr->getVolumeManager());
 
 	r_attr->compute_disk();
+#else
+	if (resmgr->m_attr->recompute_disk_free()) {
+		r_attr->recompute_disk(false);
+	}
+#endif
 }
 
 void Resource::compute_evaluated()
@@ -1303,7 +1460,8 @@ Resource::eval_state( void )
 	//PRAGMA_REMIND("tj: revisit this with SlotEval?")
 	resmgr->publishSlotAttrs( r_classad );
 
-	r_state->eval_policy();
+	// evaluate policy expressions and change state appropriately
+	r_state->eval_policy_periodic();
 };
 
 
@@ -1541,8 +1699,12 @@ void Resource::publish_single_slot_ad(ClassAd & ad, time_t last_heard_from, Purp
 
 	publish_static(&ad);
 	publish_dynamic(&ad);
-	// the collector will set this, but for direct query, we have to set this ourselves
-	if (last_heard_from) { ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from); }
+	if (last_heard_from) {
+		// the collector will set this, but for direct query, we have to set this ourselves
+		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		// the dc_collector object normally sets this
+		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	}
 
 	switch (purpose) {
 	case Purpose::for_update:
@@ -1741,11 +1903,11 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
+	r_cur->starterVacateJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
 }
 
 int
-Resource::wants_hold( void )
+Resource::wants_hold( void ) const
 {
 	int want_hold = eval_expr("WANT_HOLD",false,false);
 
@@ -1762,7 +1924,7 @@ Resource::wants_hold( void )
 
 
 int
-Resource::wants_vacate( void )
+Resource::wants_vacate( void ) const
 {
 	bool want_vacate = false;
 	bool unknown = true;
@@ -1827,7 +1989,7 @@ Resource::wants_vacate( void )
 
 
 int
-Resource::wants_suspend( void )
+Resource::wants_suspend( void ) const
 {
 	bool want_suspend;
 	bool unknown = true;
@@ -1858,7 +2020,7 @@ Resource::wants_suspend( void )
 
 
 int
-Resource::wants_pckpt( void )
+Resource::wants_pckpt( void ) const
 {
 	switch( r_cur->universe() ) {
 		case CONDOR_UNIVERSE_VANILLA: {
@@ -1886,26 +2048,26 @@ Resource::wants_pckpt( void )
 	return want_pckpt;
 }
 
-int
-Resource::hasPreemptingClaim()
+bool
+Resource::hasPreemptingClaim() const
 {
-	return (r_pre && r_pre->requestStream());
+	return (r_pre && r_pre->hasRequestStream());
 }
 
-int
-Resource::mayUnretire()
+bool
+Resource::mayUnretire() const
 {
 	if(!isDraining() && r_cur && r_cur->mayUnretire()) {
 		if(!hasPreemptingClaim()) {
 			// preempting claim has gone away
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 bool
-Resource::inRetirement()
+Resource::inRetirement() const
 {
 	return hasPreemptingClaim() || !mayUnretire();
 }
@@ -1918,11 +2080,12 @@ Resource::preemptWasTrue() const
 }
 
 void
-Resource::preemptIsTrue()
+Resource::setPreemptIsTrue()
 {
-	if(r_cur) r_cur->preemptIsTrue();
+	if(r_cur) r_cur->setPreemptIsTrue();
 }
 
+#if 0
 bool
 Resource::curClaimIsClosing()
 {
@@ -1933,15 +2096,16 @@ Resource::curClaimIsClosing()
 		claimWorklifeExpired() ||
 		isDraining();
 }
+#endif
 
 bool
-Resource::isDraining()
+Resource::isDraining() const
 {
 	return resmgr->isSlotDraining(this);
 }
 
 bool
-Resource::claimWorklifeExpired()
+Resource::claimWorklifeExpired() const
 {
 	//This function evaulates to true if the claim has been alive
 	//for longer than the CLAIM_WORKLIFE expression dictates.
@@ -1967,7 +2131,7 @@ Resource::claimWorklifeExpired()
 }
 
 time_t
-Resource::evalRetirementRemaining()
+Resource::evalRetirementRemaining() const
 {
 	int MaxJobRetirementTime = 0;
 	int JobMaxJobRetirementTime = 0;
@@ -2021,7 +2185,7 @@ Resource::evalRetirementRemaining()
 }
 
 bool
-Resource::retirementExpired()
+Resource::retirementExpired() const
 {
 	//
 	// GT#6697: Allow job policy to be effective while draining.  Only
@@ -2081,7 +2245,7 @@ Resource::retirementExpired()
 }
 
 time_t
-Resource::evalMaxVacateTime()
+Resource::evalMaxVacateTime() const
 {
 	time_t MaxVacateTime = 0;
 
@@ -2144,7 +2308,7 @@ Resource::evalMaxVacateTime()
 
 // returns -1 on undefined, 0 on false, 1 on true
 int
-Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
+Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla ) const
 {
 	int tmp;
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
@@ -2218,35 +2382,35 @@ Resource::evaluateHibernate( std::string &state_str ) const
 
 
 int
-Resource::eval_kill()
+Resource::eval_kill() const
 {
 	return eval_expr( "KILL", false, true );
 }
 
 
 int
-Resource::eval_preempt( void )
+Resource::eval_preempt( void ) const
 {
 	return eval_expr( "PREEMPT", false, true );
 }
 
 
 int
-Resource::eval_suspend( void )
+Resource::eval_suspend( void ) const
 {
 	return eval_expr( "SUSPEND", false, true );
 }
 
 
 int
-Resource::eval_continue( void )
+Resource::eval_continue( void ) const
 {
 	return (r_suspended_by_command)?false:eval_expr( "CONTINUE", false, true );
 }
 
 
 int
-Resource::eval_is_owner( void )
+Resource::eval_is_owner( void ) const
 {
 	// fatal if undefined, don't check vanilla
 	return eval_expr( ATTR_IS_OWNER, true, false );
@@ -2254,7 +2418,7 @@ Resource::eval_is_owner( void )
 
 
 int
-Resource::eval_start( void )
+Resource::eval_start( void ) const
 {
 	// -1 if undefined, don't check vanilla
 	return eval_expr( "START", false, false );
@@ -2291,7 +2455,7 @@ Resource::eval_cpu_busy( void )
 #if HAVE_BACKFILL
 
 int
-Resource::eval_start_backfill( void )
+Resource::eval_start_backfill( void ) const
 {
 	int rval = 0;
 	rval = eval_expr( "START_BACKFILL", false, false );
@@ -2304,7 +2468,7 @@ Resource::eval_start_backfill( void )
 
 
 int
-Resource::eval_evict_backfill( void )
+Resource::eval_evict_backfill( void ) const
 {
 		// return -1 on undefined (not fatal), don't check vanilla
 	return eval_expr( "EVICT_BACKFILL", false, false );
@@ -2366,13 +2530,12 @@ void Resource::publish_static(ClassAd* cap)
 	//	dprintf(D_ALWAYS | D_BACKTRACE, "in Resource::publish_static(%p) for %s classad=%p, base=%p\n", cap, r_name, r_classad, r_config_classad);
 	//}
 	if (wrong_internal_ad) {
-		dprintf(D_ALWAYS, "ERROR! updating the wrong internal ad!\n");
+		dprintf(D_ERROR, "ERROR! updating the wrong internal ad!\n");
 	} else {
 		dprintf(D_TEST | D_VERBOSE, "Resource::publish_static, %s ad\n", internal_ad ? "internal" : "external");
 	}
 
 	// Set the correct types on the ClassAd
-	dprintf(D_ZKM | D_VERBOSE, "Resource::publish_static send_daemon_ad=%d\n", enable_single_startd_daemon_ad);
 	if (enable_single_startd_daemon_ad) {
 		cap->Assign(ATTR_HAS_START_DAEMON_AD, true);
 		SetMyTypeName( *cap,STARTD_SLOT_ADTYPE );
@@ -2422,9 +2585,21 @@ void Resource::publish_static(ClassAd* cap)
 
 		// Put in cpu-specific attributes that can only change on reconfig
 		resmgr->publish_static_slot_resources(this, cap);
+		// debug code to help track HTCONDOR-3072
+		std::string assigned_gpus;
+		if (m_orig_assigned_gpus == "*") {
+			m_orig_assigned_gpus.clear();
+			cap->LookupString("AssignedGPUs", m_orig_assigned_gpus);
+		} else {
+			cap->LookupString("AssignedGPUs", assigned_gpus);
+			if (assigned_gpus != m_orig_assigned_gpus) {
+				dprintf(D_ERROR | D_BACKTRACE, "%sAssignedGPUs changed from \"%s\" to \"%s\"\n",
+					internal_ad?"Config Ad ":"", m_orig_assigned_gpus.c_str(), assigned_gpus.c_str());
+			}
+		}
 
 		// Put in machine-wide attributes that can only change on reconfig
-		resmgr->m_attr->publish_static(cap);
+		resmgr->m_attr->publish_static(cap, r_attr);
 		resmgr->publish_static(cap);
 
 		// now override the global STARTD_ATTRS values with SLOT_TYPE_n_* or SLOTn_* values if they exist.
@@ -2579,7 +2754,7 @@ void Resource::publish_static(ClassAd* cap)
             dprintf(D_FULLDEBUG, "Acquiring consumption policy configuration for slot type %d\n", slot_type);
             // If we have a consumption policy, then we acquire config for it
             // cpus, memory and disk always exist, and have asset-specific defaults:
-            string mrv;
+            std::string mrv;
             if (!cap->LookupString(ATTR_MACHINE_RESOURCES, mrv)) {
                 EXCEPT("Resource ad missing %s attribute", ATTR_MACHINE_RESOURCES);
             }
@@ -2587,13 +2762,12 @@ void Resource::publish_static(ClassAd* cap)
             for (const auto& asset: StringTokenIterator(mrv)) {
                 if (MATCH == strcasecmp(asset.c_str(), "swap")) continue;
 
-				pname = "CONSUMPTION_"; pname += asset;
+				pname = "CONSUMPTION_" + asset;
 				if ( ! SlotType::param(expr, r_attr, pname.c_str())) {
 					formatstr(expr, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset.c_str(), ATTR_REQUEST_PREFIX, asset.c_str());
 				}
 
-                string rattr;
-                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset.c_str());
+                std::string rattr = ATTR_CONSUMPTION_PREFIX + asset;
                 if (!cap->AssignExpr(rattr, expr.c_str())) {
                     EXCEPT("Bad consumption policy expression: '%s'", expr.c_str());
                 }
@@ -2686,6 +2860,16 @@ Resource::publish_dynamic(ClassAd* cap)
 			cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
 		}
 
+		// if there is a jobad publish the JobPid for use by condor_who etc,
+		// TODO: store this in the claim like c_numPids ?
+		long long jobpid = 0;
+		if ( ! internal_ad && r_cur->ad() && r_cur->ad()->LookupInteger(ATTR_JOB_PID, jobpid) && jobpid != 0) {
+			cap->Assign(ATTR_JOB_PID, jobpid);
+		}
+		// publish StarterPid for use by condor_who
+		if ( ! internal_ad && r_cur->starterPID()) {
+			cap->Assign(ATTR_STARTER_PID, r_cur->starterPID());
+		}
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap );
@@ -2749,7 +2933,11 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 	if (starter && starter->executeDir()) {
 
 		std::string updateAdDir;
-		formatstr( updateAdDir, "%s%cdir_%d", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			formatstr( updateAdDir, "%s%cdir_%d/htcondor", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID());
+		} else {
+			formatstr( updateAdDir, "%s%cdir_%d", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
+		}
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.
@@ -2767,9 +2955,9 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 			DecryptFile(updateAdTmpPath.c_str(), 0);
 		}
 #else
-		StatInfo si( updateAdDir.c_str() );
-		if((!si.Error()) && (si.GetOwner() > 0) && (si.GetGroup() > 0)) {
-			set_user_ids( si.GetOwner(), si.GetGroup() );
+		struct stat si = {};
+		if (stat(updateAdDir.c_str(), &si) == 0 && si.st_uid > 0 && si.st_gid > 0) {
+			set_user_ids( si.st_uid, si.st_gid );
 			TemporaryPrivSentry p( PRIV_USER, true );
 			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
 		}
@@ -2796,9 +2984,9 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 #if defined(WINDOWS)
 			rotate_file( updateAdTmpPath.c_str(), updateAdPath.c_str() );
 #else
-			StatInfo si( updateAdDir.c_str() );
-			if(! si.Error()) {
-				set_user_ids( si.GetOwner(), si.GetGroup() );
+			struct stat si = {};
+			if (stat(updateAdDir.c_str(), &si) == 0 && si.st_uid > 0 && si.st_gid > 0) {
+				set_user_ids( si.st_uid, si.st_gid );
 				TemporaryPrivSentry p(PRIV_USER, true);
 				if (rename(updateAdTmpPath.c_str(), updateAdPath.c_str()) < 0) {
 					dprintf(D_ALWAYS, "Failed to rename update ad from  %s to %s\n", updateAdTmpPath.c_str(), updateAdPath.c_str());
@@ -2810,6 +2998,19 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 				updateAdTmpPath.c_str(), strerror( errno ), errno );
 		}
 	}
+}
+
+// matches one of the slot splitting claim ids in r_claims;
+Claim*
+Resource::is_split_claim_id(const char * id)
+{
+	// d-slots can have split claim ids in the r_claims collection
+	for (auto & claim : r_claims) {
+		if (claim->idMatches(id)) {
+			return claim;
+		}
+	}
+	return nullptr;
 }
 
 void
@@ -2859,7 +3060,7 @@ Resource::publish_private( ClassAd *ad )
 	}
 
     if (r_has_cp) {
-        string claims;
+        std::string claims;
         for (claims_t::iterator j(r_claims.begin());  j != r_claims.end();  ++j) {
             claims += " ";
             claims += (*j)->id();
@@ -2869,13 +3070,13 @@ Resource::publish_private( ClassAd *ad )
     }
 
 	if (is_partitionable_slot()) {
-		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, makeChildClaimIds().c_str());
+		ad->AssignExpr(ATTR_CHILD_CLAIM_IDS, renderDslotClaimIdsList().c_str());
 		ad->Assign(ATTR_NUM_DYNAMIC_SLOTS, (long long)m_children.size());
 	}
 }
 
 std::string
-Resource::makeChildClaimIds() {
+Resource::renderDslotClaimIdsList() {
 		std::string attrValue = "{";
 		bool firstTime = true;
 
@@ -3278,9 +3479,7 @@ Resource::startTimerToEndCODLoadHack( void )
 	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0,
 					(TimerHandlercpp)&Resource::endCODLoadHack,
 					"endCODLoadHack", this );
-	if( r_cod_load_hack_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(r_cod_load_hack_tid >= 0);
 }
 
 
@@ -3349,7 +3548,7 @@ const char * Resource::analyze_match(
 		anaFormattingOptions fmt = { 100,
 			detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr
 			| detail_suppress_tall_heading | detail_append_to_buf /* | detail_show_all_subexprs */,
-			"Requirements", "Slot", "Job" };
+			"Requirements", "Slot", "Job", nullptr };
 		AnalyzeRequirementsForEachTarget(r_classad, ATTR_REQUIREMENTS, inline_attrs, jobs, buf, fmt);
 		chomp(buf); buf += "\n--------------------------\n";
 
@@ -3504,11 +3703,9 @@ Resource::spawnFetchedWork(void)
 
 		// Update the claim object with info from the job classad stored in the Claim object
 		// Then spawn the given starter.
-		// If the starter was spawned, we no longer own the tmp_starter object
+		// Once we call spawnStarter, we no longer own the tmp_starter object
 	ASSERT(r_cur->ad() != NULL);
 	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
-		delete tmp_starter; tmp_starter = NULL;
-
 		dprintf(D_ERROR, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
@@ -3745,7 +3942,7 @@ bool Resource::fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad,
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_claim)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -3877,6 +4074,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
             cp_compute_consumption(*req_classad, *mach_classad, consumption);
 
             for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+#ifdef PROVISION_FRACTIONAL_DISK
                 if (YourStringNoCase("disk") == j->first) {
                     // int denom = (int)(ceil(rip->r_attr->total_cpus()));
                     double total_disk = rip->r_attr->get_total_disk();
@@ -3884,6 +4082,12 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
                     cpu_attrs_request.disk_fraction = std::max(0.0, j->second + disk_slop) / total_disk;
                 } else if (YourStringNoCase("swap") == j->first) {
                     cpu_attrs_request.virt_mem_fraction = j->second;
+#else
+                if (YourStringNoCase("disk") == j->first) {
+                    cpu_attrs_request.num_disk = (long long)std::max(0.0, ceil(j->second));
+                } else if (YourStringNoCase("swap") == j->first) {
+                    cpu_attrs_request.num_swap = (long long)ceil(j->second);
+#endif
                 } else if (YourStringNoCase("cpus") == j->first) {
                     cpu_attrs_request.num_cpus = MAX(1.0/128.0, j->second);
                 } else if (YourStringNoCase("memory") == j->first) {
@@ -3929,6 +4133,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
                     return NULL;
                 }
             }
+#ifdef PROVISION_FRACTIONAL_DISK
             // convert disk request into a fraction for the slot splitting code
             //int denom = (int)(ceil(rip->r_attr->total_cpus()));
             double total_disk = rip->r_attr->get_total_disk();
@@ -3936,11 +4141,18 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
             double disk_fraction = std::max(0.0, disk + disk_slop) / total_disk;
 
             cpu_attrs_request.disk_fraction = disk_fraction;
+#else
+			cpu_attrs_request.num_disk = disk;
+#endif
 
                 // Look to see how much swap is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_VIRTUAL_MEMORY;
+#ifdef PROVISION_FRACTIONAL_DISK
 			double total_virt_mem = resmgr->m_attr->virt_mem();
+#else
+			long long total_virt_mem = resmgr->m_attr->num_swap();
+#endif
 			bool set_swap = true;
 
             if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, swap ) ) {
@@ -3948,8 +4160,13 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 						// Schedd didn't set it, user didn't request it
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
+#ifdef PROVISION_FRACTIONAL_DISK
 						cpu_attrs_request.virt_mem_fraction = double(memory) / double(resmgr->m_attr->phys_mem());
 						set_swap = false;
+#else
+						double swap_proportion = double(memory) / double(resmgr->m_attr->phys_mem());
+						swap = (long long)(swap_proportion * total_virt_mem);
+#endif
 					} else {
 						// Fall back to you get everything and don't pay anything
 						set_swap = false;
@@ -3957,9 +4174,15 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
                 }
             }
 
+#ifdef PROVISION_FRACTIONAL_DISK
 			if (set_swap) {
 				cpu_attrs_request.virt_mem_fraction = swap / total_virt_mem;
 			}
+#else
+			if (set_swap) {
+				cpu_attrs_request.num_swap = swap;
+			}
+#endif
 
 			for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
 				std::string reqname = ATTR_REQUEST_PREFIX + j->first;
@@ -3991,18 +4214,24 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 				cpu_attrs_request.num_cpus = MAX(cpu_attrs_request.num_cpus, 1.0);
 				cpu_attrs_request.num_phys_mem = MAX(cpu_attrs_request.num_phys_mem, 1);
 			}
-			cpu_attrs = new CpuAttributes(rip->type_id(), cpu_attrs_request, executeDir, partitionId);
+			cpu_attrs = new CpuAttributes(rip->type_id(), cpu_attrs_request, *resmgr->m_attr, executeDir, partitionId);
 		} else {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_parent_claim);
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip, take_donor_claim);
 		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
 			return NULL;
+		}
+
+		// HACK!! give a split claim to the new d-slot
+		// TODO: do this later? make it conditional??
+		if (rip->is_partitionable_slot() && new_rip->r_claims.empty()) {
+			new_rip->r_claims.insert(new Claim(new_rip));
 		}
 
 		// update the standard value for "now" for all of the subsequent slot attributes
@@ -4033,13 +4262,13 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 /*
 Create multiple dynamic slots for a single request ad
 */
-std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_parent_claim)
+std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_donor_claim)
 {
 	std::vector<Resource*> dslots(num_dslots);
 
 	dslots.clear();
 	for (int ix = 0; ix < num_dslots; ++ix) {
-		Resource * dslot = create_dslot(rip, req_classad, take_parent_claim);
+		Resource * dslot = create_dslot(rip, req_classad, take_donor_claim);
 		if ( ! dslot) break;
 		dslots.push_back(dslot);
 	}

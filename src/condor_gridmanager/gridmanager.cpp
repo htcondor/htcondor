@@ -196,13 +196,6 @@ Init()
 		}
 	}
 
-	const char *val = getenv( "SCHEDD_NAME" );
-	if ( val ) {
-		ScheddName = strdup( val );
-	} else {
-		ScheddName = strdup( "" );
-	}
-
 	if ( ScheddObj == NULL ) {
 		ScheddObj = new DCSchedd( ScheddAddr );
 		ASSERT( ScheddObj );
@@ -218,9 +211,7 @@ Init()
 		EXCEPT( "Schedd didn't specify scratch dir with -S" );
 	}
 
-	if ( InitializeProxyManager( GridmanagerScratchDir ) == false ) {
-		EXCEPT( "Failed to initialize Proxymanager" );
-	}
+	InitializeProxyManager(GridmanagerScratchDir);
 
 	JobType new_type;
 

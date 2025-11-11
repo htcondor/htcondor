@@ -84,28 +84,13 @@ if( WINDOWS )
 	condor_exe(win_install_probe "win_install_probe.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 	condor_exe(condor_set_acls "condor_set_acls.c" ${C_BIN} "" OFF)
 	condor_exe(htcondor "htcondor.c" ${C_BIN} "" OFF)
+	message(STATUS "setting python target link libs ${PYTHON3_LIBRARIES}")
 	target_include_directories( htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-	#message(STATUS "set target-inc-dir for htcondor to ${PYTHON3_INCLUDE_DIRS}")
-	target_link_libraries( htcondor ${PYTHON3_LIBRARIES} )
-	#message(STATUS "set target-lib for htcondor to ${PYTHON3_LIBRARIES}")
+	target_link_libraries( htcondor PRIVATE ${PYTHON3_LIBRARIES} )
 endif()
 
 condor_exe_test(condor_test_auth "test_auth.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-
-# Check condor_version's shared library dependencies and copy a specific
-# subset of those libraries into <release>/lib/condor
-if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
-	set( SRC_DIR ${CMAKE_SOURCE_DIR} )
-	set( BIN_DIR ${CMAKE_BINARY_DIR} )
-	install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
-	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
-	COMMAND xargs -isrc ${CMAKE_COMMAND} -E copy_if_different src ${CMAKE_INSTALL_PREFIX}/lib/condor
-		 )" )
-	# This is required for opensuse, where the system's libssl and
-	# libcrypto files don't have owner write permission.
-	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
-endif()
 
 
 ###########################################################

@@ -45,6 +45,7 @@ const int FAILURE_CREDMON_TIMEOUT = 10;  // The credmon did not process credenti
 const int FAILURE_CONFIG_ERROR = 11;    // an operation failed because of a configuration error
 const int FAILURE_JSON_PARSE = 12;      // Failure parsing credential as JSON
 const int FAILURE_CRED_MISMATCH = 13;   // Credential was found but it did not match requested scopes or audience
+const int FAILURE_UNTRUSTED_HOST = 14;  // Credential requires contacting an untrusted host
 
 // not a return code - reserved for caller's use
 const int FAILURE_ABORTED = -1;	
@@ -170,6 +171,26 @@ const std::string & getCachedIssuerKeyNames(CondorError * err);
 void clearIssuerKeyNameCache();
 
 bool okay_for_oauth_filename(const std::string & s);
+
+// Given an oauth2 token name (wihtout the optional handle name), determine
+// which credmon is responsible for maintaining it.
+class CredSorter
+{
+ public:
+	CredSorter() { Init(); }
+	void Init();
+
+	enum CredType { OAuth2Type, LocalIssuerType, LocalClientType, VaultType, UnknownType };
+
+	CredType Sort(const std::string& cred_name) const;
+
+ private:
+	std::string m_local_names;
+	std::string m_client_names;
+	std::string m_oauth2_names;
+	std::string m_vault_names;
+	bool m_vault_enabled{false};
+};
 
 #endif // STORE_CRED_H
 

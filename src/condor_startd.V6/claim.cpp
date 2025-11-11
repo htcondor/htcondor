@@ -88,6 +88,8 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_badput_caused_by_draining(false)
 	, c_badput_caused_by_preemption(false)
 	, c_schedd_closed_claim(false)
+	, c_schedd_reported_job_done(false)
+	, c_ocu(false)
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
@@ -119,10 +121,12 @@ Claim::~Claim()
 	}
 
 	// The resources assigned to this claim must have been freed by now.
+	// TODO: this should not happen on *every* claim delete
+	// figure the right place to put this - maybe when the Starter object is deleted?
 	if( c_rip != NULL && c_rip->r_classad != NULL ) {
 		resmgr->adlist_unset_monitors( c_rip->r_id, c_rip->r_classad );
-	} else {
-		dprintf( D_ALWAYS, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
+	} else if (c_rip && ! c_rip->is_broken_slot()) { // d-slots are marked as broken just before they are deleted.
+		dprintf( D_BACKTRACE, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
 	}
 
 		// Cancel any daemonCore events associated with this claim
@@ -146,6 +150,9 @@ Claim::~Claim()
 				resmgr->startd_stats.job_busy_time += busyTime;
 			}
 
+			// if we have a pending deactivate reply, send it now.
+			sendDeactivateReply();
+	
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -163,6 +170,7 @@ Claim::~Claim()
 	}
 		// delete the request stream and do any necessary related cleanup
 	setRequestStream( NULL );
+	setDeactivateStream(nullptr); // we should never get here with an open socket, but just in case...
 
 	if( c_global_job_id ) { 
 		free( c_global_job_id );
@@ -170,7 +178,8 @@ Claim::~Claim()
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
 	}
-}	
+}
+
 
 void
 Claim::scheddClosedClaim() {
@@ -306,6 +315,20 @@ Claim::publish( ClassAd* cad )
 		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
 		// also the CpusUsage value
 		cad->Assign(ATTR_CPUS_USAGE, c_cpus_usage);
+
+		// when we are using the procd for memory usage reporting, the STARTD only sees
+		// update for memory usage when the starter updates both the shadow and the STARTD
+		// which happens about every 5 Minutes.  this is far too slow for policy evaluation.
+		// 
+		// We want to refresh RSS in the ad whenever we refresh ImageSize in the ad if
+		// we are getting RSS updates from the procd. Right now, we only know for sure
+		// that we are getting updates from the proc on windows. thus #ifdef WIN32
+	#ifdef WIN32
+		// TODO: make this conditional on cgroup memory tracking, instead of WIN32
+		cad->Assign(ATTR_RESIDENT_SET_SIZE, c_peak_rss);
+	#endif
+		//TODO: fix it so that c_cur_rss is not a peak value, then advertise it.
+		//cad->Assign("Cur" ATTR_RESIDENT_SET_SIZE, c_cur_rss);
 	}
 
 	// If this claim is for vm universe, update some info about VM
@@ -317,13 +340,59 @@ Claim::publish( ClassAd* cad )
 		cad->Assign("WorkingCM", c_working_cm);
 	}
 
-	if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
-		cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
+	if (c_rip) {
+		if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
+			cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
+		} else if (c_rip->is_dynamic_slot() && ! c_rip->r_claims.empty()) {
+			cad->Assign(ATTR_IS_SPLITTABLE, true);
+		}
 	}
+
+	if (c_ocu) {
+		cad->Assign(ATTR_OCU, true);
+		if (!c_ocu_name.empty()) {
+			cad->Assign(ATTR_OCU_NAME, c_ocu_name);
+		}
+	} 
 
 	publishStateTimes( cad );
 
 }
+
+// remove claim attributes from the given ad but *not* from it's chained parent ad
+void
+Claim::unpublish( ClassAd* cad )
+{
+	static const char * const attrs[]{
+		ATTR_REMOTE_SCHEDD_NAME,
+		ATTR_REMOTE_USER,
+		ATTR_REMOTE_OWNER,
+		ATTR_ACCOUNTING_GROUP,
+		ATTR_CLIENT_MACHINE,
+		ATTR_CONCURRENCY_LIMITS,
+		ATTR_NUM_PIDS,
+		ATTR_REMOTE_GROUP,
+		ATTR_REMOTE_NEGOTIATING_GROUP,
+		ATTR_REMOTE_AUTOREGROUP,
+		ATTR_CGROUP_ENFORCED,
+		ATTR_JOB_ID,
+		ATTR_GLOBAL_JOB_ID,
+		ATTR_JOB_START,
+		ATTR_LAST_PERIODIC_CHECKPOINT,
+		ATTR_IMAGE_SIZE,
+		ATTR_CPUS_USAGE,
+		"WorkingCM",
+		ATTR_WANT_MATCHING,
+	};
+
+	ClassAd * parent = cad->GetChainedParentAd();
+	cad->Unchain();
+	for (auto * attr : attrs) {
+		cad->Delete(attr);
+	}
+	if (parent) cad->ChainToAd(parent);
+}
+
 
 void
 Claim::publishPreemptingClaim( ClassAd* cad )
@@ -538,9 +607,7 @@ Claim::start_match_timer()
 								   (TimerHandlercpp)
 								   &Claim::match_timed_out,
 								   "match_timed_out", this );
-	if( c_match_tid == -1 ) {
-		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
+	ASSERT(c_match_tid >= 0);
 	dprintf( D_FULLDEBUG, "Started match timer (%d) for %d seconds.\n", 
 			 c_match_tid, match_timeout );
 }
@@ -663,6 +730,17 @@ Claim::beginClaim( void )
 	changeState( CLAIM_IDLE );
 
 	startLeaseTimer();
+}
+
+void
+Claim::clearClientInfo(void)
+{
+	// we don't delete c_jobad here because a command handler may still be using it.
+
+	c_rank = 0;
+	c_oldrank = 0;
+	delete c_client;
+	c_client = new Client();
 }
 
 /** Copy info about the client and resource request from another claim object.
@@ -888,32 +966,27 @@ Claim::startLeaseTimer()
 		daemonCore->Register_Timer( when, 0,
 				(TimerHandlercpp)&Claim::leaseExpired,
 				"Claim::leaseExpired", this );
-	if( c_lease_tid == -1 ) {
-		EXCEPT( "Couldn't register timer (out of memory)." );
-	}
+	ASSERT(c_lease_tid >= 0);
 
 	// Figure out who should sending keep alives
 	// note that the job-ad lookups MUST be here rather than in cacheJobInfo
 	// because the  job ad we get from the shadow at activation time doesn't have
 	// the necessary attributes - they are only in the job ad we get from the schedd at claim time
 	// see #6568 for more details.
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
+	// CRUFT Starting in 25.3, the schedd always sets this to true
 	if ( c_jobad && c_jobad->LookupBool( ATTR_STARTD_SENDS_ALIVES, c_startd_sends_alives ) ) {
 		// Use value from ad
-	} else if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		c_startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		c_startd_sends_alives = true;
 	} else {
-		// No direction from the schedd or config file.
-		c_startd_sends_alives = false;
+		// No direction from the schedd.
+		// Assume true, so future schedds can drop this ancient option.
+		c_startd_sends_alives = true;
 	}
 
 	// If startd is sending the alives, look to see if the schedd is requesting
 	// that we let only send alives when there is no starter present (i.e. when
 	// the claim is idle).
-	c_starter_handles_alives = false;  // default to false unless schedd tells us
+	// CRUFT Starting in 25.3, the schedd always sets this to true
+	c_starter_handles_alives = true;  // default to true unless schedd tells us
 	if (c_jobad) {
 		c_jobad->LookupBool( ATTR_STARTER_HANDLES_ALIVES, c_starter_handles_alives );
 	}
@@ -1336,6 +1409,79 @@ Claim::requestClaimSockClosed(Stream *s)
 	return FALSE;
 }
 
+void
+Claim::setDeactivateStream(Stream* stream)
+{
+	if( c_deactivate_stream ) {
+		daemonCore->Cancel_Socket( c_deactivate_stream );
+		delete( c_deactivate_stream );
+	}
+	c_deactivate_stream = stream;
+
+	// register a callback if the deactivate reply sock is closed before we can reply
+	if( c_deactivate_stream ) {
+		std::string desc;
+		formatstr(desc, "deactivate claim %s", publicClaimId() );
+
+		int register_rc = daemonCore->Register_Socket(
+			c_deactivate_stream,
+			desc.c_str(),
+			(SocketHandlercpp)&Claim::deactivateClaimSockClosed,
+			"deactivateClaimSockClosed",
+			this );
+
+		if( register_rc < 0 ) {
+			dprintf(D_ALWAYS,
+				"Failed to register claim deactivate socket "
+				" to detect premature closure for claim %s.\n",
+				publicClaimId() );
+		}
+	}
+}
+
+int
+Claim::deactivateClaimSockClosed(Stream *s)
+{
+	dprintf( D_ALWAYS,
+		"Request claim socket closed prematurely for claim %s. "
+		"This probably means the schedd gave up.\n",
+		publicClaimId() );
+
+	ASSERT( s == c_deactivate_stream );
+	c_deactivate_stream = NULL; // socket will be closed when we return
+
+	return FALSE;
+}
+
+bool
+Claim::sendDeactivateReply()
+{
+	if (c_deactivate_stream) {
+
+		auto * stream = c_deactivate_stream;
+		stream->encode();
+
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_START,c_may_reactivate);
+		bool success = true;
+		if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
+			dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
+			success = false;
+		}
+		setDeactivateStream(nullptr);
+
+		if (c_rip && ep_eventlog.inEvent(ULOG_EP_DEACTIVATE_CLAIM, c_rip)) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, c_rip);
+			ep_event.Ad().Assign("ReplyTime", _condor_debug_get_time_double());
+			ep_event.Ad().Assign("Success", success);
+			ep_eventlog.flush();
+		}
+
+		return success;
+	}
+	return false;
+}
+
 
 char*
 Claim::id( void )
@@ -1381,6 +1527,8 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 {
 	percentCpuUsage = 0.0;
 	imageSize = 0;
+	long long cur_rss = 0;
+	long long peak_rss = 0;
 	if (c_starter_pid) {
 		Starter *starter = findStarterByPid(c_starter_pid);
 		if ( ! starter) {
@@ -1389,10 +1537,19 @@ void Claim::updateUsage(double & percentCpuUsage, long long & imageSize)
 		const ProcFamilyUsage & usage = starter->updateUsage();
 		percentCpuUsage = usage.percent_cpu;
 		imageSize = usage.total_image_size;
+		cur_rss = usage.total_resident_set_size; // TJ: v24.12 procd seems to be returning peak RSS on Windows
+		peak_rss = usage.max_image_size;
+		//dprintf(D_ZKM, "Claim::updateUsage (%u) TotImageSize=%lld, TotRss=%lld, max=%llu\n",
+		//	c_starter_pid, imageSize, cur_rss, peak_rss);
+	} else if (c_rip && ! c_rip->is_partitionable_slot()) {
+		//dprintf(D_ZKM, "Claim::updateUsage (no starter pid) ImageSize=%lld\n", imageSize);
 	}
+
 	// save off the last values so we can use them in the ::publish method
 	c_cpus_usage = percentCpuUsage / 100;
 	c_image_size = imageSize;
+	c_cur_rss = cur_rss;
+	c_peak_rss = peak_rss;
 }
 
 
@@ -1407,6 +1564,8 @@ Claim::getCODMgr( void )
 
 // spawn a starter in the given starter object.
 // on successful spawn, the claim will take ownership of the job classad.
+// and the starter object will be given to a global array
+// on failure, this function will delete the starter object and job object that were passed in.
 // job can be NULL in the case where we are doing a delayed spawn because of preemption
 // or when doing fetchwork.  when job is NULL, the c_ad member of this class must not be.
 pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
@@ -1415,7 +1574,8 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 			// Big error!
 		dprintf( D_ALWAYS, "ERROR! Claim::spawnStarter() called "
 				 "w/o a Starter object! Returning failure\n" );
-		return FALSE;
+		if (job && (job != c_jobad)) delete job;
+		return 0;
 	}
 
 	// the starter had better not already have an active process.
@@ -1453,11 +1613,13 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 	c_jobad = old_c_ad;
 
 	if (c_starter_pid) {
+		// if the starter pid is non-zero, ownership of the Starter object was given to the living_starters map
 		if (job) { setjobad(job); } // transfer ownership of the job ad to the claim.
 		alive();
 	} else {
 		resetClaim();
-		return FALSE;
+		delete starter; // if we failed to spawn the starter, we have to delete the starter object now
+		return 0;
 	}
 
 	changeState( CLAIM_RUNNING );
@@ -1476,49 +1638,91 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 		// TODO: should we set a timer here to tell the procd
 		// explicitly to take a snapshot in 15 seconds???
 
-	return TRUE;
+	return c_starter_pid;
+}
+
+
+static bool
+IsBrokenExitCode(int code) {
+	return (WIFEXITED(code) &&
+	       WEXITSTATUS(code) >= STARTER_EXIT_BROKEN_RES_FIRST &&
+	       WEXITSTATUS(code) <= STARTER_EXIT_BROKEN_RES_LAST);
 }
 
 
 void
 Claim::starterExited( Starter* starter, int status)
 {
-		// Now that the starter is gone, we need to change our state
-	changeState( CLAIM_IDLE );
-
-	bool orphanedJob = false;
+	int orphanedJob = 0;
+	bool still_broken = true;
+	CleanupReminder* reminder = nullptr;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
 		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
 	if (starter) {
-		if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", true)) {
-			int tries = 3;
-			orphanedJob = true;
-			while (tries--) {
-				daemonCore->Kill_Family(starter->pid());
-				ProcFamilyUsage usage;
-				daemonCore->Snapshot();
-				daemonCore->Get_Family_Usage(starter->pid(), usage, true);
 
-				// If no procs remain, we are good
-				if (usage.num_procs == 0) {
-					orphanedJob = false;
-					break;
-				} 
-				sleep(1); // Give a chance for init to reap
-			}
-
-
-			// If any procs remain, they must be unkillable.  We'll mark the slot as broken
-			if (orphanedJob) {
-				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter, marking slots as broken\n");
-			} 
+		// if the update socket is still open, process all messages from it before we delete the starter object
+		int pending_update = starter->has_pending_update();
+		if (pending_update > 0) {
+			dprintf(D_ALWAYS, "Starter (pid=%d) is being reaped with %d pending job update message bytes\n",
+				starter->pid(), pending_update);
+			starter->handle_pending_updates();
 		}
 
+		// 
+		int tries = 3;
+		while (tries--) {
+			daemonCore->Kill_Family(starter->pid());
+			ProcFamilyUsage usage;
+			daemonCore->Snapshot();
+			daemonCore->Get_Family_Usage(starter->pid(), usage, true);
+
+			// report number of processes in the family if non-zero or it was previously non-zero
+			if (orphanedJob || usage.num_procs) {
+				dprintf(D_STATUS, "Startd has detected %d still-running processes under starter %d\n", usage.num_procs, starter->pid());
+			}
+			orphanedJob = usage.num_procs;
+			if (usage.num_procs == 0) {
+				// If no procs remain, we are good
+				break;
+			}
+			sleep(1); // Give a chance for init to reap
+		}
+
+		if (orphanedJob) {
+			if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", false)) {
+				dprintf(D_ERROR, "Slot will break because of %d still-running job processes\n", orphanedJob);
+				// If any procs remain, they must be unkillable.  We'll mark the slot as broken down below
+			} else {
+				// hope for the best.
+				orphanedJob = 0;
+			}
+		}
+
+		// Now that the starter is gone, we need to change our state
+		changeState( CLAIM_IDLE );
+
 		starter->exited(this, status);
+
+		// Some broken resources may actually be cleaned up during final
+		// cleanup so verify that
+		if (IsBrokenExitCode(status)) {
+			still_broken = starter->VerifyBrokenResources(WEXITSTATUS(status));
+			if ( ! still_broken) {
+				dprintf(D_STATUS, "Broken resources successfully cleaned up. Ignoring exit code %d\n",
+				        WEXITSTATUS(status));
+			} else if (WEXITSTATUS(status) == STARTER_EXIT_IMMORTAL_LVM) {
+				reminder = resmgr->findCleanupReminder(CleanupReminder::category::logical_volume, starter->logicalVolumeName());
+			}
+		}
+
 		delete starter; starter = NULL;
+	} else {
+
+		// Now that the starter is gone, we need to change our state
+		changeState( CLAIM_IDLE );
 	}
 
 	// update stat for JobBusyTime
@@ -1532,6 +1736,11 @@ Claim::starterExited( Starter* starter, int status)
 		dprintf(D_ALWAYS,"Adding to badput caused by draining: %ld cpu-seconds\n",badput);
 		resmgr->addToDrainingBadput( badput );
 	}
+
+
+	// save off the job ad (if any) so that resetClaim doesn't delete it before we know
+	// whether we want to save it because the slot resources are about to be broken
+	std::unique_ptr<ClassAd> job(c_jobad); c_jobad = nullptr;
 
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.
@@ -1562,35 +1771,67 @@ Claim::starterExited( Starter* starter, int status)
 
 	// Check for exit codes that indicate the Starter could not clean up and
 	// the startd will probably be unable to also, so it should mark the resource as broken
-	if (orphanedJob ||
-		(WIFEXITED(status) && 
-		 WEXITSTATUS(status) >= STARTER_EXIT_BROKEN_RES_FIRST &&
-		 WEXITSTATUS(status) <= STARTER_EXIT_BROKEN_RES_LAST)) {
+	if (orphanedJob || (IsBrokenExitCode(status) && still_broken)) {
 
 		int code = BROKEN_CODE_UNCLEAN;
+		bool do_not_delete_slot = false; // set to true if the broken code indicates that the slot should not be deleted.
 		const char * reason = "Could not clean up after job";
+		ResourceLockType lock = ResourceLockType::HUNG_PID;
 		switch (WEXITSTATUS(status)) {
 		case STARTER_EXIT_IMMORTAL_LVM:
 			code = BROKEN_CODE_UNCLEAN_LV;
 			reason = "Could not clean up Logical Volume";
+			lock = ResourceLockType::LV;
 			break;
 		case STARTER_EXIT_IMMORTAL_JOB_PROCESS:
 			code = BROKEN_CODE_HUNG_PID;
 			reason = "Could not terminate all job processes";
 			break;
+		case STARTER_EXIT_CGROUP_LOCKED:
+			code = BROKEN_CODE_HUNG_CGROUP;
+			reason = "Could not cleanup CGroup for slot";
+			do_not_delete_slot = true;
+			lock = ResourceLockType::CGROUP;
+			break;
 		default:
+			if (orphanedJob) {
+				code = BROKEN_CODE_HUNG_PID;
+				reason = "Could not terminate all job processes";
+			}
 			// go with generic code and reason
 			break;
 		}
 
 		if ( ! c_rip->r_attr->is_broken()) {
-			// changing the resource bag to broken changes the resources of the slot
+			dprintf(D_ERROR,"Starter exit code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
+			if (do_not_delete_slot) { c_rip->r_do_not_delete = true; }
+			auto & brit = c_rip->set_broken_context(c_client, job, lock); // save client info, and give ownership of the job ad
+			if (reminder) { reminder->broken_id = brit.b_refid; }
+			if (ep_eventlog.isEnabled()) {
+				// write a RESOURCE_BREAK event reporting break reason and resources
+				auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_BREAK, c_rip);
+				ep_event.Ad().Assign("Code", code);
+				ep_event.Ad().Assign("Reason", reason);
+				ep_event.Ad().Assign(ATTR_SLOT_BROKEN_REFID, brit.b_refid);
+				if ( ! brit.b_res.empty()) {
+					ClassAd * resad = new ClassAd();
+					brit.publish_resources(*resad, "");
+					ep_event.Ad().Insert("Resources", resad);
+				}
+				ep_eventlog.flush();
+			}
+			// changing the resource bag to broken changes the resources of the slot
 			resmgr->refresh_classad_resources(c_rip);
 			// force a refresh to the collector as well
 			c_rip->update_needed(Resource::WhyFor::wf_refreshRes);
 			resmgr->rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
 		}
+	}
+
+	// if there is pending reply to DEACTIVATE_CLAIM, send the reply now
+	if (sendDeactivateReply() && ! mayReactivate()) {
+		// TODO: do we need to change the slot state to reflect a closed claim here?
 	}
 
 		// Finally, let our resource know that our starter exited, so
@@ -1600,7 +1841,7 @@ Claim::starterExited( Starter* starter, int status)
 	c_rip->starterExited( this );
 
 	// Think twice about doing anything after returning from starterExited(),
-	// as perhaps this claim object has now been destroyed.
+	// as perhaps this claim object or even the rip has now been destroyed.
 }
 
 
@@ -1617,7 +1858,9 @@ Claim::starterPidMatches( pid_t starter_pid ) const
 bool
 Claim::isDeactivating( void )
 {
-	if( c_state == CLAIM_VACATING || c_state == CLAIM_KILLING ) {
+	if( c_state == CLAIM_VACATING || c_state == CLAIM_KILLING ||
+		// TODO: add a new Claim state while waiting to reap the starter on job completion
+		(c_schedd_reported_job_done && c_state == CLAIM_RUNNING)) {
 		return true;
 	}
 	return false;
@@ -1663,13 +1906,20 @@ Claim::isRunning( void )
 
 
 bool
-Claim::deactivateClaim( bool graceful )
+Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 {
-	if( isActive() ) {
+	if (claim_closing) c_may_reactivate = false;
+	if (job_done) {
+		c_schedd_reported_job_done = true;
+		// TODO: add a Claim state for waiting to reap Starter
+		// changeState(CLAIM_KILLING);
+		return isActive();
+	}
+	if( isActive()) {
 		if( graceful ) {
-			starterHoldJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
+			starterVacateJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
 		} else {
-			starterHoldJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
+			starterVacateJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
 		}
 	}
 		// not active, so nothing to do
@@ -1784,21 +2034,29 @@ Claim::starterKillHard( void )
 
 
 void
-Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft )
+Claim::starterVacateJob( char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft )
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
 		time_t timeout;
 		if (soft) {
+		#ifdef DONT_HOLD_EXITED_JOBS
+			if (starter->got_final_update()) {
+				// after the starter got the final update, there is no vacate time to honor
+				// and a soft vacateJob does nothing, so just change the claim state here.
+				changeState(CLAIM_VACATING);
+				return;
+			}
+		#endif
 			timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
 		} else {
 			timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
 		}
-		if( starter->holdJob(hold_reason,hold_code,hold_subcode,soft,timeout) ) {
+		if( starter->vacateJob(vacate_reason,vacate_code,vacate_subcode,soft,timeout) ) {
 			changeState(soft ? CLAIM_VACATING : CLAIM_KILLING);
 			return;
 		}
-		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");
+		dprintf(D_ALWAYS,"Failed to send vacate message to starter, so evicting job via signal instead.\n");
 	}
 
 	if( soft ) {
@@ -1813,7 +2071,7 @@ void
 Claim::starterVacateJob(bool soft)
 {
 	if (!c_vacate_reason.empty()) {
-		starterHoldJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, soft);
+		starterVacateJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, soft);
 	} else {
 		if (soft) {
 			starterKillSoft();
@@ -2083,6 +2341,8 @@ Claim::resetClaim( void )
 	c_starter_pid = 0;
 	c_image_size = 0;
 	c_cpus_usage = 0;
+	c_peak_rss = 0;
+	c_cur_rss = 0;
 
 	if( c_jobad && c_type == CLAIM_COD ) {
 		delete( c_jobad );
@@ -2109,6 +2369,7 @@ Claim::resetClaim( void )
 	c_may_unretire = true;
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
+	c_schedd_reported_job_done = false;
 }
 
 
@@ -2212,6 +2473,22 @@ Claim::writeMachAdAndOverlay( Stream* stream )
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
 	}
+
+	// now write the secrets ad
+	ClassAd ad;
+	ad.Assign(ATTR_CLAIM_ID, this->id());
+	if (c_rip) {
+		std::string attr;
+		for (auto j : c_rip->r_claims) {
+			ad.Assign(ATTR_SPLIT_CLAIM_ID, j->id());
+			break; // put only the first item in r_claims into the secrets ad
+		}
+	}
+	if (!putClassAd(stream, ad) || !stream->end_of_message()) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine private ClassAd to stream\n");
+		return false;
+	}
+
 	return true;
 }
 
@@ -2420,7 +2697,21 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 			duration = 0.0;
 		}
 		resmgr->startd_stats.job_duration += duration;
+
+		filesize_t bytes_sent, bytes_recvd;
+		if (c_jobad->LookupInteger(ATTR_BYTES_SENT, bytes_sent)) {
+			resmgr->startd_stats.bytes_sent += bytes_sent;
+		}
+		if (c_jobad->LookupInteger(ATTR_BYTES_RECVD, bytes_recvd)) {
+			resmgr->startd_stats.bytes_recvd += bytes_recvd;
+		}
 	}
+}
+
+void Claim::receiveUpdateCommand(int cmd, ClassAd &/*payload_ad*/, ClassAd &/*reply_ad*/)
+{
+	ASSERT(cmd != 0 && cmd != 1); // 0 is update, and 1 is final_update
+
 }
 
 bool
@@ -2445,6 +2736,17 @@ Claim::setVacateReason(const std::string& reason, int code, int subcode)
 		c_vacate_subcode = subcode;
 	}
 }
+
+void
+Claim::setVacateInfo(EPLogEvent & ep_event)
+{
+	if ( ! c_vacate_reason.empty()) {
+		ep_event.Ad().Assign("Reason", c_vacate_reason);
+		ep_event.Ad().Assign("Code", c_vacate_code);
+		if (c_vacate_subcode) ep_event.Ad().Assign("Subcode", c_vacate_subcode);
+	}
+}
+
 
 void
 Claim::clearVacateReason()

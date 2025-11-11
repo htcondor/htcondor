@@ -52,6 +52,7 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
 #include "console-utils.h"
+#include "condor_holdcodes.h"
 #include <iterator>
 
 #include "queue_internal.h"
@@ -77,7 +78,9 @@ static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
-enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF, usage_DiagOpts=0x100 };
+enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4,
+	usage_HoldCodes=8, usage_VacateCodes=0x10,
+	usage_AllOther=0xFF, usage_DiagOpts=0x100 };
 
 // functions to fetch job ads and print them out
 //
@@ -183,15 +186,9 @@ static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
 static	ClassAdList	scheddList;
 
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-// analysis suggestions are mostly useless - usually suggest that you switch opsys
-static  ClassAdAnalyzer analyzer;
-#endif
-
 static bool local_render_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_dag_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_batch_name(std::string & out, ClassAd*, Formatter &);
-
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
 // then insert those into a map which is indexed (and thus ordered) by job id.
@@ -273,13 +270,13 @@ static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
 static  const char * dry_run_file = NULL;
 static  const char * capture_raw_results = NULL;
-static  FILE*        capture_raw_fp = NULL;
 static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static  const char *user_job_constraint = NULL; // just the constraint given by the user
 static  const char *user_slot_constraint = NULL; // just the machine constraint given by the user
+static  const char *user_slot_machine = nullptr; // the machine name given by the user
 static  const char *global_schedd_constraint = NULL; // argument from -schedd-constraint
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
@@ -289,17 +286,46 @@ static std::vector<const char *> autoformat_args;
 
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
-static	int			analysis_mode = 0;
+static	int			analysis_mode = 0;  // use anaMode* enum
+static	int			analysis_match_mode = anaMatchModePslot;
 static  int			cOwnersOnCmdline = 0;
 
 static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values above.
 
-// these are used in analysis
-KeyToClassaAdMap startdAds;
+// these are used in analysis and detecting unmatchable jobs
+struct RelatedClassads startdAds;
+std::map<int, ClassAd> autoclusterRejAds; // per-autocluster match reject reason ads from the schedd
 int longest_slot_machine_name = 0;
 int longest_slot_name = 0;
 bool single_machine = false;
-const char* single_machine_label = NULL;
+const char* single_machine_label = nullptr;
+FILE* capture_raw_fp = nullptr; // capture raw query results to this file, used for reproducing bugs
+
+// open the raw ads capture file if it is not already open
+bool OpenCaptureFP(const char * filename, FILE* & fp) {
+	if (filename && ! fp) {
+		if (MATCH == strcmp(capture_raw_results, "-")) {
+			fp = stdout;
+		} else if (MATCH == strcmp(capture_raw_results, "-2")) {
+			fp = stderr;
+		} else {
+			const char * mode = "wb";
+			if (*filename == '+') {
+				++filename;
+				mode = "ab";
+			}
+			fp = safe_fopen_wrapper(filename, mode);
+		}
+		return fp != nullptr;
+	}
+	return false;
+}
+void CloseCaptureFP(const char * filename, FILE* & fp) {
+	if (filename && *filename != '-' && fp) {
+		fclose(fp); fp = nullptr;
+	}
+}
+
 
 // The schedd will have one of these structures per owner, and one for the schedd as a whole
 // these counters are new for 8.7, and used with the code that keeps live counts of jobs
@@ -543,9 +569,16 @@ int main (int argc, const char **argv)
 
 	// check if analysis is required
 	if (better_analyze || dash_unmatchable) {
-		setupAnalysis(Collectors, machineads_file, machineads_file_format, user_slot_constraint);
+		OpenCaptureFP(capture_raw_results, capture_raw_fp);
+		setupAnalysis(Collectors, machineads_file, machineads_file_format, user_slot_constraint, user_slot_machine);
+		// if we got only dynamic slots back from the query, then we an't so P-slot matching
+		// so switch to all slots matching.
+		if (startdAds.numDynamic > 1 && startdAds.numOverlayCandidates == 0 && analysis_match_mode == anaMatchModePslot) {
+			if (verbose) fprintf(stderr, "Fetch returned only Static and Dynamic slots, setting match mode to All\n");
+			analysis_match_mode = anaMatchModeAlways;
+		}
 		if (userprios_file || analyze_with_userprio) {
-			setupUserpriosForAnalysis(pool, userprios_file);
+			setupUserpriosForAnalysis(pool, capture_raw_fp, userprios_file);
 		}
 	}
 
@@ -770,6 +803,43 @@ parse_analyze_detail(const char * pch, int current_details)
 	return current_details | details | flg;
 }
 
+// parse -hold:<code/subcode> option and convert it to a constraint.
+static void add_hold_code_constraint(const char * opts) {
+
+	std::string constr;
+
+	for (auto & opt : StringTokenIterator(opts, ",")) {
+		const char * pcode = opt.c_str();
+		char * endp = nullptr;
+		int code = strtol(pcode, &endp, 10);
+		if (endp > pcode) {
+			if ( ! constr.empty()) constr += " || ";
+			int subcode = -1;
+			if (*endp == '/') {
+				++endp;
+				char * ep2 = endp;
+				subcode = strtol(endp, &ep2, 10);
+				if (ep2 <= endp) { subcode = -1; }
+			}
+			if (subcode >= 0) {
+				constr += "(" ATTR_HOLD_REASON_CODE "==";
+				constr += std::to_string(code);
+				constr += " && " ATTR_HOLD_REASON_SUBCODE "==";
+				constr += std::to_string(subcode);
+				constr += ")";
+			} else {
+				constr += ATTR_HOLD_REASON_CODE "==";
+				constr += std::to_string(code);
+			}
+		} else if (!opt.empty()) {
+			fprintf(stderr, "Warning \"%s\" is not a hold code and/or subcode. ignoring\n", opt.c_str());
+		}
+	}
+	if ( ! constr.empty()) {
+		Q.addAND(constr.c_str());
+	}
+}
+
 
 // this enum encodes the user choice of the various reports that condor_q can show
 // The first few are mutually exclusive, the last are flags
@@ -782,6 +852,7 @@ enum {
 	QDO_JobGridInfo,
 	QDO_JobGridEC2Info,
 	QDO_JobHold,
+	QDO_JobHoldCodes,
 	QDO_JobIO,
 	QDO_Factory,
 	QDO_DAG,
@@ -1118,7 +1189,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				fprintf( stderr, "Error: %s requires another parameter\n", dash_arg);
 				exit(1);
 			}
-			user_slot_constraint = argv[++i];
+			user_slot_machine = argv[++i];
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "address", 1)) {
@@ -1275,6 +1346,10 @@ processCommandLineArguments (int argc, const char *argv[])
 					other |= usage_JobStatus;
 				} else if (is_arg_prefix(argv[i], "submit", 2) || is_arg_prefix(argv[i], "Submit", 2)) {
 					other |= usage_SubmitMethod;
+				} else if (is_arg_prefix(argv[i], "hold", 2) || is_arg_prefix(argv[i], "Hold", 2)) {
+					other |= usage_HoldCodes;
+				} else if (is_arg_prefix(argv[i], "vacate", 2) || is_arg_prefix(argv[i], "Vacate", 2)) {
+					other |= usage_VacateCodes;
 				} else if (is_arg_prefix(argv[i], "diagnostics", 4) || is_arg_prefix(argv[i], "dry-run", 3)) {
 					other |= usage_DiagOpts;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
@@ -1384,7 +1459,8 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 		}
 		else
-		if (is_dash_arg_prefix(dash_arg, "hold", 2) || is_dash_arg_prefix(dash_arg, "held", 2)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "hold", &pcolon, 2) ||
+			is_dash_arg_colon_prefix(dash_arg, "held", &pcolon, 2)) {
 			std::string expr;
 			formatstr(expr, ATTR_JOB_STATUS "==%d", HELD);
 			Q.addAND (expr.c_str());
@@ -1394,6 +1470,26 @@ processCommandLineArguments (int argc, const char *argv[])
 				fprintf( stderr, "-run and -hold/held or -idle are incompatible\n" );
 				usage( argv[0] );
 				exit( 1 );
+			}
+			if (pcolon && pcolon[1]) {
+				add_hold_code_constraint(++pcolon);
+			}
+		}
+		else
+		if (is_dash_arg_colon_prefix(dash_arg, "hold-codes", &pcolon, 6) ||
+			is_dash_arg_colon_prefix(dash_arg, "holdcodes", &pcolon, 5)) {
+			std::string expr;
+			formatstr(expr, ATTR_JOB_STATUS "==%d", HELD);
+			Q.addAND (expr.c_str());
+			show_held = QDO_JobHoldCodes;
+			querying_partial_clusters = true;
+			if (dash_run || dash_idle) {
+				fprintf( stderr, "-hold-codes incompatible with -idle or -run\n" );
+				usage( argv[0] );
+				exit( 1 );
+			}
+			if (pcolon && pcolon[1]) {
+				add_hold_code_constraint(++pcolon);
 			}
 		}
 		else
@@ -1667,7 +1763,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "normal", "run", "goodput", "grid", "grid:ec2", "hold", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "normal", "run", "goodput", "grid", "grid:ec2", "hold", "holdcodes", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -1888,15 +1984,6 @@ local_render_owner(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 	if ( ! ad->LookupString(ATTR_OWNER, out))
 		return false;
 
-#ifdef NO_DEPRECATE_NICE_USER
-	int niceUser;
-	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-		char tmp[sizeof(NiceUserName)+2];
-		strcpy(tmp, NiceUserName);
-		strcat(tmp, ".");
-		out.insert(0, tmp);
-	}
-#endif
 	max_owner_name = MAX(max_owner_name, (int)out.length());
 	return true;
 }
@@ -2053,6 +2140,7 @@ usage (const char *myName, int other)
 		"\t-goodput\t\t Display job goodput statistics\n"
 		"\t-help [Universe|State]\t Display this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\t Get information about jobs on hold\n"
+		"\t-hold-codes\t\t Display first job for each unique hold code and subcode\n"
 		"\t-io\t\t\t Display information regarding I/O\n"
 		"\t-batch\t\t\t Display DAGs or batches of similar jobs as a single line\n"
 		"\t-nobatch\t\t Display one line per job, rather than one line per batch\n"
@@ -2125,7 +2213,8 @@ usage (const char *myName, int other)
 			"\t                    \t to the file. if the filename is prefixed with + then ads are\n"
 			"\t                    \t appended to the file. Filename can be - to print to stdout and\n"
 			"\t                    \t -2 to print to stderr. default is to print to stdout.\n"
-			"\n    The file produced by -capture-raw-results can be used with the -jobads argument to reproduce\n"
+			"\t                    \t When combined with -analyze, slot ads are also captured."
+			"\n    The file produced by -capture can be used with the -jobads argument to reproduce\n"
 			"the results a particular query repeatedly, and to see how a projection is expanded to pick up\n"
 			"referenced attributes.\n"
 		);
@@ -2161,6 +2250,23 @@ usage (const char *myName, int other)
 				break;
 			}
 			printf("\t%3d  %s\n", met, display.c_str());
+		}
+		printf("\n");
+	}
+	if (other & usage_HoldCodes) {
+		printf("    %s codes:\n", ATTR_HOLD_REASON_CODE);
+		for (auto hc : CONDOR_HOLD_CODE::_values()) {
+			if (hc._to_integral() >= 1000) break;
+			printf("\t%3d  %s\n", hc._to_integral(), hc._to_string());
+		}
+		printf("\n");
+	}
+	if (other & usage_VacateCodes) {
+		printf("    %s codes:\n", ATTR_VACATE_REASON_CODE);
+		printf("\t1000  JobPolicyVacate\n");
+		for (auto hc : CONDOR_HOLD_CODE::_values()) {
+			if (hc._to_integral() <= 1000) continue;
+			printf("\t%4d  %s\n", hc._to_integral(), hc._to_string());
 		}
 		printf("\n");
 	}
@@ -2243,6 +2349,7 @@ extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
 extern const char * const jobGridEC2_PrintFormat;
 extern const char * const jobHold_PrintFormat;
+extern const char * const jobHoldCodes_PrintFormat;
 extern const char * const jobIO_PrintFormat;
 extern const char * const jobFactory_PrintFormat;
 extern const char * const jobDAG_PrintFormat;
@@ -2276,7 +2383,11 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		else { 
 			int mode = QDO_JobNormal;
 			if (show_held) {
-				mode = QDO_JobHold;
+				if (show_held == QDO_JobHoldCodes) {
+					mode = QDO_JobHoldCodes;
+				} else {
+					mode = QDO_JobHold;
+				}
 				wide_mode = true;
 			} else if (dash_batch) {
 				mode = QDO_Progress;
@@ -2305,6 +2416,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
 		{ QDO_JobGridEC2Info, "GRID_EC2", jobGridEC2_PrintFormat },
 		{ QDO_JobHold,        "HOLD",     jobHold_PrintFormat },
+		{ QDO_JobHoldCodes,   "HOLDCODES",jobHoldCodes_PrintFormat },
 		{ QDO_JobIO,          "IO",       jobIO_PrintFormat },
 		{ QDO_DAG,            "DAG",      jobDAG_PrintFormat },
 		{ QDO_Factory,        "FACTORY",  jobFactory_PrintFormat },
@@ -2523,18 +2635,17 @@ static int lookup_dagman_job_id(ClassAd* job)
 static void group_job(JobRowOfData & jrod, ClassAd* job)
 {
 	std::string key;
-	//PRAGMA_REMIND("TJ: this should be a sort of arbitrary keys, including numeric keys.")
 	//PRAGMA_REMIND("TJ: fix to honor ascending/descending.")
 	if ( ! group_by_keys.empty()) {
 		for (size_t ii = 0; ii < group_by_keys.size(); ++ii) {
-			std::string value;
-			if (job->LookupString(group_by_keys[ii].expr, value)) {
-				key += value;
+			classad::Value value;
+			if (job->EvaluateExpr(group_by_keys[ii].expr, value)) {
+				ClassAdValueToString(value, key);
 				key += "\n";
 			}
 		}
 
-		// tack on the row unique adentifier as a final sort key
+		// tack on the row unique identifier as a final sort key
 		// (this will usually be cluster/proc or autocluster id)
 		formatstr_cat(key, "%016llX", jrod.id);
 		rod_sort_key_map[key] = jrod.id;
@@ -2642,7 +2753,7 @@ void cleanup_cache_optimizer()
 }
 
 // write an ad to the given fp in standard long classad form
-static bool dump_long_to_fp(void * pv, ClassAd *job)
+bool dump_long_to_fp(void * pv, ClassAd *job)
 {
 	std::string line;
 
@@ -2667,30 +2778,13 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	count_job(app.sumy, job);
 
 	ASSERT( ! g_stream_results);
-	if (capture_raw_results) {
-		if ( ! capture_raw_fp) {
-			if (MATCH == strcmp(capture_raw_results, "-")) {
-				capture_raw_fp = stdout;
-			} else if (MATCH == strcmp(capture_raw_results, "-2")) {
-				capture_raw_fp = stderr;
-			} else {
-				const char * mode = "wb";
-				const char * filename = capture_raw_results;
-				if (*filename == '+') {
-					++filename;
-					mode = "ab";
-				}
-				capture_raw_fp = safe_fopen_wrapper(filename, mode);
-			}
-			// if we just opened the file, print a banner
-			if (capture_raw_fp) {
-				fprintf(capture_raw_fp, "# condor_q v" CONDOR_VERSION " raw query results\n");
-			}
-		}
-		if (capture_raw_fp) {
-			dump_long_to_fp(capture_raw_fp, job);
+	if (capture_raw_results && ! capture_raw_fp) {
+		// if we just opened the file, print a banner
+		if (OpenCaptureFP(capture_raw_results, capture_raw_fp)) {
+			fprintf(capture_raw_fp, "# condor_q v" CONDOR_VERSION " raw query results\n");
 		}
 	}
+	if (capture_raw_fp) { dump_long_to_fp(capture_raw_fp, job); }
 
 	union _jobid jobid;
 
@@ -2808,6 +2902,7 @@ void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_unde
 		for (KeyToIdMap::const_iterator it = order.begin(); it != order.end(); ++it) {
 			ROD_MAP_BY_ID::iterator jt = results.find(it->second);
 			if (jt != results.end()) {
+				if (jt->second.flags & JROD_SKIP) continue;
 				if (children_under_parents && (jt->second.flags & JROD_PRINTED)) continue;
 				print_a_result(buf, jt->second);
 				if (children_under_parents && jt->second.children) {
@@ -2817,6 +2912,7 @@ void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_unde
 		}
 	} else {
 		for(ROD_MAP_BY_ID::iterator it = results.begin(); it != results.end(); ++it) {
+			//if (it->second.flags & JROD_SKIP) continue;
 			if (children_under_parents && (it->second.flags & JROD_PRINTED)) continue;
 			print_a_result(buf, it->second);
 			if (children_under_parents && it->second.children) {
@@ -3260,11 +3356,22 @@ static void reduce_children(child_progress & prog, JobRowOfData * pjr, int & dep
 	}
 }
 
+// for a given number, return how many chars would be needed to print it.
+static char number_width(int num) {
+	char wid = 1;
+	for (int val = 10; val < 999999999; val *= 10) {
+		if (num < val) return wid;
+		++wid;
+	}
+	return wid;
+}
+
 // passed to fnFixupWidthsForProgressFormat
 struct _fixup_progress_width_values {
 	int owner_width;
 	int batch_name_width;
 	int ids_width;
+	char count_widths[5]; // done, active, idle, held, total
 	bool any_held;
 	bool zeros_as_dashes;
 	char alt_kind;
@@ -3287,9 +3394,16 @@ static int fnFixupWidthsForProgressFormat(void* pv, int index, Formatter * fmt, 
 		wid = MAX(10, p->batch_name_width);
 		p->batch_name_width = wid; // return the actual width
 		fmt->width = -wid;
-	} else if (index == 6) { // held
-		if ( ! p->any_held && ! global) {
-			fmt->options |= FormatOptionHideMe;
+	} else if (index >= 3 && index < 3+5) { // ixFirstCounterCol = 3;
+		int count_wid = p->count_widths[index-3];
+		char * pf = const_cast<char*>(fmt->printfFmt);
+		if (pf && pf[1] >= '6' && pf[1] <= '9' && count_wid > (pf[1] - '0')) {
+			pf[1] = '0' + count_wid; fmt->width = count_wid;
+		}
+		if (index == 6) { // held
+			if ( ! p->any_held && ! global) {
+				fmt->options |= FormatOptionHideMe;
+			}
 		}
 	}
 	if (p->zeros_as_dashes && (index >= 3 && index <= 7)) {
@@ -3347,22 +3461,27 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		int ixCol = ixFirstCounterCol; // starting column for counters
 		jr.rov.Column(ixCol)->SetIntegerValue(num_done);
 		jr.rov.set_col_valid(ixCol, (bool)(num_done > 0));
+		wids.count_widths[0] = MAX(wids.count_widths[0], number_width(num_done));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_active);
 		jr.rov.set_col_valid(ixCol, (bool)(num_active > 0));
+		wids.count_widths[1] = MAX(wids.count_widths[1], number_width(num_active));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_idle);
 		jr.rov.set_col_valid(ixCol, (bool)(num_idle > 0));
+		wids.count_widths[2] = MAX(wids.count_widths[2], number_width(num_idle));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_held);
 		jr.rov.set_col_valid(ixCol, (bool)(num_held > 0));
+		wids.count_widths[3] = MAX(wids.count_widths[3], number_width(num_held));
 
 		++ixCol;
 		jr.rov.Column(ixCol)->SetIntegerValue(num_total);
 		jr.rov.set_col_valid(ixCol, (bool)(num_total > 0));
+		wids.count_widths[4] = MAX(wids.count_widths[4], number_width(num_total));
 
 		int name_width = 0;
 		jr.getString(ixOwnerCol, name_width);
@@ -3456,11 +3575,30 @@ const char * summarize_sinful_for_display(std::string & addrsumy, const char * a
 }
 
 
+void populate_summary_analysis(ClassAd * summary_ad)
+{
+	if ( ! summary_ad) return;
+	auto *expr = summary_ad->Lookup("Analyze");
+	if ( ! expr) return;
+
+	auto anal_ad = dynamic_cast<ClassAd*>(expr);
+	if (anal_ad) {
+		for (auto it = anal_ad->begin(); it != anal_ad->end(); ++it) {
+			auto * ad = dynamic_cast<ClassAd*>(it->second);
+			int acid = -1;
+			if (ad && ad->LookupInteger(ATTR_AUTO_CLUSTER_ID, acid)) {
+				autoclusterRejAds[acid].Update(*ad);
+			}
+		}
+	}
+}
+
 // Given a list of jobs, do analysis for each job and print out the results.
 //
 bool print_jobs_analysis (
 	IdToClassaAdMap & jobs,
 	const char * source_label,
+	ClassAd * q_summary_ad,
 	DaemonAllowLocateFull * pschedd_daemon)
 {
 	int console_width = widescreen ? getDisplayWidth() : 80;
@@ -3537,8 +3675,8 @@ bool print_jobs_analysis (
 				printf(fmt.c_str(), "Name", "Type", "Matches Job", "Matches Slot", "Match %");
 				printf(fmt.c_str(), "------------------------", "----", "------------", "------------", "----------");
 			}
-			for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
-				doSlotRunAnalysis(it->second.get(), job_autoclusters, console_width, analyze_detail_level, analysis_mode >= anaModeSummary);
+			for (auto & offer : startdAds.allAds) {
+				doSlotRunAnalysis(offer.get(), job_autoclusters, console_width, analyze_detail_level, analysis_mode >= anaModeSummary);
 			}
 		}
 	} else if (analysis_mode == anaModeSummary) {
@@ -3598,19 +3736,19 @@ bool print_jobs_analysis (
 				anaPrio prio;
 				anaCounters ac;
 				std::string job_status;
-				doJobRunAnalysis(job, NULL, job_status, true, ac, &prio, NULL);
+				doJobRunAnalysis(job, NULL, job_status, anaMatchModeAlways, ac, &prio, NULL);
 				const char * fmt = "%-13s %-12s %12d %11d %11s %10d %9d %s\n";
 
 				achRunning[0] = 0;
 				if (cRunning) { snprintf(achRunning, sizeof(achRunning), "%d/", cRunning); }
-				snprintf(achRunning+strlen(achRunning), 12, "%d", ac.machinesRunningUsersJobs);
+				snprintf(achRunning+strlen(achRunning), 12, "%d", ac.slotsRunningYourJobs);
 
 				printf(fmt, achJobId, achAutocluster,
-						ac.totalMachines - ac.fReqConstraint,
+						ac.totalSlots - ac.fReqConstraint,
 						ac.fOffConstraint,
 						achRunning,
-						ac.machinesRunningJobs - ac.machinesRunningUsersJobs,
-						ac.available,
+						ac.slotsRunningJobs - ac.slotsRunningYourJobs,
+						ac.available_now,
 						owner.c_str());
 			}
 		}
@@ -3652,9 +3790,25 @@ bool print_jobs_analysis (
 
 	} else { // the regular condor_q -better output, not reversed, not summarized.
 
+		// if the summary ad has an analysis sub-ad (added in 24.X), iterate
+		// the per-autocluster sub-ads and copy them into our global autoclusterRejAds collection
+		if (q_summary_ad) {
+			populate_summary_analysis(q_summary_ad);
+		}
+
+		// in verbose mode, print the autocluster reject ads
+		if (verbose && ! autoclusterRejAds.empty()) {
+			fprintf(stderr, "job query analysis summary ad has autocluster rejection ads:\n");
+			for (auto & [acid, ad] : autoclusterRejAds) {
+				std::string adbuf;
+				fprintf(stderr, "\n%s", formatAd(adbuf,ad,"\t"));
+			}
+			fprintf(stderr, "\n");
+		}
+
 		for (auto it = jobs.begin(); it != jobs.end(); ++it) {
 			ClassAd *job = it->second.get();
-			printJobRunAnalysis(job, pschedd_daemon, analyze_detail_level, analyze_with_userprio);
+			printJobRunAnalysis(job, pschedd_daemon, analyze_detail_level, analyze_with_userprio, analysis_match_mode);
 		}
 	}
 
@@ -3689,6 +3843,43 @@ bool print_jobs_analysis (
 		}
 	}
 #endif
+
+static void
+reduce_holds(ROD_MAP_BY_ID & results, KeyToIdMap sorted_results)
+{
+	int last_code=-1, last_subcode=-1;
+	JobRowOfData * first_row = nullptr; // pointer to first row for each unique CODE/SUBCODE 
+	const int code_col = 1;
+	const int subcode_col = 2;
+	const int count_col = 3;
+
+	for (auto & [key, id] : sorted_results) {
+		auto it = results.find(id);
+		if (it != results.end()) {
+			auto & jr = it->second;
+			int code=-1, subcode = -1;
+			if (jr.getNumber(code_col, code)) {
+				jr.getNumber(subcode_col, subcode);
+				if (last_code == code && last_subcode == subcode) {
+					jr.flags |= JROD_SKIP;
+					if (first_row) { 
+						auto * pcolval = first_row->rov.Column(count_col);
+						long long count = 0;
+						if (pcolval->IsIntegerValue(count)) {
+							count += 1;
+							pcolval->SetIntegerValue(count);
+						}
+					}
+				} else {
+					last_code = code; last_subcode = subcode;
+					jr.flags |= JROD_COOKED;
+					first_row = &jr;
+					first_row->rov.Column(count_col)->SetIntegerValue(1);
+				}
+			}
+		}
+	}
+}
 
 // query SCHEDD daemon for jobs. and then print out the desired job info.
 // this function handles -analyze, -streaming, -dag and all normal condor_q output
@@ -3785,6 +3976,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			// we do this so that a subsequent "condor_q -jobs <file> -nobatch" will show the correct job times.
 			Q.requestServerTime(true);
 		}
+		if (better_analyze) { Q.forAnalysis(true); }
 		std::vector<std::string> attrs;
 		std::copy(pattrs->begin(), pattrs->end(), std::back_inserter(attrs));
 		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
@@ -3811,10 +4003,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	}
 
 	// if we opened a raw capture file, we can close it now.
-	if (capture_raw_results && *capture_raw_results != '-' && capture_raw_fp) {
-		fclose(capture_raw_fp);
-		capture_raw_fp = NULL;
-	}
+	CloseCaptureFP(capture_raw_results, capture_raw_fp);
 
 	// Modern schedds will return as summary ad. otherwise we create one from our own totals
 	// in either case, we (sometimes) want to skip printing of the summary ad when there are no jobs
@@ -3853,9 +4042,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		
 		//PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
 		DaemonAllowLocateFull schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+		auto ret = print_jobs_analysis(ads, source_label.c_str(), summary_ad, &schedd);
 		delete summary_ad;
-
-		return print_jobs_analysis(ads, source_label.c_str(), &schedd);
+		return ret;
 	}
 
 	if (dash_long) {
@@ -3887,7 +4076,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 
 	if (cResults > 0) {
 		linkup_nodes_by_id(rod_result_map);
-		if (dash_batch) {
+		if (show_held == QDO_JobHoldCodes) {
+			reduce_holds(rod_result_map, rod_sort_key_map);
+		} else if (dash_batch) {
 			reduce_results(rod_result_map);
 		} else if (dash_dag) {
 			format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
@@ -4111,7 +4302,7 @@ show_file_queue(const char* jobads, const char* userlog)
 	}
 
 	if (better_analyze) {
-		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
+		return print_jobs_analysis(jobs, source_label.c_str(), nullptr, NULL);
 	}
 
 	CondorClassAdListWriter writer(dash_long_format);
@@ -4143,7 +4334,9 @@ show_file_queue(const char* jobads, const char* userlog)
 		int cResults = (int)rod_result_map.size();
 		if (cResults > 0) {
 			linkup_nodes_by_id(rod_result_map);
-			if (dash_batch) {
+			if (show_held == QDO_JobHoldCodes) {
+				reduce_holds(rod_result_map, rod_sort_key_map);
+			} else if (dash_batch) {
 				reduce_results(rod_result_map);
 			} else if (dash_dag) {
 				format_name_column_for_dag_nodes(rod_result_map, name_column_index, name_column_width);
@@ -4256,8 +4449,24 @@ const char * const jobHold_PrintFormat = "SELECT\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
 "   Owner         AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
 "   EnteredCurrentStatus  AS HELD_SINCE WIDTH 11 PRINTAS QDATE OR ??\n"
+"   HoldReasonCode AS CODE NOSUFFIX PRINTF %4d OR ?\n"
+"   HoldReasonSubCode AS '/SUB' NOPREFIX PRINTF '/%-3d' TRUNCATE OR ' '\n"
 "   HoldReason           AS HOLD_REASON WIDTH 0\n"
 "SUMMARY STANDARD\n";
+
+const char * const jobHoldCodes_PrintFormat = "SELECT\n"
+ATTR_OWNER               " AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
+ATTR_HOLD_REASON_CODE    " AS CODE   NOSUFFIX PRINTF %4d OR ?\n"
+ATTR_HOLD_REASON_SUBCODE " AS '/SUB' NOPREFIX PRINTF '/%-3d' OR ' '\n"
+ATTR_JOB_STATUS          " AS '   COUNT ' PRINTF %9d OR _\n"    // JobStatus is a convenient int attr that is guaranteed to exist.
+ATTR_CLUSTER_ID          " AS OLDEST_JOB_ID PRINTAS JOB_ID\n"
+ATTR_ENTERED_CURRENT_STATUS " AS HELD_SINCE WIDTH 11 PRINTAS QDATE OR ??\n"
+ATTR_HOLD_REASON         " AS HOLD_REASON WIDTH 0\n"
+"GROUP BY \n"
+ATTR_HOLD_REASON_CODE "\n"
+ATTR_HOLD_REASON_SUBCODE "\n"
+"SUMMARY NONE\n";
+
 
 const char * const jobIO_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
@@ -4277,7 +4486,7 @@ const char * const jobTotals_PrintFormat = "SELECT NOHEADER\nSUMMARY STANDARD";
 const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 "   AutoClusterId AS '   ID'    WIDTH 5 PRINTF %5d\n"
 "   JobCount      AS COUNT      WIDTH 5 PRINTF %5d\n"
-"   JobUniverse   AS UINVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
+"   JobUniverse   AS UNIVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
 "   RequestCPUs   AS CPUS       WIDTH 4 PRINTF %4d OR ??\n"
 "   RequestMemory AS MEMORY     WIDTH 6 PRINTF %6d OR ??\n"
 "   RequestDisk   AS '    DISK' WIDTH 8 PRINTF %8d OR ??\n"

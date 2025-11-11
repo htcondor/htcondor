@@ -108,7 +108,8 @@ bool
 CODMgr::removeClaim( Claim* c ) 
 {
 	auto it = std::find(claims.begin(), claims.end(), c);
-	if (it != claims.end()) {
+	bool found = it != claims.end();
+	if (found) {
 		delete *it;
 		claims.erase(it);
 		rip->update_needed(Resource::WhyFor::wf_cod);
@@ -117,7 +118,7 @@ CODMgr::removeClaim( Claim* c )
 				 "WARNING: CODMgr::removeClaim() could not find claim %s\n", 
 				 c->id() );
 	}
-	return it != claims.end();
+	return found;
 }
 
 
@@ -200,6 +201,7 @@ int
 CODMgr::release( Stream* s, ClassAd* req, Claim* claim )
 {
 	VacateType vac_type = getVacateType( req );
+	bool job_done = false; // for now assume that job is not done already
 
 		// tell this claim we're trying to release it
 	claim->setPendingCmd( CA_RELEASE_CLAIM );
@@ -224,7 +226,7 @@ CODMgr::release( Stream* s, ClassAd* req, Claim* claim )
 			// clean up the claim when it's gone.  so, all we can do
 			// now is stash the Stream in the claim, and signal the
 			// starter as appropriate;
-		claim->deactivateClaim( vac_type == VACATE_GRACEFUL );
+		claim->deactivateClaim( vac_type == VACATE_GRACEFUL, job_done, false );
 		break;
 
 	case CLAIM_VACATING:
@@ -233,7 +235,7 @@ CODMgr::release( Stream* s, ClassAd* req, Claim* claim )
 			// now that we know to release this claim, there's nothing
 			// else to do except wait for the starter to exit.
 		if( vac_type == VACATE_FAST ) {
-			claim->deactivateClaim( false );
+			claim->deactivateClaim( false, job_done, false );
 		}
 		break;
 
@@ -304,13 +306,13 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	interactionLogicCODRunning();
 
 		// finally, spawn the starter and COD job itself
+		// spawnStarter will take ownership even on failure
 
 	pid_t starter_pid = claim->spawnStarter(tmp_starter, new_req_ad);
 	if( !starter_pid ) {
 			// Failed to spawn, make sure everything goes back to
 			// normal with the opportunistic claim
 		interactionLogicCODStopped();
-		delete tmp_starter;
 	} else {
 		// We delete the starter object here even though we created it successfully
 		// because this will have the side effect of removing the starter object
@@ -340,6 +342,7 @@ CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 {
 	std::string err_msg;
 	VacateType vac_type = getVacateType( req );
+	bool job_done = false;
 
 	claim->setPendingCmd( CA_DEACTIVATE_CLAIM );
 	claim->setRequestStream( s );
@@ -369,7 +372,7 @@ CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 			// notify the other side when it's gone.  so, all we can
 			// do now is stash the Stream in the claim, and signal the
 			// starter as appropriate;
-		claim->deactivateClaim( vac_type == VACATE_GRACEFUL );
+		claim->deactivateClaim( vac_type == VACATE_GRACEFUL, job_done, false );
 		break;
 
 	case CLAIM_VACATING:
@@ -379,7 +382,7 @@ CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 			// stream, there's nothing else to do except wait for the
 			// starter to exit.
 		if( vac_type == VACATE_FAST ) {
-			claim->deactivateClaim( false );
+			claim->deactivateClaim( false, job_done, false );
 		}
 		break;
 

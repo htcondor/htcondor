@@ -14,709 +14,603 @@ set -e
 #
 
 usage() {
-	cat <<-EOF
-	Specify only one of the following:
-	--dist		: Display detected operating system and exit
-	-h, --help	: Display this message and exit
-	--download	: Download the tarball for a user-level installation and exit.
-	--dry-run	: Do not install, just print commands [default]
-	--no-dry-run	: Issue all the commands neeed to install HTCondor
+    cat <<-EOF
+Specify only one of the following:
+--dist      : Display detected operating system and exit
+-h, --help  : Display this message and exit
+--download  : Download the tarball for a user-level installation and exit.
+--dry-run   : Do not install, just print commands [default]
+--no-dry-run: Issue all the commands neeed to install HTCondor
 
-	Installation options:
-	--channel NAME	: Specify version channel to install; NAME can be
-	    current: Most recent release with new features [default]
-	    stable : Most recent release with only bug-fixes
-	--password	: Set the password used to secure the pool.  Use only if
-	          	  nobody else can log into the machine.  Otherwise specify
-	          	  in the environment (GET_HTCONDOR_PASSWORD) or interactively.
-	--shared-filesystem-domain NAME : Specifies that machines installed with
-	    the same NAME share a filesystem.
+Installation options:
+--channel NAME: Specify version channel to install; NAME can be
+       feature: Most recent release with new features [default]
+       lts    : Most recent release with only bug-fixes
+--password: Set the password used to secure the pool.  Use only if
+            nobody else can log into the machine.  Otherwise specify
+            in the environment (GET_HTCONDOR_PASSWORD) or interactively.
+--shared-filesystem-domain NAME: Specifies that machines installed with
+                                 the same NAME share a filesystem.
 
-	Installation options, specify only one:
-	--minicondor            : Install a complete stand-alone HTCondor.  [default]
-	--central-manager NAME	: Install as the central manager role.
-	--submit NAME		: Install as the submit role.
-	--execute NAME		: Install as the execute role.
-	     The NAME of central manager's machine must be a DNS name resolvable
-	     on all the machines in the pool, or an IP address.
-	EOF
-	exit 0
+Installation options, specify only one:
+--minicondor: Install a complete stand-alone HTCondor.  [default]
+--cm NAME   : Install as the central manager (CM) role.
+--ap NAME   : Install as the access point (AP) role.
+--ep NAME   : Install as the execution point (EP) role.
+     The NAME of central manager's machine must be a DNS name resolvable
+     on all the machines in the pool, or an IP address.
+EOF
+    exit 0
 }
 
 command_exists() {
-	command -v "$@" > /dev/null 2>&1
-}
-
-install_config_file() {
-	# Install a config file by either copying it from examples dir, or if
-	# that does not exist, curl it.  Hopefully we do not need to curl it.
-	if [ -r "/usr/share/condor/get_configs/$@" ]; then
-		cp "/usr/share/condor/get_configs/$@" /etc/condor/config.d/.
-		chmod 644 "/etc/condor/config.d/$@"
-	fi
+    command -v "$@" > /dev/null 2>&1
 }
 
 is_download() {
-	[[ $DOWNLOAD ]]
+    [[ $DOWNLOAD ]]
 }
 
 is_dry_run() {
-	[[ $DRY_RUN ]]
+    [[ $DRY_RUN ]]
 }
 
 is_display_dist() {
-	[[ $DIST ]]
+    [[ $DIST ]]
 }
 
 is_darwin() {
-	case "$(uname -s)" in
-	*darwin* ) true ;;
-	*Darwin* ) true ;;
-	* ) false;;
-	esac
+    case "$(uname -s)" in
+        *darwin* ) true ;;
+        *Darwin* ) true ;;
+        * ) false;;
+    esac
 }
 
 
 # Check if this is a forked Linux distro
 check_forked() {
 
-	# Check for lsb_release command existence, it usually exists in forked distros
-	if command_exists lsb_release; then
-		# Check if the `-u` option is supported
-		# If the command has exited successfully, it means we're in a forked distro
-		if lsb_release -a -u > /dev/null 2>&1; then
-			# Print info about current distro
-			cat <<-EOF
-			You're using '$lsb_dist' version '$dist_version'.
-			EOF
+    if [ "$ID" = 'linuxmint' ]; then
+        # Linux Mint is an Ubuntu fork
+        ID='ubuntu'
+        VERSION_CODENAME=$UBUNTU_CODENAME
+        case $VERSION_CODENAME in
+            focal) VERSION_ID=20.04;;
+            jammy) VERSION_ID=22.04;;
+            noble) VERSION_ID=24.04;;
+        esac
+    fi
 
-			# Get the upstream release info
-			lsb_dist=$(lsb_release           --id -u | cut -f2 | tr '[:upper:]' '[:lower:]')
-			dist_version=$(lsb_release --codename -u | cut -f2 | tr '[:upper:]' '[:lower:]')
-
-			# Print info about upstream distro
-			cat <<-EOF
-			Upstream release is '$lsb_dist' version '$dist_version'.
-			EOF
-			if is_display_dist; then
-				exit 0
-			fi
-		fi
-	else
-		if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
-			if [ "$lsb_dist" = "osmc" ]; then
-				# OSMC runs Raspbian
-				lsb_dist="raspbian"
-			else
-				# We're Debian and don't even know it!
-				lsb_dist="debian"
-			fi
-			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
-			case $dist_version in
-				12)
-					dist_version_number=12
-					dist_version="bookworm"
-				;;
-				11)
-					dist_version_number=11
-					dist_version="bullseye"
-				;;
-				10)
-					dist_version_number=10
-					dist_version="buster"
-				;;
-				9)
-					dist_version_number=9
-					dist_version="stretch"
-				;;
-				8|'Kali Linux 2')
-					dist_version_number=8
-					dist_version="jessie"
-				;;
-			esac
-		fi
-	fi
-
-	if is_display_dist; then
-		cat <<-EOF
-		You're using '$lsb_dist' version '$dist_version'.
-		EOF
-		exit 0
-	fi
+    if is_display_dist; then
+        cat <<-EOF
+You're using '$ID' version '$VERSION_ID' codename '$VERSION_CODENAME'.
+EOF
+        exit 0
+    fi
 }
 
 
 get_distribution() {
-	if [[ $DISTRIBUTION ]]; then
-		#
-		# For testing purposes.  DISTRIBUTION is a space-separated tuple:
-		#      ${lsb_dist} ${dist_version} ${dist_version_number}
-		# where $dist_version number is only set on Debian.  Because the list
-		# is space-separated, it must be quoted (or escaped) on the command-
-		# line.  The values generated by this script for the supported
-		# platforms follow.
-		#
-		#     debian bullseye 11
-		#     debian bookworm 12
-		#     ubuntu focal
-		#     ubuntu jammy
-		#     centos 7
-		#     rocky 8
-		#     rocky 9
-		#     almalinux 8
-		#     almalinux 9
-		#
+    if [[ $DISTRIBUTION ]]; then
+        #
+        # For testing purposes.  DISTRIBUTION is a space-separated tuple:
+        #      ${ID} ${VERSION_ID} ${VERSION_CODENAME}
+        # where $VERSION_CODENAME number is only set on Debian and Ubuntu.
+        # Because the list is space-separated, it must be quoted (or escaped)
+        # on the command-line.  The values generated by this script for the
+        # supported platforms follow.
+        #
+        #     debian 12 bookworm
+        #     debian 13 trixie
+        #     ubuntu 22 jammy
+        #     ubuntu 24 noble
+        #     almalinux 8
+        #     almalinux 9
+        #     rocky 8
+        #     rocky 9
+        #     amzn 2023
+        #     opensuse-leap 15
+        #
 
-		read lsb_dist dist_version dist_version_number <<< $DISTRIBUTION
-		return
-	fi
+        read -r ID VERSION_ID VERSION_CODENAME <<< "$DISTRIBUTION"
+        return
+    fi
 
-	lsb_dist=""
-	# Every system that we officially support has /etc/os-release
-	if [ -r /etc/os-release ]; then
-		lsb_dist=$(. /etc/os-release && echo "$ID")
-	fi
-	lsb_dist=$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')
+    # Every Linux system that we officially support has /etc/os-release
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+    fi
 
-	# An empty string for lsb_dist should be alright since the
-	# case statements don't act unless you provide an actual value
+    ARCH=$(arch)
+    repo_arch='noarch'
 
-	case $lsb_dist in
+    if [ "$ID" = 'almalinux' ]; then
+        if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
+            ARCH='x86_64_v2'
+            repo_arch='x86_64_v2'
+        fi
+    fi
 
-		ubuntu)
-			if command_exists lsb_release; then
-				dist_version=$(lsb_release --codename | cut -f2)
-			fi
-			if [[ ! $dist_version ]] && [ -r /etc/lsb-release ]; then
-				dist_version=$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")
-			fi
-		;;
+    check_forked
 
-		debian|raspbian)
-			# Echoing VERSION_CODENAME out of /etc/os-release works
-			# better on Devuan and is simpler... is that file missing on
-			# raspbian?
-			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
-			case $dist_version in
-				12)
-					dist_version="bookworm"
-				;;
-				11)
-					dist_version="bullseye"
-				;;
-				10)
-					dist_version="buster"
-				;;
-				9)
-					dist_version="stretch"
-				;;
-				8)
-					dist_version="jessie"
-				;;
-			esac
-		;;
+    VERSION_ID=${VERSION_ID%%.*}
 
-		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
-			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
-				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
-			fi
-			dist_version=$(echo "$dist_version" | cut -d. -f1)
-		;;
-
-		*)
-			if command_exists lsb_release; then
-				dist_version=$(lsb_release --release | cut -f2)
-			fi
-			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
-				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
-			fi
-		;;
-
-	esac
-
-	# Check if this is a forked Linux distro
-	check_forked
-
-	if [[ $SHOW_DISTRIBUTION ]]; then
-		echo "${lsb_dist} ${dist_version} ${dist_version_number}"
-		exit 0
-	fi
+    if [[ $SHOW_DISTRIBUTION ]]; then
+        echo "${ID} ${VERSION_ID} ${VERSION_CODENAME}"
+        exit 0
+    fi
 }
 
 do_configure_firewall() {
-	if command_exists firewall-cmd; then
-		echo -e "\n# Open port 9618 for use by HTCondor"
-		(
-			if ! is_dry_run; then
-				set -x
-			fi
-			$sh_c "firewall-cmd --zone=public --add-port=9618/tcp --permanent"
-			$sh_c "firewall-cmd --reload"
-		)
-	fi
+    if command_exists firewall-cmd; then
+        if firewall-cmd --state > /dev/null 2>&1; then
+            # The firewall is running, let's configure it
+            echo -e "\n# Open port 9618 for use by HTCondor"
+            (
+                if ! is_dry_run; then
+                    set -x
+                fi
+                $sh_c "firewall-cmd --zone=public --add-port=9618/tcp --permanent"
+                $sh_c "firewall-cmd --reload"
+            )
+        fi
+    fi
 }
 
 do_start_service() {
-	# Start HTCondor via systemd if detected, else via just condor_master
-	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] || ! command_exists systemctl; then
-		echo -e "\n# Start the HTCondor service in the background (without systemd)"
-		(
-			if ! is_dry_run; then
-				set -x
-			fi
-			$sh_c "condor_master"
-		)
-	else
-		echo -e "\n# Start the HTCondor service via systemd"
-		(
-			if ! is_dry_run; then
-				set -x
-			fi
-			$sh_c "systemctl enable condor"
-			$sh_c "systemctl start condor"
-		)
-	fi
+    # Start HTCondor via systemd if detected, else via just condor_master
+    if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] || ! command_exists systemctl; then
+        echo -e "\n# Start the HTCondor service in the background (without systemd)"
+        (
+            if ! is_dry_run; then
+                set -x
+            fi
+            $sh_c "condor_master"
+        )
+    else
+        echo -e "\n# Start the HTCondor service via systemd"
+        (
+            if ! is_dry_run; then
+                set -x
+            fi
+            $sh_c "systemctl enable condor"
+            $sh_c "systemctl start condor"
+        )
+    fi
 }
 
 do_token_security() {
-	# Remove the default 9.0 security configuration.  Arguably, the
-	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
-	# and adjust accordingly, which might make microversion upgrades easier.
-	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
+    # Remove the default 9.0 security configuration.  Arguably, the
+    # get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
+    # and adjust accordingly, which might make microversion upgrades easier.
+    $sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
-	# Ensure that the password directory exists, since the condor_master has
-	# not yet been run.
-	$sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_PASSWORD_DIRECTORY)"
+    # Ensure that the password directory exists, since the condor_master has
+    # not yet been run.
+    $sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_PASSWORD_DIRECTORY)"
 
-	# So 'echo' is a shell built-in, which means no command-line to show
-	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
-	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
-	# But if we're a dry run, then we need the $sh_c first.
-	if is_dry_run; then
-		$sh_c "echo -n \"${PASSWORD}\" | condor_store_cred add -c -i -"
-	else
-		echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
-	fi
+    # So 'echo' is a shell built-in, which means no command-line to show
+    # up in 'ps' and leak the password.  You MUST do the 'echo' before the
+    # '$sh_c', because the '$sh_c' itself will show up in 'ps'.
+    # But if we're a dry run, then we need the $sh_c first.
+    if is_dry_run; then
+        $sh_c "echo -n \"${PASSWORD}\" | condor_store_cred add -c -i -"
+    else
+        echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+    fi
 
-	# Ensure that the tokens directory exists, since the condor_master has
-	# not yet been run.
-	$sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
+    # Ensure that the tokens directory exists, since the condor_master has
+    # not yet been run.
+    $sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
 
-	# Now issue myself a token.
-	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
+    # Now issue myself a token.
+    $sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
 }
 
 do_install() {
-	# Figure out the distribution and version we are running on.
-	# This will set $lsb_dist and $dist_version.
-	get_distribution
+    # Figure out the distribution and version we are running on.
+    # This will set $ID and $VERSION_ID.
+    get_distribution
 
-	user=$(id -un 2>/dev/null || true)
+    user=$(id -un 2>/dev/null || true)
 
-	if is_dry_run; then
-		sh_c="echo"
-	elif [ "$user" != 'root' ]; then
-		if command_exists sudo; then
-			sh_c='sudo -E sh -c'
-		elif command_exists su; then
-			sh_c='su -c'
-		else
-			cat >&2 <<-'EOF'
-			Error: this installer needs the ability to run commands as root.
-			We are unable to find either "sudo" or "su" available to make this happen.
-			EOF
-			exit 1
-		fi
-	fi
+    if is_dry_run; then
+        sh_c="echo"
+    elif [ "$user" != 'root' ]; then
+        if command_exists sudo; then
+            sh_c='sudo -E sh -c'
+        elif command_exists su; then
+            sh_c='su -c'
+        else
+            cat >&2 <<-'EOF'
+Error: this installer needs the ability to run commands as root.
+We are unable to find either "sudo" or "su" available to make this happen.
+EOF
+            exit 1
+        fi
+    fi
 
-    case $lsb_dist in
-    scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
-        repo_cmd="dnf --assumeyes"
-        case $lsb_dist in
-        centos|scientific)
-            repo_cmd="yum --assumeyes"
+    case $ID in
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+            repo_cmd="dnf --assumeyes"
+            case $ID in
+                suse|opensuse-leap)
+                    repo_cmd="zypper --non-interactive"
+                    ;;
+            esac
+    esac
+    #
+    # Check for a previous installation.  The instructions below remove
+    # the HTCondor package(s) and whatever packages they depended on but
+    # which no other package(s) did.  However, neither set of instructions
+    # removes HTCondor's repositories, which will prevent downgrades.  I
+    # thinks that's OK for now.
+    #
+    if [ -f "/etc/condor/condor_config" ]; then
+        cat >&2 <<-'EOF'
+Error: HTCondor appears to have been installed previously on this system.
+
+You may update the existing install, or remove and then re-install.
+EOF
+        case $ID in
+        ubuntu|debian)
+            PACKAGE="condor"
+            if [[ ! $ROLE ]]; then
+                PACKAGE="minicondor"
+            fi
+
+            cat >&2 <<-EOF
+To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
+To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
+EOF
             ;;
-        suse|opensuse-leap)
-            repo_cmd="zypper --non-interactive"
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+            PACKAGE="condor"
+            if [[ ! $ROLE ]]; then
+                PACKAGE="minicondor"
+            fi
+
+            cat >&2 <<-EOF
+To update: $sh_c "${repo_cmd} update ${PACKAGE}"
+To remove: $sh_c "${repo_cmd} remove ${PACKAGE} && rm -fr /etc/condor"
+EOF
             ;;
         esac
-    esac
-	#
-	# Check for a previous installation.  The instructions below remove
-	# the HTCondor package(s) and whatever packages they depended on but
-	# which no other package(s) did.  However, neither set of instructions
-	# removes HTCondor's repositories, which will prevent downgrades.  I
-	# thinks that's OK for now.
-	#
-	if [ -f "/etc/condor/condor_config" ]; then
-		cat >&2 <<-'EOF'
-			Error: HTCondor appears to have been installed previously on this system.
-
-			You may update the existing install, or remove and then re-install.
-		EOF
-		case $lsb_dist in
-		ubuntu|debian)
-			PACKAGE="condor"
-			if [[ ! $ROLE ]]; then
-				PACKAGE="minicondor"
-			fi
-
-			cat >&2 <<-EOF
-				To update: $sh_c "apt-get update && apt-get upgrade ${PACKAGE}"
-				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
-			EOF
-			;;
-		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
-			PACKAGE="condor"
-			if [[ ! $ROLE ]]; then
-				PACKAGE="minicondor"
-			fi
-
-			cat >&2 <<-EOF
-				To update: $sh_c "${repo_cmd} update ${PACKAGE}"
-				To remove: $sh_c "${repo_cmd} remove ${PACKAGE} && rm -fr /etc/condor"
-			EOF
-			;;
-		esac
-		exit 1
-	fi
+        exit 1
+    fi
 
 
-	#
-	# Check for the pool password / default signing key before installing.
-	#
-	if [[ $ROLE ]]; then
-		if [[ ! $PASSWORD ]]; then
-			if ! is_dry_run; then
-				echo -n "Enter a pool password: "
-				read PASSWORD
-			else
-				PASSWORD="NONE"
-				echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
-			fi
-		fi
+    #
+    # Check for the pool password / default signing key before installing.
+    #
+    if [[ $ROLE ]]; then
+        if [[ ! $PASSWORD ]]; then
+            if ! is_dry_run; then
+                echo -n "Enter a pool password: "
+                read -r PASSWORD
+            else
+                PASSWORD="NONE"
+                echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
+            fi
+        fi
 
-		if [[ ! $PASSWORD ]]; then
-			echo
-			echo "You must set a password!  Did you replace \$htcondor_password with a password?"
-			echo
-			exit 1
-		fi
-	fi
+        if [[ ! $PASSWORD ]]; then
+            echo
+            echo "You must set a password!  Did you replace \$htcondor_password with a password?"
+            echo
+            exit 1
+        fi
+    fi
 
-	if [[ ! $ROLE ]]; then
-		echo -e "\n# Installing mini HTCondor for ${lsb_dist^} $dist_version"
-	else
-		echo -e "\n# Installing HTCondor as ${ROLE} for ${lsb_dist^} $dist_version"
-	fi
+    if [[ ! $ROLE ]]; then
+        echo -e "\n# Installing mini HTCondor for $PRETTY_NAME"
+    else
+        echo -e "\n# Installing HTCondor as ${ROLE} for $PRETTY_NAME"
+    fi
 
-	# Run install binaries for each distro accordingly
-	case $lsb_dist in
-		ubuntu|debian)
-			(
-				if ! is_dry_run; then
-					set -x
-				fi
+    # Run install binaries for each distro accordingly
+    case $ID in
+        ubuntu|debian)
+            (
+                if ! is_dry_run; then
+                    set -x
+                fi
 
-				echo -e "\n# Adding our repository"
-				apt_get='DEBIAN_FRONTEND=noninteractive apt-get'
+                echo -e "\n# Adding our repository"
+                apt_get='DEBIAN_FRONTEND=noninteractive apt-get'
 
-				# Install our repository key.
-				$sh_c "${apt_get} update"
-				$sh_c "${apt_get} install -y gnupg"
-				$sh_c "mkdir -p /etc/apt/keyrings"
-				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key"
+                # Install our repository key.
+                $sh_c "${apt_get} update"
+                $sh_c "${apt_get} install -y curl gnupg"
+                $sh_c "mkdir -p /etc/apt/keyrings"
+                $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/htcondor.asc"
 
-				# Our repository redirects to https even if you try to
-				# avoid it, and Debian 9 doesn't come with this by default.
-				$sh_c "${apt_get} install apt-transport-https"
+                # Our repository redirects to https even if you try to
+                # avoid it, and Debian 9 doesn't come with this by default.
+                $sh_c "${apt_get} install apt-transport-https"
 
-				# Add our repository.
-				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
-				$sh_c "echo \"deb [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
-				$sh_c "echo \"deb-src [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
+                # Add our repository.
+                HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
+                $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/${ID}/htcondor-${CHANNEL_DIR}-${VERSION_CODENAME}.list -o ${HTCONDOR_LIST}"
+                if [ "${REPO_SUFFIX}" ]; then
+                    sed -i "/$REPO_SUFFIX/s/^#//" ${HTCONDOR_LIST}
+                fi
 
-				echo -e "\n# Updating package lists"
-				$sh_c "${apt_get} update"
+                echo -e "\n# Updating package lists"
+                $sh_c "${apt_get} update"
 
-				echo -e "\n# Installing ps"
-				$sh_c "${apt_get} install -y procps"
+                echo -e "\n# Installing ps"
+                $sh_c "${apt_get} install -y procps"
 
-				# In the Ubuntu 20.04 Docker container, the following packages
-				# need to be installed non-interactively, because the pipe
-				# out of curl eats the tty they'd like to use:
-				#	keyboard-configuration
-				#	console-setup
-				#	tzdata
-				# apt-get will succeed if these packages are already installed,
-				# but for now let's not risk screwing things up by adding them
-				# on the platforms that don't need them.
-				case $lsb_dist.$dist_version in
-				    ubuntu.bionic|ubuntu.focal|ubuntu.jammy|ubuntu.noble)
-    					echo -e "\n# Preconfiguring packages for Ubuntu."
-	    				$sh_c "${apt_get} install -y keyboard-configuration console-setup tzdata"
+                # In the Ubuntu 20.04 Docker container, the following packages
+                # need to be installed non-interactively, because the pipe
+                # out of curl eats the tty they'd like to use:
+                #   keyboard-configuration
+                #   console-setup
+                #   tzdata
+                # apt-get will succeed if these packages are already installed,
+                # but for now let's not risk screwing things up by adding them
+                # on the platforms that don't need them.
+                case $ID.$VERSION_CODENAME in
+                    ubuntu.bionic|ubuntu.focal|ubuntu.jammy|ubuntu.noble)
+                        echo -e "\n# Preconfiguring packages for Ubuntu."
+                        $sh_c "${apt_get} install -y keyboard-configuration console-setup tzdata"
                     ;;
                 esac
 
-				echo -e "\n# Installing HTCondor binaries and dependencies"
-				if [[ ! $ROLE ]]; then
-					$sh_c "${apt_get} install -y minicondor"
-				else
-					$sh_c "${apt_get} install -y condor"
-				fi
-			)
-			;;
-		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
-			(
-			if ! is_dry_run; then
-				set -x
-			fi
+                echo -e "\n# Installing HTCondor binaries and dependencies"
+                if [[ ! $ROLE ]]; then
+                    $sh_c "${apt_get} install -y minicondor"
+                else
+                    $sh_c "${apt_get} install -y condor"
+                fi
+            )
+            ;;
+        centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+            (
+            if ! is_dry_run; then
+                set -x
+            fi
 
-			# Some distros don't include ps by default.
-			case $lsb_dist in
-			amzn|almalinux|rocky)
-				echo -e "\n# Installing ps"
-				$sh_c "${repo_cmd} install procps-ng"
-				;;
-			suse|opensuse-leap)
-				echo -e "\n# Installing ps"
-				$sh_c "${repo_cmd} install procps"
-				;;
-			esac
+            # Some distros don't include ps by default.
+            case $ID in
+            amzn|almalinux|rocky)
+                echo -e "\n# Installing ps"
+                $sh_c "${repo_cmd} install procps-ng"
+                ;;
+            suse|opensuse-leap)
+                echo -e "\n# Installing ps"
+                $sh_c "${repo_cmd} install procps"
+                ;;
+            esac
 
-			repo_dist=$lsb_dist
-			case $lsb_dist in
-				scientific|centos|rhel|almalinux|rocky)
-					repo_dist="el"
+            repo_dist=$ID
+            case $ID in
+                centos|almalinux|rocky)
+                    repo_dist="el"
                     echo -e "\n# Installing EPEL"
-                    epel_version=$dist_version
-                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+                    $sh_c "${repo_cmd} install epel-release || ${repo_cmd} reinstall epel-release"
                     ;;
-				suse|opensuse-leap)
-					repo_dist="leap"
+                rhel)
+                    repo_dist="el"
+                    echo -e "\n# Installing EPEL"
+                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${VERSION_ID}.noarch.rpm"
                     ;;
-			esac
-			repo_suffix="${repo_dist}${dist_version}"
-			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.noarch.rpm"
+                suse|opensuse-leap)
+                    repo_dist="leap"
+                    ;;
+            esac
+            repo_suffix="${repo_dist}${VERSION_ID}"
+            repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.${repo_arch}.rpm"
 
-			# Just to make our lives harder, the packages we need from
-			# EPEL depend on repositories which are disabled by default,
-			# and those repositories and how to enable them between
-			# RHEL and Rocky and between version 7 and 8.
-			#
-			case ${lsb_dist}.${dist_version} in
-				almalinux.8|rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
-				                 $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
-				                 ;;
-				almalinux.9|rocky.9 ) $sh_c "dnf -y install dnf-plugins-core"
-				                 $sh_c "dnf config-manager --set-enabled crb"
-				                 ;;
-				# subscription-manager only works if you've already
-				# "register"ed and "attach"ed the system.
-				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
-				         ;;
-				rhel.8 ) ARCH=$(/bin/arch)
-				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
-				         ;;
-				rhel.9 ) ARCH=$(/bin/arch)
-				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-9-${ARCH}-rpms\""
-				         ;;
-			esac
+            # Just to make our lives harder, the packages we need from
+            # EPEL depend on repositories which are disabled by default,
+            # and those repositories and how to enable them between
+            # RHEL and Rocky and between version 7 and 8.
+            #
+            case ${ID}.${VERSION_ID} in
+                almalinux.8|rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
+                                 $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
+                                 ;;
+                almalinux.9|almalinux.10|rocky.9|rocky.10 ) $sh_c "dnf -y install dnf-plugins-core"
+                                 $sh_c "dnf config-manager --set-enabled crb"
+                                 ;;
+                # subscription-manager only works if you've already
+                # "register"ed and "attach"ed the system.
+                rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
+                         ;;
+                rhel.8 )
+                         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+                         ;;
+                rhel.9 )
+                         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-9-${ARCH}-rpms\""
+                         ;;
+                rhel.10 )
+                         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-10-${ARCH}-rpms\""
+                         ;;
+            esac
 
-			echo -e "\n# Installing the HTCondor repo"
-            case $lsb_dist in
+            echo -e "\n# Installing the HTCondor repo"
+            case $ID in
                 suse|opensuse-leap)
                     # There is a way to setup SUSE repos where you can install the repo
                     # with a single zypper command. But, I don't know how to do that (yet)
-                    $sh_c "${repo_cmd} --no-gpg-checks install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    $sh_c "${repo_cmd} --no-gpg-checks install ${repo_rpm} || ${repo_cmd} reinstall ${repo_rpm}"
                     ;;
                 *)
-                    $sh_c "${repo_cmd} install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    $sh_c "${repo_cmd} install ${repo_rpm} || ${repo_cmd} reinstall ${repo_rpm}"
                     ;;
             esac
 
             # Needed for SUSE, limits chattyness for other RPM distros
-			echo -e "\n# Importing RPM keys"
+            echo -e "\n# Importing RPM keys"
             for key in /etc/pki/rpm-gpg/RPM-GPG-KEY-HTCondor-*; do
                 $sh_c "rpmkeys --import $key"
             done
 
-			echo -e "\n# Installing HTCondor"
-			if [[ ! $ROLE ]]; then
-				$sh_c "${repo_cmd} install ${YUM_REPO} minicondor"
-			else
-				$sh_c "${repo_cmd} install ${YUM_REPO} condor"
-			fi
-			)
-			;;
-		*)
-			if [[ ! $lsb_dist ]]; then
-				if is_darwin; then
-					echo
-					echo "Error: Unsupported operating system 'macOS'"
-					echo
-					exit 1
-				fi
-			fi
-			echo
-			echo "Error: Unsupported distribution '$lsb_dist'"
-			echo
-			exit 1
-			;;
-	esac
+            echo -e "\n# Installing HTCondor"
+            if [[ ! $ROLE ]]; then
+                $sh_c "${repo_cmd} install ${YUM_REPO} minicondor"
+            else
+                $sh_c "${repo_cmd} install ${YUM_REPO} condor"
+            fi
+            )
+            ;;
+        *)
+            if [[ ! $ID ]]; then
+                if is_darwin; then
+                    echo
+                    echo "Error: Unsupported operating system 'macOS'"
+                    echo
+                    exit 1
+                fi
+            fi
+            echo
+            echo "Error: Unsupported distribution '$NAME'"
+            echo
+            exit 1
+            ;;
+    esac
 
-	if [[ $SHARED_FS_DOMAIN ]]; then
-		DOMAIN_CONFIG=$(cat <<-EOF
+    if [[ $SHARED_FS_DOMAIN ]]; then
+        DOMAIN_CONFIG=$(cat <<-EOF
+# HTCondor assumes that any two machines with the same value
+# for this variable have the same shared filesystems.  Shared
+# filesystems tend not to scale as well as you would like, but
+# they do make it simpler to explain how a job accesses its file.
+FILESYSTEM_DOMAIN = ${SHARED_FS_DOMAIN}
 
-			# HTCondor assumes that any two machines with the same value
-			# for this variable have the same shared filesystems.  Shared
-			# filesystems tend not to scale as well as you would like, but
-			# they do make it simpler to explain how a job accesses its file.
-			FILESYSTEM_DOMAIN = ${SHARED_FS_DOMAIN}
+# If your jobs are accessing a shared filesystem, they probably
+# need to be run as the user who submitted them (as opposed to
+# user nobody or a local user which only runs batch jobs).  This
+# variable must be set to the same thing on the submit machine
+# and on the execute machine to do this.
+UID_DOMAIN = ${SHARED_FS_DOMAIN}
 
-			# If your jobs are accessing a shared filesystem, they probably
-			# need to be run as the user who submitted them (as opposed to
-			# user nobody or a local user which only runs batch jobs).  This
-			# variable must be set to the same thing on the submit machine
-			# and on the execute machine to do this.
-			UID_DOMAIN = ${SHARED_FS_DOMAIN}
+# The UID_DOMAIN must normally be a suffix of the fully-qualified
+# DNS name of the submit machine (as determined by a reverse
+# lookup of the IP address used to contact the execute machine).
+# Setting this variable relaxes that requirement, which is safe
+# to do for this configuration because only submit machines you
+# trust can contact your execute machines.
+TRUST_UID_DOMAIN = TRUE
 
-			# The UID_DOMAIN must normally be a suffix of the fully-qualified
-			# DNS name of the submit machine (as determined by a reverse
-			# lookup of the IP address used to contact the execute machine).
-			# Setting this variable relaxes that requirement, which is safe
-			# to do for this configuration because only submit machines you
-			# trust can contact your execute machines.
-			TRUST_UID_DOMAIN = TRUE
+# Normally, before running a job as a particular user (that is,
+# not as user nobody), HTCondor checks to make sure that user
+# is in the password file.  Not all methods for sharing UIDs
+# across machines store every user in every password file (for
+# example, LDAP does not).  Setting this this variable relaxes
+# this requirement.
+SOFT_UID_DOMAIN = TRUE
 
-			# Normally, before running a job as a particular user (that is,
-			# not as user nobody), HTCondor checks to make sure that user
-			# is in the password file.  Not all methods for sharing UIDs
-			# across machines store every user in every password file (for
-			# example, LDAP does not).  Setting this this variable relaxes
-			# this requirement.
-			SOFT_UID_DOMAIN = TRUE
+EOF
+        )
+    fi
 
-		EOF
-		)
-	fi
+    # Configure the role, if any.
+    echo -e "\n# Configuring role, if any ..."
+    case $ROLE in
+        "central manager")
+            CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
+            $sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+            $sh_c "echo '# For details, run condor_config_val use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
+            $sh_c "echo 'use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
 
-	# Configure the role, if any.
-	echo -e "\n# Configuring role, if any ..."
-	case $ROLE in
-		"central manager")
-			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
-			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
+            do_token_security
+            ;;
 
-			do_token_security
-			;;
+        "submit")
+            CONFIG_FILE="/etc/condor/config.d/01-submit.config"
+            $sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+            $sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
+            $sh_c "echo 'use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 
-		"submit")
-			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
-			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role:get_htcondor_submit' >> ${CONFIG_FILE}"
+            if [[ ${SHARED_FS_DOMAIN} ]]; then
+                $sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
+            fi
 
-			if [[ ${SHARED_FS_DOMAIN} ]]; then
-				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
-			fi
+            do_token_security
+            ;;
 
-			do_token_security
-			;;
+        "execute")
+            CONFIG_FILE="/etc/condor/config.d/01-execute.config"
+            $sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
+            $sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
+            $sh_c "echo 'use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 
-		"execute")
-			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
-			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role:get_htcondor_execute' >> ${CONFIG_FILE}"
+            if [[ "${SHARED_FS_DOMAIN}" ]]; then
+                $sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
+            fi
 
-			if [[ "${SHARED_FS_DOMAIN}" ]]; then
-				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
-			fi
+            do_token_security
+            ;;
 
-			do_token_security
-			;;
+        *)
+            # The mini[ht]condor package has done everything for us.
+            ;;
 
-		*)
-			# The mini[ht]condor package has done everything for us.
-			;;
+    esac
 
-	esac
+    # Open port 9618 on system firewall
+    do_configure_firewall
 
-	# Open port 9618 on system firewall
-	do_configure_firewall
+    # Finally, start the HTCondor service
+    do_start_service
 
-	# Finally, start the HTCondor service
-	do_start_service
-
-	echo
+    echo
 }
 
 do_download() {
-	get_distribution
+    get_distribution
 
-	TARBALL_BASE_URL="${DOWNLOAD_URL}/tarball"
-	TARBALL_DIR_URL="${TARBALL_BASE_URL}/${CHANNEL_DIR}/current"
+    TARBALL_BASE_URL="${DOWNLOAD_URL}/tarball"
+    TARBALL_DIR_URL="${TARBALL_BASE_URL}/${CHANNEL_DIR}/current"
 
-	OS_VERSION=$dist_version
-	case $lsb_dist in
-		# We don't release HTCondor for Fedora.
-		# fedora)
-		#	;;
-		ubuntu)
-			OS_NAME="Ubuntu"
-			dist_version_number=$(. /etc/os-release && echo "$VERSION_ID")
-			dist_version_number=$(echo $dist_version_number | sed -e s'/\.[0-9]*//')
-			OS_VERSION=$dist_version_number
-			;;
-		debian)
-			OS_NAME="Debian"
-			OS_VERSION=$dist_version_number
-			;;
-		scientific|centos|rhel)
-			if [ "$dist_version" = "7" ]; then
-				OS_NAME="CentOS"
-			else
-				OS_NAME="AlmaLinux"
-			fi
-			;;
-		almalinux)
-			OS_NAME="AlmaLinux"
-			;;
-		rocky)
-			OS_NAME="AlmaLinux"
-			;;
-		amzn)
-			OS_NAME="AmazonLinux"
-			;;
-		suse|opensuse-leap)
-			OS_NAME="openSUSE"
-			;;
-		*)
-			if is_darwin; then
-				OS_NAME=macOS
-				OS_VERSION=13
-			else
-				echo
-				echo "Error: Unsupported distribution '$lsb_dist'"
-				echo
-				exit 1
-			fi
-			;;
-	esac
+    OS_VERSION=$VERSION_ID
+    case $ID in
+        # We don't release HTCondor for Fedora.
+        # fedora)
+        #     ;;
+        ubuntu)
+            OS_NAME="Ubuntu"
+            ;;
+        debian)
+            OS_NAME="Debian"
+            ;;
+        almalinux|centos|rhel|rocky)
+            OS_NAME="AlmaLinux"
+            ;;
+        amzn)
+            OS_NAME="AmazonLinux"
+            ;;
+        suse|opensuse-leap)
+            OS_NAME="openSUSE"
+            ;;
+        *)
+            if is_darwin; then
+                OS_NAME=macOS
+                OS_VERSION=13
+                ARCH=x86_64
+            else
+                echo
+                echo "Error: Unsupported distribution '$NAME'"
+                echo
+                exit 1
+            fi
+            ;;
+    esac
 
-	TARBALL_NAME="condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
-	TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
+    TARBALL_NAME="condor-${ARCH}_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
+    TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
-	echo "Downloading to condor.tar.gz..."
-	curl -fSL ${TARBALL_URL} -o condor.tar.gz
+    echo "Downloading to condor.tar.gz..."
+    curl -fSL "${TARBALL_URL}" -o condor.tar.gz
 }
 
 # Set global defaults
-CHANNEL="current"
-DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
+CHANNEL="feature"
+DOWNLOAD_URL="https://htcss-downloads.chtc.wisc.edu"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
@@ -724,132 +618,129 @@ PASSWORD=$GET_HTCONDOR_PASSWORD
 
 # Process command-line options
 while [ $# -gt 0 ]; do
-	case $1 in
-		--show-distribution)
-			SHOW_DISTRIBUTION=TRUE
-			;;
-		--distribution)
-			DISTRIBUTION=$2
-			if [[ ! $DISTRIBUTION ]]; then
-				echo "--distribution requires an argument"
-				exit 1
-			fi
-			shift
-			;;
-		--password)
-			PASSWORD=$2
-			if [[ ! $PASSWORD ]]; then
-				echo "--password requires an argument"
-				exit 1
-			fi
-			shift
-			;;
-		--shared-filesystem-domain)
-			SHARED_FS_DOMAIN=$2
-			if [[ ! $SHARED_FS_DOMAIN ]]; then
-				echo "--shared-filesystem-domain requires an argument"
-				exit 1
-			fi
-			shift
-			;;
-		--minicondor)
-			unset ROLE
-			;;
-		--central-manager)
-			ROLE="central manager"
-			CONDOR_HOST=$2
-			if [[ ! $CONDOR_HOST ]]; then
-				echo "--central-manager requires its external name as an argument"
-				exit 1
-			fi
-			shift
-			;;
-		--submit)
-			ROLE="submit"
-			CONDOR_HOST=$2
-			if [[ ! $CONDOR_HOST ]]; then
-				echo "--submit requires the central manager as an argument"
-				exit 1
-			fi
-			shift
-			;;
-		--execute)
-			ROLE="execute"
-			CONDOR_HOST=$2
-			if [[ ! $CONDOR_HOST ]]; then
-				echo "--execute requires the central manager as an argument"
-				exit 1
-			fi
-			shift
-			;;
-		--yum-repo)
-			REPO_SUFFIX=$2
-			if [[ ! $REPO_SUFFIX ]]; then
-				echo "--yum-repo requires a repo-suffix as an argument"
-				exit 1
-			fi
-			YUM_REPO=--enablerepo=htcondor-${REPO_SUFFIX}
-			shift
-			;;
-		--channel)
-			case $2 in
-				stable|lts)
-					CHANNEL="stable"
-					;;
-				current|latest|developer|feature)
-					CHANNEL="current"
-					;;
-				*-rc)
-					CHANNEL=$2
-					;;
-				*)
-					echo "Illegal option $2 for --channel"
-					echo "Run $0 --help for usage"
-					exit 1
-					;;
-			esac
-			shift
-			;;
-		--no-dry-run)
-			unset DRY_RUN
-			;;
-		--dry-run)
-			DRY_RUN=1
-			;;
-		--dist)
-			DIST=1
-			;;
-		--download)
-			DOWNLOAD=1
-			;;
-		--help|-h)
-			usage
-			;;
-		*)
-			echo "Illegal option $1"
-			echo "Run $0 --help for usage"
-			exit 1
-			;;
-	esac
-	shift
+    case $1 in
+        --show-distribution)
+            SHOW_DISTRIBUTION=TRUE
+            ;;
+        --distribution)
+            DISTRIBUTION=$2
+            if [[ ! $DISTRIBUTION ]]; then
+                echo "--distribution requires an argument"
+                exit 1
+            fi
+            shift
+            ;;
+        --password)
+            PASSWORD=$2
+            if [[ ! $PASSWORD ]]; then
+                echo "--password requires an argument"
+                exit 1
+            fi
+            shift
+            ;;
+        --shared-filesystem-domain)
+            SHARED_FS_DOMAIN=$2
+            if [[ ! $SHARED_FS_DOMAIN ]]; then
+                echo "--shared-filesystem-domain requires an argument"
+                exit 1
+            fi
+            shift
+            ;;
+        --minicondor)
+            unset ROLE
+            ;;
+        --cm|--central-manager)
+            ROLE="central manager"
+            CONDOR_HOST=$2
+            if [[ ! $CONDOR_HOST ]]; then
+                echo "--central-manager requires its external name as an argument"
+                exit 1
+            fi
+            shift
+            ;;
+        --ap|--submit)
+            ROLE="submit"
+            CONDOR_HOST=$2
+            if [[ ! $CONDOR_HOST ]]; then
+                echo "--submit requires the central manager as an argument"
+                exit 1
+            fi
+            shift
+            ;;
+        --ep|--execute)
+            ROLE="execute"
+            CONDOR_HOST=$2
+            if [[ ! $CONDOR_HOST ]]; then
+                echo "--execute requires the central manager as an argument"
+                exit 1
+            fi
+            shift
+            ;;
+        --repo-suffix)
+            REPO_SUFFIX=$2
+            if [[ ! $REPO_SUFFIX ]]; then
+                echo "--repo-suffix requires a repo-suffix as an argument"
+                exit 1
+            fi
+            YUM_REPO=--enablerepo=htcondor-${REPO_SUFFIX}
+            shift
+            ;;
+        --channel)
+            case $2 in
+                lts|stable)
+                    CHANNEL="lts"
+                    ;;
+                feature|current|latest|developer)
+                    CHANNEL="feature"
+                    ;;
+                *)
+                    echo "Illegal option $2 for --channel"
+                    echo "Run $0 --help for usage"
+                    exit 1
+                    ;;
+            esac
+            shift
+            ;;
+        --no-dry-run)
+            unset DRY_RUN
+            ;;
+        --dry-run)
+            DRY_RUN=1
+            ;;
+        --dist)
+            DIST=1
+            ;;
+        --download)
+            DOWNLOAD=1
+            ;;
+        --help|-h)
+            usage
+            ;;
+        *)
+            echo "Illegal option $1"
+            echo "Run $0 --help for usage"
+            exit 1
+            ;;
+    esac
+    shift
 done
 
-# We have to update this once every stable release; we don't want
-# to update a symlink, like we do for 'current', because we don't
-# want to surprise other stable-channel users with new features.
-if [ "${CHANNEL}" = "stable" ]; then
-	CHANNEL_DIR=24.0
-else
-	CHANNEL_DIR=$CHANNEL
+# We have to update this once every LTS release; we don't want
+# to update a symlink, like we do for 'feature', because we don't
+# want to surprise other lts-channel users with new features.
+if [ "${CHANNEL}" = "lts" ]; then
+    CHANNEL_DIR=25.0
+elif [ "${CHANNEL}" = "feature" ]; then
+    CHANNEL_DIR=25.x
 fi
 
 # wrapped up in functions so that we have some protection against only getting
 # half the file during "curl | sh"
 
 if is_download; then
-	do_download
+    do_download
 else
-	do_install
+    do_install
 fi
 
 exit 0

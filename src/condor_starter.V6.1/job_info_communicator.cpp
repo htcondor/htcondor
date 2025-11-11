@@ -84,6 +84,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 	if( mach_ad ) {
 		delete mach_ad;
 	}
+	if( machine_secrets_ad ) {
+		delete machine_secrets_ad;
+	}
 	if( u_log ) {
 		delete u_log;
 	}
@@ -703,8 +706,14 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	bool init_priv_succeeded = true;
 	bool run_as_owner = allowRunAsOwner( false, false );
 
-	if( !name ) {	
-		if ( run_as_owner ) {
+	if (run_as_owner) {
+		char *run_jobs_as;
+		if (job_ad->LookupString(ATTR_OS_USER, &run_jobs_as)) {
+			std::string buf;
+			name = strdup(name_of_user(run_jobs_as, buf));
+			domain = strdup(domain_of_user(run_jobs_as, ""));
+			free(run_jobs_as);
+		} else {
 			job_ad->LookupString(ATTR_OWNER,&name);
 			job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
 		}
@@ -797,15 +806,26 @@ JobInfoCommunicator::initJobInfo( void )
 void
 JobInfoCommunicator::checkForStarterDebugging( void )
 {
-	if( ! job_ad ) {
-		EXCEPT( "checkForStarterDebugging() called with no job ad!" );
+	ASSERT(job_ad);
+
+		// for testing, see if there's an attribute that requests the starter return a broken exit code
+		// which we will honor, only if the knob is in a non-default state and the starter would
+		// otherwise exit with a success code.
+	int tmp = 0;
+	if (job_ad->LookupInteger("StarterShouldExitBroken", tmp) && tmp) {
+		if (param_boolean("TEST_JOB_CAN_BREAK_SLOT", false)) {
+			dprintf(D_STATUS, "TEST_JOB_CAN_BREAK_SLOT=true and job has StarterShouldExitBroken=%d. this slot gonna break!\n", tmp);
+			starter->JobRequestsBrokenExit(true);
+		} else {
+			dprintf(D_ALWAYS, "job has StarterShouldExitBroken=%d. This will be ignored because TEST_JOB_CAN_BREAK_SLOT is false\n", tmp);
+		}
 	}
 
 		// For debugging, see if there's a special attribute in the
 		// job ad that sends us into an infinite loop, waiting for
 		// someone to attach with a debugger
 	volatile int starter_should_wait = 0;
-	int tmp = 0; // Can't pass volatile int into LookupInteger
+	tmp = 0; // Can't pass volatile int into LookupInteger
 	job_ad->LookupInteger( ATTR_STARTER_WAIT_FOR_DEBUG, tmp );
 	starter_should_wait = tmp;
 	if( starter_should_wait ) {
@@ -943,9 +963,7 @@ JobInfoCommunicator::startUpdateTimer( void )
 		Register_Timer(interval,
 	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
 		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
-	if( m_periodic_job_update_tid < 0 ) {
-		EXCEPT( "Can't register DC Timer!" );
-	}
+	ASSERT(m_periodic_job_update_tid >= 0);
 }
 
 int

@@ -20,40 +20,21 @@
 
 #include "classad/common.h"
 #include "classad/exprTree.h"
-
-using std::string;
-using std::vector;
-using std::pair;
-
+#include <iterator>
 
 namespace classad {
 
 ExprList::
-ExprList()
+ExprList(const std::vector<ExprTree*>& exprs) : parentScope(nullptr)
 {
-	parentScope = NULL;
-	return;
-}
-
-ExprList::
-ExprList(const vector<ExprTree*>& exprs)
-{
-	parentScope = NULL;
     CopyList(exprs);
-	return;
 }
 
 ExprList::
-ExprList(const ExprList &other_list)
+ExprList(const ExprList &other_list): ExprTree()
 {
     CopyFrom(other_list);
     return;
-}
-
-ExprList::
-~ExprList()
-{
-	Clear( );
 }
 
 ExprList &ExprList::
@@ -68,11 +49,10 @@ operator=(const ExprList &other_list)
 void ExprList::
 Clear ()
 {
-	vector<ExprTree*>::iterator itr;
-	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
-		delete *itr;
+	for (const ExprTree *expr: exprList) {
+		delete expr;
 	}
-	exprList.clear( );
+	exprList.clear();
 }
 
 ExprTree *ExprList::
@@ -101,10 +81,9 @@ CopyFrom(const ExprList &other_list)
 
 	parentScope = other_list.parentScope;
 
-	vector<ExprTree*>::const_iterator itr;
-	for( itr = other_list.exprList.begin( ); itr != other_list.exprList.end( ); itr++ ) {
+	for (const ExprTree *expr: other_list) {
         ExprTree *newTree;
-		if( !( newTree = (*itr)->Copy( ) ) ) {
+		if( !( newTree = expr->Copy())) {
             success = false;
 			CondorErrno = ERR_MEM_ALLOC_FAILED;
 			CondorErrMsg = "";
@@ -135,7 +114,7 @@ SameAs(const ExprTree *tree) const
         if (exprList.size() != other_list->exprList.size()) {
             is_same = false;
         } else {
-            vector<ExprTree*>::const_iterator itr1, itr2;
+            std::vector<ExprTree*>::const_iterator itr1, itr2;
 
             is_same = true;
             itr1 = exprList.begin();
@@ -169,14 +148,13 @@ _SetParentScope( const ClassAd *parent )
 {
 	parentScope = parent;
 
-	vector<ExprTree*>::iterator	itr;
-	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
-		(*itr)->SetParentScope( parent );
+	for (ExprTree *expr: exprList) {
+		expr->SetParentScope( parent );
 	}
 }
 
 ExprList *ExprList::
-MakeExprList( const vector<ExprTree*> &exprs )
+MakeExprList(const std::vector<ExprTree*> &exprs )
 {
 	ExprList *el = new ExprList;
 	if( !el ) {
@@ -190,14 +168,10 @@ MakeExprList( const vector<ExprTree*> &exprs )
 }
 
 void ExprList::
-GetComponents( vector<ExprTree*> &exprs ) const
+GetComponents(std::vector<ExprTree*> &exprs) const
 {
-	vector<ExprTree*>::const_iterator itr;
-	exprs.clear( );
-	for( itr=exprList.begin( ); itr!=exprList.end( ); itr++ ) {
-		exprs.push_back( *itr );
-	}
-	return;
+	exprs.clear();
+	std::ranges::copy(exprList, std::back_inserter(exprs));
 }
 
 void ExprList::
@@ -234,24 +208,23 @@ erase(iterator f, iterator l)
 }
 
 bool ExprList::
-_Evaluate (EvalState &, Value &val) const
+_Evaluate (EvalState & /*unused*/, Value &val) const
 {
-	val.SetListValue ((ExprList *)this);
+	val.SetListValue(const_cast<ExprList *>((const ExprList *)this));
 	return( true );
 }
 
 bool ExprList::
 _Evaluate( EvalState &, Value &val, ExprTree *&sig ) const
 {
-	val.SetListValue((ExprList* )this);
-	return( ( sig = Copy( ) ) );
+	val.SetListValue(const_cast<ExprList *>((const ExprList* )this));
+	return (sig = Copy());
 }
 
 bool ExprList::
 _Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 {
-	vector<ExprTree*>::const_iterator	itr;
-	ExprTree	*expr, *nexpr;
+	ExprTree	*nexpr;
 	Value		tempVal;
 	ExprList	*newList;
 
@@ -259,8 +232,7 @@ _Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 
 	if( ( newList = new ExprList( ) ) == NULL ) return false;
 
-	for( itr = exprList.begin( ); itr != exprList.end( ); itr++ ) {
-		expr = *itr;
+	for (const ExprTree *expr: exprList) {
 		// flatten the constituent expression
 		if( !expr->Flatten( state, tempVal, nexpr ) ) {
 			delete newList;
@@ -287,15 +259,10 @@ _Flatten( EvalState &state, Value &, ExprTree *&tree, int* ) const
 	return true;
 }
 
-void ExprList::CopyList(const vector<ExprTree*> &exprs)
+void ExprList::CopyList(const std::vector<ExprTree*> &exprs)
 {
-	vector<ExprTree*>::const_iterator itr;
 
-	for( itr=exprs.begin( ); itr!=exprs.end( ); itr++ ) {	
-		exprList.push_back( *itr );
-	}
-
-	return;
+	std::ranges::copy(exprs, std::back_inserter(exprList));
 }
 
 bool 
@@ -328,6 +295,13 @@ ExprList::GetValueAt(int location, Value& val, EvalState *es)  const {
 	currentState->depth_remaining++;
 
 	return true;
+}
+
+void ExprList::
+removeAll(std::vector<ExprTree*> &exprs )
+{
+	exprs = exprList;
+	exprList.clear();
 }
 
 } // classad

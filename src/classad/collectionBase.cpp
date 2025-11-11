@@ -57,7 +57,6 @@ void ClassAdCollection::
 Setup(bool cacheOn)
 {
 	Cache = cacheOn;
-	test_checkpoint=0;
 	// create "root" view
 	viewTree.SetViewName( "root" );
 	RegisterView( "root", &viewTree );
@@ -549,7 +548,7 @@ PlayViewOp( int opType, ClassAd *logRec )
 				return( false );
 			}
 			viewInfo->Delete( "OpType" );
-			viewInfo->Remove( "Representative" );
+			std::ignore = viewInfo->Remove( "Representative" );
             return( parentView->InsertPartitionedView( this, viewInfo, rep ) );
         }
 
@@ -1120,7 +1119,7 @@ AddClassAd_NoTransaction(const string &key, ClassAd *newAd)
                 reinsert_old_ad = true;
                 success = false;
             }
-            rec->Remove(ATTR_AD);
+			std::ignore = rec->Remove(ATTR_AD);
             delete rec;
         }
     }
@@ -1631,12 +1630,12 @@ LogState( FILE *fp )
 		  
 		  if(!WriteLogEntry(fp, &logRec, true)) {
 			  CondorErrMsg += "; failed to log ad, could not log state";
-			  logRec.Remove( "Ad" );
+			  std::ignore = logRec.Remove( "Ad" );
 			  return( false );
 		  }
 		  buff = "";            
 		  local_unparser.Unparse(buff,&logRec);
-		  logRec.Remove( "Ad" );
+		  std::ignore = logRec.Remove( "Ad" );
 	  }
 	}
 	if( fsync( fileno( fp ) ) < 0 ) {
@@ -1813,7 +1812,7 @@ WriteCheckPoint(){
 	  string buffer;
 	  unparser.Unparse( buffer, &cla );
 	  buffer += "\n";
-	  int result = write(fd_check,(void*)(buffer.c_str()),(unsigned int)buffer.size());
+	  int result = write(fd_check,buffer.c_str(),(unsigned int)buffer.size());
 	  if (result < 0) {
 			CondorErrMsg = "failed to write to checkpoint file " + CheckFileName + " errno=" + std::to_string(errno);
 			fsync(fd_check);

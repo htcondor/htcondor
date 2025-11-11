@@ -33,15 +33,15 @@ bool	check_execute_dir_perms(const char* exec_path, bool abort_on_error);
 void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );
-bool	refuse( Stream* );
+bool	refuse( Stream*, ClassAd* replyAd = nullptr );
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  const char* prefix = NULL );
 bool	caRevertToParent(ClassAd* target, const char * attr);
 // delete in chained ad, and also in parent ad (ClassAd::Delete does not delete in parent)
 void	caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix = NULL);
-bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );
+bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal, const char *default_value = nullptr);
 bool	configInsert( ClassAd* ad, const char* param_name, 
-					  const char* attr, bool is_fatal );
+					  const char* attr, bool is_fatal, const char *default_value = nullptr );
 Resource* stream_to_rip( Stream* );
 
 VacateType getVacateType( ClassAd* ad );
@@ -54,10 +54,11 @@ VacateType getVacateType( ClassAd* ad );
 //
 class CleanupReminder {
 public:
-	enum category { exec_dir=0, account };
+	enum category { logical_volume=0, exec_dir, account };
 	std::string name; // name of resource to cleanup
 	category cat;  // category of resource, e.g execute dir, account name, etc.
 	int      opt; // options, meaning depends on category
+	unsigned int broken_id{0}; // Associated broken item to act upon if cleanup is successfull
 
 	// so that some of the reminders can be case sensitive, and some not.
 	// in the future, we may consider cat as well as OS in this function, so prepare for that now.
@@ -97,6 +98,15 @@ public:
 		}
 	}
 
+	const char* Type() const {
+		switch (cat) {
+			case category::exec_dir: { return "directory"; }
+			case category::account: { return "account"; }
+			case category::logical_volume: { return "logical volume"; }
+			default: { return "unknown"; }
+		}
+	}
+
 };
 
 // map the cleanup reminder to a number of iterations of the cleanup loop.
@@ -104,9 +114,9 @@ public:
 // on ever iteration.
 typedef std::map<CleanupReminder, int> CleanupReminderMap;
 
-void add_exec_dir_cleanup_reminder(const std::string & dir, int options);
-void add_account_cleanup_reminder(const std::string& name);
+void add_cleanup_reminder(const std::string& item, CleanupReminder::category cat, int opts=0);
 
+bool retry_cleanup_logical_volume(const std::string& lv_name, int options, int& err);
 bool retry_cleanup_execute_dir(const std::string & path, int options, int &err);
 bool retry_cleanup_user_account(const std::string & path, int options, int &err);
 

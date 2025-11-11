@@ -33,6 +33,8 @@
 #include "jobstate_log.h"
 #include "dagman_classad.h"
 #include "dag_priority_q.h"
+#include "dag_commands.h"
+#include <ranges>
 #include <filesystem>
 
 #include <queue>
@@ -67,9 +69,36 @@ static const char * DAG_STATUS_NAMES[] = {
 	"DAG_STATUS_HALTED"
 };
 
-namespace DAG {
-	extern const char *ALL_NODES;
-}
+// Find All Nodes Type Specifiers (i.e. ALL_NODES includes node types)
+const int ALL_NODES_REGULAR = (1 << 0);               // Regular worker nodes
+const int ALL_NODES_SERVICE = (1 << 1);               // Include service nodes (currently does nothing as service nodes are stored sperately)
+const int ALL_NODES_FINAL   = (1 << 2);               // Include the final node
+const int ALL_NODES_PROVISIONER = (1 << 3);           // Include the provisioner node
+const int ALL_NODES_EVERYTHING = std::numeric_limits<int>::max(); // All node types
+
+// Handle finding a node by name or ALL_NODES (based on type)
+// TODO: Add name prefix matching and category handling
+struct AllNodesMatcher {
+	AllNodesMatcher() = delete;
+	AllNodesMatcher(int m) : mask(m) {};
+
+	bool operator()(const Node* node) {
+		switch (node->GetType()) {
+			case NodeType::JOB:
+				return mask & ALL_NODES_REGULAR;
+			case NodeType::SERVICE: // Note: Currently we will never see since service nodes are not in main vector (FIX ME)
+				return mask & ALL_NODES_SERVICE;
+			case NodeType::FINAL:
+				return mask & ALL_NODES_FINAL;
+			case NodeType::PROVISIONER:
+				return mask & ALL_NODES_PROVISIONER;
+		}
+		return false;
+	}
+
+private:
+	int mask{ALL_NODES_REGULAR};
+};
 
 class Dagman;
 class DagmanMetrics;
@@ -127,7 +156,7 @@ public:
 	int HoldScriptReaper(Node *node);
 
 	// Add a node to be managed by this DAG
-	bool Add(Node& node);
+	bool Add(Node* node);
 	void PrefixAllNodeNames(const std::string &prefix);
 	// Defer setting node status to DONE when parsed from node line in file
 	void AddPreDoneNode(Node* node) { m_userDefinedDoneNodes.push_back(node); }
@@ -135,7 +164,7 @@ public:
 	void SetReject(const std::string &location); // Mark a DAG as rejected
 	bool GetReject(std::string &firstLocation); // Check if DAG was rejected
 	// Set the DAGs working directory from DIR subcommand
-	void SetDirectory(std::string &dir) { m_directory = dir; }
+	void SetDirectory(const std::string &dir) { m_directory = dir; }
 	// Set nodes effective priotities
 	void SetNodePriorities();
 
@@ -157,8 +186,6 @@ public:
 
 	void RunWaitingScripts(); // Run waiting scripts
 	void RemoveRunningScripts() const; // Remove running scripts
-	// Remove all managed jobs from the Schedd Queue
-	void RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs, bool bForce);
 	// Remove all running jobs associated with a node from the Schedd Queue
 	void RemoveBatchJob(Node *node, const std::string& reason = "Removed by DAGMan");
 
@@ -176,10 +203,50 @@ public:
 	Node* FindNodeByName(const char * nodeName) const;
 	Node* FindNodeByEventID(const CondorID condorID) const;
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
+	auto FindAllNodes(const std::string& name, const int mask = ALL_NODES_REGULAR) const {
+		static const istring_view all_nodes(DAG::ALL_NODES.c_str());
+		if (name.c_str() == all_nodes) {
+			return _nodes | std::views::filter(AllNodesMatcher(mask));
+		} else {
+			static std::vector<Node*> lone;
+			if (lone.size()) { lone.clear(); }
+			lone.emplace_back(FindNodeByName(name.c_str()));
+			return lone | std::views::filter(AllNodesMatcher(ALL_NODES_EVERYTHING));
+		}
+	};
 	bool NodeExists(const char *nodeName) const; // Check if node with provided name exists in DAG
+
+	inline void SetStatus(DagStatus status, bool force = false) {
+		if (force) {
+			_dagStatus = status;
+			_dagIsHalted = (_dagStatus == DagStatus::DAG_STATUS_HALTED);
+		} else if (_dagIsHalted && _altHaltStatus == DagStatus::DAG_STATUS_OK) {
+			_altHaltStatus = status;
+		} else if (_dagStatus == DagStatus::DAG_STATUS_OK) {
+			_dagStatus = status;
+		}
+	}
+
+	inline DagStatus GetStatus() const { return _dagStatus; }
 
 	inline bool Recovery() const { return _recovery; }
 	bool IsHalted() const { return _dagIsHalted; }
+
+	inline void Halt() {
+		if (_dagStatus != DagStatus::DAG_STATUS_HALTED) {
+			_altHaltStatus = _dagStatus;
+		}
+		_dagStatus = DagStatus::DAG_STATUS_HALTED;
+		_dagIsHalted = true;
+	}
+
+	inline void UnHalt() {
+		if (_dagStatus == DagStatus::DAG_STATUS_HALTED) {
+			_dagStatus = _altHaltStatus;
+		}
+		_dagIsHalted = false;
+		_preScriptQ->RunWaitingScripts();
+	}
 
 	const CondorID* DAGManJobId(void) const { return _DAGManJobId; } // Get DAGMan job ID
 	std::string DefaultNodeLog(void) { return _defaultNodeLog.string(); }
@@ -232,6 +299,7 @@ public:
 	inline int ScriptRunNodeCount() const { return _preRunNodeCount + _postRunNodeCount; }
 
 	inline int TotalJobsSubmitted() const { return _totalJobsSubmitted; }
+	inline int TotalJobsSuccessful() const { return _totalJobsSuccessful; }
 	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
 	/** Count number of Job Procs throughout the entire DAG
@@ -301,17 +369,33 @@ public:
 	void SetJobstateLogFileName(const char *logFileName);
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 
+	const char* add_inline_desc(const std::string& name, const std::string& desc) {
+		const auto& [it, added] = InlineDescriptions.insert_or_assign(name, desc);
+		if ( ! added) { // True for inserted and false for assigned
+			debug_printf(DEBUG_NORMAL, "Warning: Inline Description name '%s' used multiple time. Overwritting...\n",
+			             name.c_str());
+		}
+		return it->first.c_str();
+	}
+
+	std::string_view get_inline_desc(const std::string& name) {
+		std::string_view desc;
+		if (InlineDescriptions.contains(name)) {
+			desc = InlineDescriptions[name];
+		}
+		return desc;
+	}
+
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
-	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 	ThrottleByCategory _catThrottles;
 
-	DagStatus _dagStatus{DAG_STATUS_OK};
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
 
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
 	std::vector<Node*> _service_nodes{}; // List of Service nodes
+	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 private:
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -340,14 +424,14 @@ private:
 	void ProcessClusterSubmitEvent(Node *node); // Cluster submit (late materialization)
 	void ProcessClusterRemoveEvent(Node *node, bool recovery); // Cluster removed (late materialization)
 	void ProcessSuccessfulSubmit(Node *node, const CondorID &condorID); // Post process of successful submit of node jobs
-	void ProcessFailedSubmit(Node *node, int max_submit_attempts); // Post process of failed submit of node jobs
+	void ProcessFailedSubmit(Node *node, int max_submit_attempts, std::string err); // Post process of failed submit of node jobs
 
 	void DecrementProcCount(Node *node);
 	void UpdateNodeCounts(Node *node, int change);
 
 	bool StartNode(Node *node, bool isRetry); // Begin executing node (PRE Script -> ready queue -> POST Script)
 	void RestartNode(Node *node, bool recovery); // Restart a failed node w/ retries
-	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID); // Submit a nodes job to Schedd queue
+	submit_result_t SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID, std::string& err); // Submit a nodes job to Schedd queue
 	void TerminateNode(Node* node, bool recovery, bool bootstrap = false); // Final actions once node is completed successfully
 
 	bool RunPostScript(Node *node, bool ignore_status, int status, bool incrementRunCount = true);
@@ -446,7 +530,6 @@ private:
 	std::string _editPolicy{}; // Policy of how we respond to DAG edits
 	std::string _spliceScope; // Current splice scope (i.e. 'A+B+' or 'root')
 	std::string _firstRejectLoc{}; // File and Line number of the first REJECT keyword
-	std::string _haltFile{}; // Name of the halt file
 
 	char* _statusFileName{nullptr}; // Node status filename
 
@@ -457,6 +540,9 @@ private:
 	time_t _validatedStateTime{0}; // Time stamp of last time DAG state was validated when pending on nodes
 	time_t queryFailTime{0}; // Last time we failed to query the Schedd Queue
 
+	DagStatus _dagStatus{DAG_STATUS_OK};
+	DagStatus _altHaltStatus{DAG_STATUS_OK};
+
 	int _numNodesDone{0}; // Number of nodes that have completed execution
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
 	int _numNodesFutile{0}; // Number of nodes that can't run due to ancestor failing
@@ -464,7 +550,8 @@ private:
 	int _numServiceNodesSubmitted{0}; // Number of service nodes with jobs submitted in the queue
 
 	int _totalJobsSubmitted{0}; // Total number of batch system jobs submitted
-	int _totalJobsCompleted{0}; // Number of batch system jobs submitted
+	int _totalJobsCompleted{0}; // Total number of batch system jobs that exited AP
+	int _totalJobsSuccessful{0}; // Total number of batch system jobs that exited AP w/ success
 	int _numIdleJobProcs{0}; // Number of DAG managed jobs currently idle
 
 	int _preRunNodeCount{0}; // Number of nodes currently running PRE Scripts (STATUS_PRERUN)

@@ -172,11 +172,7 @@ if ( "${OS_NAME}" STREQUAL "LINUX" )
 	else()
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
 		set( EXTERNALS_RPATH "$ORIGIN/../lib:/lib64:/usr/lib64:$ORIGIN/../lib/condor:/usr/lib64/condor" )
-        if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
-            set( PYTHON_RPATH "$ORIGIN/../../:/usr/lib64/boost169:/lib64:/usr/lib64:$ORIGIN/../../condor" )
-        else()
-            set( PYTHON_RPATH "$ORIGIN/../../:/lib64:/usr/lib64:$ORIGIN/../../condor" )
-        endif()
+		set( PYTHON_RPATH "$ORIGIN/../../:/lib64:/usr/lib64:$ORIGIN/../../condor" )
 	endif()
 elseif( APPLE )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
@@ -189,11 +185,7 @@ if ( CONDOR_RPMBUILD )
 	    set( PYTHON_RPATH "/usr/lib/condor" )
 	else()
 	    set( CONDOR_RPATH "/usr/lib64:/usr/lib64/condor" )
-        if ( ${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7")
-            set( PYTHON_RPATH "/usr/lib64/condor:/usr/lib64/boost169" )
-        else()
-            set( PYTHON_RPATH "/usr/lib64/condor" )
-        endif()
+	    set( PYTHON_RPATH "/usr/lib64/condor" )
 	endif ()
 endif()
 
@@ -490,7 +482,11 @@ elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_BIN			usr/bin )
 		set( C_LIBEXEC		usr/libexec/condor )
 		set( C_LIBEXEC_BLAHP		usr/libexec/blahp )
-		set( C_SBIN			usr/sbin )
+		if (IS_SYMLINK "/usr/sbin")
+			set( C_SBIN			usr/bin )
+		else()
+			set( C_SBIN			usr/sbin )
+		endif()
 		set( C_INCLUDE		usr/include/condor )
 		set( C_INCLUDE_PUBLIC		usr/include )
 		set( C_MAN			usr/share/man/man1 )
@@ -513,17 +509,10 @@ elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	# Generate empty folder to ship with package
 	# Local dir
-	file (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/execute )
-	add_custom_target(	change_execute_folder_permission
-						ALL
-						WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-						COMMAND chmod 1777 execute
-						DEPENDS ${CMAKE_BINARY_DIR}/execute)
-	install(DIRECTORY	${CMAKE_BINARY_DIR}/execute
-			DESTINATION	"${C_LOCAL_DIR}"
-			DIRECTORY_PERMISSIONS	USE_SOURCE_PERMISSIONS)
 	# Blank directory means we are creating an emtpy directoy
 	# CPackDeb does not package empyty directoy, so we will recreate them during posinst
+	install(DIRECTORY
+			DESTINATION	"${C_LOCAL_DIR}/execute")
 	install(DIRECTORY
 			DESTINATION	"${C_LOCAL_DIR}/spool")
 	install(DIRECTORY

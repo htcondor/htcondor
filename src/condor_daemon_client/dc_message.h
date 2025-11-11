@@ -290,7 +290,7 @@ private:
                class.
  */
 
-class DCMessenger: public Service, public ClassyCountedPtr {
+class DCMessenger: public ClassyCountedPtr {
 public:
 		// This constructor is intended for use on the sending side,
 		// where the peer is represented by a Daemon object.

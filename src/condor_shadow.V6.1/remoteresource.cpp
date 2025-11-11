@@ -41,6 +41,9 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include "catalog_utils.h"
+#include "condor_holdcodes.h"
+#include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -101,7 +104,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
-	m_got_job_exit = false;
+	m_got_job_done = false;
 	m_want_chirp = false;
 	m_want_streaming_io = false;
 	m_attempt_shutdown_tid = -1;
@@ -138,31 +141,31 @@ RemoteResource::~RemoteResource()
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
 	}
-	if( proxy_check_tid != -1) {
+	if( proxy_check_tid != -1 && daemonCore) {
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
 	}
 
-	if (no_update_received_tid != -1) {
+	if (no_update_received_tid != -1 && daemonCore) {
 		daemonCore->Cancel_Timer(no_update_received_tid);
 		no_update_received_tid = -1;
 	}
 
 
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( m_claim_session.secSessionId()[0] != '\0' ) {
+		if( m_claim_session.secSessionId()[0] != '\0' && daemonCore ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
 		}
-		if( m_filetrans_session.secSessionId()[0] != '\0' ) {
+		if( m_filetrans_session.secSessionId()[0] != '\0' && daemonCore ) {
 			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
 		}
 	}
 
-	if( m_attempt_shutdown_tid != -1 ) {
+	if( m_attempt_shutdown_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(m_attempt_shutdown_tid);
 		m_attempt_shutdown_tid = -1;
 	}
-	if ( next_reconnect_tid != -1 ) {
+	if ( next_reconnect_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer( next_reconnect_tid );
 	}
 }
@@ -172,6 +175,8 @@ bool
 RemoteResource::activateClaim( int starterVersion )
 {
 	int reply;
+	ClassAd replyAd;
+	std::string anabuf;
 	const int max_retries = 20;
 	const int retry_delay = 1;
 	int num_retries = 0;
@@ -192,7 +197,7 @@ RemoteResource::activateClaim( int starterVersion )
 		// we'll eventually return out of this loop...
 	while( 1 ) {
 		reply = dc_startd->activateClaim( jobAd, starterVersion,
-										  &claim_sock );
+										  &claim_sock, &replyAd );
 		switch( reply ) {
 		case OK:
 			dprintf( D_ALWAYS,
@@ -249,6 +254,9 @@ RemoteResource::activateClaim( int starterVersion )
 			dprintf( D_ALWAYS,
 			         "Request to run on %s %s was REFUSED\n",
 			         machineName ? machineName:"", dc_startd->addr() );
+			if (replyAd.LookupString("Analyze", anabuf) && ! anabuf.empty()) {
+				dprintf(D_ERROR, "activateClaim failure analysis:\n%s\n", anabuf.c_str());
+			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -295,10 +303,10 @@ RemoteResource::killStarter( bool graceful )
 	// if we saw a job_exit.
 	// TODO If we add a version check or decide we don't care about 8.6.X
 	//   and earlier, we can just return true if m_got_job_exit==true.
-	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing)) {
 			break;
 		}
 		num_tries--;
@@ -639,14 +647,15 @@ RemoteResource::disconnectClaimSock(const char *err_msg)
 		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
 			Shadow->gracefulShutDown();
-			EXCEPT( "%s", my_err_msg.c_str() );
+			Shadow->reconnectFailed("This job cannot reconnect");
 		}
 			// tell the shadow to start trying to reconnect
 		Shadow->reconnect();
 	} else {
 			// The remote starter doesn't support it, so give up
 			// like we always used to.
-		EXCEPT( "%s", my_err_msg.c_str() );
+		dprintf(D_ERROR, "%s\n", my_err_msg.c_str());
+		Shadow->reconnectFailed("Reconnect is not supported");
 	}
 }
 
@@ -833,6 +842,13 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
+	// This seems like the obvious place to change the job ad so that we
+	// can properly initialize the FTO if the starter we're talking to is too
+	// old to handle common file transfer.  However, the FTO is actually
+	// initialized by checkInputFileTransfer(), which deliberately happens
+	// before we contact the starter.  Oops.
+	//
+	// Try using addInputFile() instead, I guess.
 
 	std::string buf;
 	dprintf(D_MACHINE, "StarterInfo ad:\n%s", formatAd(buf, *ad, "\t")); // formatAt guarantees a newline.
@@ -840,6 +856,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// save (most of) the incoming starter ad for later
 	if (starterAd) { starterAd->Clear(); }
 	else { starterAd = new ClassAd(); }
+
 	starterAd->Update(*ad);
 
 	if( ad->LookupString(ATTR_STARTER_IP_ADDR, buf) ) {
@@ -864,7 +881,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				free(machineName);
 				machineName = strdup( buf.c_str() );
 			}
-		}	
+		}
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	} else if( ad->LookupString(ATTR_MACHINE, buf) ) {
 		if( machineName ) {
@@ -872,20 +889,20 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 				free(machineName);
 				machineName = strdup( buf.c_str() );
 			}
-		}	
+		}
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
-	char* starter_version=NULL;
-	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
+	if( ad->LookupString(ATTR_VERSION, starter_version) ) {
+		dprintf(D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version.c_str()); 
 	}
 
-	if ( starter_version == NULL ) {
+	if (starter_version.empty()) {
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
-		filetrans.setPeerVersion( starter_version );
-		free(starter_version);
+		CondorVersionInfo vi(starter_version.c_str());
+		filetrans.setPeerVersion(vi);
+		m_use_delayed_attr = vi.built_since_version(25, 3, 0);
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
@@ -898,6 +915,62 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	} else {
 		dprintf( D_SYSCALLS, "  %s = FALSE (not specified)\n",
 				 ATTR_HAS_RECONNECT );
+	}
+
+
+	//
+	// If the starter is too old for common file transfer, fall back on
+	// per-proc file transfer.
+	//
+	CondorVersionInfo cvi( starter_version.c_str() );
+	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
+	// actually released as part of 25.2.FIXME.
+	//
+	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
+	// can successfully do common file transfer if and only if there were no
+	// catalogs specified and the job ad has the test syntax from HTC25.  As
+	// a result, those will be treated as needing the fall-back as well.
+	//
+	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+		if(! common_file_catalogs) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			return;
+		}
+
+		int required_version = 2;
+		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
+			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+
+			// We don't have a mechanism to inform the submitter of internal
+			// errors like this, so for now we're stuck putting the job on hold.
+			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+				CONDOR_HOLD_CODE::JobNotStarted, 4
+			);
+
+			return;
+		}
+
+		if( common_file_catalogs->empty() ) {
+			return;
+		}
+
+		for( const auto & [cifName, commonInputFiles] : *common_file_catalogs ) {
+			// dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+
+			for( const auto & source : split(commonInputFiles) ) {
+				// dprintf( D_ZKM, "adding %s ...\n", source.c_str() );
+				filetrans.addInputFile( source.c_str() );
+			}
+		}
 	}
 }
 
@@ -975,42 +1048,18 @@ RemoteResource::setExitReason( int reason )
 }
 
 
-float
+uint64_t
 RemoteResource::bytesSent() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesSent();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_sent();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesSent();
 	return bytes;
 }
 
 
-float
+uint64_t
 RemoteResource::bytesReceived() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesReceived();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_recvd();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesReceived();
 	return bytes;
 }
 
@@ -1254,6 +1303,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
+    CopyAttribute(ATTR_JOB_STDOUT_MTIME, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_STDERR_MTIME, *jobAd, *update_ad);
+
     CopyAttribute(ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
     CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
@@ -1282,14 +1334,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	CopyAttribute( "PostExitCode", *jobAd, *update_ad );
 	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
 	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
-
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup(ATTR_JOB_TOE));
-	if( toeTag ) {
-		CopyAttribute(ATTR_JOB_TOE, *jobAd, *update_ad );
-
-		// Required to actually update the schedd's copy.  (sigh)
-		shadow->watchJobAttr(ATTR_JOB_TOE);
-	}
 
     // You MUST NOT use CopyAttribute() here, because the starter doesn't
     // send this on every update: CopyAttribute() deletes the target's
@@ -1385,20 +1429,78 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Assign(ATTR_JOB_CORE_DUMPED, bool_value);
 	}
 
+	if( update_ad->LookupString(ATTR_VACATE_REASON, string_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON, string_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_CODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_CODE, long_value);
+	}
+	if( update_ad->LookupInteger(ATTR_VACATE_REASON_SUBCODE, long_value) ) {
+		jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, long_value);
+	}
 
 	std::string PluginResultList = "PluginResultList";
-	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
+	std::array< std::string, 4 > prefixes( { "Common", "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
+		classad::ClassAd c;
+
+
+		// The result list may contain plugin invocation ads.  Move
+		// those ads into their own list.
+		classad::ExprList * resultList = nullptr;
+		classad::ExprList * invocationList = nullptr;
+
 		std::string attributeName = prefix + PluginResultList;
-		ExprTree * resultList = update_ad->LookupExpr( attributeName );
-		if( resultList != NULL ) {
-			classad::ClassAd c;
+		classad::ExprTree * resultAttr = update_ad->LookupExpr( attributeName );
+		if( resultAttr != NULL ) {
+			resultList = dynamic_cast<classad::ExprList *>(resultAttr);
+
+			bool updateAdOwnsResultList = true;
+			if( resultList != nullptr ) {
+				std::vector<ExprTree *> results;
+				std::vector<ExprTree *> invocations;
+
+				resultList->removeAll(results);
+				auto i = std::stable_partition( results.begin(), results.end(),
+					[](ExprTree * v) {
+						ClassAd * ad = dynamic_cast<ClassAd *>(v);
+						if( ad == nullptr ) { return false; }
+
+						int transferClass;
+						return ! ad->LookupInteger(
+							"TransferClass", transferClass
+						);
+					}
+				);
+				invocations.insert( invocations.begin(), i, results.end() );
+				results.erase( i, results.end() );
+
+				updateAdOwnsResultList = false;
+				resultList = new classad::ExprList( results );
+				invocationList = new classad::ExprList( invocations );
+			}
+
+
+			// Arguably, the epoch log would be easier to parse ifthe
+			// attribute name were always just "PluginInvocations".
+			std::string pin = prefix + "PluginInvocations";
+			c.Insert( pin, invocationList );
+
 			// Arguably, the epoch log would be easier to parse if the
-			// attribute name were always PluginResultList.
+			// attribute name were always just "PluginResultList".
 			c.Insert( attributeName, resultList );
-			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
-			c.Remove( attributeName );
-			writeJobEpochFile( jobAd, starterAd, "STARTER" );
+			// ColeB pointed out that this might be nice to have.
+			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
+			// This sets the value in the header.
+			writeAdWithContextToEpoch( & c, jobAd, as_upper_case(prefix).c_str() );
+			c.Delete( "TransferClass" );
+			if (updateAdOwnsResultList) {
+				std::ignore = c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
+			} else {
+				c.Delete(attributeName);
+			}
+			// This is actually the match ad, which is mostly useless.
+			// writeAdWithContextToEpoch( starterAd, jobAd, "STARTER" );
 		}
 	}
 
@@ -1415,10 +1517,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
 	}
 
+	ExprTree* chirp_ad_expr = update_ad->Lookup(ATTR_CHIRP_DELAYED_ATTRS);
+	ClassAd* chirp_ad = dynamic_cast<ClassAd*>(chirp_ad_expr);
+	if (chirp_ad) {
+		for (ClassAd::const_iterator it = chirp_ad->begin(); it != chirp_ad->end(); it++) {
+			if (allowRemoteWriteAttributeAccess(it->first)) {
+				classad::ExprTree *expr_copy = it->second->Copy();
+				jobAd->Insert(it->first, expr_copy);
+				shadow->watchJobAttr(it->first);
+			}
+		}
+	}
+
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
 		size_t offset = 0;
-		if (allowRemoteWriteAttributeAccess(it->first)) {
+		if (!m_use_delayed_attr && allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
 			shadow->watchJobAttr(it->first);
@@ -1460,6 +1574,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
 			// if we need to log anything to the UserLog
+			// TODO This code doesn't properly handle a job that goes
+			//   from Suspended to Exited. The starter sends an extra
+			//   update currently so the the state goes to Executing
+			//   first on an eviction, but the shadow shouldn't be
+			//   relying on that.
 		if( strcasecmp(job_state, "Suspended") == MATCH ) {
 			new_state = RR_SUSPENDED;
 		} else if ( strcasecmp(job_state, "Running") == MATCH ) {
@@ -1627,14 +1746,14 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	static float last_recv_bytes = 0.0;
+	static uint64_t last_recv_bytes = 0;
 
 		// First, log this to the UserLog
 	CheckpointedEvent event;
 
 	event.run_remote_rusage = getRUsage();
 
-	float recv_bytes = bytesReceived();
+	uint64_t recv_bytes = bytesReceived();
 
 	// Received Bytes for checkpoint
 	event.sent_bytes = recv_bytes - last_recv_bytes;
@@ -1787,7 +1906,7 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
 
-	m_got_job_exit = true;
+	m_got_job_done = true;
 
 	// Record the activation stop time (HTCONDOR-861) and set the
 	// corresponding duration attributes.
@@ -1814,7 +1933,7 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, tEnd);
 	}
 
-	if( exit_value == -1 ) {
+	if( exit_value == -1 && exit_status != -1 ) {
 			/* 
 			   Backwards compatibility code...  If we don't have a
 			   real value for exit_value yet, it means the starter
@@ -2012,9 +2131,7 @@ RemoteResource::reconnect( void )
 	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
 			 (long long)remaining );
 
-	if( next_reconnect_tid >= 0 ) {
-		EXCEPT( "in reconnect() and timer for next attempt already set" );
-	}
+	ASSERT(next_reconnect_tid < 0);
 
     time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
@@ -2030,9 +2147,7 @@ RemoteResource::reconnect( void )
 						(TimerHandlercpp)&RemoteResource::attemptReconnect,
 						"RemoteResource::attemptReconnect()", this );
 
-	if( next_reconnect_tid < 0 ) {
-		EXCEPT( "Failed to register timer!" );
-	}
+	ASSERT(next_reconnect_tid >= 0);
 }
 
 
@@ -2120,21 +2235,16 @@ RemoteResource::locateReconnectStarter( void )
 			// communication successful but GlobalJobId or starter not
 			// found.  either way, we know the job is gone, and can
 			// safely give up and restart.
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
 		shadow->reconnectFailed( "Job not found at execution machine" );
 		break;
 
 	case CA_NOT_AUTHENTICATED:
-			// some condor daemon is listening on the port, but it
-			// doesn't believe us anymore, so it can't still be our
-			// old startd. :( if our job was still there, the old
-			// startd would be willing to talk to us.  Just to be
-			// safe, try one last time to see if we can kill the old
-			// starter.  We don't want the schedd to try this, since
-			// it'd block, but we don't have anything better to do,
-			// and it helps ensure run-only-once semantics for jobs.
-		shadow->cleanUp();
-		shadow->reconnectFailed( "Startd is no longer at old port, "
-								 "job must have been killed" );
+			// Our claim was not recognized by the startd or some
+			// other daemon is now listening on the port. Either
+			// way, our claim, and thus the job, is dead.
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Claim not found at execution machine");
 		break;
 
 	case CA_CONNECT_FAILED:
@@ -2151,20 +2261,31 @@ RemoteResource::locateReconnectStarter( void )
 	case CA_INVALID_STATE:
 	case CA_INVALID_REQUEST:
 	case CA_INVALID_REPLY:
-		EXCEPT( "impossible: startd returned %s for locateStarter",
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
 				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_LOCATE_FAILED:
 			// remember, this means we couldn't even find the address
 			// of the startd, not the starter.  we already know the
 			// startd's addr from the ClaimId...
-		EXCEPT( "impossible: startd address already known" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_SUCCESS:
-		EXCEPT( "impossible: success already handled" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_UNKNOWN_ERROR:
-		EXCEPT( "impossible: Unknown error code from startd" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 
 	}
@@ -2186,14 +2307,21 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 
 	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
+	if (IsDebugCategory(D_ZKM)) {
+		std::string buf;
+		info.dump(buf,"\t");
+		if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
+		dprintf(D_ZKM, "transferStatusUpdateCallback: %s", buf.c_str());
+	}
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
+		this->download_transfer_info = info;
 		m_download_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_download_file_stats = info.stats;
 		}
-	}
-	else {
+	} else {
+		this->upload_transfer_info = info;
 		m_upload_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_upload_file_stats = info.stats;
@@ -2204,50 +2332,7 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 }
 
 void
-RemoteResource::initFileTransfer()
-{
-		// FileTransfer now makes sure we only do Init() once.
-		//
-		// Tell the FileTransfer object to create a file catalog if
-		// the job's files are spooled. This prevents FileTransfer
-		// from listing unmodified input files as intermediate files
-		// that need to be transferred back from the starter.
-	ASSERT(jobAd);
-	int spool_time = 0;
-	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
-	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
-	if (r == 0) {
-		// filetransfer Init failed
-		EXCEPT( "RemoteResource::initFileTransfer  Init failed");
-	}
-
-	filetrans.RegisterCallback(
-		(FileTransferHandlerCpp)&RemoteResource::transferStatusUpdateCallback,
-		this,
-		true);
-
-	if( !daemonCore->DoFakeCreateThread() ) {
-		filetrans.SetServerShouldBlock(false);
-	}
-
-	int max_upload_mb = -1;
-	int max_download_mb = -1;
-	param_integer("MAX_TRANSFER_INPUT_MB",max_upload_mb,true,-1,false,INT_MIN,INT_MAX,jobAd);
-	param_integer("MAX_TRANSFER_OUTPUT_MB",max_download_mb,true,-1,false,INT_MIN,INT_MAX,jobAd);
-
-		// The job may override the system defaults for max transfer I/O
-	int ad_max_upload_mb = -1;
-	int ad_max_download_mb = -1;
-	if( jobAd->LookupInteger(ATTR_MAX_TRANSFER_INPUT_MB,ad_max_upload_mb) ) {
-		max_upload_mb = ad_max_upload_mb;
-	}
-	if( jobAd->LookupInteger(ATTR_MAX_TRANSFER_OUTPUT_MB,ad_max_download_mb) ) {
-		max_download_mb = ad_max_download_mb;
-	}
-
-	filetrans.setMaxUploadBytes(max_upload_mb < 0 ? -1 : ((filesize_t)max_upload_mb)*1024*1024);
-	filetrans.setMaxDownloadBytes(max_download_mb < 0 ? -1 : ((filesize_t)max_download_mb)*1024*1024);
-
+modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 	// Add extra remaps for the canonical stdout/err filenames.
 	// If using the FileTransfer object, the starter will rename the
 	// stdout/err files, and we need to remap them back here.
@@ -2326,7 +2411,7 @@ RemoteResource::initFileTransfer()
 	// because those are applied on the starter side and aren't transferred
 	// from the shadow (except as part of the job ad, which we've already
 	// sent).
-	filetrans.addInputFile( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
+	filetrans.addInputFileEx( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
 
 	//
 	// Transfer every file listed in the MANIFEST file.  It could be quite
@@ -2354,12 +2439,65 @@ RemoteResource::initFileTransfer()
 		std::string checkpointFile = manifest::FileFromLine( manifestLine );
 		formatstr( checkpointURL, "%s/%s/%.4d/%s", checkpointDestination.c_str(),
 		  globalJobID.c_str(), manifestNumber, checkpointFile.c_str() );
-		filetrans.addCheckpointFile( checkpointURL, checkpointFile, pathsAlreadyPreserved );
+		filetrans.addCheckpointFileEx( checkpointURL, checkpointFile, pathsAlreadyPreserved );
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );
 	}
+}
 
+void
+RemoteResource::initFileTransfer()
+{
+    if(doneInitFileTransfer) { return; }
+    doneInitFileTransfer = true;
+
+		// FileTransfer now makes sure we only do Init() once.
+		//
+		// Tell the FileTransfer object to create a file catalog if
+		// the job's files are spooled. This prevents FileTransfer
+		// from listing unmodified input files as intermediate files
+		// that need to be transferred back from the starter.
+	ASSERT(jobAd);
+	int spool_time = 0;
+	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
+	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+	if (r == 0) {
+		// filetransfer Init failed
+		EXCEPT( "RemoteResource::initFileTransfer  Init failed");
+	}
+
+	filetrans.RegisterCallback(
+		(FileTransferHandlerCpp)&RemoteResource::transferStatusUpdateCallback,
+		this,
+		true);
+
+	// This disables Create_Thread() for file transfer in favor of
+	// blocking mode, which is super-confusing (because why don't
+	// we just use blocking mode on Windows all the time?).
+	if( !daemonCore->DoFakeCreateThread() ) {
+		filetrans.SetServerShouldBlock(false);
+	}
+
+	int max_upload_mb = -1;
+	int max_download_mb = -1;
+	param_integer("MAX_TRANSFER_INPUT_MB",max_upload_mb,true,-1,false,INT_MIN,INT_MAX,jobAd);
+	param_integer("MAX_TRANSFER_OUTPUT_MB",max_download_mb,true,-1,false,INT_MIN,INT_MAX,jobAd);
+
+		// The job may override the system defaults for max transfer I/O
+	int ad_max_upload_mb = -1;
+	int ad_max_download_mb = -1;
+	if( jobAd->LookupInteger(ATTR_MAX_TRANSFER_INPUT_MB,ad_max_upload_mb) ) {
+		max_upload_mb = ad_max_upload_mb;
+	}
+	if( jobAd->LookupInteger(ATTR_MAX_TRANSFER_OUTPUT_MB,ad_max_download_mb) ) {
+		max_download_mb = ad_max_download_mb;
+	}
+
+	filetrans.setMaxUploadBytes(max_upload_mb < 0 ? -1 : ((filesize_t)max_upload_mb)*1024*1024);
+	filetrans.setMaxDownloadBytes(max_download_mb < 0 ? -1 : ((filesize_t)max_download_mb)*1024*1024);
+
+	modifyFileTransferObject(filetrans, jobAd);
 }
 
 void
@@ -2459,18 +2597,25 @@ RemoteResource::requestReconnect( void )
 		case CA_INVALID_STATE:
 		case CA_INVALID_REQUEST:
 		case CA_INVALID_REPLY:
-			EXCEPT( "impossible: starter returned %s for %s",
-					getCAResultString(dc_startd->errorCode()),
-					getCommandString(CA_RECONNECT_JOB) );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		case CA_LOCATE_FAILED:
 				// we couldn't even find the address of the starter, but
 				// we already know it or we wouldn't be trying this
 				// method...
-			EXCEPT( "impossible: starter address already known" );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		case CA_SUCCESS:
-			EXCEPT( "impossible: success already handled" );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		}
 	}
@@ -2622,9 +2767,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 		/* Harmless, but suspicious. */
 		return;
 	}
-	
-	StatInfo si(proxy_path.c_str());
-	time_t lastmod = si.GetModifyTime();
+
+	struct stat si = {};
+	stat(proxy_path.c_str(), &si);
+	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
 

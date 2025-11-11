@@ -1257,7 +1257,6 @@ main (int argc, char *argv[])
 		mode_constraint = nullptr;
 	}
 
-
 	if(javaMode) {
 		if (diagnose) { printf ("Adding constraint [%s]\n", ATTR_HAS_JAVA); }
 		query->addANDConstraint (ATTR_HAS_JAVA);
@@ -1268,7 +1267,7 @@ main (int argc, char *argv[])
 	}
 
 	if(offlineMode) {
-		const char * constr = "size( OfflineUniverses ) != 0";
+		const char * constr = "size(OfflineUniverses) != 0";
 		if (diagnose) { printf( "Adding constraint [%s]\n", constr ); }
 		query->addANDConstraint(constr);
 
@@ -1344,7 +1343,21 @@ main (int argc, char *argv[])
 		projList.insert("ChildState"); // this is needed to do the summary rollup
 		projList.insert("ChildActivity"); // this is needed to do the summary rollup
 		//pmHeadFoot = (printmask_headerfooter_t)(pmHeadFoot | HF_NOSUMMARY);
+	} else if (dash_broken && explicit_format) {
+		mode_constraint = nullptr;
+		if (sdo_mode == SDO_StartD_Broken) {
+			mode_constraint = "size(BrokenReasons?:BrokenSlots) > 0";
+		} else if (sdo_mode == SDO_Slots_Broken) {
+			mode_constraint = "size(SlotBrokenReason) > 0";
+		}
+		if (mode_constraint) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
+			query->addANDConstraint (mode_constraint);
+			mode_constraint = nullptr;
+		}
 	}
+
+	projList.insert(ATTR_OCU);
 
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
@@ -1510,10 +1523,6 @@ main (int argc, char *argv[])
 			const char *adtypeName = mainPP.adtypeNameFromPPMode();
 			if (adtypeName) { pmms.select_from = mainPP.adtypeNameFromPPMode(); }
 			pmms.headfoot = mainPP.pmHeadFoot;
-			std::vector<const char *> * pheadings = NULL;
-			if ( ! mainPP.pm.has_headings()) {
-				if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
-			}
 			std::string requirements;
 			if (Q_OK == query->getRequirements(requirements) && ! requirements.empty()) {
 				ConstraintHolder constrRaw(strdup(requirements.c_str()));
@@ -1525,7 +1534,7 @@ main (int argc, char *argv[])
 
 			temp.clear();
 			temp.reserve(4096);
-			PrintPrintMask(temp, *pFnTable, mainPP.pm, pheadings, pmms, group_by_keys, NULL);
+			PrintPrintMask(temp, *pFnTable, mainPP.pm, nullptr, pmms, group_by_keys, NULL);
 			fprintf(fout, "%s\n", temp.c_str());
 		}
 
@@ -1546,11 +1555,7 @@ main (int argc, char *argv[])
 		fprintf(fout, "Sort: [ %s<ord> ]\n", style_text.c_str());
 
 		style_text = "";
-		std::vector<const char *> * pheadings = NULL;
-		if ( ! mainPP.pm.has_headings()) {
-			if (mainPP.pm_head.size() > 0) pheadings = &mainPP.pm_head;
-		}
-		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
+		mainPP.pm.dump(style_text, &GlobalFnTable);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -2275,8 +2280,28 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 	return false;
 }
 
-bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, Formatter & /*fmt*/ )
+static const char broken_context_ad_format[]= "SELECT\n"
+	"strcat(\"At time \", formattime(Time))\n"
+	"join(\" \", JobId, \"from\", RemoteUser, \"on\", RemoteScheddName) PRINTF 'After job %v'\n"
+	"strcat(\"Cpus=\", int(Cpus), \", GPUs=\", int(GPUs), \", Memory=\", Memory, \" MB, Disk=\", Disk/1024, \" MB\")\n"
+	;
+static const char broken_context_ad_gpus_format[]= "SELECT\n"
+	"AssignedGPUs PRINTF GpuIds=%v\n"
+;
+static void init_internal_printmask(AttrListPrintMask & prmask, const char * format);
+
+bool local_render_broken_reasons_vector ( classad::Value & value, ClassAd* ad, Formatter & /*fmt*/ )
 {
+	static AttrListPrintMask pmcontext;
+	static AttrListPrintMask pmgpus;
+	if (pmcontext.IsEmpty()) {
+		// record prefix is \n<13 spaces> to match "%-12.12s "
+		init_internal_printmask(pmcontext, broken_context_ad_format);
+		pmcontext.SetAutoSep("", "             ", "\n", "");
+		init_internal_printmask(pmgpus, broken_context_ad_gpus_format);
+		pmgpus.SetAutoSep("", "             ", "\n", "");
+	}
+
 	classad::ExprList *lst = nullptr;
 	if (value.IsListValue(lst)) {
 		std::string slist;
@@ -2285,12 +2310,27 @@ bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, For
 			++ii;
 			const char * cstr = nullptr;
 			std::string attr, str, tag, line;
+			ClassAd * contextAd = nullptr;
 			if (ExprTreeIsLiteralString(expr, cstr)) {
 				tag = std::to_string(ii);
 			} else if (ExprTreeIsAttrRef(expr, attr) && ad->LookupString(attr,str)) {
 				size_t off = attr.find("BrokenReason");
 				if (off != std::string::npos) {
 					tag = attr.substr(0, off);
+					std::string context_attr = tag + "BrokenContext";
+					auto * expr = ad->Lookup(context_attr);
+					if (expr) contextAd = dynamic_cast<ClassAd*>(expr);
+					if (contextAd) {
+						//uncomment to print non-uniqified tags
+						contextAd->LookupString("Id", tag);
+						str += "\n             ";
+						pmcontext.display(str, contextAd);
+						trim(str); chomp(str);
+						if (contextAd->Lookup("AssignedGPUs")) {
+							str += "\n             ";
+							pmgpus.display(str, contextAd);
+						}
+					}
 				} else {
 					tag = std::to_string(ii);
 				}
@@ -2309,7 +2349,7 @@ bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, For
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "BROKEN_SLOTS_VECTOR", "BrokenSlots", 0, local_render_broken_slots_vector, "\0" },
+	{ "BROKEN_REASONS_VECTOR", "BrokenReasons", 0, local_render_broken_reasons_vector, "BrokenSlots\0BrokenContextAds\0" },
 	{ "GPUS_CAPS", "AssignedGpus", 0, local_render_gpus_caps, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_MEM", "AssignedGpus", 0, local_render_gpus_mem, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_NAMES", "AssignedGpus", 0, local_render_gpus_names, "AvailableGPUs\0OfflineGPUs\0" },
@@ -2322,44 +2362,29 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
 
-int PrettyPrinter::set_status_print_mask_from_stream (
-	const char * streamid,
-	bool is_filename,
+int PrettyPrinter::set_print_mask_from_stream (
+	SimpleInputStream & stream,
 	const char ** pconstraint)
 {
 	PrintMaskMakeSettings pmopt;
 	std::string messages;
 
 	pmopt.headfoot = pmHeadFoot;
+	pmopt.fixed_width_implies_truncate = false;
+	pmopt.generate_printf_from_width = false;
 
-	SimpleInputStream * pstream = NULL;
-	*pconstraint = NULL;
-
-	FILE *file = NULL;
-	if (MATCH == strcmp("-", streamid)) {
-		pstream = new SimpleFileInputStream(stdin, false);
-	} else if (is_filename) {
-		file = safe_fopen_wrapper_follow(streamid, "r");
-		if (file == NULL) {
-			fprintf(stderr, "Can't open select file: %s\n", streamid);
-			return -1;
-		}
-		pstream = new SimpleFileInputStream(file, true);
-	} else {
-		pstream = new StringLiteralInputStream(streamid);
-	}
-	ASSERT(pstream);
+	*pconstraint = nullptr;
 
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
+	AttrListPrintMask * sumymask = nullptr;
 	int err = SetAttrListPrintMaskFromStream(
-					*pstream,
-					&LocalPrintFormatsTable,
-					pm,
-					pmopt,
-					group_by_keys,
-					NULL,
-					messages);
-	delete pstream; pstream = NULL;
+		stream,
+		&LocalPrintFormatsTable,
+		pm,
+		pmopt,
+		group_by_keys,
+		sumymask,
+		messages);
 	if ( ! err) {
 		if (pmopt.aggregate != PR_NO_AGGREGATION) {
 			fprintf(stderr, "print-format aggregation not supported\n");
@@ -2378,6 +2403,48 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
+}
+
+int PrettyPrinter::set_status_print_mask_from_stream (
+	const char * streamid,
+	bool is_filename,
+	const char ** pconstraint)
+{
+	*pconstraint = nullptr;
+	if ( ! is_filename) {
+		StringLiteralInputStream slis(streamid);
+		return set_print_mask_from_stream(slis, pconstraint);
+	}
+
+	FILE *file = NULL;
+	bool close_file = false;
+	if (MATCH == strcmp("-", streamid)) {
+		file = stdin;
+		close_file = false;
+	} else {
+		file = safe_fopen_wrapper_follow(streamid, "r");
+		if ( ! file) {
+			fprintf(stderr, "Can't open select file: %s\n", streamid);
+			return -1;
+		}
+		close_file = true;
+	}
+	SimpleFileInputStream sfis(file, close_file);
+	return set_print_mask_from_stream(sfis, pconstraint);
+}
+
+
+static void init_internal_printmask(AttrListPrintMask & prmask, const char * format)
+{
+	std::string errmsg;
+	PrintMaskMakeSettings settings;
+	std::vector<GroupByKeyInfo> group_by;
+	prmask.SetAutoSep(" ", " ", ",", "");
+
+	StringLiteralInputStream stm(format);
+	if (SetAttrListPrintMaskFromStream(stm, &LocalPrintFormatsTable, prmask, settings, group_by, nullptr, errmsg)) {
+		fprintf(stderr, "internal print mask error : %s\n", errmsg.c_str());
+	}
 }
 
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit)
@@ -2502,7 +2569,7 @@ usage (const char * opts)
 		"\t-limit <n>\t\tDisplay no more than <n> classads.\n"
 		"\t-sort <expr>\t\tSort ClassAds by expressions. 'no' disables sorting\n"
 		"\t-natural[:off]\t\tUse natural sort order in default output (default=on)\n"
-		"\t-total\t\t\tDisplay totals only\n"
+		"\t-totals\t\t\tDisplay totals only\n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t-wide[:<width>]\t\tDon't truncate data to fit in 80 columns.\n"
 		"\t\t\t\tTruncates to console width or <width> argument if specified.\n"
@@ -2899,6 +2966,13 @@ firstPass (int argc, char *argv[])
 			}
 			dash_broken = true;
 		} else
+		if (is_dash_arg_colon_prefix(argv[i], "lvm", &pcolon, 3)) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_LvUsage, i, argv[i]);
+			}
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -2922,6 +2996,8 @@ firstPass (int argc, char *argv[])
 				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
 			} else if (sdo_mode == SDO_Slots_Broken) {
 				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots_LvUsage) {
+				mainPP.resetMode (SDO_StartD_Lvm, i, argv[i]);
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}
@@ -3045,7 +3121,7 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "ckptsrvr", 2)) {
 			mainPP.setMode (SDO_CkptSvr, i, argv[i]);
 		} else
-		if (is_dash_arg_prefix (argv[i], "total", 1)) {
+		if (is_dash_arg_prefix (argv[i], "totals", 1)) {
 			mainPP.wantOnlyTotals = true;
 			mainPP.pmHeadFoot = (printmask_headerfooter_t)(HF_NOTITLE | HF_NOHEADER);
 			explicit_format = true;
@@ -3183,11 +3259,11 @@ secondPass (int argc, char *argv[])
 				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
-				if (fheadings || mainPP.pm_head.size() > 0) { 
+				if (fheadings || mainPP.pm.has_headings()) {
 					const char * hd = fheadings ? argv[i] : "(expr)";
-					wid = 0 - (int)strlen(hd); 
-					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					mainPP.pm_head.emplace_back(hd);
+					wid = 0 - (int)strlen(hd);
+					opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
+					mainPP.pm.set_heading(hd);
 				}
 				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");

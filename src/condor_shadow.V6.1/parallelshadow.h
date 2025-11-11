@@ -92,8 +92,8 @@ class ParallelShadow : public BaseShadow
 
 	bool claimIsClosing( void );
 
-	float bytesSent( void );
-	float bytesReceived( void );
+	uint64_t bytesSent( void );
+	uint64_t bytesReceived( void );
 	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
@@ -102,15 +102,6 @@ class ParallelShadow : public BaseShadow
 	int exitSignal( void );
 
 	int exitCode( void );
-
-		/** Record the IP and port where the master is running for
-			this computation.  Once we get this info, we can spawn all
-			the workers, so start the ball rolling on that, too.
-			@param str A string containing the IP and port, separated
-			by a semicolon (e.g. "128.105.102.46:2342")
-			@return Always return true, since we're an MPI shadow
-		*/
-	bool setMpiMasterInfo( char* str );
 
 		/** If desired, send the user email now that this job has
 			terminated.  For MPI jobs, we print out all the hosts

@@ -1,7 +1,9 @@
 import htcondor2
-from htcondor._utils.ansi import underline
+import classad2
+from htcondor2._utils.ansi import underline
+from pathlib import Path
 
-from htcondor_cli.convert_ad import ads_to_daemon_status, health_str
+from htcondor_cli.convert_ad import echo_ads_to_daemon_status, health_str
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
@@ -25,16 +27,26 @@ class Status(Verb):
         if len(hostnames) > 0:
             constraint = " || ".join(f'Machine == "{host}"' for host in hostnames)
 
-        collector = htcondor2.Collector()
-        ads = collector.query(ad_type=htcondor2.AdType.Schedd, constraint=constraint)
+        try:
+            collector = htcondor2.Collector()
+            ads = collector.query(ad_type=htcondor2.AdType.Schedd, constraint=constraint)
+        except Exception:
+            ads = []
 
         if len(ads) == 0:
-            raise RuntimeError("Failed to locate any Access Points from Collector")
+            if len(hostnames):
+                raise RuntimeError("Failed to locate specified Access Point(s)")
+            else:
+                local_schedd_ad = Path(htcondor2.param["SCHEDD_DAEMON_AD_FILE"])
+                if local_schedd_ad.exists():
+                    ads.append(classad2.parseOne(local_schedd_ad.open().read()))
+                else:
+                    raise RuntimeError("Failed to locate any Access Point information")
 
         ap_status = {}
         width = 0
 
-        for daemon, status in ads_to_daemon_status(ads):
+        for daemon, status, ad in echo_ads_to_daemon_status(ads):
             assert daemon == "SCHEDD"
             host = status["Machine"]
             width = len(host) if len(host) > width else width
@@ -46,13 +58,15 @@ class Status(Verb):
                 ap_status[host]["HP"] += status["HealthPoints"]
                 ap_status[host]["Count"] += 1
             else:
-                ap_status[host] = {"HP": status["HealthPoints"], "Count": 1}
+                ap_status[host] = {"HP": status["HealthPoints"], "Count": 1, "RDCDC" : ad["RecentDaemonCoreDutyCycle"]}
 
         if len(ap_status) > 0:
-            columns = ["Access Point", "Health"]
-            logger.info(underline("{0: ^{width}}   {1}".format(*columns, width=width)))
+            columns = ["Access Point", "Health", "DutyCycle"]
+            logger.info(underline("{0: ^{width}}   {1}   {2}".format(*columns, width=width)))
             for host, status in ap_status.items():
-                logger.info(f"{host: <{width}}   {health_str(status['HP'], status['Count'])}")
+                rdcdc = status["RDCDC"] * 100
+                health = health_str(status['HP'], status['Count'])
+                logger.info(f"{host: <{width}}   {health: >6}   {rdcdc: >10.2}%")
 
         if len(hostnames) > 0:
             print(

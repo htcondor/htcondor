@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 194> makeCommandTable() {
+std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -121,8 +121,8 @@ std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 
 //#define AVAILABILITY		(SCHED_VERS+12)		/* Not used */
 //		{AVAILABILITY, "AVAILABILITY"},
-//#define NUM_FRGN_JOBS		(SCHED_VERS+13)		/* Not used */
-//		{NUM_FRGN_JOBS, "NUM_FRGN_JOBS"},
+#define DEACTIVATE_CLAIM_JOB_DONE		(SCHED_VERS+13)		/* formerly NUM_FRGN_JOBS */
+		{DEACTIVATE_CLAIM_JOB_DONE, "DEACTIVATE_CLAIM_JOB_DONE"},
 //#define STARTD_INFO			(SCHED_VERS+14)		/* Not used */
 //		{STARTD_INFO, "STARTD_INFO"},
 //#define SCHEDD_INFO			(SCHED_VERS+15)		/* Not used */
@@ -322,13 +322,8 @@ std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 		{RECYCLE_SHADOW, "RECYCLE_SHADOW"},
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 		{CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS"},
-		// These two commands originally used the same command int by mistake.
-		// In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
-		// List DRAIN_JOBS first, so that lower_bound finds it first
 #define DRAIN_JOBS (SCHED_VERS+112)
 		{DRAIN_JOBS, "DRAIN_JOBS"},
-#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
-		{GET_PRIORITY_ROLLUP_OLD, "GET_PRIORITY_ROLLUP_OLD"},
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
 		{CANCEL_DRAIN_JOBS, "CANCEL_DRAIN_JOBS"},
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
@@ -386,6 +381,14 @@ std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 		{RESET_USERREC, "RESET_USERREC"},
 #define DELETE_USERREC    (SCHED_VERS+149)
 		{DELETE_USERREC, "DELETE_USERREC"},
+#define GET_CONTACT_INFO  (SCHED_VERS+150) // Ask Schedd for child daemons contact information (addr and secret) Note: Used for DAGMan
+		{GET_CONTACT_INFO, "GET_CONTACT_INFO"},
+#define CREATE_OCU_FOR_USERREC (SCHED_VERS + 151) // Create an OCU(s) for a given UserRec
+		{CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC"},
+#define REMOVE_OCU_FROM_USERREC (SCHED_VERS + 152) // Remove an OCU(s) from a given UserRec
+		{REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC"},
+#define QUERY_OCU_FROM_USERREC (SCHED_VERS + 153) // Query the OCU(s) associated with a given UserRec
+		{QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},
@@ -468,8 +471,8 @@ std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 */
 
 #define STARTER_COMMANDS_BASE 1500
-#define STARTER_HOLD_JOB    (STARTER_COMMANDS_BASE+0)
-		{STARTER_HOLD_JOB, "STARTER_HOLD_JOB"},
+#define STARTER_VACATE_JOB    (STARTER_COMMANDS_BASE+0)
+		{STARTER_VACATE_JOB, "STARTER_VACATE_JOB"},
 #define CREATE_JOB_OWNER_SEC_SESSION (STARTER_COMMANDS_BASE+1)
 		{CREATE_JOB_OWNER_SEC_SESSION, "CREATE_JOB_OWNER_SEC_SESSION"},
 #define START_SSHD (STARTER_COMMANDS_BASE+2)
@@ -608,6 +611,11 @@ std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 		{FILETRANS_UPLOAD,"FILETRANS_UPLOAD"},
 #define FILETRANS_DOWNLOAD (FILETRANSFER_BASE+1)
 		{FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD"},
+
+// Commands for DAGMan
+#define DAGMAN_BASE 61500
+#define DAGMAN_GENERIC (DAGMAN_BASE+0)
+		{DAGMAN_GENERIC, "DAGMAN_GENERIC"}, // Generic send payload ad with more details and return result ad
 
 
 /*

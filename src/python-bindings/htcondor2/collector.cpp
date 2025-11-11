@@ -9,7 +9,9 @@ _collector_init( PyObject *, PyObject * args ) {
 	PyObject * self = NULL;
 	PyObject_Handle * handle = NULL;
 	const char * pool = NULL;
-	if(! PyArg_ParseTuple( args, "OOz", & self, (PyObject **)& handle, & pool )) {
+	const char * token = nullptr;
+	CollectorList * collector_list = nullptr;
+	if(! PyArg_ParseTuple( args, "OOzz", & self, (PyObject **)& handle, & pool, & token )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return NULL;
 	}
@@ -17,14 +19,16 @@ _collector_init( PyObject *, PyObject * args ) {
 	handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[unconstructed CollectorList]\n" ); if(v != NULL){ dprintf(D_ALWAYS, "Error!  Unconstructed Collector has non-NULL handle %p\n", v); } };
 
 	if( pool == NULL || strlen(pool) == 0 ) {
-		handle->t = (void *) CollectorList::create();
+		collector_list = CollectorList::create();
+		handle->t = (void *) collector_list;
 
 		if( PyObject_SetAttrString( self, "default", Py_True ) != 0 ) {
 			// PyObject_setAttrString() has already set an exception for us.
 			return NULL;
 		}
 	} else {
-		handle->t = (void *) CollectorList::create(pool);
+		collector_list = CollectorList::create(pool);
+		handle->t = (void *) collector_list;
 
 		if( PyObject_SetAttrString( self, "default", Py_False ) != 0 ) {
 			// PyObject_setAttrString() has already set an exception for us.
@@ -32,6 +36,11 @@ _collector_init( PyObject *, PyObject * args ) {
 		}
 	}
 
+	if (token) {
+		for (auto& collector: collector_list->getList()) {
+			collector->setPreferredToken(token);
+		}
+	}
 
 	handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[CollectorList]\n" ); delete (CollectorList *)v; v = NULL; };
 	Py_RETURN_NONE;
@@ -131,7 +140,7 @@ _collector_query( PyObject *, PyObject * args ) {
 				PyErr_SetString( PyExc_HTCondorException, "Unable to determine collector host." );
 				return NULL;
 
-			// In version 1, we believe these errors were impossible.
+			// In version 1, we believed these errors were impossible.
 			case Q_PARSE_ERROR:
 			case Q_MEMORY_ERROR:
 			case Q_INVALID_CATEGORY:

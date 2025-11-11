@@ -157,9 +157,11 @@ class CondorQuery
 
 	// fetch from collector
 	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
+	QueryResult fetchAds (ClassAdList &adList, Daemon& collector, CondorError* errstack = NULL);
 	// fetch ads from the collector, handing each to 'callback'
 	// callback will return 'false' if it took ownership of the ad.
 	QueryResult processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * pool, CondorError* errstack = NULL);
+	QueryResult processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, CondorError* errstack = NULL);
 
 
 	// filter list of ads; arg1 is 'in', arg2 is 'out'
@@ -191,6 +193,8 @@ class CondorQuery
 	void setDesiredAttrs(const std::string &attrs) { extraAttrs.Assign(ATTR_PROJECTION, attrs); }
 	void setDesiredAttrsExpr(const char *expr);
 
+	void requestPrivateAttrs() { requireAuth = true; extraAttrs.Assign(ATTR_SEND_PRIVATE_ATTRIBUTES, true); }
+
 	void setResultLimit(int limit) { resultLimit = limit; }
 	int  getResultLimit() const { return resultLimit; }
 
@@ -211,6 +215,7 @@ class CondorQuery
 	GenericQuery query;
 	char*		genericQueryType;
 	int         resultLimit; // limit on number of desired results. collectors prior to 8.7.1 will ignore this.
+	bool        requireAuth{false};
 
 	std::vector<std::string> targets; // list of target types for the MULTIPLE query
 

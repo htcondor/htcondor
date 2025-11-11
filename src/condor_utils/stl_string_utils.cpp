@@ -17,13 +17,14 @@
  *
  ***************************************************************/
 
-#include "condor_common.h" 
+#include "condor_common.h"
 #include "condor_snutils.h"
 #include "strcasestr.h"
 #include "condor_debug.h"
 #include "condor_random_num.h"
 #include <limits>
 #include <regex>
+#include <set>
 
 #include "stl_string_utils.h"
 
@@ -431,18 +432,27 @@ std::vector<std::string> split(const char* str, const char* delim, STI_TrimBehav
 	return list;
 }
 
-std::string join(const std::vector<std::string> &list, const char* delim)
+
+template<class T>
+std::string join( const T & list, const char * delim )
 {
 	std::string str;
 	if (!list.empty()) {
-		str = list.front();
-		for (auto it = (list.begin() + 1); it != list.end(); it++) {
+	    auto it = list.begin();
+		str = * it++;
+		for( ; it != list.end(); ++it ) {
 			str += delim;
 			str += *it;
 		}
 	}
 	return str;
 }
+
+// Library code requires explicit template instantiation, I guess.
+template std::string join<std::vector<const char *>>(const std::vector<const char *> &list, const char* delim);
+template std::string join<std::vector<std::string>>(const std::vector<std::string> &list, const char* delim);
+template std::string join<std::vector<std::string_view>>(const std::vector<std::string_view> &list, const char* delim);
+template std::string join<std::set<std::string>>(const std::set<std::string> & list, const char* delim);
 
 bool contains(const std::vector<std::string> &list, const char* str)
 {

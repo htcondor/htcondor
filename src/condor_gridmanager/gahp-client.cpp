@@ -342,7 +342,7 @@ GahpServer::Reaper(int pid,int status)
 		if ( !dead_server->m_sec_session_id.empty() ) {
 			SecMan *secman = daemonCore->getSecMan();
 			IpVerify *ipv = secman->getIpVerify();
-			secman->session_cache->erase(dead_server->m_sec_session_id);
+			secman->session_cache.erase(dead_server->m_sec_session_id);
 			ipv->FillHole(DAEMON, CONDOR_CHILD_FQU);
 			ipv->FillHole(CLIENT_PERM, CONDOR_CHILD_FQU);
 		}
@@ -1087,7 +1087,7 @@ GahpServer::CreateSecuritySession()
 			reason = "Unspecified error";
 		}
 		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
-		secman->session_cache->erase(claimId.secSessionId());
+		secman->session_cache.erase(claimId.secSessionId());
 		return false;
 	}
 
@@ -2244,9 +2244,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 4);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2325,9 +2323,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2393,9 +2389,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc < 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc >= 4);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2406,9 +2400,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 			error_string = "";
 		}
 		*num_ads = atoi(result->argv[3]);
-		if (result->argc != 4 + *num_ads ) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 4 + *num_ads);
 		if ( *num_ads > 0 ) {
 			*ads = (ClassAd **)malloc( *num_ads * sizeof(ClassAd*) );
 			ASSERT( *ads != NULL );
@@ -2485,9 +2477,7 @@ GahpClient::condor_job_remove(const char *schedd_name, PROC_ID job_id,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2560,9 +2550,7 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2628,9 +2616,7 @@ GahpClient::condor_job_hold(const char *schedd_name, PROC_ID job_id,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2696,9 +2682,7 @@ GahpClient::condor_job_release(const char *schedd_name, PROC_ID job_id,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2769,9 +2753,7 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2832,9 +2814,7 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2900,9 +2880,7 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -2977,9 +2955,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 4);
 		int rc = 1;
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
@@ -3058,9 +3034,7 @@ GahpClient::blah_ping(const std::string& lrms)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi( result->argv[1] );
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
@@ -3123,9 +3097,7 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 4);
 		int rc = atoi( result->argv[1] );
 		if ( strcasecmp(result->argv[3], NULLSTRING) ) {
 			*job_id = strdup(result->argv[3]);
@@ -3184,9 +3156,7 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 5) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 5);
 		int rc = atoi( result->argv[1] );
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
@@ -3253,9 +3223,7 @@ GahpClient::blah_job_cancel(const char *job_id)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi( result->argv[1] );
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
@@ -3315,9 +3283,7 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi( result->argv[1] );
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			error_string = result->argv[2];
@@ -3381,9 +3347,7 @@ GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if ( result->argc != 3 ) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
 			rc = 1;
@@ -3453,9 +3417,7 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if ( result->argc != 2 ) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 2);
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
 			rc = 1;
@@ -3520,9 +3482,7 @@ GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if ( result->argc != 2 ) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 2);
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
 			rc = 1;
@@ -3587,9 +3547,7 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if ( result->argc != 2 ) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 2);
 		int rc;
 		if ( strcasecmp( result->argv[1], NULLSTRING ) ) {
 			rc = 1;
@@ -3643,9 +3601,7 @@ GahpClient::blah_get_sandbox_path( const char *sandbox_id,
 		}
 		return false;
 	}
-	if ( result.argc != 2 ) {
-		EXCEPT( "Bad %s Result", command );
-	}
+	ASSERT(result.argc == 2);
 	if ( strcasecmp ( result.argv[1], NULLSTRING ) ) {
 		sandbox_path = result.argv[1];
 	} else {
@@ -3687,9 +3643,7 @@ GahpClient::arc_ping(const std::string &service_url)
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -3756,9 +3710,7 @@ GahpClient::arc_job_new(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc < 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc >= 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -3832,9 +3784,7 @@ GahpClient::arc_job_status(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc < 3 || result->argc > 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3 || result->argc == 4);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -3903,9 +3853,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc < 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc >= 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -3915,9 +3863,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 		}
 		if (result->argc > 3) {
 			int cnt = atoi(result->argv[3]);
-			if ( 2*cnt + 4 != result->argc ) {
-				EXCEPT("Bad %s Result",command);
-			}
+			ASSERT(2*cnt + 4 == result->argc);
 			for ( int i = 4;  (i + 1) < result->argc; i += 2 ) {
 				job_ids.emplace_back(result->argv[i]);
 				job_states.emplace_back(result->argv[i + 1]);
@@ -3977,9 +3923,7 @@ GahpClient::arc_job_info(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc < 3 || result->argc > 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3 || result->argc == 4);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4050,9 +3994,7 @@ GahpClient::arc_job_stage_in(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4123,9 +4065,7 @@ GahpClient::arc_job_stage_out(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4186,9 +4126,7 @@ GahpClient::arc_job_kill(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4249,9 +4187,7 @@ GahpClient::arc_job_clean(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4313,9 +4249,7 @@ GahpClient::arc_delegation_new(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc < 3 || result->argc > 4) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3 || result->argc == 4);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4385,9 +4319,7 @@ GahpClient::arc_delegation_renew(const std::string &service_url,
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
+		ASSERT(result->argc == 3);
 		int rc = atoi(result->argv[1]);
 		rc = (rc == 0) ? 499 : rc;
 		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
@@ -4448,9 +4380,7 @@ int GahpClient::gce_ping( const std::string &service_url,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc != 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc == 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
@@ -4541,16 +4471,12 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc < 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc >= 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
 		} else {
-			if ( result->argc != 3 ) {
-				EXCEPT( "Bad %s result", command );
-			}
+			ASSERT(result->argc == 3);
 			instance_id = result->argv[2];
 		}
 
@@ -4569,7 +4495,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::gce_instance_delete( std::string service_url,
+int GahpClient::gce_instance_delete( const std::string &service_url,
 									 const std::string &auth_file,
 									 const std::string &account,
 									 const std::string &project,
@@ -4610,9 +4536,7 @@ int GahpClient::gce_instance_delete( std::string service_url,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc != 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc == 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
@@ -4675,20 +4599,14 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc < 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc >= 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
 		} else {
-			if ( result->argc < 3 ) {
-				EXCEPT( "Bad %s result", command );
-			}
+			ASSERT(result->argc >= 3);
 			int cnt = atoi( result->argv[2] );
-			if ( cnt < 0 || result->argc != 3 + 4 * cnt ) {
-				EXCEPT( "Bad %s result", command );
-			}
+			ASSERT(cnt >= 0 && result->argc == 3 + 4 * cnt);
 			for ( int i = 0; i < cnt; i++ ) {
 				instance_ids.emplace_back( result->argv[3 + 4*i] );
 				instance_names.emplace_back( result->argv[3 + 4*i + 1] );
@@ -4742,9 +4660,7 @@ int GahpClient::azure_ping( const std::string &auth_file,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc != 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc == 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
@@ -4802,16 +4718,12 @@ int GahpClient::azure_vm_create( const std::string &auth_file,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc < 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc >= 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
 		} else {
-			if ( result->argc != 4 ) {
-				EXCEPT( "Bad %s result", command );
-			}
+			ASSERT(result->argc == 4);
 			vm_id = result->argv[2];
 			if ( strcmp( result->argv[3], NULLSTRING ) != 0 ) {
 				ip_address = result->argv[3];
@@ -4865,9 +4777,7 @@ int GahpClient::azure_vm_delete( const std::string &auth_file,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc != 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc == 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
@@ -4919,20 +4829,14 @@ int GahpClient::azure_vm_list( const std::string &auth_file,
 
 	if ( result ) {
 		int rc = 0;
-		if ( result->argc < 2 ) {
-			EXCEPT( "Bad %s result", command );
-		}
+		ASSERT(result->argc >= 2);
 		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
 			rc = 1;
 			error_string = result->argv[1];
 		} else {
-			if ( result->argc < 3 ) {
-				EXCEPT( "Bad %s result", command );
-			}
+			ASSERT(result->argc >= 3);
 			int cnt = atoi( result->argv[2] );
-			if ( cnt < 0 || result->argc != 3 + 2 * cnt ) {
-				EXCEPT( "Bad %s result", command );
-			}
+			ASSERT(cnt >= 0 && result->argc == 3 + 2 * cnt);
 			for ( int i = 0; i < cnt; i++ ) {
 				vm_names.emplace_back( result->argv[3 + 2*i] );
 				vm_statuses.emplace_back( result->argv[3 + 2*i + 1] );

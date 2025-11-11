@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_io.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 #include "baseshadow.h"
@@ -31,7 +30,11 @@
 #include "zkm_base64.h"
 #include "directory_util.h"
 #include "condor_holdcodes.h"
+#include "shortfile.h"
+#include "my_popen.h"
 
+#include <optional>
+#include "guidance.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -102,22 +105,19 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_read: return "read";
         case CONDOR_write: return "write";
         case CONDOR_lseek: return "lseek";
-        case CONDOR_lseek64: return "lseek64";
-        case CONDOR_llseek: return "llseek";
         case CONDOR_unlink: return "unlink";
         case CONDOR_rename: return "rename";
-        case CONDOR_register_mpi_master_info: return "register_mpi_master_info";
         case CONDOR_mkdir: return "mkdir";
         case CONDOR_rmdir: return "rmdir";
         case CONDOR_fsync: return "fsync";
         case CONDOR_get_file_info_new: return "get_file_info_new";
         case CONDOR_ulog: return "ulog";
-        case CONDOR_phase: return "phase";
         case CONDOR_get_job_attr: return "get_job_attr";
         case CONDOR_set_job_attr: return "set_job_attr";
         case CONDOR_constrain: return "constrain";
         case CONDOR_get_sec_session_info: return "get_sec_session_info";
 		case CONDOR_dprintf_stats: return "dprintf_stats";
+		case CONDOR_get_docker_creds: return "get_docker_creds";
 #ifdef WIN32
 #else
         case CONDOR_pread: return "pread";
@@ -152,13 +152,14 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_getcreds: return "getcreds";
         case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
         case CONDOR_event_notification: return "event_notification";
+        case CONDOR_request_guidance: return "request_guidance";
 	}
 	return "unknown";
 }
 
 // If we fail to send a reply to the starter, assume the socket is borked.
 // Close it and go into reconnect mode.
-#define ON_ERROR_RETURN(x) if ((x) == 0) {thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
+#define ON_ERROR_RETURN(x) if ((x) == 0) {dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__); thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
 
 int
 do_REMOTE_syscall()
@@ -184,7 +185,7 @@ do_REMOTE_syscall()
             Or the starter went away by itself after telling us
             it's ready to do so (via a job_exit syscall). */
 		if ( thisRemoteResource->wasClaimDeactivated() ||
-		     thisRemoteResource->gotJobExit() ) {
+		     thisRemoteResource->gotJobDone() ) {
 			thisRemoteResource->closeClaimSock();
 			return -1;
 		}
@@ -547,8 +548,6 @@ do_REMOTE_syscall()
 	}
 
 	case CONDOR_lseek:
-	case CONDOR_lseek64:
-	case CONDOR_llseek:
 	  {
 		off_t   offset;
 		int   whence;
@@ -651,31 +650,6 @@ do_REMOTE_syscall()
 		}
 		free( (char *)to );
 		free( (char *)from );
-		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
-		return 0;
-	}
-
-	case CONDOR_register_mpi_master_info:
-	{
-		ClassAd ad;
-		result = ( getClassAd(syscall_sock, ad) );
-		ASSERT( result );
-		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
-
-		errno = 0;
-		rval = pseudo_register_mpi_master_info( &ad );
-		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		result = ( syscall_sock->code(rval) );
-		ASSERT( result );
-		if( rval < 0 ) {
-			result = ( syscall_sock->code( terrno ) );
-			ASSERT( result );
-		}
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
 		return 0;
@@ -812,22 +786,6 @@ do_REMOTE_syscall()
 		ASSERT( result );
 
 		rval = pseudo_ulog(&ad);
-		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
-
-		//NOTE: caller does not expect a response.
-
-		return 0;
-	}
-
-	case CONDOR_phase:
-	{
-		std::string phase;
-		result = ( syscall_sock->code(phase) );
-		ASSERT( result );
-		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
-
-		rval = 0;
 		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
 
 		//NOTE: caller does not expect a response.
@@ -2140,9 +2098,10 @@ case CONDOR_getdir:
 		dprintf(D_SECURITY, "ENTERING getcreds syscall\n");
 
 		// read string.  ignored for now, just present for future compatibility.
-		result = ( syscall_sock->code(path) );
+		std::string ignored_path;
+		result = ( syscall_sock->code(ignored_path) );
 		ASSERT( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", path );
+		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", ignored_path.c_str());
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
@@ -2312,6 +2271,132 @@ case CONDOR_getdir:
 		return put_x509_rc;
 	}
 
+	case CONDOR_get_docker_creds:
+	{
+#ifdef WIN32
+		ASSERT("docker credentials not supported on WINDOWS");
+#else
+		// The starter will send us a queryAd, currently empty
+		ClassAd queryAd;
+		result = getClassAd(syscall_sock, queryAd);
+		ASSERT(result)
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+		dprintf(D_SYSCALLS, "\t docker_creds_query ad has %d entries\n", queryAd.size());
+
+
+		ClassAd *job_ad;
+		pseudo_get_job_ad( job_ad );
+		bool wants_creds = false;
+
+		// Double check that the job wanted the credentials, and that
+		// no one is asking for what they should not be asking for.
+		job_ad->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, wants_creds);
+		if (!wants_creds) {
+			ClassAd authsAd; // The ad to return
+			authsAd.Assign("HTCondorError", "Job did not request docker credentials to be sent");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, authsAd);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+		}
+
+		// And we will send back a docker config.json file, encoded as a classad
+		// with only the auths included.
+		//
+		// Unless there is an error, in which case, we will add as
+		// "HTCondorError" field with a description of the problem.
+
+		int exit_status = 0;
+		const int timeout = 120;
+		ArgList args;
+
+		char *pat_cstr = param("DOCKER_PAT_PRODUCER");
+		if (!pat_cstr) {
+			// Tell the starter about our shortcomings
+			ClassAd return_ad;
+			return_ad.Assign("HTCondorError", "No DOCKER_PAT_PRODUCER configured on the access point");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, return_ad);
+
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
+		}
+		args.AppendArg(pat_cstr);
+		free(pat_cstr);
+		Env command_env;
+		Env shadow_env;
+		shadow_env.Import();
+		std::string path;
+		shadow_env.GetEnv("PATH", path);
+		command_env.SetEnv("PATH", path);
+#if !defined(WIN32)
+		struct passwd *pw = getpwuid( get_user_uid() );
+		if ( pw && pw->pw_dir ) {
+			command_env.SetEnv( "HOME", pw->pw_dir );
+		} else {
+			dprintf( D_ALWAYS, "Failed to find user's home directory to set HOME for docker pat producer\n" );
+		}
+#endif
+
+		// Run the command with a 120 second timeout
+		char *out = run_command(timeout, args, 0 /*options*/, &command_env, &exit_status); 
+
+		std::string creds_json = out;
+		free(out);
+
+		classad::ClassAdJsonParser cajp;
+		ClassAd pat_ad;
+		cajp.ParseClassAd(creds_json, pat_ad);
+
+		if (exit_status != 0) {
+			// check HTCondorError in pat_ad
+			ClassAd return_ad;
+			if (pat_ad.Lookup("HTCondorError"))  {
+				// If we got an error message, copy it over to send it back
+				return_ad.Insert("HTCondorError", pat_ad.Remove("HTCondorError"));
+			} else {
+				// If we did not get an error message, make up a generic one.
+				return_ad.Assign("HTCondorError", "Cannot parse output of docker pat producer");
+			}
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, return_ad);
+
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
+		}
+
+		// Somehow the producer exited 0, but didn't generate a valid classad
+		if (pat_ad.size() == 0) {
+			ClassAd return_ad;
+			return_ad.Assign("HTCondorError", "Cannot parse json emitted by docker pat producer");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, return_ad);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
+		}
+
+		// The happy path -- send the result back
+		syscall_sock->encode();
+		result = putClassAd(syscall_sock, pat_ad);
+
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ON_ERROR_RETURN( result );
+#endif
+		return 0;
+	}
+
 	case CONDOR_event_notification:
 	{
 		ClassAd eventAd;
@@ -2332,6 +2417,31 @@ case CONDOR_getdir:
 		ON_ERROR_RETURN( result );
 
 		return 0;
+	}
+
+	case CONDOR_request_guidance:
+	{
+		ClassAd requestAd;
+		result = getClassAd(syscall_sock, requestAd);
+		ASSERT(result);
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+
+		errno = 0;
+		ClassAd guidanceAd;
+		rval = static_cast<int>(Shadow->pseudo_request_guidance(requestAd, guidanceAd));
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		result = syscall_sock->code(rval);
+		ASSERT( result );
+		result = putClassAd(syscall_sock, guidanceAd);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ON_ERROR_RETURN( result );
+
+	    return 0;
 	}
 
 	default:

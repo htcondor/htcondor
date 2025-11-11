@@ -18,7 +18,7 @@ def subcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]
     global SUBMIT_CMD_DEFS
     if text in SUBMIT_CMD_DEFS:
         docname = inliner.document.settings.env.docname
-        warn(f"{docname} @ {lineno} | '{text}' submit command already defined!")
+        warn(f"{docname}:{lineno} | '{text}' submit command already defined!")
         textnode = nodes.Text(text, " ")
         return [textnode], []
     else:

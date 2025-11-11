@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,10 +24,15 @@
 #include "condor_common.h"
 #include "baseshadow.h"
 #include "remoteresource.h"
+#include "dc_coroutines.h"
+
+#include <optional>
+#include "guidance.h"
+#include "catalog_utils.h"
 
 class ShadowHookMgr;
 
-/** This class is the implementation for the shadow.  It is 
+/** This class is the implementation for the shadow.  It is
 	called UniShadow because:
 	<ul>
 	 <li>It's not named CShadow (sorry, Todd).
@@ -67,11 +72,13 @@ class UniShadow : public BaseShadow
 			 <li>Makes a log execute event
 			 <li>Registers the RemoteResource's claimSock
 			</ul>
-			The parameters passed are all gotten from the 
+			The parameters passed are all gotten from the
 			command line and should be easy to figure out.
 		*/
 	void init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info );
-	
+
+	virtual void checkInputFileTransfer();
+
 		/** Shadow should spawn a new starter for this job.
 		 *  May be asynchronous if there's a shadow hook defined.
 		 */
@@ -88,23 +95,30 @@ class UniShadow : public BaseShadow
 	void hookTimeout( int timerID = -1 );
 	void hookTimerCancel();
 
+	const char * getStarterVersion() {
+		if (remRes && !remRes->starter_version.empty()) { 
+			return remRes->starter_version.c_str();
+		}
+		return nullptr;
+	}
+
 		/** Shadow should attempt to reconnect to a disconnected
-			starter that might still be running for this job.  
+			starter that might still be running for this job.
 		 */
 	void reconnect( void );
 
 	bool supportsReconnect( void );
 
 	/**
-	 * override to allow starter+shadow to gracefully exit 
+	 * override to allow starter+shadow to gracefully exit
 	 */
 	virtual void removeJob( const char* reason );
-	
+
 	/**
-	 * override to allow starter+shadow to gracefully exit 
+	 * override to allow starter+shadow to gracefully exit
 	 */
 	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
-	
+
 		/**
 		 */
 	int handleJobRemoval(int sig);
@@ -125,8 +139,8 @@ class UniShadow : public BaseShadow
 		/* The number of bytes transferred from the perspective of
 		 * the shadow (NOT the starter/job).
 		 */
-	float bytesSent();
-	float bytesReceived();
+	uint64_t bytesSent();
+	uint64_t bytesReceived();
 	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
@@ -144,17 +158,11 @@ class UniShadow : public BaseShadow
 
 	int exitCode( void );
 
-		/** This function is specifically used for spawning MPI jobs.
-			So, if for some bizzare reason, it gets called for a
-			non-MPI shadow, we should return falure.
-		*/
-	bool setMpiMasterInfo( char* ) { return false; };
-
 		/** If desired, send the user email now that this job has
 			terminated.  This has all the job statistics from the run,
 			and lots of other useful info.
 		*/
-	virtual void emailTerminateEvent( int exitReason, 
+	virtual void emailTerminateEvent( int exitReason,
 					update_style_t kind = US_NORMAL );
 
 	// Record the file transfer state changes.
@@ -177,12 +185,12 @@ class UniShadow : public BaseShadow
 	virtual void logDisconnectedEvent( const char* reason );
 
 	virtual bool getMachineName( std::string &machineName );
-	
+
 	/**
 	 * Handle the situation where the job is to be suspended
 	 */
 	virtual int JobSuspend(int sig);
-	
+
 	/**
 	 * Handle the situation where the job is to be continued.
 	 */
@@ -194,6 +202,13 @@ class UniShadow : public BaseShadow
 	void exitLeaseHandler( int timerID = -1 ) const;
 
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
+
+	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
+
+	virtual std::optional<std::string> uniqueCIFName(
+		const std::string & cifName, const std::string & content
+	);
+
  protected:
 
 	virtual void logReconnectedEvent( void );
@@ -201,6 +216,7 @@ class UniShadow : public BaseShadow
 	virtual void logReconnectFailedEvent( const char* reason );
 
  private:
+
 	RemoteResource *remRes;
 	std::unique_ptr<ShadowHookMgr> m_hook_mgr;
 	int m_exit_hook_timer_tid{-1};
@@ -208,6 +224,40 @@ class UniShadow : public BaseShadow
 	int delayedExitReason;
 
 	void requestJobRemoval();
+
+
+	//
+	// Internal implementation details specific to pseudo_request_guidance().
+	//
+
+	ClassAd before_common_file_transfer(
+		const std::string & cifName, const std::string & commonInputFiles
+	);
+	bool after_common_file_transfer(
+	    const ClassAd & request,
+	    const std::string & cifName,
+	    std::string & stagingDir
+	);
+
+	ClassAd handle_wiring_failure();
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
+	    ClassAd request,
+	    ListOfCatalogs common_file_catalogs,
+	    bool print_waiting=true
+	);
+
+	void set_provider_keep_alive( const std::string & cifName );
+	int producer_keep_alive = -1;
+
+	// We only transfer one catalog at a time.
+	FileTransfer * commonFTO = NULL;
+
+	// The SingleProviderSyndicate can't be default-constructed.
+	std::map< std::string, SingleProviderSyndicate * > cfLocks;
+	// At some point we'll figure out nesting our coroutines and
+	// we won't need this any more.
+	bool resume_job_setup = false;
 };
 
 #endif

@@ -41,7 +41,7 @@ def classad_function_role(name, rawtext, text, lineno, inliner, options={}, cont
 
     if function not in CLASSAD_FUNCTIONS:
         docname = inliner.document.settings.env.docname
-        warn(f"{docname} @ {lineno} | '{function}' ClassAd function not in defined list. Either a typo or not defined.")
+        warn(f"{docname}:{lineno} | '{function}' ClassAd function not in defined list. Either a typo or not defined.")
 
     ref_link = f"href=\"{root_dir}/classads/classad-builtin-functions.html#" + str(function) + "()\""
     return make_ref_and_index_nodes(name, function, index, ref_link,

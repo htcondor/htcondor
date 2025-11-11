@@ -98,7 +98,7 @@ def path_to_job_two_script(test_dir):
 
     import sys
     import time
-    from htcondor.htchirp import HTChirp
+    from htcondor2.htchirp import HTChirp
 
     nap = 0
     nap_lengths = [5, 10, 15]

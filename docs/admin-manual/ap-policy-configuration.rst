@@ -605,7 +605,7 @@ While the *condor_schedd* and the machine it runs on can be tuned to handle a
 greater rate of jobs, every machine has some limit of jobs it can support.  The
 main strategy for supporting more jobs in the system as a whole is simply by
 running more schedds, or horizontal scaling.  This may require partitioning
-users onto differening submit machines, or submiting remotely, but at the end
+users onto differening access points, or submiting remotely, but at the end
 of the day, the best way to scale out a very large HTCondor system is by adding
 more *condor_schedd*'s.
 
@@ -620,7 +620,9 @@ this file named job_queue.log is written to the :macro:`SPOOL` directory.
 However, the configuration option :macro:`JOB_QUEUE_LOG` will override this path.  Setting
 :macro:`JOB_QUEUE_LOG` to point to a file on a solid state or nvme drive will
 make the schedd faster.  Ideally, this path should be on a filesystem that only
-holds this file.
+holds this file.  Even if this file is on a fast disk, if that disk also holds
+user data, the fsync call the schedd must run to ensure data is written to disk
+may be delayed by other user activity on that disk.
 
 Avoiding shared filesystems for event logs
 ''''''''''''''''''''''''''''''''''''''''''
@@ -630,6 +632,25 @@ logs, those specified by the :subcom:`log` submit command.  When these are on
 NFS or other distributed or slow filesystems, the whole system can slow down
 tremendously.  If possible, encourage users not to put their event logs on such
 slow filesystems.
+
+Promoting the use of the condor_watch_q tool
+''''''''''''''''''''''''''''''''''''''''''''
+
+Users like to see the progress of their work by running :tool:`condor_q`.  This
+tool puts load on the *condor_schedd* every time it is run.  If users run this
+at a high frequency, it can slow down the whole system.  This is particularly
+impactful when run from a looping tool like the "watch" command.  The
+:tool:`condor_watch_q` tool is a better choice, as it reads from the job's log,
+and does not interact with the *condor_schedd* at all.
+
+Promoting the use of late materializations, where appropriate
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Each idle job in the schedd consumes some amount of memory.  If a user has
+a large bag of jobs in one submit cluster, using late materialization can
+dramatically decrease the amount of needed memory, and the time in the
+*condor_schedd* to complete these jobs.  See the :tool:`condor_submit` 
+commands :subcom:`max_idle` for more information.
 
 Using third party (url / plugin) transfers when able
 ''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -647,7 +668,7 @@ Limiting CPU or I/O bound procesing on the AP
 
 The machine the *condor_schedd* runs on is typically a machine users can log
 into, to prepare and submit jobs.  Sometimes, users will start long-running,
-cpu or I/O heavy jobs on the submit machine, which can slow down the various
+cpu or I/O heavy jobs on the access point, which can slow down the various
 HTCondor services on that machine.  We encourage admins to try to limit this,
 either by social pressure, or enforced by system limits on the user cpu.
 

@@ -1740,6 +1740,22 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 		return rc;
 	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
+	if (mySock_->isClient()) {
+		std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
+
+		if (!PEM_write_bio_X509(bio.get(), cert)) {
+			dprintf(D_SECURITY, "Unable to convert server host cert to PEM format.\n");
+			goto err_occured;
+		}
+		char *pem_raw;
+		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
+		if (len) {
+			classad::ClassAd ad;
+			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, pem_raw, len);
+			mySock_->setPolicyAd(ad);
+		}
+	}
+
 	if (param_boolean("SSL_SKIP_HOST_CHECK", false)) {
 		success = true;
 		goto success;
@@ -1815,22 +1831,6 @@ skip_san:
 		} else if (!success) {
 			dprintf(D_SECURITY|D_FULLDEBUG, "Unable to extract CN from certificate.\n");
 			goto err_occured;
-		}
-	}
-
-	if (mySock_->isClient()) {
-		std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
-
-		if (!PEM_write_bio_X509(bio.get(), cert)) {
-			dprintf(D_SECURITY, "Unable to convert server host cert to PEM format.\n");
-			goto err_occured;
-		}
-		char *pem_raw;
-		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
-		if (len) {
-			classad::ClassAd ad;
-			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, pem_raw, len);
-			mySock_->setPolicyAd(ad);
 		}
 	}
 
@@ -2214,21 +2214,20 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 		token_value = jwt.get_subject();
 		m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_SUBJECT", token_value);
 	}
-	auto claims = jwt.get_payload_claims();
+	auto claims = jwt.get_payload_json();
 	for (const auto &pair : claims) {
-		switch (pair.second.get_type()) {
-		case jwt::json::type::string:
+		if (pair.second.is<std::string>()) {
 			if (pair.first == "iss") {
-				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_ISSUER", pair.second.as_string());
+				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_ISSUER", pair.second.get<std::string>());
 			} else if (pair.first == "sub") {
-				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_SUBJECT", pair.second.as_string());
+				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_SUBJECT", pair.second.get<std::string>());
 			} else if (pair.first == "aud") {
-				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_AUDIENCE", pair.second.as_string());
+				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_AUDIENCE", pair.second.get<std::string>());
 			} else if (pair.first == "scope") {
 				// StringTokenIterator doesn't copy its input, so we need
 				// to ensure the value is valid throughout the iteration
 				// process.
-				std::string value = pair.second.as_string();
+				std::string value = pair.second.get<std::string>();
 				StringTokenIterator toker(value, " ");
 				int idx = 0;
 				const std::string* next;
@@ -2239,12 +2238,11 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 				}
 			}
 			formatstr(env_name, "BEARER_TOKEN_0_CLAIM_%s_0", pair.first.c_str());
-			m_pluginState->m_env.SetEnv(env_name, pair.second.as_string());
-			break;
-		case jwt::json::type::array: {
+			m_pluginState->m_env.SetEnv(env_name, pair.second.get<std::string>());
+		} else if (pair.second.is<picojson::array>()) {
 			int idx = 0;
 			bool is_groups = (pair.first == "wlcg.groups");
-			const picojson::array& values = pair.second.as_array();
+			const picojson::array& values = pair.second.get<picojson::array>();
 			for (const auto& next : values) {
 				//if (next.get_type() != jwt::json::type::string) {
 				//	continue;
@@ -2261,11 +2259,6 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 				m_pluginState->m_env.SetEnv(env_name, next_str);
 				idx++;
 			}
-			break;
-		}
-		default:
-			// skip
-			break;
 		}
 	}
 

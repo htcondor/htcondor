@@ -950,12 +950,18 @@ kill_daemon_ad_file()
 	free(ad_file);
 }
 
+static bool disable_drop_addr_file = false;
+void DC_Disable_Addr_File() { disable_drop_addr_file = true; }
+
 void
 drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
 	const char* addr[2];
+
+	if (disable_drop_addr_file)
+		return;
 
 	// build up a prefix as LOCALNAME.SUBSYSTEM or just SUBSYSTEM if no localname
 	// that way, daemons that have a localname will never stomp the address file of the
@@ -990,9 +996,14 @@ drop_addr_file()
 			std::string newAddrFile;
 			formatstr(newAddrFile,"%s.new",addrFile[i]);
 			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
-				fprintf( ADDR_FILE, "%s\n", addr[i] );
-				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
-				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
+				std::string adbuf;
+				formatstr(adbuf, "%s\n%s\n%s\n", addr[i], CondorVersion(), CondorPlatform());
+				// append extra contact info
+				if ( ! daemonCore->ContactInfoExtra().empty()) {
+					formatAd(adbuf, daemonCore->ContactInfoExtra());
+					if (adbuf.back() != '\n') adbuf += "\n";
+				}
+				fputs( adbuf.c_str(), ADDR_FILE );
 				fclose( ADDR_FILE );
 				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
 					dprintf( D_ALWAYS,
@@ -1007,6 +1018,11 @@ drop_addr_file()
 			}
 		}
 	}	// end of for loop
+}
+
+void DC_Enable_And_Drop_Addr_File() {
+	disable_drop_addr_file = false;
+	drop_addr_file();
 }
 
 void
@@ -1912,6 +1928,16 @@ handle_dc_start_token_request(int, Stream* stream)
 		return false;
 	}
 
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	int error_code = 0;
 	std::string error_string;
 
@@ -2089,6 +2115,16 @@ handle_dc_finish_token_request(int, Stream* stream)
 		return false;
 	}
 
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	int error_code = 0;
 	std::string error_string;
 
@@ -2182,6 +2218,16 @@ handle_dc_list_token_request(int, Stream* stream)
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
 		return false;
 	}
 
@@ -2292,6 +2338,16 @@ handle_dc_approve_token_request(int, Stream* stream)
 		return false;
 	}
 
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	int error_code = 0;
 	std::string error_string;
 
@@ -2352,6 +2408,40 @@ handle_dc_approve_token_request(int, Stream* stream)
 		request_id = -1;
 	}
 
+	if (!error_code && !has_admin && static_cast<Sock*>(stream)->hasAuthorizationBoundingSet()) {
+		auto& token_authz_set = iter->second->getBoundingSet();
+		bool reject = false;
+		if (token_authz_set.empty()) {
+			reject = true;
+		}
+		for (const auto& authz: token_authz_set) {
+			if (! static_cast<Sock*>(stream)->isAuthorizationInBoundingSet(authz)) {
+				reject = true;
+				break;
+			}
+		}
+		if (reject) {
+			error_code = 7;
+			error_string = "Insufficient privilege to approve request (scope restricted).";
+			request_id = -1;
+		}
+	}
+
+	if (!error_code && !has_admin) {
+		const ClassAd* policy_ad = static_cast<ReliSock*>(stream)->getPolicyAd();
+		time_t client_expiry = -1;
+		if (policy_ad) {
+			policy_ad->LookupInteger("TokenExpirationTime", client_expiry);
+		}
+		time_t request_lifetime = iter->second->getLifetime();
+		if ((request_lifetime == -1 && client_expiry >= 0) ||
+			(request_lifetime >= 0 && client_expiry >= 0 && (request_lifetime + time(nullptr) > client_expiry))) {
+			error_code = 8;
+			error_string = "Insufficient privilege to approve request (lifetime).";
+			request_id = -1;
+		}
+	}
+
 	CondorError err;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
 	if (!error_code && (request_id != -1) && final_key_name.empty()) {
@@ -2403,6 +2493,16 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_auto_approve_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
 		return false;
 	}
 
@@ -2495,6 +2595,16 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 		!stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to read input from client\n");
+		return false;
+	}
+
+	if (!param_boolean("SEC_ENABLE_SCITOKEN_EXCHANGE", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "SciToken exchange disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
 		return false;
 	}
 
@@ -2598,12 +2708,49 @@ handle_dc_session_token(int, Stream* stream)
 		dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to read input from client\n");
 		return false;
 	}
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_FETCH", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token fetch disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	CondorError err;
 	classad::ClassAd result_ad;
 
+	ReliSock* sock = static_cast<ReliSock*>(stream);
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
-	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
+	ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str);
+	bool sock_has_authz_limit = sock->hasAuthorizationBoundingSet();
+	if (!authz_list_str.empty()) {
+		if (sock_has_authz_limit) {
+			for (const auto& item: StringTokenIterator(authz_list_str)) {
+				if (sock->isAuthorizationInBoundingSet(item)) {
+					authz_list.emplace_back(item);
+				}
+			}
+			if (authz_list.empty()) {
+				result_ad.InsertAttr(ATTR_ERROR_STRING, "Session doesn't allow requested authorization levels.");
+				result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
+				stream->encode();
+				if (!putClassAd(stream, result_ad) ||
+					!stream->end_of_message())
+				{
+					dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to send response ad to client\n");
+					return false;
+				}
+				return true;
+			}
+		} else {
+			authz_list = split(authz_list_str);
+		}
+	} else if (sock_has_authz_limit) {
+		sock->getPolicyAd()->LookupString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str);
 		authz_list = split(authz_list_str);
 	}
 	int requested_lifetime;
@@ -3462,18 +3609,10 @@ int dc_main( int argc, char** argv )
 				get_mySubSystem()->getTypeName() );
 	}
 
-	if ( !dc_main_init ) {
-		EXCEPT( "Programmer error: dc_main_init is NULL!" );
-	}
-	if ( !dc_main_config ) {
-		EXCEPT( "Programmer error: dc_main_config is NULL!" );
-	}
-	if ( !dc_main_shutdown_fast ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_fast is NULL!" );
-	}
-	if ( !dc_main_shutdown_graceful ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_graceful is NULL!" );
-	}
+	ASSERT(dc_main_init);
+	ASSERT(dc_main_config);
+	ASSERT(dc_main_shutdown_fast);
+	ASSERT(dc_main_shutdown_graceful);
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.

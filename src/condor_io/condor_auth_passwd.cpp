@@ -221,6 +221,13 @@ findTokens(const std::string &issuer,
         std::string &token,
         std::string &signature)
 {
+	const std::string& tag_token_contents = SecMan::getTagPreferredToken();
+	if (!tag_token_contents.empty() &&
+		checkToken(tag_token_contents, issuer, server_key_ids, "", username, token, signature))
+	{
+		return true;
+	}
+
 	const std::string &token_contents = SecMan::getToken();
 	if (!token_contents.empty() &&
 		checkToken(token_contents, issuer, server_key_ids, "", username, token, signature))
@@ -992,31 +999,18 @@ Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt<jwt::traits::kazuho_pi
 		return false;
 	}
 	classad::ClassAd ad;
-	auto claims = jwt.get_payload_claims();
+	auto claims = jwt.get_payload_json();
 	for (const auto &pair : claims) {
 		bool inserted = true;
 		const auto &claim = pair.second;
-		switch (claim.get_type()) {
-		//case jwt::json::type::null:
-		//	inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
-		//	break;
-		case jwt::json::type::boolean:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
-			break;
-		case jwt::json::type::integer:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
-			break;
-		case jwt::json::type::number:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
-			break;
-		case jwt::json::type::string:
-			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
-			break;
-		// TODO: these are not currently supported
-		case jwt::json::type::array: // fallthrough
-		case jwt::json::type::object: // fallthrough
-		default:
-			break;
+		if (claim.is<bool>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<bool>());
+		} else if (claim.is<int64_t>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<int64_t>());
+		} else if (claim.is<double>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<double>());
+		} else if (claim.is<std::string>()) {
+			inserted = ad.InsertAttr(pair.first, pair.second.get<std::string>());
 		}
 
 			// If, somehow, we can't build the ad, be paranoid,
@@ -1716,8 +1710,10 @@ Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk)
 void
 Condor_Auth_Passwd::init_t_buf(struct msg_t_buf *t) 
 {
-	t->a           = NULL;
-	t->b           = NULL;
+	free(t->a);
+	t->a           = nullptr;
+	free(t->b);
+	t->b           = nullptr;
 	t->ra          = NULL;
 	t->rb          = NULL;
 	t->hkt         = NULL;
@@ -2021,9 +2017,12 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 
 		// Protocol step (d)
 	if(m_t_server.a) {
+		if (m_t_client.a) {
+			free(m_t_client.a);
+		}
 		m_t_client.a = strdup(m_t_server.a);
 	} else {
-		m_t_client.a = NULL;
+		m_t_client.a = nullptr;
 	}
 	if(m_server_status == AUTH_PW_A_OK) {
 		m_t_client.rb = (unsigned char *)malloc(AUTH_PW_KEY_LEN);
@@ -3047,6 +3046,10 @@ Condor_Auth_Passwd::should_try_auth()
 	if (has_named_creds) {
 		dprintf(D_SECURITY|D_VERBOSE,
 			"Can try token auth because we have at least one named credential.\n");
+		return true;
+	}
+
+	if (!SecMan::getTagPreferredToken().empty() || !SecMan::getToken().empty()) {
 		return true;
 	}
 

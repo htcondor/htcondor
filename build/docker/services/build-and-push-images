@@ -1,0 +1,13 @@
+#!/bin/sh
+ARCH=$(arch)
+if $ARCH = 'aarch64'; then
+    ARCH='arm64'
+fi
+./build-images --no-cache --series=24.0 --arch=${ARCH}
+./build-images --series=24.0 --arch=${ARCH} --push
+./build-images --no-cache --series=24.x --arch=${ARCH}
+./build-images --series=24.x --arch=${ARCH} --push
+./build-images --no-cache --series=25.0 --arch=${ARCH}
+./build-images --series=25.0 --arch=${ARCH} --push
+./build-images --no-cache --series=25.x --arch=${ARCH}
+./build-images --series=25.x --arch=${ARCH} --push

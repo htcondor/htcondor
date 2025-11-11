@@ -35,6 +35,7 @@
 #include "zkm_base64.h"
 #include "my_popen.h"
 #include "directory.h"
+#include "condor_url.h"
 
 #include <chrono>
 #include <algorithm>
@@ -66,6 +67,7 @@ static const char *err_strings[] = {
 	"Operation failed because of a configuration error", // FAILURE_CONFIG_ERROR
 	"Failure parsing credential as JSON", // FAILURE_JSON_PARSE
 	"Credential was found but it did not match requested scopes or audience", // FAILURE_CRED_MISMATCH
+	"Credential requires interacting with an untrusted host", // FAILURE_UNTRUSTED_HOST
 };
 
 // check to see if store_cred return value is a failure, and return a string for the failure code if so
@@ -376,42 +378,52 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		service += handle;
 	}
 
-	// If this is a query and the service name is empty, return the
-	//   timestamp on the last .top or .use file found.  If this is a
-	//   query and the service name is given, verify that any scopes or
-	//   audience given match and if so return the timestamp on the .use
-	//   file if present, else the .top file.
+	// If this is a query and the service name is empty, report the
+	//   timestamp on every last .top and .use file found, and return
+	//   whether any .top file is missing its corresponding .use file.
+	// If this is a query and the service name is given, verify that
+	//   any scopes or audience given match and if so report the
+	//   timestamp on the .top and .use files.
 	if ((mode & MODE_MASK) == GENERIC_QUERY) {
 		if (service.empty()) {
 			Directory creddir(cred_dir, PRIV_ROOT);
 			if (creddir.Find_Named_Entry(username)) {
 				Directory dir(user_cred_path.c_str(), PRIV_ROOT);
 				const char * fn;
-				int num_top_files = 0;
-				int num_use_files = 0;
+				std::set<std::string> top_files;
+				std::set<std::string> use_files;
 				while ((fn = dir.Next())) {
 					if (ends_with(fn, ".top")) {
-						++num_top_files;
+						top_files.emplace(fn, strlen(fn)-4);
 					} else if (ends_with(fn, ".use")) {
-						++num_use_files;
+						use_files.emplace(fn, strlen(fn)-4);
 					} else {
 						continue;
 					}
 					return_ad.Assign(fn, dir.GetModifyTime());
 				}
 				// TODO: add code to wait for all pending creds?
-				if (num_top_files > 0) {
+				int rc = SUCCESS;
+				for (const auto& top_name: top_files) {
+					if (use_files.count(top_name) == 0) {
+						rc = SUCCESS_PENDING;
+						break;
+					}
+				}
+				if (!top_files.empty() || !use_files.empty()) {
 					ccfile.clear();
-					return (num_top_files > num_use_files) ? SUCCESS_PENDING : SUCCESS;
+					return rc;
 				}
 			}
 			ccfile.clear();
 			return FAILURE_NOT_FOUND;
 		} else {
+			bool top_found = false;
 			// does the .top file exist?
 			dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
 			struct stat cred_stat_buf;
 			if (stat(ccfile.c_str(), &cred_stat_buf) == 0) {
+				top_found = true;
 				std::string attr("Top"); attr += service; attr += "Time";
 				return_ad.Assign(attr, cred_stat_buf.st_mtime);
 
@@ -421,19 +433,21 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 				if (rc != SUCCESS) {
 					return rc;
 				}
+			}
 
-				// if there's also a .use file, get its mod
-				//  time as the service attribute
-				dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
-				if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
-					ccfile.clear();
-					return_ad.Assign(service, cred_stat_buf.st_mtime);
-					return SUCCESS;
-				} else {
-					return SUCCESS_PENDING;
-				}
-			} else {
+			// if there's a .use file, get its mod
+			//  time as the service attribute
+			// Service names without a known credmon type are assumed to be
+			// stored by the user. They don't have a .top file and should
+			// always have a .use file.
+			dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+			if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
 				ccfile.clear();
+				return_ad.Assign(service, cred_stat_buf.st_mtime);
+				return SUCCESS;
+			} else if (top_found) {
+				return SUCCESS_PENDING;
+			} else {
 				return FAILURE_NOT_FOUND;
 			}
 		}
@@ -464,12 +478,46 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		return SUCCESS;
 	}
 
+	// Everything below here is for ADD mode
+
 	if (service.empty()) {
-		service = "scitokens";
-		if (!handle.empty()) {
-			// this is user input but has been validated above.
-			service += "_";
-			service += handle;
+		dprintf(D_ERROR, "Name of service credential to add not given\n");
+		return FAILURE_BAD_ARGS;
+	}
+
+	// Examine the credential contents to see if it looks like a Vault token.
+	// If it does, check if the Vault host is trusted.
+	// If TRUSTED_VAULT_HOSTS is unset, we trust all hosts.
+	bool is_vault_token = false;
+	std::string vault_url;
+	classad::StringViewLexerSource lexsrc(std::string_view((const char*)cred, (size_t)credlen));
+	ClassAd parsed_cred;
+	classad::ClassAdJsonParser parser;
+	if (parser.ParseClassAd(&lexsrc, parsed_cred) && parsed_cred.LookupString("vault_url", vault_url)) {
+		is_vault_token = true;
+		std::string vault_host;
+		std::string trusted_hosts_str;
+		param(trusted_hosts_str, "TRUSTED_VAULT_HOSTS", "");
+		std::vector trusted_hosts = split(trusted_hosts_str);
+		if (ParseURL(vault_url, nullptr, &vault_host, nullptr) && !trusted_hosts.empty()) {
+			if (!contains_anycase(trusted_hosts, vault_host)) {
+				dprintf(D_ERROR, "Rejecting vault token from untrusted host '%s'\n", vault_host.c_str());
+				return FAILURE_UNTRUSTED_HOST;
+			}
+		}
+	}
+
+	// Should we write a .top file or a .use file?
+	// First, see if the client tells us
+	// Second, see if it looks like a Vault credential
+	// Finally, see if the service name belongs to a CredMon in config
+	bool use_top_file = true;
+	if (!ad || !ad->LookupBool(ATTR_NEED_REFRESH, use_top_file)) {
+		if (is_vault_token) {
+			use_top_file = true;
+		} else {
+			CredSorter sorter;
+			use_top_file = sorter.Sort(service) != CredSorter::UnknownType;
 		}
 	}
 
@@ -478,7 +526,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	if (mkdir(user_cred_path.c_str(), 0700) < 0) {
 		int err = errno;
 		if (err != EEXIST) {
-			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s", err, user_cred_path.c_str());
+			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s\n", err, user_cred_path.c_str());
 			if (err == EACCES || err == EPERM || err == ENOENT || err == ENOTDIR) {
 				// for one of several reasons, the parent directory does not allow the creation of subdirs.
 				return FAILURE_CONFIG_ERROR;
@@ -486,31 +534,37 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
-	// append filename for tokens file
-	dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
-
-	std::string scopes;
-	std::string audience;
-	if (ad) {
-		ad->LookupString("Scopes", scopes);
-		ad->LookupString("Audience", audience);
-	}
-	std::string jsoncred;
 	size_t clen = credlen;
-	if ((scopes != "") || (audience != "")) {
-		// Add scopes and/or audience into the JSON-formatted credentials
-		classad::ClassAdJsonParser jsonp;
-		ClassAd credad;
-		if (!jsonp.ParseClassAd((const char *) cred, credad)) {
-			dprintf(D_ALWAYS, "Error, could not parse cred for %s as JSON\n", ccfile.c_str());
-			return FAILURE_JSON_PARSE;
+
+	if (!use_top_file) {
+		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+	} else {
+
+		// append filename for tokens file
+		dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
+
+		std::string scopes;
+		std::string audience;
+		if (ad) {
+			ad->LookupString("Scopes", scopes);
+			ad->LookupString("Audience", audience);
 		}
-		if (scopes != "") credad.Assign("scopes", scopes);
-		if (audience != "") credad.Assign("audience", audience);
-		sPrintAdAsJson(jsoncred, credad);
-		jsoncred += "\n";
-		cred = (const unsigned char *) jsoncred.c_str();
-		clen = jsoncred.length();
+		std::string jsoncred;
+		if ((scopes != "") || (audience != "")) {
+			// Add scopes and/or audience into the JSON-formatted credentials
+			classad::ClassAdJsonParser jsonp;
+			ClassAd credad;
+			if (!jsonp.ParseClassAd((const char *) cred, credad)) {
+				dprintf(D_ALWAYS, "Error, could not parse cred for %s as JSON\n", ccfile.c_str());
+				return FAILURE_JSON_PARSE;
+			}
+			if (scopes != "") credad.Assign("scopes", scopes);
+			if (audience != "") credad.Assign("audience", audience);
+			sPrintAdAsJson(jsoncred, credad);
+			jsoncred += "\n";
+			cred = (const unsigned char *) jsoncred.c_str();
+			clen = jsoncred.length();
+		}
 	}
 
 	// create/overwrite the credential file
@@ -2708,3 +2762,68 @@ void clearIssuerKeyNameCache()
 	g_issuer_name_cache.Clear();
 }
 
+void CredSorter::Init()
+{
+	if (!param(m_local_names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+		if (!param(m_local_names, "LOCAL_CREDMON_PROVIDER_NAME", "scitokens")) {
+			m_client_names.clear();
+		}
+	}
+	if (!param(m_client_names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+		m_client_names.clear();
+	}
+	// For oauth2 and vault, an empty value means they claim all tokens
+	// not explicitly claimed by another type.
+	if (!param(m_oauth2_names, "OAUTH2_CREDMON_PROVIDER_NAMES") || m_oauth2_names == "*") {
+		m_oauth2_names.clear();
+	}
+	// If neither VAULT_CREDMON_PROVIDER_NAMES nor SEC_CREDENTIAL_STORER
+	// is set, then assume there are no Vault tokens.
+	m_vault_names.clear();
+	m_vault_enabled = false;
+	if (param(m_vault_names, "VAULT_CREDMON_PROVIDER_NAMES")) {
+		m_vault_enabled = true;
+		if (m_vault_names == "*") {
+			m_vault_names.clear();
+		}
+	}
+	std::string storer;
+	if (param(storer, "SEC_CREDENTIAL_STORER")) {
+		m_vault_enabled = true;
+	}
+}
+
+CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
+{
+	std::string param_name;
+	std::string param_val;
+	for (const auto& str: StringTokenIterator(m_local_names)) {
+		if (cred_name == str) {
+			return LocalIssuerType;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_client_names)) {
+		if (cred_name == str) {
+			return LocalClientType;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_oauth2_names)) {
+		if (cred_name == str) {
+			return OAuth2Type;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_vault_names)) {
+		if (cred_name == str) {
+			return VaultType;
+		}
+	}
+	formatstr(param_name, "%s_CLIENT_ID", cred_name.c_str());
+	bool client_id_defined = param(param_val, param_name.c_str());
+	if (m_oauth2_names.empty() && client_id_defined) {
+		return OAuth2Type;
+	}
+	if (m_vault_enabled && m_vault_names.empty() && !client_id_defined) {
+		return VaultType;
+	}
+	return UnknownType;
+}

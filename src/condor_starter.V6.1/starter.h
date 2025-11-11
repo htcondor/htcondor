@@ -26,6 +26,14 @@
 #include "execute_dir_monitor.h"
 #include "exit.h"
 
+#if defined(LINUX) || defined(DARWIN)
+    // We don't test on BSD, so don't claim the hardlink code works there.
+    #define CFT_VERSION 2
+#else
+    #define CFT_VERSION 0
+#endif
+
+
 #if defined(LINUX)
 #include "../condor_startd.V6/VolumeManager.h"
 #endif
@@ -116,7 +124,7 @@ public:
 	virtual bool Remove( void );
 
 		/** Call Hold() on all elements in m_job_list */
-	int remoteHoldCommand( int cmd, Stream* s );
+	int remoteVacateCommand( int cmd, Stream* s );
 	virtual int RemoteHold(int);
 	virtual bool Hold( void );
 
@@ -145,6 +153,7 @@ public:
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
+	virtual bool skipJobImmediately( void );
 	
 		/**
 		 * Clean up any the timer that we have might
@@ -152,18 +161,25 @@ public:
 		 * there can only be one job on hold
 		 */
 	virtual bool removeDeferredJobs( void );
-		
+
 		/** Called by the JobInfoCommunicator whenever the job
 			execution environment is ready so we can actually spawn
 			the job.
 		*/
 	virtual int jobEnvironmentReady( void );
-	
+
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
+
+	static void requestGuidanceJobEnvironmentReady( Starter * s );
+	static void requestGuidanceJobEnvironmentUnready( Starter * s );
+
+	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
+	static void requestGuidanceCommandJobSetup( Starter * s, const ClassAd & context, std::function<void(void)> continue_conversation );
+
 		/**
-		 * 
-		 * 
+		 *
+		 *
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
 
@@ -216,6 +232,10 @@ public:
 		}
 		return WorkingDir.c_str();
 	}
+
+	const char *GetSlotDir() const {
+		return SlotDir.c_str();
+	}
 		/* Should the temporary directory under Execute be expected to
 		 * exist?
 		 */
@@ -266,7 +286,7 @@ public:
 
 		/** Open a file in the 'manifest' directory.
 		 */
-	FILE * OpenManifestFile(const char * filename);
+	FILE * OpenManifestFile(const char * filename, bool add_to_output = false);
 
 		/** Set up the complete environment for the job.  This includes
 			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
@@ -327,21 +347,35 @@ public:
 
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
-
-#ifdef HAVE_DATA_REUSE_DIR
-	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
-#else
-	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return nullptr;}
-#endif
+	bool HasJobRequestedBrokenExit() const { return job_requests_broken_exit; }
+	void JobRequestsBrokenExit(bool b) { job_requests_broken_exit = b; }
 
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
 	virtual void RecordJobExitStatus(int status);
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
+
+	void SetVacateReason(const std::string& msg, int code, int subcode);
+
+	void ExceptHandler(const char* errmsg);
+
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
+
+	// Code shared by the requestGuidance...() functions.
+	static bool handleJobEnvironmentCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(void)> continue_conversation
+	);
+
+	static bool handleJobSetupCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
+	);
 
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
 	// we want to report *after* we finish transfer of FailureFiles
@@ -356,6 +390,7 @@ protected:
 
 	bool recorded_job_exit_status{false};
 	int job_exit_status;
+
 private:
 
 		// // // // // // // //
@@ -364,7 +399,7 @@ private:
 
 		/// Remove the execute/dir_<pid> directory
 		/// Argument exit_code: override Starter exit code with value
-	virtual bool removeTempExecuteDir(int& exit_code);
+	virtual bool removeTempExecuteDir(int& exit_code, const char * move_to);
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
@@ -410,10 +445,16 @@ private:
 		// The temporary directory created under Execute for this job.
 		// If file transfer is used, this will also be the IWD of the job.
 	std::string WorkingDir;
+	// Same as WorkingDir if nested scratch is not enabled, otherwise immediate subdir of EXECUTE
+	std::string SlotDir;
+	std::string JobHomeDir; // Owned by user and writeable thereby
 	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
+	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
 	std::string m_recoveryFile;
+	std::string m_move_working_dir_on_exit; // if non-empty move/rename the WorkingDir to this instead of deleting it
 	bool is_gridshell;
+	bool job_requests_broken_exit{false};
 	bool m_workingDirExists;
 	bool has_encrypted_working_dir;
 
@@ -469,14 +510,6 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
-
-#ifdef HAVE_DATA_REUSE_DIR
-	// Manage the data reuse directory.
-	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
-#endif
-
-	// The string to set the tmp env vars to
-	std::string tmpdir;
 };
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"

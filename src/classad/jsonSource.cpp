@@ -51,34 +51,6 @@ ClassAdJsonParser::
 }
 
 
-bool ClassAdJsonParser::
-ParseExpression( const string &buffer, ExprTree *&tree, bool full )
-{
-	bool              success;
-	StringLexerSource lexer_source(&buffer);
-
-	success      = false;
-	if (lexer.Initialize(&lexer_source)) {
-		success = parseExpression(tree, full);
-	}
-
-	return success;
-}
-
-bool ClassAdJsonParser::
-ParseExpression( LexerSource *lexer_source, ExprTree *&tree, bool full )
-{
-	bool              success;
-
-	success      = false;
-	if (lexer.Initialize(lexer_source)) {
-		success = parseExpression(tree, full);
-	}
-
-	return success;
-}
-
-
 ExprTree *ClassAdJsonParser::
 ParseExpression( const string &buffer, bool full)
 {
@@ -306,7 +278,7 @@ ParseClassAd(LexerSource *lexer_source, bool full)
  *-------------------------------------------------------------------*/
 
 bool ClassAdJsonParser::
-parseExpression( ExprTree *&tree, bool full )
+parseExpression( ExprTree *&tree, bool /*full*/ )
 {
 	Lexer::TokenValue&	tv = lexer.PeekToken();
 	

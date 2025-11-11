@@ -78,6 +78,37 @@ _reload_config( PyObject *, PyObject * ) {
 	Py_RETURN_NONE;
 }
 
+static PyObject *
+_reload_config_usermaps( PyObject *, PyObject * ) {
+
+	// reload the config specified usermaps for this process
+	reconfig_user_maps();
+
+	Py_RETURN_NONE;
+}
+
+static PyObject *
+_load_a_config_usermap_file( PyObject *, PyObject * args ) {
+
+	const char * name = NULL;
+	const char * mapfile_path = NULL;
+
+	if(! PyArg_ParseTuple( args, "ss", &name, &mapfile_path )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+	// load or reload the given usermap file
+	int rval = add_user_map(name, mapfile_path, nullptr);
+	if (rval != 0) {
+		std::string msg("Failed to load userMap file: "); msg += mapfile_path;
+		PyErr_SetString(PyExc_HTCondorException, msg.c_str());
+		return NULL;
+	}
+
+	Py_RETURN_NONE;
+}
+
 
 static PyObject *
 _enable_debug( PyObject *, PyObject * ) {
@@ -89,8 +120,18 @@ _enable_debug( PyObject *, PyObject * ) {
 
 
 static PyObject *
+_disable_debug( PyObject *, PyObject * ) {
+	dprintf_make_thread_safe();
+	dprintf_deconfig_tool();
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
 _enable_log( PyObject *, PyObject * ) {
 	dprintf_make_thread_safe();
+	dprintf_config_ContinueOnFailure(1);
 	dprintf_config(get_mySubSystem()->getName());
 
 	Py_RETURN_NONE;
@@ -202,6 +243,82 @@ _send_command( PyObject *, PyObject * args ) {
 
 
 static PyObject *
+_ping( PyObject *, PyObject * args ) {
+	// _ping(ad._handle, authz)
+
+	const char* addr = nullptr;
+	long command = -1;
+	const char * authz = nullptr;
+	DCpermission authz_int = NOT_A_PERM;
+	const char* token = nullptr;
+
+	if(! PyArg_ParseTuple(args, "szz", & addr, & authz , &token)) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return nullptr;
+	};
+
+	Daemon d(DT_ANY, addr, nullptr);
+
+	if (token) {
+		d.setPreferredToken(token);
+	}
+
+	// authz is the string form of an authorization level or a CEDAR command.
+	// Figure out the appropriate CEDAR command integer.
+	if (authz == nullptr) {
+		authz = "DC_NOP";
+	}
+	authz_int = getPermissionFromString(authz);
+	if (authz_int != NOT_A_PERM) {
+		command = getSampleCommand(authz_int);
+	} else {
+		command = getCommandNum(authz);
+	}
+	if (command == -1) {
+		// This was HTCondorEnumError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Unable to determine DaemonCore command value.");
+		return nullptr;
+	}
+
+	ReliSock sock;
+	CondorError errorStack;
+	if (!sock.connect(d.addr(), 0, false, &errorStack)) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Unable to connect to the remote daemon.");
+		return nullptr;
+	}
+
+	if (!d.startSubCommand(DC_SEC_QUERY, command, &sock, 0, nullptr)) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Failed to start command.");
+		return NULL;
+	}
+
+	sock.decode();
+	ClassAd reply_ad;
+	if(!getClassAd(&sock, reply_ad) || !sock.end_of_message()) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString(PyExc_HTCondorException, "Failed to send end-of-message.");
+		return NULL;
+	}
+
+	// Merge the session and Sock policy ads into the ad we got back from the dameon.
+	sock.getPolicyAd(reply_ad);
+	auto itr = SecMan::session_cache.find(sock.getSessionID());
+	if (itr == SecMan::session_cache.end()) {
+		PyErr_SetString(PyExc_HTCondorException, "Failed to find session.");
+		return nullptr;
+	}
+	reply_ad.Update(*(itr->second.policy()));
+
+	sock.close();
+
+	PyObject * pyClassAd = py_new_classad2_classad(reply_ad.Copy());
+	return pyClassAd;
+}
+
+
+static PyObject *
 _send_alive( PyObject *, PyObject * args ) {
 	// _send_alive( addr, pid, timeout )
 
@@ -256,4 +373,57 @@ _set_ready_state( PyObject *, PyObject * args ) {
     }
 
 	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_send_generic_payload_command( PyObject *, PyObject * args ) {
+	PyObject_Handle * handle = nullptr;
+	const char * address = nullptr;
+	long command = -1;
+
+	if(! PyArg_ParseTuple( args, "zlO", & address, & command, (PyObject **)& handle )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return nullptr;
+	}
+
+	// Tuple[ClassAd, Error Int, Error String]
+	PyObject * result_tuple = PyTuple_New(3);
+
+	Daemon d(DT_GENERIC, address);
+	const ClassAd * sendPayload = (ClassAd *)handle->t;
+
+	Sock * sock = d.startCommand(command, Stream::reli_sock, 0);
+	if (! sock) {
+		PyTuple_SetItem(result_tuple, 0, Py_None);
+		PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(1));
+		PyTuple_SetItem(result_tuple, 2, PyUnicode_FromString("Failed to open socket"));
+		return result_tuple;
+	}
+
+	if (! putClassAd(sock, *sendPayload) || ! sock->end_of_message()) {
+		sock->close();
+		PyTuple_SetItem(result_tuple, 0, Py_None);
+		PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(2));
+		PyTuple_SetItem(result_tuple, 2, PyUnicode_FromString("Failed to send command to daemon"));
+		return result_tuple;
+	}
+
+	sock->decode();
+
+	ClassAd returnPayload;
+
+	if (! getClassAd(sock, returnPayload) || ! sock->end_of_message()) {
+		sock->close();
+		PyTuple_SetItem(result_tuple, 0, Py_None);
+		PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(3));
+		PyTuple_SetItem(result_tuple, 2, PyUnicode_FromString("Failed to get response from daemon"));
+		return result_tuple;
+	}
+
+	PyTuple_SetItem(result_tuple, 0, py_new_classad2_classad(returnPayload.Copy()));
+	PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(0));
+	PyTuple_SetItem(result_tuple, 2, Py_None);
+
+	return result_tuple;
 }

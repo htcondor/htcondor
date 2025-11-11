@@ -242,6 +242,9 @@ void
 StartdNamedClassAd::AggregateFrom(ClassAd *from)
 {
 	if( isResourceMonitor() ) {
+		// take ownership of the from ptr here as Aggregate does not.
+		std::unique_ptr<ClassAd> take_from_ad(from);
+
 		ClassAd * to = this->GetAd();
 
 		//

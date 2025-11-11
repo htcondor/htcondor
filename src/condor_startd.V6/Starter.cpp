@@ -36,6 +36,12 @@
 #include "classad_helpers.h"
 #include "ipv6_hostname.h"
 #include "shared_port_endpoint.h"
+#include "exit.h"
+
+#ifdef LINUX
+#include "proc_family_direct_cgroup_v2.h"
+#endif
+
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 
@@ -55,8 +61,9 @@ Starter *findStarterByPid(pid_t pid)
 	return NULL;
 }
 
-
-
+size_t numLivingStarters() {
+	return living_starters.size();
+}
 
 Starter::Starter()
 	: s_orphaned_jobad(NULL)
@@ -74,8 +81,8 @@ Starter::initRunData( void )
 	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
-	s_hold_soft_timeout = -1;
-	s_hold_hard_timeout = -1;
+	s_vacate_soft_timeout = -1;
+	s_vacate_hard_timeout = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
@@ -87,8 +94,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-	m_hold_job_soft_cb = nullptr;
-	m_hold_job_hard_cb = nullptr;
+	m_vacate_job_soft_cb = nullptr;
+	m_vacate_job_hard_cb = nullptr;
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -129,11 +136,11 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_hold_job_soft_cb ) {
-		m_hold_job_soft_cb->cancelCallback();
+	if( m_vacate_job_soft_cb ) {
+		m_vacate_job_soft_cb->cancelCallback();
 	}
-	if( m_hold_job_hard_cb ) {
-		m_hold_job_hard_cb->cancelCallback();
+	if( m_vacate_job_hard_cb ) {
+		m_vacate_job_hard_cb->cancelCallback();
 	}
 }
 
@@ -776,27 +783,56 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	ClassAd update_ad;
 	int final_update = 0;
 
-	s_last_update_time = time(NULL);
+	// process all pending messages in the update socket
+	// this is a Register_Socket callback, but we also call this in the reaper
+	// so it's possible that the number of updates available will be 0
+	int pending_bytes = stream->bytes_available_to_read();
+	while (static_cast<Sock*>(stream)->msgReady()) {
 
-		// It is expected that we will get here when the stream is closed.
-		// Unfortunately, log noise will be generated when we try to read
-		// from it.
+		time_t msg_time = time(NULL);
 
-	stream->decode();
-	stream->timeout(10);
-	if( !stream->get( final_update) ||
-		!getClassAd( stream, update_ad ) ||
-		!stream->end_of_message() )
-	{
-		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
-		final_update = 1;
-	}
-	else {
+		stream->decode();
+		stream->timeout(10);
+		int update_cmd = 0;
+		if ( ! stream->get(update_cmd) ||
+		     ! getClassAd(stream, update_ad) ||
+		     ! stream->end_of_message())
+		{
+			dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
+			final_update = 1;
+			break;
+		}
+		pending_bytes = stream->bytes_available_to_read();
+
+		Claim* claim = resmgr->getClaimByPid(s_pid);
+
+		if (update_cmd == 1) {
+			final_update = 1;
+		} else if (update_cmd > 1) {
+			ClassAd replyAd;
+			if ( ! claim) {
+				dprintf(D_ERROR, "No claim could be found for starter %d sending update command %d\n", s_pid, update_cmd);
+				replyAd.Assign(ATTR_ERROR_STRING, "No Claim");
+			} else {
+				claim->receiveUpdateCommand(update_cmd, update_ad, replyAd);
+			}
+			stream->encode();
+			putClassAd(stream, replyAd);
+			stream->end_of_message();
+			continue;
+		}
+
+		s_last_update_time = msg_time;
+
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else if (final_update) {
+			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending_bytes);
+		} else if (s_in_teardown_with_pending_updates) {
+			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending_bytes);
 		} else {
-			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
 
 		// In addition to new info about the job, the starter also
@@ -813,7 +849,6 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		double fPercentCPU=0.0;
 		bool has_vm_cpu = update_ad.LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, fPercentCPU);
 
-		Claim* claim = resmgr->getClaimByPid(s_pid);
 		if( claim ) {
 			claim->receiveJobClassAdUpdate(update_ad, final_update);
 
@@ -830,7 +865,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		}
 	}
 
-	if( final_update ) {
+	if( final_update || static_cast<ReliSock*>(stream)->is_closed() ) {
 		dprintf(D_FULLDEBUG, "Closing job ClassAd update socket from starter.\n");
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
@@ -967,15 +1002,13 @@ int Starter::execDCStarter(
 		claim->writeMachAdAndOverlay(s_job_update_sock);
 	}
 
-	if( daemonCore->Register_Socket(
+	int rc = daemonCore->Register_Socket(
 			s_job_update_sock,
 			"starter ClassAd update socket",
 			(SocketHandlercpp)&Starter::receiveJobClassAdUpdate,
 			"receiveJobClassAdUpdate",
-			this) < 0 )
-	{
-		EXCEPT("Failed to register ClassAd update socket.");
-	}
+			this);
+	ASSERT(rc >= 0);
 
 	int reaper_id;
 	if( s_reaper_id > 0 ) {
@@ -993,6 +1026,19 @@ int Starter::execDCStarter(
 
 	FamilyInfo fi;
 	fi.max_snapshot_interval = pid_snapshot_interval;
+
+#ifdef LINUX
+	std::string cgroup;
+	if (param_boolean("CGROUP_ALL_DAEMONS", false)) {
+		// Put each starter into a well-named cgroup.  we assume that the startd
+		// is in its own cgroup, so we just need a unique name per starter
+
+		std::string starter_name = std::string("STARTER_") + claim->rip()->r_name;
+		cgroup = ProcFamilyDirectCgroupV2::make_full_cgroup_name(starter_name);
+		fi.cgroup = cgroup.c_str();
+	}
+
+#endif
 
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
@@ -1111,7 +1157,11 @@ Starter::killHard( time_t timeout )
 		return true;
 	}
 	
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! got_final_update() && ! signal(SIGQUIT) ) {
+#else
 	if( ! signal(SIGQUIT) ) {
+#endif
 		killfamily();
 		return false;
 	}
@@ -1125,7 +1175,11 @@ Starter::killHard( time_t timeout )
 bool
 Starter::killSoft(time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! active() || got_final_update()) {
+#else
 	if( ! active() ) {
+#endif
 		return true;
 	}
 	if( ! signal(SIGTERM) ) {
@@ -1193,9 +1247,7 @@ Starter::startKillTimer( time_t timeout )
 									std::max((time_t)1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
-	if( s_kill_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(s_kill_tid >= 0);
 	return TRUE;
 }
 
@@ -1214,10 +1266,8 @@ Starter::startSoftkillTimeout( time_t timeout )
 		daemonCore->Register_Timer( softkill_timeout,
 						(TimerHandlercpp)&Starter::softkillTimeout,
 						"softkillTimeout", this );
-	if( s_softkill_tid < 0 ) {
-		EXCEPT( "Can't register softkillTimeout timer" );
-	}
-	dprintf(D_FULLDEBUG,"Using max vacate time of %ds for this job.\n",softkill_timeout);
+	ASSERT(s_softkill_tid >= 0);
+	dprintf(D_FULLDEBUG,"Using max vacate time of %llds for this job.\n",(long long)softkill_timeout);
 	return TRUE;
 }
 
@@ -1281,10 +1331,17 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
+Starter::vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft,time_t timeout)
 {
-	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
-		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
+#ifdef DONT_HOLD_EXITED_JOBS
+	if (got_final_update()) {
+		dprintf(D_ALWAYS, "vacateJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		if ( ! soft) startKillTimer(timeout);
+		return true;
+	}
+#endif
+	if( (soft && m_vacate_job_soft_cb) || (!soft && m_vacate_job_hard_cb) ) {
+		dprintf(D_ALWAYS,"vacateJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
 	}
 
@@ -1301,20 +1358,26 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		sinful = daemonCore->InfoCommandSinfulString( s_pid );
 	}
 
-	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
-	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
+	int pending_update = has_pending_update();
+	if (pending_update > 0) {
+		s_in_teardown_with_pending_updates = true;
+		dprintf(D_ALWAYS,"vacateJob() called while %d update bytes are pending (starter pid %d).\n", pending_update, s_pid);
+	}
 
-	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
+	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
+	classy_counted_ptr<StarterVacateJobMsg> msg = new StarterVacateJobMsg(vacate_reason, vacate_code, vacate_subcode,soft);
+
+	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::vacateJobCallback, this );
 
 	msg->setCallback( msg_cb );
 
-	// store the timeout so that the holdJobCallback has access to it.
+	// store the timeout so that the vacateJobCallback has access to it.
 	if (soft) {
-		m_hold_job_soft_cb = msg_cb;
-		s_hold_soft_timeout = timeout;
+		m_vacate_job_soft_cb = msg_cb;
+		s_vacate_soft_timeout = timeout;
 	} else {
-		m_hold_job_hard_cb = msg_cb;
-		s_hold_hard_timeout = timeout;
+		m_vacate_job_hard_cb = msg_cb;
+		s_vacate_hard_timeout = timeout;
 	}
 	starter->sendMsg(msg.get());
 
@@ -1329,26 +1392,55 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 }
 
 void
-Starter::holdJobCallback(DCMsgCallback *cb)
+Starter::vacateJobCallback(DCMsgCallback *cb)
 {
 	bool soft = false;
-	if (cb == m_hold_job_soft_cb) {
+	if (cb == m_vacate_job_soft_cb) {
 		soft = true;
-		m_hold_job_soft_cb = nullptr;
-	} else if (cb == m_hold_job_hard_cb) {
+		m_vacate_job_soft_cb = nullptr;
+	} else if (cb == m_vacate_job_hard_cb) {
 		soft = false;
-		m_hold_job_hard_cb = nullptr;
+		m_vacate_job_hard_cb = nullptr;
 	} else {
-		EXCEPT("Unexpected starter hold callback!");
+		EXCEPT("Unexpected starter vacate callback!");
 	}
 
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
-		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
+		if (s_was_reaped || s_got_final_update) {
+			const char * reason = s_was_reaped ? "starter already exited" : "got final update";
+			dprintf(D_ALWAYS, "Failed to vacate job (starter pid %d). %s\n", s_pid, reason);
+			return;
+		}
+		dprintf(D_ALWAYS,"Failed to vacate job (starter pid %d), so killing it.\n", s_pid);
 		if (soft) {
-			killSoft(s_hold_soft_timeout);
+			killSoft(s_vacate_soft_timeout);
 		} else {
-			killHard(s_hold_hard_timeout);
+			killHard(s_vacate_hard_timeout);
 		}
 	}
+}
+
+int
+Starter::VerifyBrokenResources(int status) {
+	bool broken = true;
+
+	switch (status) {
+		case STARTER_EXIT_IMMORTAL_LVM:
+			// Starter failed to cleanup LV. Check if we succeeded
+			{ // STARTER_EXIT_IMMORTAL_LVM Scope Start
+				auto * volman = resmgr->getVolumeManager();
+				if ( ! s_lv_name.empty() && volman && volman->is_enabled()) {
+					if (volman->CountLVDevices(s_lv_name) == 0) {
+						broken = false;
+					}
+				}
+			} // STARTER_EXIT_IMMORTAL_LVM Scope End
+			break;
+		default:
+			// Not a broken status that final cleanup could have changed
+			break;
+	}
+
+	return broken;
 }

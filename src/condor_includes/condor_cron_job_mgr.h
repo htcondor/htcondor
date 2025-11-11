@@ -49,6 +49,7 @@ class CronJobMgr : public Service
 	const char *GetParamBase( void ) const { return m_param_base; };
 
 	int KillAll( bool force );
+	int DeleteAll( bool force );
 	bool IsAllIdle(std::string * names = nullptr);	// string returns names of not-idle jobs
 	virtual bool ShouldStartJob( const CronJob & ) const;
 	virtual bool JobStarted( const CronJob & );

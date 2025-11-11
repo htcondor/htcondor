@@ -20,6 +20,8 @@ and [directives](https://www.sphinx-doc.org/en/master/usage/restructuredtext/dir
 documentation. Some notable ones are listed below:
 
 - Code Block -- **.. code-block::\<language\>**
+    - Note: There are custom inline code block references that use our custom language formats.
+      See [section on custom inline code blocks](#Custom-Inline-Code-Blocks)
 - Warning -- **.. warning::**
 - Note -- **.. note::**
 - Sidebar -- **.. sidebar::**
@@ -97,6 +99,16 @@ Example static history entry file **v24-version.hist**:
   :jira:`5555`
 ```
 
+To include comments in this file either start a line with **#** or **//** such as follows:
+```
+*** 24.6.1 features
+
+# This is a comment
+// This is also a comment
+- Version history blah blah blah
+  :jira`1234`
+```
+
 The **include-history** directive can take additional content to parse into the entries list along with those
 that are parsed from the static history entry files. The **:exclude:** tag can be used with a comment separated
 list of jira ticket numbers to use as a filter to not add associated history entries to the resulting list. Finally,
@@ -136,6 +148,25 @@ Include history entry with additional content:
     - Extra version history
       :jira:`6666`
 ```
+
+---
+
+**:jira:** is used to automatically create links to one or more JIRA tickets and create a version history
+anchor for easy linking. Multiple comma separated ticket numbers can be provided.
+
+Example: **:jira:\`1234\`** -- Link to one JIRA Ticket (#1234)
+
+Example: **:jira:\`1234,9876\`** -- Make links to two JIRA tickets (#1234 and #9876)
+
+---
+
+**:hist-anchor:** is used to add a version history entry anchor for entries with no associated **:jira:**
+tag. The provided contents can either be the keyword *default* (case insensitive) or a valid URL string.
+Note: Spaces are automatically replaced with hyphens.
+
+Example: **:hist-anchor:\`default\`** -- Create default anchor for entry (*version-history*)
+
+Example: **:hist-anchor:`Release Notes`** -- Create *Release-Notes* anchor for version history entry.
 
 ---
 
@@ -315,3 +346,14 @@ Example: **:classad-function:\`foo()\`** -- Creates a reference to the **foo()**
 
 Example: **:classad-function:\`foo()[Custom Index]\`** -- Does as above while also creating the index entry **Custom Index**.
 
+
+### Custom Inline Code Blocks
+ 
+The following sphinx roles have been defined to allow easy inline code blocks using
+our custom language highlighting.
+
+1. **:classad:** | A single *key = value* line in a ClassAd | Example: **:classad:\`foo = bar\`**
+2. **:ad-expr:** | A ClassAd expression (i.e. *value*) | Example: **:ad-expr:\`MAX({1024, (TransferInputSizeMB+1) * 1.25}) * 1024\`**
+3. **:config:**  | A single configuration line | Example: **:config:\`CONDOR_HOST = remote.pool.host\`**
+4. **:jdl:**     | A single line from the Job Description Language (JDL) | Example: **:jdl:\`exectuable = /bin/sleep\`**
+5. **:dag:**     | A single line from the DAG Description Language | Example: **:dag:\`JOB FOO job.sub\`**

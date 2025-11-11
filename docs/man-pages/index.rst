@@ -28,6 +28,8 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
          :::link:condor_transfer_data
          condor_q
          :::link:condor_q
+         condor_watch_q
+         :::link:condor_watch_q
          condor_qedit
          :::link:condor_qedit
          condor_history
@@ -78,6 +80,8 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
            condor_gpu_discovery
            :::link:condor_gpu_discovery
            condor_power_state
+           condor_dag_checker
+           :::link:condor_dag_checker
        Managing Submitters
            condor_userprio
            :::link:condor_userprio
@@ -232,9 +236,17 @@ Other
 
     classad_eval
     condor_adstash
-    condor_annex
-    condor_dagman
+    condor_dag_checker
     condor_rmdir
     condor_ssh_start
     condor_ssl_fingerprint
     htcondor
+
+.. hidden::
+
+    .. toctree::
+        :maxdepth: 1
+        :glob:
+        :caption: Internal
+
+        condor_dagman

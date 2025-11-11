@@ -12,7 +12,7 @@ import socket
 import http.client
 
 try:
-    import htcondor
+    import htcondor2 as htcondor
 except ImportError:
     htcondor = None
 
@@ -103,9 +103,9 @@ class VaultCredmon(AbstractCredentialMonitor):
 
     def __init__(self, *args, **kw):
         if htcondor is not None:
-            if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param:
+            if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param and len(htcondor.param.get('AUTH_SSL_CLIENT_CAFILE', '').strip()) > 0:
                 self.cafile = htcondor.param['AUTH_SSL_CLIENT_CAFILE']
-            if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
+            if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param and len(htcondor.param.get('AUTH_SSL_CLIENT_CADIR', '').strip()) > 0:
                 self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
         self.providers = kw.get("providers", set())
@@ -231,11 +231,13 @@ class VaultCredmon(AbstractCredentialMonitor):
         try:
             response = self.request_url(url, headers, params)
         except Exception as e:
-            self.log.error("Read of access token from %s failed: %s", url, str(e))
             if 'permission denied' in str(e):
                 # the vault token is expired, might as well delete it
+                self.log.error("Read of access token from %s failed: %s", url, str(e))
                 self.log.info("Deleting %s token for user %s because permission denied", token_name, username)
                 self.delete_tokens(username, token_name)
+            else:
+                self.log.exception("Read of access token from %s failed: %s", url, str(e))
             return False
         try:
             response = json.loads(response.data.decode())
@@ -302,10 +304,10 @@ class VaultCredmon(AbstractCredentialMonitor):
                 token_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
                 token_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
                 ):
-                self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name, token_name, token_name)
+                self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name)
                 return
         elif token_name == 'scitokens':
-            self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name, token_name, token_name)
+            self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name)
             return
 
         if self.should_renew(username, token_name):

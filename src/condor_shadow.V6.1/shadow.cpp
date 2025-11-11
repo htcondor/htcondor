@@ -29,6 +29,14 @@
 #include "store_cred.h"
 #include "condor_holdcodes.h"
 
+#include <algorithm>
+#include <filesystem>
+#include "my_popen.h"
+#include "condor_url.h"
+#include "ShadowHookMgr.h"
+#include "cred_dir.h"
+#include "call_before_exit.h"
+
 UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
@@ -38,6 +46,16 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
+	if ( commonFTO ) delete commonFTO;
+	if ( producer_keep_alive != -1 ) {
+		daemonCore->Cancel_Timer( producer_keep_alive );
+	}
+	// This makes me sad, but the SingleProviderSyndicate can't be
+	// default-constructed.  FIXME: could we get value semantics
+	// with a different kind of data structure?
+	for( const auto & [cifName, sps] : cfLocks ) {
+	    delete sps;
+	}
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 
@@ -87,9 +105,7 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 void
 UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
-	if ( !job_ad ) {
-		EXCEPT("No job_ad defined!");
-	}
+	ASSERT(job_ad);
 
 		// base init takes care of lots of stuff:
 	baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
@@ -99,9 +115,14 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 		// ad, since it'll have the ClaimId, address (in the ClaimId)
 		// startd's name (RemoteHost) and pool (RemotePool).
 	remRes->setStartdInfo( jobAd );
-	
+
 		// In this case we just pass the pointer along...
 	remRes->setJobAd( jobAd );
+
+	// Before we even try to claim, or activate the claim, check to see if
+	// it's even possible for file transfer to succeed.
+	checkInputFileTransfer();
+
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->
@@ -143,7 +164,7 @@ UniShadow::spawn()
 		if (rval == -1) {
 			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
 			BaseShadow::log_except("Submit-side job hook execution failed");
-			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed");
+			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 		} else if (rval == 0) {
 			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
 			spawnFinish();
@@ -165,7 +186,7 @@ UniShadow::hookTimeout( int /* timerID */ )
 {
 	dprintf(D_ERROR, "Timed out waiting for a hook to exit\n");
 	BaseShadow::log_except("Submit-side job hook execution timed out");
-	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out");
+	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 }
 
 
@@ -279,9 +300,9 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// note, we want to reverse the order of the send/recv in the
 		// call, since we want the email from the job's perspective,
 		// not the shadow's.. 
-	mailer.sendExitWithBytes( jobAd, exitReason, 
-							  bytesReceived(), bytesSent(), 
-							  prev_run_bytes_sent + bytesReceived(), 
+	mailer.sendExitWithBytes( jobAd, exitReason,
+							  bytesReceived(), bytesSent(),
+							  prev_run_bytes_sent + bytesReceived(),
 							  prev_run_bytes_recvd + bytesSent() );
 }
 
@@ -316,7 +337,7 @@ UniShadow::requestJobRemoval() {
 }
 
 int UniShadow::handleJobRemoval(int sig) {
-    dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
+	dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remove_requested = true;
 		// if we're not in the middle of trying to reconnect, we
 		// should immediately kill the starter.  if we're
@@ -354,14 +375,14 @@ int UniShadow::JobResume( int sig )
 	return iRet;
 }
 
-float
+uint64_t
 UniShadow::bytesSent()
 {
 	return remRes->bytesSent();
 }
 
 
-float
+uint64_t
 UniShadow::bytesReceived()
 {
 	return remRes->bytesReceived();
@@ -540,9 +561,7 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	if (reason) { event.setDisconnectReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -558,9 +577,7 @@ UniShadow::logReconnectedEvent( void )
 	JobReconnectedEvent event;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -584,9 +601,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	if (reason) { event.setReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
@@ -621,7 +636,7 @@ UniShadow::exitAfterEvictingJob( int reason ) {
 	// not called from UniShadow::cleanUp() because a bunch of those functions
 	// do important-looking things between calling cleanUp() and calling
 	// DC_Exit().
-	if( remRes->gotJobExit() || remRes->getClaimSock() == NULL ) {
+	if( remRes->gotJobDone() || remRes->getClaimSock() == NULL ) {
 		DC_Exit( reason );
 	} else {
 		this->delayedExitReason = reason;
@@ -710,6 +725,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 				}
 			}
 		}
+
+		// Increment (or set) number of job input transfer starts
+		int num_input_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers)) {
+			num_input_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_INPUT_XFER_STARTS, num_input_xfers);
 	} else if( (!tq) && (!ti) && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
@@ -729,6 +751,13 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		if( jobAd->LookupInteger( "TransferInQueued", then ) ) {
 			te.setQueueingDelay( now - then );
 		}
+
+		// Increment (or set) number of job output transfer starts
+		int num_output_xfers = 1;
+		if (jobAd->LookupInteger(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers)) {
+			num_output_xfers++;
+		}
+		jobAd->Assign(ATTR_NUM_OUTPUT_XFER_STARTS, num_output_xfers);
 	} else if( (!tq) && (!ti) && (toSet && (!to)) ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );
@@ -739,4 +768,300 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 	if(! uLog.writeEvent( &te, jobAd )) {
 		dprintf( D_ALWAYS, "Unable to log file transfer event.\n" );
 	}
+}
+
+
+void UniShadow::checkInputFileTransfer() {
+	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): entry.\n" );
+
+	// Check if we want to verify input files: Stat file for existence and size bytes
+	bool verify_inputs = param_boolean( "CHECK_INPUT_FILE_TRANSFER", false );
+	if (verify_inputs) {
+		// Only do stats/verifications of input files the first execution
+		// TODO: Use first class epoch counter when/if we implement one
+		int numShadowStarts = -1;
+		jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts );
+		if( numShadowStarts != 1 ) {
+			verify_inputs = false;
+		}
+	}
+
+
+	// Make the job's credentials available to the check commands.
+	Env env;
+
+	bool made_cred_dir = false;
+	std::string cred_dir = getCredDir();
+	if ( ! verify_inputs) {
+		// Don't set up temp creds directory if we aren't actually doing input file verification
+	} else if( cred_dir.empty()) {
+		dprintf( D_FULLDEBUG, "checkInputFileTransfer(): getCredDir() failed, continuing without credentials.\n" );
+	} else {
+		htcondor::ShadowHookCredDirCreator creds( * jobAd, cred_dir );
+
+		CondorError error;
+		if(! creds.PrepareCredDir(error)) {
+			dprintf( D_FULLDEBUG, "checkInputFileTransfer(): PrepareCredDir() failed, continuing without credentials.\n" );
+		} else {
+			if( creds.MadeCredDir() ) {
+				dprintf( D_FULLDEBUG, "checkInputFileTransfer(): setting _CONDOR_CREDS to %s\n", cred_dir.c_str() );
+				env.SetEnv("_CONDOR_CREDS", cred_dir.c_str());
+				made_cred_dir = true;
+			} else {
+				dprintf( D_FULLDEBUG, "checkInputFileTransfer(): MadeCredDir() false, continuing without credentials.\n" );
+			}
+		}
+	}
+
+	CallBeforeExit cbe( [made_cred_dir, cred_dir]() {
+		if( made_cred_dir ) {
+			std::filesystem::path c(cred_dir);
+
+			TemporaryPrivSentry tps(PRIV_ROOT);
+			if( std::filesystem::exists(c) ) {
+				std::filesystem::remove_all(c);
+			    dprintf(D_FULLDEBUG, "checkInputFileTransfer(): removed temporary credentials directory %s\n", c.string().c_str());
+			}
+		}
+	});
+
+
+	//
+	// This is the only real way to get the actual list of transfers, sadly.
+	//
+	remRes->initFileTransfer();
+	std::vector<std::string> entries = remRes->filetrans.getAllInputEntries();
+	FileTransfer::AddFilesFromSpoolTo(& remRes->filetrans);
+
+	std::vector<std::string> URLs;
+	std::vector<std::filesystem::path> paths;
+	for( auto & entry : entries ) {
+		if( IsUrl(entry.c_str()) ) {
+			URLs.push_back(entry);
+			continue;
+		}
+		std::filesystem::path path( entry );
+		if(! path.is_absolute()) {
+			path = std::filesystem::path(getIwd()) / path;
+		}
+		paths.push_back( path );
+	}
+
+
+	// Tracker for counts of requests for objects per protocol
+	std::map<std::string, size_t> requests;
+	if (! paths.empty()) { requests["CEDAR"] = paths.size(); }
+
+
+	// ENTRY EXISTS SIZE_IN_BYTES SIZE_IS_KNOWN
+	//
+	// This presumes that EXISTS is "CONFIRMED" and "UNKNOWN", because
+	// there's no "COULDN'T TELL" enumeration.
+	std::vector<std::tuple< std::string, bool, size_t, bool >> results;
+
+
+	for( const auto & path : paths ) {
+		// Don't stat CEDAR input files if we aren't doing verification
+		if (! verify_inputs) { continue; }
+
+		std::error_code errorCode;
+
+		bool got_size = false;
+		size_t size = (size_t)-1;
+		bool exists = std::filesystem::exists(path, errorCode);
+		if( exists ) {
+			// Don't hoist this into the conditional, because it will
+			// suppress error-reporting for all other reasons there.
+			if( std::filesystem::is_directory(path, errorCode) ) { continue; }
+
+			size = std::filesystem::file_size(path, errorCode);
+			if( errorCode.value() != 0 ) {
+				dprintf( D_FULLDEBUG, "checkInputFileTransfer(): failed to obtain size of '%s', error code %d (%s)\n",
+					path.string().c_str(), errorCode.value(), errorCode.message().c_str()
+				);
+			} else {
+				got_size = true;
+			}
+		}
+		results.emplace_back( path.string(), exists, size, got_size );
+	}
+
+	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): checking URLs.\n" );
+	for( const auto & fullURL : URLs ) {
+		std::string URL = fullURL;
+		std::string scheme = getURLType(fullURL.c_str(), true);
+
+		std::string key = scheme;
+		upper_case(key);
+		requests[key]++; // Note: First reference will add <key:0> then increment count
+
+		// Don't run commands to verify input files
+		if ( ! verify_inputs) { continue; }
+
+		if( scheme == "http" || scheme == "https" ) {
+			std::string token;
+
+			std::string full_scheme = getURLType(fullURL.c_str(), false);
+			size_t offset = full_scheme.find_last_of('+');
+			if( offset != std::string::npos ) {
+				std::string basename = full_scheme.substr(0, offset);
+				URL = fullURL.substr(offset + 1);
+
+				if(! made_cred_dir) {
+					// FIXME: ...?
+				} else {
+					std::filesystem::path token_path(cred_dir);
+					std::replace(basename.begin(), basename.end(), '.', '_');
+					token_path /= basename + ".use";
+					token = token_path.string();
+				}
+			}
+
+			// curl --disable --silent --location --head
+			// [--header "Authorization: Bearer ..."]
+			//
+			// An HTTP HEAD command may _optionally_ include a(n optionally
+			// capitalized) 'Content-Length' header.  However, if it says
+			// `HTTP/\d+[\.\d+]? 200`, the file exists and is fetchable.
+			//
+			// It seems highly prudent to execute this check in another
+			// process and use one of the my_popen() variants with a
+			// built-in time-out.
+
+			ArgList args;
+			std::string libexec;
+			param( libexec, "LIBEXEC" );
+			std::filesystem::path check_url =
+				std::filesystem::path(libexec) / "check-url";
+			args.AppendArg( check_url.string() );
+			args.AppendArg( URL );
+			if(! token.empty()) {
+				args.AppendArg( token );
+			}
+
+			int timeout = 5;
+			int options = 0;
+			int exit_status = 0xFFFF;
+			char * buffer = run_command( timeout, args, options, & env, & exit_status );
+
+			if( exit_status == 0 ) {
+				// Oddly, we don't have any blank line -preserving utitities.
+				unsigned int lineNo = 0;
+				std::string b( buffer );
+				std::array<std::string, 3> lines;
+				auto i = b.begin();
+				auto j = b.begin();
+				while( lineNo < 3 ) {
+					while( *j != '\n' ) { ++j; }
+					lines[lineNo].insert( lines[lineNo].begin(),
+						i, j
+					);
+					++j;
+					i = j;
+					++lineNo;
+				}
+				auto [CURL_EXIT_CODE, HTTP_CODE, SIZE_IN_BYTES] = lines;
+
+				bool exists = false;
+				size_t size = (size_t)-1;
+				bool got_size = false;
+
+				if(! CURL_EXIT_CODE.empty()) {
+					char * endptr = nullptr;
+					int code = strtol( CURL_EXIT_CODE.c_str(), & endptr, 10 );
+					if( * endptr == '\0' ) {
+						if( code == 0 && ! HTTP_CODE.empty() ) {
+							code = strtol( HTTP_CODE.c_str(), & endptr, 10 );
+							if( * endptr == '\0' ) {
+								if( code == 200 ) {
+									exists = true;
+
+									if(! SIZE_IN_BYTES.empty()) {
+										size = strtol( SIZE_IN_BYTES.c_str(), & endptr, 10 );
+										if( * endptr == '\0' ) {
+											got_size = true;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				results.emplace_back( URL, exists, size, got_size );
+			} else {
+				results.emplace_back( URL, false, (size_t)-1, false );
+			}
+		} else if( scheme == "osdf" || scheme == "pelican" ) {
+			ArgList args;
+			args.AppendArg( "/usr/bin/pelican" );
+			args.AppendArg( "object" );
+			args.AppendArg( "stat" );
+			args.AppendArg( "--json" );
+			args.AppendArg( URL );
+
+			int timeout = 5;
+			int options = 0;
+			int exit_status = 0xFFFF;
+			char * buffer = run_command( timeout, args, options, & env, & exit_status );
+
+			if( exit_status == 0 ) {
+				classad::ClassAd stat;
+				classad::ClassAdJsonParser cajp;
+				if(! cajp.ParseClassAd( buffer, stat, true )) {
+					results.emplace_back( URL, false, (size_t)-1, false );
+				} else {
+					bool got_size = false;
+					long long int size = -1;
+					got_size = stat.LookupInteger("Size", size);
+					results.emplace_back( URL, true, size, got_size );
+				}
+			} else {
+				results.emplace_back( URL, false, (size_t)-1, false );
+			}
+		} else {
+			dprintf( D_ALWAYS, "Skipping URL '%s': don't know how to check it.\n", URL.c_str() );
+			continue;
+		}
+	}
+
+
+	ClassAd* counts = new ClassAd;
+	if (counts) {
+		// Add counts of requested objects by protocol/scheme to sub ClassAd
+		for (const auto& [protocol, num] : requests) { counts->Assign(protocol, num); }
+		jobAd->Insert(ATTR_TRANSFER_INPUT_OBJECT_COUNTS, counts);
+		job_updater->watchAttribute(ATTR_TRANSFER_INPUT_OBJECT_COUNTS);
+	}
+
+
+	for( const auto & result : results ) {
+		dprintf( D_TEST, "checkInputFileTransfer():\t%s\t%s\t%zu\t%s\n",
+			std::get<0>(result).c_str(),
+			std::get<1>(result) ? "true" : "false",
+			std::get<2>(result),
+			std::get<3>(result) ? "true" : "false"
+		);
+
+		std::string readable = "checkInputFileTransfer(): ";
+		formatstr_cat( readable, "%s %s",
+			std::get<0>(result).c_str(),
+			std::get<1>(result) ? "exists" : "may not exist"
+		);
+		if( std::get<3>(result) ) {
+			formatstr_cat( readable, " and has size %zu", std::get<2>(result) );
+		}
+		dprintf( D_FULLDEBUG, "checkInputFileTransfer(): %s.\n",
+			readable.c_str()
+		);
+
+		if(! std::get<1>(result)) {
+			// If we wanted to put the job on hold right now, we'd better
+			// be sure that the entry didn't exist, and not just that we
+			// failed to confirm its existence.  We presently do the
+			// latter, for simplicity.
+		}
+	}
+
+	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): exit.\n" );
 }

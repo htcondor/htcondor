@@ -46,7 +46,7 @@
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_Executable "executable"
-#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_exectuable"
+#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
 #define SUBMIT_KEY_Arguments2 "arguments2"
@@ -55,6 +55,7 @@
 #define SUBMIT_KEY_Env "env"
 #define SUBMIT_KEY_Environment2 "environment2"
 #define SUBMIT_KEY_Input "input"
+#define SUBMIT_KEY_Shell "shell"
 #define SUBMIT_KEY_Stdin "stdin"
 #define SUBMIT_KEY_Output "output"
 #define SUBMIT_KEY_Stdout "stdout"
@@ -78,6 +79,9 @@
 #define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 #define SUBMIT_KEY_RequirePrefix "require_"
+#define SUBMIT_KEY_RetryRequestMemory "retry_request_memory"
+#define SUBMIT_KEY_RetryRequestMemoryMax "retry_request_memory_max"
+#define SUBMIT_KEY_RetryRequestMemoryIncrease "retry_request_memory_increase"
 // GPU property constraint values
 #define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
 #define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
@@ -161,7 +165,10 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+#define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
+#define SUBMIT_KEY_CommonInputFiles "common_input_files"
+#define SUBMIT_KEY_ContainerIsCommon "container_is_common"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -199,6 +206,8 @@
 #define SUBMIT_KEY_OnExitHoldReason "on_exit_hold_reason"
 #define SUBMIT_KEY_OnExitHoldSubCode "on_exit_hold_subcode"
 #define SUBMIT_KEY_OnExitRemoveCheck "on_exit_remove"
+#define SUBMIT_KEY_OnEvictChecks "on_evict_checks"
+#define SUBMIT_KEY_TransformBodyPrefix "transform_body_"
 #define SUBMIT_KEY_Noop "noop_job"
 #define SUBMIT_KEY_NoopExitSignal "noop_job_exit_signal"
 #define SUBMIT_KEY_NoopExitCode "noop_job_exit_code"
@@ -272,6 +281,7 @@
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 #define SUBMIT_KEY_DockerPullPolicy "docker_pull_policy"
 #define SUBMIT_KEY_DockerOverrideEntrypoint "docker_override_entrypoint"
+#define SUBMIT_KEY_DockerSendCredentials "docker_send_credentials"
 
 #define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
@@ -721,7 +731,7 @@ public:
 	// in the formed needed to set the value of the OAuthServicesNeeded job attribute
 	// if a request_ads collection is provided, it will be populated with OAuth service ads
 	// and ads_error be set to describe any required but missing attributes in the request_ads
-	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
+	bool NeedsOAuthServices(bool add_local, std::string & services, std::vector<ClassAd> * request_ads=NULL, std::string * ads_error=NULL) const;
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
@@ -861,6 +871,7 @@ protected:
 	int SetPeriodicExpressions();  /* factory:ok */
 	int SetLeaveInQueue();  /* factory:ok */
 	int SetJobRetries();  /* factory:ok */
+	int SetOnEvictExpressions(); /* factory TODO */
 	int SetKillSig();  /* run once if */
 	char *fixupKillSigName(char* sig);
 
@@ -907,7 +918,7 @@ protected:
 
 	// private helper functions
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
-	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
+	int build_oauth_service_ads(classad::References & services, std::vector<ClassAd> & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
@@ -928,6 +939,7 @@ private:
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
 	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
+	int SetBuiltInOnEvictCheck(const char * attr, int scale, const char * line, const char * incr=nullptr);
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,
@@ -1007,7 +1019,7 @@ struct SubmitStepFromQArgs {
 		m_hash.optimize();
 	}
 
-	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string errmsg)
+	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string & errmsg)
 	{
 		int rval = m_hash.load_inline_q_foreach_items(ms_inline_items, m_fea, errmsg);
 		if (rval == 1) { // items are external
@@ -1217,6 +1229,7 @@ int process_job_credentials(
     // Input parameters.
     SubmitHash & submit_hash,
     int DashDryRun /* should default to 0 */,
+    Daemon * schedd_or_credd,
 
     // Output parameters.
     std::string & URL,

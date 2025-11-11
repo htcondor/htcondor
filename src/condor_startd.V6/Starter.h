@@ -47,6 +47,8 @@ public:
 	time_t	birthdate( void ) const {return s_birthdate;};
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
+	int		has_pending_update() const { return s_job_update_sock ? s_job_update_sock->bytes_available_to_read() : -1; }
+	void	handle_pending_updates() { if (s_job_update_sock) receiveJobClassAdUpdate(s_job_update_sock); }
 	bool	signal(int);
 	bool	killfamily();
 	void	exited(Claim *, int status);
@@ -73,7 +75,7 @@ public:
 	bool	suspend( void );
 	bool	resume( void );
 
-	bool	holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout);
+	bool	vacateJob(char const *vacate_reason,int vacate_code,int vacate_subcode,bool soft,time_t timeout);
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
@@ -84,6 +86,10 @@ public:
 	void softkillTimeout( int timerID = -1 );
 	
 	static void	publish( ClassAd* ad );
+
+	// Verify certain Starter broken codes that may not be true post Startd cleanup
+	// Return True for still broken and False for no longer (i.e. we cleaned up successfully)
+	int VerifyBrokenResources(int status);
 
 #if HAVE_BOINC
 	bool	isBOINC( void ) const { return s_is_boinc; };
@@ -96,8 +102,9 @@ public:
 
 	int receiveJobClassAdUpdate( Stream *stream );
 
-	void holdJobCallback(DCMsgCallback *cb);
+	void vacateJobCallback(DCMsgCallback *cb);
 
+	static ClassAd *starterAd() { return s_ad;}
 private:
 
 		// methods
@@ -135,8 +142,8 @@ private:
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
-	time_t          s_hold_soft_timeout;
-	time_t          s_hold_hard_timeout;
+	time_t          s_vacate_soft_timeout;
+	time_t          s_vacate_hard_timeout;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;
@@ -145,18 +152,20 @@ private:
 	bool            s_created_execute_dir; // should we cleanup s_execute_dir
 	bool            s_got_final_update;
 	bool            s_lv_encrypted{false};
+	bool            s_in_teardown_with_pending_updates{false}; // set when the deactivate_claim command has arrived
 	int             s_reaper_id;
 	int             s_exit_status;
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
 	std::string     s_lv_name; // LogicalVolume name for use with LVM 
-	DCMsgCallback*  m_hold_job_soft_cb;
-	DCMsgCallback*  m_hold_job_hard_cb;
+	DCMsgCallback*  m_vacate_job_soft_cb;
+	DCMsgCallback*  m_vacate_job_hard_cb;
 	std::string     m_starter_addr;
 };
 
 // living (or unreaped) starters live in a global data structure and can be looked up by PID.
 Starter *findStarterByPid(pid_t pid);
+size_t numLivingStarters();
 
 #endif /* _CONDOR_STARTD_STARTER_H */

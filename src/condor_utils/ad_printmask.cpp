@@ -131,7 +131,7 @@ clearPrefixes (void)
 int AttrListPrintMask::
 adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv)
 {
-	// for each item registered in the print mask, call pfn giving it a change to make adjustments.
+	// for each item registered in the print mask, call pfn giving it a chance to make adjustments.
 	int index = 0;
 	int ret = 0;
 
@@ -545,7 +545,6 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 {
 	struct printf_fmt_info fmt_info;
 	printf_fmt_t fmt_type = PFT_NONE;
-	const char* tmp_fmt = nullptr;
 
 	rov.reset(); // in case a non-empty one was passed in.
 
@@ -571,12 +570,15 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 					// caller is using, we will fetch the appropriate
 					// value depending on what they want. we also determine
 					// that no data is needed here.
-				tmp_fmt = fmt->printfFmt;
-				if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
-					print_no_data = true;
+				if (fmt->printfFmt) {
+					const char* tmp_fmt = fmt->printfFmt;
+					if ( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+						print_no_data = true;
+					}
+					fmt_type = fmt_info.type;
+					break;
 				}
-				fmt_type = fmt_info.type;
-			break;
+				//@fallthrough@
 			case CustomFormatFn::STR_CUSTOM_RENDER:
 			case CustomFormatFn::INT_CUSTOM_RENDER:
 			case CustomFormatFn::FLT_CUSTOM_RENDER:
@@ -631,7 +633,7 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 			}
 			if (fmt_type ==  PFT_RAW) {
 				// special case for attr_is_expr when the expression is really an attribute reference.
-				if (tree->GetKind() == classad::ExprTree::NodeKind::ATTRREF_NODE) {
+				if (attr_is_expr && (tree->GetKind() == classad::ExprTree::NodeKind::ATTRREF_NODE)) {
 					pval->SetStringValue("undefined");
 				} else {
 					std::string buff;

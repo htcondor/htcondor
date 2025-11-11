@@ -40,6 +40,18 @@ Machine ClassAd Attributes
     ``"X86_64"``
         AMD/Intel 64-bit X86
 
+:classad-attribute-def:`AvgTransferInputMB`
+    The average number of megabytes transferred to each job to build the job
+    execution sandbox.
+
+:classad-attribute-def:`AvgTransferOutputMB`
+    The average number of megabytes transferred from each job from the execution
+    sandbox after the job has ended.
+
+:classad-attribute-def:`BrokenContextAds`
+    A nested ClassAd containing details about each broken resource detected on
+    an Execution Point.
+
 :classad-attribute-def:`Microarch`
     On X86_64 Linux machines, this advertises the x86_64 microarchitecture,
     like `x86_64-v2`.  See https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
@@ -63,6 +75,11 @@ Machine ClassAd Attributes
     Currently, this only applies to partitionable slots.
     This is measured in the number of integer seconds since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970).
+
+:classad-attribute-def:`CleanupCategoryCounts`
+    A nested ClassAd containing the count of cleanup reminders per resource.
+    (i.e. Account, Execute Directory, Logical Volume). This value will be
+    :ad-expr:`Undefined` if no cleanup reminders exist.
 
 :classad-attribute-def:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
@@ -115,6 +132,14 @@ Machine ClassAd Attributes
     
 :classad-attribute-def:`DetectedCpus`
     Set by the value of configuration variable ``DETECTED_CORES``
+
+:classad-attribute-def:`DetectedDisk`
+    Total size of the disk volumes in KiB that are used for :macro:`EXECUTE`. 
+    In the `StartD` ClassAd this will be the sum of all volumes used for any slot :macro:`EXECUTE`.
+    In the slot ClassAd this will be the size of the volume used by that slot.
+    if :macro:`DISK` is configured, then this attribute, as well as :ad-attr:`TotalDisk` will
+    have the value given by :macro:`DISK` regardless of the size of the volume.
+    See :ad-attr:`TotalDisk`.
 
 :classad-attribute-def:`DetectedMemory`
     Set by the value of configuration variable :macro:`DETECTED_MEMORY`
@@ -490,9 +515,25 @@ Machine ClassAd Attributes
     A boolean value that when ``True`` represents a Linux Execution Point
     is using a loop back device to enforce disk limits.
 
+:classad-attribute-def:`LvmBackingStore`
+    A string value containing the name of the backing LVM device a Linux
+    Execution Point is using to enforce disk limits. This will be the
+    ``<Volume Group Name>`` or ``<Volume Group Name>/<Thinpool LV Name>``.
+
 :classad-attribute-def:`LvmIsThinProvisioning`
     A boolean value that when ``True`` represents a Linux Execution Point
     is using thin provisioned logical volumes to enforce disk limits.
+
+:classad-attribute-def:`LvmDetectedDisk`
+    An integer value representing the size in bytes of the LVM backing
+    Volume Group or Thinpool Logical Volume used to enforce disk limits.
+
+:classad-attribute-def:`LvmNonCondorDiskUsage`
+    An integer representing the total size in bytes utilized by non-HTCondor
+    produced logical volumes associated with the LVM backing Volume Group or
+    Thinpool Logical Volume. This value is subtracted from the
+    :ad-attr:`LvmDetectedDisk` to produce the total available disk available
+    to the *condor_startd*.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
@@ -887,6 +928,11 @@ Machine ClassAd Attributes
     machine being advertised supports running jobs within a Singularity
     container (see :ad-attr:`HasSingularity`).
 
+:classad-attribute-def:`SingularityUserNamespaces`
+    A boolean attribute that is true when singularity or apptainer is
+    working, and has been configured to use user namespaces, and false
+    when HTCondor detects that it uses setuid mode.
+
 :classad-attribute-def:`SlotBrokenCode`
     An integer code indicating the general category of the failure that
     caused the slot to be broken.  This attribute will only exist in
@@ -966,6 +1012,9 @@ Machine ClassAd Attributes
         This slot is not accepting jobs, because the machine is being
         drained.
 
+:classad-attribute-def:`Start`
+    The ClassAd expression configured by the :macro:`START` option.
+
 :classad-attribute-def:`TargetType`
     Describes what type of ClassAd to match with. Always set to the
     string literal ``"Job"``, because machine ClassAds always want to be
@@ -980,10 +1029,13 @@ Machine ClassAd Attributes
     contrast with :ad-attr:`Cpus`, which is the number of CPUs in the slot.
 
 :classad-attribute-def:`TotalDisk`
-    The quantity of disk space in KiB available across the machine (not
-    the slot). For partitionable slots, where there is one partitionable
+    The quantity of disk space in KiB available for provisioning slots across the machine (not
+    the slot) on the disk volume that holds the :macro:`EXECUTE` directory.
+    For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute :ad-attr:`TotalSlotDisk`.
+    attribute :ad-attr:`TotalSlotDisk`.  In the StartD ClassAd, when more than
+    a single disk volume is used for :macro:`EXECUTE`, this will be the sum
+    of `TotalDisk` across all disk volumes.
 
 :classad-attribute-def:`TotalLoadAvg`
     A floating point number representing the current load average summed
@@ -1010,6 +1062,13 @@ Machine ClassAd Attributes
     The number of CPUs (cores) in this slot. For static slots, this
     value will be the same as in :ad-attr:`Cpus`.
 
+:classad-attribute-def:`BrokenSlotCpus`
+    The number of CPUs (cores) that this slot has lost
+    because a dynamic slot was deleted while marked as broken.
+    This attribute will appear only in partitionable slots that have lost resources to broken dynamic slots.
+    When this attribute exists, the sum of this attribute and :ad-attr:`TotalSlotCpus` will be the
+    original total CPUs for this slot.
+
 :classad-attribute-def:`TotalSlotDisk`
     The quantity of disk space in KiB given to this slot. For static
     slots, this value will be the same as machine ClassAd attribute
@@ -1017,12 +1076,26 @@ Machine ClassAd Attributes
     slot per machine, this value will be the same as machine ClassAd
     attribute :ad-attr:`TotalDisk`.
 
+:classad-attribute-def:`BrokenSlotDisk`
+    The quantity of disk space in KiB this slot has lost
+    because a dynamic slot was deleted while marked as broken.
+    This attribute will appear only in partitionable slots that have lost resources to broken dynamic slots.
+    When this attribute exists, the sum of this attribute and :ad-attr:`TotalSlotDisk` will be the
+    original total disk for this slot.
+
 :classad-attribute-def:`TotalSlotMemory`
     The quantity of RAM in MiB given to this slot. For static slots,
     this value will be the same as machine ClassAd attribute :ad-attr:`Memory`.
     For partitionable slots, where there is one partitionable slot per
     machine, this value will be the same as machine ClassAd attribute
     :ad-attr:`TotalMemory`.
+
+:classad-attribute-def:`BrokenSlotMemory`
+    The quantity of RAM in MiB this slot has lost
+    because a dynamic slot was deleted while marked as broken.
+    This attribute will appear only in partitionable slots that have lost resources to broken dynamic slots.
+    When this attribute exists, the sum of this attribute and :ad-attr:`TotalSlotMemory` will be the
+    original total memory for this slot.
 
 :classad-attribute-def:`TotalSlots`
     A sum of the static slots, partitionable slots, and dynamic slots on
@@ -1105,6 +1178,14 @@ Machine ClassAd Attributes
     within the unclaimed idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
+
+:classad-attribute-def:`TotalTransferInputMB`
+    The total number of megabytes transferred to all jobs to build the job
+    execution sandboxes.
+
+:classad-attribute-def:`TotalTransferOutputMB`
+    The total number of megabytes transferred from all job execution sandboxes
+    after the jobs have ended.
 
 :classad-attribute-def:`UidDomain`
     file entries, and therefore all have the same logins.
@@ -1336,8 +1417,7 @@ substituted with the *prefix string* assigned for the GPU.
     in Celsius of the GPU die.
 
 :classad-attribute-def:`<name>DriverVersion`
-    For CUDA devices, a string representing the manufacturer's driver
-    version.
+    For CUDA devices, a string representing the CUDA version.
 
 :classad-attribute-def:`<name>ECCEnabled`
     For CUDA or Open CL devices, a boolean value representing whether
@@ -1360,6 +1440,9 @@ substituted with the *prefix string* assigned for the GPU.
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
 
+:classad-attribute-def:`<name>NvidiaDriver`
+    For Nvidia devices, a string representing the Nvidia driver version.
+
 :classad-attribute-def:`<name>OpenCLVersion`
     For Open CL devices, a string representing the manufacturer's
     version number.
@@ -1367,6 +1450,14 @@ substituted with the *prefix string* assigned for the GPU.
 :classad-attribute-def:`<name>RuntimeVersion`
     For CUDA devices, a string representing the manufacturer's version
     number.
+    
+:classad-attribute-def:`DeviceGPUsAverageUsage`
+    The number of seconds executed by GPUs assigned to this slot,
+    divided by the number of seconds since the startd started up.
+
+:classad-attribute-def:`DeviceGPUsMemoryPeakUsage`
+    The largest amount of GPU memory used GPUs assigned to this slot,
+    since the startd started up.
 
 
 The following attributes are advertised for a machine in which

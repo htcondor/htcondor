@@ -33,10 +33,18 @@ public:
 	  NO_LAUNCHER
   };
 
+  // Is singularity/apptainer setuid, using user namespace, or we don't know
+  enum IsSetuid {
+	  SingSetuid,
+	  SingUserNamespaces,
+	  SingSetuidUnknown
+  };
+
   static result setup(classad::ClassAd &machineAd,
 			classad::ClassAd &jobAd,
 			std::string &exec,
 			ArgList &args,
+			const std::string &slot_dir,
 			const std::string &job_iwd,
 			const std::string &execute_dir,
 			Env &env,
@@ -51,12 +59,13 @@ public:
 
 	// if SINGULARITY_TARGET_DIR is set, reset environment variables
 	// for the scratch directory path as mounted inside the container
-  static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &execute_dir);
+  static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &slot_dir);
   static bool runTest(const std::string &JobName, const ArgList &args, int orig_args_len, Env &env, std::string &errorMessage);
 
   static bool canRunSandbox(bool &can_use_pidnamespaces);
   static bool canRunSIF();
-  static bool canRun(const std::string &image, int timeout = m_default_timeout);
+  static bool canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout = m_default_timeout);
+  static IsSetuid usesUserNamespaces();
   static std::string m_lastSingularityErrorLine;
 
 private:

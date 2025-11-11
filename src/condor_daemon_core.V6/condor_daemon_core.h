@@ -58,6 +58,7 @@
 #include "generic_stats.h"
 #include "filesystem_remap.h"
 #include "daemon_keep_alive.h"
+#include "classadHistory.h"
 
 #include <vector>
 #include <memory>
@@ -103,6 +104,12 @@ bool dc_args_default_to_background(bool background);
 // Disable default log setup and ignore -l log directory. Must be called before dc_main()
 void DC_Disable_Default_Log();
 
+// functions to temporarily disable the address file
+// and then to re-enable it and drop a fresh one.
+// Used by the Schedd to prevent early dropping of incomplete address files
+void DC_Disable_Addr_File();
+void DC_Enable_And_Drop_Addr_File();
+
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
 bool dc_release_background_parent(int status);
@@ -118,47 +125,29 @@ extern void (*dc_main_shutdown_graceful)();
 extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
 extern void (*dc_main_pre_command_sock_init)();
 
-/** @name Typedefs for Callback Procedures
- */
-//@{
-///
 typedef int     (*CommandHandler)(int,Stream*);
-
-///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
+using StdCommandHandler = std::function<int(int, Stream*)>;
 
-typedef std::function<int(int, Stream*)> StdFunctionHandler;
-
-///
 typedef int     (*SignalHandler)(int);
-
-typedef std::function<int(int)> StdSignalHandler;
-
-///
 typedef int     (Service::*SignalHandlercpp)(int);
+using StdSignalHandler = std::function<int(int)>;
 
-///
 typedef int     (*SocketHandler)(Stream*);
-
-///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
+using StdSocketHandler = std::function<int (Stream *)>;
 
-///
 typedef int     (*PipeHandler)(int);
-
-///
 typedef int     (Service::*PipeHandlercpp)(int);
+using StdPipeHandler = std::function<int (int)>;
 
-///
 typedef int     (*ReaperHandler)(int pid,int exit_status);
-
-///
 typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
+using StdReaperHandler = std::function<int (int, int )>;
 
-///
+
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 
-///
 typedef int     (*PumpWorkCallback)(void* cls, void* data);
 
 /// Register with RegisterTimeSkipCallback. Call when clock skips.  First
@@ -220,6 +209,7 @@ struct FamilyInfo {
 	gid_t* group_ptr{nullptr};
 #endif
 	bool want_pid_namespace{false};
+	bool want_net_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
 	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
@@ -469,8 +459,7 @@ class DaemonCore : public Service
 	 * Typically these methods are invoked from functions inside 
 	 * of daemon_core_main.C.
 	 */
-    DaemonCore (int ComSize = 0, int SigSize = 0,
-                int SocSize = 0, int ReapSize = 0);
+    DaemonCore ();
     ~DaemonCore();
     void Driver();
 
@@ -538,7 +527,7 @@ class DaemonCore : public Service
 
     int Register_Command( int               command,
                           const char *      command_description,
-                          StdFunctionHandler
+                          StdCommandHandler
                                             handler,
                           const char *      handler_description,
                           DCpermission      permission,
@@ -855,9 +844,13 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
      int Register_Reaper (const char *      reap_descript,
-                          ReaperHandlercpp  handlercpp, 
+                          ReaperHandlercpp  handlercpp,
                           const char *      handler_descrip,
                           Service*          s);
+
+    int Register_Reaper (const char *     reap_descrip,
+                         StdReaperHandler handler,
+                         const char *     handler_descrip);
 
     /** Not_Yet_Documented
         @param rid The Reaper ID
@@ -950,6 +943,24 @@ class DaemonCore : public Service
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ,
                          void **              prev_entry = NULL);
+
+    int Register_Socket (Stream*           iosock,
+                         const char *      iosock_descrip,
+                         StdSocketHandler  handler,
+                         const char *      handler_descrip,
+                         HandlerType       handler_type = HANDLE_READ,
+                         void **           prev_entry = NULL) {
+        return Register_Socket (iosock,
+                                iosock_descrip,
+                                (SocketHandler)nullptr,
+                                (SocketHandlercpp)nullptr,
+                                handler_descrip,
+                                nullptr, // Service
+                                handler_type,
+								false,
+                                prev_entry,
+								&handler);
+	}
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -1080,6 +1091,12 @@ class DaemonCore : public Service
                          const char *         handler_descrip,
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ);
+
+    int Register_Pipe (int		           pipe_end,
+                         const char *      pipe_descrip,
+                         StdPipeHandler    handler,
+                         const char *      handler_descrip,
+                         HandlerType       handler_type     = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param pipe_end           Not_Yet_Documented
@@ -1653,7 +1670,9 @@ class DaemonCore : public Service
     SelfMonitorData monitor_data;
 
 	char 	*localAdFile;
-	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL); 
+	void	UpdateLocalAd(ClassAd *daemonAd,char const *fname=NULL);
+
+	ClassAd & ContactInfoExtra() { return m_contact_info_extra; }
 
 		/**
 		   Publish all DC-specific attributes into the given ClassAd.
@@ -1664,6 +1683,10 @@ class DaemonCore : public Service
 		   automatically just when the ad is sent to the collector.
 		*/
 	void	publish(ClassAd *ad);
+
+
+		// Append provided Daemon ClassAd to the daemon history file.
+	void AppendDaemonHistory(ClassAd* ad);
 
 		/**
 		   @return A pointer to the CollectorList object that holds
@@ -1884,10 +1907,9 @@ class DaemonCore : public Service
 		std::shared_ptr<SafeSock> ssock() { return m_ssock; }
 
 		// Associate a ReliSock or SafeSock with this SockPair. Does nothing
-		// if one is already associated. b must always be true and always
-		// returns true.
-		bool has_relisock(bool b);
-		bool has_safesock(bool b);
+		// if one is already associated.
+		void add_relisock();
+		void add_safesock();
 	private:
 		std::shared_ptr<ReliSock> m_rsock;	// tcp command socket
 		std::shared_ptr<SafeSock> m_ssock;	// udp command socket
@@ -1942,34 +1964,37 @@ class DaemonCore : public Service
                          bool force_authentication,
                          int wait_for_payload,
                          std::vector<DCpermission> *alternate_perm,
-                         StdFunctionHandler * handler_f = nullptr );
+                         StdCommandHandler * handler_f = nullptr );
 
     int Register_Socket(Stream* iosock,
                         const char *iosock_descrip,
-                        SocketHandler handler, 
+                        SocketHandler handler,
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
-                        Service* s, 
-			HandlerType handler_type,
+                        Service* s,
+                        HandlerType handler_type,
                         int is_cpp,
-                        void **prev_entry = NULL);
+                        void **prev_entry = nullptr,
+                        StdSocketHandler *handler_f = nullptr);
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,
-                        PipeHandler handler, 
+                        PipeHandler handler,
                         PipeHandlercpp handlercpp,
                         const char *handler_descrip,
-                        Service* s, 
-					    HandlerType handler_type, 
-                        int is_cpp);
+                        Service* s,
+					    HandlerType handler_type,
+                        int is_cpp,
+                        StdPipeHandler *handler_f = nullptr);
 
     int Register_Reaper(int rid,
                         const char *reap_descip,
-                        ReaperHandler handler, 
+                        ReaperHandler handler,
                         ReaperHandlercpp handlercpp,
                         const char *handler_descrip,
-                        Service* s, 
-                        int is_cpp);
+                        Service* s,
+                        int is_cpp,
+                        StdReaperHandler *handle_f = nullptr);
 
 	bool Register_Family(pid_t child_pid,
 	                     pid_t parent_pid,
@@ -1986,6 +2011,7 @@ class DaemonCore : public Service
 	bool m_use_clone_to_create_processes;
 	bool UseCloneToCreateProcesses() const { return m_use_clone_to_create_processes; }
 #else
+	// If we don't have clone(), this is always false no matter what knobs might be set
 	bool UseCloneToCreateProcesses() { return false; }
 #endif
 
@@ -2006,7 +2032,7 @@ class DaemonCore : public Service
 		bool            force_authentication{false};
 		CommandHandler  handler{nullptr};
 		CommandHandlercpp   handlercpp{nullptr};
-		StdFunctionHandler  std_handler;
+		StdCommandHandler   std_handler;
 		DCpermission    perm{ALLOW};
 		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
@@ -2050,6 +2076,7 @@ class DaemonCore : public Service
         Sock*           iosock;
         SocketHandler   handler;
         SocketHandlercpp    handlercpp;
+		StdSocketHandler std_handler;
         Service*        service; 
         char*           iosock_descrip;
         char*           handler_descrip;
@@ -2093,7 +2120,8 @@ class DaemonCore : public Service
     {
         PipeHandler		handler;
         PipeHandlercpp  handlercpp;
-        Service*        service; 
+        StdPipeHandler  std_handler;
+        Service*        service;
         char*           pipe_descrip;
         char*           handler_descrip;
         void*           data_ptr;
@@ -2112,6 +2140,7 @@ class DaemonCore : public Service
         bool            is_cpp;
         ReaperHandler   handler;
         ReaperHandlercpp    handlercpp;
+        StdReaperHandler    std_handler;
         Service*        service; 
         char*           reap_descrip;
         char*           handler_descrip;
@@ -2363,6 +2392,7 @@ class DaemonCore : public Service
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
 	bool m_dirty_command_sock_sinfuls; // true if m_command_sock_sinfuls needs to be reinitialized.
+	ClassAd m_contact_info_extra; // has extra attributes that should be included in our daemon address files
 
 	//
 	// For compabitility with existing configurations and code, when we
@@ -2389,6 +2419,9 @@ class DaemonCore : public Service
 	bool m_enable_remote_admin{false};
 	time_t m_remote_admin_last_time{0};
 	std::string m_remote_admin_last;
+
+	std::string m_daemon_history{};
+	HistoryFileRotationInfo m_hist_rotation_info{};
 };
 
 /**

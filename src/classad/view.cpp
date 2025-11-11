@@ -305,10 +305,9 @@ GetViewInfo( )
 bool View::
 SetConstraintExpr( ClassAdCollection *coll, const string &expr )
 {
-	ExprTree		*constraint;
-
 		// parse the expression and insert it into ad in left context
-	if( !coll->parser.ParseExpression( expr, constraint ) ) {
+	ExprTree* constraint = coll->parser.ParseExpression(expr);
+	if( constraint == nullptr ) {
 		CondorErrMsg += "; failed to set constraint on view";
 		return( false );
 	}
@@ -352,10 +351,9 @@ SetConstraintExpr( ClassAdCollection *coll, ExprTree *constraint )
 bool View::
 SetRankExpr( ClassAdCollection *coll, const string &expr )
 {
-	ExprTree	*rank;
-
 		// parse the expression and insert it into ad in left context
-	if( !coll->parser.ParseExpression( expr, rank ) ) {
+	ExprTree* rank = coll->parser.ParseExpression(expr);
+	if( rank == nullptr ) {
 		CondorErrMsg += "; failed to set rank on view";
 		return( false );
 	}
@@ -416,10 +414,9 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 bool View::
 SetPartitionExprs( ClassAdCollection *coll, const string &expr )
 {
-	ExprTree	*exprList=NULL;
-
 		// parse the expression and insert it into ad in left context
-	if( !coll->parser.ParseExpression( expr, exprList ) || 
+	ExprTree* exprList = coll->parser.ParseExpression(expr);
+	if( exprList == nullptr ||
 			(exprList->GetKind( ) != ExprTree::EXPR_LIST_NODE) ) {
 		if( exprList ) delete exprList;
 		CondorErrno = ERR_BAD_PARTITION_EXPRS;

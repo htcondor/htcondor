@@ -375,6 +375,10 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	if( bp.xNACK != -1 ) { props["xNACK"] = Format("%d", bp.xNACK); }
 	if( bp.warpSize != -1 ) { props["WarpSize"] = Format("%d", bp.warpSize); }
 
+	if (!bp.driver.empty()) {
+		props["NvidiaDriver"] = Format("\"%s\"", bp.driver.c_str());
+	}
+
 	if( opt_extra ) {
 		if( bp.clockRate != -1 ) { props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f); }
 		if( bp.multiProcessorCount > 0 ) {
@@ -1215,6 +1219,7 @@ void usage(FILE* out, const char * argv0)
 		"    -diagnostic       Show detection diagnostic information\n"
 		"    -nvcuda           Use nvcuda libraries for -diagnostic detection\n"
 		"    -cudart           Use cudart libraries for -diagnostic detection\n"
+		"    -dirty-environment Don't cleanse environment of variables that effect GPU discovery\n"
 		"\n"
 	);
 }

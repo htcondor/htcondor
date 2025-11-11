@@ -327,37 +327,20 @@ Job Termination
 From time to time, and for a variety of reasons, HTCondor may terminate
 a job before it completes.  For instance, a job could be removed (via
 :tool:`condor_rm`), preempted (by a user a with higher priority), or killed
-(for using more memory than it requested).  In these cases, it might be
-helpful to know why HTCondor terminated the job.  HTCondor calls its
-records of these reasons "Tickets of Execution".
+(for using more memory than it requested).
+When this happens, the attributes :ad-attr:`VacateReason`,
+:ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode` will
+be set in the job ad indicating the reason for the termination.
+The first is a string explaining the reason.
+The latter two are integers that categorize the reason, suitable for
+use in ClassAd expressions.
+In some cases, the job will be put in the Held status due to the
+termination. In these cases, the job attributes :ad-attr:`HoldReason`,
+:ad-attr:`HoldReasonCode`, and :ad-attr:`HoldReasonSubCode` are set to
+the same values.
 
-A ticket of execution is usually issued by the *condor_startd*, and
-includes:
-
-- when the *condor_startd* was told, or otherwise decided, to terminate the job
-  (the ``when`` attribute);
-- who made the decision to terminate, usually a Sinful string
-  (the ``who`` attribute);
-- and what method was employed to command the termination, as both as
-  string and an integer (the ``How`` and ``HowCode`` attributes).
-
-The relevant log events include a human-readable rendition of the ToE,
-and the job ad is updated with the ToE after the usual delay.
-
-HTCondor only issues ToE in three cases:
-
-- when the job terminates of its own accord (issued by the starter,
-  ``HowCode`` 0);
-- and when the startd terminates the job because it received a
-  ``DEACTIVATE_CLAIM`` command (``HowCode`` 1)
-- or a ``DEACTIVATE_CLAIM_FORCIBLY`` command (``HowCode`` 2).
-
-In both cases, HTCondor records the ToE in the job ad.  In the event
-log(s), event 005 (job completion) includes the ToE for the first case,
-and event 009 (job aborted) includes the ToE for the second and third cases.
-
-Future HTCondor releases will issue ToEs in additional cases and include
-them in additional log events.
+The job event log(s) will contain an evict or hold event, which will
+include the same reason values.
 
 Job Completion
 --------------

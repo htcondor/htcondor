@@ -64,8 +64,14 @@ int enable_single_startd_daemon_ad = 0;
 
 BuildSlotFailureMode slot_config_failmode = BuildSlotFailureMode::Except;
 
+// set by CONTINUE_TO_ADVERTISE_BROKEN_DSLOTS on startup
+bool continue_to_advertise_broken_dslots = false;
+
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
+
+// set by NO_JOB_NETWORKING  on startup (indirectly from the Starter capabilities)
+bool want_job_networking_is_a_resource_request = false;
 
 // String Lists
 std::vector<std::string> startd_job_attrs;
@@ -95,6 +101,9 @@ int		disconnected_keyboard_boost;	// # of seconds before when we
 	// resources that aren't connected to anything.
 int     startup_keyboard_boost = 0; // # of seconds before we started up
     // that we advertise as the last key press until we get the next key press
+char*   simulated_cpuload_expr = nullptr;
+	// expression to evaluate against sysapi_load_avg to get simulated load
+
 int		startd_noclaim_shutdown = 0;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -106,6 +115,8 @@ int		lv_name_uniqueness = 0;
 
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
+
+bool	aggressive_cleanup = false; // Ignore cleanup reminder backoff intervals
 
 char* Name = NULL;
 
@@ -130,6 +141,8 @@ static int cleanup_reminder_timer_id = -1;
 int cleanup_reminder_timer_interval = 62; // default to doing at least some cleanup once a minute (ish)
 CleanupReminderMap cleanup_reminders;
 extern void register_cleanup_reminder_timer();
+
+StartdEventLog ep_eventlog;
 
 /*
  * Prototypes of static functions.
@@ -192,13 +205,24 @@ main_init( int, char* argv[] )
 
 		// Record the time we started up for use in determining
 		// keyboard idle time on SMP machines, etc.
-	startd_startup = time( 0 );
+	
+	startd_startup = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr).GetEventclock();
 
 #ifdef WIN32
 	// get the Windows sysapi load average thread going early
 	dprintf(D_FULLDEBUG, "starting Windows load averaging thread\n");
 	sysapi_load_avg();
 #endif
+
+	// if an EP eventlog is configured, open it now
+	auto_free_ptr eventlog_path(param("STARTD_EVENTLOG"));
+	if (eventlog_path) {
+		int format = ULogEvent::formatOpt::ISO_DATE | ULogEvent::formatOpt::SUB_SECOND;
+		auto_free_ptr fmt_string(param("STARTD_EVENTLOG_FORMAT"));
+		if (fmt_string) { format = ULogEvent::parse_opts(fmt_string, format); }
+		int max_len = param_integer("STARTD_EVENTLOG_MAX", 1024*1024);
+		ep_eventlog.initialize(eventlog_path, max_len, format);
+	}
 
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
@@ -207,14 +231,20 @@ main_init( int, char* argv[] )
 	Starter::config();
 
 	ClassAd tmp_classad;
-	std::string starter_ability_list;
 	Starter::publish(&tmp_classad);
-	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
-	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
+	bool hasVM = false;
+	if (tmp_classad.LookupBool(ATTR_HAS_VM, hasVM) && hasVM) {
 		// Now starter has codes for vm universe.
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server
 		resmgr->m_vmuniverse_mgr.checkVMUniverse( false );
+	}
+
+	// if Starter has job networking disabled, we need to treat WantJobNetworking as a resource request
+	// this causes a clause to be added to WithinResourceLimits
+	bool has_job_networking = true;
+	if (tmp_classad.LookupBool(ATTR_HAS_JOB_NETWORKING, has_job_networking) && ! has_job_networking) {
+		want_job_networking_is_a_resource_request = true;
 	}
 
 		// Read in global parameters from the config file.
@@ -239,6 +269,11 @@ main_init( int, char* argv[] )
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
+		// now that we have build initial slots, we can write our STARTUP event
+	auto & startupEvent = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr);
+	startupEvent.Ad().Assign("NumSlots", resmgr->numSlots());
+	ep_eventlog.flush();
+
 		// Do a little sanity checking and cleanup
 	std::vector<std::string> execute_dirs;
 	resmgr->FillExecuteDirsList( execute_dirs );
@@ -251,6 +286,8 @@ main_init( int, char* argv[] )
 	}
 
 	DockerAPI::pruneContainers();
+
+	DockerAPI::removeImagesInImageFile();
 
 		// Compute all attributes
 	resmgr->compute_static();
@@ -286,15 +323,19 @@ main_init( int, char* argv[] )
 		// make sense when we're in the claimed state.  So, we can
 		// handle them all with a common handler.  For all of them,
 		// you need DAEMON permission.
-	daemonCore->Register_Command( ALIVE, "ALIVE", 
-								  command_handler,
-								  "command_handler", DAEMON ); 
-	daemonCore->Register_Command( DEACTIVATE_CLAIM,
-								  "DEACTIVATE_CLAIM",  
+	daemonCore->Register_Command( ALIVE, "ALIVE",
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
-								  "DEACTIVATE_CLAIM_FORCIBLY", 
+	daemonCore->Register_Command( DEACTIVATE_CLAIM,
+								  "DEACTIVATE_CLAIM",
+								  command_handler,
+								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY,
+								  "DEACTIVATE_CLAIM_FORCIBLY",
+								  command_handler,
+								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_JOB_DONE,
+								  "DEACTIVATE_CLAIM_JOB_DONE",
 								  command_handler,
 								  "command_handler", DAEMON );
 
@@ -309,6 +350,9 @@ main_init( int, char* argv[] )
 								  command_give_totals_classad,
 								  "command_give_totals_classad", READ );
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
+								  command_query_ads,
+								  "command_query_ads", READ );
+	daemonCore->Register_Command( QUERY_MULTIPLE_ADS, "QUERY_MULTIPLE_ADS",
 								  command_query_ads,
 								  "command_query_ads", READ );
 	if (history_queue_mgr) {
@@ -497,6 +541,7 @@ init_params( int first_time)
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
+		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -573,6 +618,8 @@ init_params( int first_time)
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 20*60 );
 	startup_keyboard_boost = param_integer( "STARTUP_KEYBOARD_IDLE_BOOST", 0 );
 	if (startup_keyboard_boost < 0) startup_keyboard_boost = 0;
+	if (simulated_cpuload_expr) free(simulated_cpuload_expr);
+	simulated_cpuload_expr = param("SIMULATED_CPULOAD_EXPR");
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
@@ -588,6 +635,9 @@ init_params( int first_time)
 	if ( ! disable_exec_encryption) {
 		system_want_exec_encryption = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
 	}
+
+	// Skip cleanup reminder backoff and always attempt cleanup: Note for internal testing
+	aggressive_cleanup = param_boolean("AGGRESSIVE_CLEANUP_REMINDER", false);
 
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
 	// for compatibility
@@ -674,44 +724,54 @@ void CleanupReminderTimerCallback()
 {
 	dprintf(D_FULLDEBUG, "In CleanupReminderTimerCallback() there are %d reminders\n", (int)cleanup_reminders.size());
 
-	for (auto jt = cleanup_reminders.begin(); jt != cleanup_reminders.end(); /* advance in the loop */) {
-		auto it = jt++; // so we can remove the current item if we manage to clean it up
-		it->second += 1; // record that we looked at this.
-		bool erase_it = false; // set this to true when we succeed (or don't need to try anymore)
+	// Set of broken item IDs to restore if successfully cleaned up issue thing (logical volume)
+	std::set<unsigned int> broken_item_ids;
 
-		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
+	auto done = [&broken_item_ids](auto& pair) -> bool {
+		const CleanupReminder& cr = pair.first;
+		const int iteration = ++cleanup_reminders[cr];
 
-		bool retry_now = retry_on_this_iter(it->second, cr.cat);
-		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.c_str(), it->second, retry_now);
+		if ( ! aggressive_cleanup && ! retry_on_this_iter(iteration, cr.cat)) { return false; }
 
-		// if our exponential backoff says we should retry this time, attempt the cleanup.
-		if (retry_now) {
-			int err=0;
-			switch (cr.cat) {
+		dprintf(D_FULLDEBUG, "cleanup_reminder for %s iteration %d\n", cr.name.c_str(), iteration);
+
+		int err = 0;
+		bool success = false;
+
+		switch (cr.cat) {
 			case CleanupReminder::category::exec_dir:
-				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
-					erase_it = true;
-				} else {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
-				}
+				success = retry_cleanup_execute_dir(cr.name, cr.opt, err);
 				break;
 			case CleanupReminder::category::account:
-				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
-					erase_it = true;
-				} else {
-					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
+				success = retry_cleanup_user_account(cr.name, cr.opt, err);
+				break;
+			case CleanupReminder::category::logical_volume:
+				success = retry_cleanup_logical_volume(cr.name, cr.opt, err);
+				// If LV was removed and the CR had an associated broken item ID
+				// then add to set of broken item IDs to restore
+				if (success && cr.broken_id) {
+					broken_item_ids.insert(cr.broken_id);
 				}
 				break;
-			}
-
+			default:
+				EXCEPT("Unknown CleanupReminder Category: %d\n", cr.cat);
 		}
 
-		// if we successfully cleaned up, or cleanup is now moot, remove the item from the list.
-		if (erase_it) {
-			cleanup_reminders.erase(it);
+		if (success) {
+			dprintf(D_ALWAYS, "Retry to clean up %s '%s' successful.\n",
+			        cr.Type(), cr.name.c_str());
+		} else {
+			dprintf(D_ERROR, "Retry to clean up %s '%s' failed (%d). Will retry again later...\n",
+			        cr.Type(), cr.name.c_str(), err);
 		}
+
+		return success;
+	};
+
+	std::erase_if(cleanup_reminders, done);
+
+	if ( ! broken_item_ids.empty()) {
+		resmgr->RestoreBrokenResources(ResourceLockType::LV, broken_item_ids);
 	}
 
 	// if the collection of things to try and clean up is empty, turn off the timer
@@ -735,9 +795,7 @@ void register_cleanup_reminder_timer()
 								cleanup_reminder_timer_interval,
 								(TimerHandler)CleanupReminderTimerCallback,
 								"CleanupReminderTimerCallback");
-		if  (id < 0) {
-			EXCEPT( "Can't register DaemonCore timer for cleanup reminders" );
-		}
+		ASSERT(id >= 0);
 		cleanup_reminder_timer_id = id;
 	}
 }
@@ -805,6 +863,8 @@ startd_exit()
 	StartdPluginManager::Shutdown();
 #endif
 
+	ep_eventlog.composeEvent(ULOG_EP_SHUTDOWN,nullptr).Ad().Assign("ExitCode", 0);
+	ep_eventlog.flush();
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	DC_Exit(0);
 }
@@ -825,7 +885,7 @@ main_shutdown_fast()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free();
+	startd_exit_if_idle();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -839,8 +899,8 @@ main_shutdown_fast()
 	resmgr->killAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
-								startd_check_free,
-								 "startd_check_free" );
+								startd_exit_if_idle,
+								 "startd_exit_if_idle" );
 }
 
 
@@ -860,7 +920,7 @@ main_shutdown_graceful()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free();
+	startd_exit_if_idle();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -874,8 +934,8 @@ main_shutdown_graceful()
 	resmgr->releaseAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
-								startd_check_free,
-								 "startd_check_free" );
+								startd_exit_if_idle,
+								 "startd_exit_if_idle" );
 }
 
 
@@ -915,7 +975,7 @@ int
 shutdown_reaper(int pid, int status)
 {
 	reaper(pid,status);
-	startd_check_free();
+	startd_exit_if_idle();
 	return TRUE;
 }
 
@@ -927,9 +987,9 @@ do_cleanup(int,int,const char*)
 
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
-			// If the machine is already free, we can exit right away.
-		startd_check_free();		
-			// Otherwise, quickly kill all the active starters.
+		// If the machine is already free, we can exit right away.
+		startd_exit_if_idle();
+		// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
 		resmgr->vacate_all(fast, "Startd EXCEPT", CONDOR_HOLD_CODE::StartdException, 0);
 		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
@@ -940,8 +1000,8 @@ do_cleanup(int,int,const char*)
 
 
 void
-startd_check_free(int /* tid */)
-{	
+startd_exit_if_idle(int /* tid */)
+{
 	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
 		return;
 	}
@@ -955,7 +1015,7 @@ startd_check_free(int /* tid */)
 	//   RELEASE_CLAIM for those before shutting down.
 	//   Today, those messages would fail, as the schedd doesn't keep
 	//   track of claimed pslots. We expect this to change in the future.
-	if( ! resmgr->hasAnyClaim() ) {
+	if( ! resmgr->hasAnyActiveClaim(true) ) {
 		startd_exit();
 	}
 	return;

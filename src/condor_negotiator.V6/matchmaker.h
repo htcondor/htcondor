@@ -114,7 +114,7 @@ class Matchmaker : public Service
 		
 		// auxillary functions
 		bool obtainAdsFromCollector(ClassAdList &allAds, std::vector<ClassAd *> &startdAds, std::vector<ClassAd *> &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
-		char * compute_significant_attrs(std::vector<ClassAd *> & startdAds);
+		void compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & attr_refs);
 		bool consolidate_globaljobprio_submitter_ads(std::vector<ClassAd *>& submitterAds) const;
 
 		void SetupMatchSecurity(std::vector<ClassAd *> &submitterAds);
@@ -323,7 +323,7 @@ class Matchmaker : public Service
 		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
 		int  MaxTimePerSpin;        // How long per pie spin
-		int  MaxTimePerSchedd;		// How long to talk to any one schedd
+		time_t  MaxTimePerSchedd;		// How long to talk to any one schedd
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		bool preemption_req_unstable;
@@ -340,6 +340,7 @@ class Matchmaker : public Service
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
+		bool MatchPasswordEnabled{false};
         char * strSlotConstraint; // query collector for machineAds with this constraint
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas
@@ -377,7 +378,7 @@ class Matchmaker : public Service
 		bool GotRescheduleCmd;
 
 		// external references in startd ads ... used for autoclustering
-		char * job_attr_references;
+		std::string job_attr_references;
 
 		// Epoch time when we started/finished most rescent negotiation cycle
 		time_t startedLastCycleTime;
@@ -534,6 +535,8 @@ class Matchmaker : public Service
 		std::vector<GroupEntry*> hgq_groups;
         bool accept_surplus;
         bool autoregroup;
+
+		bool force_my_slot_weight{false};
 
         // true if resource ads with consumption policies are present
         // for the current negotiation cycle

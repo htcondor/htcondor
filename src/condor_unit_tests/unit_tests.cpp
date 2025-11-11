@@ -42,6 +42,7 @@ bool FTEST_is_valid_sinful(void);
 bool FTEST_string_to_port(void);
 bool FTEST_strupr(void);
 bool FTEST_strlwr(void);
+bool FTEST_remaps(void);
 bool FTEST_basename(void);
 bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
@@ -65,6 +66,8 @@ bool OTEST_StatInfo(void);
 bool OTEST_condor_sockaddr();
 bool OTEST_ranger();
 bool OTEST_Timeslice();
+bool OTEST_DagFileParser();
+bool OTEST_DagLexer();
 
 	// function map that maps testing function names to testing functions
 const static struct {
@@ -79,6 +82,7 @@ const static struct {
 	map(FTEST_strupr),
 	map(FTEST_strlwr),
 	map(FTEST_basename),
+	map(FTEST_remaps),
 	map(FTEST_dirname),
 	map(FTEST_fullpath),
 	map(FTEST_classad_file_iterator),
@@ -102,6 +106,8 @@ const static struct {
 	map(OTEST_condor_sockaddr),
 	map(OTEST_ranger),
 	map(OTEST_Timeslice),
+	map(OTEST_DagFileParser),
+	map(OTEST_DagLexer),
 };
 int function_map_num_elems = sizeof(function_map) / sizeof(function_map[0]);
 

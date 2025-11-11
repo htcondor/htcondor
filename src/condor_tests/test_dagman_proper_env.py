@@ -18,13 +18,13 @@ from ornithology import *
 import htcondor2 as htcondor
 import os
 from shutil import copy
-from time import time
+import time
 
 #-------------------------------------------------------------------------------------------------------
 #Global variable for expected variables to be found in getenv in the submit file
 GETENV_VALUES = {
     #Base always added values
-    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL","BEARER_TOKEN","BEARER_TOKEN_FILE","XDG_RUNTIME_DIR"],
+    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL","BEARER_TOKEN","BEARER_TOKEN_FILE","XDG_RUNTIME_DIR", "ASAN_OPTIONS", "LSAN_OPTIONS"],
     #getenv added values from the above configuration
     "CONFIG":["Beer","Donuts"],
     #When config knob is set to True then getenve should be set to just true
@@ -201,9 +201,9 @@ queue
         p = default_condor.run_command(cmd)
         #If we have subdags then we have to wait for internal submission for .condor.sub files
         if len(dag_files) > 1:
-            #Willing to wait a max of 10 sec per dag
-            max_time = 10*len(dag_files)
-            start = time()
+            #Willing to wait a max of 30 sec per dag
+            max_time = 30*len(dag_files)
+            start = time.time()
             #Loop checking for all expected .condor.sub files ot exists. If not found by max time fail
             while True:
                 exist = True
@@ -212,7 +212,8 @@ queue
                         exist = False
                 if exist:
                     break
-                assert time() - start < max_time
+                assert time.time() - start < max_time
+                time.sleep(0.2)
         #Craft lists of expected outout to check for in .condor.sub file
         env_key = TEST_CASES[key]["check_getenv"]
         if env_key == "TRUE":
@@ -292,12 +293,13 @@ ENV SET |GEN1_POKEMON_GAMES=Blue;Red;Yellow;|GEN2_POKEMON_GAMES=Silver;Gold;Cryt
     cmd = ["condor_submit_dag","-f","-no_submit",dag_name]
     p = default_condor.run_command(cmd)
     submit = os.path.join(path, f"{dag_name}.condor.sub")
-    start = time()
+    start = time.time()
     #Loop checking for .condor.sub files to exists. If not found after 10 sec fail
     while True:
         if os.path.exists(submit):
             break
-        assert time() - start < 10
+        assert time.time() - start < 10
+        time.sleep(0.2)
     get_env = ["EL_WISCORICAN","SLOW_FOOD","COMP_SCI","BIOLOGY","MATHEMATICS"]
     get_env.extend(GETENV_VALUES["BASE"])
     get_env.extend(GETENV_VALUES["CONFIG"])

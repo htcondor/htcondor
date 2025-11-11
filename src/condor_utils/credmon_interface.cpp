@@ -161,8 +161,15 @@ bool credmon_kick(int cred_type)
 		if (fd) {
 			char buf[256];
 			memset(buf, 0, sizeof(buf));
-			size_t len = full_read(fd, buf, sizeof(buf));
-			buf[len] = 0;
+			ssize_t len = full_read(fd, buf, sizeof(buf));
+			if ((len > 0) && (len < (ssize_t) sizeof(buf))) {
+				buf[len] = 0;
+			}
+			if (len >= (ssize_t)sizeof(buf)) {
+				dprintf(D_ALWAYS, "credmon %s: read too much data from %s, ignoring\n", type, idfile.c_str());
+				close(fd);
+				return false;
+			}
 #if 0 //def WIN32
 			HANDLE h = INVALID_HANDLE_VALUE;
 			// TODO: Open an event handle
@@ -359,15 +366,15 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 void process_cred_mark_file(const char *src) {
 	// make sure the .mark file is older than the sweep delay.
 	// default is to clean up after 8 hours of no jobs.
-	StatInfo si(src);
-	if (si.Error()) {
-		dprintf(D_ALWAYS, "CREDMON: Error %i trying to stat %s\n", si.Error(), src);
+	struct stat si;
+	if (stat(src, &si) != 0) {
+		dprintf(D_ALWAYS, "CREDMON: Error %i trying to stat %s\n", errno, src);
 		return;
 	}
 
 	int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
 	time_t now = time(0);
-	time_t mtime = si.GetModifyTime();
+	time_t mtime = si.st_mtime;
 	if ( (now - mtime) > sweep_delay ) {
 		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Sweeping...\n", src, (long long)mtime, sweep_delay);
 	} else {
@@ -401,7 +408,7 @@ void credmon_sweep_creds(const char * cred_dir, int cred_type)
 #else
 	std::string fullpathname;
 	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
-	struct dirent **namelist;
+	struct dirent **namelist = nullptr;
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
 	if (n >= 0) {
 		while (n--) {

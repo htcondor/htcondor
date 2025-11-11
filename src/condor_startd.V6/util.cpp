@@ -115,6 +115,7 @@ check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 	//     can do a mkdir as the condor UID then a chown to the job
 	//     owner UID)
 	//
+	bool require_perms = false;
 	mode_t desired_mode = 0;
 	if (st.st_uid != get_condor_uid()) {
 		dprintf(D_ERROR, "Execute path (%s) owned by uid %d (not user %s as required)\n", exec_path, (int)st.st_uid, get_condor_username());
@@ -135,17 +136,20 @@ check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 		// The starter will create execute dirs as the user.
 		// The directory should be world-writable with the sticky bit.
 		desired_mode = 01777;
-		dprintf(D_ALWAYS,
+		require_perms = true;
+		dprintf(D_STATUS,
 				"WARNING: %s root-squashed: "
 				"requiring world-writability\n",
 				exec_path);
 	}
 	if ((st.st_mode & 07777) != desired_mode) {
-		dprintf(D_ERROR, "Execute path (%s) doesn't have permissions 0%o\n", exec_path, (int)desired_mode);
-		if (abort_on_error) {
-			EXCEPT("Invalid execute directory: %s", exec_path);
+		dprintf(D_ERROR, "Execute path (%s) doesn't have recommended permissions 0%o\n", exec_path, (int)desired_mode);
+		if (require_perms) {
+			if (abort_on_error) {
+				EXCEPT("Invalid execute directory: %s", exec_path);
+			}
+			return false;
 		}
-		return false;
 	}
 #endif
 
@@ -166,6 +170,9 @@ check_recovery_file( const char *sandbox_dir, bool abnormal_exit )
 	// filename does not end in .recovery, append it.
 	std::string recovery_file(sandbox_dir);
 	if ( ! ends_with(recovery_file, ".recover")) {
+		if (ends_with(recovery_file, DIR_DELIM_STRING)) {
+			recovery_file.pop_back(); // remove trailing DIR_DELIM_STRING
+		} 
 		recovery_file += ".recover";
 	}
 
@@ -260,22 +267,14 @@ cleanup_execute_dirs(const std::string &exec_path)
 
 		execute_dir.Remove_Entire_Directory();
 #else
-		std::string dirbuf;
-		pair_strings_vector root_dirs = root_dir_list();
-		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-			const char * exec_path_full = dirscat(it->second.c_str(), exec_path.c_str(), dirbuf);
-			if(exec_path_full) {
-				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
-				Directory execute_dir( exec_path_full, PRIV_ROOT );
+		Directory execute_dir(exec_path.c_str(), PRIV_ROOT);
 
-				execute_dir.Rewind();
-				while ( execute_dir.Next() ) {
-					check_recovery_file( execute_dir.GetFullPath(), true );
-				}
-
-				execute_dir.Remove_Entire_Directory();
-			}
+		execute_dir.Rewind();
+		while (execute_dir.Next()) {
+			check_recovery_file(execute_dir.GetFullPath(), true);
 		}
+
+		execute_dir.Remove_Entire_Directory();
 #endif
 	}
 }
@@ -303,8 +302,8 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 		return true;
 	}
 
-	StatInfo si( path.c_str() );
-	if (si.Error() == SINoFile) {
+	struct stat si{};
+	if (stat(path.c_str(), &si) != 0 && errno == ENOENT) {
 		// it's gone now. return true
 		err = EALREADY;
 		return true;
@@ -316,6 +315,33 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 		// unfortunately Remove_Full_path doesn't tell us why we failed, so assume it's a permissions issue... <sigh>
 		err = EPERM;
 	}
+	return success;
+}
+
+bool
+retry_cleanup_logical_volume(const std::string& lv_name, int options, int& err) {
+	auto * volman = resmgr->getVolumeManager();
+	ASSERT(volman);
+	ASSERT(volman->is_enabled());
+
+	bool success = true;
+
+	// Attempt LV cleanup
+	CondorError error;
+	int status = volman->CleanupLV(lv_name, error, options);
+	if (status) {
+		if (status == 2) {
+			dprintf(D_FULLDEBUG, "LV '%s' was already cleaned up by another entity.\n", lv_name.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "Failed to cleanup LV %s: %s\n", lv_name.c_str(), error.getFullText().c_str());
+			success = false;
+			err = status;
+		}
+	} else {
+		dprintf(D_FULLDEBUG, "Successfully cleaned up LV: %s\n", lv_name.c_str());
+		err = 0;
+	}
+
 	return success;
 }
 
@@ -333,7 +359,6 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 		// before removing subdir, remove any nobody-user account associated
 		// with this starter pid.  this account might have been left around
 		// if the starter did not clean up completely.
-		//sprintf(buf,"condor-run-dir_%d",pid);
 		formatstr(buf,"condor-run-%d",pid);
 		if ( nobody_login.deleteuser(buf.c_str()) ) {
 			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.c_str());
@@ -354,69 +379,47 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 	formatstr(pid_dir, "dir_%d", pid );
 	const char * pid_dir_path = dirscat(exec_path, pid_dir.c_str(), dirbuf);
 
+	// pid_dir_path ends with a directory separater char here, which check_recovery_file requires
+
 	check_recovery_file(pid_dir_path, abnormal_exit);
 
-	// TODO: move this retry loop to a self-draining queue or similar
-	// we *should* only need to do this when the starter has an abnormal exit
-	// and we normally poll the LVM for a status of all LVs, so we could detect
-	// leaked LVs there rather than here.
-	// NOTE: The Starter can currently Fail to cleanup an LV and exit normally
 	auto * volman = resmgr->getVolumeManager();
 	if (lv_name && volman && volman->is_enabled()) {
-		// Attempt LV cleanup
-		CondorError err;
-		// Attempt LV cleanup n times to prevent race condition between
-		// killing of family processes and LV cleanup causing failure
-		int max_attempts = 5;
-		for (int attempt=1; attempt<=max_attempts; attempt++) {
-			// Attempt a cleanup
-			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
-			int ret = volman->CleanupLV(lv_name, err, lv_encrypted);
-			if (ret) {
-				if (!abnormal_exit && ret == 2) {
-					dprintf(D_FULLDEBUG, "Skipping remaining attempts for %s (%s|%d): %s\n",
-					        lv_name, abnormal_exit ? "T" : "F", ret, ret < 0 ? err.getFullText().c_str() : "");
-					break; // If starter exited normally and we failed to find LV assume it is cleaned up
-				} else if (attempt == max_attempts){
-					// We have failed and this was the last attempt so output error message
-					dprintf(D_ALWAYS, "Failed to cleanup LV %s: %s", lv_name, err.getFullText().c_str());
-				}
-				err.clear();
-			} else {
-				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
-				break;
-			}
-			sleep(1);
+		int err = 0;
+		if ( ! retry_cleanup_logical_volume(lv_name, (int)lv_encrypted, err)) {
+			dprintf(D_ALWAYS, "Initial cleanup of LV %s failed... will retry later.\n", lv_name);
+			add_cleanup_reminder(lv_name, CleanupReminder::category::logical_volume, (int)lv_encrypted);
 		}
 	}
 
 #ifdef WIN32
 
 	int err = 0;
+	if ( ! dirbuf.empty() && IS_ANY_DIR_DELIM_CHAR(dirbuf.back())) {
+		// remove any trailing directory char, since the code below uses
+		// Directory::Remove_Full_Path which chokes on it.
+		dirbuf.pop_back();
+		pid_dir_path = dirbuf.c_str();
+	}
 	if ( ! retry_cleanup_execute_dir(pid_dir_path, 0, err)) {
 		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", pid_dir_path);
-		add_exec_dir_cleanup_reminder(pid_dir_path, 0);
+		add_cleanup_reminder(pid_dir_path, CleanupReminder::category::exec_dir);
 	}
 
 #else /* UNIX */
 
 	// Instantiate a directory object pointing at the execute directory
-	pair_strings_vector root_dirs = root_dir_list();
-	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
+	Directory execute_dir( exec_path, PRIV_ROOT );
 
-		Directory execute_dir( exec_path_full, PRIV_ROOT );
-
-		if (remove_exec_path) {
-			// Remove entire subdirectory; used to remove
-			// an encrypted execute directory
-			execute_dir.Remove_Full_Path(exec_path_full);
-		} else {
-			// Look for specific pid_dir subdir
-			if ( execute_dir.Find_Named_Entry( pid_dir.c_str() ) ) {
-				// Remove the execute directory
-				execute_dir.Remove_Current_File();
-			}
+	if (remove_exec_path) {
+		// Remove entire subdirectory; used to remove
+		// an encrypted execute directory
+		execute_dir.Remove_Full_Path(exec_path);
+	} else {
+		// Look for specific pid_dir subdir
+		if (execute_dir.Find_Named_Entry(pid_dir.c_str())) {
+			// Remove the execute directory
+			execute_dir.Remove_Current_File();
 		}
 	}
 #endif  /* UNIX */
@@ -425,27 +428,12 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 extern void register_cleanup_reminder_timer();
 extern int cleanup_reminder_timer_interval;
 
-void add_exec_dir_cleanup_reminder(const std::string & dir, int opts)
-{
+void add_cleanup_reminder(const std::string& item, CleanupReminder::category cat, int opts) {
 	// a timer interval of 0 or negative will disable cleanup reminders
-	if (cleanup_reminder_timer_interval <= 0)
-		return;
-	CleanupReminder rd(dir, CleanupReminder::category::exec_dir, opts);
-	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
-		dprintf(D_FULLDEBUG, "Adding cleanup reminder for exec_dir %s\n", dir.c_str());
-		cleanup_reminders[rd] = 0;
-		register_cleanup_reminder_timer();
-	}
-}
+	if (cleanup_reminder_timer_interval <= 0) { return; }
 
-void add_account_cleanup_reminder(const std::string & name)
-{
-	// a timer interval of 0 or negative will disable cleanup reminders
-	if (cleanup_reminder_timer_interval <= 0)
-		return;
-	CleanupReminder rd(name, CleanupReminder::category::account);
-	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
-		dprintf(D_FULLDEBUG, "Adding cleanup reminder for account %s\n", name.c_str());
+	CleanupReminder rd(item, cat, opts);
+	if ( ! cleanup_reminders.contains(rd)) {
 		cleanup_reminders[rd] = 0;
 		register_cleanup_reminder_timer();
 	}
@@ -464,13 +452,16 @@ reply( Stream* s, int cmd )
 
 
 bool
-refuse( Stream* s )
+refuse( Stream* s, ClassAd* replyAd )
 {
 	s->end_of_message();
 	s->encode();
 	if( !s->put(NOT_OK) ) {
 		return false;
 	} 
+	if (replyAd && ! putClassAd(s, *replyAd)) {
+		return false;
+	}
 	if( !s->end_of_message() ) {
 		return false;
 	}
@@ -484,13 +475,9 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 {
 	ExprTree* tree;
 
-	if( !attr ) {
-		EXCEPT( "caInsert called with NULL attribute" );
-	}
-	if( !target || !source ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caInsert called with NULL classad\n");
-		EXCEPT( "caInsert called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
+	ASSERT(source);
 
 	std::string new_attr;
 	if( prefix ) {
@@ -514,13 +501,8 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 
 bool caRevertToParent(ClassAd* target, const char * attr)
 {
-	if( !attr ) {
-		EXCEPT( "caRevertToParent called with NULL attribute" );
-	}
-	if( !target ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caRevertToParent called with NULL classad\n");
-		EXCEPT( "caRevertToParent called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
 
 	ClassAd * parent = target->GetChainedParentAd();
 	if ( ! parent) {
@@ -536,13 +518,8 @@ bool caRevertToParent(ClassAd* target, const char * attr)
 
 void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
 {
-	if( !attr ) {
-		EXCEPT( "caDeleteThruParent called with NULL attribute" );
-	}
-	if( !target ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caDeleteThruParent called with NULL classad\n");
-		EXCEPT( "caDeleteThruParent called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
 
 	std::string new_attr;
 	if (prefix) {
@@ -575,9 +552,9 @@ void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
   -Syntax error checking by Derek on 6/25/03
 */
 bool
-configInsert( ClassAd* ad, const char* attr, bool is_fatal )
+configInsert( ClassAd* ad, const char* attr, bool is_fatal, const char *default_value)
 {
-	return configInsert( ad, attr, attr, is_fatal );
+	return configInsert( ad, attr, attr, is_fatal, default_value );
 }
 
 
@@ -588,14 +565,17 @@ configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 */
 bool
 configInsert( ClassAd* ad, const char* param_name, 
-			  const char* attr, bool is_fatal ) 
+			  const char* attr, bool is_fatal, const char *default_value) 
 {
 	char* val = param( param_name );
 	if( ! val ) {
 		if( is_fatal ) {
 			EXCEPT( "Required attribute \"%s\" is not defined", attr );
 		}
-		return false;
+		if (default_value == nullptr) {
+			return false;
+		}
+		val = strdup(default_value);
 	}
 
 	if ( ! ad->AssignExpr( attr, val ) ) {
@@ -654,5 +634,39 @@ getVacateType( ClassAd* ad )
 	free( vac_t_str );
 	return vac_t;
 }
+
+void StartdEventLog::flush()
+{
+	if (current.eventNumber != (ULogEventNumber)ULOG_EP_FUTURE_EVENT) {
+		writeEvent(current);
+	}
+	current.clear();
+}
+
+bool StartdEventLog::inEvent(ULogEPEventNumber event_num, Resource* rip) const
+{
+	int id = rip?rip->r_id:0;
+	int subid = rip?rip->r_sub_id:0;
+	return current.is(event_num, id, subid);
+}
+
+bool StartdEventLog::noEvent() const { return current.empty(); }
+
+EPLogEvent& StartdEventLog::composeEvent(ULogEPEventNumber event_num, Resource* rip)
+{
+	int id = rip?rip->r_id:0;
+	int subid = rip?rip->r_sub_id:0;
+	if (current.is(event_num, id, subid)) {
+		return current;
+	} else {
+		if ( ! current.empty()) {
+			writeEvent(current);
+		}
+		current.init(event_num, id, subid);
+	}
+	return current;
+}
+
+
 
 

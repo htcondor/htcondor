@@ -109,17 +109,18 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     # Handle reference to normal configuration knob
     else:
         url_path = CONFIG_KNOBS.get(macro_name, "admin-manual/configuration-macros.html")
-        ref = macro_name
-        if macro_name not in CONFIG_KNOBS.keys():
+        specifier, macro = macro_name.split(".", 1) if "." in macro_name else (None, macro_name)
+        ref = macro
+        if macro not in CONFIG_KNOBS.keys():
             regex_match = False
             for r in CONFIG_REGEX.keys():
-                if re.match(r, macro_name):
+                if re.match(r, macro):
                     regex_match = True
                     ref, url_path = CONFIG_REGEX[r]
             # If here then not in pure defined list or matched a recorded regex
             if not regex_match:
                 docname = inliner.document.settings.env.docname
-                warn(f"{docname} @ {lineno} | Config knob '{macro_name}' not found in defined list. Either a typo or knob needs definition.")
+                warn(f"{docname}:{lineno} | Config knob '{macro}' not found in defined list. Either a typo or knob needs definition.")
         ref_link = f"href=\"{root_dir}/{url_path}#" + str(ref) + "\""
     return make_ref_and_index_nodes(name, macro_name, macro_index,
                                     ref_link, rawtext, inliner, lineno, options)

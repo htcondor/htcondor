@@ -9,7 +9,7 @@
 using namespace condor;
 
 
-dc::void_coroutine
+cr::void_coroutine
 test_00() {
     pid_t parent_pid = getpid();
 
@@ -52,7 +52,7 @@ test_00() {
 }
 
 
-dc::void_coroutine
+cr::void_coroutine
 test_components() {
     dc::AwaitableDeadlineSocket wibble;
     Sock * sock = NULL;

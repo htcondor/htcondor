@@ -30,8 +30,8 @@ _external_refs( PyObject * /* self */, PyObject * args ) {
 	}
 
 
-	classad::ExprTree * expr = NULL;
-	if(! parser.ParseExpression( expr_str, expr, true )) {
+	classad::ExprTree * expr = parser.ParseExpression( expr_str, true );
+	if(expr == nullptr) {
 		delete ad;
 
 		PyErr_SetString( PyExc_AssertionError, "_external_refs() passed invalid expr_str" );
@@ -86,8 +86,8 @@ _internal_refs( PyObject * /* self */, PyObject * args ) {
 	}
 
 
-	classad::ExprTree * expr = NULL;
-	if(! parser.ParseExpression( expr_str, expr, true )) {
+	classad::ExprTree * expr = parser.ParseExpression( expr_str, true );
+	if(expr == nullptr) {
 		delete ad;
 
 		PyErr_SetString( PyExc_AssertionError, "_internal_refs() passed invalid expr_str" );
@@ -135,8 +135,8 @@ _flatten( PyObject * /* self */, PyObject * args ) {
 
 	classad::ClassAdParser parser;
 
-	classad::ExprTree * expr = NULL;
-	if(! parser.ParseExpression( expr_str, expr, true )) {
+	classad::ExprTree * expr = parser.ParseExpression( expr_str, true );
+	if(expr == nullptr) {
 		PyErr_SetString( PyExc_AssertionError, "_flatten() passed invalid expr_str" );
 		return NULL;
 	}
@@ -212,8 +212,8 @@ _evaluate( PyObject * /* self */, PyObject * args ) {
 
 	classad::ClassAdParser parser;
 
-	classad::ExprTree * expr = NULL;
-	if(! parser.ParseExpression( expr_str, expr, true )) {
+	classad::ExprTree * expr = parser.ParseExpression( expr_str, true );
+	if(expr == nullptr) {
 		PyErr_SetString( PyExc_AssertionError, "_evaluate() passed invalid expr_str" );
 		return NULL;
 	}
@@ -315,9 +315,9 @@ _canonicalize_expr_string( PyObject * /* self */, PyObject * args ) {
 		return NULL;
 	}
 
-	classad::ExprTree * expr = NULL;
 	classad::ClassAdParser parser;
-	if( parser.ParseExpression( expr_string, expr, true ) ) {
+	classad::ExprTree * expr = parser.ParseExpression( expr_string, true );
+	if( expr ) {
 		std::string result;
 		classad::ClassAdUnParser unparser;
 		unparser.Unparse( result, expr );

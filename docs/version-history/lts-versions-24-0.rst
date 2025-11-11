@@ -7,16 +7,149 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-2404:
+Version 24.0.15
+---------------
 
-Version 24.0.4
+Release Notes:
+
+.. HTCondor version 24.0.15 released on December 11, 2025.
+
+- HTCondor version 24.0.15 planned release date is December 11, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.15
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.15
+
+Version 24.0.14
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.14 released on November 3, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.14
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.14
+
+Version 24.0.13
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.13 released on October 9, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.13
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.13
+
+Version 24.0.12
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.12 released on September 23, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.12 23.10.29 23.0.29
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.12 23.10.29 23.0.29
+
+Version 24.0.11
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.11 released on August 21, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.11 23.10.28 23.0.28
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.11 23.10.28 23.0.28
+
+Version 24.0.10
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.10 released on July 28, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.10 23.10.27 23.0.27
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.10 23.10.27 23.0.27
+
+Version 24.0.9
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.0.4 released on Month Date, 2024.
+- HTCondor version 24.0.9 released on June 26, 2025.
 
-- HTCondor version 24.0.4 planned release date is Month Date, 2024.
+New Features:
+
+.. include-history:: features 24.0.9 23.10.26 23.0.26
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.9 23.10.26 23.0.26
+
+Version 24.0.8
+--------------
+
+Release Notes:
+
+- HTCondor version 24.0.8 released on June 12, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.8 23.10.25 23.0.25
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.8 23.10.25 23.0.25
+
+Version 24.0.7
+--------------
+
+Release Notes:
+
+- HTCondor version 24.0.7 released on April 22, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.7 23.10.24 23.0.24
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.7 23.10.24 23.0.24
+
+Version 24.0.6
+--------------
+
+Release Notes:
+
+- HTCondor version 24.0.6 released on March 27, 2025.
 
 New Features:
 
@@ -24,7 +157,42 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- *Security Item*: This release of HTCondor fixes a security-related bug
+  described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001>`_.
+
+  :jira:`2900`
+
+Version 24.0.5
+--------------
+
+Release Notes:
+
+- HTCondor version 24.0.5 released on March 4, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.5 23.10.21 23.0.21
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.5 23.10.21 23.0.21
+
+Version 24.0.4
+--------------
+
+Release Notes:
+
+- HTCondor version 24.0.4 released on February 4, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.4 23.10.20 23.0.20
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.4 23.10.20 23.0.20
 
 .. _lts-version-history-2403:
 
@@ -33,29 +201,59 @@ Version 24.0.3
 
 Release Notes:
 
-.. HTCondor version 24.0.3 released on Month Date, 2025.
-
-- HTCondor version 24.0.3 planned release date is January 9, 2025.
+- HTCondor version 24.0.3 released on January 6, 2025.
 
 New Features:
 
-- None.
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802`
 
 Bugs Fixed:
 
 - EPs spawned by `htcondor annex` no longer crash on start-up.
   :jira:`2745`
 
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
 - :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
   correctly raises an HTCondor exception when the processing of DAGMan
   options and submit time DAG commands fails.
   :jira:`2736`
 
-- You can now locate a collector daemon in the htcondor2 python bindings.
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
+- You can now locate a collector daemon in the htcondor2 Python bindings.
   :jira:`2738`
+
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
+
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
 
 - Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
   :jira:`2614`
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
 
 .. _lts-version-history-2402:
 
@@ -68,7 +266,7 @@ Release Notes:
 
 New Features:
 
-- Added a new config parameter, 
+- Added a new configuration parameter, 
   :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
   When true, if a job is killed with an OOM signal, it is put on
   hold.  When false, the system tries to determine if the job was out
@@ -79,7 +277,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
-  with sftp and scp modes.
+  with ``sftp`` and ``scp`` modes.
   :jira:`2687`
 
 - Fixed a bug where a daemon would repeatedly try to use its family

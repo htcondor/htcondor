@@ -37,7 +37,7 @@ class MultiFileCurlPlugin {
     int UploadFile( const std::string &url, const std::string &local_file_name, const std::string &cred );
     int DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes );
     int BuildTransferRequests (const std::string & input_filename, std::vector<std::pair<std::string, transfer_request>> &requested_files) const;
-    FILE *OpenLocalFile (const std::string &local_file, const char *mode) const;
+    FILE *OpenLocalFile (const std::string &local_file, const char *mode, std::string & errorString) const;
 
         // Parse the job and machine ads (if present), looking for settings that control
         // the configuration of libcurl (such as setting timeouts) for this invocation.

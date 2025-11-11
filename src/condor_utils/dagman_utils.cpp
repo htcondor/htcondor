@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2018, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -32,6 +32,7 @@
 #include "tokener.h"
 #include "which.h"
 #include "directory.h"
+#include "dag_parser.h"
 
 namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
@@ -115,7 +116,7 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	*	Update DAGMAN_MANAGER_JOB_APPEND_GETENV Macro documentation if base
 	*	getEnv value changes. -Cole Bollig 2023-02-21
 	*/
-	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL";
+	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL,ASAN_OPTIONS,LSAN_OPTIONS";
 	auto_free_ptr conf_getenvVars = param("DAGMAN_MANAGER_JOB_APPEND_GETENV");
 	if (conf_getenvVars && strcasecmp(conf_getenvVars.ptr(),"true") == MATCH) {
 		getEnv = "true";
@@ -130,6 +131,8 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		//Add config defined vars to add getenv
 		if (conf_getenvVars) { getEnv += ","; getEnv += conf_getenvVars.ptr(); }
 	}
+
+	bool disable_port = param_boolean("DAGMAN_DISABLE_PORT", false);
 
 	fprintf(pSubFile, "# Filename: %s\n", submitFile.c_str());
 
@@ -159,6 +162,9 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "My.%s = \"%s =?= $(cluster)\"\n",
 	        ATTR_OTHER_JOB_REMOVE_REQUIREMENTS, ATTR_DAGMAN_JOB_ID );
 
+	// Set ClassAd Attribute to inform Schedd that DAGMan wants a port set up
+	if ( ! disable_port) { fprintf(pSubFile, "My." ATTR_IS_DAEMON_CORE " = True\n"); }
+
 		// ensure DAGMan is automatically requeued by the schedd if it
 		// exits abnormally or is killed (e.g., during a reboot)
 	const char *defaultRemoveExpr = "(ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))";
@@ -183,16 +189,23 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	ArgList args;
 
 	if (options[shallow::b::RunValgrind]) {
+#ifdef DARWIN
+		args.AppendArg("--atExit");
+		args.AppendArg("--");
+#else
 		args.AppendArg("--tool=memcheck");
 		args.AppendArg("--leak-check=yes");
 		args.AppendArg("--show-reachable=yes");
+#endif
 		args.AppendArg(options[deep::str::DagmanPath].c_str());
 	}
 
 	//======DaemonCore Commands======
 	// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
-	args.AppendArg("-p");
-	args.AppendArg("0");
+	if (disable_port) { // Disable DAGMan port
+		args.AppendArg("-p");
+		args.AppendArg("0");
+	}
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");
@@ -210,22 +223,22 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		args.AppendArg(dagFile);
 	}
 
-	if (options[shallow::i::MaxIdle] != 0) {
+	if (options[shallow::i::MaxIdle] >= 0) {
 		args.AppendArg("-MaxIdle");
 		args.AppendArg(std::to_string(options[shallow::i::MaxIdle]));
 	}
 
-	if (options[shallow::i::MaxJobs] != 0) {
+	if (options[shallow::i::MaxJobs] >= 0) {
 		args.AppendArg("-MaxJobs");
 		args.AppendArg(std::to_string(options[shallow::i::MaxJobs]));
 	}
 
-	if (options[shallow::i::MaxPre] != 0) {
+	if (options[shallow::i::MaxPre] >= 0) {
 		args.AppendArg("-MaxPre");
 		args.AppendArg(std::to_string(options[shallow::i::MaxPre]));
 	}
 
-	if (options[shallow::i::MaxPost] != 0) {
+	if (options[shallow::i::MaxPost] >= 0) {
 		args.AppendArg("-MaxPost");
 		args.AppendArg(std::to_string(options[shallow::i::MaxPost]));
 	}
@@ -289,6 +302,10 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 			return false;
 		}
 	}
+
+#ifdef DARWIN
+	if (options[shallow::b::RunValgrind]) { env.SetEnv("MallocStackLogging=1"); }
+#endif
 
 	env.SetEnv("_CONDOR_DAGMAN_LOG", options[shallow::str::DebugLog].c_str());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
@@ -510,6 +527,7 @@ bool
 DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std::string &errMsg)
 {
 	bool result = true;
+	bool use_old_parser = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
 	// Note: destructor will change back to original directory.
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
@@ -528,89 +546,148 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 			newDagFile = dagFile;
 		}
 
-		// Note: destructor will close file.
-		MultiLogFiles::FileReader reader;
-		errMsg = reader.Open( newDagFile );
-		if ( ! errMsg.empty()) {
-			return false;
-		}
+		if (use_old_parser) {
+			// Note: destructor will close file.
+			MultiLogFiles::FileReader reader;
+			errMsg = reader.Open( newDagFile );
+			if ( ! errMsg.empty()) {
+				return false;
+			}
 
-		//Read DAG file
-		std::string logicalLine;
-		while (reader.NextLogicalLine(logicalLine)) {
-			if ( ! logicalLine.empty()) {
-				StringTokenIterator tokens(logicalLine, " \t\r");
-				const char* cmd = tokens.first();
-				if ( ! cmd) { continue; }
+			//Read DAG file
+			std::string logicalLine;
+			while (reader.NextLogicalLine(logicalLine)) {
+				if ( ! logicalLine.empty()) {
+					StringTokenIterator tokens(logicalLine, " \t\r");
+					const char* cmd = tokens.first();
+					if ( ! cmd) { continue; }
 
-				// Parse CONFIG command
-				if (strcasecmp(cmd, "CONFIG") == MATCH) {
-					const char* newFile = tokens.remain();
-					while (newFile && isspace(*newFile) && *newFile != '\0') { newFile++; }
-					if ( ! newFile || *newFile == '\0') {
-						AppendError(errMsg, "Improperly-formatted file: value missing after keyword CONFIG");
-						result = false;
-					} else {
-						std::string conf(newFile), tmpErr;
-						if (MakePathAbsolute(conf, tmpErr)) {
-							configFiles.insert(conf);
-						} else {
-							AppendError(errMsg, tmpErr);
-							result = false;
-						}
-					}
-
-				// Parse SET_JOB_ATTR command
-				} else if (strcasecmp(cmd, "SET_JOB_ATTR") == MATCH) {
-					const char* attr = tokens.remain();
-					while (attr && isspace(*attr) && *attr != '\0') { attr++; }
-					if (!attr || *attr == '\0') {
-						AppendError(errMsg, "Improperly-formatted file: value missing after keyword SET_JOB_ATTR");
-						result = false;
-					} else {
-						attrLines.emplace_back(attr);
-					}
-
-				// Parse ENV command
-				} else if (strcasecmp(cmd, "ENV") == MATCH) {
-					const char* type = tokens.next();
-					// Parse GET option
-					if (strcasecmp(type, "GET") == MATCH) {
-						const char* remain = tokens.remain();
-						while (remain && isspace(*remain) && *remain != '\0') { remain++; }
-						if (!remain || *remain == '\0') {
-							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV GET");
+					// Parse CONFIG command
+					if (strcasecmp(cmd, "CONFIG") == MATCH) {
+						const char* newFile = tokens.remain();
+						while (newFile && isspace(*newFile) && *newFile != '\0') { newFile++; }
+						if ( ! newFile || *newFile == '\0') {
+							AppendError(errMsg, "Improperly-formatted file: value missing after keyword CONFIG");
 							result = false;
 						} else {
-							StringTokenIterator vars(remain);
-							std::string delimVars;
-							for (const auto& var : vars) {
-								if ( ! delimVars.empty()) { delimVars += ","; }
-								delimVars += var;
+							std::string conf(newFile), tmpErr;
+							if (MakePathAbsolute(conf, tmpErr)) {
+								configFiles.insert(conf);
+							} else {
+								AppendError(errMsg, tmpErr);
+								result = false;
 							}
-							options.extend("GetFromEnv", delimVars);
 						}
-					// Parse SET option
-					} else if (strcasecmp(type, "SET") == MATCH) {
-						const char* info = tokens.remain();
-						while (info && isspace(*info) && *info != '\0') { info++; }
-						if (!info || *info == '\0') {
-							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
+
+					// Parse SET_JOB_ATTR command
+					} else if (strcasecmp(cmd, "SET_JOB_ATTR") == MATCH) {
+						const char* attr = tokens.remain();
+						while (attr && isspace(*attr) && *attr != '\0') { attr++; }
+						if (!attr || *attr == '\0') {
+							AppendError(errMsg, "Improperly-formatted file: value missing after keyword SET_JOB_ATTR");
 							result = false;
 						} else {
-							std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
-							options.extend("AddToEnv", kv_pairs);
+							attrLines.emplace_back(attr);
 						}
-					// Else error
-					} else {
-						AppendError(errMsg, "Improperly-formatted file: sub-command (SET or GET) missing after keyword ENV");
-						result = false;
+
+					// Parse ENV command
+					} else if (strcasecmp(cmd, "ENV") == MATCH) {
+						const char* type = tokens.next();
+						// Parse GET option
+						if (strcasecmp(type, "GET") == MATCH) {
+							const char* remain = tokens.remain();
+							while (remain && isspace(*remain) && *remain != '\0') { remain++; }
+							if (!remain || *remain == '\0') {
+								AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV GET");
+								result = false;
+							} else {
+								StringTokenIterator vars(remain);
+								std::string delimVars;
+								for (const auto& var : vars) {
+									if ( ! delimVars.empty()) { delimVars += ","; }
+									delimVars += var;
+								}
+								options.extend("GetFromEnv", delimVars);
+							}
+						// Parse SET option
+						} else if (strcasecmp(type, "SET") == MATCH) {
+							const char* info = tokens.remain();
+							while (info && isspace(*info) && *info != '\0') { info++; }
+							if (!info || *info == '\0') {
+								AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
+								result = false;
+							} else {
+								std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
+								options.extend("AddToEnv", kv_pairs);
+							}
+						// Else error
+						} else {
+							AppendError(errMsg, "Improperly-formatted file: sub-command (SET or GET) missing after keyword ENV");
+							result = false;
+						}
 					}
 				}
 			}
-		}
 
-		reader.Close();
+			reader.Close();
+		} else {
+			static const std::set<DAG::CMD> filter_commands {
+				DAG::CMD::CONFIG,
+				DAG::CMD::SET_JOB_ATTR,
+				DAG::CMD::ENV,
+			};
+
+			DagParser parser(newDagFile);
+			if (parser.failed()) {
+				errMsg = parser.error();
+				return false;
+			}
+
+			parser.SearchFor(filter_commands);
+
+			for (const auto cmd : parser) {
+				if ( ! cmd) { continue; }
+
+				// TODO: Handle reject here so user knows at submit time not once DAGMan notices
+				switch (cmd->GetCommand()) {
+					case DAG::CMD::CONFIG:
+						{
+							std::string conf = DAG::DERIVE_CMD<FileCommand>(cmd)->GetFile();
+							std::string error;
+							if (MakePathAbsolute(conf, error)) {
+								configFiles.insert(conf);
+							} else {
+								AppendError(errMsg, error);
+								result = false;
+							}
+						}
+						break;
+					case DAG::CMD::SET_JOB_ATTR:
+						attrLines.emplace_back(DAG::DERIVE_CMD<SetAttrCommand>(cmd)->GetAttrLine());
+						break;
+					case DAG::CMD::ENV:
+						{
+							const EnvCommand* env = DAG::DERIVE_CMD<EnvCommand>(cmd);
+							if (env->IsSet()) {
+								std::string kv_pairs = options.processOptionArg("AddToEnv", env->GetEnvVariables());
+								options.extend("AddToEnv", kv_pairs);
+							} else {
+								options.extend("GetFromEnv", env->GetEnvVariables());
+							}
+						}
+						break;
+					default:
+						print_msg("WARNING: DAGMan Utils does not know how to process %s command...\n",
+						        DAG::GET_KEYWORD_STRING(cmd->GetCommand()));
+						break;
+				}
+			}
+
+			if (parser.failed()) {
+				AppendError(errMsg, parser.error());
+				result = false;
+			}
+		}
 
 		// Switch back to original directory
 		std::string tmpErrMsg;

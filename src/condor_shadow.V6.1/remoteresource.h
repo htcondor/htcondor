@@ -261,15 +261,17 @@ class RemoteResource : public Service {
 	void setMachineName( const char *machineName );
 
 		/// The number of bytes sent to this resource.
-	float bytesSent() const;
-		
+	uint64_t bytesSent() const;
+
 		/// The number of bytes received from this resource.
-	float bytesReceived() const;
+	uint64_t bytesReceived() const;
 
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const;
 
 	FileTransfer filetrans;
+	FileTransfer::FileTransferInfo upload_transfer_info;
 	FileTransferStatus m_upload_xfer_status;
+	FileTransfer::FileTransferInfo download_transfer_info;
 	FileTransferStatus m_download_xfer_status;
 	ClassAd m_upload_file_stats;
 	ClassAd m_download_file_stats;
@@ -341,7 +343,7 @@ class RemoteResource : public Service {
 		/** Return true if we received a job_exit syscall from the
 			starter, false if not.
 		*/
-	bool gotJobExit() const { return m_got_job_exit; };
+	bool gotJobDone() const { return m_got_job_done; };
 
 		/** If the job on this resource exited with a signal, return
 			the signal.  If not, return -1. */
@@ -409,10 +411,11 @@ class RemoteResource : public Service {
 	// return true if job should be allowed to write to attribute
 	bool allowRemoteWriteAttributeAccess( const std::string & name );
 
-    void recordActivationExitExecutionTime( time_t when );
+	void recordActivationExitExecutionTime( time_t when );
 
 	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
+	std::string starter_version;
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -436,6 +439,7 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
+	bool m_use_delayed_attr{true};
 	std::vector<std::string> m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 
@@ -539,7 +543,7 @@ private:
 
 	bool already_killed_graceful;
 	bool already_killed_fast;
-	bool m_got_job_exit;
+	bool m_got_job_done; // set by the mis-named job_exit syscall, it means the starter is about to exit
 
 	bool m_wait_on_kill_failure;
 
@@ -551,8 +555,13 @@ private:
 	void attemptShutdownTimeout( int timerID = -1 );
 	void attemptShutdown();
 	int transferStatusUpdateCallback(FileTransfer *transobject);
+
+	bool doneInitFileTransfer {false};
 };
 
+// Refactored out of initFileTransfer() so we have a chance of checking
+// the input files we'll actually be sending.
+void modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd );
 
 #endif
 

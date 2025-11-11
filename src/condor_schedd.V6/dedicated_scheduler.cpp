@@ -531,12 +531,10 @@ DedicatedScheduler::initialize( )
 		Register_Reaper( "MPI reaper", 
 						 (ReaperHandlercpp)&DedicatedScheduler::reaper,
 						 "DedicatedScheduler::reaper", this );
-	if( rid <= 0 ) {
-			// This is lame, but Register_Reaper returns FALSE on
-			// failure, even though it seems like reaper id 0 is
-			// valid... who knows.
-		EXCEPT( "Can't register daemonCore reaper!" );
-	}
+		// This is lame, but Register_Reaper returns FALSE on
+		// failure, even though it seems like reaper id 0 is
+		// valid... who knows.
+	ASSERT(rid > 0);
 
 		// Now, register a handler for the special command that the
 		// MPI shadow sends us if it needs to get information about
@@ -650,7 +648,8 @@ DedicatedScheddNegotiate::scheduler_skipJob(JobQueueJob *jobad, ClassAd * /*matc
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+	char const *slot_name, _match_source)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
@@ -706,7 +705,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 }
 
 void
-DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reason)
+DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,int /*autocluster_id*/,char const *reason)
 {
 	ASSERT( reason );
 
@@ -719,9 +718,20 @@ DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const 
 		return;
 	}
 
+	// if job is gone, we are done
+	JobQueueJob * job = GetJobAd(job_id);
+	if ( ! job) return;
+
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
+
+	const char * negname = getNegotiatorName();
+	if (negname && *negname) {
+		SetAttributeString(job_id.cluster, job_id.proc, ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname, NONDURABLE);
+	} else if (job->Lookup(ATTR_LAST_REJ_MATCH_NEGOTIATOR)) {
+		DeleteAttribute(job_id.cluster, job_id.proc, ATTR_LAST_REJ_MATCH_NEGOTIATOR);
+	}
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,
@@ -759,17 +769,12 @@ DedicatedScheduler::negotiate( int command, Sock* sock, char const* remote_pool 
 		// Now, we've just got to handle the per-job negotiation
 		// protocol itself.
 
+	// create a ResourceRequestList with one entry for each job
+	// using a fake autocluster id for each entry. 
 	auto *requests = new ResourceRequestList;
 	int next_cluster = 0;
-	std::list<PROC_ID>::iterator id;
-
-	for( id = resource_requests.begin();
-		 id != resource_requests.end();
-		 id++ )
-	{
-		auto *cluster = new ResourceRequestCluster( ++next_cluster );
-		requests->push_back( cluster );
-		cluster->addJob( *(id) );
+	for (auto & jid : resource_requests) {
+		requests->add(++next_cluster, jid);
 	}
 
 	classy_counted_ptr<DedicatedScheddNegotiate> neg_handler =
@@ -797,9 +802,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 		Register_Timer( seconds, 0,
 				(TimerHandlercpp)&DedicatedScheduler::callHandleDedicatedJobs,
 						"callHandleDedicatedJobs", this );
-	if( hdjt_tid == -1 ) {
-		EXCEPT( "Can't register DC timer!" );
-	}
+	ASSERT(hdjt_tid >= 0);
 	dprintf( D_FULLDEBUG, 
 			 "Started timer (%d) to call handleDedicatedJobs() in %d secs\n",
 			 hdjt_tid, seconds );
@@ -911,30 +914,21 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 
 void
-DedicatedScheduler::sendAlives( )
+DedicatedScheduler::checkClaimLeases( )
 {
 	match_rec	*mrec = nullptr;
-	int		  	numsent=0;
 	time_t now = time(nullptr);
-	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
 	all_matches->startIterations();
 	while( all_matches->iterate(mrec) == 1 ) {
-		if( mrec->m_startd_sends_alives == false &&
-			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
-			if( sendAlive( mrec ) ) {
-				numsent++;
-			}
-		}
 
-		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
+		if (mrec->status == M_ACTIVE) {
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			time_t renew_time = 0;
-			if ( starter_handles_alives && 
-				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			if ( mrec->shadowRec && mrec->shadowRec->pid > 0 )
 			{
 				// If we're trusting the existance of the shadow to 
 				// keep the claim alive (because of kernel sockopt keepalives),
@@ -948,11 +942,6 @@ DedicatedScheduler::sendAlives( )
 	}
 
 	CommitTransactionOrDieTrying();
-
-	if( numsent ) {
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d dedicated startds)\n", numsent );
-	}
 }
 
 int
@@ -1571,7 +1560,7 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( int cluster : *idle_clusters) {
 		int proc = 0;
 		owner_str = "";
-		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
+		GetAttributeString( cluster, proc, ATTR_USER, owner_str );
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
 				 proc, owner_str.c_str() );
 	}
@@ -1788,10 +1777,12 @@ DedicatedScheduler::sortResources( )
 	// scheduler, do so here
 
 	if (param_boolean("DEDICATED_SCHEDULER_USE_SERIAL_CLAIMS", false)) {
+		// unlinkMrec() will erase the matches entry, so be careful here...
 		match_rec *mr = nullptr;
-		std::string id;
-		scheduler.matches->startIterations();
-		while (scheduler.matches->iterate(id, mr) == 1) {
+		auto it = scheduler.matches.begin();
+		while (it != scheduler.matches.end()) {
+			mr = it->second;
+			it++;
 			if (mr->status == M_CLAIMED) {
 				// this match rec is claimed/idle, steal it for the ded sched
 				mr->needs_release_claim = false;
@@ -1980,7 +1971,7 @@ DedicatedScheduler::spawnJobs( )
 
 			// add job to run queue, though the shadow pid is still 0,
 			// since there's not really a shadow just yet.
-		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1 );
+		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1, nullptr );
 
 		srec->is_reconnect = allocation->is_reconnect;
 
@@ -2264,7 +2255,7 @@ DedicatedScheduler::computeSchedule( )
 			nprocs++;
 		}	
 			
-		if (give_up) {
+		if (give_up || jobs->size() == 0) {
 			continue;
 		}
 
@@ -3249,7 +3240,7 @@ DedicatedScheduler::AddMrec(
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
 		// owner() here...
-	auto *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
+	auto *mrec = new match_rec( claim_id, startd_addr, empty_job_id,
 									 match_ad,owner(),remote_pool,true);
 
 	// Next, insert this match_rec into our hashtables
@@ -3734,9 +3725,7 @@ DedicatedScheduler::checkSanity( int /* timerID */ )
 			sanity_tid = daemonCore->Register_Timer( tmp, 0,
   				         (TimerHandlercpp)&DedicatedScheduler::checkSanity,
 						 "checkSanity", this );
-			if( sanity_tid == -1 ) {
-				EXCEPT( "Can't register DC timer!" );
-			}
+			ASSERT(sanity_tid >= 0);
 		} else {
 				// We've already got a timer.  Whether we got here b/c
 				// the timer went off, or b/c we just called
@@ -3860,43 +3849,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	return false;
 }
 
-void
-DedicatedScheduler::holdAllDedicatedJobs( ) 
-{
-	static bool should_notify_admin = true;
-	int i = 0, last_cluster = 0, cluster = 0;
-
-	if( ! idle_clusters ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}
-
-	last_cluster = idle_clusters->size();
-	if( ! last_cluster ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}		
-
-	for( i=0; i<last_cluster; i++ ) {
-		cluster = (*idle_clusters)[i];
-		holdJob( cluster, 0, 
-		         "No condor_shadow installed that supports parallel jobs",
-		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
-		         false, should_notify_admin );
-		if( should_notify_admin ) {
-				// only send email to the admin once per lifetime of
-				// the schedd, so we don't swamp them w/ email...
-			should_notify_admin = false;
-		}
-	}
-}
-
 /*
  * If we restart the schedd, and there are running jobs in the queue,
  * this method gets called once for each proc of each running job.
@@ -3927,10 +3879,7 @@ DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
 	}
-	if( reconnect_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
-	}
+	ASSERT(reconnect_tid >= 0);
 	return true;
 }
 
@@ -4049,8 +3998,8 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			// 2.) add to all_matches, and all_matches_by_name
 			// 3.) Call createAllocations to do the rest  
 
-		char *remote_hosts = nullptr;
-		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
+		std::string remote_hosts;
+		GetAttributeString(id.cluster, id.proc, ATTR_REMOTE_HOSTS, remote_hosts);
 
 		std::string claims;
 		GetPrivateAttributeString(id.cluster, id.proc, ATTR_CLAIM_IDS, claims);
@@ -4131,7 +4080,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			dprintf(D_FULLDEBUG, "Dedicated Scheduler:: reconnect target address is %s; claim is %s\n", sinful, cid.publicClaimId());
 
 			auto *mrec = 
-				new match_rec(claim, sinful, &id,
+				new match_rec(claim, sinful, id,
 						  machineAd, owner(), nullptr, true);
 
 			mrec->setStatus(M_CLAIMED);
@@ -4145,7 +4094,6 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 			free(sinful);
 			sinful = nullptr;
 		}
-		free(remote_hosts);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any
@@ -4167,10 +4115,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 		reconnect_tid = daemonCore->Register_Timer( 60,
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
-		if( reconnect_tid == -1 ) {
-				// Error registering timer!
-			EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
-		}
+		ASSERT(reconnect_tid >= 0);
 	}
 }	
 

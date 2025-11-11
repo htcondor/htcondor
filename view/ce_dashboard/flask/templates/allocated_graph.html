@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 40vh;
+        }
+    </style>
+{% endblock style %}
+
+{% block body %}
+
+    <div class="container-fluid">
+
+<div class="row">
+<div class="col">
+<p style="text-align: center">
+Contribution of compute capacity from the
+{{ ce_facility_name }} entity named {{ ce_site_name }}.
+</p>
+</div>
+</div>
+        {% set column = get_column(resource) %}
+        {% set vaxis = get_vaxis(resource) %}
+        <div class="row">
+            <div class="col" id="{{ resource }}-by-project">
+                <script>
+                    new HTCondorViewRanged({
+                        dst_id: "{{ resource }}-by-project",
+                        title: "{{ resource }} Allocation by Project",
+                        data_url: "/data/ce_overview",
+                        graph_query: "vAxis.title={{ vaxis }}&filter=Type=P&filter={{resource}}>0&order=Date,{{column}}&pivot=Date;Project;{{resource}}&chart=stacked&focusTarget=category&tooltip.trigger=focus&tooltip.isHtml=true&chartArea.height=85%25&chartArea.left=10%25&chartArea.right=17%25&titleTextStyle.fontSize=16",
+                        table_query: "filter=Type=P&order={{column}}&group=Project,Field,Organization;avg({{resource}}),max({{resource}})&filter=max{{resource}}>0&order=-avg{{resource}}&ceil=max{{resource}},max{{resource}}&unselect=max{{resource}}",
+                        select_tuple: ["Project"],
+                    });
+                </script>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock body %}

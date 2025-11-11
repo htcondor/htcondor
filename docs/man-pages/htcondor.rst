@@ -25,6 +25,8 @@ Synopsis
 
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
+| **htcondor** **dag** *halt* [**-r/-\-reason** *message*] dagman-job-id
+| **htcondor** **dag** *resume* dagman-job-id
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
@@ -34,6 +36,7 @@ Synopsis
 | **htcondor** **annex** *status* annex-name
 | **htcondor** **annex** *shutdown* annex-name
 | **htcondor** **annex** *systems*
+| **htcondor** **annex** *login* system-name
 
 | **htcondor** **credential** *list*
 | **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service** *service*] [**-\-handle** *handle*]
@@ -271,6 +274,11 @@ at that AP.
 
     Displays the list of supported systems and their queues.
 
+  **htcondor annex login** *system-name*
+
+    Open a shared SSH connection to the named system; if one doesn't exist,
+    create one (requiring you to login) and share it.
+
 Credential Verbs
 ----------------
 
@@ -330,6 +338,29 @@ distribute to jobs which request them.
 
     Gets the stored OAuth2 credential specified by *service* (and optionally *handle*)
     and print it to standard out.
+
+DAG Verbs
+---------
+
+  **htcondor dag submit** **dag-file**
+
+    Submit a DAGMan job to the local AP.
+
+  **htcondor dag status** **dagman-job-id**
+
+    Display current status/progress of a submitted DAG.
+
+  **htcondor dag halt** [**-r/-\-reason** *message*] **dagman-job-id**
+
+    Inform specific running DAGMan process to not start new work and
+    exit once current work is complete.
+
+    **-r/-\-reason** *message*
+        Reason for halting DAGMan progress to be written into the DAGMan
+        debug file (``*.dagman.out``).
+
+  **htcondor dag resume** **dagman-job-id**
+     Inform specific halted DAGMan process to continue making progress.
 
 .. sidebar:: HTCondor CLI System Nouns
 

@@ -42,7 +42,7 @@ Download
 The next step is to download HTCondor.
 If you want to select a specific version of HTCondor, you can download
 the corresponding file from
-`our website <https://research.cs.wisc.edu/htcondor/tarball/>`_.
+`our website <https://htcss-downloads.chtc.wisc.edu/tarball/>`_.
 Otherwise, we recommend using our download script, as follows.
 
 .. code-block:: shell
@@ -58,7 +58,7 @@ from the tarball before extracting it, like so:
 
 .. code-block:: shell
 
-    xattr -d com.apple.quarantine condor-10.7.1-x86_64_macOS13-stripped.tar.gz
+    xattr -d com.apple.quarantine condor.tar.gz
 
 Install
 -------

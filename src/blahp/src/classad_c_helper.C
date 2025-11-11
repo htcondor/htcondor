@@ -383,8 +383,7 @@ extern "C"
       if (v.IsStringValue( strres ))
        {
         ClassAdParser parser;
-        et=NULL;
-        parser.ParseExpression(strres,et);
+        et=parser.ParseExpression(strres);
         need_to_delete_et = true;
        }
      }

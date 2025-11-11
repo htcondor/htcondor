@@ -75,6 +75,10 @@ Behavior Options
             ``JOB_STATUS`` ``active`` status represents all jobs the AP
             (``idle``, ``running``, and ``held``)
 
+ **-exit-on-key-press/-no-exit-on-key-press**
+    Enable/disable tool exit via key press from keyboard.
+    Enabled by default if connected to a ``tty``.
+
 Display Options
 '''''''''''''''
 
@@ -192,7 +196,7 @@ any jobs are held:
 
 .. code-block:: bash
 
-    condor_watch_q -exit all,done,0 -exit any,held,1
+    $ condor_watch_q -exit all,done,0 -exit any,held,1
 
 See Also
 --------

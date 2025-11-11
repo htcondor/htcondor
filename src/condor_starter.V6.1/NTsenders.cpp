@@ -24,7 +24,6 @@
 #include "condor_classad.h"
 #include "cred_dir.h"
 #include "condor_sys.h"
-#include "starter.h"
 #include "condor_event.h"
 #include "condor_config.h"
 #include "secure_file.h"
@@ -40,7 +39,7 @@ extern JICShadow* syscall_jic_shadow;
 
 // If we have a communication error on the syscall socket, close it and go
 // into reconnect mode.
-#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d (%s)\n", x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
+#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "(%s:%d) i/o error result is %d, errno is %d (%s)\n", __FILE__, __LINE__, x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
 
 int
 REMOTE_CONDOR_register_starter_info(const ClassAd& ad)
@@ -685,55 +684,6 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
 		ON_ERROR_RETURN( result );
         syscall_last_rpc_time = time(nullptr);
         return rval;
-}
-
-int
-REMOTE_CONDOR_register_mpi_master_info( ClassAd* ad )
-{
-	condor_errno_t		terrno;
-	int		rval=-1;
-	int result = 0;
-	
-	dprintf ( D_SYSCALLS, "Doing CONDOR_register_mpi_master_info\n" );
-
-	CurrentSysCall = CONDOR_register_mpi_master_info;
-
-	if( ! ad ) {
-		EXCEPT( "CONDOR_register_mpi_master_info called with NULL ClassAd!" ); 
-		return -1;
-	}
-
-	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
-		errno = ETIMEDOUT;
-		return -1;
-	}
-
-	syscall_sock->encode();
-	result = ( syscall_sock->code(CurrentSysCall) );
-	ON_ERROR_RETURN( result );
-	result = ( putClassAd(syscall_sock, *ad) );
-	ON_ERROR_RETURN( result );
-	result = ( syscall_sock->end_of_message() );
-	ON_ERROR_RETURN( result );
-
-	syscall_sock->decode();
-	result = ( syscall_sock->code(rval) );
-	ON_ERROR_RETURN( result );
-	if( rval < 0 ) {
-		result = ( syscall_sock->code(terrno) );
-		ON_ERROR_RETURN( result );
-		result = ( syscall_sock->end_of_message() );
-		ON_ERROR_RETURN( result );
-		errno = terrno;
-		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
-		syscall_last_rpc_time = time(nullptr);
-		return rval;
-	}
-	result = ( syscall_sock->end_of_message() );
-	ON_ERROR_RETURN( result );
-	syscall_last_rpc_time = time(nullptr);
-	return rval;
 }
 
 int
@@ -2653,6 +2603,48 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 	return get_x509_rc;
 }
 
+int REMOTE_CONDOR_get_docker_creds(const ClassAd &query, ClassAd &creds) {
+	int result = 0;
+
+	if(!(syscall_sock->get_encryption())) {
+		if (can_switch_ids() || ! param_boolean("ALLOW_OAUTH_WITHOUT_ENCRYPTION", false)) {
+			dprintf(D_ALWAYS, "ERROR: Can't do CONDOR_get_docker_creds, syscall_sock not encrypted\n");
+			// fail
+			return -1;
+		}
+	}
+
+	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_get_docker_creds into path\n");
+
+	CurrentSysCall = CONDOR_get_docker_creds;
+
+	if( ! syscall_sock->is_connected() ) {
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ON_ERROR_RETURN( result );
+	result = putClassAd(syscall_sock, query);
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+
+	// receive response
+	syscall_sock->decode();
+
+	result = getClassAd(syscall_sock, creds);
+	ON_ERROR_RETURN( result );
+
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
+
+	return result;
+}
+
 int
 REMOTE_CONDOR_event_notification(const ClassAd& event ) {
 	int result = 0, rval = -1;
@@ -2676,6 +2668,39 @@ REMOTE_CONDOR_event_notification(const ClassAd& event ) {
 
 	syscall_sock->decode();
 	result = syscall_sock->code(rval);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
+
+	return rval;
+}
+
+int
+REMOTE_CONDOR_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	int result = 0, rval = -1;
+
+	dprintf( D_SYSCALLS, "Doing CONDOR_request_guidance\n" );
+	CurrentSysCall = CONDOR_request_guidance;
+
+	if(! syscall_sock->is_connected()) {
+		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ON_ERROR_RETURN( result );
+	result = putClassAd(syscall_sock, request);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+
+	syscall_sock->decode();
+	result = syscall_sock->code(rval);
+	ON_ERROR_RETURN( result );
+	result = getClassAd(syscall_sock, guidance);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );

@@ -75,7 +75,7 @@ public:
 			NULL if you want local
 			@param type What kind up updates to use for it
 		*/
-	DCCollector( const char* name = NULL, UpdateType type = CONFIG );
+	DCCollector( const char* name, UpdateType type = CONFIG );
 
 		/// Copy constructor (implemented using deepCopy())
 	DCCollector( const DCCollector& );
@@ -143,8 +143,10 @@ private:
 	bool do_version_check_before_startd_daemon_ad_update{true};
 	UpdateType up_type;
 
-	std::deque<class UpdateData*> pending_update_list;
 	friend class UpdateData;
+		// Clean out pending update queue and call any callback functions
+	void clearAndNotifyUpdateQueue(Sock* sock, const std::string &trust_domain, bool should_try_token_request, class UpdateData*& failed);
+	std::deque<class UpdateData*> pending_update_list;
 
 	bool sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void* miscdata );
 	bool sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata );

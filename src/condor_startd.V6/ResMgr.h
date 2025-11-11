@@ -58,6 +58,7 @@
 #endif
 
 #include "VolumeManager.h"
+#include "util.h"
 
 typedef double (Resource::*ResourceFloatMember)();
 typedef void (Resource::*VoidResourceMember)();
@@ -79,6 +80,8 @@ public:
 	stats_entry_recent<int>	total_claim_requests;
 	stats_entry_recent<int>	total_activation_requests;
 	stats_entry_recent<int> total_new_dslot_unwilling;
+	stats_entry_probe<filesize_t> bytes_sent;   // bytes transferred via cedar to job input sandboxes
+	stats_entry_probe<filesize_t> bytes_recvd; // bytes transferred via cedar as job output
 	stats_entry_recent<Probe> job_busy_time;
 	stats_entry_recent<Probe> job_duration;
 
@@ -101,6 +104,11 @@ public:
 		pool.AddProbe("ClaimRequests", &total_claim_requests);
 		pool.AddProbe("ActivationRequests", &total_activation_requests);
 		pool.AddProbe("NewDSlotNotMatch", &total_new_dslot_unwilling);
+
+		// don't publish these in the slot ads, we will publish parts of the probe
+		// using special attribute names in the STARTD daemon ad.
+		//pool.AddProbe("BytesSent", &bytes_sent);
+		//pool.AddProbe("BytesRecvd", &bytes_recvd);
 
 		// publish two Miron probes, showing only XXXCount if count is zero, and
 		// also XXXMin, XXXMax and XXXAvg if count is non-zero
@@ -143,6 +151,51 @@ public:
 	}
 };
 
+enum class ResourceLockType {
+	NONE = 0,
+	HUNG_PID,           // Resources broken from hung PID
+	CGROUP,             // Resources broken from locked cgroup
+	LV,                 // Recources broken from leaked LV
+};
+
+// holds a broken resource, slot of slot_type
+class BrokenItem {
+public:
+	BrokenItem() { b_refid = ++monotonic_id; }
+	//~BrokenItem() = default;
+	//BrokenItem(const BrokenItem &) = default;
+	//BrokenItem(BrokenItem &&) = default;
+	//BrokenItem & operator=(const BrokenItem &) = default;
+
+	ResourceLockType b_lock{};      // Locking reason for broken resources
+	int          b_srcid{-1};       // Source slot ID (p-slot) to restore resources
+	unsigned int b_refid{0};        // Unique identifying ID for each broken item
+	unsigned int b_id{0};   // an id that we can bind GPUs to
+	unsigned int b_code{0}; // a reason code
+	time_t       b_time{0}; // the time we logged the brokenness
+	void *       b_refptr{nullptr}; // holds a pointer to the trigger object, (a Resource * for broken slots)
+	std::string  b_tag;     // item tag, same as r_slot_id for broken slots
+	std::string  b_reason;  // reason string
+
+	// the broken id, converted to a sub_id suitable for use in an NFROwner struct
+	unsigned short int sub_id() const { return (unsigned short int)(0xFFFF - b_id); }
+
+	// ad holds arbitrary context information that correlates to the brokenness
+	// from job and Client* object of the claim for broken resources and slots
+	std::unique_ptr<ClassAd> b_context{nullptr};
+	std::unique_ptr<Client> b_client{nullptr};
+
+	// resources held by this item (used when not held by a slot)
+	ResBag b_res;
+
+	// create a new classad from this object for adding into the STARTD daemon ad
+	ClassAd * new_context_ad() const;
+	// publish the broken resources into the given ad, for use by ep_eventlog
+	void publish_resources(ClassAd& ad, const char * prefix="") const;
+
+	static unsigned int monotonic_id; // Monotonically increasing counter for refid's
+};
+
 class ResMgr : public Service
 {
 public:
@@ -169,6 +222,7 @@ public:
 
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
+	bool	hasAnyActiveClaim( bool for_shutdown );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) const { return m_attr->num_cpus(); }
 	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }
@@ -219,6 +273,9 @@ public:
 		walk(&Resource::refresh_startd_cron_attrs);
 		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
 	}
+
+	// Locate a specific cleanup reminder. Return nullptr if DNE
+	CleanupReminder* findCleanupReminder(CleanupReminder::category cat, const std::string& name);
 
 private:
 	int in_walk = 0;
@@ -277,6 +334,8 @@ public:
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	State		state( void );			// Return the machine state
 
+	BrokenItem & get_broken_context(Resource * rip); // find or allocate a broken context for this slot
+	void RestoreBrokenResources(const ResourceLockType lock, const std::set<unsigned int>& borked_ids); // Restore broken resources from successfully cleaned up things (i.e. logical volumes)
 
 	void report_updates( void ) const;	// Log updates w/ dprintf()
 
@@ -288,7 +347,7 @@ public:
 
 	void		init_config_classad( void );
 	void		updateExtrasClassAd( ClassAd * cap );
-	void		publish_daemon_ad(ClassAd & ad);
+	void		publish_daemon_ad(ClassAd & ad, time_t last_heard_from=0);
 	void		final_update_daemon_ad();
 
 	void		addResource( Resource* );
@@ -297,7 +356,7 @@ public:
 	void		deleteResource( Resource* );
 
 		//Make a list of the ClassAds from each slot we represent.
-	void		makeAdList( ClassAdList& ads, ClassAd & queryAd );
+	void		makeAdList( ClassAdList& ads, AdTypes adtype, ClassAd & queryAd );
 
 		// count the number of resources owned by this user
 	int			claims_for_this_user(const std::string &user);
@@ -372,16 +431,16 @@ public:
 	int nextId( void ) { return id_disp->next(); };
 
 		// returns true if specified slot is draining
-	bool isSlotDraining(Resource *rip) const;
+	bool isSlotDraining(const Resource *rip) const;
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
-	time_t gracefulDrainingTimeRemaining(Resource *rip);
+	time_t gracefulDrainingTimeRemaining(const Resource *rip);
 
 	time_t gracefulDrainingTimeRemaining();
 
 		// return true if all slots are in drained state
-	bool drainingIsComplete(Resource *rip);
+	bool drainingIsComplete(const Resource *rip) const;
 
 		// return true if draining was canceled by this function
 	bool considerResumingAfterDraining();
@@ -447,6 +506,9 @@ private:
 	// but may not be for brief periods during slot creation
 	std::vector<Resource*> slots;
 
+	// the collection of broken things, could be slots, slot_types, or resources
+	std::vector<BrokenItem> broken_things;
+
 	// The resources-in-use collections. this is recalculated each time
 	// compute_resource_conflicts is called and is used by both the daemon-ad and by the
 	// backfill slot advertising code
@@ -467,9 +529,8 @@ private:
 	time_t	cur_time;		// current time
 	time_t	deathTime = 0;		// If non-zero, time we will SIGTERM
 
-	std::vector<std::string> type_strings;	// Array of strings that
-		// define the resource types specified in the config file.  
-	std::vector<bool> bad_slot_types; // Array of slot types which had init time slot creation failures
+	// Array of strings that define the resource types specified in the config file.
+	std::vector<std::string> type_strings;
 	int*		type_nums;		// Number of each type.
 	int*		new_type_nums;	// New numbers of each type.
 	int			max_types;		// Maximum # of types.

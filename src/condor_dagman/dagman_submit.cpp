@@ -84,7 +84,7 @@ struct NodeVar {
 // Check if node var key is in specified list of items to defer (True add to other structure) return True for deferred
 static bool check_defer_var(std::vector<NodeVar>& deferred, const NodeVar& var, const std::set<std::string>& key_filter) {
 	if (key_filter.contains(var.key)) {
-		deferred.push_back(std::move(var));
+		deferred.push_back(var);
 		return true;
 	}
 	return false;
@@ -117,7 +117,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 	vars.emplace_back("JOB", nodeName, false);
 	vars.emplace_back("RETRY", std::to_string(retry), false);
 
-	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false);
+	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->GetStatus()), false);
 	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
 	// Only Add Parents Macro if not empty. Custom Attr will resolve to ""
@@ -135,8 +135,8 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false);
 	}
 
-	if (node._effectivePriority != 0) {
-		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node._effectivePriority), false);
+	if (node.GetEffectivePrio() != 0) {
+		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node.GetEffectivePrio()), false);
 	}
 
 	if (node.GetHold()) {
@@ -189,19 +189,25 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true);
 	}
 
-	for (auto &dagVar : node.varsFromDag) {
-		vars.emplace_back(dagVar._name, dagVar._value, !dagVar._prepend);
+	if (node.GetType() == NodeType::SERVICE) {
+		vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true);
+	}
+
+	for (const auto &dagVar : node.GetVars()) {
+		vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend);
 	}
 
 	return vars;
 }
 
 //-------------------------------------------------------------------------
-static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
+static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID, std::string& err) {
 	std::string cmdFile = node->GetCmdFile();
 	auto vars = init_vars(dm, *node);
 
-	if (node->HasInlineDesc()) {
+	const std::string_view desc = dm.dag->get_inline_desc(cmdFile);
+
+	if (desc.size()) {
 		formatstr(cmdFile, "%s-inline.%d.temp", node->GetNodeName(), daemonCore->getpid());
 		if (dagmanUtils.fileExists(cmdFile)) {
 			debug_printf(DEBUG_QUIET, "Warning: Temporary submit file '%s' already exists. Overwriting...\n",
@@ -211,15 +217,16 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 		if ( ! temp_fp) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to create temporary submit file '%s'\n",
 			             cmdFile.c_str());
+			err = "Failed to create temporary submit file";
 			return false;
 		}
 
-		std::string_view& desc = node->inline_desc;
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
 			             cmdFile.c_str(), desc.data());
 			if (dm.config[conf::b::RemoveTempSubFiles]) { dagmanUtils.tolerant_unlink(cmdFile); }
 			fclose(temp_fp);
+			err = "Failed to write temporary submit file";
 			return false;
 		}
 
@@ -283,7 +290,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	int exit_status;
 	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
 
-	if (dm.config[conf::b::RemoveTempSubFiles] && node->HasInlineDesc()) {
+	if (dm.config[conf::b::RemoveTempSubFiles] && desc.size()) {
 		dagmanUtils.tolerant_unlink(cmdFile);
 	}
 
@@ -295,6 +302,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 			debug_printf(DEBUG_QUIET, "ERROR (%d): Failed to run condor_submit for node %s: %s\n",
 			             errno, node->GetNodeName(), strerror(errno));
 		}
+		err = "Failed to run condor_submit";
 		return false;
 	}
 
@@ -323,6 +331,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	if ( ! successful_submit) {
 		debug_printf(DEBUG_QUIET, "ERROR: Failed to run condor_submit for node %s:\n%s\n",
 		             node->GetNodeName(), output.ptr());
+		err = "condor_submit failed : " + std::string(output.ptr());
 		return false;
 	}
 
@@ -330,8 +339,9 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	if (jobProcCount > 1) {
 		if (dm.config[conf::b::ProhibitMultiJobs]) {
 			// Other nodes may be single proc so fail and make forward progress
-			debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
-			             jobProcCount);
+			err = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
+			debug_printf(DEBUG_NORMAL, "%s (TotalProcs = %d)\n",
+			             err.c_str(), jobProcCount);
 			return false;
 		} else if (node->GetType() == NodeType::PROVISIONER) {
 			// Required first node so abort (note: debug_error calls DC_EXIT)
@@ -348,7 +358,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 
 //-------------------------------------------------------------------------
 // TJ's new direct submit w/ late-materialization.
-static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID) {
+static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID, std::string& err) {
 	int rval = 0;
 	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
@@ -359,24 +369,26 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::string URL;
 	auto_free_ptr owner(my_username());
 
+	const char* cmdFile = node->GetCmdFile(); // used when submit source is an actual file
+	const std::string_view inline_desc = dm.dag->get_inline_desc(cmdFile);;
+
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;
-	MacroStreamMemoryFile msm(node->inline_desc.data(), node->inline_desc.size(), msm_source);
+	MacroStreamMemoryFile msm(inline_desc.data(), inline_desc.size(), msm_source);
 	MacroStream* ms = &msm;
-	const char* cmdFile = node->GetCmdFile(); // used when submit source is an actual file
 
 	char* tmp_qline = nullptr;
 	std::string queue_args;
 	SubmitHash submitHash;
 	SubmitStepFromQArgs ssi(submitHash);
 
-	DCSchedd schedd;
+	DCSchedd schedd; schedd.locate(); // TODO: use locate_local() ?
 	CondorError errstack; // errstack for general qmgr commands
 	AbstractScheddQ* MyQ = nullptr;
 
 	submitHash.init(JSM_DAGMAN);
 	submitHash.setDisableFileChecks(true);
-	submitHash.setScheddVersion(CondorVersion());
+	submitHash.setScheddVersion(CondorVersion()); // TODO: use schedd.version() ?
 	submitHash.init_base_ad(time(nullptr), owner);
 
 	auto vars = init_vars(dm, *node);
@@ -394,7 +406,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
 
 	// read in the submit file
-	if (node->HasInlineDesc()) {
+	if (inline_desc.size()) {
 		ms = &msm;
 		// Note: cmdFile is set to inline description name for inline descriptions
 		submitHash.insert_submit_filename(cmdFile, msm_source);
@@ -404,6 +416,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 		if ( ! msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
 			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
+			err = "Failed to open submit file: " + errmsg;
 			goto finis;
 		}
 		ms = &msf;
@@ -435,7 +448,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
 	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
-		cred_result = process_job_credentials(submitHash, 0, URL, errmsg);
+		cred_result = process_job_credentials(submitHash, 0, &schedd, URL, errmsg);
 		if (cred_result != 0) {
 			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
 			rval = -1;
@@ -658,9 +671,11 @@ finis:
 	if (rval < 0) {
 		debug_printf(DEBUG_QUIET, "ERROR: on Line %d of submit file: %s\n", ms->source().line, errmsg.c_str());
 		if (submitHash.error_stack()) {
+			err = errmsg;
 			std::string errstk(submitHash.error_stack()->getFullText());
 			if ( ! errstk.empty()) {
 				debug_printf(DEBUG_QUIET, "submit error: %s", errstk.c_str());
+				err += ": " + errstk;
 			}
 			submitHash.error_stack()->clear();
 		}
@@ -680,7 +695,7 @@ finis:
 }
 
 
-bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
+bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID, std::string& err) {
 	bool success = false;
 	const char* directory = node->GetDirectory();
 	TmpDir tmpDir;
@@ -694,10 +709,10 @@ bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
 	DagSubmitMethod method = static_cast<DagSubmitMethod>(dm.options[deep::i::SubmitMethod]);
 	switch (method) {
 		case DagSubmitMethod::CONDOR_SUBMIT: // run condor_submit
-			success = shell_condor_submit(dm, node, condorID);
+			success = shell_condor_submit(dm, node, condorID, err);
 			break;
 		case DagSubmitMethod::DIRECT: // direct submit
-			success = direct_condor_submitV2(dm, node, condorID);
+			success = direct_condor_submitV2(dm, node, condorID, err);
 			break;
 		default:
 			// We have unknown submission method requested so jobs will never be submitted abort

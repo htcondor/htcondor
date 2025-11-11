@@ -46,10 +46,20 @@ DCSchedd::DCSchedd( const ClassAd& ad, const char* the_pool )
 {
 }
 
-DCSchedd::~DCSchedd( void )
+DCSchedd::DCSchedd( std::string_view the_name, std::string_view the_pool, std::string_view address_file )
+	: Daemon( DT_SCHEDD, the_name.empty()?nullptr:the_name.data(), the_pool.empty()?nullptr:the_pool.data() )
 {
+	if ( ! address_file.empty()) {
+		this->specify_address_file(address_file);
+	}
 }
 
+
+bool DCSchedd::getCreddAddress(std::string & address) {
+	ClassAd * ad = locationAd();
+	if ( ! ad) return false;
+	return ad->LookupString(ATTR_CREDD_IP_ADDR, address);
+}
 
 ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
@@ -1369,6 +1379,7 @@ JobActionResults::~JobActionResults()
 }
 
 
+
 void
 JobActionResults::record( PROC_ID job_id, action_result_t result ) 
 {
@@ -1409,6 +1420,9 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 		break;
 	case AR_ALREADY_DONE:
 		ar_already_done++;
+		break;
+	case AR_LIMIT_EXCEEDED:
+		ar_limit_exceeded++;
 		break;
 	}
 }
@@ -1473,8 +1487,9 @@ JobActionResults::readResults( ClassAd* ad )
 	formatstr( attr_name, "result_total_%d", AR_PERMISSION_DENIED );
 	ad->LookupInteger( attr_name, ar_permission_denied );
 
+	formatstr( attr_name, "result_total_%d", AR_LIMIT_EXCEEDED);
+	ad->LookupInteger( attr_name, ar_limit_exceeded );
 }
-
 
 ClassAd*
 JobActionResults::publishResults( void ) 
@@ -1513,6 +1528,9 @@ JobActionResults::publishResults( void )
 
 	formatstr( buf, "result_total_%d", AR_PERMISSION_DENIED );
 	result_ad->Assign( buf, ar_permission_denied );
+
+	formatstr( buf, "result_total_%d", AR_LIMIT_EXCEEDED);
+	result_ad->Assign( buf, ar_limit_exceeded);
 
 	return result_ad;
 }
@@ -1643,6 +1661,9 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		}
 		break;
 
+	case AR_LIMIT_EXCEEDED:
+		formatstr( buf, "Job %d.%d cannot be released again, has reached SYSTEM_PERIODIC_RELEASES limit", job_id.cluster, job_id.proc ); 
+		break;
 	}
 	*str = strdup( buf.c_str() );
 	return rval;
@@ -1737,6 +1758,81 @@ bool DCSchedd::getJobConnectInfo(
 
 	return result;
 }
+
+int DCSchedd::offerResources(
+	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
+	const std::string & submitter_name,
+	int timeout)
+{
+	if (resources.empty()) {
+		dprintf(D_ERROR, "offerResources : no resources offered.\n");
+		return -1; 
+	}
+
+	if (submitter_name.empty()) {
+		dprintf(D_COMMAND, "offerResources: DIRECT_ATTACH of %d ads to %s\n", (int)resources.size(), this->name());
+	} else {
+		dprintf(D_COMMAND, "offerResources: DIRECT_ATTACH of %d ads to %s for %s\n",
+			(int)resources.size(), this->name(), submitter_name.c_str());
+	}
+
+	ReliSock *sock = reliSock(timeout);
+	if ( ! sock ) {
+		dprintf(D_FULLDEBUG, "Failed to contact schedd for offerResources\n");
+		return -1;
+	}
+	if ( ! startCommand(DIRECT_ATTACH, sock, timeout)) {
+		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n", this->name());
+		delete sock;
+		return -1;
+	}
+
+	sock->encode();
+	ClassAd cmd_ad;
+	cmd_ad.InsertAttr(ATTR_NUM_ADS, (int)resources.size());
+	if ( ! submitter_name.empty()) {
+		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
+	}
+	if ( ! putClassAd(sock, cmd_ad) ) {
+		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());
+		delete sock;
+		return -1;
+	}
+
+	for ( auto &[claimid,offer_ad] : resources ) {
+		if ( !sock->put_secret(claimid) ||
+		     ! putClassAd(sock, *offer_ad) )
+		{
+			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n", this->name());
+			delete sock;
+			return -1;
+		}
+	}
+
+	if ( !sock->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n", this->name());
+	}
+
+	sock->decode();
+	ClassAd reply_ad;
+	if ( ! getClassAd(sock, reply_ad) || !sock->end_of_message()) {
+		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", this->name());
+		delete sock;
+		return -1;
+	}
+
+	int reply_code = NOT_OK;
+	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	if (reply_code != OK) {
+		dprintf(D_FULLDEBUG, "Schedd returned error %d\n", reply_code);
+	} else {
+		dprintf(D_COMMAND, "Schedd returned success\n");
+	}
+	delete sock;
+
+	return reply_code;
+}
+
 
 bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg )
 {
@@ -2083,7 +2179,7 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	bool send_server_time /*= false*/)
 {
 	if (constraint && constraint[0] && ! request_ad.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
-		return Q_PARSE_ERROR;
+		return SC_ERR_BAD_CONSTRAINT;
 	}
 
 	request_ad.Assign(ATTR_SEND_SERVER_TIME, send_server_time);
@@ -2246,6 +2342,190 @@ int DCSchedd::queryJobs (
 	return rval;
 }
 
+ClassAd
+DCSchedd::createOCU(const ClassAd &request_ocu_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(CREATE_OCU_FOR_USERREC, Stream::reli_sock, 20, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::createOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// Force auth.
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	// Send the request ad
+	if (!putClassAd((Sock *)sock, request_ocu_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU ad");
+		}
+		return {};
+	}
+
+	// and that's it for this message
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	// get results back
+	sock->decode();
+	ClassAd result;
+
+	// Get results ad
+	if (!getClassAd((Sock *)sock, result)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting OCU result");
+		}
+		return result;
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return result;
+	}
+
+	return result;
+}
+
+ClassAd 
+DCSchedd::removeOCU(const ClassAd &ocu_ad, CondorError *errstack) {
+
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(REMOVE_OCU_FROM_USERREC, Stream::reli_sock, 20, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// Force auth.
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	// Send the request ad
+	if (!putClassAd((Sock *)sock, ocu_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU request ad");
+		}
+		return {};
+	}
+
+	// and that's it for this message
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	// get results back
+	sock->decode();
+	ClassAd result;
+
+	// Get results ad
+	if (!getClassAd((Sock *)sock, result)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting OCU result");
+		}
+		return result;
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return result;
+	}
+
+	return result;
+}
+
+std::vector<ClassAd> 
+DCSchedd::queryOCU(const ClassAd &ocu_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(QUERY_OCU_FROM_USERREC, Stream::reli_sock, 20, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::queryOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// Force auth.
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	// Send the request ad
+	if (!putClassAd((Sock *)sock, ocu_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU ad");
+		}
+		return {};
+	}
+
+	// and that's it for this message
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	// get results back
+	sock->decode();
+	std::vector<ClassAd> result;
+
+	// Get results ad
+	size_t ocu_count = 0;
+	if (!sock->code(ocu_count)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting OCU count");
+		}
+		return result;
+	}
+
+	for (size_t i = 0; i < ocu_count; i++) {
+		ClassAd ocu_ad;
+		if (!getClassAd((Sock *)sock, ocu_ad)) {
+			if (errstack) {
+				errstack->pushf("DCSchedd::queryOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU ad");
+			}
+			return {};
+		}
+		result.push_back(std::move(ocu_ad));
+	}
+
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	return result;
+}
 
 /*static*/ int DCSchedd::makeUsersQueryAd (
 	classad::ClassAd & request_ad,
@@ -2256,9 +2536,8 @@ int DCSchedd::queryJobs (
 {
 	if (constraint && constraint[0]) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr = NULL;
-		parser.ParseExpression(constraint, expr);
-		if (!expr) return Q_PARSE_ERROR;
+		classad::ExprTree *expr = parser.ParseExpression(constraint);
+		if (!expr) return SC_ERR_BAD_CONSTRAINT;
 
 		request_ad.Insert(ATTR_REQUIREMENTS, expr);
 	}
@@ -2371,7 +2650,8 @@ int DCSchedd::queryUsers(
 }
 
 ClassAd* DCSchedd::actOnUsers (
-	int cmd, // ENABLE_USERREC or DISABLE_USERREC
+	int cmd, // ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
+	bool is_project, // act on Project records rather than User records
 	const ClassAd * userads[], // either pass array of ad pointers, (constraints go here)
 	const char * usernames[], // or pass array of username pointers
 	int num_usernames,
@@ -2405,21 +2685,56 @@ ClassAd* DCSchedd::actOnUsers (
 				// if there is a Requirements expression, it take precedence over a USER attribute
 				// but you can't create new records from a requrements expression so just enable/disable/edit is implied
 				create_if = false;
+				if (is_project && ! ad->Lookup(ATTR_TARGET_TYPE)) {
+					cmd_ad.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE);
+				}
+			} else if (is_project) {
+				// if project flag is set, the incoming ad may already have a Target type
+				// if it does, assume it is correct (and it may actually be a user record)
+				// this is the code path for acting on both users and projects in a single transaction
+				std::string targets;
+				if (ad->LookupString(ATTR_TARGET_TYPE, targets)) {
+					// ads has a target type, so we do verification based on the incoming target type
+					if (YourStringNoCase(PROJECT_ADTYPE) == targets && ! ad->LookupString(ATTR_NAME, name)) {
+						if (errstack) { errstack->pushf("DCSchedd::actOnUsers", SC_ERR_BAD_CONSTRAINT, "ad %d does not have a Name attribute", ii); }
+						return nullptr;
+					} else if (YourStringNoCase(OWNER_ADTYPE) == targets) {
+						if ( ! ad->LookupString(ATTR_USER, name)) {
+							if (errstack) { errstack->pushf("DCSchedd::actOnUsers", SC_ERR_BAD_CONSTRAINT, "ad %d does not have a User attribute", ii); }
+							return nullptr;
+						}
+						// if this is target=Owner, make sure that create_if flag is passed if it was set
+						if (create_if) { cmd_ad.Assign(ATTR_USERREC_OPT_CREATE, true); }
+					} else {
+						// note that target type can be "Owner Project", in which case we assume
+						// the caller filled out the ad corectly and we just pass it on to the schedd
+					}
+				} else {
+					// no target type, set one, and verify that the ad has a Name attribute
+					cmd_ad.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE);
+					if ( ! ad->LookupString(ATTR_NAME, name)) {
+						if (errstack) { errstack->pushf("DCSchedd::actOnUsers", SC_ERR_BAD_CONSTRAINT, "ad %d does not have a Name attribute", ii); }
+						return nullptr;
+					}
+				}
 			} else if ( ! ad->LookupString(ATTR_USER, name)) {
-				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", Q_PARSE_ERROR, "ad %d does not have a User attribute", ii); }
+				if (errstack) { errstack->pushf("DCSchedd::actOnUsers", SC_ERR_BAD_CONSTRAINT, "ad %d does not have a User attribute", ii); }
 				return nullptr;
 			}
 			cmd_ad.ChainToAd(const_cast<ClassAd*>(ad));
+		} else if (is_project) {
+			name = usernames[ii];
+			cmd_ad.Assign(ATTR_TARGET_TYPE, PROJECT_ADTYPE);
+			cmd_ad.Assign(ATTR_NAME, name);
 		} else {
 			name = usernames[ii];
 			cmd_ad.Assign(ATTR_USER, name);
 		}
 		if (create_if) {
-			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE, true);
-			cmd_ad.Assign(ATTR_USERREC_OPT_CREATE_DEPRECATED, true);
+			cmd_ad.Assign(is_project ? ATTR_USERREC_OPT_CREATE_PROJECT : ATTR_USERREC_OPT_CREATE, true);
 		}
 		if (reason) {
-			if (cmd == DISABLE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
+			if (cmd == DISABLE_USERREC || cmd == DELETE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
 		}
 
 		if ( ! putClassAd(sock, cmd_ad)) {
@@ -2453,8 +2768,9 @@ ClassAd * DCSchedd::addUsers(
 	int num_usernames,
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, true, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, nullptr, usernames, num_usernames, true, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(
@@ -2463,35 +2779,38 @@ ClassAd * DCSchedd::enableUsers(
 	bool create_if,           // true if we want to create users that don't already exist
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	const int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(
 	const char * constraint, // expression
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
 	if ( ! constraint) {
 		if (errstack && errstack->empty()) {
-			errstack->pushf("DCSchedd::enableusers", Q_PARSE_ERROR, "constraint expression is required");
+			errstack->pushf("DCSchedd::enableusers", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
 		}
 		return nullptr;
 	}
 	ClassAd cmd_ad;
 	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
 	const ClassAd * ads[] = { &cmd_ad };
-	return actOnUsers (ENABLE_USERREC, ads, nullptr, 1, false, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_user, ads, nullptr, 1, false, nullptr, errstack, connect_timeout);
 }
 
-ClassAd * DCSchedd::addOrEnableUsers(
+ClassAd * DCSchedd::addOrEnableUserRecs(
 	const ClassAd * userads[], // ads must have ATTR_USER attribute, may have ATTR_USERREC_OPT_CREATE=true to add, otherwise it is enable
 	int num_usernames,
 	bool create_if,           // true if we want to force ATTR_USERREC_OPT_CREATE=true in all ads that are sent
+	bool is_project,          // true if project ad or mixed user and project ads
 	CondorError *errstack)
 {
 	int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, userads, nullptr, num_usernames, create_if, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, is_project, userads, nullptr, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::disableUsers(
@@ -2500,8 +2819,9 @@ ClassAd * DCSchedd::disableUsers(
 	const char * reason,
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
-	return actOnUsers (DISABLE_USERREC, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+	return actOnUsers (DISABLE_USERREC, is_user, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::disableUsers(
@@ -2509,23 +2829,55 @@ ClassAd * DCSchedd::disableUsers(
 	const char * reason,
 	CondorError *errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
 	if ( ! constraint) {
 		if (errstack && errstack->empty()) {
-			errstack->pushf("DCSchedd::enableusers", Q_PARSE_ERROR, "constraint expression is required");
+			errstack->pushf("DCSchedd::disableUsers", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
 		}
 		return nullptr;
 	}
 	ClassAd cmd_ad;
 	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
 	const ClassAd * ads[] = { &cmd_ad };
-	return actOnUsers (DISABLE_USERREC, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+	return actOnUsers (DISABLE_USERREC, is_user, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeUsers(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_user{false}; // the converse of is_project
+	int connect_timeout = 20;
+	return actOnUsers (DELETE_USERREC, is_user, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeUsers(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_user{false}; // the converse of is_project
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeUsers", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DELETE_USERREC, is_user, ads, nullptr, 1, false, reason, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::updateUserAds(
 	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
 	CondorError * errstack)
 {
+	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
 
 	std::vector<const ClassAd*> ads;
@@ -2533,6 +2885,196 @@ ClassAd * DCSchedd::updateUserAds(
 	user_ads.Rewind();
 	const ClassAd * cmdAd;
 	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
-	return actOnUsers (EDIT_USERREC, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
+ClassAd * DCSchedd::addProjects(
+	const char * names[],   // project names
+	int num_names,          // number of project names
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, is_project, nullptr, names, num_names, true, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::enableProjects(
+	const char * names[],   // project names
+	int num_names,          // number of project names
+	bool create_if,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, is_project, nullptr, names, num_names, create_if, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::addProjects(
+	const ClassAd * userads[],   // ads must have ATTR_NAME attribute, if create_if may have other attributes as well
+	int num_ads,
+	bool create_if,           // true if we want to create users that don't already exist
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (ENABLE_USERREC, is_project, userads, nullptr, num_ads, create_if, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeProjects(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (DELETE_USERREC, is_project, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::removeProjects(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeProjects", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DELETE_USERREC, is_project, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::updateProjectAds(
+	ClassAdList & project_ads, // ads must have ATTR_NAME attribute at a minimum
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+
+	std::vector<const ClassAd*> ads;
+	ads.reserve(project_ads.Length());
+	project_ads.Rewind();
+	const ClassAd * cmdAd;
+	while ((cmdAd = project_ads.Next())) { ads.push_back(cmdAd); }
+	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::generalUpdateUserRecs(
+	int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
+	bool is_project,           // set to true if ads are project ads or mixed user and project ads
+	ClassAdList & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+	CondorError *errstack)
+{
+	int connect_timeout = 20;
+	std::vector<const ClassAd*> ads;
+	ads.reserve(userrec_ads.Length());
+	userrec_ads.Rewind();
+	const ClassAd * cmdAd;
+	while ((cmdAd = userrec_ads.Next())) { ads.push_back(cmdAd); }
+	return actOnUsers (cmd, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+}
+
+ClassAd* DCSchedd::getDAGManContact(int cluster, CondorError& errstack) {
+	ReliSock rsock;
+
+	ClassAd cmd_ad;
+
+	cmd_ad.Assign(ATTR_CLUSTER_ID, cluster);
+	cmd_ad.Assign(ATTR_PROC_ID, 0);
+	cmd_ad.Assign("ContactDaemonType", DT_DAGMAN);
+
+	rsock.timeout(20);
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::getDAGManContact: Failed to connect to schedd (%s)\n", _addr.c_str());
+		errstack.push("DCSchedd::getDAGManContact", CEDAR_ERR_CONNECT_FAILED,
+		               "Failed to connect to schedd");
+		return nullptr;
+	}
+	if( ! startCommand(GET_CONTACT_INFO, (Sock*)&rsock, 0, &errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::getDAGManContact: Failed to send command (GET_CONTACT_INFO) to the schedd\n");
+		return nullptr;
+	}
+
+	// First, if we're not already authenticated, force that now.
+	if ( ! forceAuthentication(&rsock, &errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack.getFullText().c_str());
+		return nullptr;
+	}
+
+	// Now, put the command classad on the wire
+	if ( ! putClassAd(&rsock, cmd_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:getDAGManContact: Can't send classad, probably an authorization failure\n");
+		errstack.push("DCSchedd::getDAGManContact", CEDAR_ERR_PUT_FAILED,
+		               "Can't send classad, probably an authorization failure");
+		return nullptr;
+	}
+
+	// Attempt to get response from schedd
+	rsock.decode();
+	ClassAd* result_ad = new ClassAd();
+	if( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:getDAGManContact: Can't read response ad from %s\n", _addr.c_str());
+		errstack.push("DCSchedd::getDAGManContact", CEDAR_ERR_GET_FAILED,
+		               "Can't read response ad");
+		delete result_ad;
+		return nullptr;
+	}
+
+	return result_ad;
+}
+
+bool 
+DCSchedd::getClaims(std::vector<std::unique_ptr<ClassAd>> &claims, ClassAd &queryAd, CondorError& errstack) {
+	ReliSock rsock;
+
+	rsock.timeout(20);  // Years of careful research
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::getClaims: Failed to connect to schedd (%s)\n", _addr.c_str());
+		errstack.push("DCSchedd::getClaims", CEDAR_ERR_CONNECT_FAILED, "Failed to connect to schedd");
+		return false;
+	}
+
+	// Not really STARTD_ADS, but claims that look a lot like startd ads
+	if( ! startCommand(QUERY_STARTD_ADS, (Sock*)&rsock, 0, &errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::getClaims: Failed to send command (COMMAND_QUERY_ADS) to the schedd\n");
+		return false;
+	}
+
+	// Put the query classad on the wire
+	if ( ! putClassAd(&rsock, queryAd) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:getClaims: Can't send query classad, probably an authorization failure\n");
+		errstack.push("DCSchedd::getClaims", CEDAR_ERR_PUT_FAILED, "Can't send classad, probably an authorization failure");
+		return false;
+	}
+
+	// Attempt to get responses from schedd
+	rsock.decode();
+	int more_flag = 0;
+
+	rsock.code(more_flag);
+
+	while (more_flag) {
+		ClassAd* result_ad = new ClassAd();
+		if( ! getClassAd(&rsock, *result_ad)) {
+			dprintf(D_ALWAYS, "DCSchedd:getClaims: Can't read response ad from %s\n", _addr.c_str());
+			errstack.push("DCSchedd::getClaims", CEDAR_ERR_GET_FAILED, "Can't read response ad");
+			delete result_ad;
+			return false;
+		}
+		claims.emplace_back(result_ad); // transfer ownership to the unique_ptr within
+
+		// Are there more ads?
+		rsock.code(more_flag);
+	}
+	rsock.end_of_message();
+
+	return true;
+}

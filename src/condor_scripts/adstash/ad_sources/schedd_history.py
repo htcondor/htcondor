@@ -15,17 +15,21 @@
 
 import time
 import logging
-import htcondor
+import htcondor2 as htcondor
+import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
-from adstash.convert import to_json, unique_doc_id
+from adstash.convert import to_json, unique_doc_id, REQUIRED_ATTRS
 
 
 class ScheddHistorySource(GenericAdSource):
 
 
-    def fetch_ads(self, schedd_ad, max_ads=10000):
+    def fetch_ads(self, schedd_ad, max_ads=10000, projection=set()):
+        if projection:  # If user has defined a projection, make sure it contains required attrs
+            projection = projection | REQUIRED_ATTRS
+
         history_kwargs = {}
         if max_ads > 0:
             history_kwargs["match"] = max_ads
@@ -35,10 +39,10 @@ class ScheddHistorySource(GenericAdSource):
             logging.warning(f"No checkpoint found for schedd {schedd_ad['Name']}, getting all ads available.")
         else:
             since_expr = f"""(ClusterId == {ckpt["ClusterId"]}) && (ProcId == {ckpt["ProcId"]})"""
-            history_kwargs["since"] = since_expr
+            history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting ads from {schedd_ad['Name']} since {since_expr}.")
         schedd = htcondor.Schedd(schedd_ad)
-        return schedd.history(constraint=True, projection=[], **history_kwargs)
+        return schedd.history(constraint=True, projection=list(projection), **history_kwargs)
 
 
     def process_ads(self, interface, ads, schedd_ad, metadata={}, chunk_size=0, **kwargs):
@@ -61,7 +65,7 @@ class ScheddHistorySource(GenericAdSource):
             # Here, we assume that the interface is responsible for de-duping ads
             # and only update the checkpoint after the full history queue is pushed
             # through by returning the new checkpoint at the end.
-            
+
             if schedd_checkpoint is None:  # set checkpoint based on first parseable ad
                 schedd_checkpoint = {"ClusterId": ad["ClusterId"], "ProcId": ad["ProcId"]}
             chunk.append((unique_doc_id(dict_ad), dict_ad,))

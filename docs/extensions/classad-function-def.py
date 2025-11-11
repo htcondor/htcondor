@@ -22,7 +22,7 @@ def classad_func_def_role(name, rawtext, text, lineno, inliner, options={}, cont
 
     if ")" not in function or "(" not in function or " " not in function[:function.find("(")]:
         # Expect 'ReturnType FunctionName([args])'
-        warn(f"{docname} @ {lineno} | Invalid ClassAd Function '{function}' expects 'Return function(...)'")
+        warn(f"{docname}:{lineno} | Invalid ClassAd Function '{function}' expects 'Return function(...)'")
         return [make_inline_literal_node(text)], []
 
     fn_end = function.find("(")

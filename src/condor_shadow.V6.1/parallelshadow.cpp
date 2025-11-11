@@ -51,10 +51,7 @@ ParallelShadow::~ParallelShadow() {
 void 
 ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
-
-    if( ! job_ad ) {
-        EXCEPT( "No job_ad defined!" );
-    }
+	ASSERT(job_ad);
 
         // BaseShadow::baseInit - basic init stuff...
     baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
@@ -154,9 +151,7 @@ ParallelShadow::spawn( void )
 		Register_Timer( 1, 0,
 						(TimerHandlercpp)&ParallelShadow::getResources,
 						"getResources", this );
-	if( info_tid < 0 ) {
-		EXCEPT( "Can't register DC timer!" );
-	}
+	ASSERT(info_tid >= 0);
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();
 }
@@ -741,26 +736,22 @@ ParallelShadow::getDiskUsage( void )
 }
 
 
-float
+uint64_t
 ParallelShadow::bytesSent( void )
 {
-	MpiResource* mpi_res;
-	float total = 0;
-	for( size_t i=0; i<ResourceList.size() ; i++ ) {
-		mpi_res = ResourceList[i];
+	uint64_t total = 0;
+	for (MpiResource* mpi_res : ResourceList) {
 		total += mpi_res->bytesSent();
 	}
 	return total;
 }
 
 
-float
+uint64_t
 ParallelShadow::bytesReceived( void )
 {
-	MpiResource* mpi_res;
-	float total = 0;
-	for( size_t i=0; i<ResourceList.size() ; i++ ) {
-		mpi_res = ResourceList[i];
+	uint64_t total = 0;
+	for (MpiResource* mpi_res : ResourceList) {
 		total += mpi_res->bytesReceived();
 	}
 	return total;
@@ -841,13 +832,6 @@ ParallelShadow::getExitReason( void )
 		return ResourceList[0]->getExitReason();
 	}
 	return -1;
-}
-
-
-bool
-ParallelShadow::setMpiMasterInfo( char*   /*str*/ )
-{
-	return false;
 }
 
 
@@ -961,9 +945,7 @@ ParallelShadow::logDisconnectedEvent( const char* reason )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
@@ -981,9 +963,7 @@ ParallelShadow::logReconnectedEvent( void )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
@@ -1010,9 +990,7 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdName( dc_startd->name() );
 */
 

@@ -1,33 +1,9 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils" "htcondor2/_utils")
+set(PACKAGES      "classad3" "classad2" "htcondor2" "htcondor2/htchirp" "htcondor2/dags" "htcondor2/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
-htcondor/_wrap.py
-htcondor/__init__.py
-htcondor/_lock.py
-htcondor/personal.py
-htcondor/htchirp/__init__.py
-htcondor/htchirp/htchirp.py
-htcondor/dags/writer.py
-htcondor/dags/exceptions.py
-htcondor/dags/__init__.py
-htcondor/dags/formatter.py
-htcondor/dags/dag.py
-htcondor/dags/walk_order.py
-htcondor/dags/edges.py
-htcondor/dags/utils.py
-htcondor/dags/rescue.py
-htcondor/dags/node.py
-htcondor/_deprecation.py
-htcondor/_job_status.py
-
-classad/__init__.py
-
-# Private python utilities
-htcondor/_utils/__init__.py
-htcondor/_utils/ansi.py
 
 # Version 2.
 htcondor2/_negotiator.py
@@ -39,7 +15,9 @@ htcondor2/_cred_type.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
+htcondor2/_history_src.py
 htcondor2/_daemon_command.py
+htcondor2/_dagman.py
 htcondor2/_drain_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
@@ -57,8 +35,10 @@ htcondor2/_job_status.py
 htcondor2/_param.py
 htcondor2/_remote_param.py
 htcondor2/_file_transfer_event_type.py
+htcondor2/_common_files_event_type.py
 htcondor2/_logging.py
 htcondor2/_log_level.py
+htcondor2/_security_context.py
 htcondor2/_loose_functions.py
 htcondor2/__init__.py
 
@@ -66,6 +46,23 @@ htcondor2/__init__.py
 htcondor2/personal.py
 htcondor2/_utils/__init__.py
 htcondor2/_utils/ansi.py
+htcondor2/_utils/keyboard.py
+
+# sigh. sigh.
+htcondor2/htchirp/__init__.py
+htcondor2/htchirp/htchirp.py
+
+# sigh. sigh. sigh.
+htcondor2/dags/writer.py
+htcondor2/dags/exceptions.py
+htcondor2/dags/__init__.py
+htcondor2/dags/formatter.py
+htcondor2/dags/dag.py
+htcondor2/dags/walk_order.py
+htcondor2/dags/edges.py
+htcondor2/dags/utils.py
+htcondor2/dags/rescue.py
+htcondor2/dags/node.py
 
 classad2/__init__.py
 classad2/_class_ad.py
@@ -84,18 +81,16 @@ set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
 
-if (WITH_PYTHON_BINDINGS)
+if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
     set(DEPS "")
 
     configure_file(${SETUP_PY_IN} ${SETUP_PY})
 
 	# Make the target directories for python source tree
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/htchirp)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/dags)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad2)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
 
@@ -173,12 +168,22 @@ if (WITH_PYTHON_BINDINGS)
 
     if (NOT WINDOWS AND PYTHON3LIBS_FOUND)
         set(TIMESTAMP3_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp3")
-        add_custom_command(
-            OUTPUT ${TIMESTAMP3_FILE}
-            COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
-            COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
-            DEPENDS ${DEPS} py3classad_module py3htcondor py3classad3_impl py3htcondor2_impl py3classad2_impl
-        )
+		set (DEPENDENT_MODULES "")
+		if (WITH_PYTHON_BINDINGS) 
+			list(APPEND DEPENDENT_MODULES py3classad_module py3htcondor)
+		endif()
+		if (WITH_PYTHON_BINDINGS_V2) 
+			list(APPEND DEPENDENT_MODULES py3classad2_impl py3htcondor2_impl)
+		endif()
+		if (WITH_PYTHON_BINDINGS_V3) 
+			list(APPEND DEPENDENT_MODULES py3classad3_impl)
+		endif()
+			add_custom_command(
+				OUTPUT ${TIMESTAMP3_FILE}
+				COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
+				COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
+				DEPENDS ${DEPS} ${DEPENDENT_MODULES}
+			)
 
         add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})
         install(CODE "execute_process(

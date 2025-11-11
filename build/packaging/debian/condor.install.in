@@ -5,13 +5,13 @@ usr/bin/classad_eval
 usr/bin/classad_functional_tester
 usr/bin/classad_version
 usr/bin/condor_adstash
-usr/bin/condor_annex
 usr/bin/condor_check_config
 usr/bin/condor_check_password
 usr/bin/condor_check_userlogs
 usr/bin/condor_config_val
 usr/bin/condor_continue
 usr/bin/condor_dagman
+usr/bin/condor_dag_checker
 usr/bin/condor_docker_enter
 usr/bin/condor_drain
 usr/bin/condor_evicted_files
@@ -20,6 +20,7 @@ usr/bin/condor_gather_info
 usr/bin/condor_history
 usr/bin/condor_hold
 usr/bin/condor_job_router_info
+usr/bin/condor_librarian
 usr/bin/condor_manifest
 usr/bin/condor_now
 usr/bin/condor_nsenter
@@ -62,6 +63,8 @@ usr/bin/condor_diagnostics
 usr/bin/condor_transfer_data
 usr/bin/condor_transform_ads
 usr/bin/condor_update_machine_ad
+usr/bin/condor_upgrade_check
+usr/bin/condor_join_pool
 usr/bin/condor_userlog
 usr/bin/condor_userlog_job_counter
 usr/bin/condor_userprio
@@ -83,10 +86,12 @@ usr/libexec/condor/adstash
 usr/libexec/condor/annex
 usr/libexec/condor/box_plugin.py
 usr/libexec/condor/ce-audit.so
+usr/libexec/condor/check-url
 usr/libexec/condor/cleanup_locally_mounted_checkpoint
 usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
 usr/libexec/condor/common-cloud-attributes-google.py
+usr/libexec/condor/condor_annex
 usr/libexec/condor/condor_chirp
 usr/libexec/condor/condor_container_launcher.sh
 usr/libexec/condor/condor_credmon_oauth.wsgi
@@ -99,6 +104,7 @@ usr/libexec/condor/condor_kflops
 usr/libexec/condor/condor_limits_wrapper.sh
 usr/libexec/condor/condor_mips
 usr/libexec/condor/condor_pid_ns_init
+usr/libexec/condor/condor_diagnostic_send_ep_logs
 usr/libexec/condor/condor_power_state
 usr/libexec/condor/condor_rooster
 usr/libexec/condor/condor_schedd.init
@@ -116,8 +122,8 @@ usr/libexec/condor/exit_37.sif
 usr/libexec/condor/gdrive_plugin.py
 usr/libexec/condor/get_orted_cmd.sh
 usr/libexec/condor/htcondor_docker_test
+usr/libexec/condor/htcondor_docker_test_arm
 usr/libexec/condor/interactive.sub
-usr/libexec/condor/libclassad_python*.so
 usr/libexec/condor/linux_kernel_tuning
 usr/libexec/condor/onedrive_plugin.py
 usr/libexec/condor/orted_launcher.sh
@@ -137,6 +143,7 @@ usr/sbin/condor_credd
 usr/sbin/condor_credmon_krb
 usr/sbin/condor_credmon_oauth
 usr/sbin/condor_credmon_vault
+usr/sbin/condor_docker_pat_producer
 usr/sbin/condor_fetchlog
 usr/sbin/condor_ft-gahp
 usr/sbin/condor_gridmanager
@@ -171,7 +178,7 @@ usr/sbin/rvgahp_server
 usr/sbin/scitokens_credential_producer
 usr/lib/python3/* usr/lib/python3/
 usr/libexec/blahp/* usr/libexec/blahp/
-#if defined (BULLSEYE) || defined (FOCAL)
+#if defined(BULLSEYE) || defined(FOCAL)
 src/condor_examples/condor.service lib/systemd/system/
 #else
 src/condor_examples/condor.service usr/lib/systemd/system/

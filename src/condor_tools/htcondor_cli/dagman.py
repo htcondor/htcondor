@@ -7,6 +7,7 @@ import tempfile
 import time
 import shutil
 import math
+import argparse
 
 from htcondor2._utils.ansi import Color, colorize
 from datetime import datetime
@@ -29,7 +30,7 @@ def FormatTime(time):
     days_display = ""
     if int(parts[0]) > 0:
         days_display = f"{parts[0]} days" if int(parts[0]) > 1 else "1 day"
-    return f"{days_display}{parts[1]}"
+    return f"{days_display} and {parts[1]}"
 
 class Submit(Verb):
     """
@@ -138,8 +139,8 @@ class Status(Verb):
             # Check update time
             max_update_time = 600
             update_time = datetime.now() - datetime.fromtimestamp(ad.get("DAG_AdUpdateTime", datetime.now()))
-            if update_time.seconds > max_update_time:
-                logger.info(colorize(f"Warning: DAG information for ID {dag_id} has not been updated for {FormatTime(update_time.seconds)}.", Color.RED))
+            if update_time.total_seconds() > max_update_time:
+                logger.info(colorize(f"Warning: DAG information for ID {dag_id} has not been updated for {FormatTime(update_time.total_seconds())}.", Color.RED))
                 logger.info(colorize("         Information may be outdated. This indicates a possible issue with the DAG job.", Color.RED))
             # Check recovery
             if int(dag[0]["DAG_InRecovery"]) == 1:
@@ -150,13 +151,13 @@ class Status(Verb):
                 # Check if halted
                 if dag[0]["DAG_Status"] == 6:
                     dag_state = "halted"
-                logger.info(f"DAG {dag_id} [{dag_file}] has been {dag_state} for {FormatTime(job_running_time.seconds)}")
+                logger.info(f"DAG {dag_id} [{dag_file}] has been {dag_state} for {FormatTime(job_running_time.total_seconds())}")
         elif JobStatus[dag[0]['JobStatus']] == "COMPLETED":
             completion_date = datetime.fromtimestamp(dag[0]["EnteredCurrentStatus"]).strftime("%Y-%m-%d %H:%M:%S")
             logger.info(f"DAG {dag_id} [{dag_file}] completed {completion_date}")
         else:
             job_status_time = datetime.now() - datetime.fromtimestamp(dag[0]["EnteredCurrentStatus"])
-            logger.info(f"DAG {dag_id} [{dag_file}] has been {job_status[dag[0]['JobStatus']]} for {FormatTime(job_status_time.seconds)}")
+            logger.info(f"DAG {dag_id} [{dag_file}] has been {job_status[dag[0]['JobStatus']]} for {FormatTime(job_status_time.total_seconds())}")
             if JobStatus[dag[0]['JobStatus']] == "HELD":
                 logger.info(f"Hold Reason: {dag[0]['HoldReason']}")
 
@@ -246,6 +247,70 @@ class Status(Verb):
             logger.info(f"DAG {dagman_status[dag[0]['DAG_Status']]}{display_portion}")
             logger.info(f"{bar} DAG is {complete:.2f}% complete.")
 
+
+class Halt(Verb):
+    """
+    Halt the progress of a DAG specified by a DAG id.
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
+        },
+        "reason": {
+            "args": ("-r", "--reason"),
+            "type": str,
+            "action": "store",
+            "default": None,
+            "metavar": "MESSAGE",
+            "help": "Reason for halting specified DAG",
+        },
+        # Hidden option to completely pause a DAG
+        "pause": {
+            "args":("-p", "--pause"),
+            "action": "store_true",
+            "default": False,
+            "help": argparse.SUPPRESS,
+        }
+    }
+
+    def __init__(self, logger, dag_id, **options):
+        dm = htcondor.DAGMan(dag_id)
+
+        success, msg = dm.halt(options["reason"], options["pause"])
+
+        if not success:
+            raise RuntimeError(msg)
+
+        logger.info(msg)
+
+
+class Resume(Verb):
+    """
+    Resume progress of a halted DAG specified by a DAG id.
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
+        },
+    }
+
+    def __init__(self, logger, dag_id, **options):
+        dm = htcondor.DAGMan(dag_id)
+
+        success, msg = dm.resume()
+
+        if not success:
+            raise RuntimeError(msg)
+
+        logger.info(msg)
+
+
 class DAG(Noun):
     """
     Run operations on HTCondor DAGs
@@ -257,6 +322,12 @@ class DAG(Noun):
     class status(Status):
         pass
 
+    class halt(Halt):
+        pass
+
+    class resume(Resume):
+        pass
+
     """
     class resources(Resources):
         pass
@@ -264,7 +335,7 @@ class DAG(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status]
+        return [cls.submit, cls.status, cls.halt, cls.resume]
 
 
 class DAGMan:

@@ -8,6 +8,7 @@
 #include <condor_attributes.h>
 #include <subsystem_info.h>
 #include "VolumeManager.h"
+#include "condor_universe.h"
 
 #ifdef LINUX
 
@@ -32,11 +33,13 @@ struct LVMReportFilter {
 
     LVMReportFilter& AddLV(const std::string& lv) { lv_names.insert(lv); return *this; }
     LVMReportFilter& SkipThinpool() { ignore_thinpool = true; return *this; }
+    LVMReportFilter& QueryNonCondorLVs(bool wclv = false) { want_condor = wclv; return *this; }
 
     std::set<std::string> lv_names{};
     std::string volume_group{};
     std::string thinpool{};
     bool ignore_thinpool{false};
+    bool want_condor{true};
 };
 
 struct LVMReportItem {
@@ -48,9 +51,33 @@ struct LVMReportItem {
     bool encrypted{false}; // Only normal LVs can be encrypted (non-thinpool)
 };
 
-static std::string DevicePath(const std::string& vg, const std::string& lv, bool add_suffix=false) {
-    std::string suffix = add_suffix ? ENCRYPT_SUFFIX : "";
-    return std::string("/dev/mapper/") + vg + "-" + lv + suffix;
+// All device paths are at /dev/mapper
+// Encrypt Device: <volume group>-<logical volume>-enc
+//    Note: We control this naming scheme
+// LVM LV device: <volume group>-<logical volume>
+//    Note: Any hyphens in VG/LV name are replaced w/ double hyphens
+static std::string DevicePath(const std::string& vg, const std::string& lv, bool encrypted=false) {
+    std::string path("/dev/mapper/");
+    if (encrypted) { // Hand made encrypted device name
+        return path + vg + "-" + lv + ENCRYPT_SUFFIX;
+    }
+
+    // Replace every hyphen w/ double hyphens as LVM does
+    // i.e. '-' -> '--' & '--' -> '----'
+    std::string modified_vg(vg);
+    replace_str(modified_vg, "-", "--");
+
+    std::string modified_lv(lv);
+    replace_str(modified_lv, "-", "--");
+
+    // Return LVM LV device
+    return path + modified_vg + "-" + modified_lv;
+}
+
+static bool DeviceExists(const std::string& vg, const std::string& lv, bool encrypted = false) {
+    struct stat statbuf;
+    std::string device = DevicePath(vg, lv, encrypted);
+    return (stat(device.c_str(), &statbuf) == 0);
 }
 
 VolumeManager::VolumeManager()
@@ -184,7 +211,7 @@ VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, 
 
     // Create filesystem in LV
     std::string device_path = DevicePath(m_vg_name, m_volume, m_encrypt);
-    if ( ! VolumeManager::CreateFilesystem(m_volume, device_path, err, m_timeout)) {
+    if ( ! VolumeManager::CreateFilesystem(device_path, err, m_timeout)) {
         return false;
     }
 
@@ -228,9 +255,8 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
     dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume %s.\n", lv_name.c_str());
     if (!lv_name.empty() && !m_volume_group_name.empty()) {
         if (is_encrypted == -1 /*Unknown*/) {
-            struct stat statbuf;
-            int ret = stat(DevicePath(m_volume_group_name, lv_name, true).c_str(), &statbuf);
-            is_encrypted = (int)(ret == 0);
+            // Check for encrypted LV device
+            is_encrypted = DeviceExists(m_volume_group_name, lv_name, true);
         }
         return RemoveLV(lv_name, m_volume_group_name, err, (bool)is_encrypted, m_cmd_timeout);
     }
@@ -254,6 +280,13 @@ isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
         if (machineAd.LookupBool(ATTR_HAS_DOCKER, hasDocker) && hasDocker) {
             return false;
         }
+    }
+
+    int jobUniverse = 0;
+    if ( ! jobAd.LookupInteger(ATTR_JOB_UNIVERSE, jobUniverse) || jobUniverse == CONDOR_UNIVERSE_VM) {
+        // VM Universe is not compatible
+        // For extra safety assume non-compatible if universe attr missing
+        return false;
     }
 
     // All good
@@ -342,7 +375,7 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
 
 
 bool
-VolumeManager::CreateFilesystem(const std::string &label, const std::string &devname, CondorError &err, int timeout)
+VolumeManager::CreateFilesystem(const std::string &devname, CondorError &err, int timeout)
 {
     dprintf(D_FULLDEBUG, "Creating new filesystem for device %s.\n", devname.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -358,7 +391,7 @@ VolumeManager::CreateFilesystem(const std::string &label, const std::string &dev
     args.AppendArg("-m");
     args.AppendArg("0");
     args.AppendArg("-L");
-    args.AppendArg(label);
+    args.AppendArg("HTCondorLV_FS");
     args.AppendArg(devname);
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
@@ -789,7 +822,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
                         dev, mnt);
                 int r = umount(mnt);
                 if (r != 0) {
-                    dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
+                    err.pushf("VolumeManager", 12, "Failed to unmount %s (%d): %s", mnt, errno, strerror(errno));
                     fclose(f);
                     return -1;
                 }
@@ -799,7 +832,17 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         fclose(f);
     }
 
-    if (encrypted) { (void)RemoveLVEncryption(lv_name, vg_name, err, timeout); }
+    // Don't run command if encrypted device does not exist
+    if (encrypted && DeviceExists(vg_name, lv_name, true)) {
+        (void)RemoveLVEncryption(lv_name, vg_name, err, timeout);
+    }
+
+    // Don't run a command if the LV device doesn't exists
+    if ( ! DeviceExists(vg_name, lv_name)) {
+        dprintf(D_FULLDEBUG, "Logical volume %s does not exist... nothing to remove\n",
+                lv_name.c_str());
+        return 0;
+    }
 
     dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name.c_str());
 
@@ -821,6 +864,8 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         err.pushf("VolumeManager", 12, "Failed to delete logical volume %s (exit status %d): %s",
                   lv_name.c_str(), exit_status, cmdErr.c_str());
         // Distinguish between LV not found (2) and other errors (-1)
+        // Still do this check in case something else removed lv between
+        // if device exists and the command is run
         return cmdErr.find("Failed to find logical volume") != std::string::npos ? 2 : -1;
     }
     return 0;
@@ -923,6 +968,12 @@ extractReportVal(const std::string& data, std::string& value) { // data: LM2_Opt
 }
 
 static bool
+reportWantLV(const std::string& tags, const bool wantCondorLVs) {
+    bool isCondorLV = (tags.find(CONDOR_LV_TAG) != std::string::npos);
+    return isCondorLV == wantCondorLVs;
+}
+
+static bool
 getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMReportFilter& filter, int timeout, bool query_lvs=true)
 {
     std::string exe = query_lvs ? "lvs" : "vgs";
@@ -982,7 +1033,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
             if (!extractReportVal(info[0], vg) || vg != filter.volume_group ||
                 !extractReportVal(info[1], item.name) || (!filter.lv_names.empty() && !filter.lv_names.contains(item.name)) ||
                 !extractReportVal(info[2], pool) || (filter.thinpool != item.name && pool != filter.thinpool) || (filter.ignore_thinpool && filter.thinpool == item.name) ||
-                !extractReportVal(info[3], tags) || (filter.thinpool != item.name && tags.find(CONDOR_LV_TAG) == std::string::npos) ||
+                !extractReportVal(info[3], tags) || (filter.thinpool != item.name && !reportWantLV(tags, filter.want_condor)) ||
                 !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data))
             {
                 continue;
@@ -1033,60 +1084,87 @@ getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, u
     return true;
 }
 
-
 bool
-VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
+VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint64_t& non_condor_bytes, CondorError& err)
 {
-    if (m_volume_group_name.empty() || (m_use_thin_provision && m_pool_lv_name.empty())) {return false;}
-    return GetPoolSize(*this, used_bytes, total_bytes, err);
-}
-
-
-bool
-VolumeManager::GetPoolSize(const VolumeManager& info, uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
-{
-    bool thin = info.IsThin();
-    std::vector<LVMReportItem> report;
-    LVMReportFilter filter(info.GetVG());
-    if (thin) {
-        filter.thinpool = info.GetPool();
-        filter.AddLV(info.GetPool());
+    if (m_volume_group_name.empty() || (m_use_thin_provision && m_pool_lv_name.empty())) {
+        return false;
     }
 
-    if ( ! getLVMReport(report, err, filter, info.GetTimeout(), thin)) {
+    bool thin = IsThin();
+    std::vector<LVMReportItem> report;
+    LVMReportFilter filter(GetVG());
+    if (thin) {
+        filter.thinpool = GetPool();
+        filter.AddLV(GetPool());
+    }
+
+    if ( ! getLVMReport(report, err, filter, GetTimeout(), thin)) {
         return false;
     }
 
     if (report.size() != 1) {
-        std::string debug_name = info.GetVG();
-        if (thin) { debug_name += "/" + info.GetPool(); }
+        std::string debug_name = GetBackingDevice();
         err.pushf("VolumeManager", 18, "LVM Report for %s returned %zu items instead of just one",
                   debug_name.c_str(), report.size());
         return false;
     }
 
+    // Set NonCondorUsage to the used bytes (total - free) until we actually count the total non-condor lv's
     LVMReportItem& provision = report[0];
     if (thin) {
-        if ( ! getTotalUsedBytes(provision.size, provision.data, total_bytes, used_bytes, err)) {
+        uint64_t used_bytes = 0;
+        if ( ! getTotalUsedBytes(provision.size, provision.data, detected_bytes, used_bytes, err)) {
             return false;
         }
+        free_bytes = detected_bytes - used_bytes;
     } else {
-        uint64_t vg_bytes_free;
         try {
-            vg_bytes_free = std::stoll(provision.data);
+            free_bytes = std::stoll(provision.data);
         } catch(...) {
             err.pushf("VolumeManager", 18, "Failed to convert VG free space to integer: %s",
                       provision.data.c_str());
             return false;
         }
         try {
-            total_bytes = std::stoll(provision.size);
+            detected_bytes = std::stoll(provision.size);
         } catch(...) {
             err.pushf("VolumeManager", 18, "Failed to convert VG total size to integer: %s",
                       provision.size.c_str());
             return false;
         }
-        used_bytes = total_bytes - vg_bytes_free;
+    }
+
+    // NOTE: We are querying for associated non-condor LVs rather than
+    //       using the used_bytes so that leaked condor LVs don't take
+    //       away from the available bytes.
+
+    SetTotalDisk(detected_bytes);
+
+    report.clear();
+    err.clear();
+
+    filter.lv_names.clear();
+    filter.QueryNonCondorLVs().SkipThinpool();
+
+    // NOTE: Failures here make things wonky but aren't critical failures
+    if ( ! getLVMReport(report, err, filter, GetTimeout())) {
+        dprintf(D_STATUS, "Warning: Failed to query non-condor LVs: %s\n",
+                err.getFullText().c_str());
+        err.clear();
+    } else {
+        for (const auto& lv : report) {
+            try {
+                uint64_t used = std::stoll(lv.size);
+                AddNonCondorUsage(used);
+            } catch (...) {
+                dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
+                        lv.size.c_str(), lv.name.c_str());
+            }
+        }
+
+        // True calculated NonCondorUsage (if conversions didn't fail)
+        non_condor_bytes = m_non_condor_usage;
     }
 
     return true;
@@ -1175,7 +1253,7 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
 
 
 bool
-VolumeManager::CleanupLVs() {
+VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* leaked) {
     dprintf(D_FULLDEBUG, "Cleaning up all logical volumes associated with HTCondor.\n");
 
     CondorError err;
@@ -1184,8 +1262,7 @@ VolumeManager::CleanupLVs() {
     filter.SkipThinpool();
 
     if ( ! getLVMReport(report, err, filter, m_cmd_timeout)) {
-        std::string debug_name = m_volume_group_name;
-        if (m_use_thin_provision) { debug_name += "/" + m_pool_lv_name; }
+        std::string debug_name = GetBackingDevice();
         dprintf(D_ERROR, "Error: Failed to list logical volumes during cleanup of %s: %s\n",
                          debug_name.c_str(), err.getFullText().c_str());
         return false;
@@ -1205,10 +1282,24 @@ VolumeManager::CleanupLVs() {
             dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
                     lv.name.c_str(), err.getFullText().c_str());
             success = false;
+            if (leaked) { leaked->emplace_back(lv.name, lv.encrypted); }
         }
     }
 
     return success;
+}
+
+
+int VolumeManager::CountLVDevices(const std::string& lv) {
+    int count = 0;
+    if ( ! lv.empty() && ! m_volume_group_name.empty()) {
+        // Check for normal LV device
+        count += (int)DeviceExists(m_volume_group_name, lv);
+        // Check for encrypted LV device
+        count += (int)DeviceExists(m_volume_group_name, lv, true);
+    }
+    dprintf(D_FULLDEBUG, "Counted %d devices associated with LV %s\n", count, lv.c_str());
+    return count;
 }
 
 
@@ -1232,11 +1323,10 @@ VolumeManager::IsSetup() {
 
     if (report[0].name != m_volume_group_name) { lvm_setup = false; }
 
-    if ( ! m_pool_lv_name.empty()) {
-        struct stat statbuf;
-        if (stat(DevicePath(m_volume_group_name, m_pool_lv_name).c_str(), &statbuf)) {
-            lvm_setup = false;
-        }
+    // If we are configured with a thinpool and found the volume group
+    if ( ! m_pool_lv_name.empty() && lvm_setup) {
+        // Check to see thinpool device exists
+        lvm_setup = DeviceExists(m_volume_group_name, m_pool_lv_name);
     }
 
     return lvm_setup;
@@ -1270,6 +1360,8 @@ VolumeManager::AdvertiseInfo(ClassAd* ad){
 
     if ( ! m_loopdev_name.empty()) { ad->Assign(ATTR_LVM_USE_LOOPBACK, true); }
     if (m_use_thin_provision) { ad->Assign(ATTR_LVM_USE_THIN_PROVISION, true); }
+
+    ad->Assign(ATTR_LVM_BACKING_STORE, GetBackingDevice());
 }
 
 
@@ -1292,12 +1384,16 @@ int VolumeManager::CleanupLV(const std::string& /*lv_name*/, CondorError& /*err*
     return 0;
 }
 
-bool VolumeManager::CleanupLVs() {
+bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
     return true;
 }
 
-bool VolumeManager::GetPoolSize(uint64_t& /*used_bytes*/, uint64_t& /*total_bytes*/, CondorError& /*err*/) {
+bool VolumeManager::GetPoolSize(uint64_t& /*detected_bytes*/, uint64_t& /*free_bytes*/, uint64_t& /*non_condor_bytes*/, CondorError& /*err*/) {
     return false;
+}
+
+int VolumeManager::CountLVDevices(const std::string& /*lv*/){
+    return 0;
 }
 
 #endif

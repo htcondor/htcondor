@@ -21,25 +21,11 @@
 #include "classad/common.h"
 #include "classad/classad.h"
 
-using std::string;
-using std::vector;
-using std::pair;
-
-
 namespace classad {
-
-AttributeReference::
-AttributeReference()
-{
-	parentScope = NULL;
-	expr = NULL;
-	absolute = false;
-}
-
 
 // a private ctor for use in significant expr identification
 AttributeReference::
-AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
+AttributeReference( ExprTree *tree, const std::string &attrname, bool absolut )
 {
 	parentScope = NULL;
 	attributeStr = attrname;
@@ -48,7 +34,7 @@ AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
 }
 
 AttributeReference::
-AttributeReference(const AttributeReference &ref)
+AttributeReference(const AttributeReference &ref) : ExprTree()
 {
     CopyFrom(ref);
     return;
@@ -163,7 +149,7 @@ _SetParentScope( const ClassAd *parent )
 
 
 void AttributeReference::
-GetComponents( ExprTree *&tree, string &attr, bool &abs ) const
+GetComponents( ExprTree *&tree, std::string &attr, bool &abs ) const
 {
 	tree = expr;
 	attr = attributeStr;
@@ -411,7 +397,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		}
 
 		if( val.IsListValue( ) ) {
-			vector< ExprTree *> eVector;
+			std::vector< ExprTree *> eVector;
 				// iterate through exprList and apply attribute reference
 				// to each exprTree
 			for (const auto currExpr: *adList) { 
@@ -489,7 +475,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 
 
 AttributeReference *AttributeReference::
-MakeAttributeReference(ExprTree *tree, const string &attrStr, bool absolut)
+MakeAttributeReference(ExprTree *tree, const std::string &attrStr, bool absolut)
 {
 	return( new AttributeReference( tree, attrStr, absolut ) );
 }

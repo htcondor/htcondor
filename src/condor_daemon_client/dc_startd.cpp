@@ -33,8 +33,6 @@
 DCStartd::DCStartd( const char* tName, const char* tPool ) 
 	: Daemon( DT_STARTD, tName, tPool )
 {
-	claim_id = NULL;
-	extra_ids = NULL;
 }
 
 
@@ -47,33 +45,19 @@ DCStartd::DCStartd( const char* tName, const char* tPool, const char* tAddr,
 	}
 		// claim_id isn't initialized by Daemon's constructor, so we
 		// have to treat it slightly differently 
-	claim_id = NULL;
 	if( tId ) {
-		claim_id = strdup( tId );
+		claim_id = tId;
 	}
 
-	extra_ids = NULL;
-	if( ids && (strlen(ids) > 0)) {
-		extra_ids = strdup( ids );
+	if( ids ) {
+		extra_ids = ids;
 	}
 }
 
 DCStartd::DCStartd( const ClassAd *ad, const char *tPool )
-	: Daemon(ad,DT_STARTD,tPool),
-	  claim_id(NULL), extra_ids(NULL)
+	: Daemon(ad,DT_STARTD,tPool)
 {
 }
-
-DCStartd::~DCStartd( void )
-{
-	if( claim_id ) {
-		free(claim_id);
-	}
-	if( extra_ids ) {
-		free(extra_ids);
-	}
-}
-
 
 bool
 DCStartd::setClaimId( const char* id ) 
@@ -81,11 +65,7 @@ DCStartd::setClaimId( const char* id )
 	if( ! id ) {
 		return false;
 	}
-	if( claim_id ) {
-		free(claim_id);
-		claim_id = NULL;
-	}
-	claim_id = strdup( id );
+	claim_id = id;
 	return true;
 }
 
@@ -314,7 +294,13 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim(
+	ClassAd const *req_ad,
+	char const *description,
+	char const *scheduler_addr,
+	int alive_interval,
+	requestClaimOptions & opts,
+	int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -322,12 +308,12 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	ASSERT( checkClaimId() );
 	ASSERT( checkAddr() );
 
-	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, extra_ids, req_ad, description, scheduler_addr, alive_interval );
+	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id.c_str(), extra_ids.c_str(), req_ad, description, scheduler_addr, alive_interval );
 
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
 
-	if (claim_pslot) {
+	if (opts.claim_pslot) {
 		// TODO Currently, we always request the pslot's max lease time
 		//   (msg->m_pslot_claim_lease=0).
 		//   Consider adding option to let client request shorter lease time.
@@ -340,12 +326,14 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	req_ad->LookupString("WorkingCM", working_cm);
 	if (!working_cm.empty()) {
 		msg->m_num_dslots = 0;
+	} else {
+		msg->m_num_dslots = opts.num_dslots;
 	}
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
 
 		// if this claim is associated with a security session
-	ClaimIdParser cid(claim_id);
+	ClaimIdParser cid(claim_id.c_str());
 	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) &&
 		cid.secSessionInfo()[0] != '\0')
 	{
@@ -359,10 +347,10 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 
 bool 
-DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
-			 graceful ? "graceful" : "forceful" );
+		got_job_done ? "job_done" : (graceful ? "graceful" : "forceful" ));
 
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
@@ -376,12 +364,26 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		return false;
 	}
 
+	ClaimIdParser cidp(claim_id.c_str());
+
+	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+	if (got_job_done) {
+		CondorVersionInfo cvi = cidp.secSessionInfoVersion();
+		// we need a newish Startd in order to send DEACTIVATE_CLAIM_JOB_DONE
+		if (cvi.getMajorVer() <= 0) {
+			dprintf(D_ZKM, "Startd version is not known, will use %s\n", getCommandStringSafe(cmd));
+		} else {
+			if (cvi.built_since_version(24,7,0)) {
+				cmd = DEACTIVATE_CLAIM_JOB_DONE;
+				dprintf(D_ZKM, "Startd version is known and job_has_exited, will use JOB_DONE\n");
+			}
+		}
+	}
+
 		// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
 	char const *sec_session = cidp.secSessionId();
 
 	if (IsDebugLevel(D_COMMAND)) {
-		int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
 		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
@@ -396,21 +398,11 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
-	int cmd;
-	if( graceful ) {
-		cmd = DEACTIVATE_CLAIM;
-	} else {
-		cmd = DEACTIVATE_CLAIM_FORCIBLY;
-	}
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
 		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send command ";
-		if( graceful ) {
-			err += "DEACTIVATE_CLAIM";
-		} else {
-			err += "DEACTIVATE_CLAIM_FORCIBLY";
-		}
+		err += getCommandStringSafe(cmd);
 		err += " to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		return false;
@@ -451,9 +443,13 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 
 int
 DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
-						 ReliSock** claim_sock_ptr ) 
+						 ReliSock** claim_sock_ptr, ClassAd * replyAd )
 {
 	int reply;
+	ClassAd dummyAd;
+	bool want_failure_ad = false;
+	const char * ATTR_send_failure_ad = "_condor_send_activation_failure_ad";
+
 	dprintf( D_FULLDEBUG, "Entering DCStartd::activateClaim()\n" );
 
 	setCmdStr( "activateClaim" );
@@ -465,15 +461,20 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 			// we'll give them a pointer to the real object.
 		*claim_sock_ptr = NULL;
 	}
+	if (replyAd) {
+		want_failure_ad = true;
+		replyAd->Clear();
+	}
+	else { replyAd = &dummyAd; }
 
-	if( ! claim_id ) {
+	if( claim_id.empty() ) {
 		newError( CA_INVALID_REQUEST,
-				  "DCStartd::activateClaim: called with NULL claim_id, failing" );
+				  "DCStartd::activateClaim: called with empty claim_id, failing" );
 		return CONDOR_ERROR;
 	}
 
 		// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 	char const *sec_session = cidp.secSessionId();
 
 	Sock* tmp;
@@ -495,12 +496,17 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return CONDOR_ERROR;
 	}
+
+	if (want_failure_ad) { job_ad->Assign(ATTR_send_failure_ad, true); }
 	if( ! putClassAd(tmp, *job_ad) ) {
+		if (want_failure_ad) { job_ad->Delete(ATTR_send_failure_ad); }
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::activateClaim: Failed to send job ClassAd to the startd" );
 		delete tmp;
 		return CONDOR_ERROR;
 	}
+	if (want_failure_ad) { job_ad->Delete(ATTR_send_failure_ad); }
+
 	if( ! tmp->end_of_message() ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::activateClaim: Failed to send EOM to the startd" );
@@ -508,19 +514,22 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		return CONDOR_ERROR;
 	}
 
+
 		// Now, try to get the reply
 	tmp->decode();
-	if( !tmp->code(reply) || !tmp->end_of_message()) {
+	if (tmp->code(reply) &&
+		(tmp->peek_end_of_message() || getClassAd(tmp, *replyAd)) &&
+		tmp->end_of_message())
+	{
+		dprintf( D_FULLDEBUG, "DCStartd::activateClaim: successfully sent command, reply is: %d%s\n",
+			reply, replyAd->size() ? " (with ad)" : "" );
+	} else {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
 		err += _addr;
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
-		delete tmp;
-		return CONDOR_ERROR;
+		reply = CONDOR_ERROR;
 	}
-
-	dprintf( D_FULLDEBUG, "DCStartd::activateClaim: "
-			 "successfully sent command, reply is: %d\n", reply ); 
 
 	if( reply == OK && claim_sock_ptr ) {
 		*claim_sock_ptr = (ReliSock*)tmp;
@@ -753,14 +762,14 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 
 	setCmdStr( "delegateX509Proxy" );
 
-	if( ! claim_id ) {
+	if( claim_id.empty() ) {
 		newError( CA_INVALID_REQUEST,
-				  "DCStartd::delegateX509Proxy: Called with NULL claim_id" );
+				  "DCStartd::delegateX509Proxy: Called with empty claim_id" );
 		return CONDOR_ERROR;
 	}
 
 		// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 
 	//
 	// 1) begin the DELEGATE_GSI_CRED_STARTD command
@@ -927,7 +936,7 @@ DCStartd::_suspendClaim( )
 	}
 
 	// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 	char const *sec_session = cidp.secSessionId();
 	
 	if (IsDebugLevel(D_COMMAND)) {
@@ -985,7 +994,7 @@ DCStartd::_continueClaim( )
 	}
 
 	// if this claim is associated with a security session
-	ClaimIdParser cidp(claim_id);
+	ClaimIdParser cidp(claim_id.c_str());
 	char const *sec_session = cidp.secSessionId();
 	
 	if (IsDebugLevel(D_COMMAND)) {
@@ -1072,7 +1081,7 @@ DCStartd::getAds( ClassAdList &adsList )
 bool
 DCStartd::checkClaimId( void )
 {
-	if( claim_id ) {
+	if( !claim_id.empty() ) {
 		return true;
 	}
 	std::string err_msg;

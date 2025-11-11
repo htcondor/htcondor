@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -58,9 +58,13 @@ void Usage(const char* name, int iExitCode)
 		"\t-file <file>\t\tRead history data from specified file\n"
 		"\t-search <path>\t\tRead history data from all matching HTCondor time rotated files\n"
 		"\t-local\t\t\tRead history data from the configured files\n"
+		"\t-schedd\t\t\tRead history data from Schedd (default)"
 		"\t-startd\t\t\tRead history data for the Startd\n"
 		"\t-epochs\t\t\tRead epoch (per job run instance) history data\n"
+		"\t-transfer-history\tRead historical transfer ClassAds from the epoch history\n"
+		"\t-daemon\t\t\tRead historical Daemon ClassAds. Note: Only contains Schedd Ads currently\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
+		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
 		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
@@ -105,11 +109,12 @@ void Usage(const char* name, int iExitCode)
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
+		"\t-extract <file>\t\tCopy historical ClassAd entries into the specified file\n"
 		, name);
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false, bool read_dir=false);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -120,6 +125,32 @@ static void printJob(ClassAd & ad);
 
 static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, classad::References & attrs, const char * streamid, bool is_filename);
 static int getDisplayWidth();
+//------------------------------------------------------------------------
+// Default historical ClassAd record formats and necessary attribute projections
+
+const char * const defaultJob_PrintFormat = "SELECT\n"
+"ClusterId         AS ' ID         '  WIDTH AUTO PRINTAS JOB_ID\n"
+"Owner             AS OWNER           WIDTH  -14 PRINTAS OWNER OR ??\n"
+"QDate             AS '  SUBMITTED'   WIDTH   11 PRINTAS QDATE OR ??\n"
+"RemoteWallClockTime ?:(RemoteUserCpu?:0) AS '  RUN_TIME  ' WIDTH 12 PRINTF %T\n"
+"JobStatus         AS ST                         PRINTAS JOB_STATUS\n"
+"CompletionDate    AS '  COMPLETED'   WIDTH   11 PRINTAS QDATE\n"
+"Cmd               AS CMD             WIDTH    0 PRINTAS JOB_DESCRIPTION\n"
+"SUMMARY NONE\n";
+
+const char* const defaultScheddAd_PrintFormat = "SELECT\n"
+"RecordWriteDate  AS 'TIMESTAMP  ' WIDTH -11 PRINTAS QDATE OR ??\n"
+"RecentDaemonCoreDutyCycle?:0 * 100 AS DUTY_CYCLE  PRINTF '%7.2f%%'\n"
+"TotalRunningJobs AS RunningJobs  PRINTF %11d\n"
+"TotalIdleJobs    AS '  IdleJobs' PRINTF %10d\n"
+"TotalHeldJobs    AS '  HeldJobs' PRINTF %10d\n"
+"TransferQueueNumDownloading        AS 'Download'  PRINTF %8d\n"
+"TransferQueueNumWaitingToDownload  AS    Waiting  PRINTF %7d\n"
+"FileTransferMBWaitingToDownload    AS  WaitingMB  PRINTF %9.2f\n"
+"TransferQueueNumUploading          AS '  Upload'  PRINTF %8d\n"
+"TransferQueueNumWaitingToUpload    AS    Waiting  PRINTF %7d\n"
+"FileTransferMBWaitingToUpload      AS  WaitingMB  PRINTF %9.2f\n"
+"SUMMARY NONE\n";
 
 //------------------------------------------------------------------------
 //Structure to hold info needed for ending search once all matches are found
@@ -136,6 +167,7 @@ struct BannerInfo {
 	int runId = -1;         //Job epoch < 0 = no epochs
 	std::string owner = ""; //Job Owner
 	std::string ad_type;    //Ad Type (Not equivalent to MyType)
+	std::string line;       // Line parsed for current banner info
 };
 // What kind of source file we are reading ads from
 enum HistoryRecordSource {
@@ -143,10 +175,17 @@ enum HistoryRecordSource {
 	HRS_SCHEDD_JOB_HIST,    //Standard job history from Schedd
 	HRS_STARTD_HIST,        //Standard job history from a startd
 	HRS_JOB_EPOCH,          //Job Epoch (run instance) history
+	HRS_DAEMON_HIST,        //Historical daemon ads (note currently only Schedd)
 };
 
 //Source information: Holds Source knob in above enum order
-static const char* source_knobs[] = {"HISTORY","STARTD_HISTORY","JOB_EPOCH_HISTORY"};
+static const char* source_knobs[] = {
+	"HISTORY",
+	"STARTD_HISTORY",
+	"JOB_EPOCH_HISTORY",
+	"DAEMON_HISTORY",
+};
+
 //------------------------------------------------------------------------
 static  bool longformat=false;
 static  bool diagnostic = false;
@@ -178,6 +217,11 @@ static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
 static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
+static std::set<std::string> ALL_XFER_TYPES = {"INPUT", "OUTPUT", "CHECKPOINT"};
+
+static std::deque<std::string> historyCopyAds;
+static const char* extractionFile = nullptr;
+static FILE* extractionFP = nullptr;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -254,11 +298,14 @@ main(int argc, const char* argv[])
   const char* searchPath=NULL;
   const char* setRecordSrcFlag=NULL;
   const char * pcolon=NULL;
+  std::string subsys;
   auto_free_ptr matchFileName;
   auto_free_ptr searchDirectory;
 
   bool hasSince = false;
   bool hasForwards = false;
+  bool transferAds = false;
+  bool limitSet = false;
 
   GenericQuery constraint; // used to build a complex constraint.
   ExprTree *constraintExpr=NULL;
@@ -325,6 +372,7 @@ main(int argc, const char* argv[])
             exit(1);
         }
         specifiedMatch = atoi(argv[i]);
+        limitSet = true;
     }
 
     else if (is_dash_arg_prefix(argv[i],"scanlimit",4)) {
@@ -371,7 +419,7 @@ main(int argc, const char* argv[])
 		SetRecordSource(HRS_SCHEDD_JOB_HIST, setRecordSrcFlag, "-schedd");
 		setRecordSrcFlag = argv[i];
 	}
-	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
+	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) { // Purposefully undocumented (used by history helper)
 		streamresults = true;
 		streamresults_specified = true;
 		if (pcolon) {
@@ -382,7 +430,7 @@ main(int argc, const char* argv[])
 			}
 		}
 	}
-	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) {
+	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) { // Purposefully undocumented (used by history helper)
 
 		// Start writing to the ToolLog
 		dprintf_config("Tool");
@@ -475,7 +523,35 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
-	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
+	else if (is_dash_arg_colon_prefix(argv[i], "daemon", &pcolon, 3)) {
+		SetRecordSource(HRS_DAEMON_HIST, setRecordSrcFlag, "-daemon");
+		setRecordSrcFlag = argv[i];
+		searchDirectory.clear();
+		matchFileName.clear();
+
+		// Allow -daemon:<subsys> for future queries
+		if (pcolon) { ++pcolon; }
+
+		// Default to querying Schedd history
+		std::string daemon = (pcolon && *pcolon != '\0') ? pcolon : "schedd";
+		upper_case(daemon);
+
+		std::string knob;
+		formatstr(knob, "%s_DAEMON_HISTORY", daemon.c_str());
+
+		matchFileName.set(param(knob.c_str()));
+		if ( ! matchFileName) {
+			fprintf(stderr, "Error: No daemon history to read: %s undefined\n", knob.c_str());
+			exit(1);
+		}
+
+		filterAdTypes.clear();
+		filterAdTypes.insert(daemon);
+
+		// For remote queries
+		subsys = daemon;
+	}
+	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 2)) {
 		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
 		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
@@ -494,7 +570,36 @@ main(int argc, const char* argv[])
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
 	}
-	else if (is_dash_arg_prefix(argv[i], "type", 1)) { // Purposefully undocumented (Intended internal use)
+	else if (is_dash_arg_colon_prefix(argv[i], "transfer-history", &pcolon, 2)) {
+		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-transfer-history");
+		setRecordSrcFlag = argv[i];
+		searchDirectory.clear();
+		matchFileName.clear();
+		//Get aggregate epoch history file
+		matchFileName.set(param("JOB_EPOCH_HISTORY"));
+		transferAds = true;
+		if ( ! matchFileName) {
+			fprintf(stderr, "Error: Job Epoch History file is not configured");
+		}
+
+		filterAdTypes.clear();
+		if (pcolon) {
+			pcolon++; // Increment past actual colon
+			while ( pcolon && *pcolon != '\0' ) {
+				if ( *pcolon == 'i' || *pcolon == 'I' ) { filterAdTypes.insert("INPUT"); }
+				else if ( *pcolon == 'o' || *pcolon == 'O' ) { filterAdTypes.insert("OUTPUT"); }
+				else if ( *pcolon == 'c' || *pcolon == 'C' ) { filterAdTypes.insert("CHECKPOINT"); }
+				else {
+					fprintf(stderr, "Error: Unknown -transfer-history extra attribute '%c'\n", *pcolon);
+					exit(1);
+				}
+				++pcolon;
+			}
+		} else {
+			filterAdTypes.merge(ALL_XFER_TYPES);
+		}
+	}
+	else if (is_dash_arg_prefix(argv[i], "type", 2)) { // Purposefully undocumented (Intended internal use)
 		if (argc <= i+1 || *(argv[i+1]) == '-') {
 			fprintf(stderr, "Error: Argument %s requires another parameter\n", argv[i]);
 			exit(1);
@@ -511,8 +616,7 @@ main(int argc, const char* argv[])
 					break;
 				} else if (type == "TRANSFER") {
 					// Special handling to specify Plugin Transfer return ads
-					std::set<std::string> xferTypes{"INPUT", "OUTPUT", "CHECKPOINT"};
-					filterAdTypes.merge(xferTypes);
+					filterAdTypes.merge(ALL_XFER_TYPES);
 				} else { // Insert specified type
 					filterAdTypes.insert(type);
 				}
@@ -591,7 +695,15 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
     }
+	else if (is_dash_arg_prefix(argv[i], "extract", 2)) {
+		i++;
+		if (argc <= i) {
+			fprintf(stderr, "Error: Argument -extract requires another parameter.\n");
+			exit(1);
+		}
 
+		extractionFile = argv[i];
+	}
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
 		std::string jobconst;
 		formatstr (jobconst, "%s == %d && %s == %d", 
@@ -613,7 +725,7 @@ main(int argc, const char* argv[])
           // dprintf to console
           dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
-    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) {
+    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) { // Purposefully undocumented (Intended internal use)
           // dprintf to console
           diagnostic = true;
     }
@@ -674,6 +786,11 @@ main(int argc, const char* argv[])
 	streamresults = true;
   }
 
+	if (transferAds && !longformat && !customFormat) {
+		fprintf(stderr, "Error: -transfer-history does not have a default print table. Please use -long, -json, -xml, or a custom print format.\n");
+		exit(1);
+	}
+
 	// Since we only deal with one ad at a time, this doubles the speed of parsing
   classad::ClassAdSetExpressionCaching(false);
  
@@ -690,6 +807,19 @@ main(int argc, const char* argv[])
   if ( use_xml + use_json + use_json_lines > 1 ) {
     fprintf( stderr, "Error: Cannot use more than one of XML and JSON[L]\n" );
     exit( 1 );
+  }
+
+  if (extractionFile) {
+	if ( ! readfromfile) {
+		fprintf(stderr, "Error: -extract can only be used when reading directly from a history file\n");
+		exit(1);
+	} else if (my_constraint.empty()) {
+		fprintf(stderr, "Error: -extract requires a constraint for which ClassAds to copy\n");
+		exit(1);
+	}
+
+	// Set default match limit for extraction
+	if ( ! limitSet && specifiedMatch < 0) { specifiedMatch = 100'000; }
   }
 
   if (writetosocket && streamresults) {
@@ -723,6 +853,17 @@ main(int argc, const char* argv[])
                   exit(1);
           }
       }
+
+      // Attempt to open extraction file before doing laborous reading of history
+      if (extractionFile) {
+          extractionFP = safe_fopen_wrapper_follow(extractionFile, "w");
+          if ( ! extractionFP) {
+              fprintf(stderr, "Error: Failed ot open extraction file %s (%d): %s\n",
+                      extractionFile, errno, strerror(errno));
+              exit(1);
+          }
+      }
+
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
@@ -733,9 +874,23 @@ main(int argc, const char* argv[])
       }
   }
   else {
-      readHistoryRemote(constraintExpr, want_startd_history, readFromDir);
+      readHistoryRemote(constraintExpr, subsys, want_startd_history, readFromDir);
   }
   delete constraintExpr;
+
+  if (extractionFile) {
+	ASSERT(extractionFP);
+	if (backwards) {
+		fprintf(stdout, "\nWriting %zu matched ads to %s...\n", historyCopyAds.size(), extractionFile);
+		for (const auto& ad : historyCopyAds) {
+			size_t bytes = fwrite(ad.c_str(), sizeof(char), ad.size(), extractionFP);
+			if (bytes != ad.size()) {
+				fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
+			}
+		}
+	}
+	fclose(extractionFP);
+  }
 
   if (writetosocket) {
 	ClassAd ad;
@@ -765,47 +920,31 @@ static int getDisplayWidth() {
 	return wide_format_width;
 }
 
-static void AddPrintColumn(const char * heading, int width, int opts, const char * expr)
-{
-	mask.set_heading(heading);
-
-	int wid = width ? width : (int)strlen(heading);
-	mask.registerFormat("%v", wid, opts, expr);
-}
-
-static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, const CustomFormatFn & fmt)
-{
-	mask.set_heading(heading);
-	int wid = width ? width : (int)strlen(heading);
-	mask.registerFormat(NULL, wid, opts, fmt, attr);
-}
-
 // setup display mask for default output
-static void init_default_custom_format()
-{
-	mask.SetAutoSep(NULL, " ", NULL, "\n");
+static void init_default_custom_format() {
+	const char* fmt = nullptr;
 
-	int opts = wide_format ? (FormatOptionNoTruncate | FormatOptionAutoWidth) : 0;
-	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate | FormatOptionAutoWidth, ATTR_CLUSTER_ID, render_job_id);
-	AddPrintColumn("OWNER",     -14, FormatOptionAutoWidth | opts, ATTR_OWNER);
-	AddPrintColumn("SUBMITTED",  11,    0, ATTR_Q_DATE, format_real_date);
-	AddPrintColumn("RUN_TIME",   12,    0, ATTR_CLUSTER_ID, render_hist_runtime);
-	AddPrintColumn("ST",         -2,    0, ATTR_JOB_STATUS, format_job_status_char);
-	AddPrintColumn("COMPLETED",  11,    0, ATTR_COMPLETION_DATE, format_real_date);
-	AddPrintColumn("CMD",       -15, FormatOptionLeftAlign | FormatOptionNoTruncate, ATTR_JOB_CMD, render_job_cmd_and_args);
-
-	static const char* const attrs[] = {
-		ATTR_CLUSTER_ID, ATTR_PROC_ID, ATTR_OWNER, ATTR_JOB_STATUS,
-		ATTR_JOB_REMOTE_WALL_CLOCK, ATTR_JOB_REMOTE_USER_CPU,
-		ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS1, ATTR_JOB_ARGUMENTS2,
-		//ATTR_JOB_DESCRIPTION, "MATCH_EXP_" ATTR_JOB_DESCRIPTION,
-		ATTR_Q_DATE, ATTR_COMPLETION_DATE,
-	};
-	for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
-		projection.emplace(attrs[ii]);
+	switch (recordSrc) {
+		case HRS_DAEMON_HIST:
+			fmt = defaultScheddAd_PrintFormat;
+			break;
+		case HRS_SCHEDD_JOB_HIST:
+		case HRS_STARTD_HIST:
+		case HRS_JOB_EPOCH:
+			fmt = defaultJob_PrintFormat;
+			break;
+		case HRS_AUTO:
+			EXCEPT("Developer Error: Initializing default print format with source auto!!");
+			break;
 	}
 
-	customFormat = TRUE;
+	if ( ! fmt) {
+		fprintf(stderr, "Error: Failed to initialize default print format.\n");
+		exit(1);
+	}
+
+	std::string constraint; // Needed to call function
+	set_print_mask_from_stream(mask, constraint, projection, fmt, false);
 }
 
 static void printHeader()
@@ -864,7 +1003,7 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd, bool read_dir)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string subsys, bool want_startd, bool read_dir)
 {
 	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
@@ -932,6 +1071,14 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 					if (read_dir) { ad.InsertAttr("HistoryFromDir",true); }
 				} else {
 					formatstr(err_msg, "The remote schedd (%s) version does not support remote job epoch history.",g_name.c_str());
+				}
+				break;
+			case HRS_DAEMON_HIST:
+				if (v.built_since_version(24, 9, 0)) {
+					ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE, "DAEMON");
+					ad.InsertAttr(ATTR_DAEMON_HISTORY_SUBSYS, subsys);
+				} else {
+					formatstr(err_msg, "The remote daemon version does not support daemon history.");
 				}
 				break;
 			default:
@@ -1366,6 +1513,22 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
+		if (extractionFile) {
+			if (backwards) {
+				std::string& copy = historyCopyAds.emplace_front();
+				sPrintAd(copy, ad);
+				copy += banner.line + "\n";
+			} else {
+				ASSERT(extractionFP);
+				std::string copy;
+				sPrintAd(copy, ad);
+				copy += banner.line + "\n";
+				size_t bytes = fwrite(copy.c_str(), sizeof(char), copy.size(), extractionFP);
+				if (bytes != copy.size()) {
+					fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
+				}
+			}
+		}
 	}
 	if (cluster > 0) { //User specified cluster or cluster.proc.
 		if (checkMatchJobIdsFound(banner, &ad)) { //Check if all possible ads have been displayed
@@ -1398,6 +1561,7 @@ static bool isvalidattrchar(char ch) { return isalnum(ch) || ch == '_'; }
 static bool parseBanner(BannerInfo& info, std::string banner) {
 	//Parse Banner info
 	BannerInfo newInfo;
+	newInfo.line = banner;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
 	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
@@ -1679,8 +1843,9 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 		fprintf(stderr,"Error: No search directory found for locating history files.\n");
 		exit(1);
 	} else {
-		StatInfo si(searchDirectory);
-		if (!si.IsDirectory()) {
+		struct stat si = {};
+		stat(searchDirectory, &si);
+		if ( !(si.st_mode & S_IFDIR) ) {
 			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
 			exit(1);
 		}

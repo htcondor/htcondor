@@ -40,6 +40,7 @@ public:
 	bool last(JOB_ID_KEY &jid)  { if (jobs.empty()) return false; jid = *(jobs.rbegin()); return true; }
 	void insert(JOB_ID_KEY &jid) { jobs.insert(jid); }
 	void erase(JOB_ID_KEY &jid) { jobs.erase(jid); }
+	const std::set<JOB_ID_KEY> & joblist() const { return jobs; }
 private:
 	std::set<JOB_ID_KEY> jobs;
 	std::set<JOB_ID_KEY>::const_iterator it;
@@ -671,6 +672,17 @@ void AutoCluster::removeFromAutocluster(JobQueueJob &job)
 		job.autocluster_id = -1;
 	}
 }
+
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+const std::set<JOB_ID_KEY> & AutoCluster::joblist(JobQueueJob & job) {
+	static std::set<JOB_ID_KEY> empty;
+	auto jit = find_job_id_set(job);
+	if (jit != cluster_use.end()) {
+		return jit->second.joblist();
+	}
+	return empty;
+}
+#endif
 
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 

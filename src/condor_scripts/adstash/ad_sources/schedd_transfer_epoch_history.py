@@ -23,7 +23,8 @@ from itertools import chain
 
 from adstash.ad_sources.generic import GenericAdSource
 
-import htcondor
+import htcondor2 as htcondor
+import classad2 as classad
 
 
 class ScheddTransferEpochHistorySource(GenericAdSource):
@@ -38,8 +39,10 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         self.indexed_keyword_attrs = {
             "Endpoint",
             "ErrorType",
+            "ErrorMessage",
             "FailedName",
             "FailureType",
+            "DebugErrorType",
             "GLIDEIN_ResourceName",
             "GLIDEIN_Site",
             "GlobalJobId",
@@ -74,6 +77,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
             "ErrorCode",
             "LibcurlReturnCode",
             "NumShadowStarts",
+            "PelicanErrorCode",
             "ProcId",
             "TransferFileBytes",
             "TransferHttpStatusCode",
@@ -89,6 +93,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         }
         self.bool_attrs = {
             "FinalAttempt",
+            "Retryable",
             "TransferSuccess",
         }
         self.nested_attrs = set()
@@ -113,7 +118,10 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
         super().__init__(*args, **kwargs)
 
 
-    def fetch_ads(self, schedd_ad, max_ads=10000):
+    def fetch_ads(self, schedd_ad, max_ads=10000, projection=set()):
+        if projection:
+            logging.warning(f"Custom projections are ignored for transfer history ads")
+
         history_kwargs = {}
         if max_ads > 0:
             history_kwargs["match"] = max_ads
@@ -127,7 +135,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 if attr in ckpt:
                     since_exprs.append(f"({attr} == {ckpt[attr]})")
             since_expr = " && ".join(since_exprs)
-            history_kwargs["since"] = since_expr
+            history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting transfer epoch ads from {schedd_ad['Name']} since {since_expr}.")
         schedd = htcondor.Schedd(schedd_ad)
         return schedd.jobEpochHistory(constraint=True, projection=[], ad_type="TRANSFER", **history_kwargs)
@@ -185,11 +193,14 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
 
     def expand_plugin_result_ads(self, ads, my_attr_name=None):
         debug_results = []
+        error_results = iter(())
         result = {}
         for ad in ads:
             for attr, value in ad.items():
                 if attr.lower() == "developerdata":
                     debug_results = self.expand_debug_ad(value)
+                elif attr.lower() == "transfererrordata":
+                    error_results = self.expand_error_ads(value)
                 else:
                     attr, value = self.normalize(attr, value)
                     result[attr] = value
@@ -201,18 +212,26 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 result["Attempts"] = 1
                 result["Attempt"] = 0
                 result["FinalAttempt"] = True
+                try:  # add error data if it exists
+                    result.update(next(error_results))
+                except StopIteration:
+                    pass
                 yield result
             else:
                 for debug_result in debug_results:
+                    try:
+                        error_result = next(error_results)
+                    except StopIteration:
+                        error_result = {}
                     if debug_result.get("FinalAttempt"):  # merge and return entire ad on final attempt
                         try:
-                            yield debug_result | result
+                            yield debug_result | result | error_result
                         except TypeError:  # backwards compat
                             yield {**debug_result, **result}
                     else:  # otherwise only add identifying attrs
                         for attr in ("TransferProtocol", "TransferType", "TransferUrl"):
                             debug_result[attr] = result.get(attr)
-                        yield debug_result
+                        yield debug_result | error_result
 
 
     def expand_debug_ad(self, ad):
@@ -270,6 +289,22 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 yield result | attempt_result
             except TypeError:  # backwards compat
                 yield {**result, **attempt_result}
+
+
+    def expand_error_ads(self, ads):
+        for ad in ads:
+            error_result = {}
+            for attr, value in ad.items():
+                if attr.lower() == "developerdata":
+                    for debug_attr, debug_value in value.items():
+                        debug_attr, debug_value = self.normalize(debug_attr, debug_value)
+                        if debug_attr in ad:
+                            debug_attr = f"Debug{debug_attr}"
+                        error_result[debug_attr] = debug_value
+                else:
+                    attr, value = self.normalize(attr, value)
+                    error_result[attr] = value
+            yield error_result
 
 
     def to_json_list(self, ad, return_dict=False):

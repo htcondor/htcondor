@@ -7886,16 +7886,19 @@ static bool test_nested_ads()
 	emit_test("Testing with nested ads");
 	
 	ad.InsertAttr( "A", 4 );
-	if ( !parser.ParseExpression( "{ [ Y = 1; Z = A; ] }", tree ) ) {
+	tree = parser.ParseExpression( "{ [ Y = 1; Z = A; ] }" );
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "B", tree );
-	if ( !parser.ParseExpression( "B[0].Z", tree ) ) {
+	tree = parser.ParseExpression( "B[0].Z");
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "C", tree );
 
-	if ( !parser.ParseExpression( "B[0][\"ZZZ\"]", tree ) ) {
+	tree = parser.ParseExpression( "B[0][\"ZZZ\"]");
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "D", tree );

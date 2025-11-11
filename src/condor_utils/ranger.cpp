@@ -6,8 +6,6 @@
 #include "ranger.h"
 #include "proc.h"
 
-using namespace std::rel_ops;
-
 
 ///// ranger insert/erase/find implementation /////
 

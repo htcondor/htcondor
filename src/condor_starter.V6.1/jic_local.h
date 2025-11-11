@@ -71,12 +71,12 @@ public:
 		/** Total bytes sent by this job.  Since we're talking a local 
 			job, this will always be 0.
 		*/
-	float bytesSent( void );
+	uint64_t bytesSent( void );
 
 		/** Total bytes received by this job.  Since we're talking a
 			local job, this will always be 0.
 		*/
-	float bytesReceived( void );
+	uint64_t bytesReceived( void );
 
 		/** Since the logic for getting the std filenames out of the
 			job ad and munging them are identical for all 3, just use
@@ -125,7 +125,7 @@ public:
 		   happen.  We don't do any file transfer for JICLocal, so
 		   just return true so we move directly onto the next stage.
 		*/
-	bool transferOutput( bool & ) { return true; };
+	bool transferOutput( bool&, bool& ) { return true; };
 	bool transferOutputMopUp( void ) { return true; };
 
 		/** The last job this starter is controlling has been

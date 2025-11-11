@@ -211,7 +211,7 @@ StartdBenchJobMgr::BenchmarksFinished( void )
 	m_rip->benchmarks_finished( );
 	resmgr->update_all();
 	if ( m_shutting_down ) {
-		startd_check_free();
+		startd_exit_if_idle();
 	}
 	else if ( NULL != cron_job_mgr ) {
 		cron_job_mgr->ScheduleAllJobs();

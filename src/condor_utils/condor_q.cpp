@@ -286,7 +286,11 @@ CondorQ::initQueryAd(
 	auto_free_ptr owner;
 	if (fetch_opts & fetch_MyJobs) { owner.set(my_username()); }
 
-	return DCSchedd::makeJobsQueryAd(request_ad, constraint.c_str(), projection.c_str(), fetch_opts, match_limit, owner, requestservertime);
+	rval = DCSchedd::makeJobsQueryAd(request_ad, constraint.c_str(), projection.c_str(), fetch_opts, match_limit, owner, requestservertime);
+	if (rval == Q_OK) {
+		if (for_analysis) { request_ad.Assign("ForAnalysis", true); }
+	}
+	return rval;
 }
 
 int

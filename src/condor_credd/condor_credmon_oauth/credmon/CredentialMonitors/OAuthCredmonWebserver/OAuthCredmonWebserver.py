@@ -4,8 +4,8 @@ from requests_oauthlib import OAuth2Session
 import os
 import tempfile
 from credmon.utils import atomic_rename, get_cred_dir, api_endpoints
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 import json
 import re
 

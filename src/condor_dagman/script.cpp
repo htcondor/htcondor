@@ -34,7 +34,7 @@ constexpr int STDERR = 2;
 const char* Script::GetNodeName() { return _node->GetNodeName(); }
 
 void Script::WriteDebug(int status) {
-	if (_output != DagScriptOutput::NONE && ! _debugFile.empty()) {
+	if (_output != DAG::ScriptOutput::NONE && ! _debugFile.empty()) {
 		TmpDir tmpDir;
 		std::string errMsg;
 		if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
@@ -42,13 +42,20 @@ void Script::WriteDebug(int status) {
 			             _node->GetDirectory(), errMsg.c_str());
 		}
 
+		int return_value = WEXITSTATUS(status);
+		const char* return_type = "ExitCode";
+		if (WIFSIGNALED(status)) {
+			return_value = status;
+			return_type = "Signal";
+		}
+
 		std::string output;
 		std::string *buffer;
 
 		time_t now = time(nullptr);
-		formatstr(output, "*** Node=%s Type=%s Status=%d Completion=%lld Cmd='%s'\n",
-		          _node->GetNodeName(), GetScriptName(), status, (long long)now,
-		          _executedCMD.c_str());
+		formatstr(output, "*** Node=%s Type=%s %s=%d Completion=%lld Cmd='%s'\n",
+		          _node->GetNodeName(), GetScriptName(), return_type, return_value,
+		         (long long)now, _executedCMD.c_str());
 
 		buffer = daemonCore->Read_Std_Pipe(_pid, STDOUT);
 		if (buffer) { output += *buffer; }
@@ -99,8 +106,25 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 
 	_executedCMD.clear(); // Clear previous recorded executed command
 
-	std::string exitCodes, exitFreq;
-	for (const auto& [code, count] : _node->JobExitCodes()) {
+	size_t numAborted = 0;
+	std::map<short int, size_t> exit_codes;
+	std::string exitCodes, exitFreq, exitList;
+
+	size_t proc = 0;
+	for (const auto [_, val] : _node->GetJobInfo()) {
+		if ( ! exitList.empty()) { exitList += ","; }
+		if (val == JOB_EXIT_UNKNOWN) {
+			debug_printf(DEBUG_NORMAL, "Error: Job proc %zu exit is unknown!\n", proc);
+		} else if (val == JOB_EXIT_ABORT) {
+			numAborted++;
+		} else {
+			exit_codes[val]++;
+			exitList += std::to_string(val);
+		}
+		proc++;
+	}
+
+	for (const auto& [code, count] : exit_codes) {
 		if ( ! exitCodes.empty()) { exitCodes += ","; }
 		exitCodes += std::to_string(code);
 
@@ -128,7 +152,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 			arg = std::to_string(_node->GetRetryMax());
 
 		} else if (cmp_arg == "$DAG_STATUS") {
-			arg = std::to_string(dag._dagStatus);
+			arg = std::to_string(dag.GetStatus());
 
 		} else if (cmp_arg == "$FAILED_COUNT") {
 			arg = std::to_string(dag.NumNodesFailed());
@@ -171,11 +195,14 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 		} else if (cmp_arg == "$EXIT_CODE_COUNTS") {
 			arg = checkIsPre(_type, "$EXIT_CODE_COUNTS") ? token : exitFreq;
 
+		} else if (cmp_arg == "$EXIT_CODE_LIST") {
+			arg = checkIsPre(_type, "$EXIT_CODE_LIST") ? token : exitList;
+
 		} else if (cmp_arg == "$PRE_SCRIPT_RETURN") {
 			arg = checkIsPre(_type, "$PRE_SCRIPT_RETURN") ? token : std::to_string(_retValScript);
 
 		} else if (cmp_arg == "$JOB_ABORT_COUNT") {
-			arg = checkIsPre(_type, "$JOB_ABORT_COUNT") ? token : std::to_string(_node->JobsAborted());
+			arg = checkIsPre(_type, "$JOB_ABORT_COUNT") ? token : std::to_string(numAborted);
 
 		// Non DAGMan sanctioned script macros
 		} else if (token[0] == '$') {
@@ -198,16 +225,16 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	cpArgs.reaperID(reaperId).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 	      .fdInheritList(0);
 	int std_fds[3] = {-1, DC_STD_FD_PIPE, DC_STD_FD_PIPE};
-	if (_output != DagScriptOutput::NONE) {
+	if (_output != DAG::ScriptOutput::NONE) {
 		bool unknown = FALSE;
 		switch (_output) {
-			case DagScriptOutput::STDOUT: // Want stdout
+			case DAG::ScriptOutput::STDOUT: // Want stdout
 				std_fds[STDERR] = -1;
 				break;
-			case DagScriptOutput::STDERR: // Want stderr
+			case DAG::ScriptOutput::STDERR: // Want stderr
 				std_fds[STDOUT] = -1;
 				break;
-			case DagScriptOutput::ALL: // Want both stdout & stderr
+			case DAG::ScriptOutput::ALL: // Want both stdout & stderr
 				break;
 			default: // Unknown
 				unknown = TRUE;

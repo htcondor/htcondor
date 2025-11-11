@@ -1042,14 +1042,13 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		// client requests them.
 	bool filter_private_attrs = true;
 	auto *verinfo = sock->get_peer_version();
-	if (verinfo && verinfo->built_since_version(8, 9, 3) &&
+	if (verinfo && verinfo->built_since_version(8, 9, 3) && !verinfo->built_since_version(10, 0, 0)) {
+		wants_pvt_attrs = true;
+	}
+	if (wants_pvt_attrs &&
 		(USER_AUTH_SUCCESS == daemonCore->Verify("send private attrs", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
 	{
-		if (verinfo->built_since_version(10, 0, 0)) {
-			filter_private_attrs = !wants_pvt_attrs;
-		} else {
-			filter_private_attrs = false;
-		}
+		filter_private_attrs = false;
 	}
 
 		// If our peer has ADMINISTRATOR authz and explicitly asks for
@@ -2483,7 +2482,7 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 	}
 
 	// Send the ad
-	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
+	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, nullptr, true);
 	if ( num_updated != (int)collectorsToUpdate->getList().size() ) {
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}

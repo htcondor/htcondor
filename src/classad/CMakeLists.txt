@@ -73,6 +73,10 @@ else()
 
 	###### Test executables
 	condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND}" OFF)
+	if (UNIX)
+		set_source_files_properties(classad_unit_tester.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+	endif(UNIX)
+
 	condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND}" OFF)
 endif()
 
@@ -87,7 +91,6 @@ endif()
 
 set( Headers
 classad/attrrefs.h
-classad/cclassad.h
 classad/classadCache.h
 classad/classad_containers.h
 classad/classad_distribution.h
@@ -159,6 +162,10 @@ xmlSource.cpp
 #####################################################################
 
 add_library(classads_objects OBJECT ${ClassadSrcs})
+
+if (UNIX)
+	set_source_files_properties(exprTree.cpp fnCall.cpp jsonSink.cpp operators.cpp util.cpp sink.cpp value.cpp xmlSink.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+endif()
 
 # Unix like oses need -DUNIX to get dlopen'ing code
 if (UNIX)

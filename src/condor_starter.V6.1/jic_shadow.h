@@ -56,6 +56,9 @@ public:
 	void setupJobEnvironment( void );
 	void setupJobEnvironment_part2(void);
 
+	virtual bool transferCommonInput( ClassAd * commonAd );
+	virtual void resetInputFileCatalog();
+
 	bool streamInput();
 	bool streamOutput();
 	bool streamError();
@@ -65,10 +68,10 @@ public:
 		// // // // // // // // // // // //
 
 		/// Total bytes sent by this job 
-	float bytesSent( void );
+	uint64_t bytesSent( void );
 
 		/// Total bytes received by this job 
-	float bytesReceived( void );
+	uint64_t bytesReceived( void );
 
 		/** Since the logic for getting the std filenames out of the
 			job ad and munging them are identical for all 3, just use
@@ -120,8 +123,13 @@ public:
 			If you call this, and transient_failure is not true, you
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
+			transferOutputStart() and transferOutputFinish() should
+			not be called directly by outside code. They are helpers
+			for transferOutput().
 		*/
-	bool transferOutput( bool &transient_failure );
+	bool transferOutput(bool& transient_failure, bool& in_progress);
+	bool transferOutputStart(bool& transient_failure, bool& in_progress);
+	bool transferOutputFinish(bool& transient_failure, bool& in_progress);
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the
@@ -164,6 +172,8 @@ public:
 
 	void notifyExecutionExit( void );
 	bool notifyGenericEvent( const ClassAd & event, int & rv );
+
+	virtual bool genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance );
 
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,
@@ -254,13 +264,15 @@ public:
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
 
+	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
+
 private:
 
     void _remove_files_from_output();
 
-	void updateShadowWithPluginResults( const char * which );
+	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
 
-	void recordSandboxContents( const char * filename );
+	void recordSandboxContents( const char * filename, bool add_to_output = true );
 
 		// // // // // // // // // // // //
 		// Private helper methods
@@ -289,16 +301,29 @@ private:
 		 */
 	void updateStartd( ClassAd *ad, bool final_update );
 
+		/** Send a command to the startd and get a classad reply
+		*/
+	ClassAd * sendStartdCommand(int cmd, ClassAd & payload);
+
 		/** Read all the relevent attributes out of the job ad and
 			decide if we need to transfer files.  If so, instantiate a
-			FileTransfer object, start the transfer, and return true.
+			FileTransfer object, start the input transfer, and return true.
 			If we don't have to transfer anything, return false.
 			@return true if transfer was begun, false if not
 		*/
-	bool beginFileTransfer( void );
+	bool beginInputTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
+	int transferStatusCallback(FileTransfer * ftrans) {
+		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
+			return transferInputStatus(ftrans);
+		} else if (ftrans->GetInfo().type == FileTransfer::TransferType::UploadFilesType) {
+			return transferOutputStatus(ftrans);
+		}
+		return 1;
+	}
 	int transferInputStatus(FileTransfer *);
+	int transferOutputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -308,6 +333,9 @@ private:
 
 		/// Get the job execution overlay classad from the given stream
 	bool receiveExecutionOverlayAd(Stream* stream);
+
+		/// Get the secrets classad from the given stream
+	bool receiveMachineSecretsAd(Stream* stream);
 
 		/** Initialize information about the shadow's version and
 			sinful string from the given ClassAd.  At startup, we just
@@ -327,12 +355,12 @@ private:
 			@return true on success, false on failure
 		*/
 	virtual	bool registerStarterInfo( void );
-	
+
 		/** All the attributes the shadow cares about that we send via
 			a ClassAd is handled in this method, so that we can share
 			the code between registerStarterInfo() and when we're
 			replying to accept an attempted reconnect.
-		*/ 
+		*/
 	void publishStarterInfo( ClassAd* ad );
 
 		/** Initialize the priv_state code with the appropriate user
@@ -357,7 +385,7 @@ private:
 			too.  So, everything is split up into a few helper
 			functions to maximize clarity, keep the length of
 			individual functions reasonable, and to avoid code
-			duplication.  
+			duplication.
 
 			initFileTransfer() is responsible for looking up
 			ATTR_SHOULD_TRANSFER_FILES, which specifies the
@@ -393,13 +421,13 @@ private:
 			the initStdFiles() method to initalize STDIN, STDOUT, and
 			STDERR.
 			@return true on success, false if there are fatal errors
-		*/			
+		*/
 	bool initWithFileTransfer( void );
 
 		/** This method is used whether or not we're doing a file
 			transfer to initialize the valid full paths to use for
 			STDIN, STDOUT, and STDERR.  The "job_iwd" data member of
-			this object must be filled in before this can be called.  
+			this object must be filled in before this can be called.
 			For the output files, if they contain full pathnames,
 			condor_submit now stores the original values in alternate
 			attribute names and puts a temporary value in the real
@@ -409,7 +437,7 @@ private:
 			really wants the output, and we want to access them
 			directly.  So, for STDOUT, and STDERR, we also pass in the
 			alternate attribute names to the underlying helper method,
-			getJobStdFile(). 
+			getJobStdFile().
 			@return at this time, this method always returns true
 		*/
 	bool initStdFiles( void );
@@ -460,6 +488,8 @@ private:
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
+	void doneWithInputTransfer();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -486,7 +516,8 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
-	bool m_did_transfer;
+	bool m_did_output_transfer;
+	bool m_output_transfer_active{false};
 
 
 		// specially made security sessions if we are doing
@@ -559,6 +590,12 @@ private:
 
 	// Glorious hack.
 	bool transferredFailureFiles = false;
+
+	std::map< std::string, std::filesystem::path > cifNameToLocationMap;
+
+    // Because of stupidity in how the file transfer object handles
+    // notifications, we can get a completion notice more than once.
+    bool first_completion_notice = true;
 };
 
 

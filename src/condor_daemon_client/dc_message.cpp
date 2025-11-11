@@ -496,8 +496,8 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 
 	int reg_rc = daemonCore->
 		Register_Socket( sock, peerDescription(),
-						 (SocketHandlercpp)&DCMessenger::receiveMsgCallback,
-						 name.c_str(), this );
+						 [this](Stream *s) {return this->receiveMsgCallback(s);},
+						 name.c_str());
 	if(reg_rc < 0) {
 		msg->addError(
 			CEDAR_ERR_REGISTER_SOCK_FAILED,
@@ -653,10 +653,9 @@ DCMessenger::startCommandAfterDelay( unsigned int delay, classy_counted_ptr<DCMs
 
 	incRefCount();
 	qc->timer_handle = daemonCore->Register_Timer(
-		delay,
-		(TimerHandlercpp)&DCMessenger::startCommandAfterDelay_alarm,
-		"DCMessenger::startCommandAfterDelay",
-		this );
+		delay, 0,
+		[this] (int timerid) {this->startCommandAfterDelay_alarm(timerid);},
+		"DCMessenger::startCommandAfterDelay");
 	ASSERT(qc->timer_handle != -1);
 	daemonCore->Register_DataPtr( qc );
 }

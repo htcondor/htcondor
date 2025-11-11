@@ -301,15 +301,6 @@ bool render_owner (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 	if ( ! ad->LookupString(ATTR_OWNER, out))
 		return false;
 
-#ifdef NO_DEPRECATE_NICE_USER
-	int niceUser;
-	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-		char tmp[sizeof(NiceUserName)+2];
-		strcpy(tmp, NiceUserName);
-		strcat(tmp, ".");
-		out.insert(0, tmp);
-	}
-#endif
 	return true;
 }
 
@@ -785,6 +776,24 @@ bool render_activity_code (std::string & act, ClassAd *al, Formatter &)
 	return ok;
 }
 
+// If we are idle and an OCU holder, report "OCU", else report activity
+bool render_activity_or_ocu (std::string & act, ClassAd *al, Formatter &)
+{
+	std::string activity;
+	al->LookupString(ATTR_ACTIVITY, activity);
+	if (activity.empty()) {
+		act = "??";
+		return true;
+	}
+
+	bool is_ocu = false;
+	al->LookupBool(ATTR_OCU, is_ocu);
+	if (is_ocu && activity == "Idle") {
+		act = "OCU";
+	}
+
+	return true;
+}
 
 
 bool render_activity_time (long long & atime, ClassAd *al, Formatter &)
@@ -901,6 +910,7 @@ bool render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt )
 //          !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!!
 const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "ACTIVITY_CODE",   ATTR_ACTIVITY, 0, render_activity_code, ATTR_STATE "\0" },
+	{ "ACTIVITY_OR_OCU", ATTR_ACTIVITY, 0, render_activity_or_ocu, ATTR_STATE "\0" },
 	{ "ACTIVITY_TIME",   ATTR_ENTERED_CURRENT_ACTIVITY, "%T", render_activity_time, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
 	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, render_batch_name, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
 	{ "BUFFER_IO_MISC",  ATTR_JOB_UNIVERSE, 0, render_buffer_io_misc, ATTR_FILE_SEEK_COUNT "\0" ATTR_BUFFER_SIZE "\0" ATTR_BUFFER_BLOCK_SIZE "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },

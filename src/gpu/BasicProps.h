@@ -8,6 +8,7 @@ class BasicProps {
 
 		std::string   uuid;
 		std::string   name;
+		std::string   driver;
 		char          pciId[32];
 		size_t        totalGlobalMem {(size_t)-1};
 		int           ccMajor {-1};
