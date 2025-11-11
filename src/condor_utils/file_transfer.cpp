@@ -6855,16 +6855,15 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// For protocol version 3, insert some "nonfile" ads and adjust the
 	// file ads if any file-specific plugin data was specified.
 	//
-	// The insert()s in this loop will be wildly inefficient, but we should
-	// be able to make sure that we only copy once with a little bit of care.
-	//
+	std::vector<ClassAd> nonfile_ads;
 	if( plugin.protocol_version == 3 ) {
+	    // `PluginData` for all plug-ins.
 		ClassAd nonfile_ad;
 		nonfile_ad.InsertAttr( "NonFile", true );
-		// `CopyAttribute()` uses the `strcpy()` order, not the `cp` order.
 		CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
-		pluginInputAds.insert( pluginInputAds.begin(), nonfile_ad );
+		nonfile_ads.push_back( nonfile_ad );
 
+        // `<protocol>_PluginData` for specific protocols.
 		for( const auto & schema : schemes ) {
 			std::string attrName;
 			formatstr( attrName, "%s_PluginData", schema.c_str() );
@@ -6875,12 +6874,20 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			schema_ad.InsertAttr( "NonFile", true );
 			schema_ad.InsertAttr( "Protocol", schema );
 			CopyAttribute( attrName.c_str(), schema_ad, this->_fix_me_copy_ );
-			pluginInputAds.insert( pluginInputAds.begin(), schema_ad );
+			nonfile_ads.push_back( schema_ad );
 		}
+
+		// `???` for specific URLs.
 	}
 
 
 	std::string transfer_files_string;
+	for( const auto & classAd : nonfile_ads ) {
+		std::string buffer;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( buffer, & classAd );
+		transfer_files_string += buffer;
+	}
 	for( const auto & classAd : pluginInputAds ) {
 		std::string buffer;
 		classad::ClassAdUnParser unparser;
