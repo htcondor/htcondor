@@ -105,7 +105,13 @@ Types of Releases
     commit tag: "24.0.1"
     branch "feature 24.x" order: 4
     commit tag: "24.1.0"
+    checkout "lts 23"
+    commit tag: "23.0.14"
+    checkout "lts 23.x"
+    merge "lts 23"
+    commit tag: "23.12.14"
     checkout "lts 24"
+    merge "lts 23.x"
     commit tag: "24.0.2"
     checkout "feature 24.x"
     merge "lts 24"
