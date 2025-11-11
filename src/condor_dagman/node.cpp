@@ -28,8 +28,6 @@ static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 int Node::_nextJobstateSeqNum = 1;
 
-std::map<std::string, int> Node::stringSpace;
-
 NodeID_t Node::_nodeID_counter = 0;
 int Node::NOOP_NODE_PROCID = INT_MAX;
 std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
@@ -56,33 +54,6 @@ const char* Node::status_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
-std::string_view
-Node::dedup_str(const std::string& str) {
-	if (stringSpace.contains(str)) {
-		stringSpace[str]++;
-	} else {
-		stringSpace.insert({str, 1});
-	}
-
-	auto it = stringSpace.find(str);
-	return std::string_view(it->first);
-}
-
-//---------------------------------------------------------------------------
-void
-Node::free_str(std::string_view& view) {
-	std::string key(view.data());
-	if (stringSpace.contains(key)) {
-		stringSpace[key]--;
-		std::erase_if(stringSpace, [](const auto& pair) {
-			const auto& [_, count] = pair;
-			return count <= 0;
-		});
-	}
-	view = {};
-}
-
-//---------------------------------------------------------------------------
 Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 	ASSERT(nodeName != nullptr);
 	ASSERT(cmdFile != nullptr);
@@ -92,8 +63,8 @@ Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 	_nodeName = nodeName;
 	// Initialize _directory and _cmdFile in a de-duped stringSpace since
 	// these strings may be repeated in thousands of nodes
-	_directory = dedup_str(directory);
-	_cmdFile = dedup_str(cmdFile);
+	_directory = DAG::STRING_SPACE::DEDUP(directory);
+	_cmdFile = DAG::STRING_SPACE::DEDUP(cmdFile);
 	// jobID is a primary key (a database term).  All should be unique
 	_nodeID = _nodeID_counter++;
 
@@ -110,8 +81,8 @@ Node::PrefixDirectory(const std::string &prefix) {
 	std::string newDir;
 	dircat(prefix.c_str(), _directory.data(), newDir);
 
-	free_str(_directory);
-	_directory = dedup_str(newDir);
+	DAG::STRING_SPACE::FREE(_directory);
+	_directory = DAG::STRING_SPACE::DEDUP(newDir);
 }
 
 //---------------------------------------------------------------------------
@@ -509,20 +480,22 @@ Node::CanAddChildren(const std::vector<Node*>& children, std::string &whynot) {
 
 //---------------------------------------------------------------------------
 bool
-Node::AddVar(const char *name, const char *value, const char* filename, int lineno, bool prepend) {
-	auto name_v = dedup_str(name);
-	auto value_v = dedup_str(value);
+Node::AddVar(const std::string& name, const std::string& value, bool prepend) {
 	for (auto& var : varsFromDag) {
-		if (name_v == var._name) {
-			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" is already defined in node \"%s\" (Discovered at file \"%s\", line %d)\n",
-			             name_v.data(), GetNodeName(), filename, lineno);
+		if (name == var._name) {
+			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" is already defined in node \"%s\"\n",
+			             name.c_str(), GetNodeName());
 			check_warning_strictness(DAG_STRICT_3);
-			debug_printf(DEBUG_NORMAL, "Warning: Setting VAR \"%s\" = \"%s\"\n", name_v.data(), value_v.data());
-			free_str(var._value);
-			var._value = value_v;
+			debug_printf(DEBUG_NORMAL, "        Setting VAR \"%s\" = \"%s\"\n", name.c_str(), value.c_str());
+			DAG::STRING_SPACE::FREE(var._value);
+			var._value = DAG::STRING_SPACE::DEDUP(value);
 			return true;
 		}
 	}
+
+	auto name_v = DAG::STRING_SPACE::DEDUP(name);
+	auto value_v = DAG::STRING_SPACE::DEDUP(value);
+
 	varsFromDag.emplace_back(name_v, value_v, prepend);
 	return true;
 }
@@ -701,29 +674,31 @@ Node::AddScript(Script* script) {
 	script->SetNode(this);
 
 	// Check if a script of the same type has already been assigned to this node
-	const char *old_script_name = nullptr;
 	const char *type_name;
+	Script* old_script = nullptr;
 	switch(script->GetType()) {
 		case ScriptType::PRE:
-			old_script_name = GetPreScriptName();
 			type_name = "PRE";
+			old_script = _scriptPre;
 			_scriptPre = script;
 			break;
 		case ScriptType::POST:
-			old_script_name = GetPostScriptName();
 			type_name = "POST";
+			old_script = _scriptPost;
 			_scriptPost = script;
 			break;
 		case ScriptType::HOLD:
-			old_script_name = GetHoldScriptName();
 			type_name = "HOLD";
+			old_script = _scriptHold;
 			_scriptHold = script;
 			break;
 	}
 
-	if (old_script_name) {
+	if (old_script) {
 		debug_printf(DEBUG_NORMAL, "Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
-		             GetNodeName(), type_name, old_script_name, script->GetCmd());
+		             GetNodeName(), type_name, old_script->GetCmd(), script->GetCmd());
+		delete old_script;
+		old_script = nullptr;
 	}
 
 	return true;
@@ -812,7 +787,7 @@ Node::GetJobstateJobTag() {
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
 			tmpJobTag = tmpJobTag.substr(begin, 1 + end - begin);
 		}
-		_jobTag = dedup_str(tmpJobTag);
+		_jobTag = DAG::STRING_SPACE::DEDUP(tmpJobTag);
 	}
 
 	return _jobTag.data();

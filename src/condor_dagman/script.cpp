@@ -34,7 +34,7 @@ constexpr int STDERR = 2;
 const char* Script::GetNodeName() { return _node->GetNodeName(); }
 
 void Script::WriteDebug(int status) {
-	if (_output != DagScriptOutput::NONE && ! _debugFile.empty()) {
+	if (_output != DAG::ScriptOutput::NONE && ! _debugFile.empty()) {
 		TmpDir tmpDir;
 		std::string errMsg;
 		if ( ! tmpDir.Cd2TmpDir(_node->GetDirectory(), errMsg)) {
@@ -225,16 +225,16 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	cpArgs.reaperID(reaperId).wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 	      .fdInheritList(0);
 	int std_fds[3] = {-1, DC_STD_FD_PIPE, DC_STD_FD_PIPE};
-	if (_output != DagScriptOutput::NONE) {
+	if (_output != DAG::ScriptOutput::NONE) {
 		bool unknown = FALSE;
 		switch (_output) {
-			case DagScriptOutput::STDOUT: // Want stdout
+			case DAG::ScriptOutput::STDOUT: // Want stdout
 				std_fds[STDERR] = -1;
 				break;
-			case DagScriptOutput::STDERR: // Want stderr
+			case DAG::ScriptOutput::STDERR: // Want stderr
 				std_fds[STDOUT] = -1;
 				break;
-			case DagScriptOutput::ALL: // Want both stdout & stderr
+			case DAG::ScriptOutput::ALL: // Want both stdout & stderr
 				break;
 			default: // Unknown
 				unknown = TRUE;

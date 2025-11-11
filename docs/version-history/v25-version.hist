@@ -13,6 +13,11 @@
   resource requests for matchmaking.
   :jira:`3358`
 
+- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
+  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
+  to ``True``.
+  :jira:`3304`
+
 - :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``true``
   causing failure to cleanup ephemeral Logical Volumes to break slot resources.
   If the logical volume is later successfully cleaned up then the associated
