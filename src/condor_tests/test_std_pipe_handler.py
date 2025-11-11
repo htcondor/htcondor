@@ -39,7 +39,7 @@ def the_daemon_log(the_condor):
             print( f"  >>> {line}" )
             if "EXITING WITH STATUS" in line.message:
                 return the_log
-        time.sleep(1)
+        time.sleep(2)
     assert False
 
 

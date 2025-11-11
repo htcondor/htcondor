@@ -45,6 +45,7 @@ const int FAILURE_CREDMON_TIMEOUT = 10;  // The credmon did not process credenti
 const int FAILURE_CONFIG_ERROR = 11;    // an operation failed because of a configuration error
 const int FAILURE_JSON_PARSE = 12;      // Failure parsing credential as JSON
 const int FAILURE_CRED_MISMATCH = 13;   // Credential was found but it did not match requested scopes or audience
+const int FAILURE_UNTRUSTED_HOST = 14;  // Credential requires contacting an untrusted host
 
 // not a return code - reserved for caller's use
 const int FAILURE_ABORTED = -1;	

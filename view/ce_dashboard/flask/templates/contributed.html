@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 25vh;
+        }
+    </style>
+{% endblock style %}
+
+{% block body %}
+
+    <div class="container-fluid">
+
+<div class="row mb-3">
+<div class="col">
+<p style="text-align: center">
+Contribution of compute capacity from the
+{{ ce_facility_name }} entity named {{ ce_site_name }}.
+</p>
+</div>
+</div>
+        {% set graphs = [ 'Cpus', 'Memory', 'Gpus', 'Disk', 'Bcus' ] %}
+
+        {% for resource in graphs %}
+            {% set column = get_column(resource) %}
+            {% set vaxis = get_vaxis(resource) %}
+            <div class="row mb-3">
+                <div class="col" id="{{ resource }}-contributed">
+                    <script>
+                        {% if loop.first %}
+                        new HTCondorViewRanged({
+                            reload_page: true,
+                        {% else %}
+                        new HTCondorView({
+                        {% endif %}
+                            dst_id: "{{ resource }}-contributed",
+                            title: "{{ resource }} Usage Past {{time_range | capitalize}}",
+                            data_url: "/data/ce_overview?r={{time_range}}",
+                            graph_query: "filter=Type=R&q={{ column }}&order=Date&pivot=Date;Project;{{ resource }}&legend.position=top&add={{ resource }}Allocated,{{ resource }}Unallocated,{{ resource }}Contributed&unselect={{ resource }}Unallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area&chartArea.left=10%25&chartArea.right=5%25&titleTextStyle.fontSize=16&vAxis.title={{ vaxis }}",
+                            {% if resource != 'Bcus' %}
+                            help_url: "Allocated Details|/allocated_graph_{{ resource }}.html?r={{time_range}}amp;host={{ host }}",
+                            {% endif %}
+                        });
+                    </script>
+                </div>
+            </div>
+        {% endfor %}
+
+
+
+    </div>
+
+{% endblock body %}

@@ -156,6 +156,8 @@ char ** _argv;
 
 int preen_report();
 
+std::vector<char *> freeThese;
+
 int
 preen_main( int, char ** ) {
 	// argc = _argc;
@@ -178,6 +180,10 @@ preen_main( int, char ** ) {
 	VerboseFlag = false;
 	MailFlag = false;
 	RmFlag = false;
+
+	for (char * s: freeThese) {
+		free(s);
+	}
 
 	// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -326,6 +332,10 @@ main( int argc, char * argv[] ) {
 
 	argc = 4;
 	argv = dcArgv;
+
+	for (int i = 1; i < argc; ++i) {
+		freeThese.push_back(argv[i]);
+	}
 
 	dc_main_init = & main_init;
 	dc_main_config = & main_config;
@@ -482,6 +492,7 @@ check_spool_dir()
 		"HISTORY",
 		"JOB_EPOCH_HISTORY",
 		"STARTD_HISTORY",
+		"SCHEDD_DAEMON_HISTORY",
 		"COLLECTOR_PERSISTENT_AD_LOG",
 		"LVM_BACKING_FILE",
 	};
@@ -1608,7 +1619,12 @@ lease_has_expired( const std::filesystem::path & file ) {
 
 void
 check_syndicate_dir() {
-	std::string LOCK = param("LOCK");
+	char *LOCK_str = param("LOCK");
+	std::string LOCK;
+	if (LOCK_str != nullptr) {
+		LOCK = LOCK_str;
+		free(LOCK_str);
+	}
 	std::filesystem::path lock(LOCK);
 	std::filesystem::path syndicate = lock / "syndicate";
 

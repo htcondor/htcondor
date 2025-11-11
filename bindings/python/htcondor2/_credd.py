@@ -16,6 +16,8 @@ from .htcondor2_impl import (
     HTCondorException,
 )
 
+from ._param import _param as param
+
 
 class Credd():
 
@@ -68,7 +70,7 @@ class Credd():
         if self._default:
             addr = None
 
-        _credd_do_store_cred(addr, user, password, mode, None, None)
+        _credd_do_store_cred(addr, user, password, mode, None, None, -1)
 
 
     def delete_password(self, user : str = None) -> bool:
@@ -85,7 +87,7 @@ class Credd():
         if self._default:
             addr = None
 
-        result = _credd_do_store_cred(addr, user, None, mode, None, None)
+        result = _credd_do_store_cred(addr, user, None, mode, None, None, -1)
         return result == self._SUCCESS
 
 
@@ -105,7 +107,7 @@ class Credd():
         if self._default:
             addr = None
 
-        result = _credd_do_store_cred(addr, user, None, mode, None, None)
+        result = _credd_do_store_cred(addr, user, None, mode, None, None, -1)
         return result == self._SUCCESS
 
 
@@ -130,10 +132,12 @@ class Credd():
             raise ValueError("invalid credtype")
 
         if credential is None:
-            producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
+            producer = param.get("SEC_CREDENTIAL_PRODUCER")
             if producer == "CREDENTIAL_ALREADY_STORED":
                 # This raised HTCondorIOError in version 1.
                 return
+            if producer is None:
+                raise HTCondorException("No credential supplied but SEC_CREDENTIAL_PRODUCER not set.")
 
             credential = _credd_run_credential_producer(producer)
 
@@ -141,7 +145,7 @@ class Credd():
             # This was HTCondorValueError in version 1
             raise ValueError("credential may not be empty")
 
-        _credd_do_store_cred(self._addr, user, credential, mode, None, None)
+        _credd_do_store_cred(self._addr, user, credential, mode, None, None, -1)
 
 
     def delete_user_cred(self, credtype : CredType, user : str = None) -> None:
@@ -156,7 +160,7 @@ class Credd():
                       current process's effective user ID.
         '''
         mode = self._GENERIC_DELETE | credtype
-        _credd_do_store_cred(self._addr, user, None, mode, None, None)
+        _credd_do_store_cred(self._addr, user, None, mode, None, None, -1)
 
 
     def query_user_cred(self, credtype : CredType, user : str = None) -> str:
@@ -180,7 +184,7 @@ class Credd():
             # This was HTCondorEnumError in version 1.
             raise ValueError("invalid credtype")
 
-        result = _credd_do_store_cred(self._addr, user, None, mode, None, None)
+        result = _credd_do_store_cred(self._addr, user, None, mode, None, None, -1)
 
         # This function returns "The time the credential was last updated,
         # or None."  6 is the SUCCESS_PENDING error code, which is not
@@ -192,7 +196,7 @@ class Credd():
             return result
 
 
-    def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : str = None, user : str = None) -> None:
+    def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : str = None, user : str = None, refresh : bool = None) -> None:
         '''
         Store the specified OAuth *credential* in the credd for the specified *user*.
 
@@ -206,6 +210,9 @@ class Credd():
         :param user:  The user for whom to store the credential.  If
                       :const:`None`, attempt to guess based on the
                       current process's effective user ID.
+        :param refresh:  Is credential a refresh-style token that must be
+                         processed by a CredMon to produce an access token.
+                         If :const:`None`, have credd decide.
         '''
         mode = self._GENERIC_ADD | CredType.OAuth
         if credtype != CredType.OAuth:
@@ -213,10 +220,12 @@ class Credd():
             raise ValueError("invalid credtype")
 
         if credential is None:
-            producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
+            producer = param.get("SEC_CREDENTIAL_PRODUCER")
             if producer == "CREDENTIAL_ALREADY_STORED":
                 # This was HTCondorIOError in version 1.
                 return
+            if producer is None:
+                raise HTCondorException("No credential supplied but SEC_CREDENTIAL_PRODUCER not set.")
 
             credential = _credd_run_credential_producer(producer)
 
@@ -224,7 +233,10 @@ class Credd():
             # This was HTCondorValueError in version 1
             raise ValueError("credential may not be empty")
 
-        _credd_do_store_cred(self._addr, user, credential, mode, service, handle)
+        if refresh is None:
+            refresh = -1
+
+        _credd_do_store_cred(self._addr, user, credential, mode, service, handle, refresh)
 
 
     def delete_user_service_cred(self, credtype : CredType, service : str, handle : str = None, user : str = None) -> None:
@@ -246,7 +258,7 @@ class Credd():
             # This was HTCondorEnumError in version 1.
             raise ValueError("invalid credtype")
 
-        _credd_do_store_cred(self._addr, user, None, mode, service, handle)
+        _credd_do_store_cred(self._addr, user, None, mode, service, handle, -1)
 
 
     # In version 1, this returned a CredStatus instance, but the CredStatus
@@ -273,7 +285,7 @@ class Credd():
             # This was HTCondorEnumError in version 1.
             raise ValueError("invalid credtype")
 
-        return _credd_do_store_cred(self._addr, user, None, mode, service, handle)
+        return _credd_do_store_cred(self._addr, user, None, mode, service, handle, -1)
 
 
     # We should probably change the type of `services`, since they're not

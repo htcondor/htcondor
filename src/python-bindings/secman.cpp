@@ -324,8 +324,8 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // Session cache lookup is tag-dependent; hence, we may need to temporarily override
         std::string origTag = SecMan::getTag();
         if (m_tag_set) {SecMan::setTag(tag);}
-        auto itr = (SecMan::session_cache)->find(session_id);
-        if (itr == (SecMan::session_cache)->end())
+        auto itr = (SecMan::session_cache).find(session_id);
+        if (itr == (SecMan::session_cache).end())
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
             THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");

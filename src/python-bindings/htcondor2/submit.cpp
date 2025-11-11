@@ -87,8 +87,8 @@ struct SubmitBlob {
 
         void insert_macro( const char * name, const std::string & value );
 
-        int process_job_credentials( std::string & URL, std::string & error_string ) {
-            return ::process_job_credentials( m_hash, 0, URL, error_string );
+        int process_job_credentials( Daemon* schedd, std::string & URL, std::string & error_string ) {
+            return ::process_job_credentials( m_hash, 0, schedd, URL, error_string );
         }
 
         const ClassAd * getJOBSET() { return m_hash.getJOBSET(); }
@@ -630,7 +630,7 @@ _submit_itemdata( PyObject *, PyObject * args ) {
         for( const auto & item : itemdata->items ) {
             std::vector< std::string_view > items;
             itemdata->split_item( item, items, itemdata->vars.size() );
-            formatstr_cat( values, "%s\n", join(items, "\0x1F").c_str() );
+            formatstr_cat( values, "%s\n", join(items, "\x1F").c_str() );
         }
         values.pop_back();
         py_values = PyUnicode_FromString(values.c_str());
@@ -661,7 +661,7 @@ _submit_issue_credentials( PyObject *, PyObject * args ) {
 
     std::string URL;
     std::string error_string;
-    int rv = sb->process_job_credentials( URL, error_string );
+    int rv = sb->process_job_credentials( nullptr,  URL, error_string ); // TODO: how to get the schedd daemon object here??
 
     if(rv != 0) {
         PyErr_SetString( PyExc_HTCondorException, error_string.c_str() );

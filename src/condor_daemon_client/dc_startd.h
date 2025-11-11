@@ -53,9 +53,6 @@ public:
 
 	DCStartd( const ClassAd *ad, const char *pool = NULL );
 
-		/// Destructor.
-	~DCStartd();
-
 		/** Set the ClaimId to use when talking to this startd. 
 			@param id The ClaimID string
 			@return true on success, false on invalid input (NULL)
@@ -66,7 +63,7 @@ public:
 		/** @return the ClaimId string for this startd, NULL if we
 			don't have a value yet.
 		*/
-	const char* getClaimId( void ) { return claim_id; };
+	const char* getClaimId( void ) { return claim_id.c_str(); };
 
 		/** This is the old-style way of requesting a claim, not the
 			"generic ClassAd" way, which currently only supports COD
@@ -191,8 +188,8 @@ public:
 	bool updateMachineAd( const ClassAd * update, ClassAd * reply, int timeout = -1 );
 
  private:
-	char* claim_id;
-	char* extra_ids;
+	std::string claim_id;
+	std::string extra_ids;
 
 		// Helper methods
 	bool checkClaimId( void );

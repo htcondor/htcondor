@@ -76,14 +76,10 @@ public:
 	static const char sec_feat_act_rev[][10];
 	static const char sec_req_rev[][10];
 
-	// A pointer to the current session cache.
-	static KeyCache                     *session_cache;
-	// The default session cache - used when there are no tags
-	static KeyCache                      m_default_session_cache;
-	// Alternate session caches.
-	static std::map<std::string,KeyCache> m_tagged_session_cache;
+	static KeyCache                     session_cache;
         static std::string m_tag;
 	// Alternate tag methods
+	static std::string m_tag_token;
 	static std::map<DCpermission, std::string> m_tag_methods;
 	static std::string m_tag_token_owner;
 	static std::map<std::string, std::string> command_map;
@@ -118,6 +114,7 @@ public:
 		int m_cmd{-1};
 		Sock *m_sock{nullptr};
 		bool m_raw_protocol{false};
+		bool m_force_auth{false};
 		bool m_resume_response{true};
 		CondorError *m_errstack{nullptr};
 		int m_subcmd{-1};
@@ -126,6 +123,8 @@ public:
 		bool m_nonblocking{false};
 		const char *m_cmd_description{nullptr};
 		const char *m_sec_session_id{nullptr};
+		std::string m_sec_context_tag;
+		std::string m_preferred_token;
 			// Do the start command on behalf of a specific owner;
 			// empty tag is the default (`condor` for daemons...).
 		std::string m_owner;
@@ -189,11 +188,16 @@ public:
 	static void setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods);
 	static const std::string getTagAuthenticationMethods(DCpermission perm);
 
+	// Setup the preferred IDToken for a tag; this is considered an override
+	// and is cleared when the tag is changed.
+	static void setTagPreferredToken(const std::string& token) {m_tag_token = token;}
+	static const std::string& getTagPreferredToken() {return m_tag_token;}
+
 	// Setup the tag credential owner name; this is considered an override and cleared when the
 	// tag is changed.
 	//
 	// When non-empty, the authentication method should proceed as-if the daemon was running as
-	// the specified owner.  While `tag` is an opaque string, this is interpreted as a username.
+	// the specified OS username.
 	static void setTagCredentialOwner(const std::string &owner) {m_tag_token_owner = owner;}
 	static const std::string &getTagCredentialOwner() {return m_tag_token_owner;}
 
@@ -321,7 +325,6 @@ public:
 	static std::string getPreferredOldCryptProtocol(const std::string &name);
 
  private:
-	void invalidateOneExpiredCache(KeyCache *session_cache);
 	static  std::string		filterAuthenticationMethods(DCpermission perm, const std::string &input_methods);
 
     void                    remove_commands(KeyCacheEntry * keyEntry);

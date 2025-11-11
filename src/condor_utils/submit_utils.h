@@ -46,7 +46,7 @@
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_Executable "executable"
-#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_exectuable"
+#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
 #define SUBMIT_KEY_Arguments2 "arguments2"
@@ -1010,7 +1010,7 @@ struct SubmitStepFromQArgs {
 		m_hash.optimize();
 	}
 
-	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string errmsg)
+	int load_items(MacroStream & ms_inline_items, bool allow_stdin, std::string & errmsg)
 	{
 		int rval = m_hash.load_inline_q_foreach_items(ms_inline_items, m_fea, errmsg);
 		if (rval == 1) { // items are external
@@ -1220,6 +1220,7 @@ int process_job_credentials(
     // Input parameters.
     SubmitHash & submit_hash,
     int DashDryRun /* should default to 0 */,
+    Daemon * schedd_or_credd,
 
     // Output parameters.
     std::string & URL,

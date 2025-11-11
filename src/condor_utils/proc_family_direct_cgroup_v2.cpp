@@ -97,10 +97,14 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
 
 	// append all directories from here on down
-	for (const auto& entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
-		if (stdfs::is_directory(entry)) {
-			dirs.emplace_back(entry);
-		}	
+	try { // apparently the ++operator will throw, even if the ctor does not
+		for (const auto& entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
+			if (stdfs::is_directory(entry)) {
+				dirs.emplace_back(entry);
+			}	
+		}
+	} catch(stdfs::filesystem_error &) {
+		// return whatever valid directories we have so far
 	}
 
 	auto deepest_first = [](const stdfs::path &p1, const stdfs::path &p2) {
@@ -1055,7 +1059,7 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 }
 
 bool 
-ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
+ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid, int exit_status) {
 	bool killed = false;
 
 	// Double check that we have an entry
@@ -1100,8 +1104,9 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::checking if pid %d was oom killed... oom_count was %zu\n", pid, oom_count);
 
 	killed = oom_count > 0;
+	bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
 
-	return killed;
+	return killed && was_sigkilled;
 }
 
 // Returns true if cgroup v2 is mounted

@@ -2112,11 +2112,6 @@ Starter::createTempExecuteDir( void )
 		return false;
 	}
 
-	dprintf_open_logs_in_directory(WorkingDir.c_str());
-
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
-
 #if !defined(WIN32)
 	if (use_chown) {
 		priv_state p = set_root_priv();
@@ -2135,6 +2130,12 @@ Starter::createTempExecuteDir( void )
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
 	int chdir_result = chdir(WorkingDir.c_str());
+
+	dprintf_open_logs_in_directory(WorkingDir.c_str());
+
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
+
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
@@ -3542,6 +3543,10 @@ Starter::PublishToEnv( Env* proc_env )
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long
+					// so we just force CUDA_VISIBLE_DEVICES to be the same value as NVIDIA_VISIBLE_DEVICES
+					proc_env->SetEnv("CUDA_VISIBLE_DEVICES", env_value);
+					dprintf(D_ALWAYS, "AvailableGPUs forcing env CUDA_VISIBLE_DEVICES=%s\n", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
 				}
@@ -4308,7 +4313,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 		std::string limit_str = to_string_byte_units(limit);
 		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
 		         limit_str.c_str());
-		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Disk);
 		m_lvm_held_job = true;
 	}
 

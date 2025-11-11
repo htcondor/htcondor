@@ -6,6 +6,7 @@
 
 import classad2 as classad
 
+from ._security_context import SecurityContext
 from ._collector import Collector
 from ._daemon_type import DaemonType
 from ._cred_type import CredType

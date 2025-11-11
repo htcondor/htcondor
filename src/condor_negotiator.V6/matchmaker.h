@@ -323,7 +323,7 @@ class Matchmaker : public Service
 		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
 		int  MaxTimePerSpin;        // How long per pie spin
-		int  MaxTimePerSchedd;		// How long to talk to any one schedd
+		time_t  MaxTimePerSchedd;		// How long to talk to any one schedd
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 		bool preemption_req_unstable;
@@ -340,6 +340,7 @@ class Matchmaker : public Service
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
+		bool MatchPasswordEnabled{false};
         char * strSlotConstraint; // query collector for machineAds with this constraint
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas

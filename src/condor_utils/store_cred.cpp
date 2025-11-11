@@ -35,6 +35,7 @@
 #include "zkm_base64.h"
 #include "my_popen.h"
 #include "directory.h"
+#include "condor_url.h"
 
 #include <chrono>
 #include <algorithm>
@@ -66,6 +67,7 @@ static const char *err_strings[] = {
 	"Operation failed because of a configuration error", // FAILURE_CONFIG_ERROR
 	"Failure parsing credential as JSON", // FAILURE_JSON_PARSE
 	"Credential was found but it did not match requested scopes or audience", // FAILURE_CRED_MISMATCH
+	"Credential requires interacting with an untrusted host", // FAILURE_UNTRUSTED_HOST
 };
 
 // check to see if store_cred return value is a failure, and return a string for the failure code if so
@@ -367,9 +369,6 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
-	CredSorter sorter;
-	CredSorter::CredType cred_type = sorter.Sort(service);
-
 	// if there is a service name and a handle name, concat the two together.
 	// this does mean we don't actually support querying service and/or handle
 	// separately.  until such time as these tokens live in some semi-structured
@@ -419,10 +418,12 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			ccfile.clear();
 			return FAILURE_NOT_FOUND;
 		} else {
+			bool top_found = false;
 			// does the .top file exist?
 			dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
 			struct stat cred_stat_buf;
 			if (stat(ccfile.c_str(), &cred_stat_buf) == 0) {
+				top_found = true;
 				std::string attr("Top"); attr += service; attr += "Time";
 				return_ad.Assign(attr, cred_stat_buf.st_mtime);
 
@@ -432,9 +433,6 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 				if (rc != SUCCESS) {
 					return rc;
 				}
-			} else if (cred_type != CredSorter::UnknownType) {
-				ccfile.clear();
-				return FAILURE_NOT_FOUND;
 			}
 
 			// if there's a .use file, get its mod
@@ -447,11 +445,10 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 				ccfile.clear();
 				return_ad.Assign(service, cred_stat_buf.st_mtime);
 				return SUCCESS;
-			} else if (cred_type == CredSorter::UnknownType) {
-				ccfile.clear();
-				return FAILURE_NOT_FOUND;
-			} else {
+			} else if (top_found) {
 				return SUCCESS_PENDING;
+			} else {
+				return FAILURE_NOT_FOUND;
 			}
 		}
 	}
@@ -481,9 +478,47 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		return SUCCESS;
 	}
 
+	// Everything below here is for ADD mode
+
 	if (service.empty()) {
 		dprintf(D_ERROR, "Name of service credential to add not given\n");
 		return FAILURE_BAD_ARGS;
+	}
+
+	// Examine the credential contents to see if it looks like a Vault token.
+	// If it does, check if the Vault host is trusted.
+	// If TRUSTED_VAULT_HOSTS is unset, we trust all hosts.
+	bool is_vault_token = false;
+	std::string vault_url;
+	classad::StringViewLexerSource lexsrc(std::string_view((const char*)cred, (size_t)credlen));
+	ClassAd parsed_cred;
+	classad::ClassAdJsonParser parser;
+	if (parser.ParseClassAd(&lexsrc, parsed_cred) && parsed_cred.LookupString("vault_url", vault_url)) {
+		is_vault_token = true;
+		std::string vault_host;
+		std::string trusted_hosts_str;
+		param(trusted_hosts_str, "TRUSTED_VAULT_HOSTS", "");
+		std::vector trusted_hosts = split(trusted_hosts_str);
+		if (ParseURL(vault_url, nullptr, &vault_host, nullptr) && !trusted_hosts.empty()) {
+			if (!contains_anycase(trusted_hosts, vault_host)) {
+				dprintf(D_ERROR, "Rejecting vault token from untrusted host '%s'\n", vault_host.c_str());
+				return FAILURE_UNTRUSTED_HOST;
+			}
+		}
+	}
+
+	// Should we write a .top file or a .use file?
+	// First, see if the client tells us
+	// Second, see if it looks like a Vault credential
+	// Finally, see if the service name belongs to a CredMon in config
+	bool use_top_file = true;
+	if (!ad || !ad->LookupBool(ATTR_NEED_REFRESH, use_top_file)) {
+		if (is_vault_token) {
+			use_top_file = true;
+		} else {
+			CredSorter sorter;
+			use_top_file = sorter.Sort(service) != CredSorter::UnknownType;
+		}
 	}
 
 	// create dir for user's creds, note that for OAUTH we *don't* create this as ROOT
@@ -491,7 +526,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	if (mkdir(user_cred_path.c_str(), 0700) < 0) {
 		int err = errno;
 		if (err != EEXIST) {
-			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s", err, user_cred_path.c_str());
+			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s\n", err, user_cred_path.c_str());
 			if (err == EACCES || err == EPERM || err == ENOENT || err == ENOTDIR) {
 				// for one of several reasons, the parent directory does not allow the creation of subdirs.
 				return FAILURE_CONFIG_ERROR;
@@ -501,7 +536,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 	size_t clen = credlen;
 
-	if (cred_type == CredSorter::UnknownType) {
+	if (!use_top_file) {
 		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
 	} else {
 

@@ -82,6 +82,10 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    parameter.
 	)C0ND0R"},
 
+	{"_disable_debug", & _disable_debug, METH_VARARGS, R"C0ND0R(
+	    Disable debugging output from HTCondor.
+	)C0ND0R"},
+
 	{"_enable_log", & _enable_log, METH_VARARGS, R"C0ND0R(
 	    Enable debugging output from HTCondor, where the output is sent to
 	    a file. The logging level is set by the ``TOOL_DEBUG``
@@ -104,6 +108,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
+	{"_ping", & _ping, METH_VARARGS, NULL},
 	{"_set_ready_state", & _set_ready_state, METH_VARARGS, NULL},
 	{"_send_generic_payload_command", & _send_generic_payload_command, METH_VARARGS, NULL},
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
@@ -133,6 +138,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_credd_get_oauth2_credential", &_credd_get_oauth2_credential, METH_VARARGS, NULL},
 
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
+	{"_schedd_userrec_query", &_schedd_userrec_query, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_constraint", &_schedd_act_on_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_edit_job_ids", &_schedd_edit_job_ids, METH_VARARGS, NULL},
@@ -149,6 +155,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
 	{"_schedd_get_dag_contact_info", &_schedd_get_dag_contact_info, METH_VARARGS, NULL},
+	{"_schedd_get_claims", &_schedd_get_claims, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},

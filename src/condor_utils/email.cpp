@@ -393,7 +393,7 @@ email_close(FILE *mailer)
 			free( temp );
 		}
 		fprintf( mailer, "The Official HTCondor Homepage is "
-				 "http://www.cs.wisc.edu/htcondor\n" );
+				 "https://htcondor.org/\n" );
 	}
 
 	fflush(mailer);

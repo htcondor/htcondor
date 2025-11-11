@@ -1,17 +1,62 @@
-Version 23 Feature Releases
-===========================
+Version 23.x LTS Releases
+=========================
 
-We release new features in these releases of HTCondor. The details of each
-version are described below.
+HTCondor 23.x transitioned from feature to LTS with the release of 23.10.18.
+These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
+(and potentially, ports to new platforms) will be provided in future
+23.10.y versions. New features will be added in the 24.x.y feature versions.
+
+Version 23.10.29
+----------------
+
+Release Notes:
+
+- HTCondor version 23.10.29 released on September 23, 2025.
+
+New Features:
+
+.. include-history:: features 23.10.29 23.0.29
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.10.29 23.0.29
+
+Version 23.10.28
+----------------
+
+Release Notes:
+
+- HTCondor version 23.10.28 released on August 21, 2025.
+
+New Features:
+
+.. include-history:: features 23.10.28 23.0.28
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.10.28 23.0.28
+
+Version 23.10.27
+----------------
+
+Release Notes:
+
+- HTCondor version 23.10.27 released on July 28, 2025.
+
+New Features:
+
+.. include-history:: features 23.10.27 23.0.27
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.10.27 23.0.27
 
 Version 23.10.26
 ----------------
 
 Release Notes:
 
-.. HTCondor version 23.10.26 released on Month Date, 2025.
-
-- HTCondor version 23.10.26 planned release date is Month Date, 2025
+- HTCondor version 23.10.26 released on June 26, 2025.
 
 New Features:
 
@@ -26,9 +71,7 @@ Version 23.10.25
 
 Release Notes:
 
-.. HTCondor version 23.10.25 released on May 27, 2025.
-
-- HTCondor version 23.10.25 planned release date is May 27, 2025
+- HTCondor version 23.10.25 released on May 29, 2025.
 
 New Features:
 
@@ -207,6 +250,12 @@ Bugs Fixed:
 - An unresponsive libvirtd daemon no longer causes the *condor_startd*
   to block indefinitely.
   :jira:`2644`
+
+Version 23.x Feature Releases
+=============================
+
+We release new features in these releases of HTCondor. The details of each
+version are described below.
 
 Version 23.10.2
 ---------------

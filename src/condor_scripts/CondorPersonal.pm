@@ -1214,6 +1214,8 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";
 				print NEW "JOB_START_DELAY = 0\n";
 				print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
+				print NEW "SINGULARITY_TEST_SANDBOX_TIMEOUT = 8\n";
+				print NEW "SINGULARITY = /usr/bin/false\n";
 				print NEW "LOCK = \$(LOG)\n";
 				if($iswindows == 1) {
 				#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";

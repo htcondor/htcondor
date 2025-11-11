@@ -74,11 +74,6 @@ option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF
 option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" OFF)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 
-if (WINDOWS)
-	# Python 3.6 on windows will look in the PATH for dependent dll's (like boost-python)
-	# Python 3.8 or later will not, so 3.6 might be preferable for some users
-	option(WANT_PYTHON36 "Prefer python 3.6 to other versions of python3" OFF)
-endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
@@ -188,155 +183,57 @@ if(NOT WINDOWS)
 
 else(NOT WINDOWS)
     #if(WINDOWS)
-    # ! less 1700 is Visual Studio 2012 or later
-    if(NOT (MSVC_VERSION LESS 1700))
-        message(STATUS "=======================================================")
-        message(STATUS "Searching for python installation(s)")
-        #look at registry for 32-bit view of 64-bit registry first
-        message(STATUS "  Looking for python 2.7 in HKLM\\Software\\Wow3264Node")
-        get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
-        #when registry reading fails cmake returns with c:\registry
-        message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
 
-        #look at native registry if not found
-        if("${PYTHON_INSTALL_DIR}" MATCHES "registry" OR ( CMAKE_SIZEOF_VOID_P EQUAL 8 AND "${PYTHON_INSTALL_DIR}" MATCHES "32" ) )
-            message(STATUS "  Looking for python 2.7 in HKLM\\Software")
-            get_filename_component(PYTHON_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.7\\InstallPath;]" REALPATH)
-            message(STATUS "  Got ${PYTHON_INSTALL_DIR}")
-        endif()
-    endif(NOT (MSVC_VERSION LESS 1700))
-
-    # starting with Visual Studio 2015, we build boost-python for several minor versions of python3
     if (NOT (MSVC_VERSION LESS 1900))
         if (WANT_PYTHON36)
             # look for a 32 bit python 3.6 before looking for the 64 python 3.6
-            message(STATUS "  Looking for python 3.6 in HKLM\\Software\\Wow3264Node")
-            get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
-            message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
+            message(STATUS "  WANT_PYTHON36 no longer supported, remove this from your cmake config")
         else (WANT_PYTHON36)
-            # look for python 3.9 and prefer it.  Else fallback to Python 3.10 or 3.8.
-            message(STATUS "  Looking for python 3.9, 3.10, or 3.8 in that order")
+            # look for python 3.9 or later
+            message(STATUS "  Looking for python 3.x")
 
-			# Use the FindPython module to find the python interpreter, since
-			# can find the interpreter even if it is not in the registry via the "py.exe" launcher.
-			# This module was introduced in CMake 3.12
-			include(FindPython)
-			find_package(Python3 3.9 EXACT QUIET COMPONENTS Interpreter)
-			if (NOT Python3_FOUND)
-				find_package(Python3 3.10 EXACT QUIET COMPONENTS Interpreter)
-			endif()
-			if (NOT Python3_FOUND)
-				find_package(Python3 3.8 EXACT QUIET COMPONENTS Interpreter)
-			endif()
+            # Use the FindPython module to find the python interpreter, since it
+            # can find the interpreter even if it is not in the registry via the "py.exe" launcher.
+            # This module was introduced in CMake 3.12
+            set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+            include(FindPython)
+            find_package(Python3 COMPONENTS Interpreter Development)
 
-			if (Python3_FOUND)
-				set(PYTHON3_INSTALL_DIR ${Python3_EXECUTABLE})
-				get_filename_component(PYTHON3_INSTALL_DIR ${PYTHON3_INSTALL_DIR} DIRECTORY)
+            if (Python3_FOUND)
+                set(PYTHON3_INSTALL_DIR ${Python3_EXECUTABLE})
+                get_filename_component(PYTHON3_INSTALL_DIR ${PYTHON3_INSTALL_DIR} DIRECTORY)
                 message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-			else()
-				message(STATUS "  Python 3.9, 3.10, and/or 3.8 not found")
-				set(PYTHON3_INSTALL_DIR "registry")
-			endif()
-
-            # forget that we found python2
-            message(STATUS "  Disabling python 2.7 build")
-            set(PYTHON_INSTALL_DIR "registry")
+            else()
+                message(STATUS "  No Python 3.x found")
+                set(PYTHON3_INSTALL_DIR "registry")
+            endif()
         endif (WANT_PYTHON36)
     endif(NOT (MSVC_VERSION LESS 1900))
 
-    # python 3.6 is our fallback if we can't find a newer version or if we are building 32 bit.
-    if("${PYTHON3_INSTALL_DIR}" MATCHES "registry" OR ( CMAKE_SIZEOF_VOID_P EQUAL 8 AND "${PYTHON3_INSTALL_DIR}" MATCHES "32" ) )
-        message(STATUS "  Looking for python 3.6 in HKLM\\Software")
-        get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
-        message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-    endif()
-
-    unset(PYTHON_EXECUTABLE)
+    unset(PYTHON_INSTALL_DIR) # no python 2.7 support
+    unset(PYTHON_EXECUTABLE)  # no python 2.7 support
     unset(PYTHON3_EXECUTABLE)
     unset(PYTHONINTERP_FOUND)
 
-    if ("${PYTHON_INSTALL_DIR}" MATCHES "registry")
-        unset(PYTHON_INSTALL_DIR)
-    endif()
     if ("${PYTHON3_INSTALL_DIR}" MATCHES "registry")
         unset(PYTHON3_INSTALL_DIR)
     endif()
 
-    # did we find either python2 or python3 ?
-    if(PYTHON_INSTALL_DIR OR PYTHON3_INSTALL_DIR)
+    # did we find either python3 ?
+    if(PYTHON3_INSTALL_DIR)
         message(STATUS "testing python for validity")
     else()
         message(STATUS "Supported python installation not found on this system")
     endif()
 
-    if (WANT_PYTHON2_BINDINGS AND PYTHON_INSTALL_DIR)
-        set(PYTHON_QUERY_PART_01 "from distutils import sysconfig as s;")
-        set(PYTHON_QUERY_PART_02 "import sys;")
-        set(PYTHON_QUERY_PART_03 "import struct;")
-        set(PYTHON_QUERY_PART_04 "print('.'.join(str(v) for v in sys.version_info));")
-        set(PYTHON_QUERY_PART_05 "print(sys.prefix);")
-        set(PYTHON_QUERY_PART_06 "print(s.get_python_inc(plat_specific=True));")
-        set(PYTHON_QUERY_PART_07 "print(s.get_python_lib(plat_specific=True));")
-        set(PYTHON_QUERY_PART_08 "print(s.get_config_var('SO'));")
-        set(PYTHON_QUERY_PART_09 "print(hasattr(sys, 'gettotalrefcount')+0);")
-        set(PYTHON_QUERY_PART_10 "print(struct.calcsize('@P'));")
-        set(PYTHON_QUERY_PART_11 "print(s.get_config_var('LDVERSION') or s.get_config_var('VERSION'));")
-
-        set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}")
-
-        execute_process(COMMAND "${PYTHON_INSTALL_DIR}\\python.exe" "-c" "${PYTHON_QUERY_COMMAND}"
-                        RESULT_VARIABLE _PYTHON_SUCCESS
-                        OUTPUT_VARIABLE _PYTHON_VALUES
-                        ERROR_VARIABLE _PYTHON_ERROR_VALUE
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-        # Convert the process output into a list
-        string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
-        string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
-        list(GET _PYTHON_VALUES 0 _PYTHON_VERSION_LIST)
-        list(GET _PYTHON_VALUES 1 PYTHON_PREFIX)
-        list(GET _PYTHON_VALUES 2 PYTHON_INCLUDE_DIR)
-        list(GET _PYTHON_VALUES 3 PYTHON_SITE_PACKAGES)
-        list(GET _PYTHON_VALUES 4 PYTHON_MODULE_EXTENSION)
-        list(GET _PYTHON_VALUES 5 PYTHON_IS_DEBUG)
-        list(GET _PYTHON_VALUES 6 PYTHON_SIZEOF_VOID_P)
-        list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
-
-        #check version (only 2.7 works for now)
-        if(NOT "${PYTHON_LIBRARY_SUFFIX}" STREQUAL "27")
-            message(STATUS "Wrong python 2.x library version detected.  Only 2.7.x supported ${PYTHON_LIBRARY_SUFFIX} detected")
-        else()
-            # Test for 32bit python by making sure that Python has the same pointer-size as the chosen compiler
-            if(NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}")
-                message(STATUS "Python bitness mismatch: Python 2.7 is ${PYTHON_SIZEOF_VOID_P} byte pointers, compiler is ${CMAKE_SIZEOF_VOID_P} byte pointers")
-            else()
-                message(STATUS "Valid Python 2.7 version and bitdepth detected")
-                #we build the path to the library by hand to not be confused in multipython installations
-                set(PYTHON_LIBRARIES "${PYTHON_PREFIX}\\libs\\python${PYTHON_LIBRARY_SUFFIX}.lib")
-                set(PYTHON_LIBRARY ${PYTHON_LIBRARIES})
-                set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}")
-                set(PYTHON_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
-                message(STATUS "PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
-                set(PYTHON_DLL_SUFFIX "${PYTHON_MODULE_EXTENSION}")
-                message(STATUS "PYTHON_DLL_SUFFIX=${PYTHON_DLL_SUFFIX}")
-                set(PYTHONLIBS_FOUND TRUE)
-                set(PYTHONINTERP_FOUND TRUE)
-                set(PYTHON_VERSION_STRING "${_PYTHON_VERSION_LIST}")
-                set(PYTHON_EXECUTABLE "${PYTHON_INSTALL_DIR}/python.exe")
-                message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
-            endif()
-        endif(NOT "${PYTHON_LIBRARY_SUFFIX}" STREQUAL "27")
-
-    endif (WANT_PYTHON2_BINDINGS AND PYTHON_INSTALL_DIR)
-
     if (WANT_PYTHON3_BINDINGS AND PYTHON3_INSTALL_DIR)
-        set(PYTHON_QUERY_PART_01 "from distutils import sysconfig as s;")
+        set(PYTHON_QUERY_PART_01 "import sysconfig as s;")
         set(PYTHON_QUERY_PART_02 "import sys;")
         set(PYTHON_QUERY_PART_03 "import struct;")
         set(PYTHON_QUERY_PART_04 "print('.'.join(str(v) for v in sys.version_info));")
         set(PYTHON_QUERY_PART_05 "print(sys.prefix);")
-        set(PYTHON_QUERY_PART_06 "print(s.get_python_inc(plat_specific=True));")
-        set(PYTHON_QUERY_PART_07 "print(s.get_python_lib(plat_specific=True));")
+        set(PYTHON_QUERY_PART_06 "print(s.get_path('platinclude'));")
+        set(PYTHON_QUERY_PART_07 "print(s.get_path('platlib'));")
         set(PYTHON_QUERY_PART_08 "print(s.get_config_var('EXT_SUFFIX'));")
         set(PYTHON_QUERY_PART_09 "print(hasattr(sys, 'gettotalrefcount')+0);")
         set(PYTHON_QUERY_PART_10 "print(struct.calcsize('@P'));")
@@ -364,21 +261,23 @@ else(NOT WINDOWS)
         list(GET _PYTHON_VALUES 7 PYTHON_LIBRARY_SUFFIX)
         list(GET _PYTHON_VALUES 8 PYTHON_VERSION_MINOR)
 
-        #check version (only 3.6, 3.8, 3.9, or 3.10 works for now)
-        if(NOT "${PYTHON_LIBRARY_SUFFIX}" MATCHES "3[6891]")
-            message(STATUS "Wrong python 3.x library version detected.  Only 3.6, 3.8, 3.9, or 3.10 supported ${PYTHON_LIBRARY_SUFFIX} detected")
+        #check version (only 3.9+ works now)
+        if(${PYTHON_LIBRARY_SUFFIX} LESS 9)
+            message(STATUS "Wrong python 3.x library version detected.  Only 3.9 and higher is supported ${PYTHON_LIBRARY_SUFFIX} detected")
         else()
             # Test for 32bit python by making sure that Python has the same pointer-size as the chosen compiler
             if(NOT "${PYTHON_SIZEOF_VOID_P}" STREQUAL "${CMAKE_SIZEOF_VOID_P}")
                 message(STATUS "Python bitness mismatch: Python 3.x is ${PYTHON_SIZEOF_VOID_P} byte pointers, compiler is ${CMAKE_SIZEOF_VOID_P} byte pointers")
             else()
-                message(STATUS "Valid Python 3.x version and bitdepth detected : ${PYTHON_LIBRARY_SUFFIX}")
+                set(PYTHON_LIBRARY_SUFFIX "3") # remove minor version from PYTHON_LIBRARY_SUFFIX
+                message(STATUS "Valid Python 3.x version and bitdepth detected : using ${PYTHON_LIBRARY_SUFFIX}")
                 #we build the path to the library by hand to not be confused in multipython installations
                 set(PYTHON3_LIBRARIES "${PYTHON_PREFIX}\\libs\\python${PYTHON_LIBRARY_SUFFIX}.lib")
                 set(PYTHON3_LIBRARY ${PYTHON3_LIBRARIES})
                 set(PYTHON3_INCLUDE_PATH "${PYTHON_INCLUDE_DIR}")
                 set(PYTHON3_INCLUDE_DIRS "${PYTHON_INCLUDE_DIR}")
                 message(STATUS "PYTHON3_LIBRARIES=${PYTHON3_LIBRARIES}")
+                # TODO: can we remove minor version from module extension?
                 set(PYTHON3_DLL_SUFFIX "${PYTHON_MODULE_EXTENSION}")
                 set(PYTHON3_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
                 set(PYTHON3_LIB_BASENAME "python${PYTHON_LIBRARY_SUFFIX}")
@@ -388,10 +287,13 @@ else(NOT WINDOWS)
                 set(PYTHON3_VERSION_STRING "${_PYTHON_VERSION_LIST}")
                 set(PYTHON3_VERSION_MINOR "${PYTHON_VERSION_MINOR}")
                 set(PYTHON3_EXECUTABLE "${PYTHON3_INSTALL_DIR}/python.exe")
+                #message(STATUS "Got PYTHON3_LIBRARIES = ${PYTHON3_LIBRARIES}")
+                message(STATUS "Using PYTHON3_LIBRARY = ${PYTHON3_LIBRARY}")
+                #message(STATUS "Got PYTHON3_LIB_BASENAME = ${PYTHON3_LIB_BASENAME}")
                 message(STATUS "Got PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
                 message(STATUS "Got PYTHON3_VERSION_MINOR = ${PYTHON3_VERSION_MINOR}")
             endif()
-        endif(NOT "${PYTHON_LIBRARY_SUFFIX}" MATCHES "3[6891]")
+        endif(${PYTHON_LIBRARY_SUFFIX} LESS 9)
 
     endif (WANT_PYTHON3_BINDINGS AND PYTHON3_INSTALL_DIR)
     message(STATUS "=======================================================")
@@ -811,16 +713,6 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
-	if (WITH_PYTHON_BINDINGS)
-		if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
-			# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-		else()
-			# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
-			#            or vc143 with Python 3.8 and 3.9 and 3.10
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
-		endif()
-	endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
 else ()
 
@@ -834,7 +726,7 @@ else ()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.3)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.4-beta)
 
 	if (LINUX)
 		option(WITH_LIBVIRT "Enable VM universe by linking with libvirt" ON)
@@ -972,8 +864,6 @@ if (OPENMP_FOUND)
 endif()
 
 if(MSVC)
-	#disable autolink settings
-	add_definitions(-DBOOST_ALL_NO_LIB)
 
 	add_compile_options(/FC)      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)

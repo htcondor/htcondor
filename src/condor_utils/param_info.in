@@ -2796,6 +2796,11 @@ default=
 type=string
 tags=starter
 
+[STARTER_NESTED_SCRATCH]
+default=false
+type=bool
+tags=starter
+
 [STARTER_NUM_THREADS_ENV_VARS]
 default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS PYTHON_CPU_COUNT ROOT_MAX_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
@@ -2837,6 +2842,11 @@ tags=schedd,starter
 default=30
 type=int
 tags=schedd,starter
+
+[LOCAL_UNIVERSE_CGROUP_ENFORCEMENT]
+default=false
+type=bool
+tags=starter
 
 [STARTER_JOB_HOOK_KEYWORD]
 default=
@@ -3186,10 +3196,6 @@ tags=JobRouter
 default=false
 type=bool
 
-[JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES]
-default=false
-type=bool
-
 [POLLING_PERIOD]
 default=
 type=string
@@ -3214,7 +3220,7 @@ tags=schedd,qmgmt
 description=All users can edit other users jobs
 
 [SYSTEM_SECURE_JOB_ATTRS]
-default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes
+default=x509userProxySubject x509UserProxyEmail x509UserProxyVOName x509UserProxyFirstFQAN x509UserProxyFQAN TotalSubmitProcs AuthTokenSubject AuthTokenIssuer AuthTokenGroups AuthTokenId AuthTokenScopes OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that only the Schedd can change
@@ -5189,7 +5195,7 @@ description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
-default=50000
+default=2000000000
 range=0,
 type=int
 description=History Helper max number of history ads
@@ -5354,6 +5360,10 @@ description=How often to query docker for the size of the image cache.  0 disabl
 [DOCKER_IMAGE_CACHE_SIZE]
 default=8
 type=int
+
+[DOCKER_TRUST_LOCAL_IMAGES]
+default=false
+type=bool
 
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
@@ -5733,6 +5743,9 @@ type=string
 default=scitoken:2.0
 type=string
 
+[TRUSTED_VAULT_HOSTS]
+default=
+type=string
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]

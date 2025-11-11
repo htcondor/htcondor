@@ -36,6 +36,10 @@
 #include <string>
 #include <chrono>
 
+// This is _really fucking dangerous_.
+#define BETTER_ENUMS_MACRO_FILE "enum_larger.h"
+#include "enum.h"
+
 /* 
 	Since the ULogEvent class definition only deals with the ClassAd via a
 	black box pointer and never needs to know the size of the actual
@@ -141,6 +145,7 @@ enum ULogEventNumber {
 	/** Data reused               */ ULOG_FILE_USED					= 44,
 	/** File removed from reuse   */ ULOG_FILE_REMOVED				= 45,
 	/** Dataflow job skipped      */ ULOG_DATAFLOW_JOB_SKIPPED		= 46,
+	/** Common Files (in)activity */ ULOG_COMMON_FILES              = 47,
 
 	// Debugging events in the Startd/Starter
 	ULOG_EP_FIRST = 100,
@@ -2109,6 +2114,38 @@ class FileTransferEvent : public ULogEvent {
 		std::string host;
 		time_t queueingDelay;
 		FileTransferEventType type;
+};
+
+
+// BETTER_ENUM is not C++-safe; any attempt to use this macro inside
+// a class, where it belongs, will fail.
+BETTER_ENUM(CommonFilesEventType, int,
+	None = 0,
+	TransferQueued = 1, TransferStarted = 2, TransferFinished = 3,
+	WaitStarted = 4, WaitFinished = 5
+)
+
+class CommonFilesEvent : public ULogEvent {
+	public:
+
+		CommonFilesEvent();
+		// Almost every class in this file is rule-of-three violation?
+		~CommonFilesEvent() = default;
+
+		virtual int readEvent( ULogFile& file, bool & got_sync_line );
+		virtual bool formatBody( std::string & out );
+
+		virtual ClassAd * toClassAd(bool event_time_utc);
+		virtual void initFromClassAd( ClassAd * ad );
+
+		static const char * CommonFilesEventStrings[];
+
+        void setType( CommonFilesEventType cfet ) { type = (+cfet)._to_string(); }
+		void setType( const std::string & cfet ) { type = cfet; }
+		const std::string & getType() const { return type; }
+
+	protected:
+		std::string type;
 };
 
 

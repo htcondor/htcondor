@@ -1155,14 +1155,33 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 }
 
 void MACRO_SET::initialize(int opts) {
-	size = 0; allocation_size = 0; sorted = 0;
-	table = NULL; metat = NULL; defaults = NULL;
-
 	options = opts; //CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX;
-	apool = ALLOCATION_POOL();
-	sources = std::vector<const char*>();
+	delete errors;
 	errors = new CondorError();
 }
+
+void MACRO_SET::free_all() {
+	delete [] table; table = nullptr;
+	delete [] metat; metat = nullptr;
+	size = 0; allocation_size = 0; sorted = 0;
+	delete errors; errors = nullptr;
+	if (apool.contains((const char *)defaults)) { defaults = nullptr; }
+	sources.clear();
+	apool.clear();
+}
+
+// empty out, but do not free macro tables
+void MACRO_SET::clear() {
+	if (table) { memset((void*)table, 0, sizeof(table[0]) * allocation_size); }
+	if (metat) { memset((void*)metat, 0, sizeof(metat[0]) * allocation_size); }
+	if (apool.contains((const char *)defaults)) { defaults = nullptr; } // because we are going to clear the apool
+	if (defaults && defaults->metat) { memset((void*)defaults->metat, 0, sizeof(defaults->metat[0]) * defaults->size); }
+	size = 0;
+	sorted = 0;
+	sources.clear();
+	apool.clear();
+}
+
 
 // fprintf an error if the above errors field is NULL, otherwise format an error and add it to the above errorstack
 // the preface is printed with fprintf but not with the errors stack.
@@ -2219,7 +2238,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 			// transfer existing key/value pairs old allocation to new one.
 			if (set.size > 0) {
 				memcpy(ptab, set.table, sizeof(set.table[0]) * set.size);
-				memset(set.table, 0, sizeof(set.table[0]) * set.size);
+				memset((void*)set.table, 0, sizeof(set.table[0]) * set.size);
 			}
 			delete [] set.table;
 		}
@@ -2230,7 +2249,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 				// transfer existing metadata from old allocation to new one.
 				if (set.size > 0) {
 					memcpy(pmet, set.metat, sizeof(set.metat[0]) * set.size);
-					memset(set.metat, 0, sizeof(set.metat[0]) * set.size);
+					memset((void*)set.metat, 0, sizeof(set.metat[0]) * set.size);
 				}
 				delete [] set.metat;
 			}
@@ -3575,6 +3594,7 @@ static const char * evaluate_macro_func (
 				else { tvalue = ""; }
 			}
 			if (tmp2) { free(tmp2); } tmp2 = NULL;
+			delete tree; tree=nullptr;
 		}
 		break;
 
@@ -3582,6 +3602,18 @@ static const char * evaluate_macro_func (
 		case SPECIAL_MACRO_ID_BASENAME:
 		case SPECIAL_MACRO_ID_FILENAME:
 		{
+			// $BASENAME() has an optional second argument that is a suffix to remove
+			// for instance $BASENAME(file, .tar.gz)
+			const char * kill_suffix = nullptr;
+			if (special_id == SPECIAL_MACRO_ID_BASENAME) {
+				char * arg2 = strrchr(body, ',');
+				if (arg2 && ! strchr(arg2, ')')) {
+					*arg2++ = 0;
+					while (isspace(*arg2)) ++arg2; // remove whitespace after the comma
+					kill_suffix = arg2;
+				}
+			}
+
 			const char * mval = lookup_macro(name, macro_set, ctx);
 			if ( ! mval) mval = body;
 			tvalue = NULL;
@@ -3649,17 +3681,26 @@ static const char * evaluate_macro_func (
 				int ixend = (int)strlen(buf); // this will be the end of what we wish to return
 				int ixn = (int)(condor_basename(buf) - buf); // index of start of filename, ==0 if no path sep
 				int ixx = (int)(condor_basename_extension_ptr(buf+ixn) - buf); // index of . in extension, ==ixend if no ext
+				if (kill_suffix) {
+					// if there is a kill_suffix that matches the end of the fullname
+					// treat that suffix as if it is a file extension and expand without it.
+					int cch = strlen(kill_suffix);
+					if (ixend - cch >= ixn && MATCH == strcasecmp(kill_suffix,buf+ixend-cch)) {
+						ixx = ixend - cch; // treat the suffix as a file extension
+						parts &= ~1;       // expand without the "extension"
+					}
+				}
 				// if this is a bare filename, we can ignore the p & d flags if n or x is set
 				if ( ! ixn) { if (parts & (2|1)) parts &= ~(4|8); }
 
 				// set tvalue to start, and ixend to end of text we want to return.
 				switch (parts & 0xF)
 				{
-				case 1:     tvalue = buf+ixx; if (bare && (ixx < ixend)) ++tvalue; break;
-				case 2|1:   tvalue = buf+ixn;  break;
-				case 2:     tvalue = buf+ixn;  ixend = ixx; break;
+				case 1:     tvalue = buf+ixx; if (bare && (ixx < ixend)) ++tvalue; break; // $Fx
+				case 2|1:   tvalue = buf+ixn;  break; // $Fnx
+				case 2:     tvalue = buf+ixn;  ixend = ixx; break; // $Fn
 				case 0:
-				case 4|2|1: tvalue = buf;      break;
+				case 4|2|1: tvalue = buf;      break; // $Fpnx
 				case 4|1:   tvalue = buf;      break; // TODO: fix to strip out filename part?
 				case 4:     tvalue = buf; ixend = ixn; if (bare && ixn > 0) ixend = ixn-1; break;
 				case 4|2:   tvalue = buf; ixend = ixx; break;
@@ -4966,7 +5007,7 @@ MACRO_META * hash_iter_meta(HASHITER& it) {
 	if (hash_iter_done(it)) return NULL;
 	if (it.is_def) {
 		static MACRO_META meta;
-		memset(&meta, 0, sizeof(meta));
+		meta = MACRO_META();
 		meta.inside = true;
 		meta.param_table = true;
 		meta.param_id = it.id;

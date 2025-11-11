@@ -787,7 +787,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	// this is a Register_Socket callback, but we also call this in the reaper
 	// so it's possible that the number of updates available will be 0
 	int pending_bytes = stream->bytes_available_to_read();
-	while (pending_bytes > 0) {
+	while (static_cast<Sock*>(stream)->msgReady()) {
 
 		time_t msg_time = time(NULL);
 
@@ -865,7 +865,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		}
 	}
 
-	if( final_update ) {
+	if( final_update || static_cast<ReliSock*>(stream)->is_closed() ) {
 		dprintf(D_FULLDEBUG, "Closing job ClassAd update socket from starter.\n");
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
@@ -1273,7 +1273,7 @@ Starter::startSoftkillTimeout( time_t timeout )
 	if( s_softkill_tid < 0 ) {
 		EXCEPT( "Can't register softkillTimeout timer" );
 	}
-	dprintf(D_FULLDEBUG,"Using max vacate time of %ds for this job.\n",softkill_timeout);
+	dprintf(D_FULLDEBUG,"Using max vacate time of %llds for this job.\n",(long long)softkill_timeout);
 	return TRUE;
 }
 

@@ -23,7 +23,7 @@ SCHEDD_NAME=$9
 BIRTH=`date +%s`
 CLEAN_UP_TIME=300
 BINARIES_FILE=condor-*.tar.gz
-CONFIGURATION_FILE=hpc-config.tar.gz
+CONFIGURATION_FILE=
 
 
 #
@@ -147,11 +147,13 @@ mv ../password_file local/passwords.d/POOL
 #
 # Unpack the configuration on top.
 #
-TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
-if [[ $? != 0 ]]; then
-    echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
-    echo ${TAR_LOGGING}
-    exit 5
+if [[ -n "${CONFIGURATION_FILE}" ]]; then
+    TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
+    if [[ $? != 0 ]]; then
+        echo "Failed to unpack configuration from '${CONFIGURATION_FILE}', aborting."
+        echo ${TAR_LOGGING}
+        exit 5
+    fi
 fi
 
 

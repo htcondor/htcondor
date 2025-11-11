@@ -28,11 +28,11 @@ def f_failure(* pargs):
 class TestJobSpecTypes:
 
     def test_job_spec_int(self):
-        job_spec_hack( "addr", 7, f_success, f_failure, [] )
+        job_spec_hack( "addr", 7, f_failure, f_success, [] )
 
 
     def test_job_spec_str(self):
-        job_spec_hack( "addr", "6", f_success, f_failure, [] )
+        job_spec_hack( "addr", "6", f_failure, f_success, [] )
         job_spec_hack( "addr", "6.5", f_success, f_failure, [] )
         job_spec_hack( "addr", "ClusterID >= 4", f_failure, f_success, [] )
 
@@ -43,7 +43,7 @@ class TestJobSpecTypes:
 
 
     def test_job_spec_list(self):
-        job_spec_hack( "addr", ["2", "1.1", "10"], f_success, f_failure, [] )
+        job_spec_hack( "addr", ["2", "1.1", "10"], f_failure, f_success, [] )
 
 
     # There's probably a way to mark this as expected to fail with a

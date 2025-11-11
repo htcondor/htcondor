@@ -35,6 +35,7 @@
 #include "nullfile.h"
 #include "spooled_job_files.h"
 #include "condor_holdcodes.h"
+#include "condor_event.h"
 
 #include <filesystem>
 #include "manifest.h"
@@ -44,6 +45,8 @@
 #include "condor_base64.h"
 #include "shortfile.h"
 #include "single_provider_syndicate.h"
+
+#include <regex>
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -1134,10 +1137,32 @@ do_wiring_up( const std::string & stagingDir, const std::string & cifName ) {
 }
 
 
+bool
+LookupBoolInContext( const ClassAd & ad, const std::string & attr, bool & value ) {
+	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
+	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
+	if( context ) {
+		return context->LookupBool( attr, value );
+	}
+	return false;
+}
+
+
+bool
+LookupStringInContext( const ClassAd & ad, const std::string & attr, std::string & value ) {
+	ClassAd * context = dynamic_cast<ClassAd *>(ad.Lookup( ATTR_CONTEXT_AD ));
+	if( context ) {
+		return context->LookupString( attr, value );
+	}
+	return false;
+}
+
+
 // The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_common_input_conversation(
-	ClassAd request, std::string commonInputFiles, std::string cifName
+	ClassAd request, std::string commonInputFiles, std::string cifName,
+	bool print_waiting /* = true */
 ) {
 	ClassAd guidance;
 
@@ -1167,7 +1192,6 @@ UniShadow::start_common_input_conversation(
 	//  normal transfer.
 	//
 
-
 	this->cfLock = new SingleProviderSyndicate(cifName);
 
 	bool success;
@@ -1182,7 +1206,7 @@ UniShadow::start_common_input_conversation(
 				this->producer_keep_alive = daemonCore->Register_Timer(
 					0, 60,
 					[this] (int /* timerID */) -> void {
-						dprintf( D_ZKM, "Elected producer touch()ing keyfile.\n" );
+						dprintf( D_TEST, "Elected producer touch()ing keyfile.\n" );
 						if(! this->cfLock->touch()) {
 							delete this->cfLock;
 							EXCEPT( "Elected producer touch() failed, aborting.\n" );
@@ -1211,6 +1235,11 @@ UniShadow::start_common_input_conversation(
 				// to prolong its life.
 				//
 
+				dprintf( D_ALWAYS, "Starting common files transfer.\n" );
+				CommonFilesEvent cfe1;
+				cfe1.setType( CommonFilesEventType::TransferStarted );
+				uLog.writeEvent( & cfe1, jobAd );
+
 				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
@@ -1218,13 +1247,18 @@ UniShadow::start_common_input_conversation(
 				// double-check here.
 
 				success = false;
-				request.LookupBool( ATTR_RESULT, success );
+				LookupBoolInContext( request, ATTR_RESULT, success );
+
+				CommonFilesEvent cfe2;
+				cfe2.setType( CommonFilesEventType::TransferFinished );
+				uLog.writeEvent( & cfe2, jobAd );
+				dprintf( D_ALWAYS, "Finished common files transfer: %s.\n", success ? "success" : "failure" );
 
 				std::string stagingDir;
 				if( success ) {
 					// We'll assume that malformed replies are transients.
-					if(! request.LookupString( "StagingDir", stagingDir ) ) {
-						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common file transfer; aborting job.\n" );
+					if(! LookupStringInContext( request, "StagingDir", stagingDir )) {
+						dprintf( D_ALWAYS, "UniShadow::start_common_input_conversation(): malformed reply to doing common files transfer; aborting job.\n" );
 
 						// Make sure we take care of this.
 						delete this->cfLock;
@@ -1245,7 +1279,7 @@ UniShadow::start_common_input_conversation(
 						co_return guidance;
 					}
 
-					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
+					dprintf( D_TEST, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
 					if(! this->cfLock->ready( stagingDir )) {
 						// We failed to tell the jobs waiting on us that we're
 						// ready.  This job can continue, but the others can't.
@@ -1261,18 +1295,70 @@ UniShadow::start_common_input_conversation(
 					delete this->cfLock;
 					this->cfLock = NULL;
 
+					//
+					// Improve the starter's hold/vacate reason.
+					//
+					// From JICShadow::transferInputStatus().
+					//
 					const FileTransfer::FileTransferInfo info = this->commonFTO->GetInfo();
-					if( info.try_again ) {
-						// Consider replacing this with a delayed (zero-second
-						// timer) call to evictJob().
-						this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
-						this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to transfer common files." );
-						this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-						this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
-						remRes->setExitReason(JOB_SHOULD_REQUEUE);
-						remRes->killStarter(false);
+
+					std::string reason = "Failed to transfer files: ";
+					if(! info.error_desc.empty()) {
+						reason += info.error_desc;
 					} else {
-						holdJob( "Failed to transfer common files.", CONDOR_HOLD_CODE::JobNotStarted, 3 );
+						reason += " reason unknown.";
+					}
+
+					// This is not common file -specific...
+					// we know if it's a hold or a vacate.
+					int code = info.hold_code;
+					int subcode = info.hold_subcode;
+					std::string url_file_type;
+					std::string improved_reason = improveReasonAttributes(
+							reason.c_str(),
+							code, subcode, url_file_type
+					);
+
+					// ... so go ahead and clean it up now.
+					if( improved_reason.empty() ) {
+						improved_reason = reason;
+					} else {
+						std::regex r("Transfer input files failure");
+						improved_reason = std::regex_replace(
+							improved_reason, r,
+							"Transfer common input files failure"
+						);
+					}
+
+
+					// According ToddT (on 2025-08-21), the `try_again` field
+					// has only ever been intended for immediate starter-side
+					// retries of CEDAR transfers.  (There's certainly nothing
+					// in the plug-in interface, ignoring the incomplete
+					// HTCONDOR-3064.)  So we'll just ignore it here.
+
+					// FIXME: Will this be correct for a starter-side failure?
+					dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
+						info.error_desc.c_str(), info.hold_code, info.hold_subcode
+					);
+
+
+					// This seems wrong -- improveReasonAttributes() could
+					// have changed the hold code and sub-code even if it
+					// didn't produce and improved string -- but it's how
+					// the original code in evictJob() worked.
+					if( improved_reason.empty() ) {
+						holdJob( info.error_desc.c_str(), code, subcode );
+					} else {
+						// improveReasonAttribute() will not specify that
+						// job is going on hold because of _common_ input
+						// transfer, so fix it here.
+						std::regex r("Transfer input files failure");
+						improved_reason = std::regex_replace(
+							improved_reason, r,
+							"Transfer common input files failure"
+						);
+						holdJob( improved_reason.c_str(), code, subcode );
 					}
 
 					guidance.Clear();
@@ -1284,7 +1370,7 @@ UniShadow::start_common_input_conversation(
 				request = co_yield guidance;
 
 				success = false;
-				request.LookupBool( ATTR_RESULT, success );
+				LookupBoolInContext( request, ATTR_RESULT, success );
 				if(! success) {
 					// Consider replacing this with a delayed (zero-second
 					// timer) call to evictJob().
@@ -1299,6 +1385,7 @@ UniShadow::start_common_input_conversation(
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
 					co_return guidance;
 				}
+
 
 				//
 				// TODO.
@@ -1335,14 +1422,28 @@ UniShadow::start_common_input_conversation(
 				// sure the starter has already set up the job environment.
 
 				bool job_environment_ready = false;
-				request.LookupBool( ATTR_JOB_ENVIRONMENT_READY, job_environment_ready );
+				LookupBoolInContext(
+					request, ATTR_JOB_ENVIRONMENT_READY, job_environment_ready
+				);
 				if(! job_environment_ready) {
 					this->resume_job_setup = true;
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 					co_return guidance;
 				} else {
+					if( print_waiting ) {
+						print_waiting = false;
+						dprintf( D_ALWAYS, "Waiting for common files to be transferred (%s)\n", cifName.c_str() );
+
+						CommonFilesEvent cfe;
+						cfe.setType( CommonFilesEventType::WaitStarted );
+						uLog.writeEvent( & cfe, jobAd );
+					}
 					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
 					guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+					// It's a little clumsy to send the starter's own context
+					// ad back to it, but it's also easier than preserving it
+					// across invocations over there.
+					CopyAttribute(ATTR_CONTEXT_AD, guidance, request);
 					request = co_yield guidance;
 				}
 				} break;
@@ -1358,7 +1459,7 @@ UniShadow::start_common_input_conversation(
 				request = co_yield guidance;
 
 				success = false;
-				request.LookupBool( ATTR_RESULT, success );
+				LookupBoolInContext( request, ATTR_RESULT, success );
 				if(! success) {
 					// Consider replacing this with a delayed (zero-second
 					// timer) call to evictJob().
@@ -1610,7 +1711,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ZKM, "Sending (job setup) guidance with command %s\n", command.c_str());
+		dprintf( D_TEST, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 

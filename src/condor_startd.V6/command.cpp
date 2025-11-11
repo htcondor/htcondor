@@ -456,7 +456,10 @@ command_release_claim(int cmd, Stream* stream )
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
+			// The shadow is either gone and not coming back, or it no
+			// longer cares what the starter has to say; make sure we don't
+			// tie up a slot waiting out the job lease period for a reconnect.
+			rip->kill_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto success_exit;
 		}
 	}
@@ -1514,6 +1517,12 @@ accept_request_claim(
 		goto abort;
 	}
 	claim->rip()->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
+
+	{
+		bool ocu_holder = false;
+		claim->ad()->LookupBool(ATTR_OCU_HOLDER, ocu_holder);
+		claim->setOCU(ocu_holder);
+	}
 
 	// if an array of d-slots were passed, we want to change them to claimed state also.
 	// The claim passed above may or may not be attached to the first d-slot here

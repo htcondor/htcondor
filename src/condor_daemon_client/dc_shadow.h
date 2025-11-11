@@ -41,9 +41,6 @@ public:
 		*/
 	DCShadow( const char* name = NULL );
 
-		/// Destructor.
-	~DCShadow();
-
 		/** Initialize this object with a ClassAd that contains the
 			information we need.  At minimum, it must include
 			ATTR_SHADOW_IP_ADDR.  Ideally, it'd also have
@@ -83,7 +80,6 @@ public:
 
  private:
 	bool is_initialized;
-	SafeSock* shadow_safesock;
 
 		// I can't be copied (yet)
 	DCShadow( const DCShadow& );

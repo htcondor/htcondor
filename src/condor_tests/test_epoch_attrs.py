@@ -140,10 +140,10 @@ def readNextEpochLogEntry(f) -> EpochLogEntry:
 
 
 ALWAYS_KEYS = {
-    "INPUT": [ "TransferClass", "InputPluginResultList", "EpochWriteDate", "InputPluginInvocations" ],
-    "OUTPUT": [ "TransferClass", "OutputPluginResultList", "EpochWriteDate", "OutputPluginInvocations" ],
-    "CHECKPOINT": [ "TransferClass", "CheckpointPluginResultList", "EpochWriteDate", "CheckpointPluginInvocations" ],
-    "SPAWN": [ "ClusterId", "ProcId", "EpochWriteDate", "Owner", "NumShadowStarts", "ShadowBday" ],
+    "INPUT": [ "RunInstanceID", "EpochAdType", "TransferClass", "InputPluginResultList", "EpochWriteDate", "InputPluginInvocations" ],
+    "OUTPUT": [ "RunInstanceID", "EpochAdType", "TransferClass", "OutputPluginResultList", "EpochWriteDate", "OutputPluginInvocations" ],
+    "CHECKPOINT": [ "RunInstanceID", "EpochAdType", "TransferClass", "CheckpointPluginResultList", "EpochWriteDate", "CheckpointPluginInvocations" ],
+    "SPAWN": [ "RunInstanceID", "EpochAdType", "ClusterId", "ProcId", "EpochWriteDate", "Owner", "NumShadowStarts", "ShadowBday" ],
 }
 
 

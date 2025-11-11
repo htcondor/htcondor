@@ -234,8 +234,9 @@ bool SubmitHash::AssignJobVal(const char * attr, long long val) { return job->As
 
 // declare enough of the condor_params structure definitions so that we can define submit hashtable defaults
 namespace condor_params {
-	typedef struct string_value { const char * psz; int flags; } string_value;
-	struct key_value_pair { const char * key; const string_value * def; };
+	typedef struct nodef_value { const char * psz; int flags; } nodef_value;
+	typedef nodef_value string_value; // string value derives from nodef value but is actually the same structurally
+	struct key_value_pair { const char * key; const nodef_value * def; };
 	struct key_table_pair { const char * key; const key_value_pair * aTable; int cElms; }; // metaknob table
 	typedef struct kvp_value { const char * key; int flags; const key_value_pair * aTable; int cElms; } kvp_value;
 	typedef struct ktp_value { const char * label; int flags; const key_table_pair * aTables; int cTables; } ktp_value;
@@ -573,8 +574,7 @@ SubmitHash::SubmitHash()
 
 SubmitHash::~SubmitHash()
 {
-	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
-	SubmitMacroSet.errors = NULL;
+	SubmitMacroSet.free_all();
 
 	delete job; job = nullptr;
 	delete procAd; procAd = nullptr;
@@ -582,7 +582,6 @@ SubmitHash::~SubmitHash()
 	protectedUrlMap = nullptr; // Submit Hash does not own this object
 
 	// detach but do not delete the cluster ad
-	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
 	clusterAd = nullptr;
 }
 
@@ -1319,19 +1318,7 @@ void SubmitHash::init(int value)
 
 void SubmitHash::clear()
 {
-	if (SubmitMacroSet.table) {
-		memset(SubmitMacroSet.table, 0, sizeof(SubmitMacroSet.table[0]) * SubmitMacroSet.allocation_size);
-	}
-	if (SubmitMacroSet.metat) {
-		memset(SubmitMacroSet.metat, 0, sizeof(SubmitMacroSet.metat[0]) * SubmitMacroSet.allocation_size);
-	}
-	if (SubmitMacroSet.defaults && SubmitMacroSet.defaults->metat) {
-		memset(SubmitMacroSet.defaults->metat, 0, sizeof(SubmitMacroSet.defaults->metat[0]) * SubmitMacroSet.defaults->size);
-	}
-	SubmitMacroSet.size = 0;
-	SubmitMacroSet.sorted = 0;
-	SubmitMacroSet.apool.clear();
-	SubmitMacroSet.sources.clear();
+	SubmitMacroSet.clear();
 	setup_macro_defaults(); // setup a defaults table for the macro_set. have to re-do this because we cleared the apool
 }
 
@@ -3369,9 +3356,12 @@ int SubmitHash::SetNotification()
 	else if( strcasecmp(how, "ERROR") == 0 ) {
 		notification = NOTIFY_ERROR;
 	} 
+	else if( strcasecmp(how, "START") == 0 ) {
+		notification = NOTIFY_START;
+	} 
 	else {
 		push_error(stderr, "Notification must be 'Never', "
-				 "'Always', 'Complete', or 'Error'\n" );
+				 "'Always', 'Complete', 'Start', or 'Error'\n" );
 		ABORT_AND_RETURN( 1 );
 	}
 
@@ -3548,7 +3538,7 @@ int SubmitHash::SetArguments()
 	bool args_success = true;
 	std::string error_msg;
 
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
 		std::string value;
@@ -4061,7 +4051,7 @@ int SubmitHash::SetExecutable()
 	}
 
 	char *shell = submit_param(SUBMIT_KEY_Shell);
-	if (shell) {
+	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			return 0;
@@ -6567,6 +6557,14 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			}
 		}
 	} else {
+		// we get here for late-mat when the digest does not have container_image (it's a constant)
+		// but if we are building an input transfer list, we still need to add the full path of
+		// the container to it.
+		std::string container_path;
+		if (clusterAd && clusterAd->LookupString(ATTR_CONTAINER_IMAGE "FullPath", container_path)) {
+			input_files.emplace_back(container_path);
+			// when there is a clusterAd, accumulate_size_kb will be a nullptr
+		}
 		return 0;
 	}
 
@@ -6584,10 +6582,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	if (container_image.ptr())  {
+	if (container_image)  {
 		input_files.emplace_back(container_image.ptr());
 		if (accumulate_size_kb) {
-			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+			*accumulate_size_kb += calc_image_size_kb(container_image);
 		}
 
 		// Now that we've sure that we're transfering the container, set
@@ -6599,6 +6597,10 @@ int SubmitHash::process_container_input_files(std::vector<std::string> & input_f
 			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
 		}
 		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+
+		// if we are going to change ContainerImage, we need to store the full pathname
+		// for use by late-materialization when late-mat will be building a per-job transfer input list
+		job->Assign(ATTR_CONTAINER_IMAGE "FullPath", container_image.ptr());
 
 		size_t pos = container_tmp.find(':');
 		if (pos == std::string::npos) {
@@ -7292,10 +7294,17 @@ int SubmitHash::SetProtectedURLTransferLists() {
 			if (has_diff_queue_list || clusterInputQueues.size() > 0) {
 				classad::ExprTree *list = classad::ExprList::MakeExprList(queue_xfer_lists);
 				if (! job->Insert(ATTR_TRANSFER_Q_URL_IN_LIST, list)) {
+					delete list;
 					push_error(stderr, "failed to insert list of transfer queue input file attributes to %s\n",
 					           ATTR_TRANSFER_Q_URL_IN_LIST);
 					ABORT_AND_RETURN( 1 );
 				}
+			} else {
+				// We didn't transfer ownership of the queue_xfer_lists, so delete them
+				for (auto& tree : queue_xfer_lists) {
+					delete tree;
+				}
+				queue_xfer_lists.clear(); // Clear the vector to remove dangling pointers
 			}
 
 			// Set all cluster ad queue input list attrs not overwritten to empty string
@@ -8599,6 +8608,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 
 	// empty table options gets original split behavior.  (basically standard_foreach_table_opts)
 	bool legacy_split = table_opts.empty();
+	bool split_on_ws = table_opts.ws_sep; // capture the split-on-whitespace flag in case we need to turn it off
 
 	// setup token seps
 	const char* token_seps = ", \t";
@@ -8608,6 +8618,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 	char sep_char = 0;
 	if (legacy_split && item.find_first_of('\x1f') != std::string_view::npos) {
 		sep_char = '\x1f'; // autodetected US separator
+		split_on_ws = false; // turnoff whitespace splitting.
 	} else {
 		sep_char = table_opts.sep_char;
 	}
@@ -8615,7 +8626,7 @@ int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string
 		// build a dynamic token_seps string
 		char* seps = table_token_seps;
 		*seps++ = sep_char;
-		if (table_opts.ws_sep) { *seps++ = ' '; *seps++ = '\t'; }
+		if (split_on_ws) { *seps++ = ' '; *seps++ = '\t'; }
 		*seps = 0;
 
 		token_seps = table_token_seps;
@@ -8953,14 +8964,6 @@ int SubmitHash::load_external_q_foreach_items (
 			expand_options &= ~(EXPAND_GLOBS_TO_FILES|EXPAND_GLOBS_TO_DIRS);
 		}
 		citems = submit_expand_globs(o.items, expand_options, errmsg);
-		if ( ! errmsg.empty()) {
-			if (citems >= 0) {
-				push_warning(stderr, "%s", errmsg.c_str());
-			} else {
-				push_error(stderr, "%s", errmsg.c_str());
-			}
-			errmsg.clear();
-		}
 		if (citems < 0) return citems;
 		break;
 
@@ -9502,6 +9505,7 @@ int
 process_job_credentials(
 	SubmitHash & submit_hash,
 	int DashDryRun,
+	Daemon* schedd_or_credd,
 
 	std::string & URL,
 	std::string & error_string
@@ -9568,8 +9572,12 @@ process_job_credentials(
 		}
 
 		if (call_storer) {
-			if( my_system(storer_args) != 0 ) {
-				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
+			int rc = my_system(storer_args);
+			if (rc < 0) {
+				formatstr(error_string, "process_job_credentials(): failed to run '%s': errno %d (%s)\n", storer.c_str(), errno, strerror(errno));
+				return 1;
+			} else if (rc > 0) {
+				formatstr(error_string, "process_job_credentials(): '%s' failed: exit code %d\n", storer.c_str(), rc);
 				return 1;
 			}
 		}
@@ -9641,18 +9649,40 @@ process_job_credentials(
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
-			Daemon my_credd(DT_CREDD);
-			if (my_credd.locate()) {
-				// this version check will fail if CredD is not
-				// local.  the version is not exchanged over
-				// the wire until calling startCommand().  if
-				// we want to support remote submit we should
-				// just send the command anyway, after checking
-				// to make sure older CredDs won't completely
-				// choke on the new protocol.
-				bool new_credd = true; // assume new credd
-				if (my_credd.version()) {
-					CondorVersionInfo cvi(my_credd.version());
+
+			Daemon credd(DT_CREDD);
+
+			// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+			// in either case we want to initialize our credd object from the passed-in one if we can.
+			if (schedd_or_credd) {
+				DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+				if (schedd) {
+					std::string credd_address;
+					if (schedd->getCreddAddress(credd_address)) {
+						// when we init the credd from the schedd's locationAd,
+						// it will pick up the CreddIpAddr in the locationAd and
+						// use it to set the addr field of the daemon object
+						// And it will use the name, machine, and version of the schedd
+						// TODO: does the location ad need to know the name of the credd?
+						credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+					} else {
+						if (schedd->name() && ! schedd->isLocal()) {
+							// this is a Hail Mary, if the address of the credd is not known,
+							// and the schedd is remote we hope that the credd name and the schedd name are the same.
+							// if this is a local schedd, we are better off using a default credd.
+							credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+						}
+					}
+				} else if (schedd_or_credd->type() == DT_CREDD) {
+					credd = *schedd_or_credd;
+				}
+			}
+
+			// if we did not init the credd object from an ad, we need to locate now.
+			if (credd.locate()) {
+				bool new_credd = true; // assume new credd if version is not known.
+				if (credd.version()) {
+					CondorVersionInfo cvi(credd.version());
 					new_credd = (cvi.getMajorVer() <= 0) || cvi.built_since_version(8, 9, 7);
 				}
 				if (new_credd) {
@@ -9660,18 +9690,18 @@ process_job_credentials(
 					const char * err = NULL;
 					ClassAd return_ad;
 					// pass an empty username here, which tells the CredD to take the authenticated name from the socket
-					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &my_credd);
+					long long result = do_store_cred("", mode, uber_ticket, (int)bytes_read, return_ad, NULL, &credd);
 					if (store_cred_failed(result, mode, &err)) {
 						formatstr( error_string, "ERROR: store_cred of Kerberos credential failed - %s\n", err ? err : "" );
 						return 1;
 					}
 				} else {
 					formatstr( error_string, "\nERROR: Credd is too old to support storing of Kerberos credentials\n"
-							"  Credd version: %s", my_credd.version() );
+							"  Credd version: %s", credd.version());
 					return 1;
 				}
 			} else {
-				formatstr( error_string, "ERROR: locate(credd) failed!\n" );
+				formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
 				return 1;
 			}
 		}

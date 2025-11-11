@@ -79,7 +79,10 @@ and *-A* options may be used with *add-oauth* to add scopes and/or
 audience to the credentials or with *query-oauth* to make sure that
 the scopes or audience match the previously stored credentials.  If
 either *-S* or *-A* are used then the credentials must be in JSON
-format.
+format. The credential is assumed to be a refresh token that the
+CredMon daemon knows how to turn into an access token for use by jobs.
+The *-P* option can be used to indicate that the credential is an
+access token that requires no additional handling by the CredMon.
 
 Options
 -------
@@ -110,6 +113,8 @@ Options
     action.  If used with the *query-oauth* action, makes sure that
     the same audience was requested in the original credential.
     Requires credentials to be in JSON format.
+ **-P**
+    Indicate that the Oauth2 credential is an access token.
  **-n** *machinename*
     Apply the command on the given machine.
  **-p** *password*

@@ -22,11 +22,6 @@
 #include "classad/sink.h"
 #include "classad/value.h"
 
-using std::string;
-using std::vector;
-using std::pair;
-
-
 namespace classad {
 
 bool Value::
@@ -133,7 +128,7 @@ CopyFrom( const Value &val )
 
 	switch (val.valueType) {
 		case STRING_VALUE:
-			strValue = new string( *val.strValue);
+			strValue = new std::string( *val.strValue);
 			return;
 
 		case BOOLEAN_VALUE:
@@ -222,7 +217,7 @@ SetErrorValue (void)
 }
 
 void Value::
-SetStringValue( const string &s )
+SetStringValue( const std::string &s )
 {
 	// optimization, when copying string to string, we can skip the delete/new of the string buffer
 	if (valueType == STRING_VALUE) {
@@ -231,7 +226,7 @@ SetStringValue( const string &s )
 	}
 	_Clear();
 	valueType = STRING_VALUE;
-	strValue = new string( s );
+	strValue = new std::string( s );
 }
 
 void Value::
@@ -244,7 +239,7 @@ SetStringValue( const char *s )
 	}
 	_Clear();
 	valueType = STRING_VALUE;
-	strValue = new string( s );
+	strValue = new std::string( s );
 }
 
 void Value::
@@ -257,7 +252,7 @@ SetStringValue( const char *s, size_t cch )
 	}
 	_Clear();
 	valueType = STRING_VALUE;
-	strValue = new string( s, cch );
+	strValue = new std::string( s, cch );
 }
 
 void Value::
@@ -443,7 +438,7 @@ bool operator==(const Value &value1, const Value &value2)
 bool convertValueToRealValue(const Value value, Value &realValue)
 {
     bool                could_convert;
-	string	            buf;
+	std::string         buf;
 	const char	        *start;
 	const char          *end;
 	char                *end_tmp;
@@ -526,7 +521,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 bool convertValueToIntegerValue(const Value value, Value &integerValue)
 {
     bool                could_convert;
-	string	            buf;
+	std::string	        buf;
     char                *end;
 	long long           ivalue;
 	time_t	            rtvalue;
@@ -606,7 +601,7 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
     bool             could_convert;
 	time_t	         rtvalue;
 	abstime_t        atvalue;
-    string           string_representation;
+	std::string      string_representation;
     ClassAdUnParser  unparser;
 
 	switch(value.GetType()) {

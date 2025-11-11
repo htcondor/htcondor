@@ -28,6 +28,7 @@ from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _schedd_query,
+    _schedd_userrec_query,
     _schedd_act_on_job_ids,
     _schedd_act_on_job_constraint,
     _schedd_edit_job_ids,
@@ -45,6 +46,7 @@ from .htcondor2_impl import (
     _schedd_spool,
     _schedd_refresh_gsi_proxy,
     _schedd_get_dag_contact_info,
+    _schedd_get_claims,
 )
 
 
@@ -61,22 +63,38 @@ def job_spec_hack(
     if isinstance(job_spec, list):
         if not all([isinstance(i, str) for i in job_spec]):
             raise TypeError("All elements of the job_spec list must be strings.")
-        job_spec_string = ", ".join(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        if all([re.fullmatch(r'\d+\.\d+', i) for i in job_spec]):
+            job_spec_string = ", ".join(job_spec)
+            return f_job_ids(addr, job_spec_string, *args)
+
+        constraints = []
+        for i in job_spec:
+            if re.fullmatch(r'\d+', i):
+                constraints.append(f"(ClusterID == {i})")
+            elif re.fullmatch(r'\d+\.\d+', i):
+                (clusterID, procID) = i.split('.')
+                constraints.append(f"(ClusterID == {clusterID} && ProcID == {procID})")
+            else:
+                raise ValueError("All elements of the job_spec list must be strings of the form clusterID[.procID]")
+        job_spec_string = " || ".join(constraints)
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, int):
-        job_spec_string = str(job_spec)
-        return f_job_ids(addr, job_spec_string, *args)
+        job_spec_string = f'ClusterID == {job_spec}'
+        return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, classad.ExprTree):
         job_spec_string = str(job_spec)
         return f_constraint(addr, job_spec_string, *args)
     elif isinstance(job_spec, str):
-        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+        if re.fullmatch(r'\d+\.\d+', job_spec):
             return f_job_ids(addr, job_spec, *args)
+        if re.fullmatch(r'\d+', job_spec):
+            job_spec_string = f'ClusterID == {job_spec}'
+            return f_constraint(addr, job_spec_string, *args)
         try:
             job_spec_expr = classad.ExprTree(job_spec)
-            return f_constraint(addr, job_spec, *args);
-        except ValueError:
-            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        except classad.ClassAdException:
+            raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
+        return f_constraint(addr, job_spec, *args);
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
@@ -130,6 +148,85 @@ class Schedd():
         :param opts:  Special query options; see the enumeration for details.
         '''
         results = _schedd_query(self._addr, str(constraint), projection, int(limit), int(opts))
+        if callback is None:
+            return results
+
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
+
+    def queryUserAds(self,
+        constraint : Union[str, classad.ExprTree] = "",
+        projection : List[str] = [],
+        callback : Callable[[classad.ClassAd], Any] = None,
+        limit : int = -1,
+    ) -> List[classad.ClassAd]:
+        '''
+        Query the *condor_schedd* daemon for user ads.
+
+        :param constraint:  A query constraint.  Only user ads matching this
+            constraint will be returned.  The default will return all user ads
+        :param projection:  A list of classad attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param callback:  A filtering function.  It will be invoked for
+            each user ad which matches the constraint.  The value returned
+            by *callback* will replace the corresponding user ad in the
+            list returned by this method unless that value is `None`, which
+            will instead be omitted.
+        :param limit:  The maximum number of user ads to return.  The default
+            (``-1``) is to return all ads.
+        '''
+        results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), 0)
+        if callback is None:
+            return results
+
+        # We could pass `None` as the first argument to filter() if we
+        # were sure that nothing coming back from callback() was false-ish.
+        #
+        # The parentheses make the second argument a generator, which is
+        # probably a little more efficient than a list comprehension even
+        # though we immediately turn it back into a list.
+        return list(
+            filter(
+                lambda r: r is not None,
+                (callback(result) for result in results)
+            )
+        )
+
+    def queryProjectAds(self,
+        constraint : Union[str, classad.ExprTree] = "",
+        projection : List[str] = [],
+        callback : Callable[[classad.ClassAd], Any] = None,
+        limit : int = -1,
+    ) -> List[classad.ClassAd]:
+        '''
+        Query the *condor_schedd* daemon for project ads.
+
+        :param constraint:  A query constraint.  Only project ads matching this
+            constraint will be returned.  The default will return all project ads
+        :param projection:  A list of classad attributes.  These attributes will
+            be returned for each ad in the list.  (Others may be as well.)
+            The default (an empty list) returns all attributes.
+        :param callback:  A filtering function.  It will be invoked for
+            each project ad which matches the constraint.  The value returned
+            by *callback* will replace the corresponding project ad in the
+            list returned by this method unless that value is `None`, which
+            will instead be omitted.
+        :param limit:  The maximum number of project ads to return.  The default
+            (``-1``) is to return all ads.
+        '''
+        project_flag = 1 # 0=default, 1=project, 2=user, 3=both
+        results = _schedd_userrec_query(self._addr, str(constraint), projection, int(limit), project_flag)
         if callback is None:
             return results
 
@@ -512,31 +609,36 @@ class Schedd():
             # If the original itemdata wasn't inline, there's not only no
             # need to repeat it, but it's technically syntactically invalid.
             if submit_file.strip().endswith("("):
+                projection = None
                 original_item_data = description.itemdata()
                 if original_item_data is not None:
+                    first = next(original_item_data)
+                    projection = first.keys()
+                    submit_file = _add_line_from_itemdata(submit_file, first, separator, projection)
                     for item in original_item_data:
-                        submit_file = _add_line_from_itemdata(submit_file, item, separator)
+                        submit_file = _add_line_from_itemdata(submit_file, item, separator, projection)
                     submit_file = submit_file + ")\n"
 
         elif itemdata is None:
             submit_file = submit_file + "queue\n"
 
         else:
+            projection = None
             first = next(itemdata)
             if isinstance(first, str):
                 submit_file = submit_file + "QUEUE item FROM "
             elif isinstance(first, dict):
                 if any(not isinstance(x, str) for x in first.keys()):
                     raise TypeError("itemdata dictionaries must have string keys")
-                keys_list = ",".join(first.keys())
-                submit_file = submit_file + f"QUEUE {keys_list} FROM "
+                projection = first.keys()
+                submit_file = submit_file + f"QUEUE {','.join(projection)} FROM "
             else:
                 raise TypeError("itemdata must be a list of strings or dictionaries")
 
             submit_file = submit_file + "(\n"
-            submit_file = _add_line_from_itemdata(submit_file, first, separator)
+            submit_file = _add_line_from_itemdata(submit_file, first, separator, projection)
             for item in itemdata:
-                submit_file = _add_line_from_itemdata(submit_file, item, separator)
+                submit_file = _add_line_from_itemdata(submit_file, item, separator, projection)
             submit_file = submit_file + ")\n"
 
         # This assumes that None is the default value for the queue parameter.
@@ -681,8 +783,22 @@ class Schedd():
             raise TypeError("cluster must be an integer")
         return _schedd_get_dag_contact_info(self._addr, cluster)
 
+    def get_claims(self,
+        constraint : Optional[Union[str, classad.ExprTree]] = None,
+        projection : List[str] = []
+    ) -> List[classad.ClassAd]:
+        """
+        Query the schedd for the list of classads that represent claimed slots
 
-def _add_line_from_itemdata(submit_file, item, separator):
+        :param constraint: Constraint expression to return only the
+            matching claims.  If empty, return all matches.
+        :param projection: List of specific ClassAd attributes to return
+            from each match. If not specified the full match is returned.
+        """
+        projection_string = ",".join(projection)
+        return _schedd_get_claims(self._addr, str(constraint), projection_string)
+
+def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):
         if "\n" in item:
             raise ValueError("itemdata strings must not contain newlines")
@@ -692,7 +808,7 @@ def _add_line_from_itemdata(submit_file, item, separator):
             raise ValueError("itemdata keys must not contain newlines")
         if any(["\n" in x for x in item.values()]):
             raise ValueError("itemdata values must not contain newlines")
-        submit_file = submit_file + separator.join(item.values()) + "\n"
+        submit_file = submit_file + separator.join([item.get(k, "") for k in projection]) + "\n"
     return submit_file
 
 

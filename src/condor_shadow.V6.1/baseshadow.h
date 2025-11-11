@@ -118,6 +118,7 @@ class BaseShadow : public Service
 			about it, and exit with a special status.
 			@param reason Why we gave up (for UserLog, dprintf, etc)
 		*/
+	[[noreturn]]
 	PREFAST_NORETURN
 	void reconnectFailed( const char* reason );
 
@@ -432,6 +433,8 @@ class BaseShadow : public Service
 
 	void emailRemoveEvent( const char* reason );
 
+	void emailStartEvent( ClassAd * ad, const char *reason);
+
 	void logRequeueEvent( const char* reason );
 
 	void removeJobPre( const char* reason );
@@ -454,6 +457,13 @@ class BaseShadow : public Service
 	ClassAd m_prev_run_upload_file_stats;
 	ClassAd m_prev_run_download_file_stats;
 
+ protected:
+		/** Improve Hold/EvictReason string and codes before sending this info
+			to the job classad in the schedd. */
+	std::string improveReasonAttributes(const char* orig_reason_str, int  &reason_code, int &reason_subcode,
+		std::string& url_file_type);
+
+
  private:
 
 	// private methods
@@ -462,10 +472,6 @@ class BaseShadow : public Service
 			not, exit with JOB_NO_MEM.
 		*/
 	void checkSwap( void );
-
-		/** Improve Hold/EvictReason string and codes before sending this info
-			to the job classad in the schedd. */
-	std::string improveReasonAttributes(const char* orig_reason_str, int  &reason_code, int &reason_subcode);
 
 	// config file parameters
 	int reconnect_ceiling;

@@ -6180,17 +6180,21 @@ pid_t CreateProcessForkit::fork_exec() {
 #ifdef HAVE_CLONE
 		if (fork_flags & CLONE_NEWUSER) {
 			int fd = open("/proc/self/uid_map", O_WRONLY);
-			if (fd && (uid_map.size() > 0)) {
+			if ((fd >= 0)  && (uid_map.size() > 0)) {
 				std::ignore = write(fd, uid_map.c_str(), uid_map.size());
+			}
+			if (fd >= 0) {
 				close(fd);
 			}
 			fd = open("/proc/self/setgroups", O_WRONLY);
-			if (fd) {
+
+			if (fd >= 0) {
 				std::ignore = write(fd, "deny", 5);
 				close(fd);
 			}
+
 			fd = open("/proc/self/gid_map", O_WRONLY);
-			if (fd) {
+			if (fd >= 0) {
 				std::ignore = write(fd, gid_map.c_str(), gid_map.size());
 				close(fd);
 			}
@@ -9891,9 +9895,8 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 
 	if (this->m_proc_family) {
 #ifdef LINUX
-		bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
-		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_sigkilled && was_oom_killed) {
+		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid, exit_status);
+		if (was_oom_killed) {
 			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
 			exit_status |= DC_STATUS_OOM_KILLED;
 		} 
@@ -10053,7 +10056,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->erase(pidentry->child_session_id);
+		getSecMan()->session_cache.erase(pidentry->child_session_id);
 #ifdef WIN32
 		// close WIN32 handles
 	::CloseHandle(pidentry->hThread);  pidentry->hThread = NULL;
@@ -10841,7 +10844,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 
 KeyCache*
 DaemonCore::getKeyCache() {
-	return sec_man->session_cache;
+	return &sec_man->session_cache;
 }
 
 SecMan* DaemonCore :: getSecMan()
