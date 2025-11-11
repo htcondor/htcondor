@@ -2,7 +2,7 @@ Introduction to HTCondor Versions
 =================================
 
 This chapter provides descriptions of what features have been added or
-bugs fixed for each release of HTCondor. The first section describes the
+bugs fixed for each version of HTCondor. The first section describes the
 HTCondor version numbering scheme, what the numbers mean, and what the
 different releases are. The rest of the sections each describe the
 specific releases.
@@ -18,15 +18,15 @@ development of HTCondor.  The version number will still retain the
 MAJOR.MINOR.PATCH form with slightly different meanings.  We have borrowed
 ideas from `Semantic Versioning <https://semver.org/>`_.
 
--   The MAJOR number increments for each new Long Term Support (LTS) release.
+-   The MAJOR number increments with each new Long Term Support (LTS) release.
     A new LTS release may have backward-incompatible changes and may require
-    updates to configuration files.  If the current LTS release is 23.0.6,
-    the next one will be 24.0.0.  A new LTS release is expected about every
-    twelve months in August. The LTS major version number matches the year
+    updates to configuration files.  If the current LTS version is 23.0.12,
+    the next one will be 24.0.1.  A new LTS release is expected in the third
+    quarter of each year. The LTS major version number matches the year
     of initial release.
 
 -   The MINOR number increments each feature release.
-    This number stays at 0 for LTS releases. If the current feature release
+    This number stays constant for LTS releases. If the current feature version
     is 23.2.3, the next one will be 23.3.0.
     A new feature release is expected every month.
 
@@ -39,9 +39,12 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 Types of Releases
 ^^^^^^^^^^^^^^^^^
 
--   An **LTS** release is numbered **X.0.1**, and is a new long-term support
-    release.  The previous LTS
-    release is supported for approximately one year after a new LTS version is released.
+-   A new **LTS** release is numbered **X.0.1**. When the new LTS version is
+    released, the **X-1** feature versions transition to LTS versions (bug
+    fixes only). This LTS release will be supported for approximately two
+    years. The previous LTS release and newly minted LTS release from the
+    latest feature release are supported for approximately one year after
+    a new LTS version is released.
     The final feature release undergoes a stabilization effort where the
     software is run through multiple code quality tools (such as Valgrind)
     to assure the best possible LTS release.  The MAJOR.0.1 version is not
@@ -59,27 +62,22 @@ Types of Releases
     HTCondor team guarantees that patches to the LTS release are compatible.
     Paid support contracts are only available for the LTS releases.
 
--   A **feature** release is numbered **X.Y.1** and includes one or more new
+-   A **feature** release is numbered **X.Y.Z** and includes one or more new
     features.
     The software goes through our entire testing process.
     We use these releases in production at the Center for High Throughput
-    Computing (CHTC).  These releases contain all the patches from the LTS release.
-
--   A **feature patch** release is numbered **X.Y.Z** and contains targeted
-    fixes for features.
-    The software goes through an abbreviated testing process.
-    We use these releases in production at the Center for High Throughput
-    Computing (CHTC).
+    Computing (CHTC) and Open Science Pool (OSPool).
+    These releases contain all the patches from the LTS release.
 
 -   The HTCondor
     development team guarantees protocol compatibility between the feature
-    releases and the LTS release.  However, changes in behavior may be
+    release and the LTS releases.  However, changes in behavior may be
     observed, and adjustments to configuration may be required when new
     features are implemented.
 
--   By default, a feature release in the same series is compatible with
-    the previous release. That is, release **X.Y+1.x** will be compatible with
-    release **X.Y.x**, such the nodes in a cluster may be upgraded without
+-   By default, each MAJOR version is compatible with adjacent MAJOR versions.
+    That is, versions **X.y.z** will be compatible with **X-1.y.z** and
+    **X+1.y.z** versions, such that nodes in a cluster may be upgraded without
     losing state information. There may be a pause in operation during upgrade.
     **Check the release notes** for exceptions prior to updating nodes.
 
@@ -123,29 +121,24 @@ We plan to release a new LTS version every August. The support life cycles
 are directly related to the release dates.
 
 .. list-table:: HTCondor Support Life Cycle
-   :widths: 10 30 30 30
+   :widths: 20 40 40
    :header-rows: 1
 
    * - Version
-     - Release
-     - End of Regular Support
-     - End of Security Support
-   * - 24.x
+     - Release Date
+     - End of Support
+   * - 25.x
+     - September 29, 2025
+     - August 2027
+   * - 25.0 LTS
+     - September 29, 2025
+     - August 2027
+   * - 24.x LTS
      - October 31, 2024
      - August 2026
-     - August 2026
-   * - 24.0
+   * - 24.0 LTS
      - October 31, 2024
      - August 2026
-     - August 2026
-   * - 23.x
-     - September 29, 2023
-     - August 2025
-     - August 2025
-   * - 23.0
-     - September 29, 2023
-     - August 2025
-     - August 2025
 
 Repositories
 ^^^^^^^^^^^^
