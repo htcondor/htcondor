@@ -6859,8 +6859,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// be able to make sure that we only copy once with a little bit of care.
 	//
 	if( plugin.protocol_version == 3 ) {
-		// FIXME
-/*
 		ClassAd nonfile_ad;
 		nonfile_ad.InsertAttr( "NonFile", true );
 		// `CopyAttribute()` uses the `strcpy()` order, not the `cp` order.
