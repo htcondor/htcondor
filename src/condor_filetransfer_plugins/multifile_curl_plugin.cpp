@@ -746,7 +746,10 @@ MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, st
         while ( adFileIter.next( transfer_file_ad ) > 0 ) {
             bool nonfile_ad = false;
             transfer_file_ad.LookupBool( "nonfile", nonfile_ad );
-            if( nonfile_ad ) { continue; }
+            if( nonfile_ad ) {
+                fPrintAd( stdout, transfer_file_ad );
+                continue;
+            }
 
             transfer_file_ad.EvaluateAttrString( "LocalFileName", local_file_name );
             transfer_file_ad.EvaluateAttrString( "Url", url );
