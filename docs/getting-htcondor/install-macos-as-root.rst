@@ -10,7 +10,7 @@ Note that the ``get_htcondor`` tool cannot perform the installation
 steps on macOS at present. You must follow the instructions below.
 
 Note that all of the following commands must be run as root, except for
-downloading and extracting the tarball.
+downloading the tarball.
 
 The condor Service Account
 --------------------------
@@ -68,7 +68,7 @@ Unpack the tarball.
 .. code-block:: shell
 
     mkdir /usr/local/condor
-    tar -x -C /usr/local/condor --strip-components 1 -f condor.tar.gz
+    tar -x -C /usr/local/condor --no-same-owner --strip-components 1 -f condor.tar.gz
 
 You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
 
@@ -91,13 +91,6 @@ command to finish the configuration.
 
 If you are setting up part of a multi-machine pool, then you'll have to
 make some other configuration changes, which we don't cover here.
-
-Next, fix up the permissions of the the installed files.
-
-.. code-block:: shell
-
-    chown -R root:wheel /usr/local/condor
-    chown -R condor:condor /usr/local/condor/local/log
 
 Finally, make the configuration file available at one of the well-known
 locations for the tools to find.
