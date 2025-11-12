@@ -136,11 +136,8 @@
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
 
-///* Do we have the curl external (Imake)*/
+///* Do we have the curl external */
 #cmakedefine HAVE_EXT_CURL
-
-///* Do we have the libcgroup external */
-#cmakedefine HAVE_EXT_LIBCGROUP
 
 /* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
