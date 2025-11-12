@@ -1262,6 +1262,15 @@ fi
 # configuration
 
 %changelog
+* Thu Nov 13 2025 Tim Theisen <tim@cs.wisc.edu> - 25.4.0-1
+- Job scratch space is now in a sub-directory of the execute directory
+- HTCondor EPs can now refresh credentials during output transfers
+- HTCondor will now create intermediate directories with output remaps
+- condor_watch_q now correctly accounts for unmaterialized jobs
+- Now able to control maximum jobs running by user on an AP
+- HTCondor now tracks when jobs are vacated prior to running
+- Disk space allocated to jobs now more closely matches the request
+
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 25.3.1-1
 - All changes in 25.0.3
 
