@@ -1,3 +1,9 @@
+*** 24.12.15 features
+
+- *condor_submit* will now report an error when :subcom:`output_destination` is
+  not a URL and suggest an alternative.
+  :jira:`3385`
+
 *** 24.12.15 bugs
 
 - Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
