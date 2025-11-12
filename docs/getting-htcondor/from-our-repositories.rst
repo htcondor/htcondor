@@ -55,20 +55,17 @@ Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
 
+Place our `signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-25.0-Key>`_
+in ``/etc/apt/keyrings/htcondor.asc``
+
 Debian 12 and 13
 ################
 
-Add our `Debian signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-25.0-Key>`_
-with ``apt-key add`` before adding the repositories below.
-
-* Debian 12: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/25.0 bookworm main``
-* Debian 13: ``deb https://htcss-downloads.chtc.wisc.edu/repo/debian/25.0 trixie main``
+* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.0-bookworm.list>`_
+* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.0-trixie.list>`_
 
 Ubuntu 22.04 and 24.04
 ######################
 
-Add our `Ubuntu signing key <https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-25.0-Key>`_
-with ``apt-key add`` before adding the repositories below.
-
-* Ubuntu 22.04: ``deb https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/25.0 jammy main``
-* Ubuntu 24.04: ``deb https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/25.0 noble main``
+* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-jammy.list>`_
+* Ubuntu 24.04 (noble numbat): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.0-noble.list>`_
