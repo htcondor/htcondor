@@ -55,7 +55,7 @@ Ubuntu 22.04 (Jammy Jellyfish) and 24.04 (Noble Numbat).
 Binaries are available for x86_64 for all these platforms.
 These repositories also include the source packages.
 
-Place our `signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-24.x-Key>`_
+Place our `signing key <https://htcss-downloads.chtc.wiwc.edu/repo/keys/HTCondor-24.x-Key>`_
 in ``/etc/apt/keyrings/htcondor.asc``
 
 Debian 11, 12, and 13
