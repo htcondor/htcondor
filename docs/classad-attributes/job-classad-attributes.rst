@@ -1237,7 +1237,10 @@ all attributes.
     jobs is removed.
 
 :classad-attribute-def:`OutputDestination`
-    A URL, as defined by submit command **output_destination**.
+    A URL, as defined by submit command :subcom:`output_destination`.
+
+:classad-attribute-def:`OutputDirectory`
+    A directory on the AP, for use when :subcom:`output_destination`, is not a URL.
 
 :classad-attribute-def:`Owner`
     String describing the user who submitted this job.

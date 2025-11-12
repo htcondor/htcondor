@@ -646,6 +646,7 @@
 #define ATTR_OS_USER  "OsUser"
 #define ATTR_OTHER_JOB_REMOVE_REQUIREMENTS  "OtherJobRemoveRequirements" 
 #define ATTR_OUTPUT_DESTINATION  "OutputDestination"
+#define ATTR_OUTPUT_DIRECTORY "OutputDirectory"
 #define ATTR_OWNER  "Owner" 
 #define ATTR_PARALLEL_SCHEDULING_GROUP  "ParallelSchedulingGroup"
 #define ATTR_PARALLEL_SCRIPT_SHADOW  "ParallelScriptShadow"  
