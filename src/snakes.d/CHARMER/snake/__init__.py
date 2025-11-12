@@ -78,6 +78,13 @@ query_command_to_ad_type_map = {
 }
 
 
+invalidate_command_to_ad_type_map = {
+    13: htcondor2.AdType.Startd,
+    14: htcondor2.AdType.Schedd,
+    15: htcondor2.AdType.Master,
+}
+
+
 def handleUpdateCommand(command_int : int):
     classad_format = classad2.ClassAd()
     query = yield (None, None, (classad_format, end_of_message))
@@ -99,7 +106,16 @@ def handleInvalidateCommand(command_int : int):
     invalidateAd = query[0]
 
 
-    
+    global ad_tables
+    adType = invalidate_command_to_ad_type_map[command_int]
+    hash_key = hashkey_table[adType](invalidateAd)
+    # htcondor2.log(htcondor2.LogLevel.Always, f"hashkey: {hash_key}")
+    if hash_key is not None:
+        del ad_tables[adType][hash_key]
+    else:
+        for key, ad in ad_tables[adType].items():
+            if ad.matches(queryAd):
+                del ad_tables[adType][key]
 
 
     replyAd = classad2.ClassAd()
@@ -123,9 +139,9 @@ def handleQueryCommand(command_int : int):
     for ad in ad_tables[adType].values():
         htcondor2.log(htcondor2.LogLevel.Always, str(ad))
         if ad.matches(queryAd):
-            # More, the matching ad, no reply expected.
+            # (Not the last message, a matching ad), no time-out, no reply expected.
             yield((1, ad), 0, None)
 
 
-    # No more, the end of message, no reply expected.
+    # (The last message, end-of-message), no time-out, no reply expected.
     yield ((0, end_of_message), 0, None)
