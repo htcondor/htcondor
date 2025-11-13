@@ -77,6 +77,7 @@ class ActionType(enum.Enum):
 PROGRAM_NAME = "debug_plugin.py"
 PLUGIN_VERSION = "1.0.0"
 SUPPORTED_SCHEMAS = "debug,decode,encoded"
+PROTOCOL_VERSION = 3
 
 DEFAULT_HOSTNAME = "default.test.hostname"
 
@@ -561,6 +562,7 @@ def parse_args():
             "PluginType": "FileTransfer",
             "SupportedMethods": SUPPORTED_SCHEMAS,
             "Version": PLUGIN_VERSION,
+            "ProtocolVersion": PROTOCOL_VERSION,
         }
         sys.stdout.write(classad.ClassAd(capabilities).printOld())
         sys.exit(EXIT_SUCCESS)
@@ -594,6 +596,8 @@ def main():
     try:
         with open(args.outfile, "w") as outfile:
             for ad in infile_ads:
+                if ad.get('nonfile', False):
+                    continue
                 try:
                     outfile_dict = plugin.transfer_file(ad["Url"], ad["LocalFileName"], args.upload)
                     outfile.write(str(classad.ClassAd(outfile_dict)))
