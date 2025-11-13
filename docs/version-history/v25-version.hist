@@ -6,6 +6,14 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
+- EP administrators may now alter the semantics of self-checkpointing jobs:
+  after a job self-checkpoints and the checkpoint is uploaded, if
+  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
+  be reactivated, and evict the job (with its own
+  :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`
+  ) if not.
+  :jira:`3222`
+
 - The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
   list to the attributes it will be sending to the *condor_schedd* for resource requests.
   The *condor_negotiator* now also has a more complete set of known slot attributes which it
