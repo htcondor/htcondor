@@ -6132,6 +6132,10 @@ type=path
 default=$(SPOOL)/TokensDatabase
 type=path
 
+[SEC_USE_TOKENS_DATABASE]
+default=false
+type=bool
+
 [SEC_ACCEPT_CAPABILITY_TOKENS]
 default=false
 type=bool

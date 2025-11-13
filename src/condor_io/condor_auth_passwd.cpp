@@ -1976,7 +1976,11 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 
 #if defined(HAVE_SQLITE3_H)
-	sqlite3* db = acquireTokensDbHandle();
+	sqlite3* db = nullptr;
+	bool use_db = param_boolean("SEC_USE_TOKENS_DATABASE", false);
+	if (use_db) {
+		db = acquireTokensDbHandle();
+	}
 	if (db != nullptr) {
 		bool db_success = false;
 		int rc = 0;
@@ -2033,6 +2037,9 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		if (!db_success) {
 			return false;
 		}
+	} else if (use_db) {
+		dprintf(D_ERROR, "No tokens database, can't generate tokens\n");
+		return false;
 	} else if (capability) {
 		dprintf(D_ERROR, "No tokens database, can't use capability token\n");
 		return false;
