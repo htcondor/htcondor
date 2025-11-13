@@ -2336,10 +2336,8 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	// These are updates taken from Chirp
 	if (shadow_version && shadow_version->built_since_version(25, 3, 0)) {
-		dprintf(D_STATUS, "JEF setting ChirpDelayedAttrs\n");
 		ad->Insert(ATTR_CHIRP_DELAYED_ATTRS, new ClassAd(m_delayed_updates));
 	} else {
-		dprintf(D_STATUS, "JEF not setting ChirpDelayedAttrs\n");
 		ad->Update(m_delayed_updates);
 	}
 	m_delayed_updates.Clear();
