@@ -1178,6 +1178,20 @@ RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 
 
 void
+RemoteResource::processResultAd( ClassAd * resultAd ) {
+	dprintf( D_MACHINE | D_VERBOSE, "Processing result ad:\n" );
+	dPrintAd( D_MACHINE | D_VERBOSE, * resultAd );
+}
+
+
+void
+RemoteResource::processInvocationAd( ClassAd * invocationAd ) {
+	dprintf( D_MACHINE | D_VERBOSE, "Processing invocation ad:\n" );
+	dPrintAd( D_MACHINE | D_VERBOSE, * invocationAd );
+}
+
+
+void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int64_t long_value;
@@ -1474,6 +1488,23 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				);
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
+
+
+				// ToddT and I are both working on tickets that will require
+				// looking at each ad individually, so to minimize merge
+				// conflicts, make this a call-out to another function.
+				for( const auto & result : results ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(result);
+					if( ad == nullptr ) { continue; }
+					processResultAd( ad );
+				}
+
+				for( const auto & invocation : invocations ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(invocation);
+					if( ad == nullptr ) { continue; }
+					processInvocationAd( ad );
+				}
+
 
 				updateAdOwnsResultList = false;
 				resultList = new classad::ExprList( results );
