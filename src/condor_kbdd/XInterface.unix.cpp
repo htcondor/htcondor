@@ -37,6 +37,8 @@
 #include <setjmp.h>
 #include <filesystem>
 
+namespace stdfs = std::filesystem;
+
 #if defined(LINUX)
 	static const char *UtmpName = "/var/run/utmp";
 	static const char *AltUtmpName = "/var/adm/utmpx";
@@ -78,11 +80,30 @@ CatchIOFalseAlarm(Display *)
 	return 0;
 }
 
+static void maybe_uninit_user_id(const char *user) {
+	static bool need_uninit = false;
+
+	if ( need_uninit ) {
+		uninit_user_ids();
+		need_uninit = false;
+	}
+
+	// passing "root" to init_user_ids is fatal
+	if (strcmp(user, "root") == 0) {
+		set_root_priv();
+	} else {
+		if (!init_user_ids( user, NULL )) {
+			dprintf(D_ALWAYS, "init_user_ids failed\n");
+		}
+		set_user_priv();
+		need_uninit = true;
+	}
+}
+
 bool
 XInterface::TryUser(const char *user)
 {
 	static char env[1024];
-	static bool need_uninit = false;
 	passwd *passwd_entry;
 
 	passwd_entry = getpwnam(user);
@@ -98,21 +119,7 @@ XInterface::TryUser(const char *user)
 		}
 	}
 
-	if ( need_uninit ) {
-		uninit_user_ids();
-		need_uninit = false;
-	} 
-
-		// passing "root" to init_user_ids is fatal
-	if (strcmp(user, "root") == 0) {
-		set_root_priv();
-	} else {
-		if (!init_user_ids( user, NULL )) {
-			dprintf(D_ALWAYS, "init_user_ids failed\n");
-		}
-		set_user_priv();
-		need_uninit = true;
-	}
+	maybe_uninit_user_id(user);
 
 	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", passwd_entry->pw_name );
 	return true;
@@ -124,14 +131,14 @@ bool
 XInterface::TryUserXDG(const char *user)
 {
 	static char env[1024];
-	static bool need_uninit = false;
 	passwd *passwd_entry;
-	std::string xauth_filename_str; 
+	std::string xauth_filename_str;
+	bool found = false;
 
 	passwd_entry = getpwnam(user);
 	if(passwd_entry == NULL) {
 		// We couldn't find the current user in the passwd file?
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_FULLDEBUG,
 				"Current user cannot be found in passwd file.\n" );
 		return false;
 	} else {
@@ -139,38 +146,38 @@ XInterface::TryUserXDG(const char *user)
 
 		// find the first file named .xauth_<something> in XDG_RUNTIME_DIR
 		formatstr(xdg_runtime_dir_str, "/var/run/user/%d/", passwd_entry->pw_uid);
-		std::filesystem::path xdg_runtime_dir {xdg_runtime_dir_str};
-		for (const auto &entry: std::filesystem::directory_iterator(xdg_runtime_dir)) {
-			if (entry.path().filename().string().starts_with("xauth_")) {
+		stdfs::path xdg_runtime_dir {xdg_runtime_dir_str};
+
+		/*
+		  avoid crashing when iterating over files that can't
+		  be accessed. Example from Debian 13 Trixie: (/var/run/user/112/)
+		  ls: cannot access 'doc': Permission denied
+		  d?????????  ? ?          ?            ?            ? doc
+		*/
+		stdfs::directory_options opts =
+			stdfs::directory_options::skip_permission_denied;
+
+		for (const auto &entry: stdfs::directory_iterator(xdg_runtime_dir, opts)) {
+			if (entry.path().has_filename() && entry.path().filename().string().starts_with("xauth_")) {
 				dprintf(D_FULLDEBUG, "Trying xauth file %s\n", entry.path().string().c_str());
 				xauth_filename_str = entry.path().string();
+				found = true;
 				break;
 			}
 		}
+	}
+
+	maybe_uninit_user_id(user);
+
+	if (found) {
 		sprintf(env, "XAUTHORITY=%s", xauth_filename_str.c_str());
 		if(putenv(env) != 0) {
 			EXCEPT("Putenv failed!.");
 		}
+		dprintf( D_FULLDEBUG, "Using %s's XDG .Xauthority: %s \n",
+			 passwd_entry->pw_name, xauth_filename_str.c_str());
 	}
-
-	if ( need_uninit ) {
-		uninit_user_ids();
-		need_uninit = false;
-	} 
-
-	// passing "root" to init_user_ids is fatal
-	if (strcmp(user, "root") == 0) {
-		set_root_priv();
-	} else {
-		if (!init_user_ids( user, NULL )) {
-			dprintf(D_ALWAYS, "init_user_ids failed\n");
-		}
-		set_user_priv();
-		need_uninit = true;
-	}
-
-	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: %s \n", passwd_entry->pw_name, xauth_filename_str.c_str());
-	return true;
+	return found;
 }
 
 XInterface::XInterface(int id)
@@ -223,9 +230,7 @@ XInterface::~XInterface()
 }
 
 void
-XInterface::ReadUtmp() {
-	struct utmp utmp_entry;
-
+XInterface::InitLoggedOnUsers() {
 	if ( logged_on_users ) {
 		for (size_t foo =0; foo < logged_on_users->size(); foo++) {
 			free((*logged_on_users)[foo]);
@@ -234,50 +239,113 @@ XInterface::ReadUtmp() {
 	}
 
 	logged_on_users = new std::vector< char * >;
+}
 
+void
+XInterface::AddUniqueUsername(char *username) {
+	bool found_it = false;
+	for (size_t i=0; (i<logged_on_users->size()) && (! found_it); i++) {
+		if (!strcmp(username, (*logged_on_users)[i])) {
+			found_it = true;
+		}
+	}
+	if (! found_it) {
+		dprintf(D_FULLDEBUG, "User %s is logged in.\n",
+			username );
+		logged_on_users->push_back(strdup(username));
+	}
+}
+
+bool
+XInterface::ReadUtmp() {
+	struct utmp utmp_entry;
+	bool found_users = false;
+	FILE * utmp_fp;
+
+	InitLoggedOnUsers();
 
 	// fopen the Utmp.  If we fail, bail...
 	if ((utmp_fp=safe_fopen_wrapper(UtmpName,"r")) == NULL) {
-		if ((utmp_fp=safe_fopen_wrapper(AltUtmpName,"r")) == NULL) {                      
-			EXCEPT("fopen of \"%s\" (and \"%s\") failed!", UtmpName,
-				AltUtmpName);                        
-		}                             
-	}                                 
- 
+		if ((utmp_fp=safe_fopen_wrapper(AltUtmpName,"r")) == NULL) {
+			return found_users;
+			// EXCEPT("fopen of \"%s\" (and \"%s\") failed!", UtmpName,
+			//        AltUtmpName);
+		}
+	}
+
 	while(fread((char *)&utmp_entry,
 		sizeof( struct utmp ),
 		1, utmp_fp)) {
 
 		if (utmp_entry.ut_type == USER_PROCESS) {
-			bool _found_it = false;
 			char user[UT_NAMESIZE + 1];
 			memcpy(user, utmp_entry.ut_user, UT_NAMESIZE);
 			user[UT_NAMESIZE] = 0;
-			for (size_t i=0; (i<logged_on_users->size()) && (! _found_it); i++) {
-				if (!strcmp(user, (*logged_on_users)[i])) {
-					_found_it = true;
-				}
-			}
-			if (! _found_it) {
-				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
-					user );
-				logged_on_users->push_back(strdup(user));
-			}
+			AddUniqueUsername(user);
+			found_users = true;
 		}
 	}
 	int fclose_ret = fclose( utmp_fp );
- 	if( fclose_ret ) {
+	if( fclose_ret ) {
 		EXCEPT("fclose of \"%s\" (or \"%s\") failed! "
 			"This message brought to you by the fatal error %d",
 			UtmpName, AltUtmpName, errno);
 	}
 
-	return;
+	return found_users;
 }
+
+#ifdef HAVE_LIBSYSTEMD
+bool
+XInterface::ReadSDLogin() {
+	int num_sessions;
+	char **sd_sessions;
+	char *username = NULL;
+	bool found_sessions = false;
+
+	InitLoggedOnUsers();
+
+	num_sessions = sd_get_sessions(&sd_sessions);
+
+	dprintf(D_FULLDEBUG, "SD-Login found %d sessions.\n", num_sessions);
+
+	if (num_sessions <= 0) {
+		return false;
+	}
+
+	for (int i = 0; i < num_sessions; ++i) {
+		uid_t uid;
+
+		/* UID */
+		if (sd_session_get_uid(sd_sessions[i], &uid) < 0) {
+			dprintf(D_ERROR, "SD-Login failed to get UID for session %d.\n", i);
+			goto cleanup;
+		}
+
+		if(!pcache()->get_user_name(uid, username)) {
+			dprintf(D_ERROR, "SD-Login pcache() failed to get username for uid %u.\n", uid);
+			goto cleanup;
+		}
+
+		AddUniqueUsername(username);
+
+		// get_user_name() strdup()'d the username for us
+		free(username);
+		found_sessions = true;
+
+	cleanup:
+		free(sd_sessions[i]);
+	}
+
+	return found_sessions;
+}
+#endif /* HAVE_LIBSYSTEMD */
+
 
 bool
 XInterface::Connect()
 {
+	bool found_sessions = false;
 	dprintf(D_ALWAYS, "Connecting to X server: %s\n", _display_name);
 
 	// First try as whatever user we entered as, with whatever
@@ -314,12 +382,16 @@ XInterface::Connect()
 	// If this X server is using MIT-MAGIC_COOKIE, set
 	// XAUTHORITY to point within the user's home directory.
 
-	ReadUtmp();
+#ifdef HAVE_LIBSYSTEMD
+	found_sessions = ReadSDLogin();
+#endif /* HAVE_LIBSYSTEMD */
+	if (!found_sessions) {
+		found_sessions = ReadUtmp();
+	}
 
-	size_t utmpIndex = 0;
-	while (utmpIndex < logged_on_users->size()) {
-
-		const char *username = (*logged_on_users)[utmpIndex];
+	size_t userIndex = 0;
+	while (userIndex < logged_on_users->size()) {
+		const char *username = (*logged_on_users)[userIndex];
 
 		dprintf(D_FULLDEBUG, "Trying to XOpenDisplay as user %s\n", username);
 		bool switched = TryUser(username); // set_priv's and setenv's
@@ -344,13 +416,15 @@ XInterface::Connect()
 		}
 
 		set_condor_priv();
-		utmpIndex++;
+		userIndex++;
 	}
 
+	/*
 	dprintf(D_FULLDEBUG, "Exausted all possible attempts to "
 		"connect to X server, will try again in 60 seconds.\n");
 	daemonCore->Reset_Timer( _daemon_core_timer, 60 ,60 );
 	dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
+	*/
 
 	g_connected = false;
 	return false;
