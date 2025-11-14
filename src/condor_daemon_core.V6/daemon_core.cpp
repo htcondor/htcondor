@@ -1511,7 +1511,7 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 			break;
 	}
 
-	// From here to there should probably be a constructor.
+	// From here to there should probably be a constructor...
 	struct SignalEnt::HandlerEntry entry;
 
 	entry.valid = true;
@@ -1554,31 +1554,31 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 	}
 
 
-    {
-	// Search our array for an empty spot
-	auto sigIt = sigTable.begin();
-	while (sigIt != sigTable.end()) {
-		if ( sigIt->num == 0 ) {
-			break;
+	{
+		// Search our array for an empty spot
+		auto sigIt = sigTable.begin();
+		while (sigIt != sigTable.end()) {
+			if ( sigIt->num == 0 ) {
+				break;
+			}
+			sigIt++;
 		}
-		sigIt++;
+
+		if( sigIt == sigTable.end() ) {
+			// We need to add a new entry at the end of our array
+			sigTable.push_back({});
+			sigIt = sigTable.end() - 1;
+			sigIt->data_ptr = nullptr;
+		}
+
+		// Found a blank entry at index i. Now add in the new data.
+		sigIt->num = sig;
+		sigIt->is_blocked = false;
+		sigIt->is_pending = false;
+		sigIt->handlers.push_back(entry);
+		which = sigIt->handlers.size() - 1;
 	}
 
-	if( sigIt == sigTable.end() ) {
-		// We need to add a new entry at the end of our array
-		sigTable.push_back({});
-		sigIt = sigTable.end() - 1;
-		sigIt->data_ptr = nullptr;
-	}
-
-
-	// Found a blank entry at index i. Now add in the new data.
-	sigIt->num = sig;
-	sigIt->is_blocked = false;
-	sigIt->is_pending = false;
-	sigIt->handlers.push_back(entry);
-	which = sigIt->handlers.size() - 1;
-    }
 
 successful_exit:
 
@@ -1850,6 +1850,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return (int) i;
 }
 
+
 void
 DaemonCore::Destroy_Signals_By_Description( const std::string & d ) {
      if( daemonCore == NULL ) {
@@ -1866,6 +1867,25 @@ DaemonCore::Destroy_Signals_By_Description( const std::string & d ) {
             }
         }
     }
+}
+
+
+std::vector<std::pair<Sock *, Service *>>
+DaemonCore::findSocketsAndServicesByDescription( const std::string & d ) {
+    std::vector<std::pair<Sock *, Service *>> result;
+    if( daemonCore == NULL ) {
+        return result;
+    }
+
+    for( size_t i = 0; i < sockTable.size(); ++i ) {
+        if( sockTable[i].handler_descrip != NULL ) {
+            if( d == sockTable[i].handler_descrip ) {
+                result.emplace_back(sockTable[i].iosock, sockTable[i].service);
+            }
+        }
+    }
+
+    return result;
 }
 
 
