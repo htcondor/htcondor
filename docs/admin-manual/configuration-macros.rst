@@ -3816,7 +3816,7 @@ prevent the job from using more scratch space than provisioned.
         Docker and VM Universe jobs are not compatible with mount namespaces.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
-    A boolean value that defaults to ``False``. When ``True`` EP slots
+    A boolean value that defaults to ``True``. When ``True`` EP slots
     will be marked as broken if the associated ephemeral logical volume
     is failed to be cleaned up.
 
@@ -6350,10 +6350,10 @@ These settings affect the *condor_starter*.
     :macro:`STARTER_UPDATE_INTERVAL`.
 
 :macro-def:`STARTER_UPDATE_INTERVAL_MAX[STARTER]`
-    An integer value representing an upper bound on the number of 
+    An integer value representing an upper bound on the number of
     seconds between updates controlled by :macro:`STARTER_UPDATE_INTERVAL` and
     :macro:`STARTER_UPDATE_INTERVAL_TIMESLICE`.  It is recommended to leave this parameter
-    at its default value, which is calculated 
+    at its default value, which is calculated
     as :macro:`STARTER_UPDATE_INTERVAL` * ( 1 / :macro:`STARTER_UPDATE_INTERVAL_TIMESLICE` )
 
 :macro-def:`USER_JOB_WRAPPER[STARTER]`
@@ -6491,7 +6491,7 @@ These settings affect the *condor_starter*.
     permissions.  The ``nvidia-smi`` command will not report them as being available.
     Setting this macro to false returns to the previous functionality (of allowing jobs
     to access NVidia GPUs not assigned to them).
-   
+
 :macro-def:`USE_VISIBLE_DESKTOP[STARTER]`
     This boolean variable is only meaningful on Windows machines. If
     ``True``, HTCondor will allow the job to create windows on the
@@ -6510,7 +6510,7 @@ These settings affect the *condor_starter*.
     the submit file, the user's setting takes precedence.
 
 :macro-def:`JOB_INHERITS_STARTER_ENVIRONMENT[STARTER]`
-    A matchlist or boolean value that defaults to ``False``. When set to 
+    A matchlist or boolean value that defaults to ``False``. When set to
     a matchlist it causes jobs to inherit all environment variables from the
     *condor_starter* that are selected by the match list and not already defined
     in the job ClassAd or by the :macro:`STARTER_JOB_ENVIRONMENT` configuration variable.
@@ -6524,14 +6524,6 @@ These settings affect the *condor_starter*.
     to force a matching environment variable to not be imported.  The order of members in the Matchlist
     has no effect on the result.  For backward compatibility a single value of ``True`` behaves as if the value
     was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
-
-:macro-def:`NAMED_CHROOT[STARTER]`
-    A comma and/or space separated list of full paths to one or more
-    directories, under which the *condor_starter* may run a chroot-ed
-    job. This allows HTCondor to invoke chroot() before launching a job,
-    if the job requests such by defining the job ClassAd attribute
-    :ad-attr:`RequestedChroot` with a directory that matches one in this list.
-    There is no default value for this variable.
 
 :macro-def:`STARTER_UPLOAD_TIMEOUT[STARTER]`
     An integer value that specifies the network communication timeout to
@@ -6786,10 +6778,8 @@ These settings affect the *condor_starter*.
     the job proper after dropping a file indicating that the shell wrapper
     has successfully run inside the container.  When HTCondor sees this file
     exists, it knows the container runtime has successfully launched the image.
-    If the job exits without this file, HTCondor assumes there is some problem 
+    If the job exits without this file, HTCondor assumes there is some problem
     with the runtime, and retries the job.
-
-    
 
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed
@@ -6836,6 +6826,10 @@ These settings affect the *condor_starter*.
     A string value that when :macro:`USE_DEFAULT_CONTAINER` is true, contains the container
     image to use, either starting with docker:, ending in .sif for a sif file, or otherwise
     an exploded directory for singularity/apptainer to run.
+
+:macro-def:`REACTIVATE_ON_RESTART`
+    A boolean value.  If true, self-checkpointing jobs will not restart after
+    uploading a checkpoint if the slot would not otherwise be reactivatable.
 
 condor_submit Configuration File Entries
 -----------------------------------------
@@ -8679,6 +8673,26 @@ These macros affect the *condor_job_router* daemon.
     *condor_job_router* does not attempt to reset the original job
     ClassAd to a pre-claimed state upon yielding control of the job.
 
+:macro-def:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE[JOB ROUTER]`
+    The path to the address file file for the *condor_schedd*
+    serving as the source of jobs for routing.  If specified,
+    this must point to the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
+    When configured, the *condor_job_router* will first look in this
+    address file to get the address of the source schedd and will only
+    query the collector specified in :macro:`JOB_ROUTER_SCHEDD1_POOL`
+    if it does not find an address in that file.
+
+:macro-def:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE[JOB ROUTER]`
+    The path to the job_queue.log file for the *condor_schedd*
+    serving as the destination of jobs for routing.  If specified,
+    this must point to the the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD2_NAME`.
+    When configured, the *condor_job_router* will first look in this
+    address file to get the address of the destination schedd and will only
+    query the collector specified in :macro:`JOB_ROUTER_SCHEDD2_POOL`
+    if it does not find an address in that file.
+
 :macro-def:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG[JOB ROUTER]`
     The path to the job_queue.log file for the *condor_schedd*
     serving as the source of jobs for routing.  If specified,
@@ -8891,6 +8905,16 @@ General
     The path to the configuration file to be used by :tool:`condor_dagman`.
     This option is set by :tool:`condor_submit_dag` automatically and should not be
     set explicitly by the user. Defaults to an empty string.
+
+:macro-def:`DAGMAN_USE_OLD_FILE_PARSER[DAGMan]`
+    A boolean that defaults to ``False``, when ``True`` *condor_dagman* will use
+    the old file parser to process DAG files.
+
+.. note::
+
+    This option is intended to be a fall back to the known working DAG file parser
+    while transitioning to the new style parser. This will be deprecated in the
+    future.
 
 :macro-def:`DAGMAN_USE_STRICT[DAGMan]`
     An integer defining the level of strictness :tool:`condor_dagman` will

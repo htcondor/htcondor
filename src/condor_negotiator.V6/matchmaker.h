@@ -114,7 +114,7 @@ class Matchmaker : public Service
 		
 		// auxillary functions
 		bool obtainAdsFromCollector(ClassAdList &allAds, std::vector<ClassAd *> &startdAds, std::vector<ClassAd *> &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
-		char * compute_significant_attrs(std::vector<ClassAd *> & startdAds);
+		void compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & attr_refs);
 		bool consolidate_globaljobprio_submitter_ads(std::vector<ClassAd *>& submitterAds) const;
 
 		void SetupMatchSecurity(std::vector<ClassAd *> &submitterAds);
@@ -340,6 +340,7 @@ class Matchmaker : public Service
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
+		bool MatchPasswordEnabled{false};
         char * strSlotConstraint; // query collector for machineAds with this constraint
         ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
                                          // constraint before calculating quotas
@@ -377,7 +378,7 @@ class Matchmaker : public Service
 		bool GotRescheduleCmd;
 
 		// external references in startd ads ... used for autoclustering
-		char * job_attr_references;
+		std::string job_attr_references;
 
 		// Epoch time when we started/finished most rescent negotiation cycle
 		time_t startedLastCycleTime;

@@ -346,8 +346,8 @@ DCStartd::asyncRequestOpportunisticClaim(
 }
 
 
-bool 
-DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing )
+bool
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool job_is_restarting )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
 		got_job_done ? "job_done" : (graceful ? "graceful" : "forceful" ));
@@ -378,6 +378,9 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 				dprintf(D_ZKM, "Startd version is known and job_has_exited, will use JOB_DONE\n");
 			}
 		}
+	}
+	if (job_is_restarting) {
+		cmd = REACTIVATE_CLAIM_CHECK;
 	}
 
 		// if this claim is associated with a security session

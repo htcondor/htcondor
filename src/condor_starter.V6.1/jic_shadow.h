@@ -137,20 +137,22 @@ public:
 			between the failure of the transfer and the disconnection of the
 			shadow when the starter notifies it of the file transfer error.
 			This call will put the job on hold and cause the shadow to
-			disconnect from the starter if something went wrong. If 
+			disconnect from the starter if something went wrong. If
 			the file transfer went right, then it is a noop.
 		*/
 	bool transferOutputMopUp( void );
 
+	virtual void setOutputTransfer(bool b) { m_did_output_transfer = b; }
+
 		/** The last job this starter is controlling has been
-   			completely cleaned up.  We don't care, since we just wait
-			for the shadow to tell the startd to tell us to go away. 
+			completely cleaned up.  We don't care, since we just wait
+			for the shadow to tell the startd to tell us to go away.
 		*/
 	void allJobsGone( void );
 
 		/** The starter has been asked to shutdown fast.  Disable file
 			transfer, since we don't want that on fast shutdowns.
-			Also, set a flag so we know we were asked to vacate. 
+			Also, set a flag so we know we were asked to vacate.
 		 */
 	void gotShutdownFast( void );
 

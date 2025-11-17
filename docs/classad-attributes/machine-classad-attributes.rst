@@ -76,6 +76,11 @@ Machine ClassAd Attributes
     This is measured in the number of integer seconds since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970).
 
+:classad-attribute-def:`CleanupCategoryCounts`
+    A nested ClassAd containing the count of cleanup reminders per resource.
+    (i.e. Account, Execute Directory, Logical Volume). This value will be
+    :ad-expr:`Undefined` if no cleanup reminders exist.
+
 :classad-attribute-def:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
     Saturday.
@@ -1445,6 +1450,14 @@ substituted with the *prefix string* assigned for the GPU.
 :classad-attribute-def:`<name>RuntimeVersion`
     For CUDA devices, a string representing the manufacturer's version
     number.
+    
+:classad-attribute-def:`DeviceGPUsAverageUsage`
+    The number of seconds executed by GPUs assigned to this slot,
+    divided by the number of seconds since the startd started up.
+
+:classad-attribute-def:`DeviceGPUsMemoryPeakUsage`
+    The largest amount of GPU memory used GPUs assigned to this slot,
+    since the startd started up.
 
 
 The following attributes are advertised for a machine in which

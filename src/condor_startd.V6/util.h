@@ -58,6 +58,7 @@ public:
 	std::string name; // name of resource to cleanup
 	category cat;  // category of resource, e.g execute dir, account name, etc.
 	int      opt; // options, meaning depends on category
+	unsigned int broken_id{0}; // Associated broken item to act upon if cleanup is successfull
 
 	// so that some of the reminders can be case sensitive, and some not.
 	// in the future, we may consider cat as well as OS in this function, so prepare for that now.
@@ -101,7 +102,7 @@ public:
 		switch (cat) {
 			case category::exec_dir: { return "directory"; }
 			case category::account: { return "account"; }
-			case category::logical_volume: { return "LV"; }
+			case category::logical_volume: { return "logical volume"; }
 			default: { return "unknown"; }
 		}
 	}

@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 196> makeCommandTable() {
+std::array<std::pair<int, const char *>, 200> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -383,6 +383,15 @@ std::array<std::pair<int, const char *>, 196> makeCommandTable() {
 		{DELETE_USERREC, "DELETE_USERREC"},
 #define GET_CONTACT_INFO  (SCHED_VERS+150) // Ask Schedd for child daemons contact information (addr and secret) Note: Used for DAGMan
 		{GET_CONTACT_INFO, "GET_CONTACT_INFO"},
+#define CREATE_OCU_FOR_USERREC (SCHED_VERS + 151) // Create an OCU(s) for a given UserRec
+		{CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC"},
+#define REMOVE_OCU_FROM_USERREC (SCHED_VERS + 152) // Remove an OCU(s) from a given UserRec
+		{REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC"},
+#define QUERY_OCU_FROM_USERREC (SCHED_VERS + 153) // Query the OCU(s) associated with a given UserRec
+		{QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC"},
+
+#define	 REACTIVATE_CLAIM_CHECK (SCHED_VERS+151)
+		{REACTIVATE_CLAIM_CHECK, "REACTIVATE_CLAIM_CHECK"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

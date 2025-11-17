@@ -110,6 +110,33 @@ skip_line(const std::string& line) {
 }
 
 //--------------------------------------------------------------------------------------------
+// WARNING: This function clears the passed reference variable regardless of successfully reading a line
+bool
+DagParser::getnextline(std::string& line, bool raw) {
+	std::string curr;
+	bool read_line = false;
+
+	line.clear();
+
+	while ((read_line = readLine(curr, fp))) {
+		++line_no;
+
+		trim(curr);
+		if (skip_line(curr)) { /* DO NOTHING */ }
+		else if (raw) { line = curr; break; }
+		else {
+			if ( ! line.empty()) { line += " "; }
+			line += curr;
+			if (line.back() == '\\') {
+				line.pop_back();
+			} else { break; }
+		}
+		curr.clear();
+	}
+
+	return read_line;
+}
+
 bool
 DagParser::get_inline_desc_end(const std::string& desc, std::string& end) {
 	if (desc.empty()) { return false; }
@@ -124,7 +151,7 @@ DagParser::get_inline_desc_end(const std::string& desc, std::string& end) {
 }
 
 std::string
-DagParser::parse_inline_desc(std::ifstream& stream, const std::string& end, std::string& error, std::string& endline) {
+DagParser::parse_inline_desc(const std::string& end, std::string& error, std::string& endline) {
 	std::string desc;
 	std::string line;
 	bool found_end = false;
@@ -134,11 +161,7 @@ DagParser::parse_inline_desc(std::ifstream& stream, const std::string& end, std:
 		return desc;
 	}
 
-	while (std::getline(stream, line)) {
-		line_no++;
-		trim(line);
-		if (skip_line(line)) { continue; }
-
+	while (getnextline(line, true)) {
 		if (line == end || starts_with(line, end + " ")) {
 			endline = (line.length() > end.length()) ? line.substr(end.length()) : "";
 			found_end = true;
@@ -155,7 +178,7 @@ DagParser::parse_inline_desc(std::ifstream& stream, const std::string& end, std:
 }
 
 std::string 
-DagParser::ParseSubmitDesc(std::ifstream& stream, DagLexer& details) {
+DagParser::ParseSubmitDesc(DagLexer& details) {
 	
 	std::string token = details.next();
 	if (token.empty()) {
@@ -171,7 +194,7 @@ DagParser::ParseSubmitDesc(std::ifstream& stream, DagLexer& details) {
 	std::string inline_end, final_line;
 	if (get_inline_desc_end(token, inline_end)) {
 		std::string error;
-		std::string inline_desc = parse_inline_desc(stream, inline_end, error, final_line);
+		std::string inline_desc = parse_inline_desc(inline_end, error, final_line);
 		if ( ! error.empty()) { return error; }
 		((SubmitDescCommand*)data.get())->SetInlineDesc(inline_desc);
 		return "";
@@ -181,7 +204,7 @@ DagParser::ParseSubmitDesc(std::ifstream& stream, DagLexer& details) {
 }
 
 std::string
-DagParser::ParseNodeTypes(std::ifstream& stream, DagLexer& details, DAG::CMD type) {
+DagParser::ParseNodeTypes(DagLexer& details, DAG::CMD type) {
 	std::string node_name = details.next();
 	if (node_name.empty()) {
 		return "Missing node name";
@@ -228,7 +251,7 @@ DagParser::ParseNodeTypes(std::ifstream& stream, DagLexer& details, DAG::CMD typ
 	std::string inline_end, final_line;
 	if (type != DAG::CMD::SUBDAG && get_inline_desc_end(desc, inline_end)) {
 		std::string error;
-		std::string inline_desc = parse_inline_desc(stream, inline_end, error, final_line);
+		std::string inline_desc = parse_inline_desc(inline_end, error, final_line);
 		if ( ! error.empty()) { return error; }
 		nodeCmd->SetInlineDesc(inline_desc);
 		nodeCmd->SetSubmit("INLINE");
@@ -318,9 +341,9 @@ DagParser::ParseParentChild(DagLexer& details) {
 				error.clear();
 			} else { error = "No children node(s) specified"; }
 		} else if (parsing_children) {
-			cmd->children.insert(token);
+			cmd->AddChild(token);
 		} else {
-			cmd->parents.insert(token);
+			cmd->AddParent(token);
 		}
 		token = details.next();
 	} while ( ! token.empty());
@@ -481,14 +504,14 @@ DagParser::ParseVars(DagLexer& details) {
 	assert(cmd != nullptr);
 
 	// Possibly APPEND or PREPEND keyword
-	token = details.next();
+	token = details.next(TRIM_QUOTES);
 
 	if (strcasecmp(token.c_str(), "PREPEND") == 0) {
 		cmd->Prepend();
-		token = details.next();
+		token = details.next(TRIM_QUOTES);
 	} else if (strcasecmp(token.c_str(), "APPEND") == 0) {
 		cmd->Append();
-		token = details.next();
+		token = details.next(TRIM_QUOTES);
 	}
 
 	int num_pairs = 0;
@@ -512,7 +535,7 @@ DagParser::ParseVars(DagLexer& details) {
 		num_pairs++;
 		cmd->AddPair(key, val);
 
-		token = details.next();
+		token = details.next(TRIM_QUOTES);
 	}
 
 	return (num_pairs == 0) ? "No key=value pairs specified" : "";
@@ -568,6 +591,9 @@ std::string
 DagParser::ParseSavePoint(DagLexer& details) {
 	std::string token = details.next();
 	if (token.empty()) { return "No node name specified"; }
+	else if (strcasecmp(token.c_str(), DAG::ALL_NODES.c_str()) == 0) {
+		return "ALL_NODES cannot be used for save point file command";
+	}
 
 	data.reset(new SavePointCommand(token));
 	SavePointCommand* cmd = (SavePointCommand*)data.get();
@@ -599,7 +625,7 @@ DagParser::ParseCategory(DagLexer& details) {
 	if ( ! junk.empty()) { return "Unexpected token '" + junk + "'"; }
 
 	data.reset(new CategoryCommand(name));
-	((CategoryCommand*)data.get())->nodes.emplace_back(node);
+	((CategoryCommand*)data.get())->AddNode(node);
 
 	return "";
 }
@@ -724,6 +750,8 @@ DagParser::ParseEnv(DagLexer& details) {
 	trim(vars);
 	if (vars.empty()) { return "No environment variables provided"; }
 
+	if ( ! set) { vars = join(split(vars), ","); }
+
 	data.reset(new EnvCommand(vars, set));
 	return "";
 }
@@ -771,10 +799,8 @@ bool
 DagParser::next() {
 	std::string line;
 
-	while (std::getline(fs, line)) {
-		uint64_t command_line_no = ++line_no;
-		trim(line);
-		if (skip_line(line)) { continue; }
+	while (getnextline(line)) {
+		uint64_t command_line_no = line_no;
 
 		bool parse_success = true;
 
@@ -792,25 +818,20 @@ DagParser::next() {
 			DAG::CMD cmd = it->second;
 
 			std::string parse_error, check;
+			bool ignore = filter_ignore.contains(cmd);
 
-			if (filter_ignore.contains(cmd) || (! filter_only.empty() && ! filter_only.contains(cmd))) {
+			if (ignore || (! filter_only.empty() && ! filter_only.contains(cmd))) {
 				// If ignored command is potentially multilined then parse the command
 				if (cmd >= DAG::CMD::JOB && cmd <= DAG::CMD::SERVICE) {
-					parse_error = ParseNodeTypes(fs, details, cmd);
+					std::ignore = ParseNodeTypes(details, cmd);
 				} else if (cmd == DAG::CMD::SUBMIT_DESCRIPTION) {
-					parse_error = ParseSubmitDesc(fs, details);
+					std::ignore = ParseSubmitDesc(details);
 				}
 
-				if (details.failed()) {
-					parse_error = details.error();
-				}
+				// Reset any data that was successfully parsed
+				data.reset(nullptr);
 
-				if ( ! parse_error.empty()) {
-					auto& ref = all_errors.emplace_back(GetFile(), command_line_no, parse_error);
-					ref.SetCommand(cmd);
-
-					return false;
-				}
+				if ( ! ignore) { has_other_commands = true; }
 
 				continue;
 			}
@@ -827,13 +848,13 @@ DagParser::next() {
 				case DAG::CMD::FINAL:
 				case DAG::CMD::PROVISIONER:
 				case DAG::CMD::SERVICE:
-					parse_error = ParseNodeTypes(fs, details, cmd);
+					parse_error = ParseNodeTypes(details, cmd);
 					break;
 				case DAG::CMD::SPLICE:
 					parse_error = ParseSplice(details); // TODO: Support inline DAG splices
 					break;
 				case DAG::CMD::SUBMIT_DESCRIPTION:
-					parse_error = ParseSubmitDesc(fs, details);
+					parse_error = ParseSubmitDesc(details);
 					break;
 				case DAG::CMD::PARENT_CHILD:
 					parse_error = ParseParentChild(details);
@@ -924,7 +945,7 @@ DagParser::next() {
 					check = details.next();
 					if ( ! check.empty()) {
 						parse_error = "Unexpected token '" + check + "'";
-					} else { data.reset(new RejectCommand(GetFile(), line_no)); }
+					} else { data.reset(new RejectCommand()); }
 					break;
 				case DAG::CMD::CONNECT:
 					parse_error = ParseConnect(details);
@@ -935,6 +956,7 @@ DagParser::next() {
 					break;
 				default:
 					parse_error = "Parser not implemented";
+					break;
 			} // End switch statement on DAG commands
 
 			// Handle line lexer error (overrides specific parse failure because this was likely the cause)

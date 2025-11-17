@@ -22,9 +22,12 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "schedd_negotiate.h"
+#include "scheduler.h"
+#include "qmgmt.h"
 
 
 static int next_negotiate_instance_id = 1;
+extern Scheduler scheduler;
 
 ScheddNegotiate::ScheddNegotiate
 (
@@ -159,18 +162,33 @@ ScheddNegotiate::nextJob()
 
 		m_current_auto_cluster_id = cluster.getAutoClusterId();
 
+			// if this auto-cluster has already been rejected, skip it
 		if( !getAutoClusterRejected(m_current_auto_cluster_id) ) {
 			size_t clusterSize = cluster.size();
 			for (auto & jid : cluster) {
 				--clusterSize; // decrement as we iterate so we know how many jobs remain
-				if (!jid.isJobKey()) continue;
+
+					// if this is not a job (i.e. an OCU request), skip it
+				if (!jid.isJobKey() && (jid.proc != OCU_qkey2)) {
+					continue;
+				}
 				m_current_job_id = jid;
 
 				const char* because = "";
 				bool skip_all = false;
 				JobQueueJob * job = GetJobAd(m_current_job_id);
-				if ( ! job)
-				{
+				if (! job) {
+					// Is this an OCU request?
+					if (scheduler.getOCU(m_current_job_id.cluster)) {
+						m_current_job_ad = scheduler.getOCU(m_current_job_id.cluster)->ad;
+						m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT, 1);
+
+						// negotiator has to see clusterid and procid or it will not be happy.  Sad but true.
+						m_current_job_ad.Assign(ATTR_CLUSTER_ID, m_current_job_id.cluster);
+						m_current_job_ad.Assign(ATTR_PROC_ID, OCU_qkey2);
+						m_current_job_ad.Assign(ATTR_REQUIREMENTS, true);
+						return true;
+					} 
 					dprintf(D_MATCH,
 						"skipping job %d.%d because it no longer exists\n",
 						m_current_job_id.cluster,m_current_job_id.proc);
@@ -357,6 +375,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 bool
 ScheddNegotiate::sendResourceRequestList(Sock *sock)
 {
+		// The Negotiator wants us to send it a list of resource requests.
 	m_jobs_can_offer = scheduler_maxJobsToOffer();
 
 	while (m_num_resource_reqs_to_send > 0) {
@@ -635,6 +654,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		int rr_proc = -1;
 		m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_CLUSTER, rr_cluster);
 		m_match_ad.LookupInteger(ATTR_RESOURCE_REQUEST_PROC, rr_proc);
+			// if we got a valid job id back, use it to update m_current_job_id
 		if (rr_cluster != -1 && rr_proc != -1) {
 			if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 				m_current_resources_delivered = 0;

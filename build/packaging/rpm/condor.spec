@@ -1262,6 +1262,34 @@ fi
 # configuration
 
 %changelog
+* Thu Nov 13 2025 Tim Theisen <tim@cs.wisc.edu> - 25.4.0-1
+- Job scratch space is now in a sub-directory of the execute directory
+- HTCondor EPs can now refresh credentials during output transfers
+- HTCondor will now create intermediate directories with output remaps
+- condor_watch_q now correctly accounts for unmaterialized jobs
+- Now able to control maximum jobs running by user on an AP
+- HTCondor now tracks when jobs are vacated prior to running
+- Disk space allocated to jobs now more closely matches the request
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 25.3.1-1
+- All changes in 25.0.3
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.3-1
+- All changes in 24.12.14
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.14-1
+- Fix interoperability problem between HTCondor-CE 24 and 25 which
+  manifests as a Job Router crash when upgrading the CE to HTCondor 25
+- Fix several issues when submitting jobs with itemdata in
+  the htcondor2 Python bindings
+- Fix bug when using max_idle and transfer_input_files that could result
+  in the container_image to be only transferred with the first job
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the CUDA_VISIBLE_DEVICES environment variable
+
 * Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 25.2.1-1
 - Support for re-running a job with an increased memory request
 - Several DAGMan Improvements

@@ -3522,6 +3522,13 @@ int SubmitHash::ReportCommonMistakes()
 		ABORT_AND_RETURN(1);
 	}
 
+	std::string out_dir;
+	if (job->Lookup(ATTR_OUTPUT_DESTINATION) && job->Lookup(ATTR_OUTPUT_DIRECTORY)) {
+		push_error(stderr, "You cannot use both " SUBMIT_KEY_OutputDestination
+			" and " SUBMIT_KEY_OutputDirectory " in the same submit file\n");
+		ABORT_AND_RETURN(1);
+	}
+
 	return abort_code;
 }
 
@@ -4754,6 +4761,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// formerly SetOutputDestination
 	{SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_OutputDirectory, ATTR_OUTPUT_DIRECTORY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_genfile},
 	// formerly SetWantGracefulRemoval
 	{SUBMIT_KEY_WantGracefulRemoval, ATTR_WANT_GRACEFUL_REMOVAL, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJobMaxVacateTime
@@ -6270,11 +6278,13 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
-				// check output (only a single file this time)
+				// check output (not a list this time)
 				if (job->LookupString(ATTR_OUTPUT_DESTINATION, file_list)) {
 					if (IsUrl(file_list.c_str())) {
 						std::string tag = getURLType(file_list.c_str(), true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
+					} else {
+						push_warning(stderr, SUBMIT_KEY_OutputDestination " must be a URL, did you mean " SUBMIT_KEY_OutputDirectory " ?\n");
 					}
 				}
 

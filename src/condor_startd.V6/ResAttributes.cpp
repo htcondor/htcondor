@@ -38,7 +38,7 @@
 #include "docker-api.h"
 
 MachAttributes::MachAttributes()
-   : m_user_settings_init(false), m_named_chroot()
+   : m_user_settings_init(false)
 {
 	m_mips = -1;
 	m_kflops = -1;
@@ -458,23 +458,6 @@ MachAttributes::compute_config()
 				 m_filesystem_domain );
 
 		m_idle_interval = param_integer( "IDLE_INTERVAL", -1 );
-
-		pair_strings_vector root_dirs = root_dir_list();
-		std::stringstream result;
-		unsigned int chroot_count = 0;
-		for (pair_strings_vector::const_iterator it=root_dirs.begin();
-				it != root_dirs.end(); 
-				++it, ++chroot_count) {
-			if (chroot_count) {
-				result << ", ";
-			}
-			result << it->first;
-		}
-		if (chroot_count > 1) {
-			std::string result_str = result.str();
-			dprintf(D_FULLDEBUG, "Named chroots: %s\n", result_str.c_str() );
-			m_named_chroot = result_str;
-		}
 	}
 }
 
@@ -1516,11 +1499,6 @@ MachAttributes::publish_static(ClassAd* cp, const CpuAttributes * childAttrs)
 	}
 	cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources);
 
-	// Advertise chroot information
-	if ( m_named_chroot.size() > 0 ) {
-		cp->Assign( "NamedChroot", m_named_chroot );
-	}
-
 	// Advertise Docker Volumes
 	char *dockerVolumes = param("DOCKER_VOLUMES");
 	if (dockerVolumes) {
@@ -2308,6 +2286,24 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 }
 
 void
+CpuAttributes::claim_broken_DevIds(MachAttributes* map, int broken_sub_id)
+{
+	if ( ! map) { return; }
+
+	for (const auto& [tag, _] : c_slotres_map) {
+		// Locate devids associated with broken item subid
+		slotres_assigned_ids_t devids;
+		int claimed = map->ReportBrokenDevIds(tag, devids, broken_sub_id);
+		dprintf(D_FULLDEBUG, "Claiming %d %s device ids from broken item %d\n",
+		        claimed, tag.c_str(), broken_sub_id);
+
+		// Add claimed device ids to appropriate list of assigned device ids for this CpuAttrs
+		slotres_assigned_ids_t& ref_assigned_devids = c_slotres_ids_map[tag];
+		ref_assigned_devids.insert(ref_assigned_devids.end(), devids.begin(), devids.end());
+	}
+}
+
+void
 CpuAttributes::publish_dynamic(ClassAd* cp) const
 {
 #ifdef PROVISION_FRACTIONAL_DISK
@@ -2707,6 +2703,40 @@ ResBag::operator-=(const CpuAttributes& rhs)
 	for (auto & res : rhs.c_slottot_map) { resmap[res.first] -= res.second; }
 	return *this;
 }
+
+
+ResBag&
+ResBag::operator+=(const ResBag& rhs)
+{
+        cpus += rhs.cpus;
+        disk += rhs.disk;
+        mem += rhs.mem;
+        slots += rhs.slots;
+        for (auto & res : rhs.resmap) { resmap[res.first] += res.second; }
+        return *this;
+}
+
+ResBag&
+ResBag::operator-=(const ResBag& rhs)
+{
+        cpus -= rhs.cpus;
+        disk -= rhs.disk;
+        mem -= rhs.mem;
+        slots -= rhs.slots;
+        for (auto & res : rhs.resmap) { resmap[res.first] -= res.second; }
+        return *this;
+}
+
+
+void
+ResBag::convert_to_request(CpuAttributes::_slot_request& req) const
+{
+	req.num_disk = disk;
+	req.num_cpus = cpus;
+	req.num_phys_mem = mem;
+	req.slotres = resmap;
+}
+
 
 void ResBag::reset()
 {

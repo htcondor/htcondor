@@ -250,6 +250,21 @@ public:
 		  */
 	bool isLocal( void ) const			{ return _is_local; }
 
+		/** Specify the path to the address file, which will be used
+		*   if locate decides to use an address file and if it exists
+		*/
+	void specify_address_file(std::string_view address_file) {
+		if (address_file.empty()) { _specified_address_file.clear(); }
+		else {_specified_address_file = address_file;}
+	}
+
+		/** return the specified address file, or nullptr if one was not specified.
+		*/
+	const char * specified_address_file() const {
+		if (_specified_address_file.empty()) return nullptr;
+		return _specified_address_file.c_str();
+	}
+
 		/** Returns a descriptive string for error messages.  This has
 		  all the logic about printing out an appropriate string to
 		  describe the daemon, it's type, and it's location.  For
@@ -694,6 +709,7 @@ protected:
 	std::string _platform;
 	std::string _pool;
 	std::string _error;
+	std::string _specified_address_file;
 	CAResult _error_code;
 	std::string _id_str;
 	std::string _subsys;

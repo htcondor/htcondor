@@ -44,10 +44,7 @@ LocalUserLog::~LocalUserLog()
 bool
 LocalUserLog::initFromJobAd( ClassAd* ad, bool starter_ulog )
 {
-	if( ! jic->userPrivInitialized() ) {
-		EXCEPT( "LocalUserLog::initFromJobAd() "
-				"called before user priv is initialized!" );
-	}
+	ASSERT(jic->userPrivInitialized());
 
 	if ( ! starter_ulog ) {
 		// This is the primary user log for the local universe.
@@ -127,9 +124,7 @@ LocalUserLog::initFromJobAd( ClassAd* ad, bool starter_ulog )
 bool
 LocalUserLog::logExecute( ClassAd*  ad  )
 {
-	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logExecute() called before init()" );
-	}
+	ASSERT(is_initialized);
 	if( ! should_log ) {
 		return true;
 	}
@@ -149,9 +144,7 @@ LocalUserLog::logExecute( ClassAd*  ad  )
 bool
 LocalUserLog::logSuspend( ClassAd* ad )
 {
-	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logSuspend() called before init()" );
-	}
+	ASSERT(is_initialized);
 	if( ! should_log ) {
 		return true;
 	}
@@ -178,9 +171,7 @@ LocalUserLog::logSuspend( ClassAd* ad )
 bool
 LocalUserLog::logContinue( ClassAd*  ad  )
 {
-	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logContinue() called before init()" );
-	}
+	ASSERT(is_initialized);
 	if( ! should_log ) {
 		return true;
 	}
@@ -198,9 +189,7 @@ LocalUserLog::logContinue( ClassAd*  ad  )
 bool
 LocalUserLog::logCheckpoint( ClassAd*  /* ad */ )
 {
-	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logCheckpoint() called before init()" );
-	}
+	ASSERT(is_initialized);
 	if( ! should_log ) {
 		return true;
 	}
@@ -269,9 +258,7 @@ LocalUserLog::logJobExit( ClassAd* ad, int exit_reason )
 bool
 LocalUserLog::logTerminate( ClassAd* ad )
 {
-	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logTerminate() called before init()" );
-	}
+	ASSERT(is_initialized);
 	if( ! should_log ) {
 		return true;
 	}
@@ -331,9 +318,7 @@ LocalUserLog::logTerminate( ClassAd* ad )
 bool
 LocalUserLog::logEvict( ClassAd* ad, bool checkpointed )
 {
-	if( ! is_initialized ) {
-		EXCEPT( "LocalUserLog::logEvict() called before init()" );
-	}
+	ASSERT(is_initialized);
 	if( ! should_log ) {
 		return true;
 	}
