@@ -6859,13 +6859,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	//
 	std::vector<ClassAd> nonfile_ads;
 	if( plugin.protocol_version == 3 ) {
-	    // `PluginData` for all plug-ins.
+		// `PluginData` for all plug-ins.
 		ClassAd nonfile_ad;
 		nonfile_ad.InsertAttr( "NonFile", true );
 		CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
 		nonfile_ads.push_back( nonfile_ad );
 
-        // `<protocol>_PluginData` for specific protocols.
+		// `<protocol>_PluginData` for specific protocols.
 		for( const auto & schema : schemes ) {
 			std::string attrName;
 			formatstr( attrName, "%s_PluginData", schema.c_str() );
@@ -6879,7 +6879,25 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			nonfile_ads.push_back( schema_ad );
 		}
 
-		// `???` for specific URLs.
+		// It's obvious what do for specific URLs, but not how the specify
+		// them, so we'll just skip them for now.
+	} else if( plugin.protocol_version == 2 ) {
+		if( param_boolean( "ASSUME_COMPATIBLE_MULTIFILE_PLUGINS", true ) ) {
+			// Bravely assumes that all multifile plug-in speak fluent ClassAd.
+			for( auto & fileAd : pluginInputAds ) {
+				CopyAttribute( "PluginData", fileAd, this->_fix_me_copy_ );
+
+				// `<protocol>_PluginData` for specific protocols.
+				for( const auto & schema : schemes ) {
+					std::string attrName;
+					formatstr( attrName, "%s_PluginData", schema.c_str() );
+					ExprTree * e = this->_fix_me_copy_.Lookup( attrName );
+					if(e == NULL) { continue; }
+
+					CopyAttribute( attrName.c_str(), fileAd, this->_fix_me_copy_ );
+				}
+			}
+		}
 	}
 
 
