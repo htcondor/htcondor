@@ -116,7 +116,7 @@ def ce_info_from_ganglia(resource_info_by_fqdn):
     df.rename({'Timestamp':'Date'}, axis='columns', inplace=True)
     df.set_index('Date', inplace=True)
     # Convert the index to datetime
-    df.index = pd.to_datetime(df.index)
+    df.index = pd.to_datetime(df.index, utc=True)
     df.index = df.index.tz_localize(None)
     
     # The columns are the FQDNs of the CEs.  The values are the number of CPUs in use at that time.
