@@ -1,3 +1,9 @@
+*** 25.6.0 features
+
+*** 25.6.0 bugs
+
+*** 25.0.6 bugs
+
 *** 25.5.0 features
 
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
