@@ -1,3 +1,7 @@
+*** 24.12.16 bugs
+
+*** 24.0.16 bugs
+
 *** 24.12.15 features
 
 - *condor_submit* will now report an error when :subcom:`output_destination` is
