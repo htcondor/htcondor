@@ -390,7 +390,7 @@ std::array<std::pair<int, const char *>, 200> makeCommandTable() {
 #define QUERY_OCU_FROM_USERREC (SCHED_VERS + 153) // Query the OCU(s) associated with a given UserRec
 		{QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC"},
 
-#define	 REACTIVATE_CLAIM_CHECK (SCHED_VERS+151)
+#define	 REACTIVATE_CLAIM_CHECK (SCHED_VERS+154)
 		{REACTIVATE_CLAIM_CHECK, "REACTIVATE_CLAIM_CHECK"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
