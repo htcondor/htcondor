@@ -74,8 +74,10 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
                                   unsigned char *      output, 
                                   int                  output_buf_len)
 {
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt **********************\n");
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt with %d bytes of input\n", input_len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt **********************\n");
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt with %d bytes of input\n", input_len);
+	}
     StreamCryptoState *stream_state = &(cs->m_stream_crypto_state);
 
     int output_len = input_len;
@@ -128,10 +130,12 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     memcpy(iv, &ctr_encoded, sizeof(ctr_encoded));
     memcpy(iv + sizeof(ctr_encoded), stream_state->m_iv_enc.iv + sizeof(ctr_encoded), IV_SIZE - sizeof(ctr_encoded));
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV base value %d\n", base);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter value _enc %u\n", stream_state->m_ctr_enc);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value %d\n", result);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV base value %d\n", base);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter value _enc %u\n", stream_state->m_ctr_enc);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value %d\n", result);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
+	}
 
         // Only need to send IV for the first encrypted packet.
     if (sending_IV) {
@@ -142,9 +146,11 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     // for debugging, hexdbg at different times needs to hold hex
     // representation of IV, MAC, or initial AAD bytes.  currently
     // none are larger than 16 so the 128 is plenty.
-    char hexdbg[128];
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Final IV used for outgoing encrypt: %s\n",
-        debug_hex_dump(hexdbg, reinterpret_cast<char*>(iv), IV_SIZE));
+	if (IsDebugLevel(D_NETWORK)) {
+		char hexdbg[128];
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Final IV used for outgoing encrypt: %s\n",
+				debug_hex_dump(hexdbg, reinterpret_cast<char*>(iv), IV_SIZE));
+	}
 
     if (cs->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to have correct AES-GCM key type.\n");
@@ -152,8 +158,10 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     }
 
     const unsigned char *kdp = cs->m_keyInfo.getKeyData();
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : about to init key %0x %0x %0x %0x.\n",
-        *(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : about to init key %0x %0x %0x %0x.\n",
+				*(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
+	}
 
     if (1 != EVP_EncryptInit_ex(ctx.get(), NULL, NULL, cs->m_keyInfo.getKeyData(), iv)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to initialize key and IV.\n");
@@ -162,28 +170,38 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 
     // Authenticate additional data from the caller.
     int len;
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of AAD data: %s...\n",
-        aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
+	if (IsDebugLevel(D_NETWORK)) {
+		char hexdbg[128];
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of AAD data: %s...\n",
+				aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
+	}
     if (aad && (1 != EVP_EncryptUpdate(ctx.get(), NULL, &len, aad, aad_len))) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to authenticate caller input data.\n");
         return false;
     }
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of plaintext\n", input_len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : We have %d bytes of plaintext\n", input_len);
+	}
     if (1 != EVP_EncryptUpdate(ctx.get(), output + (sending_IV ? IV_SIZE : 0),
         &len, input, input_len))
     {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to encrypt plaintext buffer.\n");
         return false;
     }
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : First %d bytes written to ciphertext.\n", len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : First %d bytes written to ciphertext.\n", len);
+	}
 
     int len2;
     if (1 != EVP_EncryptFinal_ex(ctx.get(), output + (sending_IV ? IV_SIZE : 0) + len, &len2)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to finalize cipher text.\n");
         return false;
     }
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Finalized an additional %d bytes written to ciphertext.\n", len2);
+
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Finalized an additional %d bytes written to ciphertext.\n", len2);
+	}
     len += len2;
 
     // we never use the result of len or len2 after this.  how would len2 be non-zero?
@@ -218,14 +236,19 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to get tag.\n");
         return false;
     }
-    char hex2[3 * AES_MAC_SIZE + 1];
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Outgoing MAC : %s\n",
-        debug_hex_dump(hex2, reinterpret_cast<char*>(output + output_len - AES_MAC_SIZE), AES_MAC_SIZE));
+
+	if (IsDebugLevel(D_NETWORK)) {
+		char hex2[3 * AES_MAC_SIZE + 1];
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Outgoing MAC : %s\n",
+				debug_hex_dump(hex2, reinterpret_cast<char*>(output + output_len - AES_MAC_SIZE), AES_MAC_SIZE));
+	}
 
     // Only change state if everything was successful.
     stream_state->m_ctr_enc++;
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt.  Successful encryption with cipher text %d bytes.\n", output_len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt.  Successful encryption with cipher text %d bytes.\n", output_len);
+	}
     return true;
 }
 
@@ -239,8 +262,11 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 {
     std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(EVP_CIPHER_CTX_new(), &EVP_CIPHER_CTX_free);
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt **********************\n");
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt with input buffer %d.\n", input_len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt **********************\n");
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt with input buffer %d.\n", input_len);
+	}
+
     StreamCryptoState *stream_state = &(cs->m_stream_crypto_state);
 
     if (output_len < input_len) {
@@ -281,7 +307,9 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     bool receiving_IV = (stream_state->m_ctr_dec == 0);
 
     if (receiving_IV) {
-        dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : First decrypt - initializing IV\n");
+		if (IsDebugLevel(D_NETWORK)) {
+			dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : First decrypt - initializing IV\n");
+		}
         memcpy(stream_state->m_iv_dec.iv, input, IV_SIZE);
     }
 
@@ -291,10 +319,12 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     int32_t base = ntohl(stream_state->m_iv_dec.ctr.pkt);
     int32_t result = base + *reinterpret_cast<int32_t*>(&stream_state->m_ctr_dec);
     int32_t ctr_encoded = htonl(result);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV base value %d\n", base);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter value _dec %u\n", stream_state->m_ctr_dec);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value %d\n", result);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV base value %d\n", base);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter value _dec %u\n", stream_state->m_ctr_dec);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value %d\n", result);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV Counter plus base value (encoded) %d\n", ctr_encoded);
+	}
 
     // Assemble our expected IV.
     unsigned char iv[IV_SIZE];
@@ -302,16 +332,20 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     memcpy(iv + sizeof(ctr_encoded), stream_state->m_iv_dec.iv + sizeof(ctr_encoded), IV_SIZE - sizeof(ctr_encoded));
 
     const unsigned char *kdp = cs->m_keyInfo.getKeyData();
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : about to init key %0x %0x %0x %0x.\n",
-        *(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : about to init key %0x %0x %0x %0x.\n",
+				*(kdp), *(kdp + 15), *(kdp + 16), *(kdp + 31));
+	}
 
     // for debugging, hexdbg at different times needs to hold hex
     // representation of IV, MAC, or initial AAD bytes.  currently
     // none are larger than 16 so the 128 is plenty.
-    char hexdbg[128];
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV used for incoming decrypt: %s\n",
-        debug_hex_dump(hexdbg,
-        reinterpret_cast<const char *>(iv), IV_SIZE));
+	if (IsDebugLevel(D_NETWORK)) {
+		char hexdbg[128];
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decyrpt DUMP : IV used for incoming decrypt: %s\n",
+				debug_hex_dump(hexdbg,
+					reinterpret_cast<const char *>(iv), IV_SIZE));
+	}
 
     if (!EVP_DecryptInit_ex(ctx.get(), NULL, NULL, kdp, iv)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed init.\n");
@@ -319,17 +353,22 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     }
 
     int len;
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of AAD data: %s...\n",
-        aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
+	if (IsDebugLevel(D_NETWORK)) {
+		char hexdbg[128];
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : We have %d bytes of AAD data: %s...\n",
+				aad_len, debug_hex_dump(hexdbg, reinterpret_cast<const char *>(aad), std::min(16, aad_len)));
+	}
     if (aad && !EVP_DecryptUpdate(ctx.get(), NULL, &len, aad, aad_len)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed when authenticating user AAD.\n");
         return false;
     }
 
-    dprintf(D_NETWORK | D_VERBOSE,
-        "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
-        " Input length is %d\n",
-        input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE,
+				"Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
+				" Input length is %d\n",
+				input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
+	}
 
     if( (input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE) < 0) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: input was too small.\n");
@@ -340,7 +379,9 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed cipher text update.\n");
         return false;
     }
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : produced output of size %d\n", len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : produced output of size %d\n", len);
+	}
 
 	if (IsDebugLevel(D_NETWORK) && (input_len > 3) && (len > 3)) {
 		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Cipher text: "
@@ -370,22 +411,28 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
 
-    char hex2[3 * AES_MAC_SIZE + 1];
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Incoming MAC : %s\n",
-        debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - AES_MAC_SIZE), AES_MAC_SIZE));
+	if (IsDebugLevel(D_NETWORK)) {
+		char hex2[3 * AES_MAC_SIZE + 1];
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Incoming MAC : %s\n",
+				debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - AES_MAC_SIZE), AES_MAC_SIZE));
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output (len is %i).\n", len);
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output (len is %i).\n", len);
+	}
     if (!EVP_DecryptFinal_ex(ctx.get(), output + len, &len)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to finalize decryption and check of tag.\n");
        return false;
     }
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
+	}
     output_len = input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE;
 
         // Only touch state after success
     stream_state->m_ctr_dec ++;
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt.  Successful decryption with plain text %d bytes.\n", output_len);
+	if (IsDebugLevel(D_NETWORK)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt.  Successful decryption with plain text %d bytes.\n", output_len);
+	}
     return true;
 }
