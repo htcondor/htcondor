@@ -151,9 +151,7 @@ ShadowCredDirCreator::GetOAuth2Credential(const std::string &service_name, const
 JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	m_wrote_chirp_config(false), m_job_update_attrs_set(false)
 {
-	if( ! shadow_name ) {
-		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
-	}
+	ASSERT(shadow_name);
 	m_shadow_name = strdup( shadow_name );
 
 	shadow = NULL;
@@ -1318,9 +1316,7 @@ JICShadow::registerStarterInfo( void )
 {
 	int rval;
 
-	if( ! shadow ) {
-		EXCEPT( "registerStarterInfo called with NULL DCShadow object" );
-	}
+	ASSERT(shadow);
 
 	ClassAd starter_info;
 	publishStarterInfo( &starter_info );
@@ -1683,9 +1679,7 @@ JICShadow::initJobInfo( void )
 	std::string orig_job_iwd;
 	std::string x509userproxy;
 
-	if( ! job_ad ) {
-		EXCEPT( "JICShadow::initJobInfo() called with NULL job ad!" );
-	}
+	ASSERT(job_ad);
 
 		// stash the executable name in orig_job_name
 	if( ! job_ad->LookupString(ATTR_JOB_CMD, &orig_job_name) ) {
@@ -2342,10 +2336,8 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	// These are updates taken from Chirp
 	if (shadow_version && shadow_version->built_since_version(25, 3, 0)) {
-		dprintf(D_STATUS, "JEF setting ChirpDelayedAttrs\n");
 		ad->Insert(ATTR_CHIRP_DELAYED_ATTRS, new ClassAd(m_delayed_updates));
 	} else {
-		dprintf(D_STATUS, "JEF not setting ChirpDelayedAttrs\n");
 		ad->Update(m_delayed_updates);
 	}
 	m_delayed_updates.Clear();

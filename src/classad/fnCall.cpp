@@ -2854,7 +2854,7 @@ static bool regexp_helper(
 			}
 
 #if PCRE2_MAJOR == 10 && PCRE2_MINOR < 43
-			pcre2_substring_list_free((PCRE2_SPTR *)groups_pcre2);
+			pcre2_substring_list_free(const_cast<PCRE2_SPTR *>(groups_pcre2));
 #else
 			pcre2_substring_list_free(groups_pcre2);
 #endif

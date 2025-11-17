@@ -188,14 +188,7 @@ int FilesystemRemap::PerformMappings() {
 
 	// do bind mounts (or chroots) for AddMapping() entries
 	for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
-		if (strcmp(it->second.c_str(), "/") == 0) {
-			if ((retval = chroot(it->first.c_str()))) {
-				break;
-			}
-			if ((retval = chdir("/"))) {
-				break;
-			}
-		} else if ((retval = mount(it->first.c_str(), it->second.c_str(), NULL, MS_BIND, NULL))) {
+		if ((retval = mount(it->first.c_str(), it->second.c_str(), NULL, MS_BIND, NULL))) {
 			break;
 		}
 	}
@@ -318,45 +311,3 @@ void FilesystemRemap::ParseMountinfo() {
 	fclose(fd);
 #endif  // of defined(LINUX)
 }
-
-pair_strings_vector
-root_dir_list()
-{
-	pair_strings_vector execute_dir_list;
-	execute_dir_list.push_back(pair_strings("root","/"));
-	const char * allowed_root_dirs = param("NAMED_CHROOT");
-	if (allowed_root_dirs) {
-		for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
-			StringTokenIterator chroot_spec(next_chroot, "=");
-			const char* tok;
-			tok = chroot_spec.next();
-			if (tok == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
-				continue;
-			}
-			std::string chroot_name = tok;
-			tok = chroot_spec.next();
-			if (tok == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
-				continue;
-			}
-			std::string next_dir = tok;
-			if (IsDirectory(next_dir.c_str())) {
-				pair_strings p(chroot_name, next_dir);
-				execute_dir_list.push_back(p);
-			}
-		}
-	}
-	return execute_dir_list;
-}
-
-bool
-is_trivial_rootdir(const std::string &root_dir)
-{
-	for (std::string::const_iterator it=root_dir.begin(); it!=root_dir.end(); it++) {
-		if (*it != '/')
-			return false;
-	}
-	return true;
-}
-

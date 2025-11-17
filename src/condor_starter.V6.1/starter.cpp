@@ -135,9 +135,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				bool is_gsh, int stdin_fd, int stdout_fd, 
 				int stderr_fd )
 {
-	if( ! my_jic ) {
-		EXCEPT( "Starter::Init() called with no JobInfoCommunicator!" ); 
-	}
+	ASSERT(my_jic);
 	if( jic ) {
 		delete( jic );
 	}
@@ -2258,9 +2256,7 @@ Starter::skipJobImmediately() {
 	//
 	// Make sure our timer callback registered properly
 	//
-	if( this->deferral_tid < 0 ) {
-		EXCEPT( "Can't register SkipJob DaemonCore timer" );
-	}
+	ASSERT(this->deferral_tid >= 0);
 	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
 			this->jic->jobCluster(),
 			this->jic->jobProc() );
@@ -2427,9 +2423,7 @@ Starter::jobWaitUntilExecuteTime( void )
 			//
 			// Make sure our timer callback registered properly
 			//
-		if( this->deferral_tid < 0 ) {
-			EXCEPT( "Can't register Deferred Execution DaemonCore timer" );
-		}
+		ASSERT(this->deferral_tid >= 0);
 			//
 			// Our job will start in the future
 			//
@@ -3584,6 +3578,10 @@ Starter::PublishToEnv( Env* proc_env )
 				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
+					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long
+					// so we just force CUDA_VISIBLE_DEVICES to be the same value as NVIDIA_VISIBLE_DEVICES
+					proc_env->SetEnv("CUDA_VISIBLE_DEVICES", env_value);
+					dprintf(D_ALWAYS, "AvailableGPUs forcing env CUDA_VISIBLE_DEVICES=%s\n", env_value);
 				} else {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", "none");
 				}
@@ -4092,7 +4090,7 @@ Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
-			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", false);
+			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", true);
 			if (mark_broken && exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
 				if (exit_code != STARTER_EXIT_NORMAL) {
 					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",
@@ -4105,38 +4103,20 @@ Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
 	}
 #endif /* LINUX */
 
-	// Remove the directory from all possible chroots.
-	// On Windows, we expect the root_dir_list to have only a single entry - "/"
-	std::string full_exec_dir(Execute);
-	pair_strings_vector root_dirs = root_dir_list();
-	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		if (it->second == "/") {
-			// if the root is /, just use the execute dir.  we do this because dircat doesn't work
-			// correctly on windows when cat'ing  / + c:\condor\execute
-			full_exec_dir = Execute;
+	// Remove the scratch directory.
+	Directory execute_dir(Execute, PRIV_ROOT);
+	if (execute_dir.Find_Named_Entry(dir_name.c_str())) {
+
+		int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
+		if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
+
+		if (move_to) {
+			dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
+			rename(execute_dir.GetFullPath(), move_to);
 		} else {
-			// for chroots other than the trivial one, cat the chroot to the configured execute dir
-			// we don't expect to ever get here on Windows.
-			// If we do get here on Windows, Find_Named_Entry will just fail to find a match
-			if ( ! dircat(it->second.c_str(), Execute, full_exec_dir)) {
-				continue;
-			}
-		}
-
-		Directory execute_dir( full_exec_dir.c_str(), PRIV_ROOT );
-		if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
-
-			int closed = dprintf_close_logs_in_directory(execute_dir.GetFullPath(), true);
-			if (closed) { dprintf(D_FULLDEBUG, "Closed %d logs in %s\n", closed, execute_dir.GetFullPath()); }
-
-			if (it->second == "/" && move_to) {
-				dprintf(D_STATUS, "Renaming %s to %s instead of deleting it\n", execute_dir.GetFullPath(), move_to);
-				rename(execute_dir.GetFullPath(), move_to);
-			} else {
-				dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
-				if (!execute_dir.Remove_Current_File()) {
-					has_failed = true;
-				}
+			dprintf(D_FULLDEBUG, "Removing %s\n", execute_dir.GetFullPath());
+			if (!execute_dir.Remove_Current_File()) {
+				has_failed = true;
 			}
 		}
 	}
@@ -4372,3 +4352,12 @@ Starter::CheckLVUsage( int /* timerID */ )
 	}
 }
 #endif // LINUX
+
+
+void
+Starter::jicNotifyStarterError( bool critical ) {
+    jic->notifyStarterError(
+        m_vacateReason.c_str(), critical,
+        m_vacateCode, m_vacateSubcode
+    );
+}

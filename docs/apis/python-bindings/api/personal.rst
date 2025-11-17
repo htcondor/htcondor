@@ -1,5 +1,5 @@
 :mod:`htcondor2.personal` API Reference
-======================================
+=======================================
 
 .. module:: htcondor2.personal
 

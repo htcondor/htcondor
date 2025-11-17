@@ -32,7 +32,7 @@ using std::map;
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
-static int deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done);
+static int deactivate_claim(Stream *stream, Resource *rip, int cmd);
 
 int
 command_handler(int cmd, Stream* stream )
@@ -41,6 +41,28 @@ command_handler(int cmd, Stream* stream )
 	Resource* rip;
 	if( ! (rip = stream_to_rip(stream)) ) {
 		dprintf(D_ALWAYS, "Error: problem finding resource for %d (%s)\n", cmd, getCommandString(cmd));
+
+		// Let's not just hang up if we failed to find the claim ID.
+		switch( cmd ) {
+			case ALIVE:
+				// This isn't KEEP_STREAM and therefore meaningless?
+				return FALSE;
+				break;
+			case DEACTIVATE_CLAIM:
+			case DEACTIVATE_CLAIM_FORCIBLY:
+			case DEACTIVATE_CLAIM_JOB_DONE:
+			case REACTIVATE_CLAIM_CHECK:
+				stream->encode();
+
+				ClassAd response_ad;
+				response_ad.Assign(ATTR_START, false /* the claim has closed */ );
+				if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
+					dprintf(D_FULLDEBUG, "Failed to send response ClassAd after receiving invalid claim ID..\n");
+				}
+				return FALSE;
+				break;
+		}
+
 		return FALSE;
 	}
 	State s = rip->state();
@@ -57,15 +79,19 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM:
 	case DEACTIVATE_CLAIM_FORCIBLY:
 	case DEACTIVATE_CLAIM_JOB_DONE:
-		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM,cmd == DEACTIVATE_CLAIM_JOB_DONE);
+	case REACTIVATE_CLAIM_CHECK:
+		rval = deactivate_claim(stream, rip, cmd);
 		break;
 	}
 	return rval;
 }
 
 int
-deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done)
+deactivate_claim(Stream *stream, Resource *rip, int cmd)
 {
+	bool graceful = cmd == DEACTIVATE_CLAIM;
+	bool job_done = cmd == DEACTIVATE_CLAIM_JOB_DONE;
+
 	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, rip);
 	ep_event.Ad().Assign("Force", !graceful);
 	ep_event.Ad().Assign("Success", false); // assume failure
@@ -121,6 +147,13 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done)
 
 		claim_is_closing = false;
 	}
+	// At this point, since we've put the ClassAd response on the wire,
+	// if we correctly decided the response above, nothing we can do from
+	// here on can change the correctness of that response.  The code
+	// from here on down appears to support that assertion.  So, this is
+	// the right place to exit if this is just the starter asking if it
+	// should restart a self-checkpointing job.
+	if( cmd == REACTIVATE_CLAIM_CHECK ) { return rval; }
 
 	if( rip->r_cur && ! job_done) {
 		if(graceful) {

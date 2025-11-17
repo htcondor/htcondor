@@ -335,9 +335,7 @@ Starter::handleJobEnvironmentCommand(
 				"SkipJobs"
 			);
 
-			if( s->deferral_tid < 0 ) {
-				EXCEPT( "Can't register SkipJob DaemonCore timer" );
-			}
+			ASSERT(s->deferral_tid >= 0);
 
 			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of job environment setup failure.\n",
 				s->jic->jobCluster(),
@@ -835,9 +833,7 @@ Starter::handleJobSetupCommand(
 				"SkipJobs"
 			);
 
-			if( s->deferral_tid < 0 ) {
-				EXCEPT( "Can't register SkipJob DaemonCore timer" );
-			}
+			ASSERT(s->deferral_tid >= 0);
 
 			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of job setup failure.\n",
 				s->jic->jobCluster(),

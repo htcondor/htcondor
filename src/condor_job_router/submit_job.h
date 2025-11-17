@@ -21,6 +21,7 @@
 #define INCLUDE_SUBMIT_JOB_H
 
 #include "condor_classad.h"
+#include "JobRouter.h"
 
 namespace classad { class ClassAd; }
 
@@ -31,10 +32,9 @@ enum ClaimJobResult {
 };
 
 /*
-	Assuming an active qmgr connection to the schedd holding the job,
-	attempt to the put cluster.proc into the managed state (claiming it
+	Attempt to the put cluster.proc into the managed state (claiming it
 	for our own management).  Before doing so, does a last minute check
-	to confirm the job is IDLE.  error_details is optional. If non NULL,
+	to confirm the job is IDLE.
 	error_details will contain a message explaining why claim_job didn't
 	return OK.  The message will be suitable for reporting to a log file.
 
@@ -44,23 +44,7 @@ enum ClaimJobResult {
 	arbitrary string, but should as uniquely as possible identify
 	this process.  "$(SUBSYS) /path/to/condor_config" is recommended.
 */
-ClaimJobResult claim_job(int cluster, int proc, std::string * error_details,
-	const char * my_identity, bool target_is_sandboxed);
-
-/*
-	As the above claim_job, but will attempt to create the qmgr connection
-	itself.  pool_name can be null to indicate "whatever COLLECTOR_HOST"
-	is set to.  schedd_name can be null to indicate "local schedd".
-
-	Attempt to the put cluster.proc into the managed state (claiming it
-	for our own management).  Before doing so, does a last minute check
-	to confirm the job is IDLE.  error_details is optional. If non NULL,
-	error_details will contain a message explaining why claim_job didn't
-	return OK.  The message will be suitable for reporting to a log file.
-    The ClassAd is used to set priv state appropriately for manipulating
-    the job through qmgmt.
-*/
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed);
+ClaimJobResult claim_job(classad::ClassAd const &ad, const ScheddContactInfo & scci, int cluster, int proc, std::string& error_details, const char * my_identity);
 
 
 /*
@@ -77,10 +61,9 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 		job, the yield attempt fails.  See claim_job for details
 		on suggested identity strings.
 */
-bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, std::string * error_details = 0, const char * my_identity = 0, bool target_is_sandboxed=true, bool release_on_hold = true, bool *keep_trying = 0);
-bool yield_job(classad::ClassAd const &ad, const char * pool_name,
-	const char * schedd_name, bool done, int cluster, int proc,
-	std::string * error_details = 0, const char * my_identity = 0, bool target_is_sandboxed = true,
+bool yield_job(classad::ClassAd const &ad, const ScheddContactInfo & scci,
+	bool done, int cluster, int proc,
+	std::string& error_details, const char * my_identity = 0,
 	bool release_on_hold = true, bool *keep_trying = 0);
 
 /* 
@@ -95,7 +78,7 @@ bool yield_job(classad::ClassAd const &ad, const char * pool_name,
   condor_config file claims".
 
 */
-bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const char * schedd_name, const char * pool_name, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
+bool submit_job( const std::string &owner, const std::string &domain, ClassAd & src, const ScheddContactInfo & scci, bool is_sandboxed, int * cluster_out = 0, int * proc_out = 0 );
 
 
 /*
@@ -120,7 +103,7 @@ bool push_dirty_attributes(classad::ClassAd & src);
 	Establishes (and tears down) a qmgr connection.
 	schedd_name and pool_name can be NULL to indicate "local".
 */
-bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, const char * pool_name);
+bool push_dirty_attributes(classad::ClassAd & src, const ScheddContactInfo & scci);
 
 /*
 	Update src in the queue so that it ends up looking like dest.
@@ -128,7 +111,7 @@ bool push_dirty_attributes(classad::ClassAd & src, const char * schedd_name, con
 	Establishes (and tears down) a qmgr connection.
 	schedd_name and pool_name can be NULL to indicate "local".
 */
-bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const char * schedd_name, const char * pool_name);
+bool push_classad_diff(classad::ClassAd & src, classad::ClassAd & dest, const ScheddContactInfo & scci);
 
 /*
 
@@ -140,7 +123,7 @@ cluster.proc - ID of the grid (transformed) job.
 schedd_name and pool_name can be NULL to indicate "local".
 
 */
-bool finalize_job(const std::string &owner, const std::string &domain, classad::ClassAd const &ad, int cluster, int proc, const char * schedd_name, const char * pool_name, bool is_sandboxed);
+bool finalize_job(const std::string &owner, const std::string &domain, classad::ClassAd const &ad, int cluster, int proc, const ScheddContactInfo & scci, bool is_sandboxed);
 
 /*
 
@@ -152,7 +135,7 @@ reason - description of reason for removal
 schedd_name and pool_name can be NULL to indicate "local"
 
  */
-bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc);
+bool remove_job(int cluster, int proc, char const *reason, const ScheddContactInfo & scci, std::string &error_desc);
 
 
 bool WriteTerminateEventToUserLog( classad::ClassAd const &ad );

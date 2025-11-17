@@ -4208,6 +4208,34 @@ constraint expression may be truncated.
         NUM_SLOTS_TYPE_3 = 2
 
 
+:index:`monitoring GPUS`
+:index:`GPU monitoring`
+
+GPU Monitoring
+''''''''''''''
+
+HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
+is also enabled if you set :macro:`use feature:GPUs` in your configuration file.
+
+Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
+This tool polls the (NVidia) GPU device(s) in the system and records their
+utilization and memory usage values.  At regular intervals, the tool reports
+these values to the *condor_startd*, assigning them to each device's usage
+to the slot(s) to which those devices have been assigned.
+
+Please note that ``condor_gpu_utilization`` can not presently assign GPU
+utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
+device, or a GPU device being used by from outside HTCondor, will result
+in GPU usage and utilization being misreported accordingly.
+
+However, this approach does simplify monitoring for the owner/administrator
+of the GPUs, because usage is reported by the *condor_startd* in addition
+to the jobs themselves.
+
+When ``condor_gpu_utilization`` is running, it reports the following
+attributes to the slot ad, :ad-attr:`DeviceGPUsAverageUsage` and
+:ad-attr:`DeviceGPUsMemoryPeakUsage`.
+
 .. _consumption-policy:
 
 condor_negotiator-Side Resource Consumption Policies

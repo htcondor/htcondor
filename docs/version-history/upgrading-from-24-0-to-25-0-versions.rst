@@ -14,8 +14,8 @@ is a list of items that administrators should be aware of.
   :jira:`3240`
 
 - The old job router route language (i.e. configuration macros
-  :macro:`JOB_ROUTER_DEFAULTS`, :macro:`JOB_ROUTER_ENTRIES`,
-  :macro:`JOB_ROUTER_ENTRIES_FILE`, and :macro:`JOB_ROUTER_ENTRIES_CMD`)
+  ``JOB_ROUTER_DEFAULTS``, ``JOB_ROUTER_ENTRIES``,
+  ``JOB_ROUTER_ENTRIES_FILE``, and ``JOB_ROUTER_ENTRIES_CMD``)
   has been removed.
   The new route language (configuration macros :macro:`JOB_ROUTER_ROUTE_<name>`,
   :macro:`JOB_ROUTER_TRANSFORM_<name>` :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`,

@@ -22,24 +22,31 @@
 
 class JobLogMirror;
 class NewClassAdJobLogConsumer;
+class UserRecord;
 class Scheduler {
 public:
 	Scheduler(int id);
 	~Scheduler();
-	classad::ClassAdCollection *GetClassAds() const;
 	void init();
 	void config();
 	void stop();
 	void poll();
 	int id() const { return m_id; };
 	const char * following() const { return m_follow_log.empty() ? NULL : m_follow_log.c_str(); };
+	const char * address_file() const { return m_address_file.empty() ? nullptr : m_address_file.c_str(); }
+
+	classad::ClassAdCollection *GetClassAds() { return &m_jobs; }
+	UserRecord * GetUserAd(const std::string & username);
+	UserRecord * GetJobUser(ClassAd * jobad);
 
 private:
 
-	NewClassAdJobLogConsumer * m_consumer;
-	JobLogMirror * m_mirror;
+	classad::ClassAdCollection m_jobs;
+	NewClassAdJobLogConsumer * m_consumer{nullptr};
+	JobLogMirror * m_mirror{nullptr};
 	std::string m_follow_log;
-	int m_id; // id of this instance
+	std::string m_address_file;
+	int m_id{0}; // id of this instance
 };
 
 #endif

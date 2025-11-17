@@ -259,7 +259,6 @@ Timeslice   PrioRecArrayTimeslice;
  std::deque<prio_rec> PrioRec;
 #endif
 time_t      PrioRecMinCoolDownTime = 0;
-std::map<int,int> PrioRecAutoClusterRejected;
 int BuildPrioRecArrayTid = -1;
 int DirtyPrioRecTid = -1;
 
@@ -392,6 +391,37 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 }
 };
 
+ClassAd 
+JobQueueUserRec::removeOCU(const ClassAd &ocu) {
+		int ocu_id = -1;
+		ocu.LookupInteger(ATTR_OCU_ID, ocu_id);
+		if (ocu_id < 0) {
+			ClassAd result;
+			result.Assign(ATTR_RESULT, -1);
+			return result;
+		}
+
+		auto match = [ocu_id] (const OCU &ocu) {
+			int id = -1;
+			ocu.ad.LookupInteger(ATTR_OCU_ID, id);
+			if (id == ocu_id) {
+				if (ocu.mrec) {
+					scheduler.DelMrec(ocu.mrec);
+				}
+				return true;
+			}
+			return false;
+		};
+		std::erase_if(ocus, match);
+		//
+		syncOCUs();
+
+		ClassAd result;
+		result.Assign(ATTR_OCU_ID, ocu_id);
+		result.Assign(ATTR_RESULT, 0);
+
+		return result;
+}
 
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
@@ -1942,6 +1972,40 @@ void JobQueueUserRec::PopulateFromAd()
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
 		this->Assign(ATTR_OS_USER, os_user);
 	}
+
+	// Now reconstitue the ocus list from the ad.
+	// the ad should contain an attribute "ocus" which is a list of nested classads
+	classad::ExprTree *expr = this->Lookup("ocus");
+	if (expr) {
+		classad::ExprList *list = dynamic_cast<classad::ExprList*>(expr);
+		if (list) {
+			std::vector<classad::ExprTree *> components;
+			list->GetComponents(components);
+			ocus.clear();
+			for (auto & component : components) {
+				// Each component better be a classad, but let's be sure
+				auto *ad = dynamic_cast<ClassAd *>(component);
+				if (ad) {
+					int ocu_id;
+					ad->LookupInteger(ATTR_OCU_ID, ocu_id);
+					ocus.emplace_back(*(ClassAd *)component, ocu_id);
+
+					std::string submitter;
+					ad->LookupString(ATTR_SUBMITTER, submitter);
+					if (!submitter.empty()) {
+						SubmitterData *subdat = scheduler.insert_submitter(submitter.c_str());
+						subdat->num.Hits++;
+						subdat->num.JobsIdle++;
+						std::string owner;
+						ad->LookupString(ATTR_OWNER, owner);
+						subdat->owners.insert(owner);
+					}
+				}
+
+			}
+
+		}
+	}
 }
 
 // forward declaration
@@ -2328,6 +2392,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! cad->ownerinfo) {
 				InitClusterAd(cad, owner, jobset_ids, needed_sets);
 			}
+			cad->Delete(ATTR_OS_USER);
 			if (scheduler.HasPersistentProjectInfo() && ! cad->project) {
 				std::string project_name;
 				cad->LookupString(ATTR_PROJECT_NAME, project_name);
@@ -2356,6 +2421,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			ad->set_id = 0;
 			ad->Delete(ATTR_JOB_SET_ID);
 			ad->Delete(ATTR_JOB_SET_NAME);
+			ad->Delete(ATTR_OS_USER);
 
 				// Update fields in the newly created JobObject
 			ad->autocluster_id = -1;
@@ -6834,7 +6900,6 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 					return -1;
 				}
 #endif
-				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, os_user);
 			}
 		}
 
@@ -7937,6 +8002,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// ad, things will still be ok.
 		ChainCollapse(*expanded_ad);
 
+		JobQueueJob* job = dynamic_cast<JobQueueJob*>(ad);
+		if (job->ownerinfo->OsUser()) {
+			expanded_ad->Assign(ATTR_OS_USER, job->ownerinfo->OsUser());
+		}
+
 		// before $$ expansion, we may need to convert the Environment from v1 to v2
 		// or switch the v1 delimiter to match the target OS. We do this so that if the 
 		// environment has $$ expansions we are using the target OS's expected delim
@@ -9026,7 +9096,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		return 0;
 	} else {
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			return 0;
 		}
@@ -9168,7 +9238,7 @@ int update_autocluster_id(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void * p
 	} else {
 		// assume runnable, but we still need to check to see if we have a match record already
 		job->run = JobRunnableState::Runnable;
-		if (scheduler.AlreadyMatched(job, job->Universe())) {
+		if (scheduler.FindMrecByJobID(job->jid)) {
 			job->run = JobRunnableState::Matched;
 			++info.num_matched;
 			++info.num_skipped;
@@ -9657,9 +9727,6 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
-		// caller expects PrioRecAutoClusterRejected to be cleared
-	PrioRecAutoClusterRejected.clear();
-
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
 				"Reusing prioritized runnable job list because nothing has "
@@ -9743,8 +9810,9 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * Find the job with the highest priority that matches with
  * my_match_ad (which is a startd ad).  If user is NULL, get a job for
  * any user; o.w. only get jobs for specified user.
+ * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
@@ -9782,10 +9850,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 
 	double current_startd_rank = 0.0;
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
-
-	bool ocu = false;
-	my_match_ad->LookupBool("OCUClaim", ocu);
-
 	std::string remoteOwner;
 	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
 
@@ -9812,7 +9876,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 	// Iterate through the most recently constructed list of
 	// jobs, nicely pre-sorted first by submitter, then by job priority
 
-	bool rebuilt_prio_rec_array = BuildPrioRecArray(); // this clears PrioRecAutoClusterRejected 
+	std::set<int> PrioRecAutoClusterRejected;
+	bool rebuilt_prio_rec_array = BuildPrioRecArray();
 
 	do {
 		auto first = PrioRec.begin();
@@ -9847,13 +9912,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 			// we get to this function, so we will force it to be correct here, but not trust it.
 			//bool matched_flag = p->matched;
 			p->matched = false;
-			if (scheduler.AlreadyMatched(job, job->Universe())) {
-				p->matched = true;
-				runnable_code = runnable_reason_code::AlreadyMatched;
-			}
-			else if ( ! Runnable(job, runnable_code)) {
+			if ( ! Runnable(job, runnable_code)) {
 				// TODO: special case for cooldown here??
 				p->not_runnable = runnable_code != runnable_reason_code::MaxRunningAlready;
+			} else if (scheduler.FindMrecByJobID(job->jid)) {
+				p->matched = true;
+				runnable_code = runnable_reason_code::AlreadyMatched;
 			}
 
 		#if 0 // code for debugging stale matched flag
@@ -9869,8 +9933,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 			}
 		#endif
 
-			if (ocu) {
-				if (remoteOwner == job->ownerinfo->Name()) {
+			if (is_ocu) {
+
+				// OCU ad should have ATTR_OWNER set to the owner of the OCU claim
+				std::string owner;
+				my_match_ad->LookupString(ATTR_OWNER, owner);
+
+				if (owner == job->ownerinfo->Name()) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
@@ -9910,6 +9979,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 				continue;
 			}
 
+			// Check whether the job can flock to the resource's pool
+			if (!scheduler.JobCanFlock(*job, pool)) {
+				// See note below about trusting auto-cluster membership
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
+				continue;
+			}
+
 				// Now check if the job and the claimed resource match.
 				// NOTE : we must do this AFTER we ensure the job is still runnable, which
 				// is why we invoke Runnable() above first.
@@ -9919,7 +9995,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 					// THIS IS A DANGEROUS ASSUMPTION - what if this job is no longer
 					// part of this autocluster?  TODO perhaps we should verify this
 					// job is still part of this autocluster here.
-				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					// Move along to the next job in the prio rec array
 				continue;
 			}
@@ -9981,13 +10057,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 					dprintf(D_FULLDEBUG,
 							"ConcurrencyLimits do not match ('%s' in job vs '%s' in startd), autocluster %d "
 							"cannot reuse claim\n",jobLimits.c_str(),recordedLimits.c_str(), p->auto_cluster_id);
-					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
+					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					continue;
 				}
 			}
 
 			jobid = job->jid; // success!
-			if (ocu) {
+			if (is_ocu) {
 				if (my_match_ad) {
 					int ocu_claims = 0;
 					std::string ocu_claim_stat_attr = 
@@ -10003,7 +10079,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 
 		// If we got here and ocu true and match_any_user is false, then
 		// no job from our priority user matched.  Try again for someone else.
-		if (ocu && !match_any_user) {
+		if (is_ocu && !match_any_user) {
 			match_any_user = true;
 			continue;
 		}
@@ -10016,6 +10092,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user)
 			// Try to force a rebuild of the job list, since we
 			// are about to throw away a match.
 		rebuilt_prio_rec_array = BuildPrioRecArray(true /*no match found*/);
+		PrioRecAutoClusterRejected.clear();
 
 	} while( rebuilt_prio_rec_array );
 
@@ -10207,5 +10284,15 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName)
 	}
 
 	return rval;
+}
+
+int get_next_cluster_num() {
+	int cluster = next_cluster_num++;
+
+	// And persistent the max cluster number
+	char tmp[PROC_ID_STR_BUFLEN];
+	snprintf(tmp, sizeof(tmp), "%d", next_cluster_num);
+	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, tmp);
+	return cluster;
 }
 

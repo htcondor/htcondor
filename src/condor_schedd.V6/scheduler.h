@@ -433,6 +433,7 @@ private:
 };
 
 class JobSets; // forward reference - declared in jobsets.h
+class OCU; // forward reference - declared in qmgmt.h
 
 class Scheduler : public Service
 {
@@ -543,8 +544,6 @@ class Scheduler : public Service
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
-	int				AlreadyMatched(PROC_ID*);
-	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
@@ -763,9 +762,10 @@ class Scheduler : public Service
     // from places other than the scheduler object, necessary.
     ClassAd * getScheddAd() { return m_adSchedd; }
 
-private:
-
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
+
+	OCU *getOCU(int ocu_id); 
+private:
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
@@ -946,7 +946,7 @@ private:
 
 	// utility functions
 	void		sumAllSubmitterData(SubmitterData &all);
-	void		updateSubmitterAd(SubmitterData &submitterData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
+	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
@@ -956,6 +956,10 @@ private:
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	int			command_query_user_ads(int, Stream* stream);
 	int			command_act_on_user_ads(int, Stream* stream);
+	int			command_act_on_ocus(int, Stream* stream);
+    ClassAd     act_on_ocu_create(const ClassAd &request);
+    ClassAd     act_on_ocu_remove(const ClassAd &request);
+	std::vector<ClassAd>     act_on_ocu_query(const ClassAd &request);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
 	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
@@ -1131,6 +1135,7 @@ private:
 	MapFile m_protected_url_map;
 
 	friend class DedicatedScheduler;
+	friend class JobQueueUserRec;
 };
 
 

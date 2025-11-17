@@ -791,10 +791,10 @@ COMMANDS FOR MATCHMAKING
     dynamic slot will be created with at least this much disk space.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
  :subcom-def:`request_memory` = <quantity>
     The amount of memory this job needs in Mb. If not specified, the value is set 
@@ -803,10 +803,10 @@ COMMANDS FOR MATCHMAKING
     :ad-attr:`MemoryUsage`.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     The expression
 
@@ -824,10 +824,10 @@ COMMANDS FOR MATCHMAKING
     If more than one quantity is specified, each must be larger than the previous one.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     When ``retry_request_memory`` is specified, when the job
     is evicted from a slot for using too much memory, the memory request
@@ -935,10 +935,10 @@ COMMANDS FOR MATCHMAKING
     The mininum quantity of GPU memory in MiB that a GPU must have in order to run the job.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     Use of this command will create or modify the :subcom:`require_gpus` expression
     unless that expression already references the GPU property ``GlobalMemoryMB``.
@@ -1479,17 +1479,21 @@ POLICY COMMANDS
 
  :subcom-def:`allowed_execute_duration` = <integer>
     The longest time for which a job may be executing in seconds. Jobs which
-    exceed this duration will go on hold.  This time does not include
-    file-transfer time.  Jobs which self-checkpoint have this long to write out
-    each checkpoint.
+    exceed this duration will go on hold, with hold code 47.
+    (see :ref:`codes-other-values/hold-reason-codes:Hold Reason Codes` )
+
+    This time does not include file-transfer time.  Jobs which self-checkpoint 
+    have this long to write out each checkpoint.
 
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
  :subcom-def:`allowed_job_duration` = <integer>
     The longest time for which a job may continuously be in the running state,
-    in seconds. Jobs which exceed this duration will go on hold.  Exiting the
-    running state resets the job duration used by this command.
+    in seconds. Jobs which exceed this duration will go on hold, with hold
+    code 46.
+    (see :ref:`codes-other-values/hold-reason-codes:Hold Reason Codes` )
+    Exiting the running state resets the job duration used by this command.
 
     This command is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
