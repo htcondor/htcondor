@@ -4704,7 +4704,7 @@ const char * Scheduler::solidify_os_user(const OwnerInfo * owni, CondorError * e
 		// TODO: verify OS user for windows?
 	  #else
 		uid_t user_uid = 0;
-		if ( ! pcache()->get_user_uid(urec->OsUser(), user_uid)) {
+		if ( can_switch_ids() && ! pcache()->get_user_uid(urec->OsUser(), user_uid)) {
 			if (errstack) {
 				errstack->pushf("SCHEDD", EACCES, "AP user has OS user value %s, which is not a "
 				"valid OS account", urec->OsUser());
