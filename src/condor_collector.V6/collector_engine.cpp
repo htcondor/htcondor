@@ -1175,21 +1175,6 @@ identifySelfAd(CollectorRecord * ad)
 
 extern bool   last_updateClassAd_was_insert;
 
-void
-movePrivateAttrs(ClassAd& dest, ClassAd& src)
-{
-	auto itr = src.begin();
-	while (itr != src.end()) {
-		if (ClassAdAttributeIsPrivateAny(itr->first)) {
-			const std::string &name = itr->first;
-			dest.Insert(name, itr->second->Copy());
-			itr = src.erase(itr);
-		} else {
-			itr++;
-		}
-	}
-}
-
 CollectorRecord * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
@@ -1225,7 +1210,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	last_updateClassAd_was_insert = false;
 
 	new_pvt_ad = new ClassAd();
-	movePrivateAttrs(*new_pvt_ad, *new_ad);
+	movePrivateAttrs(*new_ad, *new_pvt_ad);
 
 	// check if it already exists in the hash table ...
 	if ( hashTable.lookup (hk, record) == -1)
@@ -1335,7 +1320,7 @@ mergeClassAd (CollectorHashTable &hashTable,
 		new_ad_copy.Delete(ATTR_TARGET_TYPE);
 
 		ClassAd new_pvt_ad;
-		movePrivateAttrs(new_pvt_ad, new_ad_copy);
+		movePrivateAttrs(new_ad_copy, new_pvt_ad);
 
 		// Now, finally, merge the new ClassAd into the old one
 		MergeClassAds(record->m_publicAd, &new_ad_copy, true);
