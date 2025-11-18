@@ -17,7 +17,7 @@
  # 
  ############################################################### 
 
-if (NOT WINDOWS)
+if (WITH_PLACEMENT AND NOT WINDOWS)
 
     condor_daemon( EXE condor_placementd SOURCES "placementd.cpp"
       LIBRARIES "${CONDOR_LIBS};${SQLITE3_LIB}" INSTALL "${C_SBIN}")

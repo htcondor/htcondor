@@ -70,6 +70,9 @@
 /* Define to 1 to support public input file transfer over HTTP */
 #cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
+/* Define to 1 to support placement tokens and tokens database */
+#cmakedefine WITH_PLACEMENT 1
+
 // configurable options.
 /////////////////////////////////////////
 

@@ -30,7 +30,7 @@
 #include <openssl/kdf.h>
 #endif
 
-#if defined(HAVE_SQLITE3_H)
+#if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 #include <sqlite3.h>
 #endif
 
@@ -147,7 +147,7 @@ GCC_DIAG_ON(cast-qual)
 
 static std::string tokens_db_file;
 
-#if defined(HAVE_SQLITE3_H)
+#if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 
 sqlite3* acquireTokensDbHandle()
 {
@@ -199,7 +199,7 @@ void releaseTokensDbHandle(sqlite3* db)
 	sqlite3_close(db);
 }
 
-#endif // defined(HAVE_SQLITE3_H)
+#endif // defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 
 namespace {
 
@@ -1775,7 +1775,7 @@ fail:
 bool
 Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope, std::map<std::string, std::string>& extra_claims)
 {
-#if !defined(HAVE_SQLITE3_H)
+#if ! (defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H))
 	return false;
 #else
 	int rc = 0;
@@ -1851,7 +1851,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	CondorError *err,
 	const ClassAd* extra_claims)
 {
-#if !defined(HAVE_SQLITE3_H)
+#if ! (defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H))
 	if (capability) {
 		dprintf(D_ERROR, "Capability tokens are not support in this build.\n");
 		return false;
@@ -1975,7 +1975,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		return false;
 	}
 
-#if defined(HAVE_SQLITE3_H)
+#if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 	sqlite3* db = nullptr;
 	bool use_db = param_boolean("SEC_USE_TOKENS_DATABASE", false);
 	if (use_db) {
