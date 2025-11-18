@@ -2,6 +2,10 @@
 
 *** 25.6.0 bugs
 
+- Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
+  :subcom:`starter_log` submit command.
+  :jira:`3408`
+
 *** 25.0.6 bugs
 
 *** 25.5.0 features
