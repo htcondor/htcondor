@@ -1776,6 +1776,12 @@ bool
 Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope, std::map<std::string, std::string>& extra_claims)
 {
 #if ! (defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H))
+	// shut the compiler up
+	(void)jti;
+	(void)key_id;
+	(void)subject;
+	(void)scope;
+	(void)extra_claims;
 	return false;
 #else
 	int rc = 0;
@@ -1974,6 +1980,10 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	} catch (...) {
 		return false;
 	}
+
+	// shut the compiler up if the code below isn't built
+	(void)iat_unix;
+	(void)exp_unix;
 
 #if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 	sqlite3* db = nullptr;
