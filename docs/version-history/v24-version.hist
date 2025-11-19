@@ -41,6 +41,9 @@
 - Fixed a bug that could cause the AP to fail to read job credential files.
   :jira:`3377`
 
+- Fixed bugs that could cause a crash in the authentication code.
+  :jira:`3394`
+
 *** 24.12.14 features
 
 - Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`

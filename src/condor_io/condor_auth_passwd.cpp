@@ -585,7 +585,7 @@ Condor_Auth_Passwd::fetchLogin()
 					CondorError err;
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
-					if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+					if (mySock_->get_peer_version() && mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
 						username = CONDOR_PASSWORD_FQU;
 					} else {
 						username = POOL_PASSWORD_USERNAME "@";
@@ -698,7 +698,7 @@ Condor_Auth_Passwd::fetchLogin()
 	std::string login;
 	
 		// decide the login name we will try to authenticate with.
-	if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+	if (mySock_->get_peer_version() && mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
 		login = CONDOR_PASSWORD_FQU;
 	} else {
 		// Older peers expect 'condor_pool@...'
@@ -2109,7 +2109,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// For older clients, we expect to see "condor_pool@<something>".
 	// For newer clients, we expect to see "condor@password"
 	if(m_version == 1) {
-		if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+		if (mySock_->get_peer_version() && mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
 			expected_subject = CONDOR_PASSWORD_FQU;
 		} else {
 			use_condor_pool = true;
