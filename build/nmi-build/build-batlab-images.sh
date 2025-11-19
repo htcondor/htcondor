@@ -33,7 +33,7 @@ COPY tmp/ /tmp/
 RUN /tmp/setup.sh $CONDOR_VERSION
 EOF
     cp -pr setup.sh ../packaging/{debian,rpm} "$platform/tmp/"
-    docker build "$platform" --platform="$base_docker_platform" --network=host --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
+    docker build "$platform" --platform="$base_docker_platform" --no-cache --network=host --tag "htcondor/nmi-build:$platform-$CONTAINER_VERSION" > "$platform.out" 2>&1
     if grep -q 'Successfully tagged htcondor/nmi-build:' "$platform.out"; then
         docker push "htcondor/nmi-build:$platform-$CONTAINER_VERSION"
         true
