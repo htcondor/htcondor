@@ -40,15 +40,16 @@ Download
 --------
 
 The next step is to download HTCondor.
-If you want to select a specific version of HTCondor, you can download
-the corresponding file from
-`our website <https://htcss-downloads.chtc.wisc.edu/tarball/>`_.
-Otherwise, we recommend using our download script, as follows.
+We recommend using our download script, as follows.
 
 .. code-block:: shell
 
     cd
     curl -fsSL https://get.htcondor.org | /bin/bash -s -- --download
+
+Otherwise, you can download
+the corresponding file from
+`our website <https://htcss-downloads.chtc.wisc.edu/tarball/current/current>`_.
 
 If you use a web browser to download a tarball from our web site, then
 the OS will mark the file as quarantined. All binaries extracted from

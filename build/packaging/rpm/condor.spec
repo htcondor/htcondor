@@ -285,11 +285,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.20.2
+Requires: pelican >= 7.21.1
 %else
-Requires: (pelican >= 7.20.2 or pelican-debug >= 7.20.2)
+Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
 %endif
-Requires: pelican-osdf-compat >= 7.20.2
+Requires: pelican-osdf-compat >= 7.21.1
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -297,7 +297,7 @@ Requires: pelican-osdf-compat >= 7.20.2
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.2
+Requires: apptainer >= 1.4.4
 %endif
 %endif
 
