@@ -1879,6 +1879,7 @@ DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
 	}
 }
 
+#ifdef LINUX
 static
 size_t convert_number_with_suffix(std::string size) {
 	size_t result = 0;
@@ -1906,6 +1907,7 @@ size_t convert_number_with_suffix(std::string size) {
 	}
 	return result;
 }
+#endif
 
 std::vector<DockerAPI::ImageInfo>
 DockerAPI::getImageInfos() {

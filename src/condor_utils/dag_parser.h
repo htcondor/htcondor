@@ -81,11 +81,11 @@ private:
 	void fmt_msg() const {
 		if (msg.empty()) {
 			if (known_cmd) {
-				formatstr(msg, "%s:%lu Failed to parse %s command: %s",
-				          source.c_str(), line, DAG::GET_KEYWORD_STRING(command),
+				formatstr(msg, "%s:%llu Failed to parse %s command: %s",
+				          source.c_str(), (unsigned long long)line, DAG::GET_KEYWORD_STRING(command),
 				          error.c_str());
 			} else {
-				formatstr(msg, "%s:%lu %s", source.c_str(), line, error.c_str());
+				formatstr(msg, "%s:%llu %s", source.c_str(), (unsigned long long)line, error.c_str());
 			}
 		}
 	}
