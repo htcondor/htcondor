@@ -15,6 +15,16 @@
   as implied by the documentation).
   :jira:`3351`
 
+*** 24.0.15 features
+
+- HTCondor tarballs now contain `Pelican 7.21.1 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.21.1.
+
+- HTCondor tarballs now contain `Apptainer 1.4.4 <https://github.com/apptainer/apptainer/releases/tag/v1.4.4>`_
+
+- The condor RPM package now requires at least apptainer version 1.4.4.
+
 *** 24.0.15 bugs
 
 - Fixed a bug where tools like *condor_status* would print an incorrect
