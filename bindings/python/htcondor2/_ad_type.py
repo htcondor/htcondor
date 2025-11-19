@@ -48,6 +48,8 @@ class AdType(enum.IntEnum):
 
     .. attribute:: Credd
 
+    .. attribute:: Placementd
+
     .. attribute:: Defrag
 
     .. attribute:: Accounting
@@ -75,7 +77,7 @@ class AdType(enum.IntEnum):
     # Database = 17
     # TT = 18
     Grid = 19
-    # XferService = 20
+    Placementd = 20
     # LeaseManager = 21
     Defrag = 22
     Accounting = 23
@@ -98,6 +100,7 @@ class AdType(enum.IntEnum):
             AdType.Generic: "Generic",
             AdType.Credd: "CredD",
             AdType.Grid: "Grid",
+            AdType.Placementd: "PlacementD",
             AdType.Accounting: "Accounting",
             AdType.Slot: "Machine",
             AdType.StartDaemon: "StartD",

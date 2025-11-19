@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 200> makeCommandTable() {
+std::array<std::pair<int, const char *>, 204> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -392,6 +392,14 @@ std::array<std::pair<int, const char *>, 200> makeCommandTable() {
 
 #define	 REACTIVATE_CLAIM_CHECK (SCHED_VERS+154)
 		{REACTIVATE_CLAIM_CHECK, "REACTIVATE_CLAIM_CHECK"},
+#define PLACEMENT_USER_LOGIN    (SCHED_VERS+155)
+		{PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN"},
+#define PLACEMENT_QUERY_USERS    (SCHED_VERS+156)
+		{PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS"},
+#define PLACEMENT_QUERY_TOKENS    (SCHED_VERS+157)
+		{PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS"},
+#define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+158)
+		{PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

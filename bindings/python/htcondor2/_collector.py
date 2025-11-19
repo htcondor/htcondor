@@ -28,6 +28,7 @@ def _ad_type_from_daemon_type(daemon_type: DaemonType):
         DaemonType.HAD: AdType.HAD,
         DaemonType.Credd: AdType.Credd,
         DaemonType.Collector: AdType.Collector,
+        DaemonType.Placementd: AdType.Placementd,
     }
     # Should raise HTCondorEnumError.
     return map.get(daemon_type, None)

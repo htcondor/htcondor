@@ -546,6 +546,17 @@ public:
 		bool create_if,           // true if we want to create users that don't already exist
 		CondorError *errstack);
 
+	ClassAd * disableProjects(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * disableProjects(
+		const char * constraint, // expression
+		const char * reason,
+		CondorError *errstack);
+
 	ClassAd * removeProjects(
 		const char * names[],
 		int num_names,

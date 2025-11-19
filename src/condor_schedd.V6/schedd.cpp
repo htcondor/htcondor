@@ -2560,12 +2560,47 @@ int Scheduler::act_on_project(
 		} else { // project does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE_PROJECT, add_if_not) && add_if_not) {
+				bool enabled = true;
+				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enabled);
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
-				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, true);
+				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, enabled);
 			} else {
 				rval = SC_ERR_NOT_FOUND;
 			}
+		}
+		break;
+	case DISABLE_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			SetUserAttributeInt(*pjad, ATTR_ENABLED, 0);
+			std::string reason;
+			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*pjad, ATTR_DISABLE_REASON, reason.c_str());
+			} else {
+				// TODO set default reason string
+			}
+			classad::Value max_val;
+			if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+				long long ival;
+				if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+					// set the default max (i.e. remove the per-project limit)
+					// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+					DeleteUserAttribute(*pjad, ATTR_MAX_JOBS_RUNNING);
+				} else {
+					SetUserAttributeValue(*pjad, ATTR_MAX_JOBS_RUNNING, max_val);
+				}
+			}
+		} else { // user does not exist, cannot be disabled
+			rval = SC_ERR_NOT_FOUND;
+		}
+		break;
+	case RESET_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			DeleteUserAttribute(*pjad, ATTR_MAX_JOBS_RUNNING);
+		} else {
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 	case EDIT_USERREC:
@@ -2671,8 +2706,7 @@ int Scheduler::act_on_user(
 	case RESET_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			// TODO: this should be a DeleteSecureAttribute
-			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
+			DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
 		} else {
 			rval = SC_ERR_NOT_FOUND;
 		}
@@ -4543,6 +4577,11 @@ void Scheduler::clearPendingOwners()
 					}
 				}
 			}
+				// JEF TODO This code assumes each generic account is in
+				//   use by a single UserRec.
+			if (m_claimedGenericOsUsers.erase(uad->OsUser()) != 0) {
+				m_openGenericOsUsers.insert(uad->OsUser());
+			}
 		}
 		delete uad;
 	}
@@ -4553,7 +4592,7 @@ void Scheduler::clearPendingOwners()
 // or (windows only) a partially qualified owner@ntdomain name
 // this will lookup the OwnerInfo record, and return it, creating a new (pending) one if needed
 OwnerInfo *
-Scheduler::insert_ownerinfo(const char * owner)
+Scheduler::insert_ownerinfo(const char * owner, CondorError* /*errstack*/)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
@@ -4617,6 +4656,10 @@ Scheduler::insert_ownerinfo(const char * owner)
 		#endif
 	}
 
+	if (m_useGenericOsUsers && JobQueueInitDone()) {
+		os_user = GENERIC_AP_USER_PLACEHOLDER;
+	}
+
 	int userrec_id = nextUnusedUserRecId();
 	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, ap_user.c_str(), os_user.c_str());
 	pendingOwners[userrec_id] = uad;
@@ -4628,6 +4671,52 @@ Scheduler::insert_ownerinfo(const char * owner)
 	return Owner;
 }
 
+const char * Scheduler::solidify_os_user(const OwnerInfo * owni, CondorError * errstack)
+{
+	if ( ! owni) {
+		if (errstack) {
+			errstack->pushf("SCHEDD", EINVAL, "No user record specified");
+		}
+		return nullptr;
+	}
+
+	// schedd is allowed to de-constify the OwnerInfo
+	JobQueueUserRec * urec = const_cast<JobQueueUserRec *>(owni);
+	if ( ! urec->OsUser() || YourString(GENERIC_AP_USER_PLACEHOLDER) == urec->OsUser()) {
+		if (m_useGenericOsUsers) {
+			auto acct_itr = m_openGenericOsUsers.begin();
+			if (acct_itr == m_openGenericOsUsers.end()) {
+				dprintf(D_ERROR, "No generic OS users left for new AP user\n");
+				if (errstack) {
+					errstack->pushf("SCHEDD", ENOSPC, "No OS user available for AP user %s", urec->Name());
+				}
+				return nullptr;
+			}
+			urec->assignOsUser(*acct_itr);
+			m_claimedGenericOsUsers.insert(*acct_itr);
+			m_openGenericOsUsers.erase(acct_itr);
+		}
+	}
+
+	// TODO: check to see if the OsUser is valid 
+	if (urec->OsUser()) {
+	  #ifdef WIN32
+		// TODO: verify OS user for windows?
+	  #else
+		uid_t user_uid = 0;
+		if ( can_switch_ids() && ! pcache()->get_user_uid(urec->OsUser(), user_uid)) {
+			if (errstack) {
+				errstack->pushf("SCHEDD", EACCES, "AP user has OS user value %s, which is not a "
+				"valid OS account", urec->OsUser());
+			}
+			return nullptr;
+		}
+	  #endif
+	}
+
+	return urec->OsUser();
+}
+
 const OwnerInfo *
 Scheduler::lookup_owner_const(const char * owner)
 {
@@ -4636,9 +4725,9 @@ Scheduler::lookup_owner_const(const char * owner)
 }
 
 const OwnerInfo *
-Scheduler::insert_owner_const(const char * name)
+Scheduler::insert_owner_const(const char * name, CondorError* errstack)
 {
-	return insert_ownerinfo(name);
+	return insert_ownerinfo(name, errstack);
 }
 
 // lookup (and cache) pointer to the job's owner instance data
@@ -8870,10 +8959,9 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		// pool name sent out with the session is identical to the one
 		// which came back from the negotiator.  Prevent negotiator fraud!
 	const std::string &sess_id = static_cast<ReliSock*>(s)->getSessionID();
-	classad::ClassAd policy_ad;
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	std::string policy_remote_pool;
-	if (policy_ad.EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
+	if (policy_ad && policy_ad->EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
 		submitter_tag = policy_remote_pool;
 	}
 
@@ -9936,6 +10024,8 @@ PostInitJobQueue()
 		// CronTab jobs
 		//
 	WalkJobQueue(updateSchedDInterval);
+
+	scheduler.configGenericOsUsers();
 
 	extern int dump_job_q_stats(int cat);
 	dump_job_q_stats(D_FULLDEBUG);
@@ -15171,6 +15261,8 @@ Scheduler::Init()
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
 
+	configGenericOsUsers();
+
 	first_time_in_init = false;
 }
 
@@ -15497,6 +15589,27 @@ Scheduler::RegisterTimers()
 				 PeriodicExprInterval.getMinInterval(),
 				 param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 		periodicid = -1;
+	}
+}
+
+void Scheduler::configGenericOsUsers()
+{
+	std::string accts;
+	param(accts, "AP_GENERIC_OS_USERS");
+	m_claimedGenericOsUsers.clear();
+	m_openGenericOsUsers.clear();
+	if (!accts.empty()) {
+		m_useGenericOsUsers = true;
+		for (const auto& os_acct: StringTokenIterator(accts)) {
+			m_openGenericOsUsers.insert(os_acct);
+		}
+		for (const auto& [user_name, user_rec]: OwnersInfo) {
+			if (m_openGenericOsUsers.erase(user_rec->OsUser()) != 0) {
+				m_claimedGenericOsUsers.insert(user_rec->OsUser());
+			}
+		}
+	} else {
+		m_useGenericOsUsers = false;
 	}
 }
 
@@ -16240,10 +16353,9 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 {
 		// Check: is this my session?
 	const auto &sess_id = static_cast<ReliSock*>(stream)->getSessionID();
-	classad::ClassAd policy_ad;
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	bool is_my_session = false;
-	if (!policy_ad.EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
+	if (!policy_ad || !policy_ad->EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
 		dprintf(D_ALWAYS, "Ignoring a collector token request from an unknown session.\n");
 		return false;
 	}
@@ -16332,6 +16444,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			final_key_name,
 			bounding_set,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))

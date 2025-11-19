@@ -4992,6 +4992,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
+	{SUBMIT_KEY_ProjectName, ATTR_PROJECT_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	//{ "+" ATTR_ACCOUNTING_GROUP, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
 	// invoke SetOAuth
 	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_acctgroup},
@@ -6513,6 +6514,12 @@ int SubmitHash::SetAccountingGroup()
 	// if nice-user is not a prefix, then it conflicts with accounting_group
 	// TODO? should this be a knob?
 	const bool nice_user_is_prefix = false;
+
+	// TODO: default accountin group from project?
+	auto_free_ptr project(submit_param(SUBMIT_KEY_ProjectName, ATTR_PROJECT_NAME));
+	if (project) {
+		AssignJobString(ATTR_PROJECT_NAME, project);
+	}
 
 	// is a group setting in effect?
 	auto_free_ptr group(submit_param(SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP));

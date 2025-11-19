@@ -2921,6 +2921,36 @@ ClassAd * DCSchedd::addProjects(
 	return actOnUsers (ENABLE_USERREC, is_project, userads, nullptr, num_ads, create_if, nullptr, errstack, connect_timeout);
 }
 
+ClassAd * DCSchedd::disableProjects(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (DISABLE_USERREC, is_project, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::disableProjects(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::disableProjects", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DISABLE_USERREC, is_project, ads, nullptr, 1, false, reason, errstack, connect_timeout);
+}
+
 ClassAd * DCSchedd::removeProjects(
 	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
 	int num_usernames,

@@ -1542,8 +1542,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
+			bool has_capability = false;
 			const ClassAd* policy_ad = m_policy ? m_policy : m_sock->getPolicyAd();
-			if (policy_ad && policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			if (policy_ad) {
+				if (policy_ad->EvaluateAttrString("TokenCapabilities", authz_policy)) {
+					has_capability = true;
+				} else {
+					policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
+				}
+			}
+			if (!authz_policy.empty()) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
@@ -1570,7 +1578,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					can_attempt = false;
 				}
 			}
-			if (can_attempt) {
+			if (has_capability && can_attempt) {
+				// Client has capability that authorizes this command
+				dprintf(D_STATUS,
+					"PERMISSION GRANTED to %s from host %s for %s, "
+					"access level %s: reason: %s\n",
+					m_user.c_str(),
+					m_sock->peer_addr().to_ip_string_ex().c_str(),
+					command_desc.c_str(),
+					PermString(m_comTable[m_cmd_index].perm),
+					"client has capability that allows this command");
+				m_perm = USER_AUTH_SUCCESS;
+			} else if (can_attempt) {
 					// A bit redundant to have the outer conditional,
 					// but this gets the log verbosity right and has
 					// zero cost in the "normal" case with no alternate
@@ -1863,6 +1882,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// send another classad saying what happened
 		ClassAd q_response;
 		q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
+
+		// Include token-related attributes
+		// Can m_policy be NULL in practice?
+		if (m_policy) {
+			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
+			for (const auto& token_attr: *m_policy) {
+				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+					continue;
+				}
+				q_response.Insert(token_attr.first, token_attr.second->Copy());
+			}
+		}
 
 		if (!putClassAd(m_sock, q_response) ||
 			!m_sock->end_of_message()) {
