@@ -1773,15 +1773,9 @@ fail:
 
 
 bool
-Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope, std::map<std::string, std::string>& extra_claims)
+Condor_Auth_Passwd::lookup_token([[maybe_unused]] const std::string& jti, [[maybe_unused]] const std::string& key_id, [[maybe_unused]] std::string& subject, [[maybe_unused]] std::string& scope, [[maybe_unused]] std::map<std::string, std::string>& extra_claims)
 {
 #if ! (defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H))
-	// shut the compiler up
-	(void)jti;
-	(void)key_id;
-	(void)subject;
-	(void)scope;
-	(void)extra_claims;
 	return false;
 #else
 	int rc = 0;
@@ -1891,9 +1885,11 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		return false;
 	}
 
+#if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 	auto iat = std::chrono::system_clock::now();
 	time_t iat_unix = std::chrono::duration_cast<std::chrono::seconds>(iat.time_since_epoch()).count();
 	time_t exp_unix = 0;
+#endif
 	std::string authz_set;
 	auto_free_ptr jti(Condor_Crypt_Base::randomHexKey(16));
 	if (!jti) {
@@ -1912,7 +1908,9 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	if (lifetime >= 0) {
 		auto exp = std::chrono::system_clock::now() + std::chrono::seconds(lifetime);
 		jwt_builder.set_expires_at(exp);
+#if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 		exp_unix = std::chrono::duration_cast<std::chrono::seconds>(exp.time_since_epoch()).count();
+#endif
 	}
 		// Set a unique JTI so we can identify the token we issued later on.
 	jwt_builder.set_id(jti.ptr());
@@ -1980,10 +1978,6 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	} catch (...) {
 		return false;
 	}
-
-	// shut the compiler up if the code below isn't built
-	(void)iat_unix;
-	(void)exp_unix;
 
 #if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 	sqlite3* db = nullptr;
