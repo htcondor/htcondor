@@ -4066,7 +4066,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
+Starter::removeTempExecuteDir([[maybe_unused]] int& exit_code, const char * move_to)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
