@@ -143,9 +143,14 @@ void
 UniShadow::spawnFinish()
 {
 	hookTimerCancel();
-	if( ! remRes->activateClaim() ) {
-			// we're screwed, give up:
-		shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
+
+	int refuse_code = 0;
+	std::string refuse_reason;
+	if( ! remRes->activateClaim(refuse_code, refuse_reason) ) {
+		if ( ! refuse_code) { refuse_code = CONDOR_HOLD_CODE::FailedToActivateClaim; }
+		if (refuse_reason.empty()) { refuse_reason = "Failed to activate claim"; }
+		// can't activate, so give up.
+		shutDown(JOB_NOT_STARTED, refuse_reason.c_str(), refuse_code);
 	}
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();

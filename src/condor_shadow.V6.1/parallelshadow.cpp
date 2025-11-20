@@ -367,9 +367,13 @@ ParallelShadow::spawnNode( MpiResource* rr )
 		rr->dprintfSelf(D_FULLDEBUG);
 		rr->reconnect();
 	} else {
+		int refuse_code = 0;
+		std::string refuse_reason;
 			// First, contact the startd to spawn the job
-		if( rr->activateClaim() != OK ) {
-			shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
+		if( rr->activateClaim(refuse_code, refuse_reason) != OK ) {
+			if ( ! refuse_code) { refuse_code = CONDOR_HOLD_CODE::FailedToActivateClaim; }
+			if (refuse_reason.empty()) { refuse_reason = "Failed to activate claim"; }
+			shutDown(JOB_NOT_STARTED, refuse_reason.c_str(), refuse_code);
 			
 		}
 	}

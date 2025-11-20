@@ -1856,7 +1856,7 @@ Claim::starterPidMatches( pid_t starter_pid ) const
 
 
 bool
-Claim::isDeactivating( void )
+Claim::isDeactivating() const
 {
 	if( c_state == CLAIM_VACATING || c_state == CLAIM_KILLING ||
 		// TODO: add a new Claim state while waiting to reap the starter on job completion
@@ -1864,6 +1864,19 @@ Claim::isDeactivating( void )
 		return true;
 	}
 	return false;
+}
+
+const char *
+Claim::isDeactivatingReason() const
+{
+	if (c_state == CLAIM_VACATING) {
+		return "Vacating job";
+	} else if (c_state == CLAIM_KILLING) {
+		return "Killing job";
+	} else if (c_schedd_reported_job_done && c_state == CLAIM_RUNNING) {
+		return "Cleaning up after job";
+	}
+	return nullptr;
 }
 
 

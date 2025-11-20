@@ -175,6 +175,7 @@ public:
 	bool	hasOppClaim( void );
 	bool	hasAnyClaim( void );
 	bool	isDeactivating( void )	{return r_cur->isDeactivating();};
+	const char * isDeactivatingReason( void )	{return r_cur->isDeactivatingReason();};
 	bool	isSuspendedForCOD( void ) const {return r_suspended_for_cod;};
 	void	hackLoadForCOD( void );
 

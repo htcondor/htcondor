@@ -172,14 +172,15 @@ RemoteResource::~RemoteResource()
 
 
 bool
-RemoteResource::activateClaim( int starterVersion )
+RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 {
-	int reply;
-	ClassAd replyAd;
 	std::string anabuf;
-	const int max_retries = 20;
-	const int retry_delay = 1;
+	const int max_retries = 6; // with backoff, 6 retries is 1+2+3+4+5+5 = 20
+	int retry_delay = 1; // +1 sec backoff each time to a max of 5
 	int num_retries = 0;
+
+	refuse_code = 0;
+	refuse_reason.clear();
 
 	if ( ! dc_startd ) {
 		dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
@@ -196,8 +197,10 @@ RemoteResource::activateClaim( int starterVersion )
 
 		// we'll eventually return out of this loop...
 	while( 1 ) {
-		reply = dc_startd->activateClaim( jobAd, starterVersion,
-										  &claim_sock, &replyAd );
+		ClassAd replyAd;
+		int reply = dc_startd->activateClaim(jobAd, &claim_sock, &replyAd);
+		if ( ! replyAd.LookupInteger(ATTR_VACATE_REASON_CODE, refuse_code)) { refuse_code = 0; }
+		if ( ! replyAd.LookupString(ATTR_VACATE_REASON, refuse_reason)) { refuse_reason.clear(); }
 		switch( reply ) {
 		case OK:
 			dprintf( D_ALWAYS,
@@ -229,9 +232,10 @@ RemoteResource::activateClaim( int starterVersion )
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
+			if (refuse_reason.empty()) { refuse_reason = "previous job still being vacated"; }
 			dprintf( D_ALWAYS,
-			         "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
-			         machineName ? machineName:"", dc_startd->addr() );
+			         "Request to run on %s %s was DELAYED (%s)\n",
+			         machineName ? machineName:"", dc_startd->addr(), refuse_reason.c_str() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -242,6 +246,7 @@ RemoteResource::activateClaim( int starterVersion )
 					 "activateClaim(): will try again in %d seconds\n",
 					 retry_delay ); 
 			sleep( retry_delay );
+			retry_delay = MIN(retry_delay+1, 5);
 			break;
 
 		case CONDOR_ERROR:
@@ -251,19 +256,29 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case NOT_OK:
-			dprintf( D_ALWAYS,
-			         "Request to run on %s %s was REFUSED\n",
-			         machineName ? machineName:"", dc_startd->addr() );
+			if (refuse_code || ! refuse_reason.empty()) {
+				dprintf( D_ALWAYS, "Request to run on %s %s was REFUSED code=%d %s\n",
+					machineName ? machineName:"", dc_startd->addr(), refuse_code, refuse_reason.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "Request to run on %s %s was REFUSED\n",
+						 machineName ? machineName:"", dc_startd->addr() );
+			}
 			if (replyAd.LookupString("Analyze", anabuf) && ! anabuf.empty()) {
+				std::replace(anabuf.begin(), anabuf.end(), (char)0x1e, '\n');
 				dprintf(D_ERROR, "activateClaim failure analysis:\n%s\n", anabuf.c_str());
 			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
+
 		default:
-			dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-			         "request to run on %s %s\n", reply,
+			if (refuse_code || ! refuse_reason.empty()) {
+				dprintf( D_ALWAYS, "Got unknown reply(%d) code=%d from request to run on %s %s %s\n", reply,
+					refuse_code, machineName ? machineName:"", dc_startd->addr(), refuse_reason.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "Got unknown reply(%d) from request to run on %s %s\n", reply,
 			         machineName ? machineName:"", dc_startd->addr() );
+			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -306,18 +321,26 @@ RemoteResource::killStarter( bool graceful )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
+		dprintf(D_STATUS, "Sending %s to startd\n",
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
 		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing)) {
 			break;
 		}
+		const char * errmsg = dc_startd->error();
+		CAResult caresult = CAResult::CA_COMMUNICATION_ERROR;
+		if ( ! errmsg) { errmsg = "Could not send command to startd"; }
+		else { caresult = dc_startd->errorCode(); }
+
+		// TODO: we should react to a reply timeout differently than we react to a failure to send the command.
+		bool timeout_on_reply = caresult == CAResult::CA_REPLY_TIMED_OUT;
+
 		num_tries--;
 		if (num_tries) {
 			const int delay = 5;
-			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): DEACTIVATE error. %s, will retry in %d seconds\n", errmsg, delay );
 			sleep(delay);
 		} else {
-			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-			         "Could not send command to startd\n" );
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): DEACTIVATE %s. %s\n", timeout_on_reply?"reply timed out":"error", errmsg);
 		}
 	}
 
@@ -2249,6 +2272,8 @@ RemoteResource::locateReconnectStarter( void )
 
 	case CA_CONNECT_FAILED:
 	case CA_COMMUNICATION_ERROR:
+	case CA_REPLY_COMMUNICATION_ERROR:
+	case CA_REPLY_TIMED_OUT:
 			// for both of these, we need to keep trying until the
 			// lease_duration expires, since the startd might still be alive
 			// and only the network is dead...

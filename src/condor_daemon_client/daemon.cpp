@@ -958,7 +958,8 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		// Now, try to get the reply
 	cmd_sock->decode();
 	if( ! getClassAd(cmd_sock, *reply) ) {
-		newError( CA_COMMUNICATION_ERROR, "Failed to read reply ClassAd" );
+		CAResult caresult = cmd_sock->is_closed() ? CA_REPLY_COMMUNICATION_ERROR : CA_REPLY_TIMED_OUT;
+		newError( caresult, "Failed to read reply ClassAd" );
 		return false;
 	}
 	if( !cmd_sock->end_of_message() ) {
