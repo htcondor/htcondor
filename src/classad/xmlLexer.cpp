@@ -122,11 +122,10 @@ DumpToken(void)
 		case tagID_Doctype:   printf("DOCTYPE\n"); break;
 		case tagID_NoTag:     printf("notag\n"); break;
 		}
-		XMLAttributesIterator  iter;
 
-		for (iter = attributes.begin(); iter != attributes.end(); iter++) {
+		for (const auto& [attr_name, attr_value] : attributes) {
 			printf("  Attribute: %s = \"%s\"\n",
-				   iter->first.c_str(), iter->second.c_str());
+				   attr_name.c_str(), attr_value.c_str());
 		}
 	} else if (token_type == tokenType_Text) {
 		printf("TEXT: \"%s\"\n", text.c_str());

@@ -63,9 +63,9 @@ TruncateStorageFile()
 		return( false );
 	};
 	
-	for (ptr=Index.begin();ptr!=Index.end();ptr++){
+	for (const auto& [key, offset] : Index){
 		
-		lseek(filed,ptr->second,SEEK_SET);
+		lseek(filed,offset,SEEK_SET);
 		char  k[1];
 		string m;
 		int l;
