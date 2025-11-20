@@ -22,7 +22,8 @@
 #define _SCRIPTQ_H
 
 #include <utility>
-#include <queue>
+#include <deque>
+#include <algorithm>
 
 #include "condor_daemon_core.h"
 
@@ -68,7 +69,7 @@ private:
 	Dag* _dag{nullptr};
 
 	std::map<int, Script*> _scriptPidTable{}; // map script pids to Script* objects
-	std::queue<Script*> _waitingQueue{}; // queue of scripts waiting to be run
+	std::deque<Script*> _waitingQueue{}; // deque of scripts waiting to be run
 
 	int _scriptReaperId{-1};
 	int _numScriptsRunning{0};

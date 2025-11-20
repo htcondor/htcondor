@@ -64,7 +64,7 @@ bool ScriptQ::Run(Script *script) {
 
 	if (deferScript) {
 		_scriptDeferredCount++;
-		_waitingQueue.push(script);
+		_waitingQueue.push_back(script);
 		return false;
 	}
 
@@ -97,21 +97,34 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 	int scriptsRun = 0;
 	time_t now = time(nullptr);
 
-	int totalScripts = _waitingQueue.size();
-	for (int i=0; i < totalScripts; i++) {
-		Script* script = _waitingQueue.front();
+	// Use std::ranges::stable_partition to separate ready scripts from deferred ones.
+	// This is more efficient than the previous pop/push loop, especially when
+	// many scripts are deferred. Complexity: O(n) vs O(n * deferred_count)
+	auto partition_result = std::ranges::stable_partition(_waitingQueue,
+		[now](Script* script) {
+			// Partition: ready scripts (true) come before deferred scripts (false)
+			return script->_nextRunTime == 0 || script->_nextRunTime <= now;
+		});
+
+	// Process ready scripts (from front up to partition point)
+	// The subrange returned contains [begin, partition_point) where all ready scripts are
+	auto it = _waitingQueue.begin();
+	auto partition_point = partition_result.begin();
+	while (it != partition_point) {
+		Script* script = *it;
 		ASSERT(script != nullptr);
-		_waitingQueue.pop();
-		if (script->_nextRunTime != 0 && script->_nextRunTime > now) {
-			// Deferral time is not yet up -- put it back into the queue.
-			_waitingQueue.push(script);
+		
+		// Try to run the script. Note: Run() takes care of
+		// checking for halted state and maxpre/maxpost.
+		if (Run(script)) {
+			// Script started successfully - remove from queue
+			it = _waitingQueue.erase(it);
+			--partition_point; // Adjust partition point after erase
+			++scriptsRun;
+			if (justOne) { break; }
 		} else {
-			// Try to run the script.  Note:  Run() takes care of
-			// checking for halted state and maxpre/maxpost.
-			if (Run(script)) {
-				++scriptsRun;
-				if (justOne) { break; }
-			} else { break; }
+			// Script couldn't run (hit throttle limit), stop processing
+			break;
 		}
 	}
 
@@ -138,7 +151,7 @@ int ScriptQ::ScriptReaper(int pid, int status) {
 	if (script->_deferStatus != SCRIPT_DEFER_STATUS_NONE && WEXITSTATUS(status) == script->_deferStatus) {
 		++_scriptDeferredCount;
 		script->_nextRunTime = time(nullptr) + script->_deferTime;
-		_waitingQueue.push(script);
+		_waitingQueue.push_back(script);
 		debug_printf(DEBUG_NORMAL, "Deferring %s script of node %s for %ld seconds (exit status was %d)...\n",
 		             script->GetScriptName(), script->GetNodeName(), script->_deferTime, script->_deferStatus);
 	} else {
