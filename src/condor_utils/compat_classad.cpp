@@ -64,7 +64,7 @@ static bool ClassAd_strictEvaluation = false;
 void ClassAdReconfig()
 {
 	// The set of private attributes in the form of a classad.
-	// Iterating over these attribute names is guaranteed to be int
+	// Iterating over these attribute names is guaranteed to be in
 	// the same relative order as any other classad.
 	for (const auto &attrName : ClassAdPrivateAttrs) {
 		privateAttrsAd.Assign(attrName, true);
@@ -2253,7 +2253,7 @@ ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttribute
 // time in the collector, so we care about performance here.
 //
 // Algorithm is -- walk down each attribute in source ad, check
-// to see if it begins with the magic pre
+// to see if it begins with the magic prefix '_condor_priv'.  If so,
 // move the attribute.  Otherwise, walk down the list of known private
 // attributes in sorted order, comparing to the current source attribute.
 bool
