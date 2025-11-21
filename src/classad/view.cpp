@@ -384,7 +384,7 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 	viewMembers.clear( );
 
 		// re-order content by new rank expression
-	for( const auto& [memberKey, key] : memberIndex ) {
+	for( const auto& [memberKey, value] : memberIndex ) {
 		if( ( ad = coll->GetClassAd( memberKey ) ) == NULL	||
 			!evalEnviron.ReplaceRightAd( ad )			||
 			!evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
@@ -393,7 +393,7 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 		}
 
 			// insert into member list
-		vm.SetKey( key );
+		vm.SetKey( memberKey );
 		vm.SetRankValue( rankValue );
 		viewMembers.insert( vm );
 	}
