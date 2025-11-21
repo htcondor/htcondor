@@ -986,7 +986,10 @@ FileTransfer::_Init(
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
-		char const *mysocket = global_dc_sinful();
+		// This used to be global_dc_sinful(), which calls
+		// daemonCore->InfoCommandSinfulStringMyself(false),
+		// but that fails on my machine for no discernabe reason.
+		auto mysocket = daemonCore->InfoCommandSinfulStringMyself(true);
 		ASSERT(mysocket);
 		ftcb.setTransferSocket(mysocket);
 		// This is actually a return value which MUST be propogated to the
