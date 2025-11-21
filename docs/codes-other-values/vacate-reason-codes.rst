@@ -85,3 +85,47 @@ Vacate Reason Codes
     | | [SuccessfulCheckpoint]          | restarted but could not reactivate  |                          |
     | |                                 | its claim.                          |                          |
     +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1026                            | Activation request had missing or   |                          |
+    | | [ActivationRefusedBadRequest]   | invalid attributes                  |                          |
+    | |                                 | its claim.                          |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1027                            | Activation request did not match    |                          |
+    | | [ActivationRefusedNoMatch]      | slot requirements                   |                          |
+    | |                                 | its claim.                          |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1028                            | Activation request refused because  |                          |
+    | | [ActivationRefusedStillCleaning]| Starter is still cleaning up after  |                          |
+    | |                                 | a job                               |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1029                            | Activation request refused because  |                          |
+    | | [ActivationRefusedWorklifeExpired]| the claim worklife has expired    |                          |
+    | |                                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1030                            | Activation request refused because  |                          |
+    | | [ActivationRefusedPreempted]    | claim is being preempted            |                          |
+    | |                                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1031                            | Activation request refused because  |                          |
+    | | [ActivationRefusedBroken]       | slot is in the broken state         |                          |
+    | |                                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1032                            | Activation request refused because  |                          |
+    | | [ActivationRefusedNotIdle]      | slot is not idle                    |                          |
+    | |                                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1033                            | Activation request refused because  |                          |
+    | | [ActivationRefusedUnclaimed]    | slot is not claimed                 |                          |
+    | |                                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1034                            | Activation request refused because  |                          |
+    | | [ActivationRefusedClaimNotFound]| claim id used for the request was   |                          |
+    | |                                 | not found                           |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1035                            | Activation request refused because  |                          |
+    | | [ActivationRefusedOldClaim]     | claim id used for the request was   |                          |
+    | |                                 | is no longer valid                  |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1036                            | Activation request refused because  |                          |
+    | | [ActivationRefusedUnhealthy]    | a slot health check failed          |                          |
+    | |                                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
