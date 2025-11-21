@@ -33,6 +33,17 @@ class Script;
 // external reaper function type
 typedef int (*extReaperFunc_t)(Node* node, int status);
 
+enum class ScriptDeferAction {
+	PUSH_QUEUE = 0,
+	DO_NOTHING
+};
+
+enum class ScriptExecResult {
+	SUCCESS = 0,     // We Successfully executed the script
+	ERROR,           // We failed to execute the script and faux reaped
+	DEFERRED         // We deferred the script execution
+};
+
 // NOTE: the ScriptQ class must be derived from Service so we can
 // register ScriptReaper() as a reaper function with DaemonCore
 
@@ -48,7 +59,7 @@ public:
 	}
 
 	// Being executing a script
-	bool Run(Script *script);
+	ScriptExecResult Run(Script *script, ScriptDeferAction act = ScriptDeferAction::PUSH_QUEUE);
 
 	// Run waiting/deferred scripts. Return number of started scripts
 	int RunWaitingScripts(bool justOne = false);
