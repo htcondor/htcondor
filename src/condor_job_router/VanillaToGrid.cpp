@@ -79,6 +79,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		// immediately correct a "wrong" value when not using non-default
 		// UID_DOMAIN (which isn't supported yet anyway).
 	ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
+	ad->Delete(ATTR_OS_USER);
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_JOB_LAST_REMOTE_WALL_CLOCK);

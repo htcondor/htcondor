@@ -4715,16 +4715,15 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 	// allowed to do that, via the internal API.
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
-		// should we fail or silently succeed?  (old submits set secure attrs)
-		bool fail_quietly = (flags & SetAttribute_UserTransform) != 0; // internal calls should fail quietly
-		if ( Q_SOCK && ! Ignore_Secure_SetAttr_Attempts) {
-			const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
-			if (vers && vers->built_since_version( 8, 5, 8 )) {
-				// new versions should know better!  fail!
-				fail_quietly = false;
-			}
+		// should we fail or quietly ignore?
+		// Internal calls should fail (schedd code should know better),
+		// but user transform calls should be quietly ignored.
+		bool ignore_quietly = (flags & SetAttribute_UserTransform) != 0;
+		// For external calls, let the config knob determine.
+		if (Q_SOCK) {
+			ignore_quietly = Ignore_Secure_SetAttr_Attempts;
 		}
-		if ( ! fail_quietly) {
+		if ( ! ignore_quietly) {
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Failing!\n",
 				func_name, attr_name, key.cluster, key.proc);
@@ -4733,10 +4732,6 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 			errno = EACCES;
 			return -1;
 		} else {
-			// old versions get a pass.  succeed (but do nothing).
-			// The idea here is we will not set the secure attributes, but we won't
-			// propagate the error back because we don't want old condor_submits to not
-			// be able to submit jobs.
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
 				func_name, attr_name, key.cluster, key.proc);
