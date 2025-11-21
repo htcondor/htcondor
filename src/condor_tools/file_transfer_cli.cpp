@@ -18,6 +18,10 @@
 #include "basename.h"
 #include "condor_getcwd.h"
 
+#include "file_transfer.h"
+
+
+// globals, yay.
 std::string transferKey;
 std::string source;
 std::string destination;
@@ -25,6 +29,10 @@ std::string destination;
 // wtaf is daemon core doing?
 std::string _cwd;
 
+
+//
+// new FT "object" -based implementation
+//
 
 int
 shadow_input_command_handler( int command, Stream * s ) {
@@ -253,6 +261,94 @@ do_starter_output( const char * addr, const char * key, const char * source, con
 }
 
 
+//
+// Old FTO-based implementation.
+//
+
+FileTransfer filetrans;
+
+void
+old_do_shadow_input( const char * src, const char * dest ) {
+    fprintf( stderr, "old_do_shadow_input(%s, %s): begins\n", src, dest );
+
+
+    // This is stupid, but required by the old FTO.
+    std::ignore = daemonCore->Register_Reaper( "boilerplate reaper description",
+        (StdReaperHandler)[](int, int) -> int { return 0; },
+        "boilerplate reaper handler"
+    );
+    // fprintf( stdout, "Registered reaper ID %d\n", reaperID );
+
+
+    ClassAd * jobAd = new ClassAd();
+
+    // jobAd->InsertAttr( ATTR_TRANSFER_INPUT_FILES, src );
+    // fprintf( stdout, "Set ATTR_TRANSFER_INPUT_FILES to %s\n", src );
+
+    jobAd->InsertAttr( ATTR_JOB_IWD, _cwd );
+    fprintf( stdout, "Set ATTR_JOB_IWD to %s\n", _cwd.c_str() );
+
+    // Because we always try to transfer this, if it's unset, we try
+    // to transfer the whole IWD, instead.
+    jobAd->InsertAttr( ATTR_JOB_CMD, src );
+
+    fPrintAd( stdout, * jobAd );
+
+
+    // jobAd is also an output parameter; it will contain
+    // ATTR_TRANSFER_KEY and ATTR_TRANSFER_SOCK after this call.
+    filetrans.Init( jobAd, false, PRIV_USER, false );
+    std::string transferSocket;
+    jobAd->LookupString( ATTR_TRANSFER_SOCKET, transferSocket );
+    std::string transferKey;
+    jobAd->LookupString( ATTR_TRANSFER_KEY, transferKey );
+
+    fprintf( stdout,
+        "COMMAND LINE = '%s' '%s'\n",
+        transferSocket.c_str(),
+        transferKey.c_str()
+    );
+}
+
+
+void
+old_do_starter_input( const char * addr, const char * key ) {
+    fprintf( stderr, "old_do_starter_input(%s, %s): begins\n", addr, key );
+
+
+    // This is stupid, but required by the old FTO.
+    std::ignore = daemonCore->Register_Reaper( "boilerplate reaper description",
+        (StdReaperHandler)[](int, int) -> int { return 0; },
+        "boilerplate reaper handler"
+    );
+    // fprintf( stdout, "Registered reaper ID %d\n", reaperID );
+
+
+    ClassAd * jobAd = new ClassAd();
+
+    jobAd->InsertAttr( ATTR_TRANSFER_SOCKET, addr );
+
+    jobAd->InsertAttr( ATTR_TRANSFER_KEY, key );
+
+    jobAd->InsertAttr( ATTR_JOB_IWD, _cwd );
+    fprintf( stdout, "Set ATTR_JOB_IWD to %s\n", _cwd.c_str() );
+
+    // How's this for magical?
+    jobAd->InsertAttr( ATTR_JOB_CMD, "no-really-wtaf" );
+
+
+    FileTransfer * filetrans = new FileTransfer();
+    filetrans->Init( jobAd, false, PRIV_USER );
+
+    filetrans->DownloadFiles(true);
+}
+
+
+//
+// Command-line interface and daemon core boilerplate.
+//
+
+
 int _argc;
 char ** _argv;
 
@@ -270,7 +366,8 @@ main_init( int /* argc */, char ** /* argv */ ) {
 
     if( 0 == strcmp( _argv[1], "--shadow" )) {
         if( 0 == strcmp( _argv[2], "--input" )) {
-            do_shadow_input( _argv[3], _argv[4] );
+            // do_shadow_input( _argv[3], _argv[4] );
+            old_do_shadow_input( _argv[3], _argv[4] );
         } else if( 0 == strcmp( _argv[2], "--output" )) {
             do_shadow_output();
         } else {
@@ -279,7 +376,8 @@ main_init( int /* argc */, char ** /* argv */ ) {
         }
     } else if( 0 == strcmp( _argv[1], "--starter" )) {
         if( 0 == strcmp( _argv[2], "--input" )) {
-            do_starter_input( _argv[3], _argv[4] );
+            // do_starter_input( _argv[3], _argv[4] );
+            old_do_starter_input( _argv[3], _argv[4] );
         } else if( 0 == strcmp( _argv[2], "--output" )) {
             do_starter_output( _argv[3], _argv[4], _argv[5], _argv[6] );
         } else {
