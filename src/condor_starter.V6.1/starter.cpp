@@ -3520,6 +3520,10 @@ Starter::PublishToEnv( Env* proc_env )
 	}
 
 	ASSERT(jic);
+
+	// Allow the job info communicator its say, too.
+	jic->PublishToEnv( proc_env );
+
 	ClassAd* jobAd = jic->jobClassAd();
 	if( jobAd ) {
 		// Probing this (file transfer) ourselves is complicated.  The JIC
