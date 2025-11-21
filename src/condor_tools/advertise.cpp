@@ -32,6 +32,7 @@
 #include "ipv6_hostname.h"
 
 #include <algorithm>
+#include <vector>
 
 void
 usage( const char *cmd , const char * opt)
@@ -197,7 +198,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	ClassAdList ads;
+	std::vector<ClassAd*> ads;
 	Sock *sock = nullptr;
 
 	switch( command ) {
@@ -243,7 +244,7 @@ int main( int argc, char *argv[] )
 			return 1;
 		}
 		if (cAttrs > 0) {
-			ads.Insert(ad);
+			ads.push_back(ad);
 		} else {
 			delete ad;
 			ad = 0; // so we don't double delete it
@@ -251,22 +252,21 @@ int main( int argc, char *argv[] )
 		if (eof) {
 			break;
 		}
-		if( !allow_multiple && ads.Length() > 0 ) {
+		if( !allow_multiple && ads.size() > 0 ) {
 			fprintf(stderr,"ERROR: multiple ads in %s\n", filename);
 			delete ad;
 			return 1;
 		}
 	}
 
-	if(ads.Length() == 0) {
+	if(ads.empty()) {
 		fprintf(stderr,"%s is empty\n",filename);
 		return 1;
 	}
 
 	// If the command is unspecified, guess.
 	if( command == -1 ) {
-		ads.Rewind();
-		ClassAd * c = ads.Next();
+		ClassAd * c = ads.front();
 		std::string myType;
 		c->LookupString( ATTR_MY_TYPE, myType );
 		if( myType.empty() ) {
@@ -309,11 +309,9 @@ int main( int argc, char *argv[] )
 
 		sock = NULL;
 
-		ClassAd *ad;
 		int success_count = 0;
 		int failure_count = 0;
-		ads.Rewind();
-		while( (ad=ads.Next()) ) {
+		for (ClassAd *ad : ads) {
 
 				// If there's no "MyAddress", generate one..
 			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
