@@ -1,5 +1,10 @@
 *** 25.6.0 features
 
+- When the attempt to claim a slot to run a job is refused, the reason for the
+  refusal is now reported back to the *condor_shadow* which logs the reason and
+  adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
+  :jira:`3388`
+
 *** 25.6.0 bugs
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the

@@ -345,56 +345,71 @@ DCStartd::asyncRequestOpportunisticClaim(
 	sendMsg(msg.get());
 }
 
+bool
+DCStartd::reactivateClaimCheck(bool & claim_is_closing)
+{
+	claim_is_closing = false;
+	setCmdStr( "reactivateClaimCheck" );
+
+	return deactivateClaim(REACTIVATE_CLAIM_CHECK, false, &claim_is_closing);
+}
 
 bool
-DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool job_is_restarting )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing )
 {
-	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
-		got_job_done ? "job_done" : (graceful ? "graceful" : "forceful" ));
-
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
 	}
 
 	setCmdStr( "deactivateClaim" );
+
+	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+
+	return deactivateClaim(cmd, got_job_done, claim_is_closing);
+}
+
+// protected helper for deactivateClaim and reactivateClaimCheck
+bool
+DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing)
+{
+	dprintf( D_FULLDEBUG, "Entering DCStartd::%s(%s)\n", _cmd_str.c_str(), got_job_done ? "job_done" : "");
+
 	if( ! checkClaimId() ) {
+		// checkClaimId sets newError
 		return false;
 	}
 	if( ! checkAddr() ) {
+		// checkAddr set newError
 		return false;
 	}
 
 	ClaimIdParser cidp(claim_id.c_str());
 
-	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
-	if (got_job_done) {
+	if (got_job_done && (cmd != REACTIVATE_CLAIM_CHECK)) {
 		CondorVersionInfo cvi = cidp.secSessionInfoVersion();
 		// we need a newish Startd in order to send DEACTIVATE_CLAIM_JOB_DONE
 		if (cvi.getMajorVer() <= 0) {
-			dprintf(D_ZKM, "Startd version is not known, will use %s\n", getCommandStringSafe(cmd));
+			// dprintf(D_ZKM, "Startd version is not known, will use %s\n", getCommandStringSafe(cmd));
 		} else {
 			if (cvi.built_since_version(24,7,0)) {
 				cmd = DEACTIVATE_CLAIM_JOB_DONE;
-				dprintf(D_ZKM, "Startd version is known and job_has_exited, will use JOB_DONE\n");
+				// dprintf(D_ZKM, "Startd version is known and job_has_exited, will use JOB_DONE\n");
 			}
 		}
 	}
-	if (job_is_restarting) {
-		cmd = REACTIVATE_CLAIM_CHECK;
-	}
 
-		// if this claim is associated with a security session
+	// if this claim is associated with a security session
 	char const *sec_session = cidp.secSessionId();
 
 	if (IsDebugLevel(D_COMMAND)) {
-		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
+		dprintf (D_COMMAND, "DCStartd::%s(%s,...) making connection to %s\n", _cmd_str.c_str(), getCommandStringSafe(cmd), _addr.c_str());
 	}
 
 	bool  result;
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr.c_str()) ) {
-		std::string err = "DCStartd::deactivateClaim: ";
+		std::string err = "DCStartd::" + _cmd_str + ": ";
 		err += "Failed to connect to startd (";
 		err += _addr;
 		err += ')';
@@ -403,7 +418,7 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 	}
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
-		std::string err = "DCStartd::deactivateClaim: ";
+		std::string err = "DCStartd::" + _cmd_str + ": ";
 		err += "Failed to send command ";
 		err += getCommandStringSafe(cmd);
 		err += " to the startd";
@@ -412,21 +427,28 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 	}
 		// Now, send the ClaimId
 	if( ! reli_sock.put_secret(claim_id) ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::deactivateClaim: Failed to send ClaimId to the startd" );
+		std::string err = "DCStartd::" + _cmd_str + ": Failed to send ClaimId to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		return false;
 	}
 	if( ! reli_sock.end_of_message() ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::deactivateClaim: Failed to send EOM to the startd" );
+		std::string err = "DCStartd::" + _cmd_str + ": Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		return false;
 	}
 
 	reli_sock.decode();
 	ClassAd response_ad;
 	if( !getClassAd(&reli_sock, response_ad) || !reli_sock.end_of_message() ) {
-		newError(CA_COMMUNICATION_ERROR,
-		         "DCStartd::deactivateClaim: failed to read response ad.");
+		// for now, we assume that the failure must be a timeout if the socket is still open.
+		std::string err = "DCStartd::" + _cmd_str + ": ";
+		if (reli_sock.is_closed()) {
+			err += "failed to read response ad";
+			newError(CA_REPLY_COMMUNICATION_ERROR, err.c_str());
+		} else {
+			err += "timed out waiting for response ad";
+			newError(CA_REPLY_TIMED_OUT, err.c_str());
+		}
 		return false;
 	}
 	else {
@@ -438,19 +460,20 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 	}
 
 		// we're done
-	dprintf( D_FULLDEBUG, "DCStartd::deactivateClaim: "
-			 "successfully sent command\n" );
+	dprintf( D_FULLDEBUG, "DCStartd::%s: successfully sent command\n", _cmd_str.c_str() );
 	return true;
 }
 
 
 int
-DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
-						 ReliSock** claim_sock_ptr, ClassAd * replyAd )
+DCStartd::activateClaim( ClassAd* job_ad, ReliSock** claim_sock_ptr, ClassAd * replyAd )
 {
 	int reply;
 	ClassAd dummyAd;
 	bool want_failure_ad = false;
+	// 2 is the vanilla starter, but the Startd ignores this now
+	// Prior to 25.x the STARTD would refuse if the value was >= 10, but otherwise ignored it.
+	int starter_version = 2;
 	const char * ATTR_send_failure_ad = "_condor_send_activation_failure_ad";
 
 	dprintf( D_FULLDEBUG, "Entering DCStartd::activateClaim()\n" );
@@ -527,10 +550,13 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		dprintf( D_FULLDEBUG, "DCStartd::activateClaim: successfully sent command, reply is: %d%s\n",
 			reply, replyAd->size() ? " (with ad)" : "" );
 	} else {
+		// for now, we assume that the failure must be a timeout if the socket is still open.
+		CAResult caresult = ((ReliSock*)tmp)->is_closed() ? CA_REPLY_COMMUNICATION_ERROR : CA_REPLY_TIMED_OUT;
+
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
 		err += _addr;
-		newError( CA_COMMUNICATION_ERROR, err.c_str() );
+		newError( caresult, err.c_str() );
 		reply = CONDOR_ERROR;
 	}
 
@@ -643,8 +669,7 @@ DCStartd::resumeClaim( ClassAd* reply, int timeout )
 
 
 bool
-DCStartd::deactivateClaim( VacateType vType, ClassAd* reply,
-						   int timeout )
+DCStartd::deactivateClaimCA( VacateType vType, ClassAd* reply, int timeout )
 {
 	setCmdStr( "deactivateClaim" );
 	if( ! checkClaimId() ) {

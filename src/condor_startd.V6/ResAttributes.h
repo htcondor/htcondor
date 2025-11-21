@@ -595,6 +595,7 @@ public:
 
 	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
 	unsigned int is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
+	const char * broken_reason() { return c_broken_reason.c_str(); }
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);

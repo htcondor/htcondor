@@ -889,11 +889,8 @@ bool VanillaProc::restartCheckpointedJob() {
 		}
 		startd.setClaimId(claimID);
 
-		bool graceful = false;
-		bool got_job_done = false;
 		bool claim_is_closing = false;
-		bool job_is_restarting = true;
-		bool OK = startd.deactivateClaim( graceful, got_job_done, & claim_is_closing, job_is_restarting );
+		bool OK = startd.reactivateClaimCheck(claim_is_closing);
 		if(! OK) {
 			dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
 

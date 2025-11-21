@@ -231,7 +231,8 @@ public:
 	pid_t spawnStarter( Starter* starter, ClassAd * job, Stream* = NULL );
 	void starterExited( Starter* starter, int status );
 	bool starterPidMatches( pid_t starter_pid ) const;
-	bool isDeactivating( void );
+	bool isDeactivating() const;
+	const char * isDeactivatingReason() const;
 	bool isActive( void );
 	bool isRunning( void );	
 	bool deactivateClaim( bool graceful, bool job_done, bool claim_closing );

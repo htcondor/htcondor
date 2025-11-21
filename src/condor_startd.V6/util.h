@@ -33,7 +33,11 @@ bool	check_execute_dir_perms(const char* exec_path, bool abort_on_error);
 void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );
-bool	refuse( Stream*, ClassAd* replyAd = nullptr );
+bool	refuse( Stream*, ClassAd* replyAd, bool retry_ok=false);
+bool	refuseX( Stream*, CONDOR_HOLD_CODE code, const char * reason, bool retry_ok=false);
+inline bool refuse(Stream* s, bool send_failure_ad, CONDOR_HOLD_CODE code, const char * reason) {
+	return refuseX(s, code, send_failure_ad ? reason : nullptr, false);
+}
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  const char* prefix = NULL );
 bool	caRevertToParent(ClassAd* target, const char * attr);

@@ -452,11 +452,11 @@ reply( Stream* s, int cmd )
 
 
 bool
-refuse( Stream* s, ClassAd* replyAd )
+refuse( Stream* s, ClassAd* replyAd, bool retry_ok )
 {
 	s->end_of_message();
 	s->encode();
-	if( !s->put(NOT_OK) ) {
+	if( !s->put(retry_ok ? CONDOR_TRY_AGAIN : NOT_OK) ) {
 		return false;
 	} 
 	if (replyAd && ! putClassAd(s, *replyAd)) {
@@ -466,6 +466,17 @@ refuse( Stream* s, ClassAd* replyAd )
 		return false;
 	}
 	return true;
+}
+
+bool refuseX( Stream* s, CONDOR_HOLD_CODE code, const char * reason, bool retry_ok /*=false*/)
+{
+	if (reason && *reason) {
+		ClassAd replyAd;
+		replyAd.Assign(ATTR_VACATE_REASON, reason);
+		replyAd.Assign(ATTR_VACATE_REASON_CODE, code);
+		return refuse(s, &replyAd, retry_ok);
+	}
+	return refuse(s, nullptr, retry_ok);
 }
 
 
