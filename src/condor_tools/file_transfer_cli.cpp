@@ -3,6 +3,7 @@
 
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
+#include "authentication.h"
 
 #include <string>
 #include <memory>
@@ -24,6 +25,13 @@ std::string destination;
 
 // wtaf is daemon core doing?
 std::string _cwd;
+
+// Security!
+std::string session_id;
+std::string session_key;
+std::string session_info;
+std::string transfer_key;
+std::string transfer_socket;
 
 
 int
@@ -118,7 +126,7 @@ starter_input_socket_handler( Stream * s ) {
 
 void
 do_starter_input( const char * addr, const char * key ) {
-    fprintf( stderr, "do_starter_input(%s, %s): begins\n", addr, key );
+    // fprintf( stderr, "do_starter_input(%s, %s): begins\n", addr, key );
 
     auto sock = FileTransferFunctions::connectToPeer(
         addr, "",
@@ -231,6 +239,32 @@ void
 do_starter_output( const char * addr, const char * key, const char * source, const char * destination ) {
     fprintf( stderr, "do_starter_output(%s, %s): begins\n", addr, key );
 
+
+    // The `addr` of the shadow should not need to be supplied on the
+    // command-line if this tool is run in a job.  (Either the starter
+    // sets it in the job's environment, or it's derived from the job ad
+    // on disk -- which may need modification as a result.)
+    int created_security_session =
+        daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+            WRITE,
+            session_id.c_str(),
+            session_key.c_str(),
+            session_info.c_str(),
+            AUTH_METHOD_MATCH,
+            SUBMIT_SIDE_MATCHSESSION_FQU,
+            addr,
+            0 /* don't expire */,
+            nullptr,
+            false
+    );
+    if(! created_security_session) {
+        dprintf( D_ALWAYS,
+            "Failed to create file transfer security session.  "
+            "This command is unlikely to work.\n"
+        );
+    }
+
+
     auto sock = FileTransferFunctions::connectToPeer(
         addr, "",
         FILETRANS_DOWNLOAD
@@ -258,7 +292,29 @@ char ** _argv;
 
 void
 main_init( int /* argc */, char ** /* argv */ ) {
-    dprintf_set_tool_debug( "TOOL", 0 );
+    // This should be conditional based on a CLI flag.  Note that setting
+    // this main() means that it doesn't work quite as expected, probably
+    // because of something daemon core is doing in its initialization.  The
+    // real problem we need to solve is not writing the daemon log...
+    // dprintf_set_tool_debug( "TOOL", 0 );
+
+    const char * ev = NULL;
+
+    ev = getenv( "_CONDOR_SHADOW_SESSION_ID" );
+    if( ev != NULL ) { session_id = ev; }
+
+    ev = getenv( "_CONDOR_SHADOW_SESSION_KEY" );
+    if( ev != NULL ) { session_key = ev; }
+
+    ev = getenv( "_CONDOR_SHADOW_SESSION_INFO" );
+    if( ev != NULL ) { session_info = ev; }
+
+    ev = getenv( "_CONDOR_SHADOW_TRANSFER_KEY" );
+    if( ev != NULL ) { transfer_key = ev; }
+
+    ev = getenv( "_CONDOR_SHADOW_TRANSFER_SOCKET" );
+    if( ev != NULL ) { transfer_socket = ev; }
+
 
     if( _argc < 2 ) {
         fprintf( stderr, " --shadow --input source destination\n" );
@@ -279,7 +335,11 @@ main_init( int /* argc */, char ** /* argv */ ) {
         }
     } else if( 0 == strcmp( _argv[1], "--starter" )) {
         if( 0 == strcmp( _argv[2], "--input" )) {
-            do_starter_input( _argv[3], _argv[4] );
+            if( _argc <= 3 ) {
+                do_starter_input( transfer_socket.c_str(), transfer_key.c_str() );
+            } else {
+                do_starter_input( _argv[3], _argv[4] );
+            }
         } else if( 0 == strcmp( _argv[2], "--output" )) {
             do_starter_output( _argv[3], _argv[4], _argv[5], _argv[6] );
         } else {
@@ -318,7 +378,18 @@ int
 main( int argc, char ** argv ) {
     condor_getcwd(_cwd);
 
+    // ...
     set_mySubSystem( "FT_EXPERIMENT", true, SUBSYSTEM_TYPE_DAEMON );
+
+    int overwrite = 1;
+    // This is dumb, but easier than doing it the "right" way.
+    setenv( "_CONDOR_SEC_USE_FAMILY_SESSION", "FALSE", overwrite );
+    const char * condor_config = getenv( "CONDOR_CONFIG" );
+    if( condor_config == NULL || (strcmp(condor_config, "/dev/null") == 0) ) {
+        setenv( "CONDOR_CONFIG", "/dev/null", overwrite );
+        // This leaves a file in /tmp that we want to avoid creating at all.
+        setenv( "_CONDOR_LOG", "/tmp", overwrite );
+    }
 
     // This is dumb, but easier than fighting daemon core about parsing.
     _argc = argc;
