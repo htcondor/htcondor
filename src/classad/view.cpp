@@ -384,8 +384,8 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 	viewMembers.clear( );
 
 		// re-order content by new rank expression
-	for( const auto& [key, value] : memberIndex ) {
-		if( ( ad = coll->GetClassAd( key ) ) == NULL	||
+	for( const auto& [memberKey, key] : memberIndex ) {
+		if( ( ad = coll->GetClassAd( memberKey ) ) == NULL	||
 			!evalEnviron.ReplaceRightAd( ad )			||
 			!evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
 				// internal error
