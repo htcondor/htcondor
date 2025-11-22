@@ -15,6 +15,10 @@
   as implied by the documentation).
   :jira:`3351`
 
+- Improve compatibility with versions of HTCondor that attempt to set
+  attribute ``OsUser`` in the job ad.
+  :jira:`3415`
+
 *** 24.0.15 features
 
 - HTCondor tarballs now contain `Pelican 7.21.1 <https://pelicanplatform.org/releases>`_
