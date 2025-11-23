@@ -336,6 +336,10 @@ main_init( int /* argc */, char ** /* argv */ ) {
     } else if( 0 == strcmp( _argv[1], "--starter" )) {
         if( 0 == strcmp( _argv[2], "--input" )) {
             if( _argc <= 3 ) {
+                if( transfer_socket.empty() || transfer_key.empty() ) {
+                    fprintf( stderr, "If you don't specify the transfer socket or the transfer key on the command-line, they must be set in the environment.\n" );
+                    DC_Exit(1);
+                }
                 do_starter_input( transfer_socket.c_str(), transfer_key.c_str() );
             } else {
                 do_starter_input( _argv[3], _argv[4] );
