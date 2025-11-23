@@ -97,9 +97,9 @@ Query( const string &viewName, ExprTree *expr, bool two_way_matching )
 
 
 	// iterate over the view members
-	for( vmi=view->viewMembers.begin(); vmi!=view->viewMembers.end(); vmi++ ) {
+	for( const auto &member : view->viewMembers ) {
 		// ... and insert keys into local list in same order
-		vmi->GetKey( key );
+		member.GetKey( key );
 
 		if( expr ) {
 			// if a constraint was supplied, make sure its satisfied
