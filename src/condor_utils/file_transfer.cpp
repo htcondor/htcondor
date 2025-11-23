@@ -85,24 +85,8 @@ const char * const StderrRemapName = "_condor_stderr";
 //     files available.
 // 9 - ClassAd contains a list of URLs that need to be signed for the uploader
 //     to proceed.
-enum class TransferCommand {
-	Unknown = -1,
-	Finished = 0,
-	XferFile = 1,
-	EnableEncryption = 2,
-	DisableEncryption = 3,
-	XferX509 = 4,
-	DownloadUrl = 5,
-	Mkdir = 6,
-	Other = 999
-};
 
-enum class TransferSubCommand {
-	Unknown = -1,
-	UploadUrl = 7,
-	ReuseInfo = 8,
-	SignUrls = 9
-};
+#include "file_transfer_constants.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -287,15 +271,6 @@ dPrintFileTransferList( int flags, const FileTransferList & list, const std::str
     }
 	dprintf( flags, "%s\n", message.c_str() );
 }
-
-const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
-const int GO_AHEAD_UNDEFINED = 0;
-//const int GO_AHEAD_ONCE = 1;    // send one file and ask again
-				// Currently, there is no usage of GO_AHEAD_ONCE; if we have a
-				// token, we assume it lasts forever.
-
-const int GO_AHEAD_ALWAYS = 2;  // send all files without asking again
-
 
 struct upload_info {
 	FileTransfer *myobj;
@@ -1013,7 +988,10 @@ FileTransfer::_Init(
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
-		char const *mysocket = global_dc_sinful();
+		// This used to be global_dc_sinful(), which calls
+		// daemonCore->InfoCommandSinfulStringMyself(false),
+		// but that fails on my machine for no discernabe reason.
+		auto mysocket = daemonCore->InfoCommandSinfulStringMyself(true);
 		ASSERT(mysocket);
 		ftcb.setTransferSocket(mysocket);
 		// This is actually a return value which MUST be propogated to the
@@ -2368,6 +2346,7 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
 #define return_and_resetpriv(i)                     \
     if( saved_priv != PRIV_UNKNOWN )                \
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
+    dprintf( D_ALWAYS, "return_and_resetpriv() called at %s:%d\n", __FILE__, __LINE__ ); \
     return i;
 
 filesize_t
