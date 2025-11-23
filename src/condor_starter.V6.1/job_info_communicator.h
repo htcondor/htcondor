@@ -429,6 +429,8 @@ public:
 		return -1;
 	}
 
+	virtual void PublishToEnv( Env * /* proc_env */ ) { return; }
+
 protected:
 
 		// // // // // // // // // // // //
