@@ -28,6 +28,9 @@
 
 #include "condor_daemon_client.h"
 
+#include "file_transfer_constants.h"
+#include "file_transfer_functions.h"
+
 /** The base class of JobInfoCommunicator that knows how to talk to a
 	remote condor_shadow.  this is where we deal with sending any
 	shadow RSCs, FileTransfer, etc.
@@ -55,6 +58,8 @@ public:
 		/// If needed, transfer files.
 	void setupJobEnvironment( void );
 	void setupJobEnvironment_part2(void);
+
+	void newSetupJobEnvironment( void );
 
 	virtual bool transferCommonInput( ClassAd * commonAd );
 	virtual void resetInputFileCatalog();
@@ -127,9 +132,12 @@ public:
 			not be called directly by outside code. They are helpers
 			for transferOutput().
 		*/
+
 	bool transferOutput(bool& transient_failure, bool& in_progress);
 	bool transferOutputStart(bool& transient_failure, bool& in_progress);
-	bool transferOutputFinish(bool& transient_failure, bool& in_progress);
+	bool transferOutputFinish(bool &transient_failure, bool& in_progress);
+	bool newTransferOutput(bool& transient_failure, bool& in_progress);
+	bool oldTransferOutput(bool& transient_failure, bool& in_progress);
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the
@@ -268,8 +276,12 @@ public:
 
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
+	virtual void PublishToEnv( Env * proc_env );
+
 private:
 
+	int handleFileTransferCommand( Stream * s );
+	FileTransferFunctions::GoAheadState gas;
     void _remove_files_from_output();
 
 	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
@@ -313,7 +325,10 @@ private:
 			If we don't have to transfer anything, return false.
 			@return true if transfer was begun, false if not
 		*/
+
 	bool beginInputTransfer( void );
+	bool beginNewInputTransfer( void );
+	bool beginOldInputTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferStatusCallback(FileTransfer * ftrans) {
@@ -524,7 +539,9 @@ private:
 
 		// specially made security sessions if we are doing
 		// SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION
-	char *m_filetrans_sec_session;
+	char *      m_filetrans_sec_session;
+	std::string m_filetrans_sec_info;
+	std::string m_filetrans_sec_key;
 	char *m_reconnect_sec_session;
 
 	/// if true, transfer files at vacate time (in addtion to job exit)

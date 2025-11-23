@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include "dc_coroutines.h"
 #include "condor_daemon_client.h"
 #include "condor_classad.h"
 #include "reli_sock.h"
@@ -277,6 +278,13 @@ class RemoteResource : public Service {
 	ClassAd m_download_file_stats;
 
 	void initFileTransfer();
+	void initOldFileTransfer();
+	void initNewFileTransfer();
+
+	int handleInputSandboxTransfer( int command, Stream * s );
+	int handleOutputSandboxTransfer( int command, Stream * s );
+	void sendFilesToStarter( ReliSock * sock );
+	condor::cr::void_coroutine receiveFilesFromStarter( ReliSock * sock );
 
 	virtual void resourceExit( int reason_for_exit, int exit_status );
 	virtual void updateFromStarter( ClassAd* update_ad );

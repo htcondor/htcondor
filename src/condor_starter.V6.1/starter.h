@@ -378,6 +378,11 @@ protected:
 		const ClassAd & guidance,
 		std::function<void(void)> continue_conversation
 	);
+	static bool handleJobSetupCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(void)> continue_conversation
+	);
 
 	static bool handleJobSetupCommand(
 		Starter * s,
