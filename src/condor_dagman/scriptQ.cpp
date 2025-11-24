@@ -19,9 +19,11 @@
 
 #include "condor_common.h"
 
+
 #include "script.h"
 #include "node.h"
 #include "dag.h"
+#include "scriptQ.h"
 
 namespace shallow = DagmanShallowOptions;
 

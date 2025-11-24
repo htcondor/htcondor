@@ -35,13 +35,13 @@ typedef int (*extReaperFunc_t)(Node* node, int status);
 
 enum class ScriptDeferAction {
 	PUSH_QUEUE = 0,
-	DO_NOTHING
+	DO_NOTHING,
 };
 
 enum class ScriptExecResult {
 	SUCCESS = 0,     // We Successfully executed the script
 	ERROR,           // We failed to execute the script and faux reaped
-	DEFERRED         // We deferred the script execution
+	DEFERRED,        // We deferred the script execution
 };
 
 // NOTE: the ScriptQ class must be derived from Service so we can
