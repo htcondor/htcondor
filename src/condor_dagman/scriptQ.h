@@ -39,8 +39,8 @@ enum class ScriptDeferAction {
 };
 
 enum class ScriptExecResult {
-	SUCCESS = 0,     // We Successfully executed the script
-	ERROR,           // We failed to execute the script and faux reaped
+	EXECUTED = 0,    // We Successfully executed the script
+	FAUX_REAPED,     // We failed to execute the script and faux reaped
 	DEFERRED,        // We deferred the script execution
 };
 

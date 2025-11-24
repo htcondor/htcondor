@@ -77,7 +77,7 @@ ScriptExecResult ScriptQ::Run(Script *script, ScriptDeferAction act) {
 		auto insertResult = _scriptPidTable.insert(std::make_pair(pid, script));
 		ASSERT(insertResult.second == true);
 		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->GetExecuted());
-		return ScriptExecResult::SUCCESS;
+		return ScriptExecResult::EXECUTED;
 	}
 
 	// BackgroundRun() returned pid 0
@@ -92,7 +92,7 @@ ScriptExecResult ScriptQ::Run(Script *script, ScriptDeferAction act) {
 	const int returnVal = 1<<8;
 	ReapScript(*script, returnVal);
 
-	return ScriptExecResult::ERROR;
+	return ScriptExecResult::FAUX_REAPED;
 }
 
 int ScriptQ::RunWaitingScripts(bool justOne) {
@@ -120,15 +120,12 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 			ASSERT(script != nullptr);
 			ScriptExecResult res = Run(script, ScriptDeferAction::DO_NOTHING);
 			if (res != ScriptExecResult::DEFERRED) {
-				_waitingQueue.erase(it);
-				if (res == ScriptExecResult::SUCCESS) {
-					return 1;
-				}
-			}
-			it++;
+				it = _waitingQueue.erase(it);
+				if (res == ScriptExecResult::EXECUTED) { return 1; }
+			} else { it++; }
 		}
 
-		// If here, then we didn't execute anything successfully
+		// If here, then we didn't execute anything
 		return 0;
 	}
 
@@ -145,11 +142,11 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 			bool remove_from_q = false;
 
 			switch (Run(script, ScriptDeferAction::DO_NOTHING)) {
-				case ScriptExecResult::SUCCESS:
+				case ScriptExecResult::EXECUTED:
 					scriptsRun++;
 					[[fallthrough]];
 				// NOTE: Script execution error means DAGMan has faux reaped the script as a failure (thus consider it as executed)
-				case ScriptExecResult::ERROR:
+				case ScriptExecResult::FAUX_REAPED:
 					remove_from_q = true;
 					break;
 				default:
