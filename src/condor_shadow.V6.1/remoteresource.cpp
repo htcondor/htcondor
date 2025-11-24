@@ -318,12 +318,14 @@ RemoteResource::killStarter( bool graceful )
 	// if we saw a job_exit.
 	// TODO If we add a version check or decide we don't care about 8.6.X
 	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool still_cleaning = false;
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
 		dprintf(D_STATUS, "Sending %s to startd\n",
 			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing)) {
+		still_cleaning = false;
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
 			break;
 		}
 		const char * errmsg = dc_startd->error();
@@ -366,10 +368,17 @@ RemoteResource::killStarter( bool graceful )
 		already_killed_fast = true;
 	}
 
-	const char* addr = dc_startd->addr();
-	if( addr ) {
-		dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", 
-				 graceful ? "graceful" : "fast", addr );
+	if (m_got_job_done) {
+		if (still_cleaning) {
+			dprintf(D_STATUS, "Claim deactivated but starter is still cleaning up\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Claim deactivated\n");
+		}
+	} else {
+		const char* addr = dc_startd->addr();
+		if (addr) {
+			dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", graceful ? "graceful" : "fast", addr );
+		}
 	}
 
 	bool wantReleaseClaim = false;

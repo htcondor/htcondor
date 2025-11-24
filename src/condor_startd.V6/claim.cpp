@@ -151,7 +151,7 @@ Claim::~Claim()
 			}
 
 			// if we have a pending deactivate reply, send it now.
-			sendDeactivateReply();
+			sendDeactivateReply(false);
 	
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
@@ -629,7 +629,6 @@ Claim::cancel_match_timer()
 		c_match_tid = -1;
 	}
 }
-
 
 void
 Claim::match_timed_out( int /* timerID */ )
@@ -1409,6 +1408,25 @@ Claim::requestClaimSockClosed(Stream *s)
 	return FALSE;
 }
 
+void Claim::cancel_deactivate_reply_timer()
+{
+	if (c_deactivate_reply_tid != -1) {
+		if( daemonCore->Cancel_Timer(c_deactivate_reply_tid) < 0 ) {
+			dprintf( D_ERROR, "Failed to cancel deactivate reply timer (%d): daemonCore error\n", c_deactivate_reply_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Cancelled old deactivate reply timer (%d)\n", c_deactivate_reply_tid);
+		}
+		c_deactivate_reply_tid = -1;
+	}
+}
+
+// when deactivate reply timer fires, we want to send the reply
+void 
+Claim::send_deactivate_reply_timed_out( int /*timerID = -1*/ )
+{
+	sendDeactivateReply(false);
+}
+
 void
 Claim::setDeactivateStream(Stream* stream)
 {
@@ -1418,10 +1436,22 @@ Claim::setDeactivateStream(Stream* stream)
 	}
 	c_deactivate_stream = stream;
 
+	cancel_deactivate_reply_timer(); // just in case.
+
 	// register a callback if the deactivate reply sock is closed before we can reply
 	if( c_deactivate_stream ) {
 		std::string desc;
 		formatstr(desc, "deactivate claim %s", publicClaimId() );
+
+		// Shadow will wait 20 seconds, we guarantee a reply within 10 seconds
+		// sooner if we reap the Starter before then
+		const int deactivate_reply_timeout = 10;
+		c_deactivate_reply_tid = 
+			daemonCore->Register_Timer( 10, 0,
+				(TimerHandlercpp) &Claim::send_deactivate_reply_timed_out,
+				"send_deactivate_reply_timed_out", this );
+		ASSERT(c_deactivate_reply_tid >= 0);
+		dprintf( D_FULLDEBUG, "Started deactivate reply timer (%d) for %d seconds.\n",  c_deactivate_reply_tid, deactivate_reply_timeout );
 
 		int register_rc = daemonCore->Register_Socket(
 			c_deactivate_stream,
@@ -1454,7 +1484,7 @@ Claim::deactivateClaimSockClosed(Stream *s)
 }
 
 bool
-Claim::sendDeactivateReply()
+Claim::sendDeactivateReply(bool starter_exited)
 {
 	if (c_deactivate_stream) {
 
@@ -1463,6 +1493,10 @@ Claim::sendDeactivateReply()
 
 		ClassAd response_ad;
 		response_ad.Assign(ATTR_START,c_may_reactivate);
+		if ( ! starter_exited) {
+			response_ad.Assign("StillCleaning", true);
+			if (c_starter_pid) response_ad.Assign("StarterPID", c_starter_pid);
+		}
 		bool success = true;
 		if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
@@ -1474,6 +1508,11 @@ Claim::sendDeactivateReply()
 			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, c_rip);
 			ep_event.Ad().Assign("ReplyTime", _condor_debug_get_time_double());
 			ep_event.Ad().Assign("Success", success);
+			if ( ! c_may_reactivate) ep_event.Ad().Assign("ClaimClosing", true);
+			if ( ! starter_exited) {
+				ep_event.Ad().Assign("StillCleaning", true);
+				if (c_starter_pid) ep_event.Ad().Assign("StarterPID", c_starter_pid);
+			}
 			ep_eventlog.flush();
 		}
 
@@ -1830,7 +1869,7 @@ Claim::starterExited( Starter* starter, int status)
 	}
 
 	// if there is pending reply to DEACTIVATE_CLAIM, send the reply now
-	if (sendDeactivateReply() && ! mayReactivate()) {
+	if (sendDeactivateReply(true) && ! mayReactivate()) {
 		// TODO: do we need to change the slot state to reflect a closed claim here?
 	}
 

@@ -101,7 +101,7 @@ public:
 			       it should restart a job after uploading its checkpoint.
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing);
+	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning);
 
 		/** Send the command to this startd to ask if claim_is_closing would be returned if we deactivated.
 			Used by starter to check if it should restart a job after uploading its checkpoint.
@@ -112,7 +112,7 @@ public:
 
 protected:
 		// helper for deactivateClaim and reactivateClaimCheck
-	bool deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing);
+	bool deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bool *still_cleaning);
 public:
 
 		/** Try to activate the claim on this started with the given
