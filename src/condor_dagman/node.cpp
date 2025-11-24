@@ -538,9 +538,8 @@ Node::AddChildren(const std::vector<Node*>& children, std::string &whynot) {
 		NodeID_t id = _child;
 		Edge * edge = Edge::PromoteToMultiple(_child, _multiple_children, id);
 
-		// Reserve space in the edge array for children (add one if node has a single child currently)
-		size_t num_children = children.size() + (id != NO_ID);
-		edge->_ary.reserve(num_children);
+		// Reserve space in the edge array for children. Add one for current child node (even if we don't have one)
+		edge->_ary.reserve(children.size() + 1);
 
 		// populate the edge array, since we know that children is sorted we can just push_back here.
 		for (auto child : children) {

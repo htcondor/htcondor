@@ -64,7 +64,7 @@ ScriptExecResult ScriptQ::Run(Script *script, ScriptDeferAction act) {
 
 	if (deferScript) {
 		_scriptDeferredCount++;
-		if (act ==  ScriptDeferAction::PUSH_QUEUE) { _waitingQueue.push_back(script); }
+		if (act == ScriptDeferAction::PUSH_QUEUE) { _waitingQueue.push_back(script); }
 		return ScriptExecResult::DEFERRED;
 	}
 
@@ -155,7 +155,7 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 		});
 
 	// Erase scripts that executed from the waiting queue
-	// Waiting Queue Partitioning: [ Exectued | Waiting (skipped) | Deferred ]
+	// Waiting Queue Partitioning: [ Executed | Waiting (skipped) | Deferred ]
 	_waitingQueue.erase(_waitingQueue.begin(), executed_end);
 
 	debug_printf(DEBUG_DEBUG_1, "Started %d deferred scripts\n", scriptsRun);
