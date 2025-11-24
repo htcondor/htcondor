@@ -116,9 +116,12 @@ int ScriptQ::RunWaitingScripts(bool justOne) {
 		while (it != end) {
 			Script* script = *it;
 			ASSERT(script != nullptr);
-			if (Run(script, ScriptDeferAction::DO_NOTHING) == ScriptExecResult::SUCCESS) {
+			ScriptExecResult res = Run(script, ScriptDeferAction::DO_NOTHING);
+			if (res != ScriptExecResult::DEFERRED) {
 				_waitingQueue.erase(it);
-				return 1;
+				if (res == ScriptExecResult::SUCCESS) {
+					return 1;
+				}
 			}
 			it++;
 		}
