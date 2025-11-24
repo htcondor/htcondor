@@ -4,6 +4,7 @@
 docker://htcondor/nmi-build:aarch64_AlmaLinux8-25000500
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-25000500
 docker://htcondor/nmi-build:aarch64_AlmaLinux10-25000500
+docker://htcondor/nmi-build:aarch64_Ubuntu24-25000500
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25000500
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-25000500
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-25000500
