@@ -18,9 +18,6 @@
  ***************************************************************/
 
 
-// Defining this before including winsock2.h gives us htonll() on Windows
-#define INCL_EXTRA_HTON_FUNCTIONS
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
