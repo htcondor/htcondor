@@ -45,6 +45,11 @@ static void usage() {
 class MatchTest {
 public:
     MatchTest();
+    ~MatchTest() {
+		for (ClassAd* ad : m_machineads) {
+			delete ad;
+		}
+	}
 
     // prints out the estimated demand
     void ShowDemand(char const *jobads_fname,const std::vector<std::string> &job_constraints,char const *machineads_fname,char const *machine_constraint,const std::vector<std::string> &claimed);
@@ -74,7 +79,7 @@ private:
     unsigned int m_machines_matched;
     unsigned int m_machines_unmatched;
 
-    ClassAdList m_machineads;
+    std::vector<ClassAd*> m_machineads;
     // hash of matched machines
 	std::map<ClassAd*,bool> m_matched_machines;
 
@@ -271,10 +276,7 @@ MatchTest::unmatch()
 void
 MatchTest::matchExpr(ExprTree *claimed)
 {
-    ClassAd *machinead;
-
-    m_machineads.Open();
-	while( (machinead=m_machineads.Next()) ) {
+	for (ClassAd *machinead : m_machineads) {
 		if( m_matched_machines.contains(machinead)) {
 			continue; // already matched this machine
 		}
@@ -287,7 +289,6 @@ MatchTest::matchExpr(ExprTree *claimed)
 bool
 MatchTest::matchJobAd(ClassAd *jobad)
 {
-    ClassAd *machinead;
 	bool retval=true;
 
 	OptimizeJobAdForMatchmaking( jobad );
@@ -298,9 +299,8 @@ MatchTest::matchJobAd(ClassAd *jobad)
     // algorithm will not discover that fact.  No RANKs are taken
     // into account either, only Requirements.
 
-    m_machineads.Open();
 	bool found_match = false;
-	while( (machinead=m_machineads.Next()) ) {
+	for (ClassAd *machinead : m_machineads) {
 		if( m_matched_machines.contains(machinead)) {
 			continue; // already matched this machine
 		}
@@ -311,7 +311,7 @@ MatchTest::matchJobAd(ClassAd *jobad)
 		}
 	}
 
-    unsigned int num_machines = m_machineads.MyLength();
+    unsigned int num_machines = m_machineads.size();
 	if( (unsigned int)m_matched_machines.size() == num_machines ) {
 		retval=false; // all machines matched
 	}
@@ -327,7 +327,7 @@ bool
 MatchTest::addMachineAd(ClassAd *machinead)
 {
 	OptimizeMachineAdForMatchmaking( machinead );
-	m_machineads.Insert(machinead);
+	m_machineads.push_back(machinead);
 	return true;
 }
 
@@ -377,7 +377,10 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
             return false;
         }
 
-		m_machineads.Clear();
+		for (ClassAd* ad : m_machineads) {
+			delete ad;
+		}
+		m_machineads.clear();
 
         if( !read_classad_file(machineads_fname,machine_constraint_expr,&MatchTest::addMachineAd) ) {
             return false;
@@ -399,9 +402,7 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
     }
 
     if( m_show_unmatched_machines ) {
-        ClassAd *machinead;
-        m_machineads.Open();
-        while( (machinead=m_machineads.Next()) ) {
+		for (ClassAd *machinead : m_machineads) {
             if (m_matched_machines.contains(machinead)) {
                 continue;
             }
@@ -409,7 +410,7 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
         }
     }
 
-    unsigned int num_machines = m_machineads.MyLength();
+    unsigned int num_machines = m_machineads.size();
     m_machines_matched = m_matched_machines.size();
     m_machines_unmatched = num_machines - m_machines_matched;
 
