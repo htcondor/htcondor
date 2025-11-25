@@ -530,7 +530,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		int sz = sizeof(tmpbuf);
 		int rc;
 		rc = condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf, sz, 1, MSG_PEEK);
+			tmpbuf, sz, 1, CondorRWFlags::Peek);
 		if (rc != sz) {
 			char const *ip = m_sock->peer_ip_str();
 			if(!ip) {
