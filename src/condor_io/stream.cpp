@@ -570,16 +570,6 @@ Stream::put( unsigned int		i)
 	return put((unsigned long long)i);
 }
 
-// Pick the correct 64-bit convert-to/from-big-endian function for each
-// platform
-#if defined(LINUX)
-#  define htonLL(x) htobe64(x)
-#  define ntohLL(x) be64toh(x)
-#elif defined(DARWIN) || defined(WIN32)
-#  define htonLL(x) htonll(x)
-#  define ntohLL(x) htonll(x)
-#endif
-
 int 
 Stream::put( long	l)
 {

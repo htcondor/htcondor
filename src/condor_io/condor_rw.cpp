@@ -340,7 +340,11 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t 
 
 			return -1;
 		}
-		nr += nro;
+		// Increment the number of bytes read,
+		// but not if we got a short read when using MSG_PEEK.
+		if ( !(flags & MSG_PEEK) || nro == (sz - nr) ) {
+			nr += nro;
+		}
 	}
 	
 /* Post Conditions */
