@@ -2278,7 +2278,7 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 			
 		}
 
-		classad::ClassAdFlatMapOrder lessThan(privateIt->first);
+		classad::ClassAdFlatMapOrder lessThan{};
 
 		// SourceIt < privateIt, increment source and try again
 		if (lessThan(*sourceIt, privateIt->first)) {
