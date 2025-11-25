@@ -56,12 +56,20 @@ classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 
 }
 
+static ClassAd privateAttrsAd;
+
 static bool ClassAd_initConfig = false;
 static bool ClassAd_strictEvaluation = false;
 
 void ClassAdReconfig()
 {
-	//ClassAdPrivateAttrs.rehash(11);
+	// The set of private attributes in the form of a classad.
+	// Iterating over these attribute names is guaranteed to be in
+	// the same relative order as any other classad.
+	for (const auto &attrName : ClassAdPrivateAttrs) {
+		privateAttrsAd.Assign(attrName, true);
+	}
+
 	ClassAd_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::SetOldClassAdSemantics( !ClassAd_strictEvaluation );
 
@@ -2238,6 +2246,94 @@ ClassAdAttributeIsPrivateV2( const std::string &name )
 
 bool
 ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV2(name) || ClassAdAttributeIsPrivateV1(name);}
+
+// This function moves all the known private attributes out of the source
+// ad and into the target ad.  This is a hot path in the collector, ad
+// naive implementation (commented out below) consumes about 15% of the
+// time in the collector, so we care about performance here.
+//
+// Algorithm is -- walk down each attribute in source ad, check
+// to see if it begins with the magic prefix '_condor_priv'.  If so,
+// move the attribute.  Otherwise, walk down the list of known private
+// attributes in sorted order, comparing to the current source attribute.
+bool
+movePrivateAttrs(ClassAd &source, ClassAd &target)
+{
+	bool moved_any = false;
+	auto privateIt = privateAttrsAd.begin(); // Can't be .end(), don't bother to check
+	auto sourceIt =  source.begin();
+
+	// Walk both pointers until one is at the end
+	while (sourceIt != source.end()) {
+
+		// First check for _condor_priv prefix
+		if (sourceIt->first[0] == '_') { // Blatant optimization
+			if (ClassAdAttributeIsPrivateV2(sourceIt->first)) {
+				// We have a match!
+				moved_any = true;
+				target.Insert(sourceIt->first, sourceIt->second->Copy());
+				sourceIt = source.erase(sourceIt);
+				continue; // keep going
+			}
+			
+		}
+
+		classad::ClassAdFlatMapOrder lessThan{};
+
+		// SourceIt < privateIt, increment source and try again
+		if (lessThan(*sourceIt, privateIt->first)) {
+			sourceIt++;
+		} else if (classad::ClassAdFlatMapEqual(*sourceIt, privateIt->first)) {
+			// We have a match!
+			moved_any = true;
+			target.Insert(sourceIt->first, sourceIt->second->Copy());
+			sourceIt = source.erase(sourceIt);
+			privateIt++;
+			if (privateIt == privateAttrsAd.end()) {
+				// We're done!
+				break;
+			}
+		} else {
+			// privateIt < sourceIt, increment privateIt and try again
+			privateIt++;
+			if (privateIt == privateAttrsAd.end()) {
+				// We're done!
+				break;
+			}
+		}
+	}
+
+	// If sourceIt is not at the end, we need to check for any remaining _condor_priv attributes
+	while (sourceIt != source.end()) {
+		if (sourceIt->first[0] == '_') { // Blatant optimization
+			if (ClassAdAttributeIsPrivateV2(sourceIt->first)) {
+				// We have a match!
+				moved_any = true;
+				target.Insert(sourceIt->first, sourceIt->second->Copy());
+				sourceIt = source.erase(sourceIt);
+				continue;
+			}
+		}
+		sourceIt++;
+	}
+
+	return moved_any;
+	// The former implementation is left below for reference
+	// void movePrivateAttrs(ClassAd& dest, ClassAd& src)
+	// {
+	// 	auto itr = src.begin();
+	// 	while (itr != src.end()) {
+	// 		if (ClassAdAttributeIsPrivateAny(itr->first)) {
+	// 			const std::string &name = itr->first;
+	// 			dest.Insert(name, itr->second->Copy());
+	// 			itr = src.erase(itr);
+	// 		} else {
+	// 			itr++;
+	// 		}
+	// 	}
+	// }
+
+}
 
 int
 EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
