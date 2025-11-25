@@ -2318,7 +2318,7 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 	}
 
 	return moved_any;
-	// The former implmementation is left below for reference
+	// The former implementation is left below for reference
 	// void movePrivateAttrs(ClassAd& dest, ClassAd& src)
 	// {
 	// 	auto itr = src.begin();
