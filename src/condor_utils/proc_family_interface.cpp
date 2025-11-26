@@ -66,17 +66,8 @@ ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* sub
 		        "GID-based process tracking requires use of ProcD; "
 		            "ignoring USE_PROCD setting\n");
 		ptr = new ProcFamilyProxy;
-	}
-	else if (param_boolean("GLEXEC_JOB", false)) {
 
-		dprintf(D_ALWAYS,
-		        "GLEXEC_JOB requires use of ProcD; "
-		            "ignoring USE_PROCD setting\n");
-		ptr = new ProcFamilyProxy;
-	// Note: if CGROUPS is turned on and the startd has USE_PROCD=false,
-	// then we will respect the procd setting and not use cgroups.
 	} else {
-
 		ptr = new ProcFamilyDirect;
 	}
 	ASSERT(ptr != NULL);
