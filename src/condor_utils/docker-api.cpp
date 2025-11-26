@@ -959,7 +959,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	int written;
 
 	// read with 200 second timeout, no flags, nonblocking
-	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, 0, false)) > 0) {
+	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, CondorRWFlags::Read, false)) > 0) {
 		response.append(buf, written);
 	}
 

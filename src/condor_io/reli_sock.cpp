@@ -838,7 +838,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, ti
 
 	header_filled = 0;
 
-	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, CondorRWFlags::Read, p_sock->is_non_blocking());
 	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
 	                       // returns -2 if the socket has been closed.
 		dprintf(D_NETWORK, "Reading header would have blocked.\n");
