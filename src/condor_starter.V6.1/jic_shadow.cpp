@@ -87,7 +87,7 @@ std::array<std::string, 8> ALWAYS_EXCLUDED_FILES {{
     MACHINE_AD_FILENAME,
     ".docker_sock",
     ".docker_stdout",
-    ".docker_stderr",
+    ".docker_stderror",
     ".update.ad",
     ".update.ad.tmp"
 }};
