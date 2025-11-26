@@ -567,8 +567,8 @@ DockerAPI::pullImage(const std::string &image_name,
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string DockerOutputFile = diag_dir + "/docker_stdout";
-	std::string DockerErrorFile  = diag_dir + "/docker_stderror";
+	std::string DockerOutputFile = diag_dir + "/.docker_stdout";
+	std::string DockerErrorFile  = diag_dir + "/.docker_stderror";
 
 	childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
