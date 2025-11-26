@@ -311,8 +311,7 @@ MatchTest::matchJobAd(ClassAd *jobad)
 		}
 	}
 
-    unsigned int num_machines = m_machineads.size();
-	if( (unsigned int)m_matched_machines.size() == num_machines ) {
+if(m_matched_machines.size() == m_machineads.size() ) {
 		retval=false; // all machines matched
 	}
 	if( m_show_unmatched_jobs && !found_match ) {
