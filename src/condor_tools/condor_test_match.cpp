@@ -409,9 +409,8 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
         }
     }
 
-    unsigned int num_machines = m_machineads.size();
-    m_machines_matched = m_matched_machines.size();
-    m_machines_unmatched = num_machines - m_machines_matched;
+m_machines_matched = m_matched_machines.size();
+m_machines_unmatched = m_machineads.size() - m_machines_matched;
 
     if( claimed_expr ) {
         delete claimed_expr;
