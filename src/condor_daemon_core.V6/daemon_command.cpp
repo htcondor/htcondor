@@ -515,45 +515,38 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	m_sock->decode();
 
-		// Determine if incoming socket is HTTP over TCP, or if it is CEDAR.
-		// For better or worse, we figure this out by seeing if the socket
-		// starts w/ a GET or POST.  Hopefully this does not correspond to
-		// a daemoncore command int!  [not ever likely, since CEDAR ints are
-		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
-		// with a more foolproof method.
-		// Note: We no longer support soap, but this peek is part of the
-		//   code below that checks if this is a command that shared port
-		//   should transparently hand off to the collector.
-	char tmpbuf[6];
-	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
-			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
-	}
-
-		// This was not a soap request; next, see if we have a special command
-		// handler for unknown command integers.
-		//
-		// We do manual CEDAR parsing here to look at the command int directly
-		// without consuming data from the socket.  The first few bytes are the
-		// size of the message, followed by the command int itself.
-	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
-	tmp_req = ntohl(tmp_req);
-	if (daemonCore->HandleUnregistered() && (tmp_req >= 8)) {
+	// See if we have a special command handler for unknown command integers.
+	//
+	// We do manual CEDAR parsing here to look at the command int directly
+	// without consuming data from the socket.  The first five bytes are the
+	// CEDAR packet header. The next eight bytes are the command int itself.
+	// Leaving the data unconsumed is necessary for the shared port daemon
+	// to transparently hand connections to the collector for commands it
+	// doesn't handle.
+	if (m_is_tcp && daemonCore->HandleUnregistered()) {
 			// Peek at the command integer if one exists.
-		char tmpbuf2[8+5]; memset(tmpbuf2, 0, sizeof(tmpbuf2));
-		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf2, 8+5, 1, MSG_PEEK);
-		char *tmpbuf3 = tmpbuf2 + 5;
-		if (8-sizeof(int) > 0) { tmpbuf3 += 8-sizeof(int); } // Skip padding
-		memcpy(static_cast<void*>(&tmp_req), tmpbuf3, sizeof(int));
-		tmp_req = ntohl(tmp_req);
+		long long tmp_req;
+		char tmpbuf[8+5]; memset(tmpbuf, 0, sizeof(tmpbuf));
+		int sz = sizeof(tmpbuf);
+		int rc;
+		rc = condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+			tmpbuf, sz, 1, CondorRWFlags::Peek);
+		if (rc != sz) {
+			char const *ip = m_sock->peer_ip_str();
+			if(!ip) {
+				ip = "unknown address";
+			}
+			dprintf(D_ERROR, "DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+		memcpy(static_cast<void*>(&tmp_req), tmpbuf + 5, sizeof(tmp_req));
+		tmp_req = ntohLL(tmp_req);
 
 			// Lookup the command integer in our command table to see if it is unregistered
 		int tmp_cmd_index;
 		if(	   (!m_isSharedPortLoopback)
-			&& (! daemonCore->CommandNumToTableIndex( tmp_req, &tmp_cmd_index ))
+			&& (! daemonCore->CommandNumToTableIndex( (int)tmp_req, &tmp_cmd_index ))
 			&& ( daemonCore->HandleUnregisteredDCAuth()
 				|| (tmp_req != DC_AUTHENTICATE) ) ) {
 			ScopedEnableParallel(false);
@@ -563,7 +556,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 				m_sock->set_deadline(0);
 			}
 
-			m_result = daemonCore->CallUnregisteredCommandHandler(tmp_req, m_sock);
+			m_result = daemonCore->CallUnregisteredCommandHandler((int)tmp_req, m_sock);
 			return CommandProtocolFinished;
 		}
 	}
