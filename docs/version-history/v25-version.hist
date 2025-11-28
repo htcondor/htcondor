@@ -16,7 +16,7 @@
   :jira:`3408`
 
 - Fixed a bug where docker universe jobs would bring back as
-  .docker_stderr file back to the AP after job completion.
+  .docker_stderror file back to the AP after job completion.
   :jira:`3424`
 
 *** 25.0.6 bugs
