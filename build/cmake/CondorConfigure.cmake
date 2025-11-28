@@ -454,6 +454,18 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	  find_library(HAVE_XSS Xss)
 	endif()
 
+	find_package(DBus1)
+	if (DBus1_FOUND)
+	  set(HAVE_DBUS DBus1_FOUND)
+	  include_directories(${DBus1_INCLUDE_DIRS})
+	endif()
+
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(LIBSYSTEMD libsystemd)
+	if (LIBSYSTEMD_FOUND)
+	  set(HAVE_LIBSYSTEMD LIBSYSTEMD_FOUND)
+	endif()
+
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
     if (HAVE_SD_DAEMON_H)
 		# Since systemd-209, libsystemd-daemon.so has been deprecated
