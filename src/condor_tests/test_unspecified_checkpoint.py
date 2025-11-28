@@ -26,7 +26,7 @@ def condor_files():
         ".machine.ad",
         ".docker_sock",
         ".docker_stdout",
-        ".docker_stderr",
+        ".docker_stderror",
         ".update.ad",
         ".update.ad.tmp",
         ".execution_overlay.ad",
