@@ -527,9 +527,8 @@ Matchmaker::
 	if (stashedAds) delete stashedAds;
     if (strSlotConstraint) free(strSlotConstraint), strSlotConstraint = NULL;
 
-	int i;
-	for(i=0;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
-		delete negotiation_cycle_stats[i];
+	for (auto* stats : negotiation_cycle_stats) {
+		delete stats;
 	}
 
     if (NULL != hgq_root_group) delete hgq_root_group;
@@ -1984,10 +1983,8 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 	
 		dprintf(D_FULLDEBUG, "Updating collector with accounting information\n");
 			// for all of the names of active submitters
-		for (it = names.begin(); it != names.end(); it++) {
-			std::string name = *it;
-			std::string key("Customer.");  // hashkey is "Customer" followed by name
-			key += name;
+		for (const auto& name : names) {
+			std::string key = "Customer." + name;  // hashkey is "Customer" followed by name
 
 			ClassAd *accountingAd = accountant.GetClassAd(key);
 			if (accountingAd) {
@@ -2118,8 +2115,8 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, nullptr, true);
 
     // Populate group's children recursively, if it has any
-    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(*j);
+    for (GroupEntry* child : group->children) {
+        forwardGroupAccounting(child);
     }
 }
 

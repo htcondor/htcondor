@@ -11,8 +11,8 @@
 double calculate_subtree_usage(Accountant &accountant, GroupEntry *group) {
 	double subtree_usage = 0.0;
 
-	for (std::vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
-		subtree_usage += calculate_subtree_usage(accountant, *i);
+	for (GroupEntry* child : group->children) {
+		subtree_usage += calculate_subtree_usage(accountant, child);
 	}
 	subtree_usage += accountant.GetWeightedResourcesUsed(group->name);
 
@@ -48,10 +48,8 @@ GroupEntry::GroupEntry():
 }
 
 GroupEntry::~GroupEntry() {
-	for (unsigned long j=0;  j < children.size();  ++j) {
-		if (children[j] != NULL) {
-			delete children[j];
-		}
+	for (auto* child : children) {
+		delete child;  // delete nullptr is safe
 	}
 
 	if (NULL != submitterAds) {
@@ -72,8 +70,8 @@ GroupEntry::Initialize(GroupEntry *hgq_root_group) {
 		GroupEntry* group = grpq.front();
 		grpq.pop_front();
 		hgq_submitter_group_map[group->name] = group;
-		for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-			grpq.push_back(*j);
+		for (GroupEntry* child : group->children) {
+			grpq.push_back(child);
 		}
 	}
 }
@@ -219,8 +217,8 @@ GroupEntry::hgq_construct_tree(
 		GroupEntry* group = grpq.front();
 		grpq.pop_front();
 		hgq_groups.push_back(group);
-		for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-			grpq.push_back(*j);
+		for (GroupEntry* child : group->children) {
+			grpq.push_back(child);
 		}
 	}
 
@@ -321,8 +319,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 	// Any groups with autoregroup are allowed to also negotiate in root group ("none")
 	if (hgq_root_group->autoregroup) { // autoregroup is set at the root if any children have it
 		unsigned long n = 0;
-		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-			GroupEntry* group = *j;
+		for (GroupEntry* group : hgq_groups) {
 			if (group == hgq_root_group) continue;
 			if (!group->autoregroup) continue;
 			for(ClassAd *ad: *group->submitterAds) {
@@ -372,8 +369,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 
 		// make sure working values are reset for this iteration
 		groupQuotasHash->clear();
-		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-			GroupEntry* group = *j;
+		for (GroupEntry* group : hgq_groups) {
 			group->allocated = 0;
 			group->subtree_requested = 0;
 			group->rr = false;
@@ -401,8 +397,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 		double allocated_total = 0;
 		unsigned long served_groups = 0;
 		unsigned long unserved_groups = 0;
-		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-			GroupEntry* group = *j;
+		for (GroupEntry* group : hgq_groups) {
 			dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
 					group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
 			groupQuotasHash->insert(group->name, group->quota);
@@ -430,8 +425,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 		}
 
 		// fill in sorting classad attributes for configurable sorting
-		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-			GroupEntry* group = *j;
+		for (GroupEntry* group : hgq_groups) {
 			ClassAd* ad = group->sort_ad;
 			ad->Assign(ATTR_GROUP_QUOTA, group->quota);
 			ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
@@ -463,9 +457,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 			dprintf(D_ALWAYS, "group quotas: entering RR iteration n= %g\n", n);
 
 			// Do the negotiations
-			for (std::vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
-				GroupEntry* group = *j;
-
+			for (GroupEntry* group : negotiating_groups) {
 				dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
 
 				if (group->allocated <= 0) {
@@ -511,9 +503,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 
 		// After round robin, assess where we are relative to HGQ allocation goals
 		double usage_total = 0;
-		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-			GroupEntry* group = *j;
-
+		for (GroupEntry* group : hgq_groups) {
 			double usage = accountant.GetWeightedResourcesUsed(group->name);
 
 			group->usage = usage;

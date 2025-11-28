@@ -288,8 +288,8 @@ void Accountant::Initialize(GroupEntry* root_group)
       grpq.pop_front();
       // This creates entries if they don't already exist:
       GetPriority(group->name);
-      for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-          grpq.push_back(*j);
+      for (GroupEntry* child : group->children) {
+          grpq.push_back(child);
       }
   }
 
@@ -1158,8 +1158,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
         GroupEntry* group = grpq.front();
         grpq.pop_front();
         gnmap[group->name] = EntryNum++;
-        for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-            grpq.push_back(*j);
+        for (GroupEntry* child : group->children) {
+            grpq.push_back(child);
         }
     }
 
@@ -1366,8 +1366,8 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     
     // Populate group's children recursively, if it has any
     // Recursion is to allow for proper rollup from children to parents
-    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        ReportGroups(*j, ad, rollup, gnmap);
+    for (GroupEntry* child : group->children) {
+        ReportGroups(child, ad, rollup, gnmap);
     }
 
     // if we aren't doing rollup, finish now
