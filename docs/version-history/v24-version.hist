@@ -6,14 +6,14 @@
 
 *** 24.12.15 bugs
 
+- Improve compatibility with versions of HTCondor that attempt to set
+  attribute ``OsUser`` in the job ad.
+  :jira:`3415`
+
 - Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
   keys will no longer mangle the values (and instead ignore the extra keys,
   as implied by the documentation).
   :jira:`3351`
-
-- Improve compatibility with versions of HTCondor that attempt to set
-  attribute ``OsUser`` in the job ad.
-  :jira:`3415`
 
 *** 24.0.15 features
 
