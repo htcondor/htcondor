@@ -3,7 +3,6 @@
 # File:     flux_utils.sh
 # Author:   Ian Lumsden (ilumsden@vols.utk.edu)
 # Author:   Michela Taufer (mtaufer@utk.edu)
-# Based on code by David Rebatto (david.rebatto@mi.infn.it)
 #
 # Copyright (c) Members of the EGEE Collaboration. 2004. 
 # Copyright (c) HTCondor Team, Computer Sciences Department,
