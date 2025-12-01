@@ -11,6 +11,7 @@ from dataclasses import dataclass, fields, astuple
 from math import floor
 import time
 import threading
+import re
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 # from . import overview  # Import the overview module
 
@@ -83,6 +84,13 @@ class ResourceInfo:
     glideinsHeld: int = 0
     def __post_init__(self):
         self.hosted = is_hosted_fqdn(self.fqdn)
+
+
+@dataclass
+class HeaderLink:
+    """ Util class containing the text and URL for a header link """
+    text: str
+    url: str
 
 def returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn):
     """
@@ -290,7 +298,7 @@ def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
             resource_info_by_fqdn[fqdn] = resource_info
     return resource_info_by_fqdn
 
-@cache_response_to_disk(file_name="ce_info.csv")
+#@cache_response_to_disk(file_name="ce_info.csv")
 def get_landing_response():
     # Gather up CE info from Topology
     resource_info_by_fqdn = ce_info_from_topology()
@@ -371,13 +379,42 @@ def get_ce_facility_site_descrip(fqdn: str):
         return ce_info.facility_name, ce_info.site_name, ce_info.description, ce_info.health
     return "Unknown", "Unknown", "Unknown", "Poor"
 
+def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional[HeaderLink]]:
+    """
+    Get the next and previous site FQDNs in alphabetical order.
+    If the FQDN is not found, return None for both.
+    """
+    # Get all CE Facility names in sorted order, for the facilities that have links from the homepage
+    healthy_facilities_by_name = sorted(
+        (ce for ce in ce_info_dict.values() if 'overview.html' in ce.name and ce.health != "Poor"), 
+        key=lambda x: x.facility_name)
+    current_index = next((i for i, ri in enumerate(healthy_facilities_by_name) if ri.fqdn == fqdn), 0)
+
+    prev_index = current_index - 1 if current_index > 0  else len(healthy_facilities_by_name) - 1
+    next_index = current_index + 1 if current_index < len(healthy_facilities_by_name) - 1 else 0
+
+    prev_facility = healthy_facilities_by_name[prev_index]
+    next_facility = healthy_facilities_by_name[next_index]
+
+    return (
+        HeaderLink(
+            text=prev_facility.site_name,
+            url=re.sub(r'\|.*', '', prev_facility.name)
+        ),
+        HeaderLink(
+            text=next_facility.site_name,
+            url=re.sub(r'\|.*', '', next_facility.name)
+        ),
+
+    )
+
 ##########################################
 # Flask routes
 ##########################################
 
 landing_bp = Blueprint('landing', __name__)
 lock = threading.Lock()
-ce_info_dict = {}
+ce_info_dict : dict[str, ResourceInfo] = {}
 ce_info_dict_last_update_time = 0
 
 landing_linkmap = {

@@ -64,8 +64,24 @@
 <body>
     <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
 		
-			<div class="navbar-brand abs">
-			   {{ page_title }}
+			<div class="navbar-brand abs container">
+               <div class="row flex-nowrap">
+                    {% if prev_page %}
+                    <div class="navbar-nav col" style="font-size: 1rem; font-weight: 400;">
+                        <a class="nav-link" href="{{ prev_page.url }}" style="padding-top: 0;">&lt; {{ prev_page.text }}</a>
+                    </div>
+                    {% endif %} 
+
+                    <div class="col">
+                        {{ page_title }}
+                    </div>
+
+                    {% if next_page %}
+                    <div class="navbar-nav col" style="font-size: 1rem; font-weight: 400;">
+                        <a class="nav-link" href="{{ next_page.url }}" style="padding-top: 0;">{{ next_page.text }} &gt;</a>
+                    </div>
+                    {% endif %} 
+               </div>
 			</div>
 
 			<div class="navbar-logo">

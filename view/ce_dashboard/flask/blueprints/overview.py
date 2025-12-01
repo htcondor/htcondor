@@ -210,11 +210,13 @@ def handle_contributed():
 @overview_bp.route('/overview.html')
 def overview():
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
-    from blueprints.landing import get_ce_facility_site_descrip
+    from blueprints.landing import get_ce_facility_site_descrip, get_next_prev_sites
     facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     title = facility if facility!='Unknown' else host
     return render_template('overview.html', page_title=title, ce_facility_name=facility, ce_site_name=site,
-                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap)
+                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap, 
+                           next_page=next_site, prev_page=prev_site)
 
 @overview_bp.route('/data/ce_overview')
 def ce_overview_data():
