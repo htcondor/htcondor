@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# File:     slurm_hold.sh
-# Author:   Jaime Frey (jfrey@cs.wisc.edu)
+# File:     flux_hold.sh
+# Author:   Ian Lumsden (ilumsden@vols.utk.edu)
+# Author:   Michela Taufer (mtaufer@utk.edu)
 # Based on code by David Rebatto (david.rebatto@mi.infn.it)
 # 
 # Copyright (c) Members of the EGEE Collaboration. 2004. 
