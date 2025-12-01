@@ -234,6 +234,9 @@ set(blah_scripts
     scripts/condor_ping.sh scripts/kubernetes_ping.sh
     scripts/lsf_ping.sh scripts/nqs_ping.sh scripts/pbs_ping.sh
     scripts/sge_ping.sh scripts/slurm_ping.sh
+	scripts/flux_cancel.sh scripts/flux_hold.sh scripts/flux_local_submit_attributes.sh
+	scripts/flux_ping.sh scripts/flux_resume.sh scripts/flux_status.sh
+	scripts/flux_submit.sh scripts/flux_utils.sh
    )
 
 install(FILES
