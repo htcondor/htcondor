@@ -385,7 +385,7 @@ class Condor:
     @skip_if(master_is_not_alive)
     def _condor_off(self):
         off = self.run_command(
-            ["condor_off", "-daemon", "master"], timeout=30, echo=False
+            ["condor_off", "-fast", "-daemon", "master"], timeout=30, echo=False
         )
 
         if not off.returncode == 0:
