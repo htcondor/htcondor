@@ -186,7 +186,7 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	JobNotStarted = 1003,
 	UserVacateJob = 1004,
 	JobShouldRequeue = 1005,
-	FailedToActivateClaim = 1006,
+	FailedToActivateClaim = 1006,  // (obsolete?) generic reason shadow could not activate the claim (see ActivationRefused* codes)
 	StarterError = 1007,
 	ReconnectFailed = 1008,
 	ClaimDeactivated = 1009,
@@ -204,8 +204,19 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	ContainerError = 1021,
 	ScheddVacate = 1022,
 	JobRemoved = 1023,
-	ScratchDirError = 1024
-	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
+	ScratchDirError = 1024,
+	SuccessfulCheckpoint = 1025
+	,ActivationRefusedBadRequest = 1026      // activation request ad (job) has missing or invalid attributes
+	,ActivationRefusedNoMatch = 1027         // slot does not match (see Analyze attribute of reply)
+	,ActivationRefusedStillCleaning = 1028   // slot is still cleaning up from previous activation
+	,ActivationRefusedWorklifeExpired = 1029 // claim worklife expired
+	,ActivationRefusedPreempted = 1030       // claim was preempted
+	,ActivationRefusedBroken  = 1031         // slot is broken
+	,ActivationRefusedNotIdle = 1032         // slot is not idle and there is no better reason code.
+	,ActivationRefusedUnclaimed = 1033       // slot is not claimed
+	,ActivationRefusedClaimNotFound = 1034   // claim id was not found
+	,ActivationRefusedOldClaim = 1035        // claim id existed once, but has been consumed (future)
+	,ActivationRefusedUnhealthy = 1036       // slot is unhealthy (future)
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
 

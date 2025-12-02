@@ -72,7 +72,7 @@ class ClassAd(MutableMapping):
       * ClassAd (:class:`ClassAd`)
       * undefined (:data:`classad2.Value.Undefined`)
       * error (:data:`classad2.Value.Error`)
-      * expression (:class:`ExprTree)
+      * expression (:class:`ExprTree`)
 
     When setting a value, :py:obj:`None` is converted to
     :data:`classad2.Value.Undefined` and :class:`dict`\s
@@ -80,8 +80,8 @@ class ClassAd(MutableMapping):
 
     Expressions are always evaluated lazily, so setting a value to
     :class:`ExprTree` ``2 + 2`` will not result in the value being
-    the :class:`int:` ``4``; this also applies when constructing or
-    parsing :class:`ClassAd`s or :classad:`ExprTree`s.
+    the :class:`int` ``4``; this also applies when constructing or
+    parsing :class:`ClassAd`\s or :class:`ExprTree`\s.
     """
 
     def __init__(self, input : Optional[Union[str, dict]] = None):

@@ -105,9 +105,7 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 void
 UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
-	if ( !job_ad ) {
-		EXCEPT("No job_ad defined!");
-	}
+	ASSERT(job_ad);
 
 		// base init takes care of lots of stuff:
 	baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
@@ -145,9 +143,14 @@ void
 UniShadow::spawnFinish()
 {
 	hookTimerCancel();
-	if( ! remRes->activateClaim() ) {
-			// we're screwed, give up:
-		shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
+
+	int refuse_code = 0;
+	std::string refuse_reason;
+	if( ! remRes->activateClaim(refuse_code, refuse_reason) ) {
+		if ( ! refuse_code) { refuse_code = CONDOR_HOLD_CODE::FailedToActivateClaim; }
+		if (refuse_reason.empty()) { refuse_reason = "Failed to activate claim"; }
+		// can't activate, so give up.
+		shutDown(JOB_NOT_STARTED, refuse_reason.c_str(), refuse_code);
 	}
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();
@@ -166,7 +169,7 @@ UniShadow::spawn()
 		if (rval == -1) {
 			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
 			BaseShadow::log_except("Submit-side job hook execution failed");
-			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed");
+			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 		} else if (rval == 0) {
 			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
 			spawnFinish();
@@ -188,7 +191,7 @@ UniShadow::hookTimeout( int /* timerID */ )
 {
 	dprintf(D_ERROR, "Timed out waiting for a hook to exit\n");
 	BaseShadow::log_except("Submit-side job hook execution timed out");
-	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out");
+	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out", CONDOR_HOLD_CODE::HookShadowPrepareJobFailure);
 }
 
 
@@ -563,9 +566,7 @@ UniShadow::logDisconnectedEvent( const char* reason )
 	if (reason) { event.setDisconnectReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -581,9 +582,7 @@ UniShadow::logReconnectedEvent( void )
 	JobReconnectedEvent event;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_addr = dc_startd->addr();
 	event.startd_name = dc_startd->name();
 
@@ -607,9 +606,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 	if (reason) { event.setReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {

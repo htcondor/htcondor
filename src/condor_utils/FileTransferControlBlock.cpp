@@ -30,7 +30,7 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 
 
 	eval_OutputDirectory = jobAd->LookupString(
-		"OutputDirectory", OutputDirectory
+		ATTR_OUTPUT_DIRECTORY, OutputDirectory
 	);
 	eval_TRANSFER_OUTPUT_REMAPS = jobAd->EvaluateAttrString(
 		ATTR_TRANSFER_OUTPUT_REMAPS, TRANSFER_OUTPUT_REMAPS

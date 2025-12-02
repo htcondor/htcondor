@@ -60,6 +60,7 @@ Scheduler::Scheduler(int id)
 		m_consumer = new NewClassAdJobLogConsumer(m_jobs);
 		m_mirror = new JobLogMirror(m_consumer, m_follow_log.c_str());
 	}
+
 }
 
 Scheduler::~Scheduler()
@@ -73,11 +74,30 @@ UserRecord * Scheduler::GetUserAd(const std::string & username) { return m_consu
 UserRecord * Scheduler::GetJobUser(ClassAd * jobad) { return m_consumer->GetJobUser(jobad); }
 
 
-void Scheduler::init() { m_mirror->init(); }
-void Scheduler::config() { m_mirror->config(); }
+void Scheduler::init() { config(); }
+
+void Scheduler::config() {
+	m_mirror->config();
+
+	const int id = m_id;
+	std::string knob;
+	formatstr(knob, "JOB_ROUTER_SCHEDD%d_ADDRESS_FILE", id ? id : 1);
+	if ( ! param(m_address_file, knob.c_str())) {
+		// no knob for the log, look for the (deprecated) spool knob
+		formatstr(knob, "$(JOB_ROUTER_SCHEDD%d_SPOOL:,)/.schedd_address", id ? id : 1);
+		expand_param(knob.c_str(), m_address_file);
+		if (m_address_file.empty() || m_address_file[0] == ',') { // JOB_ROUTER_SCHEDD<id>_SPOOL knob not defined
+			m_address_file.clear();
+			if (0 == id) {
+				// only if we are id 0, do we look for the default schedd address file
+				param(m_address_file, "SCHEDD_ADDRESS_FILE");
+			}
+		}
+	}
+}
+
 void Scheduler::stop()  { m_mirror->stop(); }
 void Scheduler::poll()  { m_mirror->poll(); }
-
 
 //-------------------------------------------------------------
 

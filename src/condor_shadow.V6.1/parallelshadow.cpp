@@ -51,10 +51,7 @@ ParallelShadow::~ParallelShadow() {
 void 
 ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info )
 {
-
-    if( ! job_ad ) {
-        EXCEPT( "No job_ad defined!" );
-    }
+	ASSERT(job_ad);
 
         // BaseShadow::baseInit - basic init stuff...
     baseInit( job_ad, schedd_addr, xfer_queue_contact_info );
@@ -154,9 +151,7 @@ ParallelShadow::spawn( void )
 		Register_Timer( 1, 0,
 						(TimerHandlercpp)&ParallelShadow::getResources,
 						"getResources", this );
-	if( info_tid < 0 ) {
-		EXCEPT( "Can't register DC timer!" );
-	}
+	ASSERT(info_tid >= 0);
 	// Start the timer for the periodic user job policy
 	shadow_user_policy.startTimer();
 }
@@ -372,9 +367,13 @@ ParallelShadow::spawnNode( MpiResource* rr )
 		rr->dprintfSelf(D_FULLDEBUG);
 		rr->reconnect();
 	} else {
+		int refuse_code = 0;
+		std::string refuse_reason;
 			// First, contact the startd to spawn the job
-		if( rr->activateClaim() != OK ) {
-			shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
+		if( rr->activateClaim(refuse_code, refuse_reason) != OK ) {
+			if ( ! refuse_code) { refuse_code = CONDOR_HOLD_CODE::FailedToActivateClaim; }
+			if (refuse_reason.empty()) { refuse_reason = "Failed to activate claim"; }
+			shutDown(JOB_NOT_STARTED, refuse_reason.c_str(), refuse_code);
 			
 		}
 	}
@@ -950,9 +949,7 @@ ParallelShadow::logDisconnectedEvent( const char* reason )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
@@ -970,9 +967,7 @@ ParallelShadow::logReconnectedEvent( void )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdAddr( dc_startd->addr() );
 	event.setStartdName( dc_startd->name() );
 
@@ -999,9 +994,7 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
-	if( ! dc_startd ) {
-		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
-	}
+	ASSERT(dc_startd);
 	event.setStartdName( dc_startd->name() );
 */
 

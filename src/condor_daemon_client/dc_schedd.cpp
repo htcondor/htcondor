@@ -46,6 +46,15 @@ DCSchedd::DCSchedd( const ClassAd& ad, const char* the_pool )
 {
 }
 
+DCSchedd::DCSchedd( std::string_view the_name, std::string_view the_pool, std::string_view address_file )
+	: Daemon( DT_SCHEDD, the_name.empty()?nullptr:the_name.data(), the_pool.empty()?nullptr:the_pool.data() )
+{
+	if ( ! address_file.empty()) {
+		this->specify_address_file(address_file);
+	}
+}
+
+
 bool DCSchedd::getCreddAddress(std::string & address) {
 	ClassAd * ad = locationAd();
 	if ( ! ad) return false;
@@ -2333,6 +2342,190 @@ int DCSchedd::queryJobs (
 	return rval;
 }
 
+ClassAd
+DCSchedd::createOCU(const ClassAd &request_ocu_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(CREATE_OCU_FOR_USERREC, Stream::reli_sock, 20, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::createOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// Force auth.
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	// Send the request ad
+	if (!putClassAd((Sock *)sock, request_ocu_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU ad");
+		}
+		return {};
+	}
+
+	// and that's it for this message
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	// get results back
+	sock->decode();
+	ClassAd result;
+
+	// Get results ad
+	if (!getClassAd((Sock *)sock, result)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting OCU result");
+		}
+		return result;
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return result;
+	}
+
+	return result;
+}
+
+ClassAd 
+DCSchedd::removeOCU(const ClassAd &ocu_ad, CondorError *errstack) {
+
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(REMOVE_OCU_FROM_USERREC, Stream::reli_sock, 20, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::removeOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// Force auth.
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	// Send the request ad
+	if (!putClassAd((Sock *)sock, ocu_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU request ad");
+		}
+		return {};
+	}
+
+	// and that's it for this message
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	// get results back
+	sock->decode();
+	ClassAd result;
+
+	// Get results ad
+	if (!getClassAd((Sock *)sock, result)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting OCU result");
+		}
+		return result;
+	}
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::removeOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return result;
+	}
+
+	return result;
+}
+
+std::vector<ClassAd> 
+DCSchedd::queryOCU(const ClassAd &ocu_ad, CondorError *errstack) {
+	ReliSock* sock;
+	if (!(sock = (ReliSock *)startCommand(QUERY_OCU_FROM_USERREC, Stream::reli_sock, 20, errstack))) {
+		//return Q_SCHEDD_COMMUNICATION_ERROR;
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::queryOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error");
+		}
+		return {};
+	}
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	// Force auth.
+	if ( ! forceAuthentication(sock, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack->getFullText().c_str());
+		return {};
+	}
+
+	// Send the request ad
+	if (!putClassAd((Sock *)sock, ocu_ad)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryOCU", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU ad");
+		}
+		return {};
+	}
+
+	// and that's it for this message
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::createOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	// get results back
+	sock->decode();
+	std::vector<ClassAd> result;
+
+	// Get results ad
+	size_t ocu_count = 0;
+	if (!sock->code(ocu_count)) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error getting OCU count");
+		}
+		return result;
+	}
+
+	for (size_t i = 0; i < ocu_count; i++) {
+		ClassAd ocu_ad;
+		if (!getClassAd((Sock *)sock, ocu_ad)) {
+			if (errstack) {
+				errstack->pushf("DCSchedd::queryOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending OCU ad");
+			}
+			return {};
+		}
+		result.push_back(std::move(ocu_ad));
+	}
+
+	if (! sock->end_of_message() ) {
+		if (errstack) {
+			errstack->pushf("DCSchedd::queryOCUs", Q_SCHEDD_COMMUNICATION_ERROR, "communication error sending end of message");
+		}
+		return {};
+	}
+
+	return result;
+}
 
 /*static*/ int DCSchedd::makeUsersQueryAd (
 	classad::ClassAd & request_ad,
@@ -2726,6 +2919,36 @@ ClassAd * DCSchedd::addProjects(
 	const bool is_project{true};
 	int connect_timeout = 20;
 	return actOnUsers (ENABLE_USERREC, is_project, userads, nullptr, num_ads, create_if, nullptr, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::disableProjects(
+	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+	int num_usernames,
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (DISABLE_USERREC, is_project, nullptr, usernames, num_usernames, false, reason, errstack, connect_timeout);
+}
+
+ClassAd * DCSchedd::disableProjects(
+	const char * constraint, // expression
+	const char * reason,
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	if ( ! constraint) {
+		if (errstack && errstack->empty()) {
+			errstack->pushf("DCSchedd::disableProjects", SC_ERR_BAD_CONSTRAINT, "constraint expression is required");
+		}
+		return nullptr;
+	}
+	ClassAd cmd_ad;
+	cmd_ad.AssignExpr(ATTR_REQUIREMENTS, constraint);
+	const ClassAd * ads[] = { &cmd_ad };
+	return actOnUsers (DISABLE_USERREC, is_project, ads, nullptr, 1, false, reason, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::removeProjects(

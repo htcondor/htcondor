@@ -12,6 +12,7 @@ htcondor2/_startd.py
 htcondor2/_credd.py
 htcondor2/_cred_check.py
 htcondor2/_cred_type.py
+htcondor2/_placementd.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py

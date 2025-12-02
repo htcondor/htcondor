@@ -436,7 +436,6 @@ private:
 	std::vector<std::string> m_user_specified;
 	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
-	std::string		m_named_chroot;
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;
 	OSVERSIONINFOEX	m_window_version_info;
@@ -541,6 +540,8 @@ public:
 	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id);
 	// check for offline changes for non-fungible resource ids
 	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id);
+	// Add broken non-fungible resource ids to this objects mapping
+	void claim_broken_DevIds(MachAttributes* map, int broken_sub_id);
 
 	void publish_static(ClassAd*, const ResBag * inuse, const ResBag * broken) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
@@ -594,6 +595,7 @@ public:
 
 	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
 	unsigned int is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
+	const char * broken_reason() { return c_broken_reason.c_str(); }
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
@@ -671,6 +673,9 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	ResBag& operator+=(const ResBag& rhs);
+	ResBag& operator-=(const ResBag& rhs);
+
 	bool empty() const {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
 	bool underrun(std::string * names) const;
@@ -680,6 +685,7 @@ public:
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
 	const MachAttributes::slotres_map_t & nfrmap() const { return resmap; }
+	void convert_to_request(CpuAttributes::_slot_request& req) const;
 
 protected:
 	double     cpus{0};

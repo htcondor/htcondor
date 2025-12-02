@@ -70,6 +70,9 @@
 /* Define to 1 to support public input file transfer over HTTP */
 #cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
+/* Define to 1 to support placement tokens and tokens database */
+#cmakedefine WITH_PLACEMENT 1
+
 // configurable options.
 /////////////////////////////////////////
 
@@ -136,11 +139,8 @@
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
 
-///* Do we have the curl external (Imake)*/
+///* Do we have the curl external */
 #cmakedefine HAVE_EXT_CURL
-
-///* Do we have the libcgroup external */
-#cmakedefine HAVE_EXT_LIBCGROUP
 
 /* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
@@ -192,6 +192,9 @@
 
 /* Define to 1 if you have the <resolv.h> header file. (USED)*/
 #cmakedefine HAVE_RESOLV_H 1
+
+/* Define to 1 if you have the <sqlite3.h> header file. (USED)*/
+#cmakedefine HAVE_SQLITE3_H 1
 
 /* does os support the sched_setaffinity (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY 1

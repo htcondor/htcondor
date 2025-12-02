@@ -138,7 +138,7 @@ AddNode( Dag *dag, const char *name,
 	node->SetType( type );
 
 	ASSERT( dag != NULL );
-	if( !dag->Add( *node ) ) {
+	if( !dag->Add( node ) ) {
 		failReason = "unknown failure adding ";
 		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
 		failReason += ( node->GetType() == NodeType::SERVICE )? "SERVICE " : "";

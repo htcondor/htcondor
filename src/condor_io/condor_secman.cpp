@@ -4026,29 +4026,14 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	return true;
 }
 
-bool
-SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
+const ClassAd*
+SecMan::getSessionPolicy(const char *session_id)
 {
 	auto itr = session_cache.find(session_id);
 	if (itr == session_cache.end()) {
-		return false;
+		return nullptr;
 	}
-	ClassAd *policy = itr->second.policy();
-
-	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_SUBJECT);
-	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EXPIRATION);
-	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EMAIL);
-	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_VONAME);
-	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FIRST_FQAN);
-	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_FQAN);
-	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_SUBJECT);
-	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_ISSUER);
-	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_GROUPS);
-	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_SCOPES);
-	sec_copy_attribute(policy_ad, *policy, ATTR_TOKEN_ID);
-	sec_copy_attribute(policy_ad, *policy, ATTR_REMOTE_POOL);
-	sec_copy_attribute(policy_ad, *policy, "ScheddSession");
-	return true;
+	return itr->second.policy();
 }
 
 bool

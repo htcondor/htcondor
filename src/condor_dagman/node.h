@@ -26,6 +26,7 @@
 #include "read_multiple_logs.h"
 #include "CondorError.h"
 #include "submit_utils.h"
+#include "dag_commands.h"
 
 #include <deque>
 #include <algorithm>
@@ -296,7 +297,7 @@ public:
 	inline const char* GetNodeName() const { return _nodeName.c_str(); }
 	inline const char* GetDirectory() const { return _directory.data(); }
 	inline const char* GetCmdFile() const { return _cmdFile.data(); }
-	void SetDagFile(const char *dagFile) { if (dagFile) { _dagFile = dedup_str(dagFile); } }
+	void SetDagFile(const char *dagFile) { if (dagFile) { _dagFile = DAG::STRING_SPACE::DEDUP(dagFile); } }
 	const char* GetDagFile() const { return _dagFile.data(); }
 	// Prefix node name with splice scope
 	void PrefixName(const std::string &prefix) { _nodeName = prefix + _nodeName; }
@@ -318,7 +319,7 @@ public:
 	void SetHold(bool value) { _hold = value; }
 	bool GetHold() const { return _hold; }
 
-	void SetSaveFile(const std::string& saveFile) { _saveFile = dedup_str(saveFile); _isSavePoint = true; }
+	void SetSaveFile(const std::string& saveFile) { _saveFile = DAG::STRING_SPACE::DEDUP(saveFile); _isSavePoint = true; }
 	inline std::string GetSaveFile() const { return std::string(_saveFile.data()); }
 	inline bool IsSavePoint() const { return _isSavePoint; }
 
@@ -330,7 +331,7 @@ public:
 	};
 
 	const std::vector<NodeVar>& GetVars() const { return varsFromDag; }
-	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
+	bool AddVar(const std::string& name, const std::string& value, bool prepend);
 	bool HasVars() const { return ! varsFromDag.empty(); }
 	int PrintVars(std::string &vars);
 
@@ -399,10 +400,6 @@ public:
 	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
 
 private:
-	// Duplicate string into map of strings
-	static std::string_view dedup_str(const std::string& str);
-	// Remove use of string from map of strings any empty string_view
-	static void free_str(std::string_view& str);
 	// private methods for use by AdjustEdges
 	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 	// Print the list of which procs are idle/not idle for this node
@@ -419,7 +416,6 @@ private:
 		}
 	}
 
-	static std::map<std::string, int> stringSpace; // Shared strings to reduce memory footprint
 	static NodeID_t _nodeID_counter; // Counter to give nodes unique ID's
 	static int _nextJobstateSeqNum; // The next jobstate log sequnce number
 	static time_t lastStateChangeTime; // Last time a node had a state change

@@ -106,11 +106,11 @@ class RemoteResource : public Service {
 			an ACTIVATE_CLAIM command on it.  The ClaimId, starternum
 			and Job ClassAd are pushed, and the executing host's 
 			full machine name and (hopefully) an OK are returned.
-			@param starterVersion The version number of the starter
-                   wanted. The default is 2.
+			@param refuse_code   returns the CONDOR_HOLD_CODE that indicates the reason for refusal
+			@param refuse_reason returns a string giving more detail about the refuse reason
 			@return true on success, false on failure
 		 */ 
-	bool activateClaim( int starterVersion = 2 );
+	bool activateClaim(int & refuse_code, std::string & refuse_reason);
 
 		/** Tell the remote starter to kill itself.
 			@param graceful Should we do a graceful or fast shutdown?

@@ -49,10 +49,6 @@ using QueriedJobs = std::map<int, std::set<int>>;
 
 const CondorID Dag::_defaultCondorId;
 
-namespace DAG {
-	const char *ALL_NODES = "ALL_NODES";
-}
-
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),
@@ -76,9 +72,8 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 
 	_readyQ = new DagPriorityQ;
 	_submitQ = new std::queue<Node*>;
-	if (!_readyQ || !_submitQ) {
-		EXCEPT("ERROR: out of memory (%s:%d)!", __FILE__, __LINE__);
-	}
+	ASSERT(_readyQ);
+	ASSERT(_submitQ);
 
 	/* The ScriptQ object allocates daemoncore reapers, which are a
 		regulated and precious resource. Since we *know* we will never need
@@ -89,9 +84,9 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 		_preScriptQ = new ScriptQ(this);
 		_postScriptQ = new ScriptQ(this);
 		_holdScriptQ = new ScriptQ(this);
-		if (!_preScriptQ || !_postScriptQ) {
-			EXCEPT("ERROR: out of memory (%s:%d)!", __FILE__, __LINE__);
-		}
+		ASSERT(_preScriptQ);
+		ASSERT(_postScriptQ);
+		ASSERT(_holdScriptQ);
 	}
 
 	debug_printf(DEBUG_DEBUG_4, "MaxJobsSubmitted = %d, MaxPreScripts = %d, MaxPostScripts = %d\n",
@@ -1249,7 +1244,7 @@ Dag::FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const ch
 	bool skipFinalNode = true;
 	Node *node = nullptr;
 	if (nodeName) {
-		if (strcasecmp(nodeName, DAG::ALL_NODES) != MATCH) {
+		if (strcasecmp(nodeName, DAG::ALL_NODES.c_str()) != MATCH) {
 			// Looking for a specific node.
 			_allNodesIt = _nodes.end(); 
 			// Specific node lookups should not skip the final node.
@@ -3268,42 +3263,42 @@ Dag::ChooseDotFileName(std::string &dot_file_name)
 }
 
 //---------------------------------------------------------------------------
-bool Dag::Add(Node& node)
+bool Dag::Add(Node* node)
 {
-	auto insertJobResult = _nodeNameHash.insert(std::make_pair(node.GetNodeName(), &node));
+	auto insertJobResult = _nodeNameHash.insert(std::make_pair(node->GetNodeName(), node));
 	ASSERT(insertJobResult.second == true);
-	auto insertIdResult = _nodeIDHash.insert(std::make_pair( node.GetNodeID(), &node));
+	auto insertIdResult = _nodeIDHash.insert(std::make_pair(node->GetNodeID(), node));
 	ASSERT(insertIdResult.second == true);
 
 	// Final node status is set to STATUS_NOT_READY here, so it
 	// won't get run even though it has no parents; its status
 	// will get changed when it should be run.
-	if (node.GetType() == NodeType::FINAL) {
+	if (node->GetType() == NodeType::FINAL) {
 		if (_final_node) {
 			debug_printf(DEBUG_QUIET, "Error: DAG already has a final node %s; attempting to add final node %s\n",
-			             _final_node->GetNodeName(), node.GetNodeName() );
+			             _final_node->GetNodeName(), node->GetNodeName());
 			return false;
 		}
-		node.SetStatus(Node::STATUS_NOT_READY);
-		_final_node = &node;
+		node->SetStatus(Node::STATUS_NOT_READY);
+		_final_node = node;
 	}
 
-	if (node.GetType() == NodeType::PROVISIONER) {
+	if (node->GetType() == NodeType::PROVISIONER) {
 		if (_provisioner_node) {
 			debug_printf(DEBUG_QUIET, "Error: DAG already has a provisioner node %s; attempting to add provisioner node %s\n",
-			             _provisioner_node->GetNodeName(), node.GetNodeName());
+			             _provisioner_node->GetNodeName(), node->GetNodeName());
 			return false;
 		}
-		_provisioner_node = &node;
+		_provisioner_node = node;
 	}
 
-	if (node.GetType() == NodeType::SERVICE) {
-		_service_nodes.push_back(&node);
+	if (node->GetType() == NodeType::SERVICE) {
+		_service_nodes.push_back(node);
 		// Service nodes do not get included in the _nodes list
 		return true;
 	}
 
-	_nodes.push_back(&node);
+	_nodes.push_back(node);
 	return true;
 }
 

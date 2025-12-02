@@ -172,14 +172,15 @@ RemoteResource::~RemoteResource()
 
 
 bool
-RemoteResource::activateClaim( int starterVersion )
+RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 {
-	int reply;
-	ClassAd replyAd;
 	std::string anabuf;
-	const int max_retries = 20;
-	const int retry_delay = 1;
+	const int max_retries = 6; // with backoff, 6 retries is 1+2+3+4+5+5 = 20
+	int retry_delay = 1; // +1 sec backoff each time to a max of 5
 	int num_retries = 0;
+
+	refuse_code = 0;
+	refuse_reason.clear();
 
 	if ( ! dc_startd ) {
 		dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
@@ -196,8 +197,10 @@ RemoteResource::activateClaim( int starterVersion )
 
 		// we'll eventually return out of this loop...
 	while( 1 ) {
-		reply = dc_startd->activateClaim( jobAd, starterVersion,
-										  &claim_sock, &replyAd );
+		ClassAd replyAd;
+		int reply = dc_startd->activateClaim(jobAd, &claim_sock, &replyAd);
+		if ( ! replyAd.LookupInteger(ATTR_VACATE_REASON_CODE, refuse_code)) { refuse_code = 0; }
+		if ( ! replyAd.LookupString(ATTR_VACATE_REASON, refuse_reason)) { refuse_reason.clear(); }
 		switch( reply ) {
 		case OK:
 			dprintf( D_ALWAYS,
@@ -229,9 +232,10 @@ RemoteResource::activateClaim( int starterVersion )
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
+			if (refuse_reason.empty()) { refuse_reason = "previous job still being vacated"; }
 			dprintf( D_ALWAYS,
-			         "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
-			         machineName ? machineName:"", dc_startd->addr() );
+			         "Request to run on %s %s was DELAYED (%s)\n",
+			         machineName ? machineName:"", dc_startd->addr(), refuse_reason.c_str() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -242,6 +246,7 @@ RemoteResource::activateClaim( int starterVersion )
 					 "activateClaim(): will try again in %d seconds\n",
 					 retry_delay ); 
 			sleep( retry_delay );
+			retry_delay = MIN(retry_delay+1, 5);
 			break;
 
 		case CONDOR_ERROR:
@@ -251,19 +256,29 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case NOT_OK:
-			dprintf( D_ALWAYS,
-			         "Request to run on %s %s was REFUSED\n",
-			         machineName ? machineName:"", dc_startd->addr() );
+			if (refuse_code || ! refuse_reason.empty()) {
+				dprintf( D_ALWAYS, "Request to run on %s %s was REFUSED code=%d %s\n",
+					machineName ? machineName:"", dc_startd->addr(), refuse_code, refuse_reason.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "Request to run on %s %s was REFUSED\n",
+						 machineName ? machineName:"", dc_startd->addr() );
+			}
 			if (replyAd.LookupString("Analyze", anabuf) && ! anabuf.empty()) {
+				std::replace(anabuf.begin(), anabuf.end(), (char)0x1e, '\n');
 				dprintf(D_ERROR, "activateClaim failure analysis:\n%s\n", anabuf.c_str());
 			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
+
 		default:
-			dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-			         "request to run on %s %s\n", reply,
+			if (refuse_code || ! refuse_reason.empty()) {
+				dprintf( D_ALWAYS, "Got unknown reply(%d) code=%d from request to run on %s %s %s\n", reply,
+					refuse_code, machineName ? machineName:"", dc_startd->addr(), refuse_reason.c_str() );
+			} else {
+				dprintf( D_ALWAYS, "Got unknown reply(%d) from request to run on %s %s\n", reply,
 			         machineName ? machineName:"", dc_startd->addr() );
+			}
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -303,21 +318,31 @@ RemoteResource::killStarter( bool graceful )
 	// if we saw a job_exit.
 	// TODO If we add a version check or decide we don't care about 8.6.X
 	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool still_cleaning = false;
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing)) {
+		dprintf(D_STATUS, "Sending %s to startd\n",
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
+		still_cleaning = false;
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
 			break;
 		}
+		const char * errmsg = dc_startd->error();
+		CAResult caresult = CAResult::CA_COMMUNICATION_ERROR;
+		if ( ! errmsg) { errmsg = "Could not send command to startd"; }
+		else { caresult = dc_startd->errorCode(); }
+
+		// TODO: we should react to a reply timeout differently than we react to a failure to send the command.
+		bool timeout_on_reply = caresult == CAResult::CA_REPLY_TIMED_OUT;
+
 		num_tries--;
 		if (num_tries) {
 			const int delay = 5;
-			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): DEACTIVATE error. %s, will retry in %d seconds\n", errmsg, delay );
 			sleep(delay);
 		} else {
-			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-			         "Could not send command to startd\n" );
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): DEACTIVATE %s. %s\n", timeout_on_reply?"reply timed out":"error", errmsg);
 		}
 	}
 
@@ -343,10 +368,17 @@ RemoteResource::killStarter( bool graceful )
 		already_killed_fast = true;
 	}
 
-	const char* addr = dc_startd->addr();
-	if( addr ) {
-		dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", 
-				 graceful ? "graceful" : "fast", addr );
+	if (m_got_job_done) {
+		if (still_cleaning) {
+			dprintf(D_STATUS, "Claim deactivated but starter is still cleaning up\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Claim deactivated\n");
+		}
+	} else {
+		const char* addr = dc_startd->addr();
+		if (addr) {
+			dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", graceful ? "graceful" : "fast", addr );
+		}
 	}
 
 	bool wantReleaseClaim = false;
@@ -647,14 +679,15 @@ RemoteResource::disconnectClaimSock(const char *err_msg)
 		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
 			Shadow->gracefulShutDown();
-			EXCEPT( "%s", my_err_msg.c_str() );
+			Shadow->reconnectFailed("This job cannot reconnect");
 		}
 			// tell the shadow to start trying to reconnect
 		Shadow->reconnect();
 	} else {
 			// The remote starter doesn't support it, so give up
 			// like we always used to.
-		EXCEPT( "%s", my_err_msg.c_str() );
+		dprintf(D_ERROR, "%s\n", my_err_msg.c_str());
+		Shadow->reconnectFailed("Reconnect is not supported");
 	}
 }
 
@@ -2130,9 +2163,7 @@ RemoteResource::reconnect( void )
 	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
 			 (long long)remaining );
 
-	if( next_reconnect_tid >= 0 ) {
-		EXCEPT( "in reconnect() and timer for next attempt already set" );
-	}
+	ASSERT(next_reconnect_tid < 0);
 
     time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
@@ -2148,9 +2179,7 @@ RemoteResource::reconnect( void )
 						(TimerHandlercpp)&RemoteResource::attemptReconnect,
 						"RemoteResource::attemptReconnect()", this );
 
-	if( next_reconnect_tid < 0 ) {
-		EXCEPT( "Failed to register timer!" );
-	}
+	ASSERT(next_reconnect_tid >= 0);
 }
 
 
@@ -2252,6 +2281,8 @@ RemoteResource::locateReconnectStarter( void )
 
 	case CA_CONNECT_FAILED:
 	case CA_COMMUNICATION_ERROR:
+	case CA_REPLY_COMMUNICATION_ERROR:
+	case CA_REPLY_TIMED_OUT:
 			// for both of these, we need to keep trying until the
 			// lease_duration expires, since the startd might still be alive
 			// and only the network is dead...
@@ -2264,20 +2295,31 @@ RemoteResource::locateReconnectStarter( void )
 	case CA_INVALID_STATE:
 	case CA_INVALID_REQUEST:
 	case CA_INVALID_REPLY:
-		EXCEPT( "impossible: startd returned %s for locateStarter",
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
 				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_LOCATE_FAILED:
 			// remember, this means we couldn't even find the address
 			// of the startd, not the starter.  we already know the
 			// startd's addr from the ClaimId...
-		EXCEPT( "impossible: startd address already known" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_SUCCESS:
-		EXCEPT( "impossible: success already handled" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 	case CA_UNKNOWN_ERROR:
-		EXCEPT( "impossible: Unknown error code from startd" );
+		dprintf(D_ERROR, "startd returned unexpected error %s for locateStarter\n",
+				getCAResultString(dc_startd->errorCode()) );
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Startd sent bad reply to reconnect");
 		break;
 
 	}
@@ -2589,18 +2631,25 @@ RemoteResource::requestReconnect( void )
 		case CA_INVALID_STATE:
 		case CA_INVALID_REQUEST:
 		case CA_INVALID_REPLY:
-			EXCEPT( "impossible: starter returned %s for %s",
-					getCAResultString(dc_startd->errorCode()),
-					getCommandString(CA_RECONNECT_JOB) );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		case CA_LOCATE_FAILED:
 				// we couldn't even find the address of the starter, but
 				// we already know it or we wouldn't be trying this
 				// method...
-			EXCEPT( "impossible: starter address already known" );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		case CA_SUCCESS:
-			EXCEPT( "impossible: success already handled" );
+			dprintf(D_ERROR, "starter returned unexpected error %s for reconnect\n",
+			        getCAResultString(starter.errorCode()) );
+			resourceExit(JOB_SHOULD_REQUEUE, -1);
+			shadow->reconnectFailed("Starter sent bad reply to reconnect");
 			break;
 		}
 	}

@@ -188,6 +188,7 @@
 #define SUBMIT_KEY_DontEncryptOutputFiles "dont_encrypt_output_files"
 
 #define SUBMIT_KEY_OutputDestination "output_destination"
+#define SUBMIT_KEY_OutputDirectory "output_directory"
 
 #define SUBMIT_KEY_StreamInput "stream_input"
 #define SUBMIT_KEY_StreamOutput "stream_output"
@@ -273,6 +274,7 @@
 // Accounting Group parameters
 #define SUBMIT_KEY_AcctGroup "accounting_group"
 #define SUBMIT_KEY_AcctGroupUser "accounting_group_user"
+#define SUBMIT_KEY_ProjectName "project_name"
 
 //
 // docker "universe" Parameters

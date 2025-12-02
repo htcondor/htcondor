@@ -43,6 +43,10 @@ condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "$
 condor_exe(condor_scitoken_exchange "scitoken_exchange.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_ssl_fingerprint "ssl_fingerprint.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 
+if (WITH_PLACEMENT)
+    condor_exe(condor_login "login.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+endif()
+
 if (LINUX)
     condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
     condor_exe(condor_nsenter "nsenter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

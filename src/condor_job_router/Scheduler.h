@@ -33,6 +33,7 @@ public:
 	void poll();
 	int id() const { return m_id; };
 	const char * following() const { return m_follow_log.empty() ? NULL : m_follow_log.c_str(); };
+	const char * address_file() const { return m_address_file.empty() ? nullptr : m_address_file.c_str(); }
 
 	classad::ClassAdCollection *GetClassAds() { return &m_jobs; }
 	UserRecord * GetUserAd(const std::string & username);
@@ -44,6 +45,7 @@ private:
 	NewClassAdJobLogConsumer * m_consumer{nullptr};
 	JobLogMirror * m_mirror{nullptr};
 	std::string m_follow_log;
+	std::string m_address_file;
 	int m_id{0}; // id of this instance
 };
 

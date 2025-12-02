@@ -212,8 +212,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.20.2 or pelican-debug >= 7.20.2)
-Requires: pelican-osdf-compat >= 7.20.2
+Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
+Requires: pelican-osdf-compat >= 7.21.1
 
 %if ! 0%{?amzn}
 # Require tested Apptainer
@@ -221,7 +221,7 @@ Requires: pelican-osdf-compat >= 7.20.2
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.2
+Requires: apptainer >= 1.4.4
 %endif
 %endif
 
@@ -1262,6 +1262,15 @@ fi
 # configuration
 
 %changelog
+* Thu Nov 13 2025 Tim Theisen <tim@cs.wisc.edu> - 25.4.0-1
+- Job scratch space is now in a sub-directory of the execute directory
+- HTCondor EPs can now refresh credentials during output transfers
+- HTCondor will now create intermediate directories with output remaps
+- condor_watch_q now correctly accounts for unmaterialized jobs
+- Now able to control maximum jobs running by user on an AP
+- HTCondor now tracks when jobs are vacated prior to running
+- Disk space allocated to jobs now more closely matches the request
+
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 25.3.1-1
 - All changes in 25.0.3
 

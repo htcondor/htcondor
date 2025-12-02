@@ -27,6 +27,7 @@
 #include "condor_sockaddr.h"
 #include "classad_log.h"
 #include "live_job_counters.h"
+#include "condor_attributes.h"
 
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
@@ -117,6 +118,7 @@ class QmgmtPeer {
 
 extern bool user_is_the_new_owner; // set in schedd.cpp at startup
 extern bool ignore_domain_mismatch_when_setting_owner;
+
 inline const char * EffectiveUserName(QmgmtPeer * peer) {
 	if (peer) {
 		// with JobQueueUserRec we always want to know the full username
@@ -170,6 +172,12 @@ inline int USERRECID_to_qkey2(unsigned int userrec_id) {
 const int JOBSETID_qkey2 = -100;
 const int CLUSTERID_qkey2 = -1;
 const int CLUSTERPRIVATE_qkey2 = -2;
+
+// The magic procid value for OCUs.  OCUs are not jobs, but almost
+// have the job nature, as they are sent to the negotiator.
+// OCU_qkey2 identifies an OCU record.
+const int OCU_qkey2 = -99;
+
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
     if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey1 called with id=%ud", jobset_id);
@@ -240,9 +248,24 @@ public:
 	bool UpdateSecureAttribute(const char * attr);
 };
 
+int get_next_cluster_num();
+
+class match_rec;
+// Owned Capacity Unit
+class OCU {
+	public:
+		OCU() = default;
+		OCU(const ClassAd &ad, int ocu_id = -1) : ad(ad), mrec(nullptr), ocu_id(ocu_id) {}
+		ClassAd ad;
+		match_rec *mrec{nullptr}; // null if no currect match
+		int ocu_id;
+};
+
 // flag values for JobQueueUserRec
 #define JQU_F_DIRTY    0x01   // PopulateFromAd needed 
 #define JQU_F_PENDING  0x80   // JobQueueUserRec is in the pendingOwners collection
+
+#define GENERIC_AP_USER_PLACEHOLDER "<tmp_ap_user>"
 
 class JobQueueUserRec : public JobQueueBase {
 public:
@@ -303,6 +326,10 @@ public:
 	bool IsLocalUser() const { return local; }
 	bool OsUserDiffers() const { return os_user_differs; }
 
+	// used to assign a specific OS user to a userrec when the Owner is not a local user
+	// or when you don't want to use the local user account that matches the Owner
+	bool assignOsUser(const std::string & os_user);
+
 	// The super member has 4 possible values
 	// super == 0 is not super
 	// super == 1 is intrinsic super ( UserRec has SuperUser=true or UserRec is a built-in )
@@ -318,6 +345,45 @@ public:
 	void setStaleConfigSuper() { if (super != 1) super = JQU_F_PENDING; } // intrinsic super cant be stale
 	bool IsInherentlySuper() const { return super == 1; }
 	bool IsConfigSuper() const { return super == 2; }
+
+	std::vector<OCU> ocus; // vector of OCU ClassAds held by this user record
+
+	void syncOCUs() {
+		std::vector<ExprTree *> l;
+		for (auto &ocu: ocus) {
+			l.push_back(new ClassAd(ocu.ad)); // What is the ownership model here?
+		}
+		classad::ExprList *exprList = classad::ExprList::MakeExprList(l);
+		this->Insert("ocus", exprList);
+		UpdateSecureAttribute("ocus");
+	}
+
+	ClassAd addOCU(const ClassAd &ocu_ad) {
+		ocus.emplace_back();
+		ocus.back().ad = ocu_ad;
+		int ocu_id = get_next_cluster_num();
+		ocus.back().ad.Assign(ATTR_OCU_ID, ocu_id);
+		ocus.back().ocu_id = ocu_id;
+
+		// Give the OCU a name if it doesn't have one
+		std::string ocu_name;
+		ocus.back().ad.LookupString(ATTR_OCU_NAME, ocu_name);
+		if (ocu_name.empty()) {
+			formatstr(ocu_name, "OCU-%d", ocu_id);
+		} 
+		ocus.back().ad.Assign(ATTR_OCU_NAME, ocu_name);
+		ocus.back().ad.Assign("OCUClaim", true);
+		ocus.back().ad.Assign(ATTR_OCU_HOLDER, true);
+		syncOCUs();
+
+		ClassAd result;
+		result.Assign(ATTR_OCU_ID, ocu_id);
+		result.Assign(ATTR_RESULT, 0);
+		result.Assign(ATTR_OCU_NAME, ocu_name);
+		return result;
+	}
+
+	ClassAd removeOCU(const ClassAd &ocu); 
 
 	// add a numeric value to a numeric value in the user record, and optionally
 	// write the result to the job queue log
@@ -590,6 +656,7 @@ void DestroyJobQueue( void );
 int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
+bool JobQueueInitDone();
 
 bool isQueueSuperUser(const JobQueueUserRec * user);
 
@@ -846,7 +913,7 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
   extern std::deque<prio_rec> PrioRec;
 #endif
 
-extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr);
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr, bool is_ocu=false);
 //extern bool Runnable(PROC_ID*);
 enum class runnable_reason_code : int {
 	IsRunnable=0,

@@ -216,6 +216,7 @@ void	DoSetAttributeCallbacks(const std::vector<JobQueueKey> &new_ids, const std:
 int		MaterializeJobs(JobQueueCluster * clusterAd, TransactionWatcher & txn, int & retry_delay);
 
 static bool qmgmt_was_initialized = false;
+static bool job_queue_init_done = false;
 static JobQueueType *JobQueue = nullptr;
 static std::set<JOB_ID_KEY> DirtyJobIDs;
 static std::set<JOB_ID_KEY>::iterator DirtyJobIDsItr = DirtyJobIDs.begin();
@@ -390,6 +391,37 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 }
 };
 
+ClassAd 
+JobQueueUserRec::removeOCU(const ClassAd &ocu) {
+		int ocu_id = -1;
+		ocu.LookupInteger(ATTR_OCU_ID, ocu_id);
+		if (ocu_id < 0) {
+			ClassAd result;
+			result.Assign(ATTR_RESULT, -1);
+			return result;
+		}
+
+		auto match = [ocu_id] (const OCU &ocu) {
+			int id = -1;
+			ocu.ad.LookupInteger(ATTR_OCU_ID, id);
+			if (id == ocu_id) {
+				if (ocu.mrec) {
+					scheduler.DelMrec(ocu.mrec);
+				}
+				return true;
+			}
+			return false;
+		};
+		std::erase_if(ocus, match);
+		//
+		syncOCUs();
+
+		ClassAd result;
+		result.Assign(ATTR_OCU_ID, ocu_id);
+		result.Assign(ATTR_RESULT, 0);
+
+		return result;
+}
 
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
@@ -1835,7 +1867,39 @@ bool JobQueueBase::UpdateSecureAttribute(const char * attr)
 }
 
 static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * defaults);
-static bool MakeProjectRec(const JobQueueKey & key, const char * name, const ClassAd * defaults);
+static bool MakeProjectRec(const JobQueueKey & key, const char * name, bool enabled, const ClassAd * defaults);
+
+// Used to assign a specific OS user to a userrec that does not yet have one.
+// i.e. When the User rec was created without an OS user assignment.
+bool JobQueueUserRec::assignOsUser(const std::string & _os_user)
+{
+	os_user = _os_user;
+	if ( ! os_user.empty() && this->LookupExpr(ATTR_OS_USER)) {
+		this->Assign(ATTR_OS_USER, os_user);
+	}
+
+#ifdef WIN32
+	std::string ntdomain;
+	if (this->LookupString(ATTR_NT_DOMAIN, ntdomain)) {
+		std::string buf;
+		std::string derived_user = name_of_user(name.c_str(), buf);
+		if ( ! ntdomain.empty()) {
+			derived_user += '@';
+			derived_user += ntdomain;
+		}
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_FULL | CASELESS_USER);
+		os_user_differs = ! is_same_user(os_user.c_str(), derived_user.c_str(), opt, "~");
+	} else {
+		// effective NT domain is a prefix of the uid domain (i.e. hostname rather than full_hostname)
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | CASELESS_USER);
+		os_user_differs = ! is_same_user(os_user.c_str(), name.c_str(), opt, "~");
+	}
+#else
+	CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_FULL | ASSUME_UID_DOMAIN);
+	os_user_differs = ! is_same_user(os_user.c_str(), name.c_str(), opt, scheduler.uidDomain());
+#endif
+	return OsUser();
+}
 
 void JobQueueUserRec::PopulateFromAd()
 {
@@ -1853,7 +1917,11 @@ void JobQueueUserRec::PopulateFromAd()
 
 	if (this->flags & JQU_F_DIRTY) {
 		if ( ! this->LookupBool(ATTR_ENABLED, this->enabled)) {
-			if (IsProject()) { this->enabled = true; } // project records are default enabled
+			if (IsProject()) {
+				// fixup project records that were created before Enabled was part of the schema
+				this->enabled = true;
+				this->Assign(ATTR_ENABLED, this->enabled?1:0);
+			}
 		}
 		this->flags &= ~JQU_F_DIRTY;
 	}
@@ -1903,6 +1971,40 @@ void JobQueueUserRec::PopulateFromAd()
 	}
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
 		this->Assign(ATTR_OS_USER, os_user);
+	}
+
+	// Now reconstitue the ocus list from the ad.
+	// the ad should contain an attribute "ocus" which is a list of nested classads
+	classad::ExprTree *expr = this->Lookup("ocus");
+	if (expr) {
+		classad::ExprList *list = dynamic_cast<classad::ExprList*>(expr);
+		if (list) {
+			std::vector<classad::ExprTree *> components;
+			list->GetComponents(components);
+			ocus.clear();
+			for (auto & component : components) {
+				// Each component better be a classad, but let's be sure
+				auto *ad = dynamic_cast<ClassAd *>(component);
+				if (ad) {
+					int ocu_id;
+					ad->LookupInteger(ATTR_OCU_ID, ocu_id);
+					ocus.emplace_back(*(ClassAd *)component, ocu_id);
+
+					std::string submitter;
+					ad->LookupString(ATTR_SUBMITTER, submitter);
+					if (!submitter.empty()) {
+						SubmitterData *subdat = scheduler.insert_submitter(submitter.c_str());
+						subdat->num.Hits++;
+						subdat->num.JobsIdle++;
+						std::string owner;
+						ad->LookupString(ATTR_OWNER, owner);
+						subdat->owners.insert(owner);
+					}
+				}
+
+			}
+
+		}
 	}
 }
 
@@ -2739,6 +2841,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	if( spool_cur_version != SPOOL_CUR_VERSION_SCHEDD_SUPPORTS ) {
 		WriteSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
 	}
+
+	job_queue_init_done = true;
 }
 
 
@@ -3619,7 +3723,11 @@ NewCluster(CondorError* errstack)
 					// create user a user record for a new submitter
 					// the insert_owner_const will make a pending user record
 					// which we then add to the current transaction by calling MakeUserRec
-					urec = scheduler.insert_owner_const(user);
+					urec = scheduler.insert_owner_const(user, errstack);
+					if (urec == nullptr || ! scheduler.solidify_os_user(urec, errstack)) {
+						errno = ENOSPC;
+						return NEWJOB_ERR_INTERNAL;
+					}
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
 						if (errstack) {
@@ -3646,6 +3754,10 @@ NewCluster(CondorError* errstack)
 				}
 				errno = EACCES;
 				return NEWJOB_ERR_DISABLED_USER;
+			}
+			if ( ! scheduler.solidify_os_user(urec, errstack)) {
+				errno = ENOSPC;
+				return NEWJOB_ERR_INTERNAL;
 			}
 			ASSERT(urec);
 		}
@@ -3834,7 +3946,7 @@ static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 	FILL(ATTR_NT_DOMAIN,          -1), // forced into cluster ad
 	FILL(ATTR_OWNER,              -1), // forced into cluster ad
 	FILL(ATTR_PROC_ID,            1),  // forced into proc ad
-// TODO: make ProjectName a forced cluster attr?
+// TODO: make ProjectName a forced cluster attr? (cannot until persistent project records cannot be disabled)
 //	FILL(ATTR_PROJECT_NAME,       -1), // forced into the cluster ad
 	FILL(ATTR_USER,              -1), // forced into cluster ad
 };
@@ -4650,16 +4762,15 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 	// allowed to do that, via the internal API.
 	if (secure_attrs.find(attr_name) != secure_attrs.end())
 	{
-		// should we fail or silently succeed?  (old submits set secure attrs)
-		bool fail_quietly = (flags & SetAttribute_UserTransform) != 0; // internal calls should fail quietly
-		if ( Q_SOCK && ! Ignore_Secure_SetAttr_Attempts) {
-			const CondorVersionInfo *vers = Q_SOCK->get_peer_version();
-			if (vers && vers->built_since_version( 8, 5, 8 )) {
-				// new versions should know better!  fail!
-				fail_quietly = false;
-			}
+		// should we fail or quietly ignore?
+		// Internal calls should fail (schedd code should know better),
+		// but user transform calls should be quietly ignored.
+		bool ignore_quietly = (flags & SetAttribute_UserTransform) != 0;
+		// For external calls, let the config knob determine.
+		if (Q_SOCK) {
+			ignore_quietly = Ignore_Secure_SetAttr_Attempts;
 		}
-		if ( ! fail_quietly) {
+		if ( ! ignore_quietly) {
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Failing!\n",
 				func_name, attr_name, key.cluster, key.proc);
@@ -4668,10 +4779,6 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 			errno = EACCES;
 			return -1;
 		} else {
-			// old versions get a pass.  succeed (but do nothing).
-			// The idea here is we will not set the secure attributes, but we won't
-			// propagate the error back because we don't want old condor_submits to not
-			// be able to submit jobs.
 			dprintf(D_ALWAYS,
 				"%s attempt to edit secure attribute %s in job %d.%d. Ignoring!\n",
 				func_name, attr_name, key.cluster, key.proc);
@@ -4809,6 +4916,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	JobQueueJob    *job = nullptr;
 	JobQueueJobSet *jobset = nullptr;
 	std::string		new_value;
+	std::string err_str;
 	bool query_can_change_only = (flags & SetAttribute_QueryOnly) != 0; // flag for 'just query if we are allowed to change this'
 
 	IdToKey(cluster_id,proc_id,key);
@@ -5008,18 +5116,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				return -1;
 		}
 
-#if !defined(WIN32)
-		uid_t user_uid = 0;
-		if ( can_switch_ids() && !pcache()->get_user_uid( owner, user_uid ) ) {
-			dprintf( D_ALWAYS, "SetAttribute security violation: "
-					 "setting owner to %s, which is not a valid user account\n",
-					 attr_value );
-			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s, which is not a "
-				"valid user account", attr_value);
-			errno = EACCES;
-			return -1;
-		}
-#endif
 		if (query_can_change_only) {
 			return 0;
 		}
@@ -5168,6 +5264,65 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 	else if (attr_id == idATTR_PROJECT_NAME) {
 		if (scheduler.HasPersistentProjectInfo()) {
+			// Ensure ProjectName is a string literal
+			std::string project_buf(attr_value);
+			bool project_is_valid = false;
+			if (project_buf.size() > 2 && project_buf[0] == '"' && project_buf[project_buf.size()-1] == '"')
+			{
+				project_buf = project_buf.substr(1, project_buf.size() - 2);
+				project_is_valid = project_buf.find('"') == std::string::npos;
+			}
+			if (!project_is_valid) {
+				formatstr(err_str, "Setting ProjectName to %s, which is not a valid string", attr_value);
+				dprintf(D_ERROR, "SetAttribute security violation: %s\n", err_str.c_str());
+				if (err) err->push("QMGMT", EACCES, err_str.c_str());
+				errno = EACCES;
+				return -1;
+			}
+
+			// If the client session has a project attribute, the project
+			// name given here must match.
+			if (Q_SOCK && Q_SOCK->getReliSock()) {
+				std::string sess_project;
+				const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
+				const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
+				if (policy_ad) {
+					policy_ad->LookupString(ATTR_TOKEN_PROJECT, sess_project);
+				}
+				if (!sess_project.empty() && strcasecmp(sess_project.c_str(), project_buf.c_str()) != 0) {
+					formatstr(err_str, "Setting ProjectName to \"%s\" when token project is \"%s\"", project_buf.c_str(), sess_project.c_str());
+					dprintf(D_ERROR, "SetAttribute security violation: %s\n", err_str.c_str());
+					if (err) err->push("QMGMT", EACCES, err_str.c_str());
+					errno = EACCES;
+					return -1;
+				}
+			}
+
+			// if there is an existing persistent project record
+			// we have to check it's Enabled status.
+			JobQueueProjectRec * prj = scheduler.find_projectinfo(project_buf.c_str());
+			if (prj) {
+				// Attempt to submit a job for a disabled project will fail here rather than in NewCluster
+				// except possibly when the session indicates the project
+				if ( ! prj->IsEnabled()) {
+					std::string reason;
+					prj->LookupString(ATTR_DISABLE_REASON, reason);
+
+					dprintf(D_ALWAYS, "SetAttribute(): rejecting attempt to attach a job to suspended project %s. %s\n", prj->Name(), reason.c_str());
+					if (!reason.empty()) {
+						err->pushf("SCHEDD",EACCES,"Project %s is suspended : %s", prj->Name(), reason.c_str());
+					} else {
+						err->pushf("SCHEDD",EACCES,"Project %s is suspended", prj->Name());
+					}
+					errno = EACCES;
+					return NEWJOB_ERR_DISABLED_USER;
+				}
+				// if there is an existing project record, use the name of the project record
+				// instead of the current attr_value to canonicalize the capitalization
+				formatstr(new_value, "\"%s\"", prj->Name());
+				attr_value = new_value.c_str();
+			}
+
 			// when there are project records, ProjectName is a cluster only attribute
 			if (proc_id == 0) {
 				return SetAttribute(cluster_id, -1, attr_name, attr_value, flags, err);
@@ -6350,10 +6505,12 @@ static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * de
 static bool MakeProjectRec(
 	const JobQueueKey & key,
 	const char * name,
+	bool enabled,
 	const ClassAd * defaults)
 {
 	bool rval = JobQueue->NewClassAd(key, PROJECT_ADTYPE) &&
-		0 == SetSecureAttributeString(key, ATTR_NAME, name)
+		0 == SetSecureAttributeString(key, ATTR_NAME, name) &&
+		0 == SetSecureAttributeInt(key, ATTR_ENABLED, enabled?1:0)
 		;
 	if (rval) {
 		// if there is a defaults ad, store those attributes as well
@@ -6362,6 +6519,7 @@ static bool MakeProjectRec(
 			ClassAd pjad;
 			pjad.Assign(ATTR_MY_TYPE, PROJECT_ADTYPE);
 			pjad.Assign(ATTR_NAME, name);
+			pjad.Assign(ATTR_ENABLED, enabled?1:0);
 			// TODO: this instead?
 			// JobQueue->AddAttrsFromTransaction(key, pjad);
 
@@ -6404,7 +6562,7 @@ CreateNeededUserRecs(const std::map<int, JobQueueUserRec*> &needed)
 	const bool enabled = true;
 	for (auto & [id,urec] : needed) {
 		if (urec->IsProject()) {
-			if ( ! MakeProjectRec(urec->jid, urec->Name(), &scheduler.getProjectRecDefaultsAd())) {
+			if ( ! MakeProjectRec(urec->jid, urec->Name(), enabled, &scheduler.getProjectRecDefaultsAd())) {
 				++fail_count;
 				break;
 			}
@@ -6475,7 +6633,7 @@ bool UserRecCreate(int userrec_id, bool is_project, const char * name, const Cla
 
 	int rval = -1;
 	if (is_project) {
-		rval = MakeProjectRec(key, name, &scheduler.getProjectRecDefaultsAd());
+		rval = MakeProjectRec(key, name, enabled, &scheduler.getProjectRecDefaultsAd());
 	} else {
 
 		const char * username  = name;
@@ -6506,11 +6664,15 @@ bool UserRecCreate(int userrec_id, bool is_project, const char * name, const Cla
 			os_user = owner;
 			os_user += '@';
 			os_user += ntdomain;
+		} else {
+			os_user = username;
 		}
 	#else
 		os_user = owner;
 	#endif
-
+		if (scheduler.m_useGenericOsUsers) {
+			os_user = GENERIC_AP_USER_PLACEHOLDER;
+		}
 		rval = MakeUserRec(key, ap_user.c_str(), os_user.c_str(), enabled, &scheduler.getUserRecDefaultsAd());
 	}
 
@@ -6627,7 +6789,7 @@ static bool AddImplicitProjectRecords(std::vector<JobQueueKey> &new_keys)
 				// MakeProjectRec adds it to the transaction
 				JobQueueProjectRec * prjad = scheduler.insert_projectinfo(name.c_str());
 				if (prjad->isPending()) {
-					MakeProjectRec(prjad->jid, name.c_str(), &scheduler.getProjectRecDefaultsAd());
+					MakeProjectRec(prjad->jid, name.c_str(), true, &scheduler.getProjectRecDefaultsAd());
 					implicit_projects.emplace_back(prjad->jid);
 				}
 			}
@@ -6642,21 +6804,26 @@ static bool AddImplicitProjectRecords(std::vector<JobQueueKey> &new_keys)
 
 
 static int
-AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
+AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errstack)
 {
-	ClassAd policy_ad;
+	const ClassAd* policy_ad = nullptr;
 	if (Q_SOCK && Q_SOCK->getReliSock()) {
 		const std::string &sess_id = Q_SOCK->getReliSock()->getSessionID();
-		daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+		policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	}
 
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
 	// See if the values have already been set
-	ClassAd *x509_attrs = &policy_ad;
+	const ClassAd *x509_attrs = policy_ad;
 	std::string last_proxy_file;
 	ClassAd proxy_file_attrs;
+
+	std::string session_project;
+	if (policy_ad) {
+		policy_ad->LookupString(ATTR_TOKEN_PROJECT, session_project);
+	}
 
 	// Put X509 credential information in cluster ads (from either the
 	// job's proxy or the GSI authentication on the CEDAR socket).
@@ -6695,9 +6862,48 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 				#endif
 				}
 			}
+
+				// ...
+			std::string ap_user;
+			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
+			const JobQueueUserRec *urec = scheduler.lookup_owner_const(ap_user.c_str());
+			if (urec == nullptr) {
+				dprintf(D_ERROR, "No User Record for user %s, aborting transaction\n", ap_user.c_str());
+				if (errstack) {
+					errstack->pushf("SCHEDD", EACCES, "Unknown User %s.", ap_user.c_str());
+				}
+				return -1;
+			}
+
+			const char* os_user = urec->OsUser();
+			if (os_user == nullptr) {
+				dprintf(D_ERROR, "User %s has no OS user, aborting transaction\n", ap_user.c_str());
+				if (errstack) {
+					errstack->pushf("SCHEDD", EACCES, "No OS user for %s.", ap_user.c_str());
+				}
+				return -1;
+			} else {
+#if !defined(WIN32)
+				uid_t user_uid = 0;
+				if ( can_switch_ids() && !pcache()->get_user_uid( os_user, user_uid ) ) {
+					dprintf(D_ERROR, "User %s has OS user %s, which is not a valid OS account, aborting transaction\n",
+					        ap_user.c_str(), os_user);
+					if (errstack) {
+						errstack->pushf("SCHEDD", EACCES, "Setting OsUser to %s, which is not a "
+										"valid OS account", os_user);
+					}
+					return -1;
+				}
+#endif
+			}
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
+
+		if (JobQueueBase::IsClusterId(jid) && !session_project.empty()) {
+			SetSecureAttributeString(jid.cluster, jid.proc, ATTR_PROJECT_NAME, session_project.c_str());
+			JobQueue->SetTransactionTriggers(catJobProject);
+		}
 
 		std::string x509up, iwd;
 		GetAttributeString(jid.cluster, jid.proc, ATTR_X509_USER_PROXY, x509up);
@@ -6725,7 +6931,7 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 		if (jid.proc == CLUSTERID_qkey2 && x509up.empty()) {
 			// A cluster ad with no proxy file. If the client authenticated
 			// with GSI, use the attributes from that credential.
-			x509_attrs = &policy_ad;
+			x509_attrs = policy_ad;
 		} else {
 			// We have a cluster ad with a proxy file or a proc ad with a
 			// proxy file that may be different than in its cluster's ad.
@@ -6776,16 +6982,33 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *)
 				// Failed to read proxy for a cluster ad.
 				// If the client authenticated with GSI, use the attributes
 				// from that credential.
-				x509_attrs = &policy_ad;
+				x509_attrs = policy_ad;
 			}
 		}
 
-		for (const auto & x509_attr : *x509_attrs)
-		{
-			std::string attr_value_buf;
-			unparse.Unparse(attr_value_buf, x509_attr.second);
-			SetSecureAttribute(jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
-			dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
+		if (x509_attrs) {
+			size_t prefix_len = strlen(ATTR_X509_USER_prefix);
+			for (const auto & x509_attr : *x509_attrs) {
+				if (strncasecmp(x509_attr.first.c_str(), ATTR_X509_USER_prefix, prefix_len) != 0) {
+					continue;
+				}
+				std::string attr_value_buf;
+				unparse.Unparse(attr_value_buf, x509_attr.second);
+				SetSecureAttribute(jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
+				dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
+			}
+		}
+		if (policy_ad) {
+			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
+			for (const auto & token_attr : *policy_ad) {
+				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+					continue;
+				}
+				std::string attr_value_buf;
+				unparse.Unparse(attr_value_buf, token_attr.second);
+				SetSecureAttribute(jid.cluster, jid.proc, token_attr.first.c_str(), attr_value_buf.c_str());
+				dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, token_attr.first.c_str(), attr_value_buf.c_str());
+			}
 		}
 	}
 
@@ -9584,7 +9807,7 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * any user; o.w. only get jobs for specified user.
  * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
@@ -9622,10 +9845,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 	double current_startd_rank = 0.0;
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
-
-	bool ocu = false;
-	my_match_ad->LookupBool("OCUClaim", ocu);
-
 	std::string remoteOwner;
 	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
 
@@ -9709,8 +9928,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 		#endif
 
-			if (ocu) {
-				if (remoteOwner == job->ownerinfo->Name()) {
+			if (is_ocu) {
+
+				// OCU ad should have ATTR_OWNER set to the owner of the OCU claim
+				std::string owner;
+				my_match_ad->LookupString(ATTR_OWNER, owner);
+
+				if (owner == job->ownerinfo->Name()) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
@@ -9834,7 +10058,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 
 			jobid = job->jid; // success!
-			if (ocu) {
+			if (is_ocu) {
 				if (my_match_ad) {
 					int ocu_claims = 0;
 					std::string ocu_claim_stat_attr = 
@@ -9850,7 +10074,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 		// If we got here and ocu true and match_any_user is false, then
 		// no job from our priority user matched.  Try again for someone else.
-		if (ocu && !match_any_user) {
+		if (is_ocu && !match_any_user) {
 			match_any_user = true;
 			continue;
 		}
@@ -10002,6 +10226,9 @@ int GetJobQueuedCount() {
     return job_queued_count;
 }
 
+bool JobQueueInitDone() {
+	return job_queue_init_done;
+}
 
 /**********************************************************************
  * These qmgt function support JobSets - see jobsets.cpp       
@@ -10052,5 +10279,15 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName)
 	}
 
 	return rval;
+}
+
+int get_next_cluster_num() {
+	int cluster = next_cluster_num++;
+
+	// And persistent the max cluster number
+	char tmp[PROC_ID_STR_BUFLEN];
+	snprintf(tmp, sizeof(tmp), "%d", next_cluster_num);
+	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, tmp);
+	return cluster;
 }
 

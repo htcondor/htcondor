@@ -49,6 +49,9 @@ from .htcondor2_impl import (
     _schedd_refresh_gsi_proxy,
     _schedd_get_dag_contact_info,
     _schedd_get_claims,
+    _schedd_create_ocu,
+    _schedd_remove_ocu,
+    _schedd_query_ocu,
 )
 
 
@@ -99,6 +102,7 @@ def job_spec_hack(
         return f_constraint(addr, job_spec, *args);
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
+
 
 # helper method that routes various types of userrec_spec
 # to the correct userrec act function
@@ -190,6 +194,7 @@ class Schedd():
             )
         )
 
+
     def queryUserAds(self,
         constraint : Union[str, classad.ExprTree] = "",
         projection : List[str] = [],
@@ -228,6 +233,7 @@ class Schedd():
                 (callback(result) for result in results)
             )
         )
+
 
     def queryProjectAds(self,
         constraint : Union[str, classad.ExprTree] = "",
@@ -320,6 +326,7 @@ class Schedd():
 
         return pyResult
 
+
     def addUserRec(self,
         user_spec : Union[List[str], str, List[classad.ClassAd] ],
     ) -> classad.ClassAd:
@@ -339,6 +346,7 @@ class Schedd():
             (0x10000 + 541, None)
         )
         return result;
+
 
     def enableUserRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -360,6 +368,7 @@ class Schedd():
             (541, None)
         )
         return result;
+
 
     def disableUserRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -387,6 +396,7 @@ class Schedd():
             (542, reason)
         )
         return result;
+
 
     def removeUserRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -434,6 +444,7 @@ class Schedd():
             (0x10000 + 0x80000 + 541, None)
         )
         return result;
+
 
     def removeProjectRec(self,
         user_spec : Union[List[str], str, classad.ExprTree],
@@ -580,7 +591,7 @@ class Schedd():
     #
     # This can certainly be done in version 2, but I'd like to see where
     # else we'd like to keep a socket open before implementing anything.
-
+    #
     # `match` should be `limit` for consistency with `query()`.
     def history(self,
         constraint : Optional[Union[str, classad.ExprTree]] = None,
@@ -944,12 +955,14 @@ class Schedd():
             (),
         )
 
+
     def _get_dag_contact_info(self,
         cluster: int
     ) -> classad.ClassAd:
         if not isinstance(cluster, int):
             raise TypeError("cluster must be an integer")
         return _schedd_get_dag_contact_info(self._addr, cluster)
+
 
     def get_claims(self,
         constraint : Optional[Union[str, classad.ExprTree]] = None,
@@ -965,6 +978,45 @@ class Schedd():
         """
         projection_string = ",".join(projection)
         return _schedd_get_claims(self._addr, str(constraint), projection_string)
+
+
+    def create_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing an OCU claim request to the schedd.
+
+        :param request: ClassAd representing the OCU claim request
+            must contain Owner, and RequestCpu, Memory, maybe disk
+        :return:  A ClassAd containing information about the create operation.
+        """
+        return _schedd_create_ocu(self._addr, request._handle)
+
+
+    def remove_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Send a classad representing an existing OCU id request to be removed.
+
+        :param request: ClassAd representing the OCU claim request
+            must contain the OCU id
+        :return:  A ClassAd containing information about the remove operation.
+        """
+        return _schedd_remove_ocu(self._addr, request)
+
+
+    def query_ocu(self,
+        request : classad.ClassAd
+    ) -> classad.ClassAd:
+        """
+        Query the schedd for all the OCU ads
+
+        :param request: ClassAd representing the query
+        :return:  A list of OCU ClassAds
+        """
+        return _schedd_query_ocu(self._addr, request._handle)
+
 
 def _add_line_from_itemdata(submit_file, item, separator, projection):
     if isinstance(item, str):

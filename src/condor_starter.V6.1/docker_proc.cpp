@@ -271,7 +271,7 @@ DockerProc::LaunchContainer() {
 	TemporaryPrivSentry sentry(PRIV_USER);
 	std::string workingDir = starter->GetWorkingDir(0);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
-	std::string DockerErrorFile  = workingDir + "/docker_stderror";
+	std::string DockerErrorFile  = workingDir + "/.docker_stderror";
 
 	//childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -402,7 +402,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
 			std::string fileName = starter->GetWorkingDir(0);
-			fileName += "/docker_stderror";
+			fileName += "/.docker_stderror";
 			int fd = open(fileName.c_str(), O_RDONLY, 0000);
 			if (fd >= 0) {
 				int r = read(fd, buf, 511);
@@ -418,14 +418,14 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				}
 				close(fd);
 			} else {
-				dprintf(D_ALWAYS, "Cannot open docker_stderror\n");
+				dprintf(D_ALWAYS, "Cannot open .docker_stderror\n");
 			}
 			}
 			message = buf;
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
-			unlink("docker_stderror");
+			unlink(".docker_stderror");
 			}
 			return VanillaProc::JobReaper( pid, status );
 		}
@@ -1087,7 +1087,7 @@ bool DockerProc::Version( std::string & version ) {
 
 	return foundVersion;
 }
-void 
+bool
 DockerProc::restartCheckpointedJob() {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	CondorError error;
@@ -1097,7 +1097,7 @@ DockerProc::restartCheckpointedJob() {
 		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
 	}
 
-	VanillaProc::restartCheckpointedJob();
+	return VanillaProc::restartCheckpointedJob();
 }
 
 // Generate a list of strings that are suitable arguments to

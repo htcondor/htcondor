@@ -2052,6 +2052,7 @@ handle_dc_start_token_request(int, Stream* stream)
 					final_key_name,
 					token_request.getBoundingSet(),
 					token_request.getLifetime(),
+					false,
 					token,
 					static_cast<Sock*>(stream)->getUniqueId(),
 					&err))
@@ -2082,10 +2083,10 @@ handle_dc_start_token_request(int, Stream* stream)
 				Sock * sock = dynamic_cast<Sock *>(stream);
 				if( sock ) {
 					const char * method = sock->getAuthenticationMethodUsed();
-					if( strcasecmp( method, "ANONYMOUS" ) == 0 ) {
+					if( !method || strcasecmp( method, "ANONYMOUS" ) == 0 ) {
 						g_request_map.erase(iter);
 						result_ad.Clear();
-						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS authentication.");
+						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS or no authentication.");
 						result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
 					}
 				}
@@ -2464,6 +2465,7 @@ handle_dc_approve_token_request(int, Stream* stream)
 			final_key_name,
 			token_request.getBoundingSet(),
 			token_request.getLifetime(),
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
@@ -2550,6 +2552,7 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 				final_key_name,
 				token_request.getBoundingSet(),
 				token_request.getLifetime(),
+				false,
 				token,
 				static_cast<Sock*>(stream)->getUniqueId(),
 				&err))
@@ -2650,7 +2653,7 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 			if (lifetime < 0) {lifetime = 0;}
 
 			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
-				lifetime, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
+					lifetime, false, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
 			{
 				error_code = err.code();
 				error_string = err.getFullText();
@@ -2830,6 +2833,7 @@ handle_dc_session_token(int, Stream* stream)
 			final_key_name,
 			authz_list,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
@@ -3609,18 +3613,10 @@ int dc_main( int argc, char** argv )
 				get_mySubSystem()->getTypeName() );
 	}
 
-	if ( !dc_main_init ) {
-		EXCEPT( "Programmer error: dc_main_init is NULL!" );
-	}
-	if ( !dc_main_config ) {
-		EXCEPT( "Programmer error: dc_main_config is NULL!" );
-	}
-	if ( !dc_main_shutdown_fast ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_fast is NULL!" );
-	}
-	if ( !dc_main_shutdown_graceful ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_graceful is NULL!" );
-	}
+	ASSERT(dc_main_init);
+	ASSERT(dc_main_config);
+	ASSERT(dc_main_shutdown_fast);
+	ASSERT(dc_main_shutdown_graceful);
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.

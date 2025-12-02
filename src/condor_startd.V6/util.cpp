@@ -267,22 +267,14 @@ cleanup_execute_dirs(const std::string &exec_path)
 
 		execute_dir.Remove_Entire_Directory();
 #else
-		std::string dirbuf;
-		pair_strings_vector root_dirs = root_dir_list();
-		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-			const char * exec_path_full = dirscat(it->second.c_str(), exec_path.c_str(), dirbuf);
-			if(exec_path_full) {
-				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
-				Directory execute_dir( exec_path_full, PRIV_ROOT );
+		Directory execute_dir(exec_path.c_str(), PRIV_ROOT);
 
-				execute_dir.Rewind();
-				while ( execute_dir.Next() ) {
-					check_recovery_file( execute_dir.GetFullPath(), true );
-				}
-
-				execute_dir.Remove_Entire_Directory();
-			}
+		execute_dir.Rewind();
+		while (execute_dir.Next()) {
+			check_recovery_file(execute_dir.GetFullPath(), true);
 		}
+
+		execute_dir.Remove_Entire_Directory();
 #endif
 	}
 }
@@ -417,22 +409,17 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 #else /* UNIX */
 
 	// Instantiate a directory object pointing at the execute directory
-	pair_strings_vector root_dirs = root_dir_list();
-	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
+	Directory execute_dir( exec_path, PRIV_ROOT );
 
-		Directory execute_dir( exec_path_full, PRIV_ROOT );
-
-		if (remove_exec_path) {
-			// Remove entire subdirectory; used to remove
-			// an encrypted execute directory
-			execute_dir.Remove_Full_Path(exec_path_full);
-		} else {
-			// Look for specific pid_dir subdir
-			if ( execute_dir.Find_Named_Entry( pid_dir.c_str() ) ) {
-				// Remove the execute directory
-				execute_dir.Remove_Current_File();
-			}
+	if (remove_exec_path) {
+		// Remove entire subdirectory; used to remove
+		// an encrypted execute directory
+		execute_dir.Remove_Full_Path(exec_path);
+	} else {
+		// Look for specific pid_dir subdir
+		if (execute_dir.Find_Named_Entry(pid_dir.c_str())) {
+			// Remove the execute directory
+			execute_dir.Remove_Current_File();
 		}
 	}
 #endif  /* UNIX */
@@ -465,11 +452,11 @@ reply( Stream* s, int cmd )
 
 
 bool
-refuse( Stream* s, ClassAd* replyAd )
+refuse( Stream* s, ClassAd* replyAd, bool retry_ok )
 {
 	s->end_of_message();
 	s->encode();
-	if( !s->put(NOT_OK) ) {
+	if( !s->put(retry_ok ? CONDOR_TRY_AGAIN : NOT_OK) ) {
 		return false;
 	} 
 	if (replyAd && ! putClassAd(s, *replyAd)) {
@@ -481,6 +468,17 @@ refuse( Stream* s, ClassAd* replyAd )
 	return true;
 }
 
+bool refuseX( Stream* s, CONDOR_HOLD_CODE code, const char * reason, bool retry_ok /*=false*/)
+{
+	if (reason && *reason) {
+		ClassAd replyAd;
+		replyAd.Assign(ATTR_VACATE_REASON, reason);
+		replyAd.Assign(ATTR_VACATE_REASON_CODE, code);
+		return refuse(s, &replyAd, retry_ok);
+	}
+	return refuse(s, nullptr, retry_ok);
+}
+
 
 bool
 caInsert( ClassAd* target, ClassAd* source, const char* attr,
@@ -488,13 +486,9 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 {
 	ExprTree* tree;
 
-	if( !attr ) {
-		EXCEPT( "caInsert called with NULL attribute" );
-	}
-	if( !target || !source ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caInsert called with NULL classad\n");
-		EXCEPT( "caInsert called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
+	ASSERT(source);
 
 	std::string new_attr;
 	if( prefix ) {
@@ -518,13 +512,8 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 
 bool caRevertToParent(ClassAd* target, const char * attr)
 {
-	if( !attr ) {
-		EXCEPT( "caRevertToParent called with NULL attribute" );
-	}
-	if( !target ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caRevertToParent called with NULL classad\n");
-		EXCEPT( "caRevertToParent called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
 
 	ClassAd * parent = target->GetChainedParentAd();
 	if ( ! parent) {
@@ -540,13 +529,8 @@ bool caRevertToParent(ClassAd* target, const char * attr)
 
 void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
 {
-	if( !attr ) {
-		EXCEPT( "caDeleteThruParent called with NULL attribute" );
-	}
-	if( !target ) {
-		dprintf(D_ALWAYS | D_BACKTRACE, "caDeleteThruParent called with NULL classad\n");
-		EXCEPT( "caDeleteThruParent called with NULL classad" );
-	}
+	ASSERT(attr);
+	ASSERT(target);
 
 	std::string new_attr;
 	if (prefix) {

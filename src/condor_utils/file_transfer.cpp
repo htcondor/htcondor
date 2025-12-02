@@ -969,13 +969,14 @@ FileTransfer::_Init(
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
 
+	if (ActiveTransferTid >= 0) {
+		dprintf(D_ERROR, "FileTransfer::Init called during active transfer!\n");
+		return 0;
+	}
+
 	m_use_file_catalog = use_file_catalog;
 
 	simple_init = false;
-
-	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::Init called during active transfer!");
-	}
 
 	// Note: we must register commands here instead of our constructor
 	// to ensure that daemonCore object has been initialized before we
@@ -992,7 +993,8 @@ FileTransfer::_Init(
 							&FileTransfer::Reaper,
 							"FileTransfer::Reaper()");
 		if (ReaperId == 1) {
-			EXCEPT("FileTransfer::Reaper() can not be the default reaper!");
+			dprintf(D_ERROR, "FileTransfer::Reaper() can not be the default reaper!\n");
+			return 0;
 		}
 	}
 
@@ -1740,7 +1742,6 @@ FileTransfer::Reap(int exit_status)
 	FileTransferInfo & Info = r_Info; // I am the fork parent, so I get to use r_Info
 
 	Info.duration = time(nullptr) - TransferStart;
-	Info.in_progress = false;
 	bool set_success_to_failed = false;
 	if( WIFSIGNALED(exit_status) ) {
 		Info.success = false;
@@ -1765,6 +1766,10 @@ FileTransfer::Reap(int exit_status)
 			// caller, which should not see the success status 
 			// as failed until we have the full error message
 			// which comes from the final message on the pipe.
+
+			// Same holds true for in_progress, delay setting
+			// that to true until after we have drained the pipe,
+			// and want to fire the final callback.
 			set_success_to_failed = true;
 		}
 	}
@@ -1799,6 +1804,7 @@ FileTransfer::Reap(int exit_status)
 		// below can interpret everything correctly. 
 		Info.success = false;
 	}
+	Info.in_progress = false;
 
 	if( registered_xfer_pipe ) {
 		registered_xfer_pipe = false;

@@ -274,9 +274,8 @@ GetViewInfo( )
 	
 		// insert names of subordinate views
 	viewNames.clear( );
-	SubordinateViews::iterator	si;
-	for( si=subordinateViews.begin(); si!=subordinateViews.end(); si++ ) {
-		if( !( lit = Literal::MakeString( (*si)->GetViewName( ) ) ) ) {
+	for( auto subordinate_view : subordinateViews ) {
+		if( !( lit = Literal::MakeString( subordinate_view->GetViewName( ) ) ) ) {
 			delete newAd;
 			return( NULL );
 		}
@@ -385,9 +384,8 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 	viewMembers.clear( );
 
 		// re-order content by new rank expression
-	for( mIdxItr=memberIndex.begin(); mIdxItr!=memberIndex.end(); mIdxItr++ ) {
-		key = mIdxItr->first;
-		if( ( ad = coll->GetClassAd( key ) ) == NULL	||
+	for( const auto& [memberKey, value] : memberIndex ) {
+		if( ( ad = coll->GetClassAd( memberKey ) ) == NULL	||
 			!evalEnviron.ReplaceRightAd( ad )			||
 			!evalEnviron.EvaluateAttr( "LeftRankValue", rankValue ) ) {
 				// internal error
@@ -395,7 +393,7 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 		}
 
 			// insert into member list
-		vm.SetKey( key );
+		vm.SetKey( memberKey );
 		vm.SetRankValue( rankValue );
 		viewMembers.insert( vm );
 	}

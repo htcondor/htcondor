@@ -18,7 +18,6 @@ Build-Depends: cmake (>= 3.16),
                default-jdk,
 #endif
                dh-python,
-               libcgroup-dev,
                libcurl4-openssl-dev,
                libkrb5-dev,
                libldap2-dev | libldap-dev,
@@ -72,8 +71,8 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.18.1),
-         pelican-osdf-compat (>= 7.18.1),
+         pelican (>= 7.21.1),
+         pelican-osdf-compat (>= 7.21.1),
 #endif
          libjs-bootstrap,
          libjs-jquery,

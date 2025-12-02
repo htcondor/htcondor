@@ -288,7 +288,7 @@ int render_ads(void* pv, ClassAd* ad)
 // Suspend users is a composite operation where we both disable and edit
 // with a single command.  This can be done with a USERREC_EDIT command
 // if we supply ATTR_ENABLED and ATTR_DISABLE_REASON in the edit list
-ClassAd *  suspendUsers(
+ClassAd *  suspendUsersOrProjects(
 	DCSchedd &schedd,
 	_cmd_properties & op,
 	std::vector<const char*> &usernames,
@@ -757,7 +757,8 @@ main( int argc, const char *argv[] )
 				op.rectype = "users and projects";
 				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "Not Implemented");
 			} else {
-				ad = schedd.addProjects(&usernames[0], (int)usernames.size(), &errstack);
+				const bool create_if = dash_add;
+				ad = schedd.enableProjects(&usernames[0], (int)usernames.size(), create_if, &errstack);
 			}
 		} else {
 			const bool create_if = dash_add;
@@ -766,7 +767,7 @@ main( int argc, const char *argv[] )
 				op.name = "unsuspend";
 				op.has_constraint = constraint;
 				op.num_ads = usernames.size();
-				ad = suspendUsers(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
+				ad = suspendUsersOrProjects(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
 			} else {
 				ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
 			}
@@ -788,14 +789,26 @@ main( int argc, const char *argv[] )
 		ClassAd * ad = nullptr;
 		struct _cmd_properties op(cmd, "disable", dash_projects ? "projects" : "users");
 		if (dash_projects) {
-			errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects is not implemented");
+			if ( ! edit_args.empty()) {
+				op.cmd = cmd;
+				op.name = "suspend";
+				op.has_constraint = constraint;
+				op.num_ads = usernames.size();
+				ad = suspendUsersOrProjects(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
+			} else if (constraint) {
+				op.has_constraint = true;
+				ad = schedd.disableProjects(constraint, disableReason, &errstack);
+			} else {
+				op.num_ads = usernames.size();
+				ad = schedd.disableProjects(&usernames[0], (int)usernames.size(), disableReason, &errstack);
+			}
 		} else {
 			if ( ! edit_args.empty()) {
 				op.cmd = cmd;
 				op.name = "suspend";
 				op.has_constraint = constraint;
 				op.num_ads = usernames.size();
-				ad = suspendUsers(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
+				ad = suspendUsersOrProjects(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
 			} else if (constraint) {
 				op.has_constraint = true;
 				ad = schedd.disableUsers(constraint, disableReason, &errstack);

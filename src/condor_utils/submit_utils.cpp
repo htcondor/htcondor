@@ -3522,6 +3522,13 @@ int SubmitHash::ReportCommonMistakes()
 		ABORT_AND_RETURN(1);
 	}
 
+	std::string out_dir;
+	if (job->Lookup(ATTR_OUTPUT_DESTINATION) && job->Lookup(ATTR_OUTPUT_DIRECTORY)) {
+		push_error(stderr, "You cannot use both " SUBMIT_KEY_OutputDestination
+			" and " SUBMIT_KEY_OutputDirectory " in the same submit file\n");
+		ABORT_AND_RETURN(1);
+	}
+
 	return abort_code;
 }
 
@@ -4754,6 +4761,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	// formerly SetOutputDestination
 	{SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_OutputDirectory, ATTR_OUTPUT_DIRECTORY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_genfile},
 	// formerly SetWantGracefulRemoval
 	{SUBMIT_KEY_WantGracefulRemoval, ATTR_WANT_GRACEFUL_REMOVAL, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJobMaxVacateTime
@@ -4984,6 +4992,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	{SUBMIT_KEY_AcctGroupUser, ATTR_ACCT_GROUP_USER, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
+	{SUBMIT_KEY_ProjectName, ATTR_PROJECT_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup},
 	//{ "+" ATTR_ACCOUNTING_GROUP, ATTR_ACCOUNTING_GROUP, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_acctgroup },
 	// invoke SetOAuth
 	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER_deprecated, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_acctgroup},
@@ -5310,6 +5319,40 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 				auto_free_ptr rrm(submit_param(SUBMIT_KEY_RetryRequestMemory));
 				auto_free_ptr rrmax(submit_param(SUBMIT_KEY_RetryRequestMemoryMax));
 				auto_free_ptr rrmincr(submit_param(SUBMIT_KEY_RetryRequestMemoryIncrease));
+				
+				// Check units for retry_request_memory if it's a literal value
+				if (rrm) {
+					char unit = 0;
+					int64_t retry_memory_mb = 0;
+					const char * endp = nullptr;
+					if (parse_int64_bytes(rrm, retry_memory_mb, 1024 * 1024, &unit, ",", &endp)) {
+						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+						if (missingUnitsIs && ! unit) {
+							if (0 == strcasecmp("error", missingUnitsIs)) {
+								push_error(stderr, "\nERROR: retry_request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
+								ABORT_AND_RETURN(1);
+							}
+							push_warning(stderr, "\nWARNING: retry_request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
+						}
+					}
+				}
+				
+				// Check units for retry_request_memory_max if it's a literal value
+				if (rrmax) {
+					char unit = 0;
+					int64_t retry_max_mb = 0;
+					if (parse_int64_bytes(rrmax, retry_max_mb, 1024 * 1024, &unit)) {
+						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+						if (missingUnitsIs && ! unit) {
+							if (0 == strcasecmp("error", missingUnitsIs)) {
+								push_error(stderr, "\nERROR: retry_request_memory_max=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
+								ABORT_AND_RETURN(1);
+							}
+							push_warning(stderr, "\nWARNING: retry_request_memory_max=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
+						}
+					}
+				}
+				
 				if (rrm) {
 					if (rrmincr) {
 						push_warning(stderr, "\nWARNING: retry_request_memory_increase will be ignored because retry_request_memory was used");
@@ -6270,11 +6313,13 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
-				// check output (only a single file this time)
+				// check output (not a list this time)
 				if (job->LookupString(ATTR_OUTPUT_DESTINATION, file_list)) {
 					if (IsUrl(file_list.c_str())) {
 						std::string tag = getURLType(file_list.c_str(), true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
+					} else {
+						push_warning(stderr, SUBMIT_KEY_OutputDestination " must be a URL, did you mean " SUBMIT_KEY_OutputDirectory " ?\n");
 					}
 				}
 
@@ -6503,6 +6548,12 @@ int SubmitHash::SetAccountingGroup()
 	// if nice-user is not a prefix, then it conflicts with accounting_group
 	// TODO? should this be a knob?
 	const bool nice_user_is_prefix = false;
+
+	// TODO: default accountin group from project?
+	auto_free_ptr project(submit_param(SUBMIT_KEY_ProjectName, ATTR_PROJECT_NAME));
+	if (project) {
+		AssignJobString(ATTR_PROJECT_NAME, project);
+	}
 
 	// is a group setting in effect?
 	auto_free_ptr group(submit_param(SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP));

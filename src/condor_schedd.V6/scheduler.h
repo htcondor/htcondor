@@ -433,6 +433,7 @@ private:
 };
 
 class JobSets; // forward reference - declared in jobsets.h
+class OCU; // forward reference - declared in qmgmt.h
 
 class Scheduler : public Service
 {
@@ -710,8 +711,10 @@ class Scheduler : public Service
 	bool HasPersistentProjectInfo() const { return EnablePersistentProjectInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
-	const OwnerInfo * insert_owner_const(const char*);
+	const OwnerInfo * insert_owner_const(const char*, CondorError* errstack=nullptr);
 	const OwnerInfo * lookup_owner_const(const char*);
+	// make sure that the ownerInfo has a valid OsUser, assiging a generic one if needed.
+	const char *    solidify_os_user(const OwnerInfo *, CondorError* errstack=nullptr);
 	// make sure that a job object has a submitter record pointer
 	const SubmitterData * get_submitter(JobQueueJob * job) {
 		SubmitterData * subdat = nullptr;
@@ -723,6 +726,12 @@ class Scheduler : public Service
 	JobQueueProjectRec * get_projectinfo(JobQueueJob * job);
 	// find a project record or insert a pending project record
 	JobQueueProjectRec * insert_projectinfo(const char * project_name);
+
+	void configGenericOsUsers();
+
+	bool m_useGenericOsUsers{false};
+	std::set<std::string> m_openGenericOsUsers;
+	std::set<std::string> m_claimedGenericOsUsers;
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
@@ -755,6 +764,7 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
+	OCU *getOCU(int ocu_id); 
 private:
 
 	// Setup a new security session for a remote negotiator.
@@ -936,7 +946,7 @@ private:
 
 	// utility functions
 	void		sumAllSubmitterData(SubmitterData &all);
-	void		updateSubmitterAd(SubmitterData &submitterData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
+	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
@@ -946,9 +956,13 @@ private:
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	int			command_query_user_ads(int, Stream* stream);
 	int			command_act_on_user_ads(int, Stream* stream);
+	int			command_act_on_ocus(int, Stream* stream);
+    ClassAd     act_on_ocu_create(const ClassAd &request);
+    ClassAd     act_on_ocu_remove(const ClassAd &request);
+	std::vector<ClassAd>     act_on_ocu_query(const ClassAd &request);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
-	OwnerInfo     * insert_ownerinfo(const char*);
+	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
 	SubmitterData * insert_submitter(const char*);
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
@@ -1114,6 +1128,7 @@ private:
 	MapFile m_protected_url_map;
 
 	friend class DedicatedScheduler;
+	friend class JobQueueUserRec;
 };
 
 

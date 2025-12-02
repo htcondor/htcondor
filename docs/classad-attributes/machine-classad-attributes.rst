@@ -76,6 +76,11 @@ Machine ClassAd Attributes
     This is measured in the number of integer seconds since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970).
 
+:classad-attribute-def:`CleanupCategoryCounts`
+    A nested ClassAd containing the count of cleanup reminders per resource.
+    (i.e. Account, Execute Directory, Logical Volume). This value will be
+    :ad-expr:`Undefined` if no cleanup reminders exist.
+
 :classad-attribute-def:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
     Saturday.
