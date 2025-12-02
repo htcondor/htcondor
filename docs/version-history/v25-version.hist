@@ -9,6 +9,13 @@
   :subcom:`retry_request_memory` as well.
   :jira:`3419`
 
+- The option for the *condor_schedd* to keep job event log files open for
+  a period of time has been removed.
+  This was controlled by configuration parameters
+  :macro:`USERLOG_FILE_CACHE_MAX` and
+  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
+  :jira:`3367`
+
 *** 25.6.0 bugs
 
 - Fixed an intermittent bug where the *condor_shadow* would occasionally
