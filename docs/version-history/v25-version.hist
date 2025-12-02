@@ -9,6 +9,10 @@
   :subcom:`retry_request_memory` as well.
   :jira:`3419`
 
+- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
+  DAGMan rescue file by name for state restoration.
+  :jira:`3425`
+
 - The option for the *condor_schedd* to keep job event log files open for
   a period of time has been removed.
   This was controlled by configuration parameters

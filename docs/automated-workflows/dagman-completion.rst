@@ -320,11 +320,16 @@ Using an Older Rescue DAG
 
 If a DAG has failed multiple times and produced many Rescue DAG files, specific
 Rescue DAGs can be specified to re-run the DAG from rather than the rescue with
-the highest magnitude. This is achieved by using the *-DoRescueFrom* option for
-:tool:`condor_submit_dag`.
+the highest magnitude. This is achieved by using the *-DoRescueFrom* option or
+*-RescueFile* option for :tool:`condor_submit_dag`.
 
 .. code-block:: console
     :caption: Example re-running failed DAG from specific rescue file
+
+    $ condor_submit_dag -RescueFile diamond.dag.rescue002 diamond.dag
+
+.. code-block:: console
+    :caption: Example re-running failed DAG from specific rescue number
 
     $ condor_submit_dag -DoRescueFrom 2 diamond.dag
 
