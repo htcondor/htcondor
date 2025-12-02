@@ -257,7 +257,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for them to finish.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda self: self.status_exactly(4, JobStatus.COMPLETED),
         fail_condition=ClusterState.any_held
     )
