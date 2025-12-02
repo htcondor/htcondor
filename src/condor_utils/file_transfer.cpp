@@ -6879,7 +6879,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			nonfile_ads.push_back( schema_ad );
 		}
 
-		// It's obvious what do for specific URLs, but not how the specify
+		// It's obvious what do for specific URLs, but not how to specify
 		// them, so we'll just skip them for now.
 	} else if( plugin.protocol_version == 2 ) {
 		if( param_boolean( "ASSUME_COMPATIBLE_MULTIFILE_PLUGINS", true ) ) {
