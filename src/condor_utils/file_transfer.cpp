@@ -7606,12 +7606,46 @@ FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool en
 	args.AppendArg(path);
 	args.AppendArg("-classad");
 
+
+
+	/* Copied from InvokeMultipleFileTransferPlugin() ... */
+	// prepare environment for the plugin
+	Env plugin_env;
+
+	// start with this environment
+	plugin_env.Import();
+
+	// grab environment variables from the job that start with the plugin name
+	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
+	Env job_env;
+	std::string env_errmsg;
+	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
+	std::string env_prefix = plugin.name + "_*";
+	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
+	walkargs.prefix = env_prefix.c_str();
+	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
+
+	job_env.Walk([](void * pv, const std::string & lhs, const std::string &rhs) -> bool {
+			struct _walkargs & wa = *(struct _walkargs *)pv;
+			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
+				wa.env.emplace(lhs, rhs);
+			}
+			return true;
+		}, &walkargs);
+
+	for (auto &[lhs, rhs] : walkargs.env) {
+		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
+		plugin_env.SetEnv(lhs, rhs);
+	}
+	/* ... so there's a refactoring opportunity. */
+
+
 	int timeout = param_integer( "FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT", 20 );
 
 	MyPopenTimer pgm;
 
 	// start_program returns 0 on success, -1 on "already started", and errno otherwise
-	if (pgm.start_program(args, MyPopenTimer::WITH_STDERR) != 0) {
+	if (pgm.start_program(args, MyPopenTimer::WITH_STDERR, & plugin_env) != 0) {
 		std::string message;
 		formatstr(message, "FILETRANSFER: Failed to execute %s -classad: %s skipping", path, strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
@@ -7687,6 +7721,7 @@ FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool en
 		protocol_ver = this_plugin_supports_multifile ? 2 : 1;
 	}
 	plugin.protocol_version = protocol_ver;
+
 
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
