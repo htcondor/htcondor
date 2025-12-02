@@ -16,6 +16,31 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+TEST_CASES = {
+    "v2": {
+        'expected_ads':     [
+                                classad2.ClassAd({"foo": "bar"}),
+                                classad2.ClassAd({"bar": "debug-data"}),
+                            ],
+        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=2',
+    },
+    "v3": {
+        'expected_ads':     [
+                                classad2.ClassAd({
+                                    'NonFile':      True,
+                                    'PluginData':   {'foo': 'bar'},
+                                }),
+                                classad2.ClassAd({
+                                    'NonFile':      True,
+                                    'Protocol':     'debug',
+                                    'debug_PluginData':   {'bar': 'debug-data'},
+                                }),
+                            ],
+        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=3',
+    },
+}
+
+
 @action
 def the_condor(test_dir):
     local_dir = test_dir / "condor"
@@ -28,6 +53,8 @@ def the_condor(test_dir):
 
             "LOG_FILETRANSFER_PLUGIN_STDOUT_ON_SUCCESS":    "D_ALWAYS",
             "LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE":    "D_ALWAYS",
+
+            "STARTER_DEBUG":                "D_SUBSECOND D_CATEGORY D_PID D_FULLDEBUG",
         }
     ) as the_condor:
         yield the_condor
@@ -38,8 +65,23 @@ def the_log(test_dir):
     return test_dir / "job.log"
 
 
+@action(params={name: name for name in TEST_CASES})
+def the_test_pair(request):
+    return (request.param, TEST_CASES[request.param])
+
+
 @action
-def the_completed_job(the_condor, the_log):
+def the_test_name(the_test_pair):
+    return the_test_pair[0]
+
+
+@action
+def the_test_case(the_test_pair):
+    return the_test_pair[1]
+
+
+@action
+def the_completed_job(the_test_case, the_condor, the_log):
     description = {
         'executable':            '/bin/sleep',
         'transfer_executable':   False,
@@ -48,6 +90,7 @@ def the_completed_job(the_condor, the_log):
         'arguments':             1,
 
         'log':                  the_log.as_posix(),
+        'env':                  the_test_case['env'],
 
         'transfer_input_files': 'debug://sleep/1, http://google.com',
         'MY.PluginData':        '[ foo = "bar"; ]',
@@ -76,11 +119,8 @@ def the_starter_log_path(test_dir, the_completed_job):
 
 class TestPluginClassAdTransfer:
 
-    def test_v3_plugins(the_condor, the_completed_job, the_starter_log_path):
-        expected_ads = [
-            classad2.ClassAd({"foo": "bar"}),
-            classad2.ClassAd({"bar": "debug-data"}),
-        ]
+    def test_roundtrip(self, the_test_case, the_completed_job, the_starter_log_path):
+        expected_ads = the_test_case['expected_ads']
 
         # 'FILETRANSFER: plugin ... exit=0 stdout:\n<new_ad>\n<new_ad>\n'
         prefix = 'FILETRANSFER: plugin '
