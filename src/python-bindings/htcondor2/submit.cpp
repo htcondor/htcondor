@@ -474,6 +474,11 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
             return false;
         }
 
+        std::string err;
+        if( !dag_opts.checkMutualExclusion(k, err) ) {
+            PyErr_SetString(PyExc_RuntimeError, err.c_str());
+            return false;
+        }
 
         v = dag_opts.processOptionArg( k, v );
 
