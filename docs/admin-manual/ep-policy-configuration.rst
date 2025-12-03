@@ -975,6 +975,34 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
       VG -- Thick --> Done(HTCondor Ready)
       Thinpool --> Done(HTCondor Ready)
 
+To verify HTCondor correctly initialized LVM disk enforcement for an Execution Point,
+execute the following :tool:`condor_status` query. Check to make sure the Execution Point
+appears in the list, has the correct backing device name, and has the expected amount of
+disk. Something is likely wrong if the disk column says ``0.0B``.
+
+.. code-block:: console
+
+    $ condor_status -startd -lvm
+
+.. code-block:: console
+    :caption: Sample command output
+
+    HOST                   DEVICE              PROVISION     DISK  LOOPBACK
+
+    ep1.chtc.wisc.edu      condor_vg           thick        0.0 B     false
+    ep2.chtc.wisc.edu      condor_vg           thick        1.2 TB    false
+    ep3.chtc.wisc.edu      condor_vg           thick        1.2 TB    false
+    ep4.chtc.wisc.edu      condor_vg/condor_lv thin         1.2 TB    false
+    ep5.chtc.wisc.edu      condor_vg/condor_lv thin         1.2 TB    false
+    ep6.chtc.wisc.edu      condor_vg/condor_lv thin         1.2 TB    false
+
+A misconfigured Execution Point may also result in broken resources which can
+be seen with the following :tool:`condor_status` query
+
+.. code-block:: console
+
+    $ condor_status -startd -broken
+
 .. note::
 
     The condor_startd must be restarted rather than just reconfigured in order for
