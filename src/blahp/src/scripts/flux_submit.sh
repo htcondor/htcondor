@@ -59,6 +59,9 @@ bls_setup_all_files
 #   * HostNumber: specifies the total number of nodes
 #   * SMPGranularity: specifies the number of cores per node
 #   * GPUNumber: specifies the number of GPUs per node
+#   * BatchExtraSbumitArgs: specifies user-defined extra arguments.
+#     * Note: this is not handled by this script. Instead, extra arguments are injected
+#             by the bls_set_up_local_and_extra_args function from blah_common_submit_functions.sh
 #
 # As part of this, set Flux's "--output" flag to BLAHP's "Out" argument,
 # and set Flux's "--error" flag to BLAHP's "Err" argument
@@ -152,10 +155,10 @@ elif [ ! -z "$bls_opt_mpinodes" ]; then
   flux_nslots=$bls_opt_mpinodes
   flux_ncores_per_slot=1
 # Else we cannot derive the job shape, and this request is an error
-else
-  echo "Error: invalid resource specification"
-	echo Error # for the sake of waiting fgets in blahpd
-	exit 1
+# else
+#   echo "Error: invalid resource specification"
+# 	echo Error # for the sake of waiting fgets in blahpd
+# 	exit 1
 fi
 # If flux_nnodes is defined, add "--nodes" to Flux
 if [ ! -z "$flux_nnodes" ]; then
