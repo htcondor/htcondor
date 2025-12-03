@@ -6,7 +6,7 @@ from ornithology import *
 import htcondor2
 import os
 from pathlib import Path
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, List
 from shutil import rmtree
 import json
 import glob
@@ -128,7 +128,7 @@ JOB CC touch
 #     rescue_files: List of expected rescue files to find in test case directory
 #     touch_files: List of files we expect from re-running DAGs (touched via the_job_script action script)
 class Details():
-    def __init__(self, rescue: str, rescue_num: int, setup: Callable[[Path], Path], rescue_files: list[str], touch_files: list[str]):
+    def __init__(self, rescue: str, rescue_num: int, setup: Callable[[Path], Path], rescue_files: List[str], touch_files: List[str]):
         self.rescue = rescue
         self.rescue_num = rescue_num
         self.setup = setup
@@ -163,7 +163,7 @@ class RescueGenerator:
 #------------------------------------------------------------------
 # Generator function to make all expected rescue files based on generator
 # objects plus the custom named rescue file
-def gen_expected_rescues(generators: list[RescueGenerator]):
+def gen_expected_rescues(generators: List[RescueGenerator]):
     yield CUSTOM_NAMED_RESCUE
     for gen in generators:
         for rescue in gen:
