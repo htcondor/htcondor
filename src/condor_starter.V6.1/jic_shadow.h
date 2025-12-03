@@ -268,6 +268,8 @@ public:
 
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
+	virtual void PublishToEnv( Env * proc_env );
+
 private:
 
     void _remove_files_from_output();
@@ -524,7 +526,9 @@ private:
 
 		// specially made security sessions if we are doing
 		// SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION
-	char *m_filetrans_sec_session;
+	char *      m_filetrans_sec_session;
+	std::string m_filetrans_sec_info;
+	std::string m_filetrans_sec_key;
 	char *m_reconnect_sec_session;
 
 	/// if true, transfer files at vacate time (in addtion to job exit)

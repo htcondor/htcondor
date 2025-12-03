@@ -3606,6 +3606,8 @@ JICShadow::initMatchSecuritySession()
 		m_filetrans_sec_session = NULL;
 	}
 
+	m_filetrans_sec_key = filetrans_session_key;
+	m_filetrans_sec_info= filetrans_session_info;
 	if( filetrans_session_id.length() ) {
 		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 			WRITE,
@@ -3880,5 +3882,25 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 
 void
 JICShadow::resetInputFileCatalog() {
-    filetrans->BuildFileCatalog();
+	filetrans->BuildFileCatalog();
+}
+
+
+void
+JICShadow::PublishToEnv( Env * proc_env ) {
+	proc_env->SetEnv( "_CONDOR_SHADOW_SESSION_ID", this->m_filetrans_sec_session );
+	proc_env->SetEnv( "_CONDOR_SHADOW_SESSION_KEY", this->m_filetrans_sec_key );
+	proc_env->SetEnv( "_CONDOR_SHADOW_SESSION_INFO", this->m_filetrans_sec_info );
+
+	std::string attrTransferKey;
+	if(! job_ad->LookupString( ATTR_TRANSFER_KEY, attrTransferKey )) {
+		EXCEPT("ATTR_TRANSFER_KEY not present in job ad, aborting.\n");
+	}
+	proc_env->SetEnv( "_CONDOR_SHADOW_TRANSFER_KEY", attrTransferKey );
+
+	std::string attrTransferAddress;
+	if(! job_ad->LookupString( ATTR_TRANSFER_SOCKET, attrTransferAddress )) {
+		EXCEPT("ATTR_TRANSFER_SOCKET not present in job ad, aborting.\n");
+	}
+	proc_env->SetEnv( "_CONDOR_SHADOW_TRANSFER_SOCKET", attrTransferAddress );
 }
