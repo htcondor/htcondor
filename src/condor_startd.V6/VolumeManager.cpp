@@ -288,7 +288,7 @@ VolumeManager::CreateFilesystem(const std::string &devname, CondorError &err, in
     args.AppendArg("-O");
     args.AppendArg("^has_journal");
     args.AppendArg("-E");
-    args.AppendArg("lazy_itable_init=0");
+    args.AppendArg("lazy_itable_init=1");
     args.AppendArg("-m");
     args.AppendArg("0");
     args.AppendArg("-L");

@@ -1,5 +1,9 @@
 *** 24.0.16 bugs
 
+- Fix Logical Volume setup timeout on Execution Points enforcing disk usage
+  for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
+  :jira:`3432
+
 *** 24.0.15 features
 
 - HTCondor tarballs now contain `Pelican 7.21.1 <https://pelicanplatform.org/releases>`_
