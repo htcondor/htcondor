@@ -33,6 +33,10 @@
 
 *** 25.0.6 bugs
 
+- Fixed a bug where a job with a floating point value for :ad-attr:`RequestMemory`
+  or :ad-attr:`RequestDisk` might not match the slot created to run it.
+  :jira:`3423`
+
 *** 25.5.0 features
 
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
