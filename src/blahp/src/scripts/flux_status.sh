@@ -21,13 +21,11 @@
 # Load BLAH config
 . `dirname $0`/blah_load_config.sh
 
+. `dirname $0`/flux_utils.sh
+
 # If flux_binpath is specified in the BLAH config, use it.
 # Otherwise, set flux_binpath to /usr/bin
-if [ -z "$flux_binpath" ] ; then
-  flux_binpath=/usr/bin
-fi
-
-. `dirname $0`/flux_utils.sh
+flux_utils_get_binpath flux_binpath
 
 usage_string="Usage: $0 [-w] [-n]"
 
@@ -55,19 +53,19 @@ pars=$*
 for  reqfull in $pars ; do
   # Get the Flux job ID (reqjob) and cluster name (cluster_name) from the
   # current BLAHP job ID (reqfull)
-  flux_utils_check_or_get_requeued_job $reqfull "reqjob" "cluster_name"
+  flux_utils_split_jobid $reqfull "reqjob" "cluster_name"
 
   # Set a temporary file to store the output of 'flux jobs'
   staterr=/tmp/${reqjob}_staterr
   
   # Use 'flux jobs' to get the requested job information in JSON format
-  job_json=`${flux_binpath}/flux jobs --json $reqjob 2>$staterr`
+  job_json=`${flux_binpath}flux jobs --json $reqjob 2>$staterr`
   stat_exit_code=$?
   
   # Use a separate 'flux jobs' command to validate the job ID
   # NOTE: this is not really needed for Flux v0.80.0 and later since
   #       'flux jobs' will produce a bad exit code
-  ${flux_binpath}/flux jobs -no {id} $reqjob 2>/dev/null | grep -q $reqjob
+  ${flux_binpath}flux jobs -no {id} $reqjob 2>/dev/null | grep -q $reqjob
   valid_jobid_exit_code=$?
 
   # Set default values for blah_status and exit_code

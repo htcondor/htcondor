@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# File:     flux_hold.sh
-# Author:   Ian Lumsden (ilumsden@vols.utk.edu)
-# Author:   Michela Taufer (mtaufer@utk.edu)
+# File:     slurm_hold.sh
+# Author:   Jaime Frey (jfrey@cs.wisc.edu)
 # Based on code by David Rebatto (david.rebatto@mi.infn.it)
 # 
 # Copyright (c) Members of the EGEE Collaboration. 2004. 
@@ -24,39 +23,20 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$flux_binpath" ] ; then
-  flux_binpath=/usr/bin
-fi
-
 . `dirname $0`/flux_utils.sh
+
+flux_utils_get_binpath flux_binpath
 
 sleep 5s
 
-flux_utils_check_or_get_requeued_job "$1" "requested" "cluster_name"
+flux_utils_split_jobid "$1" "requested" "cluster_name"
 
-cmdout=`${flux_binpath}/flux job urgency $requested 0 2>&1`
+cmdout=`${flux_binpath}flux job urgency $requested 0 2>&1`
 retcode=$?
-if echo "$cmdout" | grep -q 'job is inactive' || echo "$cmdout" | grep -q 'urgency cannot be changed once resources are allocated' ; then
-  # Note: all of this in the conditional is a Flux way to implement the
-  #       equivalent to `scontrol requeuehold`
-  # First, we cancel the existing job, if it's running.
-  ${flux_binpath}/flux cancel $requested
-  # Next, we get the jobspec for the original job
-  jobspec=`${flux_binpath}/flux job info $requested jobspec`
-  retcode=$?
-  # If we were successful in getting the jobspec:
-  if [ "$retcode" == "0" ]; then
-    # Resubmit the job with a hold. This creates a new job ID.
-    new_flux_job_id=`${flux_binpath}/flux job submit --urgency=hold ${jobspec}`
-    retcode=$?
-    # If the resubmission was successful, add a mapping of original job ID to new job ID
-    # to the mapping script
-    if [ "$retcode" == "0" ]; then
-      flux_utils_add_requeued_job "$1" "$requested" "$new_flux_job_id"
-      retcode=$?
-    fi
-  fi
-fi
+# NOTE: since Flux doesn't have an equivalent to 'scontrol requeuehold',
+#       this script just returns an error if 'flux job urgency' fails.
+#       The only real reason for that command to fail is if the job has
+#       entered a state where the urgency cannot be changed (e.g., RUN).
 
 if [ "$retcode" == "0" ] ; then
   echo " 0 No\\ error"

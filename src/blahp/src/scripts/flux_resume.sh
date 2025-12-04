@@ -24,15 +24,13 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$flux_binpath" ] ; then
-  flux_binpath=/usr/bin
-fi
-
 . `dirname $0`/flux_utils.sh
 
-flux_utils_check_or_get_requeued_job "$1" "requested" "cluster_name"
+flux_utils_get_binpath flux_binpath
 
-${flux_binpath}/flux job urgency $requested DEFAULT >&/dev/null
+flux_utils_split_jobid "$1" "requested" "cluster_name"
+
+${flux_binpath}flux job urgency $requested DEFAULT >&/dev/null
 
 if [ "$?" == "0" ]; then
   echo " 0 No\\ error"
