@@ -134,7 +134,8 @@ class TestPluginClassAdTransfer:
                 if prefix in line and suffix in line:
                     in_ad_block = True
             else:
-                if re.match(r'^\d\d/\d\d/\d\d \d\d:\d\d:\d\d ', line):
+                # Allow D_SUB_SECOND to be on or off.
+                if re.match(r'^\d\d/\d\d/\d\d \d\d:\d\d:\d\d(\.d+)? ', line):
                     break
                 ad_block += line
         actual_ads = [ad for ad in classad2.parseAds(ad_block)]
