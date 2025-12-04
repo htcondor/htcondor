@@ -565,7 +565,7 @@ class FileTransfer final: public Service {
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
 
-	typedef struct {
+	typedef struct _walkargs {
     	std::map<std::string, std::string> env;
     	const char * prefix{nullptr};
 	} walkargs_t;
