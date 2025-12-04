@@ -74,13 +74,13 @@ function flux_utils_get_binpath {
   local binpath_varname="$1"
 
   if [ -z "${!binpath_varname}" ]; then
-    declare -g "${binpath_varname}=/usr/bin/"
-  fi
-  
-  echo "${!binpath_varname}" | grep \/$
-  ends_in_slash=$?
-  
-  if [ "${ends_in_slash}" -ne 0 ]; then
-    declare -g "${binpath_varname}=${!binpath_varname}/"
+    declare -g "${binpath_varname}=''"
+  else
+    echo "${!binpath_varname}" | grep \/$
+    ends_in_slash=$?
+    
+    if [ "${ends_in_slash}" -ne 0 ]; then
+      declare -g "${binpath_varname}=${!binpath_varname}/"
+    fi
   fi
 }
