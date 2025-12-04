@@ -54,7 +54,7 @@ def the_condor(test_dir):
             "LOG_FILETRANSFER_PLUGIN_STDOUT_ON_SUCCESS":    "D_ALWAYS",
             "LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE":    "D_ALWAYS",
 
-            "STARTER_DEBUG":                "D_SUBSECOND D_CATEGORY D_PID D_FULLDEBUG",
+            "STARTER_DEBUG":                "D_FULLDEBUG",
         }
     ) as the_condor:
         yield the_condor
