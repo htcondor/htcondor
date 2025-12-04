@@ -54,7 +54,7 @@ def the_condor(test_dir):
             "LOG_FILETRANSFER_PLUGIN_STDOUT_ON_SUCCESS":    "D_ALWAYS",
             "LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE":    "D_ALWAYS",
 
-            "STARTER_DEBUG":                "D_FULLDEBUG",
+            "STARTER_DEBUG":                "D_FULLDEBUG D_SUB_SECOND",
         }
     ) as the_condor:
         yield the_condor
@@ -135,16 +135,11 @@ class TestPluginClassAdTransfer:
                     in_ad_block = True
             else:
                 # Allow D_SUB_SECOND to be on or off.
-                print(f"In ad block, considering: '{line}'")
-                if re.match(r'^\d\d/\d\d/\d\d \d\d:\d\d:\d\d(\.d+)? ', line):
-                    print(f"Line '{line}' was a log line, done.")
+                if re.match(r'^\d\d/\d\d/\d\d \d\d:\d\d:\d\d(\.\d+)? ', line):
                     break
                 ad_block += line
-                print(f"Ad block is now: '{ad_block}'")
         actual_ads = [ad for ad in classad2.parseAds(ad_block)]
         assert(len(actual_ads) == 2)
-        print()
-        print(actual_ads)
 
         assert expected_ads[0] == actual_ads[0]
         assert expected_ads[1] == actual_ads[1]
