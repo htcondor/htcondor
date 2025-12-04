@@ -561,9 +561,17 @@ class FileTransfer final: public Service {
 
   protected:
 
-    bool _fix_me_copy_initialized = false;
+	bool _fix_me_copy_initialized = false;
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
+
+	typedef struct {
+    	std::map<std::string, std::string> env;
+    	const char * prefix{nullptr};
+	} walkargs_t;
+	walkargs_t mergePluginSpecificEnvironment(
+		const FileTransferPlugin & plugin, Env & plugin_env
+	);
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.

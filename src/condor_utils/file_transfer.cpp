@@ -6741,10 +6741,42 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 }
 
 
+FileTransfer::walkargs_t
+FileTransfer::mergePluginSpecificEnvironment(
+    const FileTransferPlugin & plugin, Env & plugin_env
+) {
+	// grab environment variables from the job that start with the plugin name
+	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
+	Env job_env;
+	std::string env_errmsg;
+	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
+	std::string env_prefix = plugin.name + "_*";
+	walkargs_t walkargs;
+	walkargs.prefix = env_prefix.c_str();
+	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
+
+	job_env.Walk([](void * pv, const std::string & lhs, const std::string & rhs) -> bool {
+			walkargs_t & wa = *(walkargs_t *)pv;
+			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
+				wa.env.emplace(lhs, rhs);
+			}
+			return true;
+		}, &walkargs);
+
+	for (auto &[lhs, rhs] : walkargs.env) {
+		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
+		plugin_env.SetEnv(lhs, rhs);
+	}
+
+	return walkargs;
+}
+
+
 const std::vector< ClassAd > &
 FileTransfer::getPluginResultList() {
     return pluginResultList;
 }
+
 
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer
 // multiple files in a single plugin invocation.
@@ -6778,28 +6810,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT, !CONDOR_DCADDR");
 	plugin_env.Import(filter);
 
-	// grab environment variables from the job that start with the plugin name
-	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
-	Env job_env;
-	std::string env_errmsg;
-	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
-	std::string env_prefix = plugin.name + "_*";
-	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
-	walkargs.prefix = env_prefix.c_str();
-	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
-
-	job_env.Walk([](void * pv, const std::string & lhs, const std::string &rhs) -> bool {
-			struct _walkargs & wa = *(struct _walkargs *)pv;
-			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
-				wa.env.emplace(lhs, rhs);
-			}
-			return true;
-		}, &walkargs);
-
-	for (auto &[lhs, rhs] : walkargs.env) {
-		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
-		plugin_env.SetEnv(lhs, rhs);
-	}
+    auto walkargs = mergePluginSpecificEnvironment( plugin, plugin_env );
 
 	// Add any credential directory.
 	if (!m_cred_dir.empty()) {
@@ -7607,37 +7618,14 @@ FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool en
 	args.AppendArg("-classad");
 
 
-
-	/* Copied from InvokeMultipleFileTransferPlugin() ... */
 	// prepare environment for the plugin
 	Env plugin_env;
 
 	// start with this environment
-	plugin_env.Import();
+	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT, !CONDOR_DCADDR");
+	plugin_env.Import(filter);
 
-	// grab environment variables from the job that start with the plugin name
-	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
-	Env job_env;
-	std::string env_errmsg;
-	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
-	std::string env_prefix = plugin.name + "_*";
-	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
-	walkargs.prefix = env_prefix.c_str();
-	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
-
-	job_env.Walk([](void * pv, const std::string & lhs, const std::string &rhs) -> bool {
-			struct _walkargs & wa = *(struct _walkargs *)pv;
-			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
-				wa.env.emplace(lhs, rhs);
-			}
-			return true;
-		}, &walkargs);
-
-	for (auto &[lhs, rhs] : walkargs.env) {
-		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
-		plugin_env.SetEnv(lhs, rhs);
-	}
-	/* ... so there's a refactoring opportunity. */
+    std::ignore = mergePluginSpecificEnvironment(plugin, plugin_env);
 
 
 	int timeout = param_integer( "FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT", 20 );
