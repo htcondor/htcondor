@@ -18,11 +18,11 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$flux_binpath" ] ; then
-  flux_binpath=/usr/bin
-fi
+. `dirname $0`/flux_utils.sh
 
-out=`$flux_binpath/flux ping -c 1 job-manager 2>&1`
+flux_utils_get_binpath flux_binpath
+
+out=`${flux_binpath}flux ping -c 1 job-manager 2>&1`
 
 if [ "$?" == "0" ]; then
     echo "0 No error"

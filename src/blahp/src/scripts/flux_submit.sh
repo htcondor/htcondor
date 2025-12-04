@@ -30,11 +30,11 @@
 # Source blah_common_submit_function.sh to get access to common functions
 . `dirname $0`/blah_common_submit_functions.sh
 
+. `dirname $0`/flux_utils.sh
+
 # Get flux_binpath (i.e., directory continaing the 'flux' executable), or
 # default to /usr/bin
-flux_binpath=${flux_binpath:-/usr/bin}
-
-. `dirname $0`/flux_utils.sh
+flux_utils_get_binpath flux_binpath
 
 # Set bls_submit_args_prefix so that any extra Flux directives are prefixed with
 # "#FLUX: "
@@ -196,8 +196,7 @@ bls_save_submit
 # Submit the script
 ###############################################################
 
-# TODO remove slash after binpath for HTCondor 25.x (x > 0)
-jobID=`${flux_binpath}/flux batch $bls_tmp_file` # actual submission
+jobID=`${flux_binpath}flux batch $bls_tmp_file` # actual submission
 retcode=$?
 
 # Verify that submission was successful

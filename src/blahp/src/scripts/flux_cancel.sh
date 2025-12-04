@@ -25,11 +25,9 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$flux_binpath" ] ; then
-  flux_binpath=/usr/bin
-fi
-
 . `dirname $0`/flux_utils.sh
+
+flux_utils_get_binpath flux_binpath
 
 jnr=0
 jc=0
@@ -37,8 +35,8 @@ for job in  $@ ; do
         jnr=$(($jnr+1))
 done
 for  job in  $@ ; do
-        flux_utils_check_or_get_requeued_job "$job" "requested" "cluster_name"
-        cmdout=`${flux_binpath}/flux cancel $requested 2>&1`
+        flux_utils_split_jobid "$job" "requested" "cluster_name"
+        cmdout=`${flux_binpath}flux cancel $requested 2>&1`
         retcode=$?
         # If the job is already completed or no longer in the queue,
         # treat it as successfully deleted.
