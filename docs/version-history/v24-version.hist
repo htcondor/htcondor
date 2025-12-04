@@ -2,7 +2,11 @@
 
 - Fix Logical Volume setup timeout on Execution Points enforcing disk usage
   for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
-  :jira:`3432
+  :jira:`3432`
+
+- Fixed a bug where a job with a floating point value for :ad-attr:`RequestMemory`
+  or :ad-attr:`RequestDisk` might not match the slot created to run it.
+  :jira:`3423`
 
 *** 24.0.15 features
 
