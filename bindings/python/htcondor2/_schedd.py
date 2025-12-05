@@ -374,8 +374,13 @@ class Schedd():
             pattern = re.compile(r'(\d+).(\d+)')
             matches = pattern.fullmatch(since)
             if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
+                # If we don't do this, `since` is silently ignored.  This
+                # isn't the same check done by condor_history, which only
+                # allows an ExprTree with the expression type, but we
+                # can't check that from Python.
+                e = classad.ExprTree(since)
+            else:
+                since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
         elif isinstance(since, classad.ExprTree):
             since = str(since)
         elif since is None:
