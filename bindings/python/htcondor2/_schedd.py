@@ -375,7 +375,7 @@ class Schedd():
             matches = pattern.fullmatch(since)
             if matches is None:
                 raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+            since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
         elif isinstance(since, classad.ExprTree):
             since = str(since)
         elif since is None:
