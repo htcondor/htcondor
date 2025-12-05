@@ -425,6 +425,25 @@ class Schedd():
         )
         return result;
 
+    def updateUserRec(self,
+        user_attributes : List[classad.ClassAd],
+    ) -> classad.ClassAd:
+        """
+        Edit/Update User record(s) in the *condor_schedd* daemon
+
+        :param user_attributes: Which attributes to update. a list of the new User record
+             attribute values in :class:`classad2.ClassAd` form. Each ad must have a User or
+             Requirements attribute to indentify which User records to update.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, user_attributes,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (543, None)
+        )
+        return result;
+
 
     def addProjectRec(self,
         project_spec : Union[List[str], str, List[classad.ClassAd] ],
@@ -470,6 +489,25 @@ class Schedd():
         result = userrec_act_dispatcher(self._addr, user_spec,
             _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
             (0x80000 + 549, reason)
+        )
+        return result;
+
+    def updateProjectRec(self,
+        project_attributes : List[classad.ClassAd],
+    ) -> classad.ClassAd:
+        """
+        Edit/Update Project record(s) in the *condor_schedd* daemon
+
+        :param project_attributes: Which attributes to update. a list of the new Project record
+             attribute values in :class:`classad2.ClassAd` form. Each ad must have a Name or
+             Requirements attribute to indentify which Project records to update.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, project_attributes,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 543, None)
         )
         return result;
 

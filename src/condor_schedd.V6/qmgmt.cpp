@@ -6398,6 +6398,7 @@ int UpdateUserRecAttributes(JobQueueKey & key, bool is_project, const ClassAd & 
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 	std::string buf;
+	std::string delref;
 
 	for (auto &[attr, tree] : cmdAd) {
 		if (starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) continue;
@@ -6412,6 +6413,18 @@ int UpdateUserRecAttributes(JobQueueKey & key, bool is_project, const ClassAd & 
 			// and should be quietly ignored.
 			if (cat != catUserRecForbidden && cat != catUserRecRequiredKey) {
 				info.special += 1;
+			}
+			continue;
+		}
+
+		// treat Attr = delete or Attr = <nullptr> as a request to delete the attribute
+		// and not a request to set the attribute
+		if ( ! tree || (ExprTreeIsAttrRef(SkipExprParens(tree), delref) && delref=="delete")) {
+			if (JobQueue->DeleteAttribute(key, attr.c_str())) {
+				JobQueue->SetTransactionTriggers(is_project ? catSetProjectRec : catSetUserRec);
+				info.valid += 1;
+			} else {
+				info.invalid += 1;
 			}
 			continue;
 		}
