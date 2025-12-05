@@ -431,7 +431,7 @@ class Schedd():
         """
         Edit/Update User record(s) in the *condor_schedd* daemon
 
-        :param user_attributes: Which attributes to update. a list of the new User record
+        :param user_attributes: Which attributes to update. A list of the new User record
              attribute values in :class:`classad2.ClassAd` form. Each ad must have a User or
              Requirements attribute to indentify which User records to update.
         :return:  A ClassAd describing the changes made.  This
@@ -498,7 +498,7 @@ class Schedd():
         """
         Edit/Update Project record(s) in the *condor_schedd* daemon
 
-        :param project_attributes: Which attributes to update. a list of the new Project record
+        :param project_attributes: Which attributes to update. A list of the new Project record
              attribute values in :class:`classad2.ClassAd` form. Each ad must have a Name or
              Requirements attribute to indentify which Project records to update.
         :return:  A ClassAd describing the changes made.  This
