@@ -372,7 +372,7 @@ class Schedd():
             since = f"ClusterID == {since}"
         elif isinstance(since, str):
             pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
+            matches = pattern.fullmatch(since)
             if matches is None:
                 raise ValueError("since string must be in the form {clusterID}.{procID}")
             since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
