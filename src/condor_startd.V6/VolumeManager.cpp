@@ -1147,6 +1147,10 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
     filter.lv_names.clear();
     filter.QueryNonCondorLVs().SkipThinpool();
 
+    // Reset non-condor usage count so multiple calls don't
+    // create bogus numbers (does a += below)
+    m_non_condor_usage = 0;
+
     // NOTE: Failures here make things wonky but aren't critical failures
     if ( ! getLVMReport(report, err, filter, GetTimeout())) {
         dprintf(D_STATUS, "Warning: Failed to query non-condor LVs: %s\n",
@@ -1155,8 +1159,7 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
     } else {
         for (const auto& lv : report) {
             try {
-                uint64_t used = std::stoll(lv.size);
-                AddNonCondorUsage(used);
+                m_non_condor_usage += std::stoll(lv.size);
             } catch (...) {
                 dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
                         lv.size.c_str(), lv.name.c_str());
