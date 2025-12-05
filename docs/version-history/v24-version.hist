@@ -9,7 +9,7 @@
   :jira:`3423`
 
 - Fixed a bug that would cause a crash in the *condor_rooster* and *condor_defrag* when many slots
-  would have identical :ad-attr:`Rank` expressions.
+  would have identical :macro:`RANK` expressions.
   :jira:`3436`
 
 *** 24.0.15 features
