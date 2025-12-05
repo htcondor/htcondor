@@ -156,9 +156,10 @@ XInterface::TryUserXDG(const char *user)
 		*/
 		stdfs::directory_options opts =
 			stdfs::directory_options::skip_permission_denied;
+    std::error_code ec;
 
-		for (const auto &entry: stdfs::directory_iterator(xdg_runtime_dir, opts)) {
-			if (entry.path().has_filename() && entry.path().filename().string().starts_with("xauth_")) {
+		for (const auto &entry: stdfs::directory_iterator(xdg_runtime_dir, opts, ec)) {
+			if (!ec && entry.path().has_filename() && entry.path().filename().string().starts_with("xauth_")) {
 				dprintf(D_FULLDEBUG, "Trying xauth file %s\n", entry.path().string().c_str());
 				xauth_filename_str = entry.path().string();
 				found = true;

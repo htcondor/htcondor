@@ -182,41 +182,37 @@ MutterInterface::GetSessions()
 
   for (auto const& dir_entry : stdfs::directory_iterator{proc_d}) {
     if (std::atoi(dir_entry.path().filename().c_str()) > 1) {
-      stdfs::path exe{dir_entry.path() / "exe"};
+		  stdfs::path exe{dir_entry.path() / "exe"};
+      std::error_code ec;
 
-      /* Check exists() to avoid catching an exception thrown from an
-         empty symlink being passed to read_symlink() */
-      if (stdfs::is_symlink(exe) && stdfs::exists(exe)) {
+      if (stdfs::read_symlink(exe, ec).filename() == "gnome-session-binary") {
+        std::string line;
+        stdfs::path env_p{dir_entry.path() / "environ"};
+        std::ifstream environ;
+        environ.open(env_p, std::ios::in);
 
-        if (stdfs::read_symlink(exe).filename() == "gnome-session-binary") {
-          std::string line;
-          stdfs::path env_p{dir_entry.path() / "environ"};
-          std::ifstream environ;
-          environ.open(env_p, std::ios::in);
+        /* Find the DBUS_SESSION_BUS_ADDRESS variable in the
+           environment, we need it to connect later */
+        while (std::getline(environ, line, '\0')) {
+          if (!line.find("DBUS_SESSION_BUS_ADDRESS=")) {
+            StatInfo s = StatInfo(dir_entry.path().c_str());
 
-          /* Find the DBUS_SESSION_BUS_ADDRESS variable in the
-             environment, we need it to connect later */
-          while (std::getline(environ, line, '\0')) {
-            if (!line.find("DBUS_SESSION_BUS_ADDRESS=")) {
-              StatInfo s = StatInfo(dir_entry.path().c_str());
+            /* Remove "DBUS_BUS_SESSION=" from string, we just want
+               the address portion */
+            line.erase(0, line.find_first_of('=') + 1);
 
-              /* Remove "DBUS_BUS_SESSION=" from string, we just want
-                 the address portion */
-              line.erase(0, line.find_first_of('=') + 1);
+            sessions.emplace_back(0, s.GetOwner(), s.GetGroup(), line);
+            found_sessions = true;
 
-              sessions.emplace_back(0, s.GetOwner(), s.GetGroup(), line);
-              found_sessions = true;
-
-              dprintf(D_FULLDEBUG,
-                      "Found session for PID %s, UID %u GID %u (%s)\n",
-                      dir_entry.path().filename().c_str(),
-                      s.GetOwner(), s.GetGroup(), line.c_str()
-                      );
-            }
+            dprintf(D_FULLDEBUG,
+                    "Found session for PID %s, UID %u GID %u (%s)\n",
+                    dir_entry.path().filename().c_str(),
+                    s.GetOwner(), s.GetGroup(), line.c_str()
+                    );
           }
-
-          environ.close();
         }
+
+        environ.close();
       }
     }
   }
