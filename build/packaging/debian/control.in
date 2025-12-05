@@ -20,6 +20,7 @@ Build-Depends: cmake (>= 3.16),
                dh-python,
                libcgroup-dev,
                libcurl4-openssl-dev,
+               libdbus-1-dev,
                libkrb5-dev,
                libldap2-dev | libldap-dev,
                libmunge-dev,
@@ -288,7 +289,8 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends},
-         ${shlibs:Depends}
+         ${shlibs:Depends},
+         libdbus-1-3
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
