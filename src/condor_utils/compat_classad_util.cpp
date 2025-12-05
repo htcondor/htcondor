@@ -1015,3 +1015,23 @@ ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFile
 	return parse_type;
 }
 
+int 
+SlotRankSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
+{
+	ClassAd *rank_ad = (ClassAd *)data;
+
+	double rank1 = 0.0;
+	double rank2 = 0.0;
+	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
+	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
+
+	// Must provide a strict weak ordering, so we can't just
+	// return rank1 > rank2
+
+	if (fabs(rank1 - rank2) < DBL_EPSILON) {
+		return ad1 > ad2;
+	}
+	return rank1 > rank2;
+}
+
+
