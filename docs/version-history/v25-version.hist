@@ -11,6 +11,13 @@
   :subcom:`starter_log` submit command.
   :jira:`3408`
 
+- The EPs produced by :tool:`htcondor annex` now include the additional
+  configuration distributed with the HTCondor tarball, which should make
+  them less sensitive to version changes.  Additionally, the default
+  configuration for HTCondor now enabls the Pelican (OSDF) file transfer
+  plug-in.
+  :jira:`3410`
+
 *** 25.0.6 bugs
 
 *** 25.5.0 features
