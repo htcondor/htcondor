@@ -7823,7 +7823,7 @@ private:
 bool
 FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 {
-	const std::string test_url_param = std::string(method) + "_test_url";
+	const std::string test_url_param = std::string(method) + "_TEST_URL";
 	std::string test_url;
 	if (!param(test_url, test_url_param.c_str())) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: no test url defined for method %s.\n", method.c_str());

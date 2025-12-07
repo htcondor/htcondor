@@ -6254,6 +6254,13 @@ condor_starter Configuration File Entries
 
 These settings affect the *condor_starter*.
 
+:macro-def:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS`
+    All multi-file file transfefr plug-ins read from ClassAd-formatted input
+    file, and are expected to both parse any valid ClassAd and ignore any
+    attributes it doesn't recognize.  To allow plug-ins which don't meet this
+    expectation to continue to work while they're being fixed, you may set
+    this macro to false.
+
 :macro-def:`DISABLE_SETUID[STARTER]`
     HTCondor can prevent jobs from running setuid executables
     on Linux by setting the no-new-privileges flag.  This can be
@@ -6586,7 +6593,7 @@ These settings affect the *condor_starter*.
     names for plug-ins that will accomplish the task of doing file
     transfer when a job requests the transfer of an input file by
     specifying a URL. See
-    :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
+    :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plug-Ins`
     for a description of the functionality required of a plug-in.
 
 :macro-def:`<PLUGIN>_TEST_URL[STARTER]`
