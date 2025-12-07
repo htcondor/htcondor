@@ -734,10 +734,6 @@ Scheduler::Scheduler() :
 
 	CronJobMgr = NULL;
 
-    m_userlog_file_cache_max = 0;
-    m_userlog_file_cache_clear_last = time(NULL);
-    m_userlog_file_cache_clear_interval = 60;
-
 	jobThrottleNextJobDelay = 0;
 
 	JobStartCount = 0;
@@ -831,8 +827,6 @@ Scheduler::~Scheduler()
 	if ( m_unparsed_gridman_selection_expr ) {
 		free(m_unparsed_gridman_selection_expr);
 	}
-
-    userlog_file_cache_clear(true);
 
 		//
 		// Delete CronTab objects
@@ -1068,9 +1062,6 @@ Scheduler::timeout( int /* timerID */ )
 	min_interval_timer_set = false;
 	SchedDInterval.setStartTimeNow();
 
-    // keep the log file cache from accumulating defunct user log file mappings
-    userlog_file_cache_clear();
-
 	count_jobs();
 
 	clean_shadow_recs();
@@ -1297,54 +1288,6 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 
 	return true;
 }
-
-void Scheduler::userlog_file_cache_clear(bool force) {
-    time_t t = time(NULL);
-    if (!force && ((t - m_userlog_file_cache_clear_last) < m_userlog_file_cache_clear_interval)) return;
-
-    dprintf(D_FULLDEBUG, "Clearing userlog file cache\n");
-
-    for (WriteUserLog::log_file_cache_map_t::iterator e(m_userlog_file_cache.begin());  e != m_userlog_file_cache.end();  ++e) {
-        delete e->second;
-    }
-    m_userlog_file_cache.clear();
-
-    m_userlog_file_cache_clear_last = t;
-}
-
-
-void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
-    // only if caching is turned on
-    if (m_userlog_file_cache_max <= 0) return;
-
-	ClassAd* ad = GetJobAd(cluster, proc);
-    if (NULL == ad) return;
-
-    std::string userlog_name;
-    std::string dagman_log_name;
-    std::vector<char const*> log_names;
-
-    // possible userlog file names associated with this job
-    if (getPathToUserLog(ad, userlog_name)) log_names.push_back(userlog_name.c_str());
-    if (getPathToUserLog(ad, dagman_log_name, ATTR_DAGMAN_WORKFLOW_LOG)) log_names.push_back(dagman_log_name.c_str());
-
-    for (std::vector<char const*>::iterator j(log_names.begin());  j != log_names.end();  ++j) {
-
-        // look for file name in the cache
-        WriteUserLog::log_file_cache_map_t::iterator f(m_userlog_file_cache.find(*j));
-        if (f == m_userlog_file_cache.end()) continue;
-
-        // remove this job from the reference set:
-        f->second->refset.erase(std::make_pair(cluster, proc));
-        if (f->second->refset.empty()) {
-            // if that was the last job referring to this log file, remove it from the cache
-            dprintf(D_FULLDEBUG, "Erasing entry for %s from userlog file cache\n", *j);
-            delete f->second;
-            m_userlog_file_cache.erase(f);
-        }
-    }
-}
-
 
 void
 Scheduler::sumAllSubmitterData(SubmitterData &all) {
@@ -5744,16 +5687,6 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	WriteUserLog* ULog=new WriteUserLog();
 	ULog->setCreatorName( Name );
 
-    if (m_userlog_file_cache_max > 0) {
-        // This is a bit draconian, but doing it smarter requires more machinery and data,
-        // and the log cache can still save plenty of open/close
-        if (m_userlog_file_cache.size() >= size_t(m_userlog_file_cache_max)) userlog_file_cache_clear(true);
-
-        // important to do this before invoking initialize() method
-        dprintf(D_FULLDEBUG, "Scheduler::InitializeUserLog(): setting log file cache\n");
-        ULog->setLogFileCache(&m_userlog_file_cache);
-    }
-
 	if ( ! ULog->initialize(*ad, true) ) {
 		dprintf ( D_ALWAYS, "WARNING: Failed to initialize user log file for writing!\n");
 		delete ULog;
@@ -5835,8 +5768,6 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
-
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_ABORTED event for job %d.%d\n",
@@ -5875,8 +5806,6 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
-
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!status) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event for job %d.%d\n",
@@ -5969,8 +5898,6 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
 
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
-
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_EVICTED event for job %d.%d\n",
@@ -6014,8 +5941,6 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
-
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!rval) {
 		dprintf( D_ALWAYS, 
@@ -15152,9 +15077,6 @@ Scheduler::Init()
 
 	int max_history_concurrency = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50);
 	HistoryQue.setup(1000, max_history_concurrency);
-
-    m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
-    m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
 
 	if (slotWeightOfJob) {
 		delete slotWeightOfJob;

@@ -465,6 +465,19 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
         }
         break;
 
+    case EDIT_USERREC:
+        if ( ! list_of_ads) {
+            PyErr_SetString(PyExc_HTCondorException, "Edit requires a list of ads.");
+        } else {
+            if (is_project) {
+                result = schedd.updateProjectAds(ads, &errstack);
+            } else {
+                result = schedd.updateUserAds(ads, &errstack);
+            }
+        }
+        break;
+
+
     default:
         if (is_project) {
             PyErr_SetString(PyExc_HTCondorException, "Project action not implemented.");

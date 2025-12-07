@@ -170,6 +170,8 @@ public:
 	void sendAlive( int timerID = -1 );
 	int sendAliveConnectHandler(Stream *sock);
 	int sendAliveResponseHandler( Stream *sock );
+	void send_deactivate_reply_timed_out( int timerID = -1 );	// send deactivate reply now
+	void cancel_deactivate_reply_timer();
 
 	void scheddClosedClaim();
 
@@ -297,7 +299,7 @@ public:
 
 		// registered callback for premature closure of connection from shadow for deactivate claim
 	int deactivateClaimSockClosed(Stream *s);
-	bool sendDeactivateReply();
+	bool sendDeactivateReply(bool starter_exited);
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
@@ -333,6 +335,7 @@ private:
 	Stream*		c_request_stream{nullptr}; // cedar sock that a remote request is waiting for a response on
 	Stream*		c_deactivate_stream{nullptr}; // cedar sock that a remote deactivate is waiting for a responce on
 
+	int			c_deactivate_reply_tid{-1};
 	int			c_match_tid;	// DaemonCore timer id for this
 								// match.  If we're matched but not
 								// claimed within 5 minutes, throw out

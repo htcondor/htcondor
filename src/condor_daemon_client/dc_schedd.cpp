@@ -2888,6 +2888,16 @@ ClassAd * DCSchedd::updateUserAds(
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
+ClassAd * DCSchedd::updateUserAds(
+	std::vector<const ClassAd*> & ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
+	CondorError * errstack)
+{
+	const bool is_user{false}; // the converse of is_project
+	int connect_timeout = 20;
+
+	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+}
+
 ClassAd * DCSchedd::addProjects(
 	const char * names[],   // project names
 	int num_names,          // number of project names
@@ -2996,10 +3006,20 @@ ClassAd * DCSchedd::updateProjectAds(
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
+ClassAd * DCSchedd::updateProjectAds(
+	std::vector<const ClassAd*> & ads, // ads must have ATTR_NAME attribute at a minimum
+	CondorError *errstack)
+{
+	const bool is_project{true};
+	int connect_timeout = 20;
+	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
+}
+
+
 ClassAd * DCSchedd::generalUpdateUserRecs(
 	int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 	bool is_project,           // set to true if ads are project ads or mixed user and project ads
-	ClassAdList & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+	ClassAdListDoesNotDeleteAds & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
 	CondorError *errstack)
 {
 	int connect_timeout = 20;

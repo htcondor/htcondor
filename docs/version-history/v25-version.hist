@@ -1,9 +1,24 @@
 *** 25.6.0 features
 
+- The option for the *condor_schedd* to keep job event log files open for
+  a period of time has been removed.
+  This was controlled by configuration parameters
+  :macro:`USERLOG_FILE_CACHE_MAX` and
+  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
+  :jira:`3367`
+
 - When the attempt to claim a slot to run a job is refused, the reason for the
   refusal is now reported back to the *condor_shadow* which logs the reason and
   adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
   :jira:`3388`
+
+- The submit knob :macro:`SUBMIT_REQUEST_MISSING_UNITS` now also applies to
+  :subcom:`retry_request_memory` as well.
+  :jira:`3419`
+
+- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
+  DAGMan rescue file by name for state restoration.
+  :jira:`3425`
 
 *** 25.6.0 bugs
 
@@ -17,6 +32,15 @@
   configuration for HTCondor now enabls the Pelican (OSDF) file transfer
   plug-in.
   :jira:`3410`
+
+- Fixed a bug where docker universe jobs would bring back a
+  file named ``.docker_stderror`` back to the AP after job completion.
+  :jira:`3424`
+
+- Fixed an intermittent bug where the *condor_shadow* would occasionally
+  get stuck for 20 minutes trying to reconnect to a non-existent *condor_starter*
+  when file transfer file fails for any reason.
+  :jira:`3429`
 
 *** 25.0.6 bugs
 

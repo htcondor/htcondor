@@ -351,26 +351,29 @@ DCStartd::reactivateClaimCheck(bool & claim_is_closing)
 	claim_is_closing = false;
 	setCmdStr( "reactivateClaimCheck" );
 
-	return deactivateClaim(REACTIVATE_CLAIM_CHECK, false, &claim_is_closing);
+	return deactivateClaim(REACTIVATE_CLAIM_CHECK, false, &claim_is_closing, nullptr);
 }
 
 bool
-DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning )
 {
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
+	}
+	if( still_cleaning ) {
+		*still_cleaning = false;
 	}
 
 	setCmdStr( "deactivateClaim" );
 
 	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
 
-	return deactivateClaim(cmd, got_job_done, claim_is_closing);
+	return deactivateClaim(cmd, got_job_done, claim_is_closing, still_cleaning);
 }
 
 // protected helper for deactivateClaim and reactivateClaimCheck
 bool
-DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing)
+DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bool *still_cleaning)
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::%s(%s)\n", _cmd_str.c_str(), got_job_done ? "job_done" : "");
 
@@ -449,13 +452,26 @@ DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing)
 			err += "timed out waiting for response ad";
 			newError(CA_REPLY_TIMED_OUT, err.c_str());
 		}
+		dprintf(D_ZKM, "failed to get deactivateClaim response (%s)\n", err.c_str());
 		return false;
 	}
 	else {
+		std::string adbuf;
+		dprintf(D_ZKM, "got deactivateClaim response:\n%s\n", formatAd(adbuf, response_ad, "\t"));
 		bool start = true;
 		response_ad.LookupBool(ATTR_START,start);
 		if( claim_is_closing ) {
 			*claim_is_closing = !start;
+		}
+		bool cleaning = false;
+		if (response_ad.LookupBool("StillCleaning", cleaning) && cleaning) {
+			int starter_pid = 0;
+			response_ad.LookupInteger("StarterPID", starter_pid);
+			dprintf(D_COMMAND, "DCStartd::%s(%s) succeeded, %sStarter is still cleaning up (pid=%d)\n",
+				_cmd_str.c_str(), getCommandStringSafe(cmd), start?"":"claim is closing and ", starter_pid);
+		}
+		if( still_cleaning ) {
+			*still_cleaning = cleaning;
 		}
 	}
 
