@@ -119,19 +119,6 @@ void Rooster::stop()
 	}
 }
 
-static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
-{
-	ClassAd *rank_ad = (ClassAd *)data;
-
-	float rank1 = 0;
-	float rank2 = 0;
-	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
-	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
-
-	return rank1 > rank2;
-}
-
-
 void Rooster::poll( int /* timerID */ )
 {
 	dprintf(D_FULLDEBUG,"Cock-a-doodle-doo! (Time to look for machines to wake up.)\n");
@@ -164,7 +151,7 @@ void Rooster::poll( int /* timerID */ )
 	dprintf(D_FULLDEBUG,"Got %d startd ads matching ROOSTER_UNHIBERNATE=%s\n",
 			startdAds.MyLength(), m_unhibernate_constraint.c_str());
 
-	startdAds.Sort(StartdSortFunc,&m_rank_ad);
+	startdAds.Sort(SlotRankSortFunc,&m_rank_ad);
 
 	startdAds.Open();
 	int num_woken = 0;
