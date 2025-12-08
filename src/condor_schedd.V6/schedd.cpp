@@ -12687,7 +12687,6 @@ mark_job_running(PROC_ID* job_id)
 	// Update some ocu-centric statistics if using an ocu resource
 	if (mrec && mrec->is_ocu) {
 		int ocu_cluster = mrec->ocu_originator.cluster;
-		int ocu_proc = mrec->ocu_originator.proc;
 		bool ocu_wanted = false;
 		bool ocu_willing = false;
 		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWanted",&ocu_wanted);
@@ -12702,19 +12701,25 @@ mark_job_running(PROC_ID* job_id)
 		
 		if (!ocu_attr_name.empty()) {
 			int ocu_num_uses = 0;
-			GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_num_uses);
-			ocu_num_uses++;
-			SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_num_uses);
-			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_ACTIVATION_START_TIME, time(nullptr));
+			OCU *ocu = scheduler.getOCU(ocu_cluster);
+			if (ocu) {
+				ocu->ad.LookupInteger(ocu_attr_name, ocu_num_uses);
+				ocu_num_uses++;
+				ocu->ad.Assign(ocu_attr_name, ocu_num_uses);
+				ocu->ad.Assign(ATTR_OCU_ACTIVATION_START_TIME, time(nullptr));
+			}
 		}
 
 		// if the ocu was claimed/idle, increment the total claimed time
 		// otherwise, the total running 
 		if (mrec->status == M_CLAIMED) {
 			time_t ocu_claimed_time = 0;
-			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, &ocu_claimed_time);
-			ocu_claimed_time += time(0) - mrec->entered_current_status;
-			SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			OCU *ocu = scheduler.getOCU(ocu_cluster);
+			if (ocu) {
+				ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+				ocu_claimed_time += time(0) - mrec->entered_current_status;
+				ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			}
 		}
 	}
 
@@ -13263,7 +13268,10 @@ Scheduler::child_exit(int pid, int status)
 			}
 			time_t ocu_start_time = 0;
 			time_t now = time(nullptr);
-			GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_ACTIVATION_START_TIME, &ocu_start_time);
+			OCU *ocu = scheduler.getOCU(ocu_cluster);
+			if (ocu) {
+				ocu->ad.LookupInteger(ATTR_OCU_ACTIVATION_START_TIME, ocu_start_time);
+			}
 
 			// Update various OCU claim time statistics
 			if ((now > ocu_start_time) && (ocu_start_time > 0)) {
@@ -13273,9 +13281,11 @@ Scheduler::child_exit(int pid, int status)
 				ocu_total_time += ocu_time;
 				SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_total_time);
 				time_t ocu_claimed_time = 0;
-				GetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, &ocu_claimed_time);
-				ocu_claimed_time += now - srec->match->entered_current_status;
-				SetAttributeInt(ocu_cluster, ocu_proc, ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+				if (ocu) {
+					ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+					ocu_claimed_time += now - srec->match->entered_current_status;
+					ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+				}
 			}
 		}
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
@@ -16075,10 +16085,13 @@ Scheduler::unlinkMrec(match_rec* match)
 	// correct job.
 	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
 		jobId = match->ocu_originator;
-		time_t ocu_claimed_time = 0;
-		GetAttributeInt(jobId.cluster, jobId.proc, ATTR_OCU_CLAIMED_TIME, &ocu_claimed_time);
-		ocu_claimed_time += time(0) - match->entered_current_status;
-		SetAttributeInt(jobId.cluster, jobId.proc, ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+		OCU *ocu = scheduler.getOCU(jobId.cluster);
+		if (ocu) {
+			time_t ocu_claimed_time = 0;
+			ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			ocu_claimed_time += time(0) - match->entered_current_status;
+			ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+		}
 		dirtyJobQueue();
 	}
 
