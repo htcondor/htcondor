@@ -9943,11 +9943,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 			if (is_ocu) {
 
-				// OCU ad should have ATTR_OWNER set to the owner of the OCU claim
-				std::string owner;
-				my_match_ad->LookupString(ATTR_OWNER, owner);
-
-				if (owner == job->ownerinfo->Name()) {
+				// OCU ad should have ATTR_REMOTE_OWNER set to the owner of the OCU claim
+				if (remoteOwner == job->ownerinfo->Name()) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
