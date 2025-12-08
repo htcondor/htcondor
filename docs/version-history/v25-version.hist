@@ -1,5 +1,12 @@
 *** 25.6.0 features
 
+- The option for the *condor_schedd* to keep job event log files open for
+  a period of time has been removed.
+  This was controlled by configuration parameters
+  :macro:`USERLOG_FILE_CACHE_MAX` and
+  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
+  :jira:`3367`
+
 - When the attempt to claim a slot to run a job is refused, the reason for the
   refusal is now reported back to the *condor_shadow* which logs the reason and
   adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
@@ -13,27 +20,27 @@
   DAGMan rescue file by name for state restoration.
   :jira:`3425`
 
-- The option for the *condor_schedd* to keep job event log files open for
-  a period of time has been removed.
-  This was controlled by configuration parameters
-  :macro:`USERLOG_FILE_CACHE_MAX` and
-  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
-  :jira:`3367`
-
 *** 25.6.0 bugs
-
-- Fixed an intermittent bug where the *condor_shadow* would occasionally
-  get stuck for 20 minutes trying to reconnect to a non-existent *condor_starter*
-  when file transfer file fails for any reason.
-  :jira:`3429`
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
   :subcom:`starter_log` submit command.
   :jira:`3408`
 
+- The EPs produced by :tool:`htcondor annex` now include the additional
+  configuration distributed with the HTCondor tarball, which should make
+  them less sensitive to version changes.  Additionally, the default
+  configuration for HTCondor now enables the Pelican (OSDF) file transfer
+  plug-in.
+  :jira:`3410`
+
 - Fixed a bug where docker universe jobs would bring back a
   file named ``.docker_stderror`` back to the AP after job completion.
   :jira:`3424`
+
+- Fixed an intermittent bug where the *condor_shadow* would occasionally
+  get stuck for 20 minutes trying to reconnect to a non-existent *condor_starter*
+  when file transfer file fails for any reason.
+  :jira:`3429`
 
 *** 25.0.6 bugs
 
