@@ -6462,6 +6462,14 @@ These settings affect the *condor_starter*.
     :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
     for a description of the functionality required of a plug-in.
 
+:macro-def:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT[STARTER]`
+    An integer number of seconds (defaulting to 20 seconds) after which
+    the starter will kill a file transfer plug-in if it takes too long
+    to return its ClassAd describing its capabilities.  This may 
+    need to be set higher than the default if the plugin is stored 
+    on a slow or shared filesystem, or if it does a significant amount 
+    of work to generate its ClassAd.
+
 :macro-def:`<PLUGIN>_TEST_URL[STARTER]`
     This configuration takes a URL to be tested against the specified
     ``<PLUGIN>``. If this test fails, then that plugin is removed from
