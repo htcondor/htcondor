@@ -15,6 +15,8 @@
               href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
               integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
               crossorigin="anonymous">
+        <link rel="stylesheet" 
+              href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
         <link rel="stylesheet" href="static/htcondorview.css?version=8"/>
     {% endblock stylesheets %}
 
@@ -63,29 +65,36 @@
 </head>
 <body>
     <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
+			<div class="navbar-logo">
+                <a href="{{url_for('landing.ce_user_landing_page')}}"><img width="145px" src="static/navbar_logo.svg"></a>
+			</div>
 		
 			<div class="navbar-brand abs container">
                <div class="row flex-nowrap">
                     {% if prev_page %}
-                    <div class="navbar-nav col" style="font-size: 1rem; font-weight: 400;">
-                        <a class="nav-link" href="{{ prev_page.url }}" style="padding-top: 0;">&lt; {{ prev_page.text }}</a>
+                    <div class="navbar-nav col site-link">
+                        <a class="nav-link" href="{{ prev_page.url }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
                     </div>
                     {% endif %} 
 
                     <div class="col">
-                        {{ page_title }}
+                        <span>{{ page_title }}</span>
+                        {% if page_subtitle %}
+                        <br/>
+                        <span style="font-size: 1rem;"> {{ page_subtitle }} </span>
+                        {% endif %}
                     </div>
 
                     {% if next_page %}
-                    <div class="navbar-nav col" style="font-size: 1rem; font-weight: 400;">
-                        <a class="nav-link" href="{{ next_page.url }}" style="padding-top: 0;">{{ next_page.text }} &gt;</a>
+                    <div class="navbar-nav col site-link">
+                        <a class="nav-link" href="{{ next_page.url }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
                     </div>
                     {% endif %} 
                </div>
-			</div>
-
-			<div class="navbar-logo">
-			<a href="{{url_for('landing.ce_user_landing_page')}}"><img width=50% src="static/navbar_logo.svg"></a>
 			</div>
 
 

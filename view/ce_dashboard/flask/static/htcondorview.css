@@ -23,18 +23,41 @@ nav {
     margin-bottom: 10px;
 }
 
+.navbar {
+    justify-content: space-between;
+}
+
+.navbar-collapse {
+    flex-grow: 0;
+}
+
 .navbar-brand.abs
 {
-	position: absolute;
+	/* position: absolute; */
 	width: auto;
 	left: 50%;
     top: 0.5em;
-	transform: translateX(-50%);
+	/* transform: translateX(-50%); */
 	text-align: center;
 	align-items: center;
-	font-size: 24px;
+	font-size: 1.5rem;
 	font-weight: bold;
 	color: white;
+    margin-left: 16px;
+    margin-right: 16px;
+}
+
+.navbar-nav.site-link {
+    font-size: 1.5rem; 
+    font-weight: 400;
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    .nav-link {
+        padding: 0;
+    }
 }
 
 h1 {

@@ -91,6 +91,7 @@ class HeaderLink:
     """ Util class containing the text and URL for a header link """
     text: str
     url: str
+    subtitle: str = ""
 
 def returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn):
     """
@@ -162,7 +163,8 @@ def ce_info_from_collectors(resource_info_by_fqdn):
     coll = htcondor.Collector("collector.opensciencegrid.org:9619")
     try:
         ads = coll.query(htcondor.AdTypes.Schedd,projection=["Name","CollectorHost","OSG_BatchSystems","Status","DaemonStartTime","HTCondorCEVersion","TotalRunningJobs","TotalHeldJobs","TotalIdleJobs"])
-    except:
+    except Exception as e:
+        print(f"Unable to reach collector.opensciencegrid.org:9619: {e}")
         for fqdn in resource_info_by_fqdn:
             resource_info_by_fqdn[fqdn].health="Unknown"
             resource_info_by_fqdn[fqdn].healthInfo="Server collector.opensciencegrid.org unreachable"
@@ -298,7 +300,7 @@ def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
             resource_info_by_fqdn[fqdn] = resource_info
     return resource_info_by_fqdn
 
-#@cache_response_to_disk(file_name="ce_info.csv")
+@cache_response_to_disk(file_name="ce_info.csv")
 def get_landing_response():
     # Gather up CE info from Topology
     resource_info_by_fqdn = ce_info_from_topology()
@@ -376,8 +378,10 @@ def get_ce_facility_site_descrip(fqdn: str):
     """
     ce_info = get_ce_info(fqdn)
     if ce_info:
-        return ce_info.facility_name, ce_info.site_name, ce_info.description, ce_info.health
-    return "Unknown", "Unknown", "Unknown", "Poor"
+        # Re-extract the original site name from the URL if the health isn't Poor
+        name = ce_info.name if ce_info.health == "Poor" else ce_info.name.split('|',1)[1]
+        return ce_info.facility_name, ce_info.site_name, name, ce_info.description, ce_info.health
+    return "Unknown", "Unknown", "Unknown", "Unknown", "Poor"
 
 def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional[HeaderLink]]:
     """
@@ -396,16 +400,13 @@ def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional
     prev_facility = healthy_facilities_by_name[prev_index]
     next_facility = healthy_facilities_by_name[next_index]
 
-    return (
-        HeaderLink(
-            text=prev_facility.site_name,
-            url=re.sub(r'\|.*', '', prev_facility.name)
-        ),
-        HeaderLink(
-            text=next_facility.site_name,
-            url=re.sub(r'\|.*', '', next_facility.name)
-        ),
+    # TODO re-extracting the original name and link from the parsed facility csv here is a bit hacky
+    prev_link, prev_name = prev_facility.name.split('|',1)
+    next_link, next_name = next_facility.name.split('|',1)
 
+    return (
+        HeaderLink(text=prev_facility.facility_name, subtitle=prev_name, url=prev_link),
+        HeaderLink(text=next_facility.facility_name, subtitle=next_name, url=next_link)
     )
 
 ##########################################
