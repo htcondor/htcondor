@@ -1,6 +1,6 @@
 *** 25.0.5 features
 
-- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 plaform
+- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform
   :jira:`3414`
 
 *** 25.0.5 bugs
