@@ -6,7 +6,7 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
-- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``True``
+- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``True``\,
   causing failure to cleanup ephemeral Logical Volumes to break slot resources.
   If the logical volume is later successfully cleaned up then the associated
   broken resources will be restored.
