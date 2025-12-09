@@ -215,7 +215,7 @@ Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 	}
 
 	// Carry on.
-	s->jobWaitUntilExecuteTime();
+	s->jic->runPrepareJobHook();
 }
 
 

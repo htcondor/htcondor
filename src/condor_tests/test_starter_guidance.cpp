@@ -397,3 +397,4 @@ bool JobInfoCommunicator::updateX509Proxy(int, ReliSock*) { EXCEPT("MOCK"); retu
 bool JobInfoCommunicator::initJobInfo() { EXCEPT("MOCK"); return false; }
 void JobInfoCommunicator::checkForStarterDebugging() { EXCEPT("MOCK"); }
 void JobInfoCommunicator::writeExecutionVisa(classad::ClassAd&) { EXCEPT("MOCK"); }
+void JobInfoCommunicator::runPrepareJobHook() { EXCEPT("MOCK"); }
