@@ -155,7 +155,7 @@ void Rooster::poll( int /* timerID */ )
 	// Assign HibernationRank once to each startd ad, just in case the classad expression
 	// is not stable. (e.g. it depends on time or random numbers)
 
-	static const char *ATTR_HIBERNATION_RANK = "CondorHibernationRank";
+	static const char *ATTR_HIBERNATION_RANK = "_CondorHibernationRank";
 
 	for (auto& startdAd: startdAds) {
 		double hibernation_rank = 0.0;
