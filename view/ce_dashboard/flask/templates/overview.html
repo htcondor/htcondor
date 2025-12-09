@@ -272,6 +272,26 @@ Contribution of compute capacity from the
                     });
                 </script>
             </div>
+            <div class="col-6 htcv-col-6" id="eps-running">
+                <script>
+                    new HTCondorView({
+                        dst_id: "eps-running",
+                        title: "Running Execution Points Past Week",
+						data_url: "/data/ce_overview?r=week",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=EPsRunning
+                            order=Date
+                            pivot=Date;Project;EPsRunning
+                            legend.position=in
+                            series.0.areaOpacity=0.5
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
+            </div>
         </div>
 
 		<p><p>
