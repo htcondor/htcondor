@@ -291,6 +291,14 @@ int _argc;
 char ** _argv;
 
 void
+usage(){
+    fprintf( stderr, " --shadow --input source destination\n" );
+    fprintf( stderr, "--starter --input sinful transfer_key\n" );
+    fprintf( stderr, " --shadow --output\n" );
+    fprintf( stderr, "--starter --output source destination sinful transfer_key\n" );
+}
+
+void
 main_init( int /* argc */, char ** /* argv */ ) {
     // This should be conditional based on a CLI flag.  Note that setting
     // this main() means that it doesn't work quite as expected, probably
@@ -316,44 +324,61 @@ main_init( int /* argc */, char ** /* argv */ ) {
     if( ev != NULL ) { transfer_socket = ev; }
 
 
-    if( _argc < 2 ) {
-        fprintf( stderr, " --shadow --input source destination\n" );
-        fprintf( stderr, "--starter --input sinful transfer_key\n" );
-        fprintf( stderr, " --shadow --output\n" );
-        fprintf( stderr, "--starter --output source destination sinful transfer_key\n" );
-        DC_Exit(1);
-    }
-
-    if( 0 == strcmp( _argv[1], "--shadow" )) {
-        if( 0 == strcmp( _argv[2], "--input" )) {
-            do_shadow_input( _argv[3], _argv[4] );
-        } else if( 0 == strcmp( _argv[2], "--output" )) {
-            do_shadow_output();
-        } else {
-            fprintf( stderr, "--shadow (--input|--output)\n" );
+    if( _argc == 1 ) {
+        if( transfer_socket.empty() || transfer_key.empty() ) {
+            fprintf( stderr, "If you don't specify the transfer socket or the transfer key on the command-line, they must be set in the environment.\n" );
             DC_Exit(1);
+        } else {
+            do_starter_input( transfer_socket.c_str(), transfer_key.c_str() );
+            goto success;
         }
-    } else if( 0 == strcmp( _argv[1], "--starter" )) {
-        if( 0 == strcmp( _argv[2], "--input" )) {
-            if( _argc <= 3 ) {
+    } else if( _argc == 2 ) {
+        usage();
+        DC_Exit(1);
+    } else if( _argc == 3 ) {
+        if( 0 == strcmp( _argv[1], "--shadow" )) {
+            if( 0 == strcmp( _argv[2], "--output" )) {
+                do_shadow_output();
+                goto success;
+            }
+        } else if( 0 == strcmp( _argv[1], "--starter" )) {
+            if( 0 == strcmp( _argv[2], "--input" )) {
                 if( transfer_socket.empty() || transfer_key.empty() ) {
                     fprintf( stderr, "If you don't specify the transfer socket or the transfer key on the command-line, they must be set in the environment.\n" );
                     DC_Exit(1);
+                } else {
+                    do_starter_input( transfer_socket.c_str(), transfer_key.c_str() );
+                    goto success;
                 }
-                do_starter_input( transfer_socket.c_str(), transfer_key.c_str() );
-            } else {
-                do_starter_input( _argv[3], _argv[4] );
             }
-        } else if( 0 == strcmp( _argv[2], "--output" )) {
-            do_starter_output( _argv[3], _argv[4], _argv[5], _argv[6] );
-        } else {
-            fprintf( stderr, "--starter (--input|--output)\n" );
-            DC_Exit(1);
         }
-    } else {
-        fprintf( stderr, "(--shadow|--starter)\n" );
-        DC_Exit(1);
+    } else if( _argc == 5 ) {
+        if( 0 == strcmp( _argv[1], "--shadow" )) {
+            if( 0 == strcmp( _argv[2], "--input" )) {
+                do_shadow_input( _argv[3], _argv[4] );
+                goto success;
+            }
+        } else if( 0 == strcmp( _argv[1], "--starter" )) {
+            if( 0 == strcmp( _argv[2], "--input" )) {
+                do_starter_input( _argv[3], _argv[4] );
+                goto success;
+            }
+        }
+    } else if( _argc == 7 ) {
+        if( 0 == strcmp( _argv[1], "--starter" )) {
+            if( 0 == strcmp( _argv[2], "--output" )) {
+                do_starter_output( _argv[3], _argv[4], _argv[5], _argv[6] );
+                goto success;
+            }
+        }
     }
+
+
+    // failure:;
+    usage();
+    DC_Exit(1);
+
+    success:;
 }
 
 void
