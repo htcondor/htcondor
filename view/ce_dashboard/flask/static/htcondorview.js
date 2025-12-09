@@ -95,6 +95,7 @@ function HTCondorView(id, url, graph_args, options) {
             data_url: args.get("url"),
             graph_query: "",
             help_url: args.get("help_url"),
+            action_url: args.get("action_url"),
         };
 
         for (let argi in args.all) {
@@ -170,6 +171,7 @@ HTCondorView.prototype.initialize = function (options) {
     this.title = options.title;
     this.url = options.data_url;
     this.help_url = options.help_url;
+    this.action_url = options.action_url;
 
     const container = $("#" + id);
     if (container.length === 0) {
@@ -483,6 +485,9 @@ HTCondorView.prototype.promise_render_viz = function (viz, args) {
     if (args.help_url) {
         query_bits.push("help_url=" + args.help_url);
     }
+    if (args.action_url) {
+        query_bits.push("action_url=" + args.action_url);
+    }
     if (args.query_args) {
         query_bits.push(args.query_args);
     }
@@ -526,6 +531,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
     const total_table_id = this.total_table_id;
     const url = this.url;
     const help_url = this.help_url;
+    const action_url = this.action_url;
     const title = this.title;
 
     if (graphargs) {
@@ -534,6 +540,7 @@ HTCondorView.prototype.load_and_render = function (graphargs, tableargs) {
                 id: graph_id,
                 url: url,
                 help_url: help_url,
+                action_url: action_url,
                 title: title,
                 query_args: graphargs,
                 data: data,
@@ -3833,7 +3840,19 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 const escapedHelpUrl = help_url.replace("amp;", "&amp;");
                 console.log("help_url", help_url);
                 console.log("escapedHelpUrl", escapedHelpUrl);
-                $(chartTitle).html(`${options.title} [ <a fill="blue" target="_blank" style="font-weight: normal;" xlink:href="${escapedHelpUrl}">${label}</a> ]`);
+                $(chartTitle).html(`${options.title} [ <a fill="blue" target="_blank" style="font-weight: normal;" href="${escapedHelpUrl}">${label}</a> ]`);
+                const parent = $(chartTitle).parent()[0];
+                $(parent).append($(chartTitle).detach());
+            }
+
+            let action_url = args.get("action_url");
+            console.log("action_url", action_url);
+            if (!(action_url === undefined || action_url === null)) {
+                // Then, look for the chart title and add the help link to it
+                let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
+                console.log("action_url", chartTitle);
+                // Escape ampersands in the help_url
+                $(chartTitle).html(`${options.title} <a fill="blue" style="font-weight: bold;" href="#" onclick="${action_url};">ⓘ</a>`);
                 const parent = $(chartTitle).parent()[0];
                 $(parent).append($(chartTitle).detach());
             }

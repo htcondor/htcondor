@@ -83,6 +83,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
+                                   action_url: "new bootstrap.Modal($('#cookieModal')).show()",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -366,6 +367,12 @@ Contribution of compute capacity from the
 
         
     <script>
+
+        function showModal() {
+            const cookieModal = new bootstrap.Modal(document.getElementById("cookieModal"));
+            cookieModal.show();
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
             // Check if the cookie exists
             const cookieName = "ceDashStoredHost";
@@ -377,6 +384,7 @@ Contribution of compute capacity from the
             if (!hostParam) {
                 window.location.href = "/";
             }
+
 
             // Show the modal if the cookie does not exist
             if (!cookieExists) {
