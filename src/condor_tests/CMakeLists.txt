@@ -447,6 +447,8 @@ endif()
 			condor_pl_test(test_queue_from_table "Test QUEUE FROM TABLE" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_spool_preserved_relative_paths "Test using preserve_relative_paths and spooled jobs." "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_max_releases "Test Max Releases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_new_ft_interop "Test old/new FTO interop" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# These Ornithology tests only work on linux.

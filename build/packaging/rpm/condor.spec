@@ -1156,6 +1156,7 @@ rm -rf %{buildroot}
 #################
 %files test
 %defattr(-,root,root,-)
+%_bindir/file_transfer_cli
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping

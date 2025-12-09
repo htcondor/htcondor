@@ -21,12 +21,13 @@
 /* This file is the implementation of the RemoteResource class. */
 
 #include "condor_common.h"
+#include "condor_daemon_core.h"
+#include "dc_coroutines.h"
 #include "remoteresource.h"
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
 #include "condor_attributes.h"
 #include "internet.h"
-#include "condor_daemon_core.h"
 #include "dc_starter.h"
 #include "directory.h"
 #include "condor_claimid_parser.h"
@@ -43,6 +44,12 @@
 #include "job_ad_instance_recording.h"
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
+#include "basename.h"
+
+#include "file_transfer_constants.h"
+#include "file_transfer_functions.h"
+#include "file_transfer_commands.h"
+#include "file_transfer_utils.h"
 #include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
@@ -2365,6 +2372,7 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 	return 0;
 }
 
+
 void
 modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 	// Add extra remaps for the canonical stdout/err filenames.
@@ -2480,11 +2488,12 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 	}
 }
 
+
 void
-RemoteResource::initFileTransfer()
+RemoteResource::initOldFileTransfer()
 {
-    if(doneInitFileTransfer) { return; }
-    doneInitFileTransfer = true;
+	if(doneInitFileTransfer) { return; }
+	doneInitFileTransfer = true;
 
 		// FileTransfer now makes sure we only do Init() once.
 		//
@@ -2533,6 +2542,65 @@ RemoteResource::initFileTransfer()
 
 	modifyFileTransferObject(filetrans, jobAd);
 }
+
+
+void
+RemoteResource::initNewFileTransfer()
+{
+	//
+	// Generate and assign the transfer key.
+	//
+	std::string transferKey;
+	FileTransferFunctions::generateTransferKey( transferKey );
+	jobAd->Assign( ATTR_TRANSFER_KEY, transferKey );
+
+	//
+	// The starter will learn the socket's address, and the transfer key,
+	// from the job ad.
+	//
+	jobAd->Assign(ATTR_TRANSFER_SOCKET, global_dc_sinful());
+
+	//
+	// The shadow waits for a command from the starter, but then
+	// is the one issuing file transfer commands.
+	//
+	daemonCore->Register_Command(
+		FILETRANS_UPLOAD, "FILETRANS_UPLOAD",
+		(CommandHandlercpp) & RemoteResource::handleInputSandboxTransfer,
+		"RemoteResource::handleInputSandboxTransfer",
+		this, WRITE
+	);
+
+	//
+	// We don't know when the starter will initiate output (checkpoint)
+	// file transfer, so just go ahead and register the command now.
+	//
+	daemonCore->Register_Command(
+		FILETRANS_DOWNLOAD, "FILETRANS_DOWNLOAD",
+		(CommandHandlercpp) & RemoteResource::handleOutputSandboxTransfer,
+		"RemoteResource::handleOutputSandboxTransfer",
+		this, WRITE
+	);
+}
+
+
+void
+RemoteResource::initFileTransfer()
+{
+	bool shadowUsesNewFileTransfer = param_boolean(
+		"SHADOW_USES_NEW_FILE_TRANSFER", false
+	);
+	bool useNewFileTransfer = param_boolean(
+		"USE_NEW_FILE_TRANSFER", false
+	);
+
+	if( shadowUsesNewFileTransfer || useNewFileTransfer ) {
+		initNewFileTransfer();
+	} else {
+		initOldFileTransfer();
+	}
+}
+
 
 void
 RemoteResource::requestReconnect( void )
@@ -2940,4 +3008,188 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
     // Where would this attribute get rotated?  Here?
     jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
     shadow->updateJobInQueue( U_STATUS );
+}
+
+
+int
+RemoteResource::handleInputSandboxTransfer( int command, Stream * s ) {
+    dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): begins\n", command );
+
+    if( s->type() != Stream::reli_sock ) {
+        dprintf( D_ALWAYS, "RemoteResource::handleInputSandboxTransfer(%d): ignoring non-TCP connection.\n", command );
+        return 0;
+    }
+    ReliSock * sock = static_cast<ReliSock *>(s);
+
+
+    //
+    // Read the transfer key.
+    //
+    std::string peerTransferKey;
+    FileTransferFunctions::receiveTransferKey( sock, peerTransferKey );
+    dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+    //
+    // Verify the transfer key.
+    //
+    std::string myTransferKey;
+    jobAd->LookupString( ATTR_TRANSFER_KEY, myTransferKey );
+    if( myTransferKey != peerTransferKey ) {
+        dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+        // The original code says "send back 0 for failure", but what
+        // this actually does is send 0 as the final-transfer flag and
+        // then cause the starter to fail to read the transfer info ClassAd.
+        sock->put(0);
+        sock->end_of_message();
+
+        // Prevent brute-force attack.
+        sleep(5);
+
+        return 0;
+    }
+
+    switch( command ) {
+        case FILETRANS_UPLOAD:
+            sendFilesToStarter( sock );
+            return KEEP_STREAM;
+            break;
+
+        default:
+            dprintf( D_ALWAYS, "RemoteResource::handleInputSandboxTransfer(%d): ignoring unknown command.\n", command );
+            return 0;
+            break;
+    }
+}
+
+void
+RemoteResource::sendFilesToStarter( ReliSock * sock ) {
+    //
+    // Decide what we're going to transfer.
+    //
+    std::string tifAttribute;
+    jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tifAttribute );
+    auto files = split( tifAttribute, "," );
+
+    bool transferExecutable = true;
+    jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
+
+    if( transferExecutable ) {
+        std::string executable;
+        jobAd->LookupString( ATTR_JOB_CMD, executable );
+        files.push_back( executable );
+    }
+
+    std::map<std::string, std::string> entries;
+    for( const auto & file : files ) {
+        entries[file] = condor_basename(file.c_str());
+    }
+
+    //
+    // Transfer it.
+    //
+    FileTransferUtils::sendFilesToPeer( sock, entries );
+}
+
+int
+RemoteResource::handleOutputSandboxTransfer( int command, Stream * s ) {
+	dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): begins\n", command );
+
+	if( s->type() != Stream::reli_sock ) {
+		dprintf( D_ALWAYS, "RemoteResource::handleOutputSandboxTransfer(%d): ignoring non-TCP connection.\n", command );
+		return 0;
+	}
+	ReliSock * sock = static_cast<ReliSock *>(s);
+
+	//
+	// Read the transfer key.
+	//
+	std::string peerTransferKey;
+	FileTransferFunctions::receiveTransferKey( sock, peerTransferKey );
+	dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+	//
+	// Verify the transfer key.
+	//
+	std::string myTransferKey;
+	jobAd->LookupString( ATTR_TRANSFER_KEY, myTransferKey );
+	if( myTransferKey != peerTransferKey ) {
+		dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+		// The original code says "send back 0 for failure", but what
+		// this actually does is send 0 as the final-transfer flag and
+		// then cause the starter to fail to read the transfer info ClassAd.
+		sock->put(0);
+		sock->end_of_message();
+
+		// Prevent brute-force attack.
+		sleep(5);
+
+		return 0;
+	}
+
+	switch( command ) {
+		case FILETRANS_DOWNLOAD:
+			receiveFilesFromStarter( sock );
+			return KEEP_STREAM;
+			break;
+
+		default:
+			dprintf( D_ALWAYS, "RemoteResource::handleOutputSandboxTransfer(%d): ignoring unknown command.\n", command );
+			return 0;
+			break;
+	}
+}
+
+condor::cr::void_coroutine
+RemoteResource::receiveFilesFromStarter( ReliSock * sock ) {
+	std::unique_ptr<ReliSock> s(sock);
+
+	//
+	// Receive transfer info.
+	//
+	int finalTransfer;
+	ClassAd transferInfoAd;
+	FileTransferFunctions::receiveTransferInfo( s,
+		finalTransfer,
+		transferInfoAd
+	);
+
+	FileTransferFunctions::GoAheadState gas;
+	while( true ) {
+		// The idea of this hack is that the reaper for PID can't ever be
+		// called, so co_await() just goes in and out of the event loop
+		// via a 0-second timer every time we call it.
+		{
+			condor::dc::AwaitableDeadlineReaper hack;
+			hack.born( 1, 0 );
+			auto [pid, timed_out, status] = co_await(hack);
+			ASSERT(pid == 1);
+			ASSERT(timed_out);
+		}
+
+		bool wasFinishCommand = false;
+		bool proceed = FileTransferFunctions::handleOneCommand(
+			s, wasFinishCommand, gas
+		);
+
+		if(! proceed) {
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): FileTransferFunctions::handleOneCommand() failed, aborting.\n" );
+
+			co_return;
+		}
+
+		if( wasFinishCommand ) {
+			ClassAd peerReport;
+			FileTransferFunctions::receiveFinalReport( sock, peerReport );
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): ignoring peer's report.\n" );
+
+			ClassAd myReport;
+			myReport.Assign(ATTR_RESULT, 0 /* success */);
+			FileTransferFunctions::sendFinalReport( sock, myReport );
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): send success report.\n" );
+
+			co_return;
+		}
+	}
 }
