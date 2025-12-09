@@ -2585,6 +2585,10 @@ default=
 type=string
 tags=email
 
+[SEC_USE_LOW_DATA_MODE]
+default=false
+type=bool
+
 [SEC_TCP_SESSION_TIMEOUT]
 default=20
 type=int

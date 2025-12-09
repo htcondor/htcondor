@@ -561,6 +561,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 		}
 	}
 
+	// If we don't know who this client is, limit them to single-packet
+	// CEDAR messages.
+	if (m_is_tcp && !m_sock->isMappedFQU() && param_boolean("SEC_USE_LOW_DATA_MODE", false)) {
+		((ReliSock*)m_sock)->SetLowDataMode(true);
+	}
+
 	m_state = CommandProtocolReadCommand;
 	return CommandProtocolContinue;
 }
@@ -1903,6 +1909,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// successfully abort before actually calling any command handler.
 		m_result = TRUE;
 		return CommandProtocolFinished;
+	}
+
+	// If we know who the client is, turn off CEDAR low-data mode, if it
+	// was enabled.
+	if (m_is_tcp && m_sock->isMappedFQU()) {
+		((ReliSock*)m_sock)->SetLowDataMode(false);
 	}
 
 	if ( m_reqFound == TRUE ) {

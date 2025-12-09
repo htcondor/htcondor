@@ -811,7 +811,8 @@ ReliSock::RcvMsg :: RcvMsg() :
 	m_end(0),
 	m_tmp(NULL),
 	ready(0),
-	m_closed(false)
+	m_closed(false),
+	m_low_data_mode(false)
 {
 	memset( m_partial_cksum, 0, sizeof(m_partial_cksum) );
 }
@@ -874,7 +875,8 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, ti
 		memcpy(&len_t, &hdr[1], 4);
 		len = (int)ntohl(len_t);
 		m_end = (int) ((char *)hdr)[0];
-		if (m_end < 0 || m_end > 10 || len < 0 || len > max_packet_size) {
+		if (m_end < 0 || m_end > 10 || len < 0 || len > max_packet_size ||
+		    (m_low_data_mode && m_end == 0)) {
 			header_filled = retval;
 			goto check_header; // jump down to a check we now know will fail
 		}
@@ -906,6 +908,11 @@ check_header:
 		char hex[3 * NORMAL_HEADER_SIZE + 1];
 		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized : %s\n",
 				debug_hex_dump(hex, &hdr[0], MIN(NORMAL_HEADER_SIZE, header_filled)));
+		return FALSE;
+	}
+	// In low-data mode, reject multi-packet messages.
+	if (m_low_data_mode && m_end == 0) {
+		dprintf(D_ERROR, "IO: Multi-packet message received in low-data mode\n");
 		return FALSE;
 	}
 
