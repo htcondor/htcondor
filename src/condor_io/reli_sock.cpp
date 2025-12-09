@@ -61,6 +61,7 @@ ReliSock::init()
 	m_has_backlog = false;
 	m_read_would_block = false;
 	m_non_blocking = false;
+	m_read_broken = false;
 	ignore_next_encode_eom = FALSE;
 	ignore_next_decode_eom = FALSE;
 	_bytes_sent = 0.0;
@@ -512,7 +513,18 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
-	return rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
+	// A previous read failure has left the stream in an inconsistent state.
+	if (m_read_broken) {
+		return FALSE;
+	}
+
+	int rc = rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
+	if (rc == 0) {
+		// Our read has failed and the stream is likely non-recoverable.
+		// Mark it as broken.
+		m_read_broken = true;
+	}
+	return rc;
 }
 
 int
@@ -1838,6 +1850,12 @@ ReliSock::setTargetSharedPortID( char const *id )
 
 bool
 ReliSock::msgReady() {
+	// If m_read_broken==true, the read stream is either closed or in a
+	// non-recoverable state. In that situation, we indicate a message is
+	// ready (i.e. attempting to read data won't block).
+	if (m_read_broken) {
+		return true;
+	}
 	while (!rcv_msg.ready)
 	{
 		// NOTE: 'true' here indicates non-blocking.
@@ -1848,6 +1866,9 @@ ReliSock::msgReady() {
 			m_read_would_block = true;
 			return false;
 		} else if (retval == 0) {
+			if (m_read_broken) {
+				return true;
+			}
 			// No data is available
 			return false;
 		}

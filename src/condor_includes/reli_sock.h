@@ -401,6 +401,7 @@ protected:
 	bool m_has_backlog;
 	bool m_read_would_block;
 	bool m_non_blocking;
+	bool m_read_broken;
 
 	// Message digest covering communications prior to enabling encryption
 	// When encryption is enabled, this digest is included in the authenticated
