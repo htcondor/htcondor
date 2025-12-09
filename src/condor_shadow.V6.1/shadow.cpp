@@ -741,6 +741,10 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
 
+		// Once input transfer is finished, the next "input" transfer, if any,
+		// will be the "synch" list.
+		remRes->filetrans.SetUploadIsSynch();
+
 		jobAd->Assign( "TransferInFinished", time(nullptr) );
 	} else if( tq && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_QUEUED );

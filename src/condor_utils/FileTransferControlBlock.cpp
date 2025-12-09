@@ -104,6 +104,9 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 	eval_FAILURE_FILES = jobAd->LookupString(
 		ATTR_FAILURE_FILES, FAILURE_FILES
 	);
+	eval_SYNCH_FILES = jobAd->LookupString(
+	    ATTR_SYNCH_FILES, SYNCH_FILES
+	);
 
 	eval_NT_DOMAIN = jobAd->LookupString(
 		ATTR_NT_DOMAIN, NT_DOMAIN

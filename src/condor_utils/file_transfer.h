@@ -269,6 +269,8 @@ class FileTransfer final: public Service {
 	void setMaxUploadBytes(filesize_t MaxUploadBytes);
 	void setMaxDownloadBytes(filesize_t MaxUploadBytes);
 
+	void SetUploadIsSynch();
+
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
 
@@ -559,6 +561,8 @@ class FileTransfer final: public Service {
 
   protected:
 
+	bool upload_is_synch = false;
+
     bool _fix_me_copy_initialized = false;
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
@@ -592,6 +596,7 @@ class FileTransfer final: public Service {
 	filesize_t DoUpload(ReliSock *s);
 	filesize_t DoCheckpointUploadFromStarter(ReliSock * s);
 	filesize_t DoCheckpointUploadFromShadow(ReliSock * s);
+	filesize_t DoSynchUpload(ReliSock * s);
 	filesize_t DoNormalUpload(ReliSock * s);
 
 	typedef struct _ft_protocol_bits_struct {
@@ -680,6 +685,7 @@ class FileTransfer final: public Service {
 	std::vector<std::string> EncryptCheckpointFiles;
 	std::vector<std::string> DontEncryptCheckpointFiles;
 	std::vector<std::string> FailureFiles;
+	std::vector<std::string> SynchFiles;
 
 	char* OutputDestination{nullptr};
 	char* SpooledIntermediateFiles{nullptr};
@@ -891,6 +897,8 @@ class FileTransfer final: public Service {
     FileTransferList checkpointList;
 
     FileTransferList inputList;
+
+    FileTransferList synchList;
 
     std::unordered_map< std::string, std::string > proxy_by_method;
 };

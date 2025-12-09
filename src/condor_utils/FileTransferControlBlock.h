@@ -135,6 +135,9 @@ class FileTransferControlBlock {
 		bool hasFailureFiles() { return eval_FAILURE_FILES; }
 		const std::string & getFailureFiles() { return FAILURE_FILES; }
 
+		bool hasSynchFiles() { return eval_SYNCH_FILES; }
+		const std::string & getSynchFiles() { return SYNCH_FILES; }
+
 		int getStageInFinish() { return STAGE_IN_FINISH; }
 
 		bool hasNTDomain() { return eval_NT_DOMAIN; }
@@ -183,6 +186,7 @@ class FileTransferControlBlock {
 		std::string		DONT_ENCRYPT_INPUT_FILES;
 		std::string		DONT_ENCRYPT_OUTPUT_FILES;
 		std::string		FAILURE_FILES;
+		std::string		SYNCH_FILES;
 		std::string		NT_DOMAIN;
 
 		// Some attributes are evaluated rather than looked up.
@@ -212,6 +216,7 @@ class FileTransferControlBlock {
 		bool			eval_DONT_ENCRYPT_INPUT_FILES {false};
 		bool			eval_DONT_ENCRYPT_OUTPUT_FILES {false};
 		bool			eval_FAILURE_FILES {false};
+		bool			eval_SYNCH_FILES {false};
 		bool			eval_NT_DOMAIN {false};
 
 
