@@ -643,6 +643,10 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 		FailureFiles = split(ftcb.getFailureFiles(), ",");
 	}
 
+	if( ftcb.hasSynchFiles() ) {
+		SynchFiles = split(ftcb.getSynchFiles(), ",");
+	}
+
 	// You always get your standard out and error back.
 	if( shouldSendStdout() ) {
 		if(! file_contains(FailureFiles, JobStdoutFile) ) {
@@ -4243,6 +4247,8 @@ FileTransfer::DoUpload(ReliSock * sock)
 		} else {
 			return DoCheckpointUploadFromShadow(sock);
 		}
+	} else if( upload_is_synch ) {
+		return DoSynchUpload(sock);
 	} else {
 		return DoNormalUpload(sock);
 	}
@@ -4434,6 +4440,28 @@ FileTransfer::DoCheckpointUploadFromShadow(ReliSock * s)
 }
 
 filesize_t
+FileTransfer::DoSynchUpload(ReliSock * s)
+{
+	FileTransferList filelist;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+
+	FilesToSend = & SynchFiles;
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    WITHOUT_OUTPUT_DESTINATION
+	);
+	if( rc < 0 ) { return rc; }
+
+	return uploadFileList(
+		s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	);
+}
+
+filesize_t
 FileTransfer::DoNormalUpload(ReliSock * s)
 {
 	FileTransferList filelist;
@@ -4442,7 +4470,9 @@ FileTransfer::DoNormalUpload(ReliSock * s)
 	_ft_protocol_bits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
-	if( inHandleCommands ) { filelist = this->inputList; }
+	if( inHandleCommands ) {
+		filelist = this->inputList;
+	}
 
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
@@ -8525,4 +8555,10 @@ FileTransfer::AddFilesFromSpoolTo( FileTransfer * transobject ) {
 		if (!file_contains(transobject->InputFiles, info.filename()))
 			transobject->InputFiles.emplace_back(info.filename());
 	}
+}
+
+
+void
+FileTransfer::SetUploadIsSynch() {
+    upload_is_synch = true;
 }
