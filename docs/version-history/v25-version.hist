@@ -6,7 +6,7 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
-- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``true``
+- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``True``
   causing failure to cleanup ephemeral Logical Volumes to break slot resources.
   If the logical volume is later successfully cleaned up then the associated
   broken resources will be restored.
@@ -24,16 +24,15 @@
 - The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
   list to the attributes it will be sending to the *condor_schedd* for resource requests.
   The *condor_negotiator* now also has a more complete set of known slot attributes which it
-  will remove as well.  These changes should help make the schedd more efficient when building
+  will remove as well.  These changes should help make the *condor_schedd* more efficient when building
   resource requests for matchmaking.
   :jira:`3358`
 
-- EP administrators may now alter the semantics of self-checkpointing jobs:
-  after a job self-checkpoints and the checkpoint is uploaded, if
+- EP administrators may now alter the semantics of self-checkpointing jobs.
+  After a job self-checkpoints and the checkpoint is uploaded, if
   :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
-  be reactivated, and evict the job (with its own
-  :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`
-  ) if not.
+  be reactivated then the job is restarted: otherwise the job is evicted with a
+  :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`.
   :jira:`3222`
 
 - Fix up the *condor_credmon_oauth* to support Python 3.14.  With this, we believe that
@@ -42,8 +41,8 @@
 
 - Added configuration variables :macro:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE` and
   :macro:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE`. When configured, the *condor_job_router*
-  will first use the address file to locate the source or destination Schedd and
-  only query the Collector if the file does not contain an address. Use of these
+  will first use the address file to locate the source or destination *condor_schedd* and
+  only query the *condor_collector* if the file does not contain an address. Use of these
   configuration variables improves the efficiency of the job router and eliminates
   one source of failure when routing.
   :jira:`1736`
