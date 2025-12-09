@@ -24,10 +24,7 @@
         <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
                 integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
                 crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
-                integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
-                crossorigin="anonymous"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.bundle.min.js"
                 integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
                 crossorigin="anonymous"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.js"></script>
@@ -48,13 +45,21 @@
            });
         </script>
         <script>
-        /**
-         * Util to format graph query strings by replacing newlines between parameters with '&' characters, 
-         * and escaping '%' characters.
-         */
-        function urlEscapeGraphQuery(query) {
-            return query.replace(/\n\s*/g,'&').replace(/^\&|\&$/,'').replace(/%/g, '%25');
-        }
+            /**
+             * Util to format graph query strings by replacing newlines between parameters with '&' characters, 
+             * and escaping '%' characters.
+             */
+            function urlEscapeGraphQuery(query) {
+                return query.replace(/\n\s*/g,'&').replace(/^\&|\&$/,'').replace(/%/g, '%25');
+            }
+        </script>
+        <script>
+            /**
+             * Enable bootstrap tooltips
+             */
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip()
+            })
         </script>
 
     {% endblock js %}
@@ -73,7 +78,10 @@
                <div class="row flex-nowrap">
                     {% if prev_page %}
                     <div class="navbar-nav col site-link">
-                        <a class="nav-link" href="{{ prev_page.url }}">
+                        <a class="nav-link" href="{{ prev_page.url }}" 
+                           data-toggle="tooltip" 
+                           data-placement="left" 
+                            title="{{ prev_page.text }} - {{ prev_page.subtitle }}">
                             <i class="bi bi-chevron-left"></i>
                         </a>
                     </div>
@@ -89,7 +97,10 @@
 
                     {% if next_page %}
                     <div class="navbar-nav col site-link">
-                        <a class="nav-link" href="{{ next_page.url }}">
+                        <a class="nav-link" href="{{ next_page.url }}" 
+                            data-toggle="tooltip" 
+                            data-placement="right" 
+                            title="{{ next_page.text }} - {{ next_page.subtitle }}">
                             <i class="bi bi-chevron-right"></i>
                         </a>
                     </div>

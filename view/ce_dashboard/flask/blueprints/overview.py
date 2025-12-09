@@ -207,7 +207,8 @@ def handle_contributed():
 
     return render_template('contributed.html', host=host, 
                            linkmap=overview_linkmap, time_range=time_range,
-                           page_title=title, page_subtitle = name, ce_facility_name=facility, ce_site_name=site)
+                           page_title=title, page_subtitle = name, ce_facility_name=facility, ce_site_name=site,
+                           next_page=next_site, prev_page=prev_site)
 
 @overview_bp.route('/overview.html')
 def overview():

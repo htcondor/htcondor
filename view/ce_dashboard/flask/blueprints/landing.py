@@ -405,8 +405,8 @@ def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional
     next_link, next_name = next_facility.name.split('|',1)
 
     return (
-        HeaderLink(text=prev_facility.facility_name, subtitle=prev_name, url=prev_link),
-        HeaderLink(text=next_facility.facility_name, subtitle=next_name, url=next_link)
+        HeaderLink(text=next_facility.facility_name, subtitle=next_name, url=next_link),
+        HeaderLink(text=prev_facility.facility_name, subtitle=prev_name, url=prev_link)
     )
 
 ##########################################
