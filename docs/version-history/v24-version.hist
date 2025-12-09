@@ -1,13 +1,13 @@
 *** 24.12.15 features
 
-- *condor_submit* will now report an error when :subcom:`output_destination` is
+- :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
   not a URL and suggest an alternative.
   :jira:`3385`
 
 *** 24.12.15 bugs
 
 - Improve compatibility with versions of HTCondor that attempt to set
-  attribute ``OsUser`` in the job ad.
+  attribute :ad-attr:`OsUser` in the job ad.
   :jira:`3415`
 
 - Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
