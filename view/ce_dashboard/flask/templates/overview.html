@@ -25,6 +25,7 @@
 
     <div class="container-fluid">
 
+
 <div class="row">
 <div class="col">
 <p style="text-align: center">
@@ -41,7 +42,24 @@ Contribution of compute capacity from the
                         dst_id: "table-now",
 						has_fullscreen_link: false,
 						data_url: "/data/ce_overview?r=day",
-						graph_query: "filter=Type=P&limit=lastDate&filter=Cpus>0&group=Date;Date,Project,Field,Organization,Cpus&addRowIfEmpty=None&ceil=Cpus,Cpus&unselect=Cpus&rename=Date=Last Update Time&rename=Project=Projects&rename=Field=Fields&rename=Organization=Organizations&rename=Cpus=Cpus&rename=Date=CE Health&allowHtml=True&set_val=CE Health={{ ce_health }}&intensify=health",
+						graph_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            limit=lastDate
+                            filter=Cpus>0
+                            group=Date;Date,Project,Field,Organization,Cpus
+                            addRowIfEmpty=None
+                            ceil=Cpus,Cpus
+                            unselect=Cpus
+                            rename=Date=Last Update Time
+                            rename=Project=Projects
+                            rename=Field=Fields
+                            rename=Organization=Organizations
+                            rename=Cpus=Cpus
+                            rename=Date=CE Health
+                            allowHtml=True
+                            set_val=CE Health=Good
+                            intensify=health
+                        `)
                     });
                 </script>
 
@@ -55,7 +73,20 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Cpus&order=Date&pivot=Date;Project;Cpus&legend.position=in&add=CpusAllocated,CpusUnallocated,CpusContributed&unselect=CpusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=Cpus
+                                        order=Date
+                                        pivot=Date;Project;Cpus
+                                        legend.position=in
+                                        add=CpusAllocated,CpusUnallocated,CpusContributed
+                                        unselect=CpusUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                   `)
 			                    });
 			                </script>
 			</div>
@@ -65,7 +96,22 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project2",
 			                       title: "Memory Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Memory&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=MemoryAllocated,MemoryUnallocated
+                                        div=Memory,1000,Memory
+                                        unselect=Memory
+                                        order=Date
+                                        pivot=Date;Project;Memory
+                                        legend.position=in
+                                        vAxis.format=short
+                                        add=MemoryAllocated,MemoryUnallocated,MemoryContributed
+                                        unselect=MemoryUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        chart=area
+                                    `)
 			                    });
 			                </script>
 			</div>
@@ -78,7 +124,20 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Disk&order=Date&pivot=Date;Project;Disk&legend.position=in&add=DiskAllocated,DiskUnallocated,DiskContributed&unselect=DiskUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=DiskAllocated,DiskUnallocated
+                                        order=Date
+                                        pivot=Date;Project;Disk
+                                        legend.position=in
+                                        add=DiskAllocated,DiskUnallocated,DiskContributed
+                                        unselect=DiskUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                    `)
 			                    });
 			                </script>
 			</div>
@@ -88,7 +147,20 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project4",
 			                       title: "BCUs Past Week (1core/4GB Mem/4GB Disk)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Bcus&order=Date&pivot=Date;Project;Bcus&legend.position=in&add=BcusAllocated,BcusUnallocated,BcusContributed&unselect=BcusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=Bcus
+                                        order=Date
+                                        pivot=Date;Project;Bcus
+                                        legend.position=in
+                                        add=BcusAllocated,BcusUnallocated,BcusContributed
+                                        unselect=BcusUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                   `)
 			                    });
 			                </script>
 			</div>
@@ -101,7 +173,20 @@ Contribution of compute capacity from the
                         dst_id: "col-chart",
                         title: "Groups Served per Day",
 						data_url: "/data/ce_overview?r=week",
-						graph_query: "filter=Type=P&filter=Cpus>0&extract_regexp=Date=-(.*) .*&group=Date;Project,Organization,Field&rename=Project=Projects&rename=Organization=Organizations&rename=Field=Fields&order=Date&addRowIfEmpty=Nobody Served This Week&vAxis.maxValue=2&chart=column&legend.position=in",
+						graph_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            filter=Cpus>0
+                            extract_regexp=Date=-(.*) .*
+                            group=Date;Project,Organization,Field
+                            rename=Project=Projects
+                            rename=Organization=Organizations
+                            rename=Field=Fields
+                            order=Date
+                            addRowIfEmpty=Nobody Served This Week
+                            vAxis.maxValue=2
+                            chart=column
+                            legend.position=in
+                        `)
                     });
                 </script>
             </div>
@@ -111,12 +196,103 @@ Contribution of compute capacity from the
                         dst_id: "cpu-by-day",
                         title: "CPU (l), Memory (r), Disk (r) Allocated per Day",
 						data_url: "/data/ce_overview?r=week",
-						graph_query: "vAxis.maxValue=3&filter=Type=R&q=Allocated&group=Date;Cpus,Memory,Disk&div=Memory,1000,Memory&unselect=Memory&extract_regexp=Date=-(.*) .*&group=Date;avg(Cpus),avg(Memory),avg(Disk)&mult=avgCpus,24,CPU Hours&mult=avgMemory,24,Mem GB Hours&mult=avgDisk,24,Disk GB Hours&unselect=avgCpus,avgMemory,avgDisk&order=Date&vAxes.0.minValue=0&vAxes.1.minValue=0&vAxes.0.title=CPU Hours&vAxes.1.title=GB Hours&series.0.targetAxisIndex=0&series.1.targetAxisIndex=1&series.2.targetAxisIndex=1&legend.position=in&vAxis.format=short&chartArea.left=13%25&chartArea.right=13%25&chart=column",
+						graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=Allocated
+
+                            group=Date;Cpus,Memory,Disk
+                            div=Memory,1000,Memory
+
+                            unselect=Memory
+                            extract_regexp=Date=-(.*) .*
+                            group=Date;avg(Cpus),avg(Memory),avg(Disk)
+
+                            mult=avgCpus,24,CPU Hours
+                            mult=avgMemory,24,Mem GB Hours
+                            mult=avgDisk,24,Disk GB Hours
+
+                            unselect=avgCpus,avgMemory,avgDisk
+                            order=Date
+
+                            vAxes.0.minValue=0
+                            vAxes.1.minValue=0
+                            vAxes.0.title=CPU Hours
+                            vAxes.1.title=GB Hours
+                            
+                            series.0.targetAxisIndex=0
+                            series.1.targetAxisIndex=1
+                            series.2.targetAxisIndex=1
+                            
+                            legend.position=in
+                            vAxis.format=short
+                            chartArea.left=13%
+                            chartArea.right=13%
+                            chart=column
+                        `)
                     });
                 </script>
             </div>
 		</div>
+  
+		<div class="row">
+            <div class="col-6 htcv-col-6" id="glidein-limits">
+                <script>
+                    new HTCondorView({
+                        dst_id: "glidein-limits",
+                        title: "Maximum Concurrent Resource-Limited Glideins per Day",
+						data_url: "/data/ce_overview?r=week",
+                        graph_query: urlEscapeGraphQuery(`
+                            filter=Type=R
+                            q=EPs
+                            group=Date;EPsCpuLimited,EPsMemoryLimited,EPsDiskLimited,EPsRunning
 
+                            div=EPsCpuLimited,EPsRunning,FractionCpuLimited
+                            mult=FractionCpuLimited,100,PercentCpuLimited
+
+                            div=EPsMemoryLimited,EPsRunning,FractionMemoryLimited
+                            mult=FractionMemoryLimited,100,PercentMemoryLimited
+
+                            div=EPsDiskLimited,EPsRunning,FractionDiskLimited
+                            mult=FractionDiskLimited,100,PercentDiskLimited
+
+                            extract_regexp=Date=-(.*) .*
+                            group=Date;max(PercentCpuLimited),max(PercentMemoryLimited),max(PercentDiskLimited)
+                            order=Date
+
+                            rename=maxPercentCpuLimited=% CPU Limited
+                            rename=maxPercentMemoryLimited=% Memory Limited
+                            rename=maxPercentDiskLimited=% Disk Limited
+
+                            legend.position=in
+                            vAxis.format=short
+                            vAxes.0.title=% Running EPs
+                            chart=column
+                        `)
+                    });
+                </script>
+            </div>
+            <div class="col-6 htcv-col-6" id="eps-running">
+                <script>
+                    new HTCondorView({
+                        dst_id: "eps-running",
+                        title: "Running Execution Points Past Week",
+						data_url: "/data/ce_overview?r=week",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=EPsRunning
+                            order=Date
+                            pivot=Date;Project;EPsRunning
+                            legend.position=in
+                            series.0.areaOpacity=0.5
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
+            </div>
+        </div>
 
 		<p><p>
         <div class="row">
@@ -126,8 +302,25 @@ Contribution of compute capacity from the
                         dst_id: "pie-by-project",
                         title: "CPU Allocation Percentage by Project",
 						data_url: "/data/ce_overview",
-						graph_query: "filter=Type=P&group=Project;Cpus&filter=Cpus>0&order=-Cpus&chart=pie&tooltip.text=percentage&tooltip.isHtml=false&sliceVisibilityThreshold=0",
-						table_query: "filter=Type=P&group=Project,Field,Organization;avg(Cpus),max(Cpus)&filter=maxCpus>0&order=-avgCpus&ceil=maxCpus,maxCpus&unselect=maxCpus&make_url=Project=https://osg-htc.org/services/ospool/projects?project=*",
+						graph_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            group=Project;Cpus
+                            filter=Cpus>0
+                            order=-Cpus
+                            chart=pie
+                            tooltip.text=percentage
+                            tooltip.isHtml=false
+                            sliceVisibilityThreshold=0
+                        `),
+						table_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            group=Project,Field,Organization;avg(Cpus),max(Cpus)
+                            filter=maxCpus>0
+                            order=-avgCpus
+                            ceil=maxCpus,maxCpus
+                            unselect=maxCpus
+                            make_url=Project=https://osg-htc.org/services/ospool/projects?project=*
+                        `)
                     });
                 </script>
             </div>

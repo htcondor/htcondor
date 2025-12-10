@@ -37,7 +37,21 @@ Contribution of compute capacity from the
                             dst_id: "{{ resource }}-contributed",
                             title: "{{ resource }} Usage Past {{time_range | capitalize}}",
                             data_url: "/data/ce_overview?r={{time_range}}",
-                            graph_query: "filter=Type=R&q={{ column }}&order=Date&pivot=Date;Project;{{ resource }}&legend.position=top&add={{ resource }}Allocated,{{ resource }}Unallocated,{{ resource }}Contributed&unselect={{ resource }}Unallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area&chartArea.left=10%25&chartArea.right=5%25&titleTextStyle.fontSize=16&vAxis.title={{ vaxis }}",
+                            graph_query: urlEscapeGraphQuery(`
+                                filter=Type=R
+                                q={{ column }}
+                                order=Date
+                                pivot=Date;Project;{{ resource }}
+                                legend.position=top
+                                add={{ resource }}Allocated,{{ resource }}Unallocated,{{ resource }}Contributed
+                                unselect={{ resource }}Unallocated,EPs{{ resource }}Limited
+                                series.0.areaOpacity=1
+                                series.1.areaOpacity=0.05
+                                chart=area&chartArea.left=10%25
+                                chartArea.right=5%25
+                                titleTextStyle.fontSize=16
+                                vAxis.title={{ vaxis }}
+                            `),
                             {% if resource != 'Bcus' %}
                             help_url: "Allocated Details|/allocated_graph_{{ resource }}.html?r={{time_range}}amp;host={{ host }}",
                             {% endif %}
