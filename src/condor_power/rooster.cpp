@@ -123,11 +123,10 @@ void Rooster::poll( int /* timerID */ )
 {
 	dprintf(D_FULLDEBUG,"Cock-a-doodle-doo! (Time to look for machines to wake up.)\n");
 
-	ClassAdList startdAds;
 	CondorQuery unhibernateQuery(STARTD_AD);
-	ExprTree *requirements = NULL;
+	ExprTree *requirements = nullptr;
 
-	if( ParseClassAdRvalExpr( m_unhibernate_constraint.c_str(), requirements )!=0 || requirements==NULL )
+	if( ParseClassAdRvalExpr( m_unhibernate_constraint.c_str(), requirements )!=0 || requirements==nullptr )
 	{
 		EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE: %s",
 			   m_unhibernate_constraint.c_str());
@@ -139,25 +138,50 @@ void Rooster::poll( int /* timerID */ )
 	ASSERT( collects );
 
 	QueryResult result;
+	std::vector<std::unique_ptr<ClassAd>> startdAds;
 	result = collects->query(unhibernateQuery,startdAds);
 	if( result != Q_OK ) {
 		dprintf(D_ALWAYS,
 				"Couldn't fetch startd ads using constraint "
 				"ROOSTER_UNHIBERNATE=%s: %s\n",
 				m_unhibernate_constraint.c_str(), getStrQueryResult(result));
+		delete requirements;
 		return;
 	}
 
-	dprintf(D_FULLDEBUG,"Got %d startd ads matching ROOSTER_UNHIBERNATE=%s\n",
-			startdAds.MyLength(), m_unhibernate_constraint.c_str());
+	dprintf(D_FULLDEBUG,"Got %zu startd ads matching ROOSTER_UNHIBERNATE=%s\n",
+			startdAds.size(), m_unhibernate_constraint.c_str());
 
-	startdAds.Sort(SlotRankSortFunc,&m_rank_ad);
+	// Assign HibernationRank once to each startd ad, just in case the classad expression
+	// is not stable. (e.g. it depends on time or random numbers)
 
-	startdAds.Open();
+	static const char *ATTR_HIBERNATION_RANK = "_CondorHibernationRank";
+
+	for (auto& startdAd: startdAds) {
+		double hibernation_rank = 0.0;
+		EvalFloat(ATTR_RANK,&m_rank_ad,startdAd.get(),hibernation_rank);
+		startdAd->Assign(ATTR_HIBERNATION_RANK,hibernation_rank);
+	}
+
+	// Sort startd ads by HibernationRank (higher rank first)
+	std::ranges::sort(startdAds,
+		[](const std::unique_ptr<ClassAd>& ad1, const std::unique_ptr<ClassAd>& ad2) {
+			double rank1 = 0.0;
+			double rank2 = 0.0;
+			ad1->LookupFloat(ATTR_HIBERNATION_RANK, rank1);
+			ad2->LookupFloat(ATTR_HIBERNATION_RANK, rank2);
+
+			if (fabs(rank1 - rank2) < DBL_EPSILON) {
+				return ad1.get() > ad2.get(); // pointer comparison to have a consistent order
+			}
+			return rank1 > rank2; // higher rank first
+		}
+	);
+
 	int num_woken = 0;
-	ClassAd *startd_ad;
 	std::set<std::string> machines_done;
-	while( (startd_ad=startdAds.Next()) ) {
+	for (const auto& startdAdPtr : startdAds) {
+		ClassAd *startd_ad = startdAdPtr.get();
 		std::string machine;
 		std::string name;
 		startd_ad->LookupString(ATTR_MACHINE,machine);
@@ -190,12 +214,11 @@ void Rooster::poll( int /* timerID */ )
 			}
 		}
 	}
-	startdAds.Close();
 
 	delete requirements;
 	requirements = NULL;
 
-	if( startdAds.MyLength() ) {
+	if (!startdAds.empty() ) {
 		dprintf(D_FULLDEBUG,"Done sending wakeup calls.\n");
 	}
 }
