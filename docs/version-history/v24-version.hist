@@ -11,7 +11,8 @@
   :jira:`3423`
 
 - Fixed a bug that would cause a crash in the *condor_rooster* and *condor_defrag* when many slots
-  would have identical :macro:`RANK` expressions.
+  would have identical :macro:`ROOSTER_UNHIBERNATE_RANK` expressions, or if was
+  not constant (e.g. used random() or time()).
   :jira:`3436`
 
 *** 24.12.15 features
