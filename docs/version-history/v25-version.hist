@@ -16,11 +16,6 @@
   reminders a *condor_startd* is tracking.
   :jira:`3352`
 
-- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
-  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
-  to ``True``.
-  :jira:`3304`
-
 - The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
   list to the attributes it will be sending to the *condor_schedd* for resource requests.
   The *condor_negotiator* now also has a more complete set of known slot attributes which it
