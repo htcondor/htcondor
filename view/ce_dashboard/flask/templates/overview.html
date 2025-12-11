@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% import 'utils.jinja' as utils %}
+
 {% block style %}
     <style>
         .graph .vizchart {
@@ -83,7 +85,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-                                   action_url: "new bootstrap.Modal($('#cookieModal')).show()",
+                                   action_url: "ⓘ|showModal('cpus-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -107,6 +109,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project2",
 			                       title: "Memory Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
+                                   action_url: "ⓘ|showModal('memory-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -135,6 +138,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
+                                   action_url: "ⓘ|showModal('disk-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -158,6 +162,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project4",
 			                       title: "BCUs Past Week (1core/4GB Mem/4GB Disk)",
 			                       data_url: "/data/ce_overview?r=week",
+                                   action_url: "ⓘ|showModal('bcus-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -184,6 +189,7 @@ Contribution of compute capacity from the
                         dst_id: "col-chart",
                         title: "Groups Served per Day",
 						data_url: "/data/ce_overview?r=week",
+                        action_url: "ⓘ|showModal('groups-per-day-modal')",
 						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             filter=Cpus>0
@@ -207,6 +213,7 @@ Contribution of compute capacity from the
                         dst_id: "cpu-by-day",
                         title: "CPU (l), Memory (r), Disk (r) Allocated per Day",
 						data_url: "/data/ce_overview?r=week",
+                        action_url: "ⓘ|showModal('resources-per-day-modal')",
 						graph_query: urlEscapeGraphQuery(`
                             vAxis.maxValue=3
                             filter=Type=R
@@ -253,6 +260,7 @@ Contribution of compute capacity from the
                         dst_id: "glidein-limits",
                         title: "Maximum Concurrent Resource-Limited Glideins per Day",
 						data_url: "/data/ce_overview?r=week",
+                        action_url: "ⓘ|showModal('resource-limited-per-day-modal')",
                         graph_query: urlEscapeGraphQuery(`
                             filter=Type=R
                             q=EPs
@@ -289,6 +297,7 @@ Contribution of compute capacity from the
                         dst_id: "eps-running",
                         title: "Running Execution Points Past Week",
 						data_url: "/data/ce_overview?r=week",
+                        action_url: "ⓘ|showModal('eps-past-week-modal')",
                         graph_query: urlEscapeGraphQuery(`
                             vAxis.maxValue=3
                             filter=Type=R
@@ -363,14 +372,104 @@ Contribution of compute capacity from the
         </div>
         <!-- End of Bootstrap Modal -->
 
+        <!-- Help Modal for Cpus Allocated -->
+        {% call utils.bootstrap_modal('cpus-past-week-modal', 'About: CPUs Past Week') %}
+            <p>Displays the CPUs allocated to and contributed by EPs at this site.</p>
+            <ul>
+                <li>CPUs Allocated: Total count of CPUs allocated to EPs running at this site.</li>
+                <li>CPUs Contributed: CPUs utilized by jobs running at this site.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for Memory Past Week -->
+        {% call utils.bootstrap_modal('memory-past-week-modal', 'About: Memory Past Week') %}
+            <p>Displays the memory allocated to and contributed by EPs at this site.</p>
+            <ul>
+                <li>Memory Allocated: Total amount of memory (in GB) allocated to EPs running at this site.</li>
+                <li>Memory Contributed: Memory (in GB) utilized by jobs running at this site.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for Disk Past Week -->
+        {% call utils.bootstrap_modal('disk-past-week-modal', 'About: Disk Past Week') %}
+            <p>Displays the disk allocated to and contributed by EPs at this site.</p>
+            <ul>
+                <li>Disk Allocated: Total amount of disk space (in GB) allocated to EPs running at this site.</li>
+                <li>Disk Contributed: Disk space (in GB) utilized by jobs running at this site.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for BCUs Past Week -->
+        {% call utils.bootstrap_modal('bcus-past-week-modal', 'About: BCUs Past Week') %}
+            <p>
+                Displays the Basic Compute Units (BCUs) allocated to and contributed by EPs at this site.
+                1 BCU is defined as 1 CPU core, 4 GB of memory, and 4 GB of disk. Total BCUs are calculated 
+                based on the most constrained resource.
+            </p>
+            <p>
+                For example, if a site contributes the following:
+            </p>
+            <ul>
+                <li>2 CPU cores</li>
+                <li>16 GB of memory</li>
+                <li>16 GB of disk</li>
+            </ul>
+            <p>
+                Its BCU contribution would be 2 BCUs, since the CPU cores are the limiting factor.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Groups Served Per Day -->
+        {% call utils.bootstrap_modal('groups-per-day-modal', 'About: Groups Served per Day') %}
+            <p>Displays the count of different organizational units that have utilized resources at this site.</p>
+            <ul>
+                <li>Projects: Individual research groups within an organization.</li>
+                <li>Organizations: Research Institutions.</li>
+                <li>Fields: Different fields of science.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for Resources Past Day -->
+        {% call utils.bootstrap_modal('resources-per-day-modal', 'About: CPU (l), Memory (r), Disk (r) Allocated per Day') %}
+            <p>
+                Displays the sum total of resources allocated by the site per day, multiplied by the duration
+                for which they were allocated. For example, if 4 CPUs were allocated for 5 hours, that would 
+                contribute 20 CPU Hours to the total for that day.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Resource Limited Glideins per day -->
+        {% call utils.bootstrap_modal('resource-limited-per-day-modal', 'About: Maximum Concurrent Resource-Limited Glideins Per Day') %}
+            <p>
+                For each resource type, display the maximum percentage of running Execution Points (EPs)
+                that were limited by that resource on a given day. Here, "limited" is defined as having over 
+                90% of a resource allocated to the EP used by running jobs. 
+            </p>
+            <p>
+                For example, if an EP has 16 GB of memory and jobs running on the EP occupy 15 GB of memory, 
+                then the EP would be considered memory-limited. If 8 of the 10 EPs running at the site were memory-limited, 
+                then the site would be 80% memory-limited at that time.
+            </p>
+            <p>
+                Values displayed are the maximum percentages observed on that day. If, at any point in the day,
+                90% of concurrently running EPs were CPU-limited, the value for that day would be 90%.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for EPs RUnning Past Week -->
+        {% call utils.bootstrap_modal('eps-past-week-modal', 'About: Running Execution Points Past Week') %}
+            <p>
+                Displays the count of running execution points at this site.
+            </p>
+        {% endcall %}
+
     </div>
 
         
     <script>
-
-        function showModal() {
-            const cookieModal = new bootstrap.Modal(document.getElementById("cookieModal"));
-            cookieModal.show();
+        function showModal(modalId) {
+            const modal = new bootstrap.Modal(document.getElementById(modalId));
+            modal.show();
         }
 
         document.addEventListener("DOMContentLoaded", function () {
