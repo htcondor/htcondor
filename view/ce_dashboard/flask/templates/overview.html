@@ -322,6 +322,7 @@ Contribution of compute capacity from the
                         dst_id: "pie-by-project",
                         title: "CPU Allocation Percentage by Project",
 						data_url: "/data/ce_overview",
+                        action_url: "ⓘ|showModal('allocation-modal')",
 						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             group=Project;Cpus
@@ -456,10 +457,18 @@ Contribution of compute capacity from the
             </p>
         {% endcall %}
 
-        <!-- Help Modal for EPs RUnning Past Week -->
+        <!-- Help Modal for EPs Running Past Week -->
         {% call utils.bootstrap_modal('eps-past-week-modal', 'About: Running Execution Points Past Week') %}
             <p>
                 Displays the count of running execution points at this site.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Cpu Allocation Percentage by Project -->
+        {% call utils.bootstrap_modal('allocation-modal', 'About: CPU Allocation Percentage by Project') %}
+            <p>
+                For the given time range (day, week, or month), display the percentage of total CPU allocation
+                at the site used by each project that ran jobs at the site.
             </p>
         {% endcall %}
 
@@ -467,11 +476,6 @@ Contribution of compute capacity from the
 
         
     <script>
-        function showModal(modalId) {
-            const modal = new bootstrap.Modal(document.getElementById(modalId));
-            modal.show();
-        }
-
         document.addEventListener("DOMContentLoaded", function () {
             // Check if the cookie exists
             const cookieName = "ceDashStoredHost";

@@ -64,6 +64,16 @@
         })
         </script>
 
+        <script>
+            /**
+             * Util for showing help modals
+             */
+            function showModal(modalId) {
+                const modal = new bootstrap.Modal(document.getElementById(modalId));
+                modal.show();
+            }
+        </script>
+
     {% endblock js %}
 
     {% block style %}{% endblock style %}
