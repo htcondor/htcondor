@@ -7,6 +7,11 @@
   :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
   :jira:`3367`
 
+- If a docker universe jobs fails on an execution point because the image
+  was built for a machine architecture that does not match the execution
+  point, the hold message now more clearly indicates why.
+  :jira:`3447`
+
 - When the attempt to claim a slot to run a job is refused, the reason for the
   refusal is now reported back to the *condor_shadow* which logs the reason and
   adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
