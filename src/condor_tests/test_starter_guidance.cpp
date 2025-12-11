@@ -24,6 +24,14 @@
 // jobWaitUntilExecuteTime()) called to implement "carry on" with ones that
 // make it easy to check the result of the test cases.
 //
+// Update: jobWaitUntilExecuteTime() is now called as a result of calling
+// runPrepareJobHook(), so that the latter doesn't happen until after
+// common file transfer.  In the real starter, the invocation is indirect,
+// via prepareJobHookDone(), because control flow passes through the event
+// loop if we _do_ spawn a PREPARE_JOB hook.  This makes the mockery more
+// complicated.  We could simplify it a bit (by setting `jwuet_called` in
+// runPrepareJobHook()), but orthogonality is probably good here.
+//
 
 class MockJIC;
 using mock_genericRequestGuidance_type = std::function<bool(
@@ -31,13 +39,15 @@ using mock_genericRequestGuidance_type = std::function<bool(
 )>;
 
 
+class MockStarter;
 class MockJIC : public JobInfoCommunicator {
     private:
         mock_genericRequestGuidance_type the_test_case;
+        MockStarter * the_starter {nullptr};
 
     public:
 
-        MockJIC( mock_genericRequestGuidance_type m_grg ) : the_test_case(m_grg) { }
+        MockJIC( mock_genericRequestGuidance_type m_grg, MockStarter * s ) : the_test_case(m_grg), the_starter(s) { }
         virtual ~MockJIC() = default;
 
         virtual bool genericRequestGuidance(
@@ -51,6 +61,7 @@ class MockJIC : public JobInfoCommunicator {
 
         bool got_diagnostic_event = false;
 
+        virtual void runPrepareJobHook();
 
         // Additional mocks.
         virtual int JobCluster() const { return 1; }
@@ -132,6 +143,8 @@ class MockStarter : public Starter {
         // The "carry on" action if the job environment is ready.
         virtual bool jobWaitUntilExecuteTime();
 
+        virtual void prepareJobHookDone();
+
         // The "carry on" action if the job environmet is unready.
         virtual bool skipJobImmediately();
 
@@ -141,7 +154,7 @@ class MockStarter : public Starter {
 
 
 MockStarter::MockStarter( mock_genericRequestGuidance_type m_grg ) {
-    jic = new MockJIC(m_grg);
+    jic = new MockJIC(m_grg, this);
 }
 
 
@@ -153,12 +166,26 @@ MockStarter::jobWaitUntilExecuteTime() {
 }
 
 
+// This is now called before jobWaitUntilExecuteTime().
+void MockJIC::runPrepareJobHook() {
+    dprintf( D_ALWAYS, "MockJIC::runPrepareJobHook()\n" );
+    the_starter->prepareJobHookDone();
+    return;
+}
+
+
 bool
 MockStarter::skipJobImmediately() {
     dprintf( D_ALWAYS, "MockStarter::skipJobImmediately()\n" );
     sji_called = true;
     return true;
 };
+
+
+void
+MockStarter::prepareJobHookDone() {
+    jobWaitUntilExecuteTime();
+}
 
 
 //
