@@ -490,14 +490,16 @@ class FileTransfer final: public Service {
 
 	TransferPluginResult InvokeMultipleFileTransferPlugin(
 		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
-		FileTransferPlugin & plugin, const std::string &transfer_files_string,
+		FileTransferPlugin & plugin,
+		std::vector<ClassAd> & pluginInputAds,
 		std::vector<ClassAd> & resultAds,
 		const char* proxy_filename, bool do_upload
 	);
 	TransferPluginResult InvokeMultiUploadPlugin(
 		FileTransferPlugin & plugin,
 		int &exit_code, bool &exit_by_signal, int &exit_signal,
-		const std::string &transfer_files_string, ReliSock &sock,
+		std::vector<ClassAd> & pluginInputAds,
+		ReliSock &sock,
 		bool send_trailing_eom, CondorError &err, long long &upload_bytes
 	);
 
@@ -559,9 +561,17 @@ class FileTransfer final: public Service {
 
   protected:
 
-    bool _fix_me_copy_initialized = false;
+	bool _fix_me_copy_initialized = false;
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
+
+	typedef struct _walkargs {
+    	std::map<std::string, std::string> env;
+    	const char * prefix{nullptr};
+	} walkargs_t;
+	walkargs_t mergePluginSpecificEnvironment(
+		const FileTransferPlugin & plugin, Env & plugin_env
+	);
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.
