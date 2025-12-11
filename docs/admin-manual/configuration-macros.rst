@@ -8884,7 +8884,7 @@ General
     set explicitly by the user. Defaults to an empty string.
 
 :macro-def:`DAGMAN_USE_OLD_FILE_PARSER[DAGMan]`
-    A boolean that defaults to ``False``, when ``True`` *condor_dagman* will use
+    A boolean that defaults to ``True``, when ``True`` *condor_dagman* will use
     the old file parser to process DAG files.
 
 .. note::
