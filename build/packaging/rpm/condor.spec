@@ -1295,6 +1295,9 @@ fi
 # configuration
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
+- condor_submit checks that output_destination is properly specified
+
 * Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
 - Fix bug where AP would fail to read job credential files
 - Fix bugs that could causes a crash in the authentication code
