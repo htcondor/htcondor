@@ -1492,6 +1492,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
 - Fix problem running PyTorch jobs on multiple GPUs with
   newer versions of the CUDA library by providing long GPU IDs
