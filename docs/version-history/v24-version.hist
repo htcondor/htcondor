@@ -27,10 +27,11 @@
 
 *** 24.0.15 bugs
 
-- Fixed a bug where tools like *condor_status* would print an incorrect
-  value for the ``-af:r`` option when the value to be printed was a single
-  attribute reference.
-  :jira:`3347`
+- Fixed a bug that could cause the AP to fail to read job credential files.
+  :jira:`3377`
+
+- Fixed bugs that could cause a crash in the authentication code.
+  :jira:`3394`
 
 - Fixed a bug where the *condor_negotiator* would fail to contact the
   *condor_schedd* to perform matchmaking if its :macro:`ALLOW_CLIENT`
@@ -38,11 +39,10 @@
   ``submit-side@matchsession``.
   :jira:`3378`
 
-- Fixed a bug that could cause the AP to fail to read job credential files.
-  :jira:`3377`
-
-- Fixed bugs that could cause a crash in the authentication code.
-  :jira:`3394`
+- Fixed a bug where tools like :tool:`condor_status` would print an incorrect
+  value for the ``-af:r`` option when the value to be printed was a single
+  attribute reference.
+  :jira:`3347`
 
 *** 24.12.14 features
 
