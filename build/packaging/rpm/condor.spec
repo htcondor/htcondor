@@ -1295,6 +1295,14 @@ fi
 # configuration
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
+- condor_submit checks that output_destination is properly specified
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.14-1
 - Fix interoperability problem between HTCondor-CE 24 and 25 which
   manifests as a Job Router crash when upgrading the CE to HTCondor 25

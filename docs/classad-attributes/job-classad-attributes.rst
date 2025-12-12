@@ -1206,6 +1206,10 @@ all attributes.
     This can be put into :macro:`MOUNT_UNDER_SCRATCH` to hide users' home
     directories.
 
+:classad-attribute-def:`OsUser`
+    A string value representing the ``User`` the jobs *condor_shadow* will run
+    as. This is set by Condor.
+
 :classad-attribute-def:`OtherJobRemoveRequirements`
     A string that defines a list of jobs. When the job with this
     attribute defined is removed, all other jobs defined by the list are
