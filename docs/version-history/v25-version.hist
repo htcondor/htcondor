@@ -12,6 +12,11 @@
   point, the hold message now more clearly indicates why.
   :jira:`3447`
 
+- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
+  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
+  to ``True``.
+  :jira:`3304`
+
 - When the attempt to claim a slot to run a job is refused, the reason for the
   refusal is now reported back to the *condor_shadow* which logs the reason and
   adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.

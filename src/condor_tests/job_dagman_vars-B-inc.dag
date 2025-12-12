@@ -3,3 +3,5 @@ Vars NodeC third="Frank_Schleck"
 
 Job NodeD job_dagman_vars-B-node.sub
 Vars NodeD misc="that's_all"
+
+JOB ALL_NODES empty1="" empty2=""

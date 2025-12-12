@@ -104,7 +104,7 @@ public:
 		boolOpts[static_cast<size_t>(b::ProduceJobCreds)] = true;
 		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveTempSubFiles)] = true;
-		boolOpts[static_cast<size_t>(b::UseOldDagParser)] = true;
+		boolOpts[static_cast<size_t>(b::UseOldDagParser)] = false;
 
 		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
 		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;
