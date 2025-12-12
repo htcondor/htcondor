@@ -77,7 +77,7 @@ Licensed under the Apache License, Version 2.0.'
 release = '25.5.1'
 
 rst_epilog = """
-.. |release_date| replace:: December 11, 2025
+.. |release_date| replace:: December 15, 2025
 
 .. role:: config(code)
     :language: condor-config
