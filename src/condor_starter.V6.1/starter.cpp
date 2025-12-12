@@ -2238,6 +2238,12 @@ Starter::jobEnvironmentReady( void )
 }
 
 
+void
+Starter::prepareJobHookDone() {
+	jobWaitUntilExecuteTime();
+}
+
+
 bool
 Starter::skipJobImmediately() {
 	//
