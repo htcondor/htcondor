@@ -1,4 +1,4 @@
-*** 25.5.0 features
+*** 25.5.1 features
 
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
   an administrator to configure the *condor_negotiator* so it uses its
@@ -50,7 +50,7 @@
 - Improved DAGMan's debugging for executed scripts.
   :jira:`3381`
 
-*** 25.5.0 bugs
+*** 25.5.1 bugs
 
 *** 25.0.5 bugs
 
