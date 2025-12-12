@@ -1295,6 +1295,11 @@ fi
 # configuration
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.14-1
 - Fix interoperability problem between HTCondor-CE 24 and 25 which
   manifests as a Job Router crash when upgrading the CE to HTCondor 25
@@ -1302,11 +1307,6 @@ fi
   the htcondor2 Python bindings
 - Fix bug when using max_idle and transfer_input_files that could result
   in the container_image to be only transferred with the first job
-
-* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
-- Fix bug where AP would fail to read job credential files
-- Fix bugs that could causes a crash in the authentication code
-- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
 
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
 - Fix problem running PyTorch jobs on multiple GPUs with
