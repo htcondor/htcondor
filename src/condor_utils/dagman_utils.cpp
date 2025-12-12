@@ -508,7 +508,7 @@ bool
 DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std::string &errMsg)
 {
 	bool result = true;
-	bool use_old_parser = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", true);
+	bool use_old_parser = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
 	// Note: destructor will change back to original directory.
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
