@@ -6491,6 +6491,11 @@ int SubmitHash::SetRequirements()
 		}
 	}
 
+	bool ocu_wanted = false;
+	if (job->LookupBool(ATTR_OCU_WANTED, ocu_wanted) && ocu_wanted) {
+		answer += " && TARGET." ATTR_OCU " =?= true";
+	}
+
 	AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
 	RETURN_IF_ABORT();
 

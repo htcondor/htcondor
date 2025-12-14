@@ -8995,6 +8995,19 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
+	// OCUs represent requests for match_recs (slots) that have no jobs associated With
+	// them.  Add them into the resource_requests list now.
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (auto &ocu: oi->ocus) {
+			if (ocu.mrec == nullptr) {
+			
+				int ocu_id = ocu.ocu_id;
+				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+				resource_requests->add(ocu_id, ocu_request);
+			}
+		}
+	}
+	
 	for (auto prec = firstRec; prec != endRec && ! skip_negotiation; ++prec) {
 
 		// make sure job isn't flagged as not needing matching
@@ -9049,19 +9062,6 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		resource_requests->add(auto_cluster_id, prec->id);
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated With
-	// them.  Add them into the resource_requests list now.
-	for (const auto &[_,oi]: OwnersInfo) {
-		for (auto &ocu: oi->ocus) {
-			if (ocu.mrec == nullptr) {
-			
-				int ocu_id = ocu.ocu_id;
-				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
-				resource_requests->add(ocu_id, ocu_request);
-			}
-		}
-	}
-	
 
 	classy_counted_ptr<MainScheddNegotiate> sn =
 		new MainScheddNegotiate(
@@ -9594,6 +9594,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				slot->is_ocu = true;
 				slot->ocu_originator = {slot->cluster, slot->proc};
 				slot->cluster = slot->proc = -1;
+				slot->my_match_ad->Assign(ATTR_OCU, true);
 
 				// If we already have a match for this OCU, then delete this match
 				if (ocu->mrec) {
