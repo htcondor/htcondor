@@ -32,6 +32,10 @@ app.config['CE_DASHBOARD_SERVER_CACHE_MINUTES'] = int(os.getenv('CE_DASHBOARD_SE
 # Default to 30 minutes.
 app.config['CE_DASHBOARD_BROWSER_CACHE_MINUTES'] = int(os.getenv('CE_DASHBOARD_BROWSER_CACHE_MINUTES', '30'))
 
+# CE_DASHBOARD_METRICSD_URL is the URL of the MetricsD server to query for CE Dashboard data.
+# Default to 'https://display.ospool.osg-htc.org'.
+app.config['CE_DASHBOARD_METRICSD_URL'] = os.getenv('CE_DASHBOARD_METRICSD_URL', 'https://display.ospool.osg-htc.org')
+
 
 ################################################
 # Initialize my utils and any other modules

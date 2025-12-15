@@ -95,7 +95,14 @@ def get_data_from_ganglia():
     # If host is not fully qualified, add the default domain
     if not '.' in host:
         host = host + '.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
-    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    
+    metricsd_url = current_app.config['CE_DASHBOARD_METRICSD_URL']
+
+    # Retrieve any metrics from Ganglia that start with any of the following phrases
+    metric_exprs = ['Cpus', 'Gpus','Memory','Disk','Bcus','EPs']
+    metric_args = '&'.join([f'mreg[]=%5E{expr}' for expr in metric_exprs])
+
+    df=pd.read_csv(f'{metricsd_url}/ganglia/graph.php?r={r}&hreg[]={host}&{metric_args}&aggregate=1&csv=1',skipfooter=1,engine='python')
 
     # Transpose the data received from ganglia into the format we need for the CE Dashboard frontend
 
@@ -127,16 +134,21 @@ def get_data_from_ganglia():
     # Add a 'Type' column to distinguish between project usage (with P) and total resource (with R) entries
     df['Type'] = df['Project'].apply(lambda x: 'R' if x.startswith('____meta_') else 'P')
     # Replace meta entries with more descriptive names for better readability
-    df['Project'] = df['Project'].str.replace('____meta_CpusIn', 'CpusAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_CpusNotIn', 'CpusUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_GpusIn', 'GpusAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_GpusNotIn', 'GpusUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_MemoryIn', 'MemoryAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_MemoryNotIn', 'MemoryUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_DiskIn', 'DiskAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_DiskNotIn', 'DiskUnallocated')
-    df['Project'] = df['Project'].str.replace('____meta_BcusIn', 'BcusAllocated')
-    df['Project'] = df['Project'].str.replace('____meta_BcusNotIn', 'BcusUnallocated')
+    for oldname, newname in (['CpusIn', 'CpusAllocated'],
+                              ['CpusNotIn', 'CpusUnallocated'],
+                              ['GpusIn', 'GpusAllocated'],
+                              ['GpusNotIn', 'GpusUnallocated'],
+                              ['MemoryIn', 'MemoryAllocated'],
+                              ['MemoryNotIn', 'MemoryUnallocated'],
+                              ['DiskIn', 'DiskAllocated'],
+                              ['DiskNotIn', 'DiskUnallocated'],
+                              ['BcusIn', 'BcusAllocated'],
+                              ['BcusNotIn', 'BcusUnallocated'],
+                              ['EPsRunning', 'EPsRunning'],
+                              ['EPsCpuLimited', 'EPsCpuLimited'],
+                              ['EPsMemoryLimited', 'EPsMemoryLimited'],
+                              ['EPsDiskLimited', 'EPsDiskLimited']):
+        df['Project'] = df['Project'].str.replace(f'____meta_{oldname}', newname)
     # Get rid of columns that are not needed; specifically, we don't want info per user, just per project   
     df.drop(columns=['Cpus_User'],inplace=True,errors='ignore')
     df.drop(columns=['Memory_User'],inplace=True,errors='ignore')
