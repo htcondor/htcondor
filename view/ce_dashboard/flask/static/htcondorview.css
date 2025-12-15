@@ -48,15 +48,21 @@ nav {
 }
 
 .navbar-nav.site-link {
-    font-size: 1.5rem; 
+    font-size: 2rem; 
     font-weight: 400;
     padding: 0 8px;
     display: flex;
     flex-direction: column;
     justify-content: center;
 
+
     .nav-link {
         padding: 0;
+        color: lightgray;
+
+        &:hover{
+            color: white;
+        }
     }
 }
 
