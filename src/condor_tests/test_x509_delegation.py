@@ -48,6 +48,16 @@ def path_to_the_job_script(test_dir):
             echo "X509_USER_PROXY isn't a readable file"
             exit 2
         fi
+        proxy_subj=`openssl x509 -in $X509_USER_PROXY -noout -subject -nameopt rfc2253`
+        if [ $? != 0 ] ; then
+            echo "openssl failed"
+            exit 3
+        fi
+        if ! echo "$proxy_subj" | grep -q 'subject= *CN=[0-9]*,CN=Test' ; then
+            echo "Proxy subject doesn't look valid:"
+            echo $proxy_subj
+            exit 4
+        fi
         exit 0
         """
     write_file(path, format_script(script))
