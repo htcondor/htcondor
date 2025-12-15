@@ -11,7 +11,7 @@ logger.setLevel(logging.DEBUG)
 
 """
 This test creates a new X.509 user credential, submits a job that uses that
-credential, and verfies that HTCondor can delegation the credential.
+credential, and verfies that HTCondor can delegate the credential.
 """
 
 @action
