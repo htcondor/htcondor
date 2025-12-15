@@ -1,3 +1,49 @@
+*** 24.12.15 features
+
+- :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
+  not a URL and suggest an alternative.
+  :jira:`3385`
+
+*** 24.12.15 bugs
+
+- Improve compatibility with versions of HTCondor that attempt to set
+  attribute :ad-attr:`OsUser` in the job ad.
+  :jira:`3415`
+
+- Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
+  keys will no longer mangle the values (and instead ignore the extra keys,
+  as implied by the documentation).
+  :jira:`3351`
+
+*** 24.0.15 features
+
+- HTCondor tarballs now contain `Pelican 7.21.1 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.21.1.
+
+- HTCondor tarballs now contain `Apptainer 1.4.4 <https://github.com/apptainer/apptainer/releases/tag/v1.4.4>`_
+
+- The condor RPM package now requires at least apptainer version 1.4.4.
+
+*** 24.0.15 bugs
+
+- Fixed a bug that could cause the AP to fail to read job credential files.
+  :jira:`3377`
+
+- Fixed bugs that could cause a crash in the authentication code.
+  :jira:`3394`
+
+- Fixed a bug where the *condor_negotiator* would fail to contact the
+  *condor_schedd* to perform matchmaking if its :macro:`ALLOW_CLIENT`
+  configuration parameter didn't authorize the identity
+  ``submit-side@matchsession``.
+  :jira:`3378`
+
+- Fixed a bug where tools like :tool:`condor_status` would print an incorrect
+  value for the ``-af:r`` option when the value to be printed was a single
+  attribute reference.
+  :jira:`3347`
+
 *** 24.12.14 features
 
 - Added a new EP configuration knob, :macro:`DOCKER_TRUST_LOCAL_IMAGES`

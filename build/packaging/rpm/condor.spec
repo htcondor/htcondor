@@ -212,8 +212,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.20.2 or pelican-debug >= 7.20.2)
-Requires: pelican-osdf-compat >= 7.20.2
+Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
+Requires: pelican-osdf-compat >= 7.21.1
 
 %if ! 0%{?amzn}
 # Require tested Apptainer
@@ -221,7 +221,7 @@ Requires: pelican-osdf-compat >= 7.20.2
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.2
+Requires: apptainer >= 1.4.4
 %endif
 %endif
 
@@ -1261,6 +1261,17 @@ fi
 # configuration
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.5-1
+- Initial support for Ubuntu 24.04 on the ARM64 platform
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
+- condor_submit checks that output_destination is properly specified
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
 * Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.3-1
 - All changes in 24.12.14
 
