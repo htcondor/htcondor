@@ -1178,14 +1178,14 @@ RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 
 
 void
-RemoteResource::processResultAd( ClassAd * resultAd ) {
+RemoteResource::processResultAd( ClassAd * const resultAd ) {
 	dprintf( D_MACHINE | D_VERBOSE, "Processing result ad:\n" );
 	dPrintAd( D_MACHINE | D_VERBOSE, * resultAd );
 }
 
 
 void
-RemoteResource::processInvocationAd( ClassAd * invocationAd ) {
+RemoteResource::processInvocationAd( ClassAd * const invocationAd ) {
 	dprintf( D_MACHINE | D_VERBOSE, "Processing invocation ad:\n" );
 	dPrintAd( D_MACHINE | D_VERBOSE, * invocationAd );
 }
