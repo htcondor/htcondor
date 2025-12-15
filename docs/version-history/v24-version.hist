@@ -13,6 +13,10 @@
   not constant (e.g. used random() or time()).
   :jira:`3436`
 
+- Fixed a bug where the values of the attributes :ad-attr:`LocalJobsIdle` and
+  :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
+  :jira:`3456`
+
 *** 24.0.15 features
 
 - HTCondor tarballs now contain `Pelican 7.21.1 <https://pelicanplatform.org/releases>`_
