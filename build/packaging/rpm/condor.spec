@@ -1262,6 +1262,23 @@ fi
 # configuration
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.5.1-1
+- The negotiator can now use its own concept of slot weight (not the EP's)
+- A stuck LVM logical volume will cause the EP slot to be broken and
+  then later unbroken if and when the logical volume cleanup succeeds
+- Made the AP more efficient at building resource requests for matchmaking
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.5-1
+- Initial support for Ubuntu 24.04 on the ARM64 platform
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
+- condor_submit checks that output_destination is properly specified
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
 * Thu Nov 13 2025 Tim Theisen <tim@cs.wisc.edu> - 25.4.0-1
 - Job scratch space is now in a sub-directory of the execute directory
 - HTCondor EPs can now refresh credentials during output transfers
