@@ -27,7 +27,7 @@
   attribute :ad-attr:`OsUser` in the job ad.
   :jira:`3415`
 
-- Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
+- Calling :meth:`htcondor2.Schedd.submit` with a list of dictionaries with dissimilar
   keys will no longer mangle the values (and instead ignore the extra keys,
   as implied by the documentation).
   :jira:`3351`
@@ -85,15 +85,15 @@
   manifests as a Job Router crash when upgrading the CE to HTCondor 25
   :jira:`3355`
 
-- Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
+- Fixed a bug in :meth:`htcondor2.Schedd.submit` where single-entry itemdata could be
   truncated to its first character.
   :jira:`3272`
 
-- Fixed a bug in :meth:`Schedd.submit` where the ``$(step)`` submit variable
+- Fixed a bug in :meth:`htcondor2.Schedd.submit` where the ``$(step)`` submit variable
   wasn't being set.
   :jira:`3272`
 
-- Fixed a bug in :meth:`Submit.itemdata` causing multi-entry itemdata to be
+- Fixed a bug in :meth:`htcondor2.Submit.itemdata` causing multi-entry itemdata to be
   returned incorrectly.
   :jira:`3272`
 

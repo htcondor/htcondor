@@ -1,5 +1,10 @@
 *** 25.6.0 features
 
+- Added :meth:`~classad2.ClassAd.formatJson` and :meth:`~classad2.ClassAd.formatOld` as
+  aliases for :meth:`~classad2.ClassAd.printJson` and :meth:`~classad2.ClassAd.printOld`,
+  respectively.
+  :jira:`3341`
+
 - The option for the *condor_schedd* to keep job event log files open for
   a period of time has been removed.
   This was controlled by configuration parameters
