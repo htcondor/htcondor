@@ -6872,7 +6872,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if( plugin.protocol_version == 4 ) {
 		// `PluginData` for all plug-ins.
 		ClassAd nonfile_ad;
-		nonfile_ad.InsertAttr( "NonFile", true );
+		// nonfile_ad.InsertAttr( "NonFile", true );
 		CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
 		nonfile_ads.push_back( nonfile_ad );
 

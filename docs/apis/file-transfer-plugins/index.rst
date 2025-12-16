@@ -217,8 +217,8 @@ The Input File (v4)
 
 * Instead of duplicating information from the job ad into each individual
   input ad, HTCondor provides additional ads in the input file.  These ads do
-  not correspond to a particular input file (or URL), so we call them
-  "non-file" ads.  Each individual input ad may still have additional
+  not correspond to a particular input file (or URL). Each individual input ad
+  may still have additional
   attributes, but they will be specific to that file.  (For example, the user
   may wish tarball T to be untarred, but not zip file Z, because the former
   contains  a compressed application and the latter is itself an input to that
@@ -227,8 +227,8 @@ The Input File (v4)
 * Ads that don't correspond to a particular input file (or URL) will not have
   the `URL` or `LocalFileName` attributes.
 * Ads that don't correspond to a particular input file (or URL) may be present
-  anywhere in the input file.  We will endeavour but not guarantee that
-  "non-file" ads precede the ads that they modify.
+  anywhere in the input file.  However, these ads must only affect file ads
+  after them in the input file.
 
 The Output File (v4)
 """"""""""""""""""""
