@@ -6884,7 +6884,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			if(e == NULL) { continue; }
 
 			ClassAd schema_ad;
-			schema_ad.InsertAttr( "NonFile", true );
+			// schema_ad.InsertAttr( "NonFile", true );
 			schema_ad.InsertAttr( "Protocol", schema );
 			CopyAttribute( attrName.c_str(), schema_ad, this->_fix_me_copy_ );
 			nonfile_ads.push_back( schema_ad );
