@@ -19,7 +19,8 @@ logger.setLevel(logging.DEBUG)
 def condor(test_dir):
     with Condor(test_dir / "condor", config={
         "DAEMON_LIST": "MASTER SCHEDD STARTD COLLECTOR",
-        "STARTD_DIRECT_ATTACH_SCHEDD_NAME": "$(USERNAME)@$(FULL_HOSTNAME)",
+        "SCHEDD_NAME": "$(USERNAME)@$(FULL_HOSTNAME)",
+        "STARTD_DIRECT_ATTACH_SCHEDD_NAME": "$(SCHEDD_NAME)",
         "STARTD_DIRECT_ATTACH_INTERVAL": "3",
         }) as condor:
         yield condor
