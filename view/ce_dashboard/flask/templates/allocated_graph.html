@@ -31,7 +31,7 @@ Contribution of compute capacity from the
                         dst_id: "{{ resource }}-by-project",
                         title: "{{ resource }} Allocation by Project",
                         data_url: "/data/ce_overview",
-                        action_url: "ⓘ|showModal('allocation-modal')",
+                        action_url: "showModal('allocation-modal')",
                         graph_query: urlEscapeGraphQuery(`
                             vAxis.title={{ vaxis }}
                             filter=Type=P

@@ -85,7 +85,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-                                   action_url: "ⓘ|showModal('cpus-past-week-modal')",
+                                   action_url: "showModal('cpus-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -109,7 +109,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project2",
 			                       title: "Memory Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-                                   action_url: "ⓘ|showModal('memory-past-week-modal')",
+                                   action_url: "showModal('memory-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -138,7 +138,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-                                   action_url: "ⓘ|showModal('disk-past-week-modal')",
+                                   action_url: "showModal('disk-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -162,7 +162,7 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project4",
 			                       title: "BCUs Past Week (1core/4GB Mem/4GB Disk)",
 			                       data_url: "/data/ce_overview?r=week",
-                                   action_url: "ⓘ|showModal('bcus-past-week-modal')",
+                                   action_url: "showModal('bcus-past-week-modal')",
 			                       graph_query: urlEscapeGraphQuery(`
                                         vAxis.maxValue=3
                                         filter=Type=R
@@ -189,7 +189,7 @@ Contribution of compute capacity from the
                         dst_id: "col-chart",
                         title: "Groups Served per Day",
 						data_url: "/data/ce_overview?r=week",
-                        action_url: "ⓘ|showModal('groups-per-day-modal')",
+                        action_url: "showModal('groups-per-day-modal')",
 						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             filter=Cpus>0
@@ -213,7 +213,7 @@ Contribution of compute capacity from the
                         dst_id: "cpu-by-day",
                         title: "CPU (l), Memory (r), Disk (r) Allocated per Day",
 						data_url: "/data/ce_overview?r=week",
-                        action_url: "ⓘ|showModal('resources-per-day-modal')",
+                        action_url: "showModal('resources-per-day-modal')",
 						graph_query: urlEscapeGraphQuery(`
                             vAxis.maxValue=3
                             filter=Type=R
@@ -260,7 +260,7 @@ Contribution of compute capacity from the
                         dst_id: "glidein-limits",
                         title: "Maximum Concurrent Resource-Limited Glideins per Day",
 						data_url: "/data/ce_overview?r=week",
-                        action_url: "ⓘ|showModal('resource-limited-per-day-modal')",
+                        action_url: "showModal('resource-limited-per-day-modal')",
                         graph_query: urlEscapeGraphQuery(`
                             filter=Type=R
                             q=EPs
@@ -297,7 +297,7 @@ Contribution of compute capacity from the
                         dst_id: "eps-running",
                         title: "Running Execution Points Past Week",
 						data_url: "/data/ce_overview?r=week",
-                        action_url: "ⓘ|showModal('eps-past-week-modal')",
+                        action_url: "showModal('eps-past-week-modal')",
                         graph_query: urlEscapeGraphQuery(`
                             vAxis.maxValue=3
                             filter=Type=R
@@ -322,7 +322,7 @@ Contribution of compute capacity from the
                         dst_id: "pie-by-project",
                         title: "CPU Allocation Percentage by Project",
 						data_url: "/data/ce_overview",
-                        action_url: "ⓘ|showModal('allocation-modal')",
+                        action_url: "showModal('allocation-modal')",
 						graph_query: urlEscapeGraphQuery(`
                             filter=Type=P
                             group=Project;Cpus

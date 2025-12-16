@@ -3845,14 +3845,13 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 $(parent).append($(chartTitle).detach());
             }
 
+            // At present a widget cannot have both a help_url and an action_url
             let action_url = args.get("action_url");
             console.log("action_url", action_url);
             if (!(action_url === undefined || action_url === null)) {
                 // Then, look for the chart title and add the help link to it
-                const [help_label, help_action] = action_url.split("|",2);
                 let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
-                // Escape ampersands in the help_url
-                $(chartTitle).html(`${options.title} <a fill="blue" style="font-weight: bold;" href="javascript:void(0);" onclick="${help_action};">${help_label}</a>`);
+                $(chartTitle).html(`${options.title} <a fill="blue" href="javascript:void(0);" style="font-family: bootstrap-icons; font-size: 16px" onclick="${action_url};">&#xF431;</a>`);
                 const parent = $(chartTitle).parent()[0];
                 $(parent).append($(chartTitle).detach());
             }
