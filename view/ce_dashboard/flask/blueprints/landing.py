@@ -11,7 +11,6 @@ from dataclasses import dataclass, fields, astuple
 from math import floor
 import time
 import threading
-import re
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 # from . import overview  # Import the overview module
 
@@ -385,8 +384,7 @@ def get_ce_facility_site_descrip(fqdn: str):
 
 def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional[HeaderLink]]:
     """
-    Get the next and previous site FQDNs in alphabetical order.
-    If the FQDN is not found, return None for both.
+    Given a site FQDN, return the next and previous healthy sites in alphabetical order.
     """
     # Get all CE Facility names in sorted order, for the facilities that have links from the homepage
     healthy_facilities_by_name = sorted(
