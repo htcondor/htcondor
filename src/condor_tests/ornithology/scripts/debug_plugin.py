@@ -596,7 +596,7 @@ def main():
     try:
         with open(args.outfile, "w") as outfile:
             for ad in infile_ads:
-                if 'NonFile' in ad:
+                if "URL" not in ad or "LocalFileName" not in ad:
                     print(ad)
                     continue
                 if 'PluginData' in ad:
