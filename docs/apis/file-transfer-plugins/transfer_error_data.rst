@@ -215,7 +215,7 @@ This includes the transfer timing out (client-side), any particular byte
 never arriving, the checksum (if the protocol includes one) not
 matching, the transfer timing out (server-side), an inexplicably closed
 socket, and so on.  This does not include running out space in the
-sandbox; plug-ins should not unlink partial transfers so that the
+sandbox; plug-ins should not remove partial transfers so that the
 starter will be able to determine if the job didn't request enough
 space, or if the provisioned disk was filled up by some other process.
 Plug-ins should nonetheless specifically report running out of disk

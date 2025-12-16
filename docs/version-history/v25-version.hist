@@ -1,6 +1,6 @@
 *** 25.5.0 features
 
-- HTCondor will by default now send extra information to "multi-file" file
+- By default, HTCondor will now send extra information to "multi-file" file
   transfer plug-ins if such is specified in the job.  All such plug-ins
   should safely ignore this extra information.  To ease the transition if a
   plug-in does not, the extra information may be disabled by unsetting

@@ -24,7 +24,7 @@ TEST_CASES = {
                             ],
         'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=2',
     },
-    "v3": {
+    "v4": {
         'expected_ads':     [
                                 classad2.ClassAd({
                                     'NonFile':      True,

@@ -77,7 +77,7 @@ class ActionType(enum.Enum):
 PROGRAM_NAME = "debug_plugin.py"
 PLUGIN_VERSION = "1.0.0"
 SUPPORTED_SCHEMAS = "debug,decode,encoded"
-PROTOCOL_VERSION = int(os.environ.get('DEBUG_PLUGIN_PROTOCOL_VERSION', 3))
+PROTOCOL_VERSION = int(os.environ.get('DEBUG_PLUGIN_PROTOCOL_VERSION', 4))
 
 DEFAULT_HOSTNAME = "default.test.hostname"
 

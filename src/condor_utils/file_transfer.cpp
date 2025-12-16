@@ -6865,11 +6865,11 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 
 	//
-	// For protocol version 3, insert some "nonfile" ads and adjust the
+	// For protocol version 4, insert some "nonfile" ads and adjust the
 	// file ads if any file-specific plugin data was specified.
 	//
 	std::vector<ClassAd> nonfile_ads;
-	if( plugin.protocol_version == 3 ) {
+	if( plugin.protocol_version == 4 ) {
 		// `PluginData` for all plug-ins.
 		ClassAd nonfile_ad;
 		nonfile_ad.InsertAttr( "NonFile", true );

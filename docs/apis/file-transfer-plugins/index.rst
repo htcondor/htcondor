@@ -9,7 +9,7 @@ There are three versions of this interface.  The first version, retroactively
 protocol version 1, invoked the plug-in once for each file being transferred;
 this was simple and easy, but not very efficient.  In the second version --
 introducing protocol version 2 -- "multi-file" plug-ins could transfer more
-than one file per invocation.  Protocol version 3 extends version 2 with
+than one file per invocation.  Protocol version 4 extends version 2 with
 additional information in the plug-in's input, allowing for more precise
 control (e.g., over which caches a particular transfer method uses).  It
 also explicitly requires some behaviors intended to minimize the need for
@@ -51,7 +51,7 @@ Instead of requiring the tedious (and static) specification of everything
 HTCondor needs to know about a file transfer plug-in in configuration,
 HTCondor invokes the plug-in with the ``-classad`` command-line argument and
 parses the ClassAd written to standard out.  Presently, the ClassAd must be
-serialized in the "old" (line-oriented) format.
+serialized in the "long" (line-oriented) format.
 
 The ClassAd must contain four attributes, and should contain five.  Extra
 attributes will be ignored, but preserved in the epoch log.  Those
@@ -80,7 +80,7 @@ For example, the "curl" plug-in might produce the following output:
     ProtocolVersion = 2
     SupportedMethods = "http,https,ftp,file,dav,davs"
     StartdAttrs = "CurlPluginInfo"
-    CurlPluginInfo = [ "PluginVersion" = PluginVersion; ]
+    CurlPluginInfo = [ PluginVersion = PluginVersion; ]
 
 The Transfer Interface (v2)
 '''''''''''''''''''''''''''
@@ -106,18 +106,18 @@ The Input File (v2)
 """""""""""""""""""
 
 The input file is a sequence of ClassAds serialized in the "new" format;
-see :ref:`classads/classad-mechanism:ClassAds: Old and New` for details.  There will be one ad for
-each URL (if downloading) or file (if uploading).  Each ClassAd will contain
-the following attributes:
+see :ref:`classads/classad-mechanism:ClassAds: Old and New` for details.  There
+will be one ad for each URL (if downloading) or file (if uploading).  Each
+ClassAd will contain the following attributes:
 
 * ``URL``, a string containing the URL to transfer to/from.
 * ``LocalFileName``, a string containing the path to transfer to/from.
 
-(Remember that ClassAd attribute
-names are not case-sensitivie.)  Plug-ins are expected to parse the complete
-ClassAd language, and not just the subset any particular version of HTCondor
-generates; see :macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS`; the example
-plug-in does this.  Plug-ins are expected to ignore any attribute(s) they
+(Remember that ClassAd attribute names are not case-sensitive.)  Plug-ins must
+parse the complete ClassAd language, and not just the subset any particular
+version of HTCondor generates; see
+:macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS`; the example plug-in does
+this.  Plug-ins must ignore any attribute(s) they
 don't know how to deal with; it is HTCondor's responsibility not to pass
 attributes that shouldn't be ignored.  (For example: if a later version of
 the protocol were to require plug-ins to honor an "untar" flag, HTCondor
@@ -183,7 +183,7 @@ otherwise ignored; it is intended to help plug-in developers debug problems.
 Each ClassAd in ``TransferErrorData`` specifies additional data about
 the nature of the failed transfer(s); this data is intended to allow HTCondor
 to make better decisions(s) about how the handle the failure(s).  For
-example, a plug-in may be told that a particular service is down but but
+example, a plug-in may be told that a particular service is down but
 should be back up in a few minutes.  The transfer fails, because that's longer
 than the plug-in is willing to wait, but ``TransferErrorData`` allows the
 plug-in to tell HTCondor that the transfer might work if tried again in a few
@@ -192,12 +192,13 @@ be the case.
 
 See :doc:`transfer_error_data` for details.
 
-Protocol Version 3
+Protocol Version 4
 ------------------
 
-Protocol version 3 is a small evolution of protocol version 2.
+Protocol version 4 is a small evolution of protocol version 2.  (There is
+no protocol version 3.)
 
-The Query Interface (v3)
+The Query Interface (v4)
 ''''''''''''''''''''''''
 
 The query interface is identical, except that the plug-in must not add
@@ -206,29 +207,33 @@ in later versions of this document.  We'll try not to specify attribute
 names that begin with ``_``, but the safest thing to do is not generate
 any attributes other than those named in this specification.
 
-The Transfer Interface (v3)
+The Transfer Interface (v4)
 '''''''''''''''''''''''''''
 
 The transfer interface is identical, with the following exceptions.
 
-The Input File (v3)
+The Input File (v4)
 """""""""""""""""""
 
-* Instead
-  of duplicating information from the job ad into each individual input ad,
-  HTCondor provides additional ads in the input file.  These ads do not
-  correspond to a particular input file (or URL), so we call them "non-file"
-  ads.  Each individual input ad may still have additional attributes,
-  but they will be specific to that file.  (For example, the user may wish
-  tarball T to be untarred, but not zip file Z, because the former contains
-  a compressed application and the latter is itself an input to that
+* Instead of duplicating information from the job ad into each individual
+  input ad, HTCondor provides additional ads in the input file.  These ads do
+  not correspond to a particular input file (or URL), so we call them
+  "non-file" ads.  Each individual input ad may still have additional
+  attributes, but they will be specific to that file.  (For example, the user
+  may wish tarball T to be untarred, but not zip file Z, because the former
+  contains  a compressed application and the latter is itself an input to that
   application.)  This feature is not presently documented because we expect
   it to change -- and conformant plug-ins will ignore the extra attributes.
+* Ads that don't correspond to a particular input file (or URL) will not have
+  the `URL` or `LocalFileName` attributes.
+* Ads that don't correspond to a particular input file (or URL) may be present
+  anywhere in the input file.  We will endeavour but not guarantee that
+  "non-file" ads precede the ads that they modify.
 
-The Output File (v3)
+The Output File (v4)
 """"""""""""""""""""
 
-* The ``TransferErrorData`` attribute is mandatory in version 3.
+* The ``TransferErrorData`` attribute is mandatory in version 4.
 
 Further Protocol Versions
 -------------------------
@@ -240,4 +245,4 @@ for the various ads that will change how HTCondor interacts with the plug-in.
 (To continue the previous example, we might add a ''HasUntar'' boolean to
 the query interface which causes the ''MustUntar'' flag to be set in some
 specific transfer ads; we might further expect the plug-in to explicitly
-not in the corresponding output ad if the untarring was succesful.)
+note in the corresponding output ad if the untarring was succesful.)
