@@ -10,7 +10,7 @@
 #include <map>
 #include <functional>
 
-typedef HashTable<std::string, double> groupQuotasHashType;
+typedef std::map<std::string, double> groupQuotasHashType;
 
 void parse_group_name(const std::string& gname, std::vector<std::string>& gpath);
 
@@ -43,7 +43,7 @@ struct GroupEntry {
 		static void hgq_negotiate_with_all_groups(
 						GroupEntry *hgq_root_group, 
 						std::vector<GroupEntry *> &hqg_groups, 
-						groupQuotasHashType *groupQuotasHash, 
+						groupQuotasHashType &groupQuotasHash,
 						double hgq_total_quota, 
 						Accountant &accountant,
 						const std::function<void(GroupEntry *g, int limit)> &fn,

@@ -447,8 +447,6 @@ Matchmaker ()
 
 	update_interval = 5*MINUTE;
 
-	groupQuotasHash = NULL;
-
 	prevLHF = 0;
 	Collectors = 0;
 
@@ -521,7 +519,6 @@ Matchmaker::
 	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
-	if (groupQuotasHash) delete groupQuotasHash;
     if (strSlotConstraint) free(strSlotConstraint), strSlotConstraint = NULL;
 
 	for (auto* stats : negotiation_cycle_stats) {
@@ -1599,8 +1596,6 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 bool Matchmaker::
 getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQuota, double& groupUsage)
 {
-	ASSERT(groupQuotasHash);
-
     groupName = "";
 	groupQuota = 0.0;
 	groupUsage = 0.0;
@@ -1614,11 +1609,13 @@ getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQu
 
     groupName = group->name;
 
-	if (groupQuotasHash->lookup(groupName, groupQuota) == -1) {
+	auto itr = groupQuotasHash.find(groupName);
+	if (itr == groupQuotasHash.end()) {
 		// hash lookup failed, must not be a group name
 		return false;
 	}
 
+	groupQuota = itr->second;
 	groupUsage = accountant.GetWeightedResourcesUsed(groupName);
 
 	return true;
@@ -1782,11 +1779,6 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	// ----- Recalculate priorities for schedds
 	accountant.UpdatePriorities();
 	accountant.CheckMatches( startdAds );
-
-	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(hashFunction);
-		ASSERT(groupQuotasHash);
-    }
 
 	int cPoolsize = 0;
     double weightedPoolsize = 0;

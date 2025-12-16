@@ -359,7 +359,7 @@ class Matchmaker : public Service
 
 		std::map<std::string, MapEntry*> stashedAds;
 
-		groupQuotasHashType *groupQuotasHash;
+		groupQuotasHashType groupQuotasHash;
 
 		// rank condition on matches
 		ExprTree *rankCondStd;// no preemption or machine rank-preemption 
