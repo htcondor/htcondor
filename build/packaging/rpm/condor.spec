@@ -24,7 +24,11 @@ BuildArch: x86_64_v2
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
+%if "%{os_release_id}" == "sles"
+%global dist .sles15sp5
+%else
 %global dist .leap15
+%endif
 %endif
 %endif
 
@@ -52,12 +56,12 @@ BuildRequires: cmake
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: libvirt-devel
 %endif
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
-%if ! ( 0%{?rhel} >= 10 )
+%if ! ( 0%{?rhel} >= 10 ) && "%{os_release_id}" != "sles"
 BuildRequires: libXScrnSaver-devel
 %endif
 %if 0%{?suse_version}
@@ -99,11 +103,13 @@ BuildRequires: python3-devel
 BuildRequires: libcurl-devel
 
 # Authentication build requirements
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: voms-devel
 %endif
+%if "%{os_release_id}" != "sles"
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
+%endif
 
 %if 0%{?devtoolset}
 BuildRequires: which
@@ -116,8 +122,8 @@ BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
 %if  0%{?suse_version}
-BuildRequires: gcc11
-BuildRequires: gcc11-c++
+BuildRequires: gcc12
+BuildRequires: gcc12-c++
 %endif
 
 BuildRequires: libuuid-devel
@@ -187,9 +193,11 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %if 0%{?suse_version}
+%if "%{os_release_id}" != "sles"
 Requires: libvomsapi1
+%endif
 %else
 Requires: voms
 %endif
@@ -197,9 +205,13 @@ Requires: voms
 %if 0%{?suse_version}
 Requires: krb5
 Requires: libcom_err2
+%if "%{os_release_id}" != "sles"
 Requires: libmunge2
+%endif
 Requires: libopenssl1_1
+%if "%{os_release_id}" != "sles"
 Requires: libSciTokens0
+%endif
 Requires: libsystemd0
 %else
 Requires: krb5-libs
@@ -215,7 +227,7 @@ Requires: rsync
 Requires: (pelican >= 7.20.2 or pelican-debug >= 7.20.2)
 Requires: pelican-osdf-compat >= 7.20.2
 
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
@@ -323,7 +335,7 @@ useful on systems where no device (e.g. /dev/*) can be used to
 determine console idle time.
 
 #######################
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %package vm-gahp
 Summary: HTCondor's VM Gahp
 Group: Applications/System
@@ -508,8 +520,8 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?suse_version}
-export CC=/usr/bin/gcc-11
-export CXX=/usr/bin/g++-11
+export CC=/usr/bin/gcc-12
+export CXX=/usr/bin/g++-12
 %endif
 
 %if 0%{?devtoolset}
@@ -572,9 +584,13 @@ make -C docs man
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-%if 0%{?amzn}
-       -DWITH_VOMS:BOOL=FALSE \
+%if 0%{?amzn} || "%{os_release_id}" == "sles"
        -DWITH_LIBVIRT:BOOL=FALSE \
+       -DWITH_VOMS:BOOL=FALSE \
+%endif
+%if "%{os_release_id}" == "sles"
+       -DWITH_MUNGE:BOOL=FALSE \
+       -DWITH_SCITOKENS:BOOL=FALSE \
 %endif
        -DCMAKE_INSTALL_PREFIX:PATH=/
 
@@ -1145,7 +1161,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_kbdd
 
 #################
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %files vm-gahp
 %defattr(-,root,root,-)
 %_sbindir/condor_vm-gahp

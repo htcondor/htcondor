@@ -24,6 +24,10 @@ VERSION_ID=${VERSION_ID%%.*}
 ARCH=$(arch)
 REPO_ARCH='noarch'
 
+if [ -d /etc/rpm ]; then
+    echo "%os_release_id $ID" > /etc/rpm/macros.os-release-id
+fi
+
 if [ $ID = 'almalinux' ]; then
     if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
         ARCH='x86_64_v2'
@@ -46,7 +50,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     INSTALL='apt-get install --yes'
 elif [ $ID = 'centos' ]; then
     INSTALL='yum install --assumeyes'
-elif [ $ID = 'opensuse-leap' ]; then
+elif [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     INSTALL='zypper --non-interactive install'
     $INSTALL system-group-wheel system-user-mail
 elif [ $ID = 'amzn' ] || [ $ID = 'almalinux' ] || [ $ID = 'fedora' ]; then
@@ -116,7 +120,7 @@ fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
     for key in /etc/pki/rpm-gpg/*; do
@@ -150,7 +154,7 @@ if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; th
     # ] ] Help out vim syntax highlighting
 fi
 # SUSE is special
-if [ $ID = 'future-opensuse-leap' ]; then
+if [ $ID = 'sles' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/zypp/repos.d/htcondor-test.repo
@@ -164,7 +168,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Install the build dependencies
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL make rpm-build
     # shellcheck disable=SC2046 # we want word splitting
     $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
@@ -191,7 +195,7 @@ fi
 
 # Add useful tools
 $INSTALL gdb git less nano patchelf python3-pip strace sudo vim
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
@@ -199,7 +203,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Add in the ninja build system
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL ninja
 else
     $INSTALL ninja-build
@@ -232,7 +236,7 @@ fi
 
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
-    if [ $ID = 'opensuse-leap' ]; then
+    if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
         $INSTALL procps wget
         # Install better patchelf
         wget https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz
@@ -304,8 +308,8 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
-if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 pelican pelican-osdf-compat
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
 fi
 
 # Clean up package caches
