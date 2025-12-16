@@ -36,7 +36,7 @@ TEST_CASES = {
                                     'debug_PluginData':   {'bar': 'debug-data'},
                                 }),
                             ],
-        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=3',
+        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=4',
     },
 }
 
