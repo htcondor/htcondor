@@ -27,11 +27,9 @@ TEST_CASES = {
     "v4": {
         'expected_ads':     [
                                 classad2.ClassAd({
-                                    'NonFile':      True,
                                     'PluginData':   {'foo': 'bar'},
                                 }),
                                 classad2.ClassAd({
-                                    'NonFile':      True,
                                     'Protocol':     'debug',
                                     'debug_PluginData':   {'bar': 'debug-data'},
                                 }),
