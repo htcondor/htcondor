@@ -357,8 +357,7 @@ class Matchmaker : public Service
 
 		CollectorList* Collectors;
 
-		typedef HashTable<std::string, MapEntry*> AdHash;
-		AdHash *stashedAds;			
+		std::map<std::string, MapEntry*> stashedAds;
 
 		groupQuotasHashType *groupQuotasHash;
 

@@ -425,8 +425,6 @@ Matchmaker ()
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
 	
-	stashedAds = new AdHash(hashFunction);
-
 	MatchList = NULL;
 	cachedAutoCluster = -1;
 	cachedName = NULL;
@@ -524,7 +522,6 @@ Matchmaker::
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
-	if (stashedAds) delete stashedAds;
     if (strSlotConstraint) free(strSlotConstraint), strSlotConstraint = NULL;
 
 	for (auto* stats : negotiation_cycle_stats) {
@@ -3105,10 +3102,11 @@ obtainAdsFromCollector (
 				oldAdEntry = NULL;
 
 				std::string adID = MachineAdID(ad);
-				stashedAds->lookup( adID, oldAdEntry);
-				// if we find it...
 				oldSequence = -1;
-				if( oldAdEntry ) {
+				auto itr = stashedAds.find(adID);
+				if (itr != stashedAds.end()) {
+					// if we find it...
+					oldAdEntry = itr->second;
 					oldSequence = oldAdEntry->sequenceNum;
 					oldAd = oldAdEntry->oldAd;
 				}
@@ -3156,13 +3154,13 @@ obtainAdsFromCollector (
 						delete(oldAdEntry->oldAd);
 						delete(oldAdEntry->remoteHost);
 						delete(oldAdEntry);
-						stashedAds->remove(adID);
+						stashedAds.erase(adID);
 					}
 					MapEntry *me = new MapEntry;
 					me->sequenceNum = newSequence;
 					me->remoteHost = strdup(remoteHost);
 					me->oldAd = new ClassAd(*ad);
-					stashedAds->insert(adID, me);
+					stashedAds.emplace(adID, me);
 				} else {
 					/*
 					  We have a stashed copy of this ad, and it's the
@@ -5597,7 +5595,10 @@ reeval(ClassAd *ad)
 	ad->LookupInteger("CurMatches", cur_matches);
 
 	std::string adID = MachineAdID(ad);
-	stashedAds->lookup( adID, oldAdEntry);
+	auto itr = stashedAds.find(adID);
+	if (itr != stashedAds.end()) {
+		oldAdEntry = itr->second;
+	}
 		
 	cur_matches++;
 	ad->Assign("CurMatches", cur_matches);
