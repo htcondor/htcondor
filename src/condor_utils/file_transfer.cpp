@@ -7175,7 +7175,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	args.AppendArg(path);
 	args.AppendArg("-classad");
 
-	const int timeout = 20; // max time to allow the plugin to run
+	int timeout = param_integer( "FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT", 20 );
 
 	MyPopenTimer pgm;
 

@@ -1,3 +1,26 @@
+condor (24.0.15-1) stable; urgency=medium
+
+  * Fix bug where AP would fail to read job credential files
+  * Fix bugs that could causes a crash in the authentication code
+  * HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 12 Dec 2025 06:21:00 -0600
+
+condor (24.0.14-1) stable; urgency=medium
+
+  * Fix problem running PyTorch jobs on multiple GPUs with
+    newer versions of the CUDA library by providing long GPU IDs
+    in the CUDA_VISIBLE_DEVICES environment variable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 31 Oct 2025 11:03:00 -0500
+
+condor (24.0.13-1) stable; urgency=medium
+
+  * Fix bug that could cause Python job submission to crash
+  * HTCondor tarballs now contain Pelican 7.20.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 08 Oct 2025 09:41:00 -0500
+
 condor (24.0.12-1) stable; urgency=medium
 
   * Update condor_upgrade_check to warn about v1 Python bindings retirement

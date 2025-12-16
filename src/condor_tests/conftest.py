@@ -74,6 +74,7 @@ def get_base_test_dir(config):
     return base_dir
 
 
+'''
 @pytest.hookimpl(tryfirst=True)
 def pytest_report_header(config, startdir):
     return [
@@ -89,6 +90,7 @@ def pytest_report_header(config, startdir):
         ),
         "",
     ]
+'''
 
 
 class TestDir:

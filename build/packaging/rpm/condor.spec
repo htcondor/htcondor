@@ -285,11 +285,11 @@ Requires: condor-upgrade-checks
 
 # Require tested Pelican packages
 %if 0%{?rhel} == 7
-Requires: pelican >= 7.20.1
+Requires: pelican >= 7.21.1
 %else
-Requires: (pelican >= 7.20.1 or pelican-debug >= 7.20.1)
+Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
 %endif
-Requires: pelican-osdf-compat >= 7.20.1
+Requires: pelican-osdf-compat >= 7.21.1
 
 %if 0%{?rhel} != 7 && ! 0%{?amzn}
 # Require tested Apptainer
@@ -297,7 +297,7 @@ Requires: pelican-osdf-compat >= 7.20.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.2
+Requires: apptainer >= 1.4.4
 %endif
 %endif
 
@@ -1492,6 +1492,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
+* Mon Nov 03 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.14-1
+- Fix problem running PyTorch jobs on multiple GPUs with
+  newer versions of the CUDA library by providing long GPU IDs
+  in the CUDA_VISIBLE_DEVICES environment variable
+
+* Thu Oct 09 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.13-1
+- Fix bug that could cause Python job submission to crash
+- HTCondor tarballs now contain Pelican 7.20.2
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.12-1
 - Update condor_upgrade_check to warn about v1 Python bindings retirement
 - Update condor_upgrade_check to look for old syntax job transforms

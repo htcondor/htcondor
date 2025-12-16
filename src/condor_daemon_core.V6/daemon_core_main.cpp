@@ -2079,10 +2079,10 @@ handle_dc_start_token_request(int, Stream* stream)
 				Sock * sock = dynamic_cast<Sock *>(stream);
 				if( sock ) {
 					const char * method = sock->getAuthenticationMethodUsed();
-					if( strcasecmp( method, "ANONYMOUS" ) == 0 ) {
+					if( !method || strcasecmp( method, "ANONYMOUS" ) == 0 ) {
 						g_request_map.erase(iter);
 						result_ad.Clear();
-						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS authentication.");
+						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS or no authentication.");
 						result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
 					}
 				}

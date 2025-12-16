@@ -177,6 +177,9 @@ check_recovery_file( const char *sandbox_dir, bool abnormal_exit )
 	// filename does not end in .recovery, append it.
 	std::string recovery_file(sandbox_dir);
 	if ( ! ends_with(recovery_file, ".recover")) {
+		if (ends_with(recovery_file, DIR_DELIM_STRING)) {
+			recovery_file.pop_back(); // remove trailing DIR_DELIM_STRING
+		} 
 		recovery_file += ".recover";
 	}
 

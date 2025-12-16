@@ -705,6 +705,17 @@ reinitialize ()
 		sockCache = new SocketCache(socket_cache_size);
 	}
 
+	bool new_match_password = param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true);
+	if (new_match_password != MatchPasswordEnabled) {
+		IpVerify* ipv = daemonCore->getIpVerify();
+		if ( new_match_password ) {
+			ipv->PunchHole(CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU);
+		} else {
+			ipv->FillHole( CLIENT_PERM, SUBMIT_SIDE_MATCHSESSION_FQU );
+		}
+		MatchPasswordEnabled = new_match_password;
+	}
+
 	// get PreemptionReq expression
 	if (PreemptionReq) delete PreemptionReq;
 	PreemptionReq = NULL;
@@ -910,7 +921,7 @@ reinitialize ()
 void
 Matchmaker::SetupMatchSecurity(std::vector<ClassAd *> &submitterAds)
 {
-	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true)) {
+	if (!MatchPasswordEnabled) {
 		return;
 	}
 	dprintf(D_SECURITY, "Will look for match security sessions.\n");
@@ -2942,7 +2953,7 @@ obtainAdsFromCollector (
     //
 #if 1
 	CondorQuery publicQuery(QUERY_MULTIPLE_PVT_ADS);
-	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	publicQuery.requestPrivateAttrs();
 
 	if (!m_SubmitterConstraintStr.empty()) {
 		publicQuery.addORConstraint(m_SubmitterConstraintStr.c_str());
@@ -2981,8 +2992,8 @@ obtainAdsFromCollector (
         publicQuery.addORConstraint(slot_ad_constraint);
     }
 
-	privateQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
-	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	privateQuery.requestPrivateAttrs();
+	publicQuery.requestPrivateAttrs();
 
 	// If preemption is disabled, we only need a handful of attrs from claimed ads.
 	// Ask for that projection.

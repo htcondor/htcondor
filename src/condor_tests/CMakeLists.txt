@@ -196,6 +196,7 @@ endif ()
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 		if (LINUX OR APPLE)
+			condor_pl_test(test_admin_capability "Use admin capability from collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Fail.  We can't build this on Windows because of bad target names.
 			# At some point, this should be turned into a unit test.
 			condor_exe_test(test_filter.exe "test_filter.cpp;../condor_starter.V6.1/filter.cpp" "condor_utils")
@@ -218,6 +219,7 @@ endif ()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
 		if(LINUX OR APPLE)
+			condor_pl_test(test_x509_delegation "Test X.509 delegation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_shadow_hook "Test shadow job hooks and their status msg" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")

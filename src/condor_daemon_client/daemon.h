@@ -672,6 +672,9 @@ public:
 	void setSecSessionId(const std::string& sess_id) { m_sec_session_id = sess_id; }
 	const std::string& getSecSessionId() { return m_sec_session_id; }
 
+	void setForceAuthentication(bool force) { m_force_auth = force; }
+	bool getForceAuthentication() { return m_force_auth; }
+
 protected:
 	// Data members
 	std::string _name;
@@ -696,6 +699,7 @@ protected:
 	bool _tried_init_version;
 	bool _is_configured;
 	bool m_should_try_token_request{false};
+	bool m_force_auth{false};
 	SecMan _sec_man;
 	// If our target daemon is the default collector
 	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
