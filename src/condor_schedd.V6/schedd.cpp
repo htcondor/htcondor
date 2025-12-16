@@ -7945,7 +7945,6 @@ public:
 		/** These are not actually used, because we are
 		 *  using the all_dups option to SelfDrainingQueue. */
 	virtual int ServiceDataCompare( ServiceData const* other ) const;
-	virtual size_t HashFn( ) const;
 };
 
 int
@@ -7960,12 +7959,6 @@ ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
 		return 1;
 	}
 	return m_job_id.ServiceDataCompare( &o->m_job_id );
-}
-
-size_t
-ActOnJobRec::HashFn( ) const
-{
-	return m_job_id.HashFn();
 }
 
 void
