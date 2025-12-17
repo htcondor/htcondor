@@ -179,7 +179,6 @@ class ScheddOtherStatsMgr {
 public:
    ScheddOtherStatsMgr(ScheddStatistics & stats)
      : config(stats)
-	 , pools(hashFunction)
    {};
    ~ScheddOtherStatsMgr();
 
@@ -194,8 +193,8 @@ public:
 
    // add an entry in the pools hash (by pre), if by==true, also add an entry in the by hash
    bool Enable(const char * pre, const char * trig, bool stats_by_trig_value=false, time_t lifetime=0);
-   bool Contains(const char * pre) { return pools.exists(pre) == 0; }
-   ScheddOtherStats * Lookup(const char * pre) { ScheddOtherStats * po = NULL; pools.lookup(pre, po); return po; }
+   bool Contains(const char * pre) { return pools.find(pre) != pools.end(); }
+   ScheddOtherStats * Lookup(const char * pre) { auto it = pools.find(pre); return (it != pools.end()) ? it->second : nullptr; }
    bool DisableAll(); // returns true if any were enabled before this call
    bool RemoveDisabled();
    bool AnyEnabled();
@@ -208,7 +207,7 @@ public:
 
 private:
    ScheddStatistics & config;  // ref to ScheddStatistics that we pull config from
-   HashTable<std::string, ScheddOtherStats*> pools; // pools of stats and triggers (for Enable)
+   std::map<std::string, ScheddOtherStats*> pools; // pools of stats and triggers (for Enable)
    std::map<int,int> deferred_jobs_submitted; // key=cluster, value=max_proc.
 };
 

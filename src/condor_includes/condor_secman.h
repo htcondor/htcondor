@@ -93,7 +93,7 @@ public:
 	static std::string m_token;
 
 		// The following is indexed by session index name ( "addr,<cmd>" )
-	static HashTable<std::string, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
+	static std::map<std::string, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
 
 	SecMan();
 	SecMan(const SecMan &);

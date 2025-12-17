@@ -1014,10 +1014,10 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
   std::string CustomerName;
 
 	  // Create a hash table for speedier lookups of Resource ads.
-  HashTable<std::string,ClassAd *> resource_hash(hashFunction);
+  std::map<std::string,ClassAd *> resource_hash;
   for (ClassAd *ResourceAd: ResourceList) {
     ResourceName = GetResourceName(ResourceAd);
-    bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    auto [it, success] = resource_hash.emplace(ResourceName, ResourceAd);
     if (!success) {
       dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.c_str());
       dPrintAd(D_FULLDEBUG, *ResourceAd);
@@ -1030,13 +1030,14 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
     char const *key = HK.c_str();
     if (strncmp(ResourceRecord.c_str(),key,ResourceRecord.length())) continue;
     ResourceName=key+ResourceRecord.length();
-	ClassAd *ResourceAd = nullptr;
-    if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
+    auto itr = resource_hash.find(ResourceName);
+    if (itr == resource_hash.end()) {
       dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.c_str());
       RemoveMatch(ResourceName);
     }
 	else {
 		// Here we need to figure out the CustomerName.
+      ClassAd* ResourceAd = itr->second;
       ad->LookupString(RemoteUserAttr,CustomerName);
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
         dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.c_str(),CustomerName.c_str());

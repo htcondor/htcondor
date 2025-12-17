@@ -32,6 +32,7 @@
 #include "condor_email.h"
 #include "shared_port_endpoint.h"
 #include "scheduler.h"
+#include "qmgmt.h"
 
 extern char *Name;
 
@@ -377,7 +378,7 @@ GridUniverseLogic::FindGManagerPid(const GridUserIdentity& userident)
 {
 	gman_node_t* gman_node = nullptr;
 
-	if ( (gman_node=lookupGmanByOwner(userident.username().c_str(), userident.auxid().c_str())) ) {
+	if ( (gman_node=lookupGmanByOwner(userident.m_ownerinfo->Name(), userident.m_auxid.c_str())) ) {
 		return gman_node->pid;
 	}
 	else {
@@ -388,9 +389,9 @@ GridUniverseLogic::FindGManagerPid(const GridUserIdentity& userident)
 GridUniverseLogic::gman_node_t *
 GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const char* attr_name)
 {
-	const char* user = userident.username().c_str();
-	const char* osname = userident.osname().c_str();
-	const char* attr_value = userident.auxid().c_str();
+	const char* user = userident.m_ownerinfo->Name();
+	const char* osname = userident.m_ownerinfo->OsUser();
+	const char* attr_value = userident.m_auxid.c_str();
 	gman_node_t* gman_node = nullptr;
 	int pid = 0;
 
@@ -496,7 +497,7 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 	args.AppendArg(Name);
 
 	std::string tmp;
-	if (!init_user_ids(userident.ownerinfo())) {
+	if (!init_user_ids(userident.m_ownerinfo)) {
 		dprintf(D_ERROR,"ERROR - init_user_ids(%s) failed in GRIDMANAGER\n", osname);
 		free(gman_binary);
 		return nullptr;
@@ -610,7 +611,7 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 	if ( !gman_node ) {
 		gman_node = new gman_node_t;
 	}
-	gman_node->ownerinfo = userident.ownerinfo();
+	gman_node->ownerinfo = userident.m_ownerinfo;
 	gman_node->pid = pid;
 	gman_node->user[0] = '\0';
 	if ( user ) {
