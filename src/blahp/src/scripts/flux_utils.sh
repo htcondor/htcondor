@@ -61,26 +61,3 @@ function flux_utils_split_jobid {
     declare -g "${flux_jobid_varname}=`echo ${!flux_jobid_varname} | cut -f1 -d@`"
   fi
 }
-
-# This function gets and normalizes the path to the Flux bindir. To enable support across
-# multiple versions of HTCondor, this function will ensure the returned path ends in a slash.
-# Arguments:
-#   2. The name of the global variable in which to store the Flux binbdir
-# Outputs:
-#   * A global variable, named based on input, containing the Flux bindir
-# Returns:
-#   None
-function flux_utils_get_binpath {
-  local binpath_varname="$1"
-
-  if [ -z "${!binpath_varname}" ]; then
-    declare -g "${binpath_varname}=''"
-  else
-    echo "${!binpath_varname}" | grep \/$
-    ends_in_slash=$?
-    
-    if [ "${ends_in_slash}" -ne 0 ]; then
-      declare -g "${binpath_varname}=${!binpath_varname}/"
-    fi
-  fi
-}

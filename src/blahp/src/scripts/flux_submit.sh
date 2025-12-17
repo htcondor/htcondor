@@ -32,10 +32,6 @@
 
 . `dirname $0`/flux_utils.sh
 
-# Get flux_binpath (i.e., directory continaing the 'flux' executable), or
-# default to /usr/bin
-flux_utils_get_binpath flux_binpath
-
 # Set bls_submit_args_prefix so that any extra Flux directives are prefixed with
 # "#FLUX: "
 bls_submit_args_prefix="#FLUX:"

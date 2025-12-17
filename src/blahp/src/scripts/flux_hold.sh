@@ -25,8 +25,6 @@
 
 . `dirname $0`/flux_utils.sh
 
-flux_utils_get_binpath flux_binpath
-
 sleep 5s
 
 flux_utils_split_jobid "$1" "requested" "cluster_name"
