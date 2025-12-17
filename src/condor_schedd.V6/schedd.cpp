@@ -425,20 +425,10 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
 }
 
-size_t GridUserIdentity::HashFcn(const GridUserIdentity & index)
-{
-	return hashFunction(index.m_username) + hashFunction(index.m_auxid);
-}
-
 //PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
 GridUserIdentity::GridUserIdentity(JobQueueJob& job_ad):
-	m_username(job_ad.ownerinfo->Name()),
-	m_auxid(""),
 	m_ownerinfo(job_ad.ownerinfo)
 {
-	// TODO Once JobQueueUserRec has an OS account field, use that here
-	std::string tmp;
-	m_osname = job_ad.ownerinfo->OsUser();
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
 	const char *str = NULL;
@@ -623,7 +613,6 @@ Scheduler::Scheduler() :
 	m_scheduler_startup(time(NULL)),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	GridJobOwners(GridUserIdentity::HashFcn),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
@@ -1937,11 +1926,8 @@ Scheduler::count_jobs()
 	for (auto& [_, sd] : Submitters) { sd.OldFlockLevel = sd.FlockLevel; }
 
 	 // Tell our GridUniverseLogic class what we've seen in terms
-	 // of Globus Jobs per owner.
-	GridJobOwners.startIterations();
-	GridUserIdentity userident;
-	GridJobCounts gridcounts;
-	while( GridJobOwners.iterate(userident, gridcounts) ) {
+	 // of Grid Jobs per owner.
+	for (const auto& [userident, gridcounts]: GridJobOwners) {
 		if(gridcounts.GridJobs > 0) {
 			GridUniverseLogic::JobCountUpdate(
 					userident, m_unparsed_gridman_selection_expr,
@@ -4112,15 +4098,11 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
-			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
-			ASSERT(gridcounts);
-			gridcounts->GridJobs++;
+			scheduler.GridJobOwners[userident].GridJobs++;
 		}
 		if ( status != HELD && job_managed == 0 && job_managed_done == 0 ) 
 		{
-			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
-			ASSERT(gridcounts);
-			gridcounts->UnmanagedGridJobs++;
+			scheduler.GridJobOwners[userident].UnmanagedGridJobs++;
 		}
 
 		return 0;
@@ -4323,11 +4305,8 @@ bool Scheduler::any_userrec_refs(JobQueueUserRec * urec)
 	}
 
 	if ( ! refs.in_use) {
-		GridJobOwners.startIterations();
-		GridUserIdentity userident;
-		GridJobCounts gridcounts;
-		while( GridJobOwners.iterate(userident, gridcounts) ) {
-			if (userident.ownerinfo() == urec) {
+		for (const auto& [userident, gridcounts]: GridJobOwners) {
+			if (userident.m_ownerinfo == urec) {
 				refs.in_use = true;
 				break;
 			}
@@ -17613,21 +17592,6 @@ Scheduler::jobThrottle( void )
 	dprintf( D_FULLDEBUG, "start next job after %d sec, JobsThisBurst %d\n",
 			delay, JobsThisBurst);
 	return delay;
-}
-
-GridJobCounts *
-Scheduler::GetGridJobCounts(GridUserIdentity user_identity) {
-	GridJobCounts * gridcounts = 0;
-	if( GridJobOwners.lookup(user_identity, gridcounts) == 0 ) {
-		ASSERT(gridcounts);
-		return gridcounts;
-	}
-	// No existing entry.
-	GridJobCounts newcounts;
-	GridJobOwners.insert(user_identity, newcounts);
-	GridJobOwners.lookup(user_identity, gridcounts);
-	ASSERT(gridcounts); // We just added it. Where did it go?
-	return gridcounts;
 }
 
 int

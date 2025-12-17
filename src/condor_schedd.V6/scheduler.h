@@ -296,43 +296,14 @@ class match_rec
 
 };
 
-class GridUserIdentity {
-	public:
-			// The default constructor is not recommended as it
-			// has no real identity.  It only exists so
-			// we can put UserIdentities in various templates.
-		GridUserIdentity() : m_username(""), m_osname(""), m_auxid(""), m_ownerinfo(nullptr) { }
-		GridUserIdentity(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-		}
-		GridUserIdentity(JobQueueJob& job_ad);
-		const GridUserIdentity & operator=(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-			return *this;
-		}
-		bool operator==(const GridUserIdentity & rhs) {
-			return m_username == rhs.m_username && 
-				m_auxid == rhs.m_auxid && m_ownerinfo == rhs.m_ownerinfo;
-		}
-		const std::string& username() const { return m_username; }
-		const std::string& osname() const { return m_osname; }
-		const std::string& auxid() const { return m_auxid; }
-		const JobQueueUserRec* ownerinfo() const { return  m_ownerinfo; }
+struct GridUserIdentity {
+	GridUserIdentity() = default;
+	GridUserIdentity(JobQueueJob& job_ad);
 
-			// For use in HashTables
-		static size_t HashFcn(const GridUserIdentity & index);
+	auto operator<=>(const GridUserIdentity&) const = default;
 	
-	private:
-		std::string m_username;
-		std::string m_osname;
-		std::string m_auxid;
-		const JobQueueUserRec* m_ownerinfo;
+	const JobQueueUserRec* m_ownerinfo{nullptr};
+	std::string m_auxid;
 };
 
 
@@ -738,6 +709,8 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
+	std::map<GridUserIdentity, GridJobCounts> GridJobOwners;
+
 	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const OwnerInfo *user, const char * new_spool_dir="##");
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const OwnerInfo *user);
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const OwnerInfo *user);
@@ -869,7 +842,6 @@ private:
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 	ProjectInfoMap  ProjectInfo;   // map of JobQueueProjectRec ads by project name
 
-	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	std::queue<shadow_rec*> RunnableJobQueue;
@@ -908,12 +880,6 @@ private:
 
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;
-
-		// Get the associated GridJobCounts object for a given
-		// user identity.  If necessary, will create a new one for you.
-		// You can read or write the values, but don't go
-		// deleting the pointer!
-	GridJobCounts * GetGridJobCounts(GridUserIdentity user_identity);
 
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;
