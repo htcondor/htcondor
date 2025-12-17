@@ -1981,7 +1981,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 
 #if defined(WITH_PLACEMENT) && defined(HAVE_SQLITE3_H)
 	sqlite3* db = nullptr;
-	bool use_db = param_boolean("SEC_USE_TOKENS_DATABASE", false);
+	bool use_db = param_boolean("SEC_USE_TOKENS_DATABASE", true);
 	if (use_db) {
 		db = acquireTokensDbHandle();
 	}
