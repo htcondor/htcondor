@@ -15,6 +15,10 @@
   not constant (e.g. used random() or time()).
   :jira:`3436`
 
+- Fixed a bug where the values of the attributes :ad-attr:`LocalJobsIdle` and
+  :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
+  :jira:`3456`
+
 *** 24.12.15 features
 
 - :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
