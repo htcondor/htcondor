@@ -48,7 +48,7 @@ nav {
 }
 
 .navbar-nav.site-link {
-    font-size: 2rem; 
+    font-size: 1rem; 
     font-weight: 400;
     padding: 0 8px;
     display: flex;
@@ -60,7 +60,12 @@ nav {
         padding: 0;
         color: lightgray;
 
-        &:hover{
+        i {
+            font-size: 2rem;
+            align-self: center;
+        }
+
+        &:hover {
             color: white;
         }
     }

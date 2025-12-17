@@ -83,8 +83,11 @@
                         <a class="nav-link" href="{{ prev_page.url }}" 
                            data-toggle="tooltip" 
                            data-placement="left" 
-                            title="{{ prev_page.text }} - {{ prev_page.subtitle }}">
-                            <i class="bi bi-chevron-left"></i>
+                            title="{{ prev_page.tooltip }}">
+                            <div style="display: flex; flex-direction: row;">
+                                <i class="bi bi-chevron-left"></i>
+                                <span style="white-space: pre-wrap;">{{ prev_page.title }}</span>
+                            </div>
                         </a>
                     </div>
                     {% endif %} 
@@ -102,8 +105,11 @@
                         <a class="nav-link" href="{{ next_page.url }}" 
                             data-toggle="tooltip" 
                             data-placement="right" 
-                            title="{{ next_page.text }} - {{ next_page.subtitle }}">
-                            <i class="bi bi-chevron-right"></i>
+                            title="{{ next_page.tooltip }}">
+                            <div style="display: flex; flex-direction: row;">
+                                <span style="white-space: pre-wrap;">{{ next_page.title }}</span>
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
                         </a>
                     </div>
                     {% endif %} 

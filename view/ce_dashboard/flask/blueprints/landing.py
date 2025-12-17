@@ -88,9 +88,9 @@ class ResourceInfo:
 @dataclass
 class HeaderLink:
     """ Util class containing the text and URL for a header link """
-    text: str
+    title: str
+    tooltip: str
     url: str
-    subtitle: str = ""
 
 def returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn):
     """
@@ -403,8 +403,8 @@ def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional
     next_link, next_name = next_facility.name.split('|',1)
 
     return (
-        HeaderLink(text=next_facility.facility_name, subtitle=next_name, url=next_link),
-        HeaderLink(text=prev_facility.facility_name, subtitle=prev_name, url=prev_link)
+        HeaderLink(title='Next\nCE', tooltip=f"{next_facility.facility_name} - {next_name}", url=next_link),
+        HeaderLink(title='Prev\nCE', tooltip=f"{prev_facility.facility_name} - {prev_name}", url=prev_link)
     )
 
 ##########################################
