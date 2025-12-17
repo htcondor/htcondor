@@ -15,8 +15,9 @@ fi
 
 PATCHELF='patchelf'
 if [ -x /usr/bin/lief-patchelf ]; then
-PATCHELF='lief-patchelf'
+    PATCHELF='lief-patchelf'
 fi
+echo "Using $PATCHELF"
 
 # shellcheck disable=SC2046
 for file in $(file $(find "$tarball" -type f)|grep  ' ELF '|sed -e s/:.*//|grep -v '\.o$'|grep -v exit_37|grep -v pelican); do
