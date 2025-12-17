@@ -190,7 +190,7 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
 fi
 
 # Add useful tools
-$INSTALL gdb git less nano python3-pip strace sudo vim
+$INSTALL gdb git less nano patchelf python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL iputils rpmlint
 fi
@@ -199,13 +199,11 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use fancy new lief-patchelf
-$INSTALL patchelf
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
         $INSTALL lief-patchelf
     fi
 fi
-echo "Using $PATCHELF"
 
 # Add in the ninja build system
 if [ $ID = 'opensuse-leap' ]; then
