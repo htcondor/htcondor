@@ -64,8 +64,7 @@ const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(unsigned int as_tool)
-	: m_jobs(hashFunction)
-	, m_round_robin_selection(true)
+	: m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -99,11 +98,8 @@ JobRouter::JobRouter(unsigned int as_tool)
 }
 
 JobRouter::~JobRouter() {
-	RoutedJob *job;
-
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
-		RemoveJob(job);
+	for (auto& [key, job]: m_jobs) {
+		delete job;
 	}
 
 	m_route_order.clear();
@@ -762,15 +758,13 @@ JobRouter::InitPublicAd()
 void
 JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 {
-	RoutedJob *job;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *orig_ad;
 
 	dprintf(D_FULLDEBUG, "JobRouter: Evaluating all managed jobs periodic "
 			"job policy expressions.\n");
 
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job))
+	for (auto& [key, job]: m_jobs)
 	{
 		orig_ad = ad_collection->GetClassAd(job->src_key);
 		
@@ -1170,16 +1164,17 @@ JobRouter::GracefullyRemoveJob(RoutedJob *job) {
 
 bool
 JobRouter::AddJob(RoutedJob *job) {
-	return m_jobs.insert(job->src_key,job) == 0;
+	auto [it, success] = m_jobs.emplace(job->src_key, job);
+	return success;
 }
 
 RoutedJob *
 JobRouter::LookupJobWithSrcKey(std::string const &src_key) {
-	RoutedJob *job = NULL;
-	if(m_jobs.lookup(src_key,job) == -1) {
+	auto it = m_jobs.find(src_key);
+	if (it == m_jobs.end()) {
 		return NULL;
 	}
-	return job;
+	return it->second;
 }
 
 RoutedJob *
@@ -1195,9 +1190,9 @@ JobRouter::LookupJobWithKeys(std::string const &src_key,std::string const &dest_
 
 bool
 JobRouter::RemoveJob(RoutedJob *job) {
-	int success;
+	size_t success;
 	ASSERT(job);
-	success = m_jobs.remove(job->src_key);
+	success = m_jobs.erase(job->src_key);
 	delete job;
 	return success != 0;
 }
@@ -1228,9 +1223,7 @@ RoutedJob::~RoutedJob() {
 int
 JobRouter::NumManagedJobs() {
 	int count = 0;
-	RoutedJob *job = NULL;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (const auto& [key, job]: m_jobs) {
 		if(job->state != RoutedJob::RETIRED) count++;
 	}
 	return count;
@@ -1258,9 +1251,12 @@ JobRouter::Poll( int /* timerID */ ) {
 	UpdateRouteStats();
 	GetCandidateJobs();
 
+	// CleanupRetiredJob() will erase the m_jobs entry, so be careful...
 	RoutedJob *job;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	auto it = m_jobs.begin();
+	while (it != m_jobs.end()) {
+		job = it->second;
+		it++;
 		// The following functions only do something if the job is in a state
 		// where it needs the action to be done.
 		TakeOverJob(job);
@@ -1268,16 +1264,14 @@ JobRouter::Poll( int /* timerID */ ) {
 		CheckSubmittedJobStatus(job);
 		FinalizeJob(job);
 		CleanupJob(job);
-		CleanupRetiredJob(job); //NOTE: this may delete job
+		CleanupRetiredJob(job); //NOTE: this may delete job and remove it from m_jobs
 	}
 }
 
 void JobRouter::SimulateRouting()
 {
 	ASSERT(m_operate_as_tool);
-	RoutedJob *job;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (auto& [key, job]: m_jobs) {
 		// The following functions only do something if the job is in a state
 		// where it needs the action to be done.
 		TakeOverJob(job);
@@ -1726,15 +1720,13 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 
 void
 JobRouter::UpdateRouteStats() {
-	RoutedJob *job;
 	JobRoute *route;
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		route->ResetCurrentRoutedJobs();
 	}
 
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (auto& [key, job]: m_jobs) {
 		if(!job->route_name.empty()) {
 			route = safe_lookup_route(job->route_name);
 			if (route) {
