@@ -1841,7 +1841,6 @@ DedicatedScheduler::clearResources( )
 			serialMach->LookupString(ATTR_NAME, slot_name);
 			match_rec *mr = nullptr;
 			auto it = all_matches.find(slot_name);
-			// JEF original code had a bug here
 			if (it != all_matches.end()) {
 				mr = it->second;
 				mr->needs_release_claim = false;

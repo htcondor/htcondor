@@ -58,16 +58,3 @@ CondorID::ServiceDataCompare( const ServiceData* rhs ) const
 	
 	return id_lhs->Compare( *id_rhs );
 }
-
-static unsigned int reverse_bits(unsigned int x) {
-	//http://www-graphics.stanford.edu/~seander/bithacks.html#BitReverseObvious
-	unsigned int y = x;
-	unsigned int high_zeros=sizeof(x)*8-1;
-	for(x >>= 1; x; x >>= 1) {
-		y <<= 1;
-		y |= x&1;
-		high_zeros--;
-	}
-	y <<= high_zeros;
-	return y;
-}
