@@ -941,7 +941,7 @@ private:
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
 	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
-	int SetBuiltInOnEvictCheck(const char * attr, int scale, const char * line, const char * incr=nullptr);
+	int SetBuiltInOnEvictCheck(const char * attr, const char * subkey, int scale, const char * line, const char * incr=nullptr);
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,
