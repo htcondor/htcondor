@@ -197,11 +197,15 @@ fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
 fi
+
+# Use fancy new lief-patchelf
+$INSTALL patchelf
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
-    $INSTALL lief-patchelf
-else
-    $INSTALL patchelf
+    if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
+        $INSTALL lief-patchelf
+    fi
 fi
+echo "Using $PATCHELF"
 
 # Add in the ninja build system
 if [ $ID = 'opensuse-leap' ]; then
