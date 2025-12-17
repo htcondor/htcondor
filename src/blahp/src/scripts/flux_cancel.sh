@@ -27,8 +27,6 @@
 
 . `dirname $0`/flux_utils.sh
 
-flux_utils_get_binpath flux_binpath
-
 jnr=0
 jc=0
 for job in  $@ ; do

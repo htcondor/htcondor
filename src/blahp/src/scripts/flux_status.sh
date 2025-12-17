@@ -23,10 +23,6 @@
 
 . `dirname $0`/flux_utils.sh
 
-# If flux_binpath is specified in the BLAH config, use it.
-# Otherwise, set flux_binpath to /usr/bin
-flux_utils_get_binpath flux_binpath
-
 usage_string="Usage: $0 [-w] [-n]"
 
 ###############################################################
