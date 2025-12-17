@@ -1534,9 +1534,6 @@ InitQmgmt()
 		}
 	}
 
-	// Queue Super users are also ocu super users
-	ocu_super_users.insert(ocu_super_users.end(), super_users.begin(), super_users.end());
-
 	delete queue_super_user_may_impersonate_regex;
 	queue_super_user_may_impersonate_regex = nullptr;
 	std::string queue_super_user_may_impersonate;
