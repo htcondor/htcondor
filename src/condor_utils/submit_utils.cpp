@@ -5347,41 +5347,7 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 				auto_free_ptr rrm(submit_param(SUBMIT_KEY_RetryRequestMemory));
 				auto_free_ptr rrmax(submit_param(SUBMIT_KEY_RetryRequestMemoryMax));
 				auto_free_ptr rrmincr(submit_param(SUBMIT_KEY_RetryRequestMemoryIncrease));
-				
-#if 0
-				// Check units for retry_request_memory if it's a literal value
-				if (rrm && missingUnitsIs) {
-					char unit = 0;
-					int64_t retry_memory_mb = 0;
-					const char * endp = nullptr;
-					if (parse_int64_bytes(rrm, retry_memory_mb, 1024 * 1024, &unit, ",", &endp)) {
-						if ( ! unit) {
-							if (0 == strcasecmp("error", missingUnitsIs)) {
-								push_error(stderr, "\nERROR: retry_request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
-								ABORT_AND_RETURN(1);
-							}
-							push_warning(stderr, "\nWARNING: retry_request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
-						}
-					}
-				}
-				
-				// Check units for retry_request_memory_max if it's a literal value
-				if (rrmax && missingUnitsIs) {
-					char unit = 0;
-					int64_t retry_max_mb = 0;
-					if (parse_int64_bytes(rrmax, retry_max_mb, 1024 * 1024, &unit)) {
-						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-						if ( ! unit) {
-							if (0 == strcasecmp("error", missingUnitsIs)) {
-								push_error(stderr, "\nERROR: retry_request_memory_max=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
-								ABORT_AND_RETURN(1);
-							}
-							push_warning(stderr, "\nWARNING: retry_request_memory_max=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
-						}
-					}
-				}
-#endif
-				
+
 				if (rrm) {
 					if (rrmincr) {
 						push_warning(stderr, "\nWARNING: retry_request_memory_increase will be ignored because retry_request_memory was used");
