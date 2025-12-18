@@ -295,6 +295,7 @@ static void ScheduleJobQueueLogFlush();
 
 bool qmgmt_all_users_trusted = false;
 static std::vector<std::string> super_users;
+std::vector<std::string> ocu_super_users;
 static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
@@ -1506,6 +1507,19 @@ InitQmgmt()
 			"NOTE: QUEUE_ALL_USERS_TRUSTED=TRUE - "
 			"all queue access checks disabled!\n"
 			);
+	}
+
+	std::vector<std::string> ocu_s_users;
+	auto_free_ptr ocu_super(param("OCU_SUPER_USERS"));
+	if (ocu_super) {
+		ocu_s_users = split(ocu_super);
+	}
+	ocu_super_users = ocu_s_users;
+	if( IsFulldebug(D_FULLDEBUG) && !ocu_s_users.empty()) {
+		dprintf( D_FULLDEBUG, "OCU Super Users:\n" );
+		for (const auto &username : ocu_super_users) {
+			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
+		}
 	}
 
 	delete queue_super_user_may_impersonate_regex;
