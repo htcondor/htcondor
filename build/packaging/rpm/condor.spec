@@ -30,6 +30,9 @@ BuildArch: x86_64_v2
 %global dist .leap15
 %endif
 %endif
+%if %{suse_version} == 1600
+%global dist .leap16
+%endif
 %endif
 
 # Edit the %condor_release to set the release number
@@ -121,9 +124,14 @@ BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
-%if  0%{?suse_version}
+%if %{suse_version} == 1500
 BuildRequires: gcc12
 BuildRequires: gcc12-c++
+%endif
+
+%if %{suse_version} == 1600
+BuildRequires: gcc15
+BuildRequires: gcc15-c++
 %endif
 
 BuildRequires: libuuid-devel
@@ -290,7 +298,7 @@ Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
-%if 0%{?suse_version}
+%if %{suse_version} == 1500
 %debug_package
 %endif
 
@@ -519,9 +527,14 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?suse_version}
+%if %{suse_version} == 1500
 export CC=/usr/bin/gcc-12
 export CXX=/usr/bin/g++-12
+%endif
+
+%if %{suse_version} == 1600
+export CC=/usr/bin/gcc-15
+export CXX=/usr/bin/g++-15
 %endif
 
 %if 0%{?devtoolset}

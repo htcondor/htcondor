@@ -154,7 +154,7 @@ if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; th
     # ] ] Help out vim syntax highlighting
 fi
 # SUSE is special
-if [ $ID = 'sles' ]; then
+if [ $ID = 'future-suse' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/zypp/repos.d/htcondor-test.repo
