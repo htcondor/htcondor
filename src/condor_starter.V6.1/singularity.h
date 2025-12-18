@@ -64,9 +64,7 @@ public:
 
   static bool canRunSandbox(bool &can_use_pidnamespaces);
   static bool canRunSIF();
-#ifdef LINUX
   static bool canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout = m_default_timeout);
-#endif
   static IsSetuid usesUserNamespaces();
   static std::string m_lastSingularityErrorLine;
 

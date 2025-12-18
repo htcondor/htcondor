@@ -723,6 +723,11 @@ Singularity::add_containment_args(ArgList & sing_args)
 #ifdef LINUX
 bool
 Singularity::canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout) {
+#else
+Singularity::canRun(const std::string &, const std::string &, std::string &, int ) {
+#endif
+
+#ifdef LINUX
 	bool success = true;
 	bool retry_on_fail_without_namespaces = false;
 
@@ -816,5 +821,7 @@ Singularity::canRun(const std::string &image, const std::string &command, std::s
 	else {
 		return false;
 	}
-}
+#else
+	return false;
 #endif
+}
