@@ -728,10 +728,14 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 		}
 		break;
 
-		case classad::ExprTree::EXPR_ENVELOPE:
+		case classad::ExprTree::EXPR_ENVELOPE: {
+			classad::ExprTree *inner = SkipExprEnvelope(tree);
+			if (inner) { iret += RewriteAttrRefs(inner, mapping); }
+		}
+		break;
+
 		default:
-			// unknown or unallowed node.
-			ASSERT(0);
+			// unknown or unhandled node kind; leave untouched.
 		break;
 	}
 	return iret;
