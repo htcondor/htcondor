@@ -409,7 +409,7 @@ queue
 ==retry_mem3.sub
 executable=$Fp(SUBMIT_FILE)basic.cmd
 arguments=10s
-request_memory = 1GB, 2GB, 8GB
+request_memory = 1GB, 2G, 8 gb
 queue
 
 ==parallel.sub
