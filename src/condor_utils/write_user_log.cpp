@@ -157,7 +157,7 @@ WriteUserLog::initialize(const ClassAd &job_ad)
 
 	m_set_user_priv = true;
 
-	if (!user_ids_are_inited()) {
+	if (can_switch_ids() && !user_ids_are_inited()) {
 		dprintf(D_ERROR, "WriteUserLog: user ids not initialized\n");
 		return false;
 	}
