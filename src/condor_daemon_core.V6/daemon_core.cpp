@@ -240,6 +240,7 @@ DaemonCore::DaemonCore()
 	m_proc_family = NULL;
 
 	m_unregisteredCommand.num = 0;
+	m_httpCommand.num = 0;
 
 	sec_man = new SecMan();
 	audit_log_callback_fn = 0;
@@ -399,6 +400,10 @@ DaemonCore::~DaemonCore()
 	if ( m_unregisteredCommand.num ) {
 		free( m_unregisteredCommand.command_descrip );
 		free( m_unregisteredCommand.handler_descrip );
+	}
+	if ( m_httpCommand.num ) {
+		free( m_httpCommand.command_descrip );
+		free( m_httpCommand.handler_descrip );
 	}
 
 	for (auto &s : sigTable) {
@@ -929,6 +934,28 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 	m_unregisteredCommand.service = s;
 	m_unregisteredCommand.num = 1;
 	m_unregisteredCommand.is_cpp = include_auth;
+	return 1;
+}
+
+int DaemonCore::Register_HTTP_CommandHandler(
+	CommandHandlercpp handlercpp,
+	const char* handler_descrip,
+	Service* s)
+{
+	if (handlercpp == nullptr) {
+		dprintf(D_ERROR, "Can't register NULL HTTP command handler\n");
+		return -1;
+	}
+	if (m_httpCommand.num) {
+		dprintf(D_ERROR, "DaemonCore: HTTP command handler already registered\n");
+		return -1;
+	}
+	m_httpCommand.handlercpp = handlercpp;
+	m_httpCommand.command_descrip = strdup("HTTP HANDLER");
+	m_httpCommand.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
+	m_httpCommand.service = s;
+	m_httpCommand.num = 1;
+	m_httpCommand.is_cpp = true;
 	return 1;
 }
 
@@ -4436,6 +4463,43 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 	dprintf(D_COMMAND, "Return from HandleUnregisteredReq <%s, %d> (handler: %.3fs)\n", m_unregisteredCommand.handler_descrip, req, handler_time);
 
         return result;
+}
+
+int
+DaemonCore::CallHTTPCommandHandler(int req, Stream *stream)
+{
+	double handler_start_time = 0;
+	if (!m_httpCommand.num) {
+		dprintf(D_ALWAYS,
+			"Received HTTP/TLS request (%d) from %s but no HTTP handler registered.\n",
+			req,
+			stream->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_COMMAND, "Calling HTTP handler <%s> for request %d from %s\n",
+			m_httpCommand.handler_descrip,
+			req,
+			stream->peer_description());
+
+	handler_start_time = _condor_debug_get_time_double();
+
+	// call the handler function; first curr_dataptr for GetDataPtr()
+	curr_dataptr = &(m_httpCommand.data_ptr);
+
+	int result = FALSE;
+	if (m_httpCommand.handlercpp) {
+		result = (m_httpCommand.service->*(m_httpCommand.handlercpp))(req, stream);
+	}
+
+	curr_dataptr = NULL;
+
+	double handler_time = _condor_debug_get_time_double() - handler_start_time;
+
+	dprintf(D_COMMAND, "Return from HTTP handler <%s> (%.3fs)\n",
+			m_httpCommand.handler_descrip, handler_time);
+
+	return result;
 }
 
 int

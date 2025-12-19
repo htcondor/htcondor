@@ -23,9 +23,11 @@
 #include "shared_port_server.h"
 
 #include "daemon_command.h"
+#include "stl_string_utils.h"
 
 SharedPortServer::SharedPortServer():
 	m_registered_handlers(false),
+	m_registered_http_handler(false),
 	m_publish_addr_timer(-1)
 {
 }
@@ -69,6 +71,30 @@ SharedPortServer::InitAndReconfig() {
 	param(m_default_id, "SHARED_PORT_DEFAULT_ID");
 	if (param_boolean("USE_SHARED_PORT", false) && param_boolean("COLLECTOR_USES_SHARED_PORT", true) && !m_default_id.size()) {
 		m_default_id = "collector";
+	}
+
+	std::string configured_http_id;
+	if (!param(configured_http_id, "SHARED_PORT_HTTP_FORWARDING_ID")) {
+		std::string daemon_list;
+		if (param(daemon_list, "DAEMON_LIST")) {
+			StringTokenIterator list_iter(daemon_list);
+			for (const char *tok = list_iter.first(); tok; tok = list_iter.next()) {
+				if (strcasecmp(tok, "HTTP_API") == 0) {
+					configured_http_id = "http_api"; // well-known shared port id for HTTP_API
+					break;
+				}
+			}
+		}
+	}
+
+	m_http_forward_id = configured_http_id;
+	if (!m_http_forward_id.empty() && !m_registered_http_handler) {
+		int rc = daemonCore->Register_HTTP_CommandHandler(
+			(CommandHandlercpp)&SharedPortServer::HandleHttpRequest,
+			"SharedPortServer::HandleHttpRequest",
+			this);
+		ASSERT(rc >= 0);
+		m_registered_http_handler = true;
 	}
 
 	PublishAddress();
@@ -322,4 +348,17 @@ SharedPortServer::HandleDefaultRequest(int cmd,Stream *sock)
 	dprintf(D_FULLDEBUG, "SharedPortServer: Passing a request from %s for command %d to ID %s.\n",
 		sock->peer_description(), cmd, m_default_id.c_str()); 
 	return PassRequest(static_cast<Sock*>(sock), m_default_id.c_str());
+}
+
+int
+SharedPortServer::HandleHttpRequest(int cmd, Stream *sock)
+{
+	if (m_http_forward_id.empty()) {
+		dprintf(D_FULLDEBUG, "SharedPortServer: HTTP handler invoked for command %d from %s but no forward ID configured.\n",
+			cmd, sock->peer_description());
+		return 0;
+	}
+	dprintf(D_FULLDEBUG, "SharedPortServer: Forwarding HTTP/TLS request from %s (cmd %d) to ID %s.\n",
+		sock->peer_description(), cmd, m_http_forward_id.c_str());
+	return PassRequest(static_cast<Sock*>(sock), m_http_forward_id.c_str());
 }
