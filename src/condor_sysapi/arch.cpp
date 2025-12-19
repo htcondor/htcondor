@@ -472,7 +472,7 @@ sysapi_get_darwin_info(void)
 
 	int major = 0, minor = 0, patch = 0;
 	int fields = sscanf(ver_str, "%d.%d.%d", &major, &minor, &patch);
-	if (major < 10 || major > 14 || fields < 2 || (major == 10 && fields != 3)) {
+	if (major < 10 || fields < 2 || (major == 10 && fields != 3)) {
 		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
 	}
 
