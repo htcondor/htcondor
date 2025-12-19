@@ -6875,10 +6875,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	std::vector<ClassAd> nonfile_ads;
 	if( plugin.protocol_version == 4 ) {
 		// `PluginData` for all plug-ins.
-		ClassAd nonfile_ad;
-		// nonfile_ad.InsertAttr( "NonFile", true );
-		CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
-		nonfile_ads.push_back( nonfile_ad );
+		ExprTree * e = this->_fix_me_copy_.Lookup( "PluginData" );
+		if( e != NULL ) {
+			ClassAd nonfile_ad;
+			// nonfile_ad.InsertAttr( "NonFile", true );
+			CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
+			nonfile_ads.push_back( nonfile_ad );
+		}
 
 		// `<protocol>_PluginData` for specific protocols.
 		for( const auto & schema : schemes ) {
