@@ -2347,7 +2347,6 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 			if (IsQueryConstraintMatch(constr, &queryAd, urec)) {
 				ClassAd ad;
 				urec->live.publish(ad,"Num");
-
 			#if 1 // speed test for Miron
 				struct _urec_test { JobQueueUserRec* ptr; int hits; } refs = {urec, 0};
 				schedd_runtime_probe runtime;
@@ -2394,6 +2393,7 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 				ClassAd ad;
 				pjad->live.publish(ad,"Num");
 				ad.ChainToAd(pjad);
+
 				if ( !putClassAd(stream, ad, put_opts, proj)) {
 					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 					return FALSE;
@@ -8092,14 +8092,13 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 
 	daemonCore->Cancel_Socket( stream );
 
-	dprintf (D_ALWAYS, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
+	dprintf (D_FULLDEBUG, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
 
 	// attempt to read a command off the stream
 	stream->decode();
 	if (!stream->code(command))
 	{
-		dprintf (D_ALWAYS, "Socket activated, but could not read command\n");
-		dprintf (D_ALWAYS, "(Negotiator probably invalidated cached socket)\n");
+		dprintf (D_ALWAYS, "Negotiator Socket activated, but could not read command (Negotiator probably invalidated cached socket)\n");
 	}
 	else {
 		negotiate(command, stream);
@@ -8620,7 +8619,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	// Negotiator has asked us to send it RRL, but not started negotiation proper
 	// don't consider negotiation finished.
 	if (RRLRequestIsPending()) {
-		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getMatchUser());
+		dprintf(D_FULLDEBUG,"Finished sending RRL for %s\n", getMatchUser());
 		return;
 	}
 
@@ -8734,9 +8733,10 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	char const *remote_pool = NULL;
 	Sock*	sock = (Sock*)s;
 	bool skip_negotiation = false;
+	const char * sock_peer = ((Sock *)s)->get_sinful_peer(); if ( ! sock_peer) sock_peer = "?";
 
-	dprintf( D_FULLDEBUG, "\n" );
-	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
+	dprintf( D_PROTOCOL, "\n" );
+	dprintf( D_PROTOCOL, "Entered negotiate with %s\n", sock_peer );
 
 	// Set timeout on socket
 	s->timeout( param_integer("NEGOTIATOR_TIMEOUT",20) );
@@ -8779,12 +8779,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	if( ShadowSizeEstimate ) {
 		MaxShadowsForSwap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
 		MaxShadowsForSwap += numShadows;
-		dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
-		dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
-		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",
-				 ShadowSizeEstimate );
-		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
-				 MaxShadowsForSwap );
+		dprintf( D_FULLDEBUG, "*** Calculated MaxShadows=%d (SwapSpace=%d, ReservedSwap=%d, ShadowSizeEstimate=%d)\n",
+			MaxShadowsForSwap, SwapSpace, ReservedSwap, ShadowSizeEstimate);
 	}
 
 		// We want to read the owner off the wire ASAP, since if we're
@@ -8793,7 +8789,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		// a prio rec array, etc.
 
 	//-----------------------------------------------
-	// Get Owner name from negotiator
+	// Get Owner name from negotiator (this is actually the Submitter name)
 	//-----------------------------------------------
 	char owner[200];
 	std::string sig_attrs_from_cm;
@@ -8806,27 +8802,28 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	bool willMatchClaimedPslots = false;
 	std::string match_caps; // matchmaker capabilities
 	std::string negotiator_name; // negotiator name, for use when there are multiple negotiators in a CM
+	std::string label; // name, host & pool of the negotiator that is calling
 
 	s->decode();
 	// Keeping body of old if-statement to avoid re-indenting
 	{
 		if( !getClassAd( s, negotiate_ad ) ) {
-			dprintf( D_ALWAYS, "Can't receive negotiation header\n" );
+			dprintf( D_ERROR, "Can't receive negotiation header from %s\n", sock_peer );
 			return (!(KEEP_STREAM));
 		}
 		if( !negotiate_ad.LookupString(ATTR_OWNER,owner,sizeof(owner)) ) {
-			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
-					 ATTR_OWNER );
+			dprintf( D_ERROR, "Can't find %s (Submitter) in negotiation header from %s\n",
+					 ATTR_OWNER, sock_peer );
 			return (!(KEEP_STREAM));
 		}
 		if( !negotiate_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,sig_attrs_from_cm) ) {
-			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
-					 ATTR_AUTO_CLUSTER_ATTRS );
+			dprintf( D_ERROR, "Can't find %s in negotiation header from %s\n",
+					 ATTR_AUTO_CLUSTER_ATTRS, sock_peer );
 			return (!(KEEP_STREAM));
 		}
 		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
-			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
-					 ATTR_SUBMITTER_TAG );
+			dprintf( D_ERROR, "Can't find %s in negotiation header from %s\n",
+					 ATTR_SUBMITTER_TAG, sock_peer );
 			return (!(KEEP_STREAM));
 		}
 			// jobprio_min and jobprio_max are optional
@@ -8841,6 +8838,12 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 			scheddsAreSubmitters = true;
 		}
 
+		// build a scope label for dprintfs for this command.
+		formatstr(label, "(name=%s, host=%s)", negotiator_name.c_str(), sock->peer_ip_str());
+		if ( ! submitter_tag.empty()) {
+			label.pop_back(); label += "pool="; label += submitter_tag; label += ")";
+		}
+
 		if (IsDebugVerbose(D_MATCH)) {
 			std::string adbuf;
 			dprintf(D_MATCH | D_VERBOSE, "Got NEGOTIATE with ad:\n%s", formatAd(adbuf, negotiate_ad, "\t"));
@@ -8848,7 +8851,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 
 	}
 	if (!s->end_of_message()) {
-		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
+		dprintf( D_ALWAYS, "No EOM in NEGOTIATE from %s\n", sock_peer );
 		return (!(KEEP_STREAM));
 	}
 
@@ -8864,9 +8867,9 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 
 	
 	if (!SubmitterMap.IsSubmitterValid(submitter_tag, owner, time(NULL)) && !scheddsAreSubmitters) {
-		dprintf(D_ALWAYS, "Remote negotiator (host=%s, pool=%s) is trying to negotiate with submitter %s;"
+		dprintf(D_ALWAYS, "Remote negotiator %s is trying to negotiate with submitter %s;"
 			" that submitter was not sent to the negotiator, so aborting the negotiation attempt.\n",
-			sock->peer_ip_str(), submitter_tag.c_str(), owner);
+			label.c_str(), owner);
 		return (!(KEEP_STREAM));
 	}
 
@@ -8889,23 +8892,21 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 				n++;
 			}
 			if( !match ) {
-				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
-						"Aborting negotiation.\n", sock->peer_ip_str(),
-						submitter_tag.c_str());
+				dprintf(D_ALWAYS, "Unknown negotiator %s.  Aborting negotiation.\n", label.c_str());
 				return (!(KEEP_STREAM));
 			}
 		}
 	}
 
 	if( remote_pool ) {
-		dprintf (D_ALWAYS, "Negotiating for owner: %s (flock level %d, pool %s)\n",
-				 scheddsAreSubmitters ? "All Owners" : owner, which_negotiator, remote_pool);
+		dprintf (D_ALWAYS, "Negotiating for Submitter: %s with %s flock level %d\n",
+				 scheddsAreSubmitters ? "All Submitters" : owner, label.c_str(), which_negotiator);
 	} else {
-		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", scheddsAreSubmitters ? "All Owners" : owner);
+		dprintf (D_ALWAYS, "Negotiating for Submitter: %s with %s\n", scheddsAreSubmitters ? "All Owners" : owner, label.c_str());
 	}
 
 	if ( consider_jobprio_min > INT_MIN || consider_jobprio_max < INT_MAX ) {
-		dprintf(D_ALWAYS,"Negotiating owner=%s jobprio restricted, min=%d max=%d\n",
+		dprintf(D_ALWAYS,"Negotiating Submitter=%s jobprio restricted, min=%d max=%d\n",
 			 owner, consider_jobprio_min, consider_jobprio_max);
 	}
 
@@ -8942,10 +8943,10 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		char *at_sign = strchr(owner, '@');
 		if (at_sign) *at_sign = '\0';
 	}
-	// find owner in the Owners array
+	// find owner in the Submitters array
 	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner && !scheddsAreSubmitters) {
-		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
+		dprintf(D_ALWAYS, "Can't find Submitter %s in Submitters table\n", owner);
 		skip_negotiation = true;
 	} else if (shadowsSpawnLimit() == 0) {
 		// shadowsSpawnLimit() prints reason for limit of 0
@@ -16539,6 +16540,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "JobsStarted", JobsStarted );
 	cad->Assign( "SwapSpace", SwapSpace );
 	cad->Assign( "ShadowSizeEstimate", ShadowSizeEstimate );
+	cad->Assign( "CurrentMatchmakingCurb", shadowsSpawnLimit());
 	cad->Assign( "SwapSpaceExhausted", SwapSpaceExhausted );
 	cad->Assign( "ReservedSwap", ReservedSwap );
 	cad->Assign( "JobsIdle", JobsIdle );

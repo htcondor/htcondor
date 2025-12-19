@@ -692,7 +692,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 
 	case END_NEGOTIATE:
 		if (RRLRequestIsPending()) {
-			dprintf(D_ALWAYS, "Finished sending rrls to negotiator\n");
+			dprintf(D_FULLDEBUG, "Finished RRL prefetch to negotiator\n");
 		} else {
 			dprintf( D_ALWAYS, "Negotiation ended: %d jobs matched\n",
 					 m_jobs_matched );
