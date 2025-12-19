@@ -21,7 +21,7 @@ email_attributes = not, spam
 remote_initialdir = sandbox
 remote_grid_resource = condor stuff
 remote_remote_grid_resource = condor remoter stuff
-output_destination = /scratch/output/$(cluster)
+output_destination = url://scratch/output/$(cluster)
 want_graceful_removal = true
 job_max_vacate_time = 5*60
 encrypt_execute_directory = true
@@ -214,7 +214,7 @@ should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
 transfer_input_files = $Fp(SUBMIT_FILE)../Multilevel_Thesis_WheatData, HTTP://example.com/file1, HTTPS://example.com/file2
 transfer_output_files = results.out
-output_destination = $(ClusterId)/$(ProcId)
+output_directory = /$(ClusterId)/$(ProcId)
 output=$Fn(SUBMIT_FILE).out
 error=$Fn(SUBMIT_FILE).err
 queue 2
