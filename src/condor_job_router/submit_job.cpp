@@ -39,7 +39,9 @@
 #include "spooled_job_files.h"
 #include "classad_helpers.h"
 #include "condor_config.h"
+#include "set_user_priv_from_ad.h"
 #include "submit_job.h"
+#include "NewClassAdJobLogConsumer.h"
 
 
 ClaimJobResult claim_job(classad::ClassAd const &ad, const ScheddContactInfo & scci, int cluster, int proc, std::string& error_details, const char * my_identity)
@@ -802,7 +804,7 @@ bool WriteEventToUserLog( ULogEvent &event, classad::ClassAd const &ad )
 {
 	WriteUserLog ulog;
 
-	if ( ! ulog.initialize(ad, true) ) {
+	if ( ! ulog.initialize(ad) ) {
 		dprintf( D_FULLDEBUG,
 				 "(%d.%d) Unable to open user log (event %d)\n",
 				 event.cluster, event.proc, event.eventNumber );
@@ -824,8 +826,15 @@ bool WriteEventToUserLog( ULogEvent &event, classad::ClassAd const &ad )
 	return true;
 }
 
-bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
+bool WriteTerminateEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+	dprintf(D_STATUS, "JEF WriteTerminateEventToUserLog()\n");
+	dPrintAd(D_STATUS, *urec);
+
 	JobTerminatedEvent event;
 
 	if(!InitializeTerminateEvent(&event,ad)) {
@@ -835,8 +844,15 @@ bool WriteTerminateEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
+bool WriteAbortEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+	dprintf(D_STATUS, "JEF WriteAbortEventToUserLog()\n");
+	dPrintAd(D_STATUS, *urec);
+
 	JobAbortedEvent event;
 
 	if(!InitializeAbortedEvent(&event,ad)) {
@@ -846,8 +862,15 @@ bool WriteAbortEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
+bool WriteHoldEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+	dprintf(D_STATUS, "JEF WriteHoldEventToUserLog()\n");
+	dPrintAd(D_STATUS, *urec);
+
 	JobHeldEvent event;
 	if(!InitializeHoldEvent(&event,ad))
 	{
@@ -857,8 +880,15 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
+bool WriteExecuteEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+	dprintf(D_STATUS, "JEF WriteExecuteEventToUserLog()\n");
+	dPrintAd(D_STATUS, *urec);
+
 	int cluster;
 	int proc;
 	ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
@@ -877,8 +907,15 @@ bool WriteExecuteEventToUserLog( classad::ClassAd const &ad )
 	return WriteEventToUserLog( event, ad );
 }
 
-bool WriteEvictEventToUserLog( classad::ClassAd const &ad )
+bool WriteEvictEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec )
 {
+	TemporaryPrivSentry sentry;
+	if (!urec || !init_user_ids_from_ad(*urec)) {
+		return false;
+	}
+	dprintf(D_STATUS, "JEF WriteEvictEventToUserLog()\n");
+	dPrintAd(D_STATUS, *urec);
+
 	int cluster;
 	int proc;
 	ad.EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
