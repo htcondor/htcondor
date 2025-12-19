@@ -70,14 +70,15 @@ jobs:
           su root -c 'cat /sys/fs/cgroup/$(awk -F: "{print \$3}" < /proc/self/cgroup)/memory.peak'
           free -h
 
-      - name: Upload All on Failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-output-for-${{ matrix.instance.abbrev }}
-          path: __build/
-          retention-days: 2
-          overwrite: true
+      # Commented out, as the output is larger than our artifact limits quota
+      #- name: Upload All on Failure
+      #  if: failure()
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: test-output-for-${{ matrix.instance.abbrev }}
+      #    path: __build/
+      #    retention-days: 2
+      #    overwrite: true
 
       - name: Upload Artifact with Test Results on failure or success
         # Always upload, even if build or tests fail
