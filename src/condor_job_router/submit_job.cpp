@@ -832,8 +832,6 @@ bool WriteTerminateEventToUserLog( classad::ClassAd const &ad, const UserRecord*
 	if (!urec || !init_user_ids_from_ad(*urec)) {
 		return false;
 	}
-	dprintf(D_STATUS, "JEF WriteTerminateEventToUserLog()\n");
-	dPrintAd(D_STATUS, *urec);
 
 	JobTerminatedEvent event;
 
@@ -850,8 +848,6 @@ bool WriteAbortEventToUserLog( classad::ClassAd const &ad, const UserRecord* ure
 	if (!urec || !init_user_ids_from_ad(*urec)) {
 		return false;
 	}
-	dprintf(D_STATUS, "JEF WriteAbortEventToUserLog()\n");
-	dPrintAd(D_STATUS, *urec);
 
 	JobAbortedEvent event;
 
@@ -868,8 +864,6 @@ bool WriteHoldEventToUserLog( classad::ClassAd const &ad, const UserRecord* urec
 	if (!urec || !init_user_ids_from_ad(*urec)) {
 		return false;
 	}
-	dprintf(D_STATUS, "JEF WriteHoldEventToUserLog()\n");
-	dPrintAd(D_STATUS, *urec);
 
 	JobHeldEvent event;
 	if(!InitializeHoldEvent(&event,ad))
@@ -886,8 +880,6 @@ bool WriteExecuteEventToUserLog( classad::ClassAd const &ad, const UserRecord* u
 	if (!urec || !init_user_ids_from_ad(*urec)) {
 		return false;
 	}
-	dprintf(D_STATUS, "JEF WriteExecuteEventToUserLog()\n");
-	dPrintAd(D_STATUS, *urec);
 
 	int cluster;
 	int proc;
@@ -913,8 +905,6 @@ bool WriteEvictEventToUserLog( classad::ClassAd const &ad, const UserRecord* ure
 	if (!urec || !init_user_ids_from_ad(*urec)) {
 		return false;
 	}
-	dprintf(D_STATUS, "JEF WriteEvictEventToUserLog()\n");
-	dPrintAd(D_STATUS, *urec);
 
 	int cluster;
 	int proc;
