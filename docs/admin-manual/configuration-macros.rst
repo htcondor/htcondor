@@ -4558,6 +4558,31 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
 
+These macros allow a *condor_startd* to directly connect to a *condor_schedd*,
+so that it can run jobs on this startd without sharing it with other
+schedds.
+
+:macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_NAME[STARTD]`
+    The name of the *condor_schedd* to which this *condor_startd* should
+    directly connect. If empty, the *condor_startd* will not directly connect to
+    a *condor_schedd*.
+
+:macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_POOL[STARTD]`
+    If the *condor_schedd* to which this *condor_startd* should directly connect is
+    in a different HTCondor pool that this *condor_startd* (that is, it reports
+    to a different collector), then this macro should be set to the name of the
+    collector the *condor_schedd* reports to.  If empty, assume that the *condor_schedd*
+    reports to the same collector as this *condor_startd*.
+
+:macro-def:`STARTD_DIRECT_ATTACH_SCHEDD_SUBMITTER[STARTD]`
+    If the *condor_schedd* to which this *condor_startd* should directly connect
+    should only run jobs from one submitter, this parameter names that submitter.
+    If empty, the *condor_startd* will run jobs from any submitter.
+
+:macro-def:`STARTD_DIRECT_ATTACH_INTERVAL[STARTD]`
+    The number of seconds between attempts by this *condor_startd* to directly
+    connect to the *condor_schedd*. The default is 300 seconds (5 minutes).
+
 condor_schedd Configuration File Entries
 -----------------------------------------
 
