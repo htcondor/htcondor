@@ -65,6 +65,15 @@
 
 *** 25.5.1 features
 
+- By default, HTCondor will now send extra information to "multi-file" file
+  transfer plug-ins if such is specified in the job.  All such plug-ins
+  should safely ignore this extra information.  To ease the transition if a
+  plug-in does not, the extra information may be disabled by unsetting
+  :macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS` on the relevant EPs.
+  [FIXME: link to protocol version definitions.]
+  [FIXME: document the job ad attributes at this time as well?]
+  :jira:`3357`
+
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
   an administrator to configure the *condor_negotiator* so it uses its
   own expression of :macro:`SLOT_WEIGHT` rather than allowing the execution
