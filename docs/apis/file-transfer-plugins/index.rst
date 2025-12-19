@@ -80,7 +80,7 @@ For example, the "curl" plug-in might produce the following output:
     ProtocolVersion = 2
     SupportedMethods = "http,https,ftp,file,dav,davs"
     StartdAttrs = "CurlPluginInfo"
-    CurlPluginInfo = [ PluginVersion = PluginVersion; ]
+    CurlPluginInfo = [ CurlVersion = "7.15.1"; ]
 
 The Transfer Interface (v2)
 '''''''''''''''''''''''''''
