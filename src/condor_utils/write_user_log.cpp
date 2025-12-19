@@ -34,7 +34,6 @@
 #include "condor_fsync.h"
 #include "condor_attributes.h"
 #include "CondorError.h"
-#include "set_user_priv_from_ad.h"
 #include "directory.h"
 
 #include <string>
@@ -139,9 +138,6 @@ WriteUserLog::~WriteUserLog()
 {
 	FreeGlobalResources( true );
 	FreeLocalResources( );
-	if ( m_init_user_ids ) {
-		uninit_user_ids();
-	}
 }
 
 
@@ -150,7 +146,7 @@ WriteUserLog::~WriteUserLog()
 // ***********************************
 
 bool
-WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
+WriteUserLog::initialize(const ClassAd &job_ad)
 {
 	int cluster = -1;
 	int proc = -1;
@@ -159,23 +155,12 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 
 	m_global_disable = false;
 
-	if ( init_user ) {
-		std::string owner;
-		std::string domain;
-
-		job_ad.LookupString(ATTR_OWNER, owner);
-		job_ad.LookupString(ATTR_NT_DOMAIN, domain);
-
-		uninit_user_ids();
-		if ( ! init_user_ids_from_ad(job_ad) ) {
-			if ( ! domain.empty()) { owner += "@"; owner += domain; }
-			dprintf(D_ALWAYS,
-				"WriteUserLog::initialize: init_user_ids(%s) failed!\n", owner.c_str());
-			return false;
-		}
-		m_init_user_ids = true;
-	}
 	m_set_user_priv = true;
+
+	if (!user_ids_are_inited()) {
+		dprintf(D_ERROR, "WriteUserLog: user ids not initialized\n");
+		return false;
+	}
 
 	TemporaryPrivSentry temp_priv;
 
@@ -248,7 +233,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 					log->path.c_str());
 				logs.push_back(log);
 
-				// setting the flag m_init_user_ids will cause the logging code in doWriteEvent()
+				// setting the flag m_set_user_priv will cause the logging code in doWriteEvent()
 				// to switch to PRIV_USER every time it does a write (as opposed to PRIV_CONDOR).
 				// even though the file is already open, this is necessary because AFS needs access
 				// to the user token on every write(), whereas other filesystems typically only need
@@ -266,8 +251,6 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
 					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
-						// TODO Shouldn't set m_init_user_ids here
-						m_init_user_ids = true;
 						m_set_user_priv = true;
 						log->set_user_priv_flag(true);
 					}
@@ -424,7 +407,6 @@ WriteUserLog::Reset( void )
 {
 	m_initialized = false;
 	m_configured = false;
-	m_init_user_ids = false;
 	m_set_user_priv = false;
 
 	m_cluster = -1;

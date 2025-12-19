@@ -255,7 +255,7 @@ bool jobCleanupNeedsThread( int cluster, int proc );
 int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
-static void WriteCompletionVisa(ClassAd* ad);
+static void WriteCompletionVisa(JobQueueJob* ad);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -3879,7 +3879,6 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		int proc = 0;
 		int noop_status = 0;
 		int temp = 0;
-		PROC_ID job_id;
 		if(job->LookupInteger(ATTR_JOB_NOOP_EXIT_SIGNAL, temp) != 0) {
 			noop_status = generate_exit_signal(temp);
 		}	
@@ -3890,10 +3889,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		job->LookupInteger(ATTR_PROC_ID, proc);
 		dprintf(D_FULLDEBUG, "Job %d.%d is a no-op with status %d\n",
 				cluster,proc,noop_status);
-		job_id.cluster = cluster;
-		job_id.proc = proc;
 		set_job_status(cluster, proc, COMPLETED);
-		scheduler.WriteTerminateToUserLog( job_id, noop_status );
+		scheduler.WriteTerminateToUserLog(job, noop_status);
 		return 0;
 	}
 
@@ -5129,13 +5126,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	}
 
 	if( mode == REMOVED ) {
-		if( !scheduler.WriteAbortToUserLog(job_id) ) {
+		if( !scheduler.WriteAbortToUserLog(job_ad) ) {
 			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
 		}
 		DestroyProc( job_id.cluster, job_id.proc );
 	}
 	if( mode == HELD ) {
-		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
+		if( log_hold && !scheduler.WriteHoldToUserLog(job_ad) ) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write hold event to the user log\n" ); 
 		}
@@ -5655,10 +5652,8 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 // the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
 WriteUserLog*
-Scheduler::InitializeUserLog( PROC_ID job_id ) 
+Scheduler::InitializeUserLog(const JobQueueJob* ad)
 {
-	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
-
 	if (!ad) {
 		dprintf(D_ALWAYS, "Scheduler::InitializeUserLog got null job ad, probably job already removed?\n");
 		return nullptr;
@@ -5666,7 +5661,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	WriteUserLog* ULog=new WriteUserLog();
 	ULog->setCreatorName( Name );
 
-	if ( ! ULog->initialize(*ad, true) ) {
+	if ( ! ULog->initialize(*ad) ) {
 		dprintf ( D_ALWAYS, "WARNING: Failed to initialize user log file for writing!\n");
 		delete ULog;
 		return NULL;
@@ -5681,7 +5676,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 }
 
 bool
-Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning )
+Scheduler::WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const char * warning )
 {
 		// Skip writing submit events for procid != 0 for parallel jobs
 	int universe = job->Universe();
@@ -5694,7 +5689,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 		}
 	}
 
-	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5729,9 +5726,11 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 
 bool
-Scheduler::WriteAbortToUserLog( PROC_ID job_id )
+Scheduler::WriteAbortToUserLog(const JobQueueJob* job)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5739,18 +5738,17 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	JobAbortedEvent event;
 
 	std::string reasonstr;
-	GetAttributeString(job_id.cluster, job_id.proc,
+	GetAttributeString(job->jid.cluster, job->jid.proc,
 	                   ATTR_REMOVE_REASON, reasonstr);
 	event.setReason(reasonstr);
 
-	bool status =
-		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_ABORTED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5758,9 +5756,11 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 
 
 bool
-Scheduler::WriteHoldToUserLog( PROC_ID job_id )
+Scheduler::WriteHoldToUserLog(const JobQueueJob* job)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5768,27 +5768,26 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	JobHeldEvent event;
 
 	std::string reasonstr;
-	if( GetAttributeString(job_id.cluster, job_id.proc,
+	if( GetAttributeString(job->jid.cluster, job->jid.proc,
 	                       ATTR_HOLD_REASON, reasonstr) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 	}
 	event.setReason(reasonstr);
 
-	GetAttributeInt(job_id.cluster, job_id.proc,
+	GetAttributeInt(job->jid.cluster, job->jid.proc,
 	                ATTR_HOLD_REASON_CODE, &event.code);
 
-	GetAttributeInt(job_id.cluster, job_id.proc,
+	GetAttributeInt(job->jid.cluster, job->jid.proc,
 	                ATTR_HOLD_REASON_SUBCODE, &event.subcode);
 
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5796,9 +5795,11 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 
 
 bool
-Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
+Scheduler::WriteReleaseToUserLog(const JobQueueJob* job)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5806,18 +5807,17 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	JobReleasedEvent event;
 
 	std::string reasonstr;
-	GetAttributeString(job_id.cluster, job_id.proc,
+	GetAttributeString(job->jid.cluster, job->jid.proc,
 	                   ATTR_RELEASE_REASON, reasonstr);
 	event.setReason(reasonstr);
 
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_RELEASED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5825,9 +5825,11 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 
 
 bool
-Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
+Scheduler::WriteExecuteToUserLog(const JobQueueJob* job, const char* sinful)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5842,13 +5844,12 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 	ExecuteEvent event;
 	event.setExecuteHost( host );
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 	
 	if (!status) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event for job %d.%d\n",
-				job_id.cluster, job_id.proc );
+				job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5856,9 +5857,11 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 
 bool
-Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed ) 
+Scheduler::WriteEvictToUserLog(const JobQueueJob* job, bool checkpointed)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5866,21 +5869,13 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
 
-	ClassAd *jobAd = GetJobAd(job_id.cluster, job_id.proc);
-	if (!jobAd) {
-		dprintf(D_ALWAYS, "Unable to write evict event to job log for job (%d.%d) -- perhaps it was already removed\n",
-				job_id.cluster, job_id.proc);
-		return false;
-	}
-
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_EVICTED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5888,9 +5883,11 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 
 
 bool
-Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
+Scheduler::WriteTerminateToUserLog(const JobQueueJob* job, int status)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5918,22 +5915,24 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		event.normal = false;
 		event.signalNumber = WTERMSIG(status);
 	}
-	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!rval) {
 		dprintf( D_ALWAYS, 
 				 "Unable to log ULOG_JOB_TERMINATED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
 }
 
 bool
-Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason ) 
+Scheduler::WriteRequeueToUserLog(const JobQueueJob* job, int status, const char * reason)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5961,12 +5960,12 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 	if (reason && reason[0]) {
 		event.setReason(reason);
 	}
-	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!rval) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED (requeue) event "
-				 "for job %d.%d\n", job_id.cluster, job_id.proc );
+				 "for job %d.%d\n", job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5974,13 +5973,13 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 
 
 bool
-Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
+Scheduler::WriteAttrChangeToUserLog(const JobQueueJob* job, const char* attr,
 					 const char* attr_value,
 					 const char* old_value)
 {
-	PROC_ID job_id;
-	StrToProcIdFixMe(job_id_str, job_id);
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5991,12 +5990,12 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 	event.setName(attr);
 	event.setValue(attr_value);
 	event.setOldValue(old_value);
-        bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event, job);
         delete ULog;
 
         if (!rval) {
                 dprintf( D_ALWAYS, "Unable to log ULOG_ATTRIBUTE_UPDATE event "
-                                 "for job %d.%d\n", job_id.cluster, job_id.proc );
+                                 "for job %d.%d\n", job->jid.cluster, job->jid.proc );
                 return false;
         }
 
@@ -6004,9 +6003,11 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 }
 
 bool
-Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
+Scheduler::WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*cluster->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(cluster);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -6035,9 +6036,11 @@ Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 }
 
 bool
-Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync )
+Scheduler::WriteClusterRemoveToUserLog(const JobQueueCluster* cluster, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*cluster->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(cluster);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -6075,9 +6078,11 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 }
 
 bool
-Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync )
+Scheduler::WriteFactoryPauseToUserLog(const JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*cluster->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(cluster);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -8016,10 +8021,11 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	PROC_ID job_id;
 	job_id.cluster = act_rec->m_job_id._cluster;
 	job_id.proc = act_rec->m_job_id._proc;
+	const JobQueueJob *job_ad = GetJobAd(job_id.cluster, job_id.proc);
 
 	delete act_rec;
 
-	if ( !GetJobAd(job_id.cluster, job_id.proc) ) {
+	if ( !job_ad ) {
 		dprintf(D_ALWAYS, "Job %d.%d is not in the queue, cannot perform action %s\n",
 			job_id.cluster, job_id.proc, getJobActionString(action));
 		return TRUE;
@@ -8040,12 +8046,12 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		break;
     }
 	case JA_RELEASE_JOBS: {
-		WriteReleaseToUserLog( job_id );
+		WriteReleaseToUserLog(job_ad);
 		needReschedule();
 		break;
     }
 	case JA_REMOVE_X_JOBS: {
-		if( !scheduler.WriteAbortToUserLog( job_id ) ) {
+		if( !scheduler.WriteAbortToUserLog(job_ad) ) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write abort event to the user log\n" ); 
 		}
@@ -9766,7 +9772,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		startd_principal = NULL;
 	}
 
-	WriteUserLog* ULog = this->InitializeUserLog( *job );
+	JobQueueJob* job_ad = GetJobAd(cluster, proc);
+	WriteUserLog* ULog = this->InitializeUserLog(job_ad);
 	if ( ULog ) {
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
@@ -9775,7 +9782,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		event.startd_addr = startd_addr;
 		event.startd_name = startd_name;
 
-		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
+		if( !ULog->writeEventNoFsync(&event, job_ad) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 		}
 		delete ULog;
@@ -11782,7 +11789,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
 	mark_serial_job_running(job_id);
-	WriteExecuteToUserLog( *job_id );
+	WriteExecuteToUserLog(userJob);
 
 		/* this is somewhat evil.  these values are absolutely
 		   essential to have accurate when we're trying to shutdown
@@ -14086,11 +14093,18 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				 job_id.cluster, job_id.proc, pid, status);
 	}
 
+	JobQueueJob * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+	if ( ! job_ad ) {
+		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
+			job_id.cluster, job_id.proc );
+		return;
+	}
+
 	if(srec->preempted) {
 		// job exited b/c we removed or held it.  the
 		// job's queue status will already be correct, so
 		// we don't have to change anything else...
-		WriteEvictToUserLog( job_id );
+		WriteEvictToUserLog(job_ad);
 		return;
 	}
 
@@ -14117,12 +14131,6 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	std::string reason;
 	int reason_code;
 	int reason_subcode;
-	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
-	if ( ! job_ad ) {
-		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
-			job_id.cluster, job_id.proc );
-		return;
-	}
 	{
 		UserPolicy policy;
 		policy.Init();
@@ -14135,12 +14143,12 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
-			scheduler_univ_job_leave_queue(job_id, status, job_ad);
+			scheduler_univ_job_leave_queue(job_ad, status);
 			break;
 
 		case STAYS_IN_QUEUE:
 			set_job_status( job_id.cluster,	job_id.proc, IDLE ); 
-			WriteRequeueToUserLog(job_id, status, reason.c_str());
+			WriteRequeueToUserLog(job_ad, status, reason.c_str());
 			break;
 
 		case HOLD_IN_QUEUE:
@@ -14156,7 +14164,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"(%d.%d) Job exited.  User policy attempted to release "
 				"job, but it wasn't on hold.  Allowing job to exit queue.\n", 
 				job_id.cluster, job_id.proc);
-			scheduler_univ_job_leave_queue(job_id, status, job_ad);
+			scheduler_univ_job_leave_queue(job_ad, status);
 			break;
 
 		case UNDEFINED_EVAL:
@@ -14190,12 +14198,12 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 
 void
-Scheduler::scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad)
+Scheduler::scheduler_univ_job_leave_queue(JobQueueJob *job, int status)
 {
-	set_job_status( job_id.cluster,	job_id.proc, COMPLETED ); 
-	WriteTerminateToUserLog( job_id, status );
+	set_job_status( job->jid.cluster, job->jid.proc, COMPLETED );
+	WriteTerminateToUserLog(job, status);
 	Email email;
-	email.sendExit(ad, JOB_EXITED);
+	email.sendExit(job, JOB_EXITED);
 }
 
 void
@@ -14233,6 +14241,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	// set cur-hosts to zero
 	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0, NONDURABLE ); 
 
+	JobQueueJob* job = GetJobAd(*job_id);
 	switch( status ) {
 	case RUNNING:
 	case SUSPENDED:
@@ -14260,14 +14269,14 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		break;
 	}
 	case HELD:
-		if( !scheduler.WriteHoldToUserLog(*job_id)) {
+		if( !job || !scheduler.WriteHoldToUserLog(job)) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write hold event to the user log for job %d.%d\n",
 					 job_id->cluster, job_id->proc );
 		}
 		break;
 	case REMOVED:
-		if( !scheduler.WriteAbortToUserLog(*job_id)) {
+		if( !job || !scheduler.WriteAbortToUserLog(job)) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write abort event to the user log for job %d.%d\n",
 					 job_id->cluster, job_id->proc ); 
@@ -17425,6 +17434,12 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
 
+	JobQueueJob* job = GetJobAd(tmp_id);
+	if (job == nullptr) {
+		dprintf(D_ERROR, "Job %d.%d not in queue. Can't release.\n",
+		        cluster, proc);
+		return false;
+	}
 
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) < 0 ) {   
 		dprintf( D_ALWAYS, "Job %d.%d has no %s attribute.  Can't release\n",
@@ -17476,7 +17491,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 	}
 
 	if ( write_to_user_log ) {
-		scheduler.WriteReleaseToUserLog(tmp_id);
+		scheduler.WriteReleaseToUserLog(job);
 	}
 
 	dprintf( D_ALWAYS, "Job %d.%d released from hold: %s\n", cluster, proc,
@@ -17484,20 +17499,8 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 
 		// finally, email anyone our caller wants us to email.
 	if( email_user ) {
-		ClassAd* job_ad;
-		job_ad = GetJobAd( cluster, proc );
-		if( ! job_ad ) {
-			dprintf( D_ALWAYS, "ERROR: Can't find ClassAd for job %d.%d "
-					 "can't send email to anyone about it\n", cluster,
-					 proc );
-				// even though we can't send the email, we still held
-				// the job, so return true.
-			return true;  
-		}
-
 		Email email;
-		email.sendRelease( job_ad, reason );
-		FreeJobAd( job_ad );
+		email.sendRelease(job, reason);
 	}
 	return true;
 }
@@ -18234,32 +18237,32 @@ Scheduler::sendSignalToShadow(pid_t pid,int sig,PROC_ID proc)
 
 static
 void
-WriteCompletionVisa(ClassAd* ad)
+WriteCompletionVisa(JobQueueJob* job_ad)
 {
 	priv_state prev_priv_state;
 	bool value;
 	std::string iwd;
 
-	ASSERT(ad);
+	ASSERT(job_ad);
 
-	if (!ad->LookupBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, value) ||
+	if (!job_ad->LookupBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, value) ||
 	    !value)
 	{
-		if (!ad->LookupBool(ATTR_JOB_SANDBOX_JOBAD, value) ||
+		if (!job_ad->LookupBool(ATTR_JOB_SANDBOX_JOBAD, value) ||
 		    !value)
 		{
 			return;
 		}
 	}
 
-	if (!ad->LookupString(ATTR_JOB_IWD, iwd)) {
+	if (!job_ad->LookupString(ATTR_JOB_IWD, iwd)) {
 		dprintf(D_ERROR,
 		        "WriteCompletionVisa ERROR: Job contained no IWD\n");
 		return;
 	}
 
-	prev_priv_state = set_user_priv_from_ad(*ad);
-	classad_visa_write(ad,
+	prev_priv_state = set_user_priv_from_ad(*job_ad->ownerinfo);
+	classad_visa_write(job_ad,
 	                   get_mySubSystem()->getName(),
 	                   daemonCore->InfoCommandSinfulString(),
 	                   iwd.c_str(),

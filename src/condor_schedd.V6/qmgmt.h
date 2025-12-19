@@ -637,7 +637,7 @@ typedef enum {
 int PauseJobFactory(JobFactory * factory, MaterializeMode pause_code);
 int ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause); // Make sure factory mode matches the persist mode
-bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
+bool GetJobFactoryMaterializeMode(const JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
