@@ -1,5 +1,8 @@
 *** 24.0.16 bugs
 
+- Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
+  :jira:`3474`
+
 - Fix Logical Volume setup timeout on Execution Points enforcing disk usage
   for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
   :jira:`3432`
