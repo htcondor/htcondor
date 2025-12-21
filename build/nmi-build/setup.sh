@@ -120,8 +120,17 @@ fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
-if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+if [ $ID = 'opensuse-leap' ]; then
     zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
+    for key in /etc/pki/rpm-gpg/*; do
+        rpmkeys --import "$key"
+    done
+fi
+
+if [ $ID = 'sles' ]; then
+    # Hard code version in this special case
+    zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.sles15sp5.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
@@ -194,19 +203,20 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
 fi
 
 # Add useful tools
-$INSTALL gdb git less nano patchelf python3-pip strace sudo vim
+$INSTALL gdb git less python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
 fi
+if [ $ID != 'sles' ]; then
+    $INSTALL nano
+fi
 
 # Use fancy new lief-patchelf
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
-    if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
-        $INSTALL lief-patchelf
-    fi
+if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
+    $INSTALL lief-patchelf
 fi
 
 # Add in the ninja build system
@@ -244,11 +254,7 @@ fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
     if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
-        $INSTALL procps wget
-        # Install better patchelf
-        wget https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz
-        (cd /usr; tar xfpz /patchelf-0.18.0-x86_64.tar.gz ./bin/patchelf)
-        rm patchelf-0.18.0-x86_64.tar.gz
+        $INSTALL procps
     else
         $INSTALL procps-ng
     fi
@@ -316,7 +322,10 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican pelican-osdf-compat
+fi
+if [ $ID = 'opensuse-leap' ]; then
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
 
 # Clean up package caches

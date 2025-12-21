@@ -69,6 +69,8 @@ else
     buildimage x86_64_Debian13 linux/x86_64 debian:trixie &
     buildimage x86_64_Fedora43 linux/x86_64 fedora:43 &
     buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
+    buildimage x86_64_openSUSE16 linux/x86_64 opensuse/leap:16.0 &
+    buildimage x86_64_SLES15SP5 linux/x86_64 registry.suse.com/suse/sle15:15.5 &
     buildimage x86_64_Ubuntu22 linux/x86_64 ubuntu:jammy &
     buildimage x86_64_Ubuntu24 linux/x86_64 ubuntu:noble &
 fi

@@ -96,8 +96,10 @@ BuildRequires: nss-devel
 BuildRequires: openssl-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
+BuildRequires: dbus-1-devel
 %else
 BuildRequires: expat-devel
+BuildRequires: dbus-devel
 %endif
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
@@ -124,14 +126,15 @@ BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
+%if 0%{?suse_version}
 %if %{suse_version} == 1500
 BuildRequires: gcc12
 BuildRequires: gcc12-c++
 %endif
-
 %if %{suse_version} == 1600
 BuildRequires: gcc15
 BuildRequires: gcc15-c++
+%endif
 %endif
 
 BuildRequires: libuuid-devel
@@ -216,7 +219,12 @@ Requires: libcom_err2
 %if "%{os_release_id}" != "sles"
 Requires: libmunge2
 %endif
+%if %{suse_version} == 1500
 Requires: libopenssl1_1
+%endif
+%if %{suse_version} == 1600
+Requires: libopenssl3
+%endif
 %if "%{os_release_id}" != "sles"
 Requires: libSciTokens0
 %endif
@@ -298,8 +306,10 @@ Obsoletes: %{name}-upgrade-checks < 24.9.0
 Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
+%if 0%{?suse_version}
 %if %{suse_version} == 1500
 %debug_package
+%endif
 %endif
 
 %description
@@ -527,14 +537,15 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
+%if 0%{?suse_version}
 %if %{suse_version} == 1500
 export CC=/usr/bin/gcc-12
 export CXX=/usr/bin/g++-12
 %endif
-
 %if %{suse_version} == 1600
 export CC=/usr/bin/gcc-15
 export CXX=/usr/bin/g++-15
+%endif
 %endif
 
 %if 0%{?devtoolset}
