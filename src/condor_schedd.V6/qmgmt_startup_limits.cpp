@@ -94,6 +94,7 @@ struct StartupLimit {
     std::unique_ptr<classad::ExprTree> expr;
     std::string cost_expr_source;
     std::unique_ptr<classad::ExprTree> cost_expr;
+    bool cost_expr_warned{false};
     classad::References job_refs;
     classad::References target_refs;
     bool job_only{false};          // true if expression references only job attrs
@@ -435,6 +436,7 @@ int QmgmtHandleCreateStartupLimit(const ClassAd &request, ClassAd &reply)
         lim.block_seconds_reported = existing->block_seconds_reported;
         lim.last_report_time = existing->last_report_time;
         lim.cost_expr_source = existing->cost_expr_source;
+        lim.cost_expr_warned = existing->cost_expr_warned;
         if (existing->cost_expr) { lim.cost_expr.reset(existing->cost_expr->Copy()); }
     } else {
         lim.last_report_time = now_wall;
@@ -532,6 +534,12 @@ bool StartupLimitsAllowJob(JobQueueJob *job, ClassAd *match_ad, const char *user
         double cost = 1.0;
         if (lim.cost_expr) {
             if (!eval_expr_number(lim.cost_expr.get(), job, match_ad, cost)) {
+                if (!lim.cost_expr_warned) {
+                    dprintf(D_ALWAYS | D_MATCH,
+                            "StartupLimit cost expression evaluation failed tag=%s uuid=%s expr=%s; defaulting cost to 1.0 (future failures suppressed)\n",
+                            lim.tag.c_str(), lim.uuid.c_str(), lim.cost_expr_source.c_str());
+                    lim.cost_expr_warned = true;
+                }
                 cost = 1.0;
             }
         }

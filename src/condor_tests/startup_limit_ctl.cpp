@@ -137,6 +137,7 @@ int main(int argc, char **argv)
         classad::ExprTree *cost_expr_tree = expr_parser.ParseExpression(cost_expr);
         if (!cost_expr_tree) {
             std::cerr << "Failed to parse cost expression: " << cost_expr << "\n";
+            delete expr_tree;
             sock->close();
             delete sock;
             return 1;

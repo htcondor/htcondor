@@ -1,12 +1,9 @@
 #!/usr/bin/env pytest
 
-import os
 import shutil
 import subprocess
 import time
 from pathlib import Path
-
-import htcondor2 as htcondor
 
 from ornithology import action, Condor, ClusterState
 

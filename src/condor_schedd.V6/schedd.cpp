@@ -15472,7 +15472,7 @@ Scheduler::Register()
 	// Startup limit management (admin use)
 	daemonCore->Register_CommandWithPayload(CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT",
 		&HandleCreateStartupLimitCommand,
-		"HandleCreateStartupLimitCommand", WRITE, true /*force authentication*/);
+		"HandleCreateStartupLimitCommand", ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS",
 		&HandleQueryStartupLimitsCommand,
 		"HandleQueryStartupLimitsCommand", READ, true /*force authentication*/);
