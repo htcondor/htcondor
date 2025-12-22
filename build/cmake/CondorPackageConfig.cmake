@@ -526,5 +526,10 @@ elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 	install(DIRECTORY
 			DESTINATION	"${C_LIB32}")
 
+elseif(APPLE)
+
+	install(DIRECTORY
+			DESTINATION	"${C_CONFIGD}")
+
 endif()
 
