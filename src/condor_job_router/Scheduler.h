@@ -37,7 +37,7 @@ public:
 
 	classad::ClassAdCollection *GetClassAds() { return &m_jobs; }
 	UserRecord * GetUserAd(const std::string & username);
-	UserRecord * GetJobUser(ClassAd * jobad);
+	UserRecord * GetJobUser(const ClassAd * jobad);
 
 private:
 

@@ -5558,14 +5558,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			std::string raw_attribute = attr_name;
 			raw_attribute += "_RAW";
 			JobQueue->SetAttribute(key, raw_attribute.c_str(), attr_value, flags & SetAttribute_SetDirty);
-			if( flags & SHOULDLOG ) {
+			if( (flags & SHOULDLOG) && job) {
 				char* old_val = nullptr;
 				ExprTree *ltree = nullptr;
 				ltree = job->LookupExpr(raw_attribute);
 				if( ltree ) {
 					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
-				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.c_str(), attr_value, old_val);
+				scheduler.WriteAttrChangeToUserLog(job, raw_attribute.c_str(), attr_value, old_val);
 			}
 
 			int64_t lvalue = 0;
@@ -5673,13 +5673,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SetAttribute_SetDirty);
-	if( flags & SHOULDLOG ) {
+	if( (flags & SHOULDLOG) && job ) {
 		const char* old_val = nullptr;
-		if (job) {
-			ExprTree *tree = job->LookupExpr(attr_name);
-			if (tree) { old_val = ExprTreeToString(tree); }
-		}
-		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
+		ExprTree *tree = job->LookupExpr(attr_name);
+		if (tree) { old_val = ExprTreeToString(tree); }
+		scheduler.WriteAttrChangeToUserLog(job, attr_name, attr_value, old_val);
 	}
 
 	if( flags & NONDURABLE ) {
@@ -9303,7 +9301,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 		}
 		dprintf( D_FULLDEBUG, "Job %d.%d was left marked as removed, "
 				 "cleaning up now\n", cluster, proc );
-		scheduler.WriteAbortToUserLog( job_id );
+		scheduler.WriteAbortToUserLog(job);
 		DestroyProc( cluster, proc );
 	}
 	else if ( status == SUSPENDED || status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {

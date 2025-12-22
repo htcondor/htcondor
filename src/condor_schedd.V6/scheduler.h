@@ -527,19 +527,19 @@ class Scheduler : public Service
 	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status );
 
-	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
-	bool			WriteAbortToUserLog( PROC_ID job_id );
-	bool			WriteHoldToUserLog( PROC_ID job_id );
-	bool			WriteReleaseToUserLog( PROC_ID job_id );
-	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
-	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
-	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
-	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
-	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
+	WriteUserLog*	InitializeUserLog(const JobQueueJob* ad);
+	bool			WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const char * warning );
+	bool			WriteAbortToUserLog(const JobQueueJob* job);
+	bool			WriteHoldToUserLog(const JobQueueJob* job);
+	bool			WriteReleaseToUserLog(const JobQueueJob* job);
+	bool			WriteExecuteToUserLog(const JobQueueJob* job, const char* sinful = NULL);
+	bool			WriteEvictToUserLog(const JobQueueJob* job, bool checkpointed = false);
+	bool			WriteTerminateToUserLog(const JobQueueJob* job, int status);
+	bool			WriteRequeueToUserLog(const JobQueueJob* job, int status, const char * reason);
+	bool			WriteAttrChangeToUserLog(const JobQueueJob* job, const char* attr, const char* attr_value, const char* old_value);
+	bool			WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog(const JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
@@ -943,7 +943,7 @@ private:
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
-	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
+	void			scheduler_univ_job_leave_queue(JobQueueJob *job, int status);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			attempt_shutdown( int timerID = -1 );
