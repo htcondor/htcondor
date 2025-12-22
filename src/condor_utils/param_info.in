@@ -7276,6 +7276,42 @@ default : @fin
 	endif
 @fin
 
+[AUTO_USE_POLICY_PelicanRetryPolicy]
+description=Enable AP policies for improved handling of Pelican file transfer failures
+default=$(IsSchedd)
+type=bool
+tags=schedd
+[$POLICY.PelicanRetryPolicy]
+description=Policy on how Pelican file transfer failures should be handled
+default : @fin
+	# These are the default values; they can be overridden later.
+	PelicanRetry_MaxRetries = 4
+	# Delay at least 300 seconds ...
+	PelicanRetry_MinimumDelay = 300
+	# ... and up to 300 more seconds, before retrying.
+	PelicanRetry_RandomDelay = 300
+	# pelican plugin uses 11 for retriable failures (11 << 8 == 2816)
+	pelican_error_subcode_retriable = 2816
+	# pelican plugin uses 5 for a stopped transfer (we're considering it retryable right now (OSPOOL-74)) (5 << 8 == 1280)
+	pelican_error_subcode_stopped = 1280
+	PelicanRetryCondition = ((VacateReasonCode == 12 || VacateReasonCode == 13) && ((VacateReasonSubCode == $(pelican_error_subcode_retriable)) || (VacateReasonSubCode == $(pelican_error_subcode_stopped)))) ?: false
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) PelicanRetry
+	JOB_TRANSFORM_PelicanRetry @=jt
+		REQUIREMENTS ( \
+			stringListIMember("pelican",WantTransferPluginMethods) || \
+			stringListIMember("osdf",WantTransferPluginMethods) || \
+			stringListIMember("stash",WantTransferPluginMethods) \
+		) && \
+		isUndefined(PelicanRetryEnabled)
+
+		EVALMACRO retry_delay = $(PelicanRetry_MinimumDelay) + random($(PelicanRetry_RandomDelay))
+
+		SET PelicanRetryEnabled true
+		SET PelicanRetryDelay $(retry_delay)
+	@jt
+	SYSTEM_ON_VACATE_COOL_DOWN = ((PelicanRetryEnabled?:false) && $(PelicanRetryCondition) && ((NumJobCoolDowns?:0) < $(PelicanRetry_MaxRetries)) ? PelicanRetryDelay : ($(SYSTEM_ON_VACATE_COOL_DOWN:0)))
+@fin
+
 [$POLICY.OnlyRegisteredCheckpointDestinations]
 description=Use submit requirement to reject jobs whose checkpoint destination is not registered.
 default : @fin
