@@ -7282,7 +7282,7 @@ default=$(IsSchedd)
 type=bool
 tags=schedd
 [$POLICY.PelicanRetryPolicy]
-description=Policy on how Pelican file transfer failures should be handled
+description=Pelican file transfer failures that are not permanent result in jobs going into cool down
 default : @fin
 	# These are the default values; they can be overridden later.
 	PelicanRetry_MaxRetries = 4
@@ -7297,15 +7297,8 @@ default : @fin
 	PelicanRetryCondition = ((VacateReasonCode == 12 || VacateReasonCode == 13) && ((VacateReasonSubCode == $(pelican_error_subcode_retriable)) || (VacateReasonSubCode == $(pelican_error_subcode_stopped)))) ?: false
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) PelicanRetry
 	JOB_TRANSFORM_PelicanRetry @=jt
-		REQUIREMENTS ( \
-			stringListIMember("pelican",WantTransferPluginMethods) || \
-			stringListIMember("osdf",WantTransferPluginMethods) || \
-			stringListIMember("stash",WantTransferPluginMethods) \
-		) && \
-		isUndefined(PelicanRetryEnabled)
-
+		REQUIREMENTS (stringListIMember("pelican",WantTransferPluginMethods) || stringListIMember("osdf",WantTransferPluginMethods) || stringListIMember("stash",WantTransferPluginMethods)) && isUndefined(PelicanRetryEnabled)
 		EVALMACRO retry_delay = $(PelicanRetry_MinimumDelay) + random($(PelicanRetry_RandomDelay))
-
 		SET PelicanRetryEnabled true
 		SET PelicanRetryDelay $(retry_delay)
 	@jt
