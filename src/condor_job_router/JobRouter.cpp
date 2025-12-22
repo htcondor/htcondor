@@ -41,6 +41,7 @@
 #include "directory_util.h"
 #include "truncate.h"
 #include "set_user_priv_from_ad.h"
+#include "Scheduler.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -904,7 +905,7 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		num_holds++;
 		ad.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, num_holds);
 
-		WriteHoldEventToUserLog(ad);
+		WriteHoldEventToUserLog(ad, m_scheduler->GetJobUser(&ad));
 
 		if(false == push_dirty_attributes(ad,m_schedd1))
 		{
@@ -1475,7 +1476,7 @@ JobRouter::AdoptOrphans() {
 			int job_status = IDLE;
 			src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
 			if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
-				WriteEvictEventToUserLog( *src_ad );
+				WriteEvictEventToUserLog(*src_ad, m_scheduler->GetJobUser(src_ad) );
 			}
 		}
 	} while (query.Next(src_key));
@@ -2199,7 +2200,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(job_status == REMOVED) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job marked for removal\n",job->JobDesc().c_str());
-		WriteAbortEventToUserLog( *src_ad );
+		WriteAbortEventToUserLog(*src_ad, m_scheduler->GetJobUser(src_ad));
 		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
@@ -2336,7 +2337,7 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 	job->src_ad.EvaluateAttrInt(ATTR_JOB_STATUS, old_status);
 	if ( old_status != IDLE ) {
 		if ( old_status == RUNNING || old_status == TRANSFERRING_OUTPUT ) {
-			WriteEvictEventToUserLog( job->src_ad );
+			WriteEvictEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad));
 		}
 		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
 		if(false == PushUpdatedAttributes(job->src_ad)) {
@@ -2375,7 +2376,7 @@ JobRouter::FinishFinalizeJob(RoutedJob *job) {
 			// exiting the queue.
 		SetJobIdle(job);
 	}
-	else if(!WriteTerminateEventToUserLog(job->src_ad)) {
+	else if(!WriteTerminateEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad))) {
 	}
 	else {
 		EmailTerminateEvent(job->src_ad);
@@ -2582,7 +2583,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 		// previously running, we need an evict event.
 		job->src_ad.EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
 		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
-			WriteEvictEventToUserLog( job->src_ad );
+			WriteEvictEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad) );
 		}
 		if(!yield_job(job->src_ad, m_schedd1, job->is_done, job->src_proc_id.cluster, job->src_proc_id.proc, error_details, JobRouterName().c_str(), m_release_on_hold, &keep_trying))
 		{
