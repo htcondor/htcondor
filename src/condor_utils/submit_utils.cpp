@@ -3419,6 +3419,12 @@ int SubmitHash::SetAutoAttributes()
 		}
 	}
 
+	bool ocu_wanted = false;
+	if (job->LookupBool("OCUWanted", ocu_wanted)) {
+		// If the job wants OCU, force very long mjrt
+		AssignJobVal(ATTR_MAX_JOB_RETIREMENT_TIME, std::numeric_limits<int>::max());
+	}
+
 	// set a default lease duration for jobs that don't have one and can reconnect
 	//
 	if (universeCanReconnect(JobUniverse) && ! job->Lookup(ATTR_JOB_LEASE_DURATION)) {
