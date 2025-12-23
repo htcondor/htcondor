@@ -63,7 +63,7 @@ By default, HTCondor includes plug-ins for the standard protocols
 ``http://...``, ``https://...`` and ``ftp://...``.  Additionally, we provide
 plug-ins for transferring files to and from Box.com accounts (``box://...``),
 Google Drive accounts (``gdrive://...``), Microsoft OneDrive accounts
-(``onedrive://...``), the OSDF (``osdf://...``), and other Pelican data
+(``onedrive://...``), the OSDF (``osdf://...``), and other Pelican Platform data
 federations (``pelican://...``).  These plug-ins require users to have
 obtained OAuth2 credentials for the relevant service(s) before they can be
 used.  See :ref:`enabling_oauth_credentials` for how to enable users

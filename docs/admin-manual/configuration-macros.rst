@@ -6060,6 +6060,11 @@ These macros control the *condor_schedd*.
     to how invoke the corresponding clean-up plug-in.  Defaults to
     ``$(ETC)/checkpoint-destination-mapfile``.
 
+:macro-def:`AUTO_USE_FEATURE_PelicanRetryPolicy[SCHEDD]`
+    A boolean that defaults to True.  When True, the 
+    configuration template :macro:`use feature:PelicanRetryPolicy`
+    will be automatically included in the schedd's configuration.
+
 :macro-def:`SCHEDD_CHECKPOINT_CLEANUP_TIMEOUT[SCHEDD]`
     There's only so long that the *condor_schedd* is willing to let clean-up
     for a single job (including all of its checkpoints) take.  This macro
