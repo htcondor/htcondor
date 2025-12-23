@@ -1388,11 +1388,11 @@ int ScheddStatistics::CountJobsTick(time_t current_time, int & advance_days)
 	advance_days = 0;
 
 	// how much time since the last tick? if 0 then we have nothing to do
-	// if PrevCountJobsTime nonzero and invalid, assume advancing by 365 days will clear everything.
+	// if PrevCountJobsTime nonzero and invalid, assume advancing by 60 days will clear everything.
 	// In the normal case, PrevCountJobsTime is updated after we call count_jobs (i.e. not here)
 	time_t delta_time = current_time - PrevCountJobsTime;
 	if (delta_time <= 0 || PrevCountJobsTime <= 0 || delta_time > (3600*24*30*2)) {
-		dprintf(D_ZKM, "CountJobsTick delta_time is %lld. timezone=%d will treat it as unset (%d.%d)\n",
+		dprintf(D_FULLDEBUG, "CountJobsTick delta_time is %lld. timezone=%d will treat it as unset (%d.%d)\n",
 			(long long)delta_time, (int)TickBias,
 			(int)((current_time-TickBias)/(seconds_per_bucket)), (int)((current_time-TickBias)%(seconds_per_bucket))
 		);
@@ -1460,12 +1460,12 @@ Scheduler::count_jobs()
 	// calculate how many buckets to advance the User and Project daily stats.
 	int cDayAdvance = 0;
 	int cHourlyAdvance = scheduler.stats.CountJobsTick(current_time, cDayAdvance);
-	if (IsDebugCatAndVerbosity(D_ZKM)) {
+	if (IsDebugCatAndVerbosity(D_STATUS)) {
 		int bucket_sec = schedd_daily_usage_stats::hour_bucket_sec;
 		double bucket_percent = ((current_time - scheduler.stats.TickBias)%(bucket_sec)) / (bucket_sec/100.0);
 		const int day_sec = 24*3600;
 		double day_percent = ((current_time - scheduler.stats.TickBias + scheduler.stats.TickMidnight)%(day_sec)) / (day_sec/100.0);
-		dprintf(D_ZKM, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
+		dprintf(D_STATUS, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
 			cHourlyAdvance, cDayAdvance, bucket_percent, day_percent);
 	}
 
