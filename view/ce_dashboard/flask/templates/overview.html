@@ -187,7 +187,7 @@ Contribution of compute capacity from the
                 <script>
                     new HTCondorView({
                         dst_id: "mem-per-cpu",
-                        title: "Memory Allocated Per CPU (in GBs)",
+                        title: "Memory per CPU (in GBs)",
                         data_url: "/data/ce_overview?r=week",
                         action_url: "showModal('memory-per-cpu-modal')",
                         graph_query: urlEscapeGraphQuery(`
@@ -231,7 +231,7 @@ Contribution of compute capacity from the
                 <script>
                     new HTCondorView({
                         dst_id: "disk-per-cpu",
-                        title: "Disk Allocated Per CPU (in GBs)",
+                        title: "Disk per CPU (in GBs)",
                         data_url: "/data/ce_overview?r=week",
                         action_url: "showModal('disk-per-cpu-modal')",
                         graph_query: urlEscapeGraphQuery(`
@@ -507,6 +507,24 @@ Contribution of compute capacity from the
             <p>
                 Its BCU contribution would be 2 BCUs, since the CPU cores are the limiting factor.
             </p>
+        {% endcall %}
+
+        <!-- Help Modal for Memory Past Week -->
+        {% call utils.bootstrap_modal('memory-per-cpu-modal', 'About: Memory per CPU') %}
+            <p>Displays the ratio between memory and cpus allocated to and contributed by EPs at this site.</p>
+            <ul>
+                <li>Memory per CPU - Allocated: Amount of memory (in GB) allocated to EPs running at this site for each CPU allocated to those EPs.</li>
+                <li>Memory per CPU - Contributed: Memory (in GB) utilized by jobs running at this site for each CPU utilized by those jobs.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for Disk Past Week -->
+        {% call utils.bootstrap_modal('disk-per-cpu-modal', 'About: Disk per CPU') %}
+            <p>Displays the ratio between disk and cpus allocated to and contributed by EPs at this site.</p>
+            <ul>
+                <li>Disk per CPU - Allocated: Amount of disk (in GB) allocated to EPs running at this site for each CPU allocated to those EPs.</li>
+                <li>Disk per CPU - Contributed: disk (in GB) utilized by jobs running at this site for each CPU utilized by those jobs.</li>
+            </ul>
         {% endcall %}
 
         <!-- Help Modal for Groups Served Per Day -->
