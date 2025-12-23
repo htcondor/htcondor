@@ -5,6 +5,10 @@
 
 *** 25.0.6 bugs
 
+- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
+  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
+  :jira:`3481`
+
 *** 25.0.5 bugs
 
 *** 25.0.3 bugs
