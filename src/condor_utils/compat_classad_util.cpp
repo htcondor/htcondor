@@ -241,6 +241,28 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
 	return val.IsStringValue(sval);
 }
 
+bool ExprTreeIsArray(classad::ExprTree * expr, size_t & num_elms)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)expr)->get();
+		if ( ! expr) return false;
+		kind = expr->GetKind();
+	}
+
+	if (kind == classad::ExprTree::EXPR_LIST_NODE) {
+		std::vector<classad::ExprTree*> exprs;
+		((const classad::ExprList*)expr)->GetComponents( exprs );
+		num_elms = exprs.size();
+		return true;
+	}
+
+	return false;
+}
+
+
 bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute /*=NULL*/)
 {
 	if ( ! expr) return false;
