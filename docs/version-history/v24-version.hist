@@ -20,6 +20,10 @@
   :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
   :jira:`3456`
 
+- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
+  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
+  :jira:`3481`
+
 *** 24.0.15 features
 
 - HTCondor tarballs now contain `Pelican 7.21.1 <https://pelicanplatform.org/releases>`_
