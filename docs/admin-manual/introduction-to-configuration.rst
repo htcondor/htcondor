@@ -1282,6 +1282,7 @@ incorporates.
        the default is to divide 100% of the machine resources evenly across the slots.
 
     -  :config-template:`AssignAccountingGroup( map_filename [, check_request] )<FEATURE>`
+       
        Sets up a
        *condor_schedd* job transform that assigns an accounting group
        to each job as it is submitted. The accounting group is determined by
@@ -1294,11 +1295,13 @@ incorporates.
        is false, the requested accounting group will be ignored if it is not valid.
 
     -  :config-template:`ScheddUserMapFile( map_name, map_filename )<FEATURE>`
+       
        Defines a
        *condor_schedd* usermap named map_name using the given map
        file.
 
     -  :config-template:`SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )<FEATURE>`
+       
        Sets up a *condor_schedd* job transform that sets the dst_attr
        attribute of each job as it is submitted. The value of dst_attr
        is determined by mapping the src_attr of the job using the
@@ -1424,6 +1427,21 @@ incorporates.
        macro ``DEFAULT_CHECKPOINT_DESTINATION`` to the whole URL.  As an
        example, the default ``DEFAULT_CHECKPOINT_DESTINATION`` is
        ``"$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"``.
+    
+    - :config-template:`PelicanRetryPolicy<FEATURE>`
+
+       Contains Access Point configuration settings that improve error handling
+       when using the Pelican Platform for job file transfers. Persistent
+       transfer errors put the job on hold. Errors that Pelican considers
+       transient, such as brief network interruptions, return the job to Idle in
+       a cool-down mode controlled by :macro:`SYSTEM_ON_VACATE_COOL_DOWN`. By
+       default, the job is rescheduled after a short delay of about 5 to 10
+       minutes. If errors continue after the configured number of retries, the
+       job is placed on hold.
+       
+       The configuration macro :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` is set to
+       ``True`` by default, meaning this template is automatically applied to Access Points.
+       To disable this behavior, set :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` to ``False``.
 
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
