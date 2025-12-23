@@ -38,6 +38,7 @@ bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval);
 bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
+bool ExprTreeIsArray(classad::ExprTree * expr, size_t & num_elms);
 bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute=NULL);
 bool ExprTreeMayDollarDollarExpand(classad::ExprTree *tree, std::string & unparsed);
 

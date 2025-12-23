@@ -141,6 +141,14 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    int    PublishFlags;
    int    AdvanceAtLastTick;
 
+   // varibles used by hourly/daily stats updates in count_jobs
+   time_t TickBias{0};           // timezone bias for converting time_t to Hour of day (for hourly/daily stats)
+   time_t TickMidnight{0};       // configurable offset to timezone bias (12*3600 to force Midnight to occur at noon)
+   time_t PrevCountJobsTime{0};  // the previous time we did count_jobs. updated *after* we count_jobs
+   time_t CountJobsHourPhase{0}; // how far we were through the smallest hourly bucket the last time we counted
+   time_t CountJobsDayPhase{0};  // how far we were through the current day the last time we counted
+   time_t SecSinceLastCountJobsTime{0}; // how much time since the last time we counted jobs
+
    StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
    // methods
@@ -148,6 +156,7 @@ typedef struct ScheddStatistics : public ScheddJobCounters {
    void InitMain();
    void Clear();
    time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
+   int CountJobsTick(time_t now, int & advance_days); // called by count_jobs, returns hour and day advance values
    void Reconfig();
    void SetWindowSize(int window);
    void Publish(ClassAd & ad) const;

@@ -1013,6 +1013,7 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 	return 0;
 }
 
+// Not just a timer calleback. This is also called explicitly on startup, reconfig, and when the flock level changes
 void
 Scheduler::timeout( int /* timerID */ )
 {
@@ -1380,6 +1381,49 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 }
 
 
+int ScheddStatistics::CountJobsTick(time_t current_time, int & advance_days)
+{
+	const int seconds_per_bucket = schedd_daily_usage_stats::hour_bucket_sec;
+
+	advance_days = 0;
+
+	// how much time since the last tick? if 0 then we have nothing to do
+	// if PrevCountJobsTime nonzero and invalid, assume advancing by 365 days will clear everything.
+	// In the normal case, PrevCountJobsTime is updated after we call count_jobs (i.e. not here)
+	time_t delta_time = current_time - PrevCountJobsTime;
+	if (delta_time <= 0 || PrevCountJobsTime <= 0 || delta_time > (3600*24*30*2)) {
+		dprintf(D_ZKM, "CountJobsTick delta_time is %lld. timezone=%d will treat it as unset (%d.%d)\n",
+			(long long)delta_time, (int)TickBias,
+			(int)((current_time-TickBias)/(seconds_per_bucket)), (int)((current_time-TickBias)%(seconds_per_bucket))
+		);
+		int ret = (delta_time <= 0) ? 0 : 24;
+		if (PrevCountJobsTime == 0) {
+			SecSinceLastCountJobsTime = 0;
+		} else {
+			// on startup (prev is 0) we want to use the time since the daemon started
+			SecSinceLastCountJobsTime = MAX(0, current_time - daemonCore->getStartTime());
+		}
+		PrevCountJobsTime = current_time;
+		if (ret) { advance_days = 30; } // invalid delta time, so advance a month of days
+		return ret;
+	}
+	SecSinceLastCountJobsTime = delta_time; // save for use by count_jobs
+
+	time_t prev = PrevCountJobsTime - TickBias + TickMidnight;
+	time_t curr = current_time - TickBias + TickMidnight;
+
+	CountJobsDayPhase = curr % (24*3600);
+	int prev_day = prev/(24*3600);
+	int today = curr/(24*3600);
+	advance_days = today - prev_day;
+
+	CountJobsHourPhase = curr % seconds_per_bucket;
+	int prev_bucket = prev/seconds_per_bucket;
+	int bucket = curr/seconds_per_bucket;
+	int advance = bucket - prev_bucket;
+	return advance;
+}
+
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
@@ -1413,17 +1457,31 @@ Scheduler::count_jobs()
 	scheduler.OtherPoolStats.ResetJobsRunning();
 
 	time_t current_time = time(0);
+	// calculate how many buckets to advance the User and Project daily stats.
+	int cDayAdvance = 0;
+	int cHourlyAdvance = scheduler.stats.CountJobsTick(current_time, cDayAdvance);
+	if (IsDebugCatAndVerbosity(D_ZKM)) {
+		int bucket_sec = schedd_daily_usage_stats::hour_bucket_sec;
+		double bucket_percent = ((current_time - scheduler.stats.TickBias)%(bucket_sec)) / (bucket_sec/100.0);
+		const int day_sec = 24*3600;
+		double day_percent = ((current_time - scheduler.stats.TickBias + scheduler.stats.TickMidnight)%(day_sec)) / (day_sec/100.0);
+		dprintf(D_ZKM, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
+			cHourlyAdvance, cDayAdvance, bucket_percent, day_percent);
+	}
 
 	for (auto & [name, owni] : OwnersInfo) {
 		owni->num.clear_counters();	// clear the jobs counters 
+		owni->daily_stats.AdvanceBy(cHourlyAdvance, cDayAdvance);
 	}
 	for (auto & [name, prji] : ProjectInfo) {
 		prji->num.clear_counters();	// clear the jobs counters 
+		prji->daily_stats.AdvanceBy(cHourlyAdvance, cDayAdvance);
 	}
 	for (OwnerInfo * owni : zombieOwners) {
 		owni->num.clear_counters(); // clear refcounts for zombies also
 	}
 	NoneProjectRec.num.clear_counters();
+	//NoneProjectRec.daily_stats.AdvanceBy(cHourlyAdvance, cDayAdvance);
 
 	FlockPools.clear();
 	if (FlockCollectors.size()) {
@@ -1465,6 +1523,7 @@ Scheduler::count_jobs()
 		// 10/8/2021 TJ - count_a_job now also sees cluster and jobset ads so it will update Owner records.
 		//    For job factories that have no materialized jobs it will potentially trigger new materialization
 	WalkJobQueueWith(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS, count_a_job, nullptr);
+	stats.PrevCountJobsTime = current_time;
 
 	if (JobsSeenOnQueueWalk >= 0) {
 		TotalJobsCount = JobsSeenOnQueueWalk;
@@ -2344,10 +2403,20 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 		for (const auto &[name, urec] : OwnersInfo) {
 			if (num_ads >= limit || num_user_ads >= user_limit) break;
-			if (IsQueryConstraintMatch(constr, &queryAd, urec)) {
-				ClassAd ad;
-				urec->live.publish(ad,"Num");
-			#if 1 // speed test for Miron
+
+			// inject the stats before we evaluate the constraint
+			// so we can constrain on them
+			ClassAd ad;
+			urec->live.publish(ad,"Num");
+			urec->daily_stats.publish(ad,"Jobs");
+			ad.Assign("HourlyStatsStartTime", daemonCore->getStartTime());
+			ad.Assign("HourlyStatsUnitSize", schedd_daily_usage_stats::hour_bucket_sec);
+			ad.Assign("HourlyStatsUnitPhase", stats.CountJobsHourPhase);
+			ad.ChainToAd(urec);
+
+			if (IsQueryConstraintMatch(constr, &queryAd, &ad)) {
+
+			#if 0 // speed test of scanning the whole job queue for jobs owned by this user
 				struct _urec_test { JobQueueUserRec* ptr; int hits; } refs = {urec, 0};
 				schedd_runtime_probe runtime;
 				WalkJobQueue3(
@@ -2362,7 +2431,6 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 				runtime.Publish(ad,"Scan",IF_RT_SUM);
 			#endif
 
-				ad.ChainToAd(urec);
 				if ( !putClassAd(stream, ad, put_opts, proj)) {
 					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 					return FALSE;
@@ -2389,11 +2457,16 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 		for (const auto &[name, pjad] : ProjectInfo) {
 			if (num_ads >= limit || num_project_ads >= proj_limit) break;
-			if (IsQueryConstraintMatch(constr, &queryAd, pjad)) {
-				ClassAd ad;
-				pjad->live.publish(ad,"Num");
-				ad.ChainToAd(pjad);
 
+			ClassAd ad;
+			pjad->live.publish(ad,"Num");
+			pjad->daily_stats.publish(ad,"Jobs");
+			ad.Assign("HourlyStatsStartTime", daemonCore->getStartTime());
+			ad.Assign("HourlyStatsUnitSize", schedd_daily_usage_stats::hour_bucket_sec);
+			ad.Assign("HourlyStatsTickTime", stats.PrevCountJobsTime);
+			ad.ChainToAd(pjad);
+
+			if (IsQueryConstraintMatch(constr, &queryAd, &ad)) {
 				if ( !putClassAd(stream, ad, put_opts, proj)) {
 					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 					return FALSE;
@@ -4143,6 +4216,10 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			job_idle_weight = request_cpus * job_idle;
 		}
 		Counters->WeightedJobsIdle += job_idle_weight;
+
+		time_t interval = scheduler.stats.SecSinceLastCountJobsTime;
+		job->ownerinfo->daily_stats.accum(status, interval, job_idle_weight);
+		if (job->project) { job->project->daily_stats.accum(status, interval, job_idle_weight); }
 
 			// Update per-flock jobs idle
 		std::string flock_targets;
@@ -10880,6 +10957,15 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	OtherPoolStats.Tick(now);
 
+	if ( ! wants_reconnect) {
+		// If not a reconnect, counts as a job launch in the User and Project records
+		JobQueueJob * job = GetJobAd(*job_id);
+		if (job) {
+			job->ownerinfo->daily_stats.launched += 1;
+			if (job->project) { job->project->daily_stats.launched += 1; }
+		}
+	}
+
 		// If this is a reconnect shadow, update the mrec with some
 		// important info.  This usually happens in StartJobs(), but
 		// in the case of reconnect, we don't go through that code. 
@@ -13740,6 +13826,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				//
 			stats.JobsExecFailed += 1;
 			OTHER.JobsExecFailed += 1;
+			job_ad->ownerinfo->daily_stats.not_started += 1;
+			if (job_ad->project) { job_ad->project->daily_stats.not_started += 1; }
 			break;
 
 		case JOB_CKPTED:
@@ -13767,10 +13855,14 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
                   stats.JobsShouldRequeue += 1;
                   OTHER.JobsShouldRequeue += 1;
                   is_goodput = true;
+                  job_ad->ownerinfo->daily_stats.requeued += 1;
+                  if (job_ad->project) { job_ad->project->daily_stats.requeued += 1; }
                   break;
                case JOB_NOT_STARTED:
                   stats.JobsNotStarted += 1;
                   OTHER.JobsNotStarted += 1;
+                  job_ad->ownerinfo->daily_stats.not_started += 1;
+                  if (job_ad->project) { job_ad->project->daily_stats.not_started += 1; }
                   break;
                }
 			break;
@@ -13900,6 +13992,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			} else {
 				stats.JobsShouldHold += 1;
 				OTHER.JobsShouldHold += 1;
+				job_ad->ownerinfo->daily_stats.held += 1;
+				if (job_ad->project) { job_ad->project->daily_stats.held += 1; }
 			}
 			break;
 		}
@@ -14389,6 +14483,17 @@ Scheduler::Init()
 			jobSets = new JobSets();
 			ASSERT(jobSets);
 		}
+
+		stats.PrevCountJobsTime = time(NULL);
+		stats.TickMidnight = param_integer("DAILY_STATS_TICK_MIDNIGHT", 0);
+#ifdef WIN32
+		long tz_offset = 6 * 3600; // default to CST
+		_get_timezone(&tz_offset);
+		stats.TickBias = tz_offset;
+#else
+		tzset();
+		stats.TickBias = timezone;
+#endif
 
 		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
 		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
