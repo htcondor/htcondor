@@ -183,6 +183,95 @@ Contribution of compute capacity from the
         </div>
 
 		<div class="row">
+            <div class="col-6 htcv-col-6" id="mem-per-cpu">
+                <script>
+                    new HTCondorView({
+                        dst_id: "mem-per-cpu",
+                        title: "Memory Allocated Per CPU (in GBs)",
+                        data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('memory-per-cpu-modal')",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=MemoryAllocated,MemoryUnallocated,CpusAllocated,CpusUnallocated
+                            order=Date
+                            pivot=Date;Project;Memory,Cpus
+                            unselect=CpusAllocated Memory,CpusUnallocated Memory,MemoryAllocated Cpus,MemoryUnallocated Cpus
+
+                            rename=CpusAllocated Cpus=CpusAllocated
+                            rename=CpusUnallocated Cpus=CpusUnallocated
+                            rename=MemoryAllocated Memory=MemoryAllocated
+                            rename=MemoryUnallocated Memory=MemoryUnallocated
+
+                            add=CpusAllocated,CpusUnallocated,CpusContributed
+                            add=MemoryAllocated,MemoryUnallocated,MemoryContributed
+
+                            unselect=CpusUnallocated,MemoryUnallocated
+
+                            div=MemoryAllocated,CpusAllocated,MemoryPerCpuAllocated
+                            div=MemoryContributed,CpusContributed,MemoryPerCpuContributed
+                            div=MemoryPerCpuAllocated,1000,MemoryPerCpuAllocated
+                            div=MemoryPerCpuContributed,1000,MemoryPerCpuContributed
+
+                            unselect=MemoryAllocated,MemoryContributed,CpusAllocated,CpusContributed,MemoryPerCpuAllocated,MemoryPerCpuContributed
+
+                            rename=MemoryPerCpuAllocated=Memory (GB) Per CPU - Allocated
+                            rename=MemoryPerCpuContributed=Memory (GB) Per CPU - Contributed
+
+                            series.0.areaOpacity=1
+                            series.1.areaOpacity=0.05
+                            legend.position=in
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
+			</div>
+            <div class="col-6 htcv-col-6" id="disk-per-cpu">
+                <script>
+                    new HTCondorView({
+                        dst_id: "disk-per-cpu",
+                        title: "Disk Allocated Per CPU (in GBs)",
+                        data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('disk-per-cpu-modal')",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=DiskAllocated,DiskUnallocated,CpusAllocated,CpusUnallocated
+                            order=Date
+                            pivot=Date;Project;Disk,Cpus
+                            unselect=CpusAllocated Disk,CpusUnallocated Disk,DiskAllocated Cpus,DiskUnallocated Cpus
+
+                            rename=CpusAllocated Cpus=CpusAllocated
+                            rename=CpusUnallocated Cpus=CpusUnallocated
+                            rename=DiskAllocated Disk=DiskAllocated
+                            rename=DiskUnallocated Disk=DiskUnallocated
+
+                            add=CpusAllocated,CpusUnallocated,CpusContributed
+                            add=DiskAllocated,DiskUnallocated,DiskContributed
+
+                            unselect=CpusUnallocated,DiskUnallocated
+
+                            div=DiskAllocated,CpusAllocated,DiskPerCpuAllocated
+                            div=DiskContributed,CpusContributed,DiskPerCpuContributed
+
+                            unselect=DiskAllocated,DiskContributed,CpusAllocated,CpusContributed
+
+                            rename=DiskPerCpuAllocated=Disk (GB) Per CPU - Allocated
+                            rename=DiskPerCpuContributed=Disk (GB) Per CPU - Contributed
+
+                            series.0.areaOpacity=1
+                            series.1.areaOpacity=0.05
+                            legend.position=in
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
+			</div>
+        </div>
+
+		<div class="row">
             <div class="col-6 htcv-col-6" id="col-chart">
                 <script>
                     new HTCondorView({
