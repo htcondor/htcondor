@@ -3549,6 +3549,8 @@ int SubmitHash::SetArguments()
 	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
+		free(shell);
+		shell = nullptr;
 		std::string value;
 		args_success = arglist.GetArgsStringV2Raw(value);
 		if (args_success) {
@@ -3559,6 +3561,8 @@ int SubmitHash::SetArguments()
 			ABORT_AND_RETURN(1);
 		}
 	}
+	free(shell);
+	shell = nullptr;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -4346,8 +4350,12 @@ int SubmitHash::SetExecutable()
 	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
+			free(shell);
+			shell = nullptr;
 			return 0;
 	}
+	free(shell);
+	shell = nullptr;
 
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
 	if ( ! ename && IsInteractiveJob) {
