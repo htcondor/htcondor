@@ -7276,12 +7276,12 @@ default : @fin
 	endif
 @fin
 
-[AUTO_USE_POLICY_PelicanRetryPolicy]
+[AUTO_USE_FEATURE_PelicanRetryPolicy]
 description=Enable AP policies for improved handling of Pelican file transfer failures
 default=$(IsSchedd)
 type=bool
 tags=schedd
-[$POLICY.PelicanRetryPolicy]
+[$FEATURE.PelicanRetryPolicy]
 description=Pelican file transfer failures that are not permanent result in jobs going into cool down
 default : @fin
 	# These are the default values; they can be overridden later.
