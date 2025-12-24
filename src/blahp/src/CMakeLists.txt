@@ -218,22 +218,15 @@ set(blah_scripts
     scripts/lsf_status.sh scripts/lsf_submit.sh scripts/lsf_hold.sh
     scripts/lsf_resume.sh scripts/condor_cancel.sh scripts/condor_status.sh
     scripts/condor_submit.sh scripts/condor_hold.sh scripts/condor_resume.sh
-    scripts/condor_local_submit_attributes.sh
-    scripts/pbs_local_submit_attributes.sh
-    scripts/lsf_local_submit_attributes.sh
     scripts/sge_cancel.sh scripts/sge_helper scripts/sge_resume.sh 
     scripts/sge_submit.sh scripts/sge_filestaging scripts/sge_hold.sh 
     scripts/sge_status.sh scripts/runcmd.pl.template
-    scripts/sge_local_submit_attributes.sh
     scripts/slurm_cancel.sh scripts/slurm_resume.sh scripts/slurm_status.sh
     scripts/slurm_hold.sh scripts/slurm_submit.sh
-    scripts/slurm_local_submit_attributes.sh
     scripts/nqs_cancel.sh scripts/nqs_resume.sh scripts/nqs_status.sh
     scripts/nqs_hold.sh scripts/nqs_submit.sh
-    scripts/nqs_local_submit_attributes.sh
     scripts/kubernetes_cancel.sh scripts/kubernetes_resume.sh scripts/kubernetes_status.sh
     scripts/kubernetes_hold.sh scripts/kubernetes_submit.sh
-    scripts/kubernetes_local_submit_attributes.sh
     scripts/__init__.py
     scripts/pbs_status.py
     scripts/slurm_status.py
@@ -249,6 +242,29 @@ install(FILES
                 GROUP_READ GROUP_EXECUTE
                 WORLD_READ WORLD_EXECUTE
     DESTINATION ${LIBEXEC_DIR})
+
+set(local_attr_scripts
+    condor_local_submit_attributes.sh
+    pbs_local_submit_attributes.sh
+    lsf_local_submit_attributes.sh
+    sge_local_submit_attributes.sh
+    slurm_local_submit_attributes.sh
+    nqs_local_submit_attributes.sh
+    kubernetes_local_submit_attributes.sh
+    )
+
+# The <lrms>_local_submit_attributes.sh scripts should be installed
+# under etc/blahp/, but be accessible via symlink from the blahp
+# libexec directory.
+foreach(local_script ${local_attr_scripts})
+    install(FILES scripts/${local_script}
+        PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE
+                    GROUP_READ GROUP_EXECUTE
+                    WORLD_READ WORLD_EXECUTE
+        DESTINATION etc/blahp)
+    file(RELATIVE_PATH PATH_DIFF "${CMAKE_INSTALL_PREFIX}/${LIBEXEC_DIR}" "${CMAKE_INSTALL_PREFIX}/etc/blahp/${local_script}")
+    install (CODE "execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink \"${PATH_DIFF}\" \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${LIBEXEC_DIR}/${local_script})")
+endforeach(local_script)
 
 # But this one isn't a standalone executable
 install(FILES

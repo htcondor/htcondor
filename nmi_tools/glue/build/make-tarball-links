@@ -102,7 +102,3 @@ ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
 if [ -d usr/libexec/condor ]; then
     ln -s ../blahp usr/libexec/condor/blahp
 fi
-# Comment out default blahp location
-sed -i -e s/blah_libexec_directory/#blah_libexec_directory/ etc/blah.config
-# Make absolute links relative
-(cd usr/libexec/blahp; ln -sf ../../../etc/blahp/*_local_submit_attributes.sh .)
