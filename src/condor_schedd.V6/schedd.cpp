@@ -116,6 +116,7 @@ char const * const HOME_POOL_SUBMITTER_TAG = "";
 extern GridUniverseLogic* _gridlogic;
 
 #include "qmgmt.h"
+#include "qmgmt_startup_limits.h"
 #include "condor_qmgr.h"
 #include "condor_vm_universe_types.h"
 #include "enum_utils.h"
@@ -8343,10 +8344,13 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 	// TODO: set this to the max matches we can allow for this resource request
 	if (match_max) { *match_max = INT_MAX; }
 
-#ifdef USE_VANILLA_START
 	const OwnerInfo* powni = NULL;
 	int universe = CONDOR_UNIVERSE_MIN;
+	JobQueueJob * job_for_limit = NULL;
+
+#ifdef USE_VANILLA_START
 	JobQueueJob * job = GetJobAndInfo(job_id, universe, powni);
+	job_for_limit = job;
 	if (job) {
 		ExprTree * tree = scheduler.flattenVanillaStartExpr(job, powni);
 		if (tree) {
@@ -8401,6 +8405,8 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 		dprintf(D_ALWAYS, "unexpected arguments to scheduler_getRequestConstraints\n");
 	}
 #endif
+
+	StartupLimitsAdjustRequest(job_for_limit, request_ad, match_max, getMatchUser(), getRemotePool());
 
 	return true;
 }
@@ -8531,7 +8537,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
-		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool());
+		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool(), /*is_ocu=*/false, /*is_new_match=*/true);
 
 		// we may have found a new job. but FindRunnableJob doesn't check to see
 		// if we hit the shadow limit, so we need to do that here.
@@ -9333,6 +9339,47 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			DelMrec( mrec );
 		}
 		return;
+	}
+
+	// Check startup limits on the initially matched job. If denied, try to
+	// swap in an alternate runnable job before we proceed to claim the startd.
+	if (!StartupLimitsEmpty()) {
+		JobQueueJob *limit_job = GetJobAd(mrec->cluster, mrec->proc);
+		if (limit_job && mrec->my_match_ad) {
+			std::unordered_set<std::string> blocked;
+			// Charge the limit here so throttling and stats reflect the pending start.
+			if (!StartupLimitsAllowJob(limit_job, mrec->my_match_ad, mrec->user, mrec->pool, &blocked, /*record_stats=*/true)) {
+				dprintf(D_FULLDEBUG,
+					"StartupLimit blocked initially matched job %d.%d user=%s pool=%s blocked=%zu; searching fallback\n",
+					mrec->cluster, mrec->proc, mrec->user ? mrec->user : "<any>",
+					mrec->pool ? mrec->pool : "<none>", blocked.size());
+				PROC_ID replacement{-1, -1};
+				FindRunnableJob(replacement, mrec->my_match_ad, mrec->user, mrec->pool, mrec->is_ocu, /*is_new_match=*/true);
+
+				if (replacement.proc < 0) {
+					dprintf(D_FULLDEBUG, "StartupLimit fallback search found no alternate job; releasing match %s\n", description.c_str());
+					delete jobAd;
+					DelMrec(mrec);
+					return;
+				}
+
+				if (replacement.cluster != mrec->cluster || replacement.proc != mrec->proc) {
+					dprintf(D_FULLDEBUG, "StartupLimit replacing job %d.%d with %d.%d for match %s\n",
+						mrec->cluster, mrec->proc, replacement.cluster, replacement.proc, description.c_str());
+					mrec->cluster = replacement.cluster;
+					mrec->proc = replacement.proc;
+					delete jobAd;
+					jobAd = GetExpandedJobAd(JOB_ID_KEY(mrec->cluster, mrec->proc), false);
+					if (!jobAd) {
+						dprintf(D_FULLDEBUG, "StartupLimit failed to load replacement job ad %d.%d; releasing match\n",
+							replacement.cluster, replacement.proc);
+						DelMrec(mrec);
+						return;
+					}
+					formatstr(description, "%s %d.%d", mrec->description(), mrec->cluster, mrec->proc);
+				}
+			}
+		}
 	}
 
 		// If the slot we are about to claim is partitionable, edit it
@@ -10217,7 +10264,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 	new_job_id.proc = -1;
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
-		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu);
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu, /*is_new_match=*/false);
 	}
 
 	if (new_job_id.proc == -1) {
@@ -15421,6 +15468,14 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(RESET_USERREC, "RESET_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+
+	// Startup limit management (admin use)
+	daemonCore->Register_CommandWithPayload(CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT",
+		&HandleCreateStartupLimitCommand,
+		"HandleCreateStartupLimitCommand", ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS",
+		&HandleQueryStartupLimitsCommand,
+		"HandleQueryStartupLimitsCommand", READ, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
@@ -17918,7 +17973,7 @@ Scheduler::claimLocalStartd()
 		PROC_ID matching_jobid;
 		matching_jobid.proc = -1;
 
-		FindRunnableJob(matching_jobid,machine_ad,NULL);
+		FindRunnableJob(matching_jobid,machine_ad,NULL, /*pool=*/nullptr, /*is_ocu=*/false, /*is_new_match=*/true);
 		if( matching_jobid.proc < 0 ) {
 				// out of jobs.  start over w/ the next startd ad.
 			continue;

@@ -78,6 +78,14 @@ int RewriteAttrRefs(classad::ExprTree * expr, const NOCASE_STRING_MAP & mapping)
 // and the expression contains MY.Foo, the Foo is added to attrs.
 int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, const std::string &scope);
 
+// add attribute references to attrs when they are of the given scope or unscoped. For example when scope is
+// "MY" and the expression contains MY.Foo or Foo (unscoped), Foo is added to attrs.
+// This is designed for use cases where you have both a "MY" and a "TARGET" classad in context,
+// and you want to walk the expression only once.
+int GetAttrRefsOfScopesOrUnscoped(classad::ExprTree *expr,
+	classad::References &scope1_attrs, const std::string &scope1,
+	classad::References &scope2_attrs, const std::string &scope2);
+
 const classad::ExprTree * SkipExprEnvelope(const classad::ExprTree * tree);
 inline classad::ExprTree * SkipExprEnvelope(classad::ExprTree * tree) {
 	return const_cast<classad::ExprTree *>(SkipExprEnvelope(const_cast<const classad::ExprTree *>(tree)));

@@ -29,6 +29,7 @@
 #include "live_job_counters.h"
 #include "condor_attributes.h"
 #include <generic_stats.h>
+#include <vector>
 
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
@@ -976,7 +977,7 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
   extern std::deque<prio_rec> PrioRec;
 #endif
 
-extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr, bool is_ocu=false);
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr, bool is_ocu=false, bool is_new_match=true);
 //extern bool Runnable(PROC_ID*);
 enum class runnable_reason_code : int {
 	IsRunnable=0,
