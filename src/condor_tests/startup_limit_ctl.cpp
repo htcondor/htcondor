@@ -198,12 +198,13 @@ int main(int argc, char **argv)
             if (verbose) {
                 print_ad(ad);
             } else {
-                long long skipped = 0, ignored = 0;
+                long long skipped = 0, ignored = 0, allowed = 0;
                 ad.LookupInteger(ATTR_STARTUP_LIMIT_JOBS_SKIPPED, skipped);
                 ad.LookupInteger(ATTR_STARTUP_LIMIT_MATCHES_IGNORED, ignored);
+                ad.LookupInteger(ATTR_STARTUP_LIMIT_JOBS_ALLOWED, allowed);
                 std::string name_out;
                 ad.LookupString(ATTR_STARTUP_LIMIT_NAME, name_out);
-                std::cout << ad_tag << " " << name_out << " " << skipped << " " << ignored << "\n";
+                std::cout << ad_tag << " " << name_out << " " << skipped << " " << ignored << " " << allowed << "\n";
             }
         }
         sock->end_of_message();

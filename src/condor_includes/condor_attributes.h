@@ -767,6 +767,8 @@
 #define ATTR_STARTUP_LIMIT_STATUS        "StartupLimitStatus"
 #define ATTR_STARTUP_LIMIT_ERROR         "StartupLimitError"
 #define ATTR_STARTUP_LIMIT_JOBS_SKIPPED  "StartupLimitJobsSkipped"
+#define ATTR_STARTUP_LIMIT_JOBS_ALLOWED  "StartupLimitJobsAllowed"
+#define ATTR_STARTUP_LIMIT_COST_ALLOWED  "StartupLimitCostAllowed"
 #define ATTR_STARTUP_LIMIT_MATCHES_IGNORED "StartupLimitMatchesIgnored"
 #define ATTR_STARTUP_LIMIT_LAST_IGNORED  "StartupLimitLastIgnoredTime"
 #define ATTR_STARTUP_LIMIT_IGNORED_USERS "StartupLimitIgnoredSources"

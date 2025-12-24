@@ -71,13 +71,14 @@ def _query_limit(helper_path, schedd_address, tag):
     if not lines:
         raise RuntimeError("no startup limit data returned")
     fields = lines[-1].split()
-    if len(fields) < 4:
+    if len(fields) < 5:
         raise RuntimeError(f"unexpected startup limit output: {lines[-1]}")
     return {
         "tag": fields[0],
         "name": fields[1],
         "skipped": int(fields[2]),
         "ignored": int(fields[3]),
+        "allowed": int(fields[4]),
     }
 
 
@@ -294,6 +295,20 @@ def costed_limit(helper_path, schedd_address):
     )
 
 
+@action
+def monitoring_limit(helper_path, schedd_address):
+    return _create_limit(
+        helper_path,
+        schedd_address,
+        tag="monitoring-limit",
+        name="monitoring",
+        expr='JOB.LimitGroup == "monitor"',
+        count=0,
+        window=60,
+        expires=240,
+    )
+
+
 class TestStartupLimitMatchmakingBlocked:
     def test_matchmaking_records_ignored(self, helper_path, schedd_address, blocking_limit, path_to_sleep, test_dir, the_condor):
         desc = {
@@ -461,3 +476,25 @@ class TestStartupLimitCostAndBurst:
         # (total burst cost 4 if the cost expression is working),
         # count=1, and burst=2, at least one job should be throttled.
         assert info["skipped"] > 0
+
+
+class TestStartupLimitMonitoring:
+    def test_unlimited_limit_records_allowed_without_blocking(self, helper_path, schedd_address, monitoring_limit, path_to_sleep, test_dir, the_condor):
+        desc = {
+            "executable": path_to_sleep,
+            "arguments": "0",
+            "log": test_dir / "monitoring_$(CLUSTER).log",
+            "+LimitGroup": '"monitor"',
+        }
+
+        handle = the_condor.submit(description=desc, count=3)
+        assert handle.wait(
+            timeout=120,
+            condition=ClusterState.all_complete,
+            fail_condition=ClusterState.any_held,
+        )
+
+        info = _query_limit(helper_path, schedd_address, monitoring_limit)
+        assert info["skipped"] == 0
+        assert info["ignored"] == 0
+        assert info["allowed"] == 3

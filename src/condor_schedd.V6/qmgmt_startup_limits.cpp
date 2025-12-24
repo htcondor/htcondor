@@ -95,6 +95,7 @@ struct StartupLimit {
     std::string cost_expr_source;
     std::unique_ptr<classad::ExprTree> cost_expr;
     bool cost_expr_warned{false};
+    bool unlimited{false};
     classad::References job_refs;
     classad::References target_refs;
     bool job_only{false};          // true if expression references only job attrs
@@ -102,6 +103,8 @@ struct StartupLimit {
     double burst{0};               // tokens allowed below zero
     double max_burst_cost{0};
     time_t expires_at{0};
+    long long jobs_allowed{0};
+    double costs_allowed{0};
     long long jobs_skipped{0};
     long long matches_ignored{0};
     long long block_seconds{0};
@@ -319,6 +322,8 @@ static void fill_limit_ad(const StartupLimit &lim, ClassAd &ad)
     if (lim.max_burst_cost > 0) { ad.Assign(ATTR_STARTUP_LIMIT_MAX_BURST_COST, (int)lim.max_burst_cost); }
     if (!lim.cost_expr_source.empty()) { ad.Assign(ATTR_STARTUP_LIMIT_COST_EXPR, lim.cost_expr_source); }
     ad.Assign(ATTR_STARTUP_LIMIT_EXPIRATION, (long long)lim.expires_at);
+    ad.Assign(ATTR_STARTUP_LIMIT_JOBS_ALLOWED, lim.jobs_allowed);
+    ad.Assign(ATTR_STARTUP_LIMIT_COST_ALLOWED, lim.costs_allowed);
     ad.Assign(ATTR_STARTUP_LIMIT_JOBS_SKIPPED, lim.jobs_skipped);
     ad.Assign(ATTR_STARTUP_LIMIT_MATCHES_IGNORED, lim.matches_ignored);
     if (lim.last_ignored) { ad.Assign(ATTR_STARTUP_LIMIT_LAST_IGNORED, (long long)lim.last_ignored); }
@@ -379,7 +384,8 @@ int QmgmtHandleCreateStartupLimit(const ClassAd &request, ClassAd &reply)
 
     expires = std::min(expires, StartupLimitMaxExpiration);
 
-    if (tag.empty() || (!expr_tree && expr_str.empty()) || rate_count <= 0 || rate_window <= 0) {
+    // Allow rate_count==0 to represent an unlimited monitor even if window isn't provided.
+    if (tag.empty() || (!expr_tree && expr_str.empty()) || rate_count < 0 || (rate_window <= 0 && rate_count > 0)) {
         reply.Assign(ATTR_STARTUP_LIMIT_STATUS, -1);
         reply.Assign(ATTR_STARTUP_LIMIT_ERROR, "Missing tag/expression/rate");
         return 0;
@@ -422,6 +428,35 @@ int QmgmtHandleCreateStartupLimit(const ClassAd &request, ClassAd &reply)
         reply.Assign(ATTR_STARTUP_LIMIT_ERROR, "Failed to parse cost expression");
         return 0;
     }
+    // Try to flatten the cost expression; if it collapses to constant 1, drop it entirely.
+    if (cost_expr) {
+        classad::Value flat_val;
+        classad::ExprTree *flat_expr = nullptr;
+        classad::ClassAd flattener;
+        if (flattener.Flatten(cost_expr.get(), flat_val, flat_expr)) {
+            if (flat_expr) {
+                cost_expr.reset(flat_expr);
+                cost_job_refs.clear();
+                cost_target_refs.clear();
+                GetAttrRefsOfScopesOrUnscoped(flat_expr, cost_job_refs, "MY", cost_target_refs, "TARGET");
+                unparser.Unparse(cost_rewritten, flat_expr);
+            } else {
+                double flat_num = 0.0;
+                if (flat_val.IsNumber(flat_num)) {
+                    cost_job_refs.clear();
+                    cost_target_refs.clear();
+                    unparser.Unparse(cost_rewritten, flat_val);
+                    if (std::abs(flat_num - 1.0) < std::numeric_limits<double>::epsilon()) {
+                        // Drop cost entirely when it simplifies to 1 to avoid later lookups, but retain the string for debug/logging.
+                        cost_expr.reset();
+                        cost_rewritten = "1";
+                    } else {
+                        cost_expr.reset(classad::Literal::MakeReal(flat_num));
+                    }
+                }
+            }
+        }
+    }
 
     auto now_steady = std::chrono::steady_clock::now();
     StartupLimit lim;
@@ -437,6 +472,9 @@ int QmgmtHandleCreateStartupLimit(const ClassAd &request, ClassAd &reply)
         lim.last_report_time = existing->last_report_time;
         lim.cost_expr_source = existing->cost_expr_source;
         lim.cost_expr_warned = existing->cost_expr_warned;
+        lim.unlimited = existing->unlimited;
+        lim.jobs_allowed = existing->jobs_allowed;
+        lim.costs_allowed = existing->costs_allowed;
         if (existing->cost_expr) { lim.cost_expr.reset(existing->cost_expr->Copy()); }
     } else {
         lim.last_report_time = now_wall;
@@ -462,9 +500,15 @@ int QmgmtHandleCreateStartupLimit(const ClassAd &request, ClassAd &reply)
     lim.job_refs.insert(cost_job_refs.begin(), cost_job_refs.end());
     lim.target_refs.insert(cost_target_refs.begin(), cost_target_refs.end());
     lim.job_only = lim.target_refs.empty();
+    lim.unlimited = (rate_count == 0);
     lim.burst = std::max(0, burst);
     lim.max_burst_cost = std::max(0, max_burst_cost);
-    lim.rate.init(rate_count, std::chrono::duration<double>(rate_window), now_steady, lim.burst, lim.max_burst_cost);
+    if (!lim.unlimited) {
+        lim.rate.init(rate_count, std::chrono::duration<double>(rate_window), now_steady, lim.burst, lim.max_burst_cost);
+    } else {
+        lim.rate.capacity = 0;
+        lim.rate.window = std::chrono::duration<double>(rate_window);
+    }
     lim.expires_at = new_expires_at;
 
     StartupLimits[uuid] = std::move(lim);
@@ -519,6 +563,14 @@ bool StartupLimitsAllowJob(JobQueueJob *job, ClassAd *match_ad, const char *user
     auto now = std::chrono::steady_clock::now();
 
     bool allowed = true;
+    // Track limits that the job passed so we can bump allowed counts only if every
+    // matching limit approves the request. Avoid heap churn on the hot path by
+    // keeping a small inline array and falling back to a vector only if needed.
+    struct PassedEntry { StartupLimit *lim; double cost; };
+    constexpr size_t kInlinePassed = 8;
+    PassedEntry passed_inline[kInlinePassed];
+    size_t passed_inline_count = 0;
+    std::vector<PassedEntry> passed_extra;
     for (auto &kv : StartupLimits) {
         StartupLimit &lim = kv.second;
         if (lim.expires_at && lim.expires_at <= now_wall) { continue; }
@@ -544,7 +596,16 @@ bool StartupLimitsAllowJob(JobQueueJob *job, ClassAd *match_ad, const char *user
             }
         }
         cost = std::max(0.0, cost);
-        if (std::abs(cost) < std::numeric_limits<double>::epsilon()) { continue; }
+        bool zero_cost = std::abs(cost) < std::numeric_limits<double>::epsilon();
+
+        if (lim.unlimited || zero_cost) {
+            if (passed_inline_count < kInlinePassed) {
+                passed_inline[passed_inline_count++] = PassedEntry{&lim, cost};
+            } else {
+                passed_extra.push_back(PassedEntry{&lim, cost});
+            }
+            continue;
+        }
 
         if (!lim.rate.allow(now, cost)) {
             if (IsDebugLevel(D_FULLDEBUG)) {
@@ -554,9 +615,27 @@ bool StartupLimitsAllowJob(JobQueueJob *job, ClassAd *match_ad, const char *user
                         lim.tag.c_str(), lim.uuid.c_str(), cost, available,
                         lim.rate.capacity, lim.rate.burst, lim.rate.max_burst_cost);
             }
+            // record_stats only guards blocked accounting; some callers recheck limits on failure
+            // and we do not want to double-count skips if both attempts fail.
             if (record_stats) { lim.jobs_skipped++; }
             allowed = false;
             if (blocked_limits) { blocked_limits->insert(lim.uuid); }
+        } else {
+            if (passed_inline_count < kInlinePassed) {
+                passed_inline[passed_inline_count++] = PassedEntry{&lim, cost};
+            } else {
+                passed_extra.push_back(PassedEntry{&lim, cost});
+            }
+        }
+    }
+    if (allowed) {
+        for (size_t i = 0; i < passed_inline_count; ++i) {
+            passed_inline[i].lim->jobs_allowed++;
+            passed_inline[i].lim->costs_allowed += passed_inline[i].cost;
+        }
+        for (const auto &entry : passed_extra) {
+            entry.lim->jobs_allowed++;
+            entry.lim->costs_allowed += entry.cost;
         }
     }
     return allowed;
@@ -599,6 +678,7 @@ void StartupLimitsAdjustRequest(JobQueueJob *job, ClassAd &request_ad, int *matc
     for (auto &kv : StartupLimits) {
         StartupLimit &lim = kv.second;
         if (lim.expires_at && lim.expires_at <= now_wall) { continue; }
+        if (lim.unlimited) { continue; }
 
         auto it = lim.ignored_sources.find(key);
         if (it == lim.ignored_sources.end()) { continue; }
