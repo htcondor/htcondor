@@ -37,6 +37,26 @@
 #include "daemon_command.h"
 #include "condor_base64.h"
 
+static bool LooksLikeTLSClientHello(const unsigned char *buf, size_t len)
+{
+	return len >= 3 && buf[0] == 0x16 && buf[1] == 0x03 && buf[2] <= 0x05;
+}
+
+static bool LooksLikeHttpRequest(const char *buf, size_t len)
+{
+	static const char *const methods[] = {
+		"GET ", "POST ", "HEAD ", "PUT ", "DELETE ", "OPTIONS ",
+		"TRACE ", "CONNECT ", "PATCH ", "PRI "
+	};
+	for (auto method : methods) {
+		size_t mlen = strlen(method);
+		if (len >= mlen && strncasecmp(buf, method, mlen) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 static unsigned int ZZZZZ = 0;
 static int ZZZ_always_increase() {
@@ -515,21 +535,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	m_sock->decode();
 
-	// See if we have a special command handler for unknown command integers.
-	//
-	// We do manual CEDAR parsing here to look at the command int directly
-	// without consuming data from the socket.  The first five bytes are the
-	// CEDAR packet header. The next eight bytes are the command int itself.
-	// Leaving the data unconsumed is necessary for the shared port daemon
-	// to transparently hand connections to the collector for commands it
-	// doesn't handle.
-	if (m_is_tcp && daemonCore->HandleUnregistered()) {
-			// Peek at the command integer if one exists.
+	// See if we have a special command handler for unknown command integers or HTTP/TLS fallbacks.
+	// We do manual CEDAR parsing here to peek at the command int directly without consuming data
+	// from the socket. The first five bytes are the CEDAR packet header. The next eight bytes are
+	// the command int itself. Leaving the data unconsumed is necessary for the shared port daemon
+	// to transparently hand connections elsewhere when it doesn't handle the command.
+	if (m_is_tcp && (daemonCore->HandleUnregistered() || daemonCore->HandleHTTP())) {
 		long long tmp_req;
 		char tmpbuf[8+5]; memset(tmpbuf, 0, sizeof(tmpbuf));
 		int sz = sizeof(tmpbuf);
-		int rc;
-		rc = condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+		int rc = condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
 			tmpbuf, sz, 1, CondorRWFlags::Peek);
 		if (rc != sz) {
 			char const *ip = m_sock->peer_ip_str();
@@ -540,15 +555,34 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 			m_result = FALSE;
 			return CommandProtocolFinished;
 		}
+
+		bool http_handler = daemonCore->HandleHTTP();
+		bool looks_tls = false;
+		bool looks_http = false;
+		if (http_handler) {
+			looks_tls = LooksLikeTLSClientHello(reinterpret_cast<unsigned char*>(tmpbuf), rc);
+			looks_http = LooksLikeHttpRequest(tmpbuf, rc);
+		}
+
 		memcpy(static_cast<void*>(&tmp_req), tmpbuf + 5, sizeof(tmp_req));
 		tmp_req = ntohLL(tmp_req);
 
-			// Lookup the command integer in our command table to see if it is unregistered
 		int tmp_cmd_index;
-		if(	   (!m_isSharedPortLoopback)
+		bool unknown_cmd = (!m_isSharedPortLoopback)
 			&& (! daemonCore->CommandNumToTableIndex( (int)tmp_req, &tmp_cmd_index ))
-			&& ( daemonCore->HandleUnregisteredDCAuth()
-				|| (tmp_req != DC_AUTHENTICATE) ) ) {
+			&& ( daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE) );
+
+		if (unknown_cmd && http_handler && (looks_tls || looks_http)) {
+			ScopedEnableParallel(false);
+			if( m_sock_had_no_deadline ) {
+				// unset the deadline we assigned in WaitForSocketData
+				m_sock->set_deadline(0);
+			}
+			m_result = daemonCore->CallHTTPCommandHandler((int)tmp_req, m_sock);
+			return CommandProtocolFinished;
+		}
+
+		if (unknown_cmd && daemonCore->HandleUnregistered()) {
 			ScopedEnableParallel(false);
 
 			if( m_sock_had_no_deadline ) {
