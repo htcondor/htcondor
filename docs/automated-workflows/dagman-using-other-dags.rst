@@ -308,7 +308,7 @@ The same DAG file can be reused as differently named splices, each one
 incorporating a copy of the same DAG structure.
 
 To prevent name collisions of nodes being spliced into a DAG, DAGMan
-adds hierarchal scopes to the name of the node using the splice name.
+adds hierarchical scopes to the name of the node using the splice name.
 This scope is delimited with ``+``. For example, if a DAG containing
 ``NodeY`` was spliced into another DAG as ``SpliceX`` then the resulting
 node added to the top-level DAG will be named ``SpliceX+NodeY``.
@@ -478,7 +478,7 @@ DAG and a disjointed splice ``s1.dag`` as described in the previous example.
 This ``S3`` splice is considered disjointed due to its lack of declared dependencies.
 
 This shows how three simple DAG structures (Diamond, X-shaped, and line) can be
-spliced together to create a more complex workflow. Notice how the hierarchal
+spliced together to create a more complex workflow. Notice how the hierarchical
 scoped naming scheme is applied to the various nodes in the workflow especially
 in the disjointed ``S3`` splice.
 
@@ -558,7 +558,7 @@ Splice Limitations
 #. **Splices and Scripts (PRE/POST)**
     Although splices are considered an entity in the parent DAG, they do not
     contain the ability to have PRE and POST scripts applied to the entire
-    sub-workflow . This is because once all the splice nodes are parsed and
+    sub-workflow . This is because once all the splice nodes are parsed
     and incorporated into the parent DAG, there is no one node that represents
     the entire sub-workflow like a Sub-DAG. Nodes within the spliced DAG can
     contain scripts.
