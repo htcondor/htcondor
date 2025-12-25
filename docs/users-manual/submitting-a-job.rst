@@ -346,7 +346,7 @@ file.
     in the config file.  Example might be X86_64.
 
 ``$(OPSYS)`` ``$(OPSYSVER)`` ``$(OPSYSANDVER)`` ``$(OPSYSMAJORVER)``
-    These submit file macros are availle at submit time, and mimic
+    These submit file macros are available at submit time, and mimic
     the classad attributes of the same names.
 
 ``$(SUBMIT_FILE)``
@@ -1429,7 +1429,7 @@ If Late Materialization of jobs is paused due to an error in materialization or 
 was used to hold the cluster id, a ``Job Materialization Paused`` event will be written to the UserLog of the
 Cluster ad. This event will indicate the reason for the pause.
 
-When ``condor_release`` is used to release the the cluster id of a Late Materialization job factory,
+When ``condor_release`` is used to release the cluster id of a Late Materialization job factory,
 and materialization  was paused because of a previous use of *condor_hold*, a ``Job Materialization Resumed``
 event will be written to the UserLog of the Cluster ad.
 
@@ -1470,7 +1470,7 @@ because of an error, the ``MODE`` field will show ``Held`` or ``Errs`` to indica
 there is a problem. ``Errs`` indicates a problem reloading the factory, ``Held``
 indicates a problem materializing jobs.
 
-In case of a factory problem, use ``condor_q -factory -long`` to see the the factory information
+In case of a factory problem, use ``condor_q -factory -long`` to see the factory information
 and the ``JobMaterializePauseReason`` attribute.
 
 Removing a Factory
