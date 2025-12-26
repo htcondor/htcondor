@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <charconv>
 
@@ -321,8 +322,8 @@ int DockerAPI::createContainer(
 
 		int num = pcache()->num_groups(user_name);
 		if (num > 0) {
-			gid_t groups[num];
-			if (pcache()->get_groups(user_name, num, groups)) {
+			std::vector<gid_t> groups(num);
+			if (pcache()->get_groups(user_name, num, groups.data())) {
 				for (int i = 0; i < num; i++) {
 					runArgs.AppendArg("--group-add");
 					std::string suppGroup;
