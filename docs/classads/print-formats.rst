@@ -66,7 +66,7 @@ column headings.
 The optional ``Query Type`` qualifier have the following keywords:
 
   ``FROM AUTOCLUSTER``
-    Query the Schedd's default auotcluster set.
+    Query the Schedd's default autocluster set.
 
   ``UNIQUE``
     Query the Schedd for newly built autocluster based on the unique
