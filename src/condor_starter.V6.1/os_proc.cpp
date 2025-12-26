@@ -1252,6 +1252,11 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		// nsenter itself uses _CONDOR_SCRATCH_DIR to decide where the
 		// home directory is, so leave this one behind, set to the
 		// old non-prefixed value
+		//
+		// But if STARTER_NESTED_SCRATCH is true, we need to append /scratch
+		if (param_boolean("STARTER_NESTED_SCRATCH",false)) {
+			target_dir += "/scratch";
+		}
 		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
 	}
 
