@@ -102,7 +102,7 @@ send it along with your job by including the following in the submit file:
     transfer_plugins = custommethod=custommethod_plugin.py
     transfer_output_files = custommethod://path/to/file1, custommethod://path/to/file2
 
-When the job arrives at an exeuction point, it will know to use the plug-in
+When the job arrives at an execution point, it will know to use the plug-in
 script provided to transfer these URLs.  If your ``custommethod://`` protocol
 is already supported at your execution point, the plugin provided in your
 submit file will take precedence.
@@ -511,7 +511,7 @@ Note that use of the ClassAd ``userMap`` function in a scope template
 expression is not currently supported.
 
 You can configure HTCondor to generate several different SciTokens,
-each with a seperate set of properties. First, pick a name for each
+each with a separate set of properties. First, pick a name for each
 type of SciToken and set ``LOCAL_CREDMON_PROVIDER_NAMES`` to the list
 of names.
 
@@ -688,7 +688,7 @@ that would like to authenticate as the AFS user condor.
 
 However, there is support for HTCondor to manage kerberos tickets
 for users' jobs, such that a running job can access a valid kerberos
-ticket to autheticate to kerberified services such as AFS and GSSAPI.
+ticket to authenticate to kerberified services such as AFS and GSSAPI.
 
 Setting up Kerberos, AFS usage for running jobs
 '''''''''''''''''''''''''''''''''''''''''''''''
@@ -756,7 +756,7 @@ have valid credentials and it should NOT try to perform any actions on that
 user’s behalf. The Credential Monitor does not need to do anything when an
 uberticket is removed from the credential directory
 
-Once the job is about to start runnning on the execute side, The condor_master
+Once the job is about to start running on the execute side, The condor_master
 on the execute machine will launch the Credential Monitor as root to maintain
 the user’s credentials on the execute side. There will be one Credential
 Monitor per machine shared by all users. The Credential Monitor takes a
@@ -767,7 +767,8 @@ flag to that program is “<directory_to_monitor>”. If the Credential Monitor
 exits for any reason, it will be restarted by the condor_master after a short
 delay. The exit status of the Credenital Monitor is logged but is otherwise
 ignored. The Credential Monitor must handle a SIGHUP signal which informs it
-that the contents of the directory it is monitoring have changed and it sho
+that the contents of the directory it is monitoring have changed and it should
+rescan the directory and perform whatever actions are necessary.
 
 The condor_starter will atomically place credentials into that directory when
 the user has jobs scheduled to run on that execute machine, and will remove

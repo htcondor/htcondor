@@ -145,12 +145,12 @@ variables for the GPU runtime to use.
   :index:`CUDA_VISIBLE_DEVICES<pair: CUDA_VISIBLE_DEVICES; environment variables for jobs>`
   :index:`NVIDIA_VISIBLE_DEVICES<pair: NVIDIA_VISIBLE_DEVICES; environment variables for jobs>`
   are set to the names of the GPUs assigned to this job.  The job should NEVER change these,
-  but they may be useful for debuggging or logging
+  but they may be useful for debugging or logging
 
 - ``_CONDOR_CREDS``
   :index:`_CONDOR_CREDS<pair: _CONDOR_CREDS; environment variables for jobs>`
   _CONDOR_CREDS is an environment variable that is set to the path of a directory
-  that contains any transfered tokens or x509 credentials for the job.
+  that contains any transferred tokens or x509 credentials for the job.
   This directory is create by HTCondor and is unique to the job. If the job
   uses no credentials, this variable will not be set.
   

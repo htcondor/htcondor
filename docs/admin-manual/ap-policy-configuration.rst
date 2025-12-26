@@ -664,7 +664,7 @@ the AP, and onto an http server.  If one http server isn't sufficient there are
 many methods for scaling http servers to handle additional load.
 
 Limiting CPU or I/O bound processing on the AP
-'''''''''''''''''''''''''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''''''''
 
 The machine the *condor_schedd* runs on is typically a machine users can log
 into, to prepare and submit jobs.  Sometimes, users will start long-running,

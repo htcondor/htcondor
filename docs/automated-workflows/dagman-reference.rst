@@ -199,7 +199,7 @@ Special Files
 ^^^^^^^^^^^^^
 
 :dag-cmd-def:`DOT` (see :ref:`Full Description<visualizing-dags-with-dot>`)
-    Inform DAGMan to produce a Graphiz Dot file for visualizing a DAG.
+    Inform DAGMan to produce a Graphviz Dot file for visualizing a DAG.
 
     .. code-block:: condor-dagman
 

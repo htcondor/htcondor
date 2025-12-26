@@ -410,7 +410,7 @@ Rescue for Parse Failure
 
 When using the **-DumpRescue** flag for :tool:`condor_submit_dag` or
 :tool:`condor_dagman`, DAGMan will produce a special Rescue DAG file
-if a the parsing of DAG description files fail. This special Rescue DAG file
+if the parsing of DAG description files fail. This special Rescue DAG file
 will contain whatever DAGMan has successfully parsed up to the point of
 failure. This may be helpful for debugging parse errors with complex DAG's.
 Especially DAG's using splices.
@@ -421,7 +421,7 @@ the file is named ``<dag file>.parse_failed``. Further more, the parse failure
 rescue DAG contains the :dag-cmd:`REJECT` command which prevents the parse failure
 Rescue DAG from being executed by DAGMan. This is because the special Rescue
 DAG is written in the full format regardless of :macro:`DAGMAN_WRITE_PARTIAL_RESCUE`.
-Due to the nature of the full Recuse file being syntactically correct DAG
+Due to the nature of the full Rescue file being syntactically correct DAG
 file, it will be perceived as a successfully executed workflow despite
 being an incomplete DAG.
 

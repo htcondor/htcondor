@@ -61,11 +61,11 @@ in ``/etc/apt/keyrings/htcondor.asc``
 Debian 12 and 13
 ################
 
-* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-bookworm.list>`_
-* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-trixie.list>`_
+* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-bookworm.list>`__
+* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-trixie.list>`__
 
 Ubuntu 22.04 and 24.04
 ######################
 
-* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.x-jammy.list>`_
+* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.x-jammy.list>`__
 * Ubuntu 24.04 (noble numbat): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.x-noble.list>`_

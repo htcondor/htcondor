@@ -595,7 +595,7 @@ statement. Multiple :subcom:`queue` statements are not permitted.
 DAGMan does allow the submission of one or more jobs when submitting a node's
 submit description described in an external file. However, it is recommended that a
 node only contains a single job to a cluster because DAGMan treats the
-an entire list of jobs associated with a single node as one entity. Meaning,
+entire list of jobs associated with a single node as one entity. Meaning,
 one job failure will result in the entire list of jobs being considered failed.
 Once declared as failed, the remaining jobs associated with the node will be
 removed from the queue.
@@ -614,7 +614,7 @@ referable by the job submit description:
 
 - **JOB**: The node name of which these jobs belong.
 - **RETRY**: The current retry attempt number. First execution is 0.
-- **DAGManJobId**: The jobs associtated :ad-attr:`DAGManJobId`.
+- **DAGManJobId**: The jobs associated :ad-attr:`DAGManJobId`.
 - **DAG_STATUS**: The current DAG status as described by :ad-attr:`DAG_Status`
   (Intended for Final Node)
 - **FAILED_COUNT**: The current number of failed nodes in the DAG
