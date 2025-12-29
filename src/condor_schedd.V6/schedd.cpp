@@ -2960,6 +2960,9 @@ Scheduler::act_on_ocu_query(const ClassAd & /*request*/) {
 	for (const auto &[_,oi]: OwnersInfo) {
 		for (const auto &ocu: oi->ocus) {
 			results.emplace_back(ocu.ad);
+			std::string state;
+			state = ocu.state;
+			results.back().Assign(ATTR_OCU_STATE, state);
 		}
 	}
 	return results;
@@ -9706,6 +9709,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 					dprintf(D_FULLDEBUG, "Assigning match %s to OCU %d\n", slot->description(), ocu->ocu_id);
 					ocu->mrec = slot;
 				}
+				ocu->state = 'I'; // mark OCU as Idle
 			} else {
 				scheduler.StartJob(slot);
 			}
@@ -13398,6 +13402,7 @@ Scheduler::child_exit(int pid, int status)
 					ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
 					ocu_claimed_time += now - srec->match->entered_current_status;
 					ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+					ocu->state = 'I';
 				}
 			}
 		}
@@ -16233,6 +16238,7 @@ Scheduler::unlinkMrec(match_rec* match)
 			ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
 			ocu_claimed_time += time(0) - match->entered_current_status;
 			ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			ocu->state = 'U';
 		}
 		dirtyJobQueue();
 	}
