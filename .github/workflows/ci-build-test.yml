@@ -70,15 +70,21 @@ jobs:
           su root -c 'cat /sys/fs/cgroup/$(awk -F: "{print \$3}" < /proc/self/cgroup)/memory.peak'
           free -h
 
-      # Commented out, as the output is larger than our artifact limits quota
-      #- name: Upload All on Failure
-      #  if: failure()
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    name: test-output-for-${{ matrix.instance.abbrev }}
-      #    path: __build/
-      #    retention-days: 2
-      #    overwrite: true
+      # The upload on fail step frequently fails because running condor
+      # processes are mutating files as upload tries to read them, which
+      # breaks the upload. So we kill off condor processes first.
+      - name: Kill off processes
+        run: |
+          ps auxww | grep [Cc]ondor_ | awk '{print $2}' | xargs -r kill -9
+
+      - name: Upload All on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-for-${{ matrix.instance.abbrev }}
+          path: __build/src/condor_tests
+          retention-days: 2
+          overwrite: true
 
       - name: Upload Artifact with Test Results on failure or success
         # Always upload, even if build or tests fail
@@ -135,13 +141,65 @@ jobs:
       - name: build
         run: (cmake --build . --verbose --config Release --parallel 4)
 
+  ubuntunative:
+    runs-on: ubuntu-latest
+
+    # Use htcondor build containers for the real work
+    container:
+      image: htcondor/nmi-build:x86_64_Ubuntu24-25050000
+      env:
+        OMP_NUM_THREADS: 4
+      options: --cpus 4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Ubuntu Native Package
+        run: ./build-on-linux.sh .
+
+      - name: Upload .debs
+        uses: actions/upload-artifact@v4
+        with:
+          name: debs
+          path: |
+            *.deb
+            /usr/local/condor/externals/pelican*
+          if-no-files-found: ignore
+          retention-days: 1
+          overwrite: true
+
+  ubuntuinstall:
+    needs: ubuntunative
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download .debs
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Install HTCondor from .debs
+        run: |
+          sudo apt update
+          # Dunno why but we need to copy them to current dir to install
+          sudo cp __w/htcondor/htcondor/condor_*.deb __w/htcondor/htcondor/mini*.deb usr/local/condor/externals/pelican*.deb .
+          sudo apt install -y ./*.deb
+
+      - name: Verify condor installation
+        run: |
+          sudo condor_master
+          condor_version
+          sleep 5
+          condor_status
+
   dashboard:
     needs: [build, macbuild, winbuild]
     runs-on: ubuntu-latest
     if: always()
     steps:
-         - name: Download all artifacts
+         - name: Download test xml output artifacts
            uses: actions/download-artifact@v4
+           with:
+             pattern: tests-for-*
 
          - name: create_summary
            shell: python
