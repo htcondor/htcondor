@@ -251,7 +251,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
 
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
     if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
         $INSTALL procps
