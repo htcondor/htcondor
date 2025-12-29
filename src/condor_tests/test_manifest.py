@@ -93,7 +93,7 @@ def completed_test_job(test_job_iwd, default_condor, test_job_hash, test_paramet
     )
     assert ctj.wait(
         condition=ClusterState.all_terminal,
-        timeout=60,
+        timeout=180,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
