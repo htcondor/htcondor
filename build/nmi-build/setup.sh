@@ -258,7 +258,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     else
         $INSTALL procps-ng
     fi
-    if [ $ID != 'amzn' ]; then
+    if [ $ID != 'amzn' ] && [ $ID != 'sles' ]; then
         $INSTALL apptainer
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
