@@ -164,6 +164,7 @@ jobs:
           path: |
             *.deb
             /usr/local/condor/externals/pelican*
+          if-no-files-found: ignore
           retention-days: 1
           overwrite: true
 
