@@ -76,6 +76,7 @@ add_subdirectory(gpu)
 add_subdirectory(python-bindings)
 add_subdirectory(rvgahp)
 add_subdirectory(placementd)
+add_subdirectory(contention)
 
 #if (BUILD_TESTING AND NOT WINDOWS)
 if (BUILD_TESTING)
