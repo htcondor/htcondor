@@ -217,6 +217,8 @@ fi
 # Use fancy new lief-patchelf
 if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
     $INSTALL lief-patchelf
+else
+    $INSTALL patchelf
 fi
 
 # Add in the ninja build system
