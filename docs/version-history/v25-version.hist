@@ -48,6 +48,12 @@
   plug-in.
   :jira:`3410`
 
+- Fixed a bug where :tool:`condor_ssh_to_job` when running into a
+  singularity or apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
+  set to true would start out with the current directory one higher than
+  the job.
+  :jira:`3467`
+
 - Fixed a bug where docker universe jobs would bring back a
   file named ``.docker_stderror`` back to the AP after job completion.
   :jira:`3424`
