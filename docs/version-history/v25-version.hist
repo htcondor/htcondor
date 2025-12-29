@@ -7,9 +7,9 @@
 
 - The option for the *condor_schedd* to keep job event log files open for
   a period of time has been removed.
-  This was controlled by configuration parameters
-  :macro:`USERLOG_FILE_CACHE_MAX` and
-  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
+  This was controlled by the now-removed configuration parameters
+  USERLOG_FILE_CACHE_MAX and USERLOG_FILE_CACHE_CLEAR_INTERVAL.
+  It was disabled by default.
   :jira:`3367`
 
 - If a docker universe jobs fails on an execution point because the image

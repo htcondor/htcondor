@@ -417,7 +417,7 @@ Table 4.2: Evaluation examples for the ``=?=`` operator
 
 
 The ``=!=`` operator is similar to the ``!=`` operator. It checks if the
-left hand side operand is not identical in both type and value to the
+left hand side operand is not identical in both type and value to
 the right hand side operand, returning ``FALSE`` when they are
 identical.
 

@@ -553,7 +553,7 @@ submit command to your submit file, as in the following example:
 
     queue
 
-A dataflow job must meet a number of critera for HTCondor to correctly
+A dataflow job must meet a number of criteria for HTCondor to correctly
 detect if it doesn't need to be run again.
 
 .. warning::

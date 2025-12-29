@@ -179,33 +179,33 @@ Optional parameters are given within square brackets.
     given. 
 
 :classad-function-def:`Boolean member(AnyType m, ListType l)`
-    Returns error if m does not evalute to a scalar, or l does not
-    evaluate to a list.  Otherwise the elements of l are evaluted
+    Returns error if m does not evaluate to a scalar, or l does not
+    evaluate to a list.  Otherwise the elements of l are evaluated
     in order, and if an element is equal to m in the sense of ``==``
     the result of the function is ``True``.  Otherwise the function
     returns false.
 
 :classad-function-def:`Boolean anyCompare(string op, list l, AnyType t)`
-    Returns error if op does not evalute to one of ``<``, ``<=``,
+    Returns error if op does not evaluate to one of ``<``, ``<=``,
     ``==``, ``>``, ``>=``, ``!-``, ``is`` or ``isnt``. Returns error
     if l isn't a list, or t isn't a scalar
-    Otherwise the elements of l are evaluted and compared to t
+    Otherwise the elements of l are evaluated and compared to t
     using the corresponding operator defined by op. If any of
     the members of l evaluate to true, the result is ``True``.
     Otherwise the function returns ``False``.
 
 :classad-function-def:`Boolean allCompare(string op, list l, AnyType t)`
-    Returns error if op does not evalute to one of ``<``, ``<=``,
+    Returns error if op does not evaluate to one of ``<``, ``<=``,
     ``==``, ``>``, ``>=``, ``!-``, ``is`` or ``isnt``. Returns error
     if l isn't a list, or t isn't a scalar
-    Otherwise the elements of l are evaluted and compared to t
+    Otherwise the elements of l are evaluated and compared to t
     using the corresponding operator defined by op. If all of
     the members of l evaluate to true, the result is ``True``.
     Otherwise the function returns ``False``.
 
 :classad-function-def:`Boolean identicalMember(AnyType m, ListType l)`
-    Returns error if m does not evalute to a scalar, or l does not
-    evaluate to a list.  Otherwise the elements of l are evaluted
+    Returns error if m does not evaluate to a scalar, or l does not
+    evaluate to a list.  Otherwise the elements of l are evaluated
     in order, and if an element is equal to m in the sense of ``=?=``
     the result of the function is ``True``.  Otherwise the function
     returns false.
