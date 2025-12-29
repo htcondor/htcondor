@@ -10084,6 +10084,16 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 					ocu_claims++;
 					my_match_ad->Assign(ocu_claim_stat_attr, ocu_claims);
 				}
+
+				// Set OCU state to 'R'unning
+				int ocu_id = -1;
+				my_match_ad->LookupInteger(ATTR_OCU_ID, ocu_id);
+				if (ocu_id != -1) {
+					OCU *ocu = scheduler.getOCU(ocu_id);
+					if (ocu) {
+						ocu->state = 'R';
+					}
+				}
 			}
 			return;
 
