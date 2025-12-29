@@ -50,7 +50,7 @@ URL: https://htcondor.org/
 %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
-
+Source1: %{name}.sysusers.conf
 Source8: htcondor.pp
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -145,6 +145,9 @@ Requires: libuuid
 %endif
 
 BuildRequires: systemd-devel
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+BuildRequires:  systemd-rpm-macros
+%endif
 %if 0%{?suse_version}
 BuildRequires: systemd
 %else
@@ -262,8 +265,8 @@ Requires: apptainer >= 1.4.4
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
-#Provides: user(condor) = 64
-#Provides: group(condor) = 64
+Provides: user(condor) = 64
+Provides: group(condor) = 64
 
 %if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
@@ -525,11 +528,15 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-getent group condor >/dev/null || groupadd -r condor
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+%sysusers_create_package %{name} %{SOURCE1}
+%else
+getent group condor >/dev/null || groupadd --system --gid 64 condor
 getent passwd condor >/dev/null || \
-  useradd -r -g condor -d %_var/lib/condor -s /sbin/nologin \
-    -c "Owner of HTCondor Daemons" condor
+  useradd --system --uid 64 --gid condor --home-dir /var/lib/condor \
+  --shell /usr/sbin/nologin --comment "Owner of HTCondor Daemons" condor
 exit 0
+%endif
 
 
 %prep
@@ -750,6 +757,9 @@ install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.ser
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 
+mkdir -p %{buildroot}%{_sysusersdir}
+install -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/condor.conf
+
 mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 
@@ -802,6 +812,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # % {_unitdir}/condor.socket
+%{_sysusersdir}/condor.conf
 %dir %_datadir/condor/
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
