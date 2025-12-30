@@ -1204,9 +1204,9 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
-	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
+	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsRunning);
 
-	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
+	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
 
