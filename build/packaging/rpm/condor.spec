@@ -265,8 +265,12 @@ Requires: apptainer >= 1.4.4
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+# The RPM macros already makes virtual Provides for user and group
+%else
 Provides: user(condor) = 64
 Provides: group(condor) = 64
+%endif
 
 %if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
