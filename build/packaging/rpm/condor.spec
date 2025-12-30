@@ -145,7 +145,7 @@ Requires: libuuid
 %endif
 
 BuildRequires: systemd-devel
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
 BuildRequires:  systemd-rpm-macros
 %endif
 %if 0%{?suse_version}
@@ -528,7 +528,7 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
 # RPM handles user creation automagically in these versions
 %else
 getent group condor >/dev/null || groupadd --system --gid 64 condor
