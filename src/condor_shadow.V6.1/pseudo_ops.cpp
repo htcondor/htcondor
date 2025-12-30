@@ -49,6 +49,7 @@
 #include <regex>
 
 #include "catalog_utils.h"
+#include "job_ad_instance_recording.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -1151,6 +1152,23 @@ UniShadow::after_common_file_transfer(
 ) {
 	bool success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
+
+
+	// This produces a second record for non-CEDAR transfers, which
+	// is sub-optimal.  We can't, in general (because of simultaneous
+	// transfers) avoid having up to one COMMON record per common files
+	// group, but we should avoid having two.
+	//
+	// The plugin results are transferred before file transfer completes
+	// (from the point of view of code that isn't in the FTO itself),
+	// so only write an entry if here if CEDAR is the _only_ protocol.
+	const ClassAd & statsAd = this->commonFTO->GetInfo().stats;
+	std::string protocols;
+	if( statsAd.LookupString("Protocols", protocols) ) {
+		if( 0 == strcasecmp( protocols.c_str(), "cedar" ) ) {
+			writeAdWithContextToEpoch( & statsAd, jobAd, "COMMON" );
+		}
+	}
 
 	CommonFilesEvent cfFinishEvent;
 	cfFinishEvent.setType( CommonFilesEventType::TransferFinished );

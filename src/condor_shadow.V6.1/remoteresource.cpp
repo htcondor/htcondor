@@ -44,6 +44,7 @@
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "shadow.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -1548,6 +1549,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// attribute name were always just "PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
+
+			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
+				auto stats = shadow->getCommonTransferInfoStats();
+				if( stats ) {
+					dPrintAd( D_ALWAYS, * stats );
+					c.Insert( "TransferCommonStats", (* stats).Copy() );
+				}
+			}
 
 			// Arguably, the epoch log would be easier to parse if the
 			// attribute name were always just "PluginResultList".
