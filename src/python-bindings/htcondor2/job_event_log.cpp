@@ -112,6 +112,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             }
 
             if(! event->formatEvent( event_text, fo )) {
+                delete event;
                 PyErr_SetString( PyExc_HTCondorException, "Failed to convert event to string" );
                 return NULL;
             }
@@ -120,6 +121,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             // Obtain the event data.
             ClassAd * eventAd = event->toClassAd(false);
             if( eventAd == NULL ) {
+                delete event;
                 // This was HTCondorInternalError in version 1.
                 PyErr_SetString( PyExc_HTCondorException, "Failed to convert event to ClassAd" );
                 return NULL;
