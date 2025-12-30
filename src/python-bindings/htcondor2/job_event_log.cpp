@@ -130,6 +130,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             PyObject * pyEventAd = py_new_classad2_classad(eventAd->Copy());
             delete eventAd;
 
+            delete event;
             return Py_BuildValue( "zN", event_text.c_str(), pyEventAd );
         }
 
