@@ -488,6 +488,27 @@ class FileTransfer final: public Service {
 	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 
+	// Helper function to handle URL downloads with optional metadata ClassAd
+	int HandleUrlDownload(
+		CondorError& errstack,
+		const std::string& URL,
+		const std::string& fullname,
+		ClassAd* url_metadata,
+		bool all_transfers_succeeded,
+		int rc,
+		ClassAd* thisTransfer,
+		ClassAd& pluginStatsAd,
+		const std::string& LocalProxyName,
+		bool& isDeferredTransfer,
+		bool& file_transfer_plugin_timed_out,
+		bool& file_transfer_plugin_exec_failed,
+		int& plugin_exit_code,
+		std::map<std::string, std::vector<ClassAd>>& deferredTransfers
+#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+		, std::map<int, ClassAd>& deferredTransfersById
+#endif
+	);
+
 	TransferPluginResult InvokeMultipleFileTransferPlugin(
 		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
 		FileTransferPlugin & plugin,

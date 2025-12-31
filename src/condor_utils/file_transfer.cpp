@@ -101,7 +101,8 @@ enum class TransferSubCommand {
 	Unknown = -1,
 	UploadUrl = 7,
 	ReuseInfo = 8,
-	SignUrls = 9
+	SignUrls = 9,
+	DownloadUrlWithAd = 10
 };
 
 #define COMMIT_FILENAME ".ccommit.con"
@@ -141,6 +142,59 @@ const char IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
  */
 class FileTransferItem {
 public:
+	// Copy constructor - needed for vector copy construction
+	// Deep copies the ClassAd if present
+	// The two places where copy assignment are used are:
+	// - DoCheckpointUploadFromStarter
+	// - DoCheckpointUploadFromShadow
+	// - DoNormalUpload
+	FileTransferItem(const FileTransferItem& other)
+		: m_src_scheme(other.m_src_scheme),
+		  m_dest_scheme(other.m_dest_scheme),
+		  m_src_name(other.m_src_name),
+		  m_dest_dir(other.m_dest_dir),
+		  m_dest_url(other.m_dest_url),
+		  m_xfer_queue(other.m_xfer_queue),
+		  is_domainsocket(other.is_domainsocket),
+		  is_directory(other.is_directory),
+		  is_symlink(other.is_symlink),
+		  m_file_mode(other.m_file_mode),
+		  m_file_size(other.m_file_size)
+	{
+		if (other.m_url_ad) {
+			m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
+		}
+	}
+
+	// Copy assignment operator
+	FileTransferItem& operator=(const FileTransferItem& other) {
+		if (this != &other) {
+			m_src_scheme = other.m_src_scheme;
+			m_dest_scheme = other.m_dest_scheme;
+			m_src_name = other.m_src_name;
+			m_dest_dir = other.m_dest_dir;
+			m_dest_url = other.m_dest_url;
+			m_xfer_queue = other.m_xfer_queue;
+			is_domainsocket = other.is_domainsocket;
+			is_directory = other.is_directory;
+			is_symlink = other.is_symlink;
+			m_file_mode = other.m_file_mode;
+			m_file_size = other.m_file_size;
+			if (other.m_url_ad) {
+				m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
+			} else {
+				m_url_ad.reset();
+			}
+		}
+		return *this;
+	}
+
+	// Default constructor, destructor, and move operations
+	FileTransferItem() = default;
+	~FileTransferItem() = default;
+	FileTransferItem(FileTransferItem&&) = default;
+	FileTransferItem& operator=(FileTransferItem&&) = default;
+
 	const std::string &srcName() const { return m_src_name; }
 	const std::string &destDir() const { return m_dest_dir; }
 	const std::string &destUrl() const { return m_dest_url; }
@@ -161,6 +215,10 @@ public:
 	bool hasQueue() const { return !m_xfer_queue.empty(); }
 	condor_mode_t fileMode() const {return m_file_mode;}
 	void setFileMode(condor_mode_t new_mode) {m_file_mode = new_mode;}
+
+	// Optional ClassAd for URL transfers (e.g., Pelican with token)
+	ClassAd* getUrlAd() const { return m_url_ad.get(); }
+	void setUrlAd(std::unique_ptr<ClassAd> ad) { m_url_ad = std::move(ad); }
 
 	void setSrcName(const std::string &src) {
 		m_src_name = src;
@@ -271,6 +329,7 @@ private:
 	bool is_symlink{false};
 	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
 	filesize_t m_file_size{0};
+	std::unique_ptr<ClassAd> m_url_ad; // For URL transfers with metadata
 };
 
 void
@@ -2374,6 +2433,114 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
     return i;
 
+// Helper function to handle URL downloads with optional metadata ClassAd
+// Returns rc (0 on success, GET_FILE_PLUGIN_FAILED on error)
+int
+FileTransfer::HandleUrlDownload(
+	CondorError& errstack,
+	const std::string& URL,
+	const std::string& fullname,
+	ClassAd* url_metadata,  // Optional metadata to copy into transfer job
+	bool all_transfers_succeeded,
+	int rc,
+	ClassAd* thisTransfer,
+	ClassAd& pluginStatsAd,
+	const std::string& LocalProxyName,
+	bool& isDeferredTransfer,
+	bool& file_transfer_plugin_timed_out,
+	bool& file_transfer_plugin_exec_failed,
+	int& plugin_exit_code,
+	std::map<std::string, std::vector<ClassAd>>& deferredTransfers
+#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+	, std::map<int, ClassAd>& deferredTransfersById
+#endif
+)
+{
+	if( !I_support_filetransfer_plugins ) {
+		// we shouldn't get here, because a job shouldn't match to a machine that won't
+		// support URL transfers if the job needs URL transfers.  but if we do get here,
+		// give a nice error message.
+		errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer URL file = %s .", UrlSafePrint(URL));
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", UrlSafePrint(URL));
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
+		// Determine which plugin to invoke, and whether it supports multiple file transfer.
+		FileTransferPlugin & plugin = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
+	   #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+	   #else
+		std::string pluginPath = plugin.path;
+	   #endif
+		bool thisPluginSupportsMultifile = plugin.multi_file();
+
+		if( thisPluginSupportsMultifile ) {
+			// Do not send the file right now!
+			// Instead, add it to a deferred list, which we'll deal with
+			// after the main download loop.
+			dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s until end of download loop.\n", UrlSafePrint(URL) );
+			thisTransfer->Clear();
+			thisTransfer->InsertAttr( "Url", URL );
+			thisTransfer->InsertAttr( "LocalFileName", fullname );
+
+			// Copy all attributes from the metadata ClassAd if provided
+			if (url_metadata) {
+				thisTransfer->Update(*url_metadata);
+			}
+
+			// Add this result to our deferred transfers map.
+		#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+			auto found = deferredTransfersById.emplace(plugin.id, * thisTransfer);
+			if ( ! found.second) {
+				// key already existed, so append the new transfer string
+				found.first->second += thisTransferString;
+			}
+		#else
+			if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
+				std::vector<ClassAd> entry;
+				entry.push_back(* thisTransfer);
+				deferredTransfers.insert( std::make_pair( pluginPath, entry ) );
+			}
+			else {
+				deferredTransfers[pluginPath].push_back( * thisTransfer );
+			}
+		#endif
+
+			isDeferredTransfer = true;
+		}
+	}
+
+	if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
+		dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
+
+		// Copy metadata into pluginStatsAd if provided
+		if (url_metadata) {
+			pluginStatsAd.Update(*url_metadata);
+		}
+
+		int exit_status = 0;
+		TransferPluginResult result = InvokeFileTransferPlugin(errstack, exit_status, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
+		// If transfer failed, set rc to error code that ReliSock recognizes
+		switch( result ) {
+			case TransferPluginResult::TimedOut:
+				file_transfer_plugin_timed_out = true;
+				[[fallthrough]];
+			case TransferPluginResult::InvalidCredentials:
+			case TransferPluginResult::Error:
+				rc = GET_FILE_PLUGIN_FAILED;
+				plugin_exit_code = exit_status;
+				break;
+			case TransferPluginResult::ExecFailed:
+				file_transfer_plugin_exec_failed = true;
+				break;
+			case TransferPluginResult::Success:
+				break;
+		}
+	}
+
+	return rc;
+}
+
 filesize_t
 FileTransfer::DoDownload(ReliSock *s)
 {
@@ -3053,6 +3220,34 @@ FileTransfer::DoDownload(ReliSock *s)
 				}
 				s->decode();
 				continue;
+			} else if (subcommand == TransferSubCommand::DownloadUrlWithAd) {
+				// Receive URL and ClassAd for URL transfers with metadata
+				std::string URL;
+				if (!s->code(URL)) {
+					dprintf(D_ERROR, "DoDownload: Failed to receive URL with ClassAd at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				ClassAd url_ad;
+				if (!getClassAd(s, url_ad)) {
+					dprintf(D_ERROR, "DoDownload: Failed to receive ClassAd for URL at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				dprintf(D_FULLDEBUG, "DoDownload: Received URL with ClassAd: %s\n", UrlSafePrint(URL));
+
+				// Use helper to handle the URL download, passing the ClassAd metadata
+				rc = HandleUrlDownload(
+					errstack,
+					URL, fullname, &url_ad,
+					all_transfers_succeeded, rc,
+					thisTransfer.get(), pluginStatsAd, LocalProxyName, isDeferredTransfer,
+					file_transfer_plugin_timed_out, file_transfer_plugin_exec_failed,
+					plugin_exit_code, deferredTransfers
+				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+					, deferredTransfers
+				#endif
+				);
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
@@ -3075,79 +3270,18 @@ FileTransfer::DoDownload(ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			if( !I_support_filetransfer_plugins ) {
-				// we shouldn't get here, because a job shouldn't match to a machine that won't
-				// support URL transfers if the job needs URL transfers.  but if we do get here,
-				// give a nice error message.
-				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer URL file = %s .", UrlSafePrint(URL));  // URL file in err msg
-				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", UrlSafePrint(URL));
-				rc = GET_FILE_PLUGIN_FAILED;
-			}
-
-			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
-
-				// Determine which plugin to invoke, and whether it supports multiple
-				// file transfer.
-				FileTransferPlugin & plugin = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
-			   #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-			   #else
-				std::string pluginPath = plugin.path;
-			   #endif
-				bool thisPluginSupportsMultifile = plugin.multi_file();
-
-				if( thisPluginSupportsMultifile ) {
-					// Do not send the file right now!
-					// Instead, add it to a deferred list, which we'll deal with
-					// after the main download loop.
-					dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
-						" until end of download loop.\n", UrlSafePrint(URL) );
-					thisTransfer->Clear();
-					thisTransfer->InsertAttr( "Url", URL );
-					thisTransfer->InsertAttr( "LocalFileName", fullname );
-
-					// Add this result to our deferred transfers map.
-				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-					auto found = deferredTransfers.emplace(plugin.id, * thisTransfer.get());
-					if ( ! found.second) {
-						// key already existed, so append the new transfer string
-						found.first->second += thisTransferString;
-					}
-				#else
-					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
-						std::vector<ClassAd> entry;
-						entry.push_back(* thisTransfer);
-						deferredTransfers.insert( std::make_pair( pluginPath, entry ) );
-					}
-					else {
-						deferredTransfers[pluginPath].push_back( * thisTransfer );
-					}
-				#endif
-
-					isDeferredTransfer = true;
-				}
-			}
-
-			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
-				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
-				int exit_status = 0;
-				TransferPluginResult result = InvokeFileTransferPlugin(errstack, exit_status, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
-				// If transfer failed, set rc to error code that ReliSock recognizes
-				switch( result ) {
-					case TransferPluginResult::TimedOut:
-						file_transfer_plugin_timed_out = true;
-						[[fallthrough]];
-					case TransferPluginResult::InvalidCredentials:
-					case TransferPluginResult::Error:
-						rc = GET_FILE_PLUGIN_FAILED;
-						plugin_exit_code = exit_status;
-						break;
-					case TransferPluginResult::ExecFailed:
-						file_transfer_plugin_exec_failed = true;
-						break;
-					case TransferPluginResult::Success:
-						break;
-				}
-			}
+			// Use helper to handle the URL download with no metadata
+			rc = HandleUrlDownload(
+				errstack,
+				URL, fullname, nullptr,
+				all_transfers_succeeded, rc,
+				thisTransfer.get(), pluginStatsAd, LocalProxyName, isDeferredTransfer,
+				file_transfer_plugin_timed_out, file_transfer_plugin_exec_failed,
+				plugin_exit_code, deferredTransfers
+			#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+				, deferredTransfers
+			#endif
+			);
 
 		} else if ( xfer_command == TransferCommand::XferX509 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -5128,6 +5262,14 @@ FileTransfer::uploadFileList(
 
 		if ( fileitem.isSrcUrl() ) {
 			file_command = TransferCommand::DownloadUrl;
+			// If this URL has an associated ClassAd,
+			// use the new protocol with TransferCommand::Other
+			if (fileitem.getUrlAd() != nullptr) {
+				file_command = TransferCommand::Other;
+				file_subcommand = TransferSubCommand::DownloadUrlWithAd;
+				dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:10 for URL with ClassAd: %s\\n",
+				        UrlSafePrint(filename));
+			}
 		}
 
 		int multifilePluginId = -1;
@@ -8547,7 +8689,7 @@ FileTransfer::addSandboxRelativePath(
 			fti.setDestDir( parent );
 			fti.setDirectory( true );
 			// dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
-			ftl.emplace_back( fti );
+			ftl.emplace_back( std::move(fti) );
 
 			pathsAlreadyPreserved.insert( partialPath );
 		}
@@ -8559,7 +8701,7 @@ FileTransfer::addSandboxRelativePath(
 	fti.setSrcName( source );
 	// At some point, we'd like to be able to store target _name_, too.
 	fti.setDestDir( condor_dirname( destination.c_str() ) );
-	ftl.emplace_back(fti);
+	ftl.emplace_back(std::move(fti));
 }
 
 void
