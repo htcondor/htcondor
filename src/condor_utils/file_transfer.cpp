@@ -106,7 +106,9 @@ enum class TransferSubCommand {
 	UploadUrl = 7,
 	ReuseInfo = 8,
 	SignUrls = 9,
-	DownloadUrlWithAd = 10
+	DownloadUrlWithAd = 10,
+	RequestUrlMetadata = 11,
+	CheckUrlSchemes = 12
 };
 
 #define COMMIT_FILENAME ".ccommit.con"
@@ -367,6 +369,151 @@ struct upload_info {
 struct download_info {
 	FileTransfer *myobj;
 };
+
+// ============================================================================
+// Generic URL transfer metadata request support
+// ============================================================================
+
+// Request transfer metadata (token, CA, etc.) for a given URL from the remote side
+// This is a generic protocol function that can be used for any URL-based transfer
+// (Pelican, S3, etc.) that requires metadata from the remote peer.
+// Returns true on success with metadata in the ClassAd, false on failure
+static bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg) {
+	if (!sock) {
+		error_msg = "No socket provided";
+		return false;
+	}
+
+	// Send the TransferCommand::Other header
+	if (!sock->snd_int(static_cast<int>(TransferCommand::Other), false) ||
+	    !sock->end_of_message()) {
+		error_msg = "Failed to send TransferCommand";
+		return false;
+	}
+
+	// Send a dummy filename (required by protocol)
+	if (!sock->put("_metadata_request_") || !sock->end_of_message()) {
+		error_msg = "Failed to send filename";
+		return false;
+	}
+
+	// Send the ClassAd with subcommand and URL
+	ClassAd request_ad;
+	request_ad.Assign("SubCommand", (int)TransferSubCommand::RequestUrlMetadata);
+	request_ad.Assign("Url", url);
+
+	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) {
+		error_msg = "Failed to send request ClassAd";
+		return false;
+	}
+
+	// Receive the response ClassAd
+	sock->decode();
+	if (!getClassAd(sock, metadata_ad) || !sock->end_of_message()) {
+		error_msg = "Failed to receive metadata ClassAd";
+		return false;
+	}
+
+	// Check if there was an error
+	std::string remote_error;
+	if (metadata_ad.LookupString("Error", remote_error)) {
+		error_msg = "Remote error: " + remote_error;
+		return false;
+	}
+
+	return true;
+}
+
+// Check if the peer supports the given URL schemes
+// Sends a list of desired schemes and receives back a list of supported schemes
+// Returns true if all desired schemes are supported, false otherwise
+static bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg) {
+	if (!sock) {
+		error_msg = "No socket provided";
+		return false;
+	}
+
+	if (desired_schemes.empty()) {
+		// No schemes to check, trivially true
+		return true;
+	}
+
+	// Send the TransferCommand::Other header
+	if (!sock->snd_int(static_cast<int>(TransferCommand::Other), false) ||
+	    !sock->end_of_message()) {
+		error_msg = "Failed to send TransferCommand";
+		return false;
+	}
+
+	// Send a dummy filename (required by protocol)
+	if (!sock->put("_scheme_check_") || !sock->end_of_message()) {
+		error_msg = "Failed to send filename";
+		return false;
+	}
+
+	// Build ClassAd with desired schemes
+	ClassAd request_ad;
+	request_ad.Assign("SubCommand", (int)TransferSubCommand::CheckUrlSchemes);
+
+	classad::ExprList scheme_list;
+	for (const auto& scheme : desired_schemes) {
+		scheme_list.push_back(classad::Literal::MakeString(scheme));
+	}
+	request_ad.Insert("DesiredSchemes", scheme_list.Copy());
+
+	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) {
+		error_msg = "Failed to send request ClassAd";
+		return false;
+	}
+
+	// Receive the response ClassAd
+	sock->decode();
+	ClassAd response_ad;
+	if (!getClassAd(sock, response_ad) || !sock->end_of_message()) {
+		error_msg = "Failed to receive response ClassAd";
+		return false;
+	}
+
+	// Check if there was an error
+	std::string remote_error;
+	if (response_ad.LookupString("Error", remote_error)) {
+		error_msg = "Remote error: " + remote_error;
+		return false;
+	}
+
+	// Extract supported schemes from response
+	classad::Value value;
+	if (!response_ad.EvaluateAttr("SupportedSchemes", value) ||
+	    (value.GetType() != classad::Value::SLIST_VALUE &&
+	     value.GetType() != classad::Value::LIST_VALUE)) {
+		error_msg = "Response missing SupportedSchemes list";
+		return false;
+	}
+
+	classad_shared_ptr<classad::ExprList> supported_list;
+	value.IsSListValue(supported_list);
+
+	// Just take the strings from the list
+	std::unordered_set<std::string> supported_schemes;
+	for (auto expr : (*supported_list)) {
+		std::string scheme_value;
+		classad::Value val;
+		if (expr->Evaluate(val) && val.IsStringValue(scheme_value)) {
+			supported_schemes.insert(scheme_value);
+		}
+	}
+
+	// Check if all desired schemes are supported
+	for (const auto& scheme : desired_schemes) {
+		if (supported_schemes.find(scheme) == supported_schemes.end()) {
+			formatstr(error_msg, "URL scheme '%s' not supported by peer", scheme.c_str());
+			return false;
+		}
+	}
+
+	dprintf(D_FULLDEBUG, "CheckUrlSchemeSupport: All desired schemes are supported\n");
+	return true;
+}
 
 // ============================================================================
 // Pelican file transfer support
@@ -3542,6 +3689,98 @@ FileTransfer::DoDownload(ReliSock *s)
 					return_and_resetpriv( -1 );
 				}
 				s->decode();
+				continue;
+			} else if (subcommand == TransferSubCommand::CheckUrlSchemes) {
+				// Peer is checking which URL schemes we support
+				dprintf(D_FULLDEBUG, "DoDownload: Received CheckUrlSchemes request\n");
+
+				// Extract desired schemes from request
+				classad::Value value;
+				std::vector<std::string> desired_schemes;
+				if (file_info.EvaluateAttr("DesiredSchemes", value) &&
+				    (value.GetType() == classad::Value::SLIST_VALUE ||
+				     value.GetType() == classad::Value::LIST_VALUE)) {
+					classad_shared_ptr<classad::ExprList> scheme_list;
+					value.IsSListValue(scheme_list);
+					for (auto expr : (*scheme_list)) {
+						std::string scheme_value;
+						classad::Value val;
+						if (expr->Evaluate(val) && val.IsStringValue(scheme_value)) {
+							desired_schemes.push_back(scheme_value);
+						}
+					}
+				}
+
+				// Build list of supported schemes based on available plugins
+				std::vector<std::string> supported_schemes;
+				for (const auto& scheme : desired_schemes) {
+					// Check if we have a plugin for this scheme
+					bool has_plugin = false;
+					for (const auto& plugin : plugin_ads) {
+						std::string plugin_methods;
+						if (plugin.ad.LookupString("SupportedMethods", plugin_methods) &&
+						    plugin_methods.find(scheme) != std::string::npos) {
+							has_plugin = true;
+							break;
+						}
+					}
+					if (has_plugin) {
+						supported_schemes.push_back(scheme);
+					}
+				}
+
+				// Build response ClassAd
+				ClassAd response_ad;
+				classad::ExprList supported_list;
+				for (const auto& scheme : supported_schemes) {
+					supported_list.push_back(classad::Literal::MakeString(scheme));
+				}
+				response_ad.Insert("SupportedSchemes", supported_list.Copy());
+
+				// Send response
+				if (!s->end_of_message()) {
+					dprintf(D_ERROR, "DoDownload: exiting at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				s->encode();
+				if (!putClassAd(s, response_ad) || !s->end_of_message()) {
+					dprintf(D_ERROR, "DoDownload: Failed to send scheme check response at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				s->decode();
+				rc = 0;
+				continue;
+			} else if (subcommand == TransferSubCommand::RequestUrlMetadata) {
+				// Starter is requesting transfer metadata for a URL
+				dprintf(D_FULLDEBUG, "DoDownload: Received RequestUrlMetadata\n");
+
+				std::string url;
+				if (!file_info.LookupString("Url", url)) {
+					dprintf(D_ALWAYS, "DoDownload: RequestUrlMetadata missing Url\n");
+					rc = 0;
+					continue;
+				}
+
+				dprintf(D_FULLDEBUG, "DoDownload: Request for metadata for URL: %s\n", UrlSafePrint(url));
+
+				ClassAd response_ad;
+
+				// Send response back to starter
+				if (!s->end_of_message()) {
+					dprintf(D_ERROR, "DoDownload: exiting at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				s->encode();
+				if (!putClassAd(s, response_ad) || !s->end_of_message()) {
+					dprintf(D_ERROR, "DoDownload: Failed to send metadata response at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				s->decode();
+				rc = 0;
 				continue;
 			} else if (subcommand == TransferSubCommand::DownloadUrlWithAd) {
 				// Receive URL and ClassAd for URL transfers with metadata
