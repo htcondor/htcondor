@@ -593,14 +593,17 @@ if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
-    if ( APPLE )
-        set( SFTP_SERVER "/usr/libexec/sftp-server" )
-    elseif ("${LINUX_NAME}" MATCHES "openSUSE")  # suse just has to be different
-        set( SFTP_SERVER "/usr/lib/ssh/sftp-server" )
-    elseif ( DEB_SYSTEM_NAME )
-        set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
-    else()
-        set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+    find_file( SFTP_SERVER
+        NAMES sftp-server
+        PATHS /usr/libexec
+              /usr/lib/ssh
+              /usr/lib/openssh
+              /usr/libexec/openssh
+              /usr/libexec/ssh
+        NO_DEFAULT_PATH
+    )
+    if ( NOT SFTP_SERVER )
+        message( WARNING "Could not find sftp-server in any of the expected locations" )
     endif()
 endif()
 

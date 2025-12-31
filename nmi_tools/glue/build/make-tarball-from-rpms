@@ -70,6 +70,10 @@ elif [[ $dist == fc43 ]]; then
     arch_dist="${arch}_Fedora43"
 elif [[ $dist == leap15 ]]; then
     arch_dist="${arch}_openSUSE15"
+elif [[ $dist == leap16 ]]; then
+    arch_dist="${arch}_openSUSE16"
+elif [[ $dist == sles15sp5 ]]; then
+    arch_dist="${arch}_SLES15SP5"
 else
     echo "Platform not defined for $dist"
     exit 1
