@@ -83,6 +83,7 @@ struct Client
 {
 	std::string c_owner;      // name of the owner
 	std::string c_user;	      // name of the user
+	std::string c_project;    // name of the project, if any
 	std::string c_acctgrp;    // name of the accounting group, if any
 	std::string c_host;	      // hostname of the clientmachine
 	std::string c_addr;	      // <ip:port> of the client
