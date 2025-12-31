@@ -5,7 +5,7 @@ docker://htcondor/nmi-build:aarch64_AlmaLinux8-25060000
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-25060000
 docker://htcondor/nmi-build:aarch64_AlmaLinux10-25060000
 docker://htcondor/nmi-build:aarch64_Ubuntu24-25060000
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25060001
+docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25060000
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-25060000
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-25060000
 docker://htcondor/nmi-build:x86_64_AlmaLinux10-25060000
@@ -15,7 +15,7 @@ docker://htcondor/nmi-build:x86_64_Debian12-25060000
 docker://htcondor/nmi-build:x86_64_Debian13-25060000
 docker://htcondor/nmi-build:x86_64_openSUSE15-25060000
 docker://htcondor/nmi-build:x86_64_openSUSE16-25060000
-docker://htcondor/nmi-build:x86_64_SLES15SP5-25060001
+docker://htcondor/nmi-build:x86_64_SLES15SP5-25060000
 docker://htcondor/nmi-build:x86_64_Ubuntu22-25060000
 docker://htcondor/nmi-build:x86_64_Ubuntu24-25060000
 x86_64_macOS13
