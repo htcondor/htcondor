@@ -2404,9 +2404,9 @@ FileTransfer::DoDownload(ReliSock *s)
 	bool isDeferredTransfer = false;
 	classad::ClassAdUnParser unparser;
 #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-	std::map<int, std::string> deferredTransfers;
+	std::map<int, std::vector<ClassAd>> deferredTransfers;
 #else
-	std::map<std::string, std::string> deferredTransfers;
+	std::map<std::string, std::vector<ClassAd>> deferredTransfers;
 #endif
 	std::unique_ptr<classad::ClassAd> thisTransfer( new classad::ClassAd() );
 
@@ -3104,22 +3104,22 @@ FileTransfer::DoDownload(ReliSock *s)
 					thisTransfer->Clear();
 					thisTransfer->InsertAttr( "Url", URL );
 					thisTransfer->InsertAttr( "LocalFileName", fullname );
-					std::string thisTransferString;
-					unparser.Unparse( thisTransferString, thisTransfer.get() );
 
 					// Add this result to our deferred transfers map.
 				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-					auto found = deferredTransfers.emplace(plugin.id, thisTransferString);
+					auto found = deferredTransfers.emplace(plugin.id, * thisTransfer.get());
 					if ( ! found.second) {
 						// key already existed, so append the new transfer string
 						found.first->second += thisTransferString;
 					}
 				#else
 					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
-						deferredTransfers.insert( std::pair<std::string, std::string>( pluginPath, thisTransferString ) );
+						std::vector<ClassAd> entry;
+						entry.push_back(* thisTransfer);
+						deferredTransfers.insert( std::make_pair( pluginPath, entry ) );
 					}
 					else {
-						deferredTransfers[pluginPath] += thisTransferString;
+						deferredTransfers[pluginPath].push_back( * thisTransfer );
 					}
 				#endif
 
@@ -4056,7 +4056,7 @@ FileTransfer::InvokeMultiUploadPlugin(
 	int &exit_code,
 	bool &exit_by_signal,
 	int &exit_signal,
-	const std::string &input,
+	std::vector<ClassAd> & pluginInputAds,
 	ReliSock &sock,
 	bool send_trailing_eom,
 	CondorError &err,
@@ -4065,7 +4065,7 @@ FileTransfer::InvokeMultiUploadPlugin(
 	std::vector<ClassAd> resultAds;
 	auto result = InvokeMultipleFileTransferPlugin(
 		err, exit_code, exit_by_signal, exit_signal,
-		plugin, input, resultAds,
+		plugin, pluginInputAds, resultAds,
 		LocalProxyName.c_str(), true
 	);
 
@@ -4957,7 +4957,7 @@ FileTransfer::uploadFileList(
 
 	// Aggregate multiple file uploads; we will upload them all at once
 	int currentUploadPluginId = -1;
-	std::string currentUploadRequests;
+	std::vector<ClassAd> currentUploadRequests;
 
 	// use an error stack to keep track of failures when invoke plugins,
 	// perhaps more of this can be instrumented with it later.
@@ -5177,7 +5177,7 @@ FileTransfer::uploadFileList(
 				}
 			}
 			currentUploadPluginId = -1;
-			currentUploadRequests = "";
+			currentUploadRequests.clear();
 			currentUploadDeferred = 0;
 		}
 
@@ -5347,10 +5347,8 @@ FileTransfer::uploadFileList(
 					ClassAd xfer_ad;
 					xfer_ad.InsertAttr( "Url", local_output_url );
 					xfer_ad.InsertAttr( "LocalFileName", fullname );
-					std::string xfer_str;
-					unparser.Unparse( xfer_str, &xfer_ad );
 
-					currentUploadRequests += xfer_str;
+					currentUploadRequests.push_back(xfer_ad);
 					currentUploadDeferred ++;
 
 					// If we cannot defer uploads, we must execute the plugin now -- with one file.
@@ -5367,7 +5365,7 @@ FileTransfer::uploadFileList(
 						);
 
 						currentUploadPluginId = -1;
-						currentUploadRequests = "";
+						currentUploadRequests.clear();
 						currentUploadDeferred = 0;
 
 						if( result == TransferPluginResult::Success ) {
@@ -6747,10 +6745,42 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 }
 
 
+FileTransfer::walkargs_t
+FileTransfer::mergePluginSpecificEnvironment(
+    const FileTransferPlugin & plugin, Env & plugin_env
+) {
+	// grab environment variables from the job that start with the plugin name
+	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
+	Env job_env;
+	std::string env_errmsg;
+	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
+	std::string env_prefix = plugin.name + "_*";
+	walkargs_t walkargs;
+	walkargs.prefix = env_prefix.c_str();
+	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
+
+	job_env.Walk([](void * pv, const std::string & lhs, const std::string & rhs) -> bool {
+			walkargs_t & wa = *(walkargs_t *)pv;
+			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
+				wa.env.emplace(lhs, rhs);
+			}
+			return true;
+		}, &walkargs);
+
+	for (auto &[lhs, rhs] : walkargs.env) {
+		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
+		plugin_env.SetEnv(lhs, rhs);
+	}
+
+	return walkargs;
+}
+
+
 const std::vector< ClassAd > &
 FileTransfer::getPluginResultList() {
     return pluginResultList;
 }
+
 
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer
 // multiple files in a single plugin invocation.
@@ -6759,7 +6789,7 @@ TransferPluginResult
 FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			int & exit_status, bool & exit_by_signal, int & exit_signal,
 			FileTransferPlugin & plugin,
-			const std::string &transfer_files_string,
+			std::vector<ClassAd> & pluginInputAds,
 			std::vector<ClassAd> & resultAds,
 			const char* proxy_filename, bool do_upload ) {
 
@@ -6784,28 +6814,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT, !CONDOR_DCADDR");
 	plugin_env.Import(filter);
 
-	// grab environment variables from the job that start with the plugin name
-	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
-	Env job_env;
-	std::string env_errmsg;
-	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
-	std::string env_prefix = plugin.name + "_*";
-	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
-	walkargs.prefix = env_prefix.c_str();
-	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
-
-	job_env.Walk([](void * pv, const std::string & lhs, const std::string &rhs) -> bool {
-			struct _walkargs & wa = *(struct _walkargs *)pv;
-			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
-				wa.env.emplace(lhs, rhs);
-			}
-			return true;
-		}, &walkargs);
-
-	for (auto &[lhs, rhs] : walkargs.env) {
-		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
-		plugin_env.SetEnv(lhs, rhs);
-	}
+    auto walkargs = mergePluginSpecificEnvironment( plugin, plugin_env );
 
 	// Add any credential directory.
 	if (!m_cred_dir.empty()) {
@@ -6841,6 +6850,89 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		// e.pushf(...)
 		return TransferPluginResult::Error;
 	}
+
+
+	std::set<std::string> schemes;
+	for( const auto & fileAd : pluginInputAds ) {
+		std::string url;
+		if(! fileAd.LookupString( "URL", url )) {
+			dprintf( D_ERROR, "FileTransfer::InvokeMultipleFileTransferPlugin(): invoked with a plugin input ad that does not specify a URL; ad follows but will be ignored.\n" );
+			dPrintAd( D_ERROR, fileAd );
+			continue;
+		}
+
+		// This depends on IsUrl() not checking for trailing garbage.
+		bool BASE_SCHEME_ONLY = true;
+		std::string schema = getURLType( url.c_str(), BASE_SCHEME_ONLY );
+		schemes.insert( schema );
+	}
+
+
+	//
+	// For protocol version 4, insert some "nonfile" ads and adjust the
+	// file ads if any file-specific plugin data was specified.
+	//
+	std::vector<ClassAd> nonfile_ads;
+	if( plugin.protocol_version == 4 ) {
+		// `PluginData` for all plug-ins.
+		ExprTree * e = this->_fix_me_copy_.Lookup( "PluginData" );
+		if( e != NULL ) {
+			ClassAd nonfile_ad;
+			// nonfile_ad.InsertAttr( "NonFile", true );
+			CopyAttribute( "PluginData", nonfile_ad, this->_fix_me_copy_ );
+			nonfile_ads.push_back( nonfile_ad );
+		}
+
+		// `<protocol>_PluginData` for specific protocols.
+		for( const auto & schema : schemes ) {
+			std::string attrName;
+			formatstr( attrName, "%s_PluginData", schema.c_str() );
+			ExprTree * e = this->_fix_me_copy_.Lookup( attrName );
+			if(e == NULL) { continue; }
+
+			ClassAd schema_ad;
+			// schema_ad.InsertAttr( "NonFile", true );
+			schema_ad.InsertAttr( "Protocol", schema );
+			CopyAttribute( attrName.c_str(), schema_ad, this->_fix_me_copy_ );
+			nonfile_ads.push_back( schema_ad );
+		}
+
+		// It's obvious what do for specific URLs, but not how to specify
+		// them, so we'll just skip them for now.
+	} else if( plugin.protocol_version == 2 ) {
+		if( param_boolean( "ASSUME_COMPATIBLE_MULTIFILE_PLUGINS", true ) ) {
+			// Bravely assumes that all multifile plug-in speak fluent ClassAd.
+			for( auto & fileAd : pluginInputAds ) {
+				CopyAttribute( "PluginData", fileAd, this->_fix_me_copy_ );
+
+				// `<protocol>_PluginData` for specific protocols.
+				for( const auto & schema : schemes ) {
+					std::string attrName;
+					formatstr( attrName, "%s_PluginData", schema.c_str() );
+					ExprTree * e = this->_fix_me_copy_.Lookup( attrName );
+					if(e == NULL) { continue; }
+
+					CopyAttribute( attrName.c_str(), fileAd, this->_fix_me_copy_ );
+				}
+			}
+		}
+	}
+
+
+	std::string transfer_files_string;
+	for( const auto & classAd : nonfile_ads ) {
+		std::string buffer;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( buffer, & classAd );
+		transfer_files_string += buffer;
+	}
+	for( const auto & classAd : pluginInputAds ) {
+		std::string buffer;
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( buffer, & classAd );
+		transfer_files_string += buffer;
+	}
+
 
 	// Create an input file for the plugin.
 	// Input file consists of the transfer_files_string data (list of classads)
@@ -6949,33 +7041,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Arguably, this should just be `plugin.name`.
 	pi.plugin_basename = condor_basename(plugin.path.c_str());
-
-
-	// The parameter transfer_files_string is a series of two-element
-	// ClassAds in new ClassAd form without any separators.  The two
-	// attributes are `LocalFileName`, which we don't care about, and `URL`,
-	// which we'd like to parse for its schema.
-	//
-	// Unfortunately, StringTokenIterator doesn't accept multicharacter
-	// delimiters, so we have to do this the hard way.
-	size_t equals = 0;
-
-	while( true ) {
-		equals = transfer_files_string.find( "Url = \"", equals );
-		if( equals == std::string::npos ) { break; }
-
-		size_t start_of_schema = equals + 7;
-		size_t end_of_schema = transfer_files_string.find( "://", start_of_schema );
-		if( end_of_schema == std::string::npos ) { break; }
-
-		// This depends on IsUrl() not checking for trailing garbage.
-		bool BASE_SCHEME_ONLY = true;
-		std::string schema = getURLType(
-			transfer_files_string.c_str() + start_of_schema, BASE_SCHEME_ONLY
-		);
-		pi.schemes.insert( schema );
-		equals = end_of_schema;
-	}
+	pi.schemes = schemes;
 
 
 	TransferPluginResult result;
@@ -7558,12 +7624,23 @@ FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool en
 	args.AppendArg(path);
 	args.AppendArg("-classad");
 
+
+	// prepare environment for the plugin
+	Env plugin_env;
+
+	// start with this environment
+	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT, !CONDOR_DCADDR");
+	plugin_env.Import(filter);
+
+    std::ignore = mergePluginSpecificEnvironment(plugin, plugin_env);
+
+
 	int timeout = param_integer( "FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT", 20 );
 
 	MyPopenTimer pgm;
 
 	// start_program returns 0 on success, -1 on "already started", and errno otherwise
-	if (pgm.start_program(args, MyPopenTimer::WITH_STDERR) != 0) {
+	if (pgm.start_program(args, MyPopenTimer::WITH_STDERR, & plugin_env) != 0) {
 		std::string message;
 		formatstr(message, "FILETRANSFER: Failed to execute %s -classad: %s skipping", path, strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
@@ -7639,6 +7716,7 @@ FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool en
 		protocol_ver = this_plugin_supports_multifile ? 2 : 1;
 	}
 	plugin.protocol_version = protocol_ver;
+
 
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
@@ -7752,7 +7830,7 @@ private:
 bool
 FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 {
-	const std::string test_url_param = std::string(method) + "_test_url";
+	const std::string test_url_param = std::string(method) + "_TEST_URL";
 	std::string test_url;
 	if (!param(test_url, test_url_param.c_str())) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: no test url defined for method %s.\n", method.c_str());
@@ -7809,9 +7887,8 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	classad::ClassAd testAd;
 	testAd.InsertAttr("Url", test_url);
 	testAd.InsertAttr("LocalFileName", fullname);
-	std::string testAdString;
-	classad::ClassAdUnParser unparser;
-	unparser.Unparse(testAdString, &testAd);
+	std::vector<ClassAd> pluginInputAds;
+	pluginInputAds.push_back(testAd);
 
 	std::vector<ClassAd> resultAds;
 	CondorError err;
@@ -7820,7 +7897,7 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	int exit_signal = 0;
 	auto result = InvokeMultipleFileTransferPlugin(
 		err, exit_code, exit_by_signal, exit_signal,
-		plugin, testAdString, resultAds,
+		plugin, pluginInputAds, resultAds,
 		nullptr, false
 	);
 	if (result != TransferPluginResult::Success) {

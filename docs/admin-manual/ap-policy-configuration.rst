@@ -586,9 +586,9 @@ The *condor_schedd* is single threaded.  Practically, this means that it only
 does one thing at a time, and often when it may be "busy" doing that one thing,
 it is actually waiting on the system for some i/o to complete.  As such, it
 will rarely appear to use 100% of a cpu in any system monitoring tool.  To help
-guage how busy the schedd is, it keeps track of a metric called
+gauge how busy the schedd is, it keeps track of a metric called
 :ad-attr:`RecentDaemonCoreDutyCycle`.  This is a floating point value that
-ranges from 0.0 (completely idle) to 1.0 (competely busy).  Values over 0.95
+ranges from 0.0 (completely idle) to 1.0 (completely busy).  Values over 0.95
 indicate the schedd is overloaded.  In extreme cases :tool:`condor_q` and
 :tool:`condor_submit` may timeout and fail trying to communicate to an
 overloaded schedd.  An administrator can see this attribute by running
@@ -605,7 +605,7 @@ While the *condor_schedd* and the machine it runs on can be tuned to handle a
 greater rate of jobs, every machine has some limit of jobs it can support.  The
 main strategy for supporting more jobs in the system as a whole is simply by
 running more schedds, or horizontal scaling.  This may require partitioning
-users onto differening access points, or submiting remotely, but at the end
+users onto different access points, or submitting remotely, but at the end
 of the day, the best way to scale out a very large HTCondor system is by adding
 more *condor_schedd*'s.
 
@@ -660,11 +660,11 @@ method, called HTCondor file transfer, or "cedar" file transfer, copies files
 from the AP to the EP.  Obviously, this uses cpu, disk and network bandwidth on
 the AP.  To the degree possible, changing large input file file transfers from
 cedar, to http transfers from some third party server, moves the load off of
-the AP, and onto an http server.  If one http server isn't sufficent there are
+the AP, and onto an http server.  If one http server isn't sufficient there are
 many methods for scaling http servers to handle additional load.
 
-Limiting CPU or I/O bound procesing on the AP
-'''''''''''''''''''''''''''''''''''''''''''''
+Limiting CPU or I/O bound processing on the AP
+''''''''''''''''''''''''''''''''''''''''''''''
 
 The machine the *condor_schedd* runs on is typically a machine users can log
 into, to prepare and submit jobs.  Sometimes, users will start long-running,
@@ -728,9 +728,9 @@ The solution is for users to set a :subcom:`checkpoint_destination` -- or the
 administrator to choose a default for them
 (see :macro:`use feature:DefaultCheckpointDestination`).  This allows HTCondor
 to store and retrieve checkpoints from third-party storage services (e.g., a
-Pelican data federation or S3).  Of course, superceded checkpoints, and
+Pelican Platform data federation or S3).  Of course, superseded checkpoints, and
 checkpoints from jobs which have completed, must also be deleted.  This
-requires addtional configuration.  Specifically, although HTCondor's
+requires additional configuration.  Specifically, although HTCondor's
 file-transfer plug-ins know how to upload and download files, they don't know
 how to delete them; some other method must be specified to HTCondor.  See
 :ref:`self-checkpointing-jobs` for details.

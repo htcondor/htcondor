@@ -24,7 +24,14 @@ BuildArch: x86_64_v2
 %if 0%{?suse_version}
 %global _libexecdir %{_exec_prefix}/libexec
 %if %{suse_version} == 1500
+%if "%{os_release_id}" == "sles"
+%global dist .sles15sp5
+%else
 %global dist .leap15
+%endif
+%endif
+%if %{suse_version} == 1600
+%global dist .leap16
 %endif
 %endif
 
@@ -43,7 +50,7 @@ URL: https://htcondor.org/
 %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
-
+Source1: %{name}.sysusers.conf
 Source8: htcondor.pp
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -52,12 +59,12 @@ BuildRequires: cmake
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: libvirt-devel
 %endif
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
-%if ! ( 0%{?rhel} >= 10 )
+%if ! ( 0%{?rhel} >= 10 ) && "%{os_release_id}" != "sles"
 BuildRequires: libXScrnSaver-devel
 %endif
 %if 0%{?suse_version}
@@ -89,8 +96,10 @@ BuildRequires: nss-devel
 BuildRequires: openssl-devel
 %if 0%{?suse_version}
 BuildRequires: libexpat-devel
+BuildRequires: dbus-1-devel
 %else
 BuildRequires: expat-devel
+BuildRequires: dbus-devel
 %endif
 BuildRequires: perl(Archive::Tar)
 BuildRequires: perl(XML::Parser)
@@ -100,11 +109,13 @@ BuildRequires: libcurl-devel
 BuildRequires: dbus-devel
 
 # Authentication build requirements
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 BuildRequires: voms-devel
 %endif
+%if "%{os_release_id}" != "sles"
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
+%endif
 
 %if 0%{?devtoolset}
 BuildRequires: which
@@ -116,9 +127,15 @@ BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
-%if  0%{?suse_version}
-BuildRequires: gcc11
-BuildRequires: gcc11-c++
+%if 0%{?suse_version}
+%if %{suse_version} == 1500
+BuildRequires: gcc12
+BuildRequires: gcc12-c++
+%endif
+%if %{suse_version} == 1600
+BuildRequires: gcc15
+BuildRequires: gcc15-c++
+%endif
 %endif
 
 BuildRequires: libuuid-devel
@@ -129,6 +146,9 @@ Requires: libuuid
 %endif
 
 BuildRequires: systemd-devel
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+BuildRequires:  systemd-rpm-macros
+%endif
 %if 0%{?suse_version}
 BuildRequires: systemd
 %else
@@ -188,9 +208,11 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %if 0%{?suse_version}
+%if "%{os_release_id}" != "sles"
 Requires: libvomsapi1
+%endif
 %else
 Requires: voms
 %endif
@@ -198,9 +220,18 @@ Requires: voms
 %if 0%{?suse_version}
 Requires: krb5
 Requires: libcom_err2
+%if "%{os_release_id}" != "sles"
 Requires: libmunge2
+%endif
+%if %{suse_version} == 1500
 Requires: libopenssl1_1
+%endif
+%if %{suse_version} == 1600
+Requires: libopenssl3
+%endif
+%if "%{os_release_id}" != "sles"
 Requires: libSciTokens0
+%endif
 Requires: libsystemd0
 %else
 Requires: krb5-libs
@@ -216,11 +247,16 @@ Requires: rsync
 Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
 Requires: pelican-osdf-compat >= 7.21.1
 
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
 %if 0%{?suse_version}
 # Unfortunately, Apptainer is lagging behind in openSUSE
+%if %{suse_version} == 1500
 Requires: apptainer >= 1.3.6
+%endif
+%if %{suse_version} == 1600
+Requires: apptainer >= 1.3.0
+%endif
 %else
 Requires: apptainer >= 1.4.4
 %endif
@@ -230,8 +266,12 @@ Requires: apptainer >= 1.4.4
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
-#Provides: user(condor) = 64
-#Provides: group(condor) = 64
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+# The RPM macros already makes virtual Provides for user and group
+%else
+Provides: user(condor) = 64
+Provides: group(condor) = 64
+%endif
 
 %if 0%{?rhel} <= 8
 # external-libs package discontinued as of 8.9.9
@@ -280,7 +320,9 @@ Provides: %{name}-upgrade-checks = %{version}-%{release}
 %endif
 
 %if 0%{?suse_version}
+%if %{suse_version} == 1500
 %debug_package
+%endif
 %endif
 
 %description
@@ -325,7 +367,7 @@ useful on systems where no device (e.g. /dev/*) can be used to
 determine console idle time.
 
 #######################
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %package vm-gahp
 Summary: HTCondor's VM Gahp
 Group: Applications/System
@@ -492,11 +534,15 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-getent group condor >/dev/null || groupadd -r condor
+%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+# RPM handles user creation automagically in these versions
+%else
+getent group condor >/dev/null || groupadd --system --gid 64 condor
 getent passwd condor >/dev/null || \
-  useradd -r -g condor -d %_var/lib/condor -s /sbin/nologin \
-    -c "Owner of HTCondor Daemons" condor
+  useradd --system --uid 64 --gid condor --home-dir /var/lib/condor \
+  --shell /usr/sbin/nologin --comment "Owner of HTCondor Daemons" condor
 exit 0
+%endif
 
 
 %prep
@@ -510,8 +556,14 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?suse_version}
-export CC=/usr/bin/gcc-11
-export CXX=/usr/bin/g++-11
+%if %{suse_version} == 1500
+export CC=/usr/bin/gcc-12
+export CXX=/usr/bin/g++-12
+%endif
+%if %{suse_version} == 1600
+export CC=/usr/bin/gcc-15
+export CXX=/usr/bin/g++-15
+%endif
 %endif
 
 %if 0%{?devtoolset}
@@ -574,9 +626,13 @@ make -C docs man
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-%if 0%{?amzn}
-       -DWITH_VOMS:BOOL=FALSE \
+%if 0%{?amzn} || "%{os_release_id}" == "sles"
        -DWITH_LIBVIRT:BOOL=FALSE \
+       -DWITH_VOMS:BOOL=FALSE \
+%endif
+%if "%{os_release_id}" == "sles"
+       -DWITH_MUNGE:BOOL=FALSE \
+       -DWITH_SCITOKENS:BOOL=FALSE \
 %endif
        -DCMAKE_INSTALL_PREFIX:PATH=/
 
@@ -707,6 +763,9 @@ install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.ser
 # Disabled until HTCondor security fixed.
 # install -m 0644 %{buildroot}/usr/share/doc/condor-%{version}/examples/condor.socket %{buildroot}%{_unitdir}/condor.socket
 
+mkdir -p %{buildroot}%{_sysusersdir}
+install -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/condor.conf
+
 mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 
@@ -759,6 +818,7 @@ rm -rf %{buildroot}
 %{_unitdir}/condor.service
 # Disabled until HTCondor security fixed.
 # % {_unitdir}/condor.socket
+%{_sysusersdir}/condor.conf
 %dir %_datadir/condor/
 %_datadir/condor/Chirp.jar
 %_datadir/condor/CondorJavaInfo.class
@@ -1148,7 +1208,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_kbdd
 
 #################
-%if ! 0%{?amzn}
+%if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 %files vm-gahp
 %defattr(-,root,root,-)
 %_sbindir/condor_vm-gahp
@@ -1264,6 +1324,23 @@ fi
 # configuration
 
 %changelog
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.5.1-1
+- The negotiator can now use its own concept of slot weight (not the EP's)
+- A stuck LVM logical volume will cause the EP slot to be broken and
+  then later unbroken if and when the logical volume cleanup succeeds
+- Made the AP more efficient at building resource requests for matchmaking
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.0.5-1
+- Initial support for Ubuntu 24.04 on the ARM64 platform
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
+- condor_submit checks that output_destination is properly specified
+
+* Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.15-1
+- Fix bug where AP would fail to read job credential files
+- Fix bugs that could causes a crash in the authentication code
+- HTCondor tarballs now contain Pelican 7.21.1 and Apptainer 1.4.4
+
 * Thu Nov 13 2025 Tim Theisen <tim@cs.wisc.edu> - 25.4.0-1
 - Job scratch space is now in a sub-directory of the execute directory
 - HTCondor EPs can now refresh credentials during output transfers

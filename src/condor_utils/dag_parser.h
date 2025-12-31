@@ -99,19 +99,31 @@ private:
 };
 
 //--------------------------------------------------------------------------------------------
+using kvp_parse_t = std::optional<std::pair<std::string, std::string>>;
+
 class DagLexer {
 public:
 	DagLexer() = default;
 	DagLexer(const std::string& s) : str(s) { len = str.size(); }
-	std::string next(bool trim_quotes=false);
-	std::string peek(bool trim_quotes=false) {
+
+	enum class TRIM_QUOTES {
+		FALSE = 0,
+		TRUE,
+	};
+
+	std::string next(TRIM_QUOTES trim_quotes=TRIM_QUOTES::FALSE);
+	kvp_parse_t next_key_value_pair(TRIM_QUOTES trim_quotes=TRIM_QUOTES::FALSE);
+
+	std::string peek(TRIM_QUOTES trim_quotes=TRIM_QUOTES::FALSE) {
 		size_t curr = pos;
 		std::string upcoming = next(trim_quotes);
 		pos = curr;
 		return upcoming;
 	}
+
 	std::string remain();
-	void reset() { pos = 0; }
+
+	void reset() { pos = 0; err.clear(); }
 	void parse(const std::string& s, bool clear_err=false) {
 		std::string_view new_str(s);
 		str = new_str;
@@ -125,7 +137,7 @@ public:
 	const char* c_error() const { return err.c_str(); }
 
 protected:
-	std::string err{}; // Internal lexer error (i.e. still in quotes or key=value incomplete)
+	std::string err{}; // Internal lexer error (i.e. still in quotes)
 	std::string_view str{}; // String being being parsed
 	size_t pos{0}; // Current position
 	size_t len{0}; // Length of parsed string

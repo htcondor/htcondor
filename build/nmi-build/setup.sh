@@ -24,6 +24,10 @@ VERSION_ID=${VERSION_ID%%.*}
 ARCH=$(arch)
 REPO_ARCH='noarch'
 
+if [ -d /etc/rpm ]; then
+    echo "%os_release_id $ID" > /etc/rpm/macros.os-release-id
+fi
+
 if [ $ID = 'almalinux' ]; then
     if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
         ARCH='x86_64_v2'
@@ -46,7 +50,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     INSTALL='apt-get install --yes'
 elif [ $ID = 'centos' ]; then
     INSTALL='yum install --assumeyes'
-elif [ $ID = 'opensuse-leap' ]; then
+elif [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     INSTALL='zypper --non-interactive install'
     $INSTALL system-group-wheel system-user-mail
 elif [ $ID = 'amzn' ] || [ $ID = 'almalinux' ] || [ $ID = 'fedora' ]; then
@@ -124,6 +128,15 @@ if [ $ID = 'opensuse-leap' ]; then
     done
 fi
 
+if [ $ID = 'sles' ]; then
+    # Hard code version in this special case
+    zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.sles15sp5.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
+    for key in /etc/pki/rpm-gpg/*; do
+        rpmkeys --import "$key"
+    done
+fi
+
 # Setup Debian based repositories
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL apt-transport-https apt-utils curl gnupg
@@ -150,7 +163,7 @@ if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; th
     # ] ] Help out vim syntax highlighting
 fi
 # SUSE is special
-if [ $ID = 'future-opensuse-leap' ]; then
+if [ $ID = 'future-suse' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/zypp/repos.d/htcondor-test.repo
@@ -164,7 +177,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Install the build dependencies
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL make rpm-build
     # shellcheck disable=SC2046 # we want word splitting
     $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
@@ -190,16 +203,26 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
 fi
 
 # Add useful tools
-$INSTALL gdb git less nano patchelf python3-pip strace sudo vim
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
+$INSTALL gdb git less python3-pip strace sudo vim
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
 fi
+if [ $ID != 'sles' ]; then
+    $INSTALL nano
+fi
+
+# Use fancy new lief-patchelf
+if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
+    $INSTALL lief-patchelf
+else
+    $INSTALL patchelf
+fi
 
 # Add in the ninja build system
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL ninja
 else
     $INSTALL ninja-build
@@ -230,18 +253,14 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
 
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
-    if [ $ID = 'opensuse-leap' ]; then
-        $INSTALL procps wget
-        # Install better patchelf
-        wget https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz
-        (cd /usr; tar xfpz /patchelf-0.18.0-x86_64.tar.gz ./bin/patchelf)
-        rm patchelf-0.18.0-x86_64.tar.gz
+    if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+        $INSTALL procps
     else
         $INSTALL procps-ng
     fi
-    if [ $ID != 'amzn' ]; then
+    if [ $ID != 'amzn' ] && [ $ID != 'sles' ]; then
         $INSTALL apptainer
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
@@ -304,8 +323,11 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican pelican-osdf-compat
+fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 pelican pelican-osdf-compat
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
 
 # Clean up package caches

@@ -27,6 +27,7 @@
 
 #include "basename.h"
 #include "qmgmt.h"
+#include "qmgmt_startup_limits.h"
 #include "condor_qmgr.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
@@ -56,7 +57,12 @@
 #include "jobsets.h"
 #include "exit.h"
 #include "credmon_interface.h"
+#include <memory>
 #include <algorithm>
+#include <vector>
+#include <deque>
+#include <unordered_map>
+#include <unordered_set>
 #include <math.h>
 #include <param_info.h>
 #include <shortfile.h>
@@ -274,8 +280,7 @@ int JobsSeenOnQueueWalk = -1;
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
-typedef HashTable<int, int> ClusterSizeHashTable_t;
-static ClusterSizeHashTable_t *ClusterSizeHashTable = nullptr;
+static std::map<int, int> ClusterSizeHashTable;
 static std::set<int> ClustersNeedingCleanup;
 static int defer_cleanup_timer_id = -1;
 static std::set<int> ClustersNeedingMaterialize;
@@ -746,7 +751,7 @@ ClusterCleanup(int cluster_id)
 	}
 
 	// remove entry in ClusterSizeHashTable 
-	ClusterSizeHashTable->remove(cluster_id);
+	ClusterSizeHashTable.erase(cluster_id);
 
 	// delete the cluster classad
 	JobQueue->DestroyClassAd( key );
@@ -1030,10 +1035,10 @@ DeferredClusterCleanupTimerCallback(int /* tid */)
 		bool do_cleanup = true;
 
 		// first get the proc count for this cluster, if it is zero then we *might* want to do cleanup
-		int *numOfProcs = nullptr;
-		if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
-			do_cleanup = *numOfProcs <= 0;
-			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has %d procs, setting do_cleanup=%d\n", cluster_id, *numOfProcs, do_cleanup);
+		auto size_it = ClusterSizeHashTable.find(cluster_id);
+		if (size_it != ClusterSizeHashTable.end()) {
+			do_cleanup = size_it->second <= 0;
+			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has %d procs, setting do_cleanup=%d\n", cluster_id, size_it->second, do_cleanup);
 		} else {
 			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has no entry in ClusterSizeHashTable, setting do_cleanup=%d\n", cluster_id, do_cleanup);
 		}
@@ -1112,39 +1117,33 @@ static
 int
 IncrementClusterSize(int cluster_num)
 {
-	int 	*numOfProcs = nullptr;
-
-	if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
-		// First proc we've seen in this cluster; set size to 1
-		ClusterSizeHashTable->insert(cluster_num,1);
+	int cnt = 1;
+	auto it = ClusterSizeHashTable.find(cluster_num);
+	if (it != ClusterSizeHashTable.end()) {
+		it->second++;
+		cnt = it->second;
 	} else {
-		// We've seen this cluster_num go by before; increment proc count
-		(*numOfProcs)++;
+		ClusterSizeHashTable.emplace(cluster_num, 1);
+		cnt = 1;
 	}
-
-		// return the number of procs in this cluster
-	if ( numOfProcs ) {
-		return *numOfProcs;
-	} else {
-		return 1;
-	}
+	return cnt;
 }
 
 static
 int
 DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 {
-	int 	*numOfProcs = nullptr;
+	int numOfProcs = 0;
 
-	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
-		// We've seen this cluster_num go by before; increment proc count
-		// NOTICE that numOfProcs is a _reference_ to an int which we
-		// fetched out of the hash table via the call to lookup() above.
-		(*numOfProcs)--;
+	auto it = ClusterSizeHashTable.find(cluster_id);
+	if (it != ClusterSizeHashTable.end()) {
+		// We've seen this cluster_num go by before; decrement proc count
+		it->second--;
+		numOfProcs = it->second;
 
-		bool cleanup_now = (*numOfProcs <= 0);
+		bool cleanup_now = (numOfProcs <= 0);
 		if (clusterAd) {
-			clusterAd->SetClusterSize(*numOfProcs);
+			clusterAd->SetClusterSize(numOfProcs);
 			if (scheduler.getAllowLateMaterialize()) {
 				// if there is a job factory, and it doesn't want us to do cleanup
 				// then schedule deferred cleanup even if the cluster is not yet empty
@@ -1160,18 +1159,13 @@ DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 		//    checkpoint file and the entry in the ClusterSizeHashTable.
 		if ( cleanup_now ) {
 			ClusterCleanup(cluster_id);
-			numOfProcs = nullptr;
+			numOfProcs = 0;
 		}
 	}
 	TotalJobsCount--;
 	
 		// return the number of procs in this cluster
-	if ( numOfProcs ) {
-		return *numOfProcs;
-	} else {
-		// if it isn't in our hashtable, there are no procs, so return 0
-		return 0;
-	}
+	return numOfProcs;
 }
 
 // CRUFT: Everything in this function is cruft, but not necessarily all
@@ -2261,7 +2255,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	if( !JobQueue->InitLogFile(job_queue_name,max_historical_logs) ) {
 		EXCEPT("Failed to initialize job queue log!");
 	}
-	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;
 
@@ -2900,8 +2893,7 @@ DestroyJobQueue( )
 	DirtyJobIDs.clear();
 
 		// There's also our hashtable of the size of each cluster
-	delete ClusterSizeHashTable;
-	ClusterSizeHashTable = nullptr;
+	ClusterSizeHashTable.clear();
 	TotalJobsCount = 0;
 
 	delete queue_super_user_may_impersonate_regex;
@@ -5572,14 +5564,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			std::string raw_attribute = attr_name;
 			raw_attribute += "_RAW";
 			JobQueue->SetAttribute(key, raw_attribute.c_str(), attr_value, flags & SetAttribute_SetDirty);
-			if( flags & SHOULDLOG ) {
+			if( (flags & SHOULDLOG) && job) {
 				char* old_val = nullptr;
 				ExprTree *ltree = nullptr;
 				ltree = job->LookupExpr(raw_attribute);
 				if( ltree ) {
 					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
-				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.c_str(), attr_value, old_val);
+				scheduler.WriteAttrChangeToUserLog(job, raw_attribute.c_str(), attr_value, old_val);
 			}
 
 			int64_t lvalue = 0;
@@ -5687,13 +5679,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SetAttribute_SetDirty);
-	if( flags & SHOULDLOG ) {
+	if( (flags & SHOULDLOG) && job ) {
 		const char* old_val = nullptr;
-		if (job) {
-			ExprTree *tree = job->LookupExpr(attr_name);
-			if (tree) { old_val = ExprTreeToString(tree); }
-		}
-		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
+		ExprTree *tree = job->LookupExpr(attr_name);
+		if (tree) { old_val = ExprTreeToString(tree); }
+		scheduler.WriteAttrChangeToUserLog(job, attr_name, attr_value, old_val);
 	}
 
 	if( flags & NONDURABLE ) {
@@ -7497,21 +7487,13 @@ AbortTransactionAndRecomputeClusters()
 			-Todd 2/2000
 		*/
 		//TODO: move cluster count from hashtable into the cluster's JobQueueJob object.
-		ClusterSizeHashTable->clear();
+		ClusterSizeHashTable.clear();
 		JobQueueBase *job = nullptr;
 		JobQueueKey key;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->Iterate(key, job)) {
 			if (key.cluster > 0 && key.proc >= 0) { // look at job ads only.
-				int *numOfProcs = nullptr;
-				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(key.cluster,numOfProcs) == -1 ) {
-					// First proc we've seen in this cluster; set size to 1
-					ClusterSizeHashTable->insert(key.cluster,1);
-				} else {
-					// We've seen this cluster_num go by before; increment proc count
-					(*numOfProcs)++;
-				}
+				IncrementClusterSize(key.cluster);
 			}
 		}
 
@@ -7521,12 +7503,11 @@ AbortTransactionAndRecomputeClusters()
 		while (JobQueue->Iterate(key, job)) {
 			if (key.cluster > 0 && key.proc == -1) { // look at cluster ads only
 				auto * cad = dynamic_cast<JobQueueCluster*>(job);
-				int *numOfProcs = nullptr;
-				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(key.cluster,numOfProcs) == -1 ) {
+				auto it = ClusterSizeHashTable.find(key.cluster);
+				if (it == ClusterSizeHashTable.end()) {
 					cad->SetClusterSize(0); // not in the cluster size hash table, so there are no procs...
 				} else {
-					cad->SetClusterSize(*numOfProcs); // copy num of procs into the cluster object.
+					cad->SetClusterSize(it->second); // copy num of procs into the cluster object.
 				}
 			}
 		}
@@ -9326,7 +9307,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 		}
 		dprintf( D_FULLDEBUG, "Job %d.%d was left marked as removed, "
 				 "cleaning up now\n", cluster, proc );
-		scheduler.WriteAbortToUserLog( job_id );
+		scheduler.WriteAbortToUserLog(job);
 		DestroyProc( cluster, proc );
 	}
 	else if ( status == SUSPENDED || status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
@@ -9820,10 +9801,19 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * any user; o.w. only get jobs for specified user.
  * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu, bool is_new_match)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
+	std::unordered_set<std::string> blocked_limits;
+
+	if (!StartupLimitsEmpty()) {
+		std::string slotname = "<none>";
+		if (my_match_ad) { my_match_ad->LookupString(ATTR_NAME, slotname); }
+		dprintf(D_FULLDEBUG,
+			"StartupLimit scan begin match for user=%s pool=%s slot=%s new_match=%d\n",
+			user ? user : "<any>", pool ? pool : "<none>", slotname.c_str(), (int)is_new_match);
+	}
 
 	// indicate failure by setting proc to -1.  do this now
 	// so if we bail out early anywhere, we say we failed.
@@ -10005,6 +9995,23 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 				continue;
 			}
 
+			if (!StartupLimitsEmpty()) {
+				// External startup limits: deny starting if rate is exceeded
+				if (!StartupLimitsAllowJob(job, my_match_ad, user, pool, &blocked_limits)) {
+					if (!blocked_limits.empty()) {
+						dprintf(D_FULLDEBUG | D_MATCH,
+							"StartupLimit denied job %d.%d user=%s pool=%s blocked=%zu\n",
+							job->jid.cluster, job->jid.proc, job->ownerinfo->Name(), pool ? pool : "<none>", blocked_limits.size());
+					}
+					continue;
+				} else if (!blocked_limits.empty()) {
+					dprintf(D_FULLDEBUG | D_MATCH,
+						"StartupLimit allowed job %d.%d user=%s pool=%s after prior blocks=%zu\n",
+						job->jid.cluster, job->jid.proc, job->ownerinfo->Name(), pool ? pool : "<none>", blocked_limits.size());
+					blocked_limits.clear();
+				}
+			}
+
 				// Now check of the job can be started - this checks various schedd limits
 				// as embodied by the START_VANILLA_UNIVERSE expression.
 #ifdef USE_VANILLA_START
@@ -10100,6 +10107,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 		PrioRecAutoClusterRejected.clear();
 
 	} while( rebuilt_prio_rec_array );
+
+	// No runnable job found for this match; record ignores only for new matches
+	if (is_new_match && !blocked_limits.empty()) {
+		StartupLimitsRecordIgnoredMatches(blocked_limits, user, pool);
+	}
 
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }

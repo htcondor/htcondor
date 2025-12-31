@@ -464,7 +464,7 @@ org.htcondor.version="%s"
         `tags_to_make_release()` for daily or non-daily builds, respectively.
         See those methods for the list.
         """
-        args = [f"--build-arg=BASE_IMAGE={image}", f"--platform={arch}"]
+        args = [f"--build-arg=BASE_IMAGE={image}", f"--platform={arch}", f"--network=host"]
         if self.want_latest_version:
             args.extend(
                 [f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"]

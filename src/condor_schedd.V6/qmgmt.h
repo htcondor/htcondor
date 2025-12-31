@@ -28,6 +28,8 @@
 #include "classad_log.h"
 #include "live_job_counters.h"
 #include "condor_attributes.h"
+#include <generic_stats.h>
+#include <vector>
 
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
@@ -261,6 +263,66 @@ class OCU {
 		int ocu_id;
 };
 
+// class used to hold stats counters for User and Project records
+//
+class schedd_daily_usage_stats {
+public:
+	stats_entry_daily<long long> slot_time;
+	stats_entry_daily<double> weighted_idle;
+	stats_entry_daily<int> launched;
+	stats_entry_daily<int> not_started;
+	stats_entry_daily<int> requeued;
+	stats_entry_daily<int> held;
+
+	static const int hour_bucket_sec = 4*3600; // 4 hour buckets
+	schedd_daily_usage_stats(int hour_buckets=(24*3600)/hour_bucket_sec, int days=10)
+		: slot_time(hour_buckets,days)
+		, weighted_idle(hour_buckets,days)
+		, launched(hour_buckets,days)
+		, not_started(hour_buckets,days)
+		, requeued(hour_buckets,days)
+		, held(hour_buckets,days)
+	{}
+
+private:
+	static const char * ajoin(std::string & buf, const char * tag, const char * attr) {
+		if (tag) { buf = tag; buf += attr; }
+		else { buf = attr; }
+		return buf.c_str();
+	}
+
+public:
+	void publish(ClassAd & ad, const char * tag) const {
+		std::string buf;
+		int pub_flags = stats_entry_daily<int>::PubDefault | IF_NONZERO;
+		slot_time.Publish(ad, ajoin(buf,tag,"SlotTime"), pub_flags);
+		weighted_idle.Publish(ad, ajoin(buf,tag,"WeightedIdle"), pub_flags);
+		launched.Publish(ad, ajoin(buf,tag,"Launched"), pub_flags);
+		not_started.Publish(ad, ajoin(buf,tag,"FailedToStart"), pub_flags);
+		requeued.Publish(ad, ajoin(buf,tag,"Requeued"), pub_flags);
+		held.Publish(ad, ajoin(buf,tag,"Held"), pub_flags);
+	}
+
+	// add to Hourly/Daily stats (called from count jobs)
+	void accum(int status, long long sec, int idle_weight) {
+		if (status == IDLE) {
+			weighted_idle += (double)(idle_weight * sec) / (double)hour_bucket_sec;
+		} else {
+			slot_time += sec;
+		}
+	}
+
+	void AdvanceBy(int cBuckets, int cDays) {
+		slot_time.AdvanceBy(cBuckets,cDays);
+		weighted_idle.AdvanceBy(cBuckets,cDays);
+		launched.AdvanceBy(cBuckets,cDays);
+		not_started.AdvanceBy(cBuckets,cDays);
+		requeued.AdvanceBy(cBuckets,cDays);
+		held.AdvanceBy(cBuckets,cDays);
+	}
+};
+
+
 // flag values for JobQueueUserRec
 #define JQU_F_DIRTY    0x01   // PopulateFromAd needed 
 #define JQU_F_PENDING  0x80   // JobQueueUserRec is in the pendingOwners collection
@@ -305,6 +367,8 @@ public:
 	CountJobsCounters num; // job counts by OWNER rather than by submitter
 	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
 	time_t LastHitTime=0; // records the last time we incremented num.Hit, use to expire OwnerInfo
+
+	schedd_daily_usage_stats daily_stats;
 
 	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _os_user=nullptr, unsigned char is_super=0)
 		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
@@ -637,7 +701,7 @@ typedef enum {
 int PauseJobFactory(JobFactory * factory, MaterializeMode pause_code);
 int ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause); // Make sure factory mode matches the persist mode
-bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
+bool GetJobFactoryMaterializeMode(const JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
@@ -913,7 +977,7 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
   extern std::deque<prio_rec> PrioRec;
 #endif
 
-extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr, bool is_ocu=false);
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr, bool is_ocu=false, bool is_new_match=true);
 //extern bool Runnable(PROC_ID*);
 enum class runnable_reason_code : int {
 	IsRunnable=0,

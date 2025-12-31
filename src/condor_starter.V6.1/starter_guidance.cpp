@@ -215,7 +215,7 @@ Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 	}
 
 	// Carry on.
-	s->jobWaitUntilExecuteTime();
+	s->jic->runPrepareJobHook();
 }
 
 
@@ -272,8 +272,7 @@ Starter::handleJobEnvironmentCommand(
 			// constant, maybe SHADOW_SAID_GO, that record that setup failed
 			// but we proceeded anyway.
 			s->m_setupStatus = 0;
-			// This schedules a zero-second timer.
-			s->jobWaitUntilExecuteTime();
+			s->jic->runPrepareJobHook();
 			return true;
 		} else if( command == COMMAND_JOB_SETUP ) {
 			ClassAd context;

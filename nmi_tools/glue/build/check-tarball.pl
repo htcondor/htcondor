@@ -24,7 +24,7 @@ if($ENV{NMI_PLATFORM} =~ /(macos|freebsd)/i) {
 # In bytes
 my $FILESIZE_LOWER_BOUND = 10_000_000;
 my $UNSTRIPPED_FILESIZE_UPPER_BOUND = 600_000_000;
-my $STRIPPED_FILESIZE_UPPER_BOUND   =  77_000_000;
+my $STRIPPED_FILESIZE_UPPER_BOUND   =  80_000_000;
 
 # Maximum number of files to print when printing permissions and ownerhsip errors
 my $MAX_TO_PRINT = 20;

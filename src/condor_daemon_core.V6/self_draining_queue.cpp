@@ -25,8 +25,7 @@
 
 
 SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int per )
-	: m_hash( SelfDrainingHashItem::HashFn ),
-	  m_count_per_interval(1)
+	: m_count_per_interval(1)
 {
 	if( queue_name ) {
 		name = strdup( queue_name );
@@ -53,7 +52,7 @@ SelfDrainingQueue::~SelfDrainingQueue()
 	ServiceData *sd = nullptr;
 	while (!queue.empty()) {
 		sd = queue.front();
-		queue.pop();
+		queue.pop_front();
 		delete sd;
 	}
 
@@ -135,14 +134,15 @@ bool
 SelfDrainingQueue::enqueue( ServiceData* data, bool allow_dups )
 {
 	if( ! allow_dups ) {
-		SelfDrainingHashItem hash_item(data);
-		if( m_hash.insert(hash_item,true) == -1 ) {
-			dprintf( D_FULLDEBUG, "SelfDrainingQueue::enqueue() "
-					 "refusing duplicate data\n" );
-			return false;
+		for (const auto queued_data: queue) {
+			if (data->ServiceDataCompare(queued_data) == 0) {
+				dprintf( D_FULLDEBUG, "SelfDrainingQueue::enqueue() "
+						 "refusing duplicate data\n" );
+				return false;
+			}
 		}
 	}
-	queue.push(data);
+	queue.push_back(data);
 	dprintf( D_FULLDEBUG,
 			 "Added data to SelfDrainingQueue %s, now has %d element(s)\n",
 			 name, (int)queue.size() );
@@ -171,10 +171,7 @@ SelfDrainingQueue::timerHandler( int /* timerID */ )
 	int count;
 	for( count=0; count<m_count_per_interval && !queue.empty(); count++ ) {
 		ServiceData* d = queue.front();
-		queue.pop();
-
-		SelfDrainingHashItem hash_item(d);
-		m_hash.remove(hash_item);
+		queue.pop_front();
 
 		if( handler_fn ) {
 			handler_fn( d );
@@ -245,10 +242,4 @@ SelfDrainingQueue::resetTimer( void )
 	daemonCore->Reset_Timer( tid, period, 0 );
 	dprintf( D_FULLDEBUG, "Reset timer for SelfDrainingQueue %s, "
 			 "period: %d (id: %d)\n", name, period, tid );
-}
-
-size_t
-SelfDrainingHashItem::HashFn(SelfDrainingHashItem const &item)
-{
-	return item.m_service->HashFn();
 }
