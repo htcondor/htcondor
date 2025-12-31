@@ -67,7 +67,16 @@
   when file transfer file fails for any reason.
   :jira:`3429`
 
+*** 25.0.6 features
+
+- Initial support for openSUSE Leap 16.
+  :jira:`3233`
+
 *** 25.0.6 bugs
+
+- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
+  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
+  :jira:`3481`
 
 *** 25.5.1 features
 
@@ -130,17 +139,11 @@
 - Improved DAGMan's debugging for executed scripts.
   :jira:`3381`
 
-*** 25.0.6 bugs
-
-- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
-  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
-  :jira:`3481`
-
 *** 25.5.1 bugs
 
 *** 25.0.5 features
 
-- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform
+- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform.
   :jira:`3414`
 
 *** 25.0.5 bugs
