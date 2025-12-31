@@ -55,6 +55,12 @@ jobs:
             export CXX=/usr/bin/g++-11
           fi
 
+          if [ -f "/usr/bin/gcc-12" ] 
+          then
+            export CC=/usr/bin/gcc-12
+            export CXX=/usr/bin/g++-12
+          fi
+
           chmod 0777 .
           mkdir __build && chown condorauto __build && chmod 0777 __build
           su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install"
