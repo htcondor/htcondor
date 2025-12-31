@@ -527,9 +527,9 @@ struct PelicanTokenResponse {
 	std::string error_message;
 };
 
-// Check if Pelican file transfer should be used for this job ad
-// Returns true if Pelican should be used, false otherwise
-static bool ShouldUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican) {
+// Common checks for Pelican file transfer eligibility
+// Returns true if basic requirements are met, false otherwise
+static bool ShouldUsePelicanTransferCommon(ClassAd *job_ad, bool peer_supports_pelican) {
 	if (!job_ad) {
 		return false;
 	}
@@ -545,21 +545,6 @@ static bool ShouldUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican
 	if (!peer_supports_pelican) {
 		dprintf(D_FULLDEBUG, "Pelican: Skipping - peer doesn't support Pelican (< 25.7.0)\n");
 		return false;
-	}
-
-	// Check for any complex functionality that might not be supported yet
-	// For now, we'll be conservative and only enable for basic transfers
-	
-	// Check if directory transfers are requested - skip Pelican for now
-	std::string transfer_input_files;
-	if (job_ad->LookupString(ATTR_TRANSFER_INPUT_FILES, transfer_input_files)) {
-		// Simple heuristic: if there's a "/" at the end of any path, it's a directory
-		if (transfer_input_files.find("/,") != std::string::npos ||
-		    transfer_input_files.find("/ ") != std::string::npos ||
-		    (transfer_input_files.length() > 0 && transfer_input_files.back() == '/')) {
-			dprintf(D_FULLDEBUG, "Pelican: Skipping due to directory transfer\n");
-			return false;
-		}
 	}
 
 	// Check if specific users/jobs are allowed to use Pelican
@@ -583,7 +568,46 @@ static bool ShouldUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican
 		}
 	}
 
-	dprintf(D_FULLDEBUG, "Pelican: Transfer enabled for this job\n");
+	return true;
+}
+
+// Check if Pelican file transfer should be used for input sandbox
+// Returns true if Pelican should be used, false otherwise
+static bool ShouldInputUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican) {
+	if (!ShouldUsePelicanTransferCommon(job_ad, peer_supports_pelican)) {
+		return false;
+	}
+
+	// Check for any complex functionality that might not be supported yet
+	// For now, we'll be conservative and only enable for basic transfers
+
+	// Check if directory transfers are requested - skip Pelican for now
+	std::string transfer_input_files;
+	if (job_ad->LookupString(ATTR_TRANSFER_INPUT_FILES, transfer_input_files)) {
+		// Simple heuristic: if there's a "/" at the end of any path, it's a directory
+		if (transfer_input_files.find("/,") != std::string::npos ||
+		    transfer_input_files.find("/ ") != std::string::npos ||
+		    (transfer_input_files.length() > 0 && transfer_input_files.back() == '/')) {
+			dprintf(D_FULLDEBUG, "Pelican: Skipping input transfer due to directory transfer\n");
+			return false;
+		}
+	}
+
+	dprintf(D_FULLDEBUG, "Pelican: Input transfer enabled for this job\n");
+	return true;
+}
+
+// Check if Pelican file transfer should be used for output sandbox
+// Returns true if Pelican should be used, false otherwise
+static bool ShouldOutputUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican) {
+	if (!ShouldUsePelicanTransferCommon(job_ad, peer_supports_pelican)) {
+		return false;
+	}
+
+	// Currently no output-specific restrictions
+	// Future: could check output file patterns, sizes, etc.
+
+	dprintf(D_FULLDEBUG, "Pelican: Output transfer enabled for this job\n");
 	return true;
 }
 
@@ -690,8 +714,18 @@ static std::string PelicanGenerateSandboxURL(const std::string &hostname, int cl
 // Prepare file list for Pelican transfer
 // Removes regular files from the list and replaces with Pelican URL + metadata
 // Returns true on success, false on failure
-static bool PreparePelicanTransferList(FileTransferList &filelist, ClassAd *job_ad, const std::string &jobid) {
+static bool PreparePelicanTransferList(FileTransferList &filelist, ClassAd *job_ad, const std::string &jobid, ReliSock *sock) {
 	dprintf(D_FULLDEBUG, "Pelican: Preparing file list for job %s\n", jobid.c_str());
+
+	// Check if peer supports pelican:// URL scheme
+	if (sock) {
+		std::vector<std::string> desired_schemes = {"pelican"};
+		std::string error_msg;
+		if (!CheckUrlSchemeSupport(sock, desired_schemes, error_msg)) {
+			dprintf(D_FULLDEBUG, "Pelican: Peer does not support pelican:// scheme: %s\n", error_msg.c_str());
+			return false;
+		}
+	}
 
 	// Get the Pelican domain socket path from configuration
 	std::string socket_path;
@@ -762,72 +796,138 @@ static bool PreparePelicanTransferList(FileTransferList &filelist, ClassAd *job_
 	return true;
 }
 
-// Request token registration for output sandbox transfer
-// Called by starter to register the job and get a token from shadow
-static PelicanTokenResponse PelicanRequestOutputToken(ReliSock *sock, ClassAd *job_ad) {
-	PelicanTokenResponse response;
-	response.success = false;
+// Build a response ClassAd for a Pelican URL metadata request
+// Called by shadow when starter requests metadata for output transfers
+// Returns true if Pelican metadata was successfully added, false otherwise
+static bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, ClassAd& response_ad) {
+	if (!starts_with_ignore_case(url, "pelican://")) {
+		return false;
+	}
 
-	dprintf(D_FULLDEBUG, "Pelican: Starter requesting output token from shadow\n");
+	if (!ShouldOutputUsePelicanTransfer(job_ad, true)) {
+		response_ad.Assign("Error", "Pelican transfer not available");
+		return false;
+	}
 
 	// Get the Pelican domain socket path from configuration
 	std::string socket_path;
 	param(socket_path, "PELICAN_TOKEN_SOCKET", "/var/run/pelican/token.sock");
 
-	// Request a token from the Pelican service (shadow side)
+	// Request token from Pelican service
 	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
+
 	if (!token_response.success) {
-		dprintf(D_ALWAYS, "Pelican: Shadow failed to obtain output token: %s\n", 
+		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Failed to get Pelican token: %s\n",
 		        token_response.error_message.c_str());
-		return token_response;
+		response_ad.Assign("Error", token_response.error_message);
+		return false;
 	}
 
-	dprintf(D_FULLDEBUG, "Pelican: Shadow successfully obtained output token\n");
-	return token_response;
-}
+	// Success - add token and CA info to response
+	response_ad.Assign("PelicanToken", token_response.token);
+	response_ad.Assign("PelicanTokenExpires", (long long)token_response.expires_at);
 
-// Handle output sandbox transfer using Pelican (stub)
-// This is called by the starter when uploading output files
-static filesize_t DoPelicanOutputTransfer(ReliSock *sock, ClassAd *job_ad, const std::string &jobid) {
-	dprintf(D_FULLDEBUG, "Pelican: Starter initiating output sandbox transfer for job %s\n", jobid.c_str());
-
-	// Request token from shadow
-	PelicanTokenResponse token_response = PelicanRequestOutputToken(sock, job_ad);
-	if (!token_response.success) {
-		dprintf(D_ALWAYS, "Pelican: Failed to obtain output token from shadow\n");
-		return -1;
-	}
-
-	// Get hostname from configuration
-	std::string hostname;
-	param(hostname, "PELICAN_HOSTNAME", "localhost");
-
-	// Extract cluster and proc IDs
-	int cluster = 0, proc = 0;
-	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-	job_ad->LookupInteger(ATTR_PROC_ID, proc);
-
-	// Generate the Pelican URL for the output sandbox
-	std::string pelican_url = PelicanGenerateSandboxURL(hostname, cluster, proc, false);
-	dprintf(D_FULLDEBUG, "Pelican: Output sandbox URL: %s\n", pelican_url.c_str());
-
-	// Get CA contents if needed
-	std::string ca_contents;
+	// Read CA file if configured
 	std::string ca_file;
 	if (param(ca_file, "PELICAN_CA_FILE")) {
+		std::string ca_contents;
 		std::ifstream ca_stream(ca_file);
-		if (ca_stream) {
-			ca_contents.assign(std::istreambuf_iterator<char>(ca_stream), std::istreambuf_iterator<char>());
-			dprintf(D_FULLDEBUG, "Pelican: Loaded CA file (%zu bytes)\n", ca_contents.size());
+		if (ca_stream.good()) {
+			ca_contents.assign(std::istreambuf_iterator<char>(ca_stream),
+			                   std::istreambuf_iterator<char>());
+			if (!ca_contents.empty()) {
+				response_ad.Assign("PelicanCAContents", ca_contents);
+			}
 		}
 	}
 
-	// TODO: Actually invoke the Pelican plugin here to upload the files
-	// For now, this is just a stub that logs the operation
-	dprintf(D_FULLDEBUG, "Pelican: Output transfer stub - would upload to %s with token\n", pelican_url.c_str());
+	dprintf(D_FULLDEBUG, "BuildPelicanMetadataResponse: Successfully provided Pelican metadata\n");
+	return true;
+}
 
-	// Return 0 for now as this is a stub
-	return 0;
+// Prepare output sandbox files for Pelican transfer
+// Similar to PreparePelicanTransferList but for output/upload side
+static bool PreparePelicanOutputTransferList(
+	ReliSock *sock,
+	FileTransferList& filelist,
+	ClassAd *job_ad,
+	bool peer_supports_pelican)
+{
+	if (!ShouldOutputUsePelicanTransfer(job_ad, peer_supports_pelican)) {
+		return false;  // Not an error, just don't use Pelican
+	}
+
+	// Check if pelican:// URL handler is available
+	bool has_pelican_handler = false;
+	for (const auto& item : filelist) {
+		if (item.isDestUrl() && starts_with_ignore_case(item.destUrl(), "pelican://")) {
+			has_pelican_handler = true;
+			break;
+		}
+	}
+
+	if (!has_pelican_handler) {
+		dprintf(D_FULLDEBUG, "Pelican: No pelican:// URLs found in output files\n");
+		return false;
+	}
+
+	// Get the job ID for the sandbox URL
+	int cluster_id = 0, proc_id = 0;
+	if (!job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster_id) ||
+	    !job_ad->LookupInteger(ATTR_PROC_ID, proc_id)) {
+		dprintf(D_ALWAYS, "Pelican: Failed to get job ID from ClassAd\n");
+		return false;
+	}
+
+	// Get Pelican hostname
+	std::string pelican_hostname;
+	if (!param(pelican_hostname, "PELICAN_HOSTNAME")) {
+		dprintf(D_FULLDEBUG, "Pelican: PELICAN_HOSTNAME not configured\n");
+		return false;
+	}
+
+	// Construct the Pelican URL for output sandbox
+	std::string pelican_url;
+	formatstr(pelican_url, "pelican://%s/sandboxes/%d.%d/output",
+	          pelican_hostname.c_str(), cluster_id, proc_id);
+
+	// Request metadata (token, CA) from the shadow
+	ClassAd metadata_ad;
+	std::string error_msg;
+	if (!RequestUrlMetadata(sock, pelican_url, metadata_ad, error_msg)) {
+		dprintf(D_ALWAYS, "Pelican: Failed to get metadata for %s: %s\n",
+		        pelican_url.c_str(), error_msg.c_str());
+		return false;
+	}
+
+	dprintf(D_FULLDEBUG, "Pelican: Successfully obtained metadata for output sandbox\n");
+
+	// Remove non-URL files from the transfer list (they'll go via Pelican)
+	auto it = filelist.begin();
+	while (it != filelist.end()) {
+		if (!it->isSrcUrl() && !it->isDirectory()) {
+			dprintf(D_FULLDEBUG, "Pelican: Removing %s from normal transfer list\n",
+			        it->srcName().c_str());
+			it = filelist.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	// Add a FileTransferItem for the Pelican URL with metadata
+	FileTransferItem pelican_item;
+	pelican_item.setDestUrl(pelican_url);
+
+	// Copy metadata into the item's ClassAd
+	auto pelican_ad = std::make_unique<ClassAd>();
+	pelican_ad->Update(metadata_ad);
+	pelican_ad->Assign("PelicanTransfer", true);
+	pelican_item.setUrlAd(std::move(pelican_ad));
+
+	filelist.push_back(std::move(pelican_item));
+
+	dprintf(D_FULLDEBUG, "Pelican: Successfully prepared output transfer list\n");
+	return true;
 }
 
 // ============================================================================
@@ -3767,6 +3867,15 @@ FileTransfer::DoDownload(ReliSock *s)
 
 				ClassAd response_ad;
 
+				// Check if this is a Pelican URL and build the metadata response
+				if (!BuildPelicanMetadataResponse(url, &_fix_me_copy_, response_ad)) {
+					// If not Pelican or error occurred, response_ad will have Error attribute set
+					if (!response_ad.Lookup("Error")) {
+						dprintf(D_FULLDEBUG, "DoDownload: Not providing Pelican transfer for URL\n");
+						response_ad.Assign("Error", "Pelican transfer not available");
+					}
+				}
+
 				// Send response back to starter
 				if (!s->end_of_message()) {
 					dprintf(D_ERROR, "DoDownload: exiting at %d\n", __LINE__);
@@ -5210,11 +5319,21 @@ FileTransfer::computeFileList(
 
 	// If Pelican transfer is enabled and supported, prepare the file list
 	// This removes normal files and adds a Pelican URL with metadata
-	if (inHandleCommands && ShouldUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
-		dprintf(D_FULLDEBUG, "Pelican: Preparing file list for transfer\\n");
-		if (!PreparePelicanTransferList(filelist, &_fix_me_copy_, m_jobid)) {
-			dprintf(D_ALWAYS, "Pelican: Failed to prepare transfer list, falling back to normal transfer\\n");
+	if (inHandleCommands && ShouldInputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing input file list for transfer\n");
+		if (!PreparePelicanTransferList(filelist, &_fix_me_copy_, m_jobid, s)) {
+			dprintf(D_ALWAYS, "Pelican: Failed to prepare transfer list, falling back to normal transfer\n");
 			// Continue with normal transfer on failure
+		}
+	}
+
+	// For output files (starter side), request metadata from shadow and prepare list
+	// This is the opposite direction from input - !inHandleCommands means starter side
+	if (!inHandleCommands && s && should_invoke_output_plugins && PeerDoesPelicanTransfer) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing output file list for transfer\n");
+		if (!PreparePelicanOutputTransferList(s, filelist, &_fix_me_copy_, PeerDoesPelicanTransfer)) {
+			dprintf(D_FULLDEBUG, "Pelican: Not using Pelican for output transfer\n");
+			// Continue with normal transfer
 		}
 	}
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandFileTransferList():" );
