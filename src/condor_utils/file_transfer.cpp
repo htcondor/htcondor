@@ -22,7 +22,9 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "condor_url.h"
 #include "file_transfer.h"
+#include "file_transfer_internal.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
 #include "basename.h"
@@ -69,6 +71,116 @@
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
+
+// FileTransferItem method implementations
+
+FileTransferItem::FileTransferItem(const FileTransferItem& other)
+	: m_src_scheme(other.m_src_scheme),
+	  m_dest_scheme(other.m_dest_scheme),
+	  m_src_name(other.m_src_name),
+	  m_dest_dir(other.m_dest_dir),
+	  m_dest_url(other.m_dest_url),
+	  m_xfer_queue(other.m_xfer_queue),
+	  is_domainsocket(other.is_domainsocket),
+	  is_directory(other.is_directory),
+	  is_symlink(other.is_symlink),
+	  m_file_mode(other.m_file_mode),
+	  m_file_size(other.m_file_size)
+{
+	if (other.m_url_ad) {
+		m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
+	}
+}
+
+FileTransferItem& FileTransferItem::operator=(const FileTransferItem& other) {
+	if (this != &other) {
+		m_src_scheme = other.m_src_scheme;
+		m_dest_scheme = other.m_dest_scheme;
+		m_src_name = other.m_src_name;
+		m_dest_dir = other.m_dest_dir;
+		m_dest_url = other.m_dest_url;
+		m_xfer_queue = other.m_xfer_queue;
+		is_domainsocket = other.is_domainsocket;
+		is_directory = other.is_directory;
+		is_symlink = other.is_symlink;
+		m_file_mode = other.m_file_mode;
+		m_file_size = other.m_file_size;
+		if (other.m_url_ad) {
+			m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
+		} else {
+			m_url_ad.reset();
+		}
+	}
+	return *this;
+}
+
+void FileTransferItem::setSrcName(const std::string &src) {
+	m_src_name = src;
+	const char *scheme_end = IsUrl(src.c_str());
+	if (scheme_end) {
+		m_src_scheme = std::string(src.c_str(), scheme_end - src.c_str());
+	}
+}
+
+void FileTransferItem::setDestUrl(const std::string &dest_url) {
+	m_dest_url = dest_url;
+	const char *scheme_end = IsUrl(dest_url.c_str());
+	if (scheme_end) {
+		m_dest_scheme = std::string(dest_url.c_str(), scheme_end - dest_url.c_str());
+	}
+}
+
+bool FileTransferItem::operator<(const FileTransferItem &other) const {
+	// Ordering of transfers:
+	// - Destination URLs first (allows these plugins to alter CEDAR transfers on
+	//   stageout)
+	// - CEDAR-based transfers (move any credentials prior to source URLs; assume
+	//   credentials are already present for stageout).
+	// - Source URLs last.
+	//      - Protected URLs (require a transfer queues permission)
+	//      - All other source URLs
+
+	auto is_dest_url = !m_dest_scheme.empty();
+	auto other_is_dest_url = !other.m_dest_scheme.empty();
+	if (is_dest_url && !other_is_dest_url) {
+		return true;
+	}
+	if (!is_dest_url && other_is_dest_url) {
+		return false;
+	}
+	if (is_dest_url) {
+		if (m_dest_scheme == other.m_dest_scheme) {
+			return false;
+		} else {
+			return m_dest_scheme < other.m_dest_scheme;
+		}
+	}
+
+	auto is_src_url = !m_src_scheme.empty();
+	auto other_is_src_url = !other.m_src_scheme.empty();
+	if (is_src_url && !other_is_src_url) {
+		return false;
+	}
+	if (!is_src_url && other_is_src_url) {
+		return true;
+	}
+	if (is_src_url) { // Both are URLs
+		// Check if src has specified queue for permissions
+		if (hasQueue() && !other.hasQueue()) {
+			return true;
+		} else if (!hasQueue() && other.hasQueue()) {
+			return false;
+		} else if (hasQueue() && other.hasQueue() && m_xfer_queue != other.m_xfer_queue) {
+			return m_xfer_queue < other.m_xfer_queue;
+		}
+		if (m_src_scheme == other.m_src_scheme) {
+			return false;
+		} else {
+			return m_src_scheme < other.m_src_scheme;
+		}
+	}
+	return false;
+}
 
 // Transfer commands are sent from the upload side to the download side.
 // 0 - finished
@@ -146,198 +258,6 @@ const char IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
  * it to be sorted in a list.  This allows, for example, all the CEDAR-based
  * transfers to be performed prior to the non-CEDAR transfers.
  */
-class FileTransferItem {
-public:
-	// Copy constructor - needed for vector copy construction
-	// Deep copies the ClassAd if present
-	// The two places where copy assignment are used are:
-	// - DoCheckpointUploadFromStarter
-	// - DoCheckpointUploadFromShadow
-	// - DoNormalUpload
-	FileTransferItem(const FileTransferItem& other)
-		: m_src_scheme(other.m_src_scheme),
-		  m_dest_scheme(other.m_dest_scheme),
-		  m_src_name(other.m_src_name),
-		  m_dest_dir(other.m_dest_dir),
-		  m_dest_url(other.m_dest_url),
-		  m_xfer_queue(other.m_xfer_queue),
-		  is_domainsocket(other.is_domainsocket),
-		  is_directory(other.is_directory),
-		  is_symlink(other.is_symlink),
-		  m_file_mode(other.m_file_mode),
-		  m_file_size(other.m_file_size)
-	{
-		if (other.m_url_ad) {
-			m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
-		}
-	}
-
-	// Copy assignment operator
-	FileTransferItem& operator=(const FileTransferItem& other) {
-		if (this != &other) {
-			m_src_scheme = other.m_src_scheme;
-			m_dest_scheme = other.m_dest_scheme;
-			m_src_name = other.m_src_name;
-			m_dest_dir = other.m_dest_dir;
-			m_dest_url = other.m_dest_url;
-			m_xfer_queue = other.m_xfer_queue;
-			is_domainsocket = other.is_domainsocket;
-			is_directory = other.is_directory;
-			is_symlink = other.is_symlink;
-			m_file_mode = other.m_file_mode;
-			m_file_size = other.m_file_size;
-			if (other.m_url_ad) {
-				m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
-			} else {
-				m_url_ad.reset();
-			}
-		}
-		return *this;
-	}
-
-	// Default constructor, destructor, and move operations
-	FileTransferItem() = default;
-	~FileTransferItem() = default;
-	FileTransferItem(FileTransferItem&&) = default;
-	FileTransferItem& operator=(FileTransferItem&&) = default;
-
-	const std::string &srcName() const { return m_src_name; }
-	const std::string &destDir() const { return m_dest_dir; }
-	const std::string &destUrl() const { return m_dest_url; }
-	const std::string &srcScheme() const { return m_src_scheme; }
-	const std::string &xferQueue() const { return m_xfer_queue; }
-	filesize_t fileSize() const { return m_file_size; }
-	void setDestDir(const std::string &dest) { m_dest_dir = dest; }
-	void setXferQueue(const std::string &queue) { m_xfer_queue = queue; }
-	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
-	void setDomainSocket(bool value) { is_domainsocket = value; }
-	void setSymlink(bool value) { is_symlink = value; }
-	void setDirectory(bool value) { is_directory = value; }
-	bool isDomainSocket() const {return is_domainsocket;}
-	bool isSymlink() const {return is_symlink;}
-	bool isDirectory() const {return is_directory;}
-	bool isSrcUrl() const {return !m_src_scheme.empty();}
-	bool isDestUrl() const {return !m_dest_scheme.empty();}
-	bool hasQueue() const { return !m_xfer_queue.empty(); }
-	condor_mode_t fileMode() const {return m_file_mode;}
-	void setFileMode(condor_mode_t new_mode) {m_file_mode = new_mode;}
-
-	// Optional ClassAd for URL transfers (e.g., Pelican with token)
-	ClassAd* getUrlAd() const { return m_url_ad.get(); }
-	void setUrlAd(std::unique_ptr<ClassAd> ad) { m_url_ad = std::move(ad); }
-
-	void setSrcName(const std::string &src) {
-		m_src_name = src;
-		const char *scheme_end = IsUrl(src.c_str());
-		if (scheme_end) {
-			m_src_scheme = std::string(src.c_str(), scheme_end - src.c_str());
-		}
-	}
-
-	void setDestUrl(const std::string &dest_url) {
-		m_dest_url = dest_url;
-		const char *scheme_end = IsUrl(dest_url.c_str());
-		if (scheme_end) {
-			m_dest_scheme = std::string(dest_url.c_str(), scheme_end - dest_url.c_str());
-		}
-	}
-
-    //
-    // This function is used by std::stable_sort() in FileTransfer::DoUpload()
-    // to group transfers.  This function used to also sort all transfers,
-    // but it no longer does; now it only sorts URLs.  (It should probably stop
-    // doing that, too, but that's another ticket.)  This is because
-    // ExpandeFileTransferList() -- which converts a list of source names
-    // into a std::vector<FileTransferItem> -- creates new non-URL
-    // FileTransferItems when it "expands" the name of a directory into
-    // the FileTransferItem which creates the directory and the
-    // FileTransferItems which populate the directory.  Obviously, creating
-    // the directory must come before populating it.
-    //
-    // Before, this almost always happened because the "source" of a directory
-    // would always sort before the source of any of the files in the
-    // directory.  However, after HTCONDOR-583 fixed a problem where file
-    // transfer would ignore directories in SPOOL, it became very easy to
-    // write job submit files which would have two different "sources" (the
-    // SPOOL and the input directory) for the same directory.  When
-    // ExpandFileTransferList() removes duplicate directories, it removes
-    // the directories which appear later in the list, because the directory
-    // needs to be created before any files in it (and the input directory,
-    // for example, could have a file in it that's not in SPOOL).  Sorting
-    // the list of non-URL FileTransferItems may undo this ordering (for
-    // instance, if SPOOL sorts before the IWD, a file from SPOOL would be
-    // transferred before the directory "sourced" in IWD would be created,
-    // because transfers from IWD are listed first (to make sure that files
-    // in SPOOL win)).
-    //
-
-	bool operator<(const FileTransferItem &other) const {
-		// Ordering of transfers:
-		// - Destination URLs first (allows these plugins to alter CEDAR transfers on
-		//   stageout)
-		// - CEDAR-based transfers (move any credentials prior to source URLs; assume
-		//   credentials are already present for stageout).
-		// - Source URLs last.
-		//      - Protected URLs (require a transfer queues permission)
-		//      - All other source URLs
-
-		auto is_dest_url = !m_dest_scheme.empty();
-		auto other_is_dest_url = !other.m_dest_scheme.empty();
-		if (is_dest_url && !other_is_dest_url) {
-			return true;
-		}
-		if (!is_dest_url && other_is_dest_url) {
-			return false;
-		}
-		if (is_dest_url) {
-			if (m_dest_scheme == other.m_dest_scheme) {
-				return false;
-			} else {
-				return m_dest_scheme < other.m_dest_scheme;
-			}
-		}
-
-		auto is_src_url = !m_src_scheme.empty();
-		auto other_is_src_url = !other.m_src_scheme.empty();
-		if (is_src_url && !other_is_src_url) {
-			return false;
-		}
-		if (!is_src_url && other_is_src_url) {
-			return true;
-		}
-		if (is_src_url) { // Both are URLs
-			// Check if src has specified queue for permissions
-			if (hasQueue() && !other.hasQueue()) {
-				return true;
-			} else if (!hasQueue() && other.hasQueue()) {
-				return false;
-			} else if (hasQueue() && other.hasQueue() && m_xfer_queue != other.m_xfer_queue) {
-				return m_xfer_queue < other.m_xfer_queue;
-			}
-			if (m_src_scheme == other.m_src_scheme) {
-				return false;
-			} else {
-				return m_src_scheme < other.m_src_scheme;
-			}
-		}
-		return false;
-	}
-
-private:
-	std::string m_src_scheme;
-	std::string m_dest_scheme;
-	std::string m_src_name;
-	std::string m_dest_dir;
-	std::string m_dest_url;
-	std::string m_xfer_queue;
-	bool is_domainsocket{false};
-	bool is_directory{false};
-	bool is_symlink{false};
-	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
-	filesize_t m_file_size{0};
-	std::unique_ptr<ClassAd> m_url_ad; // For URL transfers with metadata
-};
-
 void
 dPrintFileTransferList( int flags, const FileTransferList & list, const std::string & header ) {
 	std::string message = header;
@@ -378,7 +298,7 @@ struct download_info {
 // This is a generic protocol function that can be used for any URL-based transfer
 // (Pelican, S3, etc.) that requires metadata from the remote peer.
 // Returns true on success with metadata in the ClassAd, false on failure
-static bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg) {
+bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg) {
 	if (!sock) {
 		error_msg = "No socket provided";
 		return false;
@@ -427,7 +347,7 @@ static bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& 
 // Check if the peer supports the given URL schemes
 // Sends a list of desired schemes and receives back a list of supported schemes
 // Returns true if all desired schemes are supported, false otherwise
-static bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg) {
+bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg) {
 	if (!sock) {
 		error_msg = "No socket provided";
 		return false;

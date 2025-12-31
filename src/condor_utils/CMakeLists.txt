@@ -300,6 +300,7 @@ filesystem_remap.cpp
 filesystem_remap.h
 file_transfer.cpp
 file_transfer.h
+file_transfer_internal.h
 file_transfer_stats.cpp
 file_transfer_stats.h
 forkwork.cpp
