@@ -18,7 +18,7 @@ This document tracks the implementation of Pelican-based file transfer for HTCon
    - Uses libcurl over domain socket to communicate with Pelican token service
    - POSTs job ad in JSON format
    - Receives token and expiration time
-   - RESTful API endpoint: `http://localhost/api/v1/sandbox/token`
+   - RESTful API endpoint: `http://localhost/api/v1/sandbox/register`
 
 3. **Input Sandbox Transfer** (`DoPelicanInputTransfer()`)
    - Called by shadow when uploading input files to starter
@@ -56,7 +56,7 @@ The following configuration parameters control Pelican file transfer:
 
 ## Token Service API (Guessed)
 
-### Request: POST /api/v1/sandbox/token
+### Request: POST /api/v1/sandbox/register
 
 **Request Body:** Job ClassAd in JSON format
 

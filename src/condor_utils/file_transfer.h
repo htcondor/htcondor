@@ -690,6 +690,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesS3Urls{false};
 	bool PeerRenamesExecutable{true};
 	bool PeerKnowsProtectedURLs{false};
+	bool PeerDoesPelicanTransfer{false}; // HTCondor 25.7.0+
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 #ifdef WIN32

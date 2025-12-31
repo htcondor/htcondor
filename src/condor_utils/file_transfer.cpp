@@ -58,6 +58,10 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+
+#include <curl/curl.h>
 
 
 // not sure why, but enabling this leads to crashes in some tests (which are linux only...)
@@ -363,6 +367,325 @@ struct upload_info {
 struct download_info {
 	FileTransfer *myobj;
 };
+
+// ============================================================================
+// Pelican file transfer support
+// ============================================================================
+
+// Pelican token response structure
+struct PelicanTokenResponse {
+	std::string token;
+	time_t expires_at;
+	bool success;
+	std::string error_message;
+};
+
+// Check if Pelican file transfer should be used for this job ad
+// Returns true if Pelican should be used, false otherwise
+static bool ShouldUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican) {
+	if (!job_ad) {
+		return false;
+	}
+
+	// Check if Pelican is enabled via configuration
+	bool pelican_enabled = param_boolean("ENABLE_PELICAN_FILE_TRANSFER", false);
+	if (!pelican_enabled) {
+		return false;
+	}
+
+	// Pelican transfers require HTCondor 25.7.0 or later on both sides
+	// for the new TransferSubCommand::DownloadUrlWithAd protocol
+	if (!peer_supports_pelican) {
+		dprintf(D_FULLDEBUG, "Pelican: Skipping - peer doesn't support Pelican (< 25.7.0)\n");
+		return false;
+	}
+
+	// Check for any complex functionality that might not be supported yet
+	// For now, we'll be conservative and only enable for basic transfers
+	
+	// Check if directory transfers are requested - skip Pelican for now
+	std::string transfer_input_files;
+	if (job_ad->LookupString(ATTR_TRANSFER_INPUT_FILES, transfer_input_files)) {
+		// Simple heuristic: if there's a "/" at the end of any path, it's a directory
+		if (transfer_input_files.find("/,") != std::string::npos ||
+		    transfer_input_files.find("/ ") != std::string::npos ||
+		    (transfer_input_files.length() > 0 && transfer_input_files.back() == '/')) {
+			dprintf(D_FULLDEBUG, "Pelican: Skipping due to directory transfer\n");
+			return false;
+		}
+	}
+
+	// Check if specific users/jobs are allowed to use Pelican
+	std::string pelican_users;
+	param(pelican_users, "PELICAN_ALLOWED_USERS");
+	if (!pelican_users.empty()) {
+		std::string owner;
+		bool found_owner = false;
+		if (job_ad->LookupString(ATTR_OWNER, owner)) {
+			for (const auto& allowed_user: StringTokenIterator(pelican_users)) {
+				if (owner == allowed_user) {
+					dprintf(D_FULLDEBUG, "Pelican: User %s is allowed for Pelican transfer\n", owner.c_str());
+					found_owner = true;
+					break;
+				}
+			}
+		}
+		if (!found_owner) {
+			dprintf(D_FULLDEBUG, "Pelican: User %s is not allowed for Pelican transfer\n", owner.c_str());
+			return false;
+		}
+	}
+
+	dprintf(D_FULLDEBUG, "Pelican: Transfer enabled for this job\n");
+	return true;
+}
+
+// Callback for libcurl to capture response data
+static size_t PelicanCurlWriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+	size_t realsize = size * nmemb;
+	std::string *response = static_cast<std::string*>(userp);
+	response->append(static_cast<char*>(contents), realsize);
+	return realsize;
+}
+
+// Request a token from the Pelican token service via domain socket
+// This posts the job ad to the service and receives back a token and expiration time
+static PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &socket_path) {
+	PelicanTokenResponse response;
+	response.success = false;
+	response.expires_at = 0;
+
+	if (!job_ad) {
+		response.error_message = "Null job ad provided";
+		return response;
+	}
+
+	// Initialize curl
+	CURL *curl = curl_easy_init();
+	if (!curl) {
+		response.error_message = "Failed to initialize curl";
+		return response;
+	}
+
+	// Serialize the job ad to JSON format
+	std::string job_ad_json;
+	classad::ClassAdJsonUnParser unparser;
+	unparser.Unparse(job_ad_json, job_ad);
+
+	std::string response_string;
+	struct curl_slist *headers = nullptr;
+	headers = curl_slist_append(headers, "Content-Type: application/json");
+
+	// Configure curl to use unix domain socket
+	std::string url = "http://localhost/api/v1/sandbox/register";
+	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, socket_path.c_str());
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, job_ad_json.c_str());
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, PelicanCurlWriteCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);  // 30 second timeout
+
+	// Perform the request
+	CURLcode res = curl_easy_perform(curl);
+	
+	if (res != CURLE_OK) {
+		formatstr(response.error_message, "Curl request failed: %s", curl_easy_strerror(res));
+		curl_slist_free_all(headers);
+		curl_easy_cleanup(curl);
+		return response;
+	}
+
+	long http_code = 0;
+	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+	curl_slist_free_all(headers);
+	curl_easy_cleanup(curl);
+
+	if (http_code != 200) {
+		formatstr(response.error_message, "HTTP error code: %ld", http_code);
+		return response;
+	}
+
+	// Parse JSON response using ClassAd's JSON parser
+	ClassAd json_ad;
+	classad::ClassAdJsonParser parser;
+	
+	if (!parser.ParseClassAd(response_string, json_ad)) {
+		response.error_message = "Failed to parse JSON response from token service";
+		return response;
+	}
+
+	// Extract token and expiration from response
+	std::string token_str;
+	long long expires_at_val = 0;
+	if (!json_ad.LookupString("token", token_str) || !json_ad.LookupInteger("expires_at", expires_at_val)) {
+		response.error_message = "Response missing required fields (token, expires_at)";
+		return response;
+	}
+
+	response.token = token_str;
+	response.expires_at = expires_at_val;
+	response.success = true;
+
+	dprintf(D_FULLDEBUG, "Pelican: Successfully obtained token, expires at %ld\n", response.expires_at);
+	return response;
+}
+
+// Generate Pelican URL for the sandbox
+static std::string PelicanGenerateSandboxURL(const std::string &hostname, int cluster, int proc, bool is_input) {
+	std::string url;
+	const char *direction = is_input ? "input" : "output";
+	formatstr(url, "pelican://%s/sandboxes/%d.%d/%s", hostname.c_str(), cluster, proc, direction);
+	return url;
+}
+
+// Prepare file list for Pelican transfer
+// Removes regular files from the list and replaces with Pelican URL + metadata
+// Returns true on success, false on failure
+static bool PreparePelicanTransferList(FileTransferList &filelist, ClassAd *job_ad, const std::string &jobid) {
+	dprintf(D_FULLDEBUG, "Pelican: Preparing file list for job %s\n", jobid.c_str());
+
+	// Get the Pelican domain socket path from configuration
+	std::string socket_path;
+	param(socket_path, "PELICAN_TOKEN_SOCKET", "/var/run/pelican/token.sock");
+
+	// Request a token from the Pelican service
+	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
+	if (!token_response.success) {
+		dprintf(D_ALWAYS, "Pelican: Failed to obtain token: %s\n", token_response.error_message.c_str());
+		return false;
+	}
+
+	// Get hostname from configuration
+	std::string hostname;
+	param(hostname, "PELICAN_HOSTNAME", "localhost");
+
+	// Extract cluster and proc IDs
+	int cluster = 0, proc = 0;
+	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID, proc);
+
+	// Generate the Pelican URL for the input sandbox
+	std::string pelican_url = PelicanGenerateSandboxURL(hostname, cluster, proc, true);
+	dprintf(D_FULLDEBUG, "Pelican: Input sandbox URL: %s\n", pelican_url.c_str());
+
+	// Get CA contents if needed
+	std::string ca_contents;
+	std::string ca_file;
+	if (param(ca_file, "PELICAN_CA_FILE")) {
+		std::ifstream ca_stream(ca_file);
+		if (ca_stream) {
+			ca_contents.assign(std::istreambuf_iterator<char>(ca_stream), std::istreambuf_iterator<char>());
+			dprintf(D_FULLDEBUG, "Pelican: Loaded CA file (%zu bytes)\n", ca_contents.size());
+		} else {
+			dprintf(D_ALWAYS, "Pelican: Warning - could not read CA file %s\n", ca_file.c_str());
+		}
+	}
+
+	// Remove all non-URL, file transfer items
+	// These will now be handled by Pelican
+	auto it = filelist.begin();
+	while (it != filelist.end()) {
+		if (!it->isSrcUrl()) {
+			dprintf(D_FULLDEBUG, "Pelican: Removing %s from transfer list (will use Pelican)\n",
+			        it->srcName().c_str());
+			it = filelist.erase(it);
+		} else {
+			++it;
+		}
+	}
+
+	// Create a ClassAd with Pelican transfer metadata
+	auto pelican_ad = std::make_unique<ClassAd>();
+	pelican_ad->Assign("PelicanToken", token_response.token);
+	pelican_ad->Assign("PelicanTokenExpires", (long long)token_response.expires_at);
+	if (!ca_contents.empty()) {
+		pelican_ad->Assign("PelicanCAContents", ca_contents);
+	}
+	pelican_ad->Assign("PelicanTransfer", true);
+
+	// Add a FileTransferItem for the Pelican URL
+	FileTransferItem pelican_item;
+	pelican_item.setSrcName(pelican_url);
+	pelican_item.setUrlAd(std::move(pelican_ad));
+	filelist.push_back(std::move(pelican_item));
+
+	dprintf(D_FULLDEBUG, "Pelican: Successfully prepared transfer list\n");
+	return true;
+}
+
+// Request token registration for output sandbox transfer
+// Called by starter to register the job and get a token from shadow
+static PelicanTokenResponse PelicanRequestOutputToken(ReliSock *sock, ClassAd *job_ad) {
+	PelicanTokenResponse response;
+	response.success = false;
+
+	dprintf(D_FULLDEBUG, "Pelican: Starter requesting output token from shadow\n");
+
+	// Get the Pelican domain socket path from configuration
+	std::string socket_path;
+	param(socket_path, "PELICAN_TOKEN_SOCKET", "/var/run/pelican/token.sock");
+
+	// Request a token from the Pelican service (shadow side)
+	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
+	if (!token_response.success) {
+		dprintf(D_ALWAYS, "Pelican: Shadow failed to obtain output token: %s\n", 
+		        token_response.error_message.c_str());
+		return token_response;
+	}
+
+	dprintf(D_FULLDEBUG, "Pelican: Shadow successfully obtained output token\n");
+	return token_response;
+}
+
+// Handle output sandbox transfer using Pelican (stub)
+// This is called by the starter when uploading output files
+static filesize_t DoPelicanOutputTransfer(ReliSock *sock, ClassAd *job_ad, const std::string &jobid) {
+	dprintf(D_FULLDEBUG, "Pelican: Starter initiating output sandbox transfer for job %s\n", jobid.c_str());
+
+	// Request token from shadow
+	PelicanTokenResponse token_response = PelicanRequestOutputToken(sock, job_ad);
+	if (!token_response.success) {
+		dprintf(D_ALWAYS, "Pelican: Failed to obtain output token from shadow\n");
+		return -1;
+	}
+
+	// Get hostname from configuration
+	std::string hostname;
+	param(hostname, "PELICAN_HOSTNAME", "localhost");
+
+	// Extract cluster and proc IDs
+	int cluster = 0, proc = 0;
+	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID, proc);
+
+	// Generate the Pelican URL for the output sandbox
+	std::string pelican_url = PelicanGenerateSandboxURL(hostname, cluster, proc, false);
+	dprintf(D_FULLDEBUG, "Pelican: Output sandbox URL: %s\n", pelican_url.c_str());
+
+	// Get CA contents if needed
+	std::string ca_contents;
+	std::string ca_file;
+	if (param(ca_file, "PELICAN_CA_FILE")) {
+		std::ifstream ca_stream(ca_file);
+		if (ca_stream) {
+			ca_contents.assign(std::istreambuf_iterator<char>(ca_stream), std::istreambuf_iterator<char>());
+			dprintf(D_FULLDEBUG, "Pelican: Loaded CA file (%zu bytes)\n", ca_contents.size());
+		}
+	}
+
+	// TODO: Actually invoke the Pelican plugin here to upload the files
+	// For now, this is just a stub that logs the operation
+	dprintf(D_FULLDEBUG, "Pelican: Output transfer stub - would upload to %s with token\n", pelican_url.c_str());
+
+	// Return 0 for now as this is a stub
+	return 0;
+}
+
+// ============================================================================
+// End Pelican file transfer support
+// ============================================================================
 
 FileTransfer::FileTransfer()
 {
@@ -4645,6 +4968,16 @@ FileTransfer::computeFileList(
 	// dprintf( D_ALWAYS, "FilesToSend: '%s'\n", join(*FilesToSend, ",").c_str() );
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before ExpandFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
+
+	// If Pelican transfer is enabled and supported, prepare the file list
+	// This removes normal files and adds a Pelican URL with metadata
+	if (inHandleCommands && ShouldUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing file list for transfer\\n");
+		if (!PreparePelicanTransferList(filelist, &_fix_me_copy_, m_jobid)) {
+			dprintf(D_ALWAYS, "Pelican: Failed to prepare transfer list, falling back to normal transfer\\n");
+			// Continue with normal transfer on failure
+		}
+	}
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandFileTransferList():" );
 
 	// Presently, `inHandleCommands` will only be set on the shadow.  The conditional
@@ -5262,7 +5595,7 @@ FileTransfer::uploadFileList(
 
 		if ( fileitem.isSrcUrl() ) {
 			file_command = TransferCommand::DownloadUrl;
-			// If this URL has an associated ClassAd,
+			// If this URL has an associated ClassAd (e.g., Pelican with token),
 			// use the new protocol with TransferCommand::Other
 			if (fileitem.getUrlAd() != nullptr) {
 				file_command = TransferCommand::Other;
@@ -6508,6 +6841,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
 	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 	PeerKnowsProtectedURLs = peer_version.built_since_version(23, 1, 0);
+	PeerDoesPelicanTransfer = peer_version.built_since_version(25, 7, 0);
 }
 
 
