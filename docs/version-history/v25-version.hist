@@ -1,13 +1,18 @@
-*** 25.0.5 features
+*** 25.0.6 features
 
-- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform
-  :jira:`3414`
+- Initial support for openSUSE Leap 16.
+  :jira:`3233`
 
 *** 25.0.6 bugs
 
 - Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
   it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
   :jira:`3481`
+
+*** 25.0.5 features
+
+- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform.
+  :jira:`3414`
 
 *** 25.0.5 bugs
 
