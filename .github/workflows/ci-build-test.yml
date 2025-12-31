@@ -8,19 +8,19 @@ jobs:
       fail-fast: false
       matrix:
         instance: [ 
-        {"img": "ubuntu-latest", "abbrev": "x86v2-AL10", "container": "htcondor/nmi-build:x86_64_v2_AlmaLinux10-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-AL8", "container": "htcondor/nmi-build:x86_64_AlmaLinux8-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-AL9", "container": "htcondor/nmi-build:x86_64_AlmaLinux9-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-AL10", "container": "htcondor/nmi-build:x86_64_AlmaLinux10-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-Azn23", "container": "htcondor/nmi-build:x86_64_AmazonLinux2023-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-D12", "container": "htcondor/nmi-build:x86_64_Debian12-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-OS15", "container": "htcondor/nmi-build:x86_64_openSUSE15-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-U22", "container": "htcondor/nmi-build:x86_64_Ubuntu22-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-U24", "container": "htcondor/nmi-build:x86_64_Ubuntu24-25050000"},
-        {"img": "ubuntu-latest", "abbrev": "x86-F42", "container": "htcondor/nmi-build:x86_64_Fedora42-25050000"},
-        {"img": "ubuntu-24.04-arm", "abbrev": "arm-AL8", "container": "htcondor/nmi-build:aarch64_AlmaLinux8-25050000"},
-        {"img": "ubuntu-24.04-arm", "abbrev": "arm-AL9", "container": "htcondor/nmi-build:aarch64_AlmaLinux9-25050000"},
-        {"img": "ubuntu-24.04-arm", "abbrev": "arm-U24", "container": "htcondor/nmi-build:aarch64_Ubuntu24-25050000"},
+        {"img": "ubuntu-latest", "abbrev": "x86v2-AL10", "container": "htcondor/nmi-build:x86_64_v2_AlmaLinux10-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-AL8", "container": "htcondor/nmi-build:x86_64_AlmaLinux8-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-AL9", "container": "htcondor/nmi-build:x86_64_AlmaLinux9-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-AL10", "container": "htcondor/nmi-build:x86_64_AlmaLinux10-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-Azn23", "container": "htcondor/nmi-build:x86_64_AmazonLinux2023-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-D12", "container": "htcondor/nmi-build:x86_64_Debian12-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-OS15", "container": "htcondor/nmi-build:x86_64_openSUSE15-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-U22", "container": "htcondor/nmi-build:x86_64_Ubuntu22-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-U24", "container": "htcondor/nmi-build:x86_64_Ubuntu24-25060000"},
+        {"img": "ubuntu-latest", "abbrev": "x86-F43", "container": "htcondor/nmi-build:x86_64_Fedora43-25060000"},
+        {"img": "ubuntu-24.04-arm", "abbrev": "arm-AL8", "container": "htcondor/nmi-build:aarch64_AlmaLinux8-25060000"},
+        {"img": "ubuntu-24.04-arm", "abbrev": "arm-AL9", "container": "htcondor/nmi-build:aarch64_AlmaLinux9-25060000"},
+        {"img": "ubuntu-24.04-arm", "abbrev": "arm-U24", "container": "htcondor/nmi-build:aarch64_Ubuntu24-25060000"},
       ]
     # Host OS and CPU
     runs-on: ${{ matrix.instance.img }}
@@ -146,7 +146,7 @@ jobs:
 
     # Use htcondor build containers for the real work
     container:
-      image: htcondor/nmi-build:x86_64_Ubuntu24-25050000
+      image: htcondor/nmi-build:x86_64_Ubuntu24-25060000
       env:
         OMP_NUM_THREADS: 4
       options: --cpus 4
