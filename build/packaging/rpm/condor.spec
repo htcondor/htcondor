@@ -106,7 +106,6 @@ BuildRequires: perl(XML::Parser)
 BuildRequires: perl(Digest::MD5)
 BuildRequires: python3-devel
 BuildRequires: libcurl-devel
-BuildRequires: dbus-devel
 
 # Authentication build requirements
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
@@ -359,7 +358,6 @@ Files needed to build an HTCondor tarball
 Summary: HTCondor Keyboard Daemon
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: dbus-libs
 
 %description kbdd
 The condor_kbdd monitors logged in X users for activity. It is only

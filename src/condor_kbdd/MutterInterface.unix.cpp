@@ -28,6 +28,11 @@
 
 #include <dbus/dbus.h>
 
+#if !defined(DBUS_INT64_MODIFIER)
+// An educated guess
+#define DBUS_INT64_MODIFIER "l"
+#endif
+
 #include "MutterInterface.unix.h"
 #include "condor_config.h"
 

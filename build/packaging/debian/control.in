@@ -288,8 +288,7 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends},
-         ${shlibs:Depends},
-         libdbus-1-3
+         ${shlibs:Depends}
 Description: distributed workload management system - single node configuration
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
