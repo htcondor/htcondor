@@ -303,6 +303,8 @@ file_transfer.h
 file_transfer_internal.h
 file_transfer_stats.cpp
 file_transfer_stats.h
+pelican_transfer.cpp
+pelican_transfer.h
 forkwork.cpp
 forkwork.h
 format_time.cpp
