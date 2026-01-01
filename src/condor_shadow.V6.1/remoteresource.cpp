@@ -1553,7 +1553,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
 				auto stats = shadow->getCommonTransferInfoStats();
 				if( stats ) {
-					dPrintAd( D_ALWAYS, * stats );
 					c.Insert( "TransferCommonStats", (* stats).Copy() );
 				}
 			}
