@@ -4842,25 +4842,7 @@ FileTransfer::computeFileList(
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before ExpandFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
 
-	// If Pelican transfer is enabled and supported, prepare the file list
-	// This removes normal files and adds a Pelican URL with metadata
-	if (inHandleCommands && ShouldInputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
-		dprintf(D_FULLDEBUG, "Pelican: Preparing input file list for transfer\n");
-		if (!PreparePelicanTransferList(filelist, &_fix_me_copy_, m_jobid, s)) {
-			dprintf(D_ALWAYS, "Pelican: Failed to prepare transfer list, falling back to normal transfer\n");
-			// Continue with normal transfer on failure
-		}
-	}
 
-	// For output files (starter side), request metadata from shadow and prepare list
-	// This is the opposite direction from input - !inHandleCommands means starter side
-	if (!inHandleCommands && s && should_invoke_output_plugins && PeerDoesPelicanTransfer) {
-		dprintf(D_FULLDEBUG, "Pelican: Preparing output file list for transfer\n");
-		if (!PreparePelicanOutputTransferList(s, filelist, &_fix_me_copy_, PeerDoesPelicanTransfer)) {
-			dprintf(D_FULLDEBUG, "Pelican: Not using Pelican for output transfer\n");
-			// Continue with normal transfer
-		}
-	}
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandFileTransferList():" );
 
 	// Presently, `inHandleCommands` will only be set on the shadow.  The conditional
@@ -4933,6 +4915,29 @@ FileTransfer::computeFileList(
 	if( !s->end_of_message() ) {
 		dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
+	}
+
+	// If Pelican transfer is enabled and supported, prepare the file list
+	// This removes normal files and adds a Pelican URL with metadata
+	// This must be done AFTER xfer_info is sent because the checks for support
+	// preparation require communication with the peer (which always assumes
+	// commands come after the xfer_info)
+	if (inHandleCommands && ShouldInputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing input file list for transfer\n");
+		if (!PreparePelicanInputTransferList(filelist, &_fix_me_copy_, m_jobid, this, s, xfer_queue, sandbox_size, protocolState)) {
+			dprintf(D_ALWAYS, "Pelican: Failed to prepare transfer list, falling back to normal transfer\n");
+			// Continue with normal transfer on failure
+		}
+	}
+
+	// For output files (starter side), request metadata from shadow and prepare list
+	// This is the opposite direction from input - !inHandleCommands means starter side
+	if (!inHandleCommands && s && should_invoke_output_plugins && ShouldOutputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing output file list for transfer\n");
+		if (!PreparePelicanOutputTransferList(this, s, filelist, &_fix_me_copy_, PeerDoesPelicanTransfer, xfer_queue, sandbox_size, protocolState)) {
+			dprintf(D_FULLDEBUG, "Pelican: Not using Pelican for output transfer\n");
+			// Continue with normal transfer
+		}
 	}
 
 	std::string tag;
@@ -6752,7 +6757,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
 	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 	PeerKnowsProtectedURLs = peer_version.built_since_version(23, 1, 0);
-	PeerDoesPelicanTransfer = peer_version.built_since_version(25, 7, 0);
+	PeerDoesPelicanTransfer = peer_version.built_since_version(25, 6, 0);
 }
 
 

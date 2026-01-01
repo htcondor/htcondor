@@ -5394,6 +5394,11 @@ default=$(LIBEXEC)/stash_plugin
 description=Full path to the stash/osdf/Pelican plugin
 type=path
 
+[PELICAN_TOKEN_SOCKET]
+default=$(SPOOL)/token.sock
+description=Path to the Unix domain socket for Pelican token service
+type=path
+
 [FILETRANSFER_PLUGINS]
 default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py, $(STASH_PLUGIN)
 win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py

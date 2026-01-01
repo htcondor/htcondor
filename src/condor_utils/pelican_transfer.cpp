@@ -18,18 +18,28 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_config.h"
+#include "basename.h"
+#include "classad/classad_distribution.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
+#include "condor_debug.h"
 #include "condor_classad.h"
+#include "file_transfer.h"
 #include "file_transfer_internal.h"
 #include "pelican_transfer.h"
 #include "stl_string_utils.h"
-#include "classad/classad_distribution.h"
+
 #include <curl/curl.h>
+
 #include <fstream>
 #include <iterator>
 #include <memory>
+
+namespace {
+
+// Common checks for Pelican file transfer eligibility
+// Returns true if basic requirements are met, false otherwise
+bool ShouldUsePelicanTransferCommon(ClassAd *job_ad, bool peer_supports_pelican);
 
 // Callback for libcurl to capture response data
 static size_t PelicanCurlWriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
@@ -82,6 +92,8 @@ bool ShouldUsePelicanTransferCommon(ClassAd *job_ad, bool peer_supports_pelican)
 
 	return true;
 }
+
+} // anonymous namespace
 
 // Check if Pelican file transfer should be used for input sandbox
 // Returns true if Pelican should be used, false otherwise
@@ -159,7 +171,7 @@ PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &soc
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, PelicanCurlWriteCallback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);  // 30 second timeout
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);  // 10 second timeout
 
 	// Perform the request
 	CURLcode res = curl_easy_perform(curl);
@@ -191,19 +203,39 @@ PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &soc
 		return response;
 	}
 
-	// Extract token and expiration from response
+	// Extract token, expiration, and URLs from response
 	std::string token_str;
 	long long expires_at_val = 0;
+	std::string input_url_str;
+	std::string output_url_str;
+
 	if (!json_ad.LookupString("token", token_str) || !json_ad.LookupInteger("expires_at", expires_at_val)) {
 		response.error_message = "Response missing required fields (token, expires_at)";
 		return response;
 	}
 
+	if (!json_ad.LookupString("input_url", input_url_str)) {
+		response.error_message = "Response missing required field (input_url)";
+		return response;
+	}
+	if (!json_ad.LookupString("output_url", output_url_str)) {
+		response.error_message = "Response missing required field (output_url)";
+		return response;
+	}
+
 	response.token = token_str;
 	response.expires_at = expires_at_val;
+	response.input_url = input_url_str;
+	response.output_url = output_url_str;
 	response.success = true;
 
 	dprintf(D_FULLDEBUG, "Pelican: Successfully obtained token, expires at %ld\n", response.expires_at);
+	if (!input_url_str.empty()) {
+		dprintf(D_FULLDEBUG, "Pelican: Input URL: %s\n", input_url_str.c_str());
+	}
+	if (!output_url_str.empty()) {
+		dprintf(D_FULLDEBUG, "Pelican: Output URL: %s\n", output_url_str.c_str());
+	}
 	return response;
 }
 
@@ -218,22 +250,22 @@ std::string PelicanGenerateSandboxURL(const std::string &hostname, int cluster, 
 // Prepare file list for Pelican transfer
 // Removes regular files from the list and replaces with Pelican URL + metadata
 // Returns true on success, false on failure
-bool PreparePelicanTransferList(FileTransferList &filelist, ClassAd *job_ad, const std::string &jobid, ReliSock *sock) {
+bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad, const std::string &jobid, FileTransfer *ft, ReliSock *sock, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState) {
 	dprintf(D_FULLDEBUG, "Pelican: Preparing file list for job %s\n", jobid.c_str());
 
-	// Check if peer supports pelican:// URL scheme
-	if (sock) {
-		std::vector<std::string> desired_schemes = {"pelican"};
-		std::string error_msg;
-		if (!CheckUrlSchemeSupport(sock, desired_schemes, error_msg)) {
-			dprintf(D_FULLDEBUG, "Pelican: Peer does not support pelican:// scheme: %s\n", error_msg.c_str());
-			return false;
-		}
+	std::vector<std::string> desired_schemes = {"pelican"};
+	std::string error_msg;
+	if (!ft->CheckUrlSchemeSupport(sock, desired_schemes, error_msg, xfer_queue, sandbox_size, protocolState)) {
+		dprintf(D_FULLDEBUG, "Pelican: Peer does not support pelican:// scheme: %s\n", error_msg.c_str());
+		return false;
 	}
 
 	// Get the Pelican domain socket path from configuration
 	std::string socket_path;
-	param(socket_path, "PELICAN_TOKEN_SOCKET", "/var/run/pelican/token.sock");
+	if (!param(socket_path, "PELICAN_TOKEN_SOCKET")) {
+		dprintf(D_ALWAYS, "Pelican: Configuration error - PELICAN_TOKEN_SOCKET not set\n");
+		return false;
+	}
 
 	// Request a token from the Pelican service
 	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
@@ -242,18 +274,14 @@ bool PreparePelicanTransferList(FileTransferList &filelist, ClassAd *job_ad, con
 		return false;
 	}
 
-	// Get hostname from configuration
-	std::string hostname;
-	param(hostname, "PELICAN_HOSTNAME", "localhost");
+	// Get the input URL from token response
+	if (token_response.input_url.empty()) {
+		dprintf(D_ALWAYS, "Pelican: Registration response missing input_url\n");
+		return false;
+	}
 
-	// Extract cluster and proc IDs
-	int cluster = 0, proc = 0;
-	job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-	job_ad->LookupInteger(ATTR_PROC_ID, proc);
-
-	// Generate the Pelican URL for the input sandbox
-	std::string pelican_url = PelicanGenerateSandboxURL(hostname, cluster, proc, true);
-	dprintf(D_FULLDEBUG, "Pelican: Input sandbox URL: %s\n", pelican_url.c_str());
+	std::string pelican_url = token_response.input_url;
+	dprintf(D_FULLDEBUG, "Pelican: Using input URL from registration: %s\n", pelican_url.c_str());
 
 	// Get CA contents if needed
 	std::string ca_contents;
@@ -307,30 +335,42 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 	if (!starts_with_ignore_case(url, "pelican://")) {
 		return false;
 	}
-	
+
 	if (!ShouldOutputUsePelicanTransfer(job_ad, true)) {
 		response_ad.Assign("Error", "Pelican transfer not available");
 		return false;
 	}
-	
+
 	// Get the Pelican domain socket path from configuration
 	std::string socket_path;
-	param(socket_path, "PELICAN_TOKEN_SOCKET", "/var/run/pelican/token.sock");
-	
+	if (!param(socket_path, "PELICAN_TOKEN_SOCKET")) {
+		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Configuration error - PELICAN_TOKEN_SOCKET not set\n");
+		response_ad.Assign("Error", "Pelican configuration error - missing PELICAN_TOKEN_SOCKET");
+		return false;
+	}
+
 	// Request token from Pelican service
 	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
-	
+
 	if (!token_response.success) {
 		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Failed to get Pelican token: %s\n",
 		        token_response.error_message.c_str());
 		response_ad.Assign("Error", token_response.error_message);
 		return false;
 	}
-	
-	// Success - add token and CA info to response
+
+	// Success - add token, URL, and CA info to response
 	response_ad.Assign("PelicanToken", token_response.token);
 	response_ad.Assign("PelicanTokenExpires", (long long)token_response.expires_at);
-	
+
+	// Return the actual output URL from registration
+	if (token_response.output_url.empty()) {
+		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Registration response missing output_url\n");
+		response_ad.Assign("Error", "Registration response missing output_url");
+		return false;
+	}
+	response_ad.Assign("PelicanOutputUrl", token_response.output_url);
+
 	// Read CA file if configured
 	std::string ca_file;
 	if (param(ca_file, "PELICAN_CA_FILE")) {
@@ -344,7 +384,7 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 			}
 		}
 	}
-	
+
 	dprintf(D_FULLDEBUG, "BuildPelicanMetadataResponse: Successfully provided Pelican metadata\n");
 	return true;
 }
@@ -352,61 +392,90 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 // Prepare output sandbox files for Pelican transfer
 // Similar to PreparePelicanTransferList but for output/upload side
 bool PreparePelicanOutputTransferList(
+	FileTransfer *ft,
 	ReliSock *sock,
 	FileTransferList& filelist,
 	ClassAd *job_ad,
-	bool peer_supports_pelican)
+	bool peer_supports_pelican,
+	DCTransferQueue &xfer_queue,
+	filesize_t sandbox_size,
+	FTProtocolBits &protocolState)
 {
 	if (!ShouldOutputUsePelicanTransfer(job_ad, peer_supports_pelican)) {
 		return false;  // Not an error, just don't use Pelican
 	}
-	
-	// Check if pelican:// URL handler is available
-	bool has_pelican_handler = false;
-	for (const auto& item : filelist) {
-		if (item.isDestUrl() && starts_with_ignore_case(item.destUrl(), "pelican://")) {
-			has_pelican_handler = true;
-			break;
-		}
-	}
-	
-	if (!has_pelican_handler) {
-		dprintf(D_FULLDEBUG, "Pelican: No pelican:// URLs found in output files\n");
-		return false;
-	}
-	
-	// Get the job ID for the sandbox URL
+
+	// Get the job ID for the metadata request
 	int cluster_id = 0, proc_id = 0;
 	if (!job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster_id) ||
 	    !job_ad->LookupInteger(ATTR_PROC_ID, proc_id)) {
 		dprintf(D_ALWAYS, "Pelican: Failed to get job ID from ClassAd\n");
 		return false;
 	}
-	
-	// Get Pelican hostname
-	std::string pelican_hostname;
-	if (!param(pelican_hostname, "PELICAN_HOSTNAME")) {
-		dprintf(D_FULLDEBUG, "Pelican: PELICAN_HOSTNAME not configured\n");
-		return false;
-	}
-	
-	// Construct the Pelican URL for output sandbox
-	std::string pelican_url;
-	formatstr(pelican_url, "pelican://%s/sandboxes/%d.%d/output", 
-	          pelican_hostname.c_str(), cluster_id, proc_id);
-	
-	// Request metadata (token, CA) from the shadow
+
+	// Construct a placeholder URL for the metadata request
+	// The actual URL will come from the metadata response
+	std::string placeholder_url;
+	formatstr(placeholder_url, "pelican://placeholder/sandboxes/%d.%d/output",
+	          cluster_id, proc_id);
+
+	// Request metadata (token, actual URL, CA) from the shadow
 	ClassAd metadata_ad;
 	std::string error_msg;
-	if (!RequestUrlMetadata(sock, pelican_url, metadata_ad, error_msg)) {
+	if (!ft->RequestUrlMetadata(sock, placeholder_url, metadata_ad, error_msg, xfer_queue, sandbox_size, protocolState)) {
 		dprintf(D_ALWAYS, "Pelican: Failed to get metadata for %s: %s\n",
-		        pelican_url.c_str(), error_msg.c_str());
+		        placeholder_url.c_str(), error_msg.c_str());
 		return false;
 	}
-	
-	dprintf(D_FULLDEBUG, "Pelican: Successfully obtained metadata for output sandbox\n");
-	
-	// Remove non-URL files from the transfer list (they'll go via Pelican)
+
+	// Extract the actual Pelican URL from metadata response
+	std::string pelican_url;
+	if (!metadata_ad.LookupString("PelicanOutputUrl", pelican_url)) {
+		dprintf(D_ALWAYS, "Pelican: Metadata response missing PelicanOutputUrl\n");
+		return false;
+	}
+	metadata_ad.Delete("PelicanOutputUrl");
+
+	dprintf(D_FULLDEBUG, "Pelican: Using output URL from metadata: %s\n", pelican_url.c_str());
+
+	// Create a single FileTransferItem with a tarfiles list containing all non-URL files
+	FileTransferItem pelican_item;
+
+	// Set as destination URL (for protocol routing)
+	pelican_item.setDestUrl(pelican_url);
+
+	// Create ClassAd with transfer information
+	auto file_ad = std::make_unique<ClassAd>();
+
+	// Build list of file paths to include in tarball
+	classad::ExprList *tarfiles_list = new classad::ExprList();
+	for (const auto& item : filelist) {
+		if (!item.isSrcUrl() && !item.isDirectory()) {
+			// Add file path to tarfiles list
+			classad::Value file_value;
+			file_value.SetStringValue(item.srcName());
+			tarfiles_list->push_back(classad::Literal::MakeLiteral(file_value));
+
+			dprintf(D_FULLDEBUG, "Pelican: Adding output file %s to tarball\n",
+			        item.srcName().c_str());
+		}
+	}
+
+	if (tarfiles_list->size() == 0) {
+		delete tarfiles_list;
+		dprintf(D_FULLDEBUG, "Pelican: No output files to transfer\n");
+		return false;
+	}
+
+	// Add tarfiles list to ClassAd
+	file_ad->Insert("tarfiles", tarfiles_list);
+
+	// Copy metadata from the metadata response
+	file_ad->Update(metadata_ad);
+
+	pelican_item.setUrlAd(std::move(file_ad));
+
+	// Remove non-URL files from the original transfer list
 	auto it = filelist.begin();
 	while (it != filelist.end()) {
 		if (!it->isSrcUrl() && !it->isDirectory()) {
@@ -418,18 +487,9 @@ bool PreparePelicanOutputTransferList(
 		}
 	}
 	
-	// Add a FileTransferItem for the Pelican URL with metadata
-	FileTransferItem pelican_item;
-	pelican_item.setDestUrl(pelican_url);
-	
-	// Copy metadata into the item's ClassAd
-	auto pelican_ad = std::make_unique<ClassAd>();
-	pelican_ad->Update(metadata_ad);
-	pelican_ad->Assign("PelicanTransfer", true);
-	pelican_item.setUrlAd(std::move(pelican_ad));
-	
+	// Add the single Pelican item to the file list
 	filelist.push_back(std::move(pelican_item));
 	
-	dprintf(D_FULLDEBUG, "Pelican: Successfully prepared output transfer list\n");
+	dprintf(D_FULLDEBUG, "Pelican: Successfully prepared output files for transfer\n");
 	return true;
 }
