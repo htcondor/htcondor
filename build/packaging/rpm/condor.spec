@@ -784,16 +784,6 @@ rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 # we must place the config examples in builddir so %doc can find them
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%condor_version
 
-# Fix up blahp installation
-# Move batch system customization files to /etc, with symlinks in the
-# original location. Admins will need to edit these.
-install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
-for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
-    mv %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh %{buildroot}%{_sysconfdir}/blahp
-    ln -s ../../../etc/blahp/${batch_system}_local_submit_attributes.sh \
-        %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
-done
-
 # classad3 shouldn't be distributed yet
 rm -rf %{buildroot}/usr/lib*/python%{python3_version}/site-packages/classad3
 
