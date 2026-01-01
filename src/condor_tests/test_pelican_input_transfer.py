@@ -802,7 +802,7 @@ def condor(test_dir, pelican_server, pelican_plugin):
             "FILETRANSFER_PLUGINS": f"$(LIBEXEC)/curl_plugin, {pelican_plugin}",
             # Enable Pelican functionality
             "ENABLE_PELICAN_TRANSFERS": "TRUE",
-            "PELICAN_TOKEN_SOCKET": pelican_server['unix_socket'],
+            "PELICAN_REGISTRATION_SOCKET": pelican_server['unix_socket'],
             # Set verbose logging for debugging
             "SHADOW_DEBUG": "D_FULLDEBUG, D_NETWORK|D_VERBOSE, D_VERBOSE",
             "STARTER_DEBUG": "D_FULLDEBUG, D_NETWORK|D_VERBOSE, D_VERBOSE",

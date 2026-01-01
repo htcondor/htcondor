@@ -135,10 +135,10 @@ bool ShouldOutputUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican)
 	return true;
 }
 
-// Request a token from the Pelican token service via domain socket
-// This posts the job ad to the service and receives back a token and expiration time
-PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &socket_path) {
-	PelicanTokenResponse response;
+// Request a token from the Pelican registration service via domain socket
+// This posts the job ad to the service and receives back a token, expiration time, and transfer URLs
+PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::string &socket_path) {
+	PelicanRegistrationResponse response;
 	response.success = false;
 	response.expires_at = 0;
 
@@ -199,7 +199,7 @@ PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &soc
 	classad::ClassAdJsonParser parser;
 	
 	if (!parser.ParseClassAd(response_string, json_ad)) {
-		response.error_message = "Failed to parse JSON response from token service";
+		response.error_message = "Failed to parse JSON response from registration service";
 		return response;
 	}
 
@@ -239,14 +239,6 @@ PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &soc
 	return response;
 }
 
-// Generate Pelican URL for the sandbox
-std::string PelicanGenerateSandboxURL(const std::string &hostname, int cluster, int proc, bool is_input) {
-	std::string url;
-	const char *direction = is_input ? "input" : "output";
-	formatstr(url, "pelican://%s/sandboxes/%d.%d/%s", hostname.c_str(), cluster, proc, direction);
-	return url;
-}
-
 // Prepare file list for Pelican transfer
 // Removes regular files from the list and replaces with Pelican URL + metadata
 // Returns true on success, false on failure
@@ -260,15 +252,15 @@ bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad
 		return false;
 	}
 
-	// Get the Pelican domain socket path from configuration
+	// Get the Pelican registration service socket path from configuration
 	std::string socket_path;
-	if (!param(socket_path, "PELICAN_TOKEN_SOCKET")) {
-		dprintf(D_ALWAYS, "Pelican: Configuration error - PELICAN_TOKEN_SOCKET not set\n");
+	if (!param(socket_path, "PELICAN_REGISTRATION_SOCKET")) {
+		dprintf(D_ALWAYS, "Pelican: Configuration error - PELICAN_REGISTRATION_SOCKET not set\n");
 		return false;
 	}
 
 	// Request a token from the Pelican service
-	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
+	PelicanRegistrationResponse token_response = PelicanRegisterJob(job_ad, socket_path);
 	if (!token_response.success) {
 		dprintf(D_ALWAYS, "Pelican: Failed to obtain token: %s\n", token_response.error_message.c_str());
 		return false;
@@ -341,16 +333,16 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 		return false;
 	}
 
-	// Get the Pelican domain socket path from configuration
+	// Get the Pelican registration service socket path from configuration
 	std::string socket_path;
-	if (!param(socket_path, "PELICAN_TOKEN_SOCKET")) {
-		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Configuration error - PELICAN_TOKEN_SOCKET not set\n");
-		response_ad.Assign("Error", "Pelican configuration error - missing PELICAN_TOKEN_SOCKET");
+	if (!param(socket_path, "PELICAN_REGISTRATION_SOCKET")) {
+		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Configuration error - PELICAN_REGISTRATION_SOCKET not set\n");
+		response_ad.Assign("Error", "Pelican configuration error - missing PELICAN_REGISTRATION_SOCKET");
 		return false;
 	}
 
 	// Request token from Pelican service
-	PelicanTokenResponse token_response = PelicanRequestToken(job_ad, socket_path);
+	PelicanRegistrationResponse token_response = PelicanRegisterJob(job_ad, socket_path);
 
 	if (!token_response.success) {
 		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Failed to get Pelican token: %s\n",

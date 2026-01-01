@@ -30,12 +30,8 @@ class FileTransfer;
 class DCTransferQueue;
 struct FTProtocolBits;
 
-// Note: FileTransferList, FileTransferItem, and ClassAd are defined in file_transfer_internal.h
-// which is included by file_transfer.h. Code using pelican_transfer.h should
-// include file_transfer.h to get all necessary definitions.
-
-// Pelican token response structure
-struct PelicanTokenResponse {
+// Pelican registration response structure
+struct PelicanRegistrationResponse {
 	std::string token;
 	time_t expires_at;
 	bool success;
@@ -52,22 +48,27 @@ bool ShouldInputUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican);
 // Returns true if Pelican should be used, false otherwise
 bool ShouldOutputUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican);
 
-// Request a token from the Pelican token service via domain socket
-// This posts the job ad to the service and receives back a token and expiration time
-PelicanTokenResponse PelicanRequestToken(ClassAd *job_ad, const std::string &socket_path);
-
-// Generate Pelican URL for the sandbox
-std::string PelicanGenerateSandboxURL(const std::string &hostname, int cluster, int proc, bool is_input);
-
-// Prepare file list for Pelican transfer
-// Removes regular files from the list and replaces with Pelican URL + metadata
-// Returns true on success, false on failure
-bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad, const std::string &jobid, FileTransfer *ft, ReliSock *sock, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState);
+// Request a token from the Pelican registration service via domain socket
+// This posts the job ad to the service and receives back token, expiration time, and URLs
+PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::string &socket_path);
 
 // Build a response ClassAd for a Pelican URL metadata request
 // Called by shadow when starter requests metadata for output transfers
 // Returns true if Pelican metadata was successfully added, false otherwise
 bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, ClassAd& response_ad);
+
+// Prepare file list for Pelican transfer
+// Removes regular files from the list and replaces with Pelican URL + metadata
+// Returns true on success, false on failure
+bool PreparePelicanInputTransferList(
+	FileTransferList &filelist,
+	ClassAd *job_ad,
+	const std::string &jobid,
+	FileTransfer *ft,
+	ReliSock *sock,
+	DCTransferQueue &xfer_queue,
+	filesize_t sandbox_size,
+	FTProtocolBits &protocolState);
 
 // Prepare output sandbox files for Pelican transfer
 // Similar to PreparePelicanTransferList but for output/upload side
