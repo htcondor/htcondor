@@ -34,6 +34,8 @@ CommonFilesMappedByClusterID = defaultdict(lambda: 0)
 CommonTransfersByClusterID = defaultdict(lambda: 0)
 # For each cluster ID, how many catalogs were defined?
 CommonCatalogsByClusterID = defaultdict(lambda: 0)
+# For each cluster ID, how many common bytes were transferred?
+CommonBytesByClusterID = defaultdict(lambda: 0)
 
 for entry in results:
     clusterID = entry['ClusterID']
@@ -41,6 +43,15 @@ for entry in results:
 
     if epoch_ad_type == "COMMON":
         CommonTransfersByClusterID[clusterID] += 1
+
+        stats_ad = entry.get('TransferCommonStats')
+        if stats_ad is not None:
+            protocols = stats_ad['Protocols']
+            for protocol in protocols.split(','):
+                bytes = stats_ad[f"{protocol}SizeBytes"]
+                CommonBytesByClusterID[clusterID] += bytes
+        else:
+            CommonBytesByClusterID[clusterID] += entry['CedarSizeBytes']
     elif epoch_ad_type == "EPOCH":
         old_style = False;
         if 'CommonInputFiles' in entry:
@@ -66,6 +77,7 @@ for entry in results:
 # We could record the number of succesful mappings, but for now let's just
 # assume that if any mapping in an epoch succeeded, that they all did.
 WholeTransfersByClusterID = defaultdict(lambda: 0)
+BytesPerWholeTransferByClusterID = defaultdict(lambda: 0)
 for clusterID, transfers in CommonTransfersByClusterID.items():
     transfers_per_cluster = CommonCatalogsByClusterID[clusterID]/EpochsByClusterID[clusterID]
     whole_transfers = transfers / transfers_per_cluster
@@ -78,7 +90,29 @@ for clusterID, transfers in CommonTransfersByClusterID.items():
             f"{transfers_per_cluster} transfers_per_cluster) = "
             f"{whole_transfers} whole_transfers"
         )
-    WholeTransfersByClusterID[clusterID] = int(whole_transfers)
+    whole_transfers = int(whole_transfers)
+    WholeTransfersByClusterID[clusterID] = whole_transfers
+
+    bytes_per_whole_transfer = int(
+        CommonBytesByClusterID[clusterID] / whole_transfers
+    )
+    BytesPerWholeTransferByClusterID[clusterID] = bytes_per_whole_transfer
+
+    # And for the money...
+    common_epochs = CommonFilesMappedByClusterID[clusterID]
+    total_bytes = common_epochs * bytes_per_whole_transfer
+    bytes_actually_transferred = whole_transfers * bytes_per_whole_transfer
+    pct_a = int(
+        ((total_bytes - bytes_actually_transferred)/total_bytes) * 100
+    )
+    print(
+        f"Cluster {clusterID}: required {total_bytes} total bytes in common files "
+        f"(as {bytes_per_whole_transfer} bytes per epoch * {common_epochs} epochs, "
+        f"not including fall-back epochs), but only transferred "
+        f"{bytes_actually_transferred} bytes, skipping "
+        f"{total_bytes - bytes_actually_transferred} bytes, or "
+        f"{pct_a}% of the total."
+    )
 
 
 total_epochs = 0
