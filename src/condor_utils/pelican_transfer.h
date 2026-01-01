@@ -35,8 +35,8 @@ struct PelicanRegistrationResponse {
 	std::string token;
 	time_t expires_at;
 	bool success;
-	std::string input_url;   // URL for input sandbox download
-	std::string output_url;  // URL for output sandbox upload
+	std::vector<std::string> input_urls;   // URLs for input sandbox downloads (supports multiple for parallel/shared transfers)
+	std::vector<std::string> output_urls;  // URLs for output sandbox uploads (supports multiple for parallel transfers)
 	std::string error_message;
 	std::string ca_contents; // Auto-detected CA certificates from TLS handshake
 };

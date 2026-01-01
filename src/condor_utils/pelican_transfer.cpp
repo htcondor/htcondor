@@ -271,35 +271,62 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	// Extract token, expiration, and URLs from response
 	std::string token_str;
 	long long expires_at_val = 0;
-	std::string input_url_str;
-	std::string output_url_str;
 
 	if (!json_ad.LookupString("token", token_str) || !json_ad.LookupInteger("expires_at", expires_at_val)) {
 		response.error_message = "Response missing required fields (token, expires_at)";
 		return response;
 	}
 
-	if (!json_ad.LookupString("input_url", input_url_str)) {
-		response.error_message = "Response missing required field (input_url)";
+	// Extract input_urls array
+	classad::Value input_urls_value;
+	classad_shared_ptr<classad::ExprList> input_urls_list;
+	if (!json_ad.EvaluateAttr("input_urls", input_urls_value) || !input_urls_value.IsSListValue(input_urls_list)) {
+		response.error_message = "Response missing or invalid input_urls field (expected array)";
 		return response;
 	}
-	if (!json_ad.LookupString("output_url", output_url_str)) {
-		response.error_message = "Response missing required field (output_url)";
+	for (auto list_entry : (*input_urls_list)) {
+		classad::Value val;
+		std::string url;
+		if (list_entry->Evaluate(val) && val.IsStringValue(url)) {
+			response.input_urls.push_back(url);
+		}
+	}
+	if (response.input_urls.empty()) {
+		response.error_message = "input_urls array is empty";
+		return response;
+	}
+
+	// Extract output_urls array
+	classad::Value output_urls_value;
+	classad_shared_ptr<classad::ExprList> output_urls_list;
+	if (!json_ad.EvaluateAttr("output_urls", output_urls_value) || !output_urls_value.IsSListValue(output_urls_list)) {
+		response.error_message = "Response missing or invalid output_urls field (expected array)";
+		return response;
+	}
+	for (auto list_entry : (*output_urls_list)) {
+		classad::Value val;
+		std::string url;
+		if (list_entry->Evaluate(val) && val.IsStringValue(url)) {
+			response.output_urls.push_back(url);
+		}
+	}
+	if (response.output_urls.empty()) {
+		response.error_message = "output_urls array is empty";
 		return response;
 	}
 
 	response.token = token_str;
 	response.expires_at = expires_at_val;
-	response.input_url = input_url_str;
-	response.output_url = output_url_str;
 	response.success = true;
 
 	dprintf(D_FULLDEBUG, "Pelican: Successfully obtained token, expires at %ld\n", response.expires_at);
-	if (!input_url_str.empty()) {
-		dprintf(D_FULLDEBUG, "Pelican: Input URL: %s\n", input_url_str.c_str());
+	dprintf(D_FULLDEBUG, "Pelican: Received %zu input URL(s) and %zu output URL(s)\n",
+		response.input_urls.size(), response.output_urls.size());
+	for (size_t i = 0; i < response.input_urls.size(); i++) {
+		dprintf(D_FULLDEBUG, "Pelican: Input URL %zu: %s\n", i, response.input_urls[i].c_str());
 	}
-	if (!output_url_str.empty()) {
-		dprintf(D_FULLDEBUG, "Pelican: Output URL: %s\n", output_url_str.c_str());
+	for (size_t i = 0; i < response.output_urls.size(); i++) {
+		dprintf(D_FULLDEBUG, "Pelican: Output URL %zu: %s\n", i, response.output_urls[i].c_str());
 	}
 	return response;
 }
@@ -331,14 +358,13 @@ bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad
 		return false;
 	}
 
-	// Get the input URL from token response
-	if (token_response.input_url.empty()) {
-		dprintf(D_ALWAYS, "Pelican: Registration response missing input_url\n");
+	// Get the input URLs from token response
+	if (token_response.input_urls.empty()) {
+		dprintf(D_ALWAYS, "Pelican: Registration response missing input_urls\n");
 		return false;
 	}
 
-	std::string pelican_url = token_response.input_url;
-	dprintf(D_FULLDEBUG, "Pelican: Using input URL from registration: %s\n", pelican_url.c_str());
+	dprintf(D_FULLDEBUG, "Pelican: Using %zu input URL(s) from registration\n", token_response.input_urls.size());
 
 	// Get CA contents if needed
 	std::string ca_contents;
@@ -375,22 +401,31 @@ bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad
 		}
 	}
 
-	// Create a ClassAd with Pelican transfer metadata
-	auto pelican_ad = std::make_unique<ClassAd>();
-	pelican_ad->Assign("Capability", token_response.token);
-	pelican_ad->Assign("PelicanTokenExpires", (long long)token_response.expires_at);
-	if (!ca_contents.empty()) {
-		pelican_ad->Assign("PelicanCAContents", ca_contents);
+	// Create a FileTransferItem for each Pelican URL
+	// This allows parallel transfers or reuse of common files across jobs
+	for (size_t i = 0; i < token_response.input_urls.size(); i++) {
+		const std::string& pelican_url = token_response.input_urls[i];
+
+		// Create a ClassAd with Pelican transfer metadata
+		auto pelican_ad = std::make_unique<ClassAd>();
+		pelican_ad->Assign("Capability", token_response.token);
+		pelican_ad->Assign("PelicanTokenExpires", (long long)token_response.expires_at);
+		if (!ca_contents.empty()) {
+			pelican_ad->Assign("PelicanCAContents", ca_contents);
+		}
+		pelican_ad->Assign("PelicanTransfer", true);
+
+		// Add a FileTransferItem for this Pelican URL
+		FileTransferItem pelican_item;
+		pelican_item.setSrcName(pelican_url);
+		pelican_item.setUrlAd(std::move(pelican_ad));
+		filelist.push_back(std::move(pelican_item));
+
+		dprintf(D_FULLDEBUG, "Pelican: Added transfer item %zu: %s\n", i, pelican_url.c_str());
 	}
-	pelican_ad->Assign("PelicanTransfer", true);
 
-	// Add a FileTransferItem for the Pelican URL
-	FileTransferItem pelican_item;
-	pelican_item.setSrcName(pelican_url);
-	pelican_item.setUrlAd(std::move(pelican_ad));
-	filelist.push_back(std::move(pelican_item));
-
-	dprintf(D_FULLDEBUG, "Pelican: Successfully prepared transfer list\n");
+	dprintf(D_FULLDEBUG, "Pelican: Successfully prepared transfer list with %zu URL(s)\n",
+		token_response.input_urls.size());
 	return true;
 }
 
@@ -429,13 +464,24 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 	response_ad.Assign("Capability", token_response.token);
 	response_ad.Assign("PelicanTokenExpires", (long long)token_response.expires_at);
 
-	// Return the actual output URL from registration
-	if (token_response.output_url.empty()) {
-		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Registration response missing output_url\n");
-		response_ad.Assign("Error", "Registration response missing output_url");
+	// Return the actual output URLs from registration
+	if (token_response.output_urls.empty()) {
+		dprintf(D_ALWAYS, "BuildPelicanMetadataResponse: Registration response missing output_urls\n");
+		response_ad.Assign("Error", "Registration response missing output_urls");
 		return false;
 	}
-	response_ad.Assign("PelicanOutputUrl", token_response.output_url);
+
+	// Create ExprList for output URLs
+	classad::ExprList *output_urls_list = new classad::ExprList();
+	for (const auto& url : token_response.output_urls) {
+		classad::Value url_value;
+		url_value.SetStringValue(url);
+		output_urls_list->push_back(classad::Literal::MakeLiteral(url_value));
+	}
+	response_ad.Insert("PelicanOutputUrls", output_urls_list);
+
+	dprintf(D_FULLDEBUG, "BuildPelicanMetadataResponse: Returning %zu output URL(s)\n",
+		token_response.output_urls.size());
 
 	// Read CA file if configured
 	std::string ca_file;
@@ -504,15 +550,35 @@ bool PreparePelicanOutputTransferList(
 		return false;
 	}
 
-	// Extract the actual Pelican URL from metadata response
-	std::string pelican_url;
-	if (!metadata_ad.LookupString("PelicanOutputUrl", pelican_url)) {
-		dprintf(D_ALWAYS, "Pelican: Metadata response missing PelicanOutputUrl\n");
+	// Extract the actual Pelican URLs from metadata response
+	classad::Value output_urls_value;
+	classad_shared_ptr<classad::ExprList> output_urls_list;
+	std::vector<std::string> pelican_urls;
+	if (metadata_ad.EvaluateAttr("PelicanOutputUrls", output_urls_value) && output_urls_value.IsSListValue(output_urls_list)) {
+		for (auto list_entry : (*output_urls_list)) {
+			classad::Value val;
+			std::string url;
+			if (list_entry->Evaluate(val) && val.IsStringValue(url)) {
+				pelican_urls.push_back(url);
+			}
+		}
+	}
+
+	if (pelican_urls.empty()) {
+		dprintf(D_ALWAYS, "Pelican: Metadata response missing or empty PelicanOutputUrls\n");
 		return false;
 	}
-	metadata_ad.Delete("PelicanOutputUrl");
+	metadata_ad.Delete("PelicanOutputUrls");
 
-	dprintf(D_FULLDEBUG, "Pelican: Using output URL from metadata: %s\n", pelican_url.c_str());
+	dprintf(D_FULLDEBUG, "Pelican: Using %zu output URL(s) from metadata\n", pelican_urls.size());
+
+	// For now, use the first URL for output uploads
+	// In the future, we could split files across multiple URLs for parallel uploads
+	const std::string& pelican_url = pelican_urls[0];
+	if (pelican_urls.size() > 1) {
+		dprintf(D_FULLDEBUG, "Pelican: Multiple output URLs available, using first: %s\n",
+			pelican_url.c_str());
+	}
 
 	// Create a single FileTransferItem with a tarfiles list containing all non-URL files
 	FileTransferItem pelican_item;

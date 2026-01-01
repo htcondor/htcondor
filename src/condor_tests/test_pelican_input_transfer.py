@@ -285,8 +285,9 @@ class PelicanHTTPHandler(http.server.BaseHTTPRequestHandler):
                     response = {
                         'token': token,
                         'expires_at': int(time.time()) + 3600,  # 1 hour from now
-                        'input_url': input_url,
-                        'output_url': output_url
+                        # Array of URLs; may split sandbox across multiple URLs in the future!
+                        'input_urls': [input_url],
+                        'output_urls': [output_url]
                     }
                     
                     response_body = json.dumps(response).encode('utf-8')
