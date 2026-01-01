@@ -653,6 +653,9 @@ if (WINDOWS)
 	target_link_libraries(condor_utils PUBLIC "${CONDOR_WIN_LIBS}")
 endif()
 
+# libcurl is required for Pelican integration
+target_link_libraries(condor_utils PUBLIC ${CURL_FOUND})
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
         if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
@@ -699,6 +702,7 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
     target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
+	target_link_libraries(condor_utils_s PUBLIC ${CURL_FOUND})
 endif(LINUX OR APPLE)
 
 if (LINUX)
