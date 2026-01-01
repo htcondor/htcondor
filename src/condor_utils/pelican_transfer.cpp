@@ -34,6 +34,7 @@
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <string_view>
 
 namespace {
 
@@ -163,8 +164,12 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	struct curl_slist *headers = nullptr;
 	headers = curl_slist_append(headers, "Content-Type: application/json");
 
-	// Configure curl to use unix domain socket
-	std::string url = "http://localhost/api/v1/sandbox/register";
+	// Configure curl to use unix domain socket with TLS
+	// Using TLS allows us to capture the server's certificate chain
+	// which the Pelican plugin will need for verification
+	std::string url = "https://localhost/api/v1/sandbox/register";
+	std::string captured_ca_pem;
+
 	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 	curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, socket_path.c_str());
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, job_ad_json.c_str());
@@ -173,8 +178,68 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);  // 10 second timeout
 
+	// Enable TLS with custom verification to capture CAs
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);  // Disable verification (will verify manually)
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);  // Disable hostname verification
+	curl_easy_setopt(curl, CURLOPT_CERTINFO, 1L);  // Request certificate info
+
 	// Perform the request
 	CURLcode res = curl_easy_perform(curl);
+
+	// Extract certificate chain information after handshake
+	struct curl_certinfo *certinfo = nullptr;
+	if (res == CURLE_OK) {
+		CURLcode info_res = curl_easy_getinfo(curl, CURLINFO_CERTINFO, &certinfo);
+		if (info_res == CURLE_OK && certinfo && certinfo->num_of_certs > 0) {
+			dprintf(D_FULLDEBUG, "Pelican: Received %d certificate(s) in chain\n", certinfo->num_of_certs);
+
+			// Extract CA certificates from the chain
+			// Certificate 0 is the server cert, subsequent ones are intermediates/CAs
+			for (int i = 1; i < certinfo->num_of_certs; i++) {
+				struct curl_slist *slist = certinfo->certinfo[i];
+				bool found_pem = false;
+
+				for (struct curl_slist *item = slist; item; item = item->next) {
+					if (!item->data) continue;
+
+					std::string_view cert_line(item->data);
+
+					// curl returns cert info as "key:value" pairs
+					// Look for "Cert:" which contains the PEM-encoded certificate
+					if (cert_line.find("Cert:") == 0) {
+						// Extract everything after "Cert:"
+						auto cert_data = cert_line.substr(5); // Skip "Cert:"
+
+						// Look for PEM markers
+						size_t pem_start = cert_data.find("-----BEGIN CERTIFICATE-----");
+						if (pem_start != std::string::npos) {
+							auto pem = cert_data.substr(pem_start);
+							// Ensure newline before appending
+							if (!captured_ca_pem.empty() && captured_ca_pem.back() != '\n') {
+								captured_ca_pem += "\n";
+							}
+							captured_ca_pem += pem;
+							found_pem = true;
+							break;
+						}
+					}
+				}
+
+				if (found_pem) {
+					dprintf(D_FULLDEBUG, "Pelican: Extracted CA certificate %d from chain\n", i);
+				}
+			}
+
+			if (!captured_ca_pem.empty()) {
+				dprintf(D_FULLDEBUG, "Pelican: Auto-detected CA (%zu bytes) from TLS handshake\n",
+					captured_ca_pem.size());
+				response.ca_contents = captured_ca_pem;
+			} else if (certinfo->num_of_certs > 1) {
+				dprintf(D_FULLDEBUG, "Pelican: Warning - Certificate chain has %d certs but couldn't extract CA PEM\n",
+					certinfo->num_of_certs);
+			}
+		}
+	}
 	
 	if (res != CURLE_OK) {
 		formatstr(response.error_message, "Curl request failed: %s", curl_easy_strerror(res));
@@ -288,6 +353,15 @@ bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad
 		}
 	}
 
+	// Merge auto-detected CA from registration with CA from file
+	if (!token_response.ca_contents.empty()) {
+		if (!ca_contents.empty()) {
+			ca_contents += "\n";
+		}
+		ca_contents += token_response.ca_contents;
+		dprintf(D_FULLDEBUG, "Pelican: Merged auto-detected CA from registration\n");
+	}
+
 	// Remove all non-URL, file transfer items
 	// These will now be handled by Pelican
 	auto it = filelist.begin();
@@ -303,7 +377,7 @@ bool PreparePelicanInputTransferList(FileTransferList &filelist, ClassAd *job_ad
 
 	// Create a ClassAd with Pelican transfer metadata
 	auto pelican_ad = std::make_unique<ClassAd>();
-	pelican_ad->Assign("PelicanToken", token_response.token);
+	pelican_ad->Assign("Capability", token_response.token);
 	pelican_ad->Assign("PelicanTokenExpires", (long long)token_response.expires_at);
 	if (!ca_contents.empty()) {
 		pelican_ad->Assign("PelicanCAContents", ca_contents);
@@ -352,7 +426,7 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 	}
 
 	// Success - add token, URL, and CA info to response
-	response_ad.Assign("PelicanToken", token_response.token);
+	response_ad.Assign("Capability", token_response.token);
 	response_ad.Assign("PelicanTokenExpires", (long long)token_response.expires_at);
 
 	// Return the actual output URL from registration
@@ -365,16 +439,26 @@ bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, Class
 
 	// Read CA file if configured
 	std::string ca_file;
+	std::string ca_contents;
 	if (param(ca_file, "PELICAN_CA_FILE")) {
-		std::string ca_contents;
 		std::ifstream ca_stream(ca_file);
 		if (ca_stream.good()) {
 			ca_contents.assign(std::istreambuf_iterator<char>(ca_stream),
 			                   std::istreambuf_iterator<char>());
-			if (!ca_contents.empty()) {
-				response_ad.Assign("PelicanCAContents", ca_contents);
-			}
 		}
+	}
+
+	// Merge auto-detected CA from registration with CA from file
+	if (!token_response.ca_contents.empty()) {
+		if (!ca_contents.empty()) {
+			ca_contents += "\n";
+		}
+		ca_contents += token_response.ca_contents;
+		dprintf(D_FULLDEBUG, "BuildPelicanMetadataResponse: Merged auto-detected CA from registration\n");
+	}
+
+	if (!ca_contents.empty()) {
+		response_ad.Assign("PelicanCAContents", ca_contents);
 	}
 
 	dprintf(D_FULLDEBUG, "BuildPelicanMetadataResponse: Successfully provided Pelican metadata\n");

@@ -38,6 +38,7 @@ struct PelicanRegistrationResponse {
 	std::string input_url;   // URL for input sandbox download
 	std::string output_url;  // URL for output sandbox upload
 	std::string error_message;
+	std::string ca_contents; // Auto-detected CA certificates from TLS handshake
 };
 
 // Check if Pelican file transfer should be used for input sandbox

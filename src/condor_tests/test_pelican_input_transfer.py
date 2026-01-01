@@ -38,6 +38,8 @@ class PelicanHTTPHandler(http.server.BaseHTTPRequestHandler):
     # Class variables to store stdout/stderr paths for each job
     job_stdout_paths = {}
     job_stderr_paths = {}
+    # Class variable to store bearer tokens for each job
+    job_tokens = {}
     
     def log_message(self, format, *args):
         """Override to reduce noise in test output"""
@@ -54,7 +56,17 @@ class PelicanHTTPHandler(http.server.BaseHTTPRequestHandler):
             parts = path.split('/')
             if len(parts) >= 4:
                 job_id = parts[2]  # cluster.proc
-                
+
+                # Check bearer token
+                auth_header = self.headers.get('Authorization', '')
+                expected_token = self.job_tokens.get(job_id, '')
+                if not auth_header.startswith('Bearer ') or auth_header[7:] != expected_token:
+                    self.send_response(401)
+                    self.send_header('Content-Type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(b'Unauthorized: Invalid or missing bearer token')
+                    return
+
                 if job_id in self.tarballs:
                     tarball_data = self.tarballs[job_id]
                     self.send_response(200)
@@ -63,25 +75,35 @@ class PelicanHTTPHandler(http.server.BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(tarball_data)
                     return
-        
+
         # Not found
         self.send_response(404)
         self.send_header('Content-Type', 'text/plain')
         self.end_headers()
         self.wfile.write(b'Not found')
-    
+
     def do_PUT(self):
         """Handle PUT requests for output file uploads"""
         parsed = urlparse(self.path)
         path = parsed.path
-        
+
         # Handle output upload: /sandboxes/{cluster}.{proc}/output
         if path.startswith('/sandboxes/') and path.endswith('/output'):
             # Extract job ID from path
             parts = path.split('/')
             if len(parts) >= 4:
                 job_id = parts[2]  # cluster.proc
-                
+
+                # Check bearer token
+                auth_header = self.headers.get('Authorization', '')
+                expected_token = self.job_tokens.get(job_id, '')
+                if not auth_header.startswith('Bearer ') or auth_header[7:] != expected_token:
+                    self.send_response(401)
+                    self.send_header('Content-Type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(b'Unauthorized: Invalid or missing bearer token')
+                    return
+
                 # Read uploaded tarball
                 content_length = int(self.headers.get('Content-Length', 0))
                 tarball_data = self.rfile.read(content_length)
@@ -255,9 +277,13 @@ class PelicanHTTPHandler(http.server.BaseHTTPRequestHandler):
                     stderr_path = request.get('Err', '')
                     self.job_stdout_paths[job_id] = stdout_path
                     self.job_stderr_paths[job_id] = stderr_path
-                    
+
+                    # Generate and store token for this job
+                    token = f'mock-pelican-token-{job_id}'
+                    self.job_tokens[job_id] = token
+
                     response = {
-                        'token': 'mock-pelican-token-12345',
+                        'token': token,
                         'expires_at': int(time.time()) + 3600,  # 1 hour from now
                         'input_url': input_url,
                         'output_url': output_url
@@ -366,14 +392,35 @@ class PelicanServer:
         # Remove socket if it exists
         if Path(self.unix_socket_path).exists():
             Path(self.unix_socket_path).unlink()
-        
-        self.unix_server = socketserver.UnixStreamServer(self.unix_socket_path, PelicanHTTPHandler)
+
+        # Create custom Unix socket server class that wraps connections with TLS
+        class TLSUnixStreamServer(socketserver.UnixStreamServer):
+            def __init__(self, server_address, RequestHandlerClass, cert_file, key_file):
+                self.cert_file = cert_file
+                self.key_file = key_file
+                super().__init__(server_address, RequestHandlerClass)
+
+            def get_request(self):
+                """Override to wrap socket with TLS"""
+                sock, addr = super().get_request()
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                context.load_cert_chain(self.cert_file, self.key_file)
+                ssl_sock = context.wrap_socket(sock, server_side=True)
+                return ssl_sock, addr
+
+        self.unix_server = TLSUnixStreamServer(
+            self.unix_socket_path,
+            PelicanHTTPHandler,
+            self.cert_file,
+            self.key_file
+        )
+
         # Share the HTTP port with the Unix socket server so handlers can access it
         self.unix_server._http_port = self.http_port
         self.unix_thread = threading.Thread(target=self.unix_server.serve_forever)
         self.unix_thread.daemon = True
         self.unix_thread.start()
-        
+
         # Give servers time to start
         time.sleep(0.5)
         
@@ -460,7 +507,14 @@ def create_ca_and_certs(test_dir):
         '-out', str(server_cert),
         '-days', '365'
     ], check=True, capture_output=True)
-    
+
+    # Append CA certificate to server certificate to create a chain
+    # This allows clients to auto-detect the CA during TLS handshake
+    with open(ca_cert, 'r') as ca_file:
+        ca_pem = ca_file.read()
+    with open(server_cert, 'a') as cert_file:
+        cert_file.write(ca_pem)
+
     return {
         'ca_cert': ca_cert,
         'ca_key': ca_key,
@@ -592,20 +646,51 @@ def handle_download(infile, outfile):
     if not url:
         print("TransferError = \\"No Url in input ad\\"", file=sys.stderr)
         sys.exit(1)
-    
+
+    # Get the Capability (bearer token) if present
+    capability = ad.get('Capability', None)
+
+    # Get CA contents for TLS verification if present
+    ca_contents = ad.get('PelicanCAContents', None)
+
     # Convert pelican:// to https://
     if url.startswith('pelican://'):
         url = 'https://' + url[len('pelican://'):]
-    
+
     # Download tarball
     try:
-        # Disable SSL verification for test (since hostname won't match)
         import ssl
+        import tempfile
+
+        # Create SSL context with verification enabled
         ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
-        with urllib.request.urlopen(url, context=ctx, timeout=4) as response:
+
+        # Use CA contents for verification
+        if not ca_contents:
+            print("TransferError = \\"No PelicanCAContents in input ad\\"", file=sys.stderr)
+            sys.exit(1)
+
+        # Write CA to temporary file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.pem') as ca_file:
+            ca_file.write(ca_contents)
+            ca_file_path = ca_file.name
+
+        try:
+            ctx.load_verify_locations(cafile=ca_file_path)
+            # For test: disable hostname check since we're using localhost
+            ctx.check_hostname = False
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(ca_file_path)
+            except:
+                pass
+
+        req = urllib.request.Request(url)
+        if capability:
+            req.add_header('Authorization', f'Bearer {{capability}}')
+
+        with urllib.request.urlopen(req, context=ctx, timeout=4) as response:
             tarball_data = response.read()
     except Exception as e:
         # Write error to outfile if available
@@ -686,7 +771,13 @@ def handle_upload(infile, outfile):
     if not url:
         print("TransferError = \\"No Url in ClassAd\\"", file=sys.stderr)
         sys.exit(1)
-    
+
+    # Get the Capability (bearer token) if present
+    capability = ad.get('Capability', None)
+
+    # Get CA contents for TLS verification if present
+    ca_contents = ad.get('PelicanCAContents', None)
+
     # Get the base directory (scratch directory where files are located)
     base_dir = ad.get('LocalFileName', '.')
     
@@ -729,15 +820,47 @@ def handle_upload(infile, outfile):
     
     # Upload tarball via PUT request
     try:
-        # Disable SSL verification for test (since hostname won't match)
         import ssl
+        import tempfile
+
+        # Create SSL context with verification enabled
         ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
+
+        # Use CA contents for verification
+        if not ca_contents:
+            if outfile:
+                error_ad = classad2.ClassAd({{
+                    'TransferSuccess': False,
+                    'TransferError': 'No PelicanCAContents in ClassAd'
+                }})
+                try:
+                    with open(outfile, 'w') as f:
+                        f.write(str(error_ad))
+                except:
+                    pass
+            sys.exit(1)
+
+        # Write CA to temporary file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.pem') as ca_file:
+            ca_file.write(ca_contents)
+            ca_file_path = ca_file.name
+
+        try:
+            ctx.load_verify_locations(cafile=ca_file_path)
+            # For test: disable hostname check since we're using localhost
+            ctx.check_hostname = False
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(ca_file_path)
+            except:
+                pass
+
         req = urllib.request.Request(url, data=tarball_data, method='PUT')
         req.add_header('Content-Type', 'application/x-tar')
-        
+        if capability:
+            req.add_header('Authorization', f'Bearer {{capability}}')
+
         with urllib.request.urlopen(req, context=ctx, timeout=4) as response:
             response_data = response.read()
     except Exception as e:
@@ -752,7 +875,7 @@ def handle_upload(infile, outfile):
             except:
                 pass
         sys.exit(1)
-    
+
     # Write sentry file to test directory to prove upload happened via plugin
     test_dir = "{test_dir}"
     sentry_path = os.path.join(test_dir, '.pelican_upload_executed')
@@ -803,9 +926,11 @@ def condor(test_dir, pelican_server, pelican_plugin):
             # Enable Pelican functionality
             "ENABLE_PELICAN_TRANSFERS": "TRUE",
             "PELICAN_REGISTRATION_SOCKET": pelican_server['unix_socket'],
+            # Since auto-detection of CAs is working, we don't need to set CA file
+            # "PELICAN_CA_FILE": str(pelican_certs['ca_cert']),
             # Set verbose logging for debugging
-            "SHADOW_DEBUG": "D_FULLDEBUG, D_NETWORK|D_VERBOSE, D_VERBOSE",
-            "STARTER_DEBUG": "D_FULLDEBUG, D_NETWORK|D_VERBOSE, D_VERBOSE",
+            "SHADOW_DEBUG": "D_FULLDEBUG",
+            "STARTER_DEBUG": "D_FULLDEBUG",
         }
     ) as condor:
         yield condor

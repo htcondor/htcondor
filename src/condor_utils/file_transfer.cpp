@@ -7137,6 +7137,39 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 }
 
 
+// Helper function to unparse a ClassAd with private attributes redacted
+// Sadly, the various ClassAd printing functions do not use the new-style
+// syntax so we needed this small helper.  Without this, private attributes
+// would be printed in full when doing file transfer plugins.
+static std::string UnparseWithRedaction(const ClassAd& ad, classad::ClassAdUnParser& unparser) {
+	std::vector<std::string> private_attrs;
+
+	// Iterate through all attributes and collect private ones
+	for (auto itr = ad.begin(); itr != ad.end(); ++itr) {
+		const std::string& attr = itr->first;
+		if (ClassAdAttributeIsPrivateAny(attr.c_str())) {
+			private_attrs.push_back(attr);
+		}
+	}
+
+	// If there are no private attributes, just unparse the original
+	if (private_attrs.empty()) {
+		std::string buffer;
+		unparser.Unparse(buffer, &ad);
+		return buffer;
+	}
+
+	// Make a copy and redact private attributes
+	ClassAd redacted_ad(ad);
+	for (const auto& attr : private_attrs) {
+		redacted_ad.InsertAttr(attr, "**REDACTED**");
+	}
+
+	std::string buffer;
+	unparser.Unparse(buffer, &redacted_ad);
+	return buffer;
+}
+
 FileTransfer::walkargs_t
 FileTransfer::mergePluginSpecificEnvironment(
     const FileTransferPlugin & plugin, Env & plugin_env
@@ -7312,17 +7345,24 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 
 	std::string transfer_files_string;
+	std::string transfer_files_string_for_log;
+	classad::ClassAdUnParser unparser;
+
 	for( const auto & classAd : nonfile_ads ) {
 		std::string buffer;
-		classad::ClassAdUnParser unparser;
 		unparser.Unparse( buffer, & classAd );
 		transfer_files_string += buffer;
+
+		// Create redacted version for logging
+		transfer_files_string_for_log += UnparseWithRedaction(classAd, unparser);
 	}
 	for( const auto & classAd : pluginInputAds ) {
 		std::string buffer;
-		classad::ClassAdUnParser unparser;
 		unparser.Unparse( buffer, & classAd );
 		transfer_files_string += buffer;
+
+		// Create redacted version for logging
+		transfer_files_string_for_log += UnparseWithRedaction(classAd, unparser);
 	}
 
 
@@ -7407,7 +7447,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		plugin_args.GetArgsStringForLogging(arglog);
 		// note - test_curl_plugin.py depends on seeing the word 'invoking' in the starter log.
 		dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", arglog.c_str() );
-		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input: %s\n", transfer_files_string.c_str() );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input: %s\n", transfer_files_string_for_log.c_str() );
 		if ( ! walkargs.env.empty()) {
 			arglog.clear();
 			plugin_env.getDelimitedStringForDisplay(arglog);
