@@ -223,6 +223,12 @@ enum class TransferSubCommand {
 	CheckUrlSchemes = 12
 };
 
+// Helper function to determine if a transfer command is a URL download
+inline bool isUrlDownload(TransferCommand cmd, TransferSubCommand subcmd) {
+	return (cmd == TransferCommand::DownloadUrl) ||
+	       (cmd == TransferCommand::Other && subcmd == TransferSubCommand::DownloadUrlWithAd);
+}
+
 #define COMMIT_FILENAME ".ccommit.con"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
@@ -298,7 +304,7 @@ struct download_info {
 // This is a generic protocol function that can be used for any URL-based transfer
 // (Pelican, S3, etc.) that requires metadata from the remote peer.
 // Returns true on success with metadata in the ClassAd, false on failure
-bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg) {
+bool FileTransfer::RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState) {
 	if (!sock) {
 		error_msg = "No socket provided";
 		return false;
@@ -314,6 +320,17 @@ bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadat
 	// Send a dummy filename (required by protocol)
 	if (!sock->put("_metadata_request_") || !sock->end_of_message()) {
 		error_msg = "Failed to send filename";
+		return false;
+	}
+
+	// Here, we must wait for the go-ahead from the transfer peer.
+	if (!ReceiveTransferGoAhead(sock, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
+		error_msg = "Failed to receive go-ahead from peer";
+		return false;
+	}
+	// Obtain the transfer token from the transfer queue.
+	if (!ObtainAndSendTransferGoAhead(xfer_queue, false, sock, sandbox_size, "", protocolState.I_go_ahead_always)) {
+		error_msg = "Failed to obtain and send go-ahead";
 		return false;
 	}
 
@@ -347,7 +364,7 @@ bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadat
 // Check if the peer supports the given URL schemes
 // Sends a list of desired schemes and receives back a list of supported schemes
 // Returns true if all desired schemes are supported, false otherwise
-bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg) {
+bool FileTransfer::CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState) {
 	if (!sock) {
 		error_msg = "No socket provided";
 		return false;
@@ -368,6 +385,17 @@ bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desir
 	// Send a dummy filename (required by protocol)
 	if (!sock->put("_scheme_check_") || !sock->end_of_message()) {
 		error_msg = "Failed to send filename";
+		return false;
+	}
+
+	// Here, we must wait for the go-ahead from the transfer peer.
+	if (!ReceiveTransferGoAhead(sock, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
+		error_msg = "Failed to receive go-ahead from peer";
+		return false;
+	}
+	// Obtain the transfer token from the transfer queue.
+	if (!ObtainAndSendTransferGoAhead(xfer_queue, false, sock, sandbox_size, "", protocolState.I_go_ahead_always)) {
+		error_msg = "Failed to obtain and send go-ahead";
 		return false;
 	}
 
@@ -3238,7 +3266,7 @@ FileTransfer::DoDownload(ReliSock *s)
 			break;
 		}
 
-		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && xfer_command == TransferCommand::DownloadUrl)) {
+		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && isUrlDownload(xfer_command, TransferSubCommand::Unknown))) {
 			bool cryp_ret = s->set_crypto_mode(true);
 			if (!cryp_ret) {
 				dprintf(D_ERROR,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
@@ -3732,19 +3760,20 @@ FileTransfer::DoDownload(ReliSock *s)
 				}
 
 				// Build list of supported schemes based on available plugins
+				CondorError err;
+				std::string method_list = GetSupportedMethods(err);
 				std::vector<std::string> supported_schemes;
+
+				// Parse the comma-separated method list
+				StringTokenIterator methods(method_list);
+				std::unordered_set<std::string> supported_methods_set;
+				for (const char* method = methods.first(); method != NULL; method = methods.next()) {
+					supported_methods_set.insert(method);
+				}
+
+				// Check which desired schemes are supported
 				for (const auto& scheme : desired_schemes) {
-					// Check if we have a plugin for this scheme
-					bool has_plugin = false;
-					for (const auto& plugin : plugin_ads) {
-						std::string plugin_methods;
-						if (plugin.ad.LookupString("SupportedMethods", plugin_methods) &&
-						    plugin_methods.find(scheme) != std::string::npos) {
-							has_plugin = true;
-							break;
-						}
-					}
-					if (has_plugin) {
+					if (supported_methods_set.count(scheme)) {
 						supported_schemes.push_back(scheme);
 					}
 				}
@@ -3812,16 +3841,10 @@ FileTransfer::DoDownload(ReliSock *s)
 				rc = 0;
 				continue;
 			} else if (subcommand == TransferSubCommand::DownloadUrlWithAd) {
-				// Receive URL and ClassAd for URL transfers with metadata
-				std::string URL;
-				if (!s->code(URL)) {
-					dprintf(D_ERROR, "DoDownload: Failed to receive URL with ClassAd at %d\n", __LINE__);
-					return_and_resetpriv(-1);
-				}
 
-				ClassAd url_ad;
-				if (!getClassAd(s, url_ad)) {
-					dprintf(D_ERROR, "DoDownload: Failed to receive ClassAd for URL at %d\n", __LINE__);
+				std::string URL;
+				if (!file_info.LookupString("Url", URL)) {
+					dprintf(D_ERROR, "DoDownload: ClassAd missing Url attribute at %d\n", __LINE__);
 					return_and_resetpriv(-1);
 				}
 
@@ -3830,7 +3853,7 @@ FileTransfer::DoDownload(ReliSock *s)
 				// Use helper to handle the URL download, passing the ClassAd metadata
 				rc = HandleUrlDownload(
 					errstack,
-					URL, fullname, &url_ad,
+					URL, fullname, &file_info,
 					all_transfers_succeeded, rc,
 					thisTransfer.get(), pluginStatsAd, LocalProxyName, isDeferredTransfer,
 					file_transfer_plugin_timed_out, file_transfer_plugin_exec_failed,
@@ -5081,7 +5104,7 @@ FileTransfer::DoCheckpointUploadFromStarter( ReliSock * s )
 	FileTransferList filelist = checkpointList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
-	_ft_protocol_bits protocolState;
+	FTProtocolBits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	std::string checkpointDestination;
@@ -5158,7 +5181,7 @@ FileTransfer::DoCheckpointUploadFromShadow(ReliSock * s)
 	FileTransferList filelist = inputList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
-	_ft_protocol_bits protocolState;
+	FTProtocolBits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	filelist.insert( filelist.end(), checkpointList.begin(), checkpointList.end() );
@@ -5189,7 +5212,7 @@ FileTransfer::DoNormalUpload(ReliSock * s)
 	FileTransferList filelist;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
-	_ft_protocol_bits protocolState;
+	FTProtocolBits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	if( inHandleCommands ) { filelist = this->inputList; }
@@ -5211,7 +5234,7 @@ FileTransfer::computeFileList(
     std::unordered_set<std::string> & skip_files,
     filesize_t & sandbox_size,
     DCTransferQueue & xfer_queue,
-    _ft_protocol_bits & protocolState,
+    FTProtocolBits & protocolState,
     bool should_invoke_output_plugins
 ) {
 		// Declaration to make the return_and_reset_priv macro happy.
@@ -5350,7 +5373,7 @@ FileTransfer::computeFileList(
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
-		if ( should_invoke_output_plugins ) {
+		if ( should_invoke_output_plugins && !fileitem.isDestUrl()) {
 			std::string local_output_url;
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
@@ -5673,7 +5696,7 @@ FileTransfer::uploadFileList(
 	std::unordered_set<std::string> & skip_files,
 	const filesize_t & sandbox_size,
 	DCTransferQueue & xfer_queue,
-	_ft_protocol_bits & protocolState)
+	FTProtocolBits & protocolState)
 {
 	int rc = 0;
 	filesize_t total_bytes = 0;
@@ -5873,12 +5896,12 @@ FileTransfer::uploadFileList(
 
 		if ( fileitem.isSrcUrl() ) {
 			file_command = TransferCommand::DownloadUrl;
-			// If this URL has an associated ClassAd (e.g., Pelican with token),
+			// If this URL has an associated ClassAd,
 			// use the new protocol with TransferCommand::Other
 			if (fileitem.getUrlAd() != nullptr) {
 				file_command = TransferCommand::Other;
 				file_subcommand = TransferSubCommand::DownloadUrlWithAd;
-				dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:10 for URL with ClassAd: %s\\n",
+				dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:10 for URL with ClassAd: %s\n",
 				        UrlSafePrint(filename));
 			}
 		}
@@ -5975,7 +5998,7 @@ FileTransfer::uploadFileList(
 
 		// now enable the crypto decision we made; if we are sending a URL down the pipe
 		// (potentially embedding an authorization itself), ensure we encrypt.
-		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && (file_command == TransferCommand::DownloadUrl))) {
+		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && isUrlDownload(file_command, file_subcommand))) {
 			bool cryp_ret = s->set_crypto_mode(true);
 			if (!cryp_ret) {
 				dprintf(D_ERROR,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
@@ -6100,6 +6123,10 @@ FileTransfer::uploadFileList(
 					ClassAd xfer_ad;
 					xfer_ad.InsertAttr( "Url", local_output_url );
 					xfer_ad.InsertAttr( "LocalFileName", fullname );
+					auto file_ad = fileitem.getUrlAd();
+					if (file_ad != nullptr) {
+						xfer_ad.Update(*file_ad);
+					}
 
 					currentUploadRequests.push_back(xfer_ad);
 					currentUploadDeferred ++;
@@ -6177,6 +6204,10 @@ FileTransfer::uploadFileList(
 					// report the results:
 					file_info.Assign("Filename", source_filename);
 					file_info.Assign("OutputDestination", local_output_url);
+					auto file_ad = fileitem.getUrlAd();
+					if (file_ad != nullptr) {
+						file_info.Update(*file_ad);
+					}
 
 					// If failed, put the ErrStack into the classad
 					if (result != TransferPluginResult::Success) {
@@ -6209,6 +6240,26 @@ FileTransfer::uploadFileList(
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.length();
 				}
+			} else if(file_subcommand == TransferSubCommand::DownloadUrlWithAd) {
+				// Send a ClassAd with the URL and any associated metadata
+				ClassAd *url_ad = fileitem.getUrlAd();
+				if (url_ad) {
+					file_info.Update(*url_ad);
+				}
+				file_info.Assign("Url", fullname);
+				file_info.Assign("LocalFileName", dest_filename);
+
+				dprintf(D_FULLDEBUG, "FILETRANSFER: Sending DownloadUrlWithAd for %s\n", UrlSafePrint(fullname));
+				if(!putClassAd(s, file_info, 0)) {
+					dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+
+				std::string junkbuf;
+				sPrintAd(junkbuf, file_info);
+				bytes = junkbuf.length();
+
+				rc = 0;
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
 					static_cast<int>(file_subcommand), UrlSafePrint(filename));

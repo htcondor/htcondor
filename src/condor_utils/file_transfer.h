@@ -133,6 +133,13 @@ enum class TransferClass {
 #include "FileTransferControlBlock.h"
 
 
+struct FTProtocolBits {
+	filesize_t peer_max_transfer_bytes = {-1};
+	bool I_go_ahead_always = {false};
+	bool peer_goes_ahead_always = {false};
+	bool socket_default_crypto = {true};
+};
+
 class FileTransfer final: public Service {
 
   public:
@@ -488,6 +495,14 @@ class FileTransfer final: public Service {
 	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 
+	// Request transfer metadata (token, CA, etc.) for a given URL from the remote side
+	// Returns true on success with metadata in the ClassAd, false on failure
+	bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState);
+
+	// Check if the peer supports the given URL schemes
+	// Returns true if all desired schemes are supported, false otherwise
+	bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState);
+
 	// Helper function to handle URL downloads with optional metadata ClassAd
 	int HandleUrlDownload(
 		CondorError& errstack,
@@ -625,13 +640,6 @@ class FileTransfer final: public Service {
 	filesize_t DoCheckpointUploadFromShadow(ReliSock * s);
 	filesize_t DoNormalUpload(ReliSock * s);
 
-	typedef struct _ft_protocol_bits_struct {
-		filesize_t peer_max_transfer_bytes = {-1};
-		bool I_go_ahead_always = {false};
-		bool peer_goes_ahead_always = {false};
-		bool socket_default_crypto = {true};
-	} _ft_protocol_bits;
-
 	// Do the final computation of which files we'll be transferring.  This
 	// _includes_ starting the file-transfer protocol and executing the
 	// data reuse and S3 URL signing/conversion routines.
@@ -642,7 +650,7 @@ class FileTransfer final: public Service {
 	    std::unordered_set<std::string> & skip_files,
 	    filesize_t & sandbox_size,
 	    DCTransferQueue & xfer_queue,
-	    _ft_protocol_bits & protocolState,
+	    FTProtocolBits & protocolState,
 	    bool using_output_destination
 	);
 
@@ -655,7 +663,7 @@ class FileTransfer final: public Service {
 		std::unordered_set<std::string> & skip_files,
 		const filesize_t & sandbox_size,
 		DCTransferQueue & xfer_queue,
-		_ft_protocol_bits & protocolState
+		FTProtocolBits & protocolState
 	);
 
 	double uploadStartTime{-1}, uploadEndTime{-1};

@@ -99,8 +99,4 @@ private:
 
 typedef std::vector<FileTransferItem> FileTransferList;
 
-// Generic URL transfer support functions
-bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg);
-bool CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg);
-
 #endif // _FILE_TRANSFER_INTERNAL_H
