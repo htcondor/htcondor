@@ -468,7 +468,7 @@ def create_ca_and_certs(test_dir):
         'openssl', 'genrsa',
         '-out', str(ca_key),
         '2048'
-    ], check=True, capture_output=True)
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # CA certificate (self-signed)
     ca_cert = cert_dir / "ca.crt"
@@ -478,7 +478,7 @@ def create_ca_and_certs(test_dir):
         '-out', str(ca_cert),
         '-days', '365',
         '-subj', '/CN=Test CA'
-    ], check=True, capture_output=True)
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Server private key
     server_key = cert_dir / "server.key"
@@ -486,7 +486,7 @@ def create_ca_and_certs(test_dir):
         'openssl', 'genrsa',
         '-out', str(server_key),
         '2048'
-    ], check=True, capture_output=True)
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Server CSR (using full hostname, not localhost)
     server_csr = cert_dir / "server.csr"
@@ -495,7 +495,7 @@ def create_ca_and_certs(test_dir):
         '-key', str(server_key),
         '-out', str(server_csr),
         '-subj', f'/CN={hostname}'
-    ], check=True, capture_output=True)
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Sign server certificate with CA
     server_cert = cert_dir / "server.crt"
@@ -507,7 +507,7 @@ def create_ca_and_certs(test_dir):
         '-CAcreateserial',
         '-out', str(server_cert),
         '-days', '365'
-    ], check=True, capture_output=True)
+    ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # Append CA certificate to server certificate to create a chain
     # This allows clients to auto-detect the CA during TLS handshake
