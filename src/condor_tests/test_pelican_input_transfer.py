@@ -461,6 +461,32 @@ def create_ca_and_certs(test_dir):
             hostname = "test.example.com"
     except:
         hostname = "test.example.com"
+
+    # OpenSSL on macOS (and some older distros) lacks -addext; use a temp config with extensions
+    openssl_cfg = cert_dir / "openssl.cnf"
+    openssl_cfg.write_text(
+        f"""
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_server
+prompt = no
+
+[ req_distinguished_name ]
+CN = {hostname}
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always
+basicConstraints = critical,CA:TRUE
+keyUsage = critical,keyCertSign,cRLSign
+
+[ v3_server ]
+subjectAltName = DNS:{hostname}
+basicConstraints = critical,CA:FALSE
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+"""
+    )
     
     # CA private key
     ca_key = cert_dir / "ca.key"
@@ -477,7 +503,9 @@ def create_ca_and_certs(test_dir):
         '-key', str(ca_key),
         '-out', str(ca_cert),
         '-days', '365',
-        '-subj', '/CN=Test CA'
+        '-subj', '/CN=Test CA',
+        '-config', str(openssl_cfg),
+        '-extensions', 'v3_ca'
     ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Server private key
@@ -494,7 +522,9 @@ def create_ca_and_certs(test_dir):
         'openssl', 'req', '-new',
         '-key', str(server_key),
         '-out', str(server_csr),
-        '-subj', f'/CN={hostname}'
+        '-subj', f'/CN={hostname}',
+        '-config', str(openssl_cfg),
+        '-reqexts', 'v3_server'
     ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # Sign server certificate with CA
@@ -506,7 +536,9 @@ def create_ca_and_certs(test_dir):
         '-CAkey', str(ca_key),
         '-CAcreateserial',
         '-out', str(server_cert),
-        '-days', '365'
+        '-days', '365',
+        '-extfile', str(openssl_cfg),
+        '-extensions', 'v3_server'
     ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # Append CA certificate to server certificate to create a chain

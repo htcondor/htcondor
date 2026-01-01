@@ -305,6 +305,7 @@
 #cmakedefine LIBKRB5_SO "${LIBKRB5_SO}"
 #cmakedefine LIBGSSAPI_KRB5_SO "${LIBGSSAPI_KRB5_SO}"
 #cmakedefine LIBSSL_SO "${LIBSSL_SO}"
+#cmakedefine LIBCURL_SO "${LIBCURL_SO}"
 #cmakedefine LIBMUNGE_SO "${LIBMUNGE_SO}"
 #cmakedefine LIBVOMSAPI_SO "${LIBVOMSAPI_SO}"
 #cmakedefine LIBSYSTEMD_DAEMON_SO "${LIBSYSTEMD_DAEMON_SO}"

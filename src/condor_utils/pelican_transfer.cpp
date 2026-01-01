@@ -29,14 +29,101 @@
 #include "pelican_transfer.h"
 #include "stl_string_utils.h"
 
+#if defined(DLOPEN_SECURITY_LIBS)
+#include <dlfcn.h>
+#ifndef LIBCURL_SO
+#error "DLOPEN_SECURITY_LIBS requires LIBCURL_SO to be defined at build time"
+#endif
+#endif
+
 #include <curl/curl.h>
 
 #include <fstream>
 #include <iterator>
 #include <memory>
 #include <string_view>
+#include <type_traits>
 
 namespace {
+
+#if defined(DLOPEN_SECURITY_LIBS)
+// libcurl symbols resolved via dlopen to keep the shadow's link set small
+static void *g_curl_handle = nullptr;
+static bool g_curl_init_tried = false;
+static bool g_curl_init_success = false;
+static std::string g_curl_last_error;
+#endif
+
+static decltype(&curl_easy_init) curl_easy_init_ptr = nullptr;
+static decltype(&curl_easy_setopt) curl_easy_setopt_ptr = nullptr;
+static decltype(&curl_easy_perform) curl_easy_perform_ptr = nullptr;
+static decltype(&curl_easy_getinfo) curl_easy_getinfo_ptr = nullptr;
+static decltype(&curl_easy_cleanup) curl_easy_cleanup_ptr = nullptr;
+static decltype(&curl_easy_strerror) curl_easy_strerror_ptr = nullptr;
+static decltype(&curl_slist_append) curl_slist_append_ptr = nullptr;
+static decltype(&curl_slist_free_all) curl_slist_free_all_ptr = nullptr;
+
+// Resolve libcurl symbols on first use; mirrors the dlopen pattern used in condor_auth_ssl.
+static bool EnsureCurlInitialized(std::string &error_msg) {
+#if defined(DLOPEN_SECURITY_LIBS)
+	if (g_curl_init_tried) {
+		if (!g_curl_init_success) { error_msg = g_curl_last_error; }
+		return g_curl_init_success;
+	}
+	g_curl_init_tried = true;
+
+	// LIBCURL_SO is guaranteed to be defined when DLOPEN_SECURITY_LIBS is set (see #error above)
+	g_curl_handle = dlopen(LIBCURL_SO, RTLD_LAZY | RTLD_LOCAL);
+	if (!g_curl_handle) {
+		formatstr(g_curl_last_error, "Failed to dlopen libcurl (%s): %s", LIBCURL_SO, dlerror());
+		error_msg = g_curl_last_error;
+		return false;
+	}
+
+	auto load_symbol = [&](auto &fn_ptr, const char *name) -> bool {
+		using Fn = std::remove_reference_t<decltype(fn_ptr)>;
+		void *sym = dlsym(g_curl_handle, name);
+		if (!sym) {
+			formatstr(g_curl_last_error, "Failed to resolve %s from libcurl: %s", name, dlerror());
+			error_msg = g_curl_last_error;
+			return false;
+		}
+		fn_ptr = reinterpret_cast<Fn>(sym);
+		return true;
+	};
+
+	if (!load_symbol(curl_easy_init_ptr, "curl_easy_init") ||
+		!load_symbol(curl_easy_setopt_ptr, "curl_easy_setopt") ||
+		!load_symbol(curl_easy_perform_ptr, "curl_easy_perform") ||
+		!load_symbol(curl_easy_getinfo_ptr, "curl_easy_getinfo") ||
+		!load_symbol(curl_easy_cleanup_ptr, "curl_easy_cleanup") ||
+		!load_symbol(curl_easy_strerror_ptr, "curl_easy_strerror") ||
+		!load_symbol(curl_slist_append_ptr, "curl_slist_append") ||
+		!load_symbol(curl_slist_free_all_ptr, "curl_slist_free_all")) {
+		dlclose(g_curl_handle);
+		g_curl_handle = nullptr;
+		return false;
+	}
+
+	g_curl_init_success = true;
+	return true;
+#else
+	// Suppress unused parameter warning when linking curl directly
+	(void)error_msg;
+
+	// Directly linked build: set function pointers once.
+	if (curl_easy_init_ptr) { return true; }
+	curl_easy_init_ptr = &curl_easy_init;
+	curl_easy_setopt_ptr = &curl_easy_setopt;
+	curl_easy_perform_ptr = &curl_easy_perform;
+	curl_easy_getinfo_ptr = &curl_easy_getinfo;
+	curl_easy_cleanup_ptr = &curl_easy_cleanup;
+	curl_easy_strerror_ptr = &curl_easy_strerror;
+	curl_slist_append_ptr = &curl_slist_append;
+	curl_slist_free_all_ptr = &curl_slist_free_all;
+	return true;
+#endif
+}
 
 // Common checks for Pelican file transfer eligibility
 // Returns true if basic requirements are met, false otherwise
@@ -143,13 +230,19 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	response.success = false;
 	response.expires_at = 0;
 
+	std::string curl_init_error;
+	if (!EnsureCurlInitialized(curl_init_error)) {
+		response.error_message = curl_init_error;
+		return response;
+	}
+
 	if (!job_ad) {
 		response.error_message = "Null job ad provided";
 		return response;
 	}
 
 	// Initialize curl
-	CURL *curl = curl_easy_init();
+	CURL *curl = curl_easy_init_ptr();
 	if (!curl) {
 		response.error_message = "Failed to initialize curl";
 		return response;
@@ -162,7 +255,7 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 
 	std::string response_string;
 	struct curl_slist *headers = nullptr;
-	headers = curl_slist_append(headers, "Content-Type: application/json");
+	headers = curl_slist_append_ptr(headers, "Content-Type: application/json");
 
 	// Configure curl to use unix domain socket with TLS
 	// Using TLS allows us to capture the server's certificate chain
@@ -170,26 +263,26 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	std::string url = "https://localhost/api/v1/sandbox/register";
 	std::string captured_ca_pem;
 
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH, socket_path.c_str());
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, job_ad_json.c_str());
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, PelicanCurlWriteCallback);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);  // 10 second timeout
+	curl_easy_setopt_ptr(curl, CURLOPT_URL, url.c_str());
+	curl_easy_setopt_ptr(curl, CURLOPT_UNIX_SOCKET_PATH, socket_path.c_str());
+	curl_easy_setopt_ptr(curl, CURLOPT_POSTFIELDS, job_ad_json.c_str());
+	curl_easy_setopt_ptr(curl, CURLOPT_HTTPHEADER, headers);
+	curl_easy_setopt_ptr(curl, CURLOPT_WRITEFUNCTION, PelicanCurlWriteCallback);
+	curl_easy_setopt_ptr(curl, CURLOPT_WRITEDATA, &response_string);
+	curl_easy_setopt_ptr(curl, CURLOPT_TIMEOUT, 10L);  // 10 second timeout
 
 	// Enable TLS with custom verification to capture CAs
-	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);  // Disable verification (will verify manually)
-	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);  // Disable hostname verification
-	curl_easy_setopt(curl, CURLOPT_CERTINFO, 1L);  // Request certificate info
+	curl_easy_setopt_ptr(curl, CURLOPT_SSL_VERIFYPEER, 0L);  // Disable verification (will verify manually)
+	curl_easy_setopt_ptr(curl, CURLOPT_SSL_VERIFYHOST, 0L);  // Disable hostname verification
+	curl_easy_setopt_ptr(curl, CURLOPT_CERTINFO, 1L);  // Request certificate info
 
 	// Perform the request
-	CURLcode res = curl_easy_perform(curl);
+	CURLcode res = curl_easy_perform_ptr(curl);
 
 	// Extract certificate chain information after handshake
 	struct curl_certinfo *certinfo = nullptr;
 	if (res == CURLE_OK) {
-		CURLcode info_res = curl_easy_getinfo(curl, CURLINFO_CERTINFO, &certinfo);
+		CURLcode info_res = curl_easy_getinfo_ptr(curl, CURLINFO_CERTINFO, &certinfo);
 		if (info_res == CURLE_OK && certinfo && certinfo->num_of_certs > 0) {
 			dprintf(D_FULLDEBUG, "Pelican: Received %d certificate(s) in chain\n", certinfo->num_of_certs);
 
@@ -242,17 +335,17 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	}
 	
 	if (res != CURLE_OK) {
-		formatstr(response.error_message, "Curl request failed: %s", curl_easy_strerror(res));
-		curl_slist_free_all(headers);
-		curl_easy_cleanup(curl);
+		formatstr(response.error_message, "Curl request failed: %s", curl_easy_strerror_ptr(res));
+		curl_slist_free_all_ptr(headers);
+		curl_easy_cleanup_ptr(curl);
 		return response;
 	}
 
 	long http_code = 0;
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+	curl_easy_getinfo_ptr(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
-	curl_slist_free_all(headers);
-	curl_easy_cleanup(curl);
+	curl_slist_free_all_ptr(headers);
+	curl_easy_cleanup_ptr(curl);
 
 	if (http_code != 200) {
 		formatstr(response.error_message, "HTTP error code: %ld", http_code);

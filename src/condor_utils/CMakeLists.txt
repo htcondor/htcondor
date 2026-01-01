@@ -628,6 +628,18 @@ else()
 	endif()
 endif()
 
+if (WINDOWS)
+	# libcurl is built as a static library on Windows; this must be defined
+	# the same way.  This is exactly what modern CMake was designed to help
+	# avoid; going this route to minimize changes.
+	#
+	# On non-Windows platforms, this build currently assumes that libcurl is
+	# provided as a shared (dynamic) library, so CURL_STATICLIB is *not* set
+	# there.  This assumption is matched elsewhere in the code base; that
+        # also would benefit from future CMake modernizations.
+	target_compile_definitions(condor_utils_objects PRIVATE CURL_STATICLIB)
+endif()
+
 add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 
@@ -654,7 +666,10 @@ if (WINDOWS)
 endif()
 
 # libcurl is required for Pelican integration
-target_link_libraries(condor_utils PUBLIC ${CURL_FOUND})
+# Only link if not using dlopen (DLOPEN_SECURITY_LIBS); dlopen builds load it at runtime
+if (NOT DLOPEN_SECURITY_LIBS)
+	target_link_libraries(condor_utils PUBLIC ${CURL_FOUND})
+endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
@@ -702,7 +717,9 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
     target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
-	target_link_libraries(condor_utils_s PUBLIC ${CURL_FOUND})
+	if (NOT DLOPEN_SECURITY_LIBS)
+		target_link_libraries(condor_utils_s PUBLIC ${CURL_FOUND})
+	endif()
 endif(LINUX OR APPLE)
 
 if (LINUX)
