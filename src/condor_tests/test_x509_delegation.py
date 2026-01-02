@@ -25,8 +25,8 @@ def path_to_the_x509_cred(default_condor, test_dir):
     key_path = test_dir / "test.key"
     cred_path = test_dir / "test.pem"
     rv = default_condor.run_command(
-        ["openssl", "req", "-nodes", "-x509", "-newkey", "rsa:4096", "-keyout", key_path.as_posix(), "-out", cred_path.as_posix(), "-days", "365", "-subj", "/C=US/ST=Wisconsin/L=Madison/O=HTCondor/CN=Test Credential"],
-        timeout=8,
+        ["openssl", "req", "-nodes", "-x509", "-new", "-newkey", "rsa:4096", "-keyout", key_path.as_posix(), "-out", cred_path.as_posix(), "-days", "365", "-subj", "/C=US/ST=Wisconsin/L=Madison/O=HTCondor/CN=Test Credential"],
+        timeout=90,
     )
     assert rv.returncode == 0
     key_data = key_path.read_text()
