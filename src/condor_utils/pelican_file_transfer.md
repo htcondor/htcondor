@@ -86,8 +86,8 @@ Example:
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "expires_at": 1735603200,
-  "input_url": "pelican://foo.example.com/sandboxes/1.0/input",
-  "output_url": "pelican://foo.example.com/sandboxes/1.0/input"
+  "input_urls": ["pelican://foo.example.com/sandboxes/1.0/input"],
+  "output_urls": ["pelican://foo.example.com/sandboxes/1.0/output"]
 }
 ```
 

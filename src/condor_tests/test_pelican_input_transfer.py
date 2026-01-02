@@ -16,7 +16,6 @@ import http.server
 import socketserver
 import threading
 import socket
-import tempfile
 import tarfile
 import io
 import json
@@ -25,7 +24,7 @@ import time
 import ssl
 import os
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 
 class PelicanHTTPHandler(http.server.BaseHTTPRequestHandler):
@@ -459,7 +458,7 @@ def create_ca_and_certs(test_dir):
         # If hostname is too long or looks like an IP address, use a fallback
         if len(hostname) > 50 or '.' not in hostname or hostname.count('.') > 5:
             hostname = "test.example.com"
-    except:
+    except Exception:
         hostname = "test.example.com"
 
     # OpenSSL on macOS (and some older distros) lacks -addext; use a temp config with extensions
@@ -716,7 +715,7 @@ def handle_download(infile, outfile):
             # Clean up temp file
             try:
                 os.unlink(ca_file_path)
-            except:
+            except Exception:
                 pass
 
         req = urllib.request.Request(url)
@@ -735,7 +734,7 @@ def handle_download(infile, outfile):
             try:
                 with open(outfile, 'w') as f:
                     f.write(str(error_ad))
-            except:
+            except Exception:
                 pass
         sys.exit(1)
     
@@ -753,7 +752,7 @@ def handle_download(infile, outfile):
             try:
                 with open(outfile, 'w') as f:
                     f.write(str(error_ad))
-            except:
+            except Exception:
                 pass
         sys.exit(1)
     
@@ -843,7 +842,7 @@ def handle_upload(infile, outfile):
             try:
                 with open(outfile, 'w') as f:
                     f.write(str(error_ad))
-            except:
+            except Exception:
                 pass
         sys.exit(1)
     
@@ -869,7 +868,7 @@ def handle_upload(infile, outfile):
                 try:
                     with open(outfile, 'w') as f:
                         f.write(str(error_ad))
-                except:
+                except Exception:
                     pass
             sys.exit(1)
 
@@ -886,7 +885,7 @@ def handle_upload(infile, outfile):
             # Clean up temp file
             try:
                 os.unlink(ca_file_path)
-            except:
+            except Exception:
                 pass
 
         req = urllib.request.Request(url, data=tarball_data, method='PUT')
@@ -905,7 +904,7 @@ def handle_upload(infile, outfile):
             try:
                 with open(outfile, 'w') as f:
                     f.write(str(error_ad))
-            except:
+            except Exception:
                 pass
         sys.exit(1)
 
@@ -1062,7 +1061,6 @@ class TestPelicanInputTransfer:
         assert upload_sentry_file.exists(), "Pelican plugin was not executed for output transfer - CEDAR fallback may have been used"
         
         # Verify the uploaded tarball was received by the mock server
-        from test_pelican_input_transfer import PelicanHTTPHandler
         assert hasattr(PelicanHTTPHandler, 'uploaded_files'), "No uploaded files tracked by mock server"
         
         # Find our job ID in the uploaded files

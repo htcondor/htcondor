@@ -297,7 +297,7 @@ bool FileTransfer::CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::
 
 	// Build ClassAd with desired schemes
 	ClassAd request_ad;
-	request_ad.Assign("SubCommand", (int)TransferSubCommand::CheckUrlSchemes);
+	request_ad.Assign("SubCommand", static_cast<int>(TransferSubCommand::CheckUrlSchemes));
 
 	classad::ExprList scheme_list;
 	for (const auto& scheme : desired_schemes) {

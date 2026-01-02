@@ -241,7 +241,7 @@ std::vector<FileTransferItem> RequestStageoutTransform(
 	// Send the ClassAd with subcommand and the count of transfer items
 	sock->encode();
 	ClassAd request_ad;
-	request_ad.Assign("SubCommand", (int)TransferSubCommand::StageoutTransform);
+	request_ad.Assign("SubCommand", static_cast<int>(TransferSubCommand::StageoutTransform));
 	request_ad.Assign("ItemCount", (long long)filelist.size());
 	
 	dprintf(D_FULLDEBUG, "RequestStageoutTransform: Sending %zu items to shadow\n", filelist.size());
@@ -285,7 +285,7 @@ std::vector<FileTransferItem> RequestStageoutTransform(
 	// Check if there was an error
 	std::string remote_error;
 	if (response_ad.LookupString("Error", remote_error)) {
-		error_msg = "Remote error: " + remote_error;
+		formatstr(error_msg, "Remote error: %s", remote_error.c_str());
 		dprintf(D_ALWAYS, "RequestStageoutTransform: %s\n", error_msg.c_str());
 		return filelist;
 	}
@@ -342,6 +342,16 @@ bool HandleStageoutTransform(
 {
 	if (!sock) {
 		dprintf(D_ALWAYS, "HandleStageoutTransform: Invalid socket\n");
+		return false;
+	}
+
+	// Validate item_count to prevent excessive memory allocation on errors
+	// Use a reasonable upper bound (1,000,000; would be an excessive use case
+	// for CEDAR transfers)
+	const long long MAX_TRANSFER_ITEMS = 1000000;
+	if (item_count < 0 || item_count > MAX_TRANSFER_ITEMS) {
+		dprintf(D_ALWAYS, "HandleStageoutTransform: Invalid item_count %lld (max %lld)\n",
+			item_count, MAX_TRANSFER_ITEMS);
 		return false;
 	}
 
@@ -419,7 +429,7 @@ bool HandleStageoutTransform(
 		return false;
 	}
 
-	// Must leave socket in decode mode with an EOM remaining
+	// Leave socket in decode mode as the calling function assumes a decode EOM is next.
 	sock->decode();
 
 	dprintf(D_FULLDEBUG, "HandleStageoutTransform: Successfully sent %zu transformed items to starter\n",

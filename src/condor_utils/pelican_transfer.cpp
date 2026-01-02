@@ -231,9 +231,9 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	response.success = false;
 	response.expires_at = 0;
 
-	std::string curl_init_error;
-	if (!EnsureCurlInitialized(curl_init_error)) {
-		response.error_message = curl_init_error;
+	std::string error_msg;
+	if (!EnsureCurlInitialized(error_msg)) {
+		response.error_message = error_msg;
 		return response;
 	}
 
@@ -273,7 +273,14 @@ PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::strin
 	curl_easy_setopt_ptr(curl, CURLOPT_TIMEOUT, 10L);  // 10 second timeout
 
 	// Enable TLS with custom verification to capture CAs
-	curl_easy_setopt_ptr(curl, CURLOPT_SSL_VERIFYPEER, 0L);  // Disable verification (will verify manually)
+	// Note: SSL verification is intentionally disabled here because:
+	// 1. We're connecting over a Unix domain socket, which provides OS-level authentication
+	//    (the Pelican server can verify the shadow's UID/GID via socket credentials)
+	// 2. TLS is used here primarily to capture the server's certificate chain for CA auto-detection
+	// 3. The auto-detected CAs will be used by the file transfer plugin for actual URL transfers
+	// 4. We assume that the only entity able to create the domain socket (defaults to $SPOOL) is
+	//    the registration service.
+	curl_easy_setopt_ptr(curl, CURLOPT_SSL_VERIFYPEER, 0L);  // Disable verification (Unix domain socket provides auth)
 	curl_easy_setopt_ptr(curl, CURLOPT_SSL_VERIFYHOST, 0L);  // Disable hostname verification
 	curl_easy_setopt_ptr(curl, CURLOPT_CERTINFO, 1L);  // Request certificate info
 

@@ -5401,7 +5401,7 @@ type=bool
 
 [PELICAN_REGISTRATION_SOCKET]
 default=$(SPOOL)/pelican_registration.sock
-description=Path to the Unix domain socket for Pelican registration service
+description=Path to the Unix domain socket for Pelican registration service used by the AP. Note: The full socket path must not exceed the system's maximum Unix domain socket path length (typically 108 bytes on Linux); if $(SPOOL) is long (typically true in CI/test environments), override this default with a shorter path.
 type=path
 
 [PELICAN_CA_FILE]
