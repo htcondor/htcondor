@@ -25,6 +25,7 @@
 #include "test.h"
 #include "stdio.h"
 #include "math.h"
+#include <vector>
 
 int virt_memory_test(int	test_blocksize,
 					 double max_sd_varation_ratio, 
@@ -37,9 +38,9 @@ int virt_memory_test(int	test_blocksize,
 	int	num_warnings = 0;
 	double mean, raw_mean;
 	double variance, raw_variance;
-	long test[test_blocksize], raw_test[test_blocksize];
-	double testblocks_sd[test_blocksize], raw_testblocks_sd[test_blocksize];
-	double testblocks_mean[test_blocksize], raw_testblocks_mean[test_blocksize];
+	std::vector<long> test(test_blocksize), raw_test(test_blocksize);
+	std::vector<double> testblocks_sd(test_blocksize), raw_testblocks_sd(test_blocksize);
+	std::vector<double> testblocks_mean(test_blocksize), raw_testblocks_mean(test_blocksize);
 
 	dprintf(D_ALWAYS, "SysAPI: Running virt_memory_test.\n");
 	dprintf(D_ALWAYS, "        I will test sysapi_swap_space (and sysapi_swap_space_raw) in "

@@ -721,7 +721,7 @@ Singularity::add_containment_args(ArgList & sing_args)
 
 
 bool
-Singularity::canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout) {
+Singularity::canRun([[maybe_unused]] const std::string &image, [[maybe_unused]] const std::string &command, [[maybe_unused]] std::string &firstLine, [[maybe_unused]] int timeout) {
 #ifdef LINUX
 	bool success = true;
 	bool retry_on_fail_without_namespaces = false;
@@ -817,7 +817,6 @@ Singularity::canRun(const std::string &image, const std::string &command, std::s
 		return false;
 	}
 #else
-	(void)image;	// shut the compiler up
 	return false;
 #endif
 }
