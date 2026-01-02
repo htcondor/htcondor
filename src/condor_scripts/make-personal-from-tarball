@@ -23,8 +23,8 @@ if [[ $USER_ID -eq 0 || $GROUP_ID -eq 0 ]]; then
     exit 1
 fi
 
-if [[ ! -x ${RELEASE_DIR}/bin/condor_status ]]; then
-    echo "This directory doesn't have sbin/condor_status; did you unpack the tarball?"
+if [[ ! -x ${RELEASE_DIR}/sbin/condor_master ]]; then
+    echo "This directory doesn't have sbin/condor_master; did you unpack the tarball?"
     exit 1
 fi
 
