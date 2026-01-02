@@ -1315,17 +1315,27 @@ static void printJob(ClassAd & ad)
 	// maybe fix that someday, but as far as I know, the non-socket printing
 	// functionality of this code isn't actually used except for debugging.
 	if (longformat) {
+		classad::References order;
+		classad::References * proj = &projection;
+		if (projection.empty()) {
+			// fetch all attributes as a projection because this forces the print order
+			sGetAdAttrs(order, ad, false);
+			proj = &order;
+		}
 		if (use_xml) {
-			fPrintAdAsXML(stdout, ad, projection.empty() ? NULL : &projection);
+			fPrintAdAsXML(stdout, ad, proj);
 		} else if ( use_json ) {
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, false);
+			fPrintAdAsJson(stdout, ad, proj, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
+			fPrintAdAsJson(stdout, ad, proj, true);
 		} else {
-			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
+			// dont use fPrintAd here because it does not print in projection order
+			std::string buffer;
+			sPrintAdAttrs(buffer, ad, *proj);
+			fputs(buffer.c_str(), stdout);
 		}
 		printf("\n");
 	} else {
