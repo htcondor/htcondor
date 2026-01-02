@@ -53,10 +53,12 @@ bool ShouldOutputUsePelicanTransfer(ClassAd *job_ad, bool peer_supports_pelican)
 // This posts the job ad to the service and receives back token, expiration time, and URLs
 PelicanRegistrationResponse PelicanRegisterJob(ClassAd *job_ad, const std::string &socket_path);
 
-// Build a response ClassAd for a Pelican URL metadata request
-// Called by shadow when starter requests metadata for output transfers
-// Returns true if Pelican metadata was successfully added, false otherwise
-bool BuildPelicanMetadataResponse(const std::string& url, ClassAd *job_ad, ClassAd& response_ad);
+// Transform output file list to use Pelican
+// Called by shadow-side to transform the output transfer list
+// Returns true on success, false on failure
+bool TransformPelicanOutputList(
+	FileTransferList &filelist,
+	ClassAd *job_ad);
 
 // Prepare file list for Pelican transfer
 // Removes regular files from the list and replaces with Pelican URL + metadata
@@ -67,18 +69,6 @@ bool PreparePelicanInputTransferList(
 	const std::string &jobid,
 	FileTransfer *ft,
 	ReliSock *sock,
-	DCTransferQueue &xfer_queue,
-	filesize_t sandbox_size,
-	FTProtocolBits &protocolState);
-
-// Prepare output sandbox files for Pelican transfer
-// Similar to PreparePelicanTransferList but for output/upload side
-bool PreparePelicanOutputTransferList(
-	FileTransfer *ft,
-	ReliSock *sock,
-	FileTransferList& filelist,
-	ClassAd *job_ad,
-	bool peer_supports_pelican,
 	DCTransferQueue &xfer_queue,
 	filesize_t sandbox_size,
 	FTProtocolBits &protocolState);

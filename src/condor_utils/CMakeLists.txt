@@ -303,8 +303,6 @@ file_transfer.h
 file_transfer_internal.h
 file_transfer_stats.cpp
 file_transfer_stats.h
-pelican_transfer.cpp
-pelican_transfer.h
 forkwork.cpp
 forkwork.h
 format_time.cpp
@@ -397,6 +395,8 @@ param_info.cpp
 param_info.h
 param_info_help.cpp
 param_info_tables.h
+pelican_transfer.cpp
+pelican_transfer.h
 perm.h
 PluginManager.h
 printf_format.cpp
@@ -438,6 +438,8 @@ spooled_job_files.h
 spool_version.cpp
 spool_version.h
 ssl_version_hack.h
+stageout_transform.cpp
+stageout_transform.h
 stat_info.cpp
 stat_info.h
 status_string.cpp

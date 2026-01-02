@@ -122,6 +122,51 @@ enum class TransferClass {
 	checkpoint = 3,
 };
 
+// Transfer commands sent from the upload side to the download side.
+// 0 - finished
+// 1 - use socket default (on or off) for next file
+// 2 - force encryption on for next file.
+// 3 - force encryption off for next file.
+// 4 - do an x509 credential delegation (using the socket default)
+// 5 - send a URL and have the download side fetch it
+// 6 - send a request to make a directory
+// 999 - send a classad telling what to do.
+//
+// 999 subcommands (999 is followed by a filename and then a ClassAd):
+// 7 - ClassAd contains information about a URL upload performed by
+//     the upload side.
+// 8 - ClassAd contains information about a list of files which will be
+//     sent later that may be eligible for reuse.  This is command requires
+//     a response indicating if the download side already has one of the
+//     files available.
+// 9 - ClassAd contains a list of URLs that need to be signed for the uploader
+//     to proceed.
+// 10 - Download with metadata
+// 11 - Request URL metadata from peer
+// 12 - Check if peer supports URL schemes
+// 13 - Stageout transform request
+enum class TransferCommand {
+	Unknown = -1,
+	Finished = 0,
+	XferFile = 1,
+	EnableEncryption = 2,
+	DisableEncryption = 3,
+	XferX509 = 4,
+	DownloadUrl = 5,
+	Mkdir = 6,
+	Other = 999
+};
+
+enum class TransferSubCommand {
+	Unknown = -1,
+	UploadUrl = 7,
+	ReuseInfo = 8,
+	SignUrls = 9,
+	DownloadUrlWithAd = 10,
+	CheckUrlSchemes = 11,
+	StageoutTransform = 12
+};
+
 
 //
 // The FileTransfer object mixes control code with operational code, which
@@ -141,6 +186,10 @@ struct FTProtocolBits {
 };
 
 class FileTransfer final: public Service {
+
+  // Friend declarations for stageout transform functions
+  friend bool HandleStageoutTransform(FileTransfer *ft, ReliSock *sock, ClassAd *job_ad, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState);
+  friend std::vector<FileTransferItem> RequestStageoutTransform(FileTransfer *ft, ReliSock *sock, const std::vector<FileTransferItem>& filelist, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState);
 
   public:
 
@@ -494,10 +543,6 @@ class FileTransfer final: public Service {
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const;
 	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-
-	// Request transfer metadata (token, CA, etc.) for a given URL from the remote side
-	// Returns true on success with metadata in the ClassAd, false on failure
-	bool RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState);
 
 	// Check if the peer supports the given URL schemes
 	// Returns true if all desired schemes are supported, false otherwise

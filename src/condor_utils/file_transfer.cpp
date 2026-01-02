@@ -45,6 +45,7 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "pelican_transfer.h"
+#include "stageout_transform.h"
 #include "utc_time.h"
 #include "AWSv4-utils.h"
 #include "AWSv4-impl.h"
@@ -183,47 +184,6 @@ bool FileTransferItem::operator<(const FileTransferItem &other) const {
 	return false;
 }
 
-// Transfer commands are sent from the upload side to the download side.
-// 0 - finished
-// 1 - use socket default (on or off) for next file
-// 2 - force encryption on for next file.
-// 3 - force encryption off for next file.
-// 4 - do an x509 credential delegation (using the socket default)
-// 5 - send a URL and have the download side fetch it
-// 6 - send a request to make a directory
-// 999 - send a classad telling what to do.
-//
-// 999 subcommands (999 is followed by a filename and then a ClassAd):
-// 7 - ClassAd contains information about a URL upload performed by
-//     the upload side.
-// 8 - ClassAd contains information about a list of files which will be
-//     sent later that may be eligible for reuse.  This is command requires
-//     a response indicating if the download side already has one of the
-//     files available.
-// 9 - ClassAd contains a list of URLs that need to be signed for the uploader
-//     to proceed.
-enum class TransferCommand {
-	Unknown = -1,
-	Finished = 0,
-	XferFile = 1,
-	EnableEncryption = 2,
-	DisableEncryption = 3,
-	XferX509 = 4,
-	DownloadUrl = 5,
-	Mkdir = 6,
-	Other = 999
-};
-
-enum class TransferSubCommand {
-	Unknown = -1,
-	UploadUrl = 7,
-	ReuseInfo = 8,
-	SignUrls = 9,
-	DownloadUrlWithAd = 10,
-	RequestUrlMetadata = 11,
-	CheckUrlSchemes = 12
-};
-
 // Helper function to determine if a transfer command is a URL download
 inline bool isUrlDownload(TransferCommand cmd, TransferSubCommand subcmd) {
 	return (cmd == TransferCommand::DownloadUrl) ||
@@ -296,71 +256,6 @@ struct upload_info {
 struct download_info {
 	FileTransfer *myobj;
 };
-
-// ============================================================================
-// Generic URL transfer metadata request support
-// ============================================================================
-
-// Request transfer metadata (token, CA, etc.) for a given URL from the remote side
-// This is a generic protocol function that can be used for any URL-based transfer
-// (Pelican, S3, etc.) that requires metadata from the remote peer.
-// Returns true on success with metadata in the ClassAd, false on failure
-bool FileTransfer::RequestUrlMetadata(ReliSock *sock, const std::string& url, ClassAd& metadata_ad, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState) {
-	if (!sock) {
-		error_msg = "No socket provided";
-		return false;
-	}
-
-	// Send the TransferCommand::Other header
-	if (!sock->snd_int(static_cast<int>(TransferCommand::Other), false) ||
-	    !sock->end_of_message()) {
-		error_msg = "Failed to send TransferCommand";
-		return false;
-	}
-
-	// Send a dummy filename (required by protocol)
-	if (!sock->put("_metadata_request_") || !sock->end_of_message()) {
-		error_msg = "Failed to send filename";
-		return false;
-	}
-
-	// Here, we must wait for the go-ahead from the transfer peer.
-	if (!ReceiveTransferGoAhead(sock, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
-		error_msg = "Failed to receive go-ahead from peer";
-		return false;
-	}
-	// Obtain the transfer token from the transfer queue.
-	if (!ObtainAndSendTransferGoAhead(xfer_queue, false, sock, sandbox_size, "", protocolState.I_go_ahead_always)) {
-		error_msg = "Failed to obtain and send go-ahead";
-		return false;
-	}
-
-	// Send the ClassAd with subcommand and URL
-	ClassAd request_ad;
-	request_ad.Assign("SubCommand", (int)TransferSubCommand::RequestUrlMetadata);
-	request_ad.Assign("Url", url);
-
-	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) {
-		error_msg = "Failed to send request ClassAd";
-		return false;
-	}
-
-	// Receive the response ClassAd
-	sock->decode();
-	if (!getClassAd(sock, metadata_ad) || !sock->end_of_message()) {
-		error_msg = "Failed to receive metadata ClassAd";
-		return false;
-	}
-
-	// Check if there was an error
-	std::string remote_error;
-	if (metadata_ad.LookupString("Error", remote_error)) {
-		error_msg = "Remote error: " + remote_error;
-		return false;
-	}
-
-	return true;
-}
 
 // Check if the peer supports the given URL schemes
 // Sends a list of desired schemes and receives back a list of supported schemes
@@ -3383,43 +3278,23 @@ FileTransfer::DoDownload(ReliSock *s)
 				s->decode();
 				rc = 0;
 				continue;
-			} else if (subcommand == TransferSubCommand::RequestUrlMetadata) {
-				// Starter is requesting transfer metadata for a URL
-				dprintf(D_FULLDEBUG, "DoDownload: Received RequestUrlMetadata\n");
+			} else if (subcommand == TransferSubCommand::StageoutTransform) {
+				// Starter is requesting stageout transform for output files
+				dprintf(D_FULLDEBUG, "DoDownload: Received StageoutTransform request\n");
 
-				std::string url;
-				if (!file_info.LookupString("Url", url)) {
-					dprintf(D_ALWAYS, "DoDownload: RequestUrlMetadata missing Url\n");
-					rc = 0;
-					continue;
-				}
-
-				dprintf(D_FULLDEBUG, "DoDownload: Request for metadata for URL: %s\n", UrlSafePrint(url));
-
-				ClassAd response_ad;
-
-				// Check if this is a Pelican URL and build the metadata response
-				if (!BuildPelicanMetadataResponse(url, &_fix_me_copy_, response_ad)) {
-					// If not Pelican or error occurred, response_ad will have Error attribute set
-					if (!response_ad.Lookup("Error")) {
-						dprintf(D_FULLDEBUG, "DoDownload: Not providing Pelican transfer for URL\n");
-						response_ad.Assign("Error", "Pelican transfer not available");
-					}
-				}
-
-				// Send response back to starter
-				if (!s->end_of_message()) {
-					dprintf(D_ERROR, "DoDownload: exiting at %d\n", __LINE__);
+				// Extract item count from the request ClassAd
+				long long item_count = 0;
+				if (!file_info.LookupInteger("ItemCount", item_count)) {
+					dprintf(D_ERROR, "DoDownload: StageoutTransform request missing ItemCount at %d\n", __LINE__);
 					return_and_resetpriv(-1);
 				}
 
-				s->encode();
-				if (!putClassAd(s, response_ad) || !s->end_of_message()) {
-					dprintf(D_ERROR, "DoDownload: Failed to send metadata response at %d\n", __LINE__);
+				// Handle the stageout transform protocol
+				if (!HandleStageoutTransform(s, &_fix_me_copy_, item_count)) {
+					dprintf(D_ERROR, "DoDownload: Failed to handle stageout transform at %d\n", __LINE__);
 					return_and_resetpriv(-1);
 				}
 
-				s->decode();
 				rc = 0;
 				continue;
 			} else if (subcommand == TransferSubCommand::DownloadUrlWithAd) {
@@ -4930,14 +4805,21 @@ FileTransfer::computeFileList(
 		}
 	}
 
-	// For output files (starter side), request metadata from shadow and prepare list
+	// For output files (starter side), check if Pelican should be used
+	// The actual transformation happens via RequestStageoutTransform protocol
 	// This is the opposite direction from input - !inHandleCommands means starter side
 	if (!inHandleCommands && s && should_invoke_output_plugins && ShouldOutputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
 		dprintf(D_FULLDEBUG, "Pelican: Preparing output file list for transfer\n");
-		if (!PreparePelicanOutputTransferList(this, s, filelist, &_fix_me_copy_, PeerDoesPelicanTransfer, xfer_queue, sandbox_size, protocolState)) {
-			dprintf(D_FULLDEBUG, "Pelican: Not using Pelican for output transfer\n");
-			// Continue with normal transfer
-		}
+
+		// Request stageout transform from the shadow
+		std::string error_msg;
+		FileTransferList transformed_list = RequestStageoutTransform(this, s, filelist, error_msg, xfer_queue, sandbox_size, protocolState);
+
+		// Update the filelist with the transformed list from shadow
+		filelist = transformed_list;
+
+		dprintf(D_FULLDEBUG, "Pelican: Successfully applied stageout transform, filelist now has %zu items\n",
+			filelist.size());
 	}
 
 	std::string tag;
