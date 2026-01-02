@@ -2,6 +2,9 @@
 
 *** 24.0.16 bugs
 
+- Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
+  :jira:`3474`
+
 - Fix Logical Volume setup timeout on Execution Points enforcing disk usage
   for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
   :jira:`3432`
@@ -14,6 +17,10 @@
   would have identical :macro:`ROOSTER_UNHIBERNATE_RANK` expressions, or if was
   not constant (e.g. used random() or time()).
   :jira:`3436`
+
+- Fixed a bug where the values of the attributes :ad-attr:`LocalJobsIdle` and
+  :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
+  :jira:`3456`
 
 *** 24.12.15 features
 
