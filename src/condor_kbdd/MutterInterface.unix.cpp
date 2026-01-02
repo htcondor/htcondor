@@ -51,8 +51,6 @@ static
 uint64_t
 GetIdleTime(struct MutterSession &session)
 {
-  priv_state priv;
-
   DBusConnection *connection = NULL;
   DBusError error;
   DBusMessage *message = NULL;
@@ -69,69 +67,68 @@ GetIdleTime(struct MutterSession &session)
 
   /* Become the user in the session we're given */
   set_user_ids(session.owner, session.group);
-  priv = set_user_priv();
+  {
+	  TemporaryPrivSentry sentry(PRIV_USER);
 
-  /* Try and send message on that user's DBUS Session bus */
+	  /* Try and send message on that user's DBUS Session bus */
 
-  connection = dbus_connection_open_private(session.sesion_bus.c_str(), &error);
+	  connection = dbus_connection_open_private(session.sesion_bus.c_str(), &error);
 
-  if (connection == NULL) {
-    dprintf(D_ERROR,"Failed to open connection: %s\n", error.message);
-    dbus_error_free(&error);
-    goto cleanup;
+	  if (connection == NULL) {
+		  dprintf(D_ERROR,"Failed to open connection: %s\n", error.message);
+		  dbus_error_free(&error);
+		  goto cleanup;
+	  }
+
+	  if (!dbus_bus_register(connection, &error)) {
+		  dprintf(D_ERROR, "Failed to register connection: %s\n", error.message);
+		  dbus_error_free(&error);
+		  goto cleanup;
+	  }
+
+	  message = dbus_message_new_method_call(dest, path, iface, method);
+
+	  if (!message) {
+		  dprintf(D_ERROR, "Failed to allocate message!");
+		  dbus_error_free(&error);
+		  goto cleanup;
+	  }
+
+	  /* Get the reply and extract the value */
+
+	  dbus_error_init(&error);
+	  reply = dbus_connection_send_with_reply_and_block(connection,
+			  message, 1000,
+			  &error);
+	  if (dbus_error_is_set(&error)) {
+		  dprintf(D_ERROR, "Error %s: %s\n",
+				  error.name,
+				  error.message);
+		  dbus_error_free(&error);
+		  goto cleanup;
+	  }
+
+	  dbus_message_iter_init(reply, &iter);
+	  dbus_message_iter_get_basic(&iter, &val);
+
+	  dprintf(D_FULLDEBUG, "UID: %u Idle: %" DBUS_INT64_MODIFIER "u\n", session.owner, val);
+
+cleanup:
+	  if (message) {
+		  dbus_message_unref(message);
+	  }
+
+	  if (reply) {
+		  dbus_message_unref(reply);
+	  }
+
+	  if (connection) {
+		  dbus_connection_close(connection);
+		  dbus_connection_unref(connection);
+	  }
+
+	  return val;
   }
-
-  if (!dbus_bus_register(connection, &error)) {
-    dprintf(D_ERROR, "Failed to register connection: %s\n", error.message);
-    dbus_error_free(&error);
-    goto cleanup;
-  }
-
-  message = dbus_message_new_method_call(dest, path, iface, method);
-
-  if (!message) {
-    dprintf(D_ERROR, "Failed to allocate message!");
-    dbus_error_free(&error);
-    goto cleanup;
-  }
-
-  /* Get the reply and extract the value */
-
-  dbus_error_init(&error);
-  reply = dbus_connection_send_with_reply_and_block(connection,
-                                                    message, 1000,
-                                                    &error);
-  if (dbus_error_is_set(&error)) {
-    dprintf(D_ERROR, "Error %s: %s\n",
-            error.name,
-            error.message);
-    dbus_error_free(&error);
-    goto cleanup;
-  }
-
-  dbus_message_iter_init(reply, &iter);
-  dbus_message_iter_get_basic(&iter, &val);
-
-  dprintf(D_FULLDEBUG, "UID: %u Idle: %" DBUS_INT64_MODIFIER "u\n", session.owner, val);
-
- cleanup:
-  if (message) {
-    dbus_message_unref(message);
-  }
-
-  if (reply) {
-    dbus_message_unref(reply);
-  }
-
-  if (connection) {
-    dbus_connection_close(connection);
-    dbus_connection_unref(connection);
-  }
-
-  /* Don't forget to restore old privileged state */
-  set_priv(priv);
-
-  return val;
 }
 
 static
@@ -179,50 +176,52 @@ MutterInterface::GetSessions()
   sessions.clear();
 
   /* Time for the big guns, try as root */
-  set_root_priv();
+  {
+	  TemporaryPrivSentry sentry(PRIV_ROOT);
 
-  /* Iterate through the running processes to find one named
-     "gnome-session-binary". This is the process that let's us know
-     there's an open session (or graphical login screen!) */
+	  /* Iterate through the running processes to find one named
+		 "gnome-session-binary". This is the process that let's us know
+		 there's an open session (or graphical login screen!) */
 
-  for (auto const& dir_entry : stdfs::directory_iterator{proc_d}) {
-    if (std::atoi(dir_entry.path().filename().c_str()) > 1) {
-		  stdfs::path exe{dir_entry.path() / "exe"};
-      std::error_code ec;
+	  for (auto const& dir_entry : stdfs::directory_iterator{proc_d}) {
+		  if (std::atoi(dir_entry.path().filename().c_str()) > 1) {
+			  stdfs::path exe{dir_entry.path() / "exe"};
+			  std::error_code ec;
 
-      if (stdfs::read_symlink(exe, ec).filename() == "gnome-session-binary") {
-        std::string line;
-        stdfs::path env_p{dir_entry.path() / "environ"};
-        std::ifstream environ;
-        environ.open(env_p, std::ios::in);
+			  if (stdfs::read_symlink(exe, ec).filename() == "gnome-session-binary") {
+				  std::string line;
+				  stdfs::path env_p{dir_entry.path() / "environ"};
+				  std::ifstream environ;
+				  environ.open(env_p, std::ios::in);
 
-        /* Find the DBUS_SESSION_BUS_ADDRESS variable in the
-           environment, we need it to connect later */
-        while (std::getline(environ, line, '\0')) {
-          if (!line.find("DBUS_SESSION_BUS_ADDRESS=")) {
-            StatInfo s = StatInfo(dir_entry.path().c_str());
+				  /* Find the DBUS_SESSION_BUS_ADDRESS variable in the
+					 environment, we need it to connect later */
+				  while (std::getline(environ, line, '\0')) {
+					  if (!line.find("DBUS_SESSION_BUS_ADDRESS=")) {
+						  StatInfo s = StatInfo(dir_entry.path().c_str());
 
-            /* Remove "DBUS_BUS_SESSION=" from string, we just want
-               the address portion */
-            line.erase(0, line.find_first_of('=') + 1);
+						  /* Remove "DBUS_BUS_SESSION=" from string, we just want
+							 the address portion */
+						  line.erase(0, line.find_first_of('=') + 1);
 
-            sessions.emplace_back(0, s.GetOwner(), s.GetGroup(), line);
-            found_sessions = true;
+						  sessions.emplace_back(0, s.GetOwner(), s.GetGroup(), line);
+						  found_sessions = true;
 
-            dprintf(D_FULLDEBUG,
-                    "Found session for PID %s, UID %u GID %u (%s)\n",
-                    dir_entry.path().filename().c_str(),
-                    s.GetOwner(), s.GetGroup(), line.c_str()
-                    );
-          }
-        }
+						  dprintf(D_FULLDEBUG,
+								  "Found session for PID %s, UID %u GID %u (%s)\n",
+								  dir_entry.path().filename().c_str(),
+								  s.GetOwner(), s.GetGroup(), line.c_str()
+								 );
+					  }
+				  }
 
-        environ.close();
-      }
-    }
+				  environ.close();
+			  }
+		  }
+	  }
+
+	  set_condor_priv();
+
+	  return found_sessions;
   }
-
-  set_condor_priv();
-
-  return found_sessions;
 }
