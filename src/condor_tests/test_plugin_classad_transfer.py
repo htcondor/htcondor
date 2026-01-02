@@ -22,7 +22,7 @@ TEST_CASES = {
                                 classad2.ClassAd({"foo": "bar"}),
                                 classad2.ClassAd({"bar": "debug-data"}),
                             ],
-        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=2',
+        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=2;DEBUG_PLUGIN_VERBOSITY=TEST',
     },
     "v4": {
         'expected_ads':     [
@@ -34,7 +34,7 @@ TEST_CASES = {
                                     'debug_PluginData':   {'bar': 'debug-data'},
                                 }),
                             ],
-        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=4',
+        'env':              'DEBUG_PLUGIN_PROTOCOL_VERSION=4;DEBUG_PLUGIN_VERBOSITY=TEST',
     },
 }
 
@@ -135,6 +135,9 @@ class TestPluginClassAdTransfer:
                 # Allow D_SUB_SECOND to be on or off.
                 if re.match(r'^\d\d/\d\d/\d\d \d\d:\d\d:\d\d(\.\d+)? ', line):
                     break
+                # Debug plugin logging uses MM/DD/YYYY hh:mm:ss timestamp by default
+                elif re.match(r'^\d\d/\d\d/\d\d\d\d \d\d:\d\d:\d\d ', line):
+                    continue
                 ad_block += line
         actual_ads = [ad for ad in classad2.parseAds(ad_block)]
         assert(len(actual_ads) == 2)

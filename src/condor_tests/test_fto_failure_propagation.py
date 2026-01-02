@@ -122,7 +122,7 @@ TEST_CASES = {
                         "ErrorType" : "Parameter",
                         "ErrorCode": 19,
                         "ErrorString": "Missing host",
-                        "PluginVersion": "1.0.0",
+                        "PluginVersion": "1.1.0",
                         "PluginLaunched": False,
                         "DeveloperData" : {
                             "ConnectionTime" : 0.07,
@@ -159,7 +159,7 @@ TEST_CASES = {
                         "ErrorType" : "Parameter",
                         "ErrorCode": 32,
                         "ErrorString": "Invalid host name provided",
-                        "PluginVersion": "1.0.0",
+                        "PluginVersion": "1.1.0",
                         "PluginLaunched": True,
                         "DeveloperData" : {
                             "ConnectionTime" : 98.3,
