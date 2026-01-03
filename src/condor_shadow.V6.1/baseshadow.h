@@ -411,6 +411,8 @@ class BaseShadow : public Service
 		const std::string & /* cifName */, const std::string & /* content */
 	) { return {}; }
 
+	virtual std::optional<ClassAd> getCommonTransferInfoStats() { return {}; }
+
  protected:
 
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
