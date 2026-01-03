@@ -9850,6 +9850,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
 	std::string remoteOwner;
 	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
+	std::string remoteProject;
+	my_match_ad->LookupString(ATTR_REMOTE_PROJECT, remoteProject);
 
 #ifdef USE_VANILLA_START
 	std::string job_attr("JOB");
@@ -9934,7 +9936,10 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			if (is_ocu) {
 
 				// OCU ad should have ATTR_REMOTE_OWNER set to the owner of the OCU claim
-				if (remoteOwner == job->ownerinfo->Name()) {
+				// ... or, the job should belong to a project that has an OCU claim
+
+				if ((remoteOwner == job->ownerinfo->Name()) ||
+					(job->project ? remoteProject == job->project->Name() : false)) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
