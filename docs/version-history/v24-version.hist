@@ -22,6 +22,10 @@
   :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
   :jira:`3456`
 
+- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
+  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
+  :jira:`3481`
+
 *** 24.12.15 features
 
 - :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
