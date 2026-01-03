@@ -66,6 +66,7 @@
 - Fixed a bug in the handling of :subcom:`retry_request_memory` where a
   list of values using a scale such as ``GB`` would generate an error
   or fail quietly if the ``B`` was not present.
+  :jira:`3458`
 
 - Fixed an intermittent bug where the *condor_shadow* would occasionally
   get stuck for 20 minutes trying to reconnect to a non-existent *condor_starter*
