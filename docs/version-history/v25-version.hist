@@ -54,10 +54,6 @@
   the job.
   :jira:`3467`
 
-- Fixed a bug where docker universe jobs would bring back a
-  file named ``.docker_stderror`` back to the AP after job completion.
-  :jira:`3424`
-
 - Fixed a bug in the handling of :subcom:`retry_request_memory` where a
   list of values using a scale such as ``GB`` would generate an error
   or fail quietly if the ``B`` was not present.
