@@ -3265,9 +3265,9 @@ Dag::ChooseDotFileName(std::string &dot_file_name)
 //---------------------------------------------------------------------------
 bool Dag::Add(Node* node)
 {
-	auto insertJobResult = _nodeNameHash.insert(std::make_pair(node->GetNodeName(), node));
+	auto insertJobResult = _nodeNameHash.emplace(node->GetNodeName(), node);
 	ASSERT(insertJobResult.second == true);
-	auto insertIdResult = _nodeIDHash.insert(std::make_pair(node->GetNodeID(), node));
+	auto insertIdResult = _nodeIDHash.emplace(node->GetNodeID(), node);
 	ASSERT(insertIdResult.second == true);
 
 	// Final node status is set to STATUS_NOT_READY here, so it
@@ -3363,7 +3363,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 					auto findResult = ht->find(id);
 					if (findResult == ht->end()) {
 						// Node not found.
-						auto insertResult = ht->insert(std::make_pair(id, node));
+						auto insertResult = ht->emplace(id, node);
 						ASSERT(insertResult.second == true);
 					} else {
 						// Node was found.
@@ -3401,7 +3401,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 				auto findResult = ht->find(id);
 				if (findResult == ht->end()) {
 					// Node not found.
-					auto insertResult = ht->insert(std::make_pair(id, node));
+					auto insertResult = ht->emplace(id, node);
 					ASSERT(insertResult.second == true);
 				} else {
 					// Node was found.
@@ -3437,7 +3437,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 					// std::map::find() returns an iterator pointing to the desired element, or end() if not found
 					if (findResult == ht->end()) {
 						// Node not found.
-						auto insertResult = ht->insert(std::make_pair(id, node));
+						auto insertResult = ht->emplace(id, node);
 						// std::map::insert() returns a pair, second element is the success bool
 						ASSERT(insertResult.second == true);
 					} else {
@@ -3662,7 +3662,7 @@ Dag::ProcessSuccessfulSubmit(Node *node, const CondorID &condorID)
 	node->SetCondorID(condorID);
 	ASSERT(NodeIsNoop(node->GetID()) == node->GetNoop());
 	int id = GetIndexID(node->GetID());
-	auto result = GetEventIDHash(node->GetNoop())->insert(std::make_pair(id, node));
+	auto result = GetEventIDHash(node->GetNoop())->emplace(id, node);
 	// std::map::insert() returns a pair, second element is the success bool
 	ASSERT(result.second == true);
 
@@ -4003,7 +4003,7 @@ Dag::PrefixAllNodeNames(const std::string &prefix)
 	// Then, reindex all the nodes keyed by their new name
 	for (auto & node : _nodes) {
 		key = node->GetNodeName();
-		auto insertResult = _nodeNameHash.insert(std::make_pair(key, node));
+		auto insertResult = _nodeNameHash.emplace(key, node);
 		if (insertResult.second != true) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two nodes have an identical name, which means another
@@ -4016,10 +4016,10 @@ Dag::PrefixAllNodeNames(const std::string &prefix)
 }
 
 //---------------------------------------------------------------------------
-bool 
+bool
 Dag::InsertSplice(std::string spliceName, Dag *splice_dag)
 {
-	auto insertResult = _splices.insert(std::make_pair(spliceName, splice_dag));
+	auto insertResult = _splices.emplace(spliceName, splice_dag);
 	return insertResult.second;
 }
 
@@ -4110,7 +4110,7 @@ Dag::LiftSplices(SpliceLayer layer)
 		om = nullptr;
 
 		for (const auto& [desc_name, desc] : splice->InlineDescriptions) {
-			const auto& [_, success] = InlineDescriptions.insert(std::make_pair(desc_name, desc));
+			const auto& [_, success] = InlineDescriptions.emplace(desc_name, desc);
 			if ( ! success && InlineDescriptions[desc_name] != desc) {
 				// If we have splices using differing descriptions using the same name abort
 				debug_printf(DEBUG_NORMAL, "WARNING: Conflicting inline descriptions using the same name '%s' between %s%s and splice %s.\n",
@@ -4227,7 +4227,7 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 
 		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: node %s\n", key.c_str());
 
-		auto insertResult = _nodeNameHash.insert(std::make_pair(key, (*nodes)[i]));
+		auto insertResult = _nodeNameHash.emplace(key, (*nodes)[i]);
 		if (insertResult.second == false) {
 			debug_printf(DEBUG_QUIET,  "Found name collision while taking ownership of node: %s\n",
 			             key.c_str());
@@ -4249,7 +4249,7 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 	// 3. Update our node id hash to include the new nodes.
 	for (i = 0; i < nodes->size(); i++) {
 		key_id = (*nodes)[i]->GetNodeID();
-		auto insertResult = _nodeIDHash.insert(std::make_pair(key_id, (*nodes)[i])) ;
+		auto insertResult = _nodeIDHash.emplace(key_id, (*nodes)[i]) ;
 		if (insertResult.second != true) {
 			debug_error(1, DEBUG_QUIET, "Found node id collision while taking ownership of node: %s\n",
 			           (*nodes)[i]->GetNodeName());
