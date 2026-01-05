@@ -217,7 +217,7 @@ def set_debug_level(level: Union[int, str]) -> None:
         level = verbosity
     else:
         invalid_type = type(level)
-        raise DebugLoggingError(f"Set Logging Level Failure: Invalid level type ({ivalid_type}). Expect int or str")
+        raise DebugLoggingError(f"Set Logging Level Failure: Invalid level type ({invalid_type}). Expect int or str")
 
     if DEBUG_LEVEL != level:
         debug(DebugLevel.ALWAYS, f"Changing logging level from {DEBUG_LEVEL} to {level}")
