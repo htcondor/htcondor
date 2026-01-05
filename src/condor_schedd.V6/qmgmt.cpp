@@ -1521,13 +1521,12 @@ InitQmgmt()
 			);
 	}
 
-	std::vector<std::string> ocu_s_users;
 	auto_free_ptr ocu_super(param("OCU_SUPER_USERS"));
+	std::vector<std::string> ocu_super_users;
 	if (ocu_super) {
-		ocu_s_users = split(ocu_super);
+		ocu_super_users = split(ocu_super);
 	}
-	ocu_super_users = ocu_s_users;
-	if( IsFulldebug(D_FULLDEBUG) && !ocu_s_users.empty()) {
+	if( IsFulldebug(D_FULLDEBUG) && !ocu_super_users.empty()) {
 		dprintf( D_FULLDEBUG, "OCU Super Users:\n" );
 		for (const auto &username : ocu_super_users) {
 			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
