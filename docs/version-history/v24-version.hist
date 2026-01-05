@@ -1,5 +1,9 @@
 *** 24.0.16 bugs
 
+- Added :macro:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT` for admins 
+  to set a longer timeout for plugins to detect their health.
+  :jira:`3455`
+
 - Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
   :jira:`3474`
 
