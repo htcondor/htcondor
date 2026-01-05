@@ -295,6 +295,12 @@
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
 
+/* Define to 1 if the DBus1 header file is available */
+#cmakedefine HAVE_DBUS
+
+/* Define to 1 if the Systemd Login header file is available */
+#cmakedefine HAVE_LIBSYSTEMD
+
 /* Define if libcurl uses NSS */
 #cmakedefine CURL_USES_NSS 1
 

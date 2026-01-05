@@ -35,6 +35,12 @@
   DAGMan rescue file by name for state restoration.
   :jira:`3425`
 
+- Augment the *condor_kbdd* to use the systemd sd-login library to find user
+  sessions, since /usr/run/utmp is no longer available on newer platforms.
+  Also, add idle check support for Mutter(Gnome), which works on both
+  Wayland and X11.
+  :jira:`3452`
+  
 - By default, HTCondor will now send extra information to "multi-file" file
   transfer plug-ins if such is specified in the job.  All such plug-ins
   should safely ignore this extra information.  To ease the transition if a
