@@ -5,7 +5,7 @@
 . /etc/os-release
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] ||
    [ $ID = 'debian' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] ||
-   [ $ID = 'ubuntu' ]; then
+   [ $ID = 'sles' ] || [ $ID = 'ubuntu' ]; then
 
     # Locate the source directory
     if [ $# -eq 1 -a -d $1 ]; then

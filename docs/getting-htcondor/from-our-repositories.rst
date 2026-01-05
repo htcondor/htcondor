@@ -23,7 +23,7 @@ Amazon Linux 2023;
 Enterprise Linux 8, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
 Enterprise Linux 9, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
 Enterprise Linux 10, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
-openSUSE LEAP 15 including SUSE Linux Enterprise Server (SLES) 15.
+openSUSE LEAP 15 and 16.
 Binaries are available for ``x86_64`` for all these platforms.
 For Enterprise Linux 8, HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
 For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
@@ -35,7 +35,9 @@ Repository packages are available for each platform:
 * `Enterprise Linux 8 <https://htcss-downloads.chtc.wisc.edu/repo/25.x/htcondor-release-current.el8.noarch.rpm>`_
 * `Enterprise Linux 9 <https://htcss-downloads.chtc.wisc.edu/repo/25.x/htcondor-release-current.el9.noarch.rpm>`_
 * `Enterprise Linux 10 <https://htcss-downloads.chtc.wisc.edu/repo/25.x/htcondor-release-current.el10.noarch.rpm>`_
+* `Enterprise Linux 10 (x86_64_v2) <https://htcss-downloads.chtc.wisc.edu/repo/25.x/htcondor-release-current.el10.x86_64_v2.rpm>`_
 * `openSUSE LEAP 15 <https://htcss-downloads.chtc.wisc.edu/repo/25.x/htcondor-release-current.leap15.noarch.rpm>`_
+* `openSUSE LEAP 16 <https://htcss-downloads.chtc.wisc.edu/repo/25.x/htcondor-release-current.leap16.noarch.rpm>`_
 
 The Enterprise Linux HTCondor packages depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -61,11 +63,11 @@ in ``/etc/apt/keyrings/htcondor.asc``
 Debian 12 and 13
 ################
 
-* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-bookworm.list>`_
-* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-trixie.list>`_
+* Debian 12 (bookworm): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-bookworm.list>`__
+* Debian 13 (trixie): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/debian/htcondor-25.x-trixie.list>`__
 
 Ubuntu 22.04 and 24.04
 ######################
 
-* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.x-jammy.list>`_
+* Ubuntu 22.04 (jammy jellyfish): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.x-jammy.list>`__
 * Ubuntu 24.04 (noble numbat): `/etc/apt/sources.list.d/htcondor.list <https://htcss-downloads.chtc.wisc.edu/repo/ubuntu/htcondor-25.x-noble.list>`_

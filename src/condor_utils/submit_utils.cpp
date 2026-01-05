@@ -3419,6 +3419,12 @@ int SubmitHash::SetAutoAttributes()
 		}
 	}
 
+	bool ocu_wanted = false;
+	if (job->LookupBool("OCUWanted", ocu_wanted)) {
+		// If the job wants OCU, force very long mjrt
+		AssignJobVal(ATTR_MAX_JOB_RETIREMENT_TIME, std::numeric_limits<int>::max());
+	}
+
 	// set a default lease duration for jobs that don't have one and can reconnect
 	//
 	if (universeCanReconnect(JobUniverse) && ! job->Lookup(ATTR_JOB_LEASE_DURATION)) {
@@ -3549,6 +3555,8 @@ int SubmitHash::SetArguments()
 	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
+		free(shell);
+		shell = nullptr;
 		std::string value;
 		args_success = arglist.GetArgsStringV2Raw(value);
 		if (args_success) {
@@ -3559,6 +3567,8 @@ int SubmitHash::SetArguments()
 			ABORT_AND_RETURN(1);
 		}
 	}
+	free(shell);
+	shell = nullptr;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -3924,14 +3934,16 @@ int SubmitHash::SetJobRetries()
 // return is a vector of intermediate numbers in the sequence, and the final value
 // stored in the given ad as attr.
 //
-static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, ConstraintHolder & last, int scale)
+static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, ConstraintHolder & last, int scale, bool check_units, size_t & errpos)
 {
 	int64_t number = 0;
 	char unit = 0;
 	const char * endp = nullptr;
 	const char * p = line;
+	const char * misu = nullptr; // position of first missing units
 	// loop parsing the numbers in the sequence
 	while (parse_int64_bytes(p, number, scale, &unit, ",", &endp)) {
+		if ( ! unit && ! misu) { misu = p; }
 		seq.push_back(number);
 		p = endp;
 		while (isspace(*p)) ++p;
@@ -3949,23 +3961,41 @@ static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, Con
 			return 1;
 		}
 	}
+	// if there were missing units, and units should be checked, return 2 rather than success.
+	if (misu && check_units) {
+		errpos = (size_t)(misu - line);
+		return 2;
+	}
 	return 0;
 }
 
-int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char * line, const char * incr /*=nullptr*/)
+int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, const char * subkey, int scale, const char * line, const char * incr /*=nullptr*/)
 {
 	ClassAd tmp;
 	std::string set_attr_body;
 	std::vector<int64_t> seq;
 	ConstraintHolder last;
-	if (line && 0 != parse_expr_sequence(line, seq, last, scale)) {
-		if ( ! last.empty()) {
-			push_error(stderr, "%s=%s is invalid. must be an expression or number\n", attr, last.c_str());
-		} else {
-			// we don't expect to get here unless new error returns are added to parse_expr_sequence
-			push_error(stderr, "could not parse %s\n", line);
+	auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+	size_t errpos = 0;
+	const char * scale_label = (scale == 1024*1024) ? "defaults to megabytes, but " : "";
+
+	if (line) {
+		int rval = parse_expr_sequence(line, seq, last, scale, missingUnitsIs, errpos);
+		if (rval == 2) { // return value of 2 is units are missing.
+			if (0 == strcasecmp("error", missingUnitsIs)) {
+				push_error(stderr, "%s=%s %smust contain a units suffix (i.e K, M, G, or T)\n", subkey, line+errpos, scale_label);
+				ABORT_AND_RETURN(1);
+			}
+			push_warning(stderr, "%s=%s %sshould contain a units suffix (i.e K, M, G, or T)\n", subkey, line+errpos, scale_label);
+		} else if (rval != 0) {
+			if ( ! last.empty()) {
+				push_error(stderr, "%s=%s is invalid. must be an expression or number\n", subkey, last.c_str());
+			} else {
+				// we don't expect to get here unless new error returns are added to parse_expr_sequence
+				push_error(stderr, "while processing %s could not parse %s\n", subkey, line);
+			}
+			ABORT_AND_RETURN(1);
 		}
-		ABORT_AND_RETURN(1);
 	}
 
 	// if there is a sequence, make sure that is an increasing sequence
@@ -3974,7 +4004,7 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 		for (auto v2 : seq) {
 			if (v2 <= v1) {
 				push_error(stderr, "%s must have an increasing sequence of values, but %lld is not greater than %lld\n",
-					attr, (long long)v2, (long long)v1); // long long cast needed by gcc..
+					subkey, (long long)v2, (long long)v1); // long long cast needed by gcc..
 				ABORT_AND_RETURN(1);
 			}
 			v1 = v2;
@@ -4033,11 +4063,19 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 		// if no sequence, but there is an increment, we use a strategy of
 		// applying the increment on each retry with a cap of the max value
 		// the increment may either be a constant, in which case we make Request* + <incr>
-		// or it may be an expression that already references Requst*
+		// or it may be an expression that already references Request*
 		// TODO: handle the case where it is an expression that defines a constant?
 		int64_t inclit;
 		std::string inc_expr;
-		if (parse_int64_bytes(incr, inclit, scale)) {
+		char unit = 0;
+		if (parse_int64_bytes(incr, inclit, scale, &unit)) {
+			if ( ! unit && missingUnitsIs) {
+				if (0 == strcasecmp("error", missingUnitsIs)) {
+					push_error(stderr, "%s retry increment %s %smust contain a units suffix (i.e K, M, G or T)\n", attr, incr, scale_label);
+					ABORT_AND_RETURN(1);
+				}
+				push_warning(stderr, "%s retry increment %s %sshould contain a units suffix (i.e K, M, G or T)\n", attr, incr, scale_label);
+			}
 			if (inclit <= 0) {
 				push_error(stderr, "%s retry increment must be a positive number or an expression that references %s\n", attr, attr);
 				ABORT_AND_RETURN(1);
@@ -4318,8 +4356,12 @@ int SubmitHash::SetExecutable()
 	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
+			free(shell);
+			shell = nullptr;
 			return 0;
 	}
+	free(shell);
+	shell = nullptr;
 
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
 	if ( ! ename && IsInteractiveJob) {
@@ -5303,63 +5345,30 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 			if (missingUnitsIs && ! unit) {
 				// If all characters in string are numeric (with no unit suffix)
 					if (0 == strcasecmp("error", missingUnitsIs)) {
-						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, G or T)\n", mem.ptr());
 						ABORT_AND_RETURN(1);
 					}
-					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, G or T)\n", mem.ptr());
 			}
 			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
 
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
-				SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, ++endp);
+				SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, SUBMIT_KEY_RequestMemory, 1024*1024, ++endp);
 			} else {
 				// check for retry_request_memory, retry_request_memory_max and retry_request_memory_increase
 				// may either use retry_request_memory=<list> OR retry_request_memory_max=<val> and/or retry_request_memory_increase=<val>
 				auto_free_ptr rrm(submit_param(SUBMIT_KEY_RetryRequestMemory));
 				auto_free_ptr rrmax(submit_param(SUBMIT_KEY_RetryRequestMemoryMax));
 				auto_free_ptr rrmincr(submit_param(SUBMIT_KEY_RetryRequestMemoryIncrease));
-				
-				// Check units for retry_request_memory if it's a literal value
-				if (rrm) {
-					char unit = 0;
-					int64_t retry_memory_mb = 0;
-					const char * endp = nullptr;
-					if (parse_int64_bytes(rrm, retry_memory_mb, 1024 * 1024, &unit, ",", &endp)) {
-						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-						if (missingUnitsIs && ! unit) {
-							if (0 == strcasecmp("error", missingUnitsIs)) {
-								push_error(stderr, "\nERROR: retry_request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
-								ABORT_AND_RETURN(1);
-							}
-							push_warning(stderr, "\nWARNING: retry_request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
-						}
-					}
-				}
-				
-				// Check units for retry_request_memory_max if it's a literal value
-				if (rrmax) {
-					char unit = 0;
-					int64_t retry_max_mb = 0;
-					if (parse_int64_bytes(rrmax, retry_max_mb, 1024 * 1024, &unit)) {
-						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-						if (missingUnitsIs && ! unit) {
-							if (0 == strcasecmp("error", missingUnitsIs)) {
-								push_error(stderr, "\nERROR: retry_request_memory_max=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
-								ABORT_AND_RETURN(1);
-							}
-							push_warning(stderr, "\nWARNING: retry_request_memory_max=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
-						}
-					}
-				}
-				
+
 				if (rrm) {
 					if (rrmincr) {
 						push_warning(stderr, "\nWARNING: retry_request_memory_increase will be ignored because retry_request_memory was used");
 					}
-					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, rrm);
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, SUBMIT_KEY_RetryRequestMemory, 1024*1024, rrm);
 				} else if (rrmax || rrmincr) {
-					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, rrmax, rrmincr);
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, SUBMIT_KEY_RetryRequestMemoryMax, 1024*1024, rrmax, rrmincr);
 				}
 			}
 		} else if (YourStringNoCase("undefined") == mem) {
@@ -5411,7 +5420,7 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
-				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, 1024, ++endp);
+				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, ++endp);
 			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {

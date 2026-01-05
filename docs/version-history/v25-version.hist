@@ -1,10 +1,15 @@
 *** 25.6.0 features
 
+- Added :meth:`~classad2.ClassAd.formatJson` and :meth:`~classad2.ClassAd.formatOld` as
+  aliases for :meth:`~classad2.ClassAd.printJson` and :meth:`~classad2.ClassAd.printOld`,
+  respectively.
+  :jira:`3341`
+
 - The option for the *condor_schedd* to keep job event log files open for
   a period of time has been removed.
-  This was controlled by configuration parameters
-  :macro:`USERLOG_FILE_CACHE_MAX` and
-  :macro:`USERLOG_FILE_CACHE_CLEAR_INTERVAL`, and was disabled by default.
+  This was controlled by the now-removed configuration parameters
+  USERLOG_FILE_CACHE_MAX and USERLOG_FILE_CACHE_CLEAR_INTERVAL.
+  It was disabled by default.
   :jira:`3367`
 
 - If a docker universe jobs fails on an execution point because the image
@@ -30,6 +35,21 @@
   DAGMan rescue file by name for state restoration.
   :jira:`3425`
 
+- Augment the *condor_kbdd* to use the systemd sd-login library to find user
+  sessions, since /usr/run/utmp is no longer available on newer platforms.
+  Also, add idle check support for Mutter(Gnome), which works on both
+  Wayland and X11.
+  :jira:`3452`
+  
+- By default, HTCondor will now send extra information to "multi-file" file
+  transfer plug-ins if such is specified in the job.  All such plug-ins
+  should safely ignore this extra information.  To ease the transition if a
+  plug-in does not, the extra information may be disabled by unsetting
+  :macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS` on the relevant EPs.
+  [FIXME: link to protocol version definitions.]
+  [FIXME: document the job ad attributes at this time as well?]
+  :jira:`3357`
+
 *** 25.6.0 bugs
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
@@ -43,14 +63,26 @@
   plug-in.
   :jira:`3410`
 
-- Fixed a bug where docker universe jobs would bring back a
-  file named ``.docker_stderror`` back to the AP after job completion.
-  :jira:`3424`
+- Fixed a bug where :tool:`condor_ssh_to_job` when running into a
+  singularity or apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
+  set to true would start out with the current directory one higher than
+  the job.
+  :jira:`3467`
+
+- Fixed a bug in the handling of :subcom:`retry_request_memory` where a
+  list of values using a scale such as ``GB`` would generate an error
+  or fail quietly if the ``B`` was not present.
+  :jira:`3458`
 
 - Fixed an intermittent bug where the *condor_shadow* would occasionally
   get stuck for 20 minutes trying to reconnect to a non-existent *condor_starter*
   when file transfer file fails for any reason.
   :jira:`3429`
+
+*** 25.0.6 features
+
+- Initial support for openSUSE Leap 16.
+  :jira:`3233`
 
 *** 25.0.6 bugs
 
@@ -110,7 +142,7 @@
 
 *** 25.0.5 features
 
-- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform
+- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform.
   :jira:`3414`
 
 *** 25.0.5 bugs

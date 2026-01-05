@@ -439,14 +439,14 @@ class DedicatedScheduler : public Service {
 	CAList *pending_preemptions;
 
 		// hashed on resource name, each claim we have
-	HashTable <std::string, match_rec*>* all_matches;
+	std::map<std::string, match_rec*> all_matches;
 
 		// hashed on ClaimId, each claim we have.  only store
 		// pointers in here into the real match records we store in
 		// all_matches.  This is needed for some functions that only
 		// know the ClaimId (like DelMrec(), since vacate_service()
 		// is only given a ClaimId to identify the lost claim).
-	HashTable <std::string, match_rec*>* all_matches_by_id;
+	std::map<std::string, match_rec*> all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;

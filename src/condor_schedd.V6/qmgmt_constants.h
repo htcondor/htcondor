@@ -61,5 +61,7 @@
 #define CONDOR_SetMaterializeData   10038 /* tj - abandoned */
 #define CONDOR_SendMaterializeData  10039 /* tj */
 #define CONDOR_SendJobQueueAd       10040 /* tj */
+#define CONDOR_CreateStartupLimit   10041
+#define CONDOR_QueryStartupLimits   10042
 
 

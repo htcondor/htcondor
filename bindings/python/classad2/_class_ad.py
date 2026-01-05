@@ -225,6 +225,7 @@ class ClassAd(MutableMapping):
         """
         return _classad_print_json(self._handle)
 
+    formatJson = printJson
 
     def printOld(self) -> str:
         """
@@ -232,6 +233,7 @@ class ClassAd(MutableMapping):
         """
         return _classad_print_old(self._handle)
 
+    formatOld = printOld
 
     def symmetricMatch(self, ad : "ClassAd") -> bool:
         '''

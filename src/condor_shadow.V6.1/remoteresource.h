@@ -282,6 +282,9 @@ class RemoteResource : public Service {
 	virtual void updateFromStarter( ClassAd* update_ad );
 	virtual void incrementJobCompletionCount();
 
+	virtual void processResultAd( ClassAd * resultAd );
+	virtual void processInvocationAd( ClassAd * invocationAd );
+
 	int64_t getImageSize( int64_t & memory_usage_out, int64_t & rss, int64_t & pss  ) const { 
 		memory_usage_out = memory_usage_mb;
 		rss = remote_rusage.ru_maxrss;

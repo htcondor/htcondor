@@ -139,13 +139,15 @@ def write_job_hook_scripts(test_dir):
 #   the starter but not the schedd
 # The "CONFIG" hook will test if the shadow hook works when keyword is in the config file
 #   (in this case added in at the end since otherwise it will overwrite the other hookkeywords)
-#
+# SHADOW_WORKLIFE needs to be zero, so that we spawn a new shadow on every job
+# so that we see the config change
 @standup
 def condor(test_dir, write_job_hook_scripts):
     with Condor(
         local_dir=test_dir / "condor",
         config={
             "SHADOW_DEBUG": "D_FULLDEBUG",
+            "SHADOW_WORKLIFE": "0",
             "SCHEDD_ENVIRONMENT" : "SPECIAL_MSG='This message is brought to you by the shadow!'",
             "HOLD_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_hold_prepare.sh",
             "IDLE_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_idle_prepare.sh",

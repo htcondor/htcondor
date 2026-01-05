@@ -99,7 +99,7 @@ std::map<DCpermission, std::string> SecMan::m_tag_methods;
 std::string SecMan::m_tag_token_owner;
 std::string SecMan::m_pool_password;
 std::map<std::string,std::string> SecMan::command_map;
-HashTable<std::string,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
+std::map<std::string,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress;
 int SecMan::sec_man_ref_count = 0;
 std::set<std::string> SecMan::m_not_my_family;
 char* SecMan::_my_unique_id = 0;
@@ -2695,8 +2695,8 @@ SecManStartCommand::DoTCPAuth_inner()
 		incrementPendingSockets();
 
 			// Check if there is already a non-blocking TCP auth in progress
-		classy_counted_ptr<SecManStartCommand> sc;
-		if(m_sec_man.tcp_auth_in_progress.lookup(m_session_key,sc) == 0) {
+		auto itr = m_sec_man.tcp_auth_in_progress.find(m_session_key);
+		if (itr != m_sec_man.tcp_auth_in_progress.end()) {
 				// Rather than starting yet another TCP session for
 				// this session key, simply add ourselves to the list
 				// of things waiting for the pending session to be
@@ -2710,7 +2710,7 @@ SecManStartCommand::DoTCPAuth_inner()
 				return StartCommandWouldBlock;
 			}
 
-			sc->m_waiting_for_tcp_auth.push_back(this);
+			itr->second->m_waiting_for_tcp_auth.push_back(this);
 
 			if(IsDebugVerbose(D_SECURITY)) {
 				dprintf(D_SECURITY,
@@ -2751,7 +2751,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		// Make note that this operation to do the TCP
 		// auth operation is in progress, so others
 		// wanting the same session key can wait for it.
-	SecMan::tcp_auth_in_progress.insert(m_session_key,this);
+	SecMan::tcp_auth_in_progress.emplace(m_session_key, this);
 
 	m_tcp_auth_command = new SecManStartCommand(
 		DC_AUTHENTICATE,
@@ -2837,11 +2837,9 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 	}
 
 		// Remove ourselves from SecMan's list of pending TCP auth sessions.
-	classy_counted_ptr<SecManStartCommand> sc;
-	if( SecMan::tcp_auth_in_progress.lookup(m_session_key,sc) == 0 &&
-	    sc.get() == this )
-	{
-		ASSERT(SecMan::tcp_auth_in_progress.remove(m_session_key) == 0);
+	auto itr = SecMan::tcp_auth_in_progress.find(m_session_key);
+	if (itr != SecMan::tcp_auth_in_progress.end() && itr->second.get() == this) {
+		SecMan::tcp_auth_in_progress.erase(itr);
 	}
 
 		// Iterate through the list of objects waiting for our TCP auth session

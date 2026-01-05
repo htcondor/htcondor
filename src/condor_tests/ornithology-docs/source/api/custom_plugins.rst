@@ -43,6 +43,27 @@ additional details which are forward slash (``/``) separated e.g.
 ``debug://command/(details)``. The details may be optional depending
 on the command. The following are the available main commands:
 
+*ECHO*
+    - **Format**: ``schema://echo/<stream>/<message>``
+    - **Example**: ``debug://echo/stdout/hello%20world``
+    - **Description**: Inform plugin to log a specified message to
+      a specific logging stream (standard output or error). All
+      characters after the dividing backwards slash are considered
+      part of the desired message and will be used literally. Only
+      non-escaped ``%20``\'s will be replaced with spaces. The desired
+      logging stream, which is required, can be specified with the
+      following key words:
+
+      *Standard Output*
+          1. **STDOUT**
+          2. **OUTPUT**
+          3. **OUT**
+
+      *Standard Error*
+          1. **STDERR**
+          2. **ERROR**
+          3. **ERR**
+
 *EXIT*
     - **Format**: ``schema://exit/<value>``
     - **Example**: ``debug://exit/1``
@@ -73,6 +94,12 @@ on the command. The following are the available main commands:
     - **Description**: Inform the plugin to immediately send the signal
       specified immediately after the command to itself. The available
       signal values are denoted by `python signal module <https://docs.python.org/3/library/signal.html#signal.SIG_DFL>`_
+
+*VERBOSITY*
+    - **Format**: ``schema://verbosity/<level>``
+    - **Example**: ``debug://verbosity/debugging``
+    - **Description**: Set the debug plugins current logging level. See
+      :ref:`debug_plugin_logging` for more information.
 
 *SUCCESS* and *ERROR*
     - **Format**: ``schema://command/(details)`` [Details are optional]
@@ -213,6 +240,79 @@ on the command. The following are the available main commands:
 .. note::
 
     There is only one main command per file transfer URL.
+
+.. _debug_plugin_env_vars:
+
+Environment Variables
+~~~~~~~~~~~~~~~~~~~~~
+
+The debug plugin checks for the following environment variables to control
+various aspects of execution:
+
+**DEBUG_PLUGIN_PROTOCOL_VERSION**
+    An integer value representing the HTCondor plugin protocol version
+    to speak. Set to ``4`` by default.
+
+**DEBUG_PLUGIN_TIMESTAMP_FORMAT**
+    A string value specifying the logging timestamp format following
+    `python's DateTime format codes <https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes>`_.
+    If provided format is invalid then the default value is used.
+    This is set to ``%m/%d/%Y %H:%M:%S`` by default e.g. ``12/25/2025 07:33:42``.
+
+**DEBUG_PLUGIN_VERBOSITY**
+    A string or integer value representing the desired logging level (see
+    :ref:`debug_plugin_logging`). Set to ``ALWAYS`` by default.
+
+.. _debug_plugin_logging:
+
+Logging
+~~~~~~~
+
+By default, the debug plugin will always print error messages to standard
+error. However, a verbosity level can be specified in a variety of ways to
+enable logging to standard output:
+
+1. Via the ``-v/-verbose`` command line option.
+2. Via an environment variable (see :ref:`debug_plugin_env_vars`)
+3. Via an encoded URL using the **VERBOSITY** command.
+
+It is possible to disable all logging by setting the logging level to a
+negative level.
+
+.. warning::
+
+    Disabling logging will also prevent any **ECHO** command messages
+    from being printed to standard output.
+
+The logging level can be set by specifying either the literal level name
+or the equivalent integer value:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 30 15 100
+
+    * - Level
+      - Value
+      - Description
+    * - ALWAYS
+      - 0
+      - Logging to always print (**ECHO** command)
+    * - TEST
+      - 1
+      - Logging intended for testing purposes
+    * - DEBUGGING
+      - 2
+      - Enable general debugging messages
+    * - VERBOSE
+      - 3
+      - Enable more detailed debugging messages
+    * - CHATTY
+      - 4
+      - Enable all debugging messages
+
+.. note::
+
+    The logging level is print all messages below and at the specified levels.
 
 Special Return Codes
 ~~~~~~~~~~~~~~~~~~~~

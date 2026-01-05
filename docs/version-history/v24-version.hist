@@ -2,6 +2,13 @@
 
 *** 24.0.16 bugs
 
+- Added :macro:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT` for administrators
+  to set a longer timeout for plugins to detect their health.
+  :jira:`3455`
+
+- Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
+  :jira:`3474`
+
 - Fix Logical Volume setup timeout on Execution Points enforcing disk usage
   for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
   :jira:`3432`
@@ -15,6 +22,18 @@
   not constant (e.g. used random() or time()).
   :jira:`3436`
 
+- Fixed a bug where the values of the attributes :ad-attr:`LocalJobsIdle` and
+  :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
+  :jira:`3456`
+
+- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
+  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
+  :jira:`3481`
+
+- Fixed a bug where docker universe jobs would bring back a
+  file named ``.docker_stderror`` back to the AP after job completion.
+  :jira:`3424`
+
 *** 24.12.15 features
 
 - :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
@@ -27,7 +46,7 @@
   attribute :ad-attr:`OsUser` in the job ad.
   :jira:`3415`
 
-- Calling :meth:`Schedd.submit` with a list of dictionaries with dissimilar
+- Calling :meth:`htcondor2.Schedd.submit` with a list of dictionaries with dissimilar
   keys will no longer mangle the values (and instead ignore the extra keys,
   as implied by the documentation).
   :jira:`3351`
@@ -38,7 +57,7 @@
 
 - The condor package now requires pelican-7.21.1.
 
-- HTCondor tarballs now contain `Apptainer 1.4.4 <https://github.com/apptainer/apptainer/releases/tag/v1.4.4>`_
+- HTCondor tarballs now contain `Appoint 1.4.4 <https://github.com/apptainer/apptainer/releases/tag/v1.4.4>`_
 
 - The condor RPM package now requires at least apptainer version 1.4.4.
 
@@ -85,15 +104,15 @@
   manifests as a Job Router crash when upgrading the CE to HTCondor 25
   :jira:`3355`
 
-- Fixed a bug in :meth:`Schedd.submit` where single-entry itemdata could be
+- Fixed a bug in :meth:`htcondor2.Schedd.submit` where single-entry itemdata could be
   truncated to its first character.
   :jira:`3272`
 
-- Fixed a bug in :meth:`Schedd.submit` where the ``$(step)`` submit variable
+- Fixed a bug in :meth:`htcondor2.Schedd.submit` where the ``$(step)`` submit variable
   wasn't being set.
   :jira:`3272`
 
-- Fixed a bug in :meth:`Submit.itemdata` causing multi-entry itemdata to be
+- Fixed a bug in :meth:`htcondor2.Submit.itemdata` causing multi-entry itemdata to be
   returned incorrectly.
   :jira:`3272`
 

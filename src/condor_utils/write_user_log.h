@@ -128,11 +128,9 @@ public:
 	/* Initialize the log writer based on the given job ad.
 	 * Check for the user log, dagman log, and global event log.
 	 * Switch to user/condor priv for file I/O.
-	 * If init_user=true, call init_user_ids() (uninit_user_ids() will
-	 * then be called in the destructor).
 	 * Return true on success (even if no files will be written to).
 	 */
-	bool initialize(const ClassAd &job_ad, bool init_user = false);
+	bool initialize(const ClassAd &job_ad);
 
     /* Set the job id, which will used for each ULogEvent passed to
      * writeEvent(). Does not do any other initialization.
@@ -347,7 +345,6 @@ public:
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
-	/** called init_user_ids()?      */  bool       m_init_user_ids;
 	/** switch to user priv?         */  bool       m_set_user_priv;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;

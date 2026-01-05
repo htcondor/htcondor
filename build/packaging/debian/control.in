@@ -19,6 +19,7 @@ Build-Depends: cmake (>= 3.16),
 #endif
                dh-python,
                libcurl4-openssl-dev,
+               libdbus-1-dev,
                libkrb5-dev,
                libldap2-dev | libldap-dev,
                libmunge-dev,

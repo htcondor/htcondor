@@ -209,7 +209,7 @@ and immediately hold the job.
 Copy the checkpoint files from the spool.
 Note that ``_condor_stderr`` and ``_condor_stdout`` are the files corresponding
 to the job's output and error submit commands; they aren't named
-correctly until the the job finishes.
+correctly until the job finishes.
 
 .. code-block:: console
 
