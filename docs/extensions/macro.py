@@ -107,7 +107,8 @@ const config_regex = new Map([
 
 // Magic Redirect function
 function configRedirect() {
-	var url_root = window.location.origin + "/";
+	var end = window.location.href.indexOf("admin-manual");
+	var url_root = window.location.href.substring(0, end);
 	var redirect_url = url_root + "admin-manual/configuration/index.html";
 
 	if (window.location.hash.length > 0) {
