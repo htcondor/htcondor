@@ -748,9 +748,8 @@ all attributes.
     A comma-separated list of attribute names. The named attributes and
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
-    setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries`) but it applies to the job event log instead of the system event log.
+    setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
+    job event log instead of the system event log.
 
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 

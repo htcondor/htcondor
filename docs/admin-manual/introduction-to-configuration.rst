@@ -12,7 +12,7 @@ read the other configuration-related sections:
 -  The :ref:`admin-manual/introduction-to-configuration:configuration templates` section contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
--  The :doc:`/admin-manual/configuration-macros` section contains
+-  The :doc:`/admin-manual/configuration/index` section contains
    information about the hundreds of individual configuration macros. In
    general, it is best to try to achieve your desired configuration
    using configuration templates before resorting to setting individual
@@ -1123,14 +1123,13 @@ determined automatically at run time but which can be overwritten.
 
 ``$(FILESYSTEM_DOMAIN)`` :index:`FILESYSTEM_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See the :doc:`/admin-manual/configuration-macros` section, Shared File
+    evaluated on. See the :ref:`shared_fs_config_options` section, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
 
 ``$(UID_DOMAIN)`` :index:`UID_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See the :doc:`/admin-manual/configuration-macros` section for the full
-    description of this configuration variable.
+    evaluated on. See the :macro:`UID_DOMAIN`.
 
 ``$(CONFIG_ROOT)`` :index:`CONFIG_ROOT`
    Set to the directory where the the main config file will be read prior to reading any 

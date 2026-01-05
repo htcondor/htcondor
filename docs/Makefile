@@ -49,6 +49,7 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
+	rm -f _static/js/config-macro-redirect.js
 
 auto:
 	sphinx-autobuild -E . _build/html

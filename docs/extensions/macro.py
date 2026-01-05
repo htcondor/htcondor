@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+from pathlib import Path
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -12,12 +13,6 @@ from htc_helpers import *
 SPECIAL_CASE_KNOBS = ["<SUBSYS>"]
 TEMPLATE_FILE = "introduction-to-configuration"
 
-# List of files that define macros with :macro-def:
-CONFIG_FILES = [
-    ["admin-manual", "configuration-macros.rst"],
-    ["cloud-computing", "annex-configuration.rst"],
-]
-
 CONFIG_REGEX = {}
 CONFIG_KNOBS = {}
 TEMPLATES = {}
@@ -25,10 +20,16 @@ TEMPLATES = {}
 def find_conf_knobs(dir: str):
     knobs = {}
     regex_map = {}
-    for file_path in CONFIG_FILES:
-        url_path = "/".join(file_path).replace(".rst", ".html")
-        definition_file = os.path.join(dir, *file_path)
-        with open(definition_file, "r", encoding="utf-8") as f:
+
+    base = Path(dir)
+    config_dir = base / "admin-manual" / "configuration"
+
+    for path in config_dir.iterdir():
+        if path.suffix !=".rst":
+            continue
+
+        url = path.relative_to(base).with_suffix(".html")
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 for knob in get_all_defined_role("macro-def", line):
@@ -38,11 +39,11 @@ def find_conf_knobs(dir: str):
                     # Store macro for warning check
                     # Handle special case knobs
                     if knob in SPECIAL_CASE_KNOBS:
-                        knobs[knob] = url_path
+                        knobs[knob] = url
                     # Check if knob requires regex matching
                     elif "*" in knob:
                         regex = rf"{knob.replace('*', '(.+)')}"
-                        regex_map.update({regex : (knob, url_path)})
+                        regex_map.update({regex : (knob, url)})
                     elif "<" in knob:
                         temp = knob
                         while "<" in temp:
@@ -51,15 +52,15 @@ def find_conf_knobs(dir: str):
                             temp = regex = rf"{temp.replace(temp[start:end+1], '(.+)')}"
                         # Don't allow (.+) to be a regex match option
                         if regex != "(.+)":
-                            regex_map.update({regex : (knob, url_path)})
+                            regex_map.update({regex : (knob, url)})
                     # Store whatever is left (if not already included)
                     else:
-                        knobs[knob] = url_path
+                        knobs[knob] = url
     return (knobs, regex_map)
 
 def find_templates(dir: str):
     templates = {}
-    intro_file = os.path.join(dir, "admin-manual", f"{TEMPLATE_FILE}.rst")
+    intro_file = Path(dir) / "admin-manual" / f"{TEMPLATE_FILE}.rst"
     with open(intro_file, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -80,6 +81,57 @@ def find_templates(dir: str):
                     else:
                         templates[category].append(template)
     return templates
+
+def generate_old_redirect_page(dir: str):
+    """Write javascript to redirect old monolithic configuration macro URLs to new locations"""
+    javascript = Path(dir) / "_static" / "js" / "config-macro-redirect.js"
+    with open(javascript, "w") as f:
+        f.write("""
+// Map of tag -> URL end
+const configuration = new Map([
+""")
+
+        for macro, path in CONFIG_KNOBS.items():
+            f.write(f'\t["{macro.upper()}", "{path}"],\n')
+
+        f.write("""]);
+
+
+const config_regex = new Map([
+""")
+
+        for regex, info in CONFIG_REGEX.items():
+            f.write(f'\t[/{regex.upper()}/, "{info[1]}"],\n')
+
+        f.write("""]);
+
+// Magic Redirect function
+function configRedirect() {
+	var url_root = window.location.origin + "/";
+	var redirect_url = url_root + "admin-manual/configuration/index.html";
+
+	if (window.location.hash.length > 0) {
+		var macro = decodeURI(window.location.hash.slice(1)).toUpperCase();
+
+		if (configuration.has(macro)) {
+			// Specific macro found
+			redirect_url = url_root + configuration.get(macro) + "#" + macro;
+		} else {
+			// Macro matches regex configuration option
+			for (const check of config_regex.keys()) {
+				if (check.test(macro)) {
+					redirect_url = url_root + config_regex.get(check) + "#" + macro;
+					break;
+				}
+			}
+		}
+	}
+
+	window.location.replace(redirect_url);
+}
+
+window.addEventListener('DOMContentLoaded', configRedirect());
+""")
 
 def dump(obj):
     for attr in dir(obj):
@@ -129,7 +181,11 @@ def setup(app):
     global CONFIG_KNOBS
     global CONFIG_REGEX
     global TEMPLATES
+
     CONFIG_KNOBS, CONFIG_REGEX = find_conf_knobs(app.srcdir)
     TEMPLATES = find_templates(app.srcdir)
+
+    generate_old_redirect_page(app.srcdir)
+
     app.add_role("macro", macro_role)
 

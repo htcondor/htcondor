@@ -8,7 +8,7 @@ Administrators' Manual
    introduction-admin-manual
    installation-startup-shutdown-reconfiguration
    introduction-to-configuration
-   configuration-macros
+   configuration/index
    ep-policy-configuration
    ap-policy-configuration
    cm-configuration

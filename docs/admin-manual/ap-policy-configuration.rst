@@ -219,8 +219,7 @@ have the same value for each potentially running *condor_schedd*
 daemon. In addition, the value chosen for the variable :macro:`SCHEDD_NAME`
 will need to include the at symbol (@), such that HTCondor will not
 modify the value set for this variable. See the description of
-:macro:`MASTER_NAME` in the :ref:`admin-manual/configuration-macros:condor_master
-configuration file macros` section for defaults and composition of valid values
+:macro:`MASTER_NAME` in the :ref:`master_config_options` section for defaults and composition of valid values
 for :macro:`SCHEDD_NAME`. As an example, include in each local configuration a value
 similar to:
 
@@ -564,8 +563,7 @@ machine (correctly) interprets this situation as the *condor_schedd*
 daemon is no longer running. This machine's :tool:`condor_master` daemon then
 acquires the lock and runs the *condor_schedd* daemon.
 
-See the :ref:`admin-manual/configuration-macros:condor_master configuration
-file macros` section for details relating to the configuration variables used
+See the :ref:`master_config_options` section for details relating to the configuration variables used
 to set timing and polling intervals.
 
 Performance Tuning of the AP
