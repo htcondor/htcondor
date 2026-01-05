@@ -35,6 +35,12 @@
   DAGMan rescue file by name for state restoration.
   :jira:`3425`
 
+- Augment the *condor_kbdd* to use the systemd sd-login library to find user
+  sessions, since /usr/run/utmp is no longer available on newer platforms.
+  Also, add idle check support for Mutter(Gnome), which works on both
+  Wayland and X11.
+  :jira:`3452`
+
 *** 25.6.0 bugs
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
