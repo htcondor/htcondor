@@ -687,6 +687,7 @@
 #define ATTR_REMOTE_NEGOTIATING_GROUP  "RemoteNegotiatingGroup"
 #define ATTR_REMOTE_OWNER  "RemoteOwner"
 #define ATTR_REMOTE_POOL  "RemotePool"
+#define ATTR_REMOTE_PROJECT  "RemoteProject"
 #define ATTR_REMOTE_SCHEDD_NAME  "RemoteScheddName"
 #define ATTR_REMOTE_SLOT_ID  "RemoteSlotID"
 #define ATTR_REMOTE_SPOOL_DIR  "RemoteSpoolDir"
