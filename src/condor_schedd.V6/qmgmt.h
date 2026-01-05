@@ -261,6 +261,7 @@ class OCU {
 		ClassAd ad;
 		match_rec *mrec{nullptr}; // null if no currect match
 		int ocu_id;
+		char state{'U'}; // U=Unclaimed I=Idle, R=Running
 };
 
 // class used to hold stats counters for User and Project records

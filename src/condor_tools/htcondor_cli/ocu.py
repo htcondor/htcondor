@@ -83,16 +83,17 @@ class Query(Verb):
                 for ad in results:
                     print(ad)
             else:
-                print("OCUId  OCUName              Owner                CPUs  Memory Disk Activations")
+                print("OCUId  OCUName              Owner                    State CPUs  Memory Disk Activations")
                 for ad in results:
                     ocuID = ad.get("OCUId", "unknown")
                     ocuName = ad.get("OCUName", "unknown")
                     owner = ad.get("Owner", "unknown")
+                    state = ad.get("OCUState", "?")
                     cpus = ad.get("RequestCpus", 0)
                     memory = ad.get("RequestMemory", 0)
                     disk = ad.get("RequestDisk", 0)
                     activations = ad.get("OCUOwnerActivations", 0)
-                    print(f"{ocuID:<6} {ocuName:<20} {owner:<20} {cpus:<4} {memory:<6} {disk:<4} {activations}")
+                    print(f"{ocuID:<6} {ocuName:<20} {owner:<24} {state:<5} {cpus:<4} {memory:<6} {disk:<4} {activations}")
 
         except Exception as e:
             raise RuntimeError(f"Error querying ocu: {str(e)}")
