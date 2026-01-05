@@ -11,7 +11,8 @@ from htc_helpers import custom_ext_parser, make_headerlink_node, warn
 
 KNOB_DEFS = []
 
-# 
+# Special default macro grouping names
+# i.e. filename -> pretty name
 DEFAULT_GROUP_PRETTY_NAME = {
     "dagman": "DAGMan",
     "ssh_to_job": "SSH to Job",
@@ -32,7 +33,8 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
     targetnode = nodes.target('', knob, ids=[targetid], classes=["macro-def"])
 
     if grouping != "":
-        grouping = grouping + " "
+        # Specific macro grouping defined inline i.e. :macro-def:`foo[Group One]`
+        pass
     elif default_group in DEFAULT_GROUP_PRETTY_NAME:
         grouping = DEFAULT_GROUP_PRETTY_NAME[default_group]
     else:

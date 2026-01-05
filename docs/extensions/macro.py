@@ -25,7 +25,7 @@ def find_conf_knobs(dir: str):
     config_dir = base / "admin-manual" / "configuration"
 
     for path in config_dir.iterdir():
-        if path.suffix !=".rst":
+        if path.suffix != ".rst":
             continue
 
         url = path.relative_to(base).with_suffix(".html")
