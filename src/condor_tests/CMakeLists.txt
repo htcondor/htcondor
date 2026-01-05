@@ -55,6 +55,10 @@ if (BUILD_TESTING)
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
 	endforeach(scriptFile)
 
+	# Install ctest_driver.py to the test directory so tests can run without source
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ctest_driver.py
+		${TEST_TARGET_DIR}/ctest_driver.py COPYONLY)
+
 
 	set(CHECK_MODULES CondorLog.pm
 			JobDoesNotRun.pm

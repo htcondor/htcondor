@@ -97,6 +97,10 @@ if (BUILD_TESTING)
 	#
 	# we then define a custom target that invokes this cmake script file and then tars up the result
 	#
+	# Note: what we should do is build tests into something like
+	# build-dir/src/condor_tests, with all dependencies copied there,
+	# and then we can just package up that whole directory.
+
 	set(COPY_TESTS_CMAKE_FILE "${CMAKE_CURRENT_BINARY_DIR}/copy_tests.cmake")
 	FILE(WRITE ${COPY_TESTS_CMAKE_FILE}
 		"# generated cmake file to copy tests\n"
@@ -152,6 +156,12 @@ if (BUILD_TESTING)
 		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${TEST_TARGET_DIR}/list_${tag}\"\n")
 	ENDFOREACH(tag)
 	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_utils/param_info_tables.h\"\n")
+
+	# And the ctest_driver.py
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_tests/ctest_driver.py\"\n")
+
+	# And the ctest testfile, which contains the test definitions
+	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_tests/CTestTestfile.cmake\"\n")
 	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} ")\n")
 
 	IF(WINDOWS)

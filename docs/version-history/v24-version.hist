@@ -22,6 +22,14 @@
   :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
   :jira:`3456`
 
+- Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
+  it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
+  :jira:`3481`
+
+- Fixed a bug where docker universe jobs would bring back a
+  file named ``.docker_stderror`` back to the AP after job completion.
+  :jira:`3424`
+
 *** 24.12.15 features
 
 - :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
