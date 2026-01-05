@@ -706,7 +706,7 @@ def parse_args() -> None:
     # Ensure either -classad or (-infile and -outfile) specified
     if not args.classad and None in [args.infile, args.outfile]:
         parser.print_usage()
-        error(f"{PROGRAM_NAME}: error: invlaid args: expects either -classad or both -infile and -outfile")
+        error(f"{PROGRAM_NAME}: error: invalid args: expects either -classad or both -infile and -outfile")
         raise RuntimeError
 
     # Return capabilities ClassAd and exit
@@ -758,7 +758,7 @@ def main() -> None:
                     debug(DebugLevel.TEST, f"Non-transfer ClassAd discovered:\n{ad}")
                     continue
 
-                # Dump v3 protocol Plugin Data
+                # Dump v4 protocol Plugin Data
                 if 'PluginData' in ad:
                     data = ad.get("PluginData")
                     debug(DebugLevel.TEST, f"Plugin data:\n{data}")

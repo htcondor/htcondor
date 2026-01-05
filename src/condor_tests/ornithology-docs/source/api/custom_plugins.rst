@@ -281,8 +281,8 @@ negative level.
 
 .. warning::
 
-    Disabling logging will also prevent any **ECHO** command messages to
-    standard output to not be printed.
+    Disabling logging will also prevent any **ECHO** command messages
+    from being printed to standard output.
 
 The logging level can be set by specifying either the literal level name
 or the equivalent integer value:
