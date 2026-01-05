@@ -220,8 +220,6 @@ MutterInterface::GetSessions()
 		  }
 	  }
 
-	  set_condor_priv();
-
 	  return found_sessions;
   }
 }
