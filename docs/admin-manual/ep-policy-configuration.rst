@@ -204,7 +204,7 @@ Define slot types.
         NUM_SLOTS_TYPE_1 = 2
 
     Amounts of disk space and swap space are detected at startup and
-    may be different each time that the EP starts up. The the EP will
+    may be different each time that the EP starts up. The EP will
     use the detected free space as the amount that can be provisioned
     to the slots.  So for disk, it is may be better to specify a percentage
     or fraction of the available space that is allocated to each slot, instead of specifying absolute
@@ -232,7 +232,7 @@ Define slot types.
     -  disk, Disk, D, d
     -  swap, SWAP, S, s, VirtualMemory, V, v
 
-    Swap is treated as a resouce for backward compatibility, but in
+    Swap is treated as a resource for backward compatibility, but in
     modern computers, Swap should be be disabled for jobs and so
     there is no need to explicitly provision the Swap resource to slots.
     On Windows, provisioning Swap has no effect.
@@ -726,10 +726,10 @@ a subdirectory, and immediately move the job into that subdirectory. This
 is clunky, and prone to race conditions when the job might be spawning processes
 of its own.  Rather, the starter creates two, nested directories for the job.
 The direct child of the starter's cgroup is the job's "slice".  HTCondor puts
-resource limits on the slice (and implictly on all children of the slice),
+resource limits on the slice (and implicitly on all children of the slice),
 and measures resource usage of the job by measuring the resource of the slice
 (again, and implicitly measuring the sum of the resources of all the child
-subcgroups of that slice).  When it is time to clean up the job, the starter
+sub-cgroups of that slice).  When it is time to clean up the job, the starter
 removes the slice, and all sub-cgroups thereof.  The starter sets the Unix
 permissions on the slice so that the job can make subdirectories, and thus
 sub-cgroups of the job under the slice, and move processes into those sub-cgroups,
@@ -756,7 +756,7 @@ which creates and manages this cgroups.
       style job_scope fill:lightgreen
       style job_slice fill:lightgreen
 
-In the diagram above, the starter's cgroup is red, as it is not modifiably by 
+In the diagram above, the starter's cgroup is red, as it is not modifiable by 
 the job, but the scope and slice are green to show that they are modifiable.
 
 Cgroup V1 Support
@@ -2733,7 +2733,7 @@ when dealing with the Windows installation:
    that the local *condor_starter* be able to run jobs in this manner.
    For more information on the ``RunAsUser`` attribute, see
    :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
-   user`. For more information on the the :macro:`STARTER_ALLOW_RUNAS_OWNER`
+   user`. For more information on the :macro:`STARTER_ALLOW_RUNAS_OWNER`
    configuration variable, see
    :ref:`admin-manual/configuration-macros:shared file system configuration
    file macros`.
@@ -3258,7 +3258,7 @@ and the *condor_startd* reconfigured, all slots on this EP will advertise
 this new attribute.  
 
 Beginning users may be tempted to hard-code, or assume the knowledge that
-certain well-known machines in their poool might have this database installed
+certain well-known machines in their pool might have this database installed
 at some path.  But, by advertising this value as a custom EP attribute,
 administrators have gained a level of indirection, and are free to move
 the database to a different path, or perhaps add machines to the pool without
@@ -3654,12 +3654,12 @@ want additional options passed to the docker container create command. To do
 so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
 append these to the docker container create command.
 
-Docker universe jobs may use the chirp protoocl to read or write files
+Docker universe jobs may use the chirp protocol to read or write files
 and job ad attributes to or from the Access Point.  By default, HTCondor
 assumes that the network named "docker0" can communicate from inside
 the container to the starter outside the container.  If the docker runtime
 is configured to use a different network, the administrator can set
-the configuation know :macro:`DOCKER_NETWORK_NAME` to the appropriate
+the configuration know :macro:`DOCKER_NETWORK_NAME` to the appropriate
 network name.
 
 Docker universe jobs may fail to start on certain Linux machines when
