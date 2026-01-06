@@ -3976,7 +3976,8 @@ still map to the scratch directory outside the container.
 
 .. code-block:: condor-config
 
-      # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      # Maps the parent of $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
+      # The job's scratch directory will be under this mount
       SINGULARITY_TARGET_DIR = /srv
 
 If :macro:`SINGULARITY_TARGET_DIR` is not specified by the admin,
