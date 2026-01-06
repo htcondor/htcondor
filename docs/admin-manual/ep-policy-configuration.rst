@@ -2733,10 +2733,7 @@ when dealing with the Windows installation:
    that the local *condor_starter* be able to run jobs in this manner.
    For more information on the ``RunAsUser`` attribute, see
    :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
-   user`. For more information on the :macro:`STARTER_ALLOW_RUNAS_OWNER`
-   configuration variable, see
-   :ref:`admin-manual/configuration-macros:shared file system configuration
-   file macros`.
+   user`. For more information on the :macro:`STARTER_ALLOW_RUNAS_OWNER`.
 
 Examples of Policy Configuration
 ''''''''''''''''''''''''''''''''
