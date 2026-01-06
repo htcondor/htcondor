@@ -143,6 +143,8 @@ extern FILE *DebugFP;
 extern char *DebugFile;
 extern char *DebugLock;
 
+extern std::vector<std::string> ocu_super_users;
+
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
@@ -222,6 +224,17 @@ inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
 inline const char * EffectiveUserName(const Sock * sock) {
 	if ( ! sock) return "";
 	return sock->getOwner();
+}
+
+static bool isOCUSuperUser(ReliSock* sock) {
+	auto * rsock_user = EffectiveUserRec(sock);
+	if (isQueueSuperUser(rsock_user)) {
+		return true;
+	}
+	if (ContainsUserName(ocu_super_users, rsock_user->Name())) {
+		return true;
+	}
+	return false;
 }
 
 int init_user_ids(const JobQueueUserRec * user) {
@@ -2930,7 +2943,8 @@ Scheduler::act_on_ocu_create(const ClassAd &request) {
 		subdat->owners.insert(ocu_owner);
 		subdat->num.JobsIdle++;
 		subdat->num.Hits++;
-	}
+	} 
+	result.Assign(ATTR_RESULT, 0);
 
 	return result;
 }
@@ -2951,6 +2965,7 @@ Scheduler::act_on_ocu_remove(const ClassAd &request) {
 			}
 		}
 	}
+	result.Assign(ATTR_RESULT, 0);
 	return result;
 }
 
@@ -2994,6 +3009,15 @@ Scheduler::command_act_on_ocus(int cmd, Stream* stream)
 
 	switch (cmd) {
 		case CREATE_OCU_FOR_USERREC: {
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			}
 			ClassAd resultAd = act_on_ocu_create(requestAd);
 			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
 				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
@@ -3003,6 +3027,15 @@ Scheduler::command_act_on_ocus(int cmd, Stream* stream)
 			}
 			break;
 		case REMOVE_OCU_FROM_USERREC: {
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			} 
 			ClassAd resultAd = act_on_ocu_remove(requestAd);
 			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
 				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );

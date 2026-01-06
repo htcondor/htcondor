@@ -723,6 +723,7 @@ void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
 bool JobQueueInitDone();
 
+bool ContainsUserName(const std::vector<std::string>& list, const char* user);
 bool isQueueSuperUser(const JobQueueUserRec * user);
 
 // Verify that the user issuing a command (test_owner) is authorized
