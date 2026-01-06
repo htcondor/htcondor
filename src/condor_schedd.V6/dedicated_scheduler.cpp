@@ -1723,19 +1723,19 @@ DedicatedScheduler::sortResources( )
 		// Carry any negotiator match attrs over from the existing match ad. 
 		// Otherwise these will be lost and dollar-dollar expansion will fail.
 		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		for (auto & itr : *mrec->my_match_ad) {
-			if( !strncmp(itr.first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *oexpr = itr.second;
+		for (const auto & [attr_name, attr_expr] : *mrec->my_match_ad) {
+			if( !strncmp(attr_name.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+				ExprTree *oexpr = attr_expr.materialize();
 				if( !oexpr ) {
 					continue;
 				}
-				ExprTree *nexpr = res->LookupExpr(itr.first);
+				ExprTree *nexpr = res->LookupExpr(attr_name);
 				if (!nexpr) {
 					const char *oexprStr = ExprTreeToString(oexpr);
-					res->AssignExpr(itr.first, oexprStr);
+					res->AssignExpr(attr_name, oexprStr);
 
 					dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from existing match record.\n", 
-					         resname.c_str(), itr.first.c_str(), oexprStr);
+					         resname.c_str(), attr_name.c_str(), oexprStr);
 				}
 			}
 		}
@@ -3175,9 +3175,9 @@ static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
 	auto cit = negotiator_attr_cache.find(partitionable_slot_name);
 
 	size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-	for (auto & itr : *match_ad) {
-		if( !strncmp(itr.first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-			ExprTree *expr = itr.second;
+	for (const auto & [attr_name, attr_expr] : *match_ad) {
+		if( !strncmp(attr_name.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+			ExprTree *expr = attr_expr.materialize();
 			if( !expr ) {
 				continue;
 			}
@@ -3188,10 +3188,10 @@ static void update_negotiator_attrs_for_partitionable_slots(ClassAd* match_ad)
 			}
 			std::string exprs(ExprTreeToString(expr));
 			if (cit != negotiator_attr_cache.end()) {
-				cit->second[itr.first] = exprs;
+				cit->second[attr_name] = exprs;
 			} else {
 				negotiator_attr_cache_entry_t nmap;
-				nmap.insert(negotiator_attr_cache_entry_t::value_type(itr.first,exprs));
+				nmap.insert(negotiator_attr_cache_entry_t::value_type(attr_name,exprs));
 				negotiator_attr_cache.insert(negotiator_attr_cache_t::value_type(partitionable_slot_name, nmap));
 			}
 		}

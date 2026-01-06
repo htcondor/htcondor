@@ -484,8 +484,6 @@ bool
 caInsert( ClassAd* target, ClassAd* source, const char* attr,
 		  const char* prefix )
 {
-	ExprTree* tree;
-
 	ASSERT(attr);
 	ASSERT(target);
 	ASSERT(source);
@@ -496,15 +494,13 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 	}
 	new_attr += attr;
 
-	tree = source->LookupExpr( attr );
-	if( !tree ) {
+	auto [sourceMap, value] = source->LookupInline( attr );
+	if( !value ) {
 		target->Delete(new_attr);
 		return false;
 	}
-	tree = tree->Copy();
-	if ( !target->Insert(new_attr, tree) ) {
-		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n", attr );
-		delete tree;
+
+	if ( !target->CopyExprFrom(new_attr, *source, attr) ) {
 		return false;
 	}
 	return true;

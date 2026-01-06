@@ -317,9 +317,9 @@ VMUniverseMgr::publish( ClassAd* ad)
 
 	ExprTree* expr = NULL;
 	const char *attr_name = NULL;
-	for( auto itr = m_vmgahp_info.begin(); itr != m_vmgahp_info.end(); itr++ ) {
-		attr_name = itr->first.c_str();
-		expr = itr->second;
+	for( const auto& [name, inlineExpr] : m_vmgahp_info ) {
+		attr_name = name.c_str();
+		expr = inlineExpr.materialize();
 		// we need to adjust available vm memory
 		if( strcasecmp(attr_name, ATTR_VM_MEMORY) == MATCH ) {
 			int freemem = getFreeVMMemSize();

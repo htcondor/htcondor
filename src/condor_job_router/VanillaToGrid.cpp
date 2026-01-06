@@ -396,10 +396,10 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 	std::string chirp_prefix;
 	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	if (chirp_prefix == "Chirp*") {
-		for (const auto & [attr, expr]: newgrid) {
+		for (const auto & [attr, inlineExpr]: newgrid) {
 			if ( ! strncasecmp(attr.c_str(), "Chirp", 5) ) {
 				classad::ExprTree *old_expr = orig.Lookup(attr);
-				classad::ExprTree *new_expr = expr;
+				classad::ExprTree *new_expr = inlineExpr.materialize();
 				if ( old_expr == nullptr || !(*old_expr == *new_expr) ) {
 					update.Insert( attr, new_expr->Copy() );
 				}
@@ -408,10 +408,10 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 	} else if (!chirp_prefix.empty()) {
 		// TODO cache the prefix_list
 		std::vector<std::string> prefix_list = split(chirp_prefix);
-		for (const auto & [attr, expr]: newgrid) {
+		for (const auto & [attr, inlineExpr]: newgrid) {
 			if (contains_anycase_withwildcard(prefix_list,attr)) {
 				classad::ExprTree *old_expr = orig.Lookup(attr);
-				classad::ExprTree *new_expr = expr;
+				classad::ExprTree *new_expr = inlineExpr.materialize();
 				if ( old_expr == nullptr || !(*old_expr == *new_expr) ) {
 					update.Insert( attr, new_expr->Copy() );
 				}

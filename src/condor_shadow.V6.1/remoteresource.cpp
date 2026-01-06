@@ -1583,51 +1583,51 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	ExprTree* chirp_ad_expr = update_ad->Lookup(ATTR_CHIRP_DELAYED_ATTRS);
 	ClassAd* chirp_ad = dynamic_cast<ClassAd*>(chirp_ad_expr);
 	if (chirp_ad) {
-		for (ClassAd::const_iterator it = chirp_ad->begin(); it != chirp_ad->end(); it++) {
-			if (allowRemoteWriteAttributeAccess(it->first)) {
-				classad::ExprTree *expr_copy = it->second->Copy();
-				jobAd->Insert(it->first, expr_copy);
-				shadow->watchJobAttr(it->first);
+		for (const auto& [attr_name, inlineExpr] : *chirp_ad) {
+			if (allowRemoteWriteAttributeAccess(attr_name)) {
+				classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+				jobAd->Insert(attr_name, expr_copy);
+				shadow->watchJobAttr(attr_name);
 			}
 		}
 	}
 
 		// Process all chirp-based updates from the starter.
-	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
+	for (const auto& [attr_name, inlineExpr] : *update_ad) {
 		size_t offset = 0;
-		if (!m_use_delayed_attr && allowRemoteWriteAttributeAccess(it->first)) {
-			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(it->first, expr_copy);
-			shadow->watchJobAttr(it->first);
-		} else if( (offset = it->first.rfind( "AverageUsage" )) != std::string::npos
-			&& offset == it->first.length() - 12 ) {
-			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(it->first, expr_copy);
-			shadow->watchJobAttr(it->first);
-		} else if( (offset = it->first.rfind( "Usage" )) != std::string::npos
-			&& it->first != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
-			&& it->first != ATTR_DISK_USAGE    // ditto
+		if (!m_use_delayed_attr && allowRemoteWriteAttributeAccess(attr_name)) {
+			classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+			jobAd->Insert(attr_name, expr_copy);
+			shadow->watchJobAttr(attr_name);
+		} else if( (offset = attr_name.rfind( "AverageUsage" )) != std::string::npos
+			&& offset == attr_name.length() - 12 ) {
+			classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+			jobAd->Insert(attr_name, expr_copy);
+			shadow->watchJobAttr(attr_name);
+		} else if( (offset = attr_name.rfind( "Usage" )) != std::string::npos
+			&& attr_name != ATTR_MEMORY_USAGE  // ignore MemoryUsage, we handle it above
+			&& attr_name != ATTR_DISK_USAGE    // ditto
 			// the ATTR_JOB_*_CPU attributes don't end in "Usage"
-			&& offset == it->first.length() - 5 ) {
-			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(it->first, expr_copy);
-			shadow->watchJobAttr(it->first);
-		} else if( (offset = it->first.rfind( "Provisioned" )) != std::string::npos
-			&& offset == it->first.length() - 11 ) {
-			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(it->first, expr_copy);
-			shadow->watchJobAttr(it->first);
-		} else if( it->first.find( "Assigned" ) == 0 ) {
-			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(it->first, expr_copy);
-			shadow->watchJobAttr(it->first);
+			&& offset == attr_name.length() - 5 ) {
+			classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+			jobAd->Insert(attr_name, expr_copy);
+			shadow->watchJobAttr(attr_name);
+		} else if( (offset = attr_name.rfind( "Provisioned" )) != std::string::npos
+			&& offset == attr_name.length() - 11 ) {
+			classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+			jobAd->Insert(attr_name, expr_copy);
+			shadow->watchJobAttr(attr_name);
+		} else if( attr_name.find( "Assigned" ) == 0 ) {
+			classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+			jobAd->Insert(attr_name, expr_copy);
+			shadow->watchJobAttr(attr_name);
 		// Arguably, this should actually check the list of container services
 		// and only forward the matching attributes through, but I'm not
 		// actually worried.
-		} else if( ends_with( it->first, "_HostPort" ) ) {
-			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(it->first, expr_copy);
-			shadow->watchJobAttr(it->first);
+		} else if( ends_with( attr_name, "_HostPort" ) ) {
+			classad::ExprTree *expr_copy = inlineExpr.materialize()->Copy();
+			jobAd->Insert(attr_name, expr_copy);
+			shadow->watchJobAttr(attr_name);
 		}
 	}
 

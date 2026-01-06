@@ -1498,10 +1498,11 @@ size_t AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator
 size_t AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped)
 {
 	accum += sizeof(classad::ClassAd);
-	classad::ClassAd::const_iterator it;
-	for (it = cad->begin(); it != cad->end(); ++it) {
-		accum += it->first.length() * sizeof(char); // TODO: account for std::string overhead.
-		AddExprTreeMemoryUse(it->second, accum, num_skipped);
+	for (auto it = cad->begin(); it != cad->end(); ++it) {
+		auto [attrName, inlineExpr] = *it;
+		accum += attrName.length() * sizeof(char); // TODO: account for std::string overhead.
+		classad::ExprTree* expr = inlineExpr.materialize();
+		AddExprTreeMemoryUse(expr, accum, num_skipped);
 	}
 	return accum.Value();
 }

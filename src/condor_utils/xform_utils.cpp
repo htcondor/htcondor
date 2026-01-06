@@ -1349,28 +1349,29 @@ int XFormAdUndo::Revert(ClassAd & ad)
 	int num_changes = 0;
 	for (auto & it : list) {
 		++num_changes;
-		if (it.second) {
+		if (!it.second.isInline() && it.second.asPtr()) {
 			// rhs is an expr tree, this could be something we got from a swap, or Remove
 			// but it could also be a copy of an parent attribute from a Remove
 			// if it is parent copy, we want to prune the child rather than inserting
+			ExprTree* exprTree = it.second.asPtr();
 			if (deletions.contains(it.first)) {
 				ExprTree * tree = nullptr;
 				auto * parent = ad.GetChainedParentAd();
 				if (parent) { tree = parent->Lookup(it.first); }
-				if (tree && *tree == *it.second) {
+				if (tree && *tree == *exprTree) {
 					ad.PruneChildAttr(it.first, false);
-					delete it.second;
+					delete exprTree;
 				} else {
 					// rhs is an expr tree, and not a parent copy so we insert
-					ad.Insert(it.first, it.second);
+					ad.Insert(it.first, exprTree);
 				}
 			} else {
 				// rhs is an expr tree, and not a parent copy so we insert
-				ad.Insert(it.first, it.second);
+				ad.Insert(it.first, exprTree);
 			}
-			it.second = nullptr;
+			it.second = classad::InlineValue();
 		} else if (ad.GetChainedParentAd()) {
-			// rhs is nullptr, but there is a parent ad, so we prune
+			// rhs is nullptr or inline, but there is a parent ad, so we prune
 			// since a delete would end up setting the value to undefined
 			// rather than removing the attr from the prod ad
 			ad.PruneChildAttr(it.first, false);
@@ -1448,16 +1449,16 @@ struct _parse_rules_args {
 						// undo already had this key
 						if (to_tree) { delete to_tree; }
 					}
-					auto insert_result = undo->list.emplace(from_attr, nullptr);
-					if ( ! insert_result.second) {
-						// undo already had this key
-					} else {
-						// we have to stash a copy of the old from value since we
-						// moved the value itself to to_attr
-						insert_result.first->second = tree->Copy();
-						// we inserted the key, but it was a copy of the parent ad
-						// so we want to handle undo.Revert differently
-						if (is_parent_attr) undo->deletions.emplace(from_attr);
+					// Store a copy of the old from value in the undo list
+					// We can't use emplace directly since it expects an ExprTree*,
+					// so we use a temporary approach: emplace a placeholder and then update
+					if (tree) {
+						auto insert_result = undo->list.emplace(from_attr, tree->Copy());
+						if (insert_result.second) {
+							// we inserted the key, and it was a copy of the parent ad
+							// so we want to handle undo.Revert differently
+							if (is_parent_attr) undo->deletions.emplace(from_attr);
+						}
 					}
 				} else if (to_tree) {
 					if (to_tree) { delete to_tree; }

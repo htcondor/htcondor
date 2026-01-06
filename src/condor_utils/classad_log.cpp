@@ -561,12 +561,13 @@ bool WriteClassAdLogState(
 		classad::ClassAd *chain = ad->GetChainedParentAd();
 		ad->Unchain();
 		for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
-			expr = itr->second;
+			auto [attrName, inlineExpr] = *itr;
+			expr = inlineExpr.materialize();
 				// This conditional used to check whether the ExprTree is
 				// invisible, but no codepath sets any attributes
 				// invisible for this call.
 			if (expr) {
-				log = new LogSetAttribute(key, itr->first.c_str(),
+				log = new LogSetAttribute(key, attrName.c_str(),
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
 					formatstr(errmsg, "write to %s failed, errno = %d", filename, errno);

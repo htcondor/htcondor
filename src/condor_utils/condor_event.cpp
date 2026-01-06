@@ -1125,13 +1125,15 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	UsageMap useMap;
 	bool reqHFP = false, assignedHFP = false, allocHFP = false, useHFP = false;
 	for( auto iter = pusageAd->begin(); iter != pusageAd->end(); ++iter ) {
+		auto [attrName, inlineExpr] = *iter;
 		// Compute the string value.
 		std::string value;
 		classad::Value cVal;
 		double rVal, iVal;
 
 		bool hasFractionalPart = false;
-		if( ExprTreeIsLiteral(iter->second, cVal) && cVal.IsRealValue(rVal) ) {
+		ExprTree* exprPtr = inlineExpr.materialize();
+		if( ExprTreeIsLiteral(exprPtr, cVal) && cVal.IsRealValue(rVal) ) {
 			// show fractional values only if there actually *are* fractional
 			// values; format doubles with %.2f
 			if( modf( rVal, &iVal ) > 0.0 ) {
@@ -1141,12 +1143,12 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 				formatstr( value, "%lld", (long long)iVal);
 			}
 		} else {
-			unp.Unparse( value, iter->second );
+			unp.Unparse( value, exprPtr );
 		}
 
 		// Determine the attribute name.
 		std::string resourceName;
-		std::string attributeName = iter->first;
+		std::string attributeName = std::string(attrName);
 		if( starts_with( attributeName, "Request" ) ) {
 			resourceName = attributeName.substr(7);
 			useMap[resourceName].req = value;
@@ -2885,11 +2887,12 @@ int TerminatedEvent::initUsageFromAd(const classad::ClassAd& ad)
 			pusageAd->Insert(tag, expr);
 
 			// Copy Request<RES> attribute into the pusageAd
-			expr = it->second->Copy();
+			auto [name, inlineExpr] = *it;
+			ExprTree* itExpr = inlineExpr.materialize();
+			expr = itExpr->Copy();
 			if ( ! expr)
 				return 0;
-			pusageAd->Insert(it->first, expr);
-
+			pusageAd->Insert(name, expr);
 			// Copy <RES>Usage attribute if it exists
 			attr = tag; attr += "Usage";
 			expr = ad.Lookup(attr);

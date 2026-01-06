@@ -2759,10 +2759,12 @@ bool dump_long_to_fp(void * pv, ClassAd *job)
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
-	for (auto & itr : *job) {
-		line = itr.first;
+	for (const auto & [attr_name, inlineExpr] : *job) {
+		line = attr_name;
 		line += '=';
-		unp.Unparse(line, itr.second);
+		if (!unp.UnparseInline(line, job, *inlineExpr.value())) {
+			unp.Unparse(line, inlineExpr.materialize());
+		}
 		line += '\n';
 		fputs(line.c_str(), (FILE*)pv);
 	}
@@ -2950,11 +2952,13 @@ static void append_long_ad(std::string & out, CondorClassAdListWriter & writer, 
 		// make a special effort to print attributes in hashtable order for -long output.
 		classad::ClassAdUnParser unp;
 		unp.SetOldClassAd( true, true );
-		for (classad::ClassAd::const_iterator itr = ad.begin(); itr != ad.end(); ++itr) {
-			if (proj->contains(itr->first)) {
-				out += itr->first;
+		for (const auto& [attr_name, inlineExpr] : ad) {
+			if (proj->contains(attr_name)) {
+				out += attr_name;
 				out += " = ";
-				unp.Unparse(out, itr->second);
+				if (!unp.UnparseInline(out, &ad, *inlineExpr.value())) {
+					unp.Unparse(out, inlineExpr.materialize());
+				}
 				out += "\n";
 			}
 		}
@@ -3583,8 +3587,8 @@ void populate_summary_analysis(ClassAd * summary_ad)
 
 	auto anal_ad = dynamic_cast<ClassAd*>(expr);
 	if (anal_ad) {
-		for (auto it = anal_ad->begin(); it != anal_ad->end(); ++it) {
-			auto * ad = dynamic_cast<ClassAd*>(it->second);
+		for (const auto& [attr_name, inlineExpr] : *anal_ad) {
+			auto * ad = dynamic_cast<ClassAd*>(inlineExpr.materialize());
 			int acid = -1;
 			if (ad && ad->LookupInteger(ATTR_AUTO_CLUSTER_ID, acid)) {
 				autoclusterRejAds[acid].Update(*ad);

@@ -631,9 +631,9 @@ doContactSchedd(int /* tid */)
 		ExprTree *tree;
 		const char *lhstr, *rhstr;
 		for( auto itr = current_command->classad->begin(); itr != current_command->classad->end(); itr++ ) {
-
-			lhstr = itr->first.c_str();
-			tree = itr->second;
+			auto [attrName, inlineExpr] = *itr;
+			lhstr = attrName.c_str();
+			tree = inlineExpr.materialize();
 			rhstr = ExprTreeToString( tree );
 			if( !lhstr || !rhstr) {
 				formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
@@ -956,12 +956,12 @@ update_report_result:
 			ExprTree *tree;
 			const char *lhstr, *rhstr;
 			for( auto itr = current_command->classad->begin(); itr != current_command->classad->end(); itr++ ) {
-				lhstr = itr->first.c_str();
-				tree = itr->second;
-
+				auto [attrName, inlineExpr] = *itr;
+				lhstr = attrName.c_str();
 				if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 					continue;
 				}
+				tree = inlineExpr.materialize();
 				put_in_proc = proc_attrs.find(lhstr) != proc_attrs.end();
 				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {

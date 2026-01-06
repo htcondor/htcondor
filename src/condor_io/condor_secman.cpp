@@ -4103,14 +4103,14 @@ SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
 	}
 
 	session_info += "[";
-	for ( auto itr = exp_policy.begin(); itr != exp_policy.end(); itr++ ) {
-			// In the following, we attempt to avoid any spaces in the
-			// result string.  However, no code should depend on this.
-		session_info += itr->first;
+	for ( const auto& [attr_name, inlineExpr] : exp_policy ) {
+		// In the following, we attempt to avoid any spaces in the
+		// result string.  However, no code should depend on this.
+		session_info += attr_name;
 		session_info += "=";
 
-        const char *line = ExprTreeToString(itr->second);
-
+		classad::ExprTree* expr = inlineExpr.materialize();
+		const char *line = ExprTreeToString(expr);
 			// none of the ClassAd values should ever contain ';'
 			// that makes things easier in ImportSecSessionInfo()
 		ASSERT( strchr(line,';') == NULL );

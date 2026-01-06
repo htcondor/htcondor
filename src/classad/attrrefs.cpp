@@ -18,6 +18,7 @@
  ***************************************************************/
 
 
+ #include "classad/sink.h"
 #include "classad/common.h"
 #include "classad/classad.h"
 
@@ -466,9 +467,16 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		 * Expect alternateScope to be removed from a future release.
 		 */
 	if (!current) { return EVAL_UNDEF; }
-	int rc = current->LookupInScope( attributeStr, tree, state );
+	const InlineValue* dummyPtr = nullptr;
+	const AttrList* sourceMap = nullptr;
+	InlineValue scratch(nullptr);
+	int rc = current->LookupInScope( attributeStr, dummyPtr, sourceMap, scratch, state );
+
 	if ( !expr && !absolute && rc == EVAL_UNDEF && current->alternateScope ) {
-		rc = current->alternateScope->LookupInScope( attributeStr, tree, state );
+		rc = current->alternateScope->LookupInScope( attributeStr, dummyPtr, sourceMap, scratch, state );
+	}
+	if ( rc == EVAL_OK && dummyPtr ) {
+		tree = sourceMap ? sourceMap->materialize(*dummyPtr) : dummyPtr->asPtr();
 	}
 	return rc;
 }

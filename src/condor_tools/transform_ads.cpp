@@ -872,10 +872,10 @@ int ConvertJobRouterRoutes(int options, const char * config_file)
 		// TODO: compare generated defaults to defaults
 		default_route_ad.Clear();
 	#else
-		for (auto & it : generated_default_route_ad) {
-			ExprTree * tree = default_route_ad.Lookup(it.first);
-			if (tree && *tree == *it.second) {
-				default_route_ad.Delete(it.first);
+		for (const auto & [attr_name, inlineExpr] : generated_default_route_ad) {
+			ExprTree * tree = default_route_ad.Lookup(attr_name);
+			if (tree && *tree == *inlineExpr.materialize()) {
+				default_route_ad.Delete(attr_name);
 			}
 		}
 	#endif

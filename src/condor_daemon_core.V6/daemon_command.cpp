@@ -1880,11 +1880,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// Can m_policy be NULL in practice?
 		if (m_policy) {
 			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
-			for (const auto& token_attr: *m_policy) {
-				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+			for (const auto& [token_name, inlineExpr]: *m_policy) {
+				if (strncasecmp(token_name.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
 					continue;
 				}
-				q_response.Insert(token_attr.first, token_attr.second->Copy());
+				classad::ExprTree* expr = inlineExpr.materialize();
+				q_response.Insert(token_name, expr->Copy());
 			}
 		}
 

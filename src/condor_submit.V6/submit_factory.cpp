@@ -253,9 +253,9 @@ int SendClusterAd (ClassAd * ad)
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
 
-	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
-		lhstr = itr->first.c_str();
-		tree = itr->second;
+	for ( const auto& [attr_name, inlineExpr] : *ad ) {
+		lhstr = attr_name.c_str();
+		tree = inlineExpr.materialize();
 		if ( ! lhstr || ! tree) {
 			fprintf( stderr, "\nERROR: Null attribute name or value for cluster %d\n", ClusterId );
 			return -1;

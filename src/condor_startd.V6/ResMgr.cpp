@@ -1894,9 +1894,9 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 
 	ExprTree * expr = NULL;
 	const char * attr = NULL;
-	for ( auto itr = cap->begin(); itr != cap->end(); itr++ ) {
-		attr = itr->first.c_str();
-		expr = itr->second;
+	for ( const auto& [attr_name, inlineExpr] : *cap ) {
+		attr = attr_name.c_str();
+		expr = inlineExpr.materialize();
 		//
 		// Copy the whole ad over, excepting special or computed attributes.
 		//

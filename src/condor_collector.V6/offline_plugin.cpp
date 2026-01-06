@@ -400,8 +400,9 @@ OfflineCollectorPlugin::mergeClassAd (
 		std::string new_val;
 		std::string old_val;
 
-		attr_name = itr->first.c_str();
-		expr = itr->second;
+		auto [name, inlineExpr] = *itr;
+		attr_name = name.c_str();
+		expr = inlineExpr.materialize();
 		ASSERT( attr_name && expr );
 
 		new_val = ExprTreeToString( expr );

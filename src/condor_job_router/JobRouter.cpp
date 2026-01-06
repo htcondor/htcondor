@@ -1287,20 +1287,19 @@ JobRouter::AcceptingMoreJobs() {
 
 bool
 CombineParentAndChildClassAd(classad::ClassAd *dest,classad::ClassAd *ad,classad::ClassAd *parent) {
-	classad::AttrList::const_iterator itr;
 	classad::ExprTree *tree;
 
 	if(parent) *dest = *parent;
 	if(!ad) return true;
 
 	dest->DisableDirtyTracking();
-	for( itr = ad->begin( ); itr != ad->end( ); itr++ ) {
-		if( !( tree = itr->second->Copy( ) ) ) {
-		dprintf(D_FULLDEBUG,"failed to copy %s value\n",itr->first.c_str());
+	for( const auto& [attrName, inlineExpr] : *ad ) {
+		if( !( tree = inlineExpr.materialize()->Copy( ) ) ) {
+		dprintf(D_FULLDEBUG,"failed to copy %s value\n",attrName.c_str());
 			return false;
 		}
-		if(!dest->Insert(itr->first,tree)) {
-		dprintf(D_FULLDEBUG,"failed to insert %s\n",itr->first.c_str());	
+		if(!dest->Insert(attrName,tree)) {
+		dprintf(D_FULLDEBUG,"failed to insert %s\n",attrName.c_str());
 		return false;
 		}
 	}

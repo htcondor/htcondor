@@ -287,11 +287,13 @@ void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
 	classad::ClassAdUnParser unparse;
 	unparse.SetOldClassAd(true, true);
 
-	for (ClassAd::const_iterator attr_it = proxy_attrs.begin(); attr_it != proxy_attrs.end(); ++attr_it)
+	for (const auto& [attr_name, inlineExpr] : proxy_attrs)
 	{
 		std::string attr_value_buf;
-		unparse.Unparse(attr_value_buf, attr_it->second);
-		SetSecureAttribute(job_id.cluster, job_id.proc, attr_it->first.c_str(), attr_value_buf.c_str());
+		if (!unparse.UnparseInline(attr_value_buf, &proxy_attrs, *inlineExpr.value())) {
+			unparse.Unparse(attr_value_buf, inlineExpr.materialize());
+		}
+		SetSecureAttribute(job_id.cluster, job_id.proc, attr_name.c_str(), attr_value_buf.c_str());
 	}
 }
 
@@ -13657,7 +13659,8 @@ int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_bo
 
 	// examine the transform undo.  the keys in the undo act as dirty keys
 	// we want to convert the current value for each key to a SetAttribute call
-	for (auto &[key,oldval] : undo.list) {
+	for (auto &[key,oldval_inline] : undo.list) {
+		ExprTree * oldval = undo.list.materialize(oldval_inline);
 		ExprTree * tree = job->Lookup(key);
 		if (tree && oldval && *SkipExprEnvelope(tree) == *SkipExprEnvelope(oldval)) continue;
 		const char * attr = key.c_str();
@@ -19318,7 +19321,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 			if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
 				// nothing
 			} else {
-				const char *val = ExprTreeToString(attr_itr->second);
+				const char *val = ExprTreeToString(attr_itr->second.materialize());
 				export_queue.SetAttribute(jqc->jid, attr_itr->first.c_str(), val);
 			}
 		}
@@ -19352,7 +19355,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 					free(dir);
 					export_queue.SetAttribute(job->jid, ATTR_JOB_IWD, val.c_str());
 				} else {
-					const char *val = ExprTreeToString(attr_itr->second);
+					const char *val = ExprTreeToString(attr_itr->second.materialize());
 					export_queue.SetAttribute(job->jid, attr_itr->first.c_str(), val);
 				}
 			}
@@ -19574,8 +19577,9 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, c
 			// merge back attributes that have changed
 			for (auto it = ad->begin(); it != ad->end(); ++it) {
 				ExprTree * expr = job->Lookup(it->first);
-				if ( ! expr || ! (*expr == *(it->second))) {
-					const char *val = ExprTreeToString(it->second);
+				ExprTree * mat_expr = it->second.materialize();
+				if ( ! expr || ! (*expr == *mat_expr)) {
+					const char *val = ExprTreeToString(mat_expr);
 					SetAttribute(jid.cluster, jid.proc, it->first.c_str(), val);
 				}
 			}

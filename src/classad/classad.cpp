@@ -22,6 +22,10 @@
 #include "classad/source.h"
 #include "classad/sink.h"
 #include "classad/classadCache.h"
+#include "classad/classad_inline_value.h"
+#include "classad/classad_inline_eval.h"
+#include <limits>
+#include <cmath>
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
@@ -154,8 +158,9 @@ CopyFrom( const ClassAd &ad )
 		parentScope = ad.parentScope;
 		
 		this->do_dirty_tracking = false;
-		for( const auto& [attr_name, attr_tree] : ad.attrList ) {
-			if( !( tree = attr_tree->Copy( ) ) ) {
+		for( const auto& [attr_name, attr_value] : ad.attrList ) {
+			ExprTree* base = ad.attrList.materialize(attr_value);
+			if( !( tree = (base ? base->Copy() : nullptr) ) ) {
 				Clear( );
 				CondorErrno = ERR_MEM_ALLOC_FAILED;
 				CondorErrMsg = "";
@@ -199,40 +204,35 @@ CopyFromChain( const ClassAd &ad )
 bool ClassAd::
 SameAs(const ExprTree *tree) const
 {
-    bool is_same;
+	const ExprTree * pSelfTree = tree->self();
 
-    const ExprTree * pSelfTree = tree->self();
-    
-    if (this == pSelfTree) {
-        is_same = true;
-    } else if (pSelfTree->GetKind() != CLASSAD_NODE) {
-        is_same = false;
-   } else {
-       const ClassAd *other_classad;
+	if (this == pSelfTree) {
+		return true;
+	} else if (pSelfTree->GetKind() != CLASSAD_NODE) {
+		return false;
+	}
 
-       other_classad = (const ClassAd *) pSelfTree;
+	const ClassAd *other_classad = (const ClassAd *) pSelfTree;
+	if (attrList.size() != other_classad->attrList.size()) {
+		return false;
+	}
 
-       if (attrList.size() != other_classad->attrList.size()) {
-           is_same = false;
-       } else {
-           is_same = true;
-           
-           for (const auto& [attr_name, tree] : attrList) {
-               ExprTree *other_tree;
+	auto self_itr = attrList.begin();
+	auto self_end = attrList.end();
+	auto other_itr = other_classad->attrList.begin();
+	const InlineStringBuffer* self_buffer = attrList.stringBuffer();
+	const InlineStringBuffer* other_buffer = other_classad->attrList.stringBuffer();
 
-               other_tree = other_classad->Lookup(attr_name);
-               if (other_tree == NULL) {
-                   is_same = false;
-                   break;
-               } else if (!tree->SameAs(other_tree)) {
-                   is_same = false;
-                   break;
-               }
-           }
-       }
-   }
- 
-    return is_same;
+	for (; self_itr != self_end; ++self_itr, ++other_itr) {
+		if (strcasecmp(self_itr->first.c_str(), other_itr->first.c_str()) != 0) {
+			return false;
+		}
+		if (!self_itr->second.sameAs(other_itr->second, self_buffer, other_buffer)) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 bool operator==(ClassAd &list1, ClassAd &list2)
@@ -258,8 +258,8 @@ void ClassAd::
 GetComponents( std::vector<std::pair<std::string, ExprTree* > > &attrs ) const
 {
 	attrs.clear( );
-	for( const auto& [attr_name, tree] : attrList ) {
-		attrs.emplace_back(attr_name, tree);
+	for( const auto& [attr_name, inlineVal] : attrList ) {
+		attrs.emplace_back(attr_name, attrList.materialize(inlineVal));
 	}
 }
 
@@ -271,35 +271,100 @@ GetComponents(std::vector< std::pair< std::string, ExprTree* > > &attrs,
 	for ( const auto& attr_name : whitelist ) {
 		AttrList::const_iterator attr_itr = attrList.find( attr_name );
 		if ( attr_itr != attrList.end() ) {
-			const auto& [found_name, tree] = *attr_itr;
-			attrs.emplace_back( found_name, tree );
+			const auto& [found_name, inlineVal] = *attr_itr;
+			attrs.emplace_back( found_name, attrList.materialize(inlineVal) );
 		}
 	}
 }
+
+
+// --- begin helper methods for InsertAttr ---
+bool ClassAd::
+_InsertAttrInteger(const std::string& name, long long value)
+{
+	MarkAttributeDirty(name);
+
+	// OPTIMIZATION: Try to store as inline value if possible
+	if (value >= std::numeric_limits<int32_t>::min() &&
+		value <= std::numeric_limits<int32_t>::max()) {
+		attrList.setInt(name, static_cast<int32_t>(value));
+		return true;
+	}
+	// Fall back to literal
+	ExprTree* plit = Literal::MakeInteger(value);
+	return Insert(name, plit);
+}
+
+bool ClassAd::
+_InsertAttrReal(const std::string& name, double value)
+{
+	MarkAttributeDirty(name);
+
+	// OPTIMIZATION: Store float32 as inline value when possible
+	float f = static_cast<float>(value);
+	// Check if conversion is reasonably safe (not infinity, NaN, etc.)
+	if (std::isfinite(f)) {
+		attrList.setFloat(name, f);
+		return true;
+	}
+	// Fall back to literal for special values like infinity or NaN
+	ExprTree* plit = Literal::MakeReal(value);
+	return Insert(name, plit);
+}
+
+bool ClassAd::
+_InsertAttrBool(const std::string& name, bool value)
+{
+	MarkAttributeDirty(name);
+
+	// OPTIMIZATION: Store bool as inline value
+	attrList.setBool(name, value);
+	return true;
+}
+
+bool ClassAd::
+_InsertAttrString(const std::string& name, const char* str, size_t len)
+{
+	MarkAttributeDirty(name);
+
+	if (!str) {
+		// Store undefined as inline value
+		attrList.setUndefined(name);
+		return true;
+	}
+
+	// OPTIMIZATION: Try to store string as inline value
+	if (len <= 0xFFFFFF) {  // 24-bit size limit
+		attrList.setString(name, std::string(str, len));
+		return true;
+	}
+
+	// Fall back to literal
+	ExprTree* plit = Literal::MakeString(str, len);
+	return Insert(name, plit);
+}
+// --- end helper methods for InsertAttr ---
 
 
 // --- begin integer attribute insertion ----
 bool ClassAd::
 InsertAttr( const std::string &name, int value )
 {
-	ExprTree* plit = Literal::MakeInteger( value );
-	return( Insert( name, plit ) );
+	return _InsertAttrInteger(name, value);
 }
 
 
 bool ClassAd::
 InsertAttr( const std::string &name, long value )
 {
-	ExprTree* plit = Literal::MakeInteger( value );
-	return( Insert( name, plit ) );
+	return _InsertAttrInteger(name, value);
 }
 
 
 bool ClassAd::
 InsertAttr( const std::string &name, long long value )
 {
-	ExprTree* plit = Literal::MakeInteger( value );
-	return( Insert( name, plit ) );
+	return _InsertAttrInteger(name, value);
 }
 
 
@@ -336,8 +401,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, long long value )
 bool ClassAd::
 InsertAttr( const std::string &name, double value )
 {
-	ExprTree* plit  = Literal::MakeReal( value );
-	return( Insert( name, plit ) );
+	return _InsertAttrReal(name, value);
 }
 
 
@@ -356,15 +420,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, double value )
 bool ClassAd::
 InsertAttr( const std::string &name, bool value )
 {
-	MarkAttributeDirty(name);
-
-	// Optimized insert of bool values that overwrite the destination value if the destination is a literal.
-	classad::ExprTree* & expr = attrList[name];
-	if (expr) {
-			delete expr;
-	}
-	expr = Literal::MakeBool(value);
-	return expr != NULL;
+	return _InsertAttrBool(name, value);
 }
 
 
@@ -383,22 +439,17 @@ DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, bool value )
 bool ClassAd::
 InsertAttr( const std::string &name, const char *value )
 {
-	ExprTree* plit  = Literal::MakeString( value );
-	return( Insert( name, plit ) );
+	if (!value) {
+		return _InsertAttrString(name, nullptr, 0);
+	}
+	size_t len = std::strlen(value);
+	return _InsertAttrString(name, value, len);
 }
 
 bool ClassAd::
 InsertAttr( const std::string &name, const char * str, size_t len)
 {
-	MarkAttributeDirty(name);
-
-	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
-	classad::ExprTree* & expr = attrList[name];
-	if (expr) {
-			delete expr;
-	}
-	expr = Literal::MakeString( str, len );
-	return expr != NULL;
+	return _InsertAttrString(name, str, len);
 }
 
 
@@ -413,8 +464,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, const char *value 
 bool ClassAd::
 InsertAttr( const std::string &name, const std::string &value )
 {
-	ExprTree* plit  = Literal::MakeString( value );
-	return( Insert( name, plit ) );
+	return _InsertAttrString(name, value.c_str(), value.size());
 }
 
 
@@ -557,13 +607,100 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	auto [itr, inserted] = attrList.emplace(attrName, tree);
 	if (!inserted) {
 		// replace existing value
-		delete itr->second;
-		itr->second = tree;
+		itr->second.release();
+		itr->second = InlineValue(tree);
 	}
 
 	MarkAttributeDirty(attrName);
 
 	return true;
+}
+
+bool ClassAd::Insert( const std::string& attrName, InlineValue &&value, const AttrList* sourceMap )
+{
+	// sanity checks
+	if( attrName.empty() ) {
+		CondorErrno = ERR_MISSING_ATTRNAME;
+		CondorErrMsg= "no attribute name when inserting InlineValue in classad";
+		return false;
+	}
+
+	// If it's an out-of-line ExprTree*, set parent scope
+	if (!value.isInline()) {
+		ExprTree* tree = value.asPtr();
+		if (tree) {
+			tree->SetParentScope( this );
+		}
+	} else if (value.getInlineType() == 5) {
+		// For inline string refs, materialize from source and insert as new string
+		if (!sourceMap) {
+			CondorErrno = ERR_BAD_EXPRESSION;
+			CondorErrMsg = "cannot insert inline string reference without source ClassAdFlatMap";
+			return false;
+		}
+		// Materialize string from source buffer
+		uint32_t offset, size;
+		value.getStringRef(offset, size);
+		const InlineStringBuffer* srcBuffer = sourceMap->stringBuffer();
+		if (!srcBuffer) {
+			CondorErrno = ERR_BAD_EXPRESSION;
+			CondorErrMsg = "source ClassAdFlatMap has no string buffer";
+			return false;
+		}
+		std::string str = srcBuffer->getString(offset, size);
+		// Add to our string buffer
+		attrList.setString(attrName, str);
+		MarkAttributeDirty(attrName);
+		return true;
+	}
+
+	auto [itr, inserted] = attrList.emplace(attrName, nullptr);
+	if (!inserted) {
+		// replace existing value
+		itr->second.release();
+	}
+	itr->second = std::move(value);
+
+	MarkAttributeDirty(attrName);
+
+	return true;
+}
+
+bool ClassAd::CopyExprFrom( const std::string& attrName, const ClassAd& source, const std::string& sourceAttr )
+{
+	// Get the value from source using LookupInline - returns pair of map reference and value reference
+	auto [sourceMap, srcVal] = source.LookupInline<std::string>(sourceAttr);
+
+	// Check if attribute was found (zero value means not found)
+	if (!srcVal) {
+		return false;
+	}
+
+	// For out-of-line values, copy the tree; for inline values, reconstruct or copy bits
+	if (!srcVal.isInline()) {
+		// Out-of-line: copy the tree
+		ExprTree* tree = sourceMap.materialize(srcVal);
+		if (tree) {
+			return Insert(attrName, tree->Copy());
+		} else {
+			return false;
+		}
+	} else if (srcVal.getInlineType() == 5) {
+		// Inline string: materialize from source and add to our buffer
+		uint32_t offset, size;
+		srcVal.getStringRef(offset, size);
+		const InlineStringBuffer* srcBuffer = sourceMap.stringBuffer();
+		if (!srcBuffer) {
+			return false;
+		}
+		std::string str = srcBuffer->getString(offset, size);
+		attrList.setString(attrName, str);
+		MarkAttributeDirty(attrName);
+		return true;
+	} else {
+		// Non-string inline value - safe to copy bits
+		return Insert(attrName, InlineValue(srcVal.toBits()));
+	}
 }
 
 bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_tree)
@@ -586,8 +723,9 @@ bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_
 	auto [itr, inserted] = attrList.emplace(attrName, tree);
 	if (!inserted) {
 		// replace existing value
-		old_tree = itr->second;
-		itr->second = tree;
+		old_tree = itr->second.asPtr();
+		itr->second.release();
+		itr->second = InlineValue(tree);
 	} else {
 		old_tree = nullptr;
 	}
@@ -609,8 +747,8 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 
 	if(!inserted) {
 		// replace existing value
-		delete itr->second;
-		itr->second = lit;
+		itr->second.release();
+		itr->second = InlineValue(lit);
 	}
 
 	MarkAttributeDirty(name);
@@ -631,13 +769,13 @@ DeepInsert( ExprTree *scopeExpr, const std::string &name, ExprTree *tree )
 ClassAd::iterator ClassAd::
 find(std::string const& attrName)
 {
-    return attrList.find(attrName);
+    return iterator(attrList.find(attrName), &attrList);
 }
  
 ClassAd::const_iterator ClassAd::
 find(std::string const& attrName) const
 {
-    return attrList.find(attrName);
+    return const_iterator(attrList.find(attrName), &attrList);
 }
 // --- end STL-like functions
 
@@ -651,7 +789,7 @@ LookupIgnoreChain( const std::string &name ) const
 
 	itr = attrList.find( name );
 	if (itr != attrList.end()) {
-		tree = itr->second;
+		tree = attrList.materialize(itr);
 	} else {
 		tree = NULL;
 	}
@@ -662,14 +800,16 @@ ExprTree *ClassAd::
 LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 {
 	EvalState	state;
-	ExprTree	*tree;
+	const InlineValue* treePtr = nullptr;
+	const AttrList* sourceMap = nullptr;
+	InlineValue scratch(nullptr);
 	int			rval;
 
 	state.SetScopes( this );
-	rval = LookupInScope( name, tree, state );
-	if( rval == EVAL_OK ) {
+	rval = LookupInScope( name, treePtr, sourceMap, scratch, state );
+	if( rval == EVAL_OK && treePtr ) {
 		finalScope = state.curAd;
-		return( tree );
+		return attrList.materialize(*treePtr);
 	}
 
 	finalScope = NULL;
@@ -678,20 +818,49 @@ LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 
 
 int ClassAd::
-LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
+LookupInScope(const std::string &name, const InlineValue*& expr, const AttrList*& sourceMap, InlineValue& scratch, EvalState &state) const
 {
 	const ClassAd *current = this, *superScope;
 
-	expr = NULL;
+	expr = nullptr;
+	sourceMap = nullptr;
 
-	while( !expr && current ) {
+	while( expr == nullptr && current ) {
 
 		// lookups/eval's being done in the 'current' ad
 		state.curAd = current;
 
 		// lookup in current scope
-		if( ( expr = current->Lookup( name ) ) ) {
-			return( EVAL_OK );
+		AttrList::const_iterator itr = current->attrList.find( name );
+		if (itr != current->attrList.end()) {
+			expr = &itr->second;
+			sourceMap = &current->attrList;
+			if (expr->isInline() || expr->asPtr() != nullptr) {
+				return EVAL_OK;
+			}
+		}
+		classad::ClassAdUnParser unp;
+		std::string ad_str;
+		unp.Unparse(ad_str, current);
+
+		// chained parent fallback (only from the starting ad)
+		if (current->chained_parent_ad) {
+			auto parent = current->chained_parent_ad;
+			while (parent) {
+				AttrList::const_iterator pitr = parent->attrList.find(name);
+				if (pitr != parent->attrList.end()) {
+					expr = &pitr->second;
+					sourceMap = &parent->attrList;
+					if (expr->isInline() || expr->asPtr() != nullptr) {
+						return EVAL_OK;
+					}
+				}
+				if (parent->chained_parent_ad) {
+					parent = parent->chained_parent_ad;
+				} else {
+					break;
+				}
+			}
 		}
 
 		if ( state.rootAd == current ) {
@@ -708,24 +877,28 @@ LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
 		} else if(strcasecmp(name.c_str( ),ATTR_TOPLEVEL)==0 ||
 				strcasecmp(name.c_str( ),ATTR_ROOT)==0){
 			// if the "toplevel" attribute was requested ...
-			expr = const_cast<ClassAd *>((const ClassAd *)state.rootAd);
-			if( expr == nullptr ) {	// NAC - circularity so no root
+			scratch.updatePtr(const_cast<ClassAd *>((const ClassAd *)state.rootAd));
+			expr = &scratch;
+			if( scratch.asPtr() == nullptr ) {	// NAC - circularity so no root
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
-			return( expr ? EVAL_OK : EVAL_UNDEF );
+			return( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_SELF ) == 0 ||
 				   strcasecmp( name.c_str( ), ATTR_MY ) == 0 ) {
 			// if the "self" ad was requested
-			expr = const_cast<ClassAd *>((const ClassAd *)state.curAd);
-			return( expr ? EVAL_OK : EVAL_UNDEF );
+			scratch.updatePtr(const_cast<ClassAd *>((const ClassAd *)state.curAd));
+			expr = &scratch;
+			return( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_PARENT ) == 0 ) {
 			// the lexical parent
-			expr = const_cast<ClassAd *>((const ClassAd*)superScope);
-			return( expr ? EVAL_OK : EVAL_UNDEF );
+			scratch.updatePtr(const_cast<ClassAd *>((const ClassAd*)superScope));
+			expr = &scratch;
+			return( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
 			// an alias for time() from old ClassAds
-			expr = getCurrentTimeExpr();
-			return ( expr ? EVAL_OK : EVAL_UNDEF );
+			scratch.updatePtr(getCurrentTimeExpr());
+			expr = &scratch;
+			return ( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		}
 
 	}	
@@ -757,7 +930,7 @@ Delete( const std::string &name )
 		
 		deleted_attribute = true;
 	
-		Insert(name, Literal::MakeUndefined());
+		attrList.setUndefined(name);
 	}
 
 	if (!deleted_attribute) {
@@ -783,15 +956,17 @@ DeepDelete( ExprTree *scopeExpr, const std::string &name )
 ExprTree *ClassAd::
 Remove( const std::string &name )
 {
-	ExprTree *tree;
-
-	tree = NULL;
+	ExprTree *tree = NULL;
 	AttrList::iterator itr = attrList.find( name );
 	if( itr != attrList.end( ) ) {
-		tree = itr->second;
-		itr->second = nullptr;
+		// Sadly, we have to materialize due to the return value.
+		tree = attrList.materialize(itr);
+		// Clear the slot before erasing to avoid double-free
+		itr->second = InlineValue(nullptr);
 		attrList.erase( itr );
-		tree->SetParentScope( NULL );
+		if (tree && dynamic_cast<Literal*>(tree) == nullptr) {
+			tree->SetParentScope( NULL );
+		}
 	}
 
 	// If there is a chained parent ad, we have to check to see if removing
@@ -806,7 +981,9 @@ Remove( const std::string &name )
 			// as if we had removed it from the child.
 			if ( ! tree) {
 				tree = parent_expr->Copy();
-				tree->SetParentScope( NULL );
+				if (tree && dynamic_cast<Literal*>(tree) == nullptr) {
+					tree->SetParentScope( NULL );
+				}
 			}
 			ExprTree* plit  = Literal::MakeUndefined();
 			Insert(name, plit);
@@ -821,6 +998,52 @@ DeepRemove( ExprTree *scopeExpr, const std::string &name )
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( (ExprTree*)NULL );
 	return( ad->Remove( name ) );
+}
+
+int ClassAd::
+Compact()
+{
+	int compacted = 0;
+
+	// Iterate through all attributes in the flat map
+	for (auto it = attrList.begin(); it != attrList.end(); ++it) {
+		InlineValue& val = it->second;
+
+		// Skip if already inline
+		if (val.isInline()) {
+			continue;
+		}
+
+		// Get the ExprTree pointer
+		ExprTree* tree = val.asPtr();
+		if (!tree) {
+			continue;
+		}
+
+		// Only inline if it's already a Literal - don't evaluate complex expressions
+		Literal* literal = dynamic_cast<Literal*>(tree);
+		if (!literal) {
+			continue;
+		}
+
+		// Get the value from the literal
+		Value v;
+		literal->GetValue(v);
+
+		// Try to convert to an inline value
+		InlineValue newVal;
+		if (tryMakeInlineValue(v, newVal, const_cast<InlineStringBuffer*>(attrList.stringBuffer()))) {
+			// Successfully inlined, replace the value
+			val.setBits(newVal.toBits());
+
+			// Delete the old ExprTree to free memory
+			delete tree;
+
+			compacted++;
+		}
+	}
+
+	return compacted;
 }
 // --- end removal methods
 
@@ -839,9 +1062,72 @@ Update( const ClassAd& ad )
 {
 	AttrList::const_iterator itr;
 	for( itr=ad.attrList.begin( ); itr!=ad.attrList.end( ); itr++ ) {
-		ExprTree * cpy = itr->second->Copy();
-		if(!Insert( itr->first, cpy )) {
-			return false;
+		const InlineValue &srcVal = itr->second;
+
+		// If the source value is inline, we can copy it directly without materializing
+		if (srcVal.isInline()) {
+			// For inline values, we need to handle string references specially
+			if (srcVal.getInlineType() == 5) { // String reference type
+				// We need to copy the string data to our own string buffer
+				uint32_t offset, size;
+				srcVal.getStringRef(offset, size);
+				const InlineStringBuffer* srcBuffer = ad.attrList.stringBuffer();
+				if (srcBuffer) {
+					std::string str = srcBuffer->getString(offset, size);
+					
+					// Try to add to our string buffer
+					attrList.setString(itr->first, str);
+					// Check if it succeeded - setString always succeeds for small strings
+					if (true) {
+						// Success - inline string added
+					} else {
+						// String buffer full or string too large, fall back to materialization
+						ExprTree* base = ad.attrList.materialize(srcVal);
+						ExprTree* cpy = base ? base->Copy() : nullptr;
+						if(!Insert( itr->first, cpy )) {
+							return false;
+						}
+					}
+				} else {
+					// No source buffer? This shouldn't happen but fall back to materialization
+					ExprTree* base = ad.attrList.materialize(srcVal);
+					ExprTree* cpy = base ? base->Copy() : nullptr;
+					if(!Insert( itr->first, cpy )) {
+						return false;
+					}
+				}
+			} else {
+				// For non-string inline values (int, float, bool, error, undefined),
+				// we can copy them by type
+				int type = srcVal.getInlineType();
+				switch (type) {
+					case 0: // Error
+						attrList.setError(itr->first);
+						break;
+					case 1: // Undefined
+						attrList.setUndefined(itr->first);
+						break;
+					case 2: // int32
+						attrList.setInt(itr->first, srcVal.getInt32());
+						break;
+					case 3: // float32
+						attrList.setFloat(itr->first, srcVal.getFloat32());
+						break;
+					case 4: // bool
+						attrList.setBool(itr->first, srcVal.getBool());
+						break;
+					default:
+						// Shouldn't happen
+						return false;
+				}
+			}
+		} else {
+			// Out-of-line value, need to materialize and copy
+			ExprTree* base = srcVal.asPtr();
+			ExprTree * cpy = base ? base->Copy() : nullptr;
+			if(!Insert( itr->first, cpy )) {
+				return false;
+			}
 		}
 	}
 	return true;
@@ -939,7 +1225,8 @@ Copy( ) const
 
 	AttrList::const_iterator	itr;
 	for( itr=attrList.begin( ); itr != attrList.end( ); itr++ ) {
-		if( !( tree = itr->second->Copy( ) ) ) {
+		ExprTree* base = attrList.materialize(itr->second);
+		if( !( tree = (base ? base->Copy() : nullptr) ) ) {
 			delete newAd;
 			CondorErrno = ERR_MEM_ALLOC_FAILED;
 			CondorErrMsg = "";
@@ -984,7 +1271,8 @@ _Flatten( EvalState& state, Value&, ExprTree*& tree, int* ) const
 
 	for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
 		// flatten expression
-		if( !itr->second->Flatten( state, eval, etree ) ) {
+		ExprTree* node = attrList.materialize(itr->second);
+		if( !node || !node->Flatten( state, eval, etree ) ) {
 			delete newAd;
 			tree = NULL;
 			eval.Clear();
@@ -1029,18 +1317,57 @@ _GetDeepScope( ExprTree *tree ) const
 
 
 bool ClassAd::
+_TryGetInlineValue(ExprTree* ptr, Value& outVal) const
+{
+	// Attempt to extract value from inline encoding
+	InlineValue val(ptr);
+	if (!val.isInline()) {
+		return false;
+	}
+	return attrList.inlineValueToValue(val, outVal);
+}
+
+bool ClassAd::
+_UnparseAttr(const std::string& attrName, std::string& buffer) const
+{
+	// Try to find the attribute in the local scope only
+	ExprTree* tree = LookupIgnoreChain(attrName);
+	if (!tree) {
+		return false;
+	}
+
+	// OPTIMIZATION: Try to unparse inline value directly
+	if (attrList.unparseInline(tree, buffer)) {
+		return true;
+	}
+
+	// Not an inline value - caller should use normal unparsing
+	return false;
+}
+
+bool ClassAd::
 EvaluateAttr( const std::string &attr , Value &val, Value::ValueType mask ) const
 {
 	bool successfully_evaluated = false;
 	EvalState	state;
-	ExprTree	*tree;
 
 	state.SetScopes( this );
-	switch( LookupInScope( attr, tree, state ) ) {
+	const InlineValue* treePtr = nullptr;
+	const AttrList* sourceMap = nullptr;
+	InlineValue scratch(nullptr);
+	switch( LookupInScope( attr, treePtr, sourceMap, scratch, state ) ) {
 		case EVAL_OK:
-			successfully_evaluated = tree->Evaluate( state, val );
-			if ( ! val.SafetyCheck(state, mask)) {
-				successfully_evaluated = false;
+			// OPTIMIZATION: Try to extract inline value first
+			if (treePtr->isInline()) {
+				// Successfully extracted inline value
+				sourceMap->inlineValueToValue(*treePtr, val);
+				successfully_evaluated = val.SafetyCheck(state, mask);
+			} else {
+				// Fall back to normal evaluation
+				successfully_evaluated = treePtr->asPtr()->Evaluate( state, val );
+				if ( ! val.SafetyCheck(state, mask)) {
+					successfully_evaluated = false;
+				}
 			}
 			break;
 
@@ -1237,7 +1564,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case ATTRREF_NODE: {
             const ClassAd   *start;
-            ExprTree        *tree, *result;
+            ExprTree        *tree;
+            InlineValue      result;
             std::string          attr;
             Value           val;
             bool            abs;
@@ -1287,7 +1615,10 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
                 // lookup for attribute
 			const ClassAd *curAd = state.curAd;
-            switch( start->LookupInScope( attr, result, state ) ) {
+			const InlineValue* resultPtr = nullptr;
+			const AttrList* sourceMap = nullptr;
+			InlineValue scratch(nullptr);
+            switch( start->LookupInScope( attr, resultPtr, sourceMap, scratch, state ) ) {
                 case EVAL_ERROR:
                         // some error
                     return( false );
@@ -1306,7 +1637,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
                     }
                     state.depth_remaining--;
 
-                    bool rval=_GetExternalReferences(result,ad,state,refs,fullNames);
+                    auto expr = sourceMap->materialize(*resultPtr);
+                    bool rval=_GetExternalReferences(expr,ad,state,refs,fullNames);
 
                     state.depth_remaining++;
 					state.curAd = curAd;
@@ -1445,7 +1777,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case ATTRREF_NODE: {
             const ClassAd   *start;
-            ExprTree        *tree, *result;
+            ExprTree        *tree;
+            InlineValue      result;
             std::string          attr;
             Value           val;
             bool            abs;
@@ -1477,8 +1810,11 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 				}
             }
                 // lookup for attribute
-			const ClassAd *curAd = state.curAd;
-            switch( start->LookupInScope( attr, result, state ) ) {
+            const ClassAd *curAd = state.curAd;
+            const InlineValue* resultPtr = nullptr;
+            const AttrList* sourceMap = nullptr;
+            InlineValue scratch(nullptr);
+            switch( start->LookupInScope( attr, resultPtr, sourceMap, scratch, state ) ) {
                 case EVAL_ERROR:
                         // some error
                     return( false );
@@ -1491,7 +1827,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
                 case EVAL_OK: {
                         // attr is internal; find external refs in result
-					bool rval=_GetExternalReferences(result,ad,state,refs);
+					auto expr = sourceMap->materialize(*resultPtr);
+					bool rval = _GetExternalReferences(expr,ad,state,refs);
 					state.curAd = curAd;
 					return( rval );
 				}
@@ -1610,7 +1947,8 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case ATTRREF_NODE:{
             const ClassAd   *start;
-            ExprTree        *tree, *result;
+            ExprTree        *tree;
+            InlineValue      result;
             std::string          attr;
             Value           val;
             bool            abs;
@@ -1653,7 +1991,10 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
 
             const ClassAd *curAd = state.curAd;
-            switch( start->LookupInScope( attr, result, state) ) {
+            const InlineValue* resultPtr = nullptr;
+            const AttrList* sourceMap = nullptr;
+            InlineValue scratch(nullptr);
+            switch( start->LookupInScope( attr, resultPtr, sourceMap, scratch, state) ) {
                 case EVAL_ERROR:
                     return false;
                 break;
@@ -1692,7 +2033,8 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
                     }
                     state.depth_remaining--;
 
-                    bool rval =_GetInternalReferences(result, ad, state, refs, fullNames);
+                    auto expr = sourceMap ? sourceMap->materialize(*resultPtr) : resultPtr->asPtr();
+                    bool rval = _GetInternalReferences(expr, ad, state, refs, fullNames);
 
                     state.depth_remaining++;
                     //TODO: Does this actually matter?
@@ -1853,7 +2195,8 @@ bool ClassAd::PruneChildAttr(const std::string & attrName, bool if_child_matches
 	bool prune_it = true;
 	if (if_child_matches) {
 		ExprTree * tree = chained_parent_ad->Lookup(itr->first);
-		prune_it = (tree && tree->SameAs(itr->second));
+		ExprTree* child_tree = attrList.materialize(itr->second);
+		prune_it = (tree && tree->SameAs(child_tree));
 	}
 
 	if (prune_it) {
@@ -1879,7 +2222,8 @@ int ClassAd::PruneChildAd()
 		{
 			tree = chained_parent_ad->Lookup(itr->first);
 				
-			if(  tree && tree->SameAs(itr->second) ) {
+			ExprTree* child_tree = attrList.materialize(itr->second);
+			if(  tree && tree->SameAs(child_tree) ) {
 				MarkAttributeClean(itr->first);
 				victims.push_back(itr->first);
 				iRet++;

@@ -2266,12 +2266,15 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 	// Walk both pointers until one is at the end
 	while (sourceIt != source.end()) {
 
+		auto [attrName, inlineExpr] = *sourceIt;
+
 		// First check for _condor_priv prefix
-		if (sourceIt->first[0] == '_') { // Blatant optimization
-			if (ClassAdAttributeIsPrivateV2(sourceIt->first)) {
+		if (attrName[0] == '_') { // Blatant optimization
+			if (ClassAdAttributeIsPrivateV2(attrName)) {
 				// We have a match!
 				moved_any = true;
-				target.Insert(sourceIt->first, sourceIt->second->Copy());
+				ExprTree* expr = inlineExpr.materialize();
+				target.Insert(attrName, expr ? expr->Copy() : nullptr);
 				sourceIt = source.erase(sourceIt);
 				continue; // keep going
 			}
@@ -2281,12 +2284,13 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 		classad::ClassAdFlatMapOrder lessThan{};
 
 		// SourceIt < privateIt, increment source and try again
-		if (lessThan(*sourceIt, privateIt->first)) {
+		if (lessThan(attrName, privateIt->first)) {
 			sourceIt++;
-		} else if (classad::ClassAdFlatMapEqual(*sourceIt, privateIt->first)) {
+		} else if (strcasecmp(attrName.c_str(), privateIt->first.c_str()) == 0) {
 			// We have a match!
 			moved_any = true;
-			target.Insert(sourceIt->first, sourceIt->second->Copy());
+			ExprTree* expr = inlineExpr.materialize();
+			target.Insert(attrName, expr ? expr->Copy() : nullptr);
 			sourceIt = source.erase(sourceIt);
 			privateIt++;
 			if (privateIt == privateAttrsAd.end()) {
@@ -2305,11 +2309,13 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 
 	// If sourceIt is not at the end, we need to check for any remaining _condor_priv attributes
 	while (sourceIt != source.end()) {
-		if (sourceIt->first[0] == '_') { // Blatant optimization
-			if (ClassAdAttributeIsPrivateV2(sourceIt->first)) {
+		auto [attrName, inlineExpr] = *sourceIt;
+		if (attrName[0] == '_') { // Blatant optimization
+			if (ClassAdAttributeIsPrivateV2(attrName)) {
 				// We have a match!
 				moved_any = true;
-				target.Insert(sourceIt->first, sourceIt->second->Copy());
+				ExprTree* expr = inlineExpr.materialize();
+				target.Insert(attrName, expr ? expr->Copy() : nullptr);
 				sourceIt = source.erase(sourceIt);
 				continue;
 			}
@@ -2585,36 +2591,40 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 	attributes.reserve(ad.size() + ( parent ? parent->size() : 0));
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( attr_include_list && !attr_include_list->contains(itr->first) ) {
+			auto [attrName, inlineExpr] = *itr;
+			if ( attr_include_list && !attr_include_list->contains(attrName) ) {
 				continue; // not in include-list
 			}
 
-			if (excludeAttrs && (excludeAttrs->find(itr->first) != excludeAttrs->end())) {
+			if (excludeAttrs && (excludeAttrs->find(attrName) != excludeAttrs->end())) {
 				continue;
 			}
 
-			if ( ad.LookupIgnoreChain(itr->first) ) {
+			if ( ad.LookupIgnoreChain(attrName) ) {
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
-				attributes.emplace_back(itr->first,itr->second);
+				 !ClassAdAttributeIsPrivateAny( attrName ) ) {
+				ExprTree* expr = inlineExpr.materialize();
+				attributes.emplace_back(attrName, expr);
 			}
 		}
 	}
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_include_list && !attr_include_list->contains(itr->first) ) {
+		auto [attrName, inlineExpr] = *itr;
+		if ( attr_include_list && !attr_include_list->contains(attrName) ) {
 			continue; // not in include-list
 		}
 
-		if (excludeAttrs && (excludeAttrs->find(itr->first) != excludeAttrs->end())) {
+		if (excludeAttrs && (excludeAttrs->find(attrName) != excludeAttrs->end())) {
 			continue;
 		}
 
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
-			attributes.emplace_back(itr->first,itr->second);
+			 !ClassAdAttributeIsPrivateAny( attrName ) ) {
+			ExprTree* expr = inlineExpr.materialize();
+			attributes.emplace_back(attrName, expr);
 		}
 	}
 
@@ -2964,25 +2974,24 @@ ChainCollapse(classad::ClassAd &ad)
 
     ad.Unchain();
 
-    classad::AttrList::iterator itr; 
-
-    for(itr = parent->begin(); itr != parent->end(); itr++)
+    for(auto itr = parent->begin(); itr != parent->end(); itr++)
     {
         // Only move the value from our chained ad into our ad when it 
         // does not already exist. Hence the Lookup(). 
         // This means that the attributes in our classad takes precedence
         // over the ones in the chained class ad.
 
-        if( !ad.Lookup((*itr).first) )
+        auto [attrName, inlineExpr] = *itr;
+        if( !ad.Lookup(attrName) )
         {
-            tmpExprTree = (*itr).second;     
+            tmpExprTree = inlineExpr.materialize();
 
             //deep copy it!
             tmpExprTree = tmpExprTree->Copy(); 
             ASSERT(tmpExprTree); 
 
             //K, it's clear. Insert it, but don't try to 
-            ad.Insert((*itr).first, tmpExprTree);
+            ad.Insert(attrName, tmpExprTree);
         }
     }
 }

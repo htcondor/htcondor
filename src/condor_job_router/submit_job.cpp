@@ -318,9 +318,9 @@ bool submit_job(const std::string & owner, const std::string &domain, ClassAd & 
 	formatstr(leaveinqueue, "%s == %d", ATTR_JOB_STATUS, COMPLETED);
 	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.c_str());
 
-	for( auto itr = src.begin(); itr != src.end(); itr++ ) {
-		lhstr = itr->first.c_str();
-		tree = itr->second;
+	for( const auto& [attrName, inlineExpr] : src ) {
+		lhstr = attrName.c_str();
+		tree = inlineExpr.materialize();
 		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 			continue;
 		}

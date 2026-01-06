@@ -149,9 +149,8 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 		add_attrs_from_string_tokens(clusterAttrs, buffer);
 	}
 
-	for (const auto & it : *ad) {
-		const std::string & attr = it.first;
-		const ExprTree * tree = it.second;
+	for (const auto & [attr, inlineExpr] : *ad) {
+		const ExprTree * tree = inlineExpr.materialize();
 		if (attr.empty() || ! tree) {
 			dprintf(D_ALWAYS, "ERROR: Null attribute name or value for job %d.%d\n", ClusterId, ProcId );
 			return -1;

@@ -581,8 +581,8 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 	int numExprs=0;
 
-	classad::AttrList::const_iterator itor;
-	classad::AttrList::const_iterator itor_end;
+	classad::ClassAd::const_inline_iterator itor;
+	classad::ClassAd::const_inline_iterator itor_end;
 
 	bool haveChainedAd = false;
 
@@ -608,12 +608,12 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			if(!haveChainedAd){
 				continue;
 			}
-			itor = chainedAd->begin();
-			itor_end = chainedAd->end();
+			itor = chainedAd->begin_inline();
+			itor_end = chainedAd->end_inline();
 		}
 		else {
-			itor = ad.begin();
-			itor_end = ad.end();
+			itor = ad.begin_inline();
+			itor_end = ad.end_inline();
 		}
 
 		for(;itor != itor_end; itor++) {
@@ -662,17 +662,17 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			if(!haveChainedAd){
 				continue;
 			}
-			itor = chainedAd->begin();
-			itor_end = chainedAd->end();
+			itor = chainedAd->begin_inline();
+			itor_end = chainedAd->end_inline();
 		} 
 		else {
-			itor = ad.begin();
-			itor_end = ad.end();
+			itor = ad.begin_inline();
+			itor_end = ad.end_inline();
 		}
 
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
-			classad::ExprTree const *expr = itor->second;
+			classad::InlineValue const &inlineVal = itor->second;
 
 			bool encrypt_it = false;
 
@@ -704,7 +704,12 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 			buf = attr;
 			buf += " = ";
-			unp.Unparse( buf, expr );
+			// Try to unparse inline value without materializing
+			if (!unp.UnparseInline(buf, (pass == 0 ? chainedAd : &ad), inlineVal)) {
+				// Fall back to normal unparsing (will materialize if needed)
+				classad::ExprTree const *expr = inlineVal.asPtr();
+				unp.Unparse( buf, expr );
+			}
 
 			if (encrypt_it) {
 				sock->put(SECRET_MARKER);
@@ -772,10 +777,16 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		if (blacklist.find(*attr) != blacklist.end())
 			continue;
 
-		classad::ExprTree const *expr = ad.Lookup(*attr);
+		// Use inline lookup to avoid materializing
+		auto [adMap, inlineVal] = ad.LookupInline(*attr);
 		buf = *attr;
 		buf += " = ";
-		unp.Unparse( buf, expr );
+		// Try to unparse inline value without materializing
+		if (!unp.UnparseInline(buf, &ad, inlineVal)) {
+			// Fall back to normal unparsing (will materialize if needed)
+			classad::ExprTree const *expr = ad.Lookup(*attr);
+			unp.Unparse( buf, expr );
+		}
 
 		if ( ! crypto_is_noop &&
 			(ClassAdAttributeIsPrivateAny(*attr) ||

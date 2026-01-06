@@ -1375,24 +1375,24 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	std::string chirp_prefix;
 	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	if (chirp_prefix == "Chirp*") {
-		for (auto & attr_it : *remote_ad) {
-			if ( ! strncasecmp(attr_it.first.c_str(), "Chirp", 5) ) {
-				old_expr = jobAd->Lookup(attr_it.first);
-				new_expr = attr_it.second;
+		for (const auto& [attrName, inlineExpr] : *remote_ad) {
+			if ( ! strncasecmp(attrName.c_str(), "Chirp", 5) ) {
+				old_expr = jobAd->Lookup(attrName);
+				new_expr = inlineExpr.materialize();
 				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
-					jobAd->Insert( attr_it.first, new_expr->Copy() );
+					jobAd->Insert( attrName, new_expr->Copy() );
 				}
 			}
 		}
 	} else if (!chirp_prefix.empty()) {
 		// TODO cache the list
 		std::vector<std::string> prefix_list = split(chirp_prefix);
-		for (auto & attr_it : *remote_ad) {
-			if ( contains_anycase_withwildcard(prefix_list, attr_it.first) ) {
-				old_expr = jobAd->Lookup(attr_it.first);
-				new_expr = attr_it.second;
+		for (const auto& [attrName, inlineExpr] : *remote_ad) {
+			if ( contains_anycase_withwildcard(prefix_list, attrName) ) {
+				old_expr = jobAd->Lookup(attrName);
+				new_expr = inlineExpr.materialize();
 				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
-					jobAd->Insert( attr_it.first, new_expr->Copy() );
+					jobAd->Insert( attrName, new_expr->Copy() );
 				}
 			}
 		}
@@ -1587,8 +1587,8 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	const char *next_name;
-	for (auto & itr : *jobAd) {
-		next_name = itr.first.c_str();
+	for (const auto& [name_str, inlineExpr] : *jobAd) {
+		next_name = name_str.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1624,7 +1624,7 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = itr.second->Copy();
+			ExprTree * pTree = inlineExpr.materialize()->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}
