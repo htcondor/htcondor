@@ -233,7 +233,7 @@ Define slot types.
     -  swap, SWAP, S, s, VirtualMemory, V, v
 
     Swap is treated as a resource for backward compatibility, but in
-    modern computers, Swap should be be disabled for jobs and so
+    modern computers, Swap should be disabled for jobs and so
     there is no need to explicitly provision the Swap resource to slots.
     On Windows, provisioning Swap has no effect.
 

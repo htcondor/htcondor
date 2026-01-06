@@ -388,7 +388,7 @@ Bugs Fixed:
 
 - Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
   multiple jobs on a single GPU device when ``-divide`` or ``-repeat`` was added
-  to to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
   machine resource inventory that contained repeated identifiers.
   :jira:`2678`
 

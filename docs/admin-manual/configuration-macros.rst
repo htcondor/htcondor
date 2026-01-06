@@ -2334,7 +2334,7 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     presumed to be lying about its :macro:`UID_DOMAIN`. In this case,
     HTCondor will run the job as user nobody. For example, a job
     submission to the HTCondor pool at the UW Madison from
-    flippy.example.com, claiming a :macro:`UID_DOMAIN` of of cs.wisc.edu,
+    flippy.example.com, claiming a :macro:`UID_DOMAIN` of cs.wisc.edu,
     will run the job as the user nobody.
 
     Because of this verification, ``$(UID_DOMAIN)`` must be a real
@@ -2983,7 +2983,7 @@ probably will not want to change them for any reason.
 :macro-def:`DISCARD_SESSION_KEYRING_ON_STARTUP[MASTER]`
     A boolean value that defaults to ``True``. When ``True``, the
     :tool:`condor_master` daemon will replace the kernel session keyring it
-    was invoked with with a new keyring named ``htcondor``. Various
+    was invoked with a new keyring named ``htcondor``. Various
     Linux system services, such as OpenAFS and eCryptFS, use the kernel
     session keyring to hold passwords and authentication tokens. By
     replacing the keyring on start up, the :tool:`condor_master` ensures
@@ -3340,7 +3340,7 @@ section.
     glad you did), or change this macro to point to the right device.
 
     Unfortunately, modern versions of Linux do not update the access
-    time of device files for USB devices. Thus, these files cannot be be
+    time of device files for USB devices. Thus, these files cannot be
     used to determine when the console is in use. Instead, use the
     *condor_kbdd* daemon, which gets this information by connecting to
     the X server.
@@ -4016,7 +4016,7 @@ needs.
     A string valued parameter that defaults to ``-extra``.  Used by
     :macro:`use feature:GPUs` and the default value of
     :macro:`STARTD_DETECT_GPUS` to allow you to pass additional
-    command line arguments to the the :tool:`condor_gpu_discovery` tool.
+    command line arguments to the :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
@@ -4232,7 +4232,7 @@ section details consumption policies.
     usage of a slot, which affects user priority. Defaults to :ad-attr:`Cpus`.
 
     In the case of slots with consumption policies, the cost of each
-    match is is assessed as the difference in the slot weight expression
+    match is assessed as the difference in the slot weight expression
     before and after the resources consumed by the match are deducted
     from the slot. Only Memory, Cpus and Disk are valid attributes for
     this parameter.
@@ -8700,7 +8700,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE[JOB ROUTER]`
     The path to the job_queue.log file for the *condor_schedd*
     serving as the destination of jobs for routing.  If specified,
-    this must point to the the file configured as :macro:`SCHEDD_ADDRESS_FILE`
+    this must point to the file configured as :macro:`SCHEDD_ADDRESS_FILE`
     of the *condor_schedd* identified by :macro:`JOB_ROUTER_SCHEDD2_NAME`.
     When configured, the *condor_job_router* will first look in this
     address file to get the address of the destination schedd and will only
@@ -11401,7 +11401,7 @@ are probably the most common.
     job will be run again after any reconfiguration.
 
     The ``OnDemand`` mode is used only by the ``BENCHMARKS`` mechanism.
-    All benchmark jobs must be be ``OnDemand`` jobs. Any other jobs
+    All benchmark jobs must be ``OnDemand`` jobs. Any other jobs
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 

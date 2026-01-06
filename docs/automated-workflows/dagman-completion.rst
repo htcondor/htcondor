@@ -220,7 +220,7 @@ DAGMan has two ways of restarting a failed DAG: Rescue and Recovery.
 Rescue mode is most common for resubmitting a DAG manually while recovery
 mode is most likely to occur automatically if a crash or something occurs.
 
-If the DAG has failed, it can be be restarted such that work that needs
+If the DAG has failed, it can be restarted such that work that needs
 to be executed (including previously failed part) are ran. Resubmission should
 be done via a Rescue DAG if the file exists, otherwise DAGMan will use
 Recovery mode. To determine if Rescue mode is possible check the DAG
