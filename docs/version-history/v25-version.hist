@@ -3,8 +3,8 @@
 - Initial support for openSUSE Leap 16.
   :jira:`3233`
 
-- To eliminate to dependency on ``libexpat`` in the Python wheels, we now build
-  the Python wheels without VOMS and EC2 GAHP support.
+- To eliminate the dependency on the ``libexpat`` library in the Python wheels,
+  we now build the Python wheels without VOMS and EC2 GAHP support.
   :jira:`3469`
 
 *** 25.0.6 bugs
