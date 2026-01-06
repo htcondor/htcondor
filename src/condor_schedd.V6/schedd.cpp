@@ -233,6 +233,7 @@ static bool isOCUSuperUser(ReliSock* sock) {
 	if (ContainsUserName(ocu_super_users, rsock_user->Name())) {
 		return true;
 	}
+	return false;
 }
 
 int init_user_ids(const JobQueueUserRec * user) {
