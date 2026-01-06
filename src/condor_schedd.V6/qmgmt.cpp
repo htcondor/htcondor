@@ -9933,8 +9933,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 		#endif
 
+			bool OCUWanted = false;
+			job->LookupBool(ATTR_OCU_WANTED, OCUWanted);
 			if (is_ocu) {
-
 				// OCU ad should have ATTR_REMOTE_OWNER set to the owner of the OCU claim
 				// ... or, the job should belong to a project that has an OCU claim
 
@@ -9943,7 +9944,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
-					job->LookupBool("OCUWanted", OCUWanted);
 					if (!OCUWanted) {
 						continue;
 					}
@@ -9955,6 +9955,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 					if ( ! OCUWilling) {
 						continue;
 					}
+				}
+			} else {
+				// Not an OCU claim, so skip any jobs that are OCU only
+				if (OCUWanted) {
+					continue;
 				}
 			}
 

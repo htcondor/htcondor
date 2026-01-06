@@ -258,8 +258,8 @@ class OCU {
 	public:
 		OCU() = default;
 		OCU(const ClassAd &ad, int ocu_id = -1) : ad(ad), mrec(nullptr), ocu_id(ocu_id) {}
-		ClassAd ad;
-		match_rec *mrec{nullptr}; // null if no currect match
+		ClassAd ad; // the request ad
+		match_rec *mrec{nullptr}; // null if no current match
 		int ocu_id;
 		char state{'U'}; // U=Unclaimed I=Idle, R=Running
 };
