@@ -30,6 +30,10 @@
   file named ``.docker_stderror`` back to the AP after job completion.
   :jira:`3424`
 
+- Fixed a bug in the shared-port daemon that caused new network connections
+  to fail if only a few bytes are immeidately available to read.
+  :jira:`3420`
+
 *** 24.12.15 features
 
 - :tool:`condor_submit` will now report an error when :subcom:`output_destination` is
