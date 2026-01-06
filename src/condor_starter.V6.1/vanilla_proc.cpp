@@ -183,7 +183,7 @@ static bool cgroup_controller_is_writeable(const std::string &controller, std::s
 		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
 
 		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
-			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
+			dprintf(D_ALWAYS, "    Cgroup %s/%s is usable\n", controller.c_str(), relative_cgroup.c_str());
 			return true;
 		}
 	}
