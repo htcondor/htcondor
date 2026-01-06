@@ -279,7 +279,7 @@ Directories use by the Submit Role
     :macro:`JOB_QUEUE_LOG` to separate the job queue log (system data)
     from the (user) job data.  This can also be used to increase performance
     (or reliability) by moving the job queue log to specialized hardware (an
-    SSD or a a high-redundancy RAID, for example).
+    SSD or a high-redundancy RAID, for example).
 
 Directories use by the Execute Role
 ```````````````````````````````````

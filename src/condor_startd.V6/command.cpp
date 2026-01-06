@@ -1537,6 +1537,14 @@ accept_request_claim(
 		claim->rip()->dprintf(D_ALWAYS, "Remote owner is NULL\n");
 		// TODO: What else should we do here???
 	}
+	//
+	// Get the project of this claim out of the request classad.
+	std::string RemoteProject;
+	claim->ad()->LookupString(ATTR_PROJECT_NAME, RemoteProject);
+	if ( ! RemoteProject.empty()) {
+		claim->client()->c_project = RemoteProject;
+	}
+
 	// Also look for ATTR_ACCOUNTING_GROUP and stash that
 	claim->ad()->LookupString(ATTR_ACCOUNTING_GROUP, claim->client()->c_acctgrp);
 	claim->loadRequestInfo();
