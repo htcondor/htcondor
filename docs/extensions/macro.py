@@ -56,7 +56,10 @@ def find_conf_knobs(dir: str):
                     # Store whatever is left (if not already included)
                     else:
                         knobs[knob] = url
-    return (knobs, regex_map)
+
+    sorted_regex_map = {k: regex_map[k] for k in sorted(regex_map.keys(), reverse=True)}
+
+    return (knobs, sorted_regex_map)
 
 def find_templates(dir: str):
     templates = {}
@@ -167,9 +170,10 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         if macro not in CONFIG_KNOBS.keys():
             regex_match = False
             for r in CONFIG_REGEX.keys():
-                if re.match(r, macro):
+                if re.match(r, macro, flags=re.IGNORECASE):
                     regex_match = True
                     ref, url_path = CONFIG_REGEX[r]
+                    break
             # If here then not in pure defined list or matched a recorded regex
             if not regex_match:
                 docname = inliner.document.settings.env.docname
