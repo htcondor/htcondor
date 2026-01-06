@@ -9700,6 +9700,9 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				slot->is_ocu = true;
 				slot->ocu_originator = {slot->cluster, slot->proc};
 				slot->cluster = slot->proc = -1;
+
+				// ATTR_OCU should already be true on newer startds, but May
+				// not be for older ones.  Force to true just to be sure.
 				slot->my_match_ad->Assign(ATTR_OCU, true);
 
 				// If we already have a match for this OCU, then delete this match
