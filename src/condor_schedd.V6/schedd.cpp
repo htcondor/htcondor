@@ -230,9 +230,9 @@ static bool isOCUSuperUser(ReliSock* sock) {
 	if (isQueueSuperUser(rsock_user)) {
 		return true;
 	}
-	std::string owner = sock->getOwner();
-	return std::find(ocu_super_users.begin(), ocu_super_users.end(), owner) != 
-		ocu_super_users.end();
+	if (ContainsUserName(ocu_super_users, rsock_user->Name())) {
+		return true;
+	}
 }
 
 int init_user_ids(const JobQueueUserRec * user) {

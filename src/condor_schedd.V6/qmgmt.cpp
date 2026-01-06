@@ -3213,11 +3213,12 @@ grow_prio_recs( int newsize )
 	return 0;
 }
 
-// test an unqualified username "bob" or a fully qualfied username "bob@domain" to see
-// if it is a queue superuser
-static bool isQueueSuperUserName( const char* user )
+// test if the list contains a given username
+// names may be domain-qualified (bob@domain) or unqualified (bob)
+// on unix, list elements may be an os group
+bool ContainsUserName(const std::vector<std::string>& users_list, const char* user)
 {
-	if( !user || super_users.empty() ) {
+	if( !user || users_list.empty() ) {
 		return false;
 	}
 
@@ -3230,17 +3231,17 @@ static bool isQueueSuperUserName( const char* user )
 	bool is_local_user = is_same_user(user, owner, COMPARE_DOMAIN_FULL, scheduler.uidDomain());
 #endif
 
-	for (const auto &superuser : super_users) {
+	for (const auto &listuser : users_list) {
 #ifdef UNIX
-        if (superuser[0] == '%' && is_local_user) {
+        if (listuser[0] == '%' && is_local_user) {
             // this is a user group, so check user against the group membership
-            struct group* gr = getgrnam(&superuser[1]);
+            struct group* gr = getgrnam(&listuser[1]);
             if (gr) {
                 for (char** gmem=gr->gr_mem;  *gmem != nullptr;  ++gmem) {
                     if (strcmp(owner, *gmem) == 0) return true;
                 }
             } else {
-                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", &superuser[1]);
+                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", &listuser[1]);
             }
             continue;
         }
@@ -3248,7 +3249,7 @@ static bool isQueueSuperUserName( const char* user )
 #else
 		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
 #endif
-		if (is_same_user(user, superuser.c_str(), opt, scheduler.uidDomain())) {
+		if (is_same_user(user, listuser.c_str(), opt, scheduler.uidDomain())) {
 			return true;
 		}
 	}
@@ -3260,7 +3261,7 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 	if ( ! user) return false;
 	if (user->IsInherentlySuper()) return true;
 	if (user->isStaleConfigSuper()) {
-		bool super = isQueueSuperUserName(user->Name());
+		bool super = ContainsUserName(super_users, user->Name());
 		const_cast<JobQueueUserRec *>(user)->setConfigSuper(super);
 	}
 	return user->IsSuperUser();
@@ -4325,7 +4326,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			errno = EACCES;
 			return -1;
 		}
-		bool is_super = isQueueSuperUserName(user.c_str());
+		bool is_super = isQueueSuperUser(EffectiveUserRec(Q_SOCK));
 		dprintf(D_COMMAND | D_VERBOSE, "SetAttributeByConstraint w/ OnlyMyJobs owner = \"%s\" (isQueueSuperUser = %d)\n", owner.c_str(), is_super);
 		if (is_super) {
 			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
@@ -5104,7 +5105,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		const OwnerInfo* urec = scheduler.lookup_owner_const(owner);
 
 		if (IsDebugVerbose(D_SECURITY)) {
-			bool is_super = isQueueSuperUserName(sock_owner);
+			bool is_super = isQueueSuperUser(EffectiveUserRec(Q_SOCK));
 			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner, urec != nullptr);
 			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i urec_exists %i\n",
 				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner, urec!=nullptr);
@@ -5253,7 +5254,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// SuperUserAllowedToSetOwnerTo
 			if (!qmgmt_all_users_trusted
 				&& !is_same_user(user, sock_user, COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())
-				&& !isQueueSuperUserName(sock_user))
+				&& !isQueueSuperUser(EffectiveUserRec(Q_SOCK)))
 			{
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting User to \"%s\" when active User is \"%s\"\n",
