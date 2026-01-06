@@ -1567,7 +1567,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	}
 
 	if ( ! got_message || !sock->end_of_message()) {
-		dprintf(D_ALWAYS, "store_cred: did not recieve a valid command\n");
+		dprintf(D_ALWAYS, "store_cred: did not receive a valid command\n");
 		answer = FAILURE_PROTOCOL_MISMATCH;
 		goto cleanup_and_exit;
 	}

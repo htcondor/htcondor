@@ -187,7 +187,7 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 		err.pushf("DAEMON", 1, "Failed to recieve "
 			"response from remote collector at '%s'",
 			_addr.c_str());
-		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to recieve "
+		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to receive "
 			"response from remote daemon at '%s'\n",
 			_addr.c_str());
 		return false;
