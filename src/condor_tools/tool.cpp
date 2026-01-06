@@ -1106,8 +1106,7 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 
 	const char* pool_addr = pool ? pool->addr() : NULL;
 	CondorQuery query(adtype);
-	ClassAd* ad;
-	ClassAdList ads;
+	std::vector<std::unique_ptr<ClassAd>> ads;
 
 	CondorError errstack;
 	QueryResult q_result;
@@ -1133,7 +1132,7 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 		fprintf( stderr, "ERROR: can't connect to %s\n",
 				 pool ? pool->idStr() : "local collector" );
 		had_error = true;
-	} else if( ads.Length() <= 0 ) { 
+	} else if( ads.empty() ) {
 			// TODO make this message better
 		if( IgnoreMissingDaemon ) {
 			return true;
@@ -1164,9 +1163,8 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 
 	if( ! name_list ) {
 			// no list of names to check, just store everything.
-		ads.Rewind();
-		while( (ad = ads.Next()) ) {
-			daemon_list.emplace_back(ad, real_dt, pool_addr);
+		for (auto& ad: ads) {
+			daemon_list.emplace_back(ad.get(), real_dt, pool_addr);
 		}
 		return true;
 	}
@@ -1183,8 +1181,7 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 		bool found_it = false;
 		if (unresolved_names && contains(*unresolved_names, name))
 			continue;
-		ads.Rewind();
-		while( !found_it && (ad = ads.Next()) ) {
+		for (auto& ad: ads) {
 				// we only want to use the special ATTR_MACHINE hack
 				// to locate a startd if the query string we were
 				// given (which we're holding in the variable "name")
@@ -1224,10 +1221,11 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 					  obviously be the same for all slots)
 					*/
 				ad->Assign( ATTR_NAME, name);
-				daemon_list.emplace_back( ad, real_dt, pool_addr );
+				daemon_list.emplace_back(ad.get(), real_dt, pool_addr);
 				found_it = true;
 				free( tmp );
 				tmp = NULL;
+				break;
 
 			} else {  // daemon type != DT_STARTD or there's an '@'
 					// everything else always uses ATTR_NAME
@@ -1251,7 +1249,7 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 				if( ! strcasecmp(name.c_str(), host) || ! strcasecmp(name.c_str(), tmp) ) {
 						/* See comment above, "Because we need..." */
 					ad->Assign( ATTR_NAME, name);
-					daemon_list.emplace_back( ad, real_dt, pool_addr );
+					daemon_list.emplace_back(ad.get(), real_dt, pool_addr);
 					found_it = true;
 				}
 				free( tmp );
