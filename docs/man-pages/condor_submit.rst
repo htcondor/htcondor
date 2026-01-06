@@ -673,7 +673,7 @@ BASIC COMMANDS
        writes to ``stdout`` will be the list of items.
 
     The optional argument *<varname>* or *<list of varnames>* is the
-    name or names of of variables that will be set to the value of the
+    name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
     the variable ITEM will be used. Leading and trailing whitespace be
     trimmed. The optional argument *<slice>* is a python style slice
@@ -2150,7 +2150,7 @@ COMMANDS FOR THE GRID
  :subcom-def:`use_scitokens` = <True | False | Auto>
     Set this command to ``True`` to indicate that the job requires a scitoken.
     If **scitokens_file** is set, then that file is
-    used for the scitoken filename. Otherwise, the the scitoken filename is looked for in the
+    used for the scitoken filename. Otherwise, the scitoken filename is looked for in the
     ``BEARER_TOKEN_FILE`` environment variable. If **scitokens_file** is set
     then the value of **use_scitokens** defaults to ``True``.  If the filename is not
     defined in on one of these two places, then *condor_submit* will fail with an error message.

@@ -694,7 +694,7 @@ character (!) to represent the not operation, followed by
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
    defined.
 
--  the version keyword, representing the version number of of the daemon
+-  the version keyword, representing the version number of the daemon
    or tool currently reading this conditional. This keyword is followed
    by an HTCondor version number. That version number can be of the form
    x.y.z or x.y. The version of the daemon or tool is compared to the
@@ -1133,7 +1133,7 @@ determined automatically at run time but which can be overwritten.
     description of this configuration variable.
 
 ``$(CONFIG_ROOT)`` :index:`CONFIG_ROOT`
-   Set to the directory where the the main config file will be read prior to reading any 
+   Set to the directory where the main config file will be read prior to reading any 
    config files. The value will usually be ``/etc/condor`` for an RPM install,
    ``C:\Condor`` for a Windows MSI install and the directory part of the ``CONDOR_CONFIG`` environment
    variable for a tarball install. This variable will not be set when ``CONDOR_CONFIG`` is

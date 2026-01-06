@@ -170,7 +170,7 @@ the ``LocalFileName`` / ``URL`` pairs from the input ads.
 The following attributes are optional:
 
 * ``TransferTotalBytes``, an integer.  Specifies how many bytes were sent
-  or recieved to perform the transfer, which may differ from the number
+  or received to perform the transfer, which may differ from the number
   of bytes read from or written to the file.
 * ``TransferError``, a string.  If ``TransferSuccess`` is false, this must
   be set.  It should be meaningful to the job submitter.
