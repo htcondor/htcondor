@@ -1523,9 +1523,14 @@ InitQmgmt()
 
 	auto_free_ptr ocu_super(param("OCU_SUPER_USERS"));
 	std::vector<std::string> ocu_super_users;
+	
+	// Make sure to clear if removed on reconfig
 	if (ocu_super) {
 		ocu_super_users = split(ocu_super);
+	} else  {
+		ocu_super_users.clear();
 	}
+
 	if( IsFulldebug(D_FULLDEBUG) && !ocu_super_users.empty()) {
 		dprintf( D_FULLDEBUG, "OCU Super Users:\n" );
 		for (const auto &username : ocu_super_users) {
