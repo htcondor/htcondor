@@ -23,7 +23,6 @@
 #include "classad/sink.h"
 #include "classad/classadCache.h"
 #include "classad/classad_inline_value.h"
-#include "classad/classad_inline_eval.h"
 #include <limits>
 #include <cmath>
 
@@ -668,28 +667,31 @@ bool ClassAd::Insert( const std::string& attrName, InlineValue &&value, const At
 
 bool ClassAd::CopyExprFrom( const std::string& attrName, const ClassAd& source, const std::string& sourceAttr )
 {
-	// Get the value from source using LookupInline - returns pair of map reference and value reference
-	auto [sourceMap, srcVal] = source.LookupInline<std::string>(sourceAttr);
+	// Get the value from source using LookupInline - returns InlineExpr
+	InlineExpr srcExpr = source.LookupInline<std::string>(sourceAttr);
 
-	// Check if attribute was found (zero value means not found)
-	if (!srcVal) {
+	// Check if attribute was found
+	if (!srcExpr) {
 		return false;
 	}
 
+	const InlineValue* srcVal = srcExpr.value();
+	const ClassAdFlatMap* sourceMap = srcExpr.attrList();
+
 	// For out-of-line values, copy the tree; for inline values, reconstruct or copy bits
-	if (!srcVal.isInline()) {
+	if (!srcVal->isInline()) {
 		// Out-of-line: copy the tree
-		ExprTree* tree = sourceMap.materialize(srcVal);
+		ExprTree* tree = srcVal->asPtr();
 		if (tree) {
 			return Insert(attrName, tree->Copy());
 		} else {
 			return false;
 		}
-	} else if (srcVal.getInlineType() == 5) {
+	} else if (srcVal->getInlineType() == 5) {
 		// Inline string: materialize from source and add to our buffer
 		uint32_t offset, size;
-		srcVal.getStringRef(offset, size);
-		const InlineStringBuffer* srcBuffer = sourceMap.stringBuffer();
+		srcVal->getStringRef(offset, size);
+		const InlineStringBuffer* srcBuffer = sourceMap->stringBuffer();
 		if (!srcBuffer) {
 			return false;
 		}
@@ -699,7 +701,7 @@ bool ClassAd::CopyExprFrom( const std::string& attrName, const ClassAd& source, 
 		return true;
 	} else {
 		// Non-string inline value - safe to copy bits
-		return Insert(attrName, InlineValue(srcVal.toBits()));
+		return Insert(attrName, InlineValue(srcVal->toBits()));
 	}
 }
 
@@ -723,8 +725,11 @@ bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_
 	auto [itr, inserted] = attrList.emplace(attrName, tree);
 	if (!inserted) {
 		// replace existing value
-		old_tree = itr->second.asPtr();
-		itr->second.release();
+		// hand ownership of the old tree to the caller (do NOT delete it here)
+		old_tree = attrList.materialize(itr->second);
+		// clear without deleting; we'll overwrite next
+		itr->second.setBits(0);
+		// store the new value
 		itr->second = InlineValue(tree);
 	} else {
 		old_tree = nullptr;
@@ -800,16 +805,15 @@ ExprTree *ClassAd::
 LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 {
 	EvalState	state;
-	const InlineValue* treePtr = nullptr;
-	const AttrList* sourceMap = nullptr;
+	InlineExpr inlineExpr;
 	InlineValue scratch(nullptr);
 	int			rval;
 
 	state.SetScopes( this );
-	rval = LookupInScope( name, treePtr, sourceMap, scratch, state );
-	if( rval == EVAL_OK && treePtr ) {
+	rval = LookupInScope( name, inlineExpr, scratch, state );
+	if( rval == EVAL_OK && inlineExpr ) {
 		finalScope = state.curAd;
-		return attrList.materialize(*treePtr);
+		return inlineExpr.materialize();
 	}
 
 	finalScope = NULL;
@@ -818,14 +822,13 @@ LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 
 
 int ClassAd::
-LookupInScope(const std::string &name, const InlineValue*& expr, const AttrList*& sourceMap, InlineValue& scratch, EvalState &state) const
+LookupInScope(const std::string &name, InlineExpr& result, InlineValue& scratch, EvalState &state) const
 {
 	const ClassAd *current = this, *superScope;
 
-	expr = nullptr;
-	sourceMap = nullptr;
+	result = InlineExpr();  // Initialize to empty
 
-	while( expr == nullptr && current ) {
+	while( !result && current ) {
 
 		// lookups/eval's being done in the 'current' ad
 		state.curAd = current;
@@ -833,9 +836,8 @@ LookupInScope(const std::string &name, const InlineValue*& expr, const AttrList*
 		// lookup in current scope
 		AttrList::const_iterator itr = current->attrList.find( name );
 		if (itr != current->attrList.end()) {
-			expr = &itr->second;
-			sourceMap = &current->attrList;
-			if (expr->isInline() || expr->asPtr() != nullptr) {
+			if (itr->second.isInline() || itr->second.asPtr() != nullptr) {
+				result = InlineExpr(itr->second, &current->attrList);
 				return EVAL_OK;
 			}
 		}
@@ -849,9 +851,8 @@ LookupInScope(const std::string &name, const InlineValue*& expr, const AttrList*
 			while (parent) {
 				AttrList::const_iterator pitr = parent->attrList.find(name);
 				if (pitr != parent->attrList.end()) {
-					expr = &pitr->second;
-					sourceMap = &parent->attrList;
-					if (expr->isInline() || expr->asPtr() != nullptr) {
+					if (pitr->second.isInline() || pitr->second.asPtr() != nullptr) {
+						result = InlineExpr(pitr->second, &parent->attrList);
 						return EVAL_OK;
 					}
 				}
@@ -878,7 +879,7 @@ LookupInScope(const std::string &name, const InlineValue*& expr, const AttrList*
 				strcasecmp(name.c_str( ),ATTR_ROOT)==0){
 			// if the "toplevel" attribute was requested ...
 			scratch.updatePtr(const_cast<ClassAd *>((const ClassAd *)state.rootAd));
-			expr = &scratch;
+			result = InlineExpr(scratch, nullptr);
 			if( scratch.asPtr() == nullptr ) {	// NAC - circularity so no root
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
@@ -887,17 +888,17 @@ LookupInScope(const std::string &name, const InlineValue*& expr, const AttrList*
 				   strcasecmp( name.c_str( ), ATTR_MY ) == 0 ) {
 			// if the "self" ad was requested
 			scratch.updatePtr(const_cast<ClassAd *>((const ClassAd *)state.curAd));
-			expr = &scratch;
+			result = InlineExpr(scratch, nullptr);
 			return( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_PARENT ) == 0 ) {
 			// the lexical parent
 			scratch.updatePtr(const_cast<ClassAd *>((const ClassAd*)superScope));
-			expr = &scratch;
+			result = InlineExpr(scratch, nullptr);
 			return( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
 			// an alias for time() from old ClassAds
 			scratch.updatePtr(getCurrentTimeExpr());
-			expr = &scratch;
+			result = InlineExpr(scratch, nullptr);
 			return ( scratch.asPtr() ? EVAL_OK : EVAL_UNDEF );
 		}
 
@@ -1317,54 +1318,24 @@ _GetDeepScope( ExprTree *tree ) const
 
 
 bool ClassAd::
-_TryGetInlineValue(ExprTree* ptr, Value& outVal) const
-{
-	// Attempt to extract value from inline encoding
-	InlineValue val(ptr);
-	if (!val.isInline()) {
-		return false;
-	}
-	return attrList.inlineValueToValue(val, outVal);
-}
-
-bool ClassAd::
-_UnparseAttr(const std::string& attrName, std::string& buffer) const
-{
-	// Try to find the attribute in the local scope only
-	ExprTree* tree = LookupIgnoreChain(attrName);
-	if (!tree) {
-		return false;
-	}
-
-	// OPTIMIZATION: Try to unparse inline value directly
-	if (attrList.unparseInline(tree, buffer)) {
-		return true;
-	}
-
-	// Not an inline value - caller should use normal unparsing
-	return false;
-}
-
-bool ClassAd::
 EvaluateAttr( const std::string &attr , Value &val, Value::ValueType mask ) const
 {
 	bool successfully_evaluated = false;
 	EvalState	state;
 
 	state.SetScopes( this );
-	const InlineValue* treePtr = nullptr;
-	const AttrList* sourceMap = nullptr;
+	InlineExpr inlineExpr;
 	InlineValue scratch(nullptr);
-	switch( LookupInScope( attr, treePtr, sourceMap, scratch, state ) ) {
+	switch( LookupInScope( attr, inlineExpr, scratch, state ) ) {
 		case EVAL_OK:
 			// OPTIMIZATION: Try to extract inline value first
-			if (treePtr->isInline()) {
+			if (inlineExpr.value() && inlineExpr.value()->isInline()) {
 				// Successfully extracted inline value
-				sourceMap->inlineValueToValue(*treePtr, val);
+				inlineExpr.attrList()->inlineValueToValue(*inlineExpr.value(), val);
 				successfully_evaluated = val.SafetyCheck(state, mask);
-			} else {
+			} else if (inlineExpr.value()) {
 				// Fall back to normal evaluation
-				successfully_evaluated = treePtr->asPtr()->Evaluate( state, val );
+				successfully_evaluated = inlineExpr.value()->asPtr()->Evaluate( state, val );
 				if ( ! val.SafetyCheck(state, mask)) {
 					successfully_evaluated = false;
 				}
@@ -1615,10 +1586,9 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
                 // lookup for attribute
 			const ClassAd *curAd = state.curAd;
-			const InlineValue* resultPtr = nullptr;
-			const AttrList* sourceMap = nullptr;
+			InlineExpr inlineExpr;
 			InlineValue scratch(nullptr);
-            switch( start->LookupInScope( attr, resultPtr, sourceMap, scratch, state ) ) {
+            switch( start->LookupInScope( attr, inlineExpr, scratch, state ) ) {
                 case EVAL_ERROR:
                         // some error
                     return( false );
@@ -1637,7 +1607,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
                     }
                     state.depth_remaining--;
 
-                    auto expr = sourceMap->materialize(*resultPtr);
+                    auto expr = inlineExpr.materialize();
                     bool rval=_GetExternalReferences(expr,ad,state,refs,fullNames);
 
                     state.depth_remaining++;
@@ -1811,10 +1781,9 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
                 // lookup for attribute
             const ClassAd *curAd = state.curAd;
-            const InlineValue* resultPtr = nullptr;
-            const AttrList* sourceMap = nullptr;
+            InlineExpr inlineExpr;
             InlineValue scratch(nullptr);
-            switch( start->LookupInScope( attr, resultPtr, sourceMap, scratch, state ) ) {
+            switch( start->LookupInScope( attr, inlineExpr, scratch, state ) ) {
                 case EVAL_ERROR:
                         // some error
                     return( false );
@@ -1827,7 +1796,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
                 case EVAL_OK: {
                         // attr is internal; find external refs in result
-					auto expr = sourceMap->materialize(*resultPtr);
+					auto expr = inlineExpr.materialize();
 					bool rval = _GetExternalReferences(expr,ad,state,refs);
 					state.curAd = curAd;
 					return( rval );
@@ -1991,10 +1960,9 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
 
             const ClassAd *curAd = state.curAd;
-            const InlineValue* resultPtr = nullptr;
-            const AttrList* sourceMap = nullptr;
+            InlineExpr inlineExpr;
             InlineValue scratch(nullptr);
-            switch( start->LookupInScope( attr, resultPtr, sourceMap, scratch, state) ) {
+            switch( start->LookupInScope( attr, inlineExpr, scratch, state) ) {
                 case EVAL_ERROR:
                     return false;
                 break;
@@ -2033,7 +2001,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
                     }
                     state.depth_remaining--;
 
-                    auto expr = sourceMap ? sourceMap->materialize(*resultPtr) : resultPtr->asPtr();
+                    auto expr = inlineExpr.materialize();
                     bool rval = _GetInternalReferences(expr, ad, state, refs, fullNames);
 
                     state.depth_remaining++;

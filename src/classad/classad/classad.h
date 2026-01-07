@@ -424,21 +424,19 @@ class ClassAd : public ExprTree
 		/** Finds the InlineValue bound to an attribute name.  The lookup only
 				involves this ClassAd; scoping information is ignored.
 			@param attrName The name of the attribute.
-			@return A pair containing: reference to the ClassAdFlatMap where the value
-				was found (or this ad's attrList), and reference to the InlineValue
-				(or a static zero InlineValue if not found).
+			@return An InlineExpr containing the InlineValue and AttrList reference,
+				or an empty InlineExpr if not found.
 		*/
 		template<typename StringLikeThing>
-		std::pair<const AttrList&, const InlineValue&> LookupInline( const StringLikeThing &name ) const {
-			static const InlineValue zeroValue;
+		InlineExpr LookupInline( const StringLikeThing &name ) const {
 			AttrList::const_iterator itr = attrList.find( name );
 			if (itr != attrList.end()) {
-				return {attrList, itr->second};
+				return InlineExpr(itr->second, &attrList);
 			}
 			if (chained_parent_ad) {
 				return chained_parent_ad->LookupInline(name);
 			}
-			return {attrList, zeroValue};
+			return InlineExpr();
 		}
 
 		/** Finds the expression bound to an attribute name, ignoring chained parent.
@@ -737,17 +735,16 @@ class ClassAd : public ExprTree
 		/** Lookup an attribute without materializing inline values.
 		 *  Returns a pair containing: reference to the ClassAdFlatMap where the value
 		 *  was found, and reference to the InlineValue (or a static zero InlineValue
-		 *  if not found). Use operator bool() on the InlineValue to check if found.
+		 *  if not found). Use operator bool() on the InlineExpr to check if found.
 		 *  This is intended for internal optimizations that want to avoid
 		 *  unnecessary materialization (e.g., unparsing, serialization).
 		 */
-		std::pair<const AttrList&, const InlineValue&> LookupInline(const std::string &attrName) const {
-			static const InlineValue zeroValue;
+		InlineExpr LookupInline(const std::string &attrName) const {
 			AttrList::const_iterator itr = attrList.find(attrName);
 			if (itr != attrList.end()) {
-				return {attrList, itr->second};
+				return InlineExpr(itr->second, &attrList);
 			}
-			return {attrList, zeroValue};
+			return InlineExpr();
 		}
 
 		/** Access to raw inline iterators (do not materialize inline values).
@@ -1012,31 +1009,6 @@ class ClassAd : public ExprTree
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;
-		friend 	class ClassAdUnParser;  // Needs access to _UnparseAttr for inline optimization
-		friend 	class InlineExpr;  // Needs access to MaterializeInlineValue
-
-		/** Utility to materialize an InlineValue to an ExprTree*.
-		 *  If the value is already out-of-line, returns the pointer.
-		 *  If the value is inline, materializes it to an ExprTree* Literal.
-		 *  @param inlineValue The InlineValue to materialize
-		 *  @return ExprTree pointer (Literal for inline values)
-		 */
-		ExprTree* MaterializeInlineValue(const InlineValue& inlineValue) const {
-			if (inlineValue.isInline()) {
-				return attrList.materialize(inlineValue);
-			} else {
-				return inlineValue.asPtr();
-			}
-		}
-
-		// Optimization helpers for inline values
-		// Try to extract value from inline representation, returning true if successful
-		bool _TryGetInlineValue(ExprTree* ptr, Value& outVal) const;
-
-		// Try to unparse an inline value directly to buffer
-		// Returns true if attribute exists and was successfully unparsed (inline or normal)
-		// This is an internal optimization for efficient attribute unparsing
-		bool _UnparseAttr(const std::string& attrName, std::string& buffer) const;
 
 		// Helper methods for InsertAttr that try inline storage first, then fall back to literals
 		bool _InsertAttrInteger(const std::string& name, long long value);
@@ -1058,7 +1030,7 @@ class ClassAd : public ExprTree
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
-		int LookupInScope( const std::string&, const InlineValue*&, const AttrList*&, InlineValue&, EvalState& ) const;
+		int LookupInScope( const std::string&, InlineExpr&, InlineValue&, EvalState& ) const;
 		AttrList	  attrList;
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;

@@ -2762,7 +2762,7 @@ bool dump_long_to_fp(void * pv, ClassAd *job)
 	for (const auto & [attr_name, inlineExpr] : *job) {
 		line = attr_name;
 		line += '=';
-		if (!unp.UnparseInline(line, job, *inlineExpr.value())) {
+		if (!unp.Unparse(line, inlineExpr)) {
 			unp.Unparse(line, inlineExpr.materialize());
 		}
 		line += '\n';
@@ -2956,7 +2956,7 @@ static void append_long_ad(std::string & out, CondorClassAdListWriter & writer, 
 			if (proj->contains(attr_name)) {
 				out += attr_name;
 				out += " = ";
-				if (!unp.UnparseInline(out, &ad, *inlineExpr.value())) {
+				if (!unp.Unparse(out, inlineExpr)) {
 					unp.Unparse(out, inlineExpr.materialize());
 				}
 				out += "\n";

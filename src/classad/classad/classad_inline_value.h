@@ -195,7 +195,6 @@ private:
 	friend bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuffer* stringBuffer);
 	friend ExprTree* inlineValueToExprTree(const InlineValue& val, const InlineStringBuffer* stringBuffer);
 	friend bool inlineValueToValue(const InlineValue& val, Value& outValue, const InlineStringBuffer* stringBuffer);
-	friend bool unparseInlineValue(ExprTree* ptr, std::string& buffer, const InlineStringBuffer* stringBuffer);
 	friend class ClassAdFlatMap;
 	friend class ClassAd;
 };
@@ -207,9 +206,8 @@ private:
  */
 class InlineExpr {
 public:
+	// Default constructor creates an empty InlineExpr
 	InlineExpr() : _value(nullptr), _attrList(nullptr) {}
-	InlineExpr(const InlineValue& val, const ClassAdFlatMap* map) 
-		: _value(&val), _attrList(map) {}
 
 	// Check if this represents a valid expression
 	explicit operator bool() const { return _value && *_value; }
@@ -227,6 +225,14 @@ public:
 	ExprTree* materialize() const;
 
 private:
+	// Private constructor - use ClassAd::LookupInline() to obtain InlineExpr objects
+	InlineExpr(const InlineValue& val, const ClassAdFlatMap* map)
+		: _value(&val), _attrList(map) {}
+
+	friend class ClassAd;  // Needs to construct InlineExpr in LookupInline()
+	friend class ClassAdIterator;  // Needs to construct InlineExpr in operator*()
+	friend class ClassAdConstIterator;  // Needs to construct InlineExpr in operator*()
+
 	const InlineValue* _value;
 	const ClassAdFlatMap* _attrList;
 };

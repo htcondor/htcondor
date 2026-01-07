@@ -26,12 +26,15 @@
 namespace classad {
 
 ExprTree* InlineExpr::materialize() const {
-	if (!_value || !_attrList) {
+	if (!_value) {
 		return nullptr;
 	}
 	// We need to call ClassAd::MaterializeInlineValue, but we only have ClassAdFlatMap*
 	// The materialize method is in ClassAdFlatMap, so call it directly
 	if (_value->isInline()) {
+		if (!_attrList) {
+			return nullptr;  // Can't materialize inline value without the map
+		}
 		return _attrList->materialize(*_value);
 	} else {
 		return _value->asPtr();
@@ -233,69 +236,6 @@ bool InlineValue::sameAs(const InlineValue& other,
 
 	// Non-literal ExprTree cannot match an inline literal value; they are different types!
 	return false;
-}
-
-// Implementation of unparseInlineValue
-bool unparseInlineValue(ExprTree* ptr, std::string& buffer,
-                        const InlineStringBuffer* stringBuffer)
-{
-	InlineValue val(ptr);
-	if (!val.isInline()) {
-		return false;
-	}
-
-	int type = val.getInlineType();
-	switch (type) {
-		case 0: // TYPE_ERROR
-			buffer += "error";
-			return true;
-
-		case 1: // TYPE_UNDEFINED
-			buffer += "undefined";
-			return true;
-
-		case 4: // TYPE_BOOL
-			buffer += val.getBool() ? "true" : "false";
-			return true;
-
-		case 2: { // TYPE_INT32
-			int32_t i = val.getInt32();
-			char numBuf[32];
-			snprintf(numBuf, sizeof(numBuf), "%d", i);
-			buffer += numBuf;
-			return true;
-		}
-
-		case 3: { // TYPE_FLOAT32
-			float f = val.getFloat32();
-			char numBuf[64];
-			snprintf(numBuf, sizeof(numBuf), "%.8g", (double)f);
-			buffer += numBuf;
-			return true;
-		}
-
-		case 5: { // TYPE_STRING
-			if (!stringBuffer) {
-				return false; // Can't unparse string without buffer
-			}
-			uint32_t offset, size;
-			val.getStringRef(offset, size);
-			std::string str = stringBuffer->getString(offset, size);
-			// Quote the string properly
-			buffer += '"';
-			for (char c : str) {
-				if (c == '"' || c == '\\') {
-					buffer += '\\';
-				}
-				buffer += c;
-			}
-			buffer += '"';
-			return true;
-		}
-
-		default:
-			return false;
-	}
 }
 
 } // namespace classad

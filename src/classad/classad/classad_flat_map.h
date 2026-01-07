@@ -32,10 +32,6 @@ class ExprTree;
 class InlineValue;  // Forward declaration
 class InlineStringBuffer;  // Forward declaration
 
-// Forward declaration from classad_inline_eval.h
-bool unparseInlineValue(ExprTree* ptr, std::string& buffer,
-                        const InlineStringBuffer* stringBuffer);
-
 // ClassAdFlatMap
 //
 // This is the data structure that holds the map from std::string's to 
@@ -151,10 +147,6 @@ class ClassAdFlatMap {
 
 		bool inlineValueToValue(const InlineValue& val, Value& outVal) const {
 			return classad::inlineValueToValue(val, outVal, _stringBuffer.get());
-		}
-
-		bool unparseInline(ExprTree* ptr, std::string& buffer) const {
-			return classad::unparseInlineValue(ptr, buffer, _stringBuffer.get());
 		}
 
 		const InlineStringBuffer* stringBuffer() const {

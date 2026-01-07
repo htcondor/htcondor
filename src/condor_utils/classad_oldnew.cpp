@@ -705,13 +705,12 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			buf = attr;
 			buf += " = ";
 			// Try to unparse inline value without materializing
-			if (!unp.UnparseInline(buf, (pass == 0 ? chainedAd : &ad), inlineVal)) {
-				// Fall back to normal unparsing (will materialize if needed)
-				classad::ExprTree const *expr = inlineVal.asPtr();
-				unp.Unparse( buf, expr );
-			}
-
-			if (encrypt_it) {
+		const classad::ClassAd* adPtr = (pass == 0 && chainedAd) ? chainedAd : &ad;
+		classad::InlineExpr inlineExpr = adPtr->LookupInline(attr);
+		if (!unp.Unparse(buf, inlineExpr)) {
+			// Fall back to normal unparsing (will materialize if needed)
+			classad::ExprTree const *expr = inlineVal.asPtr();
+			unp.Unparse( buf, expr );
 				sock->put(SECRET_MARKER);
 
 				sock->put_secret(buf.c_str());
@@ -778,11 +777,11 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 			continue;
 
 		// Use inline lookup to avoid materializing
-		auto [adMap, inlineVal] = ad.LookupInline(*attr);
+		classad::InlineExpr inlineExpr = ad.LookupInline(*attr);
 		buf = *attr;
 		buf += " = ";
 		// Try to unparse inline value without materializing
-		if (!unp.UnparseInline(buf, &ad, inlineVal)) {
+		if (!unp.Unparse(buf, inlineExpr)) {
 			// Fall back to normal unparsing (will materialize if needed)
 			classad::ExprTree const *expr = ad.Lookup(*attr);
 			unp.Unparse( buf, expr );

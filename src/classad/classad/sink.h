@@ -69,11 +69,10 @@ class ClassAdUnParser
 		 *  This is an optimization for cases where we have an InlineValue
 		 *  and want to unparse it directly without converting to ExprTree*.
 		 *  @param buffer The string to unparse to
-		 *  @param ad The ClassAd containing the inline value (for string buffer access)
 		 *  @param val The inline value to unparse
 		 *  @return true if successfully unparsed, false if it needs fallback
 		 */
-		bool UnparseInline(std::string &buffer, const ClassAd *ad, const InlineValue &val);
+		bool Unparse(std::string &buffer, const InlineExpr &expr);
 
 			//	for backcompatibility only - NAC
 			// In old ClassAd syntax, nested ads should be delimited in
@@ -90,22 +89,6 @@ class ClassAdUnParser
 		void SetOldClassAd( bool old_syntax, bool attr_value );
 		bool GetOldClassAd() const;
 
-		virtual void UnparseAux( std::string &buffer, const Value &Value);
-		virtual void UnparseAux( std::string &buffer,
-								 const ExprTree *tree, 
-								 std::string &ref, bool absolute=false );
-		virtual void UnparseAux( std::string &buffer, Operation::OpKind op,
-					ExprTree *op1, ExprTree *op2, ExprTree *op3 );
-		virtual void UnparseAux(std::string &buffer, std::string &fnName,
-					std::vector<ExprTree*>& args);
-		virtual void UnparseAux( std::string &buffer,
-					std::vector< std::pair< std::string, ExprTree*> >& attrlist );
-		virtual void UnparseAux( std::string &buffer,
-					std::vector< std::pair< std::string, ExprTree*> >& attrlist,
-					const ClassAd *ad );
-		virtual void UnparseAux( std::string &buffer, const ClassAd *ad );
-		virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
-
 		// to unparse attribute names (quoted & unquoted attributes)
 		virtual void UnparseAux( std::string &buffer, const std::string &identifier);
 
@@ -114,12 +97,23 @@ class ClassAdUnParser
 		// table of string representation of operators
 		static const char *opString[];
 
+protected:
+		virtual void UnparseAux( std::string &buffer, const Value &Value);
+		virtual void UnparseAux( std::string &buffer,
+								 const ExprTree *tree, 
+								 std::string &ref, bool absolute=false );
+		virtual void UnparseAux( std::string &buffer, Operation::OpKind op,
+					ExprTree *op1, ExprTree *op2, ExprTree *op3 );
+		virtual void UnparseAux(std::string &buffer, std::string &fnName,
+					std::vector<ExprTree*>& args);
+		virtual void UnparseAux( std::string &buffer, const ClassAd *ad, const classad::References *whitelist = nullptr );
+		virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
+
 		// Internal optimization: try to unparse an attribute value efficiently
 		// by checking for inline values first. Returns true if successful.
 		bool TryUnparseAttrValue(std::string &buffer, const ClassAd *ad,
 		                          const std::string &attrName, const ExprTree *expr);
 
- protected:
 		bool oldClassAd;
 		bool xmlUnparse;
 		char delimiter; // string delimiter - initialized to '\"' in the constructor
@@ -156,8 +150,6 @@ class PrettyPrint : public ClassAdUnParser
 
         virtual void UnparseAux( std::string &buffer, Operation::OpKind op, 
 					ExprTree *op1, ExprTree *op2, ExprTree *op3 );
-        virtual void UnparseAux( std::string &buffer,
-                    std::vector< std::pair< std::string, ExprTree*> >& attrlist );
         virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
 
     private:

@@ -23,7 +23,6 @@
 #include "classad/sink.h"
 #include "classad/util.h"
 #include "classad/classadCache.h"
-#include "classad/classad_inline_eval.h"
 
 #include <math.h>
 
@@ -380,30 +379,13 @@ Unparse( string &buffer, const ClassAd *ad, const References &whitelist )
 		return;
 	}
 
-	vector< pair<string, ExprTree*> > attrs;
-	ad->GetComponents( attrs, whitelist );
 	// Use optimized version that has access to the ClassAd
-	UnparseAux( buffer, attrs, ad );
-}
-
-bool ClassAdUnParser::
-TryUnparseAttrValue(string &buffer, const ClassAd *ad,
-                     const string &attrName, const ExprTree *expr)
-{
-	// This optimization is only safe when we have both the ClassAd
-	// and the attribute name, allowing us to access the string buffer
-	if (!ad || !expr) {
-		return false;
-	}
-
-	// Try the ClassAd's internal optimized unparsing method
-	// This will check for inline values and unparse them directly
-	return const_cast<ClassAd*>(ad)->_UnparseAttr(attrName, buffer);
+	UnparseAux( buffer, ad, &whitelist );
 }
 
 // Inline-aware version that iterates ClassAd attributes without materializing inline values
 void ClassAdUnParser::
-UnparseAux( string &buffer, const ClassAd *ad )
+UnparseAux( string &buffer, const ClassAd *ad, const References *whitelist )
 {
 	if( !ad ) {
 		return;
@@ -423,25 +405,19 @@ UnparseAux( string &buffer, const ClassAd *ad )
 
 	bool first = true;
 	for( auto itr = ad->begin(); itr != ad->end(); ++itr ) {
+		if (whitelist && (whitelist->find(itr->first) == whitelist->end())) {
+			continue;
+		}
 		if( !first ) {
 			buffer += delim;	// NAC
 		}
 		first = false;
 
 		auto [name, inlineExpr] = *itr;
-	  UnparseAux( buffer, name );
-	  buffer += " = ";
-		bool save = oldClassAdValue;
-		oldClassAdValue = true;
+		UnparseAux( buffer, name );
+		buffer += " = ";
 
-		// OPTIMIZATION: Try inline value optimization
-		if (!TryUnparseAttrValue(buffer, ad, name, inlineExpr.value()->asPtr())) {
-			// Fall back to normal unparsing; materialize from InlineExpr
-			ExprTree* tree = inlineExpr.materialize();
-			Unparse( buffer, tree );
-		}
-
-		oldClassAdValue = save;
+		Unparse(buffer, inlineExpr);
 	}
 
 	if( !oldClassAd || oldClassAdValue ) {	// NAC
@@ -453,15 +429,74 @@ UnparseAux( string &buffer, const ClassAd *ad )
 }
 
 bool ClassAdUnParser::
-UnparseInline(string &buffer, const ClassAd *ad, const InlineValue &val)
+Unparse(string &buffer, const InlineExpr &expr)
 {
-	// Try to unparse the inline value directly using the ad's attrList
-	if (ad) {
-		return ad->attrList.unparseInline(reinterpret_cast<ExprTree*>(val.toBits()), buffer);
+	// Get the InlineValue from the InlineExpr
+	const InlineValue* val = expr.value();
+	if (!val || !*val) {
+		return false;
 	}
-	// No ad provided, try without string buffer
-	return unparseInlineValue(reinterpret_cast<ExprTree*>(val.toBits()), buffer, nullptr);
+	if (!val->isInline()) {
+		// Not inline - unparse as ExprTree
+		ExprTree* tree = val->asPtr();
+		if (tree) {
+			Unparse(buffer, tree);
+			return true;
+		}
+		return false;
+	}
+
+	// Get the string buffer if available
+	const InlineStringBuffer* stringBuffer = expr.attrList() ? expr.attrList()->stringBuffer() : nullptr;
+
+	// Unparse the inline value directly
+	int type = val->getInlineType();
+	switch (type) {
+		case 0: // TYPE_ERROR
+			buffer += "error";
+			return true;
+
+		case 1: // TYPE_UNDEFINED
+			buffer += "undefined";
+			return true;
+
+		case 4: // TYPE_BOOL
+			buffer += val->getBool() ? "true" : "false";
+			return true;
+
+		case 2: { // TYPE_INT32
+			int32_t i = val->getInt32();
+			char numBuf[32];
+			snprintf(numBuf, sizeof(numBuf), "%d", i);
+			buffer += numBuf;
+			return true;
+		}
+
+		case 3: { // TYPE_FLOAT32
+			float f = val->getFloat32();
+			char numBuf[64];
+			snprintf(numBuf, sizeof(numBuf), "%.8g", (double)f);
+			buffer += numBuf;
+			return true;
+		}
+
+		case 5: { // TYPE_STRING
+			if (!stringBuffer) {
+				return false; // Can't unparse string without buffer
+			}
+			uint32_t offset, size;
+			val->getStringRef(offset, size);
+			std::string str = stringBuffer->getString(offset, size);
+			// Use the standard string unparsing with proper escaping
+			UnparseString(buffer, str);
+			return true;
+		}
+
+		default:
+			return false;
+	}
 }
+
 
 void ClassAdUnParser::
 UnparseAux( string &buffer, const Value &val)
@@ -570,83 +605,6 @@ UnparseAux( string &buffer, string &fnName, vector<ExprTree*>& args )
 		if( itr+1 != args.end( ) ) buffer += ',';
 	}
 	buffer += ")";
-}
-
-void ClassAdUnParser::
-UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
-{
-	vector< pair<string,ExprTree*> >::const_iterator itr;
-
-	string delim;		// NAC
-	if( oldClassAd && !oldClassAdValue ) {	// NAC
-		delim = "\n";	// NAC
-	}					// NAC
-	else {				// NAC
-		delim = "; ";	// NAC
-	}					// NAC
-
-	if( !oldClassAd || oldClassAdValue ) {	// NAC
-		buffer += "[ ";
-	}					// NAC
-	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-	  UnparseAux( buffer, itr->first ); 
-	  buffer += " = ";
-		bool save = oldClassAdValue;
-		oldClassAdValue = true;
-		Unparse( buffer, itr->second );
-		oldClassAdValue = save;
-//		if( itr+1 != attrs.end( ) ) buffer += "; ";
-		if( itr+1 != attrs.end( ) ) buffer += delim;	// NAC
-
-	}
-	if( !oldClassAd || oldClassAdValue ) {	// NAC
-		buffer += " ]";
-	}					// NAC
-	else {				// NAC
-		buffer += "\n";	// NAC
-	}					// NAC
-}
-
-// Optimized version that can use inline value optimization when ClassAd is available
-void ClassAdUnParser::
-UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs, const ClassAd *ad )
-{
-	vector< pair<string,ExprTree*> >::const_iterator itr;
-
-	string delim;		// NAC
-	if( oldClassAd && !oldClassAdValue ) {	// NAC
-		delim = "\n";	// NAC
-	}					// NAC
-	else {				// NAC
-		delim = "; ";	// NAC
-	}					// NAC
-
-	if( !oldClassAd || oldClassAdValue ) {	// NAC
-		buffer += "[ ";
-	}					// NAC
-	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-	  UnparseAux( buffer, itr->first );
-	  buffer += " = ";
-		bool save = oldClassAdValue;
-		oldClassAdValue = true;
-
-		// OPTIMIZATION: Try inline value optimization if ClassAd is available
-		if (!TryUnparseAttrValue(buffer, ad, itr->first, itr->second)) {
-			// Fall back to normal unparsing
-			Unparse( buffer, itr->second );
-		}
-
-		oldClassAdValue = save;
-//		if( itr+1 != attrs.end( ) ) buffer += "; ";
-		if( itr+1 != attrs.end( ) ) buffer += delim;	// NAC
-
-	}
-	if( !oldClassAd || oldClassAdValue ) {	// NAC
-		buffer += " ]";
-	}					// NAC
-	else {				// NAC
-		buffer += "\n";	// NAC
-	}					// NAC
 }
 
 
@@ -837,39 +795,6 @@ UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
 		}
 	} else {
 		Unparse( buffer, op2 );
-	}
-}
-
-
-void PrettyPrint::
-UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
-{
-	vector< pair<string, ExprTree*> >::iterator	itr;
-
-	if( classadIndent > 0 ) {
-		indentLevel += classadIndent;
-		buffer += '\n' + string( indentLevel, ' ' ) + '[';
-		indentLevel += classadIndent;
-	} else {
-		buffer += "[ ";
-	}
-	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-		if( classadIndent > 0 ) {
-			buffer += '\n' + string( indentLevel, ' ' );
-		} 
-		ClassAdUnParser::UnparseAux( buffer, itr->first );
-		buffer +=  " = ";
-		Unparse( buffer, itr->second );
-		if ( itr+1 != attrs.end( ) ) {
-			buffer += "; ";
-		}
-	}
-	if( classadIndent > 0 ) {
-		indentLevel -= classadIndent;
-		buffer += '\n' + string( indentLevel, ' ' ) + ']';
-		indentLevel -= classadIndent;
-	} else {
-		buffer += " ]";
 	}
 }
 

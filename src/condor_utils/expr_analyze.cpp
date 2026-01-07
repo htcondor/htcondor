@@ -236,11 +236,7 @@ int AnalyzeThisSubExpr(
 		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
 			((classad::Literal*)expr)->GetValue(val);
-			unparser.UnparseAux(strLabel, val);
-			if (chatty) {
-				printf("     %d:const : %s\n", kind, strLabel.c_str());
-			}
-			show_work = false;
+			unparser.Unparse(strLabel, val);
 			break;
 		}
 

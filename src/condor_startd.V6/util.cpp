@@ -494,8 +494,8 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr,
 	}
 	new_attr += attr;
 
-	auto [sourceMap, value] = source->LookupInline( attr );
-	if( !value ) {
+	auto inlineExpr = source->LookupInline( attr );
+	if( !inlineExpr.value() ) {
 		target->Delete(new_attr);
 		return false;
 	}

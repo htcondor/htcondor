@@ -290,9 +290,7 @@ void UpdateJobProxyAttrs( PROC_ID job_id, const ClassAd &proxy_attrs )
 	for (const auto& [attr_name, inlineExpr] : proxy_attrs)
 	{
 		std::string attr_value_buf;
-		if (!unparse.UnparseInline(attr_value_buf, &proxy_attrs, *inlineExpr.value())) {
-			unparse.Unparse(attr_value_buf, inlineExpr.materialize());
-		}
+		unparse.Unparse(attr_value_buf, inlineExpr);
 		SetSecureAttribute(job_id.cluster, job_id.proc, attr_name.c_str(), attr_value_buf.c_str());
 	}
 }

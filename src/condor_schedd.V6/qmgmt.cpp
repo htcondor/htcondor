@@ -7017,7 +7017,7 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 					continue;
 				}
 				std::string attr_value_buf;
-				if (!unparse.UnparseInline(attr_value_buf, x509_attrs, *x509_attr.second.value())) { unparse.Unparse(attr_value_buf, x509_attr.second.materialize()); }
+				unparse.Unparse(attr_value_buf, x509_attr.second);
 				SetSecureAttribute(jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
 				dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, x509_attr.first.c_str(), attr_value_buf.c_str());
 			}
@@ -7029,7 +7029,7 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 					continue;
 				}
 				std::string attr_value_buf;
-				if (!unparse.UnparseInline(attr_value_buf, policy_ad, *token_attr.second.value())) { unparse.Unparse(attr_value_buf, token_attr.second.materialize()); }
+				unparse.Unparse(attr_value_buf, token_attr.second);
 				SetSecureAttribute(jid.cluster, jid.proc, token_attr.first.c_str(), attr_value_buf.c_str());
 				dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, token_attr.first.c_str(), attr_value_buf.c_str());
 			}
@@ -7932,9 +7932,7 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int /*flags*/, int & t
 			// TODO: more validation ?
 
 			rhs.clear();
-			if (!unparse.UnparseInline(rhs, &ad, *it.second.value())) {
-				unparse.Unparse(rhs, it.second.materialize());
-			}
+			unparse.Unparse(rhs, it.second);
 			if ( ! JobQueue->SetAttribute(key, it.first.c_str(), rhs.c_str())) {
 				terrno = EINVAL;
 				rval = -1;
