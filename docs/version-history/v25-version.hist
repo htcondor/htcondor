@@ -1,5 +1,8 @@
 *** 25.7.0 features
 
+- Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
+  :jira:`3449`
+
 *** 25.7.0 bugs
 
 *** 25.0.7 bugs

@@ -12,7 +12,7 @@ class VacateType(enum.IntEnum):
 
     .. attribute:: Graceful
 
-        Job are immediately soft-killed (generally meaning sent a ``SIGTERM``).
+        Jobs are immediately soft-killed (generally meaning sent a ``SIGTERM``).
         The startd then waits a certain amount of time to allow jobs to shut
         down cleanly before the vacate policy becomes the following.
 
