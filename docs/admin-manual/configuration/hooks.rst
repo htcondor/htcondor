@@ -425,7 +425,7 @@ are probably the most common.
     job will be run again after any reconfiguration.
 
     The ``OnDemand`` mode is used only by the ``BENCHMARKS`` mechanism.
-    All benchmark jobs must be be ``OnDemand`` jobs. Any other jobs
+    All benchmark jobs must be ``OnDemand`` jobs. Any other jobs
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 

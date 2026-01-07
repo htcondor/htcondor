@@ -453,7 +453,7 @@ probably will not want to change them for any reason.
 :macro-def:`DISCARD_SESSION_KEYRING_ON_STARTUP`
     A boolean value that defaults to ``True``. When ``True``, the
     :tool:`condor_master` daemon will replace the kernel session keyring it
-    was invoked with with a new keyring named ``htcondor``. Various
+    was invoked with a new keyring named ``htcondor``. Various
     Linux system services, such as OpenAFS and eCryptFS, use the kernel
     session keyring to hold passwords and authentication tokens. By
     replacing the keyring on start up, the :tool:`condor_master` ensures

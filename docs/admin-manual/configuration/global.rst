@@ -2328,7 +2328,7 @@ file systems, see :ref:`users-manual/submitting-a-job:Submitting Jobs Using a Sh
     presumed to be lying about its :macro:`UID_DOMAIN`. In this case,
     HTCondor will run the job as user nobody. For example, a job
     submission to the HTCondor pool at the UW Madison from
-    flippy.example.com, claiming a :macro:`UID_DOMAIN` of of cs.wisc.edu,
+    flippy.example.com, claiming a :macro:`UID_DOMAIN` of cs.wisc.edu,
     will run the job as the user nobody.
 
     Because of this verification, ``$(UID_DOMAIN)`` must be a real

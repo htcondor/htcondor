@@ -335,7 +335,7 @@ section.
     glad you did), or change this macro to point to the right device.
 
     Unfortunately, modern versions of Linux do not update the access
-    time of device files for USB devices. Thus, these files cannot be be
+    time of device files for USB devices. Thus, these files cannot be
     used to determine when the console is in use. Instead, use the
     *condor_kbdd* daemon, which gets this information by connecting to
     the X server.
@@ -1011,7 +1011,7 @@ needs.
     A string valued parameter that defaults to ``-extra``.  Used by
     :macro:`use feature:GPUs` and the default value of
     :macro:`STARTD_DETECT_GPUS` to allow you to pass additional
-    command line arguments to the the :tool:`condor_gpu_discovery` tool.
+    command line arguments to the :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>`
     An integer that specifies the quantity of or list of identifiers for
@@ -1227,7 +1227,7 @@ section details consumption policies.
     usage of a slot, which affects user priority. Defaults to :ad-attr:`Cpus`.
 
     In the case of slots with consumption policies, the cost of each
-    match is is assessed as the difference in the slot weight expression
+    match is assessed as the difference in the slot weight expression
     before and after the resources consumed by the match are deducted
     from the slot. Only Memory, Cpus and Disk are valid attributes for
     this parameter.
