@@ -2,12 +2,20 @@
 
 *** 24.0.16 bugs
 
+- Added :macro:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT` for administrators
+  to set a longer timeout for plugins to detect their health.
+  :jira:`3455`
+
 - Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
   :jira:`3474`
 
 - Fix Logical Volume setup timeout on Execution Points enforcing disk usage
   for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
   :jira:`3432`
+
+- Fixed issue with Execution Points enforcing disk usage generating an
+  excessive amount of metadata archives filling up ``/etc/lvm/archive``.
+  :jira:`3488`
 
 - Fixed a bug where a job with a floating point value for :ad-attr:`RequestMemory`
   or :ad-attr:`RequestDisk` might not match the slot created to run it.
