@@ -23,6 +23,8 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <string>
+#include <utility>
 #include <vector>
 #include <memory>
 
