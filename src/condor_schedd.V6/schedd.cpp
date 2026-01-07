@@ -1479,7 +1479,8 @@ Scheduler::count_jobs()
 		double bucket_percent = ((current_time - scheduler.stats.TickBias)%(bucket_sec)) / (bucket_sec/100.0);
 		const int day_sec = 24*3600;
 		double day_percent = ((current_time - scheduler.stats.TickBias + scheduler.stats.TickMidnight)%(day_sec)) / (day_sec/100.0);
-		dprintf(D_STATUS, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
+		int d_verbose = (cHourlyAdvance || cDayAdvance) ? 0 : D_VERBOSE;
+		dprintf(D_STATUS | d_verbose, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
 			cHourlyAdvance, cDayAdvance, bucket_percent, day_percent);
 	}
 
