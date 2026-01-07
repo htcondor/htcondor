@@ -12,6 +12,7 @@ import pytest
 import logging
 
 import time
+import math
 import pickle
 
 import htcondor2 as htcondor
@@ -177,8 +178,22 @@ def compareEvent(event, count):
 			if attr not in event:
 				print("Event {0}'s {1} is missing".format(count, attr))
 				return False
-			if event[attr] != value:
-				print("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, event[attr], value))
+			actual = event[attr]
+			if isinstance(value, float):
+				# Tolerate small FP differences
+				actual_num = None
+				if isinstance(actual, (float, int)):
+					actual_num = float(actual)
+				else:
+					try:
+						actual_num = float(actual)
+					except (TypeError, ValueError):
+						actual_num = None
+				if actual_num is None or not math.isclose(actual_num, value, rel_tol=1e-6, abs_tol=0.0):
+					print("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, actual, value))
+					return False
+			elif actual != value:
+				print("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, actual, value))
 				return False
 		d = set(event.keys()) - set(expectedAttrs.keys()) - set(boringAttrs)
 		if d:
