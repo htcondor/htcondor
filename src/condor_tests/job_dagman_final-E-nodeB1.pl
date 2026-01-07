@@ -2,13 +2,14 @@
 
 $outfile = "job_dagman_final-E.nodes.out";
 
-system("echo 'Job for node $ARGV[0]' >> $outfile");
-
-system("echo '  DAG_STATUS=$ARGV[2]' >> $outfile");
-system("echo '  FAILED_COUNT=$ARGV[3]' >> $outfile");
+open my $fh, ">>", $outfile or die "Cannot open $outfile: $!";
+print $fh "Job for node $ARGV[0]\n";
+print $fh "  DAG_STATUS=$ARGV[2]\n";
+print $fh "  FAILED_COUNT=$ARGV[3]\n";
 
 # Time for sibling node to run...
 sleep(600);
 
-system("echo '  OK done with $ARGV[0]' >> $outfile");
+print $fh "  OK done with $ARGV[0]\n";
+close $fh;
 exit(0);
