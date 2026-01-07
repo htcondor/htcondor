@@ -180,10 +180,10 @@ class ClassAdFlatMap {
 			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
 				lb->second.materialize(_stringBuffer.get());
-				return *reinterpret_cast<ExprTree**>(&lb->second._bits);
+				return lb->second.asPtrRef();
 			} else {
 				iterator newit = _theVector.insert(lb, std::make_pair(key, InlineValue(nullptr)));
-				return *reinterpret_cast<ExprTree**>(&newit->second._bits);
+				return newit->second.asPtrRef();
 			}
 		}
 

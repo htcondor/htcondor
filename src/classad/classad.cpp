@@ -1503,6 +1503,64 @@ EvaluateAttrBoolEquiv( const std::string &attr, bool &b ) const
 }
 
 bool ClassAd::
+EvaluateExprBoolEquiv( ExprTree* expr, bool &boolValue ) const
+{
+	if (!expr) {
+		return false;
+	}
+
+	Value val;
+	EvalState state;
+
+	// Set the evaluation scopes to this ClassAd
+	state.SetScopes(this);
+
+	// Evaluate the expression
+	if (!expr->Evaluate(state, val)) {
+		return false;
+	}
+
+	// Check if the result is boolean-equivalent
+	return val.IsBooleanValueEquiv(boolValue);
+}
+
+bool ClassAd::
+EvaluateExprBoolEquiv( const InlineExpr& inlineExpr, bool &boolValue ) const
+{
+	if (!inlineExpr) {
+		return false;
+	}
+
+	// If the value is inline, evaluate it directly without materializing
+	if (inlineExpr.value() && inlineExpr.value()->isInline()) {
+		// String values cannot be boolean-equivalent, so reject them
+		if (inlineExpr.value()->getInlineType() == 5) {
+			return false;
+		}
+		Value val;
+		// Evaluate the inline value directly - convert to Value first
+		classad::inlineValueToValue(*inlineExpr.value(), val, inlineExpr.attrList()->stringBuffer());
+		return val.IsBooleanValueEquiv(boolValue);
+	}
+
+	// For out-of-line values, materialize and evaluate
+	ExprTree* expr = inlineExpr.materialize();
+	if (!expr) {
+		return false;
+	}
+
+	Value val;
+	EvalState state;
+	state.SetScopes(this);
+
+	if (!expr->Evaluate(state, val)) {
+		return false;
+	}
+
+	return val.IsBooleanValueEquiv(boolValue);
+}
+
+bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const
 {
     EvalState       state;

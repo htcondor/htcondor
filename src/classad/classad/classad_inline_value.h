@@ -189,6 +189,20 @@ public:
 	uint64_t toBits() const { return _bits; }
 	void setBits(uint64_t b) { _bits = b; }
 
+	// Get a mutable reference to the pointer (only valid when !isInline())
+	// This provides a safe way to return ExprTree*& without violating strict-aliasing
+	// After materialize() is called, _bits contains the pointer value directly
+	ExprTree*& asPtrRef() {
+		// At this point, materialize() has been called, so _bits contains a pointer
+		// We use a union to safely access the bits as a pointer
+		union {
+			uint64_t* bits_ptr;
+			ExprTree** expr_ptr;
+		} u;
+		u.bits_ptr = &_bits;
+		return *u.expr_ptr;
+	}
+
 private:
 	mutable uint64_t _bits;
 

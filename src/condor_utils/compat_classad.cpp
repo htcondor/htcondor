@@ -2489,8 +2489,10 @@ EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool
 	}
 
 	getTheMatchAd( my, target );
-	if( my->Lookup( name ) ) {
-		if( my->EvaluateAttrBoolEquiv( name, value ) ) {
+	auto inlineExpr = my->LookupInline( name );
+	if( inlineExpr ) {
+		// Evaluate the inline expression directly without materializing
+		if (my->EvaluateExprBoolEquiv(inlineExpr, value)) {
 			rc = 1;
 		}
 	} else if( target->Lookup( name ) ) {

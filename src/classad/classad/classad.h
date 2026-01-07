@@ -691,6 +691,23 @@ class ClassAd : public ExprTree
 		bool LookupBool(const std::string &name, bool &value) const
 		{ return EvaluateAttrBoolEquiv(name, value); }
 
+		/** Evaluate an expression and check if it's boolean-equivalent.
+			This is useful for evaluating expressions obtained from LookupInline
+			without forcing unnecessary conversions of inline values to full Value objects.
+			@param expr The expression to evaluate (can be from materialize() or a Lookup)
+			@param boolValue Output parameter for the boolean value
+			@return true if the expression evaluated to a boolean equivalent, false otherwise
+		*/
+		bool EvaluateExprBoolEquiv( ExprTree* expr, bool& boolValue ) const;
+
+		/** Evaluate an InlineExpr and check if it's boolean-equivalent.
+			This avoids materializing inline values when possible.
+			@param inlineExpr The inline expression to evaluate
+			@param boolValue Output parameter for the boolean value
+			@return true if the expression evaluated to a boolean equivalent, false otherwise
+		*/
+		bool EvaluateExprBoolEquiv( const InlineExpr& inlineExpr, bool& boolValue ) const;
+
 		/**@name STL-like Iterators */
 		//@{
 
