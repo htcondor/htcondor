@@ -445,6 +445,31 @@ default=
 type=string
 tags=starter
 
+[ASSIGN_CPU_AFFINITY]
+default=false
+type=bool
+tags=starter
+
+[ENABLE_CHIRP]
+default=true
+type=bool
+tags=starter
+
+[ENABLE_SSH_TO_JOB]
+default=true
+type=bool
+tags=starter
+
+[ENABLE_URL_TRANSFERS]
+default=true
+type=bool
+tags=starter
+
+[MOUNT_PRIVATE_DEV_SHM]
+default=true
+type=bool
+tags=starter
+
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
@@ -1064,6 +1089,11 @@ type=int
 description=Slots above this number do not have KeyboardIdle updated
 tags=startd
 restart=true
+
+[STARTD_ENFORCE_DISK_LIMITS]
+default=false
+type=bool
+tags=startd
 
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
@@ -1855,6 +1885,11 @@ default=auto
 type=string
 customization=seldom
 friendly_name=Ask Singularity to contain pid namespace
+tags=starter
+
+[STARTER_SETS_HOME_ENV]
+default=true
+type=bool
 tags=starter
 
 [UPDATE_INTERVAL]
@@ -3288,6 +3323,11 @@ default=600
 type=int
 tags=schedd,dedicated_scheduler
 
+[ALIVE_INTERVAL]
+default=300
+type=int
+tags=schedd
+
 [SCHEDD_PREEMPTION_REQUIREMENTS]
 default=
 type=string
@@ -3321,6 +3361,11 @@ type=bool
 tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
+
+[QUEUE_CLEAN_INTERVAL]
+default=86400
+type=int
+tags=Schedd
 
 [SCHEDD_SEND_RESCHEDULE]
 default=true
@@ -5365,6 +5410,36 @@ type=int
 [DOCKER_TRUST_LOCAL_IMAGES]
 default=false
 type=bool
+
+[DOCKER_EXTRA_ARGUMENTS]
+default=
+type=string
+tags=starter
+
+[DOCKER_LOG_DRIVER_NAME]
+default=true
+type=bool
+tags=starter
+
+[DOCKER_MOUNT_VOLUMES]
+default=
+type=string
+tags=starter
+
+[DOCKER_NETWORKS]
+default=
+type=string
+tags=starter
+
+[DOCKER_SKIP_IMAGE_ARCH_CHECK]
+default=false
+type=bool
+tags=starter
+
+[DOCKER_VOLUMES]
+default=
+type=string
+tags=starter
 
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
