@@ -541,7 +541,7 @@ After this, the job submit file should contain
 
 .. code-block:: condor-submit
 
-    docker_send_credentials` = true
+    docker_send_credentials = true
 
 This tells the shadow, at job startup time, to request a read-only
 token on behalf of the user from docker hub.  This token is cached 
@@ -565,8 +565,7 @@ disk image is intended to be a virtual machine. In this manner, the
 virtual machine is the job to be executed.
 
 This section describes this type of HTCondor job. See
-:ref:`admin-manual/configuration-macros:configuration file entries relating to
-virtual machines` for details of configuration variables.
+:ref:`virtual_machine_config_options` for details of configuration variables.
 
 The Submit Description File
 '''''''''''''''''''''''''''

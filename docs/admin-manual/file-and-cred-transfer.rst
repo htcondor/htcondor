@@ -678,9 +678,7 @@ Using HTCondor with Kerberos and AFS
 :index:`KRB5<single: KRB5>`
 
 Configuration variables that allow machines to interact with and use a
-shared file system are given at the 
-:ref:`admin-manual/configuration-macros:shared file system configuration file
-macros` section.
+shared file system are given at the :ref:`shared_fs_config_options` section.
 
 Limitations with AFS occur because HTCondor does not currently have a
 way to authenticate itself to AFS. This is true of the HTCondor daemons

@@ -2559,11 +2559,8 @@ ADVANCED COMMANDS
     A comma-separated list of job ClassAd attribute names. The named
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
-    same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see the 
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries` page), but it applies to the job event log, instead of the system
-    event log.
+    same thing as the configuration variable :macro:`EVENT_LOG_INFORMATION_ATTRS`,
+    but it applies to the job event log, instead of the system event log.
 
  :subcom-def:`job_lease_duration` = <number-of-seconds>
     For vanilla, parallel, VM, and java universe jobs only, the duration

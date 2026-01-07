@@ -2055,9 +2055,8 @@ If the machine enters the Killing activity, (because either
 ``True``), it attempts to force the *condor_starter* to immediately
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
-of which is defined by the :macro:`KILLING_TIMEOUT` macro
-(:ref:`admin-manual/configuration-macros:condor_startd configuration file
-macros`). This macro is defined in seconds and defaults to 30. If this timer
+of which is defined by the :macro:`KILLING_TIMEOUT` macro.
+This macro is defined in seconds and defaults to 30. If this timer
 expires and the machine is still in the Killing activity, something has gone
 seriously wrong with the *condor_starter* and the startd tries to vacate the job
 immediately by sending SIGKILL to all of the *condor_starter* 's
@@ -2209,9 +2208,7 @@ It serves as a quick reference.
 
 :macro:`CLAIM_WORKLIFE`
     This expression specifies the number of seconds after which a claim
-    will stop accepting additional jobs. This configuration macro is
-    fully documented here: :ref:`admin-manual/configuration-macros:condor_startd
-    configuration file macros`.
+    will stop accepting additional jobs.
 
 :macro:`MachineMaxVacateTime`
     When the machine enters the Preempting/Vacating state, this
@@ -2355,7 +2352,7 @@ There are a small set of policy expressions that determine if a
 *condor_startd* will attempt to spawn a backfill client at all, and if
 so, to control the transitions in to and out of the Backfill state. This
 section briefly lists these expressions. More detail can be found in
-:ref:`admin-manual/configuration-macros:condor_startd configuration file macros`.
+:ref:`startd_config_options`.
 
 :macro:`ENABLE_BACKFILL`
     A boolean value to determine if any backfill functionality should be
@@ -2733,7 +2730,7 @@ when dealing with the Windows installation:
    that the local *condor_starter* be able to run jobs in this manner.
    For more information on the ``RunAsUser`` attribute, see
    :ref:`platform-specific/microsoft-windows:executing jobs as the submitting
-   user`. For more information on the :macro:`STARTER_ALLOW_RUNAS_OWNER`.
+   user`.
 
 Examples of Policy Configuration
 ''''''''''''''''''''''''''''''''
@@ -3424,7 +3421,7 @@ Configuration
 """""""""""""
 
 Configuration variables related to Daemon ClassAd Hooks are defined in
-:ref:`admin-manual/configuration-macros:Configuration File Entries Relating to Daemon ClassAd Hooks: Startd Cron and Schedd Cron`
+:ref:`daemon_hooks_config_options`.
 
 Here is a complete configuration example. It defines all three of the
 available types of jobs: ones that use the *condor_startd*, benchmark
@@ -3593,9 +3590,7 @@ In addition to installing the Docker service, the single configuration
 variable :macro:`DOCKER` must be set. It defines the
 location of the Docker CLI and can also specify that the
 *condor_starter* daemon has been given a password-less sudo permission
-to start the container as root. Details of the :macro:`DOCKER` configuration
-variable are in the :ref:`admin-manual/configuration-macros:condor_startd
-configuration file macros` section.
+to start the container as root.
 
 Docker must be installed as root by following these steps on an
 Enterprise Linux machine.
@@ -3937,8 +3932,7 @@ If an administrator wants to pass additional arguments to the singularity exec
 command instead of the defaults used by HTCondor, several parameters exist to
 do this - see the *condor_starter* configuration parameters that begin with the
 prefix SINGULARITY in defined in section
-:ref:`admin-manual/configuration-macros:condor_starter configuration file
-entries`.  There you will find parameters to customize things such as the use
+:ref:`starter_config_options`.  There you will find parameters to customize things such as the use
 of PID namespaces, cache directory, and several other options.  However, should
 an administrator need to customize Singularity behavior that HTCondor does not
 currently support, the parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows
@@ -4026,8 +4020,7 @@ What follows is not a comprehensive list of the options that help set up
 to use the **vm** universe; rather, it is intended to serve as a
 starting point for those users interested in getting **vm** universe
 jobs up and running quickly. Details of configuration variables are in
-the :ref:`admin-manual/configuration-macros:configuration file entries relating
-to virtual machines` section.
+the :ref:`virtual_machine_config_options` section.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor's instructions. We have successfully used
@@ -4379,10 +4372,8 @@ through configuration. This occurs when all slots on a machine agree
 that a low power state is desired.
 
 A slot's readiness to hibernate is determined by the evaluating the
-:macro:`HIBERNATE` configuration variable (see
-the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-macros` section) within the context of the slot. Readiness is evaluated at
-fixed intervals, as determined by the
+:macro:`HIBERNATE` configuration variable within the context of the slot.
+Readiness is evaluated at fixed intervals, as determined by the
 :macro:`HIBERNATE_CHECK_INTERVAL` configuration variable. A
 non-zero value of this variable enables the power management facility.
 It is an integer value representing seconds, and it need not be a small
@@ -4457,8 +4448,7 @@ low power state by sending a UDP Wake On LAN (WOL) packet. See the
 To automatically call :tool:`condor_power` under specific conditions,
 *condor_rooster* may be used. The configuration options for
 *condor_rooster* are described in the 
-:ref:`admin-manual/configuration-macros:condor_rooster configuration file
-macros` section.
+:ref:`rooster_config_options` section.
 
 Keeping a ClassAd for a Hibernating Machine
 '''''''''''''''''''''''''''''''''''''''''''
@@ -4469,15 +4459,10 @@ hibernation. This is required by *condor_rooster* so that it can
 evaluate the :macro:`UNHIBERNATE` expression of
 the offline machines.
 
-To do this, define a log file using the
-:macro:`COLLECTOR_PERSISTENT_AD_LOG` configuration variable. See
-the :ref:`admin-manual/configuration-macros:condor_startd configuration file
-macros` section for the definition. An optional expiration time for each
-ClassAd can be specified with
-:macro:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
+To do this, define a log file using the :macro:`COLLECTOR_PERSISTENT_AD_LOG`
+configuration variable. An optional expiration time for each ClassAd can be
+specified with :macro:`OFFLINE_EXPIRE_ADS_AFTER`. The timing begins from the time
 the hibernating machine's ClassAd enters the *condor_collector* daemon.
-See the :ref:`admin-manual/configuration-macros:condor_startd configuration
-file macros` section for the definition.
 
 Linux Platform Details
 ''''''''''''''''''''''
@@ -4502,10 +4487,8 @@ order shown. The first method detected as usable on the system is
 chosen.
 
 This ordered detection may be bypassed, to use a specified method
-instead by setting the configuration variable
-:macro:`LINUX_HIBERNATION_METHOD` with one of the defined strings. This
-variable is defined in the :ref:`admin-manual/configuration-macros:condor_startd
-configuration file macros` section. If no usable methods are detected or the
+instead by setting the configuration variable :macro:`LINUX_HIBERNATION_METHOD`
+with one of the defined strings. If no usable methods are detected or the
 method specified by :macro:`LINUX_HIBERNATION_METHOD` is either not detected or
 invalid, hibernation is disabled.
 

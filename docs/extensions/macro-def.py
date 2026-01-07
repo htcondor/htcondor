@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 from docutils import nodes, utils
 from docutils.parsers.rst import Directive
@@ -10,18 +11,34 @@ from htc_helpers import custom_ext_parser, make_headerlink_node, warn
 
 KNOB_DEFS = []
 
+# Special default macro grouping names
+# i.e. filename -> pretty name
+DEFAULT_GROUP_PRETTY_NAME = {
+    "dagman": "DAGMan",
+    "ssh_to_job": "SSH to Job",
+}
+
 def dump(obj):
     for attr in dir(obj):
         print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
 def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     global KNOB_DEFS
+
+    default_group = Path(inliner.document.settings.env.docname).name
+
     # Create a new linkable target using the macro name
     knob, grouping = custom_ext_parser(text)
     targetid = knob
     targetnode = nodes.target('', knob, ids=[targetid], classes=["macro-def"])
+
     if grouping != "":
-        grouping = grouping + " "
+        # Specific macro grouping defined inline i.e. :macro-def:`foo[Group One]`
+        pass
+    elif default_group in DEFAULT_GROUP_PRETTY_NAME:
+        grouping = DEFAULT_GROUP_PRETTY_NAME[default_group]
+    else:
+        grouping = default_group.replace("_", " ").title()
 
     if knob in KNOB_DEFS:
         docname = inliner.document.settings.env.docname
@@ -33,7 +50,7 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
 
     # Automatically include an index entry for macro definitions
     indexnode = addnodes.index()
-    indexnode['entries'] = process_index_entry(f"pair: {knob}; {grouping}Configuration Options", targetid)
+    indexnode['entries'] = process_index_entry(f"pair: {knob}; {grouping} Configuration Options", targetid)
     set_role_source_info(inliner, lineno, indexnode)
     headerlink_node = make_headerlink_node(knob, options)
 
@@ -41,4 +58,3 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
 
 def setup(app):
     app.add_role("macro-def", macro_def_role)
-

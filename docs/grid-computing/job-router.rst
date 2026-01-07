@@ -198,8 +198,7 @@ An Example Configuration
 The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
 specific to the Job Router are in the 
-:ref:`admin-manual/configuration-macros:condor_job_router configuration file
-entries` section. One route a local SLURM cluster.
+:ref:`job_router_config_options` section. One route a local SLURM cluster.
 A second route is cluster accessed via ARC CE. The third
 site is an HTCondor site accessed by HTCondor-C. The *condor_job_router* daemon
 does not know which site will be best for a given job. The policy implemented in

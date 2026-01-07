@@ -122,10 +122,7 @@ Options
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
     ClassAd. *WhichStatistics* is specified using the same syntax as
-    defined for :macro:`STATISTICS_TO_PUBLISH`. A definition is in the
-    HTCondor Administrator's manual section on configuration
-    (:ref:`admin-manual/configuration-macros:htcondor-wide configuration file
-    entries`).
+    defined for :macro:`STATISTICS_TO_PUBLISH`.
  **-storage**
     (Query option) Display attributes of machines with network storage
     resources.

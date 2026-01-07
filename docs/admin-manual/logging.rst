@@ -242,7 +242,7 @@ Directories used by More than One Role
     of each daemon's log by setting :macro:`<SUBSYS>_LOG`,
     although you should never need to do so.  You can also control the sizes
     of the log files or how often they rotate; see
-    :ref:`admin-manual/configuration-macros:Daemon Logging Configuration File Entries`
+    :ref:`daemon_logging_config_options`
     for details.  If you want to write your logs to a shared filesystem,
     we recommend including ``$(HOSTNAME)`` in the value of :macro:`LOG` rather
     than changing the names of each individual log to not collide.  If you

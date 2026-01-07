@@ -274,8 +274,7 @@ Scheduler ClassAd Attributes
 
 :classad-attribute-def:`MaxJobsRunning`
     The same integer value as set by the evaluation of the configuration
-    variable :macro:`MAX_JOBS_RUNNING`. See the definition in the
-    :ref:`admin-manual/configuration-macros:condor_schedd configuration file entries` section.
+    variable :macro:`MAX_JOBS_RUNNING`.
 
 :classad-attribute-def:`MonitorSelfAge`
     The number of seconds that this daemon has been running.
@@ -581,14 +580,11 @@ Scheduler ClassAd Attributes
 
 :classad-attribute-def:`StartLocalUniverse`
     The same boolean value as set in the configuration variable
-    :macro:`START_LOCAL_UNIVERSE`. See the definition in the
-    :ref:`admin-manual/configuration-macros:condor_schedd configuration file entries` section.
+    :macro:`START_LOCAL_UNIVERSE`.
 
 :classad-attribute-def:`StartSchedulerUniverse`
     The same boolean value as set in the configuration variable
-    :macro:`START_SCHEDULER_UNIVERSE`. See the definition in the
-    :ref:`admin-manual/configuration-macros:condor_schedd
-    configuration file entries` section.
+    :macro:`START_SCHEDULER_UNIVERSE`.
 
 :classad-attribute-def:`StatsLastUpdateTime`
     A Statistics attribute defining the time that statistics about jobs
