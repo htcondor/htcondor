@@ -1225,7 +1225,6 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 				found_it = true;
 				free( tmp );
 				tmp = NULL;
-				break;
 
 			} else {  // daemon type != DT_STARTD or there's an '@'
 					// everything else always uses ATTR_NAME
@@ -1255,7 +1254,11 @@ resolveNames( std::vector<Daemon>& daemon_list, std::vector<std::string>* name_l
 				free( tmp );
 				tmp = NULL;
 			} // daemon type
-		} // while( each ad from the collector )
+
+			if (found_it) {
+				break;
+			}
+		} // for( each ad from the collector )
 
 		if( !found_it ) {
 			fprintf( stderr, "Can't find address for %s %s\n",
