@@ -469,7 +469,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		 */
 	if (!current) { return EVAL_UNDEF; }
 	InlineExpr inlineExpr;
-	InlineValue scratch(nullptr);
+	InlineExprStorage scratch(nullptr);
 	int rc = current->LookupInScope( attributeStr, inlineExpr, scratch, state );
 
 	if ( !expr && !absolute && rc == EVAL_UNDEF && current->alternateScope ) {

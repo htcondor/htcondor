@@ -30,7 +30,8 @@
 namespace classad {
 
 // Forward declarations
-class InlineValue;
+class InlineExprStorage;
+
 class InlineStringBuffer;
 
 /// This converts a ClassAd into a string representing the %ClassAd
@@ -65,8 +66,8 @@ class ClassAdUnParser
 		void Unparse( std::string &buffer, const ExprTree *expr );
 		void Unparse( std::string &buffer, const ClassAd *ad, const References &whitelist );
 
-		/** Unparse an InlineValue without materializing it
-		 *  This is an optimization for cases where we have an InlineValue
+		/** Unparse an InlineExprStorage without materializing it
+		 *  This is an optimization for cases where we have an InlineExprStorage
 		 *  and want to unparse it directly without converting to ExprTree*.
 		 *  @param buffer The string to unparse to
 		 *  @param val The inline value to unparse

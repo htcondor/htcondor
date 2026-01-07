@@ -192,13 +192,13 @@ class ClassAd : public ExprTree
 
 		/**@name Insertion Methods */
 		//@{	
-		/** Inserts an attribute with an InlineValue into the ClassAd.
+		/** Inserts an attribute from an InlineExpr into the ClassAd.
+			Properly handles string values by materializing them from the source's buffer.
 			@param attrName The name of the attribute.
-			@param value The InlineValue to insert (inline or out-of-line) - moved.
-			@param sourceMap Pointer to the source ClassAdFlatMap (for materializing inline strings), or nullptr.
+			@param inlineExpr The InlineExpr to insert (contains the value and its source ClassAdFlatMap).
 			@return true if insertion succeeded, false otherwise.
 		*/
-		bool Insert( const std::string &attrName, InlineValue &&value, const AttrList* sourceMap = nullptr );
+		bool Insert( const std::string &attrName, const InlineExpr& inlineExpr );
 
 		/** Copies an attribute from another ClassAd into this ClassAd.
 			Properly handles string values by materializing them from the source's buffer.
@@ -208,6 +208,10 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 		*/
 		bool CopyExprFrom( const std::string& destAttrName, const ClassAd& source, const std::string& sourceAttrName );
+
+		/** Copy an InlineExpr into this ClassAd. This avoids a Lookup on the
+		    source ad when the caller already has an InlineExpr. */
+		bool CopyExpr(const std::string& destAttrName, const InlineExpr& srcExpr);
 
 		/** Inserts an attribute into the ClassAd.  The setParentScope() method
 				is invoked on the inserted expression.
@@ -691,6 +695,15 @@ class ClassAd : public ExprTree
 		bool LookupBool(const std::string &name, bool &value) const
 		{ return EvaluateAttrBoolEquiv(name, value); }
 
+		/** Evaluates an InlineExpr to a Value.
+			This avoids materializing inline values when possible, improving performance.
+			@param inlineExpr The inline expression to evaluate (obtained from LookupInline)
+			@param result The result of the evaluation
+			@param mask Hint about what types are wanted back (default: SAFE_VALUES)
+			@return true if evaluation succeeded, false otherwise
+		*/
+		bool EvaluateExpr( const InlineExpr& inlineExpr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
+
 		/** Evaluate an expression and check if it's boolean-equivalent.
 			This is useful for evaluating expressions obtained from LookupInline
 			without forcing unnecessary conversions of inline values to full Value objects.
@@ -707,6 +720,47 @@ class ClassAd : public ExprTree
 			@return true if the expression evaluated to a boolean equivalent, false otherwise
 		*/
 		bool EvaluateExprBoolEquiv( const InlineExpr& inlineExpr, bool& boolValue ) const;
+
+		/** Evaluates an InlineExpr to an integer.
+			@param inlineExpr The inline expression to evaluate
+			@param intValue The value of the expression
+			@return true if inlineExpr evaluated to an integer, false otherwise
+		*/
+		bool EvaluateExprInt( const InlineExpr& inlineExpr, int& intValue ) const;
+		bool EvaluateExprInt( const InlineExpr& inlineExpr, long& intValue ) const;
+		bool EvaluateExprInt( const InlineExpr& inlineExpr, long long& intValue ) const;
+
+		/** Evaluates an InlineExpr to a real.
+			@param inlineExpr The inline expression to evaluate
+			@param realValue The value of the expression
+			@return true if inlineExpr evaluated to a real, false otherwise
+		*/
+		bool EvaluateExprReal( const InlineExpr& inlineExpr, double& realValue ) const;
+
+		/** Evaluates an InlineExpr to a number (integer or real).
+			@param inlineExpr The inline expression to evaluate
+			@param numValue The value of the expression
+			@return true if inlineExpr evaluated to a number, false otherwise
+		*/
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, int& numValue ) const;
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, long& numValue ) const;
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, long long& numValue ) const;
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, double& numValue ) const;
+
+		/** Evaluates an InlineExpr to a string.
+			@param inlineExpr The inline expression to evaluate
+			@param buf The string value of the expression
+			@return true if inlineExpr evaluated to a string, false otherwise
+		*/
+		bool EvaluateExprString( const InlineExpr& inlineExpr, char* buf, int len ) const;
+		bool EvaluateExprString( const InlineExpr& inlineExpr, std::string& buf ) const;
+
+		/** Evaluates an InlineExpr to a boolean.
+			@param inlineExpr The inline expression to evaluate
+			@param boolValue The value of the expression
+			@return true if inlineExpr evaluated to a boolean value, false otherwise
+		*/
+		bool EvaluateExprBool( const InlineExpr& inlineExpr, bool& boolValue ) const;
 
 		/**@name STL-like Iterators */
 		//@{
@@ -1042,6 +1096,10 @@ class ClassAd : public ExprTree
         bool _GetInternalReferences(const ExprTree *expr, const ClassAd *ad,
             EvalState &state, References& refs, bool fullNames) const;
 
+		// Helper for EvaluateExpr methods that take InlineExpr
+		// Avoids unnecessary string allocation when type doesn't match mask
+		bool _EvaluateInlineExpr( const InlineExpr& inlineExpr, Value &result, Value::ValueType mask ) const;
+
 		ClassAd *_GetDeepScope( const std::string& ) const;
 		ClassAd *_GetDeepScope( ExprTree * ) const;
 
@@ -1050,7 +1108,7 @@ class ClassAd : public ExprTree
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
-		int LookupInScope( const std::string&, InlineExpr&, InlineValue&, EvalState& ) const;
+		int LookupInScope( const std::string&, InlineExpr&, InlineExprStorage&, EvalState& ) const;
 		AttrList	  attrList;
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;

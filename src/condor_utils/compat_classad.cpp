@@ -2271,10 +2271,11 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 		// First check for _condor_priv prefix
 		if (attrName[0] == '_') { // Blatant optimization
 			if (ClassAdAttributeIsPrivateV2(attrName)) {
-				// We have a match!
+				// We have a match! Copy the expression from source into target
+				// using ClassAd::CopyExprFrom to avoid moving InlineValue across
+				// attribute lists which can lead to invalid buffer references.
 				moved_any = true;
-				ExprTree* expr = inlineExpr.materialize();
-				target.Insert(attrName, expr ? expr->Copy() : nullptr);
+				target.CopyExpr(attrName, inlineExpr);
 				sourceIt = source.erase(sourceIt);
 				continue; // keep going
 			}
@@ -2287,10 +2288,11 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 		if (lessThan(attrName, privateIt->first)) {
 			sourceIt++;
 		} else if (strcasecmp(attrName.c_str(), privateIt->first.c_str()) == 0) {
-			// We have a match!
+			// We have a match! Copy the expression from source into target
+			// using ClassAd::CopyExprFrom to avoid moving InlineValue across
+			// attribute lists which can lead to invalid buffer references.
 			moved_any = true;
-			ExprTree* expr = inlineExpr.materialize();
-			target.Insert(attrName, expr ? expr->Copy() : nullptr);
+			target.CopyExpr(attrName, inlineExpr);
 			sourceIt = source.erase(sourceIt);
 			privateIt++;
 			if (privateIt == privateAttrsAd.end()) {
@@ -2312,10 +2314,11 @@ movePrivateAttrs(ClassAd &source, ClassAd &target)
 		auto [attrName, inlineExpr] = *sourceIt;
 		if (attrName[0] == '_') { // Blatant optimization
 			if (ClassAdAttributeIsPrivateV2(attrName)) {
-				// We have a match!
+				// We have a match! Copy the expression from source into target
+				// using ClassAd::CopyExprFrom to avoid moving InlineValue across
+				// attribute lists which can lead to invalid buffer references.
 				moved_any = true;
-				ExprTree* expr = inlineExpr.materialize();
-				target.Insert(attrName, expr ? expr->Copy() : nullptr);
+				target.CopyExpr(attrName, inlineExpr);
 				sourceIt = source.erase(sourceIt);
 				continue;
 			}
@@ -2354,13 +2357,17 @@ EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, clas
 	}
 
 	getTheMatchAd( my, target );
-	if( my->Lookup( name ) ) {
-		if( my->EvaluateAttr( name, value ) ) {
+	auto inlineExpr = my->LookupInline( name );
+	if( inlineExpr ) {
+		if( my->EvaluateExpr( inlineExpr, value ) ) {
 			rc = 1;
 		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttr( name, value ) ) {
-			rc = 1;
+	} else {
+		inlineExpr = target->LookupInline( name );
+		if( inlineExpr ) {
+			if( target->EvaluateExpr( inlineExpr, value ) ) {
+				rc = 1;
+			}
 		}
 	}
 	releaseTheMatchAd();
@@ -2380,13 +2387,17 @@ EvalString(const char *name, classad::ClassAd *my, classad::ClassAd *target, std
 	else
 	{
 	  getTheMatchAd( my, target );
-	  if( my->Lookup( name ) ) {
-		  if( my->EvaluateAttrString( name, value ) ) {
+	  auto inlineExpr = my->LookupInline( name );
+	  if( inlineExpr ) {
+		  if( my->EvaluateExprString( inlineExpr, value ) ) {
 			  rc = 1;
 		  }
-	  } else if( target->Lookup( name ) ) {
-		  if( target->EvaluateAttrString( name, value ) ) {
-			  rc = 1;
+	  } else {
+		  inlineExpr = target->LookupInline( name );
+		  if( inlineExpr ) {
+			  if( target->EvaluateExprString( inlineExpr, value ) ) {
+				  rc = 1;
+			  }
 		  }
 	  }
 	  releaseTheMatchAd();
@@ -2408,13 +2419,17 @@ EvalInteger (const char *name, classad::ClassAd *my, classad::ClassAd *target, l
 	else 
 	{
 	  getTheMatchAd( my, target );
-	  if( my->Lookup( name ) ) {
-		  if( my->EvaluateAttrNumber( name, value ) ) {
+	  auto inlineExpr = my->LookupInline( name );
+	  if( inlineExpr ) {
+		  if( my->EvaluateExprNumber( inlineExpr, value ) ) {
 			  rc = 1;
 		  }
-	  } else if( target->Lookup( name ) ) {
-		  if( target->EvaluateAttrNumber( name, value ) ) {
-			  rc = 1;
+	  } else {
+		  inlineExpr = target->LookupInline( name );
+		  if( inlineExpr ) {
+			  if( target->EvaluateExprNumber( inlineExpr, value ) ) {
+				  rc = 1;
+			  }
 		  }
 	  }
 	  releaseTheMatchAd();
@@ -2454,13 +2469,17 @@ EvalFloat (const char *name, classad::ClassAd *my, classad::ClassAd *target, dou
 	}
 
 	getTheMatchAd( my, target );
-	if( my->Lookup( name ) ) {
-		if( my->EvaluateAttrNumber( name, value ) ) {
+	auto inlineExpr = my->LookupInline( name );
+	if( inlineExpr ) {
+		if( my->EvaluateExprNumber( inlineExpr, value ) ) {
 			rc = 1;
 		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrNumber( name, value ) ) {
-			rc = 1;
+	} else {
+		inlineExpr = target->LookupInline( name );
+		if( inlineExpr ) {
+			if( target->EvaluateExprNumber( inlineExpr, value ) ) {
+				rc = 1;
+			}
 		}
 	}
 	releaseTheMatchAd();
@@ -2495,9 +2514,12 @@ EvalBool (const char *name, classad::ClassAd *my, classad::ClassAd *target, bool
 		if (my->EvaluateExprBoolEquiv(inlineExpr, value)) {
 			rc = 1;
 		}
-	} else if( target->Lookup( name ) ) {
-		if( target->EvaluateAttrBoolEquiv( name, value ) ) {
-			rc = 1;
+	} else {
+		inlineExpr = target->LookupInline( name );
+		if( inlineExpr ) {
+			if( target->EvaluateExprBoolEquiv( inlineExpr, value ) ) {
+				rc = 1;
+			}
 		}
 	}
 
@@ -2588,7 +2610,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	// Not sure why we need to sort the output. Do we?
-	std::vector<std::pair<std::string, ExprTree *>> attributes;
+	std::vector<std::pair<std::string, classad::InlineExpr>> attributes;
 
 	attributes.reserve(ad.size() + ( parent ? parent->size() : 0));
 	if ( parent ) {
@@ -2607,8 +2629,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 			}
 			if ( !exclude_private ||
 				 !ClassAdAttributeIsPrivateAny( attrName ) ) {
-				ExprTree* expr = inlineExpr.materialize();
-				attributes.emplace_back(attrName, expr);
+				attributes.emplace_back(attrName, inlineExpr);
 			}
 		}
 	}
@@ -2625,21 +2646,22 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 
 		if ( !exclude_private ||
 			 !ClassAdAttributeIsPrivateAny( attrName ) ) {
-			ExprTree* expr = inlineExpr.materialize();
-			attributes.emplace_back(attrName, expr);
+			attributes.emplace_back(attrName, inlineExpr);
 		}
 	}
 
 	if (sortHow == HumanSort) {
-		std::ranges::sort(attributes, std::less<>{}, &std::pair<std::string, ExprTree *>::first);
+		std::ranges::sort(attributes, std::less<>{}, &std::pair<std::string, classad::InlineExpr>::first);
 	} else {
-		std::ranges::sort(attributes, classad::ClassAdFlatMapOrder{}, &std::pair<std::string, ExprTree *>::first);
+		std::ranges::sort(attributes, classad::ClassAdFlatMapOrder{}, &std::pair<std::string, classad::InlineExpr>::first);
 	}
 
 	for( const auto &i : attributes) {
 		output += i.first;
 		output += " = ";
-		unp.Unparse( output, i.second );
+		// Try to unparse the inline expression without materializing. If
+		// that fails, materialize and fallback to unparsing the ExprTree.
+		unp.Unparse(output, i.second);
 		output += '\n';
 	}
 
@@ -2709,12 +2731,12 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 
 	classad::References::const_iterator it;
 	for (it = attrs.begin(); it != attrs.end(); ++it) {
-		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
-		if (tree) {
+		auto inlineExpr = ad.LookupInline(*it); // use LookupInline to support parent ad and avoid materialization
+		if (inlineExpr) {
 			if (indent) output += indent;
 			output += *it;
 			output += " = ";
-			unp.Unparse( output, tree );
+			unp.Unparse( output, inlineExpr );
 			output += "\n";
 		}
 	}
@@ -2752,18 +2774,17 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
 	size_t buffersize = 0;
 	classad::ClassAdUnParser unp;
 	std::string parsedString;
-	classad::ExprTree* expr;
 
 	unp.SetOldClassAd( true, true );
 
-    expr = ad.Lookup(name);
+    auto inlineExpr = ad.LookupInline(name);
 
-    if(!expr)
+    if(!inlineExpr)
     {
         return NULL;
     }
 
-    unp.Unparse(parsedString, expr);
+    unp.Unparse(parsedString, inlineExpr);
 
     buffersize = strlen(name) + parsedString.length() +
                     3 +     // " = "
@@ -2860,10 +2881,9 @@ IsValidAttrName(const char *name) {
 void
 CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const std::string &source_attr, const classad::ClassAd &source_ad)
 {
-	classad::ExprTree *e = source_ad.Lookup( source_attr );
-	if ( e ) {
-		e = e->Copy();
-		target_ad.Insert( target_attr, e );
+	auto inlineExpr = source_ad.LookupInline( source_attr );
+	if ( inlineExpr ) {
+		target_ad.CopyExpr( target_attr, inlineExpr );
 	} else {
 		target_ad.Delete( target_attr );
 	}
@@ -2964,8 +2984,6 @@ QuoteAdStringValue(char const *val, std::string &buf)
 void
 ChainCollapse(classad::ClassAd &ad)
 {
-    classad::ExprTree *tmpExprTree;
-
 	classad::ClassAd *parent = ad.GetChainedParentAd();
 
     if(!parent)
@@ -2978,22 +2996,15 @@ ChainCollapse(classad::ClassAd &ad)
 
     for(auto itr = parent->begin(); itr != parent->end(); itr++)
     {
-        // Only move the value from our chained ad into our ad when it 
-        // does not already exist. Hence the Lookup(). 
+        // Only move the value from our chained ad into our ad when it
+        // does not already exist. Hence the LookupInline(). 
         // This means that the attributes in our classad takes precedence
         // over the ones in the chained class ad.
 
         auto [attrName, inlineExpr] = *itr;
-        if( !ad.Lookup(attrName) )
+        if( !ad.LookupInline(attrName) )
         {
-            tmpExprTree = inlineExpr.materialize();
-
-            //deep copy it!
-            tmpExprTree = tmpExprTree->Copy(); 
-            ASSERT(tmpExprTree); 
-
-            //K, it's clear. Insert it, but don't try to 
-            ad.Insert(attrName, tmpExprTree);
+			ad.CopyExpr(attrName, inlineExpr);
         }
     }
 }
@@ -3006,11 +3017,9 @@ GetReferences( const char* attr, const classad::ClassAd &ad,
                classad::References *internal_refs,
                classad::References *external_refs )
 {
-	ExprTree *tree;
-
-	tree = ad.Lookup( attr );
-	if ( tree != NULL ) {
-		return GetExprReferences( tree, ad, internal_refs, external_refs );
+	auto inlineExpr = ad.LookupInline( attr );
+	if ( inlineExpr && !inlineExpr.isInline() ) { // Inline values have no references
+		return GetExprReferences( inlineExpr.materialize(), ad, internal_refs, external_refs );
 	} else {
 		return false;
 	}

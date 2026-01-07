@@ -41,20 +41,20 @@ ExprTree* InlineExpr::materialize() const {
 	}
 }
 
-bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuffer* stringBuffer) {
+bool tryMakeInlineValue(const Value& val, InlineExprStorage& outValue, InlineStringBuffer* stringBuffer) {
 	switch (val.GetType()) {
 		case Value::ERROR_VALUE:
-			outValue = InlineValue::makeErrorLiteral();
+			outValue = InlineExprStorage::makeErrorLiteral();
 			return true;
 
 		case Value::UNDEFINED_VALUE:
-			outValue = InlineValue::makeUndefinedLiteral();
+			outValue = InlineExprStorage::makeUndefinedLiteral();
 			return true;
 
 		case Value::BOOLEAN_VALUE: {
 			bool b;
 			if (val.IsBooleanValue(b)) {
-				outValue = InlineValue::makeBool(b);
+				outValue = InlineExprStorage::makeBool(b);
 				return true;
 			}
 			return false;
@@ -66,7 +66,7 @@ bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuf
 				// Only inline if it fits in int32
 				if (i >= std::numeric_limits<int32_t>::min() && 
 					i <= std::numeric_limits<int32_t>::max()) {
-					outValue = InlineValue::makeInt32(static_cast<int32_t>(i));
+					outValue = InlineExprStorage::makeInt32(static_cast<int32_t>(i));
 					return true;
 				}
 			}
@@ -78,7 +78,7 @@ bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuf
 			if (val.IsRealValue(d)) {
 				// Check if it can be represented as float32 without significant loss
 				float f = static_cast<float>(d);
-				outValue = InlineValue::makeFloat32(f);
+				outValue = InlineExprStorage::makeFloat32(f);
 				return true;
 			}
 			return false;
@@ -90,7 +90,7 @@ bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuf
 				if (stringBuffer) {
 					auto [offset, size] = stringBuffer->addString(s);
 					if (offset != 0 || size == 0) {  // Check for valid result
-						outValue = InlineValue::makeStringRef(offset, size);
+						outValue = InlineExprStorage::makeStringRef(offset, size);
 						return true;
 					}
 				}
@@ -104,7 +104,7 @@ bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuf
 	}
 }
 
-ExprTree* inlineValueToExprTree(const InlineValue& val, const InlineStringBuffer* stringBuffer) {
+ExprTree* inlineValueToExprTree(const InlineExprStorage& val, const InlineStringBuffer* stringBuffer) {
 	if (!val.isInline()) {
 		return val.asPtr();
 	}
@@ -152,7 +152,7 @@ ExprTree* inlineValueToExprTree(const InlineValue& val, const InlineStringBuffer
 	return Literal::MakeLiteral(v);
 }
 
-bool inlineValueToValue(const InlineValue& val, Value& outValue, const InlineStringBuffer* stringBuffer) {
+bool inlineValueToValue(const InlineExprStorage& val, Value& outValue, const InlineStringBuffer* stringBuffer) {
 	if (!val.isInline()) {
 		// Not an inline value - caller should handle this differently
 		return false;
@@ -193,9 +193,9 @@ bool inlineValueToValue(const InlineValue& val, Value& outValue, const InlineStr
 	}
 }
 
-bool InlineValue::sameAs(const InlineValue& other,
-						  const InlineStringBuffer* selfBuffer,
-						  const InlineStringBuffer* otherBuffer) const
+bool InlineExprStorage::sameAs(const InlineExprStorage& other,
+					  const InlineStringBuffer* selfBuffer,
+					  const InlineStringBuffer* otherBuffer) const
 {
 	if (isInline() && other.isInline()) {
 		return (toBits() == other.toBits());
@@ -213,9 +213,9 @@ bool InlineValue::sameAs(const InlineValue& other,
 		return lhs->SameAs(rhs);
 	}
 
-	const InlineValue& inlineVal = isInline() ? *this : other;
+	const InlineExprStorage& inlineVal = isInline() ? *this : other;
 	const InlineStringBuffer* inlineBuf = isInline() ? selfBuffer : otherBuffer;
-	const InlineValue& treeVal = isInline() ? other : *this;
+	const InlineExprStorage& treeVal = isInline() ? other : *this;
 	ExprTree* treePtr = treeVal.asPtr();
 
 	if (!treePtr) {
@@ -242,21 +242,21 @@ bool InlineValue::sameAs(const InlineValue& other,
 
 namespace classad {
 
-ExprTree* InlineValue::asPtr() const {
+ExprTree* InlineExprStorage::asPtr() const {
 	if (isInline()) {
 		return nullptr;
 	}
 	return reinterpret_cast<ExprTree*>(_bits);
 }
 
-void InlineValue::release() {
+void InlineExprStorage::release() {
 	if (!isInline()) {
 		delete asPtr();
 	}
 	_bits = 0;
 }
 
-ExprTree* InlineValue::materialize(InlineStringBuffer* stringBuffer) const {
+ExprTree* InlineExprStorage::materialize(InlineStringBuffer* stringBuffer) const {
 	if (!isInline()) {
 		return reinterpret_cast<ExprTree*>(_bits);
 	}
@@ -272,12 +272,11 @@ ExprTree* InlineValue::materialize(InlineStringBuffer* stringBuffer) const {
 		result = inlineValueToExprTree(*this, stringBuffer);
 	}
 
-	//fprintf(stderr, "InlineValue::materialize: materialized ExprTree %p from InlineValue bits 0x%llx\n", result, _bits);
 	_bits = reinterpret_cast<uint64_t>(result);
 	return result;
 }
 
-bool InlineValue::Evaluate(Value& val, const InlineStringBuffer* stringBuffer) const
+bool InlineExprStorage::Evaluate(Value& val, const InlineStringBuffer* stringBuffer) const
 {
 	if (isInline()) {
 		// Inline value - evaluate directly without materializing

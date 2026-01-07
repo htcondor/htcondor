@@ -50,6 +50,27 @@ size_t  _expressionCacheMinStringSize = 128;
 void ClassAdSetExpressionCaching(bool do_caching) {
 	doExpressionCaching = do_caching;
 }
+
+bool ClassAd::CopyExpr(const std::string& attrName, const InlineExpr& srcExpr)
+{
+	if (!srcExpr) return false;
+
+	const InlineExprStorage* srcVal = srcExpr.value();
+
+	if (!srcVal) return false;
+
+	if (!srcVal->isInline()) {
+		// Out-of-line: copy the ExprTree
+		ExprTree* tree = srcVal->asPtr();
+		if (tree) {
+			return Insert(attrName, tree->Copy());
+		}
+		return false;
+	}
+
+	// Inline value: use the new Insert with InlineExpr
+	return Insert(attrName, srcExpr);
+}
 void ClassAdSetExpressionCaching(bool do_caching, int min_string_size) {
 	doExpressionCaching = do_caching;
 	_expressionCacheMinStringSize = min_string_size;
@@ -607,7 +628,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	if (!inserted) {
 		// replace existing value
 		itr->second.release();
-		itr->second = InlineValue(tree);
+		itr->second = InlineExprStorage(tree);
 	}
 
 	MarkAttributeDirty(attrName);
@@ -615,7 +636,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	return true;
 }
 
-bool ClassAd::Insert( const std::string& attrName, InlineValue &&value, const AttrList* sourceMap )
+bool ClassAd::Insert( const std::string& attrName, const InlineExpr& inlineExpr )
 {
 	// sanity checks
 	if( attrName.empty() ) {
@@ -624,13 +645,22 @@ bool ClassAd::Insert( const std::string& attrName, InlineValue &&value, const At
 		return false;
 	}
 
+	if (!inlineExpr) {
+		CondorErrno = ERR_BAD_EXPRESSION;
+		CondorErrMsg = "no InlineValue when inserting attribute in classad";
+		return false;
+	}
+
+	const InlineExprStorage* value = inlineExpr.value();
+	const ClassAdFlatMap* sourceMap = inlineExpr.attrList();
+
 	// If it's an out-of-line ExprTree*, set parent scope
-	if (!value.isInline()) {
-		ExprTree* tree = value.asPtr();
+	if (!value->isInline()) {
+		ExprTree* tree = value->asPtr();
 		if (tree) {
 			tree->SetParentScope( this );
 		}
-	} else if (value.getInlineType() == 5) {
+	} else if (value->getInlineType() == 5) {
 		// For inline string refs, materialize from source and insert as new string
 		if (!sourceMap) {
 			CondorErrno = ERR_BAD_EXPRESSION;
@@ -639,7 +669,7 @@ bool ClassAd::Insert( const std::string& attrName, InlineValue &&value, const At
 		}
 		// Materialize string from source buffer
 		uint32_t offset, size;
-		value.getStringRef(offset, size);
+		value->getStringRef(offset, size);
 		const InlineStringBuffer* srcBuffer = sourceMap->stringBuffer();
 		if (!srcBuffer) {
 			CondorErrno = ERR_BAD_EXPRESSION;
@@ -658,7 +688,7 @@ bool ClassAd::Insert( const std::string& attrName, InlineValue &&value, const At
 		// replace existing value
 		itr->second.release();
 	}
-	itr->second = std::move(value);
+	itr->second = InlineExprStorage(value->toBits());
 
 	MarkAttributeDirty(attrName);
 
@@ -675,10 +705,9 @@ bool ClassAd::CopyExprFrom( const std::string& attrName, const ClassAd& source, 
 		return false;
 	}
 
-	const InlineValue* srcVal = srcExpr.value();
-	const ClassAdFlatMap* sourceMap = srcExpr.attrList();
+	const InlineExprStorage* srcVal = srcExpr.value();
 
-	// For out-of-line values, copy the tree; for inline values, reconstruct or copy bits
+	// For out-of-line values, copy the tree; for inline values, use Insert with InlineExpr
 	if (!srcVal->isInline()) {
 		// Out-of-line: copy the tree
 		ExprTree* tree = srcVal->asPtr();
@@ -687,21 +716,9 @@ bool ClassAd::CopyExprFrom( const std::string& attrName, const ClassAd& source, 
 		} else {
 			return false;
 		}
-	} else if (srcVal->getInlineType() == 5) {
-		// Inline string: materialize from source and add to our buffer
-		uint32_t offset, size;
-		srcVal->getStringRef(offset, size);
-		const InlineStringBuffer* srcBuffer = sourceMap->stringBuffer();
-		if (!srcBuffer) {
-			return false;
-		}
-		std::string str = srcBuffer->getString(offset, size);
-		attrList.setString(attrName, str);
-		MarkAttributeDirty(attrName);
-		return true;
 	} else {
-		// Non-string inline value - safe to copy bits
-		return Insert(attrName, InlineValue(srcVal->toBits()));
+		// Inline value: use the new Insert with InlineExpr
+		return Insert(attrName, srcExpr);
 	}
 }
 
@@ -730,7 +747,7 @@ bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_
 		// clear without deleting; we'll overwrite next
 		itr->second.setBits(0);
 		// store the new value
-		itr->second = InlineValue(tree);
+		itr->second = InlineExprStorage(tree);
 	} else {
 		old_tree = nullptr;
 	}
@@ -753,7 +770,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 	if(!inserted) {
 		// replace existing value
 		itr->second.release();
-		itr->second = InlineValue(lit);
+		itr->second = InlineExprStorage(lit);
 	}
 
 	MarkAttributeDirty(name);
@@ -806,7 +823,7 @@ LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 {
 	EvalState	state;
 	InlineExpr inlineExpr;
-	InlineValue scratch(nullptr);
+	InlineExprStorage scratch(nullptr);
 	int			rval;
 
 	state.SetScopes( this );
@@ -822,7 +839,7 @@ LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 
 
 int ClassAd::
-LookupInScope(const std::string &name, InlineExpr& result, InlineValue& scratch, EvalState &state) const
+LookupInScope(const std::string &name, InlineExpr& result, InlineExprStorage& scratch, EvalState &state) const
 {
 	const ClassAd *current = this, *superScope;
 
@@ -963,7 +980,7 @@ Remove( const std::string &name )
 		// Sadly, we have to materialize due to the return value.
 		tree = attrList.materialize(itr);
 		// Clear the slot before erasing to avoid double-free
-		itr->second = InlineValue(nullptr);
+		itr->second = InlineExprStorage(nullptr);
 		attrList.erase( itr );
 		if (tree && dynamic_cast<Literal*>(tree) == nullptr) {
 			tree->SetParentScope( NULL );
@@ -1008,7 +1025,7 @@ Compact()
 
 	// Iterate through all attributes in the flat map
 	for (auto it = attrList.begin(); it != attrList.end(); ++it) {
-		InlineValue& val = it->second;
+		InlineExprStorage& val = it->second;
 
 		// Skip if already inline
 		if (val.isInline()) {
@@ -1032,7 +1049,7 @@ Compact()
 		literal->GetValue(v);
 
 		// Try to convert to an inline value
-		InlineValue newVal;
+		InlineExprStorage newVal;
 		if (tryMakeInlineValue(v, newVal, const_cast<InlineStringBuffer*>(attrList.stringBuffer()))) {
 			// Successfully inlined, replace the value
 			val.setBits(newVal.toBits());
@@ -1063,7 +1080,7 @@ Update( const ClassAd& ad )
 {
 	AttrList::const_iterator itr;
 	for( itr=ad.attrList.begin( ); itr!=ad.attrList.end( ); itr++ ) {
-		const InlineValue &srcVal = itr->second;
+		const InlineExprStorage &srcVal = itr->second;
 
 		// If the source value is inline, we can copy it directly without materializing
 		if (srcVal.isInline()) {
@@ -1325,7 +1342,7 @@ EvaluateAttr( const std::string &attr , Value &val, Value::ValueType mask ) cons
 
 	state.SetScopes( this );
 	InlineExpr inlineExpr;
-	InlineValue scratch(nullptr);
+	InlineExprStorage scratch(nullptr);
 	switch( LookupInScope( attr, inlineExpr, scratch, state ) ) {
 		case EVAL_OK:
 			// OPTIMIZATION: Try to extract inline value first
@@ -1561,6 +1578,122 @@ EvaluateExprBoolEquiv( const InlineExpr& inlineExpr, bool &boolValue ) const
 }
 
 bool ClassAd::
+_EvaluateInlineExpr( const InlineExpr& inlineExpr, Value &result, Value::ValueType mask ) const
+{
+	if (!inlineExpr) {
+		return false;
+	}
+
+	// If the value is inline, check type compatibility before converting
+	if (inlineExpr.value() && inlineExpr.value()->isInline()) {
+		unsigned char inlineType = inlineExpr.value()->getInlineType();
+
+		// Type check optimization: avoid string allocation if caller doesn't want strings
+		// inlineType: 0=error, 1=undef, 2=bool, 3=int32, 4=float32, 5=string
+		if (inlineType == 5 && !(mask & Value::ValueType::STRING_VALUE)) {
+			// It's a string but caller doesn't want strings - return false
+			return false;
+		}
+
+		// Convert inline value to Value
+		classad::inlineValueToValue(*inlineExpr.value(), result, inlineExpr.attrList()->stringBuffer());
+		// Inline values are already safe, no need for SafetyCheck
+		return true;
+	}
+
+	// For out-of-line values, materialize and evaluate
+	ExprTree* expr = inlineExpr.materialize();
+	if (!expr) {
+		return false;
+	}
+
+	return EvaluateExpr(expr, result, mask);
+}
+
+bool ClassAd::
+EvaluateExpr( const InlineExpr& inlineExpr, Value &result, Value::ValueType mask ) const
+{
+	return _EvaluateInlineExpr(inlineExpr, result, mask);
+}
+
+bool ClassAd::
+EvaluateExprInt( const InlineExpr& inlineExpr, int &i ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i );
+}
+
+bool ClassAd::
+EvaluateExprInt( const InlineExpr& inlineExpr, long &i ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i );
+}
+
+bool ClassAd::
+EvaluateExprInt( const InlineExpr& inlineExpr, long long &i ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i );
+}
+
+bool ClassAd::
+EvaluateExprReal( const InlineExpr& inlineExpr, double &r ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsRealValue( r );
+}
+
+bool ClassAd::
+EvaluateExprNumber( const InlineExpr& inlineExpr, int &i ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i );
+}
+
+bool ClassAd::
+EvaluateExprNumber( const InlineExpr& inlineExpr, long &i ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i );
+}
+
+bool ClassAd::
+EvaluateExprNumber( const InlineExpr& inlineExpr, long long &i ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i );
+}
+
+bool ClassAd::
+EvaluateExprNumber( const InlineExpr& inlineExpr, double &r ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( r );
+}
+
+bool ClassAd::
+EvaluateExprString( const InlineExpr& inlineExpr, char *buf, int len ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::STRING_VALUE ) && val.IsStringValue( buf, len );
+}
+
+bool ClassAd::
+EvaluateExprString( const InlineExpr& inlineExpr, std::string &buf ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::STRING_VALUE ) && val.IsStringValue( buf );
+}
+
+bool ClassAd::
+EvaluateExprBool( const InlineExpr& inlineExpr, bool &b ) const
+{
+	Value val;
+	return _EvaluateInlineExpr( inlineExpr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValue( b );
+}
+
+bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const
 {
     EvalState       state;
@@ -1594,7 +1727,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
         case ATTRREF_NODE: {
             const ClassAd   *start;
             ExprTree        *tree;
-            InlineValue      result;
+            InlineExprStorage      result;
             std::string          attr;
             Value           val;
             bool            abs;
@@ -1645,7 +1778,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
                 // lookup for attribute
 			const ClassAd *curAd = state.curAd;
 			InlineExpr inlineExpr;
-			InlineValue scratch(nullptr);
+			InlineExprStorage scratch(nullptr);
             switch( start->LookupInScope( attr, inlineExpr, scratch, state ) ) {
                 case EVAL_ERROR:
                         // some error
@@ -1806,7 +1939,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
         case ATTRREF_NODE: {
             const ClassAd   *start;
             ExprTree        *tree;
-            InlineValue      result;
+            InlineExprStorage      result;
             std::string          attr;
             Value           val;
             bool            abs;
@@ -1840,7 +1973,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
                 // lookup for attribute
             const ClassAd *curAd = state.curAd;
             InlineExpr inlineExpr;
-            InlineValue scratch(nullptr);
+            InlineExprStorage scratch(nullptr);
             switch( start->LookupInScope( attr, inlineExpr, scratch, state ) ) {
                 case EVAL_ERROR:
                         // some error
@@ -1975,7 +2108,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
         case ATTRREF_NODE:{
             const ClassAd   *start;
             ExprTree        *tree;
-            InlineValue      result;
+            InlineExprStorage      result;
             std::string          attr;
             Value           val;
             bool            abs;
@@ -2019,7 +2152,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
             const ClassAd *curAd = state.curAd;
             InlineExpr inlineExpr;
-            InlineValue scratch(nullptr);
+            InlineExprStorage scratch(nullptr);
             switch( start->LookupInScope( attr, inlineExpr, scratch, state) ) {
                 case EVAL_ERROR:
                     return false;

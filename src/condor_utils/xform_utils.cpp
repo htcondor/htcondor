@@ -1369,7 +1369,7 @@ int XFormAdUndo::Revert(ClassAd & ad)
 				// rhs is an expr tree, and not a parent copy so we insert
 				ad.Insert(it.first, exprTree);
 			}
-			it.second = classad::InlineValue();
+			it.second = classad::InlineExprStorage();
 		} else if (ad.GetChainedParentAd()) {
 			// rhs is nullptr or inline, but there is a parent ad, so we prune
 			// since a delete would end up setting the value to undefined

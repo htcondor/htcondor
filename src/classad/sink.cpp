@@ -431,8 +431,8 @@ UnparseAux( string &buffer, const ClassAd *ad, const References *whitelist )
 bool ClassAdUnParser::
 Unparse(string &buffer, const InlineExpr &expr)
 {
-	// Get the InlineValue from the InlineExpr
-	const InlineValue* val = expr.value();
+	// Get the InlineExprStorage from the InlineExpr
+	const InlineExprStorage* val = expr.value();
 	if (!val || !*val) {
 		return false;
 	}

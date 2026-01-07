@@ -57,22 +57,22 @@ class ClassAdFlatMap;
 // This requires that ExprTree objects are always allocated on 2-byte boundaries,
 // which is guaranteed by the allocator since ExprTree has alignment > 1.
 
-class InlineValue {
+class InlineExprStorage {
 public:
-	InlineValue() : _bits(0) {}
-	explicit InlineValue(ExprTree* p) : _bits(reinterpret_cast<uint64_t>(p)) {}
-	explicit InlineValue(uint64_t b) : _bits(b) {}
+	InlineExprStorage() : _bits(0) {}
+	explicit InlineExprStorage(ExprTree* p) : _bits(reinterpret_cast<uint64_t>(p)) {}
+	explicit InlineExprStorage(uint64_t b) : _bits(b) {}
 
-	// Delete copy constructor and assignment - InlineValue is not copyable
+	// Delete copy constructor and assignment - storage is not copyable
 	// because inline strings refer to an external ClassAd-specific string buffer
-	InlineValue(const InlineValue&) = delete;
-	InlineValue& operator=(const InlineValue&) = delete;
+	InlineExprStorage(const InlineExprStorage&) = delete;
+	InlineExprStorage& operator=(const InlineExprStorage&) = delete;
 
 	// Allow move semantics for returning from factory functions
-	InlineValue(InlineValue&& other) noexcept : _bits(other._bits) {
+	InlineExprStorage(InlineExprStorage&& other) noexcept : _bits(other._bits) {
 		other._bits = 0;
 	}
-	InlineValue& operator=(InlineValue&& other) noexcept {
+	InlineExprStorage& operator=(InlineExprStorage&& other) noexcept {
 		if (this != &other) {
 			_bits = other._bits;
 			other._bits = 0;
@@ -86,7 +86,7 @@ public:
 	// Boolean operator - returns false if bits are all zero (equivalent to null pointer)
 	explicit operator bool() const { return _bits != 0; }
 
-	// Update this InlineValue to point to a different ExprTree pointer
+	// Update this InlineExprStorage to point to a different ExprTree pointer
 	void updatePtr(ExprTree* p) { _bits = reinterpret_cast<uint64_t>(p); }
 	// Get the type of an inline value (assumes isInline() == true)
 	int getInlineType() const { return static_cast<int>((_bits >> 1) & 0x7); }
@@ -95,30 +95,30 @@ public:
 	uint64_t getInlineData() const { return (_bits >> 8); }
 
 	// Create an inline error literal
-    static InlineValue makeErrorLiteral() {
-        InlineValue v;
+	static InlineExprStorage makeErrorLiteral() {
+		InlineExprStorage v;
         v._bits = 1 | (0 << 1);  // Set LSB and type 0
         return v;
     }
 
 	// Create an inline undefined literal
-    static InlineValue makeUndefinedLiteral() {
-        InlineValue v;
+	static InlineExprStorage makeUndefinedLiteral() {
+		InlineExprStorage v;
         v._bits = 1 | (1 << 1);  // Set LSB and type 1
         return v;
     }
 
 	// Create an inline int32 value
-    static InlineValue makeInt32(int32_t value) {
-        InlineValue v;
+	static InlineExprStorage makeInt32(int32_t value) {
+		InlineExprStorage v;
         uint64_t val = static_cast<uint64_t>(value) & 0xFFFFFFFF;
         v._bits = 1 | (2 << 1) | (val << 8);
         return v;
     }
 
 	// Create an inline float32 value
-    static InlineValue makeFloat32(float value) {
-        InlineValue v;
+	static InlineExprStorage makeFloat32(float value) {
+		InlineExprStorage v;
         uint32_t fval;
         std::memcpy(&fval, &value, sizeof(float));
         v._bits = 1 | (3 << 1) | (static_cast<uint64_t>(fval) << 8);
@@ -126,16 +126,16 @@ public:
     }
 
 	// Create an inline bool value
-    static InlineValue makeBool(bool value) {
-        InlineValue v;
+	static InlineExprStorage makeBool(bool value) {
+		InlineExprStorage v;
         v._bits = 1 | (4 << 1) | (static_cast<uint64_t>(value ? 1 : 0) << 8);
         return v;
     }
 
 	// Create an inline string reference (offset and size in global buffer)
 	// offset and size must each fit in 24 bits
-    static InlineValue makeStringRef(uint32_t offset, uint32_t size) {
-        InlineValue v;
+	static InlineExprStorage makeStringRef(uint32_t offset, uint32_t size) {
+		InlineExprStorage v;
         // Offset in bits 8-31 (24 bits), size in bits 32-55 (24 bits)
         uint64_t data = (static_cast<uint64_t>(offset) & 0xFFFFFF) |
                         ((static_cast<uint64_t>(size) & 0xFFFFFF) << 24);
@@ -170,18 +170,18 @@ public:
 	// Return or create an ExprTree*; if inline, materialize and cache as out-of-line.
 	ExprTree* materialize(InlineStringBuffer* stringBuffer) const;
 
-	// Create a copy of this InlineValue.
+	// Create a copy of this InlineExprStorage.
 	// If inline: returns a copy of the inline bits (cheap, no allocation)
-	// If out-of-line: calls Copy() on the ExprTree and returns new InlineValue wrapping it
-	InlineValue Copy() const;
+	// If out-of-line: calls Copy() on the ExprTree and returns new InlineExprStorage wrapping it
+	InlineExprStorage Copy() const;
 
 	// Delete owned pointer if out-of-line and clear the bits
 	void release();
 
 	// Compare two inline/out-of-line values without forcing materialization
-	bool sameAs(const InlineValue& other,
-	           const InlineStringBuffer* selfBuffer,
-	           const InlineStringBuffer* otherBuffer) const;
+	bool sameAs(const InlineExprStorage& other,
+               const InlineStringBuffer* selfBuffer,
+               const InlineStringBuffer* otherBuffer) const;
 
 	// Evaluate inline value to a Value without materializing if possible
 	// Returns true if evaluation succeeded, false otherwise
@@ -208,9 +208,9 @@ public:
 private:
 	mutable uint64_t _bits;
 
-	friend bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuffer* stringBuffer);
-	friend ExprTree* inlineValueToExprTree(const InlineValue& val, const InlineStringBuffer* stringBuffer);
-	friend bool inlineValueToValue(const InlineValue& val, Value& outValue, const InlineStringBuffer* stringBuffer);
+	friend bool tryMakeInlineValue(const Value& val, InlineExprStorage& outValue, InlineStringBuffer* stringBuffer);
+	friend ExprTree* inlineValueToExprTree(const InlineExprStorage& val, const InlineStringBuffer* stringBuffer);
+	friend bool inlineValueToValue(const InlineExprStorage& val, Value& outValue, const InlineStringBuffer* stringBuffer);
 	friend class ClassAdFlatMap;
 	friend class ClassAd;
 };
@@ -231,8 +231,8 @@ public:
 	// Check if the value is inline or out-of-line
 	bool isInline() const { return _value && _value->isInline(); }
 
-	// Get the InlineValue (for internal use)
-	const InlineValue* value() const { return _value; }
+	// Get the InlineExprStorage (for internal use)
+	const InlineExprStorage* value() const { return _value; }
 
 	// Get the AttrList (for internal use)
 	const ClassAdFlatMap* attrList() const { return _attrList; }
@@ -242,14 +242,14 @@ public:
 
 private:
 	// Private constructor - use ClassAd::LookupInline() to obtain InlineExpr objects
-	InlineExpr(const InlineValue& val, const ClassAdFlatMap* map)
+	InlineExpr(const InlineExprStorage& val, const ClassAdFlatMap* map)
 		: _value(&val), _attrList(map) {}
 
 	friend class ClassAd;  // Needs to construct InlineExpr in LookupInline()
 	friend class ClassAdIterator;  // Needs to construct InlineExpr in operator*()
 	friend class ClassAdConstIterator;  // Needs to construct InlineExpr in operator*()
 
-	const InlineValue* _value;
+	const InlineExprStorage* _value;
 	const ClassAdFlatMap* _attrList;
 };
 
@@ -302,13 +302,13 @@ private:
 
 // Try to convert a Value to an inline representation
 // Returns true if successful, false if the value must remain as an ExprTree*
-bool tryMakeInlineValue(const Value& val, InlineValue& outValue, InlineStringBuffer* stringBuffer);
+bool tryMakeInlineValue(const Value& val, InlineExprStorage& outValue, InlineStringBuffer* stringBuffer);
 
 // Convert an inline value to an ExprTree*
-ExprTree* inlineValueToExprTree(const InlineValue& val, const InlineStringBuffer* stringBuffer);
+ExprTree* inlineValueToExprTree(const InlineExprStorage& val, const InlineStringBuffer* stringBuffer);
 
 // Convert an inline value to a Value object
-bool inlineValueToValue(const InlineValue& val, Value& outValue, const InlineStringBuffer* stringBuffer);
+bool inlineValueToValue(const InlineExprStorage& val, Value& outValue, const InlineStringBuffer* stringBuffer);
 
 } // namespace classad
 
