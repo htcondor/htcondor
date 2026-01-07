@@ -983,6 +983,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
     ArgList args;
     args.AppendArg(exe);
     args.AppendArg("--noheadings");
+    args.AppendArg("--readonly");
     args.AppendArg("--nameprefixes");
     args.AppendArg("--separator");
     args.AppendArg(LVM_REPORT_DELIM);
