@@ -363,7 +363,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`JobBusyTimeCount`
     The total number of jobs used to calculate the :ad-attr:`JobBusyTimeAvg`
-    attribute. This is also the the total number times a *condor_starter*
+    attribute. This is also the total number times a *condor_starter*
     has exited.
 
 :classad-attribute-def:`JobBusyTimeMax`
@@ -411,7 +411,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`JobDurationCount`
     The total number of jobs used to calculate the :ad-attr:`JobDurationAvg`
-    attribute. This is also the the total number times a job has exited.
+    attribute. This is also the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
 

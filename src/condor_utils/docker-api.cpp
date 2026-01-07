@@ -184,7 +184,7 @@ int DockerAPI::createContainer(
 	}
 
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -604,7 +604,7 @@ DockerAPI::execInContainer( const std::string &containerName,
 	execArgs.AppendArg("-ti");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 

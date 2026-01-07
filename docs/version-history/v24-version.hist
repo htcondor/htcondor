@@ -1,3 +1,7 @@
+*** 24.12.17 bugs
+
+*** 24.0.17 bugs
+
 *** 24.12.16 bugs
 
 *** 24.0.16 bugs
@@ -12,6 +16,10 @@
 - Fix Logical Volume setup timeout on Execution Points enforcing disk usage
   for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
   :jira:`3432`
+
+- Fixed issue with Execution Points enforcing disk usage generating an
+  excessive amount of metadata archives filling up ``/etc/lvm/archive``.
+  :jira:`3488`
 
 - Fixed a bug where a job with a floating point value for :ad-attr:`RequestMemory`
   or :ad-attr:`RequestDisk` might not match the slot created to run it.
@@ -33,6 +41,10 @@
 - Fixed a bug where docker universe jobs would bring back a
   file named ``.docker_stderror`` back to the AP after job completion.
   :jira:`3424`
+
+- Fixed a bug in the shared-port daemon that caused new network connections
+  to fail if only a few bytes are immeidately available to read.
+  :jira:`3420`
 
 *** 24.12.15 features
 
@@ -57,7 +69,7 @@
 
 - The condor package now requires pelican-7.21.1.
 
-- HTCondor tarballs now contain `Appoint 1.4.4 <https://github.com/apptainer/apptainer/releases/tag/v1.4.4>`_
+- HTCondor tarballs now contain `Apptainer 1.4.4 <https://github.com/apptainer/apptainer/releases/tag/v1.4.4>`_
 
 - The condor RPM package now requires at least apptainer version 1.4.4.
 

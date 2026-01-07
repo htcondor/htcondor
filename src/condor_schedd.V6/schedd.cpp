@@ -143,6 +143,8 @@ extern FILE *DebugFP;
 extern char *DebugFile;
 extern char *DebugLock;
 
+extern std::vector<std::string> ocu_super_users;
+
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
@@ -222,6 +224,17 @@ inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
 inline const char * EffectiveUserName(const Sock * sock) {
 	if ( ! sock) return "";
 	return sock->getOwner();
+}
+
+static bool isOCUSuperUser(ReliSock* sock) {
+	auto * rsock_user = EffectiveUserRec(sock);
+	if (isQueueSuperUser(rsock_user)) {
+		return true;
+	}
+	if (ContainsUserName(ocu_super_users, rsock_user->Name())) {
+		return true;
+	}
+	return false;
 }
 
 int init_user_ids(const JobQueueUserRec * user) {
@@ -1466,7 +1479,8 @@ Scheduler::count_jobs()
 		double bucket_percent = ((current_time - scheduler.stats.TickBias)%(bucket_sec)) / (bucket_sec/100.0);
 		const int day_sec = 24*3600;
 		double day_percent = ((current_time - scheduler.stats.TickBias + scheduler.stats.TickMidnight)%(day_sec)) / (day_sec/100.0);
-		dprintf(D_STATUS, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
+		int d_verbose = (cHourlyAdvance || cDayAdvance) ? 0 : D_VERBOSE;
+		dprintf(D_STATUS | d_verbose, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
 			cHourlyAdvance, cDayAdvance, bucket_percent, day_percent);
 	}
 
@@ -2930,7 +2944,8 @@ Scheduler::act_on_ocu_create(const ClassAd &request) {
 		subdat->owners.insert(ocu_owner);
 		subdat->num.JobsIdle++;
 		subdat->num.Hits++;
-	}
+	} 
+	result.Assign(ATTR_RESULT, 0);
 
 	return result;
 }
@@ -2951,6 +2966,7 @@ Scheduler::act_on_ocu_remove(const ClassAd &request) {
 			}
 		}
 	}
+	result.Assign(ATTR_RESULT, 0);
 	return result;
 }
 
@@ -2994,6 +3010,15 @@ Scheduler::command_act_on_ocus(int cmd, Stream* stream)
 
 	switch (cmd) {
 		case CREATE_OCU_FOR_USERREC: {
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			}
 			ClassAd resultAd = act_on_ocu_create(requestAd);
 			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
 				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
@@ -3003,6 +3028,15 @@ Scheduler::command_act_on_ocus(int cmd, Stream* stream)
 			}
 			break;
 		case REMOVE_OCU_FROM_USERREC: {
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			} 
 			ClassAd resultAd = act_on_ocu_remove(requestAd);
 			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
 				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
@@ -9060,6 +9094,19 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
+	// OCUs represent requests for match_recs (slots) that have no jobs associated With
+	// them.  Add them into the resource_requests list now.
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (auto &ocu: oi->ocus) {
+			if (ocu.mrec == nullptr) {
+			
+				int ocu_id = ocu.ocu_id;
+				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+				resource_requests->add(ocu_id, ocu_request);
+			}
+		}
+	}
+	
 	for (auto prec = firstRec; prec != endRec && ! skip_negotiation; ++prec) {
 
 		// make sure job isn't flagged as not needing matching
@@ -9114,19 +9161,6 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		resource_requests->add(auto_cluster_id, prec->id);
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated With
-	// them.  Add them into the resource_requests list now.
-	for (const auto &[_,oi]: OwnersInfo) {
-		for (auto &ocu: oi->ocus) {
-			if (ocu.mrec == nullptr) {
-			
-				int ocu_id = ocu.ocu_id;
-				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
-				resource_requests->add(ocu_id, ocu_request);
-			}
-		}
-	}
-	
 
 	classy_counted_ptr<MainScheddNegotiate> sn =
 		new MainScheddNegotiate(
@@ -9700,6 +9734,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				slot->is_ocu = true;
 				slot->ocu_originator = {slot->cluster, slot->proc};
 				slot->cluster = slot->proc = -1;
+
+				// ATTR_OCU should already be true on newer startds, but May
+				// not be for older ones.  Force to true just to be sure.
+				slot->my_match_ad->Assign(ATTR_OCU, true);
 
 				// If we already have a match for this OCU, then delete this match
 				if (ocu->mrec) {

@@ -239,7 +239,7 @@ JobRouter::config( int /* timerID */ ) {
 	if (m_scheduler2) {
 		dprintf(D_ALWAYS, "Watching destination schedd (SCHEDD2): %s\n", m_scheduler2->following());
 	} else {
-		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destintation also\n");
+		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destination also\n");
 	}
 
 	m_scheduler->config();
@@ -2870,7 +2870,7 @@ JobRoute::ApplyRoutingJobEdits(
 	if (!pre_route.empty()) {
 		for (MacroStreamXFormSource* xfm: pre_route) {
 			if ( ! xfm->matches(src_ad)) {
-				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
+				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skipping it.\n", xfm->getName());
 				continue;
 			}
 			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying pre-route transform: %s\n", xfm->getName()); }
@@ -2897,7 +2897,7 @@ JobRoute::ApplyRoutingJobEdits(
 	if (! post_route.empty()) {
 		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
-				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
+				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skipping it.\n", xfm->getName());
 				continue;
 			}
 			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying post-route transform: %s\n", xfm->getName()); }

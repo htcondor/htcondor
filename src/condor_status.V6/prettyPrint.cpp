@@ -885,14 +885,14 @@ void PrettyPrinter::ppSetCollectorNormalCols (int width, int & mach_width, const
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	} else {
-		int name_width = wide_display ? -34 : -28;
+		//int name_width = wide_display ? -34 : -28;
 		mach_width = wide_display ? -34 : -18;
 		if (width > 79 && ! wide_display) { 
 			int wid = width - (28+18+11+8+10+4);
 			wid = MIN(wid,50);
 			int nw = MIN(20, wid*2/3);
 			int nm = MIN(30, wid - nw);
-			name_width -= nw;
+			//name_width -= nw;
 			mach_width -= nm;
 		}
 	}

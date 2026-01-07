@@ -129,14 +129,14 @@ General Remarks
 ---------------
 
 An APs User ClassAds have attributes that count the number of jobs in the queue submitted by that user.
-The full set of attributes can can be viewed with
+The full set of attributes can be viewed with
 
 .. code-block:: console
 
       $ condor_qusers -long
 
 An APs Project ClassAds also have attributes that count the number of jobs in the queue associated with that project.
-The full set of attributes can can be viewed with
+The full set of attributes can be viewed with
 
 .. code-block:: console
 

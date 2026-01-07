@@ -1016,7 +1016,7 @@ DELETE_USER_commandHandler (int, Stream *strm)
 	}
 
 	// reset usage
-	dprintf (D_ALWAYS,"Deleting accountanting record of %s\n", submitter.c_str());
+	dprintf (D_ALWAYS,"Deleting accounting record of %s\n", submitter.c_str());
 	accountant.DeleteRecord(submitter);
 	
 	return TRUE;

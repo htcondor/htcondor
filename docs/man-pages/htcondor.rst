@@ -372,7 +372,7 @@ DAG Verbs
     - The *access-point* (**ap**) noun represents every access point
       known to a pool. This list will be looked up in the pool's
       collector(s).
-    - The *central-manager* (**cm**) noun refers to every every collector
+    - The *central-manager* (**cm**) noun refers to every collector
       to which the local host reports as set in :macro:`COLLECTOR_HOST`.
       Although an HTCondor pool is normally defined by a single collector,
       a pool may have more than one when utilizing :ref:`High Availability<Central Manager High Availability>`.

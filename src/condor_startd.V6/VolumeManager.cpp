@@ -818,7 +818,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         std::string per_slot_device = DevicePath(vg_name, lv_name, encrypted);
         while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
             if (strcmp(dev, per_slot_device.c_str()) == MATCH) {
-                dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n",
+                dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, unmounting\n",
                         dev, mnt);
                 int r = umount(mnt);
                 if (r != 0) {
@@ -983,6 +983,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
     ArgList args;
     args.AppendArg(exe);
     args.AppendArg("--noheadings");
+    args.AppendArg("--readonly");
     args.AppendArg("--nameprefixes");
     args.AppendArg("--separator");
     args.AppendArg(LVM_REPORT_DELIM);

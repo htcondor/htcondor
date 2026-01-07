@@ -505,7 +505,7 @@ character (!) to represent the not operation, followed by
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
    defined.
 
--  the version keyword, representing the version number of of the daemon
+-  the version keyword, representing the version number of the daemon
    or tool currently reading this conditional. This keyword is followed
    by an HTCondor version number. That version number can be of the form
    x.y.z or x.y. The version of the daemon or tool is compared to the
