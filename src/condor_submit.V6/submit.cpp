@@ -1694,6 +1694,7 @@ int submit_jobs (
 			//PRAGMA_REMIND("check if this properly handles empty submit item lists and/or multiple queue lines")
 		}
 
+#ifndef ENABLE_SUBMIT_FROM_TABLE
 		int queue_item_opts = 0;
 		if (submit_hash.submit_param_bool("SubmitWarnEmptyFields", "submit_warn_empty_fields", true)) {
 			queue_item_opts |= QUEUE_OPT_WARN_EMPTY_FIELDS;
@@ -1701,6 +1702,7 @@ int submit_jobs (
 		if (submit_hash.submit_param_bool("SubmitFailEmptyFields", "submit_fail_empty_fields", false)) {
 			queue_item_opts |= QUEUE_OPT_FAIL_EMPTY_FIELDS;
 		}
+#endif
 
 		// ===== begin talking to schedd here ===
 		if ( ! MyQ) {

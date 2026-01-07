@@ -23,6 +23,7 @@
 #include <signal.h>
 #include <time.h>
 #include <openssl/crypto.h>
+#include <vector>
 
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -491,7 +492,7 @@ IOProcess::stdinPipeHandler()
 				num_commands = allArcCommands(arc_commands);
 				num_commands += 12;
 
-				const char *commands[num_commands];
+				std::vector<const char *> commands(num_commands);
 				size_t i = 0;
 				commands[i++] = GAHP_RESULT_SUCCESS;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
@@ -511,7 +512,7 @@ IOProcess::stdinPipeHandler()
 					commands[i++] = one_arc_command.c_str();
 				}
 
-				gahp_output_return (commands, i);
+				gahp_output_return (commands.data(), i);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
 				m_cached_proxies[DEFAULT_PROXY_NAME] = args.argv[1];
 				m_active_proxy = DEFAULT_PROXY_NAME;

@@ -1671,7 +1671,7 @@ all attributes.
 :classad-attribute-def:`JobStarterDebug`
     This attribute causes the *condor_starter* to write a job-specific
     copy of its daemon log in the job's scratch directory.
-    If the value is `True`, then the the logging level matches that of
+    If the value is `True`, then the logging level matches that of
     the regular daemon log.
     If the value is a string, then it specifies a different logging
     level following the syntax of :macro:`<SUBSYS>_DEBUG`.
@@ -2152,7 +2152,7 @@ information for the DAG.
     +------+--------------------------------------+
     | 0    | OK                                   |
     +------+--------------------------------------+
-    | 1    | An error has occured                 |
+    | 1    | An error has occurred                |
     +------+--------------------------------------+
     | 2    | One or more nodes in the DAG have    |
     |      | failed                               |

@@ -301,6 +301,7 @@ static void ScheduleJobQueueLogFlush();
 
 bool qmgmt_all_users_trusted = false;
 static std::vector<std::string> super_users;
+std::vector<std::string> ocu_super_users;
 static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
@@ -1512,6 +1513,23 @@ InitQmgmt()
 			"NOTE: QUEUE_ALL_USERS_TRUSTED=TRUE - "
 			"all queue access checks disabled!\n"
 			);
+	}
+
+	auto_free_ptr ocu_super(param("OCU_SUPER_USERS"));
+	std::vector<std::string> ocu_super_users;
+	
+	// Make sure to clear if removed on reconfig
+	if (ocu_super) {
+		ocu_super_users = split(ocu_super);
+	} else  {
+		ocu_super_users.clear();
+	}
+
+	if( IsFulldebug(D_FULLDEBUG) && !ocu_super_users.empty()) {
+		dprintf( D_FULLDEBUG, "OCU Super Users:\n" );
+		for (const auto &username : ocu_super_users) {
+			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
+		}
 	}
 
 	delete queue_super_user_may_impersonate_regex;
@@ -3192,11 +3210,12 @@ grow_prio_recs( int newsize )
 	return 0;
 }
 
-// test an unqualified username "bob" or a fully qualfied username "bob@domain" to see
-// if it is a queue superuser
-static bool isQueueSuperUserName( const char* user )
+// test if the list contains a given username
+// names may be domain-qualified (bob@domain) or unqualified (bob)
+// on unix, list elements may be an os group
+bool ContainsUserName(const std::vector<std::string>& users_list, const char* user)
 {
-	if( !user || super_users.empty() ) {
+	if( !user || users_list.empty() ) {
 		return false;
 	}
 
@@ -3209,17 +3228,17 @@ static bool isQueueSuperUserName( const char* user )
 	bool is_local_user = is_same_user(user, owner, COMPARE_DOMAIN_FULL, scheduler.uidDomain());
 #endif
 
-	for (const auto &superuser : super_users) {
+	for (const auto &listuser : users_list) {
 #ifdef UNIX
-        if (superuser[0] == '%' && is_local_user) {
+        if (listuser[0] == '%' && is_local_user) {
             // this is a user group, so check user against the group membership
-            struct group* gr = getgrnam(&superuser[1]);
+            struct group* gr = getgrnam(&listuser[1]);
             if (gr) {
                 for (char** gmem=gr->gr_mem;  *gmem != nullptr;  ++gmem) {
                     if (strcmp(owner, *gmem) == 0) return true;
                 }
             } else {
-                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", &superuser[1]);
+                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", &listuser[1]);
             }
             continue;
         }
@@ -3227,7 +3246,7 @@ static bool isQueueSuperUserName( const char* user )
 #else
 		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
 #endif
-		if (is_same_user(user, superuser.c_str(), opt, scheduler.uidDomain())) {
+		if (is_same_user(user, listuser.c_str(), opt, scheduler.uidDomain())) {
 			return true;
 		}
 	}
@@ -3239,7 +3258,7 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 	if ( ! user) return false;
 	if (user->IsInherentlySuper()) return true;
 	if (user->isStaleConfigSuper()) {
-		bool super = isQueueSuperUserName(user->Name());
+		bool super = ContainsUserName(super_users, user->Name());
 		const_cast<JobQueueUserRec *>(user)->setConfigSuper(super);
 	}
 	return user->IsSuperUser();
@@ -4304,7 +4323,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			errno = EACCES;
 			return -1;
 		}
-		bool is_super = isQueueSuperUserName(user.c_str());
+		bool is_super = isQueueSuperUser(EffectiveUserRec(Q_SOCK));
 		dprintf(D_COMMAND | D_VERBOSE, "SetAttributeByConstraint w/ OnlyMyJobs owner = \"%s\" (isQueueSuperUser = %d)\n", owner.c_str(), is_super);
 		if (is_super) {
 			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
@@ -5083,7 +5102,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		const OwnerInfo* urec = scheduler.lookup_owner_const(owner);
 
 		if (IsDebugVerbose(D_SECURITY)) {
-			bool is_super = isQueueSuperUserName(sock_owner);
+			bool is_super = isQueueSuperUser(EffectiveUserRec(Q_SOCK));
 			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner, urec != nullptr);
 			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i urec_exists %i\n",
 				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner, urec!=nullptr);
@@ -5232,7 +5251,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// SuperUserAllowedToSetOwnerTo
 			if (!qmgmt_all_users_trusted
 				&& !is_same_user(user, sock_user, COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())
-				&& !isQueueSuperUserName(sock_user))
+				&& !isQueueSuperUser(EffectiveUserRec(Q_SOCK)))
 			{
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting User to \"%s\" when active User is \"%s\"\n",
@@ -9850,6 +9869,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
 	std::string remoteOwner;
 	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
+	std::string remoteProject;
+	my_match_ad->LookupString(ATTR_REMOTE_PROJECT, remoteProject);
 
 #ifdef USE_VANILLA_START
 	std::string job_attr("JOB");
@@ -9931,14 +9952,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 		#endif
 
+			bool OCUWanted = false;
+			job->LookupBool(ATTR_OCU_WANTED, OCUWanted);
 			if (is_ocu) {
-
 				// OCU ad should have ATTR_REMOTE_OWNER set to the owner of the OCU claim
-				if (remoteOwner == job->ownerinfo->Name()) {
+				// ... or, the job should belong to a project that has an OCU claim
+
+				if ((remoteOwner == job->ownerinfo->Name()) ||
+					(job->project ? remoteProject == job->project->Name() : false)) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
-					job->LookupBool("OCUWanted", OCUWanted);
 					if (!OCUWanted) {
 						continue;
 					}
@@ -9950,6 +9974,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 					if ( ! OCUWilling) {
 						continue;
 					}
+				}
+			} else {
+				// Not an OCU claim, so skip any jobs that are OCU only
+				if (OCUWanted) {
+					continue;
 				}
 			}
 

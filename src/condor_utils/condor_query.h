@@ -155,9 +155,50 @@ class CondorQuery
 	// This query should perform only a location lookup.
 	bool setLocationLookup(const std::string &location, bool want_one_result=true);
 
-	// fetch from collector
-	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL);
-	QueryResult fetchAds (ClassAdList &adList, Daemon& collector, CondorError* errstack = NULL);
+	// Common query callback functions that just add every ad to a list
+	// Note that query_callback_vector() says the passed ad should be deleted,
+	//   since the contents have been moved away, leaving the ad itself an
+	//   empty husk.
+	static bool query_callback_cal(void* pv, ClassAd * ad) {
+		ClassAdList * padList = (ClassAdList *)pv;
+		padList->Insert (ad);
+		return false;
+	}
+	static bool query_callback_vector_ptr(void* pv, ClassAd *ad) {
+		auto *padList = (std::vector<std::unique_ptr<ClassAd>> *)pv;
+		padList->emplace_back(ad);
+		return false;
+	}
+	static bool query_callback_vector(void* pv, ClassAd *ad) {
+		auto *padList = (std::vector<ClassAd> *)pv;
+		padList->emplace_back(std::move(*ad));
+		return true;
+	}
+
+	// fetch from collector into a ClassAdList
+	QueryResult fetchAds (ClassAdList &adList, const char * pool, CondorError* errstack = NULL) {
+		return processAds(query_callback_cal, &adList, pool, errstack);
+	}
+	QueryResult fetchAds (ClassAdList &adList, Daemon& collector, CondorError* errstack = NULL) {
+		return processAds(query_callback_cal, &adList, collector, errstack);
+	}
+
+	// fetch from collector into a vector<unique_ptr<ClassAd>>
+	QueryResult fetchAds (std::vector<std::unique_ptr<ClassAd>> &adList, const char * pool, CondorError* errstack = NULL) {
+		return processAds(query_callback_vector_ptr, &adList, pool, errstack);
+	}
+	QueryResult fetchAds (std::vector<std::unique_ptr<ClassAd>> &adList, Daemon& collector, CondorError* errstack = NULL) {
+		return processAds(query_callback_vector_ptr, &adList, collector, errstack);
+	}
+
+		// fetch from collector into a vector<ClassAd>
+	QueryResult fetchAds (std::vector<ClassAd> &adList, const char * pool, CondorError* errstack = NULL) {
+		return processAds(query_callback_vector, &adList, pool, errstack);
+	}
+	QueryResult fetchAds (std::vector<ClassAd> &adList, Daemon& collector, CondorError* errstack = NULL) {
+		return processAds(query_callback_vector, &adList, collector, errstack);
+	}
+
 	// fetch ads from the collector, handing each to 'callback'
 	// callback will return 'false' if it took ownership of the ad.
 	QueryResult processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * pool, CondorError* errstack = NULL);

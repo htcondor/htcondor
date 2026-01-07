@@ -52,6 +52,8 @@ class Create(Verb):
 
         try:
             result_ad = schedd.create_ocu(ocu_ad)
+            if result_ad["Result"] != 0:
+                raise RuntimeError(f"Failed to create ocu: {result_ad['ErrorString']}")
             ocu_id = result_ad["OCUId"]
             name = result_ad["OCUName"]
             print(f"OCU created with Id {ocu_id} and name {name}.")
@@ -142,6 +144,8 @@ class Remove(Verb):
 
         try:
             remove_ad = schedd.remove_ocu(int(ocu_id))
+            if remove_ad["Result"] != 0:
+                raise RuntimeError(f"Failed to remove ocu {ocu_id}: {remove_ad['ErrorString']}")
         except Exception as e:
             logger.error(f"Error while trying to remove ocu {ocu_id}:\n{str(e)}")
             raise RuntimeError(f"Error removing ocu: {str(e)}")

@@ -255,6 +255,9 @@ Claim::publish( ClassAd* cad )
 		if( !c_client->c_owner.empty() ) {
 			cad->Assign(ATTR_REMOTE_OWNER, c_client->c_owner);
 		}
+		if( !c_client->c_project.empty() ) {
+			cad->Assign(ATTR_REMOTE_PROJECT, c_client->c_project);
+		}
 		if( !c_client->c_acctgrp.empty() ) {
 			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 

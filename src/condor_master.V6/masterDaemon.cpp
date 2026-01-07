@@ -1798,7 +1798,7 @@ daemon::HaLockAcquired( LockEventSrc src )
 int
 daemon::HaLockLost( LockEventSrc src )
 {
-	dprintf( D_FULLDEBUG, "%s: Lost HA lock (%s); stoping\n",
+	dprintf( D_FULLDEBUG, "%s: Lost HA lock (%s); stopping\n",
 			 name_in_config_file, ha_lock->EventSrcString(src) );
 	if ( LOCK_SRC_APP == src ) {
 			// We released the lock from the ReleaseLock() call; we already

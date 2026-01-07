@@ -7,14 +7,31 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 24.0.17
+---------------
+
+Release Notes:
+
+.. HTCondor version 24.0.17 released on March 3, 2026.
+
+- HTCondor version 24.0.17 planned release date is March 3, 2026.
+
+New Features:
+
+.. include-history:: features 24.0.17
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.17
+
 Version 24.0.16
 ---------------
 
 Release Notes:
 
-.. HTCondor version 24.0.16 released on January 12, 2026.
+.. HTCondor version 24.0.16 released on January 29, 2026.
 
-- HTCondor version 24.0.16 planned release date is January 12, 2026.
+- HTCondor version 24.0.16 planned release date is January 29, 2026.
 
 New Features:
 
@@ -388,7 +405,7 @@ Bugs Fixed:
 
 - Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
   multiple jobs on a single GPU device when ``-divide`` or ``-repeat`` was added
-  to to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
   machine resource inventory that contained repeated identifiers.
   :jira:`2678`
 

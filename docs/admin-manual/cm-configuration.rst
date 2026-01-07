@@ -1564,7 +1564,7 @@ manager machines.
     HAD_ARGS = -f -p $(HAD_PORT)
 
     ## The following macro defines the port number condor_replication will listen
-    ## on on this machine. This port should match the port number specified
+    ## on this machine. This port should match the port number specified
     ## for that replication daemon in the REPLICATION_LIST
     ## Port number is arbitrary (make sure no collision with other applications)
     ## This is a sample port number
