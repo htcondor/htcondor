@@ -704,7 +704,10 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			buf = attr;
 			buf += " = ";
 			// Try to unparse inline value without materializing
-			unp.Unparse(buf, itor->second);
+			if (!unp.Unparse(buf, itor->second)) {
+				dprintf(D_FULLDEBUG, "Failed to unparse expression for attribute: %s; refusing to send partial ad\n", attr.c_str());
+				return false;
+			}
 			if (encrypt_it) {
 				sock->put(SECRET_MARKER);
 
@@ -776,7 +779,10 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		buf = *attr;
 		buf += " = ";
 		// Try to unparse inline value without materializing
-		unp.Unparse(buf, inlineExpr);
+		if (!unp.Unparse(buf, inlineExpr)) {
+			dprintf(D_FULLDEBUG, "Failed to unparse expression for attribute: %s; refusing to send partial ad\n", attr->c_str());
+			return false;
+		}
 
 		if ( ! crypto_is_noop &&
 			(ClassAdAttributeIsPrivateAny(*attr) ||

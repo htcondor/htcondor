@@ -761,6 +761,9 @@ class ClassAd : public ExprTree
 			if (itr != attrList.end()) {
 				return InlineExpr(itr->second, &attrList);
 			}
+			if (chained_parent_ad) {
+				return chained_parent_ad->LookupInline(attrName);
+			}
 			return InlineExpr();
 		}
 
