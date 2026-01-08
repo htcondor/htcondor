@@ -259,7 +259,7 @@ if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
         TRIXIE=''
     fi
     $INSTALL wget
-    APPTAINER_VERSION=1.4.4
+    APPTAINER_VERSION=1.4.5
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
