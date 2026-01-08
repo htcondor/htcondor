@@ -257,7 +257,7 @@ Requires: apptainer >= 1.3.6
 Requires: apptainer >= 1.3.0
 %endif
 %else
-Requires: apptainer >= 1.4.4
+Requires: apptainer >= 1.4.5
 %endif
 %endif
 
