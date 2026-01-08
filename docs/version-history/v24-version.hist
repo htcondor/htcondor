@@ -1,5 +1,15 @@
 *** 24.0.17 bugs
 
+*** 24.0.16 features
+
+- HTCondor tarballs now contain `Pelican 7.22.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.22.0.
+
+- HTCondor tarballs now contain `Apptainer 1.4.5 <https://github.com/apptainer/apptainer/releases/tag/v1.4.5>`_
+
+- The condor RPM package now requires at least apptainer version 1.4.5.
+
 *** 24.0.16 bugs
 
 - Added :macro:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT` for administrators
