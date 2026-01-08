@@ -190,7 +190,7 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
 fi
 
 # Add useful tools
-$INSTALL gdb git less nano patchelf python3-pip strace sudo vim
+$INSTALL gdb git less nano python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL iputils rpmlint
 fi
@@ -199,10 +199,10 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use fancy new lief-patchelf
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
-    if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
-        $INSTALL lief-patchelf
-    fi
+if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
+    $INSTALL lief-patchelf
+else
+    $INSTALL patchelf
 fi
 
 # Add in the ninja build system
@@ -232,7 +232,7 @@ echo "%$SUDO_GROUP ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$SUDO_GROUP
 
 # Install HTCondor to build and test BaTLab style
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    $INSTALL htcondor libnss-myhostname openssh-server
+    $INSTALL condor libnss-myhostname openssh-server
     # Ensure that gethostbyaddr() returns our hostname
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
@@ -240,11 +240,7 @@ fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
     if [ $ID = 'opensuse-leap' ]; then
-        $INSTALL procps wget
-        # Install better patchelf
-        wget https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz
-        (cd /usr; tar xfpz /patchelf-0.18.0-x86_64.tar.gz ./bin/patchelf)
-        rm patchelf-0.18.0-x86_64.tar.gz
+        $INSTALL procps
     else
         $INSTALL procps-ng
     fi
