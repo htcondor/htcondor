@@ -224,8 +224,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
-Requires: pelican-osdf-compat >= 7.21.1
+Requires: (pelican >= 7.22.0 or pelican-debug >= 7.22.0)
+Requires: pelican-osdf-compat >= 7.22.0
 
 %if ! 0%{?amzn}
 # Require tested Apptainer
@@ -233,7 +233,7 @@ Requires: pelican-osdf-compat >= 7.21.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.4
+Requires: apptainer >= 1.4.5
 %endif
 %endif
 
