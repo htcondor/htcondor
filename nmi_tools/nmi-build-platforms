@@ -1,7 +1,6 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-<<<<<<< HEAD
 docker://htcondor/nmi-build:aarch64_AlmaLinux8-25000602
 docker://htcondor/nmi-build:aarch64_AlmaLinux9-25000602
 docker://htcondor/nmi-build:aarch64_AlmaLinux10-25000602
