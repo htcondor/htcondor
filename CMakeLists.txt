@@ -125,18 +125,8 @@ include (CondorConfigure)     # will initiate the configure
 include (TarGz) # Must be after include(CondorPackageConfig)
 
 if ( WINDOWS )
-  # Enable use of folders in Visual Studio
-  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-  if (MSVC)
-    # Enable multi-processor compilation flag (/MP) for all targets, so parallelism works within a target.
-	# This is especially useful for large targets like condor_utils.
-	# Note: this does not enable parallel builds between different targets, that is done via
-	# the build system (e.g. msbuild), and controlled via the -j flag to cmake --build.
-	# Using cmake --build -j 0 will attempt to use all available processors for building.
-    add_compile_options(/MP)
-  endif()
-endif()
-
+	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+endif ( WINDOWS )
 ##########################################################################
 # we only include the single sub to allow make at two levels.
 # root - includes externals
