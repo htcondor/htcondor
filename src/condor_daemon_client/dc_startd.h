@@ -183,8 +183,6 @@ public:
 	
 	bool vacateClaim( const char* name );
 
-	bool getAds( ClassAdList &adsList );
-
 		// request_id: set to the request id (can be used to cancel request)
 		// returns: true/false on success/failure
 		// call error() to get a descriptive error message

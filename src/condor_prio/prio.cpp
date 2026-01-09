@@ -208,16 +208,9 @@ compute_adj( char *arg )
 	}
 }
 
-void UpdateJobAd(int cluster, int proc)
+void UpdateJobAd(int cluster, int proc, int old_prio)
 {
-	int old_prio = 0;
-	int new_prio;
-	if( (GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &old_prio) < 0) ) {
-		fprintf(stderr, "Couldn't retrieve current priority for %d.%d.\n",
-				cluster, proc);
-		return;
-	}
-	new_prio = calc_prio( old_prio );
+	int new_prio = calc_prio(old_prio);
 	if( (SetAttributeInt(cluster, proc, ATTR_JOB_PRIO, new_prio, SHOULDLOG) < 0) ) {
 		fprintf(stderr, "Couldn't set new priority for %d.%d.\n",
 				cluster, proc);
@@ -227,14 +220,22 @@ void UpdateJobAd(int cluster, int proc)
 
 void ProcArg(const char* arg)
 {
-	int		cluster, proc;
+	PROC_ID job_id;
+	int old_prio;
 	char	*tmp;
+	std::string proj = ATTR_CLUSTER_ID;
+	proj += ',';
+	proj += ATTR_PROC_ID;
+	proj += ',';
+	proj += ATTR_JOB_PRIO;
+
+	std::vector<std::pair<PROC_ID, int>> job_ids;
 
 	if(isdigit(*arg))
 	// set prio by cluster/proc #
 	{
-		cluster = strtol(arg, &tmp, 10);
-		if(cluster <= 0)
+		job_id.cluster = strtol(arg, &tmp, 10);
+		if(job_id.cluster <= 0)
 		{
 			fprintf(stderr, "Invalid cluster # from %s\n", arg);
 			return;
@@ -242,68 +243,92 @@ void ProcArg(const char* arg)
 		if(*tmp == '\0')
 		// update prio for all jobs in the cluster
 		{
-			ClassAd	*ad;
 			char constraint[100];
-			snprintf(constraint, sizeof(constraint), "%s == %d", ATTR_CLUSTER_ID, cluster);
-			int firstTime = 1;
-			while((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
-				ad->LookupInteger(ATTR_PROC_ID, proc);
-				FreeJobAd(ad);
-				UpdateJobAd(cluster, proc);
-				firstTime = 0;
+			snprintf(constraint, sizeof(constraint), "%s == %d", ATTR_CLUSTER_ID, job_id.cluster);
+			int rval = GetAllJobsByConstraint_Start(constraint, proj.c_str());
+			while (rval == 0) {
+				ClassAd ad;
+				rval = GetAllJobsByConstraint_Next(ad);
+				if (rval != 0) {
+					continue;
+				}
+				ad.LookupInteger(ATTR_PROC_ID, job_id.proc);
+				if (!ad.LookupInteger(ATTR_JOB_PRIO, old_prio)) {
+					fprintf(stderr, "Couldn't retrieve current proc or priority for %d.\n", job_id.cluster);
+					continue;
+				}
+				job_ids.emplace_back(job_id, old_prio);
 			}
-			return;
-		}
-		if(*tmp == '.')
-		{
-			proc = strtol(tmp + 1, &tmp, 10);
-			if(proc < 0)
+		} else if(*tmp == '.') {
+			job_id.proc = strtol(tmp + 1, &tmp, 10);
+			if(job_id.proc < 0)
 			{
 				fprintf(stderr, "Invalid proc # from %s\n", arg);
 				return;
 			}
-			if(*tmp == '\0')
-			// update prio for proc
-			{
-				UpdateJobAd(cluster, proc);
+			if(*tmp != '\0') {
+				fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 				return;
 			}
+			if( (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_PRIO, &old_prio) < 0) ) {
+				fprintf(stderr, "Couldn't retrieve current priority for %d.%d.\n",
+				        job_id.cluster, job_id.proc);
+				return;
+			}
+			// update prio for proc
+			job_ids.emplace_back(job_id, old_prio);
+		} else {
 			fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 			return;
 		}
-		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 	}
 	else if(arg[0] == '-' && arg[1] == 'a')
 	{
-		ClassAd *ad;
-		int firstTime = 1;
-		while((ad = GetNextJob(firstTime)) != NULL) {
-			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			ad->LookupInteger(ATTR_PROC_ID, proc);
-			FreeJobAd(ad);
-			UpdateJobAd(cluster, proc);
-			firstTime = 0;
+		int rval = GetAllJobsByConstraint_Start("", proj.c_str());
+		while (rval == 0) {
+			ClassAd ad;
+			rval = GetAllJobsByConstraint_Next(ad);
+			if (rval != 0) {
+				continue;
+			}
+			ad.LookupInteger(ATTR_CLUSTER_ID, job_id.cluster);
+			ad.LookupInteger(ATTR_PROC_ID, job_id.proc);
+			if (!ad.LookupInteger(ATTR_JOB_PRIO, old_prio)) {
+				fprintf(stderr, "Couldn't retrieve priority for %d.%d.\n", job_id.cluster, job_id.proc);
+				continue;
+			}
+			job_ids.emplace_back(job_id, old_prio);
 		}
 	}
 	else if(isalpha(*arg))
 	// update prio by user name
 	{
 		char	constraint[100];
-		ClassAd	*ad;
-		int firstTime = 1;
-		
 		snprintf(constraint, sizeof(constraint), "%s == \"%s\"", ATTR_OWNER, arg);
 
-		while ((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
-			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			ad->LookupInteger(ATTR_PROC_ID, proc);
-			FreeJobAd(ad);
-			UpdateJobAd(cluster, proc);
-			firstTime = 0;
+		int rval = GetAllJobsByConstraint_Start(constraint, proj.c_str());
+		while (rval == 0) {
+			ClassAd ad;
+			rval = GetAllJobsByConstraint_Next(ad);
+			if (rval != 0) {
+				continue;
+			}
+			ad.LookupInteger(ATTR_CLUSTER_ID, job_id.cluster);
+			ad.LookupInteger(ATTR_PROC_ID, job_id.proc);
+			if (!ad.LookupInteger(ATTR_JOB_PRIO, old_prio)) {
+				fprintf(stderr, "Couldn't retrieve priority for %d.%d.\n", job_id.cluster, job_id.proc);
+				continue;
+			}
+			job_ids.emplace_back(job_id, old_prio);
 		}
 	}
 	else
 	{
 		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+	}
+
+	// Now set the new priority values for the selected jobs
+	for (auto [id, prio]: job_ids) {
+		UpdateJobAd(id.cluster, id.proc, prio);
 	}
 }

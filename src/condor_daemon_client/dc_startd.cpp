@@ -1084,44 +1084,6 @@ DCStartd::_continueClaim( )
 }
 
 
-bool 
-DCStartd::getAds( ClassAdList &adsList )
-{
-	CondorError errstack;
-	// fetch the query
-	QueryResult q;
-	CondorQuery* query;
-	const char* ad_addr;
-
-	// instantiate query object
-	if (!(query = new CondorQuery (STARTD_AD))) {
-		dprintf( D_ALWAYS, "Error:  Out of memory\n");
-		return(false);
-	}
-
-	if( this->locate() ){
-		ad_addr = this->addr();
-		q = query->fetchAds(adsList, ad_addr, &errstack);
-		if (q != Q_OK) {
-        	if (q == Q_COMMUNICATION_ERROR) {
-            	dprintf( D_ALWAYS, "%s\n", errstack.getFullText(true).c_str() );
-        	}
-        	else {
-            	dprintf (D_ALWAYS, "Error:  Could not fetch ads --- %s\n",
-                     	getStrQueryResult(q));
-        	}
-			delete query;
-        	return (false);
-		}
-	} else {
-		delete query;
-		return(false);
-	}
-
-	delete query;
-	return(true);
-}
-
 bool
 DCStartd::checkClaimId( void )
 {
