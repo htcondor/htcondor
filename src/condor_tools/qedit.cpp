@@ -605,7 +605,7 @@ main(int argc, const char *argv[])
 
 	if ( ! transaction_aborted && jobids.empty() && (setflags & SetAttribute_QueryOnly)) {
 		#if 0 // this doesn't get only-my-jobs... <sigh>
-		ClassAdList ads;
+		std::vector<ClassAd> ads;
 		GetAllJobsByConstraint(constraint.Str(), "ClusterId\nProcId", ads);
 		#endif
 	}
