@@ -65,7 +65,7 @@ $execute = sub {
 
 $success = sub {
     # remove temp file
-    system("/bin/rm $temp_file");
+    unlink $temp_file;
     
     CondorTest::EndTest();
 };
