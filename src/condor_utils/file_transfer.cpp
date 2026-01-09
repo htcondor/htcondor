@@ -7293,6 +7293,14 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		}
 	}
 
+	// If the transfer succeeded, we don't need the input or output files
+	// any longer, and preserving them causes multiple common-file catalogs
+	// that use the same plug-in(s) to fail.
+	if( result == TransferPluginResult::Success ) {
+		std::ignore = unlink(input_filename.c_str());
+		std::ignore = unlink(output_filename.c_str());
+	}
+
 	return result;
 }
 
