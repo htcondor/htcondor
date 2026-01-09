@@ -51,7 +51,14 @@ if("${OS_NAME}" MATCHES "^WIN")
 		set(SYS_ARCH "X86_64")
 	endif()
 
-	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
+	# VS 2019 16.3 or later support the MultiToolTask builder, which parallelizes
+	# like Ninja.  Turn this on if not already on.
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
+		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+	endif()
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+		list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	endif()
 
 endif()
 
