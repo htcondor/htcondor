@@ -71,6 +71,50 @@ TEST_CASES = {
         'fall_back_transfers':  0,
     },
 
+    # We'll skip to the most complicated test case; we can fill in the other
+    # cases if this one fails but none of the other ones do.
+    "three_cxfers_2_double": {
+        'submit_commands':      {
+            'MY.CommonInputFiles':              '"{path_to_common_input}, file://{path_to_common_input}.0"',
+
+            'container_image':                  'file://{the_container_image}',
+            'container_is_common':              'True',
+
+            'MY._x_common_input_catalogs':      '"A, B, condor_container_image"',
+            'MY._x_catalog_A':                  '"file://{path_to_common_input}.1, {path_to_common_input}.2"',
+            'MY._x_catalog_B':                  '"file://{path_to_common_input}.3, {path_to_common_input}.4"',
+        },
+        'expected_common_ads':   [
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+            {'CommonPluginResultList'},
+        ],
+        'expected_epoch_ads':  [
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+            {'CommonFilesMappedTime', '_x_common_input_catalogs', '_x_catalog_condor_container_image', 'CommonInputFiles'},
+        ],
+        'expected_cts_output': 'Cluster {clusterID}: required 6357200 total bytes in common files (as 794650 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 1589300 bytes, skipping 4767900 bytes, or 75% of the total.',
+    },
+}
+
+
+SKIPPED_TEST_CASES = {
+    #
+    # This is a very slow test.  We can probably safely move the `one_*` test
+    # to SKIPPED_TEST_CASES unless / until we have a problem.
+    #
+
     "one_cxfer_cedar_1": {
         'submit_commands':      {
             'MY.CommonInputFiles':                  '"{path_to_common_input}"',
@@ -118,7 +162,7 @@ TEST_CASES = {
 
     "one_cxfer_cedar_3": {
         'submit_commands':      {
-            'transfer_input_files':     '{path_to_common_input}',
+            'transfer_input_files':     '{path_to_common_input}, input-file-$(ProcID)',
             'container_image':          '{the_container_image}',
             'container_is_common':      'True',
         },
@@ -188,7 +232,7 @@ TEST_CASES = {
 
     "one_cxfer_file_3": {
         'submit_commands':      {
-            'transfer_input_files':     '{path_to_common_input}',
+            'transfer_input_files':     '{path_to_common_input}, input-file-$(ProcID)',
             'container_image':          'file://{the_container_image}',
             'container_is_common':      'True',
         },
@@ -209,10 +253,11 @@ TEST_CASES = {
         'expected_cts_output': 'Cluster {clusterID}: required 6356992 total bytes in common files (as 794624 bytes per epoch * 8 epochs, not including fall-back epochs), but only transferred 1589248 bytes, skipping 4767744 bytes, or 75% of the total.',
         'fall_back_transfers':  0,
     },
-}
 
-    
-SKIPPED_TEST_CASES = {
+    # These shouldn't check anything that `three_cxfers_2_double` doesn't;
+    # we can fill them in if starts to fail and we need to better-isolate
+    # the problem.
+
     "one_cxfer_both_1": {
         'submit_commands':      {},
         'expected_common_ads':  [],
@@ -232,15 +277,6 @@ SKIPPED_TEST_CASES = {
         'fall_back_transfers':  0,
     },
     # one_cxfer_both_3 is impossible, since you can't have >1 container image.
-
-    # We'll skip to the most complicated test case; we can fill in the other
-    # cases if this one fails but none of the other ones do.
-    "three_cxfers_2_double": {
-        'submit_commands':      {},
-        'expected_common_ads':  [],
-        'expected_epoch_ads':   [],
-        'fall_back_transfers':  0,
-    },
 }
 
 # Assuming the number of fall-back transfers will be controlled by HTCondor
@@ -252,6 +288,11 @@ SKIPPED_TEST_CASES = {
 def path_to_common_input(test_dir):
     path = test_dir / 'common-input.file'
     path.write_text('the common input file')
+
+    for i in range(0, 6):
+        new_path = test_dir / f"common-input.file.{i}"
+        new_path.write_text(f'{i}')
+
     return path
 
 
@@ -265,7 +306,7 @@ def the_job_description(test_dir):
         'shell':
             "ls -la > output-file-$(ProcID); "
             "cat common-file input-file-$(ProcID) >> output-file-$(ProcID); "
-            "sleep 5",
+            "sleep 10",
         'transfer_input_files':     'input-file-$(ProcID)',
         'transfer_output_files':    'output-file-$(ProcID)',
         'should_transfer_files':    'YES',
