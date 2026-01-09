@@ -360,7 +360,8 @@ ClassAd *GetJobAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool 
 ClassAd *GetJobByConstraint(const char *constraint);
 /** Efficiently get the all jobs ClassAd which matches the constraint.
 */
-void GetAllJobsByConstraint(const char *constraint, const char *proj,ClassAdList &list);
+int GetAllJobsByConstraint(const char *constraint, const char *proj,ClassAdList &list);
+int GetAllJobsByConstraint(const char *constraint, const char *proj, std::vector<ClassAd>& list);
 /** Iterate over all jobs in the queue.
 	The caller MUST call FreeJobAd when the ad is no longer in use. 
 	@param initScan should be non-zero on first call to initialize the iterator
