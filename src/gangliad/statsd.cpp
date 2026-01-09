@@ -977,7 +977,7 @@ StatsD::getCollectorsToMonitor()
 	
 	// First, formulate the query we will send to the collector(s)
 	QueryResult result;
-	ClassAdList daemon_ads;
+	std::vector<ClassAd> daemon_ads;
 	CollectorList* col = CollectorList::create(monitor_collector.c_str()); // must delete this ptr
 	ASSERT(col);
 	CondorQuery query(type);
@@ -996,27 +996,24 @@ StatsD::getCollectorsToMonitor()
 				monitor_collector.c_str(),
 				getStrQueryResult(result));
 	} else {
-		dprintf(D_ALWAYS,"Got %d daemon ads from MONITOR_COLLECTOR %s\n",
-			daemon_ads.MyLength(),
+		dprintf(D_ALWAYS,"Got %zu daemon ads from MONITOR_COLLECTOR %s\n",
+			daemon_ads.size(),
 			monitor_collector.c_str());
 	}
 
 	// Only update m_param_monitor_multiple_collectors if there was at least one collector to monitor,
 	// else keep any previous value
-	if (daemon_ads.MyLength() > 0) {
+	if (daemon_ads.size() > 0) {
 		m_param_monitor_multiple_collectors.clear();
-		daemon_ads.Open();
-		ClassAd *daemon;
 		std::string name,addr;
-		while( (daemon=daemon_ads.Next()) ) {
-			if (daemon->LookupString(collector_name_attr,name) &&
-				daemon->LookupString(collector_addr_attr,addr) )
+		for (auto& daemon: daemon_ads) {
+			if (daemon.LookupString(collector_name_attr,name) &&
+			    daemon.LookupString(collector_addr_attr,addr) )
 			{
 				if (!m_param_monitor_multiple_collectors.empty()) m_param_monitor_multiple_collectors += ",";
 				m_param_monitor_multiple_collectors += name + "/" + addr;			
 			}
 		}
-		daemon_ads.Close();
 		return true;
 	} else {
 		return false;
@@ -1024,7 +1021,7 @@ StatsD::getCollectorsToMonitor()
 }
 
 void
-StatsD::getDaemonAds(ClassAdList &daemon_ads)
+StatsD::getDaemonAds(std::vector<ClassAd> &daemon_ads)
 {
 	// Every 30 minutes, (1) clear out our list of unresponsive collectors so we try them again, and
 	// (2) update our list of collectors to query
@@ -1147,19 +1144,16 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 		
 		if ((result == Q_OK) && multiple_collectors) {
 			dprintf(D_ALWAYS,"Got %d daemon ads from collector %s\n",
-					daemon_ads.MyLength() - num_ads_from_prev_rounds,
+					(int)daemon_ads.size() - num_ads_from_prev_rounds,
 					collector_pool_list[i].c_str());
-			num_ads_from_prev_rounds = daemon_ads.MyLength();
-			daemon_ads.Open();
-			ClassAd *daemon;
+			num_ads_from_prev_rounds = (int)daemon_ads.size();
 			// Store the name of the collector in the daemon ads we just fetched, as this
 			// will become the default machine name where aggregate metrics are stored
-			while( (daemon=daemon_ads.Next()) ) {
-				if (!daemon->Lookup(ATTR_STASH_COLLECTOR_NAME)) {
-					daemon->Assign(ATTR_STASH_COLLECTOR_NAME,collector_name_list[i]);
+			for (auto& daemon: daemon_ads) {
+				if (!daemon.Lookup(ATTR_STASH_COLLECTOR_NAME)) {
+					daemon.Assign(ATTR_STASH_COLLECTOR_NAME,collector_name_list[i]);
 				}
 			}
-			daemon_ads.Close();
 		}
 		
 		if (result == Q_OK) {
@@ -1173,8 +1167,8 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 		}
 	}
 
-	dprintf(D_ALWAYS,"Got %d daemon ads total from %d collector(s)\n",
-		daemon_ads.MyLength(),num_collectors);
+	dprintf(D_ALWAYS,"Got %zu daemon ads total from %d collector(s)\n",
+		daemon_ads.size(),num_collectors);
 }
 
 void
@@ -1199,10 +1193,10 @@ StatsD::publishMetrics( int /* timerID */ )
 	clearAggregateMetrics();
 
 	// Query collector(s) to get daemon ads to process metric upon
-	ClassAdList daemon_ads;
+	std::vector<ClassAd> daemon_ads;
 	getDaemonAds(daemon_ads);
 
-	if (daemon_ads.MyLength() == 0) {
+	if (daemon_ads.empty()) {
 		// No ads means no more work to do
 		return;
 	}
@@ -1213,12 +1207,9 @@ StatsD::publishMetrics( int /* timerID */ )
 		determineExecuteNodes(daemon_ads);
 	}
 
-	daemon_ads.Open();
-	ClassAd *daemon;
-	while( (daemon=daemon_ads.Next()) ) {
+	for (auto& daemon: daemon_ads) {
 		publishDaemonMetrics(daemon);
 	}
-	daemon_ads.Close();
 
 	publishAggregateMetrics();
 
@@ -1234,17 +1225,15 @@ StatsD::publishMetrics( int /* timerID */ )
 }
 
 void
-StatsD::determineExecuteNodes(ClassAdList &daemon_ads) {
+StatsD::determineExecuteNodes(std::vector<ClassAd> &daemon_ads) {
 	std::set< std::string > submit_nodes;
 	std::set< std::string > execute_nodes;
 	std::set< std::string > cm_nodes;
 
-	daemon_ads.Open();
-	ClassAd *daemon;
-	while( (daemon=daemon_ads.Next()) ) {
+	for (auto& daemon: daemon_ads) {
 		std::string machine,my_type;
-		daemon->EvaluateAttrString(ATTR_MACHINE,machine);
-		daemon->EvaluateAttrString(ATTR_MY_TYPE,my_type);
+		daemon.EvaluateAttrString(ATTR_MACHINE,machine);
+		daemon.EvaluateAttrString(ATTR_MY_TYPE,my_type);
 		if( strcasecmp(my_type.c_str(),"machine")==0 ) {
 			execute_nodes.insert( std::set< std::string >::value_type(machine) );
 		}
@@ -1255,7 +1244,6 @@ StatsD::determineExecuteNodes(ClassAdList &daemon_ads) {
 			cm_nodes.insert( std::set< std::string >::value_type(machine) );
 		}
 	}
-	daemon_ads.Close();
 
 	m_execute_only_nodes.clear();
 	for( std::set< std::string >::iterator itr = execute_nodes.begin();
@@ -1273,7 +1261,7 @@ StatsD::determineExecuteNodes(ClassAdList &daemon_ads) {
 }
 
 void
-StatsD::publishDaemonMetrics(ClassAd *daemon_ad)
+StatsD::publishDaemonMetrics(ClassAd& daemon_ad)
 {
 	for( std::list< classad::ClassAd * >::iterator itr = m_metrics.begin();
 		 itr != m_metrics.end();
@@ -1281,7 +1269,7 @@ StatsD::publishDaemonMetrics(ClassAd *daemon_ad)
 	{
 		std::shared_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
-		metric->evaluateDaemonAd(**itr,*daemon_ad,m_verbosity,this);
+		metric->evaluateDaemonAd(**itr, daemon_ad, m_verbosity, this);
 	}
 }
 
@@ -1487,17 +1475,15 @@ StatsD::addToAggregateValue(Metric const &metric) {
 
 
 void
-StatsD::mapDaemonIPs(ClassAdList &daemon_ads) {
+StatsD::mapDaemonIPs(std::vector<ClassAd> &daemon_ads) {
 	// The map of machines to IPs is used when directing ganglia to
 	// associate specific metrics with specific hosts (host spoofing)
 
-	daemon_ads.Open();
-	ClassAd *daemon;
-	while( (daemon=daemon_ads.Next()) ) {
+	for (auto& daemon: daemon_ads) {
 		std::string machine,name,my_address;
-		daemon->EvaluateAttrString(ATTR_MACHINE,machine);
-		daemon->EvaluateAttrString(ATTR_MACHINE,name);
-		daemon->EvaluateAttrString(ATTR_MY_ADDRESS,my_address);
+		daemon.EvaluateAttrString(ATTR_MACHINE,machine);
+		daemon.EvaluateAttrString(ATTR_MACHINE,name);
+		daemon.EvaluateAttrString(ATTR_MY_ADDRESS,my_address);
 		Sinful s(my_address.c_str());
 		if( !s.getHost() ) {
 			continue;
@@ -1510,7 +1496,6 @@ StatsD::mapDaemonIPs(ClassAdList &daemon_ads) {
 			m_daemon_ips.insert( std::map< std::string,std::string >::value_type(name,ip) );
 		}
 	}
-	daemon_ads.Close();
 }
 
 void
