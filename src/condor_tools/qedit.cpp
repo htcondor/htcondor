@@ -603,13 +603,6 @@ main(int argc, const char *argv[])
 		printf("%sSet attribute \"%s\" for %s matching jobs.\n", dry_tag, attr, count.c_str());
 	}
 
-	if ( ! transaction_aborted && jobids.empty() && (setflags & SetAttribute_QueryOnly)) {
-		#if 0 // this doesn't get only-my-jobs... <sigh>
-		std::vector<ClassAd> ads;
-		GetAllJobsByConstraint(constraint.Str(), "ClusterId\nProcId", ads);
-		#endif
-	}
-
 bail:
 
 	if (!DisconnectQ(q) || transaction_aborted) {
