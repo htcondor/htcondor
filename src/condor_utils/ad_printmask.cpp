@@ -973,33 +973,6 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const 
 	}
 }
 
-int AttrListPrintMask::
-display (FILE *file, ClassAdList *list, ClassAd *target /* = NULL */, std::vector<const char *> * pheadings /* = NULL */)
-{
-	int retval = 1;
-
-	list->Open();
-
-	ClassAd *al = list->Next();
-
-	if (al && pheadings) {
-		// render the first line to a string so the column widths update
-		std::string tmp;
-		display(tmp, al, target);
-		display_Headings(file, *pheadings);
-	}
-
-	while( al ) {
-		if( !display (file, al, target) ) {
-			retval = 0;
-		}
-		al = list->Next();
-	}
-    list->Close ();
-
-	return retval;
-}
-
 void AttrListPrintMask::
 clearList (std::vector<char *> &l)
 {
