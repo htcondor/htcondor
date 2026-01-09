@@ -100,7 +100,7 @@ def main(requested_clusterID):
             print(
                 f"Ignoring partial transfers in cluster ID {clusterID}: "
                 f"{transfers} transfers / "
-                f"(({CommonCatalogsByClusterID[clusterID]} common catalogs /"
+                f"(({CommonCatalogsByClusterID[clusterID]} common catalogs / "
                 f"{EpochsByClusterID[clusterID]} epochs) = "
                 f"{transfers_per_cluster} transfers_per_cluster) = "
                 f"{whole_transfers} whole_transfers"
