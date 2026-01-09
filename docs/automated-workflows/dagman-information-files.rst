@@ -3,39 +3,68 @@ Informational Files
 
 .. sidebar:: Example Metrics File Contents
 
-    .. code-block:: json
-        :caption: Example DAGMan metrics (V2) file contents
+    .. tabs::
 
-        {
-            "client":"condor_dagman",
-            "version":"24.2.0",
-            "type":"metrics",
-            "metrics_version":2,
-            "start_time":1729028927.766,
-            "end_time":1729028968.913,
-            "duration":41.147,
-            "exitcode":0,
-            "dagman_id":"69",
-            "parent_dagman_id":"42",
-            "rescue_dag_number":0,
-            "has_final_node":false,
-            "nodes":2,
-            "nodes_failed":0,
-            "nodes_succeeded":2,
-            "dag_nodes":0,
-            "dag_nodes_failed":0,
-            "dag_nodes_succeeded":0,
-            "provisioner_nodes":0,
-            "service_nodes":1,
-            "service_nodes_failed":0,
-            "service_nodes_succeeded":1,
-            "total_nodes":3,
-            "total_nodes_run":3,
-            "jobs_submitted":3,
-            "jobs_succeeded":3,
-            "jobs_failed":0,
-            "DagStatus":0
-        }
+        .. code-tab:: json Version 2
+
+            {
+                "client":"condor_dagman",
+                "version":"24.2.0",
+                "type":"metrics",
+                "metrics_version":2,
+                "start_time":1729028927.766,
+                "end_time":1729028968.913,
+                "duration":41.147,
+                "exitcode":0,
+                "dagman_id":"69",
+                "parent_dagman_id":"42",
+                "rescue_dag_number":0,
+                "has_final_node":false,
+                "nodes":2,
+                "nodes_failed":0,
+                "nodes_succeeded":2,
+                "dag_nodes":0,
+                "dag_nodes_failed":0,
+                "dag_nodes_succeeded":0,
+                "provisioner_nodes":0,
+                "service_nodes":1,
+                "service_nodes_failed":0,
+                "service_nodes_succeeded":1,
+                "total_nodes":3,
+                "total_nodes_run":3,
+                "jobs_submitted":3,
+                "jobs_succeeded":3,
+                "jobs_failed":0,
+                "DagStatus":0
+            }
+
+        .. code-tab:: json Version 1
+
+            {
+                "client":"condor_dagman",
+                "version":"24.2.0",
+                "planner":"",
+                "planner_version":"",
+                "type":"metrics",
+                "wf_uuid":"",
+                "root_wf_uuid":"",
+                "start_time":1729028927.766,
+                "end_time":1729028968.913,
+                "duration":41.147,
+                "exitcode":0,
+                "dagman_id":"69",
+                "parent_dagman_id":"42",
+                "rescue_dag_number":0,
+                "jobs":2,
+                "jobs_failed":0,
+                "jobs_succeeded":2,
+                "dag_jobs":0,
+                "dag_jobs_failed":0,
+                "dag_jobs_succeeded":0,
+                "total_jobs":2,
+                "total_jobs_run":2,
+                "DagStatus":0
+            }
 
 :index:`workflow metrics<single: DAGMan; Workflow metrics>`
 
@@ -225,7 +254,7 @@ Machine-Readable Event History
 ------------------------------
 
 DAGMan can produce a machine-readable history of events called the job state
-log. This log was designed for use by the `Pegasus Workflow Management System <https://pegasus.isi.edu/>`_
+log. This log was originally designed for use by the `Pegasus Workflow Management System <https://pegasus.isi.edu/>`_
 which operates as a layer on top of DAGMan. The job state log can be used
 to monitor the state of the DAGMan workflow. The job state log is produced
 when the :dag-cmd:`JOBSTATE_LOG[Usage]` command is declared with the following syntax:
@@ -289,16 +318,18 @@ are separated by a single space character.
     The *NodeName* is the DAG identifier for the node as specified by the
     :dag-cmd:`JOB` command.
 
-    The *EventName* is one of the many defined event or meta-events
-    as listed below:
+    The *EventName* is either the echoed job event name as found in the
+    :ad-attr:`UserLog` or one of the following meta events:
 
-    +---------------------+---------------------+---------------------+
-    | PRE_SCRIPT_STARTED  | PRE_SCRIPT_SUCCESS  | PRE_SCRIPT_FAILURE  |
-    +---------------------+---------------------+---------------------+
-    | SUBMIT_FAILURE      | JOB_SUCCESS         | JOB_FAILURE         |
-    +---------------------+---------------------+---------------------+
-    | POST_SCRIPT_STARTED | POST_SCRIPT_SUCCESS | POST_SCRIPT_FAILURE |
-    +---------------------+---------------------+---------------------+
+        - **PRE_SCRIPT_STARTED**: Node PRE script began execution
+        - **PRE_SCRIPT_STARTED**: Node PRE script exited with zero exit code
+        - **PRE_SCRIPT_FAILURE**: Node PRE script exited with non-zero exit code
+        - **SUBMIT_FAILURE**: Node failed to submit job list
+        - **JOB_SUCCESS**: Node job list completed successfully (i.e. all jobs exited with code zero)
+        - **JOB_FAILURE**: Node job list completed with failure (i.e. some number of jobs had non-zero exit code)
+        - **POST_SCRIPT_STARTED**: Node POST script began execution
+        - **POST_SCRIPT_STARTED**: Node POST script exited with zero exit code
+        - **POST_SCRIPT_FAILURE**: Node POST script exited with non-zero exit code
 
     The *CondorId* is the node job's :ad-attr:`ClusterId` and :ad-attr:`ProcId`.
     Meta-events that take prior to successful job submission will not have an

@@ -18,9 +18,6 @@
  ***************************************************************/
 
 
-// Defining this before including winsock2.h gives us htonll() on Windows
-#define INCL_EXTRA_HTON_FUNCTIONS
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
@@ -496,7 +493,7 @@ Stream::code(condor_errno_t &errno_num)
 int
 Stream::code(condor_mode_t &m)
 {
-	mode_t mask = 0, y = 0;
+	int mask = 0, y = 0;
 #if !defined(WIN32)
 	mask |= (S_IRUSR|S_IWUSR|S_IXUSR|
 			 S_IRGRP|S_IWGRP|S_IXGRP|
@@ -569,16 +566,6 @@ Stream::put( unsigned int		i)
 {
 	return put((unsigned long long)i);
 }
-
-// Pick the correct 64-bit convert-to/from-big-endian function for each
-// platform
-#if defined(LINUX)
-#  define htonLL(x) htobe64(x)
-#  define ntohLL(x) be64toh(x)
-#elif defined(DARWIN) || defined(WIN32)
-#  define htonLL(x) htonll(x)
-#  define ntohLL(x) htonll(x)
-#endif
 
 int 
 Stream::put( long	l)

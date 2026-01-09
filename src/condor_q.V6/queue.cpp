@@ -184,7 +184,7 @@ static	QueryResult result;
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
-static	ClassAdList	scheddList;
+static std::vector<ClassAd> scheddList;
 
 static bool local_render_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_dag_owner(std::string & out, ClassAd*, Formatter &);
@@ -518,7 +518,6 @@ void profile_print(size_t & cbBefore, double & tmBefore, int cAds, bool fCacheSt
 
 int main (int argc, const char **argv)
 {
-	ClassAd		*ad;
 	bool		first;
 	std::string		scheddMachine;
 	int		useFastScheddQuery = 0;
@@ -710,8 +709,7 @@ int main (int argc, const char **argv)
 	first = true;
 	CondorClassAdListWriter writer(dash_long_format);
 	// get queue from each ScheddIpAddr in ad
-	scheddList.Open();
-	while ((ad = scheddList.Next()))
+	for (auto& ad: scheddList)
 	{
 		/* default to true for remotely queryable */
 
@@ -721,11 +719,11 @@ int main (int argc, const char **argv)
 		*/
 		std::string scheddName;
 		std::string scheddAddr;
-		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
-				ad->LookupString(ATTR_NAME, scheddName) &&
-				ad->LookupString(ATTR_MACHINE, scheddMachine)
-				)
-			)
+		if ( ! (ad.LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)  &&
+		        ad.LookupString(ATTR_NAME, scheddName) &&
+		        ad.LookupString(ATTR_MACHINE, scheddMachine)
+		        )
+		    )
 		{
 			/* something is wrong with this schedd/submittor ad, try the next one */
 			continue;
@@ -734,7 +732,7 @@ int main (int argc, const char **argv)
 		first = false;
 
 		std::string scheddVersion;
-		ad->LookupString(ATTR_VERSION, scheddVersion);
+		ad.LookupString(ATTR_VERSION, scheddVersion);
 		CondorVersionInfo v(scheddVersion.c_str());
 		if (v.built_since_version(8, 3, 3)) {
 			bool v3_query_with_auth = v.built_since_version(8,5,6) && (default_fetch_opts & QueryFetchOpts::fetch_MyJobs);
@@ -745,9 +743,6 @@ int main (int argc, const char **argv)
 		Q.useDefaultingOperator(v.built_since_version(8,6,0));
 		retval = show_schedd_queue(scheddAddr.c_str(), scheddName.c_str(), scheddMachine.c_str(), useFastScheddQuery, writer);
 	}
-
-	// close list
-	scheddList.Close();
 
 	if (dash_long) {
 		writer.writeFooter(stdout, always_write_xml_footer);
@@ -777,7 +772,7 @@ static int cleanup_globals(int exit_code)
 
 	// do this to make Valgrind happy.
 	cleanupAnalysis();
-	scheddList.Clear();
+	scheddList.clear();
 
 	return exit_code;
 }

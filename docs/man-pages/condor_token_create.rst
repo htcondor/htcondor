@@ -121,7 +121,7 @@ to create the key:
 Note, in this case, we created a random 32 character key using SSL instead of providing
 a human-friendly password.
 
-Next, the administrator would run run *condor_token_create*:
+Next, the administrator would run *condor_token_create*:
 
 .. code-block:: console
 

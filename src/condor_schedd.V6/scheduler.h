@@ -259,6 +259,7 @@ class match_rec
 	int keep_while_idle{0}; // number of seconds to hold onto an idle claim
 	time_t idle_timer_deadline{0}; // if the above is nonzero, abstime to hold claim
 	time_t entered_current_status{0};
+	time_t last_alive{time(0)};
 	PROC_ID m_now_job{0,0};
 
 	ClassAd * my_match_ad{nullptr};
@@ -272,7 +273,6 @@ class match_rec
 	bool			is_ocu {false}; // when true, hold forever, hand out to others
     PROC_ID         ocu_originator;  // procid of the ocu claimer job
 									
-	bool m_startd_sends_alives{false}; // in practice, actual default is true since 7.5.4
 	bool m_claim_pslot{false};
 	int  m_multi_slot{0}; // when > 1, this is a multi-slot claim request
 
@@ -296,43 +296,14 @@ class match_rec
 
 };
 
-class GridUserIdentity {
-	public:
-			// The default constructor is not recommended as it
-			// has no real identity.  It only exists so
-			// we can put UserIdentities in various templates.
-		GridUserIdentity() : m_username(""), m_osname(""), m_auxid(""), m_ownerinfo(nullptr) { }
-		GridUserIdentity(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-		}
-		GridUserIdentity(JobQueueJob& job_ad);
-		const GridUserIdentity & operator=(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-			return *this;
-		}
-		bool operator==(const GridUserIdentity & rhs) {
-			return m_username == rhs.m_username && 
-				m_auxid == rhs.m_auxid && m_ownerinfo == rhs.m_ownerinfo;
-		}
-		const std::string& username() const { return m_username; }
-		const std::string& osname() const { return m_osname; }
-		const std::string& auxid() const { return m_auxid; }
-		const JobQueueUserRec* ownerinfo() const { return  m_ownerinfo; }
+struct GridUserIdentity {
+	GridUserIdentity() = default;
+	GridUserIdentity(JobQueueJob& job_ad);
 
-			// For use in HashTables
-		static size_t HashFcn(const GridUserIdentity & index);
+	auto operator<=>(const GridUserIdentity&) const = default;
 	
-	private:
-		std::string m_username;
-		std::string m_osname;
-		std::string m_auxid;
-		const JobQueueUserRec* m_ownerinfo;
+	const JobQueueUserRec* m_ownerinfo{nullptr};
+	std::string m_auxid;
 };
 
 
@@ -433,6 +404,7 @@ private:
 };
 
 class JobSets; // forward reference - declared in jobsets.h
+class OCU; // forward reference - declared in qmgmt.h
 
 class Scheduler : public Service
 {
@@ -543,12 +515,10 @@ class Scheduler : public Service
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	void            sendSignalToShadow(pid_t pid,int sig,PROC_ID proc);
-	int				AlreadyMatched(PROC_ID*);
-	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs() const;
 	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
-	void			sendAlives( int timerID = -1 );
+	void			checkClaimLeases( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler( int timerID = -1 );
 	void			addRunnableJob( shadow_rec* );
@@ -557,19 +527,19 @@ class Scheduler : public Service
 	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status );
 
-	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
-	bool			WriteAbortToUserLog( PROC_ID job_id );
-	bool			WriteHoldToUserLog( PROC_ID job_id );
-	bool			WriteReleaseToUserLog( PROC_ID job_id );
-	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
-	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
-	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
-	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
-	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
+	WriteUserLog*	InitializeUserLog(const JobQueueJob* ad);
+	bool			WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const char * warning );
+	bool			WriteAbortToUserLog(const JobQueueJob* job);
+	bool			WriteHoldToUserLog(const JobQueueJob* job);
+	bool			WriteReleaseToUserLog(const JobQueueJob* job);
+	bool			WriteExecuteToUserLog(const JobQueueJob* job, const char* sinful = NULL);
+	bool			WriteEvictToUserLog(const JobQueueJob* job, bool checkpointed = false);
+	bool			WriteTerminateToUserLog(const JobQueueJob* job, int status);
+	bool			WriteRequeueToUserLog(const JobQueueJob* job, int status, const char * reason);
+	bool			WriteAttrChangeToUserLog(const JobQueueJob* job, const char* attr, const char* attr_value, const char* old_value);
+	bool			WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog(const JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
@@ -712,8 +682,10 @@ class Scheduler : public Service
 	bool HasPersistentProjectInfo() const { return EnablePersistentProjectInfo; }
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
-	const OwnerInfo * insert_owner_const(const char*);
+	const OwnerInfo * insert_owner_const(const char*, CondorError* errstack=nullptr);
 	const OwnerInfo * lookup_owner_const(const char*);
+	// make sure that the ownerInfo has a valid OsUser, assiging a generic one if needed.
+	const char *    solidify_os_user(const OwnerInfo *, CondorError* errstack=nullptr);
 	// make sure that a job object has a submitter record pointer
 	const SubmitterData * get_submitter(JobQueueJob * job) {
 		SubmitterData * subdat = nullptr;
@@ -726,10 +698,18 @@ class Scheduler : public Service
 	// find a project record or insert a pending project record
 	JobQueueProjectRec * insert_projectinfo(const char * project_name);
 
+	void configGenericOsUsers();
+
+	bool m_useGenericOsUsers{false};
+	std::set<std::string> m_openGenericOsUsers;
+	std::set<std::string> m_claimedGenericOsUsers;
+
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 
 	// Class to manage sets of Job 
 	JobSets *jobSets;
+
+	std::map<GridUserIdentity, GridJobCounts> GridJobOwners;
 
 	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const OwnerInfo *user, const char * new_spool_dir="##");
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const OwnerInfo *user);
@@ -755,9 +735,10 @@ class Scheduler : public Service
     // from places other than the scheduler object, necessary.
     ClassAd * getScheddAd() { return m_adSchedd; }
 
-private:
-
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
+
+	OCU *getOCU(int ocu_id); 
+private:
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
@@ -861,7 +842,6 @@ private:
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 	ProjectInfoMap  ProjectInfo;   // map of JobQueueProjectRec ads by project name
 
-	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	std::queue<shadow_rec*> RunnableJobQueue;
@@ -901,12 +881,6 @@ private:
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;
 
-		// Get the associated GridJobCounts object for a given
-		// user identity.  If necessary, will create a new one for you.
-		// You can read or write the values, but don't go
-		// deleting the pointer!
-	GridJobCounts * GetGridJobCounts(GridUserIdentity user_identity);
-
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;
 	char* m_unparsed_gridman_selection_expr;
@@ -938,7 +912,7 @@ private:
 
 	// utility functions
 	void		sumAllSubmitterData(SubmitterData &all);
-	void		updateSubmitterAd(SubmitterData &submitterData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
+	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
@@ -948,9 +922,13 @@ private:
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
 	int			command_query_user_ads(int, Stream* stream);
 	int			command_act_on_user_ads(int, Stream* stream);
+	int			command_act_on_ocus(int, Stream* stream);
+    ClassAd     act_on_ocu_create(const ClassAd &request);
+    ClassAd     act_on_ocu_remove(const ClassAd &request);
+	std::vector<ClassAd>     act_on_ocu_query(const ClassAd &request);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
-	OwnerInfo     * insert_ownerinfo(const char*);
+	OwnerInfo     * insert_ownerinfo(const char*, CondorError* errstack=nullptr);
 	SubmitterData * insert_submitter(const char*);
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
@@ -965,7 +943,7 @@ private:
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
-	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
+	void			scheduler_univ_job_leave_queue(JobQueueJob *job, int status);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			attempt_shutdown( int timerID = -1 );
@@ -998,7 +976,7 @@ private:
 		// to query the CronTab object to ask it what the next
 		// runtime is for job is
 		//
-	HashTable<PROC_ID, CronTab*> *cronTabs;	
+	std::map<PROC_ID, CronTab*> cronTabs;
 		//
 		// A list of cluster_ids that may have jobs that require
 		// CronTab execution scheduling
@@ -1036,8 +1014,8 @@ private:
 
 	static void		token_request_callback(bool success, void *miscdata);
 
-	HashTable <std::string, match_rec *> *matches;
-	HashTable <PROC_ID, match_rec *> *matchesByJobID;
+	std::map<std::string, match_rec *> matches;
+	std::map<PROC_ID, match_rec *> matchesByJobID;
 	std::map<int, shadow_rec *> shadowsByPid;
 	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
 	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;
@@ -1057,7 +1035,7 @@ private:
 		// leaseAliveInterval is the minimum interval we need to send
 		// keepalives based upon ATTR_JOB_LEASE_DURATION...
 	int				leaseAliveInterval;  
-	int				aliveid;	// timer id for sending keepalives to startd
+	int				aliveid;	// timer id for checking claim leases
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 
 		// get connection info for creating sec session to a running job
@@ -1104,13 +1082,6 @@ private:
 	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
 	std::map<std::string, ClassAd *> m_claimedLocalStartds;
 
-    int m_userlog_file_cache_max;
-    time_t m_userlog_file_cache_clear_last;
-    int m_userlog_file_cache_clear_interval;
-    WriteUserLog::log_file_cache_map_t m_userlog_file_cache;
-    void userlog_file_cache_clear(bool force = false);
-    void userlog_file_cache_erase(const int& cluster, const int& proc);
-
 	// State for the history helper queue.
 	// object to manage history queries in flight
 	HistoryHelperQueue HistoryQue;
@@ -1123,6 +1094,7 @@ private:
 	MapFile m_protected_url_map;
 
 	friend class DedicatedScheduler;
+	friend class JobQueueUserRec;
 };
 
 
@@ -1132,7 +1104,6 @@ struct JOB_ID_KEY;
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);
-extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
@@ -1144,15 +1115,15 @@ extern void incrementJobAdAttr(int cluster, int proc, const char* attrName, cons
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
-					 bool email_user = false, bool email_admin = false,
+					 bool email_user = false,
 					 bool system_hold = true,
 					 bool write_to_user_log = true);
 extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
-					 bool email_user = false, bool email_admin = false,
+					 bool email_user = false,
 					 bool write_to_user_log = true);
 extern bool setJobFactoryPauseAndLog(JobQueueCluster * cluster, int pause_mode, int hold_code, const std::string& reason);
-
+extern bool locate_and_advertise_local_credd(bool force);
 
 /** Hook to call whenever we're going to give a job to a "job
 	handler", be that a shadow, starter (local univ), or gridmanager.

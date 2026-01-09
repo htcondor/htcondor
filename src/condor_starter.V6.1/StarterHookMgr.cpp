@@ -328,7 +328,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 
 			// Now have the starter continue forward preparing for the job
 		if (type() == HOOK_PREPARE_JOB) {
-			starter->jobEnvironmentReady();
+			starter->prepareJobHookDone();
 		}
 		if (type() == HOOK_PREPARE_JOB_BEFORE_TRANSFER) {
 			JICShadow *p = dynamic_cast<JICShadow*>(starter->jic);

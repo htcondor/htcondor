@@ -673,7 +673,7 @@ BASIC COMMANDS
        writes to ``stdout`` will be the list of items.
 
     The optional argument *<varname>* or *<list of varnames>* is the
-    name or names of of variables that will be set to the value of the
+    name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
     the variable ITEM will be used. Leading and trailing whitespace be
     trimmed. The optional argument *<slice>* is a python style slice
@@ -791,10 +791,90 @@ COMMANDS FOR MATCHMAKING
     dynamic slot will be created with at least this much disk space.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
+
+ :subcom-def:`request_memory` = <quantity>
+    The amount of memory this job needs in Mb. If not specified, the value is set 
+    by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
+    The actual amount of memory used by a job is represented by the job ClassAd attribute
+    :ad-attr:`MemoryUsage`.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
+
+    The expression
+
+    .. code-block:: condor-classad-expr
+
+          && (RequestMemory <= Target.Memory)
+
+    is appended to the **requirements** expression for the job.
+
+ :subcom-def:`retry_request_memory` = <quantity> [, <quantity2> [...]]
+    The amount of memory in Mb the job should request if it is evicted from
+    a slot for using more than the original ``request_memory`` value.
+
+    The value can be a single quantity, or a comma separated list of quantities.
+    If more than one quantity is specified, each must be larger than the previous one.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
+
+    When ``retry_request_memory`` is specified, when the job
+    is evicted from a slot for using too much memory, the memory request
+    of the job will be adjusted to the next quantity and the job will run again
+    rather than being held. When the job is already requesting the last
+    quantity in the list, it will be held if it uses too much memory.
+
+    In the case where a cluster of jobs usually uses a smaller amount of memory,
+    but occasionally needs a larger amount of memory, this command will
+    allow the majority of jobs to match with smaller memory slots, and perhaps
+    allow more of them to match and start, without wasting the larger amount
+    of memory only seldomly needed.  So, if most jobs in a cluster can
+    run with 1 GB of memory, but some need 4 GB, then a submit file with:
+
+    .. code-block:: condor-submit
+
+      request_memory = 1 GB
+      retry_request_memory = 4 GB
+
+    will start every job with 1 Gb of memory, and those that fail due to 
+    exceeding the memory will be automatically restarted with 4 GB of memory.
+
+ :subcom-def:`retry_request_memory_increase` = <quantity or expression>
+    The amount of memory in Mb that should be added to the current memory
+    request when the job is evicted from a slot for using too much memory.
+    When used along with ``retry_request_memory_max``, the memory request
+    will continue to increase util it hits the max value.  If a job that
+    is at the max value is evicted for using too much memory it will be 
+    put on hold.  If this submit command is used without ``retry_request_memory_max``,
+    the memory request will only be increased once.
+
+    The increase can be either a quantity to add to the memory request, or
+    an expression that uses :ad-attr:`RequestMemory`.
+    For example, and note that because :ad-expr:`RequestMemory * 4` is a classad
+    expression, a unit suffix is not allowed after the `4`:
+
+    .. code-block:: condor-submit
+
+        request_memory = 1 GB
+        retry_request_memory_increase = RequestMemory * 4
+        retry_request_memory_max = 16 GB
+
+ :subcom-def:`retry_request_memory_max` = <quantity>
+    The maximum amount of memory in Mb that should be requested by the job
+    when a ``retry_request_memory_increase`` is specified.  If this command
+    is used without ``retry_request_memory_increase`` it behaves the same
+    as ``retry_request_memory`` with a single quantity.
 
  :subcom-def:`request_gpus` = <num-gpus>
     A requested number of GPUs. If not specified, no GPUs will be requested.
@@ -834,26 +914,6 @@ COMMANDS FOR MATCHMAKING
     the constraint will be tested against the properties of AvailableGPUs and only those that match
     will be assigned to the dynamic slot.
 
- :subcom-def:`request_memory` = <quantity>
-    The amount of memory this job needs in Mb. If not specified, the value is set 
-    by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
-    The actual amount of memory used by a job is represented by the job ClassAd attribute
-    :ad-attr:`MemoryUsage`.
-
-    Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
-
-    The expression
-
-    .. code-block:: condor-classad-expr
-
-          && (RequestMemory <= Target.Memory)
-
-    is appended to the **requirements** expression for the job.
-
     :subcom-def:`request_GPUs`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
  :subcom-def:`request_<name>` = <quantity>
@@ -875,10 +935,10 @@ COMMANDS FOR MATCHMAKING
     The mininum quantity of GPU memory in MiB that a GPU must have in order to run the job.
 
     Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
 
     Use of this command will create or modify the :subcom:`require_gpus` expression
     unless that expression already references the GPU property ``GlobalMemoryMB``.
@@ -1419,17 +1479,21 @@ POLICY COMMANDS
 
  :subcom-def:`allowed_execute_duration` = <integer>
     The longest time for which a job may be executing in seconds. Jobs which
-    exceed this duration will go on hold.  This time does not include
-    file-transfer time.  Jobs which self-checkpoint have this long to write out
-    each checkpoint.
+    exceed this duration will go on hold, with hold code 47.
+    (see :ref:`codes-other-values/hold-reason-codes:Hold Reason Codes` )
+
+    This time does not include file-transfer time.  Jobs which self-checkpoint 
+    have this long to write out each checkpoint.
 
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
  :subcom-def:`allowed_job_duration` = <integer>
     The longest time for which a job may continuously be in the running state,
-    in seconds. Jobs which exceed this duration will go on hold.  Exiting the
-    running state resets the job duration used by this command.
+    in seconds. Jobs which exceed this duration will go on hold, with hold
+    code 46.
+    (see :ref:`codes-other-values/hold-reason-codes:Hold Reason Codes` )
+    Exiting the running state resets the job duration used by this command.
 
     This command is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
@@ -2086,7 +2150,7 @@ COMMANDS FOR THE GRID
  :subcom-def:`use_scitokens` = <True | False | Auto>
     Set this command to ``True`` to indicate that the job requires a scitoken.
     If **scitokens_file** is set, then that file is
-    used for the scitoken filename. Otherwise, the the scitoken filename is looked for in the
+    used for the scitoken filename. Otherwise, the scitoken filename is looked for in the
     ``BEARER_TOKEN_FILE`` environment variable. If **scitokens_file** is set
     then the value of **use_scitokens** defaults to ``True``.  If the filename is not
     defined in on one of these two places, then *condor_submit* will fail with an error message.
@@ -2292,13 +2356,16 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_image` = < image-name >
     Defines the name of the container image. Can be a singularity .sif file,
-    a singularity exploded directory, or a path to an image in a docker style 
-    repository
+    a singularity exploded directory, or a path to an image in a docker style
+    repository.  Images that are neither on shared filesystems nor transferred
+    by the container service (*e.g.*, ``docker://`` URLs) are
+    considered common files by default.  If you need to disable this for
+    some reason, see :subcom:`container_is_common`.
 
  :subcom-def:`transfer_container` = < True | False >
     A boolean value that defaults to True.  When false, sif container images
     and expanded directories are assumed to be pre-staged on the EP, and
-    HTCondor will not attempt to transfer them. 
+    HTCondor will not attempt to transfer them.
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
@@ -2307,6 +2374,11 @@ COMMANDS FOR THE CONTAINER UNIVERSE
  :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
     Binds a new, empty writeable directory inside the container image the
     job will have permissions to write to.
+
+ :subcom-def:`container_is_common` = < True | False >
+    Defaults to ``True``.  If ``False``, HTCondor will not treat the
+    container image as a common file, requiring it to be transferred to
+    each job individually.
 
 ADVANCED COMMANDS
 
@@ -2487,11 +2559,8 @@ ADVANCED COMMANDS
     A comma-separated list of job ClassAd attribute names. The named
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
-    same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see the 
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries` page), but it applies to the job event log, instead of the system
-    event log.
+    same thing as the configuration variable :macro:`EVENT_LOG_INFORMATION_ATTRS`,
+    but it applies to the job event log, instead of the system event log.
 
  :subcom-def:`job_lease_duration` = <number-of-seconds>
     For vanilla, parallel, VM, and java universe jobs only, the duration

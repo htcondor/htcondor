@@ -122,8 +122,10 @@ Hold Reason Codes
     |                                  | exceeded. (See                      |                    |                             |
     |                                  | :macro:`MAX_TRANSFER_OUTPUT_MB`     |                    |                             |
     +----------------------------------+-------------------------------------+--------------------+-----------------------------+
-    | | 34                             | Memory usage exceeds a              |                    | Resubmit with larger        |
-    | | [JobOutOfResources]            | memory limit.                       |                    | :subcom:`request_memory`    |
+    | | 34                             | Job resource usage exceeded the     | Exceeded Resource  | Resubmit with larger        |
+    | | [JobOutOfResources]            | provisioned limit.                  |   Memory: 102      | resource request i.e.       |
+    |                                  |                                     |   Disk: 104        | :subcom:`request_memory` or |
+    |                                  |                                     |                    | :subcom:`request_disk`      |
     +----------------------------------+-------------------------------------+--------------------+-----------------------------+
     | | 35                             | Specified Docker image              |                    | Verify                      |
     | | [InvalidDockerImage]           | was invalid.                        |                    | :subcom:`docker_image`      |

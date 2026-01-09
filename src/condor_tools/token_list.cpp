@@ -25,6 +25,9 @@
 #include "CondorError.h"
 #include "condor_regex.h"
 #include "directory.h"
+#include "daemon.h"
+#include "reli_sock.h"
+#include "condor_attributes.h"
 
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
 // -Werror platforms.
@@ -70,18 +73,77 @@ GCC_DIAG_ON(cast-qual)
 
 #include <stdio.h>
 
+bool lookup_capabilities = false;
+std::string pool;
+std::string name;
+daemon_t dtype = DT_SCHEDD;
+Daemon* daemon_obj = nullptr;
+
 namespace {
 
 void print_usage(FILE* fp, const char *argv0) {
 	fprintf(fp, "Usage: %s [-dir PATH]\n"
 		"Lists the tokens available to the current user.\n"
-		"\noptions:\n"
+		"\nToken options:\n"
 		"    -dir  <path>  Look in the given directory for tokens\n"
 		"    -file  <filename>  Look in the given file for a token\n"
+		"Daemon query options:\n"
+		"    -capability                      Query a daemon for capability token details\n"
+		"    -pool    <host>                  Use this collector to locate daemon\n"
+		"    -name    <name>                  Find a daemon with this name\n"
+		"    -type    <subsystem>             Type of daemon to contact (default: SCHEDD)\n"
 		"    -help         print this message\n"
 		"\nIf no -dir agument is supplied, tokens are located by using the condor config files.\n"
 		"Ordinary users will use SEC_TOKEN_DIRECTORY or ~/tokens.d, The root user will use SEC_TOKEN_SYSTEM_DIRECTORY."
 		"\n", argv0);
+}
+
+bool queryCapability(const std::string& token, const std::string& jti)
+{
+	ClassAd authz_ad;
+	CondorError errstack;
+
+	daemon_obj->setPreferredToken(token);
+
+	ReliSock* rsock = (ReliSock*)daemon_obj->startSubCommand(DC_SEC_QUERY, DC_NOP_WRITE, Stream::reli_sock, 0, &errstack);
+	if (rsock == nullptr) {
+		fprintf(stderr, "ERROR: failed to connect to %s: %s\n", daemon_obj->addr(), errstack.getFullText(true).c_str());
+		return false;
+	}
+	rsock->decode();
+	if (!getClassAd(rsock, authz_ad) || !rsock->end_of_message()) {
+		fprintf(stderr, "ERROR: didn't receive response from %s\n", daemon_obj->addr());
+		delete rsock;
+		return false;
+	}
+	delete rsock;
+
+	std::string server_jti;
+	authz_ad.LookupString(ATTR_TOKEN_ID, server_jti);
+	if (server_jti.empty()) {
+		fprintf(stderr, "ERROR: Didn't authenticate with IDTOKENS\n");
+		return false;
+	}
+	if (server_jti != jti) {
+		fprintf(stderr, "ERROR: Didn't authenticate with expected token\n");
+		return false;
+	}
+	std::string subject;
+	std::string scopes;
+	std::string project;
+	authz_ad.LookupString(ATTR_TOKEN_SUBJECT, subject);
+	authz_ad.LookupString(ATTR_TOKEN_SCOPES, scopes);
+	authz_ad.LookupString(ATTR_TOKEN_PROJECT, project);
+	if (!subject.empty()) {
+		printf("  Subject: %s\n", subject.c_str());
+	}
+	if (!scopes.empty()) {
+		printf("  Scopes: %s\n", scopes.c_str());
+	}
+	if (!project.empty()) {
+		printf("  Project: %s\n", project.c_str());
+	}
+	return true;
 }
 
 bool printToken(const std::string &tokenfilename) {
@@ -108,6 +170,13 @@ bool printToken(const std::string &tokenfilename) {
 			printf("Header: %s Payload: %s File: %s\n", decoded_jwt.get_header().c_str(),
 				decoded_jwt.get_payload().c_str(),
 				tokenfilename.c_str());
+			if (lookup_capabilities && decoded_jwt.has_payload_claim("cap") && decoded_jwt.get_payload_claim("cap").as_boolean()) {
+				std::string jti;
+				if (decoded_jwt.has_id()) {
+					jti = decoded_jwt.get_id();
+				}
+				queryCapability(line, jti);
+			}
 			++valid_tokens;
 		} catch (...) {
 			++invalid_lines;
@@ -217,11 +286,49 @@ int main(int argc, const char *argv[]) {
 			printToken(token_file);
 			exit(0);
 
+		} else if (is_dash_arg_prefix(argv[i], "capability", 1)) {
+			lookup_capabilities = true;
+		} else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -pool requires a pool name argument.\n", argv[0]);
+				exit(1);
+			}
+			pool = argv[i];
+		} else if (is_dash_arg_prefix(argv[i], "name", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -name requires a daemon name argument.\n", argv[0]);
+				exit(1);
+			}
+			name = argv[i];
+		} else if (is_dash_arg_prefix(argv[i], "type", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -type requires a daemon type argument.\n", argv[0]);
+				exit(1);
+			}
+			dtype = stringToDaemonType(argv[i]);
+			if( dtype == DT_NONE) {
+				fprintf(stderr, "ERROR: unrecognized daemon type: %s\n", argv[i]);
+				print_usage(stderr, argv[0]);
+				exit(1);
+			}
 		} else {
 			fprintf(stderr, "%s: Invalid command line argument: %s\n", argv[0], argv[i]);
 			print_usage(stderr, argv[0]);
 			exit(1);
 		}
+	}
+
+	if (lookup_capabilities) {
+		daemon_obj = new Daemon(dtype, name.c_str(), pool.c_str());
+		if (!daemon_obj->locate(Daemon::LOCATE_FOR_LOOKUP)) {
+			fprintf(stderr, "ERROR: couldn't locate daemon.\n");
+			exit(1);
+		}
+		std::vector<std::string> authz_methods{"TOKEN"};
+		daemon_obj->setAuthenticationMethods(authz_methods);
 	}
 
 	printAllTokens(token_dir);

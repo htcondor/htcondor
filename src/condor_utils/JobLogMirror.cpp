@@ -34,11 +34,6 @@ JobLogMirror::~JobLogMirror() {
 }
 
 void
-JobLogMirror::init() {
-	config();
-}
-
-void
 JobLogMirror::stop() {
 	if( log_reader_polling_timer != -1 ) {
 		daemonCore->Cancel_Timer(log_reader_polling_timer);

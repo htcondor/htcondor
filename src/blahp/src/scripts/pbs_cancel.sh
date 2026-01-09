@@ -33,7 +33,7 @@ for job in  $@ ; do
 done
 for  job in  $@ ; do
         requested=`echo $job | sed 's/^.*\///'`
-        cmdout=`${pbs_binpath}/qdel $requested 2>&1`
+        cmdout=`${pbs_binpath}qdel $requested 2>&1`
         retcode=$?
         # If the job is already completed or no longer in the queue,
         # treat it as successfully deleted.

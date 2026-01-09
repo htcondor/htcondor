@@ -366,21 +366,30 @@ class FileTransfer final: public Service {
 	uint64_t TotalBytesSent() const { return bytesSent; }
 
 	uint64_t TotalBytesReceived() const { return bytesRcvd; };
+
+
 	//
 	// Add the given filename to the list of "output" files.  Will
 	// create the empty list of output files if necessary; never
 	// fails (unless the sytem is out of memory).
+	//
+	// The "filename" passed to these three functions may be any
+	// entry valid in their respective transfer_*_files submit command.
 	//
 	void addOutputFile( const char* filename );
 
 	// Add the given filename to the list of "failure" files.
 	void addFailureFile( const char* filename );
 
+	// Add the given filename to the list of "input" files.
+	void addInputFile( const char* filename );
+
+
 	// Check if we have failure files
 	bool hasFailureFiles() const { return !FailureFiles.empty(); }
 
 	//
-	// Add the given path or URL to the list of checkpoint files.  The file
+	// Add the given file or URL to the list of checkpoint files.  The file
 	// will be transferred to the named destination* in the sandbox.
 	//
 	// *: At present, the basename of the destination must be the same
@@ -392,15 +401,17 @@ class FileTransfer final: public Service {
 	// The caller must ensure that pathsAlreadyPreserved is empty the
 	// first time and is preserved between calls.
 	//
-	void addCheckpointFile(
+	// The file may be relative path, but may not be a directory.
+	//
+	void addCheckpointFileEx(
 		const std::string & source, const std::string & destination,
 		std::set< std::string > & pathsAlreadyPreserved
 	);
 
 	//
-	// As addCheckpointFile(), but for input files.
+	// As addCheckpointFileEx(), but for input files.
 	//
-	void addInputFile(
+	void addInputFileEx(
 		const std::string & source, const std::string & destination,
 		std::set< std::string > & pathsAlreadyPreserved
 	);
@@ -479,14 +490,16 @@ class FileTransfer final: public Service {
 
 	TransferPluginResult InvokeMultipleFileTransferPlugin(
 		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
-		FileTransferPlugin & plugin, const std::string &transfer_files_string,
+		FileTransferPlugin & plugin,
+		std::vector<ClassAd> & pluginInputAds,
 		std::vector<ClassAd> & resultAds,
 		const char* proxy_filename, bool do_upload
 	);
 	TransferPluginResult InvokeMultiUploadPlugin(
 		FileTransferPlugin & plugin,
 		int &exit_code, bool &exit_by_signal, int &exit_signal,
-		const std::string &transfer_files_string, ReliSock &sock,
+		std::vector<ClassAd> & pluginInputAds,
+		ReliSock &sock,
 		bool send_trailing_eom, CondorError &err, long long &upload_bytes
 	);
 
@@ -548,9 +561,17 @@ class FileTransfer final: public Service {
 
   protected:
 
-    bool _fix_me_copy_initialized = false;
+	bool _fix_me_copy_initialized = false;
 	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
+
+	typedef struct _walkargs {
+    	std::map<std::string, std::string> env;
+    	const char * prefix{nullptr};
+	} walkargs_t;
+	walkargs_t mergePluginSpecificEnvironment(
+		const FileTransferPlugin & plugin, Env & plugin_env
+	);
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.

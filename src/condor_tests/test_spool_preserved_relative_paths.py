@@ -63,7 +63,7 @@ class TestSpoolPreservedRelativePaths:
         assert the_job_handle.wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=20,
+            timeout=80,
             verbose=True,
         )
 

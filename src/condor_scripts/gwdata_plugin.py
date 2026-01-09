@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import classad
+import classad2 as classad
 import gwdatafind
 import io
 import json

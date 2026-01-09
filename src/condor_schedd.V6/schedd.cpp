@@ -19,6 +19,8 @@
 
 
 #include "condor_common.h"
+#include "classad/classad.h"
+#include "condor_commands.h"
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "condor_config.h"
@@ -114,6 +116,7 @@ char const * const HOME_POOL_SUBMITTER_TAG = "";
 extern GridUniverseLogic* _gridlogic;
 
 #include "qmgmt.h"
+#include "qmgmt_startup_limits.h"
 #include "condor_qmgr.h"
 #include "condor_vm_universe_types.h"
 #include "enum_utils.h"
@@ -139,6 +142,8 @@ extern int         NumberBackupHistoryFiles;
 extern FILE *DebugFP;
 extern char *DebugFile;
 extern char *DebugLock;
+
+extern std::vector<std::string> ocu_super_users;
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -221,6 +226,17 @@ inline const char * EffectiveUserName(const Sock * sock) {
 	return sock->getOwner();
 }
 
+static bool isOCUSuperUser(ReliSock* sock) {
+	auto * rsock_user = EffectiveUserRec(sock);
+	if (isQueueSuperUser(rsock_user)) {
+		return true;
+	}
+	if (ContainsUserName(ocu_super_users, rsock_user->Name())) {
+		return true;
+	}
+	return false;
+}
+
 int init_user_ids(const JobQueueUserRec * user) {
 	if ( ! user || ! user->OsUser()) {
 		return 0;
@@ -253,7 +269,7 @@ bool jobCleanupNeedsThread( int cluster, int proc );
 int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
-static void WriteCompletionVisa(ClassAd* ad);
+static void WriteCompletionVisa(JobQueueJob* ad);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -423,20 +439,10 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
 }
 
-size_t GridUserIdentity::HashFcn(const GridUserIdentity & index)
-{
-	return hashFunction(index.m_username) + hashFunction(index.m_auxid);
-}
-
 //PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
 GridUserIdentity::GridUserIdentity(JobQueueJob& job_ad):
-	m_username(job_ad.ownerinfo->Name()),
-	m_auxid(""),
 	m_ownerinfo(job_ad.ownerinfo)
 {
-	// TODO Once JobQueueUserRec has an OS account field, use that here
-	std::string tmp;
-	m_osname = job_ad.ownerinfo->OsUser();
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
 	const char *str = NULL;
@@ -509,36 +515,6 @@ match_rec::match_rec( char const* the_claim_id, char const* p, const JOB_ID_KEY 
 			if( !rc ) {
 				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",claim_id.publicClaimId());
 			}
-		}
-	}
-
-	std::string value;
-	param( value, "STARTD_SENDS_ALIVES", "peer" );
-	if ( strcasecmp( value.c_str(), "false" ) == 0 ) {
-		m_startd_sends_alives = false;
-	} else if ( strcasecmp( value.c_str(), "true" ) == 0 ) {
-		m_startd_sends_alives = true;
-	} else if ( my_match_ad &&
-				my_match_ad->LookupString( ATTR_VERSION, value ) ) {
-		CondorVersionInfo ver( value.c_str() );
-		if ( ver.built_since_version( 7, 5, 4 ) ) {
-			m_startd_sends_alives = true;
-		} else {
-			m_startd_sends_alives = false;
-		}
-	} else {
-		// Don't know the version of the startd, assume false
-		// unless STARTER_HANDLES_ALIVES is true.  If STARTER_HANDLES_ALIVES
-		// is true, we want to assume startd will send alives otherwise
-		// on a schedd restart the schedd will keep sending alives to all
-		// reconnected jobs because it will never actually receive an alive
-		// from the startd.  The downside of this logic is a v8.3.2+ schedd can
-		// no longer successfully reconnect to a startd older than v7.5.5
-		// assuming STARTER_HANDLES_ALIVES is set to the default of true.
-		// I think this is a reasonable compromise.  -Todd Tannenbaum 10/2014
-		m_startd_sends_alives = false;
-		if ( param_boolean("STARTER_HANDLES_ALIVES",true) ) {
-			m_startd_sends_alives = true;
 		}
 	}
 }
@@ -651,7 +627,6 @@ Scheduler::Scheduler() :
 	m_scheduler_startup(time(NULL)),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	GridJobOwners(GridUserIdentity::HashFcn),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
@@ -727,8 +702,6 @@ Scheduler::Scheduler() :
 	leaseAliveInterval = 500000;	// init to a nice big number
 	aliveid = -1;
 	ExitWhenDone = FALSE;
-	matches = NULL;
-	matchesByJobID = NULL;
 
 	numMatches = 0;
 	numShadows = 0;
@@ -764,10 +737,6 @@ Scheduler::Scheduler() :
 
 	CronJobMgr = NULL;
 
-    m_userlog_file_cache_max = 0;
-    m_userlog_file_cache_clear_last = time(NULL);
-    m_userlog_file_cache_clear_interval = 60;
-
 	jobThrottleNextJobDelay = 0;
 
 	JobStartCount = 0;
@@ -789,7 +758,6 @@ Scheduler::Scheduler() :
 	From.sin_addr.s_addr = 0;
 
 	m_use_startd_for_local = false;
-	cronTabs = 0;
 	MaxExceptions = 0;
 	m_job_machine_attrs_history_length = 0;
 
@@ -838,17 +806,8 @@ Scheduler::~Scheduler()
 
 	if (CondorAdministrator)
 		free(CondorAdministrator);
-	if (matches) {
-		matches->startIterations();
-		match_rec *rec;
-		std::string id;
-		while (matches->iterate(id, rec) == 1) {
-			delete rec;
-		}
-		delete matches;
-	}
-	if (matchesByJobID) {
-		delete matchesByJobID;
+	for (const auto& [id, rec]: matches) {
+		delete rec;
 	}
 	for (const auto &[pid, rec]: shadowsByPid) {
 		delete rec;
@@ -872,18 +831,11 @@ Scheduler::~Scheduler()
 		free(m_unparsed_gridman_selection_expr);
 	}
 
-    userlog_file_cache_clear(true);
-
 		//
 		// Delete CronTab objects
 		//
-	if ( this->cronTabs ) {
-		this->cronTabs->startIterations();
-		CronTab *current;
-		while ( this->cronTabs->iterate( current ) >= 1 ) {
-			if ( current ) delete current;
-		}
-		delete this->cronTabs;
+	for (const auto& [id, current] : cronTabs) {
+		delete current;
 	}
 
 	delete slotWeightOfJob;
@@ -897,12 +849,8 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 	if (!pool || !pool[0]) {return true;}
 
 		// Determine whether we should flock this cluster with this pool.
-	if (m_include_default_flock_param) {
-		for (const auto &flock_entry : FlockPools) {
-			if (flock_entry == pool) {
-				return true;
-			}
-		}
+	if (m_include_default_flock_param && FlockPools.contains(pool)) {
+		return true;
 	}
 
 	std::string flock_targets;
@@ -916,6 +864,18 @@ Scheduler::JobCanFlock(classad::ClassAd &job_ad, const char *pool) {
 	return false;
 }
 
+// Brute force search.  Will improve performance later if needed.
+OCU *
+Scheduler::getOCU(int ocu_id) {
+		for (const auto &[_, oi]: OwnersInfo) {
+			for (auto &ocu: oi->ocus) {
+				if (ocu.ocu_id == ocu_id) {
+					return &ocu;
+				}
+			}
+		}
+		return nullptr;
+	}
 
 bool
 Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, std::string &capability)
@@ -1067,6 +1027,7 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 	return 0;
 }
 
+// Not just a timer calleback. This is also called explicitly on startup, reconfig, and when the flock level changes
 void
 Scheduler::timeout( int /* timerID */ )
 {
@@ -1104,9 +1065,6 @@ Scheduler::timeout( int /* timerID */ )
 	walk_job_queue_timer_set = false;
 	min_interval_timer_set = false;
 	SchedDInterval.setStartTimeNow();
-
-    // keep the log file cache from accumulating defunct user log file mappings
-    userlog_file_cache_clear();
 
 	count_jobs();
 
@@ -1159,9 +1117,11 @@ void
 Scheduler::check_claim_request_timeouts()
 {
 	if(RequestClaimTimeout > 0) {
-		matches->startIterations();
-		match_rec *rec;
-		while(matches->iterate(rec) == 1) {
+		// DelMrec() will erase the matches entry, so be careful here...
+		auto it = matches.begin();
+		while (it != matches.end()) {
+			match_rec* rec = it->second;
+			it++;
 			if(rec->status == M_STARTD_CONTACT_LIMBO) {
 				time_t time_left = rec->entered_current_status + \
 				                 RequestClaimTimeout - time(NULL);
@@ -1184,7 +1144,7 @@ Scheduler::check_claim_request_timeouts()
 
 /*
   Helper method to create a submitter ad, called by Scheduler::count_jobs().
-  Given an index owner_num in the Owners array and a flock_level, insert a common
+  Given a reference Owner & to the SubmitterData array and a flock_level, insert a common
   set of submitter ad attributes into pAd.
   Return true if attributes filled in, false if not (because this submitter should
   no longer flock and/or be advertised).
@@ -1194,10 +1154,25 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 {
 	const bool publish_stats_to_flockers = false;
 	const SubmitterCounters & Counters = Owner.num;
+	int weighted_jobs_idle = pool_name.empty() ? Counters.WeightedJobsIdle : 0;
 
 	int jobs_idle = pool_name.empty() ? Counters.JobsIdle : 0;
+
+	// If there are any OCUs that need this submitter to generate
+	// a request for them, bump up "jobs_idle".
+	for (const std::string &owner_str: Owner.owners) {
+		OwnerInfo *oi = find_ownerinfo(owner_str.c_str());
+		if (oi) {
+			auto unmatched = [](const OCU &ocu) {
+				return ocu.mrec == nullptr;
+			};
+			jobs_idle += std::ranges::count_if(oi->ocus, unmatched);
+
+			// Not correct, but close enough
+			weighted_jobs_idle += std::ranges::count_if(oi->ocus, unmatched);
+		}
+	}
 	if ((Owner.FlockLevel >= flock_level) || (flock_level == INT_MAX)) {
-		int weighted_jobs_idle = pool_name.empty() ? Counters.WeightedJobsIdle : 0;
 		const auto iter = Owner.flock.find(pool_name);
 		if (iter != Owner.flock.end()) {
 			jobs_idle = iter->second.JobsIdle;
@@ -1242,9 +1217,9 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 
 	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, WeightedJobsRunningHere);
 
-	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsIdle);
+	pAd.Assign(ATTR_RUNNING_LOCAL_JOBS, Counters.LocalJobsRunning);
 
-	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsRunning);
+	pAd.Assign(ATTR_IDLE_LOCAL_JOBS, Counters.LocalJobsIdle);
 
 	pAd.Assign(ATTR_RUNNING_SCHEDULER_JOBS, Counters.SchedulerJobsRunning);
 
@@ -1318,54 +1293,6 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const s
 	return true;
 }
 
-void Scheduler::userlog_file_cache_clear(bool force) {
-    time_t t = time(NULL);
-    if (!force && ((t - m_userlog_file_cache_clear_last) < m_userlog_file_cache_clear_interval)) return;
-
-    dprintf(D_FULLDEBUG, "Clearing userlog file cache\n");
-
-    for (WriteUserLog::log_file_cache_map_t::iterator e(m_userlog_file_cache.begin());  e != m_userlog_file_cache.end();  ++e) {
-        delete e->second;
-    }
-    m_userlog_file_cache.clear();
-
-    m_userlog_file_cache_clear_last = t;
-}
-
-
-void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
-    // only if caching is turned on
-    if (m_userlog_file_cache_max <= 0) return;
-
-	ClassAd* ad = GetJobAd(cluster, proc);
-    if (NULL == ad) return;
-
-    std::string userlog_name;
-    std::string dagman_log_name;
-    std::vector<char const*> log_names;
-
-    // possible userlog file names associated with this job
-    if (getPathToUserLog(ad, userlog_name)) log_names.push_back(userlog_name.c_str());
-    if (getPathToUserLog(ad, dagman_log_name, ATTR_DAGMAN_WORKFLOW_LOG)) log_names.push_back(dagman_log_name.c_str());
-
-    for (std::vector<char const*>::iterator j(log_names.begin());  j != log_names.end();  ++j) {
-
-        // look for file name in the cache
-        WriteUserLog::log_file_cache_map_t::iterator f(m_userlog_file_cache.find(*j));
-        if (f == m_userlog_file_cache.end()) continue;
-
-        // remove this job from the reference set:
-        f->second->refset.erase(std::make_pair(cluster, proc));
-        if (f->second->refset.empty()) {
-            // if that was the last job referring to this log file, remove it from the cache
-            dprintf(D_FULLDEBUG, "Erasing entry for %s from userlog file cache\n", *j);
-            delete f->second;
-            m_userlog_file_cache.erase(f);
-        }
-    }
-}
-
-
 void
 Scheduler::sumAllSubmitterData(SubmitterData &all) {
 	// hack to allow this to work with unmodified negotiator
@@ -1391,6 +1318,37 @@ Scheduler::sumAllSubmitterData(SubmitterData &all) {
 	}
 }
 
+struct FlockUpdateDetails {
+	FlockUpdateDetails(size_t m, int l, SubmitterData* sd) : maxLevel(m), level(l), subData(sd) {}
+
+	size_t maxLevel{0};
+	int level{0};
+	SubmitterData* subData{nullptr}; // WARNING: WE DO NOT OWN THIS DATA! DO NOT DELELTE!!!
+};
+
+static void
+flockCommunicationCheck(bool success, Sock* /*sock*/, CondorError* /*errstack*/, const std::string& /*trust_domain*/, bool /*should_try_token_request*/, void* misc_data) {
+	std::unique_ptr<FlockUpdateDetails> details((FlockUpdateDetails*)misc_data);
+
+	if ( ! success) {
+		if (details && details->subData) {
+			SubmitterData* sd = details->subData;
+			// Check if failure at current flock level and flock level can be increased
+			if (details->level == sd->OldFlockLevel &&
+			    sd->OldFlockLevel == sd->FlockLevel &&
+			    (size_t)(details->level) < details->maxLevel)
+			{
+				// Increase flock level
+				sd->FlockLevel++;
+				dprintf(D_ALWAYS, "Increasing flock level for %s from %d to %d\n",
+				        sd->Name(), details->level, sd->FlockLevel);
+			}
+		} else {
+			dprintf(D_ERROR, "Unable to process flock collector sendUpdate failure.\n");
+		}
+	}
+}
+
 void
 Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *col, int flock_level, time_t time_now) {
 		const char * owner_name = SubDat.Name();
@@ -1402,7 +1360,9 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 				owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 			return;
 		}
-		if (!fill_submitter_ad(pAd, SubDat, col_name, flock_level)) return;
+		if (!fill_submitter_ad(pAd, SubDat, col_name, flock_level)) {
+			return;
+		}
 
 #ifdef UNIX
 		if (col == nullptr) {
@@ -1422,7 +1382,9 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 		int num_updates = 0;
 		if (col) {
 			DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
-			num_updates = col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
+			// NOTE: This is cleaned up in callback function (if allocated)
+			FlockUpdateDetails* details = new FlockUpdateDetails(FlockCollectors.size(), flock_level, &SubDat);
+			num_updates = col->sendUpdate(UPDATE_SUBMITTOR_AD, &pAd, adSeq, nullptr, true, flockCommunicationCheck, details);
 		} else {
 			num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 			SubDat.lastUpdateTime = time_now;
@@ -1432,6 +1394,49 @@ Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *c
 			num_updates, owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
 }
 
+
+int ScheddStatistics::CountJobsTick(time_t current_time, int & advance_days)
+{
+	const int seconds_per_bucket = schedd_daily_usage_stats::hour_bucket_sec;
+
+	advance_days = 0;
+
+	// how much time since the last tick? if 0 then we have nothing to do
+	// if PrevCountJobsTime nonzero and invalid, assume advancing by 60 days will clear everything.
+	// In the normal case, PrevCountJobsTime is updated after we call count_jobs (i.e. not here)
+	time_t delta_time = current_time - PrevCountJobsTime;
+	if (delta_time <= 0 || PrevCountJobsTime <= 0 || delta_time > (3600*24*30*2)) {
+		dprintf(D_FULLDEBUG, "CountJobsTick delta_time is %lld. timezone=%d will treat it as unset (%d.%d)\n",
+			(long long)delta_time, (int)TickBias,
+			(int)((current_time-TickBias)/(seconds_per_bucket)), (int)((current_time-TickBias)%(seconds_per_bucket))
+		);
+		int ret = (delta_time <= 0) ? 0 : 24;
+		if (PrevCountJobsTime == 0) {
+			SecSinceLastCountJobsTime = 0;
+		} else {
+			// on startup (prev is 0) we want to use the time since the daemon started
+			SecSinceLastCountJobsTime = MAX(0, current_time - daemonCore->getStartTime());
+		}
+		PrevCountJobsTime = current_time;
+		if (ret) { advance_days = 30; } // invalid delta time, so advance a month of days
+		return ret;
+	}
+	SecSinceLastCountJobsTime = delta_time; // save for use by count_jobs
+
+	time_t prev = PrevCountJobsTime - TickBias + TickMidnight;
+	time_t curr = current_time - TickBias + TickMidnight;
+
+	CountJobsDayPhase = curr % (24*3600);
+	int prev_day = prev/(24*3600);
+	int today = curr/(24*3600);
+	advance_days = today - prev_day;
+
+	CountJobsHourPhase = curr % seconds_per_bucket;
+	int prev_bucket = prev/seconds_per_bucket;
+	int bucket = curr/seconds_per_bucket;
+	int advance = bucket - prev_bucket;
+	return advance;
+}
 
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
@@ -1466,17 +1471,32 @@ Scheduler::count_jobs()
 	scheduler.OtherPoolStats.ResetJobsRunning();
 
 	time_t current_time = time(0);
+	// calculate how many buckets to advance the User and Project daily stats.
+	int cDayAdvance = 0;
+	int cHourlyAdvance = scheduler.stats.CountJobsTick(current_time, cDayAdvance);
+	if (IsDebugCatAndVerbosity(D_STATUS)) {
+		int bucket_sec = schedd_daily_usage_stats::hour_bucket_sec;
+		double bucket_percent = ((current_time - scheduler.stats.TickBias)%(bucket_sec)) / (bucket_sec/100.0);
+		const int day_sec = 24*3600;
+		double day_percent = ((current_time - scheduler.stats.TickBias + scheduler.stats.TickMidnight)%(day_sec)) / (day_sec/100.0);
+		int d_verbose = (cHourlyAdvance || cDayAdvance) ? 0 : D_VERBOSE;
+		dprintf(D_STATUS | d_verbose, "Advancing daily stats counters by %d,%d (%.2f%% through bucket) (%.2f%% through day)\n",
+			cHourlyAdvance, cDayAdvance, bucket_percent, day_percent);
+	}
 
 	for (auto & [name, owni] : OwnersInfo) {
 		owni->num.clear_counters();	// clear the jobs counters 
+		owni->daily_stats.AdvanceBy(cHourlyAdvance, cDayAdvance);
 	}
 	for (auto & [name, prji] : ProjectInfo) {
 		prji->num.clear_counters();	// clear the jobs counters 
+		prji->daily_stats.AdvanceBy(cHourlyAdvance, cDayAdvance);
 	}
 	for (OwnerInfo * owni : zombieOwners) {
 		owni->num.clear_counters(); // clear refcounts for zombies also
 	}
 	NoneProjectRec.num.clear_counters();
+	//NoneProjectRec.daily_stats.AdvanceBy(cHourlyAdvance, cDayAdvance);
 
 	FlockPools.clear();
 	if (FlockCollectors.size()) {
@@ -1518,6 +1538,7 @@ Scheduler::count_jobs()
 		// 10/8/2021 TJ - count_a_job now also sees cluster and jobset ads so it will update Owner records.
 		//    For job factories that have no materialized jobs it will potentially trigger new materialization
 	WalkJobQueueWith(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS, count_a_job, nullptr);
+	stats.PrevCountJobsTime = current_time;
 
 	if (JobsSeenOnQueueWalk >= 0) {
 		TotalJobsCount = JobsSeenOnQueueWalk;
@@ -1534,9 +1555,7 @@ Scheduler::count_jobs()
 	std::map<std::string, std::vector<PROC_ID>> jobs_on_borrowed_claims;	
 
 		// set JobsRunning/JobsFlocked for owners
-	matches->startIterations();
-	match_rec *rec;
-	while(matches->iterate(rec) == 1) {
+	for (const auto& [id, rec]: matches) {
 		SubmitterData * SubDat;
 		if (user_is_the_new_owner) {
 			SubDat = insert_submitter(rec->user);
@@ -1607,7 +1626,21 @@ Scheduler::count_jobs()
 				for (const auto &jid : jobs_on_borrowed_claims[name]) {
 					dprintf(D_FULLDEBUG, "Evicting job %d.%d running on OCU claim borrowed from %s\n",
 						jid.cluster, jid.proc, name.c_str());
-					enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+					match_rec *mrec = scheduler.FindMrecByJobID(jid);
+
+					// it really should be there, but just in case
+					if (mrec) {
+						ClassAd *my_match_ad = mrec->my_match_ad;
+
+						// Increment counter of per-match OCU evictions
+						if (my_match_ad) {
+							int OCUEvictions = 0;
+							my_match_ad->LookupInteger("OCUEvictions", OCUEvictions);
+							OCUEvictions++;
+							my_match_ad->Assign("OCUEvictions", OCUEvictions);
+						}
+						enqueueActOnJobMyself( jid, JA_VACATE_FAST_JOBS, true );
+					}
 				}
 			}
 		}
@@ -1741,6 +1774,8 @@ Scheduler::count_jobs()
 
 	cad->Assign(ATTR_NUM_JOB_STARTS_DELAYED, RunnableJobQueue.size());
 	cad->Assign(ATTR_NUM_PENDING_CLAIMS, startdContactQueue.size() + num_pending_startd_contacts);
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS_IN_Q, startdContactQueue.size());
+	cad->Assign(ATTR_NUM_PENDING_CLAIMS_IN_CONTACT, num_pending_startd_contacts);
 
 	m_xfer_queue_mgr.publish(cad);
 
@@ -1938,6 +1973,8 @@ Scheduler::count_jobs()
 				auto iter = FlockExtra.find(pool);
 				if (iter == FlockExtra.end()) {
 					std::pair<std::string, std::unique_ptr<DCCollector>> value(pool, std::unique_ptr<DCCollector>(new DCCollector(pool.c_str())));
+					// TODO This code is broken with fully-qualified owner names.
+					//   This assumes SubDat.owners contains OS usernames.
 					value.second->setOwner(*SubDat.owners.begin());
 					value.second->setAuthenticationMethods({"TOKEN"});
 					auto iter2 = FlockExtra.insert(std::move(value));
@@ -1960,16 +1997,11 @@ Scheduler::count_jobs()
 
 	pAd.Delete(ATTR_SUBMITTER_TAG);
 
-	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
-		it->second.OldFlockLevel = it->second.FlockLevel;
-	}
+	for (auto& [_, sd] : Submitters) { sd.OldFlockLevel = sd.FlockLevel; }
 
 	 // Tell our GridUniverseLogic class what we've seen in terms
-	 // of Globus Jobs per owner.
-	GridJobOwners.startIterations();
-	GridUserIdentity userident;
-	GridJobCounts gridcounts;
-	while( GridJobOwners.iterate(userident, gridcounts) ) {
+	 // of Grid Jobs per owner.
+	for (const auto& [userident, gridcounts]: GridJobOwners) {
 		if(gridcounts.GridJobs > 0) {
 			GridUniverseLogic::JobCountUpdate(
 					userident, m_unparsed_gridman_selection_expr,
@@ -2156,6 +2188,10 @@ int Scheduler::make_ad_list(
    for(auto const& [user, value]: this->FsyncRuntimes)
 		cad->Assign("DIAG_CFS" + user, value.Total());
 
+   // publish negotiator defined significant attributes
+   const char * sig_attrs = this->autocluster.getSigAttrs();
+   if (sig_attrs) { cad->Assign("SignificantAttributes", sig_attrs); }
+
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
    // publish daemon core stats
@@ -2208,16 +2244,8 @@ int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 
 	stream->encode();
 
-	// The HashTable class is /so/ broken:
-	//	* no operator !=
-	//	* post-increment operator modifies the base class
-	//	* no pre-increment operator
-	//	* i->second doesn't work, but (*i).second does
-	//  * will not work with C++11 for( auto && i : v ) {}
-	auto i = matches->begin();
 	dprintf( D_TEST, "Dumping match records (with now jobs)...\n" );
-	for( ; !(i == matches->end()); i.advance() ) {
-		match_rec * match = (*i).second;
+	for (const auto& [id, match]: matches) {
 
 		if( match->my_match_ad == NULL ) {
 			continue;
@@ -2238,7 +2266,7 @@ int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 
 		if( match->m_now_job.isJobKey() ) {
 			dprintf( D_TEST, "Match record '%s' has now job %d.%d\n",
-				(*i).first.c_str(), match->m_now_job.cluster, match->m_now_job.proc );
+				id.c_str(), match->m_now_job.cluster, match->m_now_job.proc );
 		}
 
 		num_ads++;
@@ -2390,10 +2418,34 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 		for (const auto &[name, urec] : OwnersInfo) {
 			if (num_ads >= limit || num_user_ads >= user_limit) break;
-			if (IsQueryConstraintMatch(constr, &queryAd, urec)) {
-				ClassAd ad;
-				urec->live.publish(ad,"Num");
-				ad.ChainToAd(urec);
+
+			// inject the stats before we evaluate the constraint
+			// so we can constrain on them
+			ClassAd ad;
+			urec->live.publish(ad,"Num");
+			urec->daily_stats.publish(ad,"Jobs");
+			ad.Assign("HourlyStatsStartTime", daemonCore->getStartTime());
+			ad.Assign("HourlyStatsUnitSize", schedd_daily_usage_stats::hour_bucket_sec);
+			ad.Assign("HourlyStatsUnitPhase", stats.CountJobsHourPhase);
+			ad.ChainToAd(urec);
+
+			if (IsQueryConstraintMatch(constr, &queryAd, &ad)) {
+
+			#if 0 // speed test of scanning the whole job queue for jobs owned by this user
+				struct _urec_test { JobQueueUserRec* ptr; int hits; } refs = {urec, 0};
+				schedd_runtime_probe runtime;
+				WalkJobQueue3(
+					[](JobQueueJob * job, const JOB_ID_KEY & /*jid*/, void * pv) -> int {
+						auto & refs = *(struct _urec_test*)pv;
+						if (refs.ptr == job->ownerinfo) { ++refs.hits; }
+						return 0;
+					},
+					&refs,
+					runtime);
+				ad.Assign("LiveHits", refs.hits);
+				runtime.Publish(ad,"Scan",IF_RT_SUM);
+			#endif
+
 				if ( !putClassAd(stream, ad, put_opts, proj)) {
 					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 					return FALSE;
@@ -2420,10 +2472,16 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 
 		for (const auto &[name, pjad] : ProjectInfo) {
 			if (num_ads >= limit || num_project_ads >= proj_limit) break;
-			if (IsQueryConstraintMatch(constr, &queryAd, pjad)) {
-				ClassAd ad;
-				pjad->live.publish(ad,"Num");
-				ad.ChainToAd(pjad);
+
+			ClassAd ad;
+			pjad->live.publish(ad,"Num");
+			pjad->daily_stats.publish(ad,"Jobs");
+			ad.Assign("HourlyStatsStartTime", daemonCore->getStartTime());
+			ad.Assign("HourlyStatsUnitSize", schedd_daily_usage_stats::hour_bucket_sec);
+			ad.Assign("HourlyStatsTickTime", stats.PrevCountJobsTime);
+			ad.ChainToAd(pjad);
+
+			if (IsQueryConstraintMatch(constr, &queryAd, &ad)) {
 				if ( !putClassAd(stream, ad, put_opts, proj)) {
 					dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 					return FALSE;
@@ -2469,6 +2527,18 @@ static int handle_enable_userrec_cmd (
 				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, "by update command");
 			}
 		}
+		// update may want to change the MaxJobsRunning attribute also
+		classad::Value max_val;
+		if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+			long long ival;
+			if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+				// set the default max (i.e. remove the per-user limit)
+				// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+				DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
+			} else {
+				SetUserAttributeValue(*urec, ATTR_MAX_JOBS_RUNNING, max_val);
+			}
+		}
 	} else {
 		// if opt_update is not set, and the record exists, then we want to enable it
 		// unless the command ad says to disable it, in which case we leave it alone
@@ -2507,12 +2577,47 @@ int Scheduler::act_on_project(
 		} else { // project does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool(ATTR_USERREC_OPT_CREATE_PROJECT, add_if_not) && add_if_not) {
+				bool enabled = true;
+				cmdAd.EvaluateAttrBoolEquiv(ATTR_ENABLED, enabled);
 				int userrec_id = scheduler.nextUnusedUserRecId();
 				txn.BeginOrContinue(userrec_id);
-				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, true);
+				UserRecCreate(userrec_id, is_project, project_name.c_str(), cmdAd, enabled);
 			} else {
 				rval = SC_ERR_NOT_FOUND;
 			}
+		}
+		break;
+	case DISABLE_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			SetUserAttributeInt(*pjad, ATTR_ENABLED, 0);
+			std::string reason;
+			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*pjad, ATTR_DISABLE_REASON, reason.c_str());
+			} else {
+				// TODO set default reason string
+			}
+			classad::Value max_val;
+			if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+				long long ival;
+				if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+					// set the default max (i.e. remove the per-project limit)
+					// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+					DeleteUserAttribute(*pjad, ATTR_MAX_JOBS_RUNNING);
+				} else {
+					SetUserAttributeValue(*pjad, ATTR_MAX_JOBS_RUNNING, max_val);
+				}
+			}
+		} else { // user does not exist, cannot be disabled
+			rval = SC_ERR_NOT_FOUND;
+		}
+		break;
+	case RESET_USERREC:
+		if (pjad) {
+			txn.BeginOrContinue(pjad->jid.proc);
+			DeleteUserAttribute(*pjad, ATTR_MAX_JOBS_RUNNING);
+		} else {
+			rval = SC_ERR_NOT_FOUND;
 		}
 		break;
 	case EDIT_USERREC:
@@ -2592,6 +2697,17 @@ int Scheduler::act_on_user(
 			} else {
 				// TODO set default reason string
 			}
+			classad::Value max_val;
+			if (cmdAd.EvaluateExpr(ATTR_MAX_JOBS_RUNNING, max_val)) {
+				long long ival;
+				if (max_val.IsUndefinedValue() || (max_val.IsIntegerValue(ival) && (ival < 0 || ival >= INT_MAX))) {
+					// set the default max (i.e. remove the per-user limit)
+					// rather than setting negative, huge positive or undefined as the value of MaxJobsRunning
+					DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
+				} else {
+					SetUserAttributeValue(*urec, ATTR_MAX_JOBS_RUNNING, max_val);
+				}
+			}
 		} else { // user does not exist, cannot be disabled
 			rval = SC_ERR_NOT_FOUND;
 		}
@@ -2607,8 +2723,7 @@ int Scheduler::act_on_user(
 	case RESET_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			// TODO: this should be a DeleteSecureAttribute
-			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
+			DeleteUserAttribute(*urec, ATTR_MAX_JOBS_RUNNING);
 		} else {
 			rval = SC_ERR_NOT_FOUND;
 		}
@@ -2802,6 +2917,167 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+ClassAd
+Scheduler::act_on_ocu_create(const ClassAd &request) {
+	ClassAd result;
+	std::string ocu_owner;
+	if (!request.LookupString(ATTR_OWNER, ocu_owner)) {
+		result.Assign(ATTR_RESULT, -1);
+		result.Assign(ATTR_ERROR_STRING, "Missing required attribute: " ATTR_OWNER);
+		return result;
+	}
+
+	OwnerInfo *oi = find_ownerinfo(ocu_owner.c_str());
+	if (!oi) {
+		result.Assign(ATTR_RESULT, -1);
+		result.Assign(ATTR_ERROR_STRING, "Owner not found: " + ocu_owner);
+		return result;
+	}
+
+	result = oi->addOCU(request);
+	std::string submitter;
+	request.LookupString(ATTR_SUBMITTER, submitter);
+	if (!submitter.empty()) {
+		SubmitterData *subdat = insert_submitter(submitter.c_str());
+		subdat->owners.insert(ocu_owner);
+		subdat->num.JobsIdle++;
+		subdat->num.Hits++;
+	} 
+	result.Assign(ATTR_RESULT, 0);
+
+	return result;
+}
+
+ClassAd
+Scheduler::act_on_ocu_remove(const ClassAd &request) {
+	ClassAd result;
+	int ocu_id_to_remove = -1;
+	request.LookupInteger(ATTR_OCU_ID, ocu_id_to_remove);
+
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (const auto &ocu: oi->ocus) {
+			int ocu_id = 0;
+			ocu.ad.LookupInteger(ATTR_OCU_ID, ocu_id);
+			if (ocu_id == ocu_id_to_remove) {
+				result = oi->removeOCU(request);
+				break;
+			}
+		}
+	}
+	result.Assign(ATTR_RESULT, 0);
+	return result;
+}
+
+std::vector<ClassAd>
+Scheduler::act_on_ocu_query(const ClassAd & /*request*/) {
+	std::vector<ClassAd> results;
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (const auto &ocu: oi->ocus) {
+			results.emplace_back(ocu.ad);
+			std::string state;
+			state = ocu.state;
+			results.back().Assign(ATTR_OCU_STATE, state);
+		}
+	}
+	return results;
+}
+
+int 
+Scheduler::command_act_on_ocus(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	dprintf( D_FULLDEBUG, "In command_act_on_ocus for %s\n", cmd_name);
+
+	stream->decode();
+	stream->timeout(30);
+
+	// All of the OCU commands send exactly one request ClassAd
+	ClassAd requestAd;
+	if (!getClassAd(stream, requestAd)) {
+		dprintf( D_ALWAYS, "Failed to receive request ad for %s command: aborting\n", cmd_name);
+		return false;
+	}
+
+	// end of reading input command stream
+	if (!stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return false;
+	}
+
+	stream->encode();
+
+	switch (cmd) {
+		case CREATE_OCU_FOR_USERREC: {
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			}
+			ClassAd resultAd = act_on_ocu_create(requestAd);
+			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+			}
+			break;
+		case REMOVE_OCU_FROM_USERREC: {
+			if (!isOCUSuperUser((ReliSock*)stream)) {
+				ClassAd errorAd;
+				errorAd.Assign(ATTR_RESULT, -1);
+				errorAd.Assign(ATTR_ERROR_STRING, "Permission denied: not an OCU super user");
+				if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				}
+				return false;
+			} 
+			ClassAd resultAd = act_on_ocu_remove(requestAd);
+			if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+			}
+			break;
+		case QUERY_OCU_FROM_USERREC: {
+			std::vector<ClassAd> results = act_on_ocu_query(requestAd);
+			size_t query_size = results.size();
+			if (!stream->code(query_size)) {
+				dprintf( D_ALWAYS, "Error sending size of results for %s command\n", cmd_name );
+				return false;
+			}
+
+			for (const auto &ad: results) {
+				if (!putClassAd(stream, ad)) {
+					dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+					return false;
+				}
+			}
+			if( !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending eom for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+			}
+			break;
+		default:
+			ClassAd errorAd;
+			errorAd.Assign(ATTR_RESULT, -1);
+			errorAd.Assign(ATTR_ERROR_STRING, std::string("Invalid Command: ") + cmd_name);
+			if( !putClassAd(stream, errorAd) || !stream->end_of_message() ) {
+				dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+				return false;
+			}
+			return true;
+	}
+
+	return true;
 }
 
 static bool
@@ -3714,7 +3990,6 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		int proc = 0;
 		int noop_status = 0;
 		int temp = 0;
-		PROC_ID job_id;
 		if(job->LookupInteger(ATTR_JOB_NOOP_EXIT_SIGNAL, temp) != 0) {
 			noop_status = generate_exit_signal(temp);
 		}	
@@ -3725,10 +4000,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		job->LookupInteger(ATTR_PROC_ID, proc);
 		dprintf(D_FULLDEBUG, "Job %d.%d is a no-op with status %d\n",
 				cluster,proc,noop_status);
-		job_id.cluster = cluster;
-		job_id.proc = proc;
 		set_job_status(cluster, proc, COMPLETED);
-		scheduler.WriteTerminateToUserLog( job_id, noop_status );
+		scheduler.WriteTerminateToUserLog(job, noop_status);
 		return 0;
 	}
 
@@ -3933,15 +4206,11 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
-			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
-			ASSERT(gridcounts);
-			gridcounts->GridJobs++;
+			scheduler.GridJobOwners[userident].GridJobs++;
 		}
 		if ( status != HELD && job_managed == 0 && job_managed_done == 0 ) 
 		{
-			GridJobCounts * gridcounts = scheduler.GetGridJobCounts(userident);
-			ASSERT(gridcounts);
-			gridcounts->UnmanagedGridJobs++;
+			scheduler.GridJobOwners[userident].UnmanagedGridJobs++;
 		}
 
 		return 0;
@@ -3985,6 +4254,10 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			job_idle_weight = request_cpus * job_idle;
 		}
 		Counters->WeightedJobsIdle += job_idle_weight;
+
+		time_t interval = scheduler.stats.SecSinceLastCountJobsTime;
+		job->ownerinfo->daily_stats.accum(status, interval, job_idle_weight);
+		if (job->project) { job->project->daily_stats.accum(status, interval, job_idle_weight); }
 
 			// Update per-flock jobs idle
 		std::string flock_targets;
@@ -4144,11 +4417,8 @@ bool Scheduler::any_userrec_refs(JobQueueUserRec * urec)
 	}
 
 	if ( ! refs.in_use) {
-		GridJobOwners.startIterations();
-		GridUserIdentity userident;
-		GridJobCounts gridcounts;
-		while( GridJobOwners.iterate(userident, gridcounts) ) {
-			if (userident.ownerinfo() == urec) {
+		for (const auto& [userident, gridcounts]: GridJobOwners) {
+			if (userident.m_ownerinfo == urec) {
 				refs.in_use = true;
 				break;
 			}
@@ -4341,6 +4611,11 @@ void Scheduler::clearPendingOwners()
 					}
 				}
 			}
+				// JEF TODO This code assumes each generic account is in
+				//   use by a single UserRec.
+			if (m_claimedGenericOsUsers.erase(uad->OsUser()) != 0) {
+				m_openGenericOsUsers.insert(uad->OsUser());
+			}
 		}
 		delete uad;
 	}
@@ -4351,7 +4626,7 @@ void Scheduler::clearPendingOwners()
 // or (windows only) a partially qualified owner@ntdomain name
 // this will lookup the OwnerInfo record, and return it, creating a new (pending) one if needed
 OwnerInfo *
-Scheduler::insert_ownerinfo(const char * owner)
+Scheduler::insert_ownerinfo(const char * owner, CondorError* /*errstack*/)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
@@ -4415,6 +4690,10 @@ Scheduler::insert_ownerinfo(const char * owner)
 		#endif
 	}
 
+	if (m_useGenericOsUsers && JobQueueInitDone()) {
+		os_user = GENERIC_AP_USER_PLACEHOLDER;
+	}
+
 	int userrec_id = nextUnusedUserRecId();
 	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, ap_user.c_str(), os_user.c_str());
 	pendingOwners[userrec_id] = uad;
@@ -4426,6 +4705,52 @@ Scheduler::insert_ownerinfo(const char * owner)
 	return Owner;
 }
 
+const char * Scheduler::solidify_os_user(const OwnerInfo * owni, CondorError * errstack)
+{
+	if ( ! owni) {
+		if (errstack) {
+			errstack->pushf("SCHEDD", EINVAL, "No user record specified");
+		}
+		return nullptr;
+	}
+
+	// schedd is allowed to de-constify the OwnerInfo
+	JobQueueUserRec * urec = const_cast<JobQueueUserRec *>(owni);
+	if ( ! urec->OsUser() || YourString(GENERIC_AP_USER_PLACEHOLDER) == urec->OsUser()) {
+		if (m_useGenericOsUsers) {
+			auto acct_itr = m_openGenericOsUsers.begin();
+			if (acct_itr == m_openGenericOsUsers.end()) {
+				dprintf(D_ERROR, "No generic OS users left for new AP user\n");
+				if (errstack) {
+					errstack->pushf("SCHEDD", ENOSPC, "No OS user available for AP user %s", urec->Name());
+				}
+				return nullptr;
+			}
+			urec->assignOsUser(*acct_itr);
+			m_claimedGenericOsUsers.insert(*acct_itr);
+			m_openGenericOsUsers.erase(acct_itr);
+		}
+	}
+
+	// TODO: check to see if the OsUser is valid 
+	if (urec->OsUser()) {
+	  #ifdef WIN32
+		// TODO: verify OS user for windows?
+	  #else
+		uid_t user_uid = 0;
+		if ( can_switch_ids() && ! pcache()->get_user_uid(urec->OsUser(), user_uid)) {
+			if (errstack) {
+				errstack->pushf("SCHEDD", EACCES, "AP user has OS user value %s, which is not a "
+				"valid OS account", urec->OsUser());
+			}
+			return nullptr;
+		}
+	  #endif
+	}
+
+	return urec->OsUser();
+}
+
 const OwnerInfo *
 Scheduler::lookup_owner_const(const char * owner)
 {
@@ -4434,9 +4759,9 @@ Scheduler::lookup_owner_const(const char * owner)
 }
 
 const OwnerInfo *
-Scheduler::insert_owner_const(const char * name)
+Scheduler::insert_owner_const(const char * name, CondorError* errstack)
 {
-	return insert_ownerinfo(name);
+	return insert_ownerinfo(name, errstack);
 }
 
 // lookup (and cache) pointer to the job's owner instance data
@@ -4688,6 +5013,39 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			return;
 		}
 
+		// Now that we're about to interrupt the execution of the job,
+		// set appropriate vacate reason attributes in the job ad if they're
+		// not there already.
+		std::string vacate_reason;
+		int vacate_code = 0;
+		int vacate_subcode = 0;
+		if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, vacate_reason) < 0) {
+			switch(action) {
+			case JA_HOLD_JOBS:
+				GetAttributeString(job_id.cluster, job_id.proc, ATTR_HOLD_REASON, vacate_reason);
+				GetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_CODE, &vacate_code);
+				GetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, &vacate_subcode);
+				break;
+			case JA_REMOVE_JOBS:
+				GetAttributeString(job_id.cluster, job_id.proc, ATTR_REMOVE_REASON, vacate_reason);
+				vacate_code = CONDOR_HOLD_CODE::JobRemoved;
+				break;
+			case JA_VACATE_JOBS:
+			case JA_VACATE_FAST_JOBS:
+				vacate_reason = "Job vacated by schedd";
+				vacate_code = CONDOR_HOLD_CODE::ScheddVacate;
+				break;
+			default:
+				// Nothing
+				break;
+			}
+			if (!vacate_reason.empty()) {
+				SetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, vacate_reason.c_str());
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, vacate_code);
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, vacate_subcode);
+			}
+		}
+
 		if( job_universe == CONDOR_UNIVERSE_LOCAL ) {
 				/*
 				  eventually, we'll want the cases for the other
@@ -4870,7 +5228,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// job to run on it.
 	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
 	bool is_ocu_holder = false;
-	GetAttributeBool(job_id.cluster, job_id.proc, "IsOCUHolder", &is_ocu_holder);
+	GetAttributeBool(job_id.cluster, job_id.proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (mrec && is_ocu_holder) {
 		// ocu holders are set with infinite keep claim idle, but if we are deleting
 		// the job, that's the only time we want to remove the claim.
@@ -4878,17 +5236,18 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 		mrec = nullptr;
 	}
 	if( mrec ) {
+		// NOTE: this might delete the mrec...
 		scheduler.FindRunnableJobForClaim( mrec );
 	}
 
 	if( mode == REMOVED ) {
-		if( !scheduler.WriteAbortToUserLog(job_id) ) {
+		if( !scheduler.WriteAbortToUserLog(job_ad) ) {
 			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
 		}
 		DestroyProc( job_id.cluster, job_id.proc );
 	}
 	if( mode == HELD ) {
-		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
+		if( log_hold && !scheduler.WriteHoldToUserLog(job_ad) ) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write hold event to the user log\n" ); 
 		}
@@ -5007,7 +5366,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 			if(status!=HELD) {
 				holdJob(cluster, proc, reason.c_str(),
 						reason_code, reason_subcode,
-						true, false, false, false);
+						true, false, false);
 			}
 			break;
 		case RELEASE_FROM_HOLD:
@@ -5408,10 +5767,8 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 // the user didn't want a WriteUserLog, so you must check for NULL before
 // using the pointer you get back.
 WriteUserLog*
-Scheduler::InitializeUserLog( PROC_ID job_id ) 
+Scheduler::InitializeUserLog(const JobQueueJob* ad)
 {
-	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
-
 	if (!ad) {
 		dprintf(D_ALWAYS, "Scheduler::InitializeUserLog got null job ad, probably job already removed?\n");
 		return nullptr;
@@ -5419,17 +5776,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	WriteUserLog* ULog=new WriteUserLog();
 	ULog->setCreatorName( Name );
 
-    if (m_userlog_file_cache_max > 0) {
-        // This is a bit draconian, but doing it smarter requires more machinery and data,
-        // and the log cache can still save plenty of open/close
-        if (m_userlog_file_cache.size() >= size_t(m_userlog_file_cache_max)) userlog_file_cache_clear(true);
-
-        // important to do this before invoking initialize() method
-        dprintf(D_FULLDEBUG, "Scheduler::InitializeUserLog(): setting log file cache\n");
-        ULog->setLogFileCache(&m_userlog_file_cache);
-    }
-
-	if ( ! ULog->initialize(*ad, true) ) {
+	if ( ! ULog->initialize(*ad) ) {
 		dprintf ( D_ALWAYS, "WARNING: Failed to initialize user log file for writing!\n");
 		delete ULog;
 		return NULL;
@@ -5444,7 +5791,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 }
 
 bool
-Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning )
+Scheduler::WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const char * warning )
 {
 		// Skip writing submit events for procid != 0 for parallel jobs
 	int universe = job->Universe();
@@ -5457,7 +5804,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 		}
 	}
 
-	WriteUserLog* ULog = this->InitializeUserLog( job->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5492,9 +5841,11 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 
 bool
-Scheduler::WriteAbortToUserLog( PROC_ID job_id )
+Scheduler::WriteAbortToUserLog(const JobQueueJob* job)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5502,20 +5853,17 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	JobAbortedEvent event;
 
 	std::string reasonstr;
-	GetAttributeString(job_id.cluster, job_id.proc,
+	GetAttributeString(job->jid.cluster, job->jid.proc,
 	                   ATTR_REMOVE_REASON, reasonstr);
 	event.setReason(reasonstr);
 
-	bool status =
-		ULog->writeEvent(&event, GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
-
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_ABORTED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5523,9 +5871,11 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 
 
 bool
-Scheduler::WriteHoldToUserLog( PROC_ID job_id )
+Scheduler::WriteHoldToUserLog(const JobQueueJob* job)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5533,29 +5883,26 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	JobHeldEvent event;
 
 	std::string reasonstr;
-	if( GetAttributeString(job_id.cluster, job_id.proc,
+	if( GetAttributeString(job->jid.cluster, job->jid.proc,
 	                       ATTR_HOLD_REASON, reasonstr) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 	}
 	event.setReason(reasonstr);
 
-	GetAttributeInt(job_id.cluster, job_id.proc,
+	GetAttributeInt(job->jid.cluster, job->jid.proc,
 	                ATTR_HOLD_REASON_CODE, &event.code);
 
-	GetAttributeInt(job_id.cluster, job_id.proc,
+	GetAttributeInt(job->jid.cluster, job->jid.proc,
 	                ATTR_HOLD_REASON_SUBCODE, &event.subcode);
 
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
-
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!status) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5563,9 +5910,11 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 
 
 bool
-Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
+Scheduler::WriteReleaseToUserLog(const JobQueueJob* job)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5573,18 +5922,17 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	JobReleasedEvent event;
 
 	std::string reasonstr;
-	GetAttributeString(job_id.cluster, job_id.proc,
+	GetAttributeString(job->jid.cluster, job->jid.proc,
 	                   ATTR_RELEASE_REASON, reasonstr);
 	event.setReason(reasonstr);
 
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_RELEASED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5592,9 +5940,11 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 
 
 bool
-Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
+Scheduler::WriteExecuteToUserLog(const JobQueueJob* job, const char* sinful)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5609,13 +5959,12 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 	ExecuteEvent event;
 	event.setExecuteHost( host );
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
 	
 	if (!status) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event for job %d.%d\n",
-				job_id.cluster, job_id.proc );
+				job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5623,9 +5972,11 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 
 
 bool
-Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed ) 
+Scheduler::WriteEvictToUserLog(const JobQueueJob* job, bool checkpointed)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5633,23 +5984,13 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
 
-	ClassAd *jobAd = GetJobAd(job_id.cluster, job_id.proc);
-	if (!jobAd) {
-		dprintf(D_ALWAYS, "Unable to write evict event to job log for job (%d.%d) -- perhaps it was already removed\n",
-				job_id.cluster, job_id.proc);
-		return false;
-	}
-
-	bool status =
-		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool status = ULog->writeEvent(&event, job);
 	delete ULog;
-
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!status) {
 		dprintf( D_ALWAYS,
 				 "Unable to log ULOG_JOB_EVICTED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5657,9 +5998,11 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 
 
 bool
-Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status ) 
+Scheduler::WriteTerminateToUserLog(const JobQueueJob* job, int status)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5687,24 +6030,24 @@ Scheduler::WriteTerminateToUserLog( PROC_ID job_id, int status )
 		event.normal = false;
 		event.signalNumber = WTERMSIG(status);
 	}
-	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event, job);
 	delete ULog;
-
-    userlog_file_cache_erase(job_id.cluster, job_id.proc);
 
 	if (!rval) {
 		dprintf( D_ALWAYS, 
 				 "Unable to log ULOG_JOB_TERMINATED event for job %d.%d\n",
-				 job_id.cluster, job_id.proc );
+				 job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
 }
 
 bool
-Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason ) 
+Scheduler::WriteRequeueToUserLog(const JobQueueJob* job, int status, const char * reason)
 {
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5732,12 +6075,12 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 	if (reason && reason[0]) {
 		event.setReason(reason);
 	}
-	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event, job);
 	delete ULog;
 
 	if (!rval) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED (requeue) event "
-				 "for job %d.%d\n", job_id.cluster, job_id.proc );
+				 "for job %d.%d\n", job->jid.cluster, job->jid.proc );
 		return false;
 	}
 	return true;
@@ -5745,13 +6088,13 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 
 
 bool
-Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
+Scheduler::WriteAttrChangeToUserLog(const JobQueueJob* job, const char* attr,
 					 const char* attr_value,
 					 const char* old_value)
 {
-	PROC_ID job_id;
-	StrToProcIdFixMe(job_id_str, job_id);
-	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*job->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(job);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5762,12 +6105,12 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 	event.setName(attr);
 	event.setValue(attr_value);
 	event.setOldValue(old_value);
-        bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
+	bool rval = ULog->writeEvent(&event, job);
         delete ULog;
 
         if (!rval) {
                 dprintf( D_ALWAYS, "Unable to log ULOG_ATTRIBUTE_UPDATE event "
-                                 "for job %d.%d\n", job_id.cluster, job_id.proc );
+                                 "for job %d.%d\n", job->jid.cluster, job->jid.proc );
                 return false;
         }
 
@@ -5775,9 +6118,11 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 }
 
 bool
-Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
+Scheduler::WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*cluster->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(cluster);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5806,9 +6151,11 @@ Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 }
 
 bool
-Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync )
+Scheduler::WriteClusterRemoveToUserLog(const JobQueueCluster* cluster, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*cluster->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(cluster);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -5846,9 +6193,11 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 }
 
 bool
-Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync )
+Scheduler::WriteFactoryPauseToUserLog(const JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync )
 {
-	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
+	TemporaryPrivSentry sentry;
+	init_user_ids_from_ad(*cluster->ownerinfo);
+	WriteUserLog* ULog = this->InitializeUserLog(cluster);
 	if( ! ULog ) {
 			// User didn't want log
 		return true;
@@ -6026,7 +6375,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		}
 
 			// And now release the job.
-		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
+		releaseJob(cluster,proc,"Data files spooled",false,false,false);
 		CommitTransactionOrDieTrying();
 	}
 
@@ -7211,10 +7560,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		buf[sizeof(buf)-1] = 0; // snprintf won't null terminate if it runs out of space.
 		int size = strlen(buf) + strlen(value) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
-		if( ! constraint ) {
-				// Maybe change EXCEPT to print to the audit log with D_AUDIT
-			EXCEPT( "Out of memory!" );
-		}
+		ASSERT(constraint);
 			// we need to terminate the ()'s after their constraint
 		snprintf( constraint, size, "%s%s)", buf, value );
 	} else {
@@ -7437,7 +7783,6 @@ Scheduler::actOnJobs(int, Stream* s)
 				hold_reason_subcode,	// hold reason subcode
 				false,	// use_transaction
 				false,	// email user?
-				false,	// email admin?
 				false,	// system hold?
 				false	// write to user log?  Set to false cause actOnJobs does not do this here...
 				) == false)
@@ -7699,7 +8044,6 @@ public:
 		/** These are not actually used, because we are
 		 *  using the all_dups option to SelfDrainingQueue. */
 	virtual int ServiceDataCompare( ServiceData const* other ) const;
-	virtual size_t HashFn( ) const;
 };
 
 int
@@ -7714,12 +8058,6 @@ ActOnJobRec::ServiceDataCompare( ServiceData const* other ) const
 		return 1;
 	}
 	return m_job_id.ServiceDataCompare( &o->m_job_id );
-}
-
-size_t
-ActOnJobRec::HashFn( ) const
-{
-	return m_job_id.HashFn();
 }
 
 void
@@ -7798,10 +8136,11 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	PROC_ID job_id;
 	job_id.cluster = act_rec->m_job_id._cluster;
 	job_id.proc = act_rec->m_job_id._proc;
+	const JobQueueJob *job_ad = GetJobAd(job_id.cluster, job_id.proc);
 
 	delete act_rec;
 
-	if ( !GetJobAd(job_id.cluster, job_id.proc) ) {
+	if ( !job_ad ) {
 		dprintf(D_ALWAYS, "Job %d.%d is not in the queue, cannot perform action %s\n",
 			job_id.cluster, job_id.proc, getJobActionString(action));
 		return TRUE;
@@ -7822,12 +8161,12 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		break;
     }
 	case JA_RELEASE_JOBS: {
-		WriteReleaseToUserLog( job_id );
+		WriteReleaseToUserLog(job_ad);
 		needReschedule();
 		break;
     }
 	case JA_REMOVE_X_JOBS: {
-		if( !scheduler.WriteAbortToUserLog( job_id ) ) {
+		if( !scheduler.WriteAbortToUserLog(job_ad) ) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write abort event to the user log\n" ); 
 		}
@@ -7874,14 +8213,13 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 
 	daemonCore->Cancel_Socket( stream );
 
-	dprintf (D_ALWAYS, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
+	dprintf (D_FULLDEBUG, "Activity on stashed negotiator socket: %s\n", ((Sock *)stream)->get_sinful_peer());
 
 	// attempt to read a command off the stream
 	stream->decode();
 	if (!stream->code(command))
 	{
-		dprintf (D_ALWAYS, "Socket activated, but could not read command\n");
-		dprintf (D_ALWAYS, "(Negotiator probably invalidated cached socket)\n");
+		dprintf (D_ALWAYS, "Negotiator Socket activated, but could not read command (Negotiator probably invalidated cached socket)\n");
 	}
 	else {
 		negotiate(command, stream);
@@ -7995,7 +8333,8 @@ public:
 
 	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id, char const *reason);
 
-	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
+	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+		char const *slot_name, _match_source source);
 
 	virtual void scheduler_handleNegotiationFinished( Sock *sock );
 
@@ -8042,10 +8381,13 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 	// TODO: set this to the max matches we can allow for this resource request
 	if (match_max) { *match_max = INT_MAX; }
 
-#ifdef USE_VANILLA_START
 	const OwnerInfo* powni = NULL;
 	int universe = CONDOR_UNIVERSE_MIN;
+	JobQueueJob * job_for_limit = NULL;
+
+#ifdef USE_VANILLA_START
 	JobQueueJob * job = GetJobAndInfo(job_id, universe, powni);
+	job_for_limit = job;
 	if (job) {
 		ExprTree * tree = scheduler.flattenVanillaStartExpr(job, powni);
 		if (tree) {
@@ -8091,11 +8433,17 @@ bool MainScheddNegotiate::scheduler_getRequestConstraints(PROC_ID job_id, ClassA
 			}
 		}
 	}
+	if (powni && match_max) {
+		int max_running_per_user = MaxRunningPer(powni) - CurRunningPer(powni);
+		*match_max = MIN(max_running_per_user, *match_max);
+	}
 #else
 	if (job_id.cluster < 0 || request_ad.size() < 0) {
 		dprintf(D_ALWAYS, "unexpected arguments to scheduler_getRequestConstraints\n");
 	}
 #endif
+
+	StartupLimitsAdjustRequest(job_for_limit, request_ad, match_max, getMatchUser(), getRemotePool());
 
 	return true;
 }
@@ -8119,13 +8467,13 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 		return true;
 	}
 
-	if( scheduler.AlreadyMatched(job, universe) ) {
-		because = "job no longer needs a match";
-		return true;
-	}
 	runnable_reason_code runnable_code;
 	if( ! Runnable(job, runnable_code) ) {
 		because = getRunnableReason(runnable_code);
+		return true;
+	}
+	if (scheduler.FindMrecByJobID(job->jid)) {
+		because = "job no longer needs a match";
 		return true;
 	}
 
@@ -8154,13 +8502,11 @@ bool MainScheddNegotiate::scheduler_skipJob(JobQueueJob * job, ClassAd *match_ad
 
 
 bool
-MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
+MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+	char const *slot_name, _match_source source)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
-
-	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
-			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
 	if ( strcasecmp(claim_id,"null") == 0 ) {
 		dprintf(D_MATCH, "Rejecting match to %s because it has no claim id\n", slot_name);
@@ -8178,15 +8524,16 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
 	}
 
+	bool is_pslot = false;
+	match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+
 	// Claim pslots if we're configured to do so and this negotiator will
 	// make further matches on the claimed pslot for us.
 	// TODO Ignore the negotiator's willingness to match once we're smart
 	//   enough to fully manage the claimed pslot or will be instructing
 	//   the startd to send updates to an AP collector/negotiator.
 	bool claim_pslot = false;
-	bool is_pslot = false;
 	if (m_will_match_claimed_pslots) {
-		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
 		if (is_pslot) {
 			std::string slot_state;
 			match_ad.LookupString(ATTR_STATE, slot_state);
@@ -8194,17 +8541,40 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 				claim_pslot = true;
 			}
 		}
-	} else {
-		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+	}
+
+	// Build up a string to describe what is happening.  This function gets called when
+	// 1) The negotiator has a match for a specific job (usually a p-slot)
+	// 2) We claimed the p-slot, got back a d-slot and now we want to use the leftovers
+	// 3) A startd called and gave us itself
+	// For the first case, we usually have a job id in mind, for the second two we do not.
+	bool for_a_job = job_id.cluster != -1 || job_id.proc != -1;
+	if (IsDebugCategory(D_MATCH)) {
+		std::string match_for;
+		if (for_a_job) {
+			match_for = "for job " + (std::string)JOB_ID_KEY(job_id);
+		} else if (source == _match_source::LEFTOVER) {
+			match_for = "Leftovers";
+		} else if (source == _match_source::DIRECT) {
+			match_for = "DirectAttach";
+		}
+		dprintf(D_MATCH,"Handling match %s (delivered=%d): %s\n", match_for.c_str(), m_current_resources_delivered, slot_name);
 	}
 
 	const char* because = "";
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
-	if (scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
+
+	// Maybe it isn't a job at all, but an OCU request
+	bool is_ocu_request = false;
+	if (job == nullptr) {
+		is_ocu_request = job_id.proc == OCU_qkey2;
+	} 
+
+	if (!is_ocu_request && scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
 		// See if it is a real match for us
 
-		FindRunnableJob(job_id, &match_ad, getMatchUser());
+		FindRunnableJob(job_id, &match_ad, getMatchUser(), getRemotePool(), /*is_ocu=*/false, /*is_new_match=*/true);
 
 		// we may have found a new job. but FindRunnableJob doesn't check to see
 		// if we hit the shadow limit, so we need to do that here.
@@ -8217,7 +8587,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 				skip_all_such = true;
 				because = "no more shadows";
 			} else {
-				dprintf(D_MATCH,"Rematched %s to job %d.%d\n", slot_name, job_id.cluster, job_id.proc );
+				dprintf(D_MATCH,"%s %s to job %d.%d\n", for_a_job ? "Rematched" : "Matched",
+					slot_name, job_id.cluster, job_id.proc );
 			}
 		}
 	}
@@ -8240,6 +8611,10 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		return false;
 	}
 
+	if (job_id.proc == OCU_qkey2) {
+		match_ad.Assign(ATTR_OCU, true);
+	}
+
 	match_rec *mrec = scheduler.AddMrec(
 		claim_id, startd.addr(), job_id, &match_ad,
 		getMatchUser(), getRemotePool() );
@@ -8247,6 +8622,10 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if( !mrec ) {
 			// There is already a match for this claim id.
 		return false;
+	}
+
+	if (job_id.proc == OCU_qkey2) {
+		mrec->is_ocu = true;
 	}
 
 	mrec->m_claim_pslot = claim_pslot;
@@ -8366,7 +8745,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 	// Negotiator has asked us to send it RRL, but not started negotiation proper
 	// don't consider negotiation finished.
 	if (RRLRequestIsPending()) {
-		dprintf(D_ALWAYS,"Finished sending RRL for %s\n", getMatchUser());
+		dprintf(D_FULLDEBUG,"Finished sending RRL for %s\n", getMatchUser());
 		return;
 	}
 
@@ -8480,9 +8859,10 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	char const *remote_pool = NULL;
 	Sock*	sock = (Sock*)s;
 	bool skip_negotiation = false;
+	const char * sock_peer = ((Sock *)s)->get_sinful_peer(); if ( ! sock_peer) sock_peer = "?";
 
-	dprintf( D_FULLDEBUG, "\n" );
-	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
+	dprintf( D_PROTOCOL, "\n" );
+	dprintf( D_PROTOCOL, "Entered negotiate with %s\n", sock_peer );
 
 	// Set timeout on socket
 	s->timeout( param_integer("NEGOTIATOR_TIMEOUT",20) );
@@ -8525,12 +8905,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	if( ShadowSizeEstimate ) {
 		MaxShadowsForSwap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
 		MaxShadowsForSwap += numShadows;
-		dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
-		dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
-		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",
-				 ShadowSizeEstimate );
-		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
-				 MaxShadowsForSwap );
+		dprintf( D_FULLDEBUG, "*** Calculated MaxShadows=%d (SwapSpace=%d, ReservedSwap=%d, ShadowSizeEstimate=%d)\n",
+			MaxShadowsForSwap, SwapSpace, ReservedSwap, ShadowSizeEstimate);
 	}
 
 		// We want to read the owner off the wire ASAP, since if we're
@@ -8539,7 +8915,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		// a prio rec array, etc.
 
 	//-----------------------------------------------
-	// Get Owner name from negotiator
+	// Get Owner name from negotiator (this is actually the Submitter name)
 	//-----------------------------------------------
 	char owner[200];
 	std::string sig_attrs_from_cm;
@@ -8552,27 +8928,28 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	bool willMatchClaimedPslots = false;
 	std::string match_caps; // matchmaker capabilities
 	std::string negotiator_name; // negotiator name, for use when there are multiple negotiators in a CM
+	std::string label; // name, host & pool of the negotiator that is calling
 
 	s->decode();
 	// Keeping body of old if-statement to avoid re-indenting
 	{
 		if( !getClassAd( s, negotiate_ad ) ) {
-			dprintf( D_ALWAYS, "Can't receive negotiation header\n" );
+			dprintf( D_ERROR, "Can't receive negotiation header from %s\n", sock_peer );
 			return (!(KEEP_STREAM));
 		}
 		if( !negotiate_ad.LookupString(ATTR_OWNER,owner,sizeof(owner)) ) {
-			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
-					 ATTR_OWNER );
+			dprintf( D_ERROR, "Can't find %s (Submitter) in negotiation header from %s\n",
+					 ATTR_OWNER, sock_peer );
 			return (!(KEEP_STREAM));
 		}
 		if( !negotiate_ad.LookupString(ATTR_AUTO_CLUSTER_ATTRS,sig_attrs_from_cm) ) {
-			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
-					 ATTR_AUTO_CLUSTER_ATTRS );
+			dprintf( D_ERROR, "Can't find %s in negotiation header from %s\n",
+					 ATTR_AUTO_CLUSTER_ATTRS, sock_peer );
 			return (!(KEEP_STREAM));
 		}
 		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
-			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
-					 ATTR_SUBMITTER_TAG );
+			dprintf( D_ERROR, "Can't find %s in negotiation header from %s\n",
+					 ATTR_SUBMITTER_TAG, sock_peer );
 			return (!(KEEP_STREAM));
 		}
 			// jobprio_min and jobprio_max are optional
@@ -8587,6 +8964,12 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 			scheddsAreSubmitters = true;
 		}
 
+		// build a scope label for dprintfs for this command.
+		formatstr(label, "(name=%s, host=%s)", negotiator_name.c_str(), sock->peer_ip_str());
+		if ( ! submitter_tag.empty()) {
+			label.pop_back(); label += "pool="; label += submitter_tag; label += ")";
+		}
+
 		if (IsDebugVerbose(D_MATCH)) {
 			std::string adbuf;
 			dprintf(D_MATCH | D_VERBOSE, "Got NEGOTIATE with ad:\n%s", formatAd(adbuf, negotiate_ad, "\t"));
@@ -8594,7 +8977,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 
 	}
 	if (!s->end_of_message()) {
-		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
+		dprintf( D_ALWAYS, "No EOM in NEGOTIATE from %s\n", sock_peer );
 		return (!(KEEP_STREAM));
 	}
 
@@ -8602,18 +8985,17 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		// pool name sent out with the session is identical to the one
 		// which came back from the negotiator.  Prevent negotiator fraud!
 	const std::string &sess_id = static_cast<ReliSock*>(s)->getSessionID();
-	classad::ClassAd policy_ad;
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	std::string policy_remote_pool;
-	if (policy_ad.EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
+	if (policy_ad && policy_ad->EvaluateAttrString(ATTR_REMOTE_POOL, policy_remote_pool)) {
 		submitter_tag = policy_remote_pool;
 	}
 
 	
 	if (!SubmitterMap.IsSubmitterValid(submitter_tag, owner, time(NULL)) && !scheddsAreSubmitters) {
-		dprintf(D_ALWAYS, "Remote negotiator (host=%s, pool=%s) is trying to negotiate with submitter %s;"
+		dprintf(D_ALWAYS, "Remote negotiator %s is trying to negotiate with submitter %s;"
 			" that submitter was not sent to the negotiator, so aborting the negotiation attempt.\n",
-			sock->peer_ip_str(), submitter_tag.c_str(), owner);
+			label.c_str(), owner);
 		return (!(KEEP_STREAM));
 	}
 
@@ -8636,23 +9018,21 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 				n++;
 			}
 			if( !match ) {
-				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
-						"Aborting negotiation.\n", sock->peer_ip_str(),
-						submitter_tag.c_str());
+				dprintf(D_ALWAYS, "Unknown negotiator %s.  Aborting negotiation.\n", label.c_str());
 				return (!(KEEP_STREAM));
 			}
 		}
 	}
 
 	if( remote_pool ) {
-		dprintf (D_ALWAYS, "Negotiating for owner: %s (flock level %d, pool %s)\n",
-				 scheddsAreSubmitters ? "All Owners" : owner, which_negotiator, remote_pool);
+		dprintf (D_ALWAYS, "Negotiating for Submitter: %s with %s flock level %d\n",
+				 scheddsAreSubmitters ? "All Submitters" : owner, label.c_str(), which_negotiator);
 	} else {
-		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", scheddsAreSubmitters ? "All Owners" : owner);
+		dprintf (D_ALWAYS, "Negotiating for Submitter: %s with %s\n", scheddsAreSubmitters ? "All Owners" : owner, label.c_str());
 	}
 
 	if ( consider_jobprio_min > INT_MIN || consider_jobprio_max < INT_MAX ) {
-		dprintf(D_ALWAYS,"Negotiating owner=%s jobprio restricted, min=%d max=%d\n",
+		dprintf(D_ALWAYS,"Negotiating Submitter=%s jobprio restricted, min=%d max=%d\n",
 			 owner, consider_jobprio_min, consider_jobprio_max);
 	}
 
@@ -8689,10 +9069,10 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		char *at_sign = strchr(owner, '@');
 		if (at_sign) *at_sign = '\0';
 	}
-	// find owner in the Owners array
+	// find owner in the Submitters array
 	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner && !scheddsAreSubmitters) {
-		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
+		dprintf(D_ALWAYS, "Can't find Submitter %s in Submitters table\n", owner);
 		skip_negotiation = true;
 	} else if (shadowsSpawnLimit() == 0) {
 		// shadowsSpawnLimit() prints reason for limit of 0
@@ -8714,6 +9094,19 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
+	// OCUs represent requests for match_recs (slots) that have no jobs associated With
+	// them.  Add them into the resource_requests list now.
+	for (const auto &[_,oi]: OwnersInfo) {
+		for (auto &ocu: oi->ocus) {
+			if (ocu.mrec == nullptr) {
+			
+				int ocu_id = ocu.ocu_id;
+				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+				resource_requests->add(ocu_id, ocu_request);
+			}
+		}
+	}
+	
 	for (auto prec = firstRec; prec != endRec && ! skip_negotiation; ++prec) {
 
 		// make sure job isn't flagged as not needing matching
@@ -8767,6 +9160,7 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		}
 		resource_requests->add(auto_cluster_id, prec->id);
 	}
+
 
 	classy_counted_ptr<MainScheddNegotiate> sn =
 		new MainScheddNegotiate(
@@ -8842,7 +9236,8 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 			// TODO handle pre-claimed slots
 			// TODO handle slots already in use
-		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str());
+		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str(),
+			ScheddNegotiate::_match_source::DIRECT);
 	}
 
 	if (!rsock->end_of_message()) {
@@ -8876,17 +9271,26 @@ Scheduler::release_claim(int, Stream *sock)
 		dprintf (D_ALWAYS, "Failed to get ClaimId\n");
 		return;
 	}
-	if( matches->lookup(claim_id, mrec) != 0 ) {
+	auto it = matches.find(claim_id);
+	if (it == matches.end()) {
 			// We couldn't find this match in our table, perhaps it's
 			// from a dedicated resource.
 		dedicated_scheduler.DelMrec( claim_id );
 	}
 	else {
-			// The startd has sent us RELEASE_CLAIM because it has
-			// destroyed the claim.  There is therefore no need for us
-			// to send RELEASE_CLAIM to the startd.
+		// The startd has sent us RELEASE_CLAIM because it has
+		// destroyed the claim.  There is therefore no need for us
+		// to send RELEASE_CLAIM to the startd.
+		mrec = it->second;
 		mrec->needs_release_claim = false;
 
+		// If this is an OCU request, need to unlink it from the OCU
+		if (mrec->is_ocu) {
+			OCU *ocu = getOCU(mrec->ocu_originator.cluster);
+			if (ocu) {
+				ocu->mrec = nullptr;
+			} 
+		}
 		DelMrec( mrec );
 	}
 	free(claim_id);
@@ -8931,6 +9335,18 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	else {
 		jobAd = GetExpandedJobAd(JOB_ID_KEY(mrec->cluster, mrec->proc), false);
 	}
+
+	if (! jobAd ) {
+		// if this request is an OCU, get the OCU request ad.
+		// not really a job ad, but close enough for claiming purposes
+
+		// We delete this later, so dup it up here.
+		OCU *ocu = scheduler.getOCU(mrec->cluster);
+		if (ocu) {
+			jobAd = new ClassAd(ocu->ad);
+		}
+	}
+
 	if( ! jobAd ) {
 			// The match rec may have been deleted by now if the job
 			// was put on hold in GetJobAd().
@@ -8960,6 +9376,47 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			DelMrec( mrec );
 		}
 		return;
+	}
+
+	// Check startup limits on the initially matched job. If denied, try to
+	// swap in an alternate runnable job before we proceed to claim the startd.
+	if (!StartupLimitsEmpty()) {
+		JobQueueJob *limit_job = GetJobAd(mrec->cluster, mrec->proc);
+		if (limit_job && mrec->my_match_ad) {
+			std::unordered_set<std::string> blocked;
+			// Charge the limit here so throttling and stats reflect the pending start.
+			if (!StartupLimitsAllowJob(limit_job, mrec->my_match_ad, mrec->user, mrec->pool, &blocked, /*record_stats=*/true)) {
+				dprintf(D_FULLDEBUG,
+					"StartupLimit blocked initially matched job %d.%d user=%s pool=%s blocked=%zu; searching fallback\n",
+					mrec->cluster, mrec->proc, mrec->user ? mrec->user : "<any>",
+					mrec->pool ? mrec->pool : "<none>", blocked.size());
+				PROC_ID replacement{-1, -1};
+				FindRunnableJob(replacement, mrec->my_match_ad, mrec->user, mrec->pool, mrec->is_ocu, /*is_new_match=*/true);
+
+				if (replacement.proc < 0) {
+					dprintf(D_FULLDEBUG, "StartupLimit fallback search found no alternate job; releasing match %s\n", description.c_str());
+					delete jobAd;
+					DelMrec(mrec);
+					return;
+				}
+
+				if (replacement.cluster != mrec->cluster || replacement.proc != mrec->proc) {
+					dprintf(D_FULLDEBUG, "StartupLimit replacing job %d.%d with %d.%d for match %s\n",
+						mrec->cluster, mrec->proc, replacement.cluster, replacement.proc, description.c_str());
+					mrec->cluster = replacement.cluster;
+					mrec->proc = replacement.proc;
+					delete jobAd;
+					jobAd = GetExpandedJobAd(JOB_ID_KEY(mrec->cluster, mrec->proc), false);
+					if (!jobAd) {
+						dprintf(D_FULLDEBUG, "StartupLimit failed to load replacement job ad %d.%d; releasing match\n",
+							replacement.cluster, replacement.proc);
+						DelMrec(mrec);
+						return;
+					}
+					formatstr(description, "%s %d.%d", mrec->description(), mrec->cluster, mrec->proc);
+				}
+			}
+		}
 	}
 
 		// If the slot we are about to claim is partitionable, edit it
@@ -8995,11 +9452,12 @@ Scheduler::contactStartd( ContactStartdArgs* args )
     CopyAttribute(ATTR_REMOTE_NEGOTIATING_GROUP, *jobAd, *mrec->my_match_ad);
     CopyAttribute(ATTR_REMOTE_AUTOREGROUP, *jobAd, *mrec->my_match_ad);
 
+	// CRUFT Starting in 25.3, the startd assumes true if these
+	//   attributes aren't set.
 	// Tell the startd side who should send alives... startd or schedd
-	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );	
+	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, true );
 	// Tell the startd if to should not send alives if starter is alive
-	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, 
-					param_boolean("STARTER_HANDLES_ALIVES",true) );
+	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, true );
 
 	// Tell the startd our name, which will go into the slot ad
 	jobAd->Assign(ATTR_SCHEDD_NAME, Name);
@@ -9074,12 +9532,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	if( !msg->claimed_startd_success() ) {
 		// Re-enable the job for matching in the PrioRec array
 		// TODO: remove the PrioRec matched field and use the one in the JobQueueJob instead
-		for (auto & rec : PrioRec) {
-			if (rec.id.cluster == match->cluster && rec.id.proc == match->proc) {
-				rec.matched = false;
-				break;
-			}
-		}
+		auto * rec = findInPrioRec({match->cluster, match->proc});
+		if (rec) rec->matched = false;
 		scheduler.DelMrec(match);
 		return;
 	}
@@ -9087,6 +9541,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// if we end up moving the original job id to a different match record
 	// we will need to delete the original match record before we exit.
 	bool delete_orig_match = false;
+	bool can_use_leftovers = true;
 
 	// If we got information for the newly-claimed slot, then update our
 	// local data to match.  First check to see if we any of the returned
@@ -9101,11 +9556,32 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		slots.reserve(msg->claimed_slots().size());
 		PROC_ID job_id{match->cluster, match->proc};
 
+		// check per-user jobs running limits and per-project jobs running limits
+		// to see if there is any point in using the leftovers.
+		// TODO: give leftovers to a different user?
+		JobQueueJob * job = GetJobAd(job_id);
+		if (job) {
+			int max_jobs_to_add = MaxRunningPer(job->ownerinfo) - CurRunningPer(job->ownerinfo);
+			if (job->project) {
+				int prj_running = MaxRunningPer(job->project) - CurRunningPer(job->project);
+				max_jobs_to_add = std::min(max_jobs_to_add, prj_running);
+			}
+			can_use_leftovers = (max_jobs_to_add > (int)msg->claimed_slots().size());
+		}
+
 		for (auto & slotInfo : msg->claimed_slots()) {
 			if (slotInfo.claim_id == match->claim_id.claimId()) {
+				// ugly, but if there are leftovers, then chances are the slot name
+				// changed from when we originally got that match, so we should log the new name
+				if (IsDebugCategory(D_MATCH) && msg->have_leftovers()) {
+					std::string slot_name;
+					slotInfo.slot_ad.LookupString(ATTR_NAME, slot_name);
+					dprintf(D_MATCH, "Claiming %s returned %s\n", match->description(), slot_name.c_str());
+				}
 				// since we got an updated slot ad, refresh the ad in the match record
 				match->my_match_ad->CopyFrom(slotInfo.slot_ad);
 				match->my_match_ad->Update(match->m_added_attrs);
+				match->makeDescription();
 				match->setStatus(M_CLAIMED);
 				orig_match_index = slots.size();
 				slots.push_back(match);
@@ -9166,7 +9642,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// If the startd returned any "leftover" partitionable slot resources,
 	// we want to create a match record for it (so we can subsequently find
 	// a job to run on it). 
-	if ( msg->have_leftovers()) {
+	if (msg->have_leftovers() && can_use_leftovers) {
 
 		ScheddNegotiate *sn;
 		if (match->is_dedicated) {
@@ -9182,27 +9658,35 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			sn = new MainScheddNegotiate(0, NULL, match->user, match->pool);
 		}
 
-			// Setting cluster.proc to -1.-1 should result in the schedd
-			// invoking FindRunnableJob to select an appropriate matching job.
-		PROC_ID jobid(-1,-1);
 
-		if (match->is_dedicated) {
-			const ClassAd *msg_ad = msg->getJobAd();
-			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
-			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
-		}
-	
+		// Need to pass handleMatch a slot name; grab from newly split slot ad
+		std::string slot_name_buf;
+		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
+		char const *slot_name = slot_name_buf.c_str();
+
 		std::string last_slot_name;
 		msg->leftover_startd_ad()->LookupString(ATTR_LAST_SLOT_NAME, last_slot_name);
-
 		if (last_slot_name.length() > 0) {
 			match->my_match_ad->Assign(ATTR_NAME, last_slot_name);
 		}
 
-			// Need to pass handleMatch a slot name; grab from newly split slot ad
-		std::string slot_name_buf;
-		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
-		char const *slot_name = slot_name_buf.c_str();
+		// Setting cluster.proc to -1.-1 should result in the schedd
+		// invoking FindRunnableJob to select an appropriate matching job.
+		PROC_ID jobid(-1,-1);
+
+		// but not when using the dedicated scheduler, in that case we want
+		// to give more slots to the same "job" since a single parallel job
+		// can use multiple matches.
+		if (match->is_dedicated) {
+			const ClassAd *msg_ad = msg->getJobAd();
+			msg_ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+			msg_ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
+
+			// we want to pass the last d-slot name to handleMatch rather than the pslot name
+			// Since the dedicated scheduler needs a unique name for each of its matches.
+			// We use the last d-slot name as a convenient unique name.
+			if ( ! last_slot_name.empty()) { slot_name = last_slot_name.c_str(); }
+		}
 
 		// Copy attributes that were added to the original slot ad after
 		// it left the startd into the fresh pslot leftovers ad
@@ -9217,15 +9701,17 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
-		ClaimIdParser idp( msg->leftover_claim_id() );
-		dprintf( D_FULLDEBUG,
-				"Received match from startd, leftover slot ad %s claim %s\n",
-				slot_name, idp.publicClaimId()  );
+		if (IsFulldebug(D_FULLDEBUG)) {
+			ClaimIdParser idp( msg->leftover_claim_id() );
+			dprintf( D_FULLDEBUG,
+					"Received match from startd, leftover slot ad %s claim %s\n",
+					slot_name, idp.publicClaimId()  );
+		}
 
 			// Tell the schedd about the leftover resources it can go claim.
 			// Note this claiming will happen asynchronously.
-		sn->scheduler_handleMatch(jobid,msg->leftover_claim_id(), "",
-			*(msg->leftover_startd_ad()),last_slot_name.length() > 0 ? last_slot_name.c_str() : slot_name);
+		sn->scheduler_handleMatch(jobid,msg->leftover_claim_id(), "", *(msg->leftover_startd_ad()),
+			slot_name, ScheddNegotiate::_match_source::LEFTOVER);
 
 		delete sn;
 	}
@@ -9239,9 +9725,8 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// now that we have queued up handling of the leftovers,
 		// try and start a job on each of the new slots
 		for (match_rec* slot : slots) {
-			bool is_ocu_holder = false;
-			GetAttributeBool(slot->cluster,slot->proc,"IsOCUHolder", &is_ocu_holder);
-			if (is_ocu_holder) {
+			OCU *ocu = scheduler.getOCU(slot->cluster);
+			if (ocu != nullptr) {
 				// If the "job" is the one which is responsible for holding the OCU 
 				// claim, don't start the job, but set cluster/proc to -1 to indicate
 				// another job could start here.
@@ -9249,7 +9734,20 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				slot->is_ocu = true;
 				slot->ocu_originator = {slot->cluster, slot->proc};
 				slot->cluster = slot->proc = -1;
-				slot->my_match_ad->Assign("OCUClaim", true);
+
+				// ATTR_OCU should already be true on newer startds, but May
+				// not be for older ones.  Force to true just to be sure.
+				slot->my_match_ad->Assign(ATTR_OCU, true);
+
+				// If we already have a match for this OCU, then delete this match
+				if (ocu->mrec) {
+					dprintf(D_ALWAYS, "OCU %d already has a match record (%s), deleting new match record %s\n", ocu->ocu_id, ocu->mrec->description(), slot->description());
+					DelMrec(slot);
+				} else {
+					dprintf(D_FULLDEBUG, "Assigning match %s to OCU %d\n", slot->description(), ocu->ocu_id);
+					ocu->mrec = slot;
+				}
+				ocu->state = 'I'; // mark OCU as Idle
 			} else {
 				scheduler.StartJob(slot);
 			}
@@ -9295,10 +9793,7 @@ Scheduler::rescheduleContactQueue()
 			(TimerHandlercpp)&Scheduler::checkContactQueue,
 			"checkContactQueue", this );
 	}
-	if( checkContactQueue_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer!" );
-	}
+	ASSERT(checkContactQueue_tid >= 0);
 }
 
 void
@@ -9348,10 +9843,7 @@ Scheduler::enqueueReconnectJob( PROC_ID job )
 			(TimerHandlercpp)&Scheduler::checkReconnectQueue,
 			"checkReconnectQueue", this );
 	}
-	if( checkReconnectQueue_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer!" );
-	}
+	ASSERT(checkReconnectQueue_tid >= 0);
 	return true;
 }
 
@@ -9447,7 +9939,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		startd_principal = NULL;
 	}
 
-	WriteUserLog* ULog = this->InitializeUserLog( *job );
+	JobQueueJob* job_ad = GetJobAd(cluster, proc);
+	WriteUserLog* ULog = this->InitializeUserLog(job_ad);
 	if ( ULog ) {
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
@@ -9456,7 +9949,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		event.startd_addr = startd_addr;
 		event.startd_name = startd_name;
 
-		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
+		if( !ULog->writeEventNoFsync(&event, job_ad) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
 		}
 		delete ULog;
@@ -9517,6 +10010,8 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	mrec->setStatus( M_CLAIMED );  // it's claimed now.  we'll set
 								   // this to active as soon as we
 								   // spawn the reconnect shadow.
+
+	GetAttributeInt(mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, &mrec->last_alive);
 
 		/*
 		  We don't want to use the version of add_shadow_rec() that
@@ -9601,6 +10096,8 @@ PostInitJobQueue()
 		//
 	WalkJobQueue(updateSchedDInterval);
 
+	scheduler.configGenericOsUsers();
+
 	extern int dump_job_q_stats(int cat);
 	dump_job_q_stats(D_FULLDEBUG);
 }
@@ -9656,8 +10153,11 @@ Scheduler::StartJobs( int /* timerID */ )
 	this->calculateCronTabSchedules();
 		
 	dprintf(D_FULLDEBUG, "-------- Begin starting jobs --------\n");
-	matches->startIterations();
-	while(matches->iterate(rec) == 1) {
+	// StartJob() may erase the matches entry, so be careful here...
+	auto it = matches.begin();
+	while (it != matches.end()) {
+		rec = it->second;
+		it++;
 			// If it's not in M_CLAIMED status, then it's not ready
 			// to start a job.
 		if ( rec->status == M_CLAIMED ) {
@@ -9678,11 +10178,24 @@ Scheduler::StartJob(match_rec *rec)
 
 	ASSERT( rec );
 
+	id.cluster = rec->cluster;
+	id.proc = rec->proc;
+	JobQueueJob * job = GetJobAd(id);
+
+	// Don't try to start a "job" if we are claiming an OCU holder claim
+	if (job == nullptr) {
+		if (getOCU(id.cluster) != nullptr) {
+			return;
+		} 
+	}
+
+	/*
 	bool is_ocu_holder = false;
-	GetAttributeBool(rec->cluster,rec->proc,"IsOCUHolder", &is_ocu_holder);
+	GetAttributeBool(rec->cluster,rec->proc, ATTR_OCU_HOLDER, &is_ocu_holder);
 	if (is_ocu_holder) {
 		return;
 	}
+	*/
 
 	switch(rec->status) {
 	case M_UNCLAIMED:
@@ -9705,9 +10218,6 @@ Scheduler::StartJob(match_rec *rec)
 		EXCEPT( "Unknown status in match rec (%d)", rec->status );
 	}
 
-	id.cluster = rec->cluster;
-	id.proc = rec->proc;
-	JobQueueJob * job = GetJobAd(id);
 	const char * reason = nullptr;
 	runnable_reason_code runnable_code = runnable_reason_code::NotFound;
 	if ( ! Runnable(job, runnable_code) || ! jobCanUseMatch(job, rec->my_match_ad, rec->pool, reason)) {
@@ -9717,9 +10227,11 @@ Scheduler::StartJob(match_rec *rec)
 			dprintf(D_MATCH, "match (%s) was activated, but job %d.%d %s. searching for new job\n", 
 				rec->description(), id.cluster, id.proc, reason);
 		}
+
 			// find the job with the highest priority
-		id.proc = -1;
+			// if no job found, rec might be deleted (or may not be because of keep claim idle)
 		if( !FindRunnableJobForClaim(rec) ) {
+			// rec was probably deleted, don't try and use it again...
 			return;
 		}
 		id.cluster = rec->cluster;
@@ -9794,31 +10306,27 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 	new_job_id.proc = -1;
 
 	if( mrec->my_match_ad && !ExitWhenDone ) {
-		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
-	}
-	auto job_ad = GetJobAd(new_job_id);
-	if (job_ad && !JobCanFlock(*job_ad, mrec->pool)) {
-		return false;
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user,mrec->pool, mrec->is_ocu, /*is_new_match=*/false);
 	}
 
-	if ((new_job_id.proc == -1) && (!mrec->is_ocu)){
+	if (new_job_id.proc == -1) {
+		if (mrec->is_ocu) {
+			// If this is an OCU holder, we don't want to run a job, but
+			// we do want to keep the match record around so that we can
+			// hold the claim for the OCU.
+			return false;
+		}
+
 			// no more jobs to run
 		if (mrec->idle_timer_deadline < time(0))  {
-			dprintf(D_ALWAYS,
-				"match (%s) out of jobs; relinquishing\n",
-				mrec->description() );
+			int dpf_level = IsDebugCategory(D_MATCH) ? D_MATCH : D_FULLDEBUG;
+			dprintf(dpf_level, "match (%s) out of jobs; relinquishing\n", mrec->description() );
 			DelMrec(mrec);
 			return false;
 		} else {
-			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
+			dprintf(D_FULLDEBUG, "Job %d.%d requested to keep this claim idle for next job for %d seconds\n",
+				mrec->cluster, mrec->proc, mrec->keep_while_idle);
 		}
-		return false;
-	}
-
-	if (new_job_id.proc == -1 && mrec->is_ocu) {
-		// If this is an OCU holder, we don't want to run a job, but
-		// we do want to keep the match record around so that we can
-		// hold the claim for the OCU.
 		return false;
 	}
 
@@ -9967,6 +10475,33 @@ bool
 Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 
 	PROC_ID id = job->jid;
+
+	// check to see if max jobs running per user would be exceeded
+	// we treat the limit as applying independently for both scheduler and local
+	// so that a user with a limit of 1 can run a DAG and a single job.
+	// we do this early so we can skip publishing the schedd ad.
+	int max_running_per = MaxRunningPer(job->ownerinfo);
+	if (job->Universe() == CONDOR_UNIVERSE_SCHEDULER) {
+		if (job->ownerinfo->live.SchedulerJobsRunning >= max_running_per) {
+			return false;
+		}
+	} else {
+		if (CurRunningPer(job->ownerinfo) >= max_running_per) {
+			return false;
+		}
+	}
+	if (job->project) {
+		int max_running_per = MaxRunningPer(job->project);
+		if (job->Universe() == CONDOR_UNIVERSE_SCHEDULER) {
+			if (job->project->live.SchedulerJobsRunning >= max_running_per) {
+				return false;
+			}
+		} else {
+			if (CurRunningPer(job->project) >= max_running_per) {
+				return false;
+			}
+		}
+	}
 
 	// The jobs will now attempt to have their requirements
 	// evalulated. We first check to see if the requirements are defined.
@@ -10511,6 +11046,15 @@ Scheduler::spawnShadow( shadow_rec* srec )
 
 	OtherPoolStats.Tick(now);
 
+	if ( ! wants_reconnect) {
+		// If not a reconnect, counts as a job launch in the User and Project records
+		JobQueueJob * job = GetJobAd(*job_id);
+		if (job) {
+			job->ownerinfo->daily_stats.launched += 1;
+			if (job->project) { job->project->daily_stats.launched += 1; }
+		}
+	}
+
 		// If this is a reconnect shadow, update the mrec with some
 		// important info.  This usually happens in StartJobs(), but
 		// in the case of reconnect, we don't go through that code. 
@@ -10531,8 +11075,9 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		  that we already wrote out the job ClassAd to the shadow's
 		  pipe.
 		*/
+		mrec->last_alive = time(nullptr);
 		SetAttributeInt( job_id->cluster, job_id->proc, 
-						 ATTR_LAST_JOB_LEASE_RENEWAL, time(0) );
+						 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 	}
 
 		// if this is a shadow for an MPI job, we need to tell the
@@ -10854,9 +11399,7 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 void
 Scheduler::addRunnableJob( shadow_rec* srec )
 {
-	if( ! srec ) {
-		EXCEPT( "Scheduler::addRunnableJob called with NULL srec!" );
-	}
+	ASSERT(srec);
 
 	dprintf( D_FULLDEBUG, "Queueing job %d.%d in runnable job queue\n",
 			 srec->job_id.cluster, srec->job_id.proc );
@@ -10878,31 +11421,15 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 void
 Scheduler::spawnLocalStarter( shadow_rec* srec )
 {
-	static bool notify_admin = true;
 	PROC_ID* job_id = &srec->job_id;
-	char* starter_path;
+	std::string starter_path;
 	ArgList starter_args;
 	bool rval;
 
 	dprintf( D_FULLDEBUG, "Starting local universe job %d.%d\n",
 			 job_id->cluster, job_id->proc );
 
-		// Someday, we'll probably want to use the shadow_list, a
-		// shadow object, etc, etc.  For now, we're just going to keep
-		// things a little more simple in the first pass.
-	starter_path = param( "STARTER_LOCAL" );
-	if( ! starter_path ) {
-		dprintf( D_ALWAYS, "Can't start local universe job %d.%d: "
-				 "STARTER_LOCAL not defined!\n", job_id->cluster,
-				 job_id->proc );
-		holdJob( job_id->cluster, job_id->proc,
-				 "No condor_starter installed that supports local universe",
-				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
-				 false, notify_admin, true );
-		delete_shadow_rec( srec );
-		notify_admin = false;
-		return;
-	}
+	param(starter_path, "STARTER_LOCAL");
 
 	starter_args.AppendArg("condor_starter");
 	starter_args.AppendArg("-f");
@@ -10927,7 +11454,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		std::string argstring;
 		starter_args.GetArgsStringForDisplay(argstring);
 		dprintf( D_FULLDEBUG, "About to spawn %s %s\n", 
-				 starter_path, argstring.c_str() );
+				 starter_path.c_str(), argstring.c_str() );
 	}
 
 	mark_serial_job_running( job_id );
@@ -10948,11 +11475,8 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	Env starter_env;
 	starter_env.SetEnv("_condor_EXECUTE",LocalUnivExecuteDir);
 	
-	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
+	rval = spawnJobHandlerRaw( srec, starter_path.c_str(), starter_args,
 							   &starter_env, "starter", true );
-
-	free( starter_path );
-	starter_path = NULL;
 
 	if( ! rval ) {
 		dprintf( D_ERROR, "Can't spawn local starter for "
@@ -11441,7 +11965,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
 	mark_serial_job_running(job_id);
-	WriteExecuteToUserLog( *job_id );
+	WriteExecuteToUserLog(userJob);
 
 		/* this is somewhat evil.  these values are absolutely
 		   essential to have accurate when we're trying to shutdown
@@ -11880,8 +12404,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claim_id.claimId() );
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
+		mrec->last_alive = time(nullptr);
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
-						 time(0) );
+		                 mrec->last_alive );
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
@@ -12311,6 +12836,48 @@ mark_job_running(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc,
 						ATTR_NUM_JOB_STARTS, num);
 	}
+
+	match_rec *mrec = scheduler.FindMrecByJobID(*job_id);
+
+	// Update some ocu-centric statistics if using an ocu resource
+	if (mrec && mrec->is_ocu) {
+		int ocu_cluster = mrec->ocu_originator.cluster;
+		bool ocu_wanted = false;
+		bool ocu_willing = false;
+		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWanted",&ocu_wanted);
+		GetAttributeBool(job_id->cluster, job_id->proc, "OCUWilling", &ocu_willing);
+
+		std::string ocu_attr_name;
+		if (ocu_wanted) {
+			ocu_attr_name = ATTR_OCU_OWNER_ACTIVATIONS;
+		} else if (ocu_willing) {
+			ocu_attr_name = ATTR_OCU_BORROWER_ACTIVATIONS;
+		}
+		
+		if (!ocu_attr_name.empty()) {
+			int ocu_num_uses = 0;
+			OCU *ocu = scheduler.getOCU(ocu_cluster);
+			if (ocu) {
+				ocu->ad.LookupInteger(ocu_attr_name, ocu_num_uses);
+				ocu_num_uses++;
+				ocu->ad.Assign(ocu_attr_name, ocu_num_uses);
+				ocu->ad.Assign(ATTR_OCU_ACTIVATION_START_TIME, time(nullptr));
+			}
+		}
+
+		// if the ocu was claimed/idle, increment the total claimed time
+		// otherwise, the total running 
+		if (mrec->status == M_CLAIMED) {
+			time_t ocu_claimed_time = 0;
+			OCU *ocu = scheduler.getOCU(ocu_cluster);
+			if (ocu) {
+				ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+				ocu_claimed_time += time(0) - mrec->entered_current_status;
+				ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			}
+		}
+	}
+
 	MarkJobClean(*job_id);
 }
 
@@ -12366,6 +12933,9 @@ _mark_job_stopped(PROC_ID* job_id)
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING || status == TRANSFERRING_OUTPUT || status == SUSPENDED) {
 
+
+		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
+				 job_id->proc );
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_ENTERED_CURRENT_STATUS, time(0) );
@@ -12378,8 +12948,6 @@ _mark_job_stopped(PROC_ID* job_id)
 		}
 		DeleteAttribute( job_id->cluster, job_id->proc, ATTR_REMOTE_POOL );
 
-		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
-				 job_id->proc );
 	}	
 }
 
@@ -12838,6 +13406,44 @@ Scheduler::child_exit(int pid, int status)
 	ASSERT(srec);
 
 	if( srec->match ) {
+		// Update OCU stats, if any
+		if (srec->match->is_ocu) {
+			int ocu_cluster = srec->match->ocu_originator.cluster;
+			int ocu_proc = srec->match->ocu_originator.proc;
+			bool ocu_wanted = false;
+			bool ocu_willing = false;
+			GetAttributeBool(srec->job_id.cluster, srec->job_id.proc, "OCUWanted",&ocu_wanted);
+			GetAttributeBool(srec->job_id.cluster, srec->job_id.proc, "OCUWilling", &ocu_willing);
+
+			std::string ocu_attr_name;
+			if (ocu_wanted) {
+				ocu_attr_name = "OCUOwnerActivationTime";
+			} else if (ocu_willing) {
+				ocu_attr_name = "OCUBorrowerActivationTime";
+			}
+			time_t ocu_start_time = 0;
+			time_t now = time(nullptr);
+			OCU *ocu = scheduler.getOCU(ocu_cluster);
+			if (ocu) {
+				ocu->ad.LookupInteger(ATTR_OCU_ACTIVATION_START_TIME, ocu_start_time);
+			}
+
+			// Update various OCU claim time statistics
+			if ((now > ocu_start_time) && (ocu_start_time > 0)) {
+				time_t ocu_time = now - ocu_start_time;
+				time_t ocu_total_time = 0;
+				GetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), &ocu_total_time);
+				ocu_total_time += ocu_time;
+				SetAttributeInt(ocu_cluster, ocu_proc, ocu_attr_name.c_str(), ocu_total_time);
+				time_t ocu_claimed_time = 0;
+				if (ocu) {
+					ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+					ocu_claimed_time += now - srec->match->entered_current_status;
+					ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+					ocu->state = 'I';
+				}
+			}
+		}
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 			DelMrec( srec->match );
 			srec->match = NULL;
@@ -12846,7 +13452,7 @@ Scheduler::child_exit(int pid, int status)
 			if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 				srec->match->setStatus(M_CLAIMED);
 				srec->match->shadowRec = NULL;
-				srec->match->cluster = srec->match->proc = -1;
+				SetMrecJobID(srec->match, -1, -1);
 				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 				srec->match = NULL;
 			}
@@ -13000,6 +13606,114 @@ Scheduler::child_exit(int pid, int status)
 	}
 }
 
+// Apply a single Eviction transform to a job and return a shadow code that indicates
+// whether the transform was successful in curing the problem that caused the eviction
+// if the input shadow_code is JOB_SHOULD_HOLD and the transform was successful, the
+// the return will be JOB_SHOULD_REQUEUE. otherwise the input shadow_code will be the return value
+//
+int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_body, int shadow_code)
+{
+	JOB_ID_KEY_BUF job_id(job->jid);
+	XFormHash mset;
+	mset.init();
+
+	MacroStreamXFormSource xfm(name);
+	std::string errmsg;
+	int rval = xfm.set_simple_transform(xform_body); // returns -1 for bad requirements and -2 for empty transform
+	if (rval < 0) {
+		if (rval == -1) {
+			dprintf(D_ERROR, "TransformOnEvict %s invalid requirements in %s\n", job_id.c_str(), name);
+		}
+		return shadow_code;
+	}
+	errmsg.clear();
+	if ( ! xfm.matches(job)) {
+		dprintf(D_STATUS, "TransformOnEvict %s does not match %s requirements\n", job_id.c_str(), name);
+		return shadow_code;
+	} else {
+		if (xfm.getRequirements()) {
+			dprintf(D_STATUS, "TransformOnEvict %s MATCHES %s requirements\n", job_id.c_str(), name);
+		}
+	}
+
+	XFormAdUndo undo;
+	int flags = XFORM_UTILS_LOG_ERRORS | XFORM_UTILS_LOG_TO_DPRINTF;
+	if (IsFulldebug(D_ALWAYS)) { flags |= XFORM_UTILS_LOG_STEPS; }
+	rval = TransformClassAd(job, xfm, mset, errmsg, flags, &undo);
+	if (rval < 0) {
+		// Transformation failed; errmsg should say why.
+		dprintf(D_ERROR, "TransformOnEvict %s error %d applying transform %s : %s\n",
+			job_id.c_str(), rval, xfm.getName(), errmsg.c_str());
+		undo.Revert(*job);
+		return shadow_code;
+	}
+
+	bool already_in_transaction = InTransaction();
+	if( !already_in_transaction ) {
+		BeginTransaction();
+	}
+
+	bool autocluster_changing = false;
+
+	// examine the transform undo.  the keys in the undo act as dirty keys
+	// we want to convert the current value for each key to a SetAttribute call
+	for (auto &[key,oldval] : undo.list) {
+		ExprTree * tree = job->Lookup(key);
+		if (tree && oldval && *SkipExprEnvelope(tree) == *SkipExprEnvelope(oldval)) continue;
+		const char * attr = key.c_str();
+		const char *rhstr = nullptr;
+
+		if (tree) {
+			rhstr = ExprTreeToString(tree);
+		} else {
+			// If an attribute is marked as dirty but Lookup() on this
+			// attribute fails, it means that attribute was deleted.
+			// We handle this by inserting into the transaction log a
+			// SetAttribute to UNDEFINED, which will work properly even if we
+			// are dealing with a chained job ad that has the attribute set differently
+			// in the cluster ad.
+			rhstr = "UNDEFINED";
+		}
+		if ( ! rhstr) {
+			dprintf(D_ALWAYS,"TransformOnEvict %s: Problem with transformed classad attribute %s aborting transform\n",
+				job_id.c_str(), attr);
+			return shadow_code;
+		}
+
+		if (SetAttribute(job_id.cluster, job_id.proc, attr, rhstr, SetAttribute_UserTransform) == -1) {
+			dprintf(D_ERROR,"(%s) job_transforms: Failed to set %s = %s\n", job_id.c_str(), attr, rhstr);
+			return -2;
+		}
+
+		if (shadow_code == JOB_SHOULD_HOLD) {
+			// The SetAttribute above will have set the autocluster_id to -1 if an attribute
+			// in the autocluster was changed, (the autocluster might have been dirty already).
+			// We further check to see if it appears to be a resource request attr, this should insure that if we
+			// go back to idle it will be with a new resource request
+			// TODO: better way of recognizing that it is safe to skip the hold?
+			if (starts_with_ignore_case(key, ATTR_REQUEST_PREFIX) && job->autocluster_id < 0) {
+				autocluster_changing = true;
+			}
+		}
+	}
+
+	// revert the direct changes to the job classad
+	// since they are now part of the transaction
+	// they will happen when the transaction is applied
+	undo.Revert(*job);
+
+	if ( ! already_in_transaction) {
+		CommitTransactionOrDieTrying();
+	}
+	// if the job was going to go on hold, but we had a successful transform
+	// and the autocluster might be changing, let the job requeue instead.
+	if (shadow_code == JOB_SHOULD_HOLD && autocluster_changing) {
+		shadow_code = JOB_SHOULD_REQUEUE;
+	}
+
+	return shadow_code;
+}
+
 /**
  * Based on the exit status code for a job, we will preform
  * an appropriate action on the job in the queue. If an exception
@@ -13024,7 +13738,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// If we are unable to get the srec, then we need to be careful
 		// down in the logic below
 	shadow_rec *srec = this->FindSrecByProcID( job_id );
-	
+	JobQueueJob * job_ad = GetJobAd( job_id );
+
 		// Get job status.  Note we only except if there is no job status AND the job
 		// is still in the queue, since we do not want to except if the job ad is gone
 		// perhaps due to condor_rm -f.
@@ -13032,7 +13747,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	if (GetAttributeInt(job_id.cluster,job_id.proc,
 						ATTR_JOB_STATUS,&q_status) < 0)	
 	{
-		if ( GetJobAd(job_id.cluster,job_id.proc) ) {
+		if ( job_ad ) {
 			// job exists, but has no status.  impossible!
 			EXCEPT( "ERROR no job status for %d.%d in Scheduler::jobExitCode()!",
 				job_id.cluster, job_id.proc );
@@ -13051,10 +13766,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 
 	ScheddOtherStats * other_stats = NULL;
 	if (OtherPoolStats.AnyEnabled()) {
-		ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		if (job_ad) {
 			other_stats = OtherPoolStats.Matches(*job_ad, updateTime);
-			FreeJobAd(job_ad);
 		}
 		OtherPoolStats.Tick(updateTime);
 	}
@@ -13092,6 +13805,22 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		//
 	bool reportException = false;
 
+	// if job is *going* to go on hold, we first check to see if there is an
+	// eviction transform that might prevent the need to hold it.
+	// TODO: rework the hold/cooldown code below so that we can make the flow
+	// clearer and less hacky.
+	bool check_eviction_transforms = false;
+	bool successful_eviction_transform = false;
+	if (exit_code == JOB_SHOULD_HOLD) {
+		check_eviction_transforms = true;
+	} else if (exit_code == JOB_SHOULD_REQUEUE) {
+		int code = 0;
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
+		if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+			check_eviction_transforms = true;
+		}
+	}
+
 		//
 		// Based on the job's exit code, we will perform different actions
 		// on the job
@@ -13114,11 +13843,36 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			scheduler.stats.JobsRestartReconnectsBadput += job_running_time;
 			srec->reconnect_done = true;
 		}
+	} else if (check_eviction_transforms) {
+		std::string xform_names;
+		if (job_ad->EvaluateAttrString(ATTR_TRANSFORM_ON_EVICT, xform_names)) {
+			for (auto const & tag : StringTokenIterator(xform_names)) {
+				std::string xform_body;
+				if (job_ad->LookupString(ATTR_TRANSFORM_BODY_PREFIX + tag, xform_body)) {
+					dprintf(D_FULLDEBUG, "checking TransformOnEvict=%s for job %d.%d\n",
+						tag.c_str(), job_id.cluster, job_id.proc);
+
+					//std::string adbuf;
+					//dprintf(D_ZKM, "jobad : %s\n", formatAd(adbuf,*job_ad,"\t"));
+
+					int code = TransformOnEvict(job_ad, tag.c_str(), xform_body.c_str(), JOB_SHOULD_HOLD);
+					successful_eviction_transform = (code == JOB_SHOULD_REQUEUE);
+					if (successful_eviction_transform) {
+						dprintf(D_ALWAYS, "TransformOnEvict=%s applied to job %d.%d, skipping other transforms\n",
+							tag.c_str(), job_id.cluster, job_id.proc);
+						break;
+					}
+				}
+			}
+		}
 	}
+	if (successful_eviction_transform) {
+		exit_code = JOB_SHOULD_REQUEUE;
+		dprintf(D_ALWAYS, "not holding job %d.%d because of successful eviction transform\n", job_id.cluster, job_id.proc);
+	} else
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
 		long long ival = 0;
 		classad::Value val;
-		JobQueueJob * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
@@ -13143,6 +13897,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 					SetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, subcode);
 				}
 				exit_code = JOB_SHOULD_HOLD;
+				Email mailer;
+				mailer.sendHold(job_ad, reason.c_str());
 			}
 		}
 	}
@@ -13160,6 +13916,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				//
 			stats.JobsExecFailed += 1;
 			OTHER.JobsExecFailed += 1;
+			job_ad->ownerinfo->daily_stats.not_started += 1;
+			if (job_ad->project) { job_ad->project->daily_stats.not_started += 1; }
 			break;
 
 		case JOB_CKPTED:
@@ -13187,10 +13945,14 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
                   stats.JobsShouldRequeue += 1;
                   OTHER.JobsShouldRequeue += 1;
                   is_goodput = true;
+                  job_ad->ownerinfo->daily_stats.requeued += 1;
+                  if (job_ad->project) { job_ad->project->daily_stats.requeued += 1; }
                   break;
                case JOB_NOT_STARTED:
                   stats.JobsNotStarted += 1;
                   OTHER.JobsNotStarted += 1;
+                  job_ad->ownerinfo->daily_stats.not_started += 1;
+                  if (job_ad->project) { job_ad->project->daily_stats.not_started += 1; }
                   break;
                }
 			break;
@@ -13308,15 +14070,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// runtime for it. This prevents a job from going
 				// on hold, then released only to fail again
 				// because a new runtime wasn't calculated for it
-			CronTab *cronTab = NULL;
-			if ( this->cronTabs->lookup( job_id, cronTab ) >= 0 ) {
-					// Delete the cached object				
-				if ( cronTab ) {
-					delete cronTab;
-					this->cronTabs->remove(job_id);
-					this->cronTabs->insert(job_id, nullptr);
-				}
-			} // CronTab
+			auto cron_it = cronTabs.find(job_id);
+			if (cron_it != cronTabs.end()) {
+				delete cron_it->second;
+				cron_it->second = nullptr;
+			}
 
 			if (JOB_MISSED_DEFERRAL_TIME == exit_code) {
 				stats.JobsMissedDeferralTime += 1;
@@ -13324,6 +14082,8 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			} else {
 				stats.JobsShouldHold += 1;
 				OTHER.JobsShouldHold += 1;
+				job_ad->ownerinfo->daily_stats.held += 1;
+				if (job_ad->project) { job_ad->project->daily_stats.held += 1; }
 			}
 			break;
 		}
@@ -13451,6 +14211,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		num_excepts++;
 		SetAttributeInt(job_id.cluster, job_id.proc,
 						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts, NONDURABLE);
+		int dummy;
+		if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &dummy) < 0) {
+			SetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, "Shadow Exception");
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, 0);
+		}
 		if (!srec->removed && srec->match) {
 				// Record that we had an exception.  This function will
 				// relinquish the match if we get too many exceptions 
@@ -13512,11 +14278,18 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				 job_id.cluster, job_id.proc, pid, status);
 	}
 
+	JobQueueJob * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+	if ( ! job_ad ) {
+		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
+			job_id.cluster, job_id.proc );
+		return;
+	}
+
 	if(srec->preempted) {
 		// job exited b/c we removed or held it.  the
 		// job's queue status will already be correct, so
 		// we don't have to change anything else...
-		WriteEvictToUserLog( job_id );
+		WriteEvictToUserLog(job_ad);
 		return;
 	}
 
@@ -13543,12 +14316,6 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	std::string reason;
 	int reason_code;
 	int reason_subcode;
-	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
-	if ( ! job_ad ) {
-		dprintf( D_ALWAYS, "Scheduler universe job %d.%d has no job ad!\n",
-			job_id.cluster, job_id.proc );
-		return;
-	}
 	{
 		UserPolicy policy;
 		policy.Init();
@@ -13561,12 +14328,12 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
-			scheduler_univ_job_leave_queue(job_id, status, job_ad);
+			scheduler_univ_job_leave_queue(job_ad, status);
 			break;
 
 		case STAYS_IN_QUEUE:
 			set_job_status( job_id.cluster,	job_id.proc, IDLE ); 
-			WriteRequeueToUserLog(job_id, status, reason.c_str());
+			WriteRequeueToUserLog(job_ad, status, reason.c_str());
 			break;
 
 		case HOLD_IN_QUEUE:
@@ -13574,7 +14341,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				// delete_shadow_rec will do that later
 			holdJob(job_id.cluster, job_id.proc, reason.c_str(),
 					reason_code, reason_subcode,
-					true,false,false,false,false);
+					true,false,false,false);
 			break;
 
 		case RELEASE_FROM_HOLD:
@@ -13582,7 +14349,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"(%d.%d) Job exited.  User policy attempted to release "
 				"job, but it wasn't on hold.  Allowing job to exit queue.\n", 
 				job_id.cluster, job_id.proc);
-			scheduler_univ_job_leave_queue(job_id, status, job_ad);
+			scheduler_univ_job_leave_queue(job_ad, status);
 			break;
 
 		case UNDEFINED_EVAL:
@@ -13592,7 +14359,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				 job_id.cluster, job_id.proc, reason.c_str());
 			holdJob(job_id.cluster, job_id.proc, reason.c_str(),
 					reason_code, reason_subcode,
-				true,false,false,true);
+				true,false,true);
 			break;
 
 		default:
@@ -13606,7 +14373,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.c_str(),
 					CONDOR_HOLD_CODE::JobPolicyUndefined, 0,
-				true,false,false,true);
+				true,false,true);
 			break;
 	}
 
@@ -13616,12 +14383,12 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 
 void
-Scheduler::scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad)
+Scheduler::scheduler_univ_job_leave_queue(JobQueueJob *job, int status)
 {
-	set_job_status( job_id.cluster,	job_id.proc, COMPLETED ); 
-	WriteTerminateToUserLog( job_id, status );
+	set_job_status( job->jid.cluster, job->jid.proc, COMPLETED );
+	WriteTerminateToUserLog(job, status);
 	Email email;
-	email.sendExit(ad, JOB_EXITED);
+	email.sendExit(job, JOB_EXITED);
 }
 
 void
@@ -13659,6 +14426,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	// set cur-hosts to zero
 	SetAttributeInt( job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0, NONDURABLE ); 
 
+	JobQueueJob* job = GetJobAd(*job_id);
 	switch( status ) {
 	case RUNNING:
 	case SUSPENDED:
@@ -13686,14 +14454,14 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		break;
 	}
 	case HELD:
-		if( !scheduler.WriteHoldToUserLog(*job_id)) {
+		if( !job || !scheduler.WriteHoldToUserLog(job)) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write hold event to the user log for job %d.%d\n",
 					 job_id->cluster, job_id->proc );
 		}
 		break;
 	case REMOVED:
-		if( !scheduler.WriteAbortToUserLog(*job_id)) {
+		if( !job || !scheduler.WriteAbortToUserLog(job)) {
 			dprintf( D_ALWAYS, 
 					 "Failed to write abort event to the user log for job %d.%d\n",
 					 job_id->cluster, job_id->proc ); 
@@ -13714,8 +14482,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		// next execution time calculated for it
 		// 11.01.2005 - Andy - pavlo@cs.wisc.edu 
 		//
-	CronTab *cronTab = NULL;
-	if ( this->cronTabs->lookup( *job_id, cronTab ) >= 0 ) {
+	if ( cronTabs.find(*job_id) != cronTabs.end()) {
 			//
 			// Set the force flag to true so it will always 
 			// calculate the next execution time
@@ -13748,6 +14515,41 @@ size_t pidHash(const int &pid)
 	return pid;
 }
 
+// look for a local CREDD and and include it's address in our address file
+//
+bool locate_and_advertise_local_credd(bool force) {
+
+	Daemon local_credd(DT_CREDD);
+	local_credd.locate_local();
+	if ( ! force) {
+		// look to see if the credd address has changed
+		// if it has not then we are done
+		std::string credd_addr;
+		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
+		if ( ! local_credd.addr()) {
+			if (credd_addr.empty())
+				return false;
+		} else {
+			if (credd_addr == local_credd.addr())
+				return false;
+		}
+	}
+
+	// update the extra contact info, and tell daemon core to write a new address file.
+	if (local_credd.addr()) {
+		daemonCore->ContactInfoExtra().Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		if (scheduler.getScheddAd()) {
+			scheduler.getScheddAd()->Assign(ATTR_CREDD_IP_ADDR, local_credd.addr());
+		}
+	} else {
+		// TODO: do we want to clear?
+		// daemonCore->ContactInfoExtra().Delete(ATTR_CREDD_IP_ADDR);
+	}
+	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
+	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	DC_Enable_And_Drop_Addr_File();
+	return true;
+}
 
 // initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
@@ -13763,7 +14565,7 @@ Scheduler::Init()
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
 
-    stats.Reconfig();
+	stats.Reconfig();
 
 	if (first_time_in_init) {
 		if (param_boolean("USE_JOBSETS", false)) {
@@ -13771,6 +14573,17 @@ Scheduler::Init()
 			jobSets = new JobSets();
 			ASSERT(jobSets);
 		}
+
+		stats.PrevCountJobsTime = time(NULL);
+		stats.TickMidnight = param_integer("DAILY_STATS_TICK_MIDNIGHT", 0);
+#ifdef WIN32
+		long tz_offset = 6 * 3600; // default to CST
+		_get_timezone(&tz_offset);
+		stats.TickBias = tz_offset;
+#else
+		tzset();
+		stats.TickBias = timezone;
+#endif
 
 		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
 		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
@@ -13841,6 +14654,8 @@ Scheduler::Init()
 			}
 		}
 	}
+	// now that we know our daemon name, refresh our address file
+	locate_and_advertise_local_credd(true);
 
 	m_include_default_flock_param = param_boolean("FLOCK_BY_DEFAULT", true);
 
@@ -14070,6 +14885,9 @@ Scheduler::Init()
 	tmp = param("SYSTEM_ON_VACATE_COOL_DOWN");
 	if (tmp) {
 		ParseClassAdRvalExpr(tmp, m_jobCoolDownExpr);
+		if( m_jobCoolDownExpr == nullptr ) {
+		    dprintf( D_ALWAYS, "Failed to parse SYSTEM_ON_VACATE_COOL_DOWN expression, ignoring it.\n" );
+		}
 		free(tmp);
 	}
 
@@ -14097,21 +14915,21 @@ Scheduler::Init()
 		launch_local_startd();
 	}
 
-	if (matches == NULL) {
-		matches = new HashTable <std::string, match_rec *> (hashFunction);
-		matchesByJobID =
-			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID);
-	}
-
 	char *flock_collector_hosts, *flock_negotiator_hosts;
 	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
 	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
 
 	if( flock_collector_hosts ) {
 		FlockCollectors.clear();
-		for (const auto& name : StringTokenIterator(flock_collector_hosts)) {
+
+		// Reserve the total number of flock collectors to prevent
+		// Copy constructor being called on DCCollector Objects for now
+		auto collector_names = split(flock_collector_hosts);
+		FlockCollectors.reserve(collector_names.size());
+		for (const auto& name : collector_names) {
 			FlockCollectors.emplace_back(name.c_str());
 		}
+
 		MaxFlockLevel = FlockCollectors.size();
 		MinFlockLevel = param_integer("MIN_FLOCK_LEVEL", 0, 0, MaxFlockLevel);
 
@@ -14223,39 +15041,22 @@ Scheduler::Init()
 		//
 		// CronTab Table
 		// We keep a list of proc_id's for jobs that define a cron
-		// schedule for exection. We first get the pointer to the 
-		// original table, and then instantiate a new one
-		//
-	HashTable<PROC_ID, CronTab*> *origCronTabs = this->cronTabs;
-	this->cronTabs = new HashTable<PROC_ID, CronTab*>(
-												hashFuncPROC_ID );
-		//
-		// Now if there was a table from before, we will want
-		// to copy all the proc_id's into our new table. We don't
+		// schedule for exection. On a reconfig, we don't
 		// keep the CronTab objects because they'll get reinstantiated
-		// later on when the Schedd tries to calculate the next runtime
-		// We have a little safety check to make sure that the the job 
-		// actually exists before adding it back in
+		// later on when the Schedd tries to calculate the next runtime.
+		// If a job doesn't exist, remove its entry.
 		//
-		// Note: There could be a problem if MaxJobsRunning is substaintially
-		// less than what it was from before on a reconfig, and in which case
-		// the new cronTabs hashtable might not be big enough to store all
-		// the old jobs. This unlikely for now because I doubt anybody will
-		// be submitting that many CronTab jobs, but it is still possible.
-		// See the comments about about automatically resizing HashTable's
-		//
-	if ( origCronTabs != NULL ) {
-		CronTab *cronTab;
-		PROC_ID id;
-		origCronTabs->startIterations();
-		while ( origCronTabs->iterate( id, cronTab ) == 1 ) {
-			if ( cronTab ) delete cronTab;
-			ClassAd *cronTabAd = GetJobAd( id.cluster, id.proc );
-			if ( cronTabAd ) {
-				this->cronTabs->insert( id, NULL );
-			}
-		} // WHILE
-		delete origCronTabs;
+	auto cron_it = cronTabs.begin();
+	while (cron_it != cronTabs.end()) {
+		auto prev_it = cron_it++;
+		delete prev_it->second;
+		if (GetJobAd(prev_it->first) != nullptr) {
+			// Job still exists: keep entry, but clear value
+			prev_it->second = nullptr;
+		} else {
+			// Job no longer exists: remove entry
+			cronTabs.erase(prev_it);
+		}
 	}
 
 	MaxExceptions = param_integer("MAX_SHADOW_EXCEPTIONS", 2);
@@ -14324,6 +15125,7 @@ Scheduler::Init()
 	}
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
+	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.
@@ -14378,9 +15180,8 @@ Scheduler::Init()
 		shadowCommandrsock = new ReliSock;
 		shadowCommandssock = new SafeSock;
 
-		if ( !shadowCommandrsock || !shadowCommandssock ) {
-			EXCEPT("Failed to create Shadow Command socket");
-		}
+		ASSERT(shadowCommandrsock);
+		ASSERT(shadowCommandssock);
 		// Note: BindAnyLocalCommandPort() is in daemon core
 		if ( !BindAnyLocalCommandPort(shadowCommandrsock,shadowCommandssock)) {
 			EXCEPT("Failed to bind Shadow Command socket");
@@ -14463,9 +15264,6 @@ Scheduler::Init()
 
 	int max_history_concurrency = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 50);
 	HistoryQue.setup(1000, max_history_concurrency);
-
-    m_userlog_file_cache_max = param_integer("USERLOG_FILE_CACHE_MAX", 0, 0);
-    m_userlog_file_cache_clear_interval = param_integer("USERLOG_FILE_CACHE_CLEAR_INTERVAL", 60, 0);
 
 	if (slotWeightOfJob) {
 		delete slotWeightOfJob;
@@ -14571,6 +15369,8 @@ Scheduler::Init()
 
 	// Read config and initialize job transforms.
 	jobTransforms.initAndReconfig();
+
+	configGenericOsUsers();
 
 	first_time_in_init = false;
 }
@@ -14711,8 +15511,27 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(RESET_USERREC, "RESET_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+
+	// Startup limit management (admin use)
+	daemonCore->Register_CommandWithPayload(CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT",
+		&HandleCreateStartupLimitCommand,
+		"HandleCreateStartupLimitCommand", ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS",
+		&HandleQueryStartupLimitsCommand,
+		"HandleQueryStartupLimitsCommand", READ, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+
+	// commands for creating/deleting/querying OCUs
+	daemonCore->Register_CommandWithPayload(CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC",
+		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC",
+		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC",
+		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
 		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
@@ -14834,7 +15653,7 @@ Scheduler::RegisterTimers()
 	startjobsid = daemonCore->Register_Timer( start_jobs_timeslice,
 		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
-		(TimerHandlercpp)&Scheduler::sendAlives,"sendAlives", this);
+		(TimerHandlercpp)&Scheduler::checkClaimLeases,"checkClaimLeases", this);
     // Preset the job queue clean timer only upon cold start, or if the timer
     // value has been changed.  If the timer period has not changed, leave the
     // timer alone.  This will avoid undesirable behavior whereby timer is
@@ -14887,6 +15706,27 @@ Scheduler::RegisterTimers()
 				 PeriodicExprInterval.getMinInterval(),
 				 param_integer("PERIODIC_EXPR_INTERVAL", 60) );
 		periodicid = -1;
+	}
+}
+
+void Scheduler::configGenericOsUsers()
+{
+	std::string accts;
+	param(accts, "AP_GENERIC_OS_USERS");
+	m_claimedGenericOsUsers.clear();
+	m_openGenericOsUsers.clear();
+	if (!accts.empty()) {
+		m_useGenericOsUsers = true;
+		for (const auto& os_acct: StringTokenIterator(accts)) {
+			m_openGenericOsUsers.insert(os_acct);
+		}
+		for (const auto& [user_name, user_rec]: OwnersInfo) {
+			if (m_openGenericOsUsers.erase(user_rec->OsUser()) != 0) {
+				m_claimedGenericOsUsers.insert(user_rec->OsUser());
+			}
+		}
+	} else {
+		m_useGenericOsUsers = false;
 	}
 }
 
@@ -15254,6 +16094,11 @@ Scheduler::AddMrec(
 	const ClassAd* extraAttrs /* = nullptr*/, // extra attrs sent by negotiator
 	match_rec **pre_existing /* = nullptr*/)  // return claim id colliding match rec
 {
+	bool is_ocu = false;
+	if (jid.proc == OCU_qkey2) {
+		is_ocu = true;
+	}
+
 	match_rec *rec = nullptr;
 
 	if( pre_existing ) {
@@ -15266,7 +16111,9 @@ Scheduler::AddMrec(
 	} 
 	// spit out a warning and return NULL if we already have this mrec
 	match_rec *tempRec;
-	if( matches->lookup( id, tempRec ) == 0 ) {
+	auto it = matches.find(id);
+	if (it != matches.end()) {
+		tempRec = it->second;
 		char const *pubid = tempRec->claim_id.publicClaimId();
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
@@ -15279,12 +16126,16 @@ Scheduler::AddMrec(
 
 
 	rec = new match_rec(id, peer, jid, my_match_ad, user, pool, false);
-	if(!rec)
-	{
-		EXCEPT("Out of memory!");
-	} 
+	ASSERT(rec);
 
-	if( matches->insert( id, rec ) != 0 ) {
+	if (is_ocu) {
+		rec->is_ocu = true;
+		rec->ocu_originator.cluster = jid.cluster;
+		rec->ocu_originator.proc = jid.proc;
+	}
+
+	auto [it2, success] = matches.emplace(id, rec);
+	if (!success) {
 		dprintf( D_ALWAYS, "match \"%s\" insert failed\n", rec->claim_id.publicClaimId());
 		delete rec;
 		return nullptr;
@@ -15294,7 +16145,8 @@ Scheduler::AddMrec(
 	JobQueueJob *job_ad = nullptr;
 	JobQueueCluster * cluster_ad = nullptr;
 	if (JobQueueBase::IsJobId(jid)) {
-		ASSERT( matchesByJobID->insert( jid, rec ) == 0 );
+		auto [it, success] = matchesByJobID.emplace(jid, rec);
+		ASSERT(success);
 		job_ad = GetJobAd(jid);
 		if (job_ad) cluster_ad = job_ad->Cluster();
 	} else if (JobQueueBase::IsClusterId(jid)) {
@@ -15361,20 +16213,19 @@ Scheduler::AddMrec(
 int
 Scheduler::DelMrec(char const* id)
 {
-	match_rec *rec;
-
 	if(!id)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
 
-	if( matches->lookup(id, rec) != 0 ) {
+	auto it = matches.find(id);
+	if( it == matches.end() ) {
 			// Couldn't find it, return failure
 		return -1;
 	}
 
-	return DelMrec( rec );
+	return DelMrec(it->second);
 }
 
 
@@ -15415,16 +16266,24 @@ Scheduler::unlinkMrec(match_rec* match)
 	jobId.cluster = match->cluster;
 	jobId.proc = match->proc;
 
-	// If this match is an ocu holder, make sure to update the
+	// If this match was an ocu holder, make sure to update the
 	// correct job.
 	if (match->is_ocu && jobId.cluster == -1 && jobId.proc == -1) {
 		jobId = match->ocu_originator;
+		OCU *ocu = scheduler.getOCU(jobId.cluster);
+		if (ocu) {
+			time_t ocu_claimed_time = 0;
+			ocu->ad.LookupInteger(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			ocu_claimed_time += time(0) - match->entered_current_status;
+			ocu->ad.Assign(ATTR_OCU_CLAIMED_TIME, ocu_claimed_time);
+			ocu->state = 'U';
+		}
 		dirtyJobQueue();
 	}
 
-	matches->remove(match->claim_id.claimId());
+	matches.erase(match->claim_id.claimId());
 
-	matchesByJobID->remove(jobId);
+	matchesByJobID.erase(jobId);
 
 		// fill any authorization hole we made for this match
 	if (match->auth_hole_id != NULL) {
@@ -15460,26 +16319,31 @@ shadow_rec*
 Scheduler::FindSrecByProcID(PROC_ID proc)
 {
 	auto it = shadowsByProcID.find(proc);
-	if (it == shadowsByProcID.end()) {
+	if (it != shadowsByProcID.end()) {
+		return it->second;
+	} else {
 		return nullptr;
 	}
-	return it->second;
 }
 
 match_rec *
 Scheduler::FindMrecByJobID(PROC_ID job_id) {
-	match_rec *match = NULL;
-	if( matchesByJobID->lookup( job_id, match ) < 0) {
-		return NULL;
+	auto it = matchesByJobID.find(job_id);
+	if (it != matchesByJobID.end()) {
+		return it->second;
+	} else {
+		return nullptr;
 	}
-	return match;
 }
 
 match_rec *
 Scheduler::FindMrecByClaimID(char const *claim_id) {
-	match_rec *rec = NULL;
-	(void) matches->lookup(claim_id, rec);
-	return rec;
+	auto it = matches.find(claim_id);
+	if (it == matches.end()) {
+		return nullptr;
+	} else {
+		return it->second;
+	}
 }
 
 void
@@ -15492,12 +16356,13 @@ Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
 		return; // no change
 	}
 
-	matchesByJobID->remove(old_job_id);
+	matchesByJobID.erase(old_job_id);
 
 	match->cluster = job_id.cluster;
 	match->proc = job_id.proc;
 	if( match->proc != -1 ) {
-		ASSERT( matchesByJobID->insert(job_id, match) == 0 );
+		auto [it, success] = matchesByJobID.emplace(job_id, match);
+		ASSERT(success);
 	}
 }
 
@@ -15528,92 +16393,6 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 			SetMrecJobID(mrec,-1,-1); // but for OCU, anyone can claim
 		}
 	}
-}
-
-int Scheduler::AlreadyMatched(JobQueueJob * job, int universe)
-{
-	bool wantPS = 0;
-	job->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS);
-
-	if ( ! job || ! job->IsJob() ||
-		 (universe == CONDOR_UNIVERSE_MPI) ||
-		 (universe == CONDOR_UNIVERSE_GRID) ||
-		 (universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
-		return FALSE;
-	}
-
-	if( FindMrecByJobID(job->jid) ) {
-			// It is possible for there to be a match rec but no shadow rec,
-			// if the job is waiting in the runnable job queue before the
-			// shadow is launched.
-		return TRUE;
-	}
-	if( FindSrecByProcID(job->jid) ) {
-			// It is possible for there to be a shadow rec but no match rec,
-			// if the match was deleted but the shadow has not yet gone away.
-		return TRUE;
-	}
-	return FALSE;
-
-}
-int Scheduler::AlreadyMatched(PROC_ID* id)
-{
-	int universe = CONDOR_UNIVERSE_MIN;
-	const OwnerInfo * powni = NULL;
-	JobQueueJob * job = GetJobAndInfo(*id, universe, powni);
-
-		// Failing to find the job or get the JOB_UNIVERSE is common 
-		// because the job may have left the queue.
-		// So in this case, just return FALSE, since a job
-		// not in the queue is most certainly not matched :)
-	if ( ! job || ! job->IsJob() || ! universe)
-		return FALSE;
-
-	return AlreadyMatched(job, universe);
-}
-
-/*
- * go through match reords and send alive messages to all the startds.
- */
-
-bool
-sendAlive( match_rec* mrec )
-{
-	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claim_id.claimId() );
-	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claim_id.claimId() );
-
-	msg->setSuccessDebugLevel(D_PROTOCOL);
-	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
-	// since we send these messages periodically, we do not want
-	// any single attempt to hang around forever and potentially pile up
-	msg->setDeadlineTimeout( 300 );
-	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-	msg->setStreamType( st );
-	if (mrec->use_sec_session) {
-		msg->setSecSessionId( mrec->claim_id.secSessionId() );
-	}
-
-	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
-
-	startd->sendMsg( msg.get() );
-
-	if( msg->deliveryStatus() == DCMsg::DELIVERY_FAILED ) {
-			// Status may also be DELIVERY_PENDING, in which case, we
-			// do not know whether it will succeed or not.  Since the
-			// return code from this function is not terribly
-			// important, we just return true in that case.
-		return false;
-	}
-
-		/* TODO: Someday, espcially once the accountant is done, 
-		   the startd should send a keepalive ACK back to the schedd.  
-		   If there is no shadow to this machine, and we have not 
-		   had a startd keepalive ACK in X amount of time, then we 
-		   should relinquish the match.  Since the accountant is 
-		   not done and we are in fire mode, leave this 
-		   for V6.1.  :^) -Todd 9/97
-		*/
-	return true;
 }
 
 int
@@ -15651,20 +16430,22 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 	}
 
 	if ( match ) {
-			// If we're sending keep-alives, stop it, since the startd
-			// wants to send them.
-		match->m_startd_sends_alives = true;
-
 		ret_value = alive_interval;
 			// If this match is active, i.e. we have a shadow, then
 			// update the ATTR_LAST_JOB_LEASE_RENEWAL in RAM.  We will
 			// commit it to disk in a big transaction batch via the timer
-			// handler method sendAlives().  We do this for scalability; we
-			// may have thousands of startds sending us updates...
+			// handler method checkClaimLeases().  We do this for scalability;
+			// we may have thousands of startds sending us updates...
+
+		// If the match is merely CLAIMED (e.g. CLAIMED/IDLE), there is no 
+		// job ad, but we want to mark this in the claim record itself
+		time_t now          = time(nullptr);
+		match->last_alive	= now;
+
 		if ( match->status == M_ACTIVE ) {
 			job_ad = GetJobAd(match->cluster, match->proc);
 			if (job_ad) {
-				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, time(nullptr));
+				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, now);
 			}
 		}
 	} else {
@@ -15693,10 +16474,9 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 {
 		// Check: is this my session?
 	const auto &sess_id = static_cast<ReliSock*>(stream)->getSessionID();
-	classad::ClassAd policy_ad;
-	daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str(), policy_ad);
+	const ClassAd* policy_ad = daemonCore->getSecMan()->getSessionPolicy(sess_id.c_str());
 	bool is_my_session = false;
-	if (!policy_ad.EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
+	if (!policy_ad || !policy_ad->EvaluateAttrBool("ScheddSession", is_my_session) || !is_my_session) {
 		dprintf(D_ALWAYS, "Ignoring a collector token request from an unknown session.\n");
 		return false;
 	}
@@ -15785,6 +16565,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			final_key_name,
 			bounding_set,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
@@ -15821,12 +16602,8 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 }
 
 void
-Scheduler::sendAlives( int /* timerID */ )
+Scheduler::checkClaimLeases( int /* timerID */ )
 {
-	match_rec	*mrec;
-	int		  	numsent=0;
-	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
-
 		/*
 		  we need to timestamp any job ad with the last time we sent a
 		  keepalive if the claim is active (i.e. there's a shadow for
@@ -15853,62 +16630,43 @@ Scheduler::sendAlives( int /* timerID */ )
 
 	time_t now = time(nullptr);
 	BeginTransaction();
-	matches->startIterations();
-	while (matches->iterate(mrec) == 1) {
-		if( mrec->status == M_ACTIVE ) {
-			time_t renew_time = 0;
-			if ( starter_handles_alives && 
-				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+	for (const auto& [id, mrec]: matches) {
+		if( mrec->status == M_ACTIVE && mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
+			if ( mrec->shadowRec && mrec->shadowRec->pid > 0 )
 			{
-				// If we're trusting the existance of the shadow to 
+				// If we're trusting the existance of the shadow to
 				// keep the claim alive (because of kernel sockopt keepalives),
 				// set ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
-				renew_time = now;
-			} else if ( mrec->m_startd_sends_alives ) {
+				mrec->last_alive = now;
+			} else {
 				// if the startd sends alives, then the ATTR_LAST_JOB_LEASE_RENEWAL
 				// is updated someplace else in RAM only when we receive a keepalive
-				// ping from the startd.  So here
+				// ping from the startd (in the mrec and in the in-memory job ad).  So here
 				// we just want to read it out of RAM and set it via SetAttributeInt
 				// so it is written to disk.  Doing things this way allows us
 				// to update the queue persistently all in one transaction, even
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
-				GetAttributeInt(mrec->cluster,mrec->proc,
-								ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
-			} else {
-				// If we're sending the alives, then we need to set
-				// ATTR_LAST_JOB_LEASE_RENEWAL to the current time.
-				renew_time = now;
 			}
 			SetAttributeInt( mrec->cluster, mrec->proc, 
-							 ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
+							 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 		}
 	}
 	CommitNonDurableTransactionOrDieTrying();
 
-	matches->startIterations();
-	while (matches->iterate(mrec) == 1) {
-		if( mrec->m_startd_sends_alives == false &&
-			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
+	// DelMrec() will erase the matches entry, so be careful here...
+	auto it = matches.begin();
+	while (it != matches.end()) {
+		match_rec* mrec = it->second;
+		it++;
 
-			if( sendAlive( mrec ) ) {
-				numsent++;
-			}
-		}
-
-		// If we have a shadow and are using the new alive protocol,
-		// check whether the lease has expired. If it has, kill the match
-		// and the shadow.
-		// TODO Kill the match if the lease is expired when there is no
-		//   shadow. This is low priority, since we'll notice the lease
-		//   expiration when we try to start another job.
-		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE &&
+		// If we have a shadow, check whether the lease has expired.
+		// If it has, kill the match and the shadow.
+		if ( mrec->status == M_ACTIVE &&
 			 mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
 			int lease_duration = -1;
-			time_t last_lease_renewal = -1;
+			time_t last_lease_renewal = mrec->last_alive;
 			GetAttributeInt( mrec->cluster, mrec->proc,
 							 ATTR_JOB_LEASE_DURATION, &lease_duration );
-			GetAttributeInt( mrec->cluster, mrec->proc,
-							 ATTR_LAST_JOB_LEASE_RENEWAL, &last_lease_renewal );
 
 			// If the job has no lease attribute, the startd sets the
 			// claim lease to 6 times the alive_interval we sent when we
@@ -15930,16 +16688,22 @@ Scheduler::sendAlives( int /* timerID */ )
 				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}
 		}
-	}
-	if( numsent ) { 
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d startds)\n", numsent );
+
+		// If the match rec is merely claimed/idle, there is no Job
+		// or shadow
+		if (mrec->status == M_CLAIMED) {
+			int lease_duration = 6 * alive_interval;
+			if ((mrec->last_alive + lease_duration) < now ) {
+				mrec->needs_release_claim = false;
+				DelMrec( mrec );
+			} 
+		}
 	}
 
 	// Just so we don't have to deal with a seperate DC timer for
 	// this, just call the dedicated_scheduler's version of the
 	// same thing so we keep all of those claims alive, too.
-	dedicated_scheduler.sendAlives();
+	dedicated_scheduler.checkClaimLeases();
 }
 
 void
@@ -15989,6 +16753,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "JobsStarted", JobsStarted );
 	cad->Assign( "SwapSpace", SwapSpace );
 	cad->Assign( "ShadowSizeEstimate", ShadowSizeEstimate );
+	cad->Assign( "CurrentMatchmakingCurb", shadowsSpawnLimit());
 	cad->Assign( "SwapSpaceExhausted", SwapSpaceExhausted );
 	cad->Assign( "ReservedSwap", ReservedSwap );
 	cad->Assign( "JobsIdle", JobsIdle );
@@ -16046,7 +16811,10 @@ Scheduler::publish( ClassAd *cad ) {
 	
 	cad->Assign( ATTR_DISK, sysapi_disk_space(this->LocalUnivExecuteDir) );
 
-	cad->Assign( ATTR_CPUS, 1 );
+	int cpus = 1;
+	int hyperthreads = 1;
+	sysapi_ncpus(&cpus, &hyperthreads);
+	cad->Assign( ATTR_CPUS, std::max(cpus, hyperthreads));
 
 		// -------------------------------------------------------
 		// Local Universe Attributes
@@ -16627,7 +17395,7 @@ abortJobsByConstraint( const char *constraint,
 }
 
 void
-incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
+incrementJobAdAttrImplementation(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
 {
 	long long val = 0;
 	if (!attrName || !attrName[0]) return;
@@ -16665,6 +17433,31 @@ incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nest
 
 }
 
+void
+incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
+{
+	// Verify that attrName is valid
+	if (!attrName || !attrName[0]) return;
+
+	// attrName and/or nestedAttrName may be a StringList, so we need to iterate over them
+	// and invoke incrementJobAdAttrImplementation for each combination.
+
+	if (nestedAdAttrName && nestedAdAttrName[0]) {
+		// Both attrName and nestedAdAttrName are non-empty, so iterate over both
+		for (auto& attr : StringTokenIterator(attrName)) {
+			for (auto& nestedAttr : StringTokenIterator(nestedAdAttrName)) {
+				incrementJobAdAttrImplementation(cluster, proc, attr.c_str(), nestedAttr.c_str());
+			}
+		}
+	} else if (attrName && attrName[0]) {
+		// Only attrName is non-empty, so iterate over it
+		for (auto& attr : StringTokenIterator(attrName)) {
+			incrementJobAdAttrImplementation(cluster, proc, attr.c_str(), nullptr);
+		}
+	}
+}
+
+
 /*
 Hold a job by stopping the shadow, changing the job state,
 writing to the user log, and updating the job queue.
@@ -16675,7 +17468,7 @@ static bool
 holdJobRaw( int cluster, int proc, const char* reason,
 			int reason_code, int reason_subcode,
 		 bool email_user,
-		 bool email_admin, bool system_hold )
+		 bool system_hold )
 {
 	int status = -1;
 	PROC_ID tmp_id;
@@ -16772,7 +17565,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	//abort_job_myself( tmp_id, JA_HOLD_JOBS, true );
 
 		// finally, email anyone our caller wants us to email.
-	if( email_user || email_admin ) {
+	if( email_user ) {
 		ClassAd* job_ad;
 		job_ad = GetJobAd( cluster, proc );
 		if( ! job_ad ) {
@@ -16784,14 +17577,8 @@ holdJobRaw( int cluster, int proc, const char* reason,
 			return true;  
 		}
 
-		if( email_user ) {
-			Email email;
-			email.sendHold( job_ad, reason );
-		}
-		if( email_admin ) {
-			Email email;
-			email.sendHoldAdmin( job_ad, reason );
-		}
+		Email email;
+		email.sendHold( job_ad, reason );
 		FreeJobAd( job_ad );
 	}
 	return true;
@@ -16807,7 +17594,7 @@ bool
 holdJob( int cluster, int proc, const char* reason,
 		 int reason_code, int reason_subcode,
 		 bool use_transaction, bool email_user,
-		 bool email_admin, bool system_hold, bool write_to_user_log )
+		 bool system_hold, bool write_to_user_log )
 {
 	bool result;
 
@@ -16815,7 +17602,7 @@ holdJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,email_user,email_admin,system_hold);
+	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,email_user,system_hold);
 
 	if(use_transaction) {
 		if(result) {
@@ -16846,13 +17633,19 @@ Does not start or end a transaction.
 static bool
 releaseJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
-		 bool email_admin, bool write_to_user_log )
+		 bool write_to_user_log )
 {
 	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
 
+	JobQueueJob* job = GetJobAd(tmp_id);
+	if (job == nullptr) {
+		dprintf(D_ERROR, "Job %d.%d not in queue. Can't release.\n",
+		        cluster, proc);
+		return false;
+	}
 
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) < 0 ) {   
 		dprintf( D_ALWAYS, "Job %d.%d has no %s attribute.  Can't release\n",
@@ -16904,34 +17697,16 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 	}
 
 	if ( write_to_user_log ) {
-		scheduler.WriteReleaseToUserLog(tmp_id);
+		scheduler.WriteReleaseToUserLog(job);
 	}
 
 	dprintf( D_ALWAYS, "Job %d.%d released from hold: %s\n", cluster, proc,
 			 reason );
 
 		// finally, email anyone our caller wants us to email.
-	if( email_user || email_admin ) {
-		ClassAd* job_ad;
-		job_ad = GetJobAd( cluster, proc );
-		if( ! job_ad ) {
-			dprintf( D_ALWAYS, "ERROR: Can't find ClassAd for job %d.%d "
-					 "can't send email to anyone about it\n", cluster,
-					 proc );
-				// even though we can't send the email, we still held
-				// the job, so return true.
-			return true;  
-		}
-
-		if( email_user ) {
-			Email email;
-			email.sendRelease( job_ad, reason );
-		}
-		if( email_admin ) {
-			Email email;
-			email.sendReleaseAdmin( job_ad, reason );
-		}
-		FreeJobAd( job_ad );
+	if( email_user ) {
+		Email email;
+		email.sendRelease(job, reason);
 	}
 	return true;
 }
@@ -16945,7 +17720,7 @@ Performs a complete transaction if desired.
 bool
 releaseJob( int cluster, int proc, const char* reason,
 		 bool use_transaction, bool email_user,
-		 bool email_admin, bool write_to_user_log )
+		 bool write_to_user_log )
 {
 	bool result;
 
@@ -16953,7 +17728,7 @@ releaseJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = releaseJobRaw(cluster,proc,reason,email_user,email_admin,write_to_user_log);
+	result = releaseJobRaw(cluster,proc,reason,email_user,write_to_user_log);
 
 	if(use_transaction) {
 		if(result) {
@@ -17028,21 +17803,6 @@ Scheduler::jobThrottle( void )
 	return delay;
 }
 
-GridJobCounts *
-Scheduler::GetGridJobCounts(GridUserIdentity user_identity) {
-	GridJobCounts * gridcounts = 0;
-	if( GridJobOwners.lookup(user_identity, gridcounts) == 0 ) {
-		ASSERT(gridcounts);
-		return gridcounts;
-	}
-	// No existing entry.
-	GridJobCounts newcounts;
-	GridJobOwners.insert(user_identity, newcounts);
-	GridJobOwners.lookup(user_identity, gridcounts);
-	ASSERT(gridcounts); // We just added it. Where did it go?
-	return gridcounts;
-}
-
 int
 Scheduler::jobIsFinishedHandler( ServiceData* data )
 {
@@ -17063,12 +17823,10 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	PROC_ID id;
 	id.cluster = cluster;
 	id.proc    = proc;
-	CronTab *cronTab;
-	if ( this->cronTabs->lookup( id, cronTab ) >= 0 ) {
-		if ( cronTab != NULL) {
-			delete cronTab;
-			this->cronTabs->remove(id);
-		}
+	auto it = cronTabs.find(id);
+	if (it != cronTabs.end()) {
+		delete it->second;
+		cronTabs.erase(it);
 	}
 
 	// This gets called on jobs with LeaveJobInQueue set, which we don't want.
@@ -17259,7 +18017,7 @@ Scheduler::claimLocalStartd()
 		PROC_ID matching_jobid;
 		matching_jobid.proc = -1;
 
-		FindRunnableJob(matching_jobid,machine_ad,NULL);
+		FindRunnableJob(matching_jobid,machine_ad,NULL, /*pool=*/nullptr, /*is_ocu=*/false, /*is_new_match=*/true);
 		if( matching_jobid.proc < 0 ) {
 				// out of jobs.  start over w/ the next startd ad.
 			continue;
@@ -17344,11 +18102,9 @@ void
 Scheduler::addCronTabClassAd( JobQueueJob *jobAd )
 {
 	if ( NULL == m_adSchedd ) return;
-	CronTab *cronTab = NULL;
 	PROC_ID id = jobAd->jid;
-	if ( this->cronTabs->lookup( id, cronTab ) < 0 &&
-		 CronTab::needsCronTab( jobAd ) ) {
-		this->cronTabs->insert( id, NULL );
+	if (cronTabs.find(id) == cronTabs.end() && CronTab::needsCronTab(jobAd)) {
+		cronTabs.emplace(id, nullptr);
 	}
 }
 
@@ -17381,7 +18137,6 @@ Scheduler::addCronTabClusterId( int cluster_id )
 void 
 Scheduler::processCronTabClusterIds( )
 {
-	CronTab *cronTab = NULL;
 		//
 		// Loop through all the cluster_ids that we have stored
 		// For each cluster, we will inspect the job ads of all its
@@ -17392,8 +18147,8 @@ Scheduler::processCronTabClusterIds( )
 		if ( ! cad) continue;
 
 		for (JobQueueJob * job = cad->FirstJob(); job != nullptr; job = cad->NextJob(job)) {
-			if (this->cronTabs->lookup(job->jid, cronTab) < 0 && CronTab::needsCronTab(job)) {
-				this->cronTabs->insert(job->jid, nullptr);
+			if (cronTabs.find(job->jid) == cronTabs.end() && CronTab::needsCronTab(job)) {
+				cronTabs.emplace(job->jid, nullptr);
 			}
 		}
 	} // WHILE
@@ -17409,11 +18164,8 @@ Scheduler::processCronTabClusterIds( )
 void
 Scheduler::calculateCronTabSchedules( )
 {
-	PROC_ID id;
-	CronTab *cronTab = NULL;
 	this->processCronTabClusterIds();
-	this->cronTabs->startIterations();
-	while ( this->cronTabs->iterate( id, cronTab ) >= 1 ) {
+	for (const auto& [id, cronTab]: cronTabs) {
 		ClassAd *jobAd = GetJobAd( id.cluster, id.proc );
 		if ( jobAd ) {
 			this->calculateCronTabSchedule( jobAd );
@@ -17449,8 +18201,12 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		//
 		// Check whether this needs a schedule
 		//
-	if ( !CronTab::needsCronTab( jobAd ) ) {	
-		this->cronTabs->remove( id );
+	if ( !CronTab::needsCronTab( jobAd ) ) {
+		auto it = cronTabs.find(id);
+		if (it != cronTabs.end()) {
+			delete it->second;
+			cronTabs.erase(it);
+		}
 		return ( true );
 	}
 	
@@ -17481,7 +18237,10 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		// See if we can get the cached scheduler object 
 		//
 	CronTab *cronTab = NULL;
-	(void) this->cronTabs->lookup( id, cronTab );
+	auto it = cronTabs.find(id);
+	if (it != cronTabs.end()) {
+		cronTab = it->second;
+	}
 	if ( ! cronTab ) {
 			//
 			// There wasn't a cached object, so we'll need to create
@@ -17497,7 +18256,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				//
 			valid = cronTab->isValid();
 			if ( valid ) {
-				this->cronTabs->insert( id, cronTab, true );
+				cronTabs[id] = cronTab;
 			} else {
 				error = cronTab->getError();
 				delete cronTab;
@@ -17684,32 +18443,32 @@ Scheduler::sendSignalToShadow(pid_t pid,int sig,PROC_ID proc)
 
 static
 void
-WriteCompletionVisa(ClassAd* ad)
+WriteCompletionVisa(JobQueueJob* job_ad)
 {
 	priv_state prev_priv_state;
 	bool value;
 	std::string iwd;
 
-	ASSERT(ad);
+	ASSERT(job_ad);
 
-	if (!ad->LookupBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, value) ||
+	if (!job_ad->LookupBool(ATTR_WANT_SCHEDD_COMPLETION_VISA, value) ||
 	    !value)
 	{
-		if (!ad->LookupBool(ATTR_JOB_SANDBOX_JOBAD, value) ||
+		if (!job_ad->LookupBool(ATTR_JOB_SANDBOX_JOBAD, value) ||
 		    !value)
 		{
 			return;
 		}
 	}
 
-	if (!ad->LookupString(ATTR_JOB_IWD, iwd)) {
+	if (!job_ad->LookupString(ATTR_JOB_IWD, iwd)) {
 		dprintf(D_ERROR,
 		        "WriteCompletionVisa ERROR: Job contained no IWD\n");
 		return;
 	}
 
-	prev_priv_state = set_user_priv_from_ad(*ad);
-	classad_visa_write(ad,
+	prev_priv_state = set_user_priv_from_ad(*job_ad->ownerinfo);
+	classad_visa_write(job_ad,
 	                   get_mySubSystem()->getName(),
 	                   daemonCore->InfoCommandSinfulString(),
 	                   iwd.c_str(),
@@ -17818,6 +18577,12 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
 			shadow_pid, new_job_id.cluster, new_job_id.proc );
+	if (IsDebugCategory(D_MATCH)) {
+		dprintf(D_MATCH, "Reusing match for job %d.%d%s: %s\n",
+			mrec->cluster, mrec->proc,
+			mrec->is_ocu?" (OCU)":"",
+			mrec->description());
+	}
 
     time_t now = stats.Tick();
     stats.ShadowsRecycled += 1;
@@ -18020,7 +18785,7 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		jobid.cluster = jobid.proc = -1;
 
 		sn = new MainScheddNegotiate(0, NULL, NULL, NULL);
-		sn->scheduler_handleMatch(jobid,claim_id, "", *machineAd, name);
+		sn->scheduler_handleMatch(jobid,claim_id, "", *machineAd, name, ScheddNegotiate::_match_source::DIRECT);
 		delete sn;
 
 		m_unclaimedLocalStartds[name] = machineAd;
@@ -18060,9 +18825,7 @@ Scheduler::launch_local_startd() {
 						"localStartdReaper",
 						this);
 
-	if (rid < 0) {
-		EXCEPT("Can't register reaper for local startd" );
-	}
+	ASSERT(rid >= 0);
 
 	  // The arguments for our startd
 	ArgList args;

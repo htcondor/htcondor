@@ -806,9 +806,7 @@ JobInfoCommunicator::initJobInfo( void )
 void
 JobInfoCommunicator::checkForStarterDebugging( void )
 {
-	if( ! job_ad ) {
-		EXCEPT( "checkForStarterDebugging() called with no job ad!" );
-	}
+	ASSERT(job_ad);
 
 		// for testing, see if there's an attribute that requests the starter return a broken exit code
 		// which we will honor, only if the knob is in a non-default state and the starter would
@@ -892,33 +890,39 @@ JobInfoCommunicator::setupCompleted(int status, const struct UnreadyReason * pur
 		return;
 	}
 
+		// If we made it here, either we're not compiled for hook
+		// support, or we didn't spawn a hook.  Either way, we're
+		// done and should tell the starter we're ready.
+		// The starter will finish setup and queue a timer to actually start the job
+	starter->jobEnvironmentReady();
+}
+
+
+void
+JobInfoCommunicator::runPrepareJobHook() {
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr) {
 		int rval = m_hook_mgr->tryHookPrepareJob();
 		switch (rval) {
-		case -1:   // Error
+		case -1: // Error
 			starter->RemoteShutdownFast(0);
 			return;
 			break;
 
-		case 0:    // Hook not configured
-				// Nothing to do, break out and finish.
+		case 0:  // Hook not configured
+			     // Nothing to do, break out and finish.
 			break;
 
-		case 1:    // Spawned the hook.
-				// We need to bail now, and let the handler call
-				// jobEnvironmentReady() when the hook returns.
+		case 1:  // Spawned the hook.
+			     // We need to bail now, and let the handler call
+			     // Starter::prepareJobHookDone() when the hook returns.
 			return;
 			break;
 		}
 	}
 #endif /* HAVE_JOB_HOOKS */
 
-		// If we made it here, either we're not compiled for hook
-		// support, or we didn't spawn a hook.  Either way, we're
-		// done and should tell the starter we're ready.
-		// The starter will finish setup and queue a timer to actually start the job
-	starter->jobEnvironmentReady();
+	starter->prepareJobHookDone();
 }
 
 
@@ -965,9 +969,7 @@ JobInfoCommunicator::startUpdateTimer( void )
 		Register_Timer(interval,
 	      (TimerHandlercpp)&JobInfoCommunicator::periodicJobUpdateTimerHandler,
 		  "JobInfoCommunicator::periodicJobUpdateTimerHandler", this);
-	if( m_periodic_job_update_tid < 0 ) {
-		EXCEPT( "Can't register DC Timer!" );
-	}
+	ASSERT(m_periodic_job_update_tid >= 0);
 }
 
 int

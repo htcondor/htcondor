@@ -27,6 +27,9 @@
 #include "condor_sockaddr.h"
 #include "classad_log.h"
 #include "live_job_counters.h"
+#include "condor_attributes.h"
+#include <generic_stats.h>
+#include <vector>
 
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
@@ -117,6 +120,7 @@ class QmgmtPeer {
 
 extern bool user_is_the_new_owner; // set in schedd.cpp at startup
 extern bool ignore_domain_mismatch_when_setting_owner;
+
 inline const char * EffectiveUserName(QmgmtPeer * peer) {
 	if (peer) {
 		// with JobQueueUserRec we always want to know the full username
@@ -170,6 +174,12 @@ inline int USERRECID_to_qkey2(unsigned int userrec_id) {
 const int JOBSETID_qkey2 = -100;
 const int CLUSTERID_qkey2 = -1;
 const int CLUSTERPRIVATE_qkey2 = -2;
+
+// The magic procid value for OCUs.  OCUs are not jobs, but almost
+// have the job nature, as they are sent to the negotiator.
+// OCU_qkey2 identifies an OCU record.
+const int OCU_qkey2 = -99;
+
 // jobset ids are id.-100
 inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
     if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey1 called with id=%ud", jobset_id);
@@ -240,9 +250,85 @@ public:
 	bool UpdateSecureAttribute(const char * attr);
 };
 
+int get_next_cluster_num();
+
+class match_rec;
+// Owned Capacity Unit
+class OCU {
+	public:
+		OCU() = default;
+		OCU(const ClassAd &ad, int ocu_id = -1) : ad(ad), mrec(nullptr), ocu_id(ocu_id) {}
+		ClassAd ad; // the request ad
+		match_rec *mrec{nullptr}; // null if no current match
+		int ocu_id;
+		char state{'U'}; // U=Unclaimed I=Idle, R=Running
+};
+
+// class used to hold stats counters for User and Project records
+//
+class schedd_daily_usage_stats {
+public:
+	stats_entry_daily<long long> slot_time;
+	stats_entry_daily<double> weighted_idle;
+	stats_entry_daily<int> launched;
+	stats_entry_daily<int> not_started;
+	stats_entry_daily<int> requeued;
+	stats_entry_daily<int> held;
+
+	static const int hour_bucket_sec = 4*3600; // 4 hour buckets
+	schedd_daily_usage_stats(int hour_buckets=(24*3600)/hour_bucket_sec, int days=10)
+		: slot_time(hour_buckets,days)
+		, weighted_idle(hour_buckets,days)
+		, launched(hour_buckets,days)
+		, not_started(hour_buckets,days)
+		, requeued(hour_buckets,days)
+		, held(hour_buckets,days)
+	{}
+
+private:
+	static const char * ajoin(std::string & buf, const char * tag, const char * attr) {
+		if (tag) { buf = tag; buf += attr; }
+		else { buf = attr; }
+		return buf.c_str();
+	}
+
+public:
+	void publish(ClassAd & ad, const char * tag) const {
+		std::string buf;
+		int pub_flags = stats_entry_daily<int>::PubDefault | IF_NONZERO;
+		slot_time.Publish(ad, ajoin(buf,tag,"SlotTime"), pub_flags);
+		weighted_idle.Publish(ad, ajoin(buf,tag,"WeightedIdle"), pub_flags);
+		launched.Publish(ad, ajoin(buf,tag,"Launched"), pub_flags);
+		not_started.Publish(ad, ajoin(buf,tag,"FailedToStart"), pub_flags);
+		requeued.Publish(ad, ajoin(buf,tag,"Requeued"), pub_flags);
+		held.Publish(ad, ajoin(buf,tag,"Held"), pub_flags);
+	}
+
+	// add to Hourly/Daily stats (called from count jobs)
+	void accum(int status, long long sec, int idle_weight) {
+		if (status == IDLE) {
+			weighted_idle += (double)(idle_weight * sec) / (double)hour_bucket_sec;
+		} else {
+			slot_time += sec;
+		}
+	}
+
+	void AdvanceBy(int cBuckets, int cDays) {
+		slot_time.AdvanceBy(cBuckets,cDays);
+		weighted_idle.AdvanceBy(cBuckets,cDays);
+		launched.AdvanceBy(cBuckets,cDays);
+		not_started.AdvanceBy(cBuckets,cDays);
+		requeued.AdvanceBy(cBuckets,cDays);
+		held.AdvanceBy(cBuckets,cDays);
+	}
+};
+
+
 // flag values for JobQueueUserRec
 #define JQU_F_DIRTY    0x01   // PopulateFromAd needed 
 #define JQU_F_PENDING  0x80   // JobQueueUserRec is in the pendingOwners collection
+
+#define GENERIC_AP_USER_PLACEHOLDER "<tmp_ap_user>"
 
 class JobQueueUserRec : public JobQueueBase {
 public:
@@ -283,6 +369,8 @@ public:
 	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
 	time_t LastHitTime=0; // records the last time we incremented num.Hit, use to expire OwnerInfo
 
+	schedd_daily_usage_stats daily_stats;
+
 	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _os_user=nullptr, unsigned char is_super=0)
 		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
 		, super(is_super), name(_name?_name:""), os_user(_os_user?_os_user:"")
@@ -303,6 +391,10 @@ public:
 	bool IsLocalUser() const { return local; }
 	bool OsUserDiffers() const { return os_user_differs; }
 
+	// used to assign a specific OS user to a userrec when the Owner is not a local user
+	// or when you don't want to use the local user account that matches the Owner
+	bool assignOsUser(const std::string & os_user);
+
 	// The super member has 4 possible values
 	// super == 0 is not super
 	// super == 1 is intrinsic super ( UserRec has SuperUser=true or UserRec is a built-in )
@@ -318,6 +410,45 @@ public:
 	void setStaleConfigSuper() { if (super != 1) super = JQU_F_PENDING; } // intrinsic super cant be stale
 	bool IsInherentlySuper() const { return super == 1; }
 	bool IsConfigSuper() const { return super == 2; }
+
+	std::vector<OCU> ocus; // vector of OCU ClassAds held by this user record
+
+	void syncOCUs() {
+		std::vector<ExprTree *> l;
+		for (auto &ocu: ocus) {
+			l.push_back(new ClassAd(ocu.ad)); // What is the ownership model here?
+		}
+		classad::ExprList *exprList = classad::ExprList::MakeExprList(l);
+		this->Insert("ocus", exprList);
+		UpdateSecureAttribute("ocus");
+	}
+
+	ClassAd addOCU(const ClassAd &ocu_ad) {
+		ocus.emplace_back();
+		ocus.back().ad = ocu_ad;
+		int ocu_id = get_next_cluster_num();
+		ocus.back().ad.Assign(ATTR_OCU_ID, ocu_id);
+		ocus.back().ocu_id = ocu_id;
+
+		// Give the OCU a name if it doesn't have one
+		std::string ocu_name;
+		ocus.back().ad.LookupString(ATTR_OCU_NAME, ocu_name);
+		if (ocu_name.empty()) {
+			formatstr(ocu_name, "OCU-%d", ocu_id);
+		} 
+		ocus.back().ad.Assign(ATTR_OCU_NAME, ocu_name);
+		ocus.back().ad.Assign("OCUClaim", true);
+		ocus.back().ad.Assign(ATTR_OCU_HOLDER, true);
+		syncOCUs();
+
+		ClassAd result;
+		result.Assign(ATTR_OCU_ID, ocu_id);
+		result.Assign(ATTR_RESULT, 0);
+		result.Assign(ATTR_OCU_NAME, ocu_name);
+		return result;
+	}
+
+	ClassAd removeOCU(const ClassAd &ocu); 
 
 	// add a numeric value to a numeric value in the user record, and optionally
 	// write the result to the job queue log
@@ -571,7 +702,7 @@ typedef enum {
 int PauseJobFactory(JobFactory * factory, MaterializeMode pause_code);
 int ResumeJobFactory(JobFactory * factory, MaterializeMode pause_code);
 bool CheckJobFactoryPause(JobFactory * factory, int want_pause); // Make sure factory mode matches the persist mode
-bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
+bool GetJobFactoryMaterializeMode(const JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
@@ -590,7 +721,9 @@ void DestroyJobQueue( void );
 int handle_q(int, Stream *sock);
 void dirtyJobQueue( void );
 bool SendDirtyJobAdNotification(const PROC_ID& job_id);
+bool JobQueueInitDone();
 
+bool ContainsUserName(const std::vector<std::string>& list, const char* user);
 bool isQueueSuperUser(const JobQueueUserRec * user);
 
 // Verify that the user issuing a command (test_owner) is authorized
@@ -604,6 +737,9 @@ bool UserCheck(const JobQueueBase *ad, const JobQueueUserRec * test_owner);
 // to modify the given queue object (job, jobset, userrec, etc).
 // when not_super is true, behave as if test_owner is not a superuser even if it is one.
 bool UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_owner, bool not_super=false);
+
+int  MaxRunningPer(const JobQueueUserRec * urec);
+int  CurRunningPer(const JobQueueUserRec * urec);
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray(int tid=-1);
@@ -634,6 +770,7 @@ typedef unsigned int SetAttributeFlags_t;
 const SetAttributeFlags_t SetAttribute_SubmitTransform     = (1 << 16);
 const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
 const SetAttributeFlags_t SetAttribute_Delete              = (1 << 18);
+const SetAttributeFlags_t SetAttribute_UserTransform       = (1 << 19); // a post-submit transform defined by the user
 
 JobQueueJob* GetNextJob(int initScan);
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
@@ -842,7 +979,7 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
   extern std::deque<prio_rec> PrioRec;
 #endif
 
-extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
+extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user, const char* pool=nullptr, bool is_ocu=false, bool is_new_match=true);
 //extern bool Runnable(PROC_ID*);
 enum class runnable_reason_code : int {
 	IsRunnable=0,
@@ -854,11 +991,12 @@ enum class runnable_reason_code : int {
 	InLongCooldown,  // cooldown > 5min
 	InShortCooldown, // cooldown <= 5min
 	AlreadyMatched,
+	MaxRunningAlready,
 };
 //extern bool Runnable(JobQueueJob *job, const char *& reason);
 extern bool Runnable(JobQueueJob *job, runnable_reason_code & code);
 extern const char * getRunnableReason(runnable_reason_code code);
-
+extern prio_rec * findInPrioRec(const PROC_ID & jobid);
 
 extern class ForkWork schedd_forker;
 

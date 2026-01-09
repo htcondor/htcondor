@@ -287,6 +287,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Debian10' => 'x86_64_Debian9',
 	'nmi-build:x86_64_Debian11' => 'x86_64_Debian9',
 	'nmi-build:x86_64_Debian12' => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian13' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
@@ -563,8 +564,12 @@ our %submit_info = (
 	'nmi-build:x86_64_Fedora39'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora40'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora41'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora42'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora43'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_AmazonLinux2023' => 'x86_64_Fedora',
 	'nmi-build:x86_64_openSUSE15'   => 'x86_64_Fedora',
+	'nmi-build:x86_64_openSUSE16'   => 'x86_64_Fedora',
+	'nmi-build:x86_64_SLES15SP5'    => 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
@@ -677,6 +682,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Ubuntu20'	=> 'x86_64_Ubuntu18',
 	'nmi-build:x86_64_Ubuntu22'	=> 'x86_64_Ubuntu18',
 	'nmi-build:x86_64_Ubuntu24'	=> 'x86_64_Ubuntu18',
+	'nmi-build:aarch64_Ubuntu24'	=> 'x86_64_Ubuntu18',
 	'nmi-build:ppc64le_Ubuntu20'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name

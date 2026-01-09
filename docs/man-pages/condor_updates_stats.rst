@@ -52,15 +52,15 @@ Options
     displayed. If an = sign is given, with no minimum or maximum values,
     the default of the entire history is displayed.
  **-interval=<seconds>**
-    The assumed update interval, in seconds. Assumed times for the the
+    The assumed update interval, in seconds. Assumed times for the
     updates are displayed, making the use of the **-time** option
     together with the **-interval** option redundant.
  **-notime**
-    Do not display assumed times for the the updates. If more than one
+    Do not display assumed times for the updates. If more than one
     of the options **-notime** and **-time** are provided, the final one
     within the command line parsed determines the display.
  **-time**
-    Display assumed times for the the updates. If more than one of the
+    Display assumed times for the updates. If more than one of the
     options **-notime** and **-time** are provided, the final one within
     the command line parsed determines the display.
  **-summary**

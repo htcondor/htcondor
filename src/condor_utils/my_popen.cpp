@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "condor_arglist.h"
 #include "my_popen.h"
 #include "sig_install.h"
@@ -1044,11 +1045,16 @@ bool MyPopenTimer::close_program(time_t wait_for_term)
 // timeout is measured relative to the time that start_program was called.
 // returns true if program runs to completion and output is captured
 // false if error or timeout while reading the output.
-const char*  MyPopenTimer::wait_for_output(time_t timeout)
-{
+const char*  MyPopenTimer::wait_for_output(time_t timeout) {
+	return wait_for_output(timeout, [](void) -> void { return; });
+}
+
+const char*  MyPopenTimer::wait_for_output(
+	time_t timeout, std::function<void()> callback
+) {
 	if (error && (error != ETIMEDOUT)) // if error was not a previous timeout, assume we cannot continue
 		return NULL;
-	if (read_until_eof(timeout) != 0)
+	if (read_until_eof(timeout, &callback) != 0)
 		return NULL;
 	return src.data() ? src.data() : "";
 }
@@ -1107,7 +1113,7 @@ static void store_buffers (
 
 
 // returns error, 0 on success
-int MyPopenTimer::read_until_eof(time_t timeout)
+int MyPopenTimer::read_until_eof(time_t timeout, std::function<void()> * callback)
 {
 	if ( ! fp)
 		return error;
@@ -1126,6 +1132,7 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 	int ix = 0;
 	const int cbBuf = 0x2000;
 	char * buffer = (char*)calloc(1, cbBuf);
+	time_t keepalive_interval = param_integer("MY_POPEN_KEEPALIVE_INTERVAL", 60);
 	for(;;) {
 		bool wait_for_hotness = false;
 		int cb = (int)fread(buffer+ix, 1, cbBuf-ix, fp);
@@ -1174,12 +1181,14 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 				sleep(2);
 			#else
 				time_t wait_time = timeout - elapsed_time;
+				if( wait_time > keepalive_interval ) {
+					wait_time = keepalive_interval;
+				}
 				int rv = poll(&fdt, 1, int(wait_time*1000));
 				if(rv == 0) {
-					error = ETIMEDOUT;
-					break;
-				} else if (rv > 0) {
-					// new data can be read.
+					if( callback != nullptr ) {
+						(* callback)();
+					}
 				}
 			#endif
 		}

@@ -1432,6 +1432,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_PROC_ID );
 	submit_ad->Delete( ATTR_USER );
 	submit_ad->Delete( ATTR_OWNER );
+	submit_ad->Delete( ATTR_OS_USER );
 	submit_ad->Delete( ATTR_GRID_RESOURCE );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );

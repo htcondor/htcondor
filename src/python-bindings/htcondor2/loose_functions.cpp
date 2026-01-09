@@ -78,6 +78,37 @@ _reload_config( PyObject *, PyObject * ) {
 	Py_RETURN_NONE;
 }
 
+static PyObject *
+_reload_config_usermaps( PyObject *, PyObject * ) {
+
+	// reload the config specified usermaps for this process
+	reconfig_user_maps();
+
+	Py_RETURN_NONE;
+}
+
+static PyObject *
+_load_a_config_usermap_file( PyObject *, PyObject * args ) {
+
+	const char * name = NULL;
+	const char * mapfile_path = NULL;
+
+	if(! PyArg_ParseTuple( args, "ss", &name, &mapfile_path )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+	// load or reload the given usermap file
+	int rval = add_user_map(name, mapfile_path, nullptr);
+	if (rval != 0) {
+		std::string msg("Failed to load userMap file: "); msg += mapfile_path;
+		PyErr_SetString(PyExc_HTCondorException, msg.c_str());
+		return NULL;
+	}
+
+	Py_RETURN_NONE;
+}
+
 
 static PyObject *
 _enable_debug( PyObject *, PyObject * ) {
@@ -219,13 +250,18 @@ _ping( PyObject *, PyObject * args ) {
 	long command = -1;
 	const char * authz = nullptr;
 	DCpermission authz_int = NOT_A_PERM;
+	const char* token = nullptr;
 
-	if(! PyArg_ParseTuple(args, "sz", & addr, & authz )) {
+	if(! PyArg_ParseTuple(args, "szz", & addr, & authz , &token)) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	};
 
 	Daemon d(DT_ANY, addr, nullptr);
+
+	if (token) {
+		d.setPreferredToken(token);
+	}
 
 	// authz is the string form of an authorization level or a CEDAR command.
 	// Figure out the appropriate CEDAR command integer.
@@ -268,8 +304,8 @@ _ping( PyObject *, PyObject * args ) {
 
 	// Merge the session and Sock policy ads into the ad we got back from the dameon.
 	sock.getPolicyAd(reply_ad);
-	auto itr = (SecMan::session_cache)->find(sock.getSessionID());
-	if (itr == (SecMan::session_cache)->end()) {
+	auto itr = SecMan::session_cache.find(sock.getSessionID());
+	if (itr == SecMan::session_cache.end()) {
 		PyErr_SetString(PyExc_HTCondorException, "Failed to find session.");
 		return nullptr;
 	}

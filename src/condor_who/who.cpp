@@ -2587,7 +2587,6 @@ main( int argc, char *argv[] )
 		if (addr) {
 			sess_id = lookup_security_session_for_addr(addr);
 			if (sess_id) {
-				query->setSecSessionId(sess_id);
 				dae->setSecSessionId(sess_id);
 			}
 		}
@@ -2639,7 +2638,7 @@ main( int argc, char *argv[] )
 					}
 					return false;
 				},
-				&result, addr, &errstack);
+				&result, *dae, &errstack);
 
 			if (Q_OK != qr) {
 				fprintf( stderr, "Error: %s\n", getStrQueryResult(qr) );

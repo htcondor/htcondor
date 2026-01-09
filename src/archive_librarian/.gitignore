@@ -1,0 +1,10 @@
+hist/
+build/
+CMakeFiles/
+cmake_install.cmake 
+CMakeCache.txt
+myHistoryList
+myHistoryList.dSYM/
+annex/
+arc_gahp/
+tester_output.db

@@ -1,6 +1,6 @@
 htcondor
 numpy<2
-filelock==3.18.0
+filelock==3.20.1
 pandas==2.0.3
 Flask~=3.1
 Jinja2~=3.1

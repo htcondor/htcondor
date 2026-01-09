@@ -137,13 +137,8 @@ AddNode( Dag *dag, const char *name,
 	}
 	node->SetType( type );
 
-	// Check to see if submitFileOrSubmitDescName refers to a file or inline submit description
-	if (dag->InlineDescriptions.contains(submitFileOrSubmitDesc)) {
-		node->SetInlineDesc(dag->InlineDescriptions[submitFileOrSubmitDesc]);
-	}
-
 	ASSERT( dag != NULL );
-	if( !dag->Add( *node ) ) {
+	if( !dag->Add( node ) ) {
 		failReason = "unknown failure adding ";
 		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
 		failReason += ( node->GetType() == NodeType::SERVICE )? "SERVICE " : "";

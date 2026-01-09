@@ -58,15 +58,21 @@ class TestClassAds:
         d["bar"] = c["bar"]
         assert d["bar"] == c["bar"]
 
-        # Some day, we'll be more specific in classad2 with exceptions.
-        with pytest.raises(RuntimeError):
+        with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("foo = 2 + i")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(classad.ClassAdException):
             c = classad.ClassAd("[ 7, 8, 9 ]")
+
+        # We don't -- presently -- actually care what the results are,
+        # just that they don't cause segfaults or throw exceptions.
+        e = classad.ExprTree()
+        e == e
+        e.eval()
+        e.simplify()
 
 
     def test_data_types(self):

@@ -35,6 +35,7 @@
 #include "globus_utils.h"
 #include "directory.h"
 #include "shared_port_client.h"
+#include "basename.h"
 #include "ipv6_hostname.h"
 
 #ifdef WIN32
@@ -837,7 +838,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, ti
 
 	header_filled = 0;
 
-	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, CondorRWFlags::Read, p_sock->is_non_blocking());
 	if ( retval == 0 ) {   // 0 means that the read would have blocked; unlike a normal read(), condor_read
 	                       // returns -2 if the socket has been closed.
 		dprintf(D_NETWORK, "Reading header would have blocked.\n");
@@ -1883,6 +1884,11 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 		// Open the file
 		errno = 0;
 		fd = ::safe_open_wrapper_follow(destination, flags, 0600);
+		if ((fd == -1) && (errno == ENOENT)) {
+			std::string directory = condor_dirname(destination);
+			mkdir_and_parents_if_needed(directory.c_str(), 0700);
+			fd = ::safe_open_wrapper_follow(destination, flags, 0600);
+		}
 	}
 	else {
 		fd = -1;

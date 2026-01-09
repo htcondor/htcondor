@@ -748,9 +748,8 @@ all attributes.
     A comma-separated list of attribute names. The named attributes and
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
-    setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries`) but it applies to the job event log instead of the system event log.
+    setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
+    job event log instead of the system event log.
 
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
@@ -1128,8 +1127,17 @@ all attributes.
     that can reconnected: those in the **vanilla** and **java**
     universes.
 
+:classad-attribute-def:`NumInputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the input sandbox. This number will always be between :ad-attr:`NumShadowStarts`
+    and :ad-attr:`NumJobStarts` inclusive.
+
 :classad-attribute-def:`NumJobStarts`
     An integer count of the number of times the job started executing.
+
+:classad-attribute-def:`NumOutputTransferStarts`
+    An integer count of the number of times the job began transferring
+    the output sandbox.
 
 :classad-attribute-def:`NumPids`
     A count of the number of child processes that this job has.
@@ -1168,6 +1176,11 @@ all attributes.
     An integer value that will increment every time a job leaves the running state and returns to the idle state.
     It may be undefined until the job has been vacated at least once.
 
+:classad-attribute-def:`NumVacatesPreExecution`
+    An integer value that will increment every time a job leaves the running state and returns to the idle state,
+    but only in the period before the job has started executing (e.g., during input file transfer).
+    It may be undefined until the job has been vacated at least once.
+
 :classad-attribute-def:`NumVacatesByReason`
     The value of this attribute is a (nested) classad containing a count of how many times a job has been
     vacated (left running state and returned to the idle state) grouped by the reason the job was vacated.
@@ -1191,11 +1204,23 @@ all attributes.
     Possible values for the protocol depend upon the file transfer plug-ins that are configured in the HTCondor pool, but may include
     ``Cedar``, ``Http``, ``S3``, ``Pelican``, ``Ftp``, and others.
 
+:classad-attribute-def:`NumVacatesByReasonPreExecution`
+    The value of this attribute is a (nested) classad containing a count of how many times a job has been
+    vacated (left running state and returned to the idle state) grouped by the reason the job was vacated,
+    but only in the period before the job has started executing (e.g., during input file transfer).
+    It may be undefined until the job has been vacated
+    at least once in that pre-execution period. 
+    See the similar attribute :ad-attr:`NumVacatesByReason` for more details.
+
 :classad-attribute-def:`OSHomeDir`
     This attribute is only set in the starter's copy of the job ad, and expands
     to string value the home directory of the Unix user the job runs as.
     This can be put into :macro:`MOUNT_UNDER_SCRATCH` to hide users' home
     directories.
+
+:classad-attribute-def:`OsUser`
+    A string value representing the ``User`` the jobs *condor_shadow* will run
+    as. This is set by Condor.
 
 :classad-attribute-def:`OtherJobRemoveRequirements`
     A string that defines a list of jobs. When the job with this
@@ -1215,7 +1240,10 @@ all attributes.
     jobs is removed.
 
 :classad-attribute-def:`OutputDestination`
-    A URL, as defined by submit command **output_destination**.
+    A URL, as defined by submit command :subcom:`output_destination`.
+
+:classad-attribute-def:`OutputDirectory`
+    A directory on the AP, for use when :subcom:`output_destination`, is not a URL.
 
 :classad-attribute-def:`Owner`
     String describing the user who submitted this job.
@@ -1643,7 +1671,7 @@ all attributes.
 :classad-attribute-def:`JobStarterDebug`
     This attribute causes the *condor_starter* to write a job-specific
     copy of its daemon log in the job's scratch directory.
-    If the value is `True`, then the the logging level matches that of
+    If the value is `True`, then the logging level matches that of
     the regular daemon log.
     If the value is a string, then it specifies a different logging
     level following the syntax of :macro:`<SUBSYS>_DEBUG`.
@@ -2124,7 +2152,7 @@ information for the DAG.
     +------+--------------------------------------+
     | 0    | OK                                   |
     +------+--------------------------------------+
-    | 1    | An error has occured                 |
+    | 1    | An error has occurred                |
     +------+--------------------------------------+
     | 2    | One or more nodes in the DAG have    |
     |      | failed                               |

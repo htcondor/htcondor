@@ -16,6 +16,8 @@ from .htcondor2_impl import (
     HTCondorException,
 )
 
+from ._param import _param as param
+
 
 class Credd():
 
@@ -130,10 +132,12 @@ class Credd():
             raise ValueError("invalid credtype")
 
         if credential is None:
-            producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
+            producer = param.get("SEC_CREDENTIAL_PRODUCER")
             if producer == "CREDENTIAL_ALREADY_STORED":
                 # This raised HTCondorIOError in version 1.
                 return
+            if producer is None:
+                raise HTCondorException("No credential supplied but SEC_CREDENTIAL_PRODUCER not set.")
 
             credential = _credd_run_credential_producer(producer)
 
@@ -216,10 +220,12 @@ class Credd():
             raise ValueError("invalid credtype")
 
         if credential is None:
-            producer = htcondor2.param["SEC_CREDENTIAL_PRODUCER"]
+            producer = param.get("SEC_CREDENTIAL_PRODUCER")
             if producer == "CREDENTIAL_ALREADY_STORED":
                 # This was HTCondorIOError in version 1.
                 return
+            if producer is None:
+                raise HTCondorException("No credential supplied but SEC_CREDENTIAL_PRODUCER not set.")
 
             credential = _credd_run_credential_producer(producer)
 

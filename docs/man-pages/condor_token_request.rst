@@ -33,7 +33,7 @@ will wait until the request is approved, timing out after an hour.
 The token request mechanism provides a powerful way to bootstrap authentication
 in a HTCondor pool - a remote user can request an identity, verify the authenticity of
 the request out-of-band with the remote daemon's administrator, and
-then securely recieve their authentication token.
+then securely receive their authentication token.
 
 By default, *condor_token_request* will query the local *condor_collector*; by specifying
 a combination of **-pool**, **-name**, or **-type**, the tool can request tokens
@@ -124,7 +124,7 @@ Exit Status
 -----------
 
 *condor_token_request* will exit with a non-zero status value if it
-fails to request or recieve the token.  Otherwise, it will exit 0.
+fails to request or receive the token.  Otherwise, it will exit 0.
 
 See also
 --------

@@ -32,21 +32,12 @@
 DCShadow::DCShadow( const char* tName ) : Daemon( DT_SHADOW, tName, NULL )
 {
 	is_initialized = false;
-	shadow_safesock = NULL;
 
 	if(! _addr.empty() && _name.empty()) {
 			// We must have been given a sinful string instead of a hostname.
 			// Just use the sinful string in place of a hostname, contrary
 			// to the default behavior in Daemon::Daemon().
 		_name = _addr;
-	}
-}
-
-
-DCShadow::~DCShadow( void )
-{
-	if( shadow_safesock ) {
-		delete shadow_safesock;
 	}
 }
 

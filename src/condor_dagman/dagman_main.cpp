@@ -91,6 +91,9 @@ bool Dagman::Config() {
 		process_config_source(config[conf::str::DagConfig].c_str(), 0, "DAGMan config", nullptr, true);
 	}
 
+	config[conf::b::UseOldDagParser] = param_boolean("DAGMAN_USE_OLD_FILE_PARSER", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_OLD_FILE_PARSER setting: %s\n", config[conf::b::UseOldDagParser] ? "True" : "False");
+
 	_strict = (strict_level_t)param_integer("DAGMAN_USE_STRICT", _strict, DAG_STRICT_0, DAG_STRICT_3);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_STRICT setting: %d\n", _strict);
 
@@ -663,6 +666,7 @@ void main_init(int argc, char ** const argv) {
 				std::string errMsg;
 				if ( ! dagOpts.AutoParse(strArg, iArg, argc, argv, errMsg, &dagman.inheritOpts)) {
 					fprintf(stderr, "%s\n", errMsg.c_str());
+					debug_printf(DEBUG_QUIET, "%s\n", errMsg.c_str());
 					Usage();
 				}
 			}
@@ -690,17 +694,6 @@ void main_init(int argc, char ** const argv) {
 	// If no user specified BatchName and no ClassAd information set batchname = primary DAG
 	if (dagOpts[deep::str::BatchName].empty()) {
 		dagOpts[deep::str::BatchName] = dagOpts.primaryDag();
-	}
-
-	if ( ! dagOpts[shallow::str::SaveFile].empty()) {
-		if (dagOpts[deep::i::DoRescueFrom] != 0 ) {
-			debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from both a save file and a specified rescue file.\n");
-			Usage();
-		}
-		if (dagOpts[shallow::b::DoRecovery]) {
-			debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from a save file in recovery mode.\n");
-			Usage();
-		}
 	}
 
 	// We expect at the very least to have a dag filename specified
@@ -887,19 +880,32 @@ void main_init(int argc, char ** const argv) {
 		if (temp) { free( temp ); }
 	}
 
-	// Figure out the rescue DAG to run, if any (this is with "new-
-	// style" rescue DAGs).
+	// Figure out the rescue DAG to run, if any (this is with "new-style" rescue DAGs).
 	int rescueDagNum = 0;
 	std::string rescueDagMsg;
 
-	if (dagOpts[deep::i::DoRescueFrom] != 0) {
+	dagman.rescueFileToRun = dagOpts[shallow::str::RescueFile];
+	if ( ! dagman.rescueFileToRun.empty()) {
+		rescueDagMsg = "Rescue DAG file specified";
+		rescueDagNum = dagmanUtils.ExtractRescueNum(dagman.rescueFileToRun, dagOpts.primaryDag(), dagOpts.isMultiDag());
+		if (rescueDagNum) {
+			debug_printf(DEBUG_NORMAL, "Extracted rescue DAG number: %d\n", rescueDagNum);
+		}
+		dagmanUtils.RenameRescueDagsAfter(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum, dagman.config[conf::i::MaxRescueNum]);
+		dagman.inheritOpts[deep::i::DoRescueFrom] = dagOpts[deep::i::DoRescueFrom] = rescueDagNum;
+
+	} else if (dagOpts[deep::i::DoRescueFrom] > 0) {
 		rescueDagNum = dagOpts[deep::i::DoRescueFrom];
 		formatstr(rescueDagMsg, "Rescue DAG number %d specified", rescueDagNum);
 		dagmanUtils.RenameRescueDagsAfter(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum, dagman.config[conf::i::MaxRescueNum]);
+		dagman.rescueFileToRun = dagmanUtils.RescueDagName(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum);
 
 	} else if (dagOpts[deep::i::AutoRescue]) {
 		rescueDagNum = dagmanUtils.FindLastRescueDagNum(dagOpts.primaryDag(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum]);
-		formatstr(rescueDagMsg, "Found rescue DAG number %d", rescueDagNum);
+		if (rescueDagNum > 0) {
+			formatstr(rescueDagMsg, "Found rescue DAG number %d", rescueDagNum);
+			dagman.rescueFileToRun = dagmanUtils.RescueDagName(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum);
+		}
 	}
 
 	dagman.metrics->SetRescueNum(rescueDagNum);
@@ -911,23 +917,21 @@ void main_init(int argc, char ** const argv) {
 	// wenger 2010-03-25
 	dagman.dag = new Dag(dagman); /* toplevel dag! */
 
-	if ( ! dagman.dag) { EXCEPT("ERROR: out of memory!"); }
+	ASSERT(dagman.dag);
 
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan
 
 	if ( ! dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
-	parseSetDoNameMunge(dagman.config[conf::b::MungeNodeNames]);
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
-	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
-	// of the parsing, copies of the dagman.dagFile string list happen which
-	// mess up the iteration of this list.
-	str_list sl(dagOpts.dagFiles());
-	for (const auto & file : sl) {
+	DagProcessor dp(dagman);
+	int dag_id = 0;
+
+	for (const auto & file : dagOpts.dagFiles()) {
 		debug_printf(DEBUG_VERBOSE, "Parsing %s ...\n", file.c_str());
 
-		if( ! parse(dagman, dagman.dag, file.c_str())) {
+		if ( ! dp.process(dagman, *(dagman.dag), file, dag_id++)) {
 			if (dagman.options[shallow::b::DumpRescueDag]) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.
@@ -979,13 +983,12 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_QUIET, "Loading saved progress from %s for DAG.\n", loadSaveFile.c_str());
 		debug_printf(DEBUG_QUIET, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 		auto [saveFile, _] = dagmanUtils.ResolveSaveFile(dagman.options.primaryDag(), loadSaveFile);
-		//Don't munge node names because save files written via rescue code already munged
-		parseSetDoNameMunge(false);
+
 		//Attempt to parse the save file. Run parse with useDagDir = false because
 		//there is no point risking changing directories just to read save file (i.e. partial rescue)
 		auto saveUseDadDir = dagman.options[deep::b::UseDagDir];
 		dagman.options[deep::b::UseDagDir] = false;
-		if ( ! parse(dagman, dagman.dag, saveFile.c_str())) {
+		if ( ! dp.process(dagman, *(dagman.dag), saveFile)) {
 			std::string rm_reason;
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse save file (%s).",
 			          saveFile.c_str());
@@ -995,23 +998,18 @@ void main_init(int argc, char ** const argv) {
 			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
 		}
 		dagman.options[deep::b::UseDagDir] = saveUseDadDir;
-	} else if (rescueDagNum > 0) {
+	} else if ( ! dagman.rescueFileToRun.empty()) {
 		// Actually parse the "new-new" style (partial DAG info only)
 		// rescue DAG here.  Note: this *must* be done after splices
 		// are lifted!
 		dagman.dag->GetJobstateLog().InitializeRescue();
-		dagman.rescueFileToRun = dagmanUtils.RescueDagName(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum);
 		debug_printf(DEBUG_QUIET, "%s; running %s in combination with normal DAG file%s\n",
 		             rescueDagMsg.c_str(), dagman.rescueFileToRun.c_str(),
 		             dagOpts.isMultiDag() ? "s" : "");
 		debug_printf(DEBUG_QUIET, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 		debug_printf(DEBUG_QUIET, "USING RESCUE DAG %s\n", dagman.rescueFileToRun.c_str());
 
-		// Turn off node name munging for the rescue DAG, because
-		// it will already have munged node names.
-		parseSetDoNameMunge(false);
-
-		if( ! parse(dagman, dagman.dag, dagman.rescueFileToRun.c_str())) {
+		if ( ! dp.process(dagman, *(dagman.dag), dagman.rescueFileToRun)) {
 			if (dagOpts[shallow::b::DumpRescueDag]) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.
@@ -1035,6 +1033,9 @@ void main_init(int argc, char ** const argv) {
 			debug_error(1, DEBUG_QUIET, "Failed to parse dag file\n");
 		}
 	}
+
+	// We have finished parsing so garbage collect DAG String Space
+	DAG::STRING_SPACE::GARBAGE_COLLECT();
 
 	dagman.dag->CheckThrottleCats();
 

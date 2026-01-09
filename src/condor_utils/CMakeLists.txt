@@ -695,6 +695,7 @@ if (LINUX OR APPLE)
     endif()
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
+    target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
 endif(LINUX OR APPLE)
 
 if (LINUX)
@@ -722,6 +723,7 @@ endif()
 
 target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND})
 target_link_libraries(condor_utils PUBLIC ${SECURITY_LIBS})
+target_link_libraries(condor_utils PUBLIC ${SQLITE3_LIB})
 
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils PUBLIC ${LIBUUID_FOUND})
@@ -806,3 +808,4 @@ condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 
 condor_exe_test(test_sinful "test_sinful.cpp" "${CONDOR_TOOL_LIBS}" )
 condor_exe_test(test_macro_expand "test_macro_expand.cpp" "${CONDOR_TOOL_LIBS}" )
+condor_exe_test(test_transform_undo "test_transform_undo.cpp" "${CONDOR_TOOL_LIBS}" )

@@ -74,3 +74,15 @@ fi
 if [ -r ~/.blah/user.config ] ; then
   . ~/.blah/user.config
 fi
+
+# For each LRMS in $supported_lrms, ensure that <lrms>_binpath is either
+# empty or ends in a '/'. This allows the LRMS scripts to find the tools
+# either in an explicit directory or via the PATH (if <lrms>_binpath is
+# empty).
+for lrms in ${supported_lrms//,/ }
+do
+  tmp=${lrms}_binpath
+  if [[ "${!tmp}" == *[^/] ]] ; then
+    eval ${tmp}="${!tmp}/"
+  fi
+done

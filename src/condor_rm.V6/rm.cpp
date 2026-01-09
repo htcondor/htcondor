@@ -425,17 +425,15 @@ main( int argc, char *argv[] )
 		CondorQuery query(SCHEDD_AD);
 		query.addORConstraint (constr.c_str());
 
-		ClassAdList schedList;
+		std::vector<ClassAd> schedList;
 		QueryResult qres = colist->query (query, schedList);
 		delete colist;
-		schedList.Rewind();
-		ClassAd * schedAd = schedList.Next();
-		if (qres != Q_OK || ! schedAd) {
+		if (qres != Q_OK || schedList.empty()) {
 			fprintf( stderr, "Error: cannot get address of schedd %s\n", get_host_part(scheddName));
 			exit(1);
 		}
 
-		schedd = new DCSchedd(*schedAd, pool ? pool->addr() : NULL );
+		schedd = new DCSchedd(schedList.front(), pool ? pool->addr() : NULL );
 	} else {
 			// This will always do the right thing, even if either or
 			// both of scheddName or pool are NULL.

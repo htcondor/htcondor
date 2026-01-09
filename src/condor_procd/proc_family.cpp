@@ -23,21 +23,6 @@
 #include "proc_family_monitor.h"
 #include "procd_common.h"
 
-#if defined(HAVE_EXT_LIBCGROUP)
-#include "libcgroup.h"
-
-#define FROZEN "FROZEN"
-#define THAWED "THAWED"
-#define BLOCK_STATS_LINE_MAX 64
-
-#include <unistd.h>
-long ProcFamily::clock_tick = sysconf( _SC_CLK_TCK );
-
-// Swap accounting is sometimes turned off.  We use this variable so we
-// warn about that situation only once.
-bool ProcFamily::have_warned_about_memsw = false;
-#endif
-
 ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
                        pid_t              root_pid,
                        birthday_t         root_birthday,

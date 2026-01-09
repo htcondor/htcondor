@@ -274,8 +274,7 @@ Scheduler ClassAd Attributes
 
 :classad-attribute-def:`MaxJobsRunning`
     The same integer value as set by the evaluation of the configuration
-    variable :macro:`MAX_JOBS_RUNNING`. See the definition in the
-    :ref:`admin-manual/configuration-macros:condor_schedd configuration file entries` section.
+    variable :macro:`MAX_JOBS_RUNNING`.
 
 :classad-attribute-def:`MonitorSelfAge`
     The number of seconds that this daemon has been running.
@@ -328,6 +327,19 @@ Scheduler ClassAd Attributes
     The number of machines (*condor_startd* daemons) matched to this
     *condor_schedd* daemon, which this *condor_schedd* knows about,
     but has not yet managed to claim.
+
+:classad-attribute-def:`NumPendingClaimsInQueue`
+    The number of machines (*condor_startd* daemons) matched to this
+    *condor_schedd* daemon that are waiting in a queue to be claimed.
+
+:classad-attribute-def:`NumPendingClaimsInContact`
+    The number of machines (*condor_startd* daemons) matched to this
+    *condor_schedd* daemon that have been contacted to claim.
+
+.. note::
+
+    The sum of :ad-attr:`NumPendingClaimsInQueue` and :ad-attr:`NumPendingClaimsInContact`
+    is equal to :ad-attr:`NumPendingClaims`.
 
 :classad-attribute-def:`NumUsers`
     The integer number of distinct users with jobs in this
@@ -568,14 +580,11 @@ Scheduler ClassAd Attributes
 
 :classad-attribute-def:`StartLocalUniverse`
     The same boolean value as set in the configuration variable
-    :macro:`START_LOCAL_UNIVERSE`. See the definition in the
-    :ref:`admin-manual/configuration-macros:condor_schedd configuration file entries` section.
+    :macro:`START_LOCAL_UNIVERSE`.
 
 :classad-attribute-def:`StartSchedulerUniverse`
     The same boolean value as set in the configuration variable
-    :macro:`START_SCHEDULER_UNIVERSE`. See the definition in the
-    :ref:`admin-manual/configuration-macros:condor_schedd
-    configuration file entries` section.
+    :macro:`START_SCHEDULER_UNIVERSE`.
 
 :classad-attribute-def:`StatsLastUpdateTime`
     A Statistics attribute defining the time that statistics about jobs

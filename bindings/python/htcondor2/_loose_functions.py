@@ -8,6 +8,7 @@ from ._common_imports import (
 from ._ad_type import AdType
 from ._daemon_type import DaemonType
 from ._daemon_command import DaemonCommand
+from ._security_context import SecurityContext
 
 from .htcondor2_impl import (
     _send_command,
@@ -17,8 +18,9 @@ from .htcondor2_impl import (
     HTCondorException,
 )
 
+from ._param import _param as param
+
 import os
-import htcondor2
 
 
 def _daemon_type_from_ad_type(ad_type: AdType):
@@ -30,6 +32,7 @@ def _daemon_type_from_ad_type(ad_type: AdType):
         AdType.Generic: DaemonType.Generic,
         AdType.HAD: DaemonType.HAD,
         AdType.Credd: DaemonType.Credd,
+        AdType.Placementd: DaemonType.Credd,
     }
     # Should raise HTCondorEnumError.
     return map.get(ad_type, None)
@@ -77,7 +80,7 @@ def send_alive(
         raise TypeError("pid must be integer")
 
     if timeout is None:
-        timeout = htcondor2.param['NOT_RESPONDING_TIMEOUT']
+        timeout = param['NOT_RESPONDING_TIMEOUT']
     if not isinstance(timeout, int):
         raise TypeError("timeout must be integer")
 
@@ -124,7 +127,7 @@ def set_ready_state(state : str = "Ready") -> None:
     _set_ready_state(state, addr)
 
 
-def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -> classad.ClassAd:
+def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, security : SecurityContext = None) -> classad.ClassAd:
     """
     Send a ping command to an HTCondor daemon.
 
@@ -132,6 +135,7 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -
                      or a :class:`classad2.ClassAd` describing the daemon
                      as returned by :meth:`Collector.locate`.
     :param str authz: Authorization level or command to test.
+    :param security: SecurityContext to use for authentication.
     """
 
     addr = None
@@ -146,4 +150,8 @@ def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None) -
     if authz is None:
         authz = "DC_NOP"
 
-    return _ping(addr, authz)
+    token = None
+    if security is not None:
+        token = security.preferred_token
+
+    return _ping(addr, authz, token)

@@ -140,8 +140,10 @@
 #define STARTER_EXIT_IMMORTAL_LVM           15 // starter could not delete LVM disk - should mark slot as broken
 #define STARTER_EXIT_IMMORTAL_JOB_PROCESS   16 // starter could not kill job process - should mark slot as broken
 #define STARTER_EXIT_BROKEN_BY_REQUEST      17 // job requested that the slot break
+#define STARTER_EXIT_CGROUP_LOCKED          18 // starter could not clean up the cgroup - mark slot as broken
+// if you add a broken exit code, make sure you update BROKEN_RES_LAST
+#define STARTER_EXIT_BROKEN_RES_LAST        18
 #define STARTER_EXIT_BROKEN_RES_FIRST      STARTER_EXIT_IMMORTAL_LVM
-#define STARTER_EXIT_BROKEN_RES_LAST       STARTER_EXIT_BROKEN_BY_REQUEST
 
 int generate_exit_code( int input_code );
 

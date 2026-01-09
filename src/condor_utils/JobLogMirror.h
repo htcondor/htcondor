@@ -30,7 +30,6 @@ public:
 	JobLogMirror(ClassAdLogConsumer *consumer,char const *_job_queue=NULL);
 	~JobLogMirror();
 
-	void init();
 	void config();
 	void stop();
 	void poll();

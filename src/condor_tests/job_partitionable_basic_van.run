@@ -38,6 +38,8 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
   SLOT_TYPE_1 = cpus=20
   SLOT_TYPE_1_PARTITIONABLE = TRUE
   NUM_SLOTS_TYPE_1 = 1
+  # in case the test platforms don't have much disk, default to a minimal request
+  JOB_DEFAULT_REQUESTDISK = (TransferInputSizeMB+1) * (1024+256)
   CLAIM_PARTITIONABLE_LEFTOVERS = true
 CONDOR_TESTREQ_CONFIG
 #endtestreq

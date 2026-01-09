@@ -28,6 +28,8 @@ use Sys::Hostname;
 my $config = <<CONDOR_TESTREQ_CONFIG;
 	# test assumes slots have constant memory size
 	use FEATURE : STATICSLOTS
+	# in case the test platforms don't have much disk, default to a minimal request
+	JOB_DEFAULT_REQUESTDISK = (TransferInputSizeMB+1) * (1024+256)
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 

@@ -123,6 +123,10 @@ main_init( int argc, char ** const argv )
 			if (argc <= i + 1) {
 				usage(argv[0]);
 			}
+			if (ScheddName) {
+				free(ScheddName);
+				ScheddName = nullptr;
+			}
 			ScheddName = strdup(argv[i + 1]);
 			i++;
 			break;

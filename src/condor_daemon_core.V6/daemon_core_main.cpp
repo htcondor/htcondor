@@ -950,12 +950,18 @@ kill_daemon_ad_file()
 	free(ad_file);
 }
 
+static bool disable_drop_addr_file = false;
+void DC_Disable_Addr_File() { disable_drop_addr_file = true; }
+
 void
 drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
 	const char* addr[2];
+
+	if (disable_drop_addr_file)
+		return;
 
 	// build up a prefix as LOCALNAME.SUBSYSTEM or just SUBSYSTEM if no localname
 	// that way, daemons that have a localname will never stomp the address file of the
@@ -990,9 +996,14 @@ drop_addr_file()
 			std::string newAddrFile;
 			formatstr(newAddrFile,"%s.new",addrFile[i]);
 			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
-				fprintf( ADDR_FILE, "%s\n", addr[i] );
-				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
-				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
+				std::string adbuf;
+				formatstr(adbuf, "%s\n%s\n%s\n", addr[i], CondorVersion(), CondorPlatform());
+				// append extra contact info
+				if ( ! daemonCore->ContactInfoExtra().empty()) {
+					formatAd(adbuf, daemonCore->ContactInfoExtra());
+					if (adbuf.back() != '\n') adbuf += "\n";
+				}
+				fputs( adbuf.c_str(), ADDR_FILE );
 				fclose( ADDR_FILE );
 				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
 					dprintf( D_ALWAYS,
@@ -1007,6 +1018,11 @@ drop_addr_file()
 			}
 		}
 	}	// end of for loop
+}
+
+void DC_Enable_And_Drop_Addr_File() {
+	disable_drop_addr_file = false;
+	drop_addr_file();
 }
 
 void
@@ -2036,6 +2052,7 @@ handle_dc_start_token_request(int, Stream* stream)
 					final_key_name,
 					token_request.getBoundingSet(),
 					token_request.getLifetime(),
+					false,
 					token,
 					static_cast<Sock*>(stream)->getUniqueId(),
 					&err))
@@ -2066,10 +2083,10 @@ handle_dc_start_token_request(int, Stream* stream)
 				Sock * sock = dynamic_cast<Sock *>(stream);
 				if( sock ) {
 					const char * method = sock->getAuthenticationMethodUsed();
-					if( strcasecmp( method, "ANONYMOUS" ) == 0 ) {
+					if( !method || strcasecmp( method, "ANONYMOUS" ) == 0 ) {
 						g_request_map.erase(iter);
 						result_ad.Clear();
-						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS authentication.");
+						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS or no authentication.");
 						result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
 					}
 				}
@@ -2448,6 +2465,7 @@ handle_dc_approve_token_request(int, Stream* stream)
 			final_key_name,
 			token_request.getBoundingSet(),
 			token_request.getLifetime(),
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
@@ -2534,6 +2552,7 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 				final_key_name,
 				token_request.getBoundingSet(),
 				token_request.getLifetime(),
+				false,
 				token,
 				static_cast<Sock*>(stream)->getUniqueId(),
 				&err))
@@ -2634,7 +2653,7 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 			if (lifetime < 0) {lifetime = 0;}
 
 			if (!Condor_Auth_Passwd::generate_token(identity, key_name, bounding_set,
-				lifetime, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
+					lifetime, false, result_token, static_cast<Sock*>(stream)->getUniqueId(), &err))
 			{
 				error_code = err.code();
 				error_string = err.getFullText();
@@ -2814,6 +2833,7 @@ handle_dc_session_token(int, Stream* stream)
 			final_key_name,
 			authz_list,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))
@@ -3593,18 +3613,10 @@ int dc_main( int argc, char** argv )
 				get_mySubSystem()->getTypeName() );
 	}
 
-	if ( !dc_main_init ) {
-		EXCEPT( "Programmer error: dc_main_init is NULL!" );
-	}
-	if ( !dc_main_config ) {
-		EXCEPT( "Programmer error: dc_main_config is NULL!" );
-	}
-	if ( !dc_main_shutdown_fast ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_fast is NULL!" );
-	}
-	if ( !dc_main_shutdown_graceful ) {
-		EXCEPT( "Programmer error: dc_main_shutdown_graceful is NULL!" );
-	}
+	ASSERT(dc_main_init);
+	ASSERT(dc_main_config);
+	ASSERT(dc_main_shutdown_fast);
+	ASSERT(dc_main_shutdown_graceful);
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.

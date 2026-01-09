@@ -24,6 +24,10 @@ VERSION_ID=${VERSION_ID%%.*}
 ARCH=$(arch)
 REPO_ARCH='noarch'
 
+if [ -d /etc/rpm ]; then
+    echo "%os_release_id $ID" > /etc/rpm/macros.os-release-id
+fi
+
 if [ $ID = 'almalinux' ]; then
     if rpm -qf /bin/sh | grep -q 'x86_64_v2'; then
         ARCH='x86_64_v2'
@@ -46,7 +50,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     INSTALL='apt-get install --yes'
 elif [ $ID = 'centos' ]; then
     INSTALL='yum install --assumeyes'
-elif [ $ID = 'opensuse-leap' ]; then
+elif [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     INSTALL='zypper --non-interactive install'
     $INSTALL system-group-wheel system-user-mail
 elif [ $ID = 'amzn' ] || [ $ID = 'almalinux' ] || [ $ID = 'fedora' ]; then
@@ -100,24 +104,33 @@ fi
 
 # Setup RPM based repositories (include alpha repositories)
 if [ $ID = 'amzn' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.$REPO_ARCH.rpm"
+    $INSTALL "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.amzn$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.$REPO_ARCH.rpm"
+    $INSTALL "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.el$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 if [ $ID = 'fedora' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.$REPO_ARCH.rpm"
+    $INSTALL "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/yum.repos.d/htcondor-alpha.repo
 fi
 
 # openSUSE has a zypper command to install a repo from a URL.
 # Let's use that in the future. This works for now.
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
+    zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.$REPO_ARCH.rpm"
+    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
+    for key in /etc/pki/rpm-gpg/*; do
+        rpmkeys --import "$key"
+    done
+fi
+
+if [ $ID = 'sles' ]; then
+    # Hard code version in this special case
+    zypper --non-interactive --no-gpg-checks install "https://htcss-downloads.chtc.wisc.edu/repo/$REPO_VERSION/htcondor-release-current.sles15sp5.$REPO_ARCH.rpm"
     sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor-alpha.repo
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
@@ -128,8 +141,8 @@ fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL apt-transport-https apt-utils curl gnupg
     mkdir -p /etc/apt/keyrings
-    curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
-    curl -fsSL "https://research.cs.wisc.edu/htcondor/repo/$ID/htcondor-${REPO_VERSION}-${VERSION_CODENAME}.list" -o /etc/apt/sources.list.d/htcondor.list
+    curl -fsSL "https://htcss-downloads.chtc.wisc.edu/repo/keys/HTCondor-${REPO_VERSION}-Key" -o /etc/apt/keyrings/htcondor.asc
+    curl -fsSL "https://htcss-downloads.chtc.wisc.edu/repo/$ID/htcondor-${REPO_VERSION}-${VERSION_CODENAME}.list" -o /etc/apt/sources.list.d/htcondor.list
     # Include alpha repositories
     sed -i "/-alpha/s/^#//" /etc/apt/sources.list.d/htcondor.list
     apt-get update
@@ -150,7 +163,7 @@ if [ $ID = 'future' ] && [ $VERSION_ID -eq 10 ] && [ "$ARCH" = 'x86_64_v2' ]; th
     # ] ] Help out vim syntax highlighting
 fi
 # SUSE is special
-if [ $ID = 'future-opensuse-leap' ]; then
+if [ $ID = 'future-suse' ]; then
     cp -p /etc/zypp/repos.d/htcondor.repo /etc/zypp/repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/zypp/repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/zypp/repos.d/htcondor-test.repo
@@ -164,7 +177,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Install the build dependencies
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL make rpm-build
     # shellcheck disable=SC2046 # we want word splitting
     $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
@@ -190,16 +203,26 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
 fi
 
 # Add useful tools
-$INSTALL gdb git less nano patchelf python3-pip strace sudo vim
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
+$INSTALL gdb git less python3-pip strace sudo vim
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
 fi
+if [ $ID != 'sles' ]; then
+    $INSTALL nano
+fi
+
+# Use fancy new lief-patchelf
+if [ "$ARCH" = 'x86_64' ] || [ "$ARCH" = 'x86_64_v2' ] || [ "$ARCH" = 'aarch64' ]; then
+    $INSTALL lief-patchelf
+else
+    $INSTALL patchelf
+fi
 
 # Add in the ninja build system
-if [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL ninja
 else
     $INSTALL ninja-build
@@ -230,18 +253,14 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     sed -i -e 's/^hosts:.*/& myhostname/' /etc/nsswitch.conf
 fi
 
-if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
     $INSTALL condor hostname java openssh-clients openssh-server openssl
-    if [ $ID = 'opensuse-leap' ]; then
-        $INSTALL procps wget
-        # Install better patchelf
-        wget https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz
-        (cd /usr; tar xfpz /patchelf-0.18.0-x86_64.tar.gz ./bin/patchelf)
-        rm patchelf-0.18.0-x86_64.tar.gz
+    if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+        $INSTALL procps
     else
         $INSTALL procps-ng
     fi
-    if [ $ID != 'amzn' ]; then
+    if [ $ID != 'amzn' ] && [ $ID != 'sles' ]; then
         $INSTALL apptainer
     fi
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
@@ -250,11 +269,16 @@ fi
 # Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    if [ $VERSION_CODENAME = 'trixie' ]; then
+        TRIXIE='-trixie+'
+    else
+        TRIXIE=''
+    fi
     $INSTALL wget
-    APPTAINER_VERSION=1.4.1
-    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
-    $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
-    rm ./apptainer_${APPTAINER_VERSION}_amd64.deb
+    APPTAINER_VERSION=1.4.5
+    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    $INSTALL ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
+    rm ./apptainer_${APPTAINER_VERSION}${TRIXIE}_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -271,17 +295,19 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 pelican pelican-osdf-compat
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
+    elif [ $VERSION_CODENAME = 'trixie' ]; then
+        apt-get download libscitokens0t64 libvomsapi1t64
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt-get download libboost-python1.71.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt-get download libboost-python1.74.0 libvomsapi1v5
+        apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'noble' ]; then
-        apt-get download libboost-python1.83.0 libvomsapi1t64
+        apt-get download libscitokens0t64 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
@@ -294,17 +320,14 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
-    if [ $ID = 'centos' ] && [ $VERSION_ID -eq 7 ]; then
-        yumdownloader --downloadonly --destdir="$externals_dir" \
-            boost169-python3 python36-chardet python36-idna python36-pysocks python36-requests python36-six python36-urllib3
-    else
-        yumdownloader --downloadonly --destdir="$externals_dir" boost-python3
-    fi
     # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
+if [ $ID = 'opensuse-leap' ] || [ $ID = 'sles' ]; then
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libpcre2-8-0 pelican pelican-osdf-compat
+fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libmunge2 libSciTokens0
 fi
 
 # Clean up package caches

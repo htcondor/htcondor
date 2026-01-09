@@ -123,8 +123,13 @@ public:
 			If you call this, and transient_failure is not true, you
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
+			transferOutputStart() and transferOutputFinish() should
+			not be called directly by outside code. They are helpers
+			for transferOutput().
 		*/
-	bool transferOutput( bool &transient_failure );
+	bool transferOutput(bool& transient_failure, bool& in_progress);
+	bool transferOutputStart(bool& transient_failure, bool& in_progress);
+	bool transferOutputFinish(bool& transient_failure, bool& in_progress);
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the
@@ -132,20 +137,22 @@ public:
 			between the failure of the transfer and the disconnection of the
 			shadow when the starter notifies it of the file transfer error.
 			This call will put the job on hold and cause the shadow to
-			disconnect from the starter if something went wrong. If 
+			disconnect from the starter if something went wrong. If
 			the file transfer went right, then it is a noop.
 		*/
 	bool transferOutputMopUp( void );
 
+	virtual void setOutputTransfer(bool b) { m_did_output_transfer = b; }
+
 		/** The last job this starter is controlling has been
-   			completely cleaned up.  We don't care, since we just wait
-			for the shadow to tell the startd to tell us to go away. 
+			completely cleaned up.  We don't care, since we just wait
+			for the shadow to tell the startd to tell us to go away.
 		*/
 	void allJobsGone( void );
 
 		/** The starter has been asked to shutdown fast.  Disable file
 			transfer, since we don't want that on fast shutdowns.
-			Also, set a flag so we know we were asked to vacate. 
+			Also, set a flag so we know we were asked to vacate.
 		 */
 	void gotShutdownFast( void );
 
@@ -302,20 +309,23 @@ private:
 
 		/** Read all the relevent attributes out of the job ad and
 			decide if we need to transfer files.  If so, instantiate a
-			FileTransfer object, start the transfer, and return true.
+			FileTransfer object, start the input transfer, and return true.
 			If we don't have to transfer anything, return false.
 			@return true if transfer was begun, false if not
 		*/
-	bool beginFileTransfer( void );
+	bool beginInputTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferStatusCallback(FileTransfer * ftrans) {
 		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
 			return transferInputStatus(ftrans);
+		} else if (ftrans->GetInfo().type == FileTransfer::TransferType::UploadFilesType) {
+			return transferOutputStatus(ftrans);
 		}
 		return 1;
 	}
 	int transferInputStatus(FileTransfer *);
+	int transferOutputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -480,6 +490,8 @@ private:
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
+	void doneWithInputTransfer();
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -506,7 +518,8 @@ private:
 	FileTransfer *filetrans;
 	bool m_ft_rval;
 	FileTransfer::FileTransferInfo m_ft_info;
-	bool m_did_transfer;
+	bool m_did_output_transfer;
+	bool m_output_transfer_active{false};
 
 
 		// specially made security sessions if we are doing
@@ -581,6 +594,10 @@ private:
 	bool transferredFailureFiles = false;
 
 	std::map< std::string, std::filesystem::path > cifNameToLocationMap;
+
+    // Because of stupidity in how the file transfer object handles
+    // notifications, we can get a completion notice more than once.
+    bool first_completion_notice = true;
 };
 
 

@@ -23,10 +23,6 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$slurm_binpath" ] ; then
-  slurm_binpath=/usr/bin
-fi
-
 requested=`echo $1 | sed 's/^.*\///'`
 
 cluster_name=`echo $requested | cut -s -f2 -d@`
@@ -35,7 +31,7 @@ if [ "$cluster_name" != "" ] ; then
   cluster_arg="-M $cluster_name"
 fi
 
-${slurm_binpath}/scontrol $cluster_name release $requested >&/dev/null
+${slurm_binpath}scontrol $cluster_name release $requested >&/dev/null
 
 if [ "$?" == "0" ]; then
   echo " 0 No\\ error"

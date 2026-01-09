@@ -18,6 +18,7 @@ import htcondor2
 import os
 from shutil import rmtree
 import re
+from time import sleep
 
 SUBDIR = "test_subdir"
 JOB_LOG = "check.log"
@@ -172,8 +173,29 @@ def test_get_history(condor, dag_wait, dag_num_nodes, dag_num_jobs):
     ads = list()
     const = f'(ClusterId=={dag_wait.clusterid} || DAGManJobId=={dag_wait.clusterid})'
     proj = ["DAGNodeName", "DAG_NodesTotal", "ClusterId", "HasCustomVar", "ExitCode"]
+
     with condor.use_config():
-        ads = htcondor2.Schedd().history(constraint=const, projection=proj)
+        # Attempt to get all job records from history archive
+        attempt = 0
+        while True:
+            ads = htcondor2.Schedd().history(constraint=const, projection=proj)
+            attempt += 1
+
+            if len(ads) > dag_num_jobs:
+                # We expect a record for each submitted job (dag_num_jobs) plus
+                # one for the schedule uni. job. Thus, only break out if we have
+                # more records than the submitted count.
+                # Note: Later check will verify the correct number of records
+                #       (greater than or less than) and contents
+                break
+            elif attempt >= 5:
+                # At this point something probably went wrong so return records
+                # for likely failure
+                break
+            else:
+                # Sleep for a little bit before attempting query once more
+                sleep(5)
+
     return (ads, dag_num_nodes, dag_num_jobs)
 
 #==================================================================

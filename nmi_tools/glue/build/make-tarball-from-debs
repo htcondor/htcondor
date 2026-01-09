@@ -60,6 +60,8 @@ if [ $VERSION_CODENAME = 'bullseye' ]; then
     arch_dist="${arch}_Debian11"
 elif [ $VERSION_CODENAME = 'bookworm' ]; then
     arch_dist="${arch}_Debian12"
+elif [ $VERSION_CODENAME = 'trixie' ]; then
+    arch_dist="${arch}_Debian13"
 elif [ $VERSION_CODENAME = 'focal' ]; then
     arch_dist="${arch}_Ubuntu20"
 elif [ $VERSION_CODENAME = 'jammy' ]; then
@@ -89,33 +91,39 @@ fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
-# Move configuration files back to example directory
-mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor/examples/
+$cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
+
+# Move configuration files back to examples directory
+mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Extract external debs
 for path in /usr/local/condor/externals/*.deb; do
     file=${path##*/}
     echo ======= $file =======
-    extract_deb $path tarball
     echo $file >> tarball/Manifest.txt
+    extract_deb $path tarball
 done
+
+# On Debian and Unbuntu consolidate shared objects into a single directory
+if [ -d tarball/usr/lib/$arch-linux-gnu ]; then
+    find tarball/usr/lib/$arch-linux-gnu -name \*.so\* -exec mv {} tarball/usr/lib \;
+fi
+
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib:$ORIGIN/../lib/condor'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 
 # Make necessary?? directories
 mkdir -p -m0700 tarball/etc/condor/passwords.d
 mkdir -p -m0700 tarball/etc/condor/tokens.d
 mkdir -p tarball/var/lib/condor/execute
 mkdir -p tarball/var/lib/condor/oauth_credentials
-
-$cmd_dir/make-tarball-links tarball
-if [ $? -ne 0 ];then
-    echo 'ERROR: tarball link script failed'
-    exit 1
-fi
-$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib:$ORIGIN/../lib/condor'
-if [ $? -ne 0 ];then
-    echo 'ERROR: set rpath script failed'
-    exit 1
-fi
 
 # Add in apptainer if available
 if [ -d /usr/local/condor/externals/apptainer ]; then

@@ -295,8 +295,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			auto sess_itr = m_sec_man->session_cache->find(sess_id);
-			if (sess_itr == m_sec_man->session_cache->end()) {
+			auto sess_itr = m_sec_man->session_cache.find(sess_id);
+			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
@@ -390,8 +390,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 
 		if (sess_id) {
 			KeyCacheEntry *session = NULL;
-			auto sess_itr = m_sec_man->session_cache->find(sess_id);
-			if (sess_itr == m_sec_man->session_cache->end()) {
+			auto sess_itr = m_sec_man->session_cache.find(sess_id);
+			if (sess_itr == m_sec_man->session_cache.end()) {
 				dprintf ( D_ERROR, "DC_AUTHENTICATE: session %s NOT FOUND; this session was requested by %s with return address %s\n", sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				// no session... we outta here!
 
@@ -515,45 +515,38 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 {
 	m_sock->decode();
 
-		// Determine if incoming socket is HTTP over TCP, or if it is CEDAR.
-		// For better or worse, we figure this out by seeing if the socket
-		// starts w/ a GET or POST.  Hopefully this does not correspond to
-		// a daemoncore command int!  [not ever likely, since CEDAR ints are
-		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
-		// with a more foolproof method.
-		// Note: We no longer support soap, but this peek is part of the
-		//   code below that checks if this is a command that shared port
-		//   should transparently hand off to the collector.
-	char tmpbuf[6];
-	memset(tmpbuf,0,sizeof(tmpbuf));
-	if ( m_is_tcp && daemonCore->HandleUnregistered() ) {
-			// TODO Should we be ignoring the return value of condor_read?
-		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf, sizeof(tmpbuf) - 1, 1, MSG_PEEK);
-	}
-
-		// This was not a soap request; next, see if we have a special command
-		// handler for unknown command integers.
-		//
-		// We do manual CEDAR parsing here to look at the command int directly
-		// without consuming data from the socket.  The first few bytes are the
-		// size of the message, followed by the command int itself.
-	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
-	tmp_req = ntohl(tmp_req);
-	if (daemonCore->HandleUnregistered() && (tmp_req >= 8)) {
+	// See if we have a special command handler for unknown command integers.
+	//
+	// We do manual CEDAR parsing here to look at the command int directly
+	// without consuming data from the socket.  The first five bytes are the
+	// CEDAR packet header. The next eight bytes are the command int itself.
+	// Leaving the data unconsumed is necessary for the shared port daemon
+	// to transparently hand connections to the collector for commands it
+	// doesn't handle.
+	if (m_is_tcp && daemonCore->HandleUnregistered()) {
 			// Peek at the command integer if one exists.
-		char tmpbuf2[8+5]; memset(tmpbuf2, 0, sizeof(tmpbuf2));
-		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
-			tmpbuf2, 8+5, 1, MSG_PEEK);
-		char *tmpbuf3 = tmpbuf2 + 5;
-		if (8-sizeof(int) > 0) { tmpbuf3 += 8-sizeof(int); } // Skip padding
-		memcpy(static_cast<void*>(&tmp_req), tmpbuf3, sizeof(int));
-		tmp_req = ntohl(tmp_req);
+		long long tmp_req;
+		char tmpbuf[8+5]; memset(tmpbuf, 0, sizeof(tmpbuf));
+		int sz = sizeof(tmpbuf);
+		int rc;
+		rc = condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+			tmpbuf, sz, 1, CondorRWFlags::Peek);
+		if (rc != sz) {
+			char const *ip = m_sock->peer_ip_str();
+			if(!ip) {
+				ip = "unknown address";
+			}
+			dprintf(D_ERROR, "DaemonCore: Can't receive command request from %s (perhaps a timeout?)\n", ip);
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+		memcpy(static_cast<void*>(&tmp_req), tmpbuf + 5, sizeof(tmp_req));
+		tmp_req = ntohLL(tmp_req);
 
 			// Lookup the command integer in our command table to see if it is unregistered
 		int tmp_cmd_index;
 		if(	   (!m_isSharedPortLoopback)
-			&& (! daemonCore->CommandNumToTableIndex( tmp_req, &tmp_cmd_index ))
+			&& (! daemonCore->CommandNumToTableIndex( (int)tmp_req, &tmp_cmd_index ))
 			&& ( daemonCore->HandleUnregisteredDCAuth()
 				|| (tmp_req != DC_AUTHENTICATE) ) ) {
 			ScopedEnableParallel(false);
@@ -563,7 +556,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadHeader()
 				m_sock->set_deadline(0);
 			}
 
-			m_result = daemonCore->CallUnregisteredCommandHandler(tmp_req, m_sock);
+			m_result = daemonCore->CallUnregisteredCommandHandler((int)tmp_req, m_sock);
 			return CommandProtocolFinished;
 		}
 	}
@@ -723,8 +716,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				m_auth_info.Delete(ATTR_SEC_NONCE);
 
 				// lookup the suggested key
-				auto sess_itr = m_sec_man->session_cache->find(m_sid);
-				if (sess_itr == m_sec_man->session_cache->end()) {
+				auto sess_itr = m_sec_man->session_cache.find(m_sid);
+				if (sess_itr == m_sec_man->session_cache.end()) {
 
 					// the key id they sent was not in our cache.  this is a
 					// problem.
@@ -1542,8 +1535,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
+			bool has_capability = false;
 			const ClassAd* policy_ad = m_policy ? m_policy : m_sock->getPolicyAd();
-			if (policy_ad && policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			if (policy_ad) {
+				if (policy_ad->EvaluateAttrString("TokenCapabilities", authz_policy)) {
+					has_capability = true;
+				} else {
+					policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
+				}
+			}
+			if (!authz_policy.empty()) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
@@ -1570,7 +1571,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					can_attempt = false;
 				}
 			}
-			if (can_attempt) {
+			if (has_capability && can_attempt) {
+				// Client has capability that authorizes this command
+				dprintf(D_STATUS,
+					"PERMISSION GRANTED to %s from host %s for %s, "
+					"access level %s: reason: %s\n",
+					m_user.c_str(),
+					m_sock->peer_addr().to_ip_string_ex().c_str(),
+					command_desc.c_str(),
+					PermString(m_comTable[m_cmd_index].perm),
+					"client has capability that allows this command");
+				m_perm = USER_AUTH_SUCCESS;
+			} else if (can_attempt) {
 					// A bit redundant to have the outer conditional,
 					// but this gets the log verbosity right and has
 					// zero cost in the "normal" case with no alternate
@@ -1796,7 +1808,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		m_sec_man->session_cache->emplace(m_sid, KeyCacheEntry(m_sid, "", keyvec, *m_policy, expiration_time, session_lease));
+		m_sec_man->session_cache.emplace(m_sid, KeyCacheEntry(m_sid, "", keyvec, *m_policy, expiration_time, session_lease));
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid.c_str(), durint, session_lease, return_addr.c_str());
 		if (IsDebugVerbose(D_SECURITY)) {
 			dPrintAd(D_SECURITY, *m_policy);
@@ -1863,6 +1875,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// send another classad saying what happened
 		ClassAd q_response;
 		q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
+
+		// Include token-related attributes
+		// Can m_policy be NULL in practice?
+		if (m_policy) {
+			size_t prefix_len = strlen(ATTR_TOKEN_prefix);
+			for (const auto& token_attr: *m_policy) {
+				if (strncasecmp(token_attr.first.c_str(), ATTR_TOKEN_prefix, prefix_len) != 0) {
+					continue;
+				}
+				q_response.Insert(token_attr.first, token_attr.second->Copy());
+			}
+		}
 
 		if (!putClassAd(m_sock, q_response) ||
 			!m_sock->end_of_message()) {

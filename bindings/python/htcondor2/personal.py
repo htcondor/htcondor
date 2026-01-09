@@ -21,6 +21,7 @@ import os
 import shlex
 import signal
 import subprocess
+import sys
 import textwrap
 import time
 from pathlib import Path
@@ -72,6 +73,8 @@ DEFAULT_CONFIG = {
     "NUM_SLOTS_TYPE_1": "1",
     "SLOT_TYPE_1": "100%",
     "SLOT_TYPE_1_PARTITIONABLE": "TRUE",
+    # Singularity has intermittent issues on startup, turn off for now
+    "SINGULARITY": "/usr/bin/false",
 }
 
 ROLES = ["Personal"]
@@ -384,8 +387,8 @@ class PersonalPool:
             "SEC_PASSWORD_DIRECTORY": self.passwords_dir.as_posix(),
             "SEC_TOKEN_DIRECTORY": self.tokens_dir.as_posix(),
             "SEC_TOKEN_SYSTEM_DIRECTORY": self.system_tokens_dir.as_posix(),
-            "MAIL": "/bin/true",
-            "SENDMAIL": "/bin/true",
+            "MAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
+            "SENDMAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
         }
 
         param_lines += ["# BASE PARAMS"]
@@ -521,7 +524,7 @@ class PersonalPool:
             return int(self.who()["MASTER_PID"])
 
     def _daemon_pids(self) -> List[int]:
-        return [int(v) for k, v in self.who() if k.endswith("_PID")]
+        return [int(v) for k, v in self.who().items() if k.endswith("_PID")]
 
     def _is_ready(self) -> bool:
         return self.who().get("IsReady", False)
@@ -627,9 +630,6 @@ class PersonalPool:
         )
 
     def _kill_condor_system(self):
-        if self._condor_master_is_alive():
-            return
-
         pids = self._daemon_pids()
         for pid in pids:
             os.kill(pid, signal.SIGKILL)

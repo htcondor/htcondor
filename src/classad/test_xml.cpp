@@ -21,10 +21,6 @@
 #include "classad/classad_distribution.h"
 #include <iostream>
 
-using std::string;
-using std::vector;
-using std::pair;
-
 using namespace classad;
 
 void test_old_time(void);
@@ -34,7 +30,7 @@ int main(int, char **)
 	ClassAdXMLParser  parser;
 	ClassAd  *classad;
 
-	string  xml = "<?xml version=\"1.0\"?>< c >"
+	std::string  xml = "<?xml version=\"1.0\"?>< c >"
                   "<a n=\"A\"><s> Alain &lt;Aslag&gt; Roy&#172;</s></a>"
                   "<a n=\"B\"><i> 3 </i></a>"
 		          "<a n=\"C\"><b v=\"t\"/></a>"
@@ -46,7 +42,7 @@ int main(int, char **)
 	classad = parser.ParseClassAd(xml);
 
 	PrettyPrint  printer;
-	string       printed_classad;
+	std::string       printed_classad;
 
 	printer.Unparse(printed_classad, classad);
 	cout << "ClassAd as parsed from XML:\n" << printed_classad << endl;
@@ -64,7 +60,7 @@ int main(int, char **)
 	cout << "ClassAd re-read from generated XML:\n" << printed_classad << endl;
 
 	// We should be able to read two classads from this string
-	string xml2 = "<?xml version=\"1.0\"?>"
+	std::string xml2 = "<?xml version=\"1.0\"?>"
                   "<classads>"
 		          "< c >"
                   "<a n=\"A\"><s> Alain &quot;Aslag&quot; Roy</s></a>"
@@ -120,7 +116,7 @@ void test_old_time(void)
 	time = Literal::MakeAbsTime();
 	ad->Insert("CurrentTime", time);
 
-	string       printed_classad;
+	std::string       printed_classad;
 	ClassAdXMLUnParser  unparser;
 	unparser.SetCompactSpacing(false);
 	unparser.Unparse(printed_classad, ad);

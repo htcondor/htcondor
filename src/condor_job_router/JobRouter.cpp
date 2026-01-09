@@ -41,6 +41,7 @@
 #include "directory_util.h"
 #include "truncate.h"
 #include "set_user_priv_from_ad.h"
+#include "Scheduler.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -64,12 +65,7 @@ const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
 const int THROTTLE_UPDATE_INTERVAL = 600;
 
 JobRouter::JobRouter(unsigned int as_tool)
-	: m_jobs(hashFunction)
-	, m_schedd2_name(NULL)
-	, m_schedd2_pool(NULL)
-	, m_schedd1_name(NULL)
-	, m_schedd1_pool(NULL)
-	, m_round_robin_selection(true)
+	: m_round_robin_selection(true)
 	, m_operate_as_tool(as_tool)
 {
 	m_scheduler = NULL;
@@ -103,11 +99,8 @@ JobRouter::JobRouter(unsigned int as_tool)
 }
 
 JobRouter::~JobRouter() {
-	RoutedJob *job;
-
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
-		RemoveJob(job);
+	for (auto& [key, job]: m_jobs) {
+		delete job;
 	}
 
 	m_route_order.clear();
@@ -192,6 +185,25 @@ JobRouter::GetInstanceLock() {
 	}
 }
 
+void ScheddContactInfo::config(int _id, Scheduler* schedd)
+{
+	id = _id;
+	name.clear();
+	pool.clear();
+
+	address_file.clear();
+	if (schedd && schedd->address_file()) {
+		address_file = schedd->address_file();
+	}
+
+	param(name, id==2 ? "JOB_ROUTER_SCHEDD2_NAME" : "JOB_ROUTER_SCHEDD1_NAME");
+	param(pool, id==2 ? "JOB_ROUTER_SCHEDD2_POOL" : "JOB_ROUTER_SCHEDD1_POOL");
+
+	if (name.empty()) { _label = "local schedd"; }
+	else { _label =  "schedd " + name; }
+	if ( ! pool.empty()) { _label += " at pool " + pool; }
+}
+
 
 void
 JobRouter::config( int /* timerID */ ) {
@@ -227,7 +239,7 @@ JobRouter::config( int /* timerID */ ) {
 	if (m_scheduler2) {
 		dprintf(D_ALWAYS, "Watching destination schedd (SCHEDD2): %s\n", m_scheduler2->following());
 	} else {
-		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destintation also\n");
+		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destination also\n");
 	}
 
 	m_scheduler->config();
@@ -478,23 +490,19 @@ JobRouter::config( int /* timerID */ ) {
 		}
 	} // ! m_operate_as_tool
 
-	param(m_schedd2_name_buf,"JOB_ROUTER_SCHEDD2_NAME");
-	param(m_schedd2_pool_buf,"JOB_ROUTER_SCHEDD2_POOL");
-	m_schedd2_name = m_schedd2_name_buf.empty() ? NULL : m_schedd2_name_buf.c_str();
-	m_schedd2_pool = m_schedd2_pool_buf.empty() ? NULL : m_schedd2_pool_buf.c_str();
-	if( m_schedd2_name ) {
+	m_schedd2.config(2, m_scheduler2 ? m_scheduler2 : m_scheduler);
+	m_schedd1.config(1, m_scheduler);
+
+	if ( ! m_schedd2.name.empty()) {
 		dprintf(D_ALWAYS,"Routing jobs to schedd %s in pool %s\n",
-				m_schedd2_name_buf.c_str(),m_schedd2_pool_buf.c_str());
+			m_schedd2.name.c_str(), m_schedd2.pool.c_str());
 	}
 
-	param(m_schedd1_name_buf,"JOB_ROUTER_SCHEDD1_NAME");
-	param(m_schedd1_pool_buf,"JOB_ROUTER_SCHEDD1_POOL");
-	m_schedd1_name = m_schedd1_name_buf.empty() ? NULL : m_schedd1_name_buf.c_str();
-	m_schedd1_pool = m_schedd1_pool_buf.empty() ? NULL : m_schedd1_pool_buf.c_str();
-	if( m_schedd1_name ) {
+	if ( ! m_schedd1.name.empty()) {
 		dprintf(D_ALWAYS,"Routing jobs from schedd %s in pool %s\n",
-				m_schedd1_name_buf.c_str(),m_schedd1_pool_buf.c_str());
+			m_schedd1.name.c_str(), m_schedd1.pool.c_str());
 	}
+
 }
 
 void
@@ -562,7 +570,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	if (dir.empty()) { param(dir, "SEC_TOKEN_DIRECTORY"); }
 
 	CondorError err;
-	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, token, 0, &err)) {
+	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, false, token, 0, &err)) {
 		dprintf(D_ALWAYS, "failed to create token %s : %s\n", name, err.getFullText(false).c_str());
 		return false;
 	}
@@ -751,15 +759,13 @@ JobRouter::InitPublicAd()
 void
 JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 {
-	RoutedJob *job;
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *orig_ad;
 
 	dprintf(D_FULLDEBUG, "JobRouter: Evaluating all managed jobs periodic "
 			"job policy expressions.\n");
 
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job))
+	for (auto& [key, job]: m_jobs)
 	{
 		orig_ad = ad_collection->GetClassAd(job->src_key);
 		
@@ -792,7 +798,7 @@ JobRouter::EvalAllSrcJobPeriodicExprs( int /* timerID */ )
 			}
 
 			job->SetSrcJobAd(job->src_key.c_str(), orig_ad, ad_collection);
-			if (false == push_dirty_attributes(job->src_ad,m_schedd1_name,m_schedd1_pool))
+			if (false == push_dirty_attributes(job->src_ad,m_schedd1))
 			{
 				dprintf(D_ALWAYS, "JobRouter failure (%s): "
 						"failed to reset src job "
@@ -899,9 +905,9 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		num_holds++;
 		ad.InsertAttr(ATTR_NUM_SYSTEM_HOLDS, num_holds);
 
-		WriteHoldEventToUserLog(ad);
+		WriteHoldEventToUserLog(ad, m_scheduler->GetJobUser(&ad));
 
-		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
+		if(false == push_dirty_attributes(ad,m_schedd1))
 		{
 			dprintf(D_ALWAYS,"JobRouter failure (%d.%d): failed to "
 					"place job on hold.\n", cluster, proc);
@@ -938,7 +944,7 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 		ad.InsertAttr(ATTR_JOB_STATUS, REMOVED);
 		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
-		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
+		if(false == push_dirty_attributes(ad,m_schedd1))
 		{
 			dprintf(D_ALWAYS,"JobRouter failure (%d.%d): failed to "
 					"remove job.\n", cluster, proc);
@@ -1159,16 +1165,17 @@ JobRouter::GracefullyRemoveJob(RoutedJob *job) {
 
 bool
 JobRouter::AddJob(RoutedJob *job) {
-	return m_jobs.insert(job->src_key,job) == 0;
+	auto [it, success] = m_jobs.emplace(job->src_key, job);
+	return success;
 }
 
 RoutedJob *
 JobRouter::LookupJobWithSrcKey(std::string const &src_key) {
-	RoutedJob *job = NULL;
-	if(m_jobs.lookup(src_key,job) == -1) {
+	auto it = m_jobs.find(src_key);
+	if (it == m_jobs.end()) {
 		return NULL;
 	}
-	return job;
+	return it->second;
 }
 
 RoutedJob *
@@ -1184,9 +1191,9 @@ JobRouter::LookupJobWithKeys(std::string const &src_key,std::string const &dest_
 
 bool
 JobRouter::RemoveJob(RoutedJob *job) {
-	int success;
+	size_t success;
 	ASSERT(job);
-	success = m_jobs.remove(job->src_key);
+	success = m_jobs.erase(job->src_key);
 	delete job;
 	return success != 0;
 }
@@ -1217,9 +1224,7 @@ RoutedJob::~RoutedJob() {
 int
 JobRouter::NumManagedJobs() {
 	int count = 0;
-	RoutedJob *job = NULL;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (const auto& [key, job]: m_jobs) {
 		if(job->state != RoutedJob::RETIRED) count++;
 	}
 	return count;
@@ -1247,9 +1252,12 @@ JobRouter::Poll( int /* timerID */ ) {
 	UpdateRouteStats();
 	GetCandidateJobs();
 
+	// CleanupRetiredJob() will erase the m_jobs entry, so be careful...
 	RoutedJob *job;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	auto it = m_jobs.begin();
+	while (it != m_jobs.end()) {
+		job = it->second;
+		it++;
 		// The following functions only do something if the job is in a state
 		// where it needs the action to be done.
 		TakeOverJob(job);
@@ -1257,16 +1265,14 @@ JobRouter::Poll( int /* timerID */ ) {
 		CheckSubmittedJobStatus(job);
 		FinalizeJob(job);
 		CleanupJob(job);
-		CleanupRetiredJob(job); //NOTE: this may delete job
+		CleanupRetiredJob(job); //NOTE: this may delete job and remove it from m_jobs
 	}
 }
 
 void JobRouter::SimulateRouting()
 {
 	ASSERT(m_operate_as_tool);
-	RoutedJob *job;
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (auto& [key, job]: m_jobs) {
 		// The following functions only do something if the job is in a state
 		// where it needs the action to be done.
 		TakeOverJob(job);
@@ -1366,7 +1372,7 @@ JobRouter::AdoptOrphans() {
 		if(!src_ad) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): removing orphaned destination job with no matching source job.\n",src_key.c_str(),dest_key.c_str());
 			std::string err_desc;
-			if(!remove_job(*dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
+			if(!remove_job(dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): failed to remove dest job: %s\n",src_key.c_str(),dest_key.c_str(),err_desc.c_str());
 			}
 			continue;
@@ -1414,7 +1420,7 @@ JobRouter::AdoptOrphans() {
 		if(!AddJob(job)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to add orphaned job to my routed job list; aborting it.\n",job->JobDesc().c_str());
 			std::string err_desc;
-			if(!remove_job(job->dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
+			if(!remove_job(dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2,err_desc)) {
 				dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.c_str());
 			}
 			delete job;
@@ -1460,7 +1466,7 @@ JobRouter::AdoptOrphans() {
 
 		std::string error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
-		if(!yield_job(*src_ad,m_schedd1_name,m_schedd1_pool,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(),true,m_release_on_hold)) {
+		if(!yield_job(*src_ad, m_schedd1, false, src_proc_id.cluster, src_proc_id.proc, error_details, JobRouterName().c_str(), m_release_on_hold)) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
 					error_details.c_str());
@@ -1470,7 +1476,7 @@ JobRouter::AdoptOrphans() {
 			int job_status = IDLE;
 			src_ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
 			if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
-				WriteEvictEventToUserLog( *src_ad );
+				WriteEvictEventToUserLog(*src_ad, m_scheduler->GetJobUser(src_ad) );
 			}
 		}
 	} while (query.Next(src_key));
@@ -1715,15 +1721,13 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 
 void
 JobRouter::UpdateRouteStats() {
-	RoutedJob *job;
 	JobRoute *route;
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		route->ResetCurrentRoutedJobs();
 	}
 
-	m_jobs.startIterations();
-	while(m_jobs.iterate(job)) {
+	for (auto& [key, job]: m_jobs) {
 		if(!job->route_name.empty()) {
 			route = safe_lookup_route(job->route_name);
 			if (route) {
@@ -1761,7 +1765,7 @@ JobRouter::TakeOverJob(RoutedJob *job) {
 	}
 
 	std::string error_details;
-	ClaimJobResult cjr = claim_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str(), job->is_sandboxed);
+	ClaimJobResult cjr = claim_job(job->src_ad, m_schedd1, job->src_proc_id.cluster, job->src_proc_id.proc, error_details, JobRouterName().c_str());
 
 	switch(cjr) {
 	case CJR_ERROR: {
@@ -1853,7 +1857,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 
 	if(job->edit_job_in_place) {
-		if(!push_classad_diff(job->src_ad,job->dest_ad,m_schedd1_name,m_schedd1_pool)) {
+		if(!push_classad_diff(job->src_ad,job->dest_ad,m_schedd1)) {
 			dprintf(D_ALWAYS, "JobRouter failure (%s): "
 					"Failed to edit job.\n",
 					job->JobDesc().c_str());
@@ -1934,7 +1938,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	}
 	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
-	rc = submit_job(owner, domain, job->dest_ad,m_schedd2_name,m_schedd2_pool,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
+	rc = submit_job(owner, domain, job->dest_ad,m_schedd2,job->is_sandboxed,&dest_cluster_id,&dest_proc_id);
 
 		// Now that the job is submitted, we can clean up any temporary
 		// x509 proxy files, because these will have been copied into
@@ -2196,7 +2200,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 
 	if(job_status == REMOVED) {
 		dprintf(D_FULLDEBUG, "JobRouter (%s): found src job marked for removal\n",job->JobDesc().c_str());
-		WriteAbortEventToUserLog( *src_ad );
+		WriteAbortEventToUserLog(*src_ad, m_scheduler->GetJobUser(src_ad));
 		job->is_interrupted = true;
 		GracefullyRemoveJob(job);
 		return;
@@ -2333,7 +2337,7 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 	job->src_ad.EvaluateAttrInt(ATTR_JOB_STATUS, old_status);
 	if ( old_status != IDLE ) {
 		if ( old_status == RUNNING || old_status == TRANSFERRING_OUTPUT ) {
-			WriteEvictEventToUserLog( job->src_ad );
+			WriteEvictEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad));
 		}
 		job->src_ad.InsertAttr(ATTR_JOB_STATUS,IDLE);
 		if(false == PushUpdatedAttributes(job->src_ad)) {
@@ -2344,9 +2348,7 @@ JobRouter::SetJobIdle(RoutedJob *job) {
 
 bool
 JobRouter::PushUpdatedAttributes(classad::ClassAd& ad, bool routed_job) {
-	if(false == push_dirty_attributes(ad,
-						routed_job ? m_schedd2_name : m_schedd1_name,
-						routed_job ? m_schedd2_pool : m_schedd1_pool))
+	if(false == push_dirty_attributes(ad, routed_job ? m_schedd2 : m_schedd1))
 	{
 		return false;
 	}
@@ -2367,14 +2369,14 @@ JobRouter::FinishFinalizeJob(RoutedJob *job) {
 	}
 	job->src_ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
 
-	if(!finalize_job(owner, domain, job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,m_schedd2_name,m_schedd2_pool,job->is_sandboxed)) {
+	if(!finalize_job(owner, domain, job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,m_schedd2,job->is_sandboxed)) {
 		dprintf(D_ALWAYS,"JobRouter failure (%s): failed to finalize job\n",job->JobDesc().c_str());
 
 			// Put the src job back in idle state to prevent it from
 			// exiting the queue.
 		SetJobIdle(job);
 	}
-	else if(!WriteTerminateEventToUserLog(job->src_ad)) {
+	else if(!WriteTerminateEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad))) {
 	}
 	else {
 		EmailTerminateEvent(job->src_ad);
@@ -2565,7 +2567,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {
 		// Remove (abort) destination job.
 		std::string err_desc;
-		if(!remove_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",m_schedd2_name,m_schedd2_pool,err_desc)) {
+		if(!remove_job(job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",m_schedd2,err_desc)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.c_str());
 		}
 		else {
@@ -2581,9 +2583,9 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 		// previously running, we need an evict event.
 		job->src_ad.EvaluateAttrInt( ATTR_JOB_STATUS, job_status );
 		if ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) {
-			WriteEvictEventToUserLog( job->src_ad );
+			WriteEvictEventToUserLog(job->src_ad, m_scheduler->GetJobUser(&job->src_ad) );
 		}
-		if(!yield_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->is_done,job->src_proc_id.cluster,job->src_proc_id.proc,&error_details,JobRouterName().c_str(),job->is_sandboxed,m_release_on_hold,&keep_trying))
+		if(!yield_job(job->src_ad, m_schedd1, job->is_done, job->src_proc_id.cluster, job->src_proc_id.proc, error_details, JobRouterName().c_str(), m_release_on_hold, &keep_trying))
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),
@@ -2868,7 +2870,7 @@ JobRoute::ApplyRoutingJobEdits(
 	if (!pre_route.empty()) {
 		for (MacroStreamXFormSource* xfm: pre_route) {
 			if ( ! xfm->matches(src_ad)) {
-				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
+				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skipping it.\n", xfm->getName());
 				continue;
 			}
 			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying pre-route transform: %s\n", xfm->getName()); }
@@ -2895,7 +2897,7 @@ JobRoute::ApplyRoutingJobEdits(
 	if (! post_route.empty()) {
 		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
-				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
+				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skipping it.\n", xfm->getName());
 				continue;
 			}
 			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying post-route transform: %s\n", xfm->getName()); }

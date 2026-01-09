@@ -220,7 +220,7 @@ DAGMan has two ways of restarting a failed DAG: Rescue and Recovery.
 Rescue mode is most common for resubmitting a DAG manually while recovery
 mode is most likely to occur automatically if a crash or something occurs.
 
-If the DAG has failed, it can be be restarted such that work that needs
+If the DAG has failed, it can be restarted such that work that needs
 to be executed (including previously failed part) are ran. Resubmission should
 be done via a Rescue DAG if the file exists, otherwise DAGMan will use
 Recovery mode. To determine if Rescue mode is possible check the DAG
@@ -320,11 +320,16 @@ Using an Older Rescue DAG
 
 If a DAG has failed multiple times and produced many Rescue DAG files, specific
 Rescue DAGs can be specified to re-run the DAG from rather than the rescue with
-the highest magnitude. This is achieved by using the *-DoRescueFrom* option for
-:tool:`condor_submit_dag`.
+the highest magnitude. This is achieved by using the *-DoRescueFrom* option or
+*-RescueFile* option for :tool:`condor_submit_dag`.
 
 .. code-block:: console
     :caption: Example re-running failed DAG from specific rescue file
+
+    $ condor_submit_dag -RescueFile diamond.dag.rescue002 diamond.dag
+
+.. code-block:: console
+    :caption: Example re-running failed DAG from specific rescue number
 
     $ condor_submit_dag -DoRescueFrom 2 diamond.dag
 
@@ -405,7 +410,7 @@ Rescue for Parse Failure
 
 When using the **-DumpRescue** flag for :tool:`condor_submit_dag` or
 :tool:`condor_dagman`, DAGMan will produce a special Rescue DAG file
-if a the parsing of DAG description files fail. This special Rescue DAG file
+if the parsing of DAG description files fail. This special Rescue DAG file
 will contain whatever DAGMan has successfully parsed up to the point of
 failure. This may be helpful for debugging parse errors with complex DAG's.
 Especially DAG's using splices.
@@ -416,7 +421,7 @@ the file is named ``<dag file>.parse_failed``. Further more, the parse failure
 rescue DAG contains the :dag-cmd:`REJECT` command which prevents the parse failure
 Rescue DAG from being executed by DAGMan. This is because the special Rescue
 DAG is written in the full format regardless of :macro:`DAGMAN_WRITE_PARTIAL_RESCUE`.
-Due to the nature of the full Recuse file being syntactically correct DAG
+Due to the nature of the full Rescue file being syntactically correct DAG
 file, it will be perceived as a successfully executed workflow despite
 being an incomplete DAG.
 

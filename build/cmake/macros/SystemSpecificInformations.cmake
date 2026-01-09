@@ -153,7 +153,7 @@ if(UNIX)
       # CentOS case
       # CentOS release 5.5 (Final)
       if(LINUX_ISSUE MATCHES "CentOS")
-        string(REGEX MATCH "release ([0-9]+\\.[0-9]+)" CENTOS "${LINUX_ISSUE}")
+        string(REGEX MATCH "release ([0-9]+\\.?[0-9]*)" CENTOS "${LINUX_ISSUE}")
         set(LINUX_NAME "CentOS")        
 	set(LINUX_VER "${CMAKE_MATCH_1}")
 	set(SYSTEM_NAME "centos${CMAKE_MATCH_1}")

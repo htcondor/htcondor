@@ -68,7 +68,7 @@ goes wrong.  The key concept to grasp is that ``htcondor annex`` works
 system managing the resource(s) you want to use to run your jobs.
 
 Point (a) matters because many systems -- ``htcondor annex`` calls the
-set of resources you want to use and its associated managment software
+set of resources you want to use and its associated management software
 a "system" -- require multi-factor authentication ("MFA") before jobs
 can be submitted to the corresponding batch system.  When you run
 ``htcondor annex``, you'll be asked to login to the system whose resources

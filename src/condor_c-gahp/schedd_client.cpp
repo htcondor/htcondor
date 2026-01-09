@@ -1068,41 +1068,19 @@ submit_report_result:
 		}
 
 		if (qmgr_connection != nullptr) {
-			std::vector<std::string *> matching_ads;
+			std::vector<std::string> matching_ads;
+			classad::ClassAdUnParser unparser;
 
-			ClassAd *next_ad;
-			ClassAdList adlist;
-				// Only use GetAllJobsByConstraint if remote schedd is
-				// 6.9.5 or newer.  Previous versions either did not
-				// support this call, or they closed the Qmgmt connection
-				// as a side-effect of this call.
-			if( ver_info.built_since_version(6,9,5) ) {
-				dprintf( D_FULLDEBUG, "Calling GetAllJobsByConstraint(%s)\n",
-						 current_command->constraint );
-					// NOTE: this could be made more efficient if we knew
-					// the list of attributes to query.  For lack of that,
-					// we just get all attributes.
-				GetAllJobsByConstraint( current_command->constraint, "", adlist);
-			}
-			else {
-					// This is the old latency-prone method.
-				dprintf( D_FULLDEBUG, "Calling GetNextJobByConstraint(%s)\n",
-						 current_command->constraint );
-				next_ad = GetNextJobByConstraint( current_command->constraint, 1 );
-				while( next_ad != NULL ) {
-					adlist.Insert( next_ad );
-					next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
+			dprintf( D_FULLDEBUG, "Calling GetAllJobsByConstraint(%s)\n",
+			         current_command->constraint );
+			int rval = GetAllJobsByConstraint_Start(current_command->constraint, "");
+			while (rval == 0) {
+				ClassAd next_ad;
+				rval = GetAllJobsByConstraint_Next(next_ad);
+				if (rval != 0) {
+					continue;
 				}
-			}
-
-				// NOTE: ClassAdList will deallocate the ClassAds in it
-
-			adlist.Rewind();
-			while( (next_ad=adlist.Next()) ) {
-				std::string * da_buffer = new std::string();	// Use a ptr to avoid excessive copying
-				classad::ClassAdUnParser unparser;
-				unparser.Unparse( *da_buffer, next_ad );
-				matching_ads.push_back(da_buffer);
+				unparser.Unparse(matching_ads.emplace_back(), &next_ad);
 			}
 			if ( errno == ETIMEDOUT ) {
 				failure_line_num = __LINE__;
@@ -1122,17 +1100,14 @@ submit_report_result:
 			result[count++] = NULL;
 			result[count++] = _ad_count.c_str();
 
-			for (auto next_string : matching_ads) {
-				result[count++] = next_string->c_str();
+			for (const auto& next_string : matching_ads) {
+				result[count++] = next_string.c_str();
 			}
 
 			enqueue_result (current_command->request_id, result, count);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 			// Cleanup
-			for (auto next_string : matching_ads) { 
-				delete next_string;
-			}
 			//CommitTransaction();
 			delete [] result;
 		}

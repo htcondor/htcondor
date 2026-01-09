@@ -24,7 +24,7 @@
 
 #include "collector.h"
 #include <set>
-#include "HashTable.h"
+#include <map>
 
 //---------------------------------------------------
 
@@ -59,7 +59,7 @@ struct GeneralRecord {
 
 //---------------------------------------------------
 
-typedef HashTable<std::string, GeneralRecord*> AccHash;
+typedef std::map<std::string, GeneralRecord*> AccHash;
 typedef std::vector< time_t > ExtIntArray;
 typedef std::vector< fpos_t* > ExtOffArray;
 
@@ -124,7 +124,7 @@ private:
 
 	// Variables used for quick searches by condor_stats
 
-	static HashTable< std::string, int >* FileHash;
+	static std::map< std::string, int >* FileHash;
 	static std::vector< ExtIntArray* >* TimesArray;
 	static std::vector< ExtOffArray* >* OffsetsArray;
 

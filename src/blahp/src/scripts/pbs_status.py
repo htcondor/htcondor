@@ -388,23 +388,18 @@ def get_qstat_location():
     Locate the copy of qstat the blahp configuration wants to use.
     """
     global _qstat_location_cache
-    if _qstat_location_cache != None:
-        return _qstat_location_cache
+    if _qstat_location_cache is None:
+        try:
+            pbs_bindir = env_expand(config.get('pbs_binpath'))
+        except:
+            pbs_bindir = ""
+        _qstat_location_cache = os.path.join(pbs_bindir, 'qstat')
+    return _qstat_location_cache
 
-    cmd = 'echo "%s/%s"' % (config.get('pbs_binpath'), 'qstat')
-
-    child_stdout = os.popen(cmd)
-    output = child_stdout.read().split("\n")[0].strip()
-    if child_stdout.close():
-        raise Exception("Unable to determine qstat location: %s" % output)
-
-    _qstat_location_cache = output
-    return output
-
-job_id_re = re.compile("\s*Job Id:\s([0-9]+)([\w\-\/.]*)")
-exec_host_re = re.compile("\s*exec_host = ([\w\-\/.]+)")
-status_re = re.compile("\s*job_state = ([QREFCH])")
-exit_status_re = re.compile("\s*[Ee]xit_status = (-?[0-9]+)")
+job_id_re = re.compile(r"\s*Job Id:\s([0-9]+)([\w\-\/.]*)")
+exec_host_re = re.compile(r"\s*exec_host = ([\w\-\/.]+)")
+status_re = re.compile(r"\s*job_state = ([QREFCH])")
+exit_status_re = re.compile(r"\s*[Ee]xit_status = (-?[0-9]+)")
 status_mapping = {"Q": 1, "R": 2, "E": 2, "F": 4, "C": 4, "H": 5}
 
 def parse_qstat(output):
@@ -491,7 +486,7 @@ def fill_cache(cache_location):
     global launchtime
     launchtime = time.time()
 
-cache_line_re = re.compile("([0-9]+[\.\w\-]+):\s+(.+)")
+cache_line_re = re.compile(r"([0-9]+[\.\w\-]+):\s+(.+)")
 def cache_to_status(jobid, fd):
     reader = csv.reader(fd, delimiter='\t')
     for row in reader:
@@ -549,7 +544,7 @@ def check_cache(jobid, recurse=True):
             return None
     return cache_to_status(jobid, fd)
 
-job_status_re = re.compile(".*JobStatus=(\d+);.*")
+job_status_re = re.compile(r".*JobStatus=(\d+);.*")
 
 def main():
     initLog()
@@ -565,8 +560,7 @@ def main():
     jobid = jobid_arg.split("/")[-1].split(".")[0]
 
     global config
-    config = blah.BlahConfigParser(defaults={'pbs_pro': 'no',
-                                             'pbs_binpath': '/usr/bin'})
+    config = blah.BlahConfigParser(defaults={'pbs_pro': 'no'})
 
     log("Checking cache for jobid %s" % jobid)
     cache_contents = None

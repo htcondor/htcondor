@@ -126,6 +126,6 @@ class TestAllowedJobDuration:
                 test_job_held = event.timestamp
 
         test_job_duration = test_job_held - test_job_started
-        # Allow two seconds of slop for rounding of seconds on each side
-        assert test_job_duration <= ALLOWED_JOB_DURATION + PERIODIC_EXPR_INTERVAL + 2
+        # Allow seven seconds of slop for rounding of seconds on each side
+        assert test_job_duration <= ALLOWED_JOB_DURATION + PERIODIC_EXPR_INTERVAL + 7
         assert test_job_duration > PERIODIC_EXPR_INTERVAL

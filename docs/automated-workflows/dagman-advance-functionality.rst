@@ -347,7 +347,7 @@ names a ClassAd attribute. For example, the VARS specification
 
     VARS NodeA My.name="\"Greg\""
 
-results in the the ``NodeA`` job ClassAd attribute
+results in the ``NodeA`` job ClassAd attribute
 
 .. code-block:: condor-classad
 
@@ -838,7 +838,7 @@ DAG Specific Configuration
 
 DAGMan allows for all :ref:`DAGMan Configuration` to be applied on a per DAG
 basis. To apply custom configuration for a DAGMan workflow simply create a
-custom configuration file to provide the the :dag-cmd:`CONFIG[Usage]` command.
+custom configuration file to provide the :dag-cmd:`CONFIG[Usage]` command.
 
 Only one configuration file is permitted per DAGMan process. If multiple DAGs
 are submitted at one time or a workflow is comprised of Splices then a fatal

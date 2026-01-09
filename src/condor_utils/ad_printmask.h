@@ -157,12 +157,9 @@ class AttrListPrintMask
 
 	// display functions
 	int   display (FILE *, ClassAd *, ClassAd *target=NULL);		// output to FILE *
-	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, std::vector<const char *> * pheadings=NULL); // output a list -> FILE *
 	int   display (std::string & out, ClassAd *, ClassAd *target=NULL ); // append to string out. return number of chars added
 	int   render (MyRowOfValues & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
-	int   calc_widths(ClassAd *, ClassAd *target=NULL );          // set column widths
-	int   calc_widths(ClassAdList *, ClassAd *target=NULL);
 	int   display_Headings(FILE *, std::vector<const char *> & headings);
 	char *display_Headings(const char * pszzHead);
 	char *display_Headings(std::vector<const char *> & headings);
@@ -171,6 +168,7 @@ class AttrListPrintMask
 	void set_heading(const char * heading);
 	bool has_headings() { return !headings.empty(); }
 	void clear_headings() { headings.clear(); }
+	void pop_back_heading() { headings.pop_back(); } // support hacky heading re-writing in condor_status
 	const char * store(std::string_view str) { return stringpool.insert(str); }
 	const char * store(const char * psz) { return stringpool.insert(psz); } // store a string in the local string pool.
 	// iterate formatter and attribs, calling pfn and allowing fmt to be changed until pfn returns < 0
@@ -319,9 +317,9 @@ protected:
 
 // simple line at a time file (or stdin) reader
 class SimpleFileInputStream : public SimpleInputStream {
-	FILE * file;
-	bool   auto_close_file; // file is owned by this class, close it in destructor
-	int    lines_read;
+	FILE * file{nullptr};
+	bool   auto_close_file{false}; // file is owned by this class, close it in destructor
+	int    lines_read{0};
 	SimpleFileInputStream() {}; // don't allow default construction
 public:
 	// Create a simple input stream for reading lines from an open file
@@ -334,10 +332,10 @@ public:
 
 // Simple line at a time string literal reader 
 class StringLiteralInputStream : public SimpleInputStream {
-	const char * lit; // points to a string literal, so it's not freed by this class
+	const char * lit{nullptr}; // points to a string literal, so it's not freed by this class
 	std::string line; // temp for the current line to return.
-	size_t ix_eol;    // end of current line in lit
-	int    lines_read;
+	size_t ix_eol{0};    // end of current line in lit
+	int    lines_read{0};
 	StringLiteralInputStream() {}; // don't allow default construction
 public:
 	StringLiteralInputStream(const char* psz) : lit(psz), ix_eol(0), lines_read(0) {}
@@ -373,14 +371,15 @@ public:
 // it is used by SetAttrListPrintMaskFromStream and by PrintPrintMask
 typedef struct PrintMaskMakeSettings {
 	std::string select_from;           // out: adtype name from SELECT
-	printmask_headerfooter_t headfoot; // out, header and footer flags set in SELECT or SUMMARY
-	printmask_aggregation_t aggregate; // out: aggregation mode in SELECT
+	printmask_headerfooter_t headfoot{STD_HEADFOOT};      // out, header and footer flags set in SELECT or SUMMARY
+	printmask_aggregation_t aggregate{PR_NO_AGGREGATION}; // out: aggregation mode in SELECT
 	std::string where_expression;      // out: classad expression from WHERE
 	classad::References attrs;        // out: ClassAd attributes referenced in mask or group_by outputs
 	classad::References scopes;       // out: scopes for ClassAd attributes referenced in mask or group_by outputs (i.e. target or job)
 	classad::References sumattrs;     // out: ClassAd attributes referenced in summary mask
+	bool generate_printf_from_width{true}; // if WIDTH given but not PRINTF or PRINTAS, assume a %Nv or %N.Nv printf
+	bool fixed_width_implies_truncate{true}; // if WIDTH specified and not AUTO or FIT assume TRUNCATE
 
-	PrintMaskMakeSettings() : headfoot(STD_HEADFOOT), aggregate(PR_NO_AGGREGATION) {}
 	void reset() {
 		select_from.clear();
 		where_expression.clear();

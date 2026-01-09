@@ -7,14 +7,106 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 24.0.17
+---------------
+
+Release Notes:
+
+.. HTCondor version 24.0.17 released on March 3, 2026.
+
+- HTCondor version 24.0.17 planned release date is March 3, 2026.
+
+New Features:
+
+.. include-history:: features 24.0.17
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.17
+
+Version 24.0.16
+---------------
+
+Release Notes:
+
+.. HTCondor version 24.0.16 released on January 29, 2026.
+
+- HTCondor version 24.0.16 planned release date is January 29, 2026.
+
+New Features:
+
+.. include-history:: features 24.0.16
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.16
+
+Version 24.0.15
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.15 released on December 15, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.15
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.15
+
+Version 24.0.14
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.14 released on November 3, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.14
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.14
+
+Version 24.0.13
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.13 released on October 9, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.13
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.13
+
+Version 24.0.12
+---------------
+
+Release Notes:
+
+- HTCondor version 24.0.12 released on September 23, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.12 23.10.29 23.0.29
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.12 23.10.29 23.0.29
+
 Version 24.0.11
 ---------------
 
 Release Notes:
 
-.. HTCondor version 24.0.11 released on August 21, 2025.
-
-- HTCondor version 24.0.11 planned release date is August 21, 2025.
+- HTCondor version 24.0.11 released on August 21, 2025.
 
 New Features:
 
@@ -313,7 +405,7 @@ Bugs Fixed:
 
 - Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
   multiple jobs on a single GPU device when ``-divide`` or ``-repeat`` was added
-  to to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
   machine resource inventory that contained repeated identifiers.
   :jira:`2678`
 

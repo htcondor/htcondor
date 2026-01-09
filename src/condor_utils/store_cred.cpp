@@ -526,7 +526,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	if (mkdir(user_cred_path.c_str(), 0700) < 0) {
 		int err = errno;
 		if (err != EEXIST) {
-			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s", err, user_cred_path.c_str());
+			dprintf(D_ALWAYS, "Error %d, attempting to create OAuth cred subdir %s\n", err, user_cred_path.c_str());
 			if (err == EACCES || err == EPERM || err == ENOENT || err == ENOTDIR) {
 				// for one of several reasons, the parent directory does not allow the creation of subdirs.
 				return FAILURE_CONFIG_ERROR;
@@ -1567,7 +1567,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	}
 
 	if ( ! got_message || !sock->end_of_message()) {
-		dprintf(D_ALWAYS, "store_cred: did not recieve a valid command\n");
+		dprintf(D_ALWAYS, "store_cred: did not receive a valid command\n");
 		answer = FAILURE_PROTOCOL_MISMATCH;
 		goto cleanup_and_exit;
 	}

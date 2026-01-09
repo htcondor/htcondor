@@ -215,7 +215,7 @@ Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 	}
 
 	// Carry on.
-	s->jobWaitUntilExecuteTime();
+	s->jic->runPrepareJobHook();
 }
 
 
@@ -272,8 +272,7 @@ Starter::handleJobEnvironmentCommand(
 			// constant, maybe SHADOW_SAID_GO, that record that setup failed
 			// but we proceeded anyway.
 			s->m_setupStatus = 0;
-			// This schedules a zero-second timer.
-			s->jobWaitUntilExecuteTime();
+			s->jic->runPrepareJobHook();
 			return true;
 		} else if( command == COMMAND_JOB_SETUP ) {
 			ClassAd context;
@@ -335,9 +334,7 @@ Starter::handleJobEnvironmentCommand(
 				"SkipJobs"
 			);
 
-			if( s->deferral_tid < 0 ) {
-				EXCEPT( "Can't register SkipJob DaemonCore timer" );
-			}
+			ASSERT(s->deferral_tid >= 0);
 
 			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of job environment setup failure.\n",
 				s->jic->jobCluster(),
@@ -604,6 +601,18 @@ mapContentsOfDirectoryInto(
 #endif /* WINDOWS */
 
 
+#define REPLY_WITH_ERROR(cmd,code,subcode) \
+	{ \
+	ClassAd context; \
+	context.InsertAttr( ATTR_COMMAND, cmd ); \
+	context.InsertAttr( ATTR_RESULT, false ); \
+	context.InsertAttr( ATTR_REQUEST_RESULT_CODE, (int)code ); \
+	context.InsertAttr( ATTR_REQUEST_RESULT_SUBCODE, (int)subcode ); \
+	continue_conversation(context); \
+	return true; \
+	}
+
+
 bool
 Starter::handleJobSetupCommand(
   Starter * s,
@@ -697,7 +706,8 @@ Starter::handleJobSetupCommand(
 			//
 
 			std::filesystem::path executeDir( s->GetSlotDir() );
-			std::filesystem::path stagingDir = executeDir / "staging";
+			std::filesystem::path parentDir = executeDir / "staging";
+			std::filesystem::path stagingDir = parentDir / cifName;
 			{
 				// We could check STARTER_NESTED_SCRATCH to see if we needed
 				// to create this directory as PRIV_CONDOR instead of PRIV_USER,
@@ -706,10 +716,20 @@ Starter::handleJobSetupCommand(
 				TemporaryPrivSentry tps(PRIV_ROOT);
 
 				std::error_code errorCode;
-				std::filesystem::create_directory( stagingDir, errorCode );
+				std::filesystem::create_directories( stagingDir, errorCode );
 				if( errorCode ) {
 					dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
-					return false;
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
+				}
+
+				std::filesystem::permissions(
+					parentDir,
+					perms::owner_read | perms::owner_write | perms::owner_exec,
+					errorCode
+				);
+				if( errorCode ) {
+					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 
 				std::filesystem::permissions(
@@ -718,8 +738,8 @@ Starter::handleJobSetupCommand(
 					errorCode
 				);
 				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to set permissions on staging directory, aborting: %s (%d).\n", errorCode.message().c_str(), errorCode.value() );
-					return false;
+					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
 				}
 
 #ifdef    WINDOWS
@@ -731,10 +751,15 @@ Starter::handleJobSetupCommand(
 				// Build fix only.
 
 #else
-				int rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+				int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
 				if( rv != 0 ) {
-					dprintf( D_ALWAYS, "Unable change owner of staging directory, aborting: %s (%d)\n", strerror(errno), errno );
-					return false;
+					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
+				}
+				rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+				if( rv != 0 ) {
+					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
+					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
 				}
 #endif /* WINDOWS */
 			}
@@ -807,9 +832,7 @@ Starter::handleJobSetupCommand(
 				"SkipJobs"
 			);
 
-			if( s->deferral_tid < 0 ) {
-				EXCEPT( "Can't register SkipJob DaemonCore timer" );
-			}
+			ASSERT(s->deferral_tid >= 0);
 
 			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of job setup failure.\n",
 				s->jic->jobCluster(),

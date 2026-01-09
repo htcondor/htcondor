@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import classad
+import classad2 as classad
 import json
 import os
 import posixpath

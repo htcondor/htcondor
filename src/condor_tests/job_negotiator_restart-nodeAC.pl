@@ -63,7 +63,9 @@ if ($ARGV[0] eq "A") {
 	if (-e $factorfile) {
 		system("rm $factorfile");
 	}
-	system("echo $priofactor > $factorfile");
+	open my $fh, ">", $factorfile or die "Cannot open $factorfile: $!";
+	print $fh "$priofactor\n";
+	close $fh;
 
 } elsif ($ARGV[0] eq "C") {
 

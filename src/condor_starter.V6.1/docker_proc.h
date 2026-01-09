@@ -3,6 +3,9 @@
 
 #include "vanilla_proc.h"
 
+#include "starter.h"
+extern Starter *starter;
+
 class DockerProc : public VanillaProc {
 	public:
 		DockerProc( ClassAd * jobAd );
@@ -41,8 +44,11 @@ class DockerProc : public VanillaProc {
 		static bool Detect();
 		static bool Version( std::string & version );
 
+		std::string DockerErrorFile() { 
+			return std::string(starter->GetWorkingDir(0)) + "/.docker_stderror";
+		}
 	protected:
-		virtual void restartCheckpointedJob();
+		virtual bool restartCheckpointedJob();
 	private:
 
 		ReliSock listener;

@@ -947,10 +947,7 @@ It is
 especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of authentication between the submit and execute
-daemons. See the description of
-:macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` in
-:ref:`admin-manual/configuration-macros:configuration file entries relating to
-security` for details.
+daemons. See :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`.
 
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION``, then HTCondor uses a default
@@ -2634,8 +2631,7 @@ the most restrictive security level possible.
 The most secure use of this feature allows HTCondor users to set
 attributes in the configuration file which are not used by HTCondor
 directly. These are custom attributes published by various HTCondor
-daemons with the :macro:`<SUBSYS>_ATTRS` setting described in
-:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`.
+daemons with the :macro:`<SUBSYS>_ATTRS` setting.
 It is secure to grant access only to modify attributes that are used by HTCondor
 to publish information. Granting access to modify settings used to control
 the behavior of HTCondor is not secure. The goal is to ensure no one can

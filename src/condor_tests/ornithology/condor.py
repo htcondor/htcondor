@@ -63,7 +63,8 @@ DEFAULT_PARAMS = {
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
-    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
+    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}",
+    "SINGULARITY": "/usr/bin/false"
 }
 
 
@@ -384,7 +385,7 @@ class Condor:
     @skip_if(master_is_not_alive)
     def _condor_off(self):
         off = self.run_command(
-            ["condor_off", "-daemon", "master"], timeout=30, echo=False
+            ["condor_off", "-fast", "-daemon", "master"], timeout=30, echo=False
         )
 
         if not off.returncode == 0:

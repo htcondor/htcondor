@@ -83,6 +83,7 @@ struct Client
 {
 	std::string c_owner;      // name of the owner
 	std::string c_user;	      // name of the user
+	std::string c_project;    // name of the project, if any
 	std::string c_acctgrp;    // name of the accounting group, if any
 	std::string c_host;	      // hostname of the clientmachine
 	std::string c_addr;	      // <ip:port> of the client
@@ -170,6 +171,8 @@ public:
 	void sendAlive( int timerID = -1 );
 	int sendAliveConnectHandler(Stream *sock);
 	int sendAliveResponseHandler( Stream *sock );
+	void send_deactivate_reply_timed_out( int timerID = -1 );	// send deactivate reply now
+	void cancel_deactivate_reply_timer();
 
 	void scheddClosedClaim();
 
@@ -231,7 +234,8 @@ public:
 	pid_t spawnStarter( Starter* starter, ClassAd * job, Stream* = NULL );
 	void starterExited( Starter* starter, int status );
 	bool starterPidMatches( pid_t starter_pid ) const;
-	bool isDeactivating( void );
+	bool isDeactivating() const;
+	const char * isDeactivatingReason() const;
 	bool isActive( void );
 	bool isRunning( void );	
 	bool deactivateClaim( bool graceful, bool job_done, bool claim_closing );
@@ -296,9 +300,12 @@ public:
 
 		// registered callback for premature closure of connection from shadow for deactivate claim
 	int deactivateClaimSockClosed(Stream *s);
-	bool sendDeactivateReply();
+	bool sendDeactivateReply(bool starter_exited);
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
+
+	void setOCU( bool ocu ) { c_ocu = ocu; }
+	void setOCUName(const std::string &name) { c_ocu_name = name; }
 
 	bool waitingForActivation() const;
 	void invalidateID();
@@ -329,6 +336,7 @@ private:
 	Stream*		c_request_stream{nullptr}; // cedar sock that a remote request is waiting for a response on
 	Stream*		c_deactivate_stream{nullptr}; // cedar sock that a remote deactivate is waiting for a responce on
 
+	int			c_deactivate_reply_tid{-1};
 	int			c_match_tid;	// DaemonCore timer id for this
 								// match.  If we're matched but not
 								// claimed within 5 minutes, throw out
@@ -362,11 +370,15 @@ private:
 	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
 	bool        c_schedd_reported_job_done;
+	bool        c_ocu;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
+	std::string c_ocu_name;
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
-	long long c_image_size;	// ImageSize from last call to updateUsage
+	long long c_image_size;	// ImageSize (total_image_size) from last call to updateUsage
+	long long c_cur_rss{0}; // current (not peak) ResidentSetSize from updateUsage
+	long long c_peak_rss{0};// peak ResidentSetSize from updateUsage
 
 	std::string c_vacate_reason;
 	int c_vacate_code{0};

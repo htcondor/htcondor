@@ -101,6 +101,15 @@ namespace DAG {
 	// Map of DAG Command to exampe syntax
 	extern const std::map<CMD, const char*> COMMAND_SYNTAX;
 
+	// Convert a DagCmd unique_ptr (see below) to specified derived class: DAG::DERIVE_CMD<JobCommand>(cmd)
+	// Typename D is the Derived Command Type and Typename B is the base command Type (normally implicitly disccovered)
+	template<typename D, typename B>
+	D* DERIVE_CMD(const std::unique_ptr<B>& cmd) {
+		D* derived = dynamic_cast<D*>(cmd.get());
+		ASSERT(derived);
+		return derived;
+	}
+
 	// DAG file constants
 	extern const std::string ALL_NODES;
 	// Reserved words that node names cannot use
@@ -120,6 +129,23 @@ namespace DAG {
 	extern const char* GET_SCRIPT_TYPE_STRING(const SCRIPT type);
 	// Get Script debug capture stream type string from enum
 	extern const char* GET_SCRIPT_DEBUG_CAPTURE_TYPE(const ScriptOutput type);
+
+	namespace STRING_SPACE {
+		// Map of string to # references
+		extern std::map<std::string, int> __string_space_map;
+
+		// Deduplicate string from string space
+		extern std::string_view DEDUP(const std::string_view str);
+		extern std::string_view __DEDUP(const std::string_view str, bool internal = true);
+
+		// Release reference to string in map (remove entry if no more references)
+		extern void FREE(const std::string_view str);
+
+		// Do general cleanup of string space map (remove non-referenced keys)
+		// Note: This includes parse command references that haven't been handed off
+		extern void GARBAGE_COLLECT();
+	}
+
 }
 
 // Abstract base class for all derived DAG Commands
@@ -152,17 +178,24 @@ public:
 	virtual DAG::CMD GetCommand() const = 0;
 	virtual std::string _getDetails() const = 0;
 
+	virtual std::string Location() const {
+		return ToStr(source) + ":" + std::to_string(line);
+	}
+
 	virtual void SetSource(const std::string& src, const uint64_t line_no) {
-		source = src;
+		source = DAG::STRING_SPACE::__DEDUP(src);
 		line = line_no;
 	}
 
 	virtual std::pair<std::string, uint64_t> GetSource() const {
-		return std::make_pair(source, line);
+		return std::make_pair(ToStr(source), line);
 	}
 
 protected:
-	std::string source{};
+	virtual std::string ToStr(const std::string_view& v) const { return v.data() ? v.data() : ""; }
+	virtual const char* Disp(const std::string_view& v) const { return v.data() ? v.data() : ""; }
+
+	std::string_view source{"Unknown"};
 	uint64_t line{0};
 };
 
@@ -177,24 +210,24 @@ public:
 	virtual DAG::CMD GetCommand() const = 0;
 	virtual std::string _getDetails() const {
 		std::string ret;
-		std::string desc = inline_desc.empty() ? "NONE" : inline_desc;
+		std::string desc = inline_desc.empty() ? "NONE" : ToStr(inline_desc);
 		std::replace(desc.begin(), desc.end(), '\n', DAG::NEWLINE_RELACEMENT);
-		formatstr(ret, "%s %s {%s} %s %s %s", name.c_str(), submit.c_str(),
-		          desc.c_str(), dir.c_str(), noop ? "T" : "F", done ? "T" : "F");
+		formatstr(ret, "%s %s {%s} %s %s %s", Disp(name), Disp(submit),
+		          desc.c_str(), Disp(dir), noop ? "T" : "F", done ? "T" : "F");
 		return ret;
 	}
 
-	void SetDir(const std::string& s) { dir = s; }
-	std::string GetDir() const { return dir; }
+	void SetDir(const std::string& s) { dir = DAG::STRING_SPACE::__DEDUP(s); }
+	std::string GetDir() const { return ToStr(dir); }
 	bool HasDir() const { return !dir.empty(); }
 
-	std::string GetName() const { return name; }
+	std::string GetName() const { return ToStr(name); }
 
-	void SetSubmit(const std::string& s) { submit = s; }
-	std::string GetSubmit() const { return submit; }
+	void SetSubmit(const std::string& s) { submit = DAG::STRING_SPACE::__DEDUP(s); }
+	std::string GetSubmit() const { return ToStr(submit); }
 
-	void SetInlineDesc(const std::string& s) { inline_desc = s; }
-	std::string GetInlineDesc() const { return inline_desc; }
+	void SetInlineDesc(const std::string& s) { inline_desc = DAG::STRING_SPACE::__DEDUP(s); }
+	std::string GetInlineDesc() const { return ToStr(inline_desc); }
 	bool HasInlineDesc() const { return !inline_desc.empty(); }
 
 	void SetNoop() { noop = true; }
@@ -203,10 +236,10 @@ public:
 	void SetDone() { done = true; }
 	bool IsDone() const { return done; }
 protected:
-	std::string name{}; // Name of node
-	std::string submit{}; // Name of submit file/description or sub-DAG
-	std::string inline_desc{}; // Inline description contents
-	std::string dir{}; // Execution directory
+	std::string_view name{}; // Name of node (Note: No guarantee that this is unique during parse time)
+	std::string_view submit{}; // Name of submit file/description or sub-DAG
+	std::string_view inline_desc{}; // Inline description contents
+	std::string_view dir{}; // Execution directory
 	bool noop{false}; // Specify no-operation node
 	bool done{false}; // Specify pre-done node
 };
@@ -215,7 +248,7 @@ protected:
 class JobCommand : public NodeCommand {
 public:
 	JobCommand() = delete;
-	JobCommand(const std::string& n) { name = n; }
+	JobCommand(const std::string& n) { name = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::JOB; }
 };
@@ -224,7 +257,7 @@ public:
 class FinalCommand : public NodeCommand {
 public:
 	FinalCommand() = delete;
-	FinalCommand(const std::string& n) { name = n; }
+	FinalCommand(const std::string& n) { name = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::FINAL; }
 };
@@ -233,7 +266,7 @@ public:
 class ServiceCommand : public NodeCommand {
 public:
 	ServiceCommand() = delete;
-	ServiceCommand(const std::string& n) { name = n; }
+	ServiceCommand(const std::string& n) { name = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SERVICE; }
 };
@@ -242,7 +275,7 @@ public:
 class ProvisionerCommand : public NodeCommand {
 public:
 	ProvisionerCommand() = delete;
-	ProvisionerCommand(const std::string& n) { name = n; }
+	ProvisionerCommand(const std::string& n) { name = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::PROVISIONER; }
 };
@@ -251,7 +284,7 @@ public:
 class SubdagCommand : public NodeCommand {
 public:
 	SubdagCommand() = delete;
-	SubdagCommand(const std::string& n) { name = n; }
+	SubdagCommand(const std::string& n) { name = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SUBDAG; }
 };
@@ -260,53 +293,53 @@ public:
 class SubmitDescCommand : public BaseDagCommand {
 public:
 	SubmitDescCommand() = delete;
-	SubmitDescCommand(const std::string& n) : name(n) {}
+	SubmitDescCommand(const std::string& n) : name(DAG::STRING_SPACE::__DEDUP(n)) {}
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SUBMIT_DESCRIPTION; }
 	virtual std::string _getDetails() const {
 		std::string ret;
-		std::string desc(inline_desc);
+		std::string desc = ToStr(inline_desc);
 		std::replace(desc.begin(), desc.end(), '\n', DAG::NEWLINE_RELACEMENT);
-		formatstr(ret, "%s {%s}", name.c_str(), desc.c_str());
+		formatstr(ret, "%s {%s}", Disp(name), desc.c_str());
 		return ret;
 	}
 
-	std::string GetName() const { return name; }
+	std::string GetName() const { return ToStr(name); }
 
-	void SetInlineDesc(const std::string& s) { inline_desc = s; }
-	std::string GetInlineDesc() const { return inline_desc; }
+	void SetInlineDesc(const std::string& s) { inline_desc = DAG::STRING_SPACE::__DEDUP(s); }
+	std::string GetInlineDesc() const { return ToStr(inline_desc); }
 	bool HasInlineDesc() const { return !inline_desc.empty(); }
 
 private:
-	std::string name{}; // Name to refer to inline description
-	std::string inline_desc{}; // Inline description contents
+	std::string_view name{}; // Name to refer to inline description
+	std::string_view inline_desc{}; // Inline description contents
 };
 
 // SPLICE Command
 class SpliceCommand : public BaseDagCommand {
 public:
 	SpliceCommand() = delete;
-	SpliceCommand(const std::string& n) : name(n) {}
+	SpliceCommand(const std::string& n) : name(DAG::STRING_SPACE::__DEDUP(n)) {}
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SPLICE; }
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %s %s", name.c_str(), file.c_str(), dir.c_str());
+		formatstr(ret, "%s %s %s", Disp(name), Disp(file), Disp(dir));
 		return ret;
 	}
 
-	std::string GetName() const { return name; }
+	std::string GetName() const { return ToStr(name); }
 
-	void SetDir(const std::string& s) { dir = s; }
-	std::string GetDir() const { return dir; }
+	void SetDir(const std::string& s) { dir = DAG::STRING_SPACE::__DEDUP(s); }
+	std::string GetDir() const { return ToStr(dir); }
 	bool HasDir() const { return !dir.empty(); }
 
-	void SetDagFile(const std::string& f) { file = f; }
-	std::string GetDagFile() const { return file; }
+	void SetDagFile(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
+	std::string GetDagFile() const { return ToStr(file); }
 private:
-	std::string name{}; // Splice name for references
-	std::string file{}; // DAG file to splice into DAG
-	std::string dir{}; // Directory to do splicing from
+	std::string_view name{}; // Splice name for references
+	std::string_view file{}; // DAG file to splice into DAG
+	std::string_view dir{}; // Directory to do splicing from
 };
 
 // PARENT(CHILD) Command
@@ -317,14 +350,26 @@ public:
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::PARENT_CHILD; }
 	virtual std::string _getDetails() const {
 		std::string ret = "[ ";
-		for (const auto& p : parents) { ret += p + " "; }
+		for (const auto& p : parents) { ret += ToStr(p) + " "; }
 		ret += "] --> [ ";
-		for (const auto& c : children) { ret += c + " "; }
+		for (const auto& c : children) { ret += ToStr(c) + " "; }
 		return ret + "]";
 	}
 
-	std::set<std::string> parents{}; // List of parent nodes
-	std::set<std::string> children{}; // List of child nodes
+	void AddParent(const std::string& p) {
+		parents.insert(DAG::STRING_SPACE::__DEDUP(p));
+	}
+
+	void AddChild(const std::string& c) {
+		children.insert(DAG::STRING_SPACE::__DEDUP(c));
+	}
+
+	const std::set<std::string_view>& GetParents() const { return parents; }
+	const std::set<std::string_view>& GetChildren() const { return children; }
+
+private:
+	std::set<std::string_view> parents{}; // List of parent nodes
+	std::set<std::string_view> children{}; // List of child nodes
 };
 
 // Abstract class to modify some behavior of a node type
@@ -335,9 +380,9 @@ public:
 	virtual DAG::CMD GetCommand() const = 0;
 	virtual std::string _getDetails() const = 0;
 
-	virtual std::string GetNodeName() const { return node; };
+	virtual std::string GetNodeName() const { return ToStr(node); };
 protected:
-	std::string node{}; // Node name to apply command
+	std::string_view node{}; // Node name to apply command
 };
 
 // SCRIPT Command
@@ -348,16 +393,16 @@ public:
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SCRIPT; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %s '%s' %lld %d %s %s", node.c_str(), DAG::GET_SCRIPT_TYPE_STRING(type),
-		          script.c_str(), (long long)defer_time, defer_status, debug_file.c_str(),
+		formatstr(ret, "%s %s '%s' %lld %d %s %s", Disp(node), DAG::GET_SCRIPT_TYPE_STRING(type),
+		          Disp(script), (long long)defer_time, defer_status, Disp(debug_file),
 		          DAG::GET_SCRIPT_DEBUG_CAPTURE_TYPE(capture));
 		return ret;
 	}
 
-	void SetNodeName(const std::string& n) { node = n; }
+	void SetNodeName(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
-	std::string GetScript() const { return script; }
-	void SetScript(const std::string& s) { script = s; }
+	std::string GetScript() const { return ToStr(script); }
+	void SetScript(const std::string& s) { script = DAG::STRING_SPACE::__DEDUP(s); }
 
 	DAG::SCRIPT GetType() const { return type; }
 	void SetType(const DAG::SCRIPT t) { type = t; }
@@ -372,13 +417,13 @@ public:
 
 	bool WantsDebug() const { return !debug_file.empty(); }
 	void SetDebugInfo(const std::string& f, DAG::ScriptOutput c) {
-		debug_file = f;
+		debug_file = DAG::STRING_SPACE::__DEDUP(f);
 		capture = c;
 	}
-	std::tuple<std::string, DAG::ScriptOutput> GetDebugInfo() const { return std::make_tuple(debug_file, capture); }
+	std::tuple<std::string, DAG::ScriptOutput> GetDebugInfo() const { return std::make_tuple(ToStr(debug_file), capture); }
 private:
-	std::string script{}; // Script + args to execute
-	std::string debug_file{}; // Debug file to write script stdout/stderr to
+	std::string_view script{}; // Script + args to execute
+	std::string_view debug_file{}; // Debug file to write script stdout/stderr to
 	time_t defer_time{0}; // Deferal time
 	int defer_status{-1}; // Exit code to trigger deferal
 	DAG::SCRIPT type{}; // Script type
@@ -389,12 +434,12 @@ private:
 class RetryCommand : public NodeModifierCommand {
 public:
 	RetryCommand() = delete;
-	RetryCommand(const std::string& n) { node = n; }
+	RetryCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::RETRY; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d %d", node.c_str(), max, code);
+		formatstr(ret, "%s %d %d", Disp(node), max, code);
 		return ret;
 	}
 
@@ -412,12 +457,12 @@ private:
 class AbortDagCommand : public NodeModifierCommand {
 public:
 	AbortDagCommand() = delete;
-	AbortDagCommand(const std::string& n) { node = n; }
+	AbortDagCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::ABORT_DAG_ON; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d %d", node.c_str(), status, code);
+		formatstr(ret, "%s %d %d", Disp(node), status, code);
 		return ret;
 	}
 
@@ -435,26 +480,31 @@ private:
 class VarsCommand : public NodeModifierCommand {
 public:
 	VarsCommand() = delete;
-	VarsCommand(const std::string& n) { node = n; }
+	VarsCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::VARS; };
 	virtual std::string _getDetails() const {
-		std::string ret = node;
+		std::string ret = ToStr(node);
 		if (when == DAG::VarsPlacement::PREPEND) { ret += " PREPEND"; }
 		else if (when == DAG::VarsPlacement::APPEND) { ret += " APPEND"; }
 
-		for (const auto& [k,v] : kv_pairs) { ret += " [" + k + "=" + v + "]"; }
+		for (const auto& [k,v] : kv_pairs) { formatstr_cat(ret, " [%s=%s]", Disp(k), Disp(v)); }
 		return ret;
 	}
 
-	void AddPair(const std::string& k, const std::string& v) { kv_pairs[k] = v; }
-	const std::map<std::string, std::string>& GetPairs() const { return kv_pairs; }
+	void AddPair(const std::string& k, const std::string& v) {
+		kv_pairs[DAG::STRING_SPACE::__DEDUP(k)] = DAG::STRING_SPACE::__DEDUP(v);
+	}
+	const std::map<std::string_view, std::string_view>& GetPairs() const { return kv_pairs; }
 
 	void Prepend() { when = DAG::VarsPlacement::PREPEND; }
 	void Append() { when = DAG::VarsPlacement::APPEND; }
 	DAG::VarsPlacement GetPlacement() const { return when; }
+
+	bool ExplicitPlacement() const { return when != DAG::VarsPlacement::DEFAULT; }
+	bool WantPrepend() const { return when == DAG::VarsPlacement::PREPEND; }
 private:
-	std::map<std::string, std::string> kv_pairs{}; // Map of key -> value pairs to add
+	std::map<std::string_view, std::string_view> kv_pairs{}; // Map of key -> value pairs to add
 	DAG::VarsPlacement when{DAG::VarsPlacement::DEFAULT}; // Specify when to add info (before/after parsing submit description)
 };
 
@@ -462,12 +512,12 @@ private:
 class PriorityCommand : public NodeModifierCommand {
 public:
 	PriorityCommand() = delete;
-	PriorityCommand(const std::string& n) { node = n; }
+	PriorityCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::PRIORITY; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d", node.c_str(), prio);
+		formatstr(ret, "%s %d", Disp(node), prio);
 		return ret;
 	}
 
@@ -481,12 +531,12 @@ private:
 class PreSkipCommand : public NodeModifierCommand {
 public:
 	PreSkipCommand() = delete;
-	PreSkipCommand(const std::string& n) { node = n; }
+	PreSkipCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::PRE_SKIP; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d", node.c_str(), code);
+		formatstr(ret, "%s %d", Disp(node), code);
 		return ret;
 	}
 
@@ -500,66 +550,69 @@ private:
 class DoneCommand : public NodeModifierCommand {
 public:
 	DoneCommand() = delete;
-	DoneCommand(const std::string& n) { node = n; }
+	DoneCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::DONE; };
-	virtual std::string _getDetails() const { return node; }
+	virtual std::string _getDetails() const { return ToStr(node); }
 };
 
 // SAVE_POINT_FILE Command
 class SavePointCommand : public NodeModifierCommand {
 public:
 	SavePointCommand() = delete;
-	SavePointCommand(const std::string& n) { node = n; }
+	SavePointCommand(const std::string& n) { node = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SAVE_POINT_FILE; };
-	virtual std::string _getDetails() const { return node + " " + file; }
+	virtual std::string _getDetails() const { return ToStr(node) + " " + ToStr(file); }
 
-	void SetFilename(const std::string& f) { file = f; }
-	std::string GetFilename() const { return file; }
+	void SetFilename(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
+	std::string GetFilename() const { return ToStr(file); }
 private:
-	std::string file{}; // File to save state
+	std::string_view file{}; // File to save state
 };
 
 // CATEGORY Command
 class CategoryCommand : public BaseDagCommand {
 public:
 	CategoryCommand() = delete;
-	CategoryCommand(const std::string& n) { name = n; }
+	CategoryCommand(const std::string& n) { name = DAG::STRING_SPACE::__DEDUP(n); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::CATEGORY; };
 	virtual std::string _getDetails() const {
-		std::string ret = name;
-		for (const auto& n : nodes) { ret += " " + n; }
+		std::string ret = ToStr(name);
+		for (const auto& n : nodes) { ret += " " + ToStr(n); }
 		return ret;
 	}
 
-	std::string GetCategory() const { return name; }
+	std::string GetCategory() const { return ToStr(name); }
 
-	std::vector<std::string> nodes{}; // List of nodes to add to category
+	void AddNode(const std::string& n) { nodes.emplace_back(DAG::STRING_SPACE::__DEDUP(n)); }
+	const std::vector<std::string_view>& GetNodes() const { return nodes; }
+
 private:
-	std::string name{}; // Category name
+	std::vector<std::string_view> nodes{}; // List of nodes to add to category
+	std::string_view name{}; // Category name
 };
 
 // MAXJOBS Command
 class MaxJobsCommand : public BaseDagCommand {
 public:
 	MaxJobsCommand() = delete;
-	MaxJobsCommand(const std::string& cat) : category(cat) {}
+	MaxJobsCommand(const std::string& cat) : category(DAG::STRING_SPACE::__DEDUP(cat)) {}
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::MAXJOBS; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d", category.c_str(), limit);
+		formatstr(ret, "%s %d", Disp(category), limit);
 		return ret;
 	}
 
-	std::string GetCategory() const { return category; }
+	std::string GetCategory() const { return ToStr(category); }
 
 	void SetLimit(const int m) { limit = m; }
 	int GetLimit() const { return limit; }
 private:
-	std::string category{}; // Category to apply throttle
+	std::string_view category{}; // Category to apply throttle
 	int limit{1}; // Maximum number of nodes with placed jobs
 };
 
@@ -571,44 +624,44 @@ public:
 	virtual DAG::CMD GetCommand() const = 0;
 	virtual std::string _getDetails() const = 0;
 
-	virtual std::string GetFile() const { return file; };
+	virtual std::string GetFile() const { return ToStr(file); };
 protected:
-	std::string file{}; // File to act on
+	std::string_view file{}; // File to act on
 };
 
 // CONFIG Command
 class ConfigCommand : public FileCommand {
 public:
 	ConfigCommand() = delete;
-	ConfigCommand(const std::string& f) { file = f; }
+	ConfigCommand(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::CONFIG; };
-	virtual std::string _getDetails() const { return file; }
+	virtual std::string _getDetails() const { return ToStr(file); }
 };
 
 // INCLUDE Command
 class IncludeCommand : public FileCommand {
 public:
 	IncludeCommand() = delete;
-	IncludeCommand(const std::string& f) { file = f; }
+	IncludeCommand(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::INCLUDE; };
-	virtual std::string _getDetails() const { return file; }
+	virtual std::string _getDetails() const { return ToStr(file); }
 };
 
 // DOT Command
 class DotCommand : public FileCommand {
 public:
 	DotCommand() = delete;
-	DotCommand(const std::string& f) { file = f; }
+	DotCommand(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::DOT; };
 	virtual std::string _getDetails() const {
-		return file + " " + include + " " + (update ? "T" : "F") + " " + (overwrite ? "T" : "F");
+		return ToStr(file) + " " + ToStr(include) + " " + (update ? "T" : "F") + " " + (overwrite ? "T" : "F");
 	}
 
-	void SetInclude(const std::string& i) { include = i; }
-	std::string GetInclude() const { return include; }
+	void SetInclude(const std::string& i) { include = DAG::STRING_SPACE::__DEDUP(i); }
+	std::string GetInclude() const { return ToStr(include); }
 	bool HasInclude() const { return !include.empty(); }
 
 	void SetUpdate(const bool u) { update = u; }
@@ -617,7 +670,7 @@ public:
 	void SetOverwrite(const bool o) { overwrite = o; }
 	bool Overwrite() const { return overwrite; }
 private:
-	std::string include{}; // Extra DOT file header to include
+	std::string_view include{}; // Extra DOT file header to include
 	bool update{false}; // Whether or not to update the file periodically
 	bool overwrite{false}; // Whether or not to overwrite old dot file
 };
@@ -626,12 +679,12 @@ private:
 class NodeStatusCommand : public FileCommand {
 public:
 	NodeStatusCommand() = delete;
-	NodeStatusCommand(const std::string& f) { file = f; }
+	NodeStatusCommand(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::NODE_STATUS_FILE; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d %s", file.c_str(), min_update, always_update ? "T" : "F");
+		formatstr(ret, "%s %d %s", Disp(file), min_update, always_update ? "T" : "F");
 		return ret;
 	}
 
@@ -649,59 +702,50 @@ private:
 class JobStateLogCommand : public FileCommand {
 public:
 	JobStateLogCommand() = delete;
-	JobStateLogCommand(const std::string& f) { file = f; }
+	JobStateLogCommand(const std::string& f) { file = DAG::STRING_SPACE::__DEDUP(f); }
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::JOBSTATE_LOG; };
-	virtual std::string _getDetails() const { return file; }
+	virtual std::string _getDetails() const { return ToStr(file); }
 };
 
 // REJECT Command
 class RejectCommand : public BaseDagCommand {
 public:
-	RejectCommand() = delete;
-	RejectCommand(const std::string& f, const int n) : file(f), line_no(n) {}
+	RejectCommand() = default;
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::REJECT; };
 	virtual std::string _getDetails() const {
-		std::string ret;
-		formatstr(ret, "%s:%d", file.c_str(), line_no);
-		return ret;
+		return this->Location();
 	}
-
-	std::string GetFile() const { return file; }
-	int GetLine() const { return line_no; }
-private:
-	std::string file{};
-	int line_no{0};
 };
 
 // SET_JOB_ATTR Command
 class SetAttrCommand : public BaseDagCommand {
 public:
 	SetAttrCommand() = delete;
-	SetAttrCommand(const std::string& a) : attr_line(a) {}
+	SetAttrCommand(const std::string& a) : attr_line(DAG::STRING_SPACE::__DEDUP(a)) {}
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::SET_JOB_ATTR; };
-	virtual std::string _getDetails() const { return attr_line; }
+	virtual std::string _getDetails() const { return ToStr(attr_line); }
 
-	std::string GetAttrLine() const { return attr_line; }
+	std::string GetAttrLine() const { return ToStr(attr_line); }
 private:
-	std::string attr_line{}; // Attribute line to append (key = value)
+	std::string_view attr_line{}; // Attribute line to append (key = value)
 };
 
 // ENV Command
 class EnvCommand : public BaseDagCommand {
 public:
 	EnvCommand() = delete;
-	EnvCommand(const std::string& v, bool set) : vars(v), is_set(set) {}
+	EnvCommand(const std::string& v, bool set) : vars(DAG::STRING_SPACE::__DEDUP(v)), is_set(set) {}
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::ENV; };
-	virtual std::string _getDetails() const { return (is_set ? "SET " : "GET ") + vars; }
+	virtual std::string _getDetails() const { return std::string((is_set ? "SET " : "GET ")) + ToStr(vars); }
 
-	std::string GetEnvVariables() const { return vars; }
+	std::string GetEnvVariables() const { return ToStr(vars); }
 	bool IsSet() const { return is_set; }
 private:
-	std::string vars{}; // Environment variables to do something with
+	std::string_view vars{}; // Environment variables to do something with
 	bool is_set{false}; // SET or GET behavior
 };
 
@@ -709,22 +753,22 @@ private:
 class ConnectCommand : public BaseDagCommand {
 public:
 	ConnectCommand() = delete;
-	ConnectCommand(const std::string& s1, const std::string& s2) : splice1(s1), splice2(s2) {}
+	ConnectCommand(const std::string& s1, const std::string& s2) : splice1(DAG::STRING_SPACE::__DEDUP(s1)), splice2(DAG::STRING_SPACE::__DEDUP(s2)) {}
 
 	virtual DAG::CMD GetCommand() const { return DAG::CMD::CONNECT; };
-	virtual std::string _getDetails() const { return "[" + splice1 + "]--[" + splice2 + "]"; }
+	virtual std::string _getDetails() const { return std::string("[") + ToStr(splice1) + "]--[" + ToStr(splice2) + "]"; }
 
-	std::tuple<std::string, std::string> GetSplices() const { return std::make_tuple(splice1, splice2); }
+	std::tuple<std::string, std::string> GetSplices() const { return std::make_tuple(ToStr(splice1), ToStr(splice2)); }
 private:
-	std::string splice1{}; // Splice 1
-	std::string splice2{}; // Splice 2
+	std::string_view splice1{}; // Splice 1
+	std::string_view splice2{}; // Splice 2
 };
 
 // PIN_[IN/OUT] Commands
 class PinCommand : public BaseDagCommand {
 public:
 	PinCommand() = delete;
-	PinCommand(const std::string& n, DAG::CMD c) : node(n) {
+	PinCommand(const std::string& n, DAG::CMD c) : node(DAG::STRING_SPACE::__DEDUP(n)) {
 		assert(c == DAG::CMD::PIN_IN || c == DAG::CMD::PIN_OUT);
 		cmd = c;
 	}
@@ -732,17 +776,17 @@ public:
 	virtual DAG::CMD GetCommand() const { return cmd; };
 	virtual std::string _getDetails() const {
 		std::string ret;
-		formatstr(ret, "%s %d %s", node.c_str(), pin, (cmd == DAG::CMD::PIN_IN) ? "IN" : "OUT");
+		formatstr(ret, "%s %d %s", Disp(node), pin, (cmd == DAG::CMD::PIN_IN) ? "IN" : "OUT");
 		return ret;
 	}
 
-	std::string GetNode() const { return node; }
+	std::string GetNode() const { return ToStr(node); }
 	bool IsPinOut() const { return cmd == DAG::CMD::PIN_OUT; }
 
 	void SetPinNum(const int n) { pin = n; }
 	int GetPinNum() const { return pin; }
 private:
-	std::string node{}; // Node to apply pin
+	std::string_view node{}; // Node to apply pin
 	int pin{1}; // Pin number to apply to node
 	DAG::CMD cmd{DAG::CMD::PIN_IN}; // Specific PIN_IN/PIN_OUT Command
 };

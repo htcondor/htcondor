@@ -83,6 +83,7 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"VARS A PREPEND foo = Bar    baz= foo  k=v a =32\n"
 		"VARS B APPEND a =\"woah =!= UNDEFINED\" test='12\\'34'\n"
 		"VARS C country=USA\n"
+		"VARS D foo=\"\" bar=''\n"
 		"PRIORITY D -82\n"
 		"PRE-SKIP E 12\n"
 		"SAVE-POINT-FILE B\n"
@@ -95,15 +96,19 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"DOT visual-2.dot UPDATE OVERWRITE\n"
 		"DOT visual-3.dot DONT-UPDATE DONT-OVERWRITE INCLUDE ../path/to/header.dot\n"
 		"NODE_STATUS_FILE foo 82 ALWAYS-UPDATE 1000\n"
-		"ENV SET   foo bar baz \n"
-		"ENV GET  foo=bar;baz=10;      \n"
+		"ENV GET   foo bar baz \n"
+		"ENV SET  foo=bar;baz=10;      \n"
 		"CONNECT S1 S2\n"
 		"PIN_IN A 2\n"
 		"PIN_OUT A 3\n"
 		"DONE A\n"
 		"INCLUDE include.dag\n"
 		"JOBSTATE_LOG some.log\n"
-		"SET_JOB_ATTR foo=bar\n",
+		"SET_JOB_ATTR foo=bar\n"
+		// Check that multiline backslash escapes work
+		"DONE \\\n"
+		"     \\\n"
+		"B\n",
 	},
 	{
 		// Each command in this file is invalid/produces an error
@@ -206,6 +211,14 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 		"PIN_OUT A\n"
 		"PIN_IN A foo\n"
 		"PIN_OUT A 1 garbage\n"
+		"SAVE_POINT_FILE ALL_NODES\n"
+		"VARS A foo'bar = 3\n"
+		"VARS A = 10\n"
+		"VARS A foo = = 4\n"
+		"VARS A foo bar\n"
+		"VARS A foo = \n"
+		"VARS A foo         \n"
+		"VARS A foo = bar = baz\n"
 	},
 	{
 		// DAG with missing final newline
@@ -277,8 +290,9 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"ABORT_DAG_ON > B 32 8",
 		"ABORT_DAG_ON > C 5 " + int_max_str,
 		"VARS > A PREPEND [a=32] [baz=foo] [foo=Bar] [k=v]",
-		"VARS > B APPEND [a=\"woah =!= UNDEFINED\"] [test='12'34']",
+		"VARS > B APPEND [a=woah =!= UNDEFINED] [test=12'34]",
 		"VARS > C [country=USA]",
+		"VARS > D [bar=] [foo=]",
 		"PRIORITY > D -82",
 		"PRE_SKIP > E 12",
 		"SAVE_POINT_FILE > B B-" + SUCCESS_DAG + ".save",
@@ -294,8 +308,8 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
 		"NODE_STATUS_FILE > foo 1000 T",
-		"ENV > SET foo bar baz",
-		"ENV > GET foo=bar;baz=10;",
+		"ENV > GET foo,bar,baz",
+		"ENV > SET foo=bar;baz=10;",
 		"CONNECT > [S1]--[S2]",
 		"PIN_IN > A 2 IN",
 		"PIN_OUT > A 3 OUT",
@@ -303,6 +317,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"INCLUDE > include.dag",
 		"JOBSTATE_LOG > some.log",
 		"SET_JOB_ATTR > foo=bar",
+		"DONE > B",
 	},
 	{
 		// *All expected command parsing failures (note some internal developer errors not included)
@@ -354,7 +369,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":43 Failed to parse ABORT_DAG_ON command: Invalid RETURN code 'foo' (Must be between 0 and 255)",
 		FAILURE_DAG + ":44 Failed to parse ABORT_DAG_ON command: Unexpected token 'garbage'",
 		FAILURE_DAG + ":45 Failed to parse VARS command: No node name specified",
-		FAILURE_DAG + ":46 Failed to parse VARS command: Non key=value token specified: no-pair",
+		FAILURE_DAG + ":46 Failed to parse VARS command: Key value pair missing operator and value",
 		FAILURE_DAG + ":47 Failed to parse VARS command: Variable name must contain at least one alphanumeric character",
 		FAILURE_DAG + ":48 Failed to parse VARS command: Illegal variable name 'QUEUE_invalid': name can not begin with 'queue'",
 		FAILURE_DAG + ":49 Failed to parse VARS command: No key=value pairs specified",
@@ -405,6 +420,14 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		FAILURE_DAG + ":94 Failed to parse PIN_OUT command: No pin number specified",
 		FAILURE_DAG + ":95 Failed to parse PIN_IN command: Invalid pin number 'foo'",
 		FAILURE_DAG + ":96 Failed to parse PIN_OUT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":97 Failed to parse SAVE_POINT_FILE command: ALL_NODES cannot be used for save point file command",
+		FAILURE_DAG + ":98 Failed to parse VARS command: Key contains quotation mark",
+		FAILURE_DAG + ":99 Failed to parse VARS command: Key value pair missing key",
+		FAILURE_DAG + ":100 Failed to parse VARS command: Key value pair missing value: Double operator",
+		FAILURE_DAG + ":101 Failed to parse VARS command: Key value pair missing value: Failed to locate operator",
+		FAILURE_DAG + ":102 Failed to parse VARS command: Key value pair missing value: No value specified",
+		FAILURE_DAG + ":103 Failed to parse VARS command: Key value pair missing operator and value",
+		FAILURE_DAG + ":104 Failed to parse VARS command: Key value pair missing key",
 	},
 };
 
@@ -977,18 +1000,16 @@ bool OTEST_DagFileParser() {
 struct TestCase1 {
 	std::string input{};
 	std::vector<std::string> expected{};
-	bool trim_quotes{false};
+	DagLexer::TRIM_QUOTES trim_quotes;
 };
 
 const TestCase1 TestTable1[] = {
-	{"foo bar baz", {"foo", "bar", "baz", ""}},
-	{"'this is a single token'", {"'this is a single token'", ""}},
-	{"'this is a single token'", {"this is a single token", ""}, true},
-	{"\"One Two\" Three Four \"Five 'Six'\"", {"\"One Two\"", "Three", "Four", "\"Five 'Six'\"", ""}},
-	{"'One \\'Two\\' Three' Four", {"'One 'Two' Three'", "Four", ""}},
-	{"k1=v1 k2= v2 k3 = v3 k4 =v4 k5      =        v5", {"k1=v1", "k2=v2", "k3=v3", "k4=v4", "k5=v5", ""}},
-	{"k1 = \"v1\" k2 = 'v2' k3 = 'kn = vn'", {"k1=\"v1\"", "k2='v2'", "k3='kn = vn'", ""}},
-	{"'One \\\\' 'Two \\''", {"'One \\'", "'Two ''", ""}},
+	{"foo bar baz", {"foo", "bar", "baz", ""}, DagLexer::TRIM_QUOTES::FALSE},
+	{"'this is a single token'", {"'this is a single token'", ""}, DagLexer::TRIM_QUOTES::FALSE},
+	{"'this is a single token'", {"this is a single token", ""}, DagLexer::TRIM_QUOTES::TRUE},
+	{"\"One Two\" Three Four \"Five 'Six'\"", {"\"One Two\"", "Three", "Four", "\"Five 'Six'\"", ""}, DagLexer::TRIM_QUOTES::FALSE},
+	{"'One \\'Two\\' Three' Four", {"'One 'Two' Three'", "Four", ""}, DagLexer::TRIM_QUOTES::FALSE},
+	{"'One \\\\' 'Two \\''", {"'One \\'", "'Two ''", ""}, DagLexer::TRIM_QUOTES::FALSE},
 };
 
 //------------------------------------------------------------------------------------
@@ -1001,9 +1022,6 @@ struct TestCase2 {
 const TestCase2 TestTable2[] = {
 	{"One Two 'Three Four", {"One", "Two", ""}, "Invalid quoting: no ending quote found"},
 	{"One Two \"Three Four", {"One", "Two", ""}, "Invalid quoting: no ending quote found"},
-	{"One Two Three=", {"One", "Two", ""}, "Invalid key value pair: no value discovered"},
-	{"One Two Three  =", {"One", "Two", ""}, "Invalid key value pair: no value discovered"},
-	{"One Two Three=     ", {"One", "Two", ""}, "Invalid key value pair: no value discovered"},
 };
 
 //------------------------------------------------------------------------------------
@@ -1017,6 +1035,48 @@ const TestCase3 TestTable3[] = {
 	{"One Two Three Four Five", {"One", "Two", "Three Four Five", ""}, 3},
 	{"One      Two   Three    ", {"One", "Two   Three    ", ""}, 2},
 	{"One 'Two Three' \"Four Five\" key   =   value", {"One", "'Two Three'", "\"Four Five\" key   =   value", ""}, 3},
+};
+
+//------------------------------------------------------------------------------------
+using next_kvp_expected_t = std::vector<std::pair<std::string, std::string>>;
+// Valid lexer next_key_value_pair
+struct TestCase4 {
+	std::string input{};
+	next_kvp_expected_t expected{};
+	DagLexer::TRIM_QUOTES trim_quotes;
+};
+
+const TestCase4 TestTable4[] = {
+	{"k1=v1 k2= v2 k3 = v3 k4 =v4 k5      =        v5", {{"k1","v1"}, {"k2","v2"}, {"k3","v3"}, {"k4","v4"}, {"k5","v5"}}, DagLexer::TRIM_QUOTES::FALSE},
+	{"k1 = \"v1\" k2 = 'v2' k3 = 'kn = vn'", {{"k1","\"v1\""}, {"k2","'v2'"}, {"k3","'kn = vn'"}}, DagLexer::TRIM_QUOTES::FALSE},
+	{"k1 = \"v1\" k2 = 'v2' k3 = 'kn = vn'", {{"k1","v1"}, {"k2","v2"}, {"k3","kn = vn"}}, DagLexer::TRIM_QUOTES::TRUE},
+	{"k1 = v1 k2 = a=v2", {{"k1", "v1"}, {"k2", "a=v2"}}, DagLexer::TRIM_QUOTES::FALSE},
+	{"k1='' k2=\"\"", {{"k1", "''"}, {"k2", "\"\""}}, DagLexer::TRIM_QUOTES::FALSE},
+	{"k1='' k2=\"\"", {{"k1", ""}, {"k2", ""}}, DagLexer::TRIM_QUOTES::TRUE},
+};
+
+//------------------------------------------------------------------------------------
+// Invalid lexer next_key_value_pair
+struct TestCase5 {
+	std::string input{};
+	next_kvp_expected_t expected{};
+	std::string error{};
+};
+
+const TestCase5 TestTable5[] = {
+	{"A=1 = error", {{"A","1"}}, "Key value pair missing key"},
+	{"A=1 fo'o=bar", {{"A","1"}}, "Key contains quotation mark"},
+	{"A=1 fo\"o=bar", {{"A","1"}}, "Key contains quotation mark"},
+	{"A=1 B = = C", {{"A","1"}}, "Key value pair missing value: Double operator"},
+	{"A=1 B error", {{"A","1"}}, "Key value pair missing value: Failed to locate operator"},
+	{"A=1 B = 'missing end quote", {{"A","1"}}, "Invalid quoting: no ending quote found"},
+	{"A=1 B = \"missing end quote", {{"A","1"}}, "Invalid quoting: no ending quote found"},
+	{"A=1 B = '", {{"A","1"}}, "Invalid quoting: no ending quote found"},
+	{"A=1 B", {{"A","1"}}, "Key value pair missing operator and value"},
+	{"A=1 B=", {{"A","1"}}, "Key value pair missing value: No value specified"},
+	{"A=1 B  =", {{"A","1"}}, "Key value pair missing value: No value specified"},
+	{"A=1 B=     ", {{"A","1"}}, "Key value pair missing value: No value specified"},
+	{"A=1 B = C = valid", {{"A","1"}, {"B", "C"}}, "Key value pair missing key"}, // Note: In this case B has no value but parser will read 'B = C' and leave '= valid' for failed parse
 };
 
 //////////////////////////////////////////////
@@ -1055,6 +1115,8 @@ void driver_register_all##n<TEST_TABLE##n##_COUNT>(FunctionDriver &driver)    \
 TEST_TABLE_SETUP(1, test_dag_lexer_next)
 TEST_TABLE_SETUP(2, test_dag_lexer_failures)
 TEST_TABLE_SETUP(3, test_dag_lexer_remainder)
+TEST_TABLE_SETUP(4, test_dag_lexer_next_kvp)
+TEST_TABLE_SETUP(5, test_dag_lexer_next_kvp_failures)
 //////////////////////////////////////////////
 
 ;
@@ -1147,6 +1209,102 @@ static bool test_dag_lexer_remainder(int N) {
 }
 
 //------------------------------------------------------------------------------------
+static std::string display_kvp_str(const std::pair<std::string, std::string>& kvp) {
+	return std::string("Key: '") + kvp.first + "' && Value: '" + kvp.second + "'";
+}
+
+static bool test_dag_lexer_next_kvp(int N) {
+	const TestCase4 &test = TestTable4[N];
+	DagLexer lex(test.input);
+
+	emit_test("Test DagLexer next key value pair functions correctly");
+	emit_input_header();
+	emit_param("Line", test.input.c_str());
+
+	for (const auto& expected : test.expected) {
+		emit_output_expected_header();
+		std::string display = display_kvp_str(expected);
+		emit_retval(display.c_str());
+
+		auto result = lex.next_key_value_pair(test.trim_quotes);
+		if ( ! result.has_value()) {
+			std::string err = "Unexpected failure: " + lex.error();
+			emit_comment(err.c_str());
+			FAIL;
+		}
+
+		emit_output_actual_header();
+		display = display_kvp_str(*result);
+		emit_retval(display.c_str());
+
+		if (expected != *result) {
+			FAIL;
+		}
+	}
+
+	emit_comment("Checking no more key value pairs");
+	auto result = lex.next_key_value_pair();
+	if (result) {
+		std::string pair = display_kvp_str(*result);
+		emit_retval(pair.c_str());
+		FAIL;
+	} else { emit_comment("All good!"); }
+
+	PASS;
+}
+
+//------------------------------------------------------------------------------------
+static bool test_dag_lexer_next_kvp_failures(int N) {
+	const TestCase5 &test = TestTable5[N];
+	DagLexer lex(test.input);
+
+	emit_test("Test DagLexer key value pair functions correctly");
+	emit_input_header();
+	emit_param("Line", test.input.c_str());
+
+	for (const auto& expected : test.expected) {
+		emit_output_expected_header();
+		std::string display = display_kvp_str(expected);
+		emit_retval(display.c_str());
+
+		auto result = lex.next_key_value_pair();
+		if ( ! result.has_value()) {
+			std::string err = "Unexpected failure: " + lex.error();
+			emit_comment(err.c_str());
+			FAIL;
+		}
+
+		emit_output_actual_header();
+		display = display_kvp_str(*result);
+		emit_retval(display.c_str());
+
+		if (expected != *result) {
+			FAIL;
+		}
+	}
+
+	emit_comment("Checking return NULL for next key value pair due to failure");
+	auto result = lex.next_key_value_pair();
+	if (result) {
+		std::string pair = display_kvp_str(*result);
+		emit_retval(pair.c_str());
+		FAIL;
+	} else { emit_comment("All good!"); }
+
+	emit_output_expected_header();
+	emit_retval(test.error.c_str());
+
+	emit_output_actual_header();
+	emit_retval(lex.c_error());
+
+	if ( ! lex.failed() || lex.error() != test.error) {
+		FAIL;
+	}
+
+	PASS;
+}
+
+//------------------------------------------------------------------------------------
 static bool test_dag_lexer_new_parse() {
 	const std::string initial = "One Two Three Four Five Six Seven";
 	const std::string swap = "Foo Bar Baz";
@@ -1228,6 +1386,8 @@ bool OTEST_DagLexer() {
 	driver_register_all1<0>(driver);
 	driver_register_all2<0>(driver);
 	driver_register_all3<0>(driver);
+	driver_register_all4<0>(driver);
+	driver_register_all5<0>(driver);
 
 	driver.register_function(test_dag_lexer_new_parse);
 	driver.register_function(test_dag_lexer_reset);

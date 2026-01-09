@@ -23,11 +23,6 @@
 #include "classad/sink.h"
 #include "classad/classadCache.h"
 
-using std::string;
-using std::vector;
-using std::pair;
-
-
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 namespace classad {
@@ -69,7 +64,7 @@ bool ClassAdGetExpressionCaching(int & min_string_size) {
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
-string CondorErrMsg;
+std::string CondorErrMsg;
 int CondorErrno;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch)
@@ -80,7 +75,7 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
     return;
 }
 
-void ClassAdLibraryVersion(string &version_string)
+void ClassAdLibraryVersion(std::string &version_string)
 {
     version_string = CLASSAD_VERSION;
     return;
@@ -104,7 +99,7 @@ static FunctionCall *getCurrentTimeExpr()
 {
 	static classad_shared_ptr<FunctionCall> curr_time_expr;
 	if ( !curr_time_expr ) {
-		vector<ExprTree*> args;
+		std::vector<ExprTree*> args;
 		curr_time_expr.reset( FunctionCall::MakeFunctionCall( "time", args ) );
 	}
 	return curr_time_expr.get();
@@ -142,7 +137,6 @@ operator=(const ClassAd &rhs)
 bool ClassAd::
 CopyFrom( const ClassAd &ad )
 {
-	AttrList::const_iterator	itr;
 	ExprTree 					*tree;
 	bool                        succeeded;
 
@@ -150,8 +144,7 @@ CopyFrom( const ClassAd &ad )
 	if (this == &ad) 
 	{
 		succeeded = false;
-	} else 
-	{
+	} else {
 		Clear( );
 		
 		// copy scoping attributes
@@ -161,8 +154,8 @@ CopyFrom( const ClassAd &ad )
 		parentScope = ad.parentScope;
 		
 		this->do_dirty_tracking = false;
-		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
-			if( !( tree = itr->second->Copy( ) ) ) {
+		for( const auto& [attr_name, attr_tree] : ad.attrList ) {
+			if( !( tree = attr_tree->Copy( ) ) ) {
 				Clear( );
 				CondorErrno = ERR_MEM_ALLOC_FAILED;
 				CondorErrMsg = "";
@@ -170,9 +163,9 @@ CopyFrom( const ClassAd &ad )
                 break;
 			}
 			
-			Insert(itr->first, tree);
-			if (ad.do_dirty_tracking && ad.IsAttributeDirty(itr->first)) {
-				dirtyAttrList.insert(itr->first);
+			Insert(attr_name, tree);
+			if (ad.do_dirty_tracking && ad.IsAttributeDirty(attr_name)) {
+				dirtyAttrList.insert(attr_name);
 			}
 		}
 
@@ -224,17 +217,14 @@ SameAs(const ExprTree *tree) const
        } else {
            is_same = true;
            
-           AttrList::const_iterator	itr;
-           for (itr = attrList.begin(); itr != attrList.end(); itr++) {
-               ExprTree *this_tree;
+           for (const auto& [attr_name, tree] : attrList) {
                ExprTree *other_tree;
 
-               this_tree = itr->second;
-               other_tree = other_classad->Lookup(itr->first);
+               other_tree = other_classad->Lookup(attr_name);
                if (other_tree == NULL) {
                    is_same = false;
                    break;
-               } else if (!this_tree->SameAs(other_tree)) {
+               } else if (!tree->SameAs(other_tree)) {
                    is_same = false;
                    break;
                }
@@ -265,24 +255,24 @@ Clear( )
 }
 
 void ClassAd::
-GetComponents( vector< pair< string, ExprTree* > > &attrs ) const
+GetComponents( std::vector<std::pair<std::string, ExprTree* > > &attrs ) const
 {
 	attrs.clear( );
-	for( AttrList::const_iterator itr=attrList.begin(); itr!=attrList.end(); 
-		itr++ ) {
-		attrs.emplace_back(itr->first, itr->second);
+	for( const auto& [attr_name, tree] : attrList ) {
+		attrs.emplace_back(attr_name, tree);
 	}
 }
 
 void ClassAd::
-GetComponents( vector< pair< string, ExprTree* > > &attrs,
+GetComponents(std::vector< std::pair< std::string, ExprTree* > > &attrs,
 	const References &whitelist ) const
 {
 	attrs.clear( );
-	for ( References::const_iterator wl_itr = whitelist.begin(); wl_itr != whitelist.end(); wl_itr++ ) {
-		AttrList::const_iterator attr_itr = attrList.find( *wl_itr );
+	for ( const auto& attr_name : whitelist ) {
+		AttrList::const_iterator attr_itr = attrList.find( attr_name );
 		if ( attr_itr != attrList.end() ) {
-			attrs.emplace_back( attr_itr->first, attr_itr->second );
+			const auto& [found_name, tree] = *attr_itr;
+			attrs.emplace_back( found_name, tree );
 		}
 	}
 }
@@ -290,7 +280,7 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs,
 
 // --- begin integer attribute insertion ----
 bool ClassAd::
-InsertAttr( const string &name, int value )
+InsertAttr( const std::string &name, int value )
 {
 	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
@@ -298,7 +288,7 @@ InsertAttr( const string &name, int value )
 
 
 bool ClassAd::
-InsertAttr( const string &name, long value )
+InsertAttr( const std::string &name, long value )
 {
 	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
@@ -306,7 +296,7 @@ InsertAttr( const string &name, long value )
 
 
 bool ClassAd::
-InsertAttr( const string &name, long long value )
+InsertAttr( const std::string &name, long long value )
 {
 	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
@@ -314,7 +304,7 @@ InsertAttr( const string &name, long long value )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, int value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -323,7 +313,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, long value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -332,7 +322,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, long long value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -344,7 +334,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value )
 
 // --- begin real attribute insertion ---
 bool ClassAd::
-InsertAttr( const string &name, double value )
+InsertAttr( const std::string &name, double value )
 {
 	ExprTree* plit  = Literal::MakeReal( value );
 	return( Insert( name, plit ) );
@@ -352,7 +342,7 @@ InsertAttr( const string &name, double value )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, double value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -364,7 +354,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value )
 
 // --- begin boolean attribute insertion
 bool ClassAd::
-InsertAttr( const string &name, bool value )
+InsertAttr( const std::string &name, bool value )
 {
 	MarkAttributeDirty(name);
 
@@ -379,7 +369,7 @@ InsertAttr( const string &name, bool value )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, bool value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, bool value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -389,16 +379,16 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, bool value )
 
 
 
-// --- begin string attribute insertion
+// --- begin std::string attribute insertion
 bool ClassAd::
-InsertAttr( const string &name, const char *value )
+InsertAttr( const std::string &name, const char *value )
 {
 	ExprTree* plit  = Literal::MakeString( value );
 	return( Insert( name, plit ) );
 }
 
 bool ClassAd::
-InsertAttr( const string &name, const char * str, size_t len)
+InsertAttr( const std::string &name, const char * str, size_t len)
 {
 	MarkAttributeDirty(name);
 
@@ -413,7 +403,7 @@ InsertAttr( const string &name, const char * str, size_t len)
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, const char *value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, const char *value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -421,7 +411,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const char *value )
 }
 
 bool ClassAd::
-InsertAttr( const string &name, const string &value )
+InsertAttr( const std::string &name, const std::string &value )
 {
 	ExprTree* plit  = Literal::MakeString( value );
 	return( Insert( name, plit ) );
@@ -429,13 +419,13 @@ InsertAttr( const string &name, const string &value )
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, const string &value )
+DeepInsertAttr( ExprTree *scopeExpr, const std::string &name, const std::string &value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
 	return( ad->InsertAttr( name, value ) );
 }
-// --- end string attribute insertion
+// --- end std::string attribute insertion
 
 #if 0
 // disabled, compat layer handles this. use the 3 argument form below to insert through the classad cache.
@@ -564,11 +554,11 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
 
-	pair<AttrList::iterator,bool> insert_result = attrList.emplace(attrName, tree);
-	if ( ! insert_result.second) {
-			// replace existing value
-		delete insert_result.first->second;
-		insert_result.first->second = tree;
+	auto [itr, inserted] = attrList.emplace(attrName, tree);
+	if (!inserted) {
+		// replace existing value
+		delete itr->second;
+		itr->second = tree;
 	}
 
 	MarkAttributeDirty(attrName);
@@ -576,19 +566,51 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	return true;
 }
 
+bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_tree)
+{
+	// sanity checks
+	if( attrName.empty() ) {
+		CondorErrno = ERR_MISSING_ATTRNAME;
+		CondorErrMsg= "no attribute name when inserting expression in classad";
+		return false;
+	}
+	if( !tree ) {
+		CondorErrno = ERR_BAD_EXPRESSION;
+		CondorErrMsg = "no expression when inserting attribute in classad";
+		return false;
+	}
+
+	// parent of the expression is this classad
+	tree->SetParentScope( this );
+
+	auto [itr, inserted] = attrList.emplace(attrName, tree);
+	if (!inserted) {
+		// replace existing value
+		old_tree = itr->second;
+		itr->second = tree;
+	} else {
+		old_tree = nullptr;
+	}
+
+	MarkAttributeDirty(attrName);
+
+	return true;
+}
+
+
 // Optimized code for inserting literals, use when the caller has guaranteed the validity
 // of the name and literal and wants a fast code path for insertion.  This function ALWAYS
 // bypasses the classad cache, which is fine for numeral literals, but probably a bad idea
-// for large string literals.
+// for large std::string literals.
 //
 bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 {
-	pair<AttrList::iterator,bool> insert_result = attrList.emplace(name, lit);
+	auto [itr, inserted] = attrList.emplace(name, lit);
 
-	if( !insert_result.second ) {
-			// replace existing value
-		delete insert_result.first->second;
-		insert_result.first->second = lit;
+	if(!inserted) {
+		// replace existing value
+		delete itr->second;
+		itr->second = lit;
 	}
 
 	MarkAttributeDirty(name);
@@ -597,7 +619,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 
 
 bool ClassAd::
-DeepInsert( ExprTree *scopeExpr, const string &name, ExprTree *tree )
+DeepInsert( ExprTree *scopeExpr, const std::string &name, ExprTree *tree )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -607,13 +629,13 @@ DeepInsert( ExprTree *scopeExpr, const string &name, ExprTree *tree )
 
 // --- begin STL-like functions
 ClassAd::iterator ClassAd::
-find(string const& attrName)
+find(std::string const& attrName)
 {
     return attrList.find(attrName);
 }
  
 ClassAd::const_iterator ClassAd::
-find(string const& attrName) const
+find(std::string const& attrName) const
 {
     return attrList.find(attrName);
 }
@@ -622,7 +644,7 @@ find(string const& attrName) const
 // --- begin lookup methods
 
 ExprTree *ClassAd::
-LookupIgnoreChain( const string &name ) const
+LookupIgnoreChain( const std::string &name ) const
 {
 	ExprTree *tree;
 	AttrList::const_iterator itr;
@@ -637,7 +659,7 @@ LookupIgnoreChain( const string &name ) const
 }
 
 ExprTree *ClassAd::
-LookupInScope( const string &name, const ClassAd *&finalScope ) const
+LookupInScope( const std::string &name, const ClassAd *&finalScope ) const
 {
 	EvalState	state;
 	ExprTree	*tree;
@@ -656,7 +678,7 @@ LookupInScope( const string &name, const ClassAd *&finalScope ) const
 
 
 int ClassAd::
-LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
+LookupInScope(const std::string &name, ExprTree*& expr, EvalState &state) const
 {
 	const ClassAd *current = this, *superScope;
 
@@ -716,7 +738,7 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 
 // --- begin deletion methods 
 bool ClassAd::
-Delete( const string &name )
+Delete( const std::string &name )
 {
 	bool deleted_attribute;
 
@@ -747,7 +769,7 @@ Delete( const string &name )
 }
 
 bool ClassAd::
-DeepDelete( ExprTree *scopeExpr, const string &name )
+DeepDelete( ExprTree *scopeExpr, const std::string &name )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -759,7 +781,7 @@ DeepDelete( ExprTree *scopeExpr, const string &name )
 
 // --- begin removal methods
 ExprTree *ClassAd::
-Remove( const string &name )
+Remove( const std::string &name )
 {
 	ExprTree *tree;
 
@@ -794,7 +816,7 @@ Remove( const string &name )
 }
 
 ExprTree *ClassAd::
-DeepRemove( ExprTree *scopeExpr, const string &name )
+DeepRemove( ExprTree *scopeExpr, const std::string &name )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( (ExprTree*)NULL );
@@ -863,7 +885,7 @@ Modify( ClassAd& mod )
 		const ExprList 		*list;
 		const char			*attrName;
 
-			// make a first pass to check that it is a list of strings ...
+			// make a first pass to check that it is a list of std::strings ...
 		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
 			return;
 		}
@@ -1007,7 +1029,7 @@ _GetDeepScope( ExprTree *tree ) const
 
 
 bool ClassAd::
-EvaluateAttr( const string &attr , Value &val, Value::ValueType mask ) const
+EvaluateAttr( const std::string &attr , Value &val, Value::ValueType mask ) const
 {
 	bool successfully_evaluated = false;
 	EvalState	state;
@@ -1043,7 +1065,7 @@ EvaluateAttr( const string &attr , Value &val, Value::ValueType mask ) const
 
 
 bool ClassAd::
-EvaluateExpr( const string& buf, Value &result ) const
+EvaluateExpr( const std::string& buf, Value &result ) const
 {
 	bool           successfully_evaluated = false;
 	ExprTree       *tree = nullptr;
@@ -1099,84 +1121,84 @@ EvaluateExpr( const ExprTree *tree , Value &val , ExprTree *&sig ) const
 }
 
 bool ClassAd::
-EvaluateAttrInt( const string &attr, int &i )  const
+EvaluateAttrInt( const std::string &attr, int &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
-EvaluateAttrInt( const string &attr, long &i )  const
+EvaluateAttrInt( const std::string &attr, long &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
-EvaluateAttrInt( const string &attr, long long &i )  const
+EvaluateAttrInt( const std::string &attr, long long &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
-EvaluateAttrReal( const string &attr, double &r )  const
+EvaluateAttrReal( const std::string &attr, double &r )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsRealValue( r ) );
 }
 
 bool ClassAd::
-EvaluateAttrNumber( const string &attr, int &i )  const
+EvaluateAttrNumber( const std::string &attr, int &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
-EvaluateAttrNumber( const string &attr, long &i )  const
+EvaluateAttrNumber( const std::string &attr, long &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
-EvaluateAttrNumber( const string &attr, long long &i )  const
+EvaluateAttrNumber( const std::string &attr, long long &i )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
-EvaluateAttrNumber( const string &attr, double &r )  const
+EvaluateAttrNumber( const std::string &attr, double &r )  const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( r ) );
 }
 
 bool ClassAd::
-EvaluateAttrString( const string &attr, char *buf, int len ) const
+EvaluateAttrString( const std::string &attr, char *buf, int len ) const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::STRING_VALUE ) && val.IsStringValue( buf, len ) );
 }
 
 bool ClassAd::
-EvaluateAttrString( const string &attr, string &buf ) const
+EvaluateAttrString( const std::string &attr, std::string &buf ) const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::STRING_VALUE ) && val.IsStringValue( buf ) );
 }
 
 bool ClassAd::
-EvaluateAttrBool( const string &attr, bool &b ) const
+EvaluateAttrBool( const std::string &attr, bool &b ) const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValue( b ) );
 }
 
 bool ClassAd::
-EvaluateAttrBoolEquiv( const string &attr, bool &b ) const
+EvaluateAttrBoolEquiv( const std::string &attr, bool &b ) const
 {
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValueEquiv( b ) );
@@ -1216,7 +1238,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
         case ATTRREF_NODE: {
             const ClassAd   *start;
             ExprTree        *tree, *result;
-            string          attr;
+            std::string          attr;
             Value           val;
             bool            abs;
 
@@ -1236,7 +1258,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
                     // are in the tree part
                 if( val.IsUndefinedValue( ) ) {
                     if (fullNames) {
-                        string fullName;
+                        std::string fullName;
                         if (tree != NULL) {
                             ClassAdUnParser unparser;
                             unparser.Unparse(fullName, tree);
@@ -1317,9 +1339,9 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case FN_CALL_NODE: {
                 // recurse on subtrees
-            string                      fnName;
-            vector<ExprTree*>           args;
-            vector<ExprTree*>::iterator itr;
+            std::string                      fnName;
+            std::vector<ExprTree*>           args;
+            std::vector<ExprTree*>::iterator itr;
 
             ((const FunctionCall*)expr)->GetComponents( fnName, args );
             for( itr = args.begin( ); itr != args.end( ); itr++ ) {
@@ -1339,8 +1361,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case CLASSAD_NODE: {
                 // recurse on subtrees
-            vector< pair<string, ExprTree*> >           attrs;
-            vector< pair<string, ExprTree*> >::iterator itr;
+            std::vector<std::pair<std::string, ExprTree*> >           attrs;
+            std::vector<std::pair<std::string, ExprTree*> >::iterator itr;
 
             ((const ClassAd*)expr)->GetComponents( attrs );
             for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
@@ -1353,8 +1375,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
                 state.depth_remaining++;
                 if( !ret ) {
-					return( false );
-				}
+                    return( false );
+                }
             }
             return( true );
         }
@@ -1362,8 +1384,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case EXPR_LIST_NODE: {
                 // recurse on subtrees
-            vector<ExprTree*>           exprs;
-            vector<ExprTree*>::iterator itr;
+            std::vector<ExprTree*>           exprs;
+            std::vector<ExprTree*>::iterator itr;
 
             ((const ExprList*)expr)->GetComponents( exprs );
             for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
@@ -1376,8 +1398,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
                 state.depth_remaining++;
                 if( !ret ) {
-					return( false );
-				}
+                    return( false );
+                }
             }
             return( true );
         }
@@ -1424,7 +1446,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
         case ATTRREF_NODE: {
             const ClassAd   *start;
             ExprTree        *tree, *result;
-            string          attr;
+            std::string          attr;
             Value           val;
             bool            abs;
 			PortReferences::iterator	pitr;
@@ -1500,9 +1522,9 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case FN_CALL_NODE: {
                 // recurse on subtrees
-            string                      fnName;
-            vector<ExprTree*>           args;
-            vector<ExprTree*>::iterator itr;
+            std::string                      fnName;
+            std::vector<ExprTree*>           args;
+            std::vector<ExprTree*>::iterator itr;
 
             ((const FunctionCall*)expr)->GetComponents( fnName, args );
             for( itr = args.begin( ); itr != args.end( ); itr++ ) {
@@ -1516,8 +1538,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case CLASSAD_NODE: {
                 // recurse on subtrees
-            vector< pair<string, ExprTree*> >           attrs;
-            vector< pair<string, ExprTree*> >::iterator itr;
+            std::vector< std::pair<std::string, ExprTree*> >           attrs;
+            std::vector< std::pair<std::string, ExprTree*> >::iterator itr;
 
             ((const ClassAd*)expr)->GetComponents( attrs );
             for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
@@ -1531,8 +1553,8 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case EXPR_LIST_NODE: {
                 // recurse on subtrees
-            vector<ExprTree*>           exprs;
-            vector<ExprTree*>::iterator itr;
+            std::vector<ExprTree*>           exprs;
+            std::vector<ExprTree*>::iterator itr;
 
             ((const ExprList*)expr)->GetComponents( exprs );
             for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
@@ -1589,7 +1611,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
         case ATTRREF_NODE:{
             const ClassAd   *start;
             ExprTree        *tree, *result;
-            string          attr;
+            std::string          attr;
             Value           val;
             bool            abs;
 
@@ -1714,13 +1736,12 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case FN_CALL_NODE:{
             //recurse on the subtrees!
-            string                          fnName;
-            vector<ExprTree*>               args;
-            vector<ExprTree*>::iterator     itr;
+            std::string                          fnName;
+            std::vector<ExprTree*>               args;
 
             ((const FunctionCall*)expr)->GetComponents(fnName, args);
-            for( itr = args.begin(); itr != args.end(); itr++){
-                if( !_GetInternalReferences( *itr, ad, state, refs, fullNames) ) {
+            for( auto arg : args ){
+                if( !_GetInternalReferences( arg, ad, state, refs, fullNames) ) {
                     return false;
                 }
             }
@@ -1731,8 +1752,8 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case CLASSAD_NODE:{
             //also recurse on subtrees...
-            vector< pair<string, ExprTree*> >               attrs;
-            vector< pair<string, ExprTree*> >:: iterator    itr;
+            std::vector<std::pair<std::string, ExprTree*> >               attrs;
+            std::vector<std::pair<std::string, ExprTree*> >:: iterator    itr;
 
             // If this ClassAd is only being used here as the scoping
             // for an attribute reference, don't recurse into all of
@@ -1761,17 +1782,16 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
 
         case EXPR_LIST_NODE:{
-            vector<ExprTree*>               exprs;
-            vector<ExprTree*>::iterator     itr;
+            std::vector<ExprTree*>               exprs;
 
             ((const ExprList*)expr)->GetComponents(exprs);
-            for(itr = exprs.begin(); itr != exprs.end(); itr++){
+            for(auto tree : exprs){
                 if( state.depth_remaining <= 0 ) {
                     return false;
                 }
                 state.depth_remaining--;
 
-                bool ret = _GetInternalReferences(*itr, ad, state, refs, fullNames);
+                bool ret = _GetInternalReferences(tree, ad, state, refs, fullNames);
 
                 state.depth_remaining++;
                 if( !ret ) {
@@ -1901,7 +1921,7 @@ void ClassAd::ClearAllDirtyFlags(void)
 	return;
 }
 
-void ClassAd::MarkAttributeClean(const string &name)
+void ClassAd::MarkAttributeClean(const std::string &name)
 {
 	if (do_dirty_tracking) {
 		dirtyAttrList.erase(name);
@@ -1909,7 +1929,7 @@ void ClassAd::MarkAttributeClean(const string &name)
 	return;
 }
 
-bool ClassAd::IsAttributeDirty(const string &name) const
+bool ClassAd::IsAttributeDirty(const std::string &name) const
 {
 	bool is_dirty;
 

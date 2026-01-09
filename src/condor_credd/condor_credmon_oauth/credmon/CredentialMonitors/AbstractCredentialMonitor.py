@@ -1,11 +1,9 @@
-import six
 from abc import ABCMeta, abstractmethod
 from argparse import Namespace
 from credmon.utils import setup_logging, get_cred_dir
 
 
-@six.add_metaclass(ABCMeta)
-class AbstractCredentialMonitor:
+class AbstractCredentialMonitor(metaclass=ABCMeta):
     """
     Abstract Credential Monitor class
 

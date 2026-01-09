@@ -195,8 +195,7 @@ get_tracking_id()
 	return s_mii++;
 }
 
-DaemonCore::DaemonCore(int ComSize,int SigSize,
-				int SocSize,int ReapSize)
+DaemonCore::DaemonCore()
 	: m_use_udp_for_dc_signals(false),
 #ifdef WIN32
 	m_never_use_kill_for_dc_signals(true),
@@ -209,11 +208,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_dirty_command_sock_sinfuls(true),
 	m_advertise_ipv4_first(false)
 {
-
-	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || ReapSize < 0)
-	{
-		EXCEPT("Invalid argument(s) for DaemonCore constructor");
-	}
 
 	SubsystemType styp = get_mySubSystem()->getType();
 	bool enable_stats = (styp == SUBSYSTEM_TYPE_MASTER)
@@ -922,10 +916,13 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 	bool include_auth)
 {
 	if (handlercpp == 0) {
-		dprintf(D_ALWAYS, "Can't register NULL unregistered command handler\n");
+		dprintf(D_ERROR, "Can't register NULL unregistered command handler\n");
 		return -1;
 	}
-	if (m_unregisteredCommand.num) { EXCEPT("DaemonCore: Two unregistered command handlers registered"); }
+	if (m_unregisteredCommand.num) {
+		dprintf(D_ERROR, "DaemonCore: Unregistered command handler already registered\n");
+		return -1;
+	}
 	m_unregisteredCommand.handlercpp = handlercpp;
 	m_unregisteredCommand.command_descrip = strdup("UNREGISTERED COMMAND");
 	m_unregisteredCommand.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
@@ -3284,6 +3281,7 @@ DaemonCore::Verify(char const *command_descrip, DCpermission perm, const Sock &s
 {
 	auto fqu = sock.getFullyQualifiedUser();
 
+	// TODO JEF Add check for client with capability token
 	CondorError err;
 	if (!getSecMan()->IsAuthenticationSufficient(perm, sock, err))
 	{
@@ -6180,17 +6178,21 @@ pid_t CreateProcessForkit::fork_exec() {
 #ifdef HAVE_CLONE
 		if (fork_flags & CLONE_NEWUSER) {
 			int fd = open("/proc/self/uid_map", O_WRONLY);
-			if (fd && (uid_map.size() > 0)) {
+			if ((fd >= 0)  && (uid_map.size() > 0)) {
 				std::ignore = write(fd, uid_map.c_str(), uid_map.size());
+			}
+			if (fd >= 0) {
 				close(fd);
 			}
 			fd = open("/proc/self/setgroups", O_WRONLY);
-			if (fd) {
+
+			if (fd >= 0) {
 				std::ignore = write(fd, "deny", 5);
 				close(fd);
 			}
+
 			fd = open("/proc/self/gid_map", O_WRONLY);
-			if (fd) {
+			if (fd >= 0) {
 				std::ignore = write(fd, gid_map.c_str(), gid_map.size());
 				close(fd);
 			}
@@ -7013,7 +7015,7 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 			socks.push_back(SockPair());
-			socks.back().has_relisock(true);
+			socks.back().add_relisock();
 			if (!socks.back().rsock()->attach_to_file_desc(new_fd))
 			{
 				dprintf(D_ALWAYS, "Failed to attach systemd socket to ReliSock.\n");
@@ -9163,7 +9165,7 @@ DaemonCore::Inherit( void )
 					if(dc_socks.empty() || dc_socks.back().has_relisock()) {
 						dc_socks.push_back(SockPair());
 					}
-					dc_socks.back().has_relisock(true);
+					dc_socks.back().add_relisock();
 					dc_socks.back().rsock()->deserialize(ptmp);
 					dc_socks.back().rsock()->set_inheritable(false);
 					break;
@@ -9181,7 +9183,7 @@ DaemonCore::Inherit( void )
 						if(dc_socks.empty() || dc_socks.back().has_safesock()) {
 							dc_socks.push_back(SockPair());
 						}
-						dc_socks.back().has_safesock(true);
+						dc_socks.back().add_safesock();
 						dc_socks.back().ssock()->deserialize(ptmp);
 						dc_socks.back().ssock()->set_inheritable(false);
 					}
@@ -9442,9 +9444,8 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		super_dc_rsock = new ReliSock;
 		super_dc_ssock = new SafeSock;
 
-		if ( !super_dc_rsock || !super_dc_ssock ) {
-			EXCEPT("Failed to create SuperUser Command socket");
-		}
+		ASSERT(super_dc_rsock);
+		ASSERT(super_dc_ssock);
 		// Note: BindAnyCommandPort() is in daemon core
 		if ( !BindAnyLocalCommandPort(super_dc_rsock,super_dc_ssock)) {
 			EXCEPT("Failed to bind SuperUser Command socket");
@@ -10052,7 +10053,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->erase(pidentry->child_session_id);
+		getSecMan()->session_cache.erase(pidentry->child_session_id);
 #ifdef WIN32
 		// close WIN32 handles
 	::CloseHandle(pidentry->hThread);  pidentry->hThread = NULL;
@@ -10281,7 +10282,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 	// We can't just do all the UDP work and then all the TCP work, because
 	// we want the TCP and UDP port numbers, if dynamically assigned,
 	// to match.
-	sock_pair.has_relisock( true );
+	sock_pair.add_relisock();
 	ReliSock * rsock = sock_pair.rsock().get();
 
 
@@ -10289,7 +10290,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 	SafeSock * ssock = NULL;
 	SafeSock * dynamicUDPSocket = NULL;
 	if( want_udp ) {
-		sock_pair.has_safesock( true );
+		sock_pair.add_safesock();
 		ssock = sock_pair.ssock().get();
 
 		if( udp_port <= 1 ) {
@@ -10840,7 +10841,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 
 KeyCache*
 DaemonCore::getKeyCache() {
-	return sec_man->session_cache;
+	return &sec_man->session_cache;
 }
 
 SecMan* DaemonCore :: getSecMan()
@@ -11413,24 +11414,16 @@ void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessi
 }
 
 
-bool DaemonCore::SockPair::has_relisock(bool b) {
-	if(!b) {
-		EXCEPT("Internal error: DaemonCore::SockPair::has_relisock must never be called with false as an argument.");
-	}
+void DaemonCore::SockPair::add_relisock() {
 	if(!m_rsock) {
 		m_rsock = std::make_shared<ReliSock>();
 	}
-	return true;
 }
 
-bool DaemonCore::SockPair::has_safesock(bool b) {
-	if(!b) {
-		EXCEPT("Internal error: DaemonCore::SockPair::has_safesock must never be called with false as an argument.");
-	}
+void DaemonCore::SockPair::add_safesock() {
 	if(!m_ssock) {
 		m_ssock = std::make_shared<SafeSock>();
 	}
-	return true;
 }
 
 int DaemonCore::CreateProcessNew(

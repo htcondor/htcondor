@@ -17,7 +17,7 @@ Synopsis
 Description
 -----------
 
-Versions of HTCondor before 8.9.12 contained contained a bug in the code
+Versions of HTCondor before 8.9.12 contained a bug in the code
 used to read the pool password (hence the name of the tool): in some
 cases the read would be truncated before end of the file.  Because the
 same code is used to read IDTOKENS signing keys, this bug affects the

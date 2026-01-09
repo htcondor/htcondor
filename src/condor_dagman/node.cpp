@@ -28,8 +28,6 @@ static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 int Node::_nextJobstateSeqNum = 1;
 
-std::map<std::string, int> Node::stringSpace;
-
 NodeID_t Node::_nodeID_counter = 0;
 int Node::NOOP_NODE_PROCID = INT_MAX;
 std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
@@ -56,33 +54,6 @@ const char* Node::status_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
-std::string_view
-Node::dedup_str(const std::string& str) {
-	if (stringSpace.contains(str)) {
-		stringSpace[str]++;
-	} else {
-		stringSpace.insert({str, 1});
-	}
-
-	auto it = stringSpace.find(str);
-	return std::string_view(it->first);
-}
-
-//---------------------------------------------------------------------------
-void
-Node::free_str(std::string_view& view) {
-	std::string key(view.data());
-	if (stringSpace.contains(key)) {
-		stringSpace[key]--;
-		std::erase_if(stringSpace, [](const auto& pair) {
-			const auto& [_, count] = pair;
-			return count <= 0;
-		});
-	}
-	view = {};
-}
-
-//---------------------------------------------------------------------------
 Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 	ASSERT(nodeName != nullptr);
 	ASSERT(cmdFile != nullptr);
@@ -92,8 +63,8 @@ Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 	_nodeName = nodeName;
 	// Initialize _directory and _cmdFile in a de-duped stringSpace since
 	// these strings may be repeated in thousands of nodes
-	_directory = dedup_str(directory);
-	_cmdFile = dedup_str(cmdFile);
+	_directory = DAG::STRING_SPACE::DEDUP(directory);
+	_cmdFile = DAG::STRING_SPACE::DEDUP(cmdFile);
 	// jobID is a primary key (a database term).  All should be unique
 	_nodeID = _nodeID_counter++;
 
@@ -110,8 +81,8 @@ Node::PrefixDirectory(const std::string &prefix) {
 	std::string newDir;
 	dircat(prefix.c_str(), _directory.data(), newDir);
 
-	free_str(_directory);
-	_directory = dedup_str(newDir);
+	DAG::STRING_SPACE::FREE(_directory);
+	_directory = DAG::STRING_SPACE::DEDUP(newDir);
 }
 
 //---------------------------------------------------------------------------
@@ -187,44 +158,32 @@ Node::SetStatus(status_t newStatus) {
 //---------------------------------------------------------------------------
 bool
 Node::GetProcIsIdle(int proc) {
-	if (GetNoop()) { proc = 0; }
-
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
-	return (_gotEvents[proc] & IDLE_MASK) != 0;
+	CheckTrackingJob(proc);
+	return (jobs[proc].events & IDLE_MASK) != 0;
 }
 
 //---------------------------------------------------------------------------
 void
 Node::SetProcIsIdle(int proc, bool isIdle) {
-	if (GetNoop()) { proc = 0; }
-
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
+	CheckTrackingJob(proc);
 
 	if (isIdle) {
-		_gotEvents[proc] |= IDLE_MASK;
+		jobs[proc].events |= IDLE_MASK;
 	} else {
-		_gotEvents[proc] &= ~IDLE_MASK;
+		jobs[proc].events &= ~IDLE_MASK;
 	}
 }
 
 //---------------------------------------------------------------------------
 void
 Node::SetProcEvent(int proc, int event) {
-	if (GetNoop()) { proc = 0; }
-
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-			_gotEvents.resize(proc + 1, 0);
-	}
+	CheckTrackingJob(proc);
 
-	_gotEvents[proc] |= event;
+	jobs[proc].events |= event;
 }
 
 //---------------------------------------------------------------------------
@@ -238,7 +197,7 @@ Node::CheckBatchFailed(int tolerance) {
 void
 Node::PrintProcIsIdle() {
 	int proc = 0;
-	for (auto state : _gotEvents) {
+	for (auto [state, _] : jobs) {
 		debug_printf(DEBUG_QUIET, "Node(%s)::_isIdle[%d]: %d\n",
 		             GetNodeName(), proc++, (state & IDLE_MASK) != 0);
 	}
@@ -521,20 +480,22 @@ Node::CanAddChildren(const std::vector<Node*>& children, std::string &whynot) {
 
 //---------------------------------------------------------------------------
 bool
-Node::AddVar(const char *name, const char *value, const char* filename, int lineno, bool prepend) {
-	auto name_v = dedup_str(name);
-	auto value_v = dedup_str(value);
+Node::AddVar(const std::string& name, const std::string& value, bool prepend) {
 	for (auto& var : varsFromDag) {
-		if (name_v == var._name) {
-			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" is already defined in node \"%s\" (Discovered at file \"%s\", line %d)\n",
-			             name_v.data(), GetNodeName(), filename, lineno);
+		if (name == var._name) {
+			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" is already defined in node \"%s\"\n",
+			             name.c_str(), GetNodeName());
 			check_warning_strictness(DAG_STRICT_3);
-			debug_printf(DEBUG_NORMAL, "Warning: Setting VAR \"%s\" = \"%s\"\n", name_v.data(), value_v.data());
-			free_str(var._value);
-			var._value = value_v;
+			debug_printf(DEBUG_NORMAL, "        Setting VAR \"%s\" = \"%s\"\n", name.c_str(), value.c_str());
+			DAG::STRING_SPACE::FREE(var._value);
+			var._value = DAG::STRING_SPACE::DEDUP(value);
 			return true;
 		}
 	}
+
+	auto name_v = DAG::STRING_SPACE::DEDUP(name);
+	auto value_v = DAG::STRING_SPACE::DEDUP(value);
+
 	varsFromDag.emplace_back(name_v, value_v, prepend);
 	return true;
 }
@@ -577,10 +538,8 @@ Node::AddChildren(const std::vector<Node*>& children, std::string &whynot) {
 		NodeID_t id = _child;
 		Edge * edge = Edge::PromoteToMultiple(_child, _multiple_children, id);
 
-		// count the children so we can reserve space in the edge array
-		int num_children = (id == NO_ID) ? 0 : 1;
-		for (auto it = children.begin(); it != children.end(); ++it) { ++num_children; }
-		edge->_ary.reserve(num_children);
+		// Reserve space in the edge array for children. Add one for current child node (even if we don't have one)
+		edge->_ary.reserve(children.size() + 1);
 
 		// populate the edge array, since we know that children is sorted we can just push_back here.
 		for (auto child : children) {
@@ -713,29 +672,31 @@ Node::AddScript(Script* script) {
 	script->SetNode(this);
 
 	// Check if a script of the same type has already been assigned to this node
-	const char *old_script_name = nullptr;
 	const char *type_name;
+	Script* old_script = nullptr;
 	switch(script->GetType()) {
 		case ScriptType::PRE:
-			old_script_name = GetPreScriptName();
 			type_name = "PRE";
+			old_script = _scriptPre;
 			_scriptPre = script;
 			break;
 		case ScriptType::POST:
-			old_script_name = GetPostScriptName();
 			type_name = "POST";
+			old_script = _scriptPost;
 			_scriptPost = script;
 			break;
 		case ScriptType::HOLD:
-			old_script_name = GetHoldScriptName();
 			type_name = "HOLD";
+			old_script = _scriptHold;
 			_scriptHold = script;
 			break;
 	}
 
-	if (old_script_name) {
+	if (old_script) {
 		debug_printf(DEBUG_NORMAL, "Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
-		             GetNodeName(), type_name, old_script_name, script->GetCmd());
+		             GetNodeName(), type_name, old_script->GetCmd(), script->GetCmd());
+		delete old_script;
+		old_script = nullptr;
 	}
 
 	return true;
@@ -824,7 +785,7 @@ Node::GetJobstateJobTag() {
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
 			tmpJobTag = tmpJobTag.substr(begin, 1 + end - begin);
 		}
-		_jobTag = dedup_str(tmpJobTag);
+		_jobTag = DAG::STRING_SPACE::DEDUP(tmpJobTag);
 	}
 
 	return _jobTag.data();
@@ -859,12 +820,10 @@ bool
 Node::Hold(int proc) {
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
+	CheckTrackingJob(proc);
 
-	if ((_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
-		_gotEvents[proc] |= HOLD_MASK;
+	if ((jobs[proc].events & HOLD_MASK) != HOLD_MASK) {
+		jobs[proc].events |= HOLD_MASK;
 
 		++_jobProcsOnHold;
 		++_timesHeld;
@@ -882,7 +841,7 @@ bool
 Node::Release(int proc, bool warn) {
 	SetStateChangeTime();
 
-	if (proc >= static_cast<int>(_gotEvents.size()) || (_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
+	if (proc >= static_cast<int>(jobs.size()) || (jobs[proc].events & HOLD_MASK) != HOLD_MASK) {
 		if (warn) {
 			dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d is not on hold\n",
 			        GetNodeName(), GetCluster(), GetProc());
@@ -890,7 +849,7 @@ Node::Release(int proc, bool warn) {
 		return false; // We never marked this as being on hold
 	}
 
-	_gotEvents[proc] &= ~HOLD_MASK;
+	jobs[proc].events &= ~HOLD_MASK;
 	--_jobProcsOnHold;
 	return true;
 }
@@ -904,16 +863,16 @@ void
 Node::Cleanup()
 {
 	int proc = 0;
-	for (auto state : _gotEvents) {
+	for (auto [state, _] : jobs) {
 		if (state != (EXEC_MASK | ABORT_TERM_MASK)) {
-			debug_printf(DEBUG_NORMAL, "Warning for node %s: unexpected _gotEvents value for proc %d: %d!\n",
+			debug_printf(DEBUG_NORMAL, "Warning for node %s: unexpected job event value for proc %d: %d!\n",
 			             GetNodeName(), proc, (int)state);
 			check_warning_strictness(DAG_STRICT_2);
 		}
 		++ proc;
 	}
 
-	_gotEvents.clear();
+	jobs.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -930,13 +889,13 @@ Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	int cluster = GetCluster();
 	const char* nodeName = GetNodeName();
 
-	if (_gotEvents.size() == 0) {
+	if (jobs.size() == 0) {
 		debug_printf(DEBUG_NORMAL, "ERROR: Node %s is internally in submitted state with no recorded job events!\n",
 		             nodeName);
 		return false;
 	}
 
-	for (auto& state : _gotEvents) {
+	for (auto& [state, _] : jobs) {
 		if (queuedJobs.contains(proc)) {
 			if (state & ABORT_TERM_MASK) {
 				debug_printf(DEBUG_NORMAL,

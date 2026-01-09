@@ -344,9 +344,7 @@ ScheddOtherStatsMgr::~ScheddOtherStatsMgr()
 
 void ScheddOtherStatsMgr::Clear()
 {
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 		delete po;
 	}
 	pools.clear();
@@ -360,9 +358,7 @@ time_t ScheddOtherStatsMgr::Tick(time_t now) // call this when time may have cha
 	// update deferred counts of submitted jobs by/for expression
 	CountJobsSubmitted();
 
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 		if (cAdvance) { po->stats.Advance(cAdvance); }
 		if ( ! po->sets.empty()) {
 			for (auto & set : po->sets) {
@@ -384,9 +380,7 @@ time_t ScheddOtherStatsMgr::Tick(time_t now) // call this when time may have cha
 
 void ScheddOtherStatsMgr::Reconfig(int window, int quantum)
 {
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 		po->stats.SetWindowSize(window, quantum);
 		if ( ! po->sets.empty()) {
 			for (auto & set : po->sets) {
@@ -404,9 +398,7 @@ void ScheddOtherStatsMgr::Reconfig(int window, int quantum)
 #if 0
 void ScheddOtherStatsMgr::Publish(ClassAd & ad)
 {
-	ScheddOtherStats* po = NULL;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 
 		if ( ! po->enabled)
 			continue;
@@ -430,9 +422,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad)
 
 void ScheddOtherStatsMgr::Publish(ClassAd & ad, int flags)
 {
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 
 		if ( ! po->enabled)
 			continue;
@@ -453,9 +443,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad, int flags)
 
 void ScheddOtherStatsMgr::UnpublishDisabled(ClassAd & ad)
 {
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 
 		if ( ! po->enabled) {
 			po->stats.Pool.Unpublish(ad);
@@ -483,7 +471,7 @@ void ScheddOtherStatsMgr::DeferJobsSubmitted(int cluster, int proc)
 {
 	// keep track of the last proc seen for each cluster 
 	// since we processed (and cleared) the deferred_jobs set
-	if (pools.getNumElements() > 0) {
+	if (pools.size() > 0) {
 		deferred_jobs_submitted[cluster] = proc;
 	}
 }
@@ -492,7 +480,7 @@ void ScheddOtherStatsMgr::DeferJobsSubmitted(int cluster, int proc)
 void ScheddOtherStatsMgr::CountJobsSubmitted()
 {
 	if ( ! deferred_jobs_submitted.empty() &&
-		pools.getNumElements() > 0) {
+		pools.size() > 0) {
 		time_t now = time(nullptr);
 
 		for (auto & it : deferred_jobs_submitted) {
@@ -517,9 +505,7 @@ void ScheddOtherStatsMgr::CountJobsSubmitted()
 // reset jobs-running counters/histograms in preparation for count_jobs
 void ScheddOtherStatsMgr::ResetJobsRunning()
 {
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 
 		// don't bother to reset disabled stats.
 		if ( ! po->enabled)
@@ -572,13 +558,15 @@ bool ScheddOtherStatsMgr::Enable(
 
 	bool was_enabled = false;
 	ScheddOtherStats* po = nullptr;
-	if (pools.lookup(pre, po) < 0) {
+	auto it = pools.find(pre);
+	if (it == pools.end()) {
 		po = new ScheddOtherStats();
 		ASSERT(po);
 		po->prefix = pre;
 		po->stats.InitOther(config.RecentWindowMax, (int)config.RecentStatsLifetime);
-		pools.insert(pre, po);
+		pools.emplace(pre, po);
 	} else {
+		po = it->second;
 		was_enabled = po->enabled;
 		if (po->by != stats_by_trig_value ||
 			po->trigger != trig) {
@@ -598,9 +586,7 @@ bool ScheddOtherStatsMgr::Enable(
 bool ScheddOtherStatsMgr::DisableAll()
 {
 	bool any_enabled = false;
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 		any_enabled = any_enabled || po->enabled;
 		po->enabled = false;
 	}
@@ -610,15 +596,14 @@ bool ScheddOtherStatsMgr::DisableAll()
 bool ScheddOtherStatsMgr::RemoveDisabled()
 {
 	bool any_removed = false;
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	auto pool_it = pools.begin();
+	while (pool_it != pools.end()) {
+		ScheddOtherStats* po = pool_it->second;
 		if ( ! po->enabled) {
-			std::string key;
-			pools.getCurrentKey(key);
-			pools.remove(key);
 			delete po;
 			any_removed = true;
+			pool_it = pools.erase(pool_it);
+			continue;
 		} else if ( ! po->sets.empty()) {
 			for (auto it = po->sets.begin();
 				 it != po->sets.end();
@@ -632,17 +617,14 @@ bool ScheddOtherStatsMgr::RemoveDisabled()
 				}
 			}
 		}
+		pool_it++;
 	}
 	return any_removed;
 }
 
 bool ScheddOtherStatsMgr::AnyEnabled()
 {
-	if (pools.getNumElements() <= 0)
-		return false;
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (const auto& [key, po]: pools) {
 		if (po->enabled)
 			return true;
 	}
@@ -656,9 +638,7 @@ bool ScheddOtherStatsMgr::AnyEnabled()
 ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 {
 	ScheddOtherStats* poLast = nullptr;
-	ScheddOtherStats* po = nullptr;
-	pools.startIterations();
-	while (pools.iterate(po)) {
+	for (auto& [key, po]: pools) {
 
 		// if we have not yet built a parse tree for this expression, do that now.
 		if ( ! po->trigger_expr) {

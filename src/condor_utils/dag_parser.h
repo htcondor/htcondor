@@ -28,6 +28,7 @@
 
 #include "dag_commands.h"
 #include "stl_string_utils.h"
+#include "safe_fopen.h"
 
 //--------------------------------------------------------------------------------------------
 class DagParseError {
@@ -80,11 +81,11 @@ private:
 	void fmt_msg() const {
 		if (msg.empty()) {
 			if (known_cmd) {
-				formatstr(msg, "%s:%lu Failed to parse %s command: %s",
-				          source.c_str(), line, DAG::GET_KEYWORD_STRING(command),
+				formatstr(msg, "%s:%llu Failed to parse %s command: %s",
+				          source.c_str(), (unsigned long long)line, DAG::GET_KEYWORD_STRING(command),
 				          error.c_str());
 			} else {
-				formatstr(msg, "%s:%lu %s", source.c_str(), line, error.c_str());
+				formatstr(msg, "%s:%llu %s", source.c_str(), (unsigned long long)line, error.c_str());
 			}
 		}
 	}
@@ -98,19 +99,31 @@ private:
 };
 
 //--------------------------------------------------------------------------------------------
+using kvp_parse_t = std::optional<std::pair<std::string, std::string>>;
+
 class DagLexer {
 public:
 	DagLexer() = default;
 	DagLexer(const std::string& s) : str(s) { len = str.size(); }
-	std::string next(bool trim_quotes=false);
-	std::string peek(bool trim_quotes=false) {
+
+	enum class TRIM_QUOTES {
+		FALSE = 0,
+		TRUE,
+	};
+
+	std::string next(TRIM_QUOTES trim_quotes=TRIM_QUOTES::FALSE);
+	kvp_parse_t next_key_value_pair(TRIM_QUOTES trim_quotes=TRIM_QUOTES::FALSE);
+
+	std::string peek(TRIM_QUOTES trim_quotes=TRIM_QUOTES::FALSE) {
 		size_t curr = pos;
 		std::string upcoming = next(trim_quotes);
 		pos = curr;
 		return upcoming;
 	}
+
 	std::string remain();
-	void reset() { pos = 0; }
+
+	void reset() { pos = 0; err.clear(); }
 	void parse(const std::string& s, bool clear_err=false) {
 		std::string_view new_str(s);
 		str = new_str;
@@ -124,11 +137,28 @@ public:
 	const char* c_error() const { return err.c_str(); }
 
 protected:
-	std::string err{}; // Internal lexer error (i.e. still in quotes or key=value incomplete)
+	std::string err{}; // Internal lexer error (i.e. still in quotes)
 	std::string_view str{}; // String being being parsed
 	size_t pos{0}; // Current position
 	size_t len{0}; // Length of parsed string
 };
+
+//--------------------------------------------------------------------------------------------
+static int64_t ftell_64b(FILE* f) {
+#ifdef WIN32
+	return _ftelli64(f);
+#else
+	return (int64_t)ftello(f);
+#endif
+}
+
+static int fseek_64b(FILE* f, int64_t offset, int origin) {
+#ifdef WIN32
+	return _fseeki64(f, offset, origin);
+#else
+	return fseeko(f, (off_t)offset, origin);
+#endif
+}
 
 //--------------------------------------------------------------------------------------------
 class DagParser {
@@ -145,11 +175,13 @@ public:
 	DagParser& operator=(const DagParser&) = delete;
 	DagParser& operator=(DagParser&&) = delete;
 
-	~DagParser() { if(fs.is_open()) fs.close(); }
+	~DagParser() { if (fp) fclose(fp); fp = nullptr; }
 
 	void SetDagFile(const char* s) { std::filesystem::path f(s ? s : ""); init(f); }
 	void SetDagFile(const std::string& s) { std::filesystem::path f(s); init(f); }
 	void SetDagFile(const std::filesystem::path& f) { init(f); }
+
+	DagParser& reset() { _reset(); return *this; }
 
 	DagParser& ContOnParseFailure(bool copf=true) { this->copf = copf; return *this; }
 	DagParser& AllowIllegalChars(bool allow=true) { allow_illegal_chars = allow; return *this; }
@@ -171,6 +203,8 @@ public:
 		return *this;
 	}
 
+	bool SkippedCommands() const { return has_other_commands; }
+
 	class iterator {
 	public:
 		using value_type = DagCmd;
@@ -183,7 +217,7 @@ public:
 
 		void next() {
 			if ( ! parser.next()) {
-				eof = parser.fs.eof();
+				eof = feof(parser.fp);
 				if ( ! eof) { parser.parse_failure = true; }
 				if (parser.copf) {
 					if (eof) { return; }
@@ -194,7 +228,7 @@ public:
 				return;
 			}
 
-			iNext = parser.fs.tellg();
+			iNext = ftell_64b(parser.fp);
 		}
 
 
@@ -232,20 +266,20 @@ public:
 
 		iterator end() {
 			iterator e(parser);
-			std::istream& efs = e.parser.fs;
-			if ( ! parser.parse_done) { parser.parse_done = efs.eof(); }
-			efs.clear();
-			std::streampos pos = efs.tellg();
-			efs.seekg(0, efs.end);
-			e.iNext = efs.tellg();
-			efs.seekg(pos, efs.beg);
+			FILE* efp = e.parser.fp;
+			if ( ! parser.parse_done) { parser.parse_done = feof(efp); }
+			clearerr(efp);
+			int64_t pos = ftell_64b(efp);
+			fseek_64b(efp, 0, SEEK_END);
+			e.iNext = ftell_64b(efp);
+			fseek_64b(efp, pos, SEEK_SET);
 			e.eof = true;
 			return e;
 		}
 
 	protected:
 		DagParser& parser;
-		std::streampos iNext;
+		int64_t iNext{0};
 		bool eof{false};
 	};
 
@@ -265,10 +299,10 @@ public:
 		bool failed = false;
 		if ( ! err.empty() || ! all_errors.empty()) {
 			failed = (copf && !parse_done) ? !parse_failure : true;
-		} else if ( ! fs.is_open()) {
+		} else if ( ! fp) {
 			err = "Failed to open file";
 			failed = true;
-		} else if ( ! fs && ! fs.eof()) {
+		} else if (ferror(fp) && ! feof(fp)) {
 			err = "Input file stream failure";
 			failed = true;
 		}
@@ -319,11 +353,11 @@ protected:
 	bool copf{false}; // Continue parsing even if error occurs
 private:
 	bool get_inline_desc_end(const std::string& desc, std::string& end);
-	std::string parse_inline_desc(std::ifstream& stream, const std::string& end, std::string& error, std::string& endline);
+	std::string parse_inline_desc(const std::string& end, std::string& error, std::string& endline);
 
-	std::string ParseNodeTypes(std::ifstream& stream, DagLexer& details, DAG::CMD type);
+	std::string ParseNodeTypes(DagLexer& details, DAG::CMD type);
 	std::string ParseSplice(DagLexer& details);
-	std::string ParseSubmitDesc(std::ifstream& stream, DagLexer& details);
+	std::string ParseSubmitDesc(DagLexer& details);
 	std::string ParseParentChild(DagLexer& details);
 	std::string ParseScript(DagLexer& details);
 	std::string ParseRetry(DagLexer& details);
@@ -341,16 +375,29 @@ private:
 	std::string ParseConnect(DagLexer& details);
 	std::string ParsePin(DagLexer& details, DAG::CMD type);
 
-	void reset() {
-		path.clear();
+	// WARNING: This function clears the passed reference variable regardless of successfully reading a line
+	bool getnextline(std::string& line, bool raw = false);
+
+	void _reset(bool new_file = false) {
 		data.reset(nullptr);
 		line_no = 0;
 		parse_failure = false;
 		parse_done = false;
+		has_other_commands = false;
+		err.clear();
+		all_errors.clear();
+
+		if (new_file) {
+			if (fp) fclose(fp);
+			fp = nullptr;
+			path.clear();
+		} else {
+			fseek_64b(fp, 0 , SEEK_SET);
+		}
 	}
 
 	void init(const std::filesystem::path &p) {
-		reset();
+		_reset(true);
 		path = p;
 
 		bool setup_failure = false;
@@ -367,11 +414,11 @@ private:
 
 		if (setup_failure) { return; }
 
-		fs.open(path.string(), std::ifstream::in);
+		fp = safe_fopen_wrapper_follow(path.string().c_str(), "r");
 	}
 
 	std::filesystem::path path; // File to parse
-	std::ifstream fs; // Input file stream
+	FILE* fp{nullptr}; // DAG file pointer
 
 	std::vector<DagParseError> all_errors{}; // All errors occurred during parsing useful for COPF
 	std::string err{}; // Parsers most recent error message (needed for setup errors)
@@ -382,6 +429,7 @@ private:
 
 	bool parse_failure{false}; // Have is failure a parse failure
 	bool parse_done{false}; // Has parser done (needed for ensuring end sentinel is returned 100% of time)
+	bool has_other_commands{false}; // Parser has skipped a command not specified in search that isn't ignored
 };
 
 #endif // DAG_PARSER_H

@@ -101,9 +101,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	const char * owner = nullptr; // bare username, even when USERREC_NAME_IS_FULLY_QUALIFIED
 	std::string ownerbuf;
 
-	if( ! job_ad ) {
-		EXCEPT("baseInit() called with NULL job_ad!");
-	}
+	ASSERT(job_ad);
 	jobAd = job_ad;
 
 	if (sendUpdatesToSchedd && ! is_valid_sinful(schedd_addr)) {
@@ -161,9 +159,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
-    if ( !jobAd->Assign( ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString() )) {
-        EXCEPT( "Failed to insert %s!", ATTR_MY_ADDRESS );
-    }
+	jobAd->Assign(ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString());
 
 	DebugId = display_dprintf_header;
 	
@@ -935,7 +931,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		}
 	}
 
-	// Note: improveReasonAttributescan change the reason_code and subcode,
+	// Note: improveReasonAttributes can change the reason_code and subcode,
 	// and will pass back a potentially improved reason string.
 	std::string url_file_type; // This will be used to store the protocol used for file transfer.
 	std::string improved_reason_str =
@@ -984,6 +980,23 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	jobAd->Assign(ATTR_VACATE_REASON_CODE, reason_code);
 	jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
 
+	// update the job ad in the queue with some important final
+	// attributes so we know what happened to the job when using
+	// condor_history...
+	// If the schedd initiated the vacate, this will update the vacate
+	// attributes in our ad from the schedd's ad.
+	if( !updateJobInQueue(U_EVICT) ) {
+		// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+	// In case we got updated vacate attributes from the schedd, set our
+	// local variables from the job ad
+	jobAd->LookupString(ATTR_VACATE_REASON, job_ad_reason);
+	reason_str = job_ad_reason.c_str();
+	jobAd->LookupInteger(ATTR_VACATE_REASON_CODE, reason_code);
+	jobAd->LookupInteger(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+
 	writeAdToEpoch(getJobAd());
 
 	if (exit_reason != JOB_RECONNECT_FAILED) {
@@ -992,14 +1005,6 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 
 		// write stuff to user log:
 		logEvictEvent(exit_reason, reason_str, reason_code, reason_subcode);
-	}
-
-		// update the job ad in the queue with some important final
-		// attributes so we know what happened to the job when using
-		// condor_history...
-	if( !updateJobInQueue(U_EVICT) ) {
-			// trouble!  TODO: should we do anything else?
-		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
 	exitAfterEvictingJob( exit_reason );
@@ -1073,8 +1078,7 @@ void BaseShadow::initUserLog()
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
 				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does
-			// EXCEPT
+		// holdJobAndExit() should not return, but just in case it does
 		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
 	}
 }
@@ -1383,8 +1387,8 @@ BaseShadow::checkSwap( void )
 void
 BaseShadow::log_except(const char *msg_str)
 {
-	if ( BaseShadow::myshadow_ptr == NULL ) {
-		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object): %s\n", msg_str ? msg_str : "");
+	if (BaseShadow::myshadow_ptr == nullptr || BaseShadow::myshadow_ptr->getJobAd() == nullptr) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event (no Shadow object or no job ad): %s\n", msg_str ? msg_str : "");
 		return;
 	}
 
@@ -1396,6 +1400,7 @@ BaseShadow::log_except(const char *msg_str)
 	if (msg_str && msg_str[0]) { event.setMessage(msg_str); }
 
 	BaseShadow *shadow = BaseShadow::myshadow_ptr;
+	ClassAd* job_ad = shadow->getJobAd();
 
 	// we want to log the events from the perspective of the
 	// user job, so if the shadow *sent* the bytes, then that
@@ -1408,8 +1413,18 @@ BaseShadow::log_except(const char *msg_str)
 		event.began_execution = TRUE;
 	}
 
-	Shadow->getJobAd()->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
-	Shadow->updateJobInQueue(U_STATUS);
+	// If we don't have a vacate reason set yet, set it to ShadowException
+	int dummy;
+	if (!job_ad->LookupInteger(ATTR_VACATE_REASON_CODE, dummy)) {
+		std::string vacate_str = "Shadow Exception: ";
+		vacate_str += msg_str;
+		job_ad->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
+		job_ad->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+		job_ad->Assign(ATTR_VACATE_REASON, vacate_str);
+		job_ad->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
+		job_ad->Assign(ATTR_VACATE_REASON_SUBCODE, 0);
+	}
+	Shadow->updateJobInQueue(U_EVICT);
 	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
 		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", event.getMessage());

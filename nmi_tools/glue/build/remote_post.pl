@@ -175,7 +175,7 @@ else {
 
 
 # copy all the bits in which are required to run batch_test (omg what a cf) 
-if( $ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|Rocky|Debian|Ubuntu/i ) {
+if( $ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|SLES|Rocky|Debian|Ubuntu/i ) {
     system("tar xfp $pub_dir/condor_tests-*.tar.gz");
     system("mv condor_tests-*/condor_tests $pub_dir");
     system("rmdir condor_tests-*");

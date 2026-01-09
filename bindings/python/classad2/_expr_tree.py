@@ -19,12 +19,14 @@ class ExprTree:
     An expression in the ClassAd language.
     """
 
+    _Nill = object()
+
     # FIXME: Allowing the creation of stray ExprTrees from Python is probably
     # not a good idea, but Ornithology needs it for now.
     def __init__(self, expr : Optional[Union[str, "ExprTree"]] = None):
         """
         :param expr:
-           * If :py:obj:`None`, create an empty :class:`ExprTree`.
+           * If :py:obj:`None`, create an undefined :class:`ExprTree`.
            * If a :class:`str`, parse the string in the ClassAd language
              and create the corresponding :class:`ExprTree`.
            * If an :class:`ExprTree`, create a deep copy of ``expr``.
@@ -32,9 +34,17 @@ class ExprTree:
         self._handle = handle_t()
         _exprtree_init(self, self._handle)
 
-        # FIXME: This is awful, but at least it doesn't involve more C code.
-        if expr is not None:
-            classad_string = f'[expression = {str(expr)}]'
+        if expr is ExprTree._Nill:
+            # This used by the C++ side when it creates a new ExprTree
+            # to signal that it will populate the fields itself.
+            pass
+        else:
+            if expr is None:
+                classad_string = f'[expression = undefined]'
+            else:
+                classad_string = f'[expression = {str(expr)}]'
+
+            # FIXME: This is awful, but at least it doesn't involve more C code.
             c = ClassAd(classad_string)
             expression = c.lookup('expression')
             assert type(expression) == ExprTree

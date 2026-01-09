@@ -22,6 +22,7 @@ Synopsis
 [**-UseDagDir**] [**-AlwaysRunPost** | **-DontAlwaysRunPost**]
 [**-suppress_notification** | **-dont_suppress_notification**]
 [**-AutoRescue** *<0|1>*] [**-DoRescueFrom** *N*] [**-DoRecovery**]
+[**-RescueFile** *filename*]
 [**-load_save** *filename*] [**-MaxHold** *N*] [**-MaxIdle** *N*]
 [**-MaxJobs** *N*] [**-MaxPost** *N*] [**-MaxPre** *N*]
 
@@ -100,6 +101,8 @@ Options
     Default ``1`` is ``True``.
  **-DoRescueFrom** *N*
     Specify a specific rescue number to locate and restore state from.
+ **-RescueFile** *filename*
+    Specify a specific rescue file by name to restore state from.
  **-DoRecovery**
     Specify to startup in recovery mode (restore state from ``*.nodes.log``).
  **-load_save** *filename*

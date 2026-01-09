@@ -8,9 +8,16 @@ from typing import List
 
 import scitokens
 import htcondor2 as htcondor
+import classad2 as classad
 
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.utils import atomic_rename
+
+
+_KEY_ALGO_PREAMBLE = {
+    "RS256": "BEGIN RSA PRIVATE KEY",
+    "ES256": "BEGIN EC PRIVATE KEY",
+}
 
 
 class TokenInfo:
@@ -44,7 +51,8 @@ class LocalCredmon(OAuthCredmon):
         super(LocalCredmon, self).__init__(*args, **kwargs)
         self.provider = provider
         self.token_issuer = None
-        self.authz_template = "read:/user/{username} write:/user/{username}"
+        self.authz_template = r"read:/user/{username} write:/user/{username}"
+        self.authz_template_expr = None
         self.authz_group_template = None
         self.authz_group_mapfile = None
         self.authz_group_requirement = None
@@ -58,10 +66,12 @@ class LocalCredmon(OAuthCredmon):
                 with open(self._private_key_location, 'r') as private_key:
                     self._private_key = private_key.read()
                 self.private_key_id = self.get_credmon_config("KEY_ID", "local")
+                self.private_key_algo = self.get_credmon_config("PRIVATE_KEY_ALGORITHM", "ES256")
             else:
                 self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but key not found or not readable")
             self.token_issuer = self.get_credmon_config("ISSUER", self.token_issuer)
             self.authz_template = self.get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
+            self.authz_template_expr = self.get_credmon_config("AUTHZ_TEMPLATE_EXPR", self.authz_template_expr)
             self.authz_group_mapfile = self.get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
             self.authz_group_template = self.get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
             self.authz_group_requirement  = self.get_credmon_config("AUTHZ_GROUP_REQUIREMENT", self.authz_group_requirement)
@@ -73,11 +83,14 @@ class LocalCredmon(OAuthCredmon):
             self._private_key_location = None
         if not self.token_issuer and htcondor:
             self.token_issuer = 'https://{}'.format(htcondor.param["FULL_HOSTNAME"])
-        # algorithm is hardcoded to ES256, warn if private key does not appear to use EC
-        if (self._private_key_location is not None) and ("BEGIN EC PRIVATE KEY" not in self._private_key.split("\n")[0]):
-            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
-            self.log.warning("`scitokens-admin-create-key --pem-private` should be used with `--ec` option")
+        # Check that the key matches the configured algorithm
+        if (self._private_key_location is not None) and (_KEY_ALGO_PREAMBLE.get(self.private_key_algo, "") not in self._private_key.split("\n")[0]):
+            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use {self.private_key_algo} algorithm")
+            self.log.warning(f"{_KEY_ALGO_PREAMBLE.get(self.private_key_algo, '')} not found in key file")
             self.log.warning("Errors are likely to occur when attempting to serialize SciTokens")
+        elif self.private_key_algo not in _KEY_ALGO_PREAMBLE:
+            self.log.warning(f"New or unknown private key algorithm '{self.private_key_algo}'")
+            self.log.warning("Errors may occur when attempting to serialize SciTokens")
 
 
     def get_credmon_config(self, config: str, default: str="") -> str:
@@ -93,33 +106,24 @@ class LocalCredmon(OAuthCredmon):
         return htcondor.param.get(f"{self.credmon_name}_CREDMON_{self.provider}_{config}", htcondor.param.get(f"{self.credmon_name}_CREDMON_{config}", default))
 
 
-    def should_renew(self, username, token_name):
-        if not super().should_renew(username, token_name):
-            return False
-
-        # Refuse to provide a token to users outside a specific group (if configured)
-        if self.authz_group_requirement:
-            if not self.authz_group_mapfile:
-                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
-                return False
-            try:
-                groups = get_user_groups(username, self.authz_group_mapfile)
-            except IOError:
-                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
-                return False
-            if self.authz_group_requirement not in groups:
-                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
-                return False
-
-        return True
-
-
     def generate_access_token_info(self, username: str, token_name: str) -> TokenInfo:
         """
         Determines what information should be in the token for a given username / provider
         """
         # Create scopes from user and group templates
         scopes = [self.authz_template.format(username=username)]
+        if self.authz_template_expr:
+            try:
+                eval_context = classad.ClassAd({
+                    "Username": username,
+                    "Scopes": classad.ExprTree(self.authz_template_expr),
+                })
+                eval_scopes = eval_context.eval("Scopes")
+                if not isinstance(eval_scopes, str):
+                    raise TypeError(f"ClassAd expression '{self.authz_template_expr}' did not evaluate to a string")
+                scopes.append(eval_scopes)
+            except Exception:
+                self.log.exception(f"Not adding scopes from {self.credmon_name}_CREDMON_AUTHZ_TEMPLATE_EXPR due to exception")
         if self.authz_group_template:
             if self.authz_group_mapfile is None:
                 self.log.warning(f"{self.credmon_name}_CREDMON_AUTHZ_GROUP_MAPFILE is undefined, cannot add group authorizations")
@@ -146,19 +150,21 @@ class LocalCredmon(OAuthCredmon):
         """
         Write a serialized access token to the credential directory.
         """
+        if isinstance(serialized_token, bytes):
+            serialized_token = serialized_token.decode()
         (tmp_fd, tmp_access_token_path) = tempfile.mkstemp(dir = self.cred_dir)
         with os.fdopen(tmp_fd, 'w') as f:
             if self.token_use_json:
                 # use JSON if configured to do so, i.e. when
                 # LOCAL_CREDMON_TOKEN_USE_JSON = True (default)
                 f.write(json.dumps({
-                    "access_token": serialized_token.decode(),
+                    "access_token": serialized_token,
                     "expires_in":   int(token_lifetime),
                 }))
             else:
                 # otherwise write a bare token string when
                 # LOCAL_CREDMON_TOKEN_USE_JSON = False
-                f.write(serialized_token.decode()+'\n')
+                f.write(serialized_token+'\n')
 
         access_token_path = os.path.join(self.cred_dir, username, token_name + '.use')
 
@@ -178,9 +184,24 @@ class LocalCredmon(OAuthCredmon):
         Create a SciToken at the specified path.
         """
 
+        # Refuse to provide a token to users outside a specific group (if configured)
+        if self.authz_group_requirement:
+            if not self.authz_group_mapfile:
+                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
+                return False
+            try:
+                groups = get_user_groups(username, self.authz_group_mapfile)
+            except IOError:
+                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
+                return False
+            if self.authz_group_requirement not in groups:
+                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
+                self.log.error(f"Writing an empty {self.provider} token for {username}")
+                return self.write_access_token(username, token_name, self.token_lifetime, "")
+
         info = self.generate_access_token_info(username, token_name)
 
-        token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self.private_key_id)
+        token = scitokens.SciToken(algorithm=self.private_key_algo, key=self._private_key, key_id=self.private_key_id)
         token.update_claims({'sub': info.sub})
         token.update_claims({'scope': " ".join(info.scopes)})
 

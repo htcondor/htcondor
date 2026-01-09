@@ -55,6 +55,7 @@ int dash_long = 0;
 int dash_add = 0;
 int dash_projects = 0;
 int dash_usage = 0;
+int dash_daily = 0;
 int dash_wide = 0;
 
 
@@ -81,8 +82,25 @@ static const struct Translation MyCommandTranslation[] = {
 	{ "", 0 }
 };
 
+// properties of the command being executed, so we know how to
+// interpret the results
+struct _cmd_properties {
+	int cmd{0};
+	bool has_constraint{false};
+	bool names_only{false};
+	const char * name{"?"};
+	const char * rectype{"users"};
+	size_t num_ads{0};
+
+	_cmd_properties(int _cmd=0, const char * _name=nullptr, const char * _rectype="users")
+		: cmd(_cmd)
+		, name(_name ? _name : getNameFromNum(_cmd, MyCommandTranslation))
+		, rectype(_rectype)
+		{};
+};
+
 static int str_to_cmd(const char * str) { return getNumFromName(str, MyCommandTranslation); }
-static int print_results(int rval, int cmd, ClassAd * ad, const char * op);
+static int print_results(int rval, ClassAd * ad, struct _cmd_properties & op, bool raw=false);
 
 typedef std::map<std::string, MyRowOfValues> ROD_MAP_BY_KEY;
 typedef std::map<std::string, ClassAd*> AD_MAP_BY_KEY;
@@ -143,6 +161,16 @@ const char * const projUsage_PrintFormat = "SELECT\n"
 "   NumHeld      AS Held        WIDTH AUTO PRINTF %d\n"
 "SUMMARY STANDARD\n";
 
+// not really a print format, just a way to set the projection
+const char * const dailyStats_Projection = "SELECT\n"
+"   Name?:User AS Name\n"
+"   HourlyJobsLaunched ?: DailyJobsLaunched AS Launched PRINTF %d OR ' '\n"
+"   HourlyJobsFailedToStart ?: DailyJobsFailedToStart AS NoExec PRINTF %d OR ' '\n"
+"   HourlyJobsRequeued ?: DailyJobsRequeued AS Requeued PRINTF %d OR ' '\n"
+"   HourlyJobsHeld ?: DailyJobsHeld AS Held PRINTF %d OR ' '\n"
+"   HourlyJobsSlotTime ?: DailyJobsSlotTime AS SlotHours PRINTF %.2f OR ' '\n"
+"   HourlyJobsWeightedIdle ?: DailyJobsWeightedIdle AS IdleWeight PRINTF %.2f OR ' '\n"
+"SUMMARY NONE\n";
 
 static  int  testing_width = 0;
 int getDisplayWidth() {
@@ -154,7 +182,7 @@ int getDisplayWidth() {
 	return testing_width;
 }
 
-static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
+static void initOutputMask(AttrListPrintMask & prmask, classad::References & attrs, int qdo_mode, bool wide_mode)
 {
 	static const struct {
 		const int mode;
@@ -165,6 +193,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ 1, "projects",      projDefault_PrintFormat },
 		{ 2, "usage",         userUsage_PrintFormat },
 		{ 3, "prjusage",      projUsage_PrintFormat },
+		{ 4, "daily",         dailyStats_Projection },
 	};
 
 	int ixInfo = -1;
@@ -194,6 +223,8 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	if (SetAttrListPrintMaskFromStream(stream, nullptr, prmask, propt, grkeys, nullptr, messages) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
+	// return attributes refs from the projection merged with refs passed in.
+	for (auto & attr : propt.attrs) { attrs.insert(attr); }
 }
 
 int store_ads(void*pv, ClassAd* ad)
@@ -268,6 +299,291 @@ int render_ads(void* pv, ClassAd* ad)
 	return done_with_ad;
 }
 
+struct _process_daily_ads_info {
+	ROD_MAP_BY_KEY & rods;
+	AD_MAP_BY_KEY & ads;
+	time_t start_time{0};    // start time of hourly data (daemon start time)
+	time_t unit_sec{4*3600}; // smallest bucket size of hourly data
+	time_t phase_sec{0};     // how far we are through the first hour bucket
+	time_t now{0};
+	FILE * hfDiag{nullptr}; // write raw ads to this file for diagnostic purposes
+	unsigned int  diag_flags{0};
+	bool rescale_data{false};
+
+	_process_daily_ads_info(ROD_MAP_BY_KEY & _rods, AD_MAP_BY_KEY & _ads) : rods(_rods), ads(_ads) {}
+	void print(FILE* out);
+};
+
+
+int process_daily_ads(void* pv, ClassAd* ad)
+{
+	struct _process_daily_ads_info & info = *(struct _process_daily_ads_info*)pv;
+
+	std::string key;
+	if (!ad->LookupString(ATTR_USER, key) && !ad->LookupString(ATTR_NAME, key)) {
+		formatstr(key, "%06d", (int)info.ads.size()+1);
+	}
+	if (info.ads.count(key)) { formatstr_cat(key, "%06d", (int)info.ads.size()+1); }
+	info.ads.emplace(key, ad);
+
+	ad->LookupInteger("HourlyStatsStartTime", info.start_time);
+	ad->LookupInteger("HourlyStatsUnitSize", info.unit_sec);
+	ad->LookupInteger("HourlyStatsUnitPhase", info.phase_sec);
+	if ( ! info.now) { info.now = time(NULL); }
+
+	// if diagnose flag is passed, unpack the key and ad and print them to the diagnostics file
+	if (info.hfDiag) {
+		if (info.diag_flags & 1) {
+			fprintf(info.hfDiag, "#Key: %s\n", key.c_str());
+		}
+
+		if (info.diag_flags & 2) {
+			fPrintAd(info.hfDiag, *ad);
+			fputc('\n', info.hfDiag);
+		}
+
+		if (info.diag_flags & 4) {
+			return true; // done processing this ad
+		}
+	}
+
+	auto pp = info.rods.emplace(key,MyRowOfValues());
+	if (!pp.second) {
+		fprintf( stderr, "Error: Two results with the same key.\n" );
+	} else {
+		int cols = 6, index;
+		classad::Value name, val;
+		std::string label;
+		name.SetStringValue(key);
+		{
+			MyRowOfValues & rov = pp.first->second;
+			rov.SetMaxCols(1+cols); // reserve space for column data and user label
+			rov += name;
+			/*
+			rov.next(index);
+			rov.next(index);
+			rov.next(index);
+			rov.next(index);
+
+			rov.next(index);
+			rov.next(index);
+			*/
+		}
+
+		// figure out how many hour buckets there are
+		size_t num_hour_buckets = 0;
+		for (const auto & attr : StringTokenIterator("HourlyJobsWeightedIdle HourlyJobsSlotTime HourlyJobsLaunched HourlyJobsFailedToStart HourlyJobsRequeued HourlyJobsHeld")) {
+			auto * expr = ad->Lookup(attr);
+			if (expr && ExprTreeIsArray(expr, num_hour_buckets))
+				break;
+		}
+
+		size_t num_day_buckets = 0;
+		for (const auto & attr : StringTokenIterator("DailyJobsWeightedIdle DailyJobsSlotTime DailyJobsLaunched DailyJobsFailedToStart DailyJobsRequeued DailyJobsHeld")) {
+			auto * expr = ad->Lookup(attr);
+			if (expr && ExprTreeIsArray(expr, num_day_buckets))
+				break;
+		}
+		// DEBUG print raw scaling info
+		// fprintf(stderr, "hour_buckets=%lld, day_buckets=%lld unit=%lld, phase=%lld\n", num_hour_buckets, num_day_buckets, info.unit_sec, info.phase_sec);
+
+		auto pp2 = info.rods.emplace(key+"_0", MyRowOfValues());
+		{
+			MyRowOfValues & rov = pp2.first->second;
+			rov.SetMaxCols(1+cols); // reserve space for column data and user label
+			double hrs;
+			if (num_hour_buckets < 2) {
+				hrs = (info.now - info.start_time) / 3600.0;
+			} else {
+				hrs = info.phase_sec / 3600.0;
+			}
+			formatstr(label, "    last %.1f hrs", hrs);
+			val.SetStringValue(label);
+			rov += val;
+
+			if (ad->EvaluateExpr("HourlyJobsLaunched[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			if (ad->EvaluateExpr("HourlyJobsFailedToStart[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			if (ad->EvaluateExpr("HourlyJobsRequeued[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			if (ad->EvaluateExpr("HourlyJobsHeld[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+			if (ad->EvaluateExpr("HourlyJobsSlotTime[0]/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+			std::string buf("HourlyJobsWeightedIdle[0]");
+			double rescale = (double)(hrs * 3600.0 / info.unit_sec);
+			if (info.rescale_data) { formatstr_cat(buf, "/%f", rescale); }
+			if (ad->EvaluateExpr(buf.c_str(), val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+		}
+
+		if ((info.now - info.start_time) > info.unit_sec || num_hour_buckets > 1) {
+
+			if (num_hour_buckets > 1) {
+				pp2 = info.rods.emplace(key+"_2", MyRowOfValues());
+				{
+					MyRowOfValues & rov = pp2.first->second;
+					rov.SetMaxCols(1+cols); // reserve space for column data and user label
+					double hrs = (info.phase_sec + info.unit_sec) / 3600.0;
+					if (num_hour_buckets == 2) { hrs = (info.now - info.start_time) / 3600.0; }
+					formatstr(label, "    Last %.1f hrs", hrs);
+					val.SetStringValue(label);
+					rov += val;
+
+					if (ad->EvaluateExpr("HourlyJobsLaunched[0] + HourlyJobsLaunched[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("HourlyJobsFailedToStart[0] + HourlyJobsFailedToStart[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("HourlyJobsRequeued[0] + HourlyJobsRequeued[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("HourlyJobsHeld[0] + HourlyJobsHeld[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+					if (ad->EvaluateExpr("(HourlyJobsSlotTime[0] + HourlyJobsSlotTime[1])/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					// scale the weight to the number of buckets, accounting for the partial bucket.
+					std::string buf("(HourlyJobsWeightedIdle[0] + HourlyJobsWeightedIdle[1])");
+					double rescale = (double)(hrs * 3600.0 / info.unit_sec);
+					if (info.rescale_data) { formatstr_cat(buf, "/%f", rescale); }
+					if (ad->EvaluateExpr(buf.c_str(), val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				}
+			}
+
+			if ((info.now - info.start_time) >= info.unit_sec*3) {
+				pp2 = info.rods.emplace(key+"_3", MyRowOfValues());
+				{
+					MyRowOfValues & rov = pp2.first->second;
+					rov.SetMaxCols(1+cols); // reserve space for column data and user label
+					long long hrs = (info.now - info.start_time) / 3600;
+					if (hrs > 24) hrs = 24;
+					formatstr(label, "    Last %lld hrs", hrs);
+					val.SetStringValue(label);
+					rov += val;
+
+					if (ad->EvaluateExpr("sum(HourlyJobsLaunched)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("sum(HourlyJobsFailedToStart)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("sum(HourlyJobsRequeued)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("sum(HourlyJobsHeld)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+					// these are not quite correct when the first bucket is partial....
+					if (ad->EvaluateExpr("sum(HourlyJobsSlotTime)/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					std::string buf("sum(HourlyJobsWeightedIdle)/size(HourlyJobsWeightedIdle)");
+					if (ad->EvaluateExpr(buf.c_str(), val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				}
+			}
+		}
+
+		if ((info.now - info.start_time) > (24*3600)) {
+			pp2 = info.rods.emplace(key+"_4", MyRowOfValues());
+			{
+				MyRowOfValues & rov = pp2.first->second;
+				rov.SetMaxCols(1+cols);
+				val.SetStringValue("    Yesterday");
+				rov += val;
+
+				if (ad->EvaluateExpr("DailyJobsLaunched[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsFailedToStart[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsRequeued[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsHeld[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+				if (ad->EvaluateExpr("DailyJobsSlotTime[0]/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsWeightedIdle[0]/size(HourlyJobsWeightedIdle)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			}
+		}
+
+		if ((info.now - info.start_time) > (27*3600)) {
+			pp2 = info.rods.emplace(key+"_5", MyRowOfValues());
+			{
+				MyRowOfValues & rov = pp2.first->second;
+				rov.SetMaxCols(1+cols);
+				
+				ad->EvaluateExpr("formattime(time() - time()%(24*3600) - (24*3600),\"    %A\")", val);
+				rov += val;
+
+				if (ad->EvaluateExpr("DailyJobsLaunched[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsFailedToStart[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsRequeued[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsHeld[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+				// these are not quite correct because the first bucket is partial....
+				if (ad->EvaluateExpr("DailyJobsSlotTime[1]/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsWeightedIdle[1]/size(HourlyJobsWeightedIdle)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			}
+		}
+
+	}
+
+	return 0; // return 0 means we are keeping the ad
+}
+
+void _process_daily_ads_info::print(FILE* out)
+{
+	for (auto & [key, ad] : ads) {
+		const char * name = key.c_str();
+		fprintf(out, "%s\n", name);
+	}
+}
+
+// Suspend users is a composite operation where we both disable and edit
+// with a single command.  This can be done with a USERREC_EDIT command
+// if we supply ATTR_ENABLED and ATTR_DISABLE_REASON in the edit list
+ClassAd *  suspendUsersOrProjects(
+	DCSchedd &schedd,
+	_cmd_properties & op,
+	std::vector<const char*> &usernames,
+	const char * constraint,
+	std::vector<const char *> &edit_args,
+	const char * disableReason,
+	CondorError &errstack)
+{
+	ClassAd edits; // make sure this gets freed.
+	for (auto & line : edit_args) {
+		if ( ! edits.Insert(line)) {
+			fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
+			return nullptr;
+		}
+	}
+
+	// we expect the edit_args to have set MaxJobsRunning=0
+	// but make sure that enabled is false and a disable reason is given
+	if (op.cmd == DISABLE_USERREC) {
+		edits.Assign(ATTR_ENABLED, false);
+		if (disableReason) edits.Assign(ATTR_DISABLE_REASON, disableReason);
+	} else if (op.cmd == ENABLE_USERREC) {
+		edits.Assign(ATTR_ENABLED, true);
+		edits.Assign(ATTR_USERREC_OPT_UPDATE, true);
+	}
+
+	ClassAd * resultAd = nullptr;
+	if (edits.size() > 0) {
+		ClassAdList adlist;
+
+		if (constraint) {
+			if (edits.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+				adlist.Insert(new ClassAd(edits));
+			} else {
+				fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
+				return nullptr;
+			}
+		} else if (usernames.size()) {
+			// we need a separate ad for each user, each should contain all of the edit_args
+			for (auto & name : usernames) {
+				// make a copy of the edit_args attributes for each user beyond the first
+				ClassAd * ad = new ClassAd(edits);
+				ad->Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
+				adlist.Insert(ad);
+			}
+		} else {
+			fprintf(stderr, "Error: no name or constraint - don't know which users or projects to %s\n", op.name);
+			return nullptr;
+		}
+
+		// if we got to here with a valid adlist, send it on to the schedd
+		if (dash_projects) {
+			if (dash_projects == 2) {
+				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects:also is not implemented");
+			} else {
+				resultAd = schedd.generalUpdateUserRecs(op.cmd, true, adlist, &errstack);
+			}
+		} else {
+			resultAd = schedd.generalUpdateUserRecs(op.cmd, false, adlist, &errstack);
+		}
+	}
+	return resultAd;
+}
+
 /*********************************************************************
    main()
 *********************************************************************/
@@ -281,6 +597,7 @@ main( int argc, const char *argv[] )
 	const char* pool = nullptr;
 	const char* name = nullptr;
 	const char* disableReason = nullptr;
+	bool raw_results_ad = false;
 	int cmd = 0;
 	int rval = 0;
 	classad::References attrs;
@@ -301,6 +618,7 @@ main( int argc, const char *argv[] )
 				int tmp = str_to_cmd(argv[i]);
 				if (tmp >= QUERY_USERREC_ADS && tmp <= DELETE_USERREC) {
 					cmd = tmp;
+					dash_add = is_arg_prefix(argv[i], "add", -1);
 					continue;
 				}
 			}
@@ -334,6 +652,10 @@ main( int argc, const char *argv[] )
 			dash_verbose = 1;
 		} 
 		else
+		if (is_dash_arg_prefix(argv[i], "raw-results", 3)) {
+			raw_results_ad = 1;
+		} 
+		else
 		if (is_dash_arg_prefix(argv[i], "user", 1)) {
 			if( i+1 >= argc ) {
 				fprintf( stderr, "Error: -user requires a username argument\n"); 
@@ -357,6 +679,24 @@ main( int argc, const char *argv[] )
 				exit(1);
 			}
 			cmd = DISABLE_USERREC;
+		}
+		else
+		if (is_dash_arg_prefix(argv[i], "suspend", 3)) {
+			if (cmd && cmd != DISABLE_USERREC) {
+				usage(stderr, my_name);
+				exit(1);
+			}
+			cmd = DISABLE_USERREC;
+			edit_args.push_back("MaxJobsRunning=0");
+		}
+		else
+		if (is_dash_arg_prefix(argv[i], "unsuspend", 3)) {
+			if (cmd && cmd != ENABLE_USERREC) {
+				usage(stderr, my_name);
+				exit(1);
+			}
+			cmd = ENABLE_USERREC;
+			edit_args.push_back("MaxJobsRunning=undefined");
 		}
 		else
 		if (is_dash_arg_prefix(argv[i], "reason", 2)) {
@@ -400,6 +740,15 @@ main( int argc, const char *argv[] )
 		else
 		if (is_dash_arg_prefix(argv[i], "usage", 2)) {
 			dash_usage = 1;
+		}
+		else
+		if (is_dash_arg_colon_prefix(argv[i], "daily", &pcolon, 2)) {
+			dash_daily = 1;
+			if (pcolon) {
+				if (is_arg_prefix(++pcolon, "rescale", 1)) {
+					dash_daily = 2;
+				}
+			}
 		}
 		else
 		if (is_dash_arg_colon_prefix(argv[i], "wide", &pcolon, 1)) {
@@ -497,8 +846,8 @@ main( int argc, const char *argv[] )
 
 	if (!cmd) cmd = QUERY_USERREC_ADS;
 
-	if ( ! edit_args.empty() && cmd != EDIT_USERREC) {
-		fprintf(stderr, "<attr>=<expr> arguments only work with -edit\n");
+	if ( ! edit_args.empty() && cmd != EDIT_USERREC && cmd != DISABLE_USERREC && cmd != ENABLE_USERREC) {
+		fprintf(stderr, "<attr>=<expr> arguments only work with -edit, -suspend and -unsuspend\n");
 		usage(stderr, my_name);
 		exit(2);
 	}
@@ -506,7 +855,12 @@ main( int argc, const char *argv[] )
 	if ((cmd == QUERY_USERREC_ADS) && ! dash_long && prmask.IsEmpty()) {
 		int qdo_mode = dash_projects ? 1 : 0;
 		if (dash_usage) { qdo_mode += 2; }
-		initOutputMask(prmask, qdo_mode, dash_wide);
+		if (dash_daily) { qdo_mode = 4;
+			attrs.insert("HourlyStatsStartTime");
+			attrs.insert("HourlyStatsUnitSize");
+			attrs.insert("HourlyStatsUnitPhase");
+		}
+		initOutputMask(prmask, attrs, qdo_mode, dash_wide);
 	}
 
 	DCSchedd schedd(name, pool);
@@ -597,6 +951,7 @@ main( int argc, const char *argv[] )
 		ROD_MAP_BY_KEY rods;
 		struct _render_ads_info render_info(&rods, &prmask);
 		AD_MAP_BY_KEY ads;
+		struct _process_daily_ads_info daily_info(rods, ads);
 		ClassAd *summary_ad=nullptr;
 		CondorError errstack;
 
@@ -605,6 +960,10 @@ main( int argc, const char *argv[] )
 		if (dash_long) {
 			process_ads = store_ads;
 			process_ads_data = &ads;
+		} else if (dash_daily) {
+			process_ads = process_daily_ads;
+			process_ads_data = &daily_info;
+			daily_info.rescale_data = dash_daily > 1;
 		} else {
 			process_ads = render_ads;
 			process_ads_data = &render_info;
@@ -622,6 +981,8 @@ main( int argc, const char *argv[] )
 			CondorClassAdListWriter writer(dash_long_format);
 			for (const auto &[key, ad]: ads) { writer.writeAd(*ad, stdout); }
 			if (writer.needsFooter()) { writer.writeFooter(stdout); }
+		//} else if (dash_daily) {
+		//	daily_info.print(stdout);
 		} else {
 			std::string line; line.reserve(1024);
 			// render once to set column widths
@@ -635,31 +996,40 @@ main( int argc, const char *argv[] )
 		}
 
 	} else if (cmd == ENABLE_USERREC) {
-		const char * opname = dash_add ? "add" : "enable";
+		struct _cmd_properties op(cmd, dash_add ? "add" : "enable", dash_projects ? "projects" : "users");
+		op.num_ads = usernames.size();
 		if (usernames.empty()) {
-			fprintf(stderr, "Error: %s %s - no names specified\n", opname, dash_projects ? "projects" : "users");
+			fprintf(stderr, "Error: %s %s - no names specified\n", op.name, op.rectype);
 			return 1;
 		}
 		CondorError errstack;
 		ClassAd * ad = nullptr;
 		if (dash_projects) {
-			opname = "add project";
 			if (dash_projects == 2) {
-				opname = dash_add ? "add user and project" : "enable user and project";
+				op.rectype = "users and projects";
 				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "Not Implemented");
 			} else {
-				ad = schedd.addProjects(&usernames[0], (int)usernames.size(), &errstack);
+				const bool create_if = dash_add;
+				ad = schedd.enableProjects(&usernames[0], (int)usernames.size(), create_if, &errstack);
 			}
 		} else {
 			const bool create_if = dash_add;
-			ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
+			if ( ! edit_args.empty() && ! create_if) {
+				op.cmd = cmd;
+				op.name = "unsuspend";
+				op.has_constraint = constraint;
+				op.num_ads = usernames.size();
+				ad = suspendUsersOrProjects(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
+			} else {
+				ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
+			}
 		}
 		if ( ! ad) {
-			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			fprintf(stderr, "Error: %s failed - %s\n", op.name, errstack.getFullText().c_str());
 			rval = errstack.code();
 			if ( ! rval) rval = 1;
 		} else {
-			rval = print_results(0, cmd, ad, opname);
+			rval = print_results(0, ad, op, raw_results_ad);
 			delete ad;
 		}
 	} else if (cmd == DISABLE_USERREC) {
@@ -669,21 +1039,41 @@ main( int argc, const char *argv[] )
 		}
 		CondorError errstack;
 		ClassAd * ad = nullptr;
-		const char * opname = "disable";
+		struct _cmd_properties op(cmd, "disable", dash_projects ? "projects" : "users");
 		if (dash_projects) {
-			errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects is not implemented");
+			if ( ! edit_args.empty()) {
+				op.cmd = cmd;
+				op.name = "suspend";
+				op.has_constraint = constraint;
+				op.num_ads = usernames.size();
+				ad = suspendUsersOrProjects(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
+			} else if (constraint) {
+				op.has_constraint = true;
+				ad = schedd.disableProjects(constraint, disableReason, &errstack);
+			} else {
+				op.num_ads = usernames.size();
+				ad = schedd.disableProjects(&usernames[0], (int)usernames.size(), disableReason, &errstack);
+			}
 		} else {
-			if (constraint) {
+			if ( ! edit_args.empty()) {
+				op.cmd = cmd;
+				op.name = "suspend";
+				op.has_constraint = constraint;
+				op.num_ads = usernames.size();
+				ad = suspendUsersOrProjects(schedd, op, usernames, constraint, edit_args, disableReason, errstack);
+			} else if (constraint) {
+				op.has_constraint = true;
 				ad = schedd.disableUsers(constraint, disableReason, &errstack);
 			} else {
+				op.num_ads = usernames.size();
 				ad = schedd.disableUsers(&usernames[0], (int)usernames.size(), disableReason, &errstack);
 			}
 		}
 		if ( ! ad) {
-			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			fprintf(stderr, "Error: %s failed - %s\n", op.name, errstack.getFullText().c_str());
 			rval = 1;
 		} else {
-			rval = print_results(0, cmd, ad, opname);
+			rval = print_results(0, ad, op, raw_results_ad);
 			delete ad;
 		}
 	} else if (cmd == DELETE_USERREC) {
@@ -693,29 +1083,33 @@ main( int argc, const char *argv[] )
 		}
 		CondorError errstack;
 		ClassAd * ad = nullptr;
-		const char * opname = "remove";
+		struct _cmd_properties op(cmd, "remove", dash_projects ? "projects" : "users");
 		if (dash_projects) {
 			if (dash_projects == 2) {
 				errstack.push("qusers", SC_ERR_NOT_IMPLEMENTED, "-projects:also is not implemented");
 			} else {
 				if (constraint) {
+					op.has_constraint = true;
 					ad = schedd.removeProjects(constraint, disableReason, &errstack);
 				} else {
+					op.num_ads = usernames.size();
 					ad = schedd.removeProjects(&usernames[0], (int)usernames.size(), disableReason, &errstack);
 				}
 			}
 		} else {
 			if (constraint) {
+				op.has_constraint = true;
 				ad = schedd.removeUsers(constraint, disableReason, &errstack);
 			} else {
+				op.num_ads = usernames.size();
 				ad = schedd.removeUsers(&usernames[0], (int)usernames.size(), disableReason, &errstack);
 			}
 		}
 		if ( ! ad) {
-			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			fprintf(stderr, "Error: %s failed - %s\n", op.name, errstack.getFullText().c_str());
 			rval = 1;
 		} else {
-			rval = print_results(0, cmd, ad, opname);
+			rval = print_results(0, ad, op, raw_results_ad);
 			delete ad;
 		}
 	} else if (cmd == EDIT_USERREC) {
@@ -724,15 +1118,17 @@ main( int argc, const char *argv[] )
 			if ( ! ad->Insert(line)) {
 				fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
 				rval = 1;
-				ad->Clear();
+				delete ad; ad = nullptr;
 				break;
 			}
 		}
 		if (ad && ad->size() > 0) {
+			struct _cmd_properties op(cmd, "edit", dash_projects ? "projects" : "users");
 			ClassAdList adlist;
 			rval = 1; // assume failure
 
 			if (constraint) {
+				op.has_constraint = true;
 				if (ad->AssignExpr(ATTR_REQUIREMENTS, constraint)) {
 					adlist.Insert(ad);
 					rval = 0;
@@ -740,6 +1136,7 @@ main( int argc, const char *argv[] )
 					fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
 				}
 			} else if (usernames.size()) {
+				op.num_ads = usernames.size();
 				// we need a separate ad for each user, each should contain all of the edit_args
 				for (auto & name : usernames) {
 					// make a copy of the edit_args attributes for each user beyond the first
@@ -770,7 +1167,7 @@ main( int argc, const char *argv[] )
 					fprintf(stderr, "Error: edit failed - %s\n", errstack.getFullText().c_str());
 					rval = 1;
 				} else {
-					rval = print_results(0, cmd, resultAd, "edit");
+					rval = print_results(0, resultAd, op, raw_results_ad);
 					delete resultAd;
 				}
 			}
@@ -784,7 +1181,7 @@ main( int argc, const char *argv[] )
 	return rval;
 }
 
-static int print_results(int rval, int /*cmd*/, ClassAd * ad, const char * op)
+static int print_results(int rval, ClassAd * ad, struct _cmd_properties & op, bool raw)
 {
 	std::string buf; buf.reserve(200);
 
@@ -806,14 +1203,14 @@ static int print_results(int rval, int /*cmd*/, ClassAd * ad, const char * op)
 
 	if (rval == 0) {
 		if (0 == num_ads) {
-			fprintf(stdout, "%s did nothing: %s\n", op, buf.c_str());
+			fprintf(stdout, "%s did nothing: %s\n", op.name, buf.c_str());
 		} else {
-			fprintf(stdout, "%s succeeded: %s\n", op, buf.c_str());
+			fprintf(stdout, "%s succeeded: %s\n", op.name, buf.c_str());
 		}
 	} else {
-		fprintf(stdout, "%s failed: %s\n", op, buf.c_str());
+		fprintf(stdout, "%s failed: %s\n", op.name, buf.c_str());
 	}
-	if (ad->size() > 0) {
+	if (ad->size() > 0 && raw) {
 		buf.clear();
 		fprintf(stdout, "%s", formatAd(buf, *ad, "    ", nullptr, false));
 	}
@@ -860,6 +1257,7 @@ usage(FILE *out, const char *appname)
 		"    -format <fmt> <attr> Print attribute attr using format fmt\n"
 		);
 	fprintf(out, "    -usage\t\t Display CPU and slot usage\n");
+	fprintf(out, "    -daily\t\t Display Hourly and Daily stats\n");
 
 	fprintf(out, "\n  NAMES is zero or more of:\n"
 		"    <name>\t\t Operate on User or Project named <name>\n"

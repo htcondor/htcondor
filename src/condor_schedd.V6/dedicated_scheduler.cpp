@@ -426,8 +426,6 @@ DedicatedScheduler::DedicatedScheduler() :
    	limbo_resources(nullptr),
    	busy_resources(nullptr),
    	pending_preemptions(nullptr),
-   	all_matches(new HashTable < std::string, match_rec*>( hashFunction )),
-   	all_matches_by_id(new HashTable < std::string, match_rec*>( hashFunction )),
    	ds_name(nullptr),
    	ds_owner(nullptr) {}
 
@@ -454,23 +452,15 @@ DedicatedScheduler::~DedicatedScheduler()
 	}
 
         // for the stored claim records
-	match_rec* tmp = nullptr;
 	for (auto& [key, alloc]: allocations) {
 		delete alloc;
 	}
 
-		// First, delete the hashtable where we hash based on
-		// ClaimId strings.  Don't actually delete the match
-		// records themselves, since we'll do those to the main
-		// records stored in all_matches.
-	delete all_matches_by_id;
-
-		// Now, we can clear out the actually match records, too. 
-	all_matches->startIterations();
-    while( all_matches->iterate( tmp ) ) {
-        delete tmp;
+		// The match records in all_matches_by_id are also in all_matches,
+		// so we only want to delete them via all_matches.
+	for (const auto& [id, mrec]: all_matches) {
+		delete mrec;
 	}
-	delete all_matches;
 
 		// Clear out the resource_requests queue
 	clearResourceRequests();  	// Delete classads in the queue
@@ -531,12 +521,10 @@ DedicatedScheduler::initialize( )
 		Register_Reaper( "MPI reaper", 
 						 (ReaperHandlercpp)&DedicatedScheduler::reaper,
 						 "DedicatedScheduler::reaper", this );
-	if( rid <= 0 ) {
-			// This is lame, but Register_Reaper returns FALSE on
-			// failure, even though it seems like reaper id 0 is
-			// valid... who knows.
-		EXCEPT( "Can't register daemonCore reaper!" );
-	}
+		// This is lame, but Register_Reaper returns FALSE on
+		// failure, even though it seems like reaper id 0 is
+		// valid... who knows.
+	ASSERT(rid > 0);
 
 		// Now, register a handler for the special command that the
 		// MPI shadow sends us if it needs to get information about
@@ -574,9 +562,12 @@ int
 DedicatedScheduler::shutdown_fast( )
 {
 		// TODO: any other cleanup?
+	// releaseClaim() will erase the all_matches entry, so be careful...
 	match_rec* mrec = nullptr;
-	all_matches->startIterations();
-    while( all_matches->iterate( mrec ) ) {
+	auto it = all_matches.begin();
+	while (it != all_matches.end()) {
+		mrec = it->second;
+		it++;
 		releaseClaim( mrec );
 	}
 	return TRUE;
@@ -587,9 +578,12 @@ int
 DedicatedScheduler::shutdown_graceful( )
 {
 		// TODO: any other cleanup?
+	// releaseClaim() will erase the all_matches entry, so be careful...
 	match_rec* mrec = nullptr;
-	all_matches->startIterations();
-    while( all_matches->iterate( mrec ) ) {
+	auto it = all_matches.begin();
+	while (it != all_matches.end()) {
+		mrec = it->second;
+		it++;
 		releaseClaim( mrec );
 	}
 	return TRUE;
@@ -650,7 +644,8 @@ DedicatedScheddNegotiate::scheduler_skipJob(JobQueueJob *jobad, ClassAd * /*matc
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name)
+DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad,
+	char const *slot_name, _match_source)
 {
 	ASSERT( claim_id );
 	ASSERT( slot_name );
@@ -678,7 +673,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 	// messing up all our data structures.
 	//
 
-	if (dedicated_scheduler.all_matches_by_id->lookup(claim_id, mrec) == 0) {
+	if (dedicated_scheduler.all_matches_by_id.find(claim_id) != dedicated_scheduler.all_matches_by_id.end()) {
 		return false;
 	}
 
@@ -803,9 +798,7 @@ DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 		Register_Timer( seconds, 0,
 				(TimerHandlercpp)&DedicatedScheduler::callHandleDedicatedJobs,
 						"callHandleDedicatedJobs", this );
-	if( hdjt_tid == -1 ) {
-		EXCEPT( "Can't register DC timer!" );
-	}
+	ASSERT(hdjt_tid >= 0);
 	dprintf( D_FULLDEBUG, 
 			 "Started timer (%d) to call handleDedicatedJobs() in %d secs\n",
 			 hdjt_tid, seconds );
@@ -917,30 +910,19 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 
 void
-DedicatedScheduler::sendAlives( )
+DedicatedScheduler::checkClaimLeases( )
 {
-	match_rec	*mrec = nullptr;
-	int		  	numsent=0;
 	time_t now = time(nullptr);
-	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
 
-	all_matches->startIterations();
-	while( all_matches->iterate(mrec) == 1 ) {
-		if( mrec->m_startd_sends_alives == false &&
-			( mrec->status == M_ACTIVE || mrec->status == M_CLAIMED ) ) {
-			if( sendAlive( mrec ) ) {
-				numsent++;
-			}
-		}
+	for (auto& [id, mrec]: all_matches) {
 
-		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
+		if (mrec->status == M_ACTIVE) {
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
 			time_t renew_time = 0;
-			if ( starter_handles_alives && 
-				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
+			if ( mrec->shadowRec && mrec->shadowRec->pid > 0 )
 			{
 				// If we're trusting the existance of the shadow to 
 				// keep the claim alive (because of kernel sockopt keepalives),
@@ -954,11 +936,6 @@ DedicatedScheduler::sendAlives( )
 	}
 
 	CommitTransactionOrDieTrying();
-
-	if( numsent ) {
-		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-				 "%d dedicated startds)\n", numsent );
-	}
 }
 
 int
@@ -1691,8 +1668,7 @@ DedicatedScheduler::sortResources( )
         std::string resname;
         res->LookupString(ATTR_NAME, resname);
         if (is_dynamic(res)) {
-            match_rec* dmrec = nullptr;
-            if (all_matches->lookup(resname, dmrec) < 0) {
+            if (all_matches.find(resname) == all_matches.end()) {
                 dprintf(D_FULLDEBUG, "New dynamic slot %s\n", resname.c_str());
                 if (!(is_claimed(res) && is_idle(res))) {
 					// Not actually unexpected -- this is a claimed dynamic slot, claimed by a serial job
@@ -1706,9 +1682,11 @@ DedicatedScheduler::sortResources( )
                     char const* claim_id = f->second.c_str();
                     auto c(pending_matches.find(claim_id));
                     if (c != pending_matches.end()) {
-                        dmrec = c->second;
-                        ASSERT( all_matches->insert(resname, dmrec) == 0 );
-                        ASSERT( all_matches_by_id->insert(claim_id, dmrec) == 0 );
+                        match_rec* dmrec = c->second;
+                        auto [it1, success1] = all_matches.emplace(resname, dmrec);
+                        ASSERT(success1);
+                        auto [it2, success2] = all_matches_by_id.emplace(claim_id, dmrec);
+                        ASSERT(success2);
                         dmrec->setStatus(M_CLAIMED);
                         pending_matches.erase(c);
                     } else {
@@ -1794,10 +1772,12 @@ DedicatedScheduler::sortResources( )
 	// scheduler, do so here
 
 	if (param_boolean("DEDICATED_SCHEDULER_USE_SERIAL_CLAIMS", false)) {
+		// unlinkMrec() will erase the matches entry, so be careful here...
 		match_rec *mr = nullptr;
-		std::string id;
-		scheduler.matches->startIterations();
-		while (scheduler.matches->iterate(id, mr) == 1) {
+		auto it = scheduler.matches.begin();
+		while (it != scheduler.matches.end()) {
+			mr = it->second;
+			it++;
 			if (mr->status == M_CLAIMED) {
 				// this match rec is claimed/idle, steal it for the ded sched
 				mr->needs_release_claim = false;
@@ -1810,8 +1790,10 @@ DedicatedScheduler::sortResources( )
 				serial_resources->Append(resource);
 				char *slot_name = nullptr;
 				resource->LookupString(ATTR_NAME, &slot_name);
-				ASSERT( all_matches->insert(slot_name, mr) == 0 );
-				ASSERT( all_matches_by_id->insert(mr->claim_id.claimId(), mr) == 0 );
+				auto [it1, success1] = all_matches.emplace(slot_name, mr);
+				ASSERT(success1);
+				auto [it2, success2] = all_matches_by_id.emplace(mr->claim_id.claimId(), mr);
+				ASSERT(success2);
 				free(slot_name);
 			}
 		}
@@ -1853,15 +1835,17 @@ DedicatedScheduler::clearResources( )
 	if (serial_resources) {
 		serial_resources->Rewind();
 		ClassAd *serialMach = nullptr;
+		std::string slot_name;
 		while ((serialMach = serial_resources->Next())) {
-			char *slot_name = nullptr;
-			serialMach->LookupString(ATTR_NAME, &slot_name);
+			slot_name.clear();
+			serialMach->LookupString(ATTR_NAME, slot_name);
 			match_rec *mr = nullptr;
-			if (all_matches->lookup(slot_name, mr) != 0) {
+			auto it = all_matches.find(slot_name);
+			if (it != all_matches.end()) {
+				mr = it->second;
 				mr->needs_release_claim = false;
 				DelMrec(mr);
 			}
-			free(slot_name);
 		}
 		delete serial_resources;
 		serial_resources = nullptr;
@@ -2166,7 +2150,6 @@ DedicatedScheduler::computeSchedule( )
 	CAList *unclaimed_candidates_jobs = nullptr;
 
 	int *nodes_per_proc = nullptr;
-	match_rec* mrec = nullptr;
 	int i = 0, l = 0;
 
 		//----------------------------------------------------------
@@ -2177,12 +2160,11 @@ DedicatedScheduler::computeSchedule( )
 		// Clear out the "scheduled" flag in all of our match_recs
 		// that aren't already allocated to a job, so we can set them
 		// correctly as we create the new schedule.
-	all_matches->startIterations();
-    while( all_matches->iterate( mrec ) ) {
+	for (auto& [id, mrec]: all_matches) {
 		if( ! mrec->allocated ) {
 			mrec->scheduled = false;
 		}
-    }
+	}
 
 		// Now, we want to remove any stale resource requests we might
 		// still have.  If we decided we want to negotiate for some
@@ -3245,8 +3227,7 @@ DedicatedScheduler::AddMrec(
 	empty_job_id.cluster = -1;
 	empty_job_id.proc = -1;
 
-	match_rec *existing_mrec = nullptr;
-	if( all_matches->lookup(slot_name, existing_mrec) == 0) {
+	if (all_matches.find(slot_name) != all_matches.end()) {
 			// Already have this match
 		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
 		return nullptr;
@@ -3277,8 +3258,10 @@ DedicatedScheduler::AddMrec(
 	std::string slot_type;
     match_ad->LookupString(ATTR_SLOT_TYPE, slot_type);
     if (slot_type == "Static") {
-        ASSERT( all_matches->insert(slot_name, mrec) == 0 );
-        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
+		auto [it1, success1] = all_matches.emplace(slot_name, mrec);
+		ASSERT(success1);
+		auto [it2, success2] = all_matches_by_id.emplace(mrec->claim_id.claimId(), mrec);
+		ASSERT(success2);
     } else {
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
@@ -3338,18 +3321,18 @@ DedicatedScheduler::DelMrec( char const* id )
 		delete rec;
 		return true;
 	}
-		// First, delete it from our table hashed on ClaimId. 
-	if( all_matches_by_id->lookup(id, rec) < 0 ) {
+		// First, delete it from our table hashed on ClaimId.
+	auto it2 = all_matches_by_id.find(id);
+	if (it2 == all_matches_by_id.end()) {
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
 				 "match not deleted (but perhaps it was deleted previously)\n", cid.publicClaimId() );
 		return false;
 	}
+	rec = it2->second;
 
 	ASSERT( rec->is_dedicated );
 
-	if (all_matches_by_id->remove(id) < 0) {
-		dprintf(D_ALWAYS, "DelMrec::all_matches_by_id->remove < 0\n");	
-	}
+	all_matches_by_id.erase(it2);
 		// Now that we have the mrec again, we have to see if this
 		// match record is stored in our table of allocation nodes,
 		// and if so, we need to remove it from there, so we don't
@@ -3400,7 +3383,7 @@ DedicatedScheduler::DelMrec( char const* id )
 
 		// Now, we can delete it from the main table hashed on name.
 	rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
-	all_matches->remove(name_buf);
+	all_matches.erase(name_buf);
 
 		// If this match record is associated with a shadow record,
 		// clear out the match record from that shadow record to avoid
@@ -3709,8 +3692,11 @@ DedicatedScheduler::checkSanity( int /* timerID */ )
 	int tmp = 0;
 	match_rec* mrec = nullptr;
 
-	all_matches->startIterations();
-    while( all_matches->iterate( mrec ) ) {
+	// releaseClaim() will erase the all_matches entry, so be careful...
+	auto it = all_matches.begin();
+	while (it != all_matches.end()) {
+		mrec = it->second;
+		it++;
 		tmp = getUnusedTime( mrec );
 		if( tmp >= unused_timeout ) {
 			char namebuf[1024];
@@ -3740,9 +3726,7 @@ DedicatedScheduler::checkSanity( int /* timerID */ )
 			sanity_tid = daemonCore->Register_Timer( tmp, 0,
   				         (TimerHandlercpp)&DedicatedScheduler::checkSanity,
 						 "checkSanity", this );
-			if( sanity_tid == -1 ) {
-				EXCEPT( "Can't register DC timer!" );
-			}
+			ASSERT(sanity_tid >= 0);
 		} else {
 				// We've already got a timer.  Whether we got here b/c
 				// the timer went off, or b/c we just called
@@ -3797,17 +3781,16 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 match_rec*
 DedicatedScheduler::getMrec( ClassAd* ad, std::string& buf )
 {
-	match_rec* mrec = nullptr;
-
 	if( ! ad->LookupString(ATTR_NAME, buf) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::getMrec(): "
 				 "No %s in ClassAd!\n", ATTR_NAME );
 		return nullptr;
 	}
-	if( all_matches->lookup(buf, mrec) < 0 ) {
+	auto it = all_matches.find(buf);
+	if (it == all_matches.end()) {
 		return nullptr;
 	}
-	return mrec;
+	return it->second;
 }
 
 
@@ -3817,7 +3800,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	ClassAd* candidate = nullptr;
 	std::vector<std::string> names;
 	char name_buf[512];
-	match_rec* mrec = nullptr;
 	
 	dprintf( D_FULLDEBUG, 
 			 "Trying to satisfy job with all possible resources\n" );
@@ -3853,7 +3835,9 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 					// for satisfying this job so we don't release them
 					// prematurely.
 					for (auto& machineName: names) {
-						if( all_matches->lookup(machineName, mrec) >= 0 ) {
+						auto it = all_matches.find(machineName);
+						if (it != all_matches.end()) {
+							match_rec* mrec = it->second;
 							mrec->scheduled = true;
 						}
 					}
@@ -3864,43 +3848,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 		}
 	}
 	return false;
-}
-
-void
-DedicatedScheduler::holdAllDedicatedJobs( ) 
-{
-	static bool should_notify_admin = true;
-	int i = 0, last_cluster = 0, cluster = 0;
-
-	if( ! idle_clusters ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}
-
-	last_cluster = idle_clusters->size();
-	if( ! last_cluster ) {
-			// No dedicated jobs found, we're done.
-		dprintf( D_FULLDEBUG,
-				 "DedicatedScheduler::holdAllDedicatedJobs: "
-				 "no jobs found\n" );
-		return;
-	}		
-
-	for( i=0; i<last_cluster; i++ ) {
-		cluster = (*idle_clusters)[i];
-		holdJob( cluster, 0, 
-		         "No condor_shadow installed that supports parallel jobs",
-		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
-		         false, should_notify_admin );
-		if( should_notify_admin ) {
-				// only send email to the admin once per lifetime of
-				// the schedd, so we don't swamp them w/ email...
-			should_notify_admin = false;
-		}
-	}
 }
 
 /*
@@ -3933,10 +3880,7 @@ DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
 	}
-	if( reconnect_tid == -1 ) {
-			// Error registering timer!
-		EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
-	}
+	ASSERT(reconnect_tid >= 0);
 	return true;
 }
 
@@ -4142,8 +4086,10 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 
 			mrec->setStatus(M_CLAIMED);
 
-			ASSERT( all_matches->insert(host, mrec) == 0 );
-			ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
+			auto [it1, success1] = all_matches.emplace(host, mrec);
+			ASSERT(success1);
+			auto [it2, success2] = all_matches_by_id.emplace(mrec->claim_id.claimId(), mrec);
+			ASSERT(success2);
 
 			jobsToAllocate.Append(job);
 
@@ -4172,10 +4118,7 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 		reconnect_tid = daemonCore->Register_Timer( 60,
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
-		if( reconnect_tid == -1 ) {
-				// Error registering timer!
-			EXCEPT( "Can't register daemonCore timer for DedicatedScheduler::checkReconnectQueue!" );
-		}
+		ASSERT(reconnect_tid >= 0);
 	}
 }	
 
@@ -4202,7 +4145,10 @@ DedicatedScheduler::FindMrecByClaimID(char const* claim_id) {
 	match_rec* rec = nullptr;
 
     // look in the traditional place first
-    if (all_matches_by_id->lookup(claim_id, rec) >= 0) return rec;
+	auto it = all_matches_by_id.find(claim_id);
+	if (it != all_matches_by_id.end()) {
+		return it->second;
+	}
 
     // otherwise, may be from a pending dynamic slot request, so check here:
     auto f(pending_matches.find(claim_id));

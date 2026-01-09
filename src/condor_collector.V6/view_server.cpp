@@ -42,7 +42,7 @@ int ViewServer::HistoryTimer;
 std::string ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 bool ViewServer::KeepHistory;
-HashTable< std::string, int >* ViewServer::FileHash;
+std::map< std::string, int >* ViewServer::FileHash;
 std::vector<ExtIntArray *> *ViewServer::TimesArray;
 std::vector<ExtOffArray *> *ViewServer::OffsetsArray;
 
@@ -117,11 +117,11 @@ void ViewServer::Init()
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
-			DataSet[i][j].AccData=new AccHash(hashFunction);
+			DataSet[i][j].AccData=new AccHash;
 		}
 	}
-	GroupHash = new AccHash(hashFunction);
-	FileHash = new HashTable< std::string, int >(hashFunction);
+	GroupHash = new AccHash;
+	FileHash = new std::map<std::string, int>;
 	OffsetsArray = new std::vector< ExtOffArray*>;
 	TimesArray = new std::vector<ExtIntArray*>;
 
@@ -356,7 +356,8 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, time_t F
 	ExtOffArray* offsets = NULL;
 
 		// first find out which vector to use, by checking the hash
-	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
+	auto file_itr = FileHash->find(FileName);
+	if (file_itr == FileHash->end()) {
 
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
@@ -364,11 +365,12 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, time_t F
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
 		file_array_index = OffsetsArray->size();
-		FileHash->insert( FileName, file_array_index );
+		FileHash->emplace(FileName, file_array_index);
 		TimesArray->push_back(times_array);
 		OffsetsArray->push_back(offsets);
 	} else {
 			// otherwise just get the appropriate array
+		file_array_index = file_itr->second;
 		times_array = (TimesArray->at( file_array_index ));
 		offsets = (OffsetsArray->at( file_array_index ));
 	}
@@ -444,7 +446,8 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, time_t F
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
 		// first find out which vector to use, by checking the hash
-	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
+	auto file_itr = FileHash->find(FileName);
+	if (file_itr == FileHash->end()) {
 
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
@@ -452,12 +455,13 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, time_t F
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
 		file_array_index = OffsetsArray->size();
-		FileHash->insert( FileName, file_array_index );
+		FileHash->emplace(FileName, file_array_index);
 		TimesArray->push_back( times_array );
 		OffsetsArray->push_back( offsets );
 	} else {
 
 			// otherwise just get the appropriate array
+		file_array_index = file_itr->second;
 		times_array = (TimesArray->at( file_array_index ));
 		offsets = (OffsetsArray->at( file_array_index ));
 		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", times_array->length());
@@ -707,8 +711,6 @@ time_t ViewServer::ReadTimeChkName(const std::string &line, const std::string& N
 
 void ViewServer::WriteHistory(int /* tid */)
 {
-	std::string Key;
-	GeneralRecord* GenRec;
 	FILE* DataFile;
 	struct stat statbuf;
 	std::string outline;
@@ -755,8 +757,7 @@ void ViewServer::WriteHistory(int /* tid */)
 
 			// Iterate through accumulated values
 
-			DataSet[i][j].AccData->startIterations();
-			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
+			for (auto& [Key, GenRec]: *DataSet[i][j].AccData) {
 				formatstr(outline,DataFormat[i].c_str(),TimeStamp,Key.c_str(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7], GenRec->Data[8]);
 				delete GenRec;
 				fputs(outline.c_str(), DataFile);
@@ -789,8 +790,10 @@ void ViewServer::WriteHistory(int /* tid */)
 				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
-				if(FileHash->lookup(DataSet[i][j].OldFileName,
-														oldFileIndex) != -1) {
+				auto new_file_itr = FileHash->end();
+				auto old_file_itr = FileHash->find(DataSet[i][j].OldFileName);
+				if (old_file_itr != FileHash->end()) {
+					oldFileIndex = old_file_itr->second;
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
 					for (auto p: *(*OffsetsArray)[oldFileIndex]) {
@@ -799,24 +802,20 @@ void ViewServer::WriteHistory(int /* tid */)
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;
 					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
-					if(FileHash->lookup(DataSet[i][j].NewFileName,
-														newFileIndex) != -1) {
+					new_file_itr = FileHash->find(DataSet[i][j].NewFileName);
+					if (new_file_itr != FileHash->end()) {
+						newFileIndex = new_file_itr->second;
 							// switch the indices to avoid copying data
-						FileHash->remove(DataSet[i][j].OldFileName);
-						FileHash->remove(DataSet[i][j].NewFileName);
-						FileHash->insert(DataSet[i][j].OldFileName,
-															newFileIndex);
-						FileHash->insert(DataSet[i][j].NewFileName,
-															oldFileIndex);
+						old_file_itr->second = newFileIndex;
+						new_file_itr->second = oldFileIndex;
 					}
 				}
-				else if(FileHash->lookup(DataSet[i][j].NewFileName,
-													newFileIndex) != -1) {
+				else if((new_file_itr = FileHash->find(DataSet[i][j].NewFileName)) != FileHash->end()) {
+					newFileIndex = new_file_itr->second;
 						// if no file got overwritten, then just add to the
 						// hash and arrays
-					FileHash->remove(DataSet[i][j].NewFileName);
-					FileHash->insert(DataSet[i][j].OldFileName,
-															newFileIndex);
+					FileHash->erase(new_file_itr);
+					(*FileHash)[DataSet[i][j].OldFileName] = newFileIndex;
 				}
 				DataSet[i][j].OldStartTime=DataSet[i][j].NewStartTime;
 				DataSet[i][j].NewStartTime=-1;
@@ -880,13 +879,10 @@ int ViewServer::SubmittorTotalFunc(void)
 {
 	// Add to Accumulated Data
 
-	std::string GroupName;
-	GeneralRecord* CurValue;
 	GeneralRecord* AccValue;
 	int NumSamples;
 
-	GroupHash->startIterations();
-	while(GroupHash->iterate(GroupName,CurValue)) {
+	for (const auto& [GroupName, CurValue]: *GroupHash) {
 		for (int j=0; j<HistoryLevels; j++) {
 			AccValue=GetAccData(DataSet[SubmittorGroupsData][j].AccData, GroupName);
 			NumSamples=DataSet[SubmittorGroupsData][j].NumSamples;
@@ -1009,13 +1005,10 @@ int ViewServer::StartdTotalFunc(void)
 {
 	// Add to Accumulated Data
 
-	std::string GroupName;
-	GeneralRecord* CurValue;
 	GeneralRecord* AccValue;
 	int NumSamples;
 
-	GroupHash->startIterations();
-	while(GroupHash->iterate(GroupName,CurValue)) {
+	for (const auto& [GroupName, CurValue]: *GroupHash) {
 		for (int j=0; j<HistoryLevels; j++) {
 			AccValue=GetAccData(DataSet[GroupsData][j].AccData, GroupName);
 			NumSamples=DataSet[GroupsData][j].NumSamples;
@@ -1077,23 +1070,22 @@ int ViewServer::CkptScanFunc(CollectorRecord* record)
 GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const std::string& Key)
 {
 	GeneralRecord* GenRec = NULL;
-	int rval;
 
-	rval = AccData->lookup( Key, GenRec );
-	if ( ( rval < 0 ) || ( GenRec == NULL ) ) {
-		if ( rval >= 0 ) {
+	auto itr = AccData->find(Key);
+	if (itr == AccData->end() || itr->second == nullptr) {
+		if ( itr != AccData->end() ) {
 			dprintf( D_ALWAYS,
-					 "Hash %p lookup returned %d, but NULL record!\n",
-					 AccData, rval );
+					 "Hash lookup %s, but NULL record!\n",
+					 Key.c_str() );
 			EXCEPT( "Bad lookup" );
 		}
 		GenRec=new GeneralRecord;
 		if ( GenRec == NULL ) {
 			EXCEPT( "Failed to allocate a GeneralRecord" );
 		}
-		if ( AccData->insert(Key,GenRec) < 0 ) {
-			EXCEPT( "Insert failed: Key=%s", Key.c_str() );
-		}
+		AccData->emplace(Key, GenRec);
+	} else {
+		GenRec = itr->second;
 	}
 	return GenRec;
 }

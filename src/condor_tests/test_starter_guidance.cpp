@@ -24,6 +24,14 @@
 // jobWaitUntilExecuteTime()) called to implement "carry on" with ones that
 // make it easy to check the result of the test cases.
 //
+// Update: jobWaitUntilExecuteTime() is now called as a result of calling
+// runPrepareJobHook(), so that the latter doesn't happen until after
+// common file transfer.  In the real starter, the invocation is indirect,
+// via prepareJobHookDone(), because control flow passes through the event
+// loop if we _do_ spawn a PREPARE_JOB hook.  This makes the mockery more
+// complicated.  We could simplify it a bit (by setting `jwuet_called` in
+// runPrepareJobHook()), but orthogonality is probably good here.
+//
 
 class MockJIC;
 using mock_genericRequestGuidance_type = std::function<bool(
@@ -31,13 +39,15 @@ using mock_genericRequestGuidance_type = std::function<bool(
 )>;
 
 
+class MockStarter;
 class MockJIC : public JobInfoCommunicator {
     private:
         mock_genericRequestGuidance_type the_test_case;
+        MockStarter * the_starter {nullptr};
 
     public:
 
-        MockJIC( mock_genericRequestGuidance_type m_grg ) : the_test_case(m_grg) { }
+        MockJIC( mock_genericRequestGuidance_type m_grg, MockStarter * s ) : the_test_case(m_grg), the_starter(s) { }
         virtual ~MockJIC() = default;
 
         virtual bool genericRequestGuidance(
@@ -51,6 +61,7 @@ class MockJIC : public JobInfoCommunicator {
 
         bool got_diagnostic_event = false;
 
+        virtual void runPrepareJobHook();
 
         // Additional mocks.
         virtual int JobCluster() const { return 1; }
@@ -68,7 +79,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual uint64_t bytesReceived( void ) { EXCEPT("MOCK"); return (uint64_t)-1; }
         virtual void Suspend( void ) { EXCEPT("MOCK"); }
         virtual void Continue( void ) { EXCEPT("MOCK"); }
-        virtual bool transferOutput( bool & ) { EXCEPT("MOCK"); return false; }
+        virtual bool transferOutput( bool &, bool & ) { EXCEPT("MOCK"); return false; }
         virtual bool transferOutputMopUp( void ) { EXCEPT("MOCK"); return false; }
         virtual void allJobsGone( void ) { EXCEPT("MOCK"); }
         virtual int reconnect( ReliSock*, ClassAd* ) { EXCEPT("MOCK"); return -1; }
@@ -132,6 +143,8 @@ class MockStarter : public Starter {
         // The "carry on" action if the job environment is ready.
         virtual bool jobWaitUntilExecuteTime();
 
+        virtual void prepareJobHookDone();
+
         // The "carry on" action if the job environmet is unready.
         virtual bool skipJobImmediately();
 
@@ -141,7 +154,7 @@ class MockStarter : public Starter {
 
 
 MockStarter::MockStarter( mock_genericRequestGuidance_type m_grg ) {
-    jic = new MockJIC(m_grg);
+    jic = new MockJIC(m_grg, this);
 }
 
 
@@ -153,12 +166,26 @@ MockStarter::jobWaitUntilExecuteTime() {
 }
 
 
+// This is now called before jobWaitUntilExecuteTime().
+void MockJIC::runPrepareJobHook() {
+    dprintf( D_ALWAYS, "MockJIC::runPrepareJobHook()\n" );
+    the_starter->prepareJobHookDone();
+    return;
+}
+
+
 bool
 MockStarter::skipJobImmediately() {
     dprintf( D_ALWAYS, "MockStarter::skipJobImmediately()\n" );
     sji_called = true;
     return true;
 };
+
+
+void
+MockStarter::prepareJobHookDone() {
+    jobWaitUntilExecuteTime();
+}
 
 
 //
@@ -321,8 +348,8 @@ main( int argc, char * argv[] ) {
 
 // Additional mocks.  Stubbing these out dramatically decreases the
 // number of source files required to build this test, and its complexity.
-Starter::Starter() { }
-Starter::~Starter() { }
+Starter::Starter() = default;
+Starter::~Starter() = default;
 
 bool Starter::Init(JobInfoCommunicator*, char const*, bool, int, int, int) { EXCEPT("MOCK"); return false; }
 void Starter::StarterExit(int code) { EXCEPT("MOCK"); exit(code); }
@@ -367,8 +394,8 @@ VolumeManager::Handle::~Handle() { }
 #endif /* defined(LINUX) */
 
 
-JobInfoCommunicator::JobInfoCommunicator() { }
-JobInfoCommunicator::~JobInfoCommunicator() { }
+JobInfoCommunicator::JobInfoCommunicator() = default;
+JobInfoCommunicator::~JobInfoCommunicator() = default;
 
 const char* JobInfoCommunicator::jobInputFilename() { EXCEPT("MOCK"); return NULL; }
 const char* JobInfoCommunicator::jobOutputFilename() { EXCEPT("MOCK"); return NULL; }
@@ -397,3 +424,4 @@ bool JobInfoCommunicator::updateX509Proxy(int, ReliSock*) { EXCEPT("MOCK"); retu
 bool JobInfoCommunicator::initJobInfo() { EXCEPT("MOCK"); return false; }
 void JobInfoCommunicator::checkForStarterDebugging() { EXCEPT("MOCK"); }
 void JobInfoCommunicator::writeExecutionVisa(classad::ClassAd&) { EXCEPT("MOCK"); }
+void JobInfoCommunicator::runPrepareJobHook() { EXCEPT("MOCK"); }

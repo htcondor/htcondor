@@ -20,6 +20,7 @@ usr/bin/condor_gather_info
 usr/bin/condor_history
 usr/bin/condor_hold
 usr/bin/condor_job_router_info
+usr/bin/condor_librarian
 usr/bin/condor_manifest
 usr/bin/condor_now
 usr/bin/condor_nsenter
@@ -123,7 +124,6 @@ usr/libexec/condor/get_orted_cmd.sh
 usr/libexec/condor/htcondor_docker_test
 usr/libexec/condor/htcondor_docker_test_arm
 usr/libexec/condor/interactive.sub
-usr/libexec/condor/libclassad_python*.so
 usr/libexec/condor/linux_kernel_tuning
 usr/libexec/condor/onedrive_plugin.py
 usr/libexec/condor/orted_launcher.sh
@@ -177,7 +177,7 @@ usr/sbin/rvgahp_server
 usr/sbin/scitokens_credential_producer
 usr/lib/python3/* usr/lib/python3/
 usr/libexec/blahp/* usr/libexec/blahp/
-#if defined (BULLSEYE) || defined (FOCAL)
+#if defined(BULLSEYE) || defined(FOCAL)
 src/condor_examples/condor.service lib/systemd/system/
 #else
 src/condor_examples/condor.service usr/lib/systemd/system/

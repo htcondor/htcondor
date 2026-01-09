@@ -92,9 +92,13 @@ public:
 		*/
 	DCSchedd( const ClassAd& ad, const char* pool = NULL );
 
+		/* Constructor, used by job router */
+	DCSchedd( std::string_view name, std::string_view pool, std::string_view address_file );
 
-		/// Destructor
-	~DCSchedd();
+
+		// return the address of the CREDD associated with this schedd
+		// do not call this method until after locate() or equivalent.
+	bool getCreddAddress(std::string & address);
 
 		/** Hold all jobs that match the given constraint.
 			Set ATTR_HOLD_REASON to the given reason.
@@ -492,10 +496,11 @@ public:
 		const char * constraint,  // expression
 		CondorError *errstack);
 
-	ClassAd * addOrEnableUsers(
+	ClassAd * addOrEnableUserRecs(
 		const ClassAd * userads[],   // ads must have ATTR_USER attribute, if create_if may have other attributes as well
 		int num_usernames,
-		bool create_if,           // true if we want to create users that don't already exist
+		bool create_if,            // true if we want to create users that don't already exist
+		bool is_project,           // true if project ad or mixed user and project ads
 		CondorError *errstack);
 
 	ClassAd * disableUsers(
@@ -524,15 +529,36 @@ public:
 		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
+	ClassAd * updateUserAds(
+		std::vector<const ClassAd*> & ads,	 // ads must have ATTR_USER attribute at a minimum
+		CondorError *errstack);
+
 	ClassAd * addProjects(
 		const char * names[],   // project names
 		int num_names,          // number of project names
+		CondorError *errstack);
+
+	ClassAd * enableProjects(
+		const char * names[],   // project names
+		int num_names,          // number of project names
+		bool create_if,         // true if we want to create projects that don't already exist
 		CondorError *errstack);
 
 	ClassAd * addProjects(
 		const ClassAd * userads[],   // ads must have ATTR_NAME attribute, if create_if may have other attributes as well
 		int num_ads,
 		bool create_if,           // true if we want to create users that don't already exist
+		CondorError *errstack);
+
+	ClassAd * disableProjects(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * disableProjects(
+		const char * constraint, // expression
+		const char * reason,
 		CondorError *errstack);
 
 	ClassAd * removeProjects(
@@ -550,6 +576,17 @@ public:
 		ClassAdList & project_ads, // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
+	ClassAd * updateProjectAds(
+		std::vector<const ClassAd*> & ads,	 // ads must have ATTR_USER attribute at a minimum
+		CondorError *errstack);
+
+	// when the caller wants more complete control over the command
+	// and the contents of the ads that get passed to actOnUsers
+	ClassAd * generalUpdateUserRecs(
+		int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
+		bool is_project,           // set to true if ads are project ads or mixed user and project ads
+		ClassAdListDoesNotDeleteAds & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+		CondorError *errstack);
 
 	/** Get DAGMan contact information (Address and secret)
 		This creates a request ClassAd to send to the Schedd as
@@ -566,6 +603,13 @@ public:
 
 	// get all the claimed slot ads from schedd
     bool getClaims(std::vector<std::unique_ptr<ClassAd>> &claims, ClassAd &queryAd, CondorError &errstack);
+
+	// The OCU ad must have the various Request_Memory, etc. 
+	// The OCU ad should have an OCU_NAME
+	ClassAd createOCU(const ClassAd &ocu_ad, CondorError *errstack);
+
+	ClassAd removeOCU(const ClassAd &ocu_ad, CondorError *errstack);
+	std::vector<ClassAd> queryOCU(const ClassAd &ocu_ad, CondorError *errstack);
 
 private:
 		/** This method actually does all the brains for all versions
@@ -624,7 +668,6 @@ private:
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );
 	DCSchedd& operator = ( const DCSchedd& );
-
 };
 
 

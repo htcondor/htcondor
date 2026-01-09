@@ -239,8 +239,7 @@ two priority values assigned to HTCondor users:
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
 priorities may be found in the 
-:ref:`admin-manual/configuration-macros:condor_negotiator configuration
-file entries` section.
+:ref:`negotiator_config_options` section.
 
 Real User Priority (RUP)
 ''''''''''''''''''''''''
@@ -403,8 +402,7 @@ associated with a single negotiation cycle. Therefore, the configuration
 variables :macro:`PREEMPTION_REQUIREMENTS_STABLE` and
 :macro:`PREEMPTION_RANK_STABLE` exist to inform the *condor_negotiator* daemon
 that values may change. See the
-:ref:`admin-manual/configuration-macros:condor_negotiator configuration file
-entries` section for definitions of these configuration variables.
+:ref:`negotiator_config_options` section for definitions of these configuration variables.
 
 
 :index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``
@@ -518,7 +516,7 @@ have submitted jobs and calculates their priority. Then, it totals the
 SlotWeight (by default, cores) of all currently available slots, and 
 using the ratios of the user priorities, it calculates the number of 
 cores each user could get. This is their pie slice.
-(See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
+(See: SLOT_WEIGHT in :ref:`startd_config_options`)
 
 If any users have a floor defined via :tool:`condor_userprio` -set-floor
 , and their current allocation of cores is below the floor, a 
@@ -1136,8 +1134,7 @@ from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
 *condor_defrag* daemon may be found in the
-:ref:`admin-manual/configuration-macros:condor_defrag configuration file
-macros` section.
+:ref:`defrag_config_options` section.
 
 By default, when a machine is drained, existing jobs are gracefully
 evicted. This means that each job will be allowed to use the remaining
@@ -1228,8 +1225,7 @@ Configuring a Machine to be a HTCondorView Server
 To configure the HTCondorView collector, a few configuration variables
 are added or modified for the *condor_collector* chosen to act as the
 HTCondorView collector. These configuration variables are described in
-:ref:`admin-manual/configuration-macros:condor_collector configuration file
-entries`. Here are brief explanations of the entries that must be customized:
+:ref:`collector_config_options`. Here are brief explanations of the entries that must be customized:
 
 :macro:`POOL_HISTORY_DIR`
     The directory where historical data will be stored. This directory
@@ -1403,8 +1399,7 @@ Configuration
 The high availability of central manager machines is enabled through
 configuration. It is disabled by default. All machines in a pool must be
 configured appropriately in order to make the high availability
-mechanism work. See the :ref:`admin-manual/configuration-macros:configuration
-file entries relating to high availability` section, for definitions
+mechanism work. See the :ref:`high_availability_config_options` section, for definitions
 of these configuration variables.
 
 The *condor_had* and *condor_replication* daemons use the
@@ -1569,7 +1564,7 @@ manager machines.
     HAD_ARGS = -f -p $(HAD_PORT)
 
     ## The following macro defines the port number condor_replication will listen
-    ## on on this machine. This port should match the port number specified
+    ## on this machine. This port should match the port number specified
     ## for that replication daemon in the REPLICATION_LIST
     ## Port number is arbitrary (make sure no collision with other applications)
     ## This is a sample port number
@@ -1942,43 +1937,6 @@ instead of invalidated, set :macro:`EXPIRE_INVALIDATED_ADS` to ``True``.
 Invalidated ClassAds will instead be treated as if they expired, including when
 evaluating :macro:`ABSENT_REQUIREMENTS`.
 
-GPUs
-----
-
-:index:`monitoring GPUS`
-:index:`GPU monitoring`
-
-HTCondor supports monitoring GPU utilization for NVidia GPUs.  This feature
-is enabled by default if you set ``use feature : GPUs`` in your configuration
-file.
-
-Doing so will cause the startd to run the ``condor_gpu_utilization`` tool.
-This tool polls the (NVidia) GPU device(s) in the system and records their
-utilization and memory usage values.  At regular intervals, the tool reports
-these values to the *condor_startd*, assigning them to each device's usage
-to the slot(s) to which those devices have been assigned.
-
-Please note that ``condor_gpu_utilization`` can not presently assign GPU
-utilization directly to HTCondor jobs.  As a result, jobs sharing a GPU
-device, or a GPU device being used by from outside HTCondor, will result
-in GPU usage and utilization being misreported accordingly.
-
-However, this approach does simplify monitoring for the owner/administrator
-of the GPUs, because usage is reported by the *condor_startd* in addition
-to the jobs themselves.
-
-:index:`DeviceGPUsAverageUsage<single: DeviceGPUsAverageUsage; machine attribute>`
-
-  ``DeviceGPUsAverageUsage``
-    The number of seconds executed by GPUs assigned to this slot,
-    divided by the number of seconds since the startd started up.
-
-:index:`DeviceGPUsMemoryPeakUsage<single: DeviceGPUsMemoryPeakUsage; machine attribute>`
-
-  ``DeviceGPUsMemoryPeakUsage``
-    The largest amount of GPU memory used GPUs assigned to this slot,
-    since the startd started up.
-
 Elasticsearch
 -------------
 
@@ -2097,3 +2055,37 @@ is unset, to prevent them from inheriting the global value of
 :macro:`CONDOR_VIEW_HOST` and attempting to report to themselves or each other. If
 the HTCondorView servers are running on different machines where there is no
 global value for :macro:`CONDOR_VIEW_HOST`, this precaution is not required.
+
+Scaling and Performance Considerations for the CM
+-------------------------------------------------
+
+:index:`performance of the CM`
+
+The central manager (CM), as the central point of an HTCondor system, is
+designed to be scalable out of the box to large systems.  As long as it 
+is installed on dedicated, reasonable hardware, it should be able to 
+manage a local pool of 100,000 cores.  One reason for the scalability is
+that the CM is mostly stateless, meaning that it does not keep many records
+on disk.  However, as some sites are scaling out beyond this size, there
+are some additional considerations and configurations to keep in mind.
+
+Scaling up the Collector
+''''''''''''''''''''''''
+
+For pools of the largest size, it may be necessary to set up a 
+tree of collectors.  This is described here: 
+:ref:`faq/admins/collector-tree:Recipe: Setting up a Collector Tree`
+
+
+Scaling up the Negotiator
+'''''''''''''''''''''''''
+
+The metric to measure the performance of the negotiator is the negotiator
+cycle time, which is the time it takes for the negotiator to complete one
+complete matchmaking cycle.  In a healthy pool, this may take on the order
+of ten minutes.  If the cycle is longer than that, consider sharding the
+negotiator as described above.  To the first degree, the cycle time scales
+by the product of the number of autoclusters in all the *condor_schedd*
+and the number of idle slots.  If you do not need preemption of running
+jobs in your system, setting the knob :macro:`NEGOTIATOR_CONSIDER_PREEMPTION`
+to false can dramatically speed up the negotiation cycle.

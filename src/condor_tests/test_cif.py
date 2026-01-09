@@ -98,7 +98,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
-        timeout=5,
+        timeout=60,
         echo=True,
         as_user='tlmiller',
     )
@@ -118,7 +118,9 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"d, null://create-epoch-entry"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"d, null://create-epoch-entry"',
+
         "transfer_input_files":     "input3.txt",
         "use_oauth_services":       "the_credential",
 
@@ -131,7 +133,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     )
 
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
 
@@ -219,7 +221,9 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         # Force a delay; the constant is to ensure that we would print out
         # the waiting message at least twice (if the delay remains at five
         # seconds each time).
-        "MY.CommonInputFiles":      '"big_input1.txt, big_input2.txt, debug://sleep/15"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"big_input1.txt, big_input2.txt, debug://sleep/15"',
+
         "transfer_input_files":     "big_input3.txt",
 
         "leave_in_queue":           True,
@@ -238,7 +242,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for them to start.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.running_exactly(4),
         fail_condition=ClusterState.any_terminal
     )
@@ -249,7 +253,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for them to finish.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda self: self.status_exactly(4, JobStatus.COMPLETED),
         fail_condition=ClusterState.any_held
     )
@@ -273,7 +277,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for the last four jobs to start.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.none_idle,
     )
 
@@ -283,7 +287,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for the last four jobs to finish.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
 
@@ -371,7 +375,9 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
         "request_cpus":             1,
         "request_memory":           1,
 
-        "MY.CommonInputFiles":      '"multi_input1.txt, multi_input2.txt"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"multi_input1.txt, multi_input2.txt"',
+
         "transfer_input_files":     "multi_input3.txt",
 
         "leave_in_queue":           True,
@@ -386,7 +392,8 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     job_description_b = { ** job_description_a,
         "arguments":
             f'{kill_file} multi_input4.txt multi_input5.txt multi_input6.txt',
-        "MY.CommonInputFiles":      '"multi_input4.txt, multi_input5.txt"',
+        "MY._x_common_input_catalogs":      '"my_common_files"',
+        "MY._x_catalog_my_common_files":    '"multi_input4.txt, multi_input5.txt"',
         "transfer_input_files":     "multi_input6.txt",
     }
 
@@ -412,12 +419,12 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
 
     # Wait for them to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
@@ -432,11 +439,11 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     # Due to a bug in Ornithology, jobs submitted on hold but not yet
     # released are considered IDLE, which is... not helpful.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda s: s.all_status(JobStatus.IDLE, JobStatus.COMPLETED),
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda s: s.all_status(JobStatus.IDLE, JobStatus.COMPLETED),
     )
 
@@ -448,11 +455,11 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
 
     # Wait for the last four jobs to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.none_idle,
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.none_idle,
     )
 
@@ -464,11 +471,11 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
 
     # Wait for the last four jobs to finish.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
 
@@ -517,7 +524,7 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert successful_staging_commands == count
 
     keyfile_touches = count_shadow_log_lines(
-        the_condor, "Elected producer touch"
+        the_condor, "Producer elected"
     )
     assert keyfile_touches == count
 

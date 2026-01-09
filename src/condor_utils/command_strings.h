@@ -80,6 +80,8 @@ typedef enum {
 	CA_LOCATE_FAILED,
 	CA_CONNECT_FAILED,
 	CA_COMMUNICATION_ERROR,
+	CA_REPLY_COMMUNICATION_ERROR,  // command was sent, but the reply was not recieved for some reason
+	CA_REPLY_TIMED_OUT, // command was sent, but timed out waiting for the reply to be fully sent.
 	CA_UNKNOWN_ERROR,
 } CAResult;
 
@@ -87,7 +89,7 @@ typedef enum {
 // Return a std::array at compile time that other
 // consteval functions can use as a lookup table
 constexpr 
-std::array<std::pair<const char *, CAResult>,11>
+std::array<std::pair<const char *, CAResult>,13>
 makeCATable() {
 	return {{ // yes, there needs to be 2 open braces here...
 		{ "Success", CA_SUCCESS },
@@ -100,6 +102,8 @@ makeCATable() {
 		{ "LocateFailed", CA_LOCATE_FAILED },
 		{ "ConnectFailed", CA_CONNECT_FAILED },
 		{ "CommunicationError", CA_COMMUNICATION_ERROR },
+		{ "ReplyCommunicationError", CA_REPLY_COMMUNICATION_ERROR },
+		{ "ReplyTimedOut", CA_REPLY_TIMED_OUT },
 		{ "UnknownError", CA_UNKNOWN_ERROR },
 	}};
 }

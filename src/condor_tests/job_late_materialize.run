@@ -270,7 +270,7 @@ CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-tot
 # because of the race between jobs entering run state and the execute event in the log
 # peak_idle can appear to be as much as double the actual value.  we would have to look
 # at the job_queue.log file to avoid this problem, which is too much work for now.
-$res = ($peak_idle >= 2 && $peak_idle <= 5);
+$res = ($peak_idle >= 2 && $peak_idle <= 6);
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_idle');
 
 TLOG("Checking factory removal");

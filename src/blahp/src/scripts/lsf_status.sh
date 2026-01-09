@@ -128,7 +128,7 @@ for  reqfull in $pars ; do
 
         staterr=/tmp/${requested}_staterr
 
-result=`${lsf_binpath}/bhist -l $requested 2>/dev/null | awk -v jobId=$requested '
+result=`${lsf_binpath}bhist -l $requested 2>/dev/null | awk -v jobId=$requested '
 BEGIN {
     current_job = ""
     current_wn = ""
@@ -236,7 +236,7 @@ END {
 
 		conffile=$lsf_confpath/lsf.conf
 		lsf_base_path=`cat $conffile|grep LSB_SHAREDIR| awk -F"=" '{ print $2 }'`
-		lsf_clustername=`${lsf_binpath}/lsid | grep 'My cluster name is'|awk -F" " '{ print $5 }'`
+		lsf_clustername=`${lsf_binpath}lsid | grep 'My cluster name is'|awk -F" " '{ print $5 }'`
 		logpath=$lsf_base_path/$lsf_clustername/logdir
 		logeventfile=lsb.events
 		touch -t ${datenow}0000 $datefile

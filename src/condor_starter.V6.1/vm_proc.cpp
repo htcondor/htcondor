@@ -160,7 +160,7 @@ bool handleFTL( const char * reason ) {
 		formatstr( errorString, "An internal error prevented HTCondor "
 			"from starting the VM.  This job will be rescheduled.  "
 			"(%s).\n", reason );
-		starter->jic->notifyStarterError( errorString.c_str(), false, 0, 0 );
+		starter->jic->notifyStarterError( errorString.c_str(), false, CONDOR_HOLD_CODE::VMError, 0 );
 		starter->jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, NULL );
 	}
 
@@ -401,7 +401,7 @@ VMProc::StartJob()
 			err_msg = m_vmgahp->start_err_msg;
 		}
 		reportErrorToStartd();
-		starter->jic->notifyStarterError( err_msg.c_str(), true, 0, 0);
+		starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::VMError, 0);
 
 		delete m_vmgahp;
 		m_vmgahp = NULL;
@@ -1472,7 +1472,8 @@ VMProc::internalVMGahpError()
 		dprintf(D_ALWAYS,"ERROR: Failed to report a VMGahp error to local startd\n");
 	}
 
-	daemonCore->Send_Signal(daemonCore->getpid(), DC_SIGHARDKILL);
+	starter->SetVacateReason("Internal error occurred while managing the VM", CONDOR_HOLD_CODE::VMError, 0);
+	EXCEPT("Internal error occurred while managing the VM");
 }
 
 MSC_DISABLE_WARNING(6262) // function uses 60844 bytes of stack.

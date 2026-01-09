@@ -300,18 +300,6 @@ void Defrag::stop()
 	}
 }
 
-static int StartdSortFunc(ClassAd *ad1,ClassAd *ad2,void *data)
-{
-	ClassAd *rank_ad = (ClassAd *)data;
-
-	float rank1 = 0;
-	float rank2 = 0;
-	EvalFloat(ATTR_RANK,rank_ad,ad1,rank1);
-	EvalFloat(ATTR_RANK,rank_ad,ad2,rank2);
-
-	return rank1 > rank2;
-}
-
 void Defrag::validateExpr(char const *constraint,char const *constraint_source)
 {
 	ExprTree *requirements = NULL;
@@ -336,7 +324,7 @@ bool Defrag::queryMachines(char const *constraint,char const *constraint_source,
 		// if no projection supplied, just get the Name attribute
 		startdQuery.setDesiredAttrs("Name");
 	}
-	startdQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	startdQuery.requestPrivateAttrs();
 
 	CollectorList* collects = daemonCore->getCollectorList();
 	ASSERT( collects );
@@ -592,7 +580,7 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 	}
 
 	startdAds.Shuffle();
-	startdAds.Sort(StartdSortFunc,&m_rank_ad);
+	startdAds.Sort(SlotRankSortFunc,&m_rank_ad);
 
 	startdAds.Open();
 
@@ -825,7 +813,7 @@ void Defrag::poll( int /* timerID */ )
 	}
 
 	startdAds.Shuffle();
-	startdAds.Sort(StartdSortFunc,&m_rank_ad);
+	startdAds.Sort(SlotRankSortFunc,&m_rank_ad);
 
 	startdAds.Open();
 	int num_drained = 0;

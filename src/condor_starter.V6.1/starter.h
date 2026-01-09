@@ -28,7 +28,7 @@
 
 #if defined(LINUX) || defined(DARWIN)
     // We don't test on BSD, so don't claim the hardlink code works there.
-    #define CFT_VERSION 1
+    #define CFT_VERSION 2
 #else
     #define CFT_VERSION 0
 #endif
@@ -356,6 +356,19 @@ public:
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
 
+	void SetVacateReason(const std::string& msg, int code, int subcode);
+	void jicNotifyStarterError( bool critical );
+
+	void ExceptHandler(const char* errmsg);
+
+		/*
+		  @param result Buffer in which to store claim id string from job.
+		  Returns false if no claim id could be found.
+		 */
+	bool getJobClaimId(std::string &result) const;
+
+	void prepareJobHookDone();
+
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
@@ -417,12 +430,6 @@ private:
 		  If no job owner can be found, substitute a suitable dummy user name.
 		 */
 	void getJobOwnerFQUOrDummy(std::string &result) const;
-
-		/*
-		  @param result Buffer in which to store claim id string from job.
-		  Returns false if no claim id could be found.
-		 */
-	bool getJobClaimId(std::string &result) const;
 
 
 	bool WriteAdFiles() const;

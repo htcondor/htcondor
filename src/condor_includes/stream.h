@@ -29,6 +29,16 @@
 #include "classy_counted_ptr.h"
 #include "cedar_enums.h"
 
+// Pick the correct 64-bit convert-to/from-big-endian function for each
+// platform
+#if defined(LINUX)
+#  define htonLL(x) htobe64(x)
+#  define ntohLL(x) be64toh(x)
+#elif defined(DARWIN) || defined(WIN32)
+#  define htonLL(x) htonll(x)
+#  define ntohLL(x) htonll(x)
+#endif
+
 enum CONDOR_MD_MODE {
     MD_OFF        = 0,         // off
     MD_ALWAYS_ON,              // always on, condor will check MAC automatically

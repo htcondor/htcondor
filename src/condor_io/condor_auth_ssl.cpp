@@ -1740,6 +1740,22 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 		return rc;
 	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
+	if (mySock_->isClient()) {
+		std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
+
+		if (!PEM_write_bio_X509(bio.get(), cert)) {
+			dprintf(D_SECURITY, "Unable to convert server host cert to PEM format.\n");
+			goto err_occured;
+		}
+		char *pem_raw;
+		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
+		if (len) {
+			classad::ClassAd ad;
+			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, pem_raw, len);
+			mySock_->setPolicyAd(ad);
+		}
+	}
+
 	if (param_boolean("SSL_SKIP_HOST_CHECK", false)) {
 		success = true;
 		goto success;
@@ -1815,22 +1831,6 @@ skip_san:
 		} else if (!success) {
 			dprintf(D_SECURITY|D_FULLDEBUG, "Unable to extract CN from certificate.\n");
 			goto err_occured;
-		}
-	}
-
-	if (mySock_->isClient()) {
-		std::unique_ptr<BIO, decltype(&BIO_free)> bio(BIO_new( BIO_s_mem() ), BIO_free);
-
-		if (!PEM_write_bio_X509(bio.get(), cert)) {
-			dprintf(D_SECURITY, "Unable to convert server host cert to PEM format.\n");
-			goto err_occured;
-		}
-		char *pem_raw;
-		auto len = BIO_get_mem_data(bio.get(), &pem_raw);
-		if (len) {
-			classad::ClassAd ad;
-			ad.InsertAttr(ATTR_SERVER_PUBLIC_CERT, pem_raw, len);
-			mySock_->setPolicyAd(ad);
 		}
 	}
 

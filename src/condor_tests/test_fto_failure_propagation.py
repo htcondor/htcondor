@@ -12,6 +12,7 @@
 import pytest
 from ornithology import *
 import classad2
+import time
 
 #--------------------------------------------------------------------------
 # Test Case Structure:
@@ -121,7 +122,7 @@ TEST_CASES = {
                         "ErrorType" : "Parameter",
                         "ErrorCode": 19,
                         "ErrorString": "Missing host",
-                        "PluginVersion": "1.0.0",
+                        "PluginVersion": "1.1.0",
                         "PluginLaunched": False,
                         "DeveloperData" : {
                             "ConnectionTime" : 0.07,
@@ -158,7 +159,7 @@ TEST_CASES = {
                         "ErrorType" : "Parameter",
                         "ErrorCode": 32,
                         "ErrorString": "Invalid host name provided",
-                        "PluginVersion": "1.0.0",
+                        "PluginVersion": "1.1.0",
                         "PluginLaunched": True,
                         "DeveloperData" : {
                             "ConnectionTime" : 98.3,
@@ -831,16 +832,23 @@ def test_get_history(default_condor, test_check_details, wait_for_job):
     if xfer_type is None:
         pytest.skip("Skipping check epoch history because transfer type is None")
 
-    p = default_condor.run_command([
-        "condor_history",
-        "-epochs",
-        "-type", xfer_type,
-        "-limit", 1,
-        "-l",
-        wait_for_job.clusterid
-    ])
-
-    ad = classad2.parseOne(p.stdout)
+    # On a busy machine, the log entry can be written before the epoch hit the
+    # history file. Retry a few times if we don't see the ad.
+    retry_count = 0
+    ad = {}
+    while (len(ad) == 0 and retry_count < 4):
+        p = default_condor.run_command([
+            "condor_history",
+            "-epochs",
+            "-type", xfer_type,
+            "-limit", 1,
+            "-l",
+            wait_for_job.clusterid
+            ])
+        ad = classad2.parseOne(p.stdout)
+        retry_count += 1
+        if (len(ad) == 0):
+            time.sleep(5)
 
     return (expected_ad, ad, xfer_type)
 
@@ -871,16 +879,23 @@ def test_get_plugin_history(default_condor, test_check_details, wait_for_job):
     if i_type is None:
         pytest.skip("Skipping check epoch history because transfer type is None")
 
-    p = default_condor.run_command([
-        "condor_history",
-        "-epochs",
-        "-type", i_type,
-        "-limit", 1,
-        "-l",
-        wait_for_job.clusterid
-    ])
-
-    ad = classad2.parseOne(p.stdout)
+    # On a busy machine, the log entry can be written before the epoch hit the
+    # history file. Retry a few times if we don't see the ad.
+    retry_count = 0
+    ad = {}
+    while (len(ad) == 0 and retry_count < 4):
+        p = default_condor.run_command([
+            "condor_history",
+            "-epochs",
+            "-type", i_type,
+            "-limit", 1,
+            "-l",
+            wait_for_job.clusterid
+            ])
+        ad = classad2.parseOne(p.stdout)
+        retry_count += 1
+        if (len(ad) == 0):
+            time.sleep(5)
 
     return (i_ad, ad, i_type)
 

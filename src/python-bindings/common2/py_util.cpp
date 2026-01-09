@@ -114,10 +114,22 @@ py_new_classad_exprtree( ExprTree * original ) {
 		py_exprtree_class = PyObject_GetAttrString( py_classad2_module, "ExprTree" );
 	}
 
+	static PyObject * py_exprtree_nill = NULL;
+	if( py_exprtree_nill == NULL ) {
+		py_exprtree_nill = PyObject_GetAttrString( py_exprtree_class, "_Nill" );
+	}
+
+
 	ExprTree * copy = original->Copy();
 	copy->SetParentScope(NULL);
 
-	PyObject * pyExprTree = PyObject_CallObject(py_exprtree_class, NULL);
+	PyObject * pyArgsTuple = Py_BuildValue( "(O)", py_exprtree_nill );
+	if( pyArgsTuple == NULL ) {
+		// Py_BuildValue() has already set an exception for us.
+		return NULL;
+	}
+	PyObject * pyExprTree = PyObject_CallObject(py_exprtree_class, pyArgsTuple );
+	Py_DecRef(pyArgsTuple);
 	auto * handle = get_handle_from(pyExprTree);
 
 	// PyObject_CallObject() should have called __init__() for us, which
@@ -153,13 +165,16 @@ py_is_classad_exprtree(PyObject * py) {
 
 int
 py_str_to_std_string(PyObject * py, std::string & str) {
+	// TODO: once python 3.10 is the minimium version, we can use
+	// PyUnicode_AsUTF8AndSize instead.
+
 	PyObject * py_bytes = PyUnicode_AsUTF8String(py);
 	if( py_bytes == NULL ) {
 		// PyUnicode_AsUTF8String() has already set an exception for us.
 		return -1;
 	}
 
-	char * buffer = NULL;
+	char * buffer = NULL; // should treat this as a const char*, it is not a copy
 	Py_ssize_t size = -1;
 	if( PyBytes_AsStringAndSize(py_bytes, &buffer, &size) == -1 ) {
 		// PyBytes_AsStringAndSize() has already set an exception for us.
@@ -167,6 +182,28 @@ py_str_to_std_string(PyObject * py, std::string & str) {
 	}
 
 	str.assign( buffer, size );
+	return 0;
+}
+
+int
+py_str_to_utf8_and_size(PyObject * py, std::string_view & str) {
+	// TODO: once python 3.10 is the minimium version, we can use
+	// PyUnicode_AsUTF8AndSize instead.
+
+	PyObject * py_bytes = PyUnicode_AsUTF8String(py);
+	if( py_bytes == NULL ) {
+		// PyUnicode_AsUTF8String() has already set an exception for us.
+		return -1;
+	}
+
+	char* buffer;
+	Py_ssize_t size;
+	if( PyBytes_AsStringAndSize(py_bytes, &buffer, &size) == -1 ) {
+		// PyBytes_AsStringAndSize() has already set an exception for us.
+		return -1;
+	}
+
+	str = std::string_view(buffer, size);
 	return 0;
 }
 
@@ -294,3 +331,33 @@ py_list_to_vector_of_strings( PyObject * l, std::vector<std::string> & v, const 
 
     return 0;
 }
+
+int
+py_list_to_projection( PyObject * l, classad::References & attrs, const char * name ) {
+	Py_ssize_t size = PyList_Size(l);
+	for( int i = 0; i < size; ++i ) {
+		PyObject * py_s = PyList_GetItem(l, i);
+		if( py_s == NULL ) {
+			// PyList_GetItem() has already set an exception for us.
+			return -1;
+		}
+
+		if(! PyUnicode_Check(py_s)) {
+			std::string exception;
+			formatstr( exception, "%s must be a list of strings", name );
+			PyErr_SetString(PyExc_TypeError, exception.c_str() );
+			return -1;
+		}
+
+		std::string_view str;
+		if( py_str_to_utf8_and_size(py_s, str) != -1 ) {
+			attrs.emplace(str);
+		} else {
+			// py_str_to_utf8_and_size() has already set an exception for us.
+			return -1;
+		}
+	}
+
+	return 0;
+}
+

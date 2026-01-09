@@ -651,6 +651,7 @@ int write_config_file(const char* pathname, int options);
 			return "param";
 		}
 		bool open(const char * src_string, const MACRO_SOURCE & _src);
+		bool open(const char * src_string, const MACRO_SOURCE & _src, const char * seps);
 		int  close(MACRO_SET& set, int parsing_return_val);
 		int  load(FILE* fp, MACRO_SOURCE & _src, bool preserve_linenumbers = false);
 		void rewind();

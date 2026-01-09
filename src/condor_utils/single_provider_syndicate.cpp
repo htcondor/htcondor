@@ -122,8 +122,9 @@ take_remove_lock( const std::filesystem::path & keyfile, int depth ) {
     std::string d = ".rm_" + std::to_string( depth );
     rmfile.replace_extension( d );
     int fd = open( rmfile.string().c_str(), O_CREAT | O_EXCL | O_RDWR, 0400 );
-    close( fd );
+
     if( fd != -1 ) {
+        close( fd );
         return true;
     }
 
@@ -270,6 +271,7 @@ SingleProviderSyndicate::acquire( std::string & message ) {
 
                 return SingleProviderSyndicate::Status(status_byte);
             } else {
+                close(fd);
                 dprintf( D_ALWAYS, "SingleProviderSyndicate::acquire(): read invalid lock byte %d\n", (int)status_byte );
                 return SingleProviderSyndicate::INVALID;
             }

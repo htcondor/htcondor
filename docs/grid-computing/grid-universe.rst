@@ -586,7 +586,7 @@ instance.
 
 To run an instance in a VPC, set
 :subcom:`ec2_vpc_subnet[definition]` to
-the the desired VPC's specification string. The instance's IP address
+the desired VPC's specification string. The instance's IP address
 may also be specified by setting:subcom:`ec2_vpc_id[definition]`.
 
 The EC2 API allows the choice of different hardware configurations for

@@ -10,8 +10,8 @@ extra_packages_ubuntu=(ssh supervisor)
 # add some basic debugging tools too
 extra_packages_centos+=(procps-ng less nano)
 extra_packages_ubuntu+=(procps less nano)
-repo_base_ubuntu=https://research.cs.wisc.edu/htcondor/repo/ubuntu
-repo_base_centos=https://research.cs.wisc.edu/htcondor/repo
+repo_base_ubuntu=https://htcss-downloads.chtc.wisc.edu/repo/ubuntu
+repo_base_centos=https://htcss-downloads.chtc.wisc.edu/repo
 
 
 

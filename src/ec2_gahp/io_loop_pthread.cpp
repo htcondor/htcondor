@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <time.h>
+#include <vector>
 
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -479,7 +480,7 @@ IOProcess::stdinPipeHandler()
 				num_commands = allAmazonCommands(amazon_commands);
 				num_commands += 7;
 
-				const char *commands[num_commands];
+				std::vector<const char *> commands(num_commands);
 				size_t i = 0;
 				commands[i++] = GAHP_RESULT_SUCCESS;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
@@ -493,7 +494,7 @@ IOProcess::stdinPipeHandler()
 					commands[i++] = one_command.c_str();
 				}
 
-				gahp_output_return (commands, i);
+				gahp_output_return (commands.data(), i);
 			} else {
 				// got new command
 				if( !addNewRequest(command) ) {

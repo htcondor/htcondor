@@ -212,7 +212,7 @@ class DedicatedScheduler : public Service {
 		// Used for claiming/releasing startds we control
 	bool releaseClaim( match_rec* m_rec );
 	bool deactivateClaim( match_rec* m_rec );
-	void sendAlives( void );
+	void checkClaimLeases( void );
 
 		// Reaper for the MPI shadow
 	int reaper( int pid, int status );
@@ -380,8 +380,6 @@ class DedicatedScheduler : public Service {
 		*/
 	bool isPossibleToSatisfy( CAList* jobs, int max_hosts );
 
-	void holdAllDedicatedJobs( void );
-
 	bool satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
 
 		// // // // // // 
@@ -441,14 +439,14 @@ class DedicatedScheduler : public Service {
 	CAList *pending_preemptions;
 
 		// hashed on resource name, each claim we have
-	HashTable <std::string, match_rec*>* all_matches;
+	std::map<std::string, match_rec*> all_matches;
 
 		// hashed on ClaimId, each claim we have.  only store
 		// pointers in here into the real match records we store in
 		// all_matches.  This is needed for some functions that only
 		// know the ClaimId (like DelMrec(), since vacate_service()
 		// is only given a ClaimId to identify the lost claim).
-	HashTable <std::string, match_rec*>* all_matches_by_id;
+	std::map<std::string, match_rec*> all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;

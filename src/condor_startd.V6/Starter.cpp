@@ -740,7 +740,11 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		}
 		if (add_a2_arg) {
 			if ( ! a2arg.empty()) a2arg += ",";
-			formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+				formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/scratch/" SANDBOX_STARTER_LOG_FILENAME);
+			} else {
+				formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			}
 			args.AppendArg("-a2");
 			args.AppendArg(a2arg);
 		}
@@ -787,7 +791,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	// this is a Register_Socket callback, but we also call this in the reaper
 	// so it's possible that the number of updates available will be 0
 	int pending_bytes = stream->bytes_available_to_read();
-	while (pending_bytes > 0) {
+	while (static_cast<Sock*>(stream)->msgReady()) {
 
 		time_t msg_time = time(NULL);
 
@@ -865,7 +869,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		}
 	}
 
-	if( final_update ) {
+	if( final_update || static_cast<ReliSock*>(stream)->is_closed() ) {
 		dprintf(D_FULLDEBUG, "Closing job ClassAd update socket from starter.\n");
 		daemonCore->Cancel_Socket(s_job_update_sock);
 		delete s_job_update_sock;
@@ -1002,15 +1006,13 @@ int Starter::execDCStarter(
 		claim->writeMachAdAndOverlay(s_job_update_sock);
 	}
 
-	if( daemonCore->Register_Socket(
+	int rc = daemonCore->Register_Socket(
 			s_job_update_sock,
 			"starter ClassAd update socket",
 			(SocketHandlercpp)&Starter::receiveJobClassAdUpdate,
 			"receiveJobClassAdUpdate",
-			this) < 0 )
-	{
-		EXCEPT("Failed to register ClassAd update socket.");
-	}
+			this);
+	ASSERT(rc >= 0);
 
 	int reaper_id;
 	if( s_reaper_id > 0 ) {
@@ -1249,9 +1251,7 @@ Starter::startKillTimer( time_t timeout )
 									std::max((time_t)1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
-	if( s_kill_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(s_kill_tid >= 0);
 	return TRUE;
 }
 
@@ -1270,10 +1270,8 @@ Starter::startSoftkillTimeout( time_t timeout )
 		daemonCore->Register_Timer( softkill_timeout,
 						(TimerHandlercpp)&Starter::softkillTimeout,
 						"softkillTimeout", this );
-	if( s_softkill_tid < 0 ) {
-		EXCEPT( "Can't register softkillTimeout timer" );
-	}
-	dprintf(D_FULLDEBUG,"Using max vacate time of %ds for this job.\n",softkill_timeout);
+	ASSERT(s_softkill_tid >= 0);
+	dprintf(D_FULLDEBUG,"Using max vacate time of %llds for this job.\n",(long long)softkill_timeout);
 	return TRUE;
 }
 

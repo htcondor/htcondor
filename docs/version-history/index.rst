@@ -6,8 +6,8 @@ Version History and Release Notes
    :glob:
    
    introduction-version-history
-   upgrading-from-23-0-to-24-0-versions
+   upgrading-from-24-0-to-25-0-versions
+   feature-versions-25-x
+   lts-versions-25-0
    feature-versions-24-x
    lts-versions-24-0
-   feature-versions-23-x
-   lts-versions-23-0

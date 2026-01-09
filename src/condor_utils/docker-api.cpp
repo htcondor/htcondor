@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <charconv>
 
@@ -183,7 +184,7 @@ int DockerAPI::createContainer(
 	}
 
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -321,8 +322,8 @@ int DockerAPI::createContainer(
 
 		int num = pcache()->num_groups(user_name);
 		if (num > 0) {
-			gid_t groups[num];
-			if (pcache()->get_groups(user_name, num, groups)) {
+			std::vector<gid_t> groups(num);
+			if (pcache()->get_groups(user_name, num, groups.data())) {
 				for (int i = 0; i < num; i++) {
 					runArgs.AppendArg("--group-add");
 					std::string suppGroup;
@@ -567,8 +568,8 @@ DockerAPI::pullImage(const std::string &image_name,
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string DockerOutputFile = diag_dir + "/docker_stdout";
-	std::string DockerErrorFile  = diag_dir + "/docker_stderror";
+	std::string DockerOutputFile = diag_dir + "/.docker_stdout";
+	std::string DockerErrorFile  = diag_dir + "/.docker_stderror";
 
 	childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -603,7 +604,7 @@ DockerAPI::execInContainer( const std::string &containerName,
 	execArgs.AppendArg("-ti");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -922,7 +923,21 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	memset(&sa, 0, sizeof(sa));
 
 	sa.sun_family = AF_UNIX;
-	strncpy(sa.sun_path, "/var/run/docker.sock",sizeof(sa.sun_path) - 1);
+	// Default docker socket path location
+	std::string docker_socket_path = "/var/run/docker.sock";
+	// unless overridden by env var
+	std::string docker_host;
+	if (getenv("DOCKER_HOST")) {
+		docker_host = getenv("DOCKER_HOST");
+		if (docker_host.starts_with("unix://")) {
+			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
+		} else {
+			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			return -1;
+		}
+	}
+
+	strncpy(sa.sun_path, docker_socket_path.c_str(), sizeof(sa.sun_path) - 1);
 
 	{
 	TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -945,7 +960,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	int written;
 
 	// read with 200 second timeout, no flags, nonblocking
-	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, 0, false)) > 0) {
+	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, CondorRWFlags::Read, false)) > 0) {
 		response.append(buf, written);
 	}
 
@@ -1832,30 +1847,40 @@ void build_env_for_docker_cli(Env &env) {
 }
 std::string 
 DockerAPI::toAnnotatedImageName(const std::string &rawImageName, const ClassAd &job) {
-	std::string user;
-	job.LookupString(ATTR_USER, user);
+	if (!param_boolean("DOCKER_TRUST_LOCAL_IMAGES", false)) {
+		std::string user;
+		job.LookupString(ATTR_USER, user);
 
-	if (user.empty()) {
-		return "";
+		if (user.empty()) {
+			return "";
+		}
+
+		// tags cannot have @ in them (dots are ok, though)
+		replace_str(user, "@", "_at_");
+
+		return std::string("htcondor.org/" + user + "/" + rawImageName);
+	} else {
+		return rawImageName;
 	}
-
-	// tags cannot have @ in them (dots are ok, though)
-	replace_str(user, "@", "_at_");
-
-	return std::string("htcondor.org/" + user + "/" + rawImageName);
 }
 
 std::string 
 DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
-	if (!annotatedName.starts_with("htcondor.org/")) {
-		return "";
-	}
+	if (!param_boolean("DOCKER_TRUST_LOCAL_IMAGES", false)) {
+		if (!annotatedName.starts_with("htcondor.org/")) {
+			return "";
+		}
 
-	size_t firstSlash = annotatedName.find('/');
-	size_t secondSlash = annotatedName.find('/', firstSlash + 1);
-	std::string raw_name = annotatedName.substr(secondSlash + 1);;
-	return raw_name;
+		size_t firstSlash = annotatedName.find('/');
+		size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+		std::string raw_name = annotatedName.substr(secondSlash + 1);;
+		return raw_name;
+	} else {
+		return annotatedName;
+	}
 }
+
+#ifdef LINUX
 static
 size_t convert_number_with_suffix(std::string size) {
 	size_t result = 0;
@@ -1883,6 +1908,7 @@ size_t convert_number_with_suffix(std::string size) {
 	}
 	return result;
 }
+#endif
 
 std::vector<DockerAPI::ImageInfo>
 DockerAPI::getImageInfos() {

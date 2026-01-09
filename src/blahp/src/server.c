@@ -319,6 +319,7 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	char *old_ld_lib=NULL;
 	char *new_ld_lib=NULL;
 #endif
+	config_entry *tmp_entry;
 	config_entry *suplrms, *jre;
 	char *next_lrms_s, *next_lrms_e;
 	int lrms_len;
@@ -376,9 +377,16 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	{
 		result = DEFAULT_GLITE_LOCATION;
 	}
-	if ((tmp_dir = getenv("GAHP_TEMP")) == NULL)
+	tmp_entry = config_get("blah_temp_dir", blah_config_handle);
+	if (tmp_entry != NULL)
 	{
-		tmp_dir  = DEFAULT_TEMP_DIR;
+		tmp_dir = tmp_entry->value;
+	} else if ((tmp_dir = getenv("GAHP_TEMP")) == NULL)
+	{
+		if ((tmp_dir = getenv("TMPDIR")) == NULL)
+		{
+			tmp_dir  = DEFAULT_TEMP_DIR;
+		}
 	}
 
 /* In the Condor build of the blahp, we can find all the libraries we need

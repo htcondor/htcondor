@@ -35,6 +35,10 @@ class DaemonType(enum.IntEnum):
 
         A *condor_credd* daemon.
 
+    .. attribute:: Placementd
+
+        A *condor_placementd* daemon.
+
     .. attribute:: HAD
 
         A *condor_had* daemon.
@@ -59,7 +63,7 @@ class DaemonType(enum.IntEnum):
     # Starter = 12
     Credd = 13
     # Stork = 14
-    # Transferd = 15
+    Placementd = 15
     # LeaseManager = 16
     HAD = 17
     Generic = 18

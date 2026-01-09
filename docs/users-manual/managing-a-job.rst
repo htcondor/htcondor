@@ -424,7 +424,7 @@ attributes in the job:
 :index:`job ClassAd attribute<single: job ClassAd attribute; GPUsUsage>`
 
   ``GPUsUsage``
-    GPU usage over the lifetime of the job, reported as a fraction of the
+    GPU usage over the lifetime of the job, reported as a fraction of
     the maximum possible utilization of one GPU.
 
 :index:`GPUsMemoryUsage<single: GPUsMemoryUsage; ClassAd job attribute>`

@@ -123,7 +123,10 @@ chirp_client_connect_starter()
     }
 
     client = chirp_client_connect(host,port);
-    if(!client) return 0;
+    if(!client) {
+		fprintf(stderr, "Can't connect to %s:%d\n", host, port);
+		return 0;
+	}
 
     result = chirp_client_cookie(client,cookie);
     if(result!=0) {

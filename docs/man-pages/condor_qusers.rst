@@ -1,4 +1,4 @@
-      
+
 
 *condor_qusers*
 ===============
@@ -46,7 +46,7 @@ Options
     both User and Project ClassAds.
  **-constraint** *expression*
     Operate on or query all User or Project ClassAds matching the given constraint expression.
- **-long[:json|jsonl|new|newl|xml|long]
+ **-long[:json|jsonl|new|newl|xml|long]**
     Print ClassAds in the specified form. If no form is specified, long form will be used.
  **-format** *fmt* *attr*
     Print selected attribute of the User or Project ClassAds using the given format.
@@ -129,14 +129,14 @@ General Remarks
 ---------------
 
 An APs User ClassAds have attributes that count the number of jobs in the queue submitted by that user.
-The full set of attributes can can be viewed with
+The full set of attributes can be viewed with
 
 .. code-block:: console
 
       $ condor_qusers -long
 
 An APs Project ClassAds also have attributes that count the number of jobs in the queue associated with that project.
-The full set of attributes can can be viewed with
+The full set of attributes can be viewed with
 
 .. code-block:: console
 

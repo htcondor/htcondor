@@ -64,7 +64,7 @@ NextJobStartDelay=2 * 60
 NoopJobExitCode=5
 NoopJobExitSignal=false
 NotifyUser="bt@cs.wisc.edu"
-OutputDestination=/"/scratch/output/[0-9]+"/
+OutputDestination=/"url://scratch/output/[0-9]+"/
 ParallelScriptShadow="shadow.cmd"
 ParallelScriptStarter="starter.cmd"
 RemoteIwd="sandbox"
@@ -228,7 +228,7 @@ UserLog=/".+\d+.log"/
 ==xfer2.sub
 Err=/"\d+xfer2.err"/
 Out=/"\d+xfer2.out"/
-OutputDestination=/"\d+/0"/
+OutputDirectory=/"/\d+/0"/
 Requirements=/TARGET\.HasFileTransfer .+"HTTP",TARGET\.HasFileTransferPluginMethods.+"HTTPS",TARGET\.HasFileTransferPluginMethods/
 ShouldTransferFiles="YES"
 StreamErr=false
@@ -237,7 +237,7 @@ TransferInput="../Multilevel_Thesis_WheatData,HTTP://example.com/file1,HTTPS://e
 TransferOutput="results.out"
 ProcId=0
 .
-OutputDestination=/"\d+/1"/
+OutputDirectory=/"/\d+/1"/
 ProcId=1
 
 ==xfer3.sub
@@ -341,6 +341,45 @@ OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= 0
 JobMaxRetries=2
 JobSuccessExitCode=5
 OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= JobSuccessExitCode
+
+==retry_mem1.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 2048"$/
+
+==retry_mem_max.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 2048"$/
+
+==retry_mem_incr.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 1524"$/
+
+==retry_mem_incr2.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eSET RequestMemory 2048"$/
+
+==retry_mem_incr_max.sub
+RequestMemory=1024
+MaxRequestMemory=2048
+NextRequestMemory=RequestMemory + 512
+TransformOnEvict="RequestMemory"
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory MIN\(\{NextRequestMemory, MaxRequestMemory\}\)"$/
+
+==retry_mem2.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+RetryRequestMemory={ 2048,8192 }
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[RetryRequestMemoryIndex\?:0\]\x1eEVALSET RetryRequestMemoryIndex .*"$/
+
+==retry_mem3.sub
+RequestMemory=1024
+TransformOnEvict="RequestMemory"
+RetryRequestMemory={ 2048,8192 }
+TransformBody_RequestMemory=/^"REQUIREMENTS \(VacateReasonCode==21.*\x1eEVALSET RequestMemory RetryRequestMemory\[RetryRequestMemoryIndex\?:0\]\x1eEVALSET RetryRequestMemoryIndex .*"$/
 
 ==parallel.sub
 JobUniverse=11

@@ -109,9 +109,11 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		"TransferInQueued",
 		"TransferInStarted",
 		"TransferInFinished",
+		ATTR_NUM_INPUT_XFER_STARTS,
 		"TransferOutQueued",
 		"TransferOutStarted",
 		"TransferOutFinished",
+		ATTR_NUM_OUTPUT_XFER_STARTS,
 		ATTR_TRANSFER_INPUT_STATS,
 		ATTR_TRANSFER_OUTPUT_STATS,
 		ATTR_NUM_JOB_STARTS,
@@ -165,7 +167,10 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 
 		ATTR_JOB_LAST_SHADOW_EXCEPTION,
 		ATTR_JOB_CHECKPOINT_NUMBER,
-		ATTR_JOB_INITIAL_WAIT_DURATION
+		ATTR_JOB_INITIAL_WAIT_DURATION,
+
+		ATTR_REQUEST_RESULT_CODE,
+		ATTR_REQUEST_RESULT_SUBCODE
 	};
 
 	hold_job_queue_attrs = {
@@ -240,9 +245,7 @@ QmgrJobUpdater::startUpdateTimer( )
 		Register_Timer( q_interval, q_interval,
                         (TimerHandlercpp)&QmgrJobUpdater::periodicUpdateQ,
                         "periodicUpdateQ", this );
-    if( q_update_tid < 0 ) {
-        EXCEPT( "Can't register DC timer!" );
-    }
+	ASSERT(q_update_tid >= 0);
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater: started timer to update queue "
 			 "every %d seconds (tid=%d)\n", q_interval, q_update_tid );
 }
@@ -381,6 +384,18 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		if (job_status == HELD) {
 			dprintf(D_FULLDEBUG, "Job already held, not updating hold reason code\n");
 			job_queue_attrs = nullptr;
+		}
+	} else if (type == U_EVICT) {
+		if (!ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, nullptr, m_owner.c_str()) ) {
+			return false;
+		}
+		is_connected = true;
+		for (const auto& attr: evict_job_queue_attrs) {
+			if ( GetAttributeExprNew(cluster, proc, attr.c_str(), &value) >= 0 ) {
+				job_ad->AssignExpr(attr, value);
+				job_ad->MarkAttributeClean(attr);
+			}
+			free( value );
 		}
 	}
 

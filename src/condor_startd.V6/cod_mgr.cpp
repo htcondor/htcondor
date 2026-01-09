@@ -108,7 +108,8 @@ bool
 CODMgr::removeClaim( Claim* c ) 
 {
 	auto it = std::find(claims.begin(), claims.end(), c);
-	if (it != claims.end()) {
+	bool found = it != claims.end();
+	if (found) {
 		delete *it;
 		claims.erase(it);
 		rip->update_needed(Resource::WhyFor::wf_cod);
@@ -117,7 +118,7 @@ CODMgr::removeClaim( Claim* c )
 				 "WARNING: CODMgr::removeClaim() could not find claim %s\n", 
 				 c->id() );
 	}
-	return it != claims.end();
+	return found;
 }
 
 

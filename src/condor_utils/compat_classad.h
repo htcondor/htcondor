@@ -555,6 +555,7 @@ bool GetExprReferences( const classad::ExprTree * expr, const classad::ClassAd &
 
 void TrimReferenceNames( classad::References &ref_set, bool external = false );
 
+bool movePrivateAttrs(ClassAd &source, ClassAd &target);
 
 typedef classad::ExprTree ExprTree;
 

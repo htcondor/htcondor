@@ -38,6 +38,9 @@ PyObject * PyExc_HTCondorException = NULL;
 #include "my_popen.h"
 #include "htcondor2/credd.cpp"
 
+// htcondor.Placementd
+#include "htcondor2/placementd.cpp"
+
 // htcondor.Submit
 #include "submit_utils.h"
 #include "dagman_utils.h"
@@ -106,6 +109,18 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
 
+	{"_reload_config_usermaps", & _reload_config_usermaps, METH_VARARGS, R"C0ND0R(
+	    Reload the userMap mapfiles defined in the HTCondor configuration for the current subsystem.
+	)C0ND0R"},
+
+	{"_load_a_config_usermap_file", & _load_a_config_usermap_file, METH_VARARGS, R"C0ND0R(
+	    Load a HTCondor map file so it can be used by the classad userMap function. A subsequent call to reload_config
+	    or reload_config_usermaps will reset the internal set of userMap files and may remove this userMap name.
+
+	    :param str name: The userMap name
+	    :param str filepath: The full path to the usermap file
+	)C0ND0R"},
+
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
 	{"_ping", & _ping, METH_VARARGS, NULL},
@@ -137,9 +152,17 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_credd_run_credential_producer", &_credd_run_credential_producer, METH_VARARGS, NULL},
 	{"_credd_get_oauth2_credential", &_credd_get_oauth2_credential, METH_VARARGS, NULL},
 
+	{"_placement_user_login", &_placement_user_login, METH_VARARGS, NULL},
+	{"_placement_query_users", &_placement_query_users, METH_VARARGS, NULL},
+	{"_placement_query_tokens", &_placement_query_tokens, METH_VARARGS, NULL},
+	{"_placement_query_authorizations", &_placement_query_authorizations, METH_VARARGS, NULL},
+
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
+	{"_schedd_userrec_query", &_schedd_userrec_query, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_constraint", &_schedd_act_on_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_act_on_userrec_list", &_schedd_act_on_userrec_list, METH_VARARGS, NULL},
+	{"_schedd_act_on_userrec_constraint", &_schedd_act_on_userrec_constraint, METH_VARARGS, NULL},
 	{"_schedd_edit_job_ids", &_schedd_edit_job_ids, METH_VARARGS, NULL},
 	{"_schedd_edit_job_constraint", &_schedd_edit_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_reschedule", &_schedd_reschedule, METH_VARARGS, NULL},
@@ -155,6 +178,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
 	{"_schedd_get_dag_contact_info", &_schedd_get_dag_contact_info, METH_VARARGS, NULL},
 	{"_schedd_get_claims", &_schedd_get_claims, METH_VARARGS, NULL},
+	{"_schedd_create_ocu", &_schedd_create_ocu, METH_VARARGS, NULL},
+	{"_schedd_query_ocu", &_schedd_query_ocu, METH_VARARGS, NULL},
+	{"_schedd_remove_ocu", &_schedd_remove_ocu, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},

@@ -16,7 +16,7 @@ import os
 from time import time as now
 
 #-----------------------------------------------------------------------------------------------
-TIMEOUT = 30
+TIMEOUT = 60
 
 NODE_NAME_SERVICE = "S"
 NODE_NAME_WORKER  = "W"

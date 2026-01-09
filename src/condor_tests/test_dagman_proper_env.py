@@ -201,8 +201,8 @@ queue
         p = default_condor.run_command(cmd)
         #If we have subdags then we have to wait for internal submission for .condor.sub files
         if len(dag_files) > 1:
-            #Willing to wait a max of 10 sec per dag
-            max_time = 10*len(dag_files)
+            #Willing to wait a max of 30 sec per dag
+            max_time = 30*len(dag_files)
             start = time.time()
             #Loop checking for all expected .condor.sub files ot exists. If not found by max time fail
             while True:

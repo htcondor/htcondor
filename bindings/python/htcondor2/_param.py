@@ -7,6 +7,7 @@ from .htcondor2_impl import (
     _param_keys,
 )
 
+
 class _Param(MutableMapping):
 
     def __init__(self):
@@ -40,5 +41,8 @@ class _Param(MutableMapping):
 
 
     def __len__(self):
-        return len(self.keys())
+        keys = _param_keys()
+        return len(keys.split('\0'))
 
+
+_param = _Param()

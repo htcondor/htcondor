@@ -33,7 +33,11 @@ bool	check_execute_dir_perms(const char* exec_path, bool abort_on_error);
 void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );
-bool	refuse( Stream*, ClassAd* replyAd = nullptr );
+bool	refuse( Stream*, ClassAd* replyAd, bool retry_ok=false);
+bool	refuseX( Stream*, CONDOR_HOLD_CODE code, const char * reason, bool retry_ok=false);
+inline bool refuse(Stream* s, bool send_failure_ad, CONDOR_HOLD_CODE code, const char * reason) {
+	return refuseX(s, code, send_failure_ad ? reason : nullptr, false);
+}
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  const char* prefix = NULL );
 bool	caRevertToParent(ClassAd* target, const char * attr);
@@ -58,6 +62,7 @@ public:
 	std::string name; // name of resource to cleanup
 	category cat;  // category of resource, e.g execute dir, account name, etc.
 	int      opt; // options, meaning depends on category
+	unsigned int broken_id{0}; // Associated broken item to act upon if cleanup is successfull
 
 	// so that some of the reminders can be case sensitive, and some not.
 	// in the future, we may consider cat as well as OS in this function, so prepare for that now.
@@ -101,7 +106,7 @@ public:
 		switch (cat) {
 			case category::exec_dir: { return "directory"; }
 			case category::account: { return "account"; }
-			case category::logical_volume: { return "LV"; }
+			case category::logical_volume: { return "logical volume"; }
 			default: { return "unknown"; }
 		}
 	}

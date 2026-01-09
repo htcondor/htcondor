@@ -74,6 +74,7 @@ def get_base_test_dir(config):
     return base_dir
 
 
+# I need this, don't remove it.
 @pytest.hookimpl(tryfirst=True)
 def pytest_report_header(config):
     return [

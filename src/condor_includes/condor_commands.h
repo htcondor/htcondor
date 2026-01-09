@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 197> makeCommandTable() {
+std::array<std::pair<int, const char *>, 206> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -322,13 +322,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{RECYCLE_SHADOW, "RECYCLE_SHADOW"},
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 		{CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS"},
-		// These two commands originally used the same command int by mistake.
-		// In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
-		// List DRAIN_JOBS first, so that lower_bound finds it first
 #define DRAIN_JOBS (SCHED_VERS+112)
 		{DRAIN_JOBS, "DRAIN_JOBS"},
-#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
-		{GET_PRIORITY_ROLLUP_OLD, "GET_PRIORITY_ROLLUP_OLD"},
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
 		{CANCEL_DRAIN_JOBS, "CANCEL_DRAIN_JOBS"},
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
@@ -388,6 +383,27 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{DELETE_USERREC, "DELETE_USERREC"},
 #define GET_CONTACT_INFO  (SCHED_VERS+150) // Ask Schedd for child daemons contact information (addr and secret) Note: Used for DAGMan
 		{GET_CONTACT_INFO, "GET_CONTACT_INFO"},
+#define CREATE_OCU_FOR_USERREC (SCHED_VERS + 151) // Create an OCU(s) for a given UserRec
+		{CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC"},
+#define REMOVE_OCU_FROM_USERREC (SCHED_VERS + 152) // Remove an OCU(s) from a given UserRec
+		{REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC"},
+#define QUERY_OCU_FROM_USERREC (SCHED_VERS + 153) // Query the OCU(s) associated with a given UserRec
+		{QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC"},
+
+#define	 REACTIVATE_CLAIM_CHECK (SCHED_VERS+154)
+		{REACTIVATE_CLAIM_CHECK, "REACTIVATE_CLAIM_CHECK"},
+#define PLACEMENT_USER_LOGIN    (SCHED_VERS+155)
+		{PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN"},
+#define PLACEMENT_QUERY_USERS    (SCHED_VERS+156)
+		{PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS"},
+#define PLACEMENT_QUERY_TOKENS    (SCHED_VERS+157)
+		{PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS"},
+#define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+158)
+		{PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS"},
+#define CREATE_STARTUP_LIMIT      (SCHED_VERS+159)
+		{CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT"},
+#define QUERY_STARTUP_LIMITS      (SCHED_VERS+160)
+		{QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

@@ -230,7 +230,7 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 				daemon->blacklistMonitorQueryStarted();
 			}
 
-			result = cQuery.processAds (callback, pv, daemon->addr(), errstack);
+			result = cQuery.processAds (callback, pv, *daemon, errstack);
 
 			if( num_collectors > 1 ) {
 				daemon->blacklistMonitorQueryFinished( result == Q_OK );

@@ -1182,11 +1182,18 @@ class TestCheckpointDestination:
         constraint = f'ClusterID == {the_removed_job.clusterid} && ProcID == 0'
 
         # Make sure the job has left the queue.
-        result = schedd.query(
-            constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID"],
-        )
-        assert(len(result) == 0)
+        # Note that we've called condor_rm above, so it may still be in the 'X'
+        # state for a bit, so poll a few times to make sure it has left the queue.
+        for i in range(10):
+            result = schedd.query(
+                constraint=constraint,
+                projection=["CheckpointDestination", "GlobalJobID"],
+            )
+            if (len(result) == 0):
+                # Success!
+                break
+            time.sleep(5)
+        assert(i < 9)
 
         # Get the CheckpointDestination and GlobalJobID from the history file.
         result = schedd.history(

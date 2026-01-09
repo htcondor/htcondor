@@ -24,10 +24,6 @@
 
 . `dirname $0`/blah_load_config.sh
 
-if [ -z "$slurm_binpath" ] ; then
-  slurm_binpath=/usr/bin
-fi
-
 requested=`echo $1 | sed 's/^.*\///'`
 
 cluster_name=`echo $requested | cut -s -f2 -d@`
@@ -36,10 +32,10 @@ if [ "$cluster_name" != "" ] ; then
   cluster_arg="-M $cluster_name"
 fi
 
-cmdout=`${slurm_binpath}/scontrol $cluster_arg hold $requested 2>&1`
+cmdout=`${slurm_binpath}scontrol $cluster_arg hold $requested 2>&1`
 retcode=$?
 if echo "$cmdout" | grep -q 'Job is no longer pending execution' ; then
-  cmdout=`${slurm_binpath}/scontrol $cluster_arg requeuehold $requested 2>&1`
+  cmdout=`${slurm_binpath}scontrol $cluster_arg requeuehold $requested 2>&1`
   retcode=$?
 fi
 

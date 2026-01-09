@@ -49,6 +49,18 @@ typedef std::map<std::string,JobRoute *, classad::CaseIgnLTStr> RoutingTable;
 #define JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA   0x0010  // wrap umbrella constraint in debug()
 #define JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS   0x0020  // route as if userid switching was possible
 
+class ScheddContactInfo {
+public:
+	int id{0};
+	std::string name;
+	std::string pool;
+	std::string address_file;
+	void config(int _id, Scheduler* schedd);
+	const char * label() const { return _label.c_str(); }
+private:
+	std::string _label;
+};
+
 /*
  * The JobRouter is responsible for finding idle jobs of one flavor
  * (e.g. vanilla), converting them to another flavor (e.g. Condor-C),
@@ -133,7 +145,7 @@ class JobRouter: public Service {
 	classad::ClassAdCollection *GetSchedd2ClassAds();
 
  private:
-	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
+	std::map<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
 	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
 	std::map<std::string,std::string> m_idtokens; // IDTOKENs created by the job router that can be included in routed jobs
@@ -151,15 +163,8 @@ class JobRouter: public Service {
 	Scheduler *m_scheduler;        // provides us with a mirror of the real schedd's job collection
 	Scheduler *m_scheduler2;       // if non-NULL, mirror of job queue in destination schedd
 
-	char const *m_schedd2_name;
-	char const *m_schedd2_pool;
-	std::string m_schedd2_name_buf;
-	std::string m_schedd2_pool_buf;
-
-	char const *m_schedd1_name;
-	char const *m_schedd1_pool;
-	std::string m_schedd1_name_buf;
-	std::string m_schedd1_pool_buf;
+	ScheddContactInfo m_schedd2;   // contact info for schedd 2
+	ScheddContactInfo m_schedd1;   // contact info for schedd 1
 
 	std::string m_constraint;
 	int m_max_jobs;

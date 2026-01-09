@@ -323,9 +323,17 @@ $runresult = SimpleJob::RunCheck(
 # so now we have the output from both forms of the cmd_q protocal
 # they had best be the same
 
+# Sometimes we'll get the job matched and started, sometimes not.
+# if so, we'll have this field, which we should ignore in the comparison
+@q3array = grep {$_ !~ /FirstJobMatchDate/ } @q3array;
+@q4array = grep {$_ !~ /FirstJobMatchDate/ } @q4array;
+
 my $q3size = @q3array;
 my $q4size = @q4array;
 $contentcheckerres = 0;
+
+print "GGT: q3 is\n @q3array\n";
+print "\nGGT: q4 is\n @q4array\n";
 
 if($q3size != $q4size) {
 	print "Sizes vary Proto on: size:$q3size Proto off size:$q4size\n";

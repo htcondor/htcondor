@@ -75,6 +75,10 @@ Behavior Options
             ``JOB_STATUS`` ``active`` status represents all jobs the AP
             (``idle``, ``running``, and ``held``)
 
+ **-exit-on-key-press/-no-exit-on-key-press**
+    Enable/disable tool exit via key press from keyboard.
+    Enabled by default if connected to a ``tty``.
+
 Display Options
 '''''''''''''''
 
@@ -139,6 +143,23 @@ A variety of options for output formatting are provided, including:
     - tabular information
     - progress bars
     - text summaries.
+
+.. list-table:: Table 1.1 condor_watch_q character legend
+    :widths: 10 45
+    :header-rows: 1
+
+    * - Character
+      - Meaning
+    * - \-
+      - Job is idle
+    * - \>
+      - Job is transfering either input or output sandbox
+    * - \=
+      - Job is running
+    * - \#
+      - Job is completed
+    * - \!
+      - Job is held, suspended, or removed
 
 A minimal language for exiting when certain conditions are met by the
 tracked jobs is provided.

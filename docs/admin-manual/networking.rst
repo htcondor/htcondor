@@ -87,9 +87,7 @@ As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
 file. The file names are controlled using the :macro:`<SUBSYS>_ADDRESS_FILE`
-configuration variables, as described in the
-:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
-section.
+configuration variables.
 
 All HTCondor tools and daemons that need to communicate with the
 *condor_negotiator* will either use the :macro:`NEGOTIATOR_ADDRESS_FILE` or
@@ -160,12 +158,6 @@ example:
     COLLECTOR_HOST = $(CONDOR_HOST):0
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
-Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the
-:ref:`admin-manual/configuration-macros:Daemoncore configuration file entries`
-section and :macro:`COLLECTOR_HOST` is in the
-:ref:`admin-manual/configuration-macros:HTCondor-wide configuration file entries`
-section.
-
 Restricting Port Usage to Operate with Firewalls
 ''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -183,17 +175,14 @@ and dynamic (apparently random) ports for everything else. See
 assigned port is desired for the *condor_collector* daemon.
 
 All of the HTCondor daemons on a machine may be configured to share a
-single port. See the :ref:`admin-manual/configuration-macros:condor_shared_port
-configuration file macros` section for more information.
+single port. See the :ref:`shared_port_config_options` section for more information.
 
 The configuration variables :macro:`HIGHPORT` and
 :macro:`LOWPORT` facilitate setting a restricted range
 of ports that HTCondor will use. This may be useful when some machines
 are behind a firewall. The configuration macros :macro:`HIGHPORT` and
-:macro:`LOWPORT` will restrict dynamic ports to the range specified. The
-configuration variables are fully defined in the 
-:ref:`admin-manual/configuration-macros:network-related configuration file
-entries` section. All of these ports must be greater than 0 and less than 65,536.
+:macro:`LOWPORT` will restrict dynamic ports to the range specified.
+All of these ports must be greater than 0 and less than 65,536.
 In general, use ports greater than 1024, in order to avoid port
 conflicts with standard services on the machine. Another reason for
 using ports greater than 1024 is that daemons and tools are often not
@@ -202,9 +191,7 @@ run as root, and only root may listen to a port lower than 1024.
 The range of ports assigned may be restricted based on incoming
 (listening) and outgoing (connect) ports with the configuration
 variables :macro:`IN_HIGHPORT`, :macro:`IN_LOWPORT`, :macro:`OUT_HIGHPORT`,
-and :macro:`OUT_LOWPORT` See
-the :ref:`admin-manual/configuration-macros:network-related configuration
-file entries` section for complete definitions of these configuration variables.
+and :macro:`OUT_LOWPORT`.
 A range of ports lower than 1024 for daemons running as root is appropriate for
 incoming ports, but not for outgoing ports. The use of ports below 1024
 (versus above 1024) has security implications; therefore, it is inappropriate to

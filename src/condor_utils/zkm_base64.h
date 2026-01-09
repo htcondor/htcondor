@@ -28,7 +28,7 @@ class Base64
 {
 public:
     static std::string zkm_base64_encode(const BYTE* buf, unsigned int bufLen);
-    static std::vector<BYTE> zkm_base64_decode(std::string encoded_string);
+    static std::vector<BYTE> zkm_base64_decode(const std::string& encoded_string);
 };
 
 // Caller needs to free the returned pointer

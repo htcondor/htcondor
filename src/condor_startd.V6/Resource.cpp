@@ -945,12 +945,16 @@ Resource::hackLoadForCOD( void )
 }
 
 const BrokenItem &
-Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job)
+Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job, ResourceLockType lock)
 {
 	// we save only the *first* broken context we get for each slot
 	// so here we find or create a BrokenItem object and initialize it
 	// if it is not empty
 	auto & brit = resmgr->get_broken_context(this);
+
+	brit.b_lock = lock;
+	r_broken_id = brit.b_refid;
+	brit.b_srcid = r_id;
 
 	// if we don't have a broken reason yet, copy the one in the r_attr
 	if (brit.b_reason.empty() && r_attr) {
@@ -976,11 +980,42 @@ Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & jo
 
 
 void
+Resource::remove_broken_context()
+{
+	if (r_attr) { r_attr->set_broken(0, ""); }
+	r_broken_id = 0;
+	r_do_not_delete = false;
+}
+
+
+void
+Resource::restore_broken_resources(const ResBag& broken, const int sub_id)
+{
+	// No broken resources then return immediately
+	if (broken.empty()) { return; }
+
+	// Remove broken amounts from internal broken bag
+	if (r_lost_child_res) { *r_lost_child_res -= broken; }
+
+	// Make slot request with resources in broken ResBag
+	CpuAttributes::_slot_request request;
+	broken.convert_to_request(request);
+
+	// Make temporary CpuAttrs to restore to this slot
+	CpuAttributes restore(type_id(), request, *(resmgr->m_attr), executeDir(), m_execute_partition_id);
+	restore.attach(this); // Enable dprintf with slot context
+	restore.claim_broken_DevIds(resmgr->m_attr, sub_id);
+	restore.unbind_DevIds(resmgr->m_attr, r_id, sub_id, 0);
+
+	// Finally restore resources to parent slot
+	*r_attr += restore;
+}
+
+
+void
 Resource::starterExited( Claim* cur_claim )
 {
-	if( ! cur_claim ) {
-		EXCEPT( "Resource::starterExited() called with no Claim!" );
-	}
+	ASSERT(cur_claim);
 
 	if( cur_claim->type() == CLAIM_COD ) {
  		r_cod_mgr->starterExited( cur_claim );
@@ -1324,12 +1359,18 @@ Resource::init_classad()
 
 void Resource::initial_compute(Resource * pslot)
 {
+#ifdef PROVISION_FRACTIONAL_DISK
 	r_attr->compute_virt_mem_share(resmgr->m_attr->virt_mem());
 	// set dslot total disk from pslot total disk (if appropriate)
 	if ( ! resmgr->m_attr->always_recompute_disk()) {
 		r_attr->init_total_disk(pslot->r_attr);
 	}
 	r_attr->compute_disk();
+#else
+	// copy total disk from our parent
+	// TODO: handle always_recompute_disk() case here?
+	r_attr->recompute_disk(true);
+#endif
 
 	// give he new dslot the same keyboard/console and load values as the p-slot
 	r_attr->set_keyboard(pslot->r_attr->keyboard_idle());
@@ -1349,12 +1390,18 @@ void Resource::compute_unshared()
 
 	// this either sets total disk into the slot, or causes it to be recomputed.
 	// TODO: !!!! do not recompute LVM free space for each slot when always_recompute_disk is true
+#ifdef PROVISION_FRACTIONAL_DISK
 	r_attr->set_total_disk(
 		resmgr->m_attr->total_disk(),
 		resmgr->m_attr->always_recompute_disk(),
 		resmgr->getVolumeManager());
 
 	r_attr->compute_disk();
+#else
+	if (resmgr->m_attr->recompute_disk_free()) {
+		r_attr->recompute_disk(false);
+	}
+#endif
 }
 
 void Resource::compute_evaluated()
@@ -2552,7 +2599,7 @@ void Resource::publish_static(ClassAd* cap)
 		}
 
 		// Put in machine-wide attributes that can only change on reconfig
-		resmgr->m_attr->publish_static(cap);
+		resmgr->m_attr->publish_static(cap, r_attr);
 		resmgr->publish_static(cap);
 
 		// now override the global STARTD_ATTRS values with SLOT_TYPE_n_* or SLOTn_* values if they exist.
@@ -2707,7 +2754,7 @@ void Resource::publish_static(ClassAd* cap)
             dprintf(D_FULLDEBUG, "Acquiring consumption policy configuration for slot type %d\n", slot_type);
             // If we have a consumption policy, then we acquire config for it
             // cpus, memory and disk always exist, and have asset-specific defaults:
-            string mrv;
+            std::string mrv;
             if (!cap->LookupString(ATTR_MACHINE_RESOURCES, mrv)) {
                 EXCEPT("Resource ad missing %s attribute", ATTR_MACHINE_RESOURCES);
             }
@@ -2715,13 +2762,12 @@ void Resource::publish_static(ClassAd* cap)
             for (const auto& asset: StringTokenIterator(mrv)) {
                 if (MATCH == strcasecmp(asset.c_str(), "swap")) continue;
 
-				pname = "CONSUMPTION_"; pname += asset;
+				pname = "CONSUMPTION_" + asset;
 				if ( ! SlotType::param(expr, r_attr, pname.c_str())) {
 					formatstr(expr, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset.c_str(), ATTR_REQUEST_PREFIX, asset.c_str());
 				}
 
-                string rattr;
-                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset.c_str());
+                std::string rattr = ATTR_CONSUMPTION_PREFIX + asset;
                 if (!cap->AssignExpr(rattr, expr.c_str())) {
                     EXCEPT("Bad consumption policy expression: '%s'", expr.c_str());
                 }
@@ -3014,7 +3060,7 @@ Resource::publish_private( ClassAd *ad )
 	}
 
     if (r_has_cp) {
-        string claims;
+        std::string claims;
         for (claims_t::iterator j(r_claims.begin());  j != r_claims.end();  ++j) {
             claims += " ";
             claims += (*j)->id();
@@ -3433,9 +3479,7 @@ Resource::startTimerToEndCODLoadHack( void )
 	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0,
 					(TimerHandlercpp)&Resource::endCODLoadHack,
 					"endCODLoadHack", this );
-	if( r_cod_load_hack_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
+	ASSERT(r_cod_load_hack_tid >= 0);
 }
 
 
@@ -3951,7 +3995,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 				ParseClassAdRvalExpr(exprstr, tree);
 				if ( tree &&
 					 EvalExprToNumber(tree,req_classad,mach_classad,result) &&
-					 result.IsIntegerValue(val) )
+					 result.IsNumber(val) )
 				{
 					req_classad->Assign(resources[i],val);
 				}
@@ -4030,6 +4074,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
             cp_compute_consumption(*req_classad, *mach_classad, consumption);
 
             for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+#ifdef PROVISION_FRACTIONAL_DISK
                 if (YourStringNoCase("disk") == j->first) {
                     // int denom = (int)(ceil(rip->r_attr->total_cpus()));
                     double total_disk = rip->r_attr->get_total_disk();
@@ -4037,6 +4082,12 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
                     cpu_attrs_request.disk_fraction = std::max(0.0, j->second + disk_slop) / total_disk;
                 } else if (YourStringNoCase("swap") == j->first) {
                     cpu_attrs_request.virt_mem_fraction = j->second;
+#else
+                if (YourStringNoCase("disk") == j->first) {
+                    cpu_attrs_request.num_disk = (long long)std::max(0.0, ceil(j->second));
+                } else if (YourStringNoCase("swap") == j->first) {
+                    cpu_attrs_request.num_swap = (long long)ceil(j->second);
+#endif
                 } else if (YourStringNoCase("cpus") == j->first) {
                     cpu_attrs_request.num_cpus = MAX(1.0/128.0, j->second);
                 } else if (YourStringNoCase("memory") == j->first) {
@@ -4082,6 +4133,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
                     return NULL;
                 }
             }
+#ifdef PROVISION_FRACTIONAL_DISK
             // convert disk request into a fraction for the slot splitting code
             //int denom = (int)(ceil(rip->r_attr->total_cpus()));
             double total_disk = rip->r_attr->get_total_disk();
@@ -4089,11 +4141,18 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
             double disk_fraction = std::max(0.0, disk + disk_slop) / total_disk;
 
             cpu_attrs_request.disk_fraction = disk_fraction;
+#else
+			cpu_attrs_request.num_disk = disk;
+#endif
 
                 // Look to see how much swap is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_VIRTUAL_MEMORY;
+#ifdef PROVISION_FRACTIONAL_DISK
 			double total_virt_mem = resmgr->m_attr->virt_mem();
+#else
+			long long total_virt_mem = resmgr->m_attr->num_swap();
+#endif
 			bool set_swap = true;
 
             if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, swap ) ) {
@@ -4101,8 +4160,13 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 						// Schedd didn't set it, user didn't request it
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
+#ifdef PROVISION_FRACTIONAL_DISK
 						cpu_attrs_request.virt_mem_fraction = double(memory) / double(resmgr->m_attr->phys_mem());
 						set_swap = false;
+#else
+						double swap_proportion = double(memory) / double(resmgr->m_attr->phys_mem());
+						swap = (long long)(swap_proportion * total_virt_mem);
+#endif
 					} else {
 						// Fall back to you get everything and don't pay anything
 						set_swap = false;
@@ -4110,9 +4174,15 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
                 }
             }
 
+#ifdef PROVISION_FRACTIONAL_DISK
 			if (set_swap) {
 				cpu_attrs_request.virt_mem_fraction = swap / total_virt_mem;
 			}
+#else
+			if (set_swap) {
+				cpu_attrs_request.num_swap = swap;
+			}
+#endif
 
 			for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
 				std::string reqname = ATTR_REQUEST_PREFIX + j->first;
@@ -4144,7 +4214,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_donor_c
 				cpu_attrs_request.num_cpus = MAX(cpu_attrs_request.num_cpus, 1.0);
 				cpu_attrs_request.num_phys_mem = MAX(cpu_attrs_request.num_phys_mem, 1);
 			}
-			cpu_attrs = new CpuAttributes(rip->type_id(), cpu_attrs_request, executeDir, partitionId);
+			cpu_attrs = new CpuAttributes(rip->type_id(), cpu_attrs_request, *resmgr->m_attr, executeDir, partitionId);
 		} else {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to parse attributes for request, aborting\n" );

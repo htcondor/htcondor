@@ -26,6 +26,7 @@
 #include "read_multiple_logs.h"
 #include "CondorError.h"
 #include "submit_utils.h"
+#include "dag_commands.h"
 
 #include <deque>
 #include <algorithm>
@@ -60,6 +61,14 @@ const int HOLD_MASK = (1 << 3); // Set if proc is held
 
 // Constant success value
 const int SUCCESS = 0;
+const short int JOB_EXIT_UNKNOWN = std::numeric_limits<short int>::min();
+const short int JOB_EXIT_ABORT = std::numeric_limits<short int>::max();
+
+// Information tracked for each job associated with this node
+struct JobDetails {
+	unsigned char events{0}; // State of job tracked via job proc event masks
+	short int exitVal{JOB_EXIT_UNKNOWN}; // Exit code of the job (or aborted value)
+};
 
 /*
 * Node Class:
@@ -99,8 +108,6 @@ public:
 		delete _scriptHold;
 	}
 
-	// Cleanup node memory (Note: does not invalidate node)
-	void Cleanup();
 	// Dump condensed node information to debug log
 	void Dump(const Dag *dag) const;
 	// double-check internal data structures for consistency
@@ -161,9 +168,9 @@ public:
 	// Check if node has already been counted as done
 	bool AlreadyDone() const { return countedAsDone; }
 	// Node is done: Success
-	bool TerminateSuccess() { SetStatus(STATUS_DONE); return true; }
+	bool TerminateSuccess() { SetStatus(STATUS_DONE); Cleanup(); return true; }
 	// Node is done: Failure
-	bool TerminateFailure() { SetStatus(STATUS_ERROR); return true; }
+	bool TerminateFailure() { SetStatus(STATUS_ERROR); Cleanup(); return true; }
 	// Return whter or not node is active (running pre script, job(s), or post script)
 	bool IsActive() const { return ACTIVE_STATES.contains(_Status); };
 
@@ -223,10 +230,6 @@ public:
 	bool Hold(int proc);
 	// Mark specified job proc as released (return false if proc wasn't in hold state)
 	bool Release(int proc, bool warn=true);
-	// Current current number of tracked job procs
-	inline int GetProcEventsSize() const { return (int)_gotEvents.size(); }
-	// Get job event mask for specified job proc
-	inline unsigned char GetProcEvent(int proc) const { return _gotEvents[proc]; }
 	// Check if internally all tracked job procs are done
 	inline bool AllProcsDone() const { return !is_factory && _queuedNodeJobProcs == 0; }
 
@@ -250,26 +253,25 @@ public:
 	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
 	// Get the number of jobs placed to AP at submit time
 	int NumSubmitted() const { return numJobsSubmitted; }
-	// Increment the count of job procs that got abort event
-	void IncrementJobsAborted() { numJobsAborted++; }
-	// Get number of job procs that got abort event
-	int JobsAborted() const { return numJobsAborted; }
 	// Increment count of job failures
 	void JobFailure() { totalJobsFailed++; }
 	// Get total number of failed jobs (terminate failure + abort)
 	int TotalJobsFailed() const { return totalJobsFailed; }
 	// Check if the # job failures have passed tolerance
 	bool CheckBatchFailed(int tolerance);
-	// Count each job proc exit code
-	void CountJobExitCode(int code) {
-		if (exitCodeCounts.contains(code)) {
-			exitCodeCounts[code]++;
-		} else {
-			exitCodeCounts[code] = 1;
-		}
+
+	// Record a specific job exit code
+	void RecordJobExitCode(int proc, int code) {
+		CheckTrackingJob(proc);
+		jobs[proc].exitVal = code;
 	}
-	// Get map of job proc exit codes count
-	const std::map<int, int>& JobExitCodes() const { return exitCodeCounts; }
+	// Record a specific job was aborted (no exit code)
+	void RecordJobAbort(int proc) {
+		CheckTrackingJob(proc);
+		jobs[proc].exitVal = JOB_EXIT_ABORT;
+	}
+	// Get vector of job information
+	const std::vector<JobDetails>& GetJobInfo() const { return jobs; }
 
 	// Check whether node has not tracked a job proc already
 	bool IsFirstProc() {
@@ -295,7 +297,7 @@ public:
 	inline const char* GetNodeName() const { return _nodeName.c_str(); }
 	inline const char* GetDirectory() const { return _directory.data(); }
 	inline const char* GetCmdFile() const { return _cmdFile.data(); }
-	void SetDagFile(const char *dagFile) { if (dagFile) { _dagFile = dedup_str(dagFile); } }
+	void SetDagFile(const char *dagFile) { if (dagFile) { _dagFile = DAG::STRING_SPACE::DEDUP(dagFile); } }
 	const char* GetDagFile() const { return _dagFile.data(); }
 	// Prefix node name with splice scope
 	void PrefixName(const std::string &prefix) { _nodeName = prefix + _nodeName; }
@@ -317,7 +319,7 @@ public:
 	void SetHold(bool value) { _hold = value; }
 	bool GetHold() const { return _hold; }
 
-	void SetSaveFile(const std::string& saveFile) { _saveFile = dedup_str(saveFile); _isSavePoint = true; }
+	void SetSaveFile(const std::string& saveFile) { _saveFile = DAG::STRING_SPACE::DEDUP(saveFile); _isSavePoint = true; }
 	inline std::string GetSaveFile() const { return std::string(_saveFile.data()); }
 	inline bool IsSavePoint() const { return _isSavePoint; }
 
@@ -329,7 +331,7 @@ public:
 	};
 
 	const std::vector<NodeVar>& GetVars() const { return varsFromDag; }
-	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
+	bool AddVar(const std::string& name, const std::string& value, bool prepend);
 	bool HasVars() const { return ! varsFromDag.empty(); }
 	int PrintVars(std::string &vars);
 
@@ -339,10 +341,6 @@ public:
 	int GetExplicitPrio() const { return _explicitPriority; }
 	int GetEffectivePrio() const { return _effectivePriority; }
 	int GetSubPrio() const { return subPriority; }
-
-	bool HasInlineDesc() const { return !inline_desc.empty(); }
-	void SetInlineDesc(std::string& desc) { inline_desc = desc; }
-	std::string_view& GetInlineDesc() { return inline_desc; }
 
 	// Set node category
 	void SetCategory(const char *categoryName, ThrottleByCategory &catThrottles);
@@ -387,13 +385,12 @@ public:
 	// Reset internal variables upon retry
 	void ResetInfo() {
 		numJobsSubmitted = 0;
-		numJobsAborted = 0;
 		totalJobsFailed = 0;
 		isSuccessful = true;
 		readFirstProc = false;
 		is_factory = false;
-		exitCodeCounts.clear();
 		error_text.clear();
+		jobs.clear();
 	}
 
 	Script* _scriptPre{nullptr};
@@ -403,18 +400,22 @@ public:
 	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
 
 private:
-	// Duplicate string into map of strings
-	static std::string_view dedup_str(const std::string& str);
-	// Remove use of string from map of strings any empty string_view
-	static void free_str(std::string_view& str);
 	// private methods for use by AdjustEdges
 	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 	// Print the list of which procs are idle/not idle for this node
 	void PrintProcIsIdle();
 	// Set last state change time
 	static void SetStateChangeTime() { time(&lastStateChangeTime); }
+	// Cleanup node memory (Note: does not invalidate node)
+	void Cleanup();
+	// Check if a proc is already being tracked if not start (also translate NOOP proc id -> 0)
+	void CheckTrackingJob(int& proc) {
+		if (GetNoop()) { proc = 0; }
+		if ((size_t)proc >= jobs.size()) {
+			jobs.resize(proc + 1);
+		}
+	}
 
-	static std::map<std::string, int> stringSpace; // Shared strings to reduce memory footprint
 	static NodeID_t _nodeID_counter; // Counter to give nodes unique ID's
 	static int _nextJobstateSeqNum; // The next jobstate log sequnce number
 	static time_t lastStateChangeTime; // Last time a node had a state change
@@ -429,13 +430,11 @@ private:
 	CondorID _CondorID{}; // Associated job ID (24 bytes)
 
 	ThrottleByCategory::ThrottleInfo *_throttleInfo{nullptr}; // Node category throttle (node doesn't own pointer)
-	std::map<int, int> exitCodeCounts{}; // Exit Code : Number of jobs that returned code
-	std::vector<unsigned char> _gotEvents{}; // Job event mask for each tracked job proc
+	std::vector<JobDetails> jobs{}; // Vector of information pertaining to one job
 	std::vector<NodeVar> varsFromDag{}; // Variables add to job list at submit time
 
 	std::string _nodeName{}; // Unique node name provided by user
 	std::string error_text{}; // Node error message
-	std::string_view inline_desc{}; // DAG file inline submit description to use at submit time
 	std::string_view _saveFile{}; // Filename to write save point rescue file
 	std::string_view _directory{}; // Node directory to run within... Do not malloc or free!
 	std::string_view _cmdFile{}; // Job list submit file... Do not malloc or free!
@@ -461,7 +460,6 @@ private:
 	int numJobsSubmitted{0}; // Number of submitted jobs
 	int _queuedNodeJobProcs{0}; // Number of job procs currently tracked in queue
 	int _jobProcsOnHold{0}; // Number of tracked job procs currently in hold state
-	int numJobsAborted{0}; // Number of jobs with abort events
 	int _timesHeld{0}; // Total number of times jobs in the job list went on hold
 	int totalJobsFailed{0}; // Count of jobs that failed (terminate failure or abort)
 

@@ -112,7 +112,7 @@ protected:
 	virtual int outputOpenFlags();
 	virtual int streamingOpenFlags( bool isOutput );
 
-	virtual void restartCheckpointedJob();
+	virtual bool restartCheckpointedJob();
 private:
 		// Current usage stats for this proc and all its children.
 	ProcFamilyUsage m_current_usage = {};

@@ -36,7 +36,7 @@ constexpr const char	*default_dc_daemon_array[] = {
 "MASTER", "STARTD", "SCHEDD", "KBDD", "COLLECTOR", "NEGOTIATOR", "EVENTD",
 "VIEW_SERVER", "CONDOR_VIEW", "VIEW_COLLECTOR", "CREDD", "HAD",
 "REPLICATION", "JOB_ROUTER", "ROOSTER", "SHARED_PORT",
-"DEFRAG", "GANGLIAD", "ANNEXD"
+"DEFRAG", "GANGLIAD", "ANNEXD", "PLACEMENTD"
 };
 
 // used to keep track of a query command for which we want to deferr the reply

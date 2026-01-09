@@ -72,15 +72,12 @@ public:
 		//! return the last ClassAd log entry
 	ClassAdLogEntry* 	getCurCALogEntry();
 		//! set the next offset. IMPOSSIBLE_OFFSET is just a default value	
-	void 	setNextOffset(long offset = IMPOSSIBLE_OFFSET);
+	void 	setNextOffset(long long offset = IMPOSSIBLE_OFFSET);
 	//!	set a job queue file name
-	void	setJobQueueName(const char* jqn);
+	void	setJobQueueName(const char* jqn) { job_queue_log_path = jqn; }
 	//!	get a job queue file name
-	char*	getJobQueueName();
-	//!	get a current file offset
-	long	getCurOffset();
-	//!	set a current file offset
-	void 	setCurOffset(long offset);
+	const char*	getJobQueueName() const { return job_queue_log_path.c_str(); };
+
 	//!	get a current classad log entry data as a New ClassAd command
 	ParserErrCode 	getNewClassAdBody(char*& key, 
 									  char*& mytype, 
@@ -125,8 +122,8 @@ private:
 		//
 		// data
 		//	
-	char	job_queue_name[PATH_MAX];//!< job queue log file path
-	long	nextOffset;						//!< next offset
+	std::string job_queue_log_path;//!< job queue log file path
+	long long	nextOffset;						//!< next offset
 
 	ClassAdLogEntry		curCALogEntry; 	//!< current ClassAd log entry
 	ClassAdLogEntry		lastCALogEntry; //!< last ClassAd log entry 

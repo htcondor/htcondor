@@ -75,7 +75,7 @@ typedef DWORD pid_t;
 #define EXTEND_SIZE	     4096L    // incremental addition to pDataBlock
 
 struct Offset {       // There will be one instance of this structure in
-	DWORD virtsize;     // the ProcAPI class - it will hold the offsets of
+	DWORD workset;     // the ProcAPI class - it will hold the offsets of
 	DWORD rssize;       // the data that reside in the pDataBlock
 	DWORD faults;
 	DWORD pctcpu;       // this info is gotten by grabOffsets()

@@ -68,8 +68,8 @@ public:
 	int				 	equal(ClassAdLogEntry* caLogEntry);
 
 		// data
-	long				offset;			//!< offset of this entry
-	long				next_offset;	//!< offset of the next entry
+	long long			offset;			//!< offset of this entry
+	long long			next_offset;	//!< offset of the next entry
 	int				op_type;		//!< command type
 
 	char				*key;			//!< key

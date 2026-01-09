@@ -88,8 +88,6 @@ bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 class WriteUserLog
 {
   public:
-    typedef std::set<std::pair<int, int> > log_file_cache_refset_t;
-
     struct log_file {
     /** Copy of path to the log file */  std::string path;
     /** The log file lock            */  FileLockBase *lock;
@@ -98,9 +96,6 @@ class WriteUserLog
     /** Whether to use user priv     */  bool user_priv_flag;
     /** Whether or not is DAGMan log */  bool is_dag_log;
     /** Whether to fsync (fdatasync) */  bool should_fsync;
-
-      // set of jobs that are using this log file
-      log_file_cache_refset_t refset;
 
       log_file(const char* p) : path(p), lock(NULL), fd(-1),
         copied(false), user_priv_flag(false), is_dag_log(false), should_fsync(true) {}
@@ -113,8 +108,6 @@ class WriteUserLog
       void set_should_fsync(bool v) { should_fsync = v; }
       bool get_should_fsync() const { return should_fsync;}
     };
-
-    typedef std::map<std::string, log_file*> log_file_cache_map_t;
 
     WriteUserLog();
     
@@ -135,11 +128,9 @@ public:
 	/* Initialize the log writer based on the given job ad.
 	 * Check for the user log, dagman log, and global event log.
 	 * Switch to user/condor priv for file I/O.
-	 * If init_user=true, call init_user_ids() (uninit_user_ids() will
-	 * then be called in the destructor).
 	 * Return true on success (even if no files will be written to).
 	 */
-	bool initialize(const ClassAd &job_ad, bool init_user = false);
+	bool initialize(const ClassAd &job_ad);
 
     /* Set the job id, which will used for each ULogEvent passed to
      * writeEvent(). Does not do any other initialization.
@@ -170,7 +161,6 @@ public:
 
 	void setCreatorName(const char *);
 
-    void setLogFileCache(log_file_cache_map_t* cache) { log_file_cache = cache; }
     void freeLogs();
 
 	// Returns whether any files are configured to be written to.
@@ -326,7 +316,6 @@ public:
 		bool is_global_event, int format_opts );
 
 	std::vector<log_file*> logs;
-    log_file_cache_map_t* log_file_cache;
 
 	bool doWriteGlobalEvent(ULogEvent *event);
     /** Enable locking?              */  bool		m_enable_locking;
@@ -356,7 +345,6 @@ public:
 
 	/** Previously configured?       */  bool       m_configured;
 	/** Initialized?                 */  bool       m_initialized;
-	/** called init_user_ids()?      */  bool       m_init_user_ids;
 	/** switch to user priv?         */  bool       m_set_user_priv;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;

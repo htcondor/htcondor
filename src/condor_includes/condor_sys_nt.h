@@ -74,6 +74,9 @@
 // Make sure to define this *before* we include winsock2.h
 #define FD_SETSIZE 1024
 
+// Defining this before including winsock2.h gives us htonll()
+#define INCL_EXTRA_HTON_FUNCTIONS
+
 struct IUnknown; // Hack to fix older C runtimes with C++20
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 

@@ -7,5 +7,8 @@ __pycache__
 # Project exclude paths
 /_build/
 
+# Ignore dynamically produced javascript for documentation
+docs/_static/js/config-macro-redirect.js
+
 # vscode files
 .vscode/

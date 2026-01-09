@@ -106,11 +106,11 @@ class RemoteResource : public Service {
 			an ACTIVATE_CLAIM command on it.  The ClaimId, starternum
 			and Job ClassAd are pushed, and the executing host's 
 			full machine name and (hopefully) an OK are returned.
-			@param starterVersion The version number of the starter
-                   wanted. The default is 2.
+			@param refuse_code   returns the CONDOR_HOLD_CODE that indicates the reason for refusal
+			@param refuse_reason returns a string giving more detail about the refuse reason
 			@return true on success, false on failure
 		 */ 
-	bool activateClaim( int starterVersion = 2 );
+	bool activateClaim(int & refuse_code, std::string & refuse_reason);
 
 		/** Tell the remote starter to kill itself.
 			@param graceful Should we do a graceful or fast shutdown?
@@ -282,6 +282,9 @@ class RemoteResource : public Service {
 	virtual void updateFromStarter( ClassAd* update_ad );
 	virtual void incrementJobCompletionCount();
 
+	virtual void processResultAd( ClassAd * resultAd );
+	virtual void processInvocationAd( ClassAd * invocationAd );
+
 	int64_t getImageSize( int64_t & memory_usage_out, int64_t & rss, int64_t & pss  ) const { 
 		memory_usage_out = memory_usage_mb;
 		rss = remote_rusage.ru_maxrss;
@@ -439,6 +442,7 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
+	bool m_use_delayed_attr{true};
 	std::vector<std::string> m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 

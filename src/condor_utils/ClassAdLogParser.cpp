@@ -60,7 +60,7 @@ ClassAdLogParser::ClassAdLogParser()
 	log_fp = NULL;
 	m_close_fp = true;
 	nextOffset = 0;
-	job_queue_name[0] = '\0';
+	job_queue_log_path.clear();
 }
 
 ClassAdLogParser::~ClassAdLogParser()
@@ -96,7 +96,7 @@ ClassAdLogParser::getCurCALogEntry()
 }
 
 void
-ClassAdLogParser::setNextOffset(long offset)
+ClassAdLogParser::setNextOffset(long long offset)
 {
 		//we first check to see whether the default value is being
 	    //used or if the user has actually provided the offset.  
@@ -113,9 +113,9 @@ ClassAdLogParser::openFile() {
     // open a job_queue.log file
 	closeFile();
 #ifdef _NO_CONDOR_
-    log_fp = fopen(job_queue_name, "r");
+    log_fp = fopen(job_queue_log_path.c_str(), "r");
 #else
-    log_fp = safe_fopen_wrapper_follow(job_queue_name, "r");
+    log_fp = safe_fopen_wrapper_follow(job_queue_log_path.c_str(), "r");
 #endif
 
     if (log_fp == NULL) {
@@ -135,19 +135,22 @@ ClassAdLogParser::closeFile() {
 }
 
 
-void
-ClassAdLogParser::setJobQueueName(const char* jqn)
-{
-	size_t cch = strlen(jqn);
-	ASSERT (cch < COUNTOF(job_queue_name));
-	strcpy(job_queue_name, jqn);
+static int fseek64(FILE* f, long long offset, int origin) {
+#ifdef WIN32
+	return _fseeki64(f, offset, origin);
+#else
+	return fseeko(f, (off_t)offset, origin);
+#endif
 }
 
-char*
-ClassAdLogParser::getJobQueueName()
-{
-	return job_queue_name;
+static long long ftell64(FILE* f) {
+#ifdef WIN32
+	return _ftelli64(f);
+#else
+	return (long long)ftello(f);
+#endif
 }
+
 
 /*! read a classad log entry in the current offset of a job queue log file
  *
@@ -159,7 +162,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 	int	rval;
 
     // move to the current offset
-    if (log_fp && fseek(log_fp, nextOffset, SEEK_SET) != 0) {
+    if (log_fp && fseek64(log_fp, nextOffset, SEEK_SET) != 0) {
         closeFile();
         return FILE_READ_EOF;
     }
@@ -279,7 +282,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 
 
 	// get and set the new current offset
-    nextOffset = ftell(log_fp);
+    nextOffset = ftell64(log_fp);
 
 	curCALogEntry.next_offset = nextOffset;
 

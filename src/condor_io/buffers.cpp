@@ -181,7 +181,7 @@ int Buf::read(
 		/* sz = num_free(); */
 	}
 
-	nr = condor_read(peer_description,sockd,&_dta[num_used()],sz,timeout, 0, non_blocking);
+	nr = condor_read(peer_description,sockd,&_dta[num_used()],sz,timeout, CondorRWFlags::Read, non_blocking);
 	if (nr < 0) {
 		dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
 		return nr;

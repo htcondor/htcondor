@@ -502,7 +502,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				job_not_started = true;
 				std::string starterErrorMessage = "Singularity test failed:";
 				starterErrorMessage += singErrorMessage;
-				EXCEPT("%s", starterErrorMessage.c_str());
+				// TODO would be nice to detect if issue is due to user-provided image
+				starter->jic->notifyStarterError(starterErrorMessage.c_str(),
+				                                 true,
+				                                 CONDOR_HOLD_CODE::SingularityTestFailed,
+				                                 -1000);
 				return 0;
 			}
 		}
@@ -1248,6 +1252,11 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		// nsenter itself uses _CONDOR_SCRATCH_DIR to decide where the
 		// home directory is, so leave this one behind, set to the
 		// old non-prefixed value
+		//
+		// But if STARTER_NESTED_SCRATCH is true, we need to append /scratch
+		if (param_boolean("STARTER_NESTED_SCRATCH",false)) {
+			target_dir += "/scratch";
+		}
 		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
 	}
 

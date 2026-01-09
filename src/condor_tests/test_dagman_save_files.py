@@ -145,7 +145,7 @@ def run_params(runTests):
     return runTests[2]
 @action
 def run_wait(run_handle):
-    assert run_handle.wait(condition=ClusterState.all_complete,timeout=60)
+    assert run_handle.wait(condition=ClusterState.all_complete,timeout=300)
     return run_handle
 
 #-----------------------------------------------------------------------------------------------

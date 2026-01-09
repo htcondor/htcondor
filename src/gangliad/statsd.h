@@ -208,7 +208,7 @@ class StatsD: Service {
 	void ParseMetricsFromFile( std::string const &fname );
 
 	// Evaluate metrics against the provided daemon ad.
-	void publishDaemonMetrics(ClassAd *ad);
+	void publishDaemonMetrics(ClassAd& ad);
 
 	// Publish the final value of all aggreate metrics.
 	void publishAggregateMetrics();
@@ -220,16 +220,16 @@ class StatsD: Service {
 	void clearMetricDefinitions();
 
 	// Extract IP addresses from daemon ads.
-	void mapDaemonIPs(ClassAdList &daemon_ads);
+	void mapDaemonIPs(std::vector<ClassAd> &daemon_ads);
 
 	// Extract IP addresses of collectors, and set a default aggregate host
 	void mapCollectorIPs(CollectorList &collectors, bool reset_mappings);
 
 	// Determine which machines are execute-only nodes
-	void determineExecuteNodes(ClassAdList &daemon_ads);
+	void determineExecuteNodes(std::vector<ClassAd> &daemon_ads);
 
 	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
-	void getDaemonAds(ClassAdList &daemon_ads);
+	void getDaemonAds(std::vector<ClassAd> &daemon_ads);
 
 	// Query a collector to set MONITOR_MULTIPLE_COLLECTORS
 	bool getCollectorsToMonitor();

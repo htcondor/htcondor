@@ -59,6 +59,7 @@ peaks = {
             "config": {
                 "NUM_CPUS": "16",
                 "NUM_SLOTS": "16",
+                "JOB_DEFAULT_REQUESTDISK" : "(TransferInputSizeMB+1) * (1024+256)", # default of 1 GB is too much for our ARM nodes
                 "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
 
                 "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/SQUID-discovery.py",

@@ -139,6 +139,7 @@ const char * const ULogEPEventNumberNames[] = {
 	"ULOG_EP_VACATE_CLAIM",
 	"ULOG_EP_DRAIN",
 	"ULOG_EP_RESOURCE_BREAK",
+	"ULOG_EP_RESOURCE_MEND",
 	"ULOG_EP_FUTURE_EVENT"
 };
 
@@ -163,6 +164,7 @@ static const char * const EPEventTypeNames[] = {
 	"VacateClaimEvent",
 	"DrainEvent",
 	"ResourceBreakEvent",
+	"ResourceMendEvent",
 	"EPFutureEvent"
 };
 
@@ -994,6 +996,7 @@ ULogEvent::toClassAd(ClassAd &ad, bool event_time_utc) const
 	case ULOG_EP_VACATE_CLAIM:
 	case ULOG_EP_DRAIN:
 	case ULOG_EP_RESOURCE_BREAK:
+	case ULOG_EP_RESOURCE_MEND:
 	case ULOG_EP_FUTURE_EVENT:
 		SetMyTypeName(*myad, EPEventTypeNames[eventNumber-ULOG_EP_FIRST]);
 		break;
