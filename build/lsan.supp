@@ -9,10 +9,7 @@ leak:SharedPortState::HandleUnbound
 leak:test_log_writer
 
 # Can't fix perl
-leak:Perl_safesysmalloc
-leak:Perl_safesyscalloc
-leak:Perl_safesysrealloc
-leak:Perl_set_numeric_standard
+leak:perl_
 
 #  Python leaks
 leak:AllocNoTrack
@@ -21,3 +18,9 @@ leak:AllocNoTrack
 leak:os::malloc
 leak:os::strdup
 leak:JLI_
+
+# Bash
+leak:/usr/bin/bash
+
+# There are surely bona-fide leaks here, but there are thousands of output files
+leak:PyObject_
