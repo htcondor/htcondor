@@ -4,12 +4,13 @@
 leak:SharedPortEndpoint::ReceiveSocket
 leak:CollectorList::create
 leak:SharedPortState::HandleUnbound
+leak:SharedPortClient::PassSocket
 
 # A test we don't care that leaks
 leak:test_log_writer
 
 # Can't fix perl
-leak:perl_
+leak:/usr/bin/perl
 
 #  Python leaks
 leak:AllocNoTrack
