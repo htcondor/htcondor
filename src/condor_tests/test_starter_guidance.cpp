@@ -283,21 +283,23 @@ test_main( int /* argv */, char ** /* argv */ ) {
     // Initialize the config system.
     config();
 
+    // Wrap tests in a scope to ensure MockStarter destructors run
+    // before DC_Exit() is called, preventing memory leaks
+    {
+        dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentReady()...\n" );
+        for( auto test_function : the_test_functions ) {
+            MockStarter ms( test_function );
+            Starter::requestGuidanceJobEnvironmentReady( & ms );
+            ASSERT( ms.jwuet_called && ! ms.sji_called );
+        }
 
-    dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentReady()...\n" );
-    for( auto test_function : the_test_functions ) {
-        MockStarter ms( test_function );
-        Starter::requestGuidanceJobEnvironmentReady( & ms );
-        ASSERT( ms.jwuet_called && ! ms.sji_called );
+        dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentUnready()...\n" );
+        for( auto test_function : the_test_functions ) {
+            MockStarter ms( test_function );
+            Starter::requestGuidanceJobEnvironmentUnready( & ms );
+            ASSERT( ms.sji_called && ! ms.jwuet_called );
+        }
     }
-
-    dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentUnready()...\n" );
-    for( auto test_function : the_test_functions ) {
-        MockStarter ms( test_function );
-        Starter::requestGuidanceJobEnvironmentUnready( & ms );
-        ASSERT( ms.sji_called && ! ms.jwuet_called );
-    }
-
 
     dprintf( D_ALWAYS, "All tests passed.\n" );
     DC_Exit(0);
