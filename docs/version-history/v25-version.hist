@@ -1,5 +1,9 @@
 *** 25.0.7 bugs
 
+- In the *condor_schedd* when a transform attempts to set an immutable attribute
+  more than once, the second attempt be quietly ignored rather than failing job materialization.
+  :jira:`3495`
+
 *** 25.0.6 features
 
 - Initial support for openSUSE Leap 16.
