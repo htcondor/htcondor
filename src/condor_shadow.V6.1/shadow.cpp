@@ -997,6 +997,10 @@ void UniShadow::checkInputFileTransfer() {
 			} else {
 				results.emplace_back( URL, false, (size_t)-1, false );
 			}
+			
+			if( buffer ) {
+				free( buffer );
+			}
 		} else if( scheme == "osdf" || scheme == "pelican" ) {
 			ArgList args;
 			args.AppendArg( "/usr/bin/pelican" );
@@ -1023,6 +1027,10 @@ void UniShadow::checkInputFileTransfer() {
 				}
 			} else {
 				results.emplace_back( URL, false, (size_t)-1, false );
+			}
+			
+			if( buffer ) {
+				free( buffer );
 			}
 		} else {
 			dprintf( D_ALWAYS, "Skipping URL '%s': don't know how to check it.\n", URL.c_str() );
