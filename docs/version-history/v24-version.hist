@@ -4,6 +4,10 @@
 
 *** 24.12.16 bugs
 
+- In the *condor_schedd* when a transform attempts to set an immutable attribute
+  more than once, the second attempt be quietly ignored rather than failing job materialization.
+  :jira:`3495`
+
 *** 24.0.16 features
 
 - HTCondor tarballs now contain `Pelican 7.22.0 <https://pelicanplatform.org/releases>`_
