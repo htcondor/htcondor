@@ -138,7 +138,9 @@ class MockStarter : public Starter {
     public:
 
         MockStarter( mock_genericRequestGuidance_type m_grg );
-        virtual ~MockStarter() = default;
+        virtual ~MockStarter() {
+            delete jic;
+        }
 
         // The "carry on" action if the job environment is ready.
         virtual bool jobWaitUntilExecuteTime();
