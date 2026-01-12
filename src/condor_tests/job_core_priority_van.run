@@ -37,7 +37,7 @@ CondorTest::debug("current directory is $newsocketname\n",1);
 
 # start a server for this test
 
-system("rm -f $flowlog");
+unlink $flowlog;
 defined(my $pid = fork) or die "Cannot fork: $!";
 unless ($pid)
 {
