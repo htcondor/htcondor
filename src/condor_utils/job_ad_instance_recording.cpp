@@ -111,6 +111,10 @@ initJobEpochHistoryFiles(){
 
 classad::ClassAd *
 copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * other_ad, const char * banner_name ) {
+    if(other_ad == nullptr) {
+        return new ClassAd(* job_ad);
+    }
+
     std::string paramName;
     formatstr( paramName, "%s_JOB_ATTRS", banner_name );
 
@@ -126,21 +130,31 @@ copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * oth
     }
 
 
-    if(other_ad == NULL) {
-        return new ClassAd(* job_ad);
-    }
 
-    std::string attributes;
+
+    std::string attributes, copied;
     param( attributes, paramName.c_str() );
     ClassAd * new_ad = new ClassAd(* other_ad);
 
-    if( attributes.empty() ) {
-        return new_ad;
+    std::vector<std::string> attributeList = split(attributes);
+
+    // Default attributes to always copy over to non-job record
+    // NOTE: Update test_epoch_attrs.py to know of any new default attributes
+    attributeList.emplace_back(ATTR_OWNER);
+    attributeList.emplace_back(ATTR_REMOTE_HOST);
+
+    for( const auto & attribute : attributeList ) {
+        if(new_ad->Lookup(attribute) == nullptr) { // Only copy attribute if not already in new record
+            CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+            if (! copied.empty()) { copied += ","; }
+            copied += attribute;
+        }
     }
 
-    std::vector<std::string> attributeList = split(attributes);
-    for( const auto & attribute : attributeList ) {
-        CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+    // Add comma separate list (string format) to ad for ability to know if
+    // attribute is original to the record or added from source job record
+    if (! copied.empty()) {
+        new_ad->InsertAttr("CopiedAttrs", copied);
     }
 
     return new_ad;

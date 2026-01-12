@@ -138,12 +138,14 @@ def readNextEpochLogEntry(f) -> EpochLogEntry:
             )
             buffer = ''
 
+EXPECTED_ALL_RECORDS = [ "RunInstanceID", "EpochAdType", "EpochWriteDate", "Owner" ]
+EXPECTED_TRANSFER_RECORDS = [ "TransferClass", "CopiedAttrs", "RemoteHost" ]
 
 ALWAYS_KEYS = {
-    "INPUT": [ "RunInstanceID", "EpochAdType", "TransferClass", "InputPluginResultList", "EpochWriteDate", "InputPluginInvocations" ],
-    "OUTPUT": [ "RunInstanceID", "EpochAdType", "TransferClass", "OutputPluginResultList", "EpochWriteDate", "OutputPluginInvocations" ],
-    "CHECKPOINT": [ "RunInstanceID", "EpochAdType", "TransferClass", "CheckpointPluginResultList", "EpochWriteDate", "CheckpointPluginInvocations" ],
-    "SPAWN": [ "RunInstanceID", "EpochAdType", "ClusterId", "ProcId", "EpochWriteDate", "Owner", "NumShadowStarts", "ShadowBday" ],
+    "INPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + [ "InputPluginResultList", "InputPluginInvocations" ],
+    "OUTPUT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + [ "OutputPluginResultList",  "OutputPluginInvocations" ],
+    "CHECKPOINT": EXPECTED_ALL_RECORDS + EXPECTED_TRANSFER_RECORDS + [ "CheckpointPluginResultList", "CheckpointPluginInvocations" ],
+    "SPAWN": EXPECTED_ALL_RECORDS + [ "ClusterId", "ProcId", "NumShadowStarts", "ShadowBday" ],
 }
 
 
