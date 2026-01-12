@@ -1,5 +1,8 @@
 #!/usr/bin/env pytest
 
+import pytest
+import subprocess
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -442,6 +445,67 @@ def ad_contains(container, containee):
     return True
 
 
+# -----------------------------------------------------------------------------
+# This really needs to become library code.
+
+
+# For the test to work, we need a singularity/apptainer which can work with
+# SIF files, which is any version of apptainer, or singularity >= 3
+def SingularityIsWorthy():
+    result = subprocess.run("singularity --version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode('utf-8')
+
+    logger.debug(output)
+    if "apptainer" in output:
+        return True
+
+    if "3." in output:
+        return True
+
+    return False
+
+
+def SingularityIsWorking():
+    result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr busybox.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode('utf-8')
+
+    logger.debug(output)
+
+    if result.returncode == 0:
+        return True
+    else:
+        return False
+
+
+# For the test to work, we need user namespaces to be working
+# and enough of them.  This is a race, but better to try
+# to test first.
+def UserNamespacesFunctional():
+    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    if result.returncode == 7:
+        print("unshare seems to work correctly, proceeding with test\n")
+        return True
+    else:
+        print("unshare command failed, test cannot work, skipping test\n")
+        return False
+
+# -----------------------------------------------------------------------------
+
+
+# We don't need apptainer for _all_ of the test cases, but I don't know how
+# to skip cases rather than tests.
+@pytest.mark.skipif(
+    not SingularityIsWorthy(),
+    reason="No worthy Singularity/Apptainer found"
+)
+@pytest.mark.skipif(
+    not UserNamespacesFunctional(),
+    reason="User namespaces not working -- some limit hit?"
+)
+@pytest.mark.skipif(
+    not SingularityIsWorking(),
+    reason="Singularity doesn't seem to be working"
+)
 class TestCTS:
     def test_is_starting_condor(self,
         the_condor
