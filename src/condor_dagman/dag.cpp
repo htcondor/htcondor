@@ -107,12 +107,18 @@ Dag::~Dag()
 		delete node;
 	}
 
+	// Delete all service node objects in _service_nodes
+	for (auto *node : _service_nodes) {
+		delete node;
+	}
+
 	for (auto &[_, splice] : _splices) {
 		delete splice;
 	}
 
 	// And remove them from the vector
 	_nodes.clear();
+	_service_nodes.clear();
 
 	delete _preScriptQ;
 	delete _postScriptQ;
