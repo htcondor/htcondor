@@ -922,13 +922,14 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 	return reply;
 }
 
-bool 
-DCStartd::vacateClaim( const char* name_vacate )
+bool
+DCStartd::vacateClaim( const char* name_vacate, bool fast /*=false*/ )
 {
 	setCmdStr( "vacateClaim" );
 
+	int cmd = fast ? VACATE_CLAIM_FAST : VACATE_CLAIM;
+
 	if (IsDebugLevel(D_COMMAND)) {
-		int cmd = VACATE_CLAIM;
 		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
@@ -944,12 +945,12 @@ DCStartd::vacateClaim( const char* name_vacate )
 		return false;
 	}
 
-	int cmd = VACATE_CLAIM;
-
 	result = startCommand( cmd, (Sock*)&reli_sock ); 
 	if( ! result ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::vacateClaim: Failed to send command VACATE_CLAIM to the startd" );
+		std::string message = "DCStartd::vacateClaim: Failed to send command ";
+		message += getCommandStringSafe(cmd);
+		message += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, message.c_str());
 		return false;
 	}
 
@@ -966,6 +967,42 @@ DCStartd::vacateClaim( const char* name_vacate )
 		
 	return true;
 }
+
+// send no payload VACATE_ALL_CLAIMS or VACATE_ALL_FAST commands.
+bool
+DCStartd::vacateAllClaims( bool fast /*=false*/ )
+{
+	setCmdStr( "vacateAllClaims" );
+	int cmd = fast ? VACATE_ALL_FAST : VACATE_ALL_CLAIMS;
+
+	if (IsDebugLevel(D_COMMAND)) {
+		dprintf (D_COMMAND, "DCStartd::vacateAllClaims(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
+	}
+
+	bool  result;
+	ReliSock reli_sock;
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr.c_str()) ) {
+		std::string err = "DCStartd::vacateAllClaims: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.c_str() );
+		return false;
+	}
+
+	result = sendCommand( cmd, (Sock*)&reli_sock );
+	if( ! result ) {
+		std::string message = "DCStartd::vacateAllClaims: Failed to send command ";
+		message += getCommandStringSafe(cmd);
+		message += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, message.c_str());
+		return false;
+	}
+
+	return true;
+}
+
 
 bool 
 DCStartd::_suspendClaim( )

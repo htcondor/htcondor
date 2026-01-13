@@ -20,6 +20,7 @@ htcondor2/_history_src.py
 htcondor2/_daemon_command.py
 htcondor2/_dagman.py
 htcondor2/_drain_type.py
+htcondor2/_vacate_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
 htcondor2/_schedd.py
