@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# File:     flux_ping.sh
+# Author:   Ian Lumsden (ilumsden@vols.utk.edu)
+# Author:   Michela Taufer (mtaufer@utk.edu)
 # Copyright (c) HTCondor Team, Computer Sciences Department,
 #   University of Wisconsin-Madison, WI. 2023.
 # 
