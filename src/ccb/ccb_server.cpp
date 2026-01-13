@@ -121,6 +121,12 @@ CCBServer::~CCBServer()
 	while (!m_targets.empty()) {
 		RemoveTarget(m_targets.begin()->second);
 	}
+	
+	// Clean up reconnect info objects
+	for (auto &entry : m_reconnect_info) {
+		delete entry.second;
+	}
+	m_reconnect_info.clear();
 
 	if (-1 != m_epfd)
 	{
