@@ -121,6 +121,12 @@ CCBServer::~CCBServer()
 	while (!m_targets.empty()) {
 		RemoveTarget(m_targets.begin()->second);
 	}
+	
+	// Clean up reconnect info objects
+	for (auto &entry : m_reconnect_info) {
+		delete entry.second;
+	}
+	m_reconnect_info.clear();
 
 	if (-1 != m_epfd)
 	{
@@ -1235,6 +1241,7 @@ CCBServer::AddReconnectInfo( CCBReconnectInfo *reconnect_info )
 	}
 
 	dprintf(D_ALWAYS, "CCBServer::AddReconnectInfo(): Found stale reconnect entry!\n");
+	delete resultpair.first->second; // 1st is iterator, 2nd is the reconnect_info
 	m_reconnect_info.erase(reconnect_info->getCCBID());
 	m_reconnect_info.emplace(reconnect_info->getCCBID(),reconnect_info);
 }
