@@ -3,6 +3,14 @@
 # File:     flux_status.sh
 # Author:   Ian Lumsden (ilumsden@vols.utk.edu)
 # Author:   Michela Taufer (mtaufer@utk.edu)
+#
+# Flux support was added as part of work supported by the US National Science Foundation
+# under Grant No. 2530461, 2513101, 2331152, 2223704, 2138811, and 2103845.
+# 
+# Flux support was also added under the auspices of the U.S. Department of Energy by
+# Lawrence Livermore National Laboratory under Contract DE-AC52-07NA27344
+# and was supported by the LLNL-LDRD Program under Project No. 24-SI-005.
+#
 # Based on code by David Rebatto (david.rebatto@mi.infn.it)
 # 
 # Licensed under the Apache License, Version 2.0 (the "License"); 
