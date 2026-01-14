@@ -15520,13 +15520,13 @@ Scheduler::Register()
 	// commands for creating/deleting/querying OCUs
 	daemonCore->Register_CommandWithPayload(CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
+		"command_act_on_user_ads", this, READ, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
