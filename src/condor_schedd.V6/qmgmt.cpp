@@ -1516,7 +1516,6 @@ InitQmgmt()
 	}
 
 	auto_free_ptr ocu_super(param("OCU_SUPER_USERS"));
-	std::vector<std::string> ocu_super_users;
 	
 	// Make sure to clear if removed on reconfig
 	if (ocu_super) {
