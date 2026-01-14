@@ -1218,6 +1218,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_generator
 %_libexecdir/condor/memory_exerciser_dinner
 %_libexecdir/condor/test_starter_guidance.exe
+%{_bindir}/common_transfer_savings.py
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
