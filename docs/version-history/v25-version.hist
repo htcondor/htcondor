@@ -9,6 +9,11 @@
 
 *** 25.0.6 bugs
 
+- Fixed a bug where a backfill p-slot could get into a state where it
+  would advertise that it had capacity, but refuse every claim with
+  a log message indicating that it had zero CPUs.
+  :jira:`3702`
+
 *** 25.0.5 features
 
 - Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform.
