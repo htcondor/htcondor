@@ -63,7 +63,6 @@
 #include "util_lib_proto.h"
 #include "status_string.h"
 #include "condor_id.h"
-#include "named_classad_list.h"
 #include "schedd_cron_job_mgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 #include "condor_crontab.h"
@@ -96,6 +95,7 @@
 #include "jobsets.h"
 #include "classad_collection.h"
 #include "../condor_sysapi/sysapi.h"
+#include "classad_merge.h"
 
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
@@ -1814,7 +1814,7 @@ Scheduler::count_jobs()
 	daemonCore->publish(cad);
 	daemonCore->dc_stats.Publish(*cad);
 	daemonCore->monitor_data.ExportData(cad);
-	extra_ads.Publish( cad );
+	adlist_publish(cad);
 
 	// can't do this at init time, the job_queue_log doesn't exist at that time.
 	time_t job_queue_birthdate = GetOriginalJobQueueBirthdate();
@@ -1870,7 +1870,7 @@ Scheduler::count_jobs()
 	m_adBase->Assign(ATTR_SCHEDD_NAME, Name);
 	m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
 	daemonCore->publish(m_adBase);
-	extra_ads.Publish(m_adBase);
+	adlist_publish(m_adBase);
 
 	// Create a new add for the per-submitter attribs 
 	// and chain it to the base ad.
@@ -2132,7 +2132,7 @@ void IncrementResourceRequestsSent() { scheduler.stats.ResourceRequestsSent += 1
 // that match the query, but for now we don't.
 //
 int Scheduler::make_ad_list(
-   ClassAdList & ads, 
+   std::vector<ClassAd>& ads,
    ClassAd * pQueryAd /*=NULL*/) // if non-null use this to get ExtraAttributes for building the list
 {
    time_t now = time(NULL);
@@ -2140,7 +2140,7 @@ int Scheduler::make_ad_list(
    // we need to copy the schedd Ad because
    // we will be putting it in a list that deletes Ads 
    // when the list is destroyed.
-   ClassAd * cad = new ClassAd(*m_adSchedd);
+   ClassAd * cad = &(ads.emplace_back(*m_adSchedd));
 
    // TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
 
@@ -2206,9 +2206,6 @@ int Scheduler::make_ad_list(
    cad->Assign(ATTR_LAST_HEARD_FROM, now);
    //cad->Assign( ATTR_AUTHENTICATED_IDENTITY, ??? );
 
-   // add the Scheduler Ad to the list
-   ads.Insert(cad);
-
    // now add the submitter ads, each one based on the base 
    // submitter ad, note that chained ad's dont delete the 
    // chain parent when they are deleted, so it's safe to 
@@ -2216,17 +2213,16 @@ int Scheduler::make_ad_list(
    for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
       const SubmitterData & Owner = it->second;
       if (Owner.empty()) continue;
-      cad = new ClassAd();
+      cad = &(ads.emplace_back());
       cad->ChainToAd(m_adBase);
       if ( ! fill_submitter_ad(*cad, Owner, "", -1)) {
          delete cad;
          continue;
       }
       cad->Assign(ATTR_SUBMITTER_TAG, HOME_POOL_SUBMITTER_TAG);
-      ads.Insert(cad);
    }
 
-   return ads.Length();
+   return (int)ads.size();
 }
 
 int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
@@ -2288,8 +2284,7 @@ int Scheduler::handleMachineAdsQuery(Stream * stream, ClassAd &queryAd) {
 int Scheduler::command_query_ads(int command, Stream* stream)
 {
 	ClassAd queryAd;
-	ClassAd *ad;
-	ClassAdList ads;
+	std::vector<ClassAd> ads;
 	int more = 1, num_ads = 0;
 
 	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
@@ -2318,10 +2313,9 @@ int Scheduler::command_query_ads(int command, Stream* stream)
 
 		// Now, find the ClassAds that match.
 	stream->encode();
-	ads.Open();
-	while( (ad = ads.Next()) ) {
-		if( IsATargetMatch( &queryAd, ad, targetType ) ) {
-			if( !stream->code(more) || !putClassAd(stream, *ad) ) {
+	for (auto& ad: ads) {
+		if( IsATargetMatch( &queryAd, &ad, targetType ) ) {
+			if( !stream->code(more) || !putClassAd(stream, ad) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
 				return FALSE;
@@ -17872,28 +17866,35 @@ Scheduler::enqueueFinishedJob( int cluster, int proc )
 }
 
 // Methods to manipulate the supplemental ClassAd list
-int
+void
 Scheduler::adlist_register( const char *name )
 {
-	return extra_ads.Register( name );
+	if (extra_ads.find(name) == extra_ads.end()) {
+		extra_ads.emplace(name, ClassAd());
+	}
 }
 
-int
+void
 Scheduler::adlist_replace( const char *name, ClassAd *newAd )
 {
-	return extra_ads.Replace( name, newAd );
+	// The caller assumes we're taking ownership of the object pointed at
+	// by newAd.
+	extra_ads[name] = std::move(*newAd);
+	delete newAd;
 }
 
-int
+void
 Scheduler::adlist_delete( const char *name )
 {
-	return extra_ads.Delete( name );
+	extra_ads.erase(name);
 }
 
-int
+void
 Scheduler::adlist_publish( ClassAd *resAd )
 {
-	return extra_ads.Publish( resAd );
+	for (const auto& [name, extra_ad]: extra_ads) {
+		MergeClassAds(resAd, &extra_ad, true);
+	}
 }
 
 bool jobExternallyManaged(ClassAd * ad)
@@ -17960,7 +17961,7 @@ Scheduler::claimLocalStartd()
 	CondorError errstack;
 	CondorQuery query(STARTD_AD);
 	QueryResult q;
-	ClassAdList result;
+	std::vector<ClassAd> result;
 	q = query.fetchAds(result, startd_addr, &errstack);
 	if ( q != Q_OK ) {
 		dprintf(D_FULLDEBUG,
@@ -17970,20 +17971,17 @@ Scheduler::claimLocalStartd()
 	}
 
 
-	ClassAd *machine_ad = NULL;
-	result.Rewind();
-
 		/*	For each machine ad, make a match rec and enqueue a request
 			to claim the resource.
 		 */
-	while ( (machine_ad = result.Next()) ) {
+	for (auto& machine_ad: result) {
 
 		slot_id = 0;		
-		machine_ad->LookupInteger(ATTR_SLOT_ID, slot_id);
+		machine_ad.LookupInteger(ATTR_SLOT_ID, slot_id);
 
 			// first check if this startd is unclaimed
 		slot_state = " ";	// clear out old value before we reuse it
-		machine_ad->LookupString(ATTR_STATE, slot_state);
+		machine_ad.LookupString(ATTR_STATE, slot_state);
 		if ( slot_state != getClaimStateString(CLAIM_UNCLAIMED) ) {
 			dprintf(D_FULLDEBUG, "Local startd slot %d is not unclaimed\n",
 					slot_id);
@@ -18017,7 +18015,7 @@ Scheduler::claimLocalStartd()
 		PROC_ID matching_jobid;
 		matching_jobid.proc = -1;
 
-		FindRunnableJob(matching_jobid,machine_ad,NULL, /*pool=*/nullptr, /*is_ocu=*/false, /*is_new_match=*/true);
+		FindRunnableJob(matching_jobid,&machine_ad,NULL, /*pool=*/nullptr, /*is_ocu=*/false, /*is_new_match=*/true);
 		if( matching_jobid.proc < 0 ) {
 				// out of jobs.  start over w/ the next startd ad.
 			continue;
@@ -18029,7 +18027,7 @@ Scheduler::claimLocalStartd()
 		jobad->LookupString(attr_JobUser,job_owner,sizeof(job_owner));
 		ASSERT(job_owner[0]);
 
-		match_rec* mrec = AddMrec( claim_id, startd_addr, matching_jobid, machine_ad,
+		match_rec* mrec = AddMrec( claim_id, startd_addr, matching_jobid, &machine_ad,
 						job_owner,	// special Owner name
 						NULL			// optional negotiator name
 						);

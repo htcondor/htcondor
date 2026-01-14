@@ -53,6 +53,7 @@ public:
 	ClassAd *Head() {return *l.begin();}
 
 	int size() const { return l.size();}
+	void clear() { l.clear(); it = l.end(); }
 
 	bool Delete(ClassAd *ad) {l.remove(ad); return true;}
 	void DeleteCurrent() {
@@ -92,42 +93,6 @@ class AllocationNode {
 	bool is_reconnect;
 };		
 
-// These aren't used anymore, but should we care about
-// MAX_JOB_RETIREMENT_TIME in the dedicated world, we
-// might need to bring this back.
-
-// A ResTimeNode has a list of resources, all of which
-// we think will come free at time "time".  These
-// ResTimeNodes themselves are linked, sorted by 
-// ascending time.
-
-#if 0
-class ResTimeNode {
- public:
-	ResTimeNode( time_t t );
-	~ResTimeNode();
-	
-		/** Can we satisfy the given job with this ResTimeNode?  No
-			matter what we return, num_matches is reset to the number
-			of matches we found at this time, and the candidates list
-			includes a pointer to each resource ad we matched with.
-			@param jobAd The job to satisfy
-			@param max_hosts How many resources does this job need?
-			@param candidates List of pointers to ads that matched
-			@return Was the job completely satisfied?
-		*/
-	bool satisfyJob( ClassAd* jobAd, int max_hosts,
-					 CAList* candidates );
-
-	void display( int level );
-
-	time_t time;
-	CAList* res_list;
-	int num_matches;
-};
-
-#endif
-
 // A ResList is a list of machine resources, all of which are in some
 // given state (e.g. unclaimed, busy, etc.)
 
@@ -137,8 +102,7 @@ class ResList : public CAList {
 	~ResList();
 	
 		/** Can we satisfy the given job with this ResList?  No
-			matter what we return, num_matches is reset to the number
-			of matches we found at this time, and the candidates list
+			matter what we return, the candidates list
 			includes a pointer to each resource ad we matched with.
 			@param jobAd The job to satisfy
 			@param candidates List of pointers to ads that matched
@@ -153,8 +117,6 @@ class ResList : public CAList {
 
 	void sortByRank( ClassAd *rankAd);
 
-	int num_matches{0};
-	
 	static bool machineSortByRank(const struct rankSortRec &lhs, const struct rankSortRec &rhs);
 
 	void selectGroup( CAList *group, const char   *groupName);
@@ -165,7 +127,7 @@ class CandidateList : public CAList {
 	CandidateList();
 	virtual ~CandidateList();
 
-    void appendResources(ResList *res);
+    void appendResources(ResList& res);
 	void markScheduled();
 };
 
@@ -207,7 +169,6 @@ class DedicatedScheduler : public Service {
 	void displaySchedule( void );
 
 	void listDedicatedJobs( int debug_level );
-	void listDedicatedResources( int debug_level, ClassAdList* resources );
 
 		// Used for claiming/releasing startds we control
 	bool releaseClaim( match_rec* m_rec );
@@ -391,9 +352,9 @@ class DedicatedScheduler : public Service {
 	int		sanity_tid{-1};		// DC timer id for sanityCheck()
 
 		// data structures for managing dedicated jobs and resources. 
-	std::vector<int>*		idle_clusters;	// Idle cluster ids
+	std::vector<int>		idle_clusters;	// Idle cluster ids
 
-	ClassAdList*		resources;		// All dedicated resources 
+	std::vector<ClassAd>	resources;		// All dedicated resources
 	int					total_cores{0};    // sum of all cores above
 
 
@@ -413,24 +374,24 @@ class DedicatedScheduler : public Service {
 		//  one job of a cluster we hope to evict the peers as well.
 																	   
 		// All resources that are idle and claimed by the ded sched
-	ResList*		idle_resources;
+	ResList idle_resources;
 
 		// All resources claimed/idle in the *serial* schedd that
 		// we could steal
-	ResList*		serial_resources;
+	ResList serial_resources;
 
 		// All resources that might be dedicated to us that aren't
 		// currently claimed by us -- they are probably running
 		// vanilla jobs
-	ResList*		unclaimed_resources;
+	ResList unclaimed_resources;
 
 		// All resources that are in limbo
 		// These should be idle soon, but haven't made
 		// it there yet.
-	ResList*		limbo_resources;
+	ResList limbo_resources;
 
 		// All resources that are busy (and claimed)
-	ResList*		busy_resources;
+	ResList busy_resources;
 
 		// keyed on cluster, all our allocations
 	std::map <int, AllocationNode*> allocations;
@@ -461,9 +422,6 @@ class DedicatedScheduler : public Service {
         // stores pending claim ids against partitionable slots, indexed
         // by corresponding public claim id
     std::map<std::string, std::string> pending_claims;
-
-
-	int		num_matches{0};	// Total number of matches in all_matches 
 
     static const int MPIShadowSockTimeout;
 
