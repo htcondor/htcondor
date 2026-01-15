@@ -288,8 +288,8 @@ void Accountant::Initialize(GroupEntry* root_group)
       grpq.pop_front();
       // This creates entries if they don't already exist:
       GetPriority(group->name);
-      for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-          grpq.push_back(*j);
+      for (GroupEntry* child : group->children) {
+          grpq.push_back(child);
       }
   }
 
@@ -1014,10 +1014,10 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
   std::string CustomerName;
 
 	  // Create a hash table for speedier lookups of Resource ads.
-  HashTable<std::string,ClassAd *> resource_hash(hashFunction);
+  std::map<std::string,ClassAd *> resource_hash;
   for (ClassAd *ResourceAd: ResourceList) {
     ResourceName = GetResourceName(ResourceAd);
-    bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    auto [it, success] = resource_hash.emplace(ResourceName, ResourceAd);
     if (!success) {
       dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.c_str());
       dPrintAd(D_FULLDEBUG, *ResourceAd);
@@ -1030,13 +1030,14 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
     char const *key = HK.c_str();
     if (strncmp(ResourceRecord.c_str(),key,ResourceRecord.length())) continue;
     ResourceName=key+ResourceRecord.length();
-	ClassAd *ResourceAd = nullptr;
-    if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
+    auto itr = resource_hash.find(ResourceName);
+    if (itr == resource_hash.end()) {
       dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.c_str());
       RemoveMatch(ResourceName);
     }
 	else {
 		// Here we need to figure out the CustomerName.
+      ClassAd* ResourceAd = itr->second;
       ad->LookupString(RemoteUserAttr,CustomerName);
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
         dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.c_str(),CustomerName.c_str());
@@ -1158,8 +1159,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
         GroupEntry* group = grpq.front();
         grpq.pop_front();
         gnmap[group->name] = EntryNum++;
-        for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-            grpq.push_back(*j);
+        for (GroupEntry* child : group->children) {
+            grpq.push_back(child);
         }
     }
 
@@ -1366,8 +1367,8 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     
     // Populate group's children recursively, if it has any
     // Recursion is to allow for proper rollup from children to parents
-    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        ReportGroups(*j, ad, rollup, gnmap);
+    for (GroupEntry* child : group->children) {
+        ReportGroups(child, ad, rollup, gnmap);
     }
 
     // if we aren't doing rollup, finish now

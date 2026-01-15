@@ -239,8 +239,7 @@ two priority values assigned to HTCondor users:
 This section describes these two priorities and how they affect resource
 allocations in HTCondor. Documentation on configuring and controlling
 priorities may be found in the 
-:ref:`admin-manual/configuration-macros:condor_negotiator configuration
-file entries` section.
+:ref:`negotiator_config_options` section.
 
 Real User Priority (RUP)
 ''''''''''''''''''''''''
@@ -403,8 +402,7 @@ associated with a single negotiation cycle. Therefore, the configuration
 variables :macro:`PREEMPTION_REQUIREMENTS_STABLE` and
 :macro:`PREEMPTION_RANK_STABLE` exist to inform the *condor_negotiator* daemon
 that values may change. See the
-:ref:`admin-manual/configuration-macros:condor_negotiator configuration file
-entries` section for definitions of these configuration variables.
+:ref:`negotiator_config_options` section for definitions of these configuration variables.
 
 
 :index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``
@@ -518,7 +516,7 @@ have submitted jobs and calculates their priority. Then, it totals the
 SlotWeight (by default, cores) of all currently available slots, and 
 using the ratios of the user priorities, it calculates the number of 
 cores each user could get. This is their pie slice.
-(See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
+(See: SLOT_WEIGHT in :ref:`startd_config_options`)
 
 If any users have a floor defined via :tool:`condor_userprio` -set-floor
 , and their current allocation of cores is below the floor, a 
@@ -1136,8 +1134,7 @@ from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
 *condor_defrag* daemon may be found in the
-:ref:`admin-manual/configuration-macros:condor_defrag configuration file
-macros` section.
+:ref:`defrag_config_options` section.
 
 By default, when a machine is drained, existing jobs are gracefully
 evicted. This means that each job will be allowed to use the remaining
@@ -1228,8 +1225,7 @@ Configuring a Machine to be a HTCondorView Server
 To configure the HTCondorView collector, a few configuration variables
 are added or modified for the *condor_collector* chosen to act as the
 HTCondorView collector. These configuration variables are described in
-:ref:`admin-manual/configuration-macros:condor_collector configuration file
-entries`. Here are brief explanations of the entries that must be customized:
+:ref:`collector_config_options`. Here are brief explanations of the entries that must be customized:
 
 :macro:`POOL_HISTORY_DIR`
     The directory where historical data will be stored. This directory
@@ -1403,8 +1399,7 @@ Configuration
 The high availability of central manager machines is enabled through
 configuration. It is disabled by default. All machines in a pool must be
 configured appropriately in order to make the high availability
-mechanism work. See the :ref:`admin-manual/configuration-macros:configuration
-file entries relating to high availability` section, for definitions
+mechanism work. See the :ref:`high_availability_config_options` section, for definitions
 of these configuration variables.
 
 The *condor_had* and *condor_replication* daemons use the
@@ -1569,7 +1564,7 @@ manager machines.
     HAD_ARGS = -f -p $(HAD_PORT)
 
     ## The following macro defines the port number condor_replication will listen
-    ## on on this machine. This port should match the port number specified
+    ## on this machine. This port should match the port number specified
     ## for that replication daemon in the REPLICATION_LIST
     ## Port number is arbitrary (make sure no collision with other applications)
     ## This is a sample port number

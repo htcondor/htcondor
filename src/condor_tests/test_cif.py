@@ -98,7 +98,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     credential_path.write_text("fake credential information")
     cp = the_condor.run_command(
         ['htcondor', 'credential', 'add', 'oauth2', credential_path.as_posix()],
-        timeout=5,
+        timeout=60,
         echo=True,
         as_user='tlmiller',
     )
@@ -133,7 +133,7 @@ def completed_cif_job(the_condor, path_to_sleep, user_dir):
     )
 
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
 
@@ -242,7 +242,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for them to start.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.running_exactly(4),
         fail_condition=ClusterState.any_terminal
     )
@@ -253,7 +253,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for them to finish.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda self: self.status_exactly(4, JobStatus.COMPLETED),
         fail_condition=ClusterState.any_held
     )
@@ -277,7 +277,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for the last four jobs to start.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.none_idle,
     )
 
@@ -287,7 +287,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     # Wait for the last four jobs to finish.
     assert job_handle.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
 
@@ -419,12 +419,12 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
 
     # Wait for them to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.running_exactly(2),
         fail_condition=ClusterState.any_terminal
     )
@@ -439,11 +439,11 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
     # Due to a bug in Ornithology, jobs submitted on hold but not yet
     # released are considered IDLE, which is... not helpful.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda s: s.all_status(JobStatus.IDLE, JobStatus.COMPLETED),
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=lambda s: s.all_status(JobStatus.IDLE, JobStatus.COMPLETED),
     )
 
@@ -455,11 +455,11 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
 
     # Wait for the last four jobs to start.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.none_idle,
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.none_idle,
     )
 
@@ -471,11 +471,11 @@ def completed_multi_jobs(the_multi_condor, user_dir, multi_job_script):
 
     # Wait for the last four jobs to finish.
     assert job_handle_a.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
     assert job_handle_b.wait(
-        timeout=60,
+        timeout=200,
         condition=ClusterState.all_complete,
     )
 

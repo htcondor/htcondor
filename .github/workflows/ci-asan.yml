@@ -1,0 +1,51 @@
+name: Run tests with Address Sanitizer
+
+on:
+  pull_request:
+    types: [labeled, pull_request]
+
+jobs:
+  ubuntu_asan_build:
+    # Only run with the "asan" label
+    if: github.event.action == 'labeled' && contains(github.event.pull_request.labels.*.name, 'asan')
+    runs-on: ubuntu-latest
+
+    # Use htcondor build containers for the real work
+    container:
+      image: htcondor/nmi-build:x86_64_Ubuntu24-25060000
+      env:
+        OMP_NUM_THREADS: 4
+      options: --cpus 4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compile with Address Sanitizer
+        run: |
+          chmod 0777 .
+          mkdir __build && chown condorauto __build && chmod 0777 __build
+          su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false -DWITH_ADDRESS_SANITIZER:bool=true .. && ninja -j 4 install"
+
+      - name: Run tests with Address Sanitizer
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/asan && chown condorauto $GITHUB_WORKSPACE/asan && chmod 0777 $GITHUB_WORKSPACE/asan
+          su condorauto -c "cd __build && ASAN_OPTIONS="log_path=$GITHUB_WORKSPACE/asan/condor:exitcode=0" LSAN_OPTIONS="exitcode=0:suppressions=$GITHUB_WORKSPACE/build/lsan.supp:print_suppressions=0" LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.8 ctest --output-junit test.xml -j 20 --label-exclude noasan"
+
+      # The upload on fail step frequently fails because running condor
+      # processes are mutating files as upload tries to read them, which
+      # breaks the upload. So we kill off condor processes first.
+      - name: Kill off processes
+        if: always()
+        run: |
+          ps auxww | grep [Cc]ondor_ | awk '{print $2}' | xargs -r kill -9
+
+      - name: Upload Artifact with asan output
+        # Always upload, even if build or tests fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asan-output
+          path: |
+            asan/
+          retention-days: 1
+          overwrite: true

@@ -34,7 +34,6 @@
 #include "condor_fsync.h"
 #include "condor_attributes.h"
 #include "CondorError.h"
-#include "set_user_priv_from_ad.h"
 #include "directory.h"
 
 #include <string>
@@ -131,7 +130,6 @@ bool getPathToUserLog(const classad::ClassAd *job_ad, std::string &result,
 // ***************************
 WriteUserLog::WriteUserLog()
 {
-	log_file_cache = NULL;
 	Reset( );
 }
 
@@ -140,9 +138,6 @@ WriteUserLog::~WriteUserLog()
 {
 	FreeGlobalResources( true );
 	FreeLocalResources( );
-	if ( m_init_user_ids ) {
-		uninit_user_ids();
-	}
 }
 
 
@@ -151,7 +146,7 @@ WriteUserLog::~WriteUserLog()
 // ***********************************
 
 bool
-WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
+WriteUserLog::initialize(const ClassAd &job_ad)
 {
 	int cluster = -1;
 	int proc = -1;
@@ -160,23 +155,12 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 
 	m_global_disable = false;
 
-	if ( init_user ) {
-		std::string owner;
-		std::string domain;
-
-		job_ad.LookupString(ATTR_OWNER, owner);
-		job_ad.LookupString(ATTR_NT_DOMAIN, domain);
-
-		uninit_user_ids();
-		if ( ! init_user_ids_from_ad(job_ad) ) {
-			if ( ! domain.empty()) { owner += "@"; owner += domain; }
-			dprintf(D_ALWAYS,
-				"WriteUserLog::initialize: init_user_ids(%s) failed!\n", owner.c_str());
-			return false;
-		}
-		m_init_user_ids = true;
-	}
 	m_set_user_priv = true;
+
+	if (can_switch_ids() && !user_ids_are_inited()) {
+		dprintf(D_ERROR, "WriteUserLog: user ids not initialized\n");
+		return false;
+	}
 
 	TemporaryPrivSentry temp_priv;
 
@@ -229,18 +213,6 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 		for(std::vector<const char*>::const_iterator it = file.begin();
 				it != file.end(); ++it) {
 
-			if (log_file_cache != NULL) {
-				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: looking up log file %s in cache\n", *it);
-				log_file_cache_map_t::iterator f(log_file_cache->find(*it));
-				if (f != log_file_cache->end()) {
-					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: found log file %s in cache, re-using\n", *it);
-					logs.push_back(f->second);
-					logs.back()->refset.insert(std::make_pair(c,p));
-					first = false;
-					continue;
-				}
-			}
-
 			log_file* log = new log_file(*it);
 			if (first) {
 				// The first entry in the vector is the user's userlog, which we rarely want to fsync
@@ -261,7 +233,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 					log->path.c_str());
 				logs.push_back(log);
 
-				// setting the flag m_init_user_ids will cause the logging code in doWriteEvent()
+				// setting the flag m_set_user_priv will cause the logging code in doWriteEvent()
 				// to switch to PRIV_USER every time it does a write (as opposed to PRIV_CONDOR).
 				// even though the file is already open, this is necessary because AFS needs access
 				// to the user token on every write(), whereas other filesystems typically only need
@@ -279,17 +251,9 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
 					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
-						// TODO Shouldn't set m_init_user_ids here
-						m_init_user_ids = true;
 						m_set_user_priv = true;
 						log->set_user_priv_flag(true);
 					}
-				}
-
-				if (log_file_cache != NULL) {
-					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: caching log file %s\n", *it);
-					(*log_file_cache)[*it] = log;
-					log->refset.insert(std::make_pair(c,p));
 				}
 			}
 		}
@@ -443,7 +407,6 @@ WriteUserLog::Reset( void )
 {
 	m_initialized = false;
 	m_configured = false;
-	m_init_user_ids = false;
 	m_set_user_priv = false;
 
 	m_cluster = -1;
@@ -454,7 +417,6 @@ WriteUserLog::Reset( void )
 
     freeLogs();
    	logs.clear();
-    log_file_cache = NULL;
 
 	m_enable_locking = true;
 	m_skip_fsync_this_event = false;
@@ -600,8 +562,6 @@ WriteUserLog::log_file::~log_file()
 }
 
 void WriteUserLog::freeLogs() {
-    // we do this only if local log files aren't being cached
-    if (log_file_cache != NULL) return;
     for (std::vector<log_file*>::iterator j(logs.begin());  j != logs.end();  ++j) {
         delete *j;
     }

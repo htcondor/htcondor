@@ -15,6 +15,8 @@
 
 .. autoclass:: DrainType
 
+.. autoclass:: VacateType
+
 .. autoclass:: FileTransferEventType
 
 .. autoclass:: JobAction

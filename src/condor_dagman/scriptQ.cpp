@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2026, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -19,14 +19,16 @@
 
 #include "condor_common.h"
 
+
 #include "script.h"
 #include "node.h"
 #include "dag.h"
+#include "scriptQ.h"
 
 namespace shallow = DagmanShallowOptions;
 
 // run script if possible, otherwise insert it into the waiting queue
-bool ScriptQ::Run(Script *script) {
+ScriptExecResult ScriptQ::Run(Script *script, ScriptDeferAction act) {
 	const char *prefix = script->GetScriptName();
 
 	bool deferScript = false;
@@ -64,18 +66,18 @@ bool ScriptQ::Run(Script *script) {
 
 	if (deferScript) {
 		_scriptDeferredCount++;
-		_waitingQueue.push(script);
-		return false;
+		if (act == ScriptDeferAction::PUSH_QUEUE) { _waitingQueue.push_back(script); }
+		return ScriptExecResult::DEFERRED;
 	}
 
 	debug_printf(DEBUG_NORMAL, "Running %s script of Node %s...\n", prefix, script->GetNodeName());
 	_dag->GetJobstateLog().WriteScriptStarted(script->GetNode(), script->_type);
 	if (int pid = script->BackgroundRun(*_dag, _scriptReaperId)) {
 		_numScriptsRunning++;
-		auto insertResult = _scriptPidTable.insert(std::make_pair(pid, script));
+		auto insertResult = _scriptPidTable.emplace(pid, script);
 		ASSERT(insertResult.second == true);
 		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->GetExecuted());
-		return true;
+		return ScriptExecResult::EXECUTED;
 	}
 
 	// BackgroundRun() returned pid 0
@@ -90,30 +92,73 @@ bool ScriptQ::Run(Script *script) {
 	const int returnVal = 1<<8;
 	ReapScript(*script, returnVal);
 
-	return false;
+	return ScriptExecResult::FAUX_REAPED;
 }
 
 int ScriptQ::RunWaitingScripts(bool justOne) {
-	int scriptsRun = 0;
+	// Just return if the queue is empty
+	if (_waitingQueue.empty()) { return 0; }
+
 	time_t now = time(nullptr);
 
-	int totalScripts = _waitingQueue.size();
-	for (int i=0; i < totalScripts; i++) {
-		Script* script = _waitingQueue.front();
-		ASSERT(script != nullptr);
-		_waitingQueue.pop();
-		if (script->_nextRunTime != 0 && script->_nextRunTime > now) {
-			// Deferral time is not yet up -- put it back into the queue.
-			_waitingQueue.push(script);
-		} else {
-			// Try to run the script.  Note:  Run() takes care of
-			// checking for halted state and maxpre/maxpost.
-			if (Run(script)) {
-				++scriptsRun;
-				if (justOne) { break; }
-			} else { break; }
+	// Use std::ranges::stable_partition to separate ready scripts from deferred ones.
+	// This is more efficient than the previous pop/push loop, especially when
+	// many scripts are deferred. Complexity: O(n) vs O(n * deferred_count)
+	auto defer_partition = std::ranges::stable_partition(_waitingQueue,
+		[now](Script* script) {
+			// Partition: ready scripts (true) come before deferred scripts (false)
+			return script->_nextRunTime == 0 || script->_nextRunTime <= now;
+		});
+
+	// If we are to only start one script then manually try non-deferred script execution
+	// until the first success
+	if (justOne) {
+		auto it = _waitingQueue.begin();
+		auto end = defer_partition.begin();
+		while (it != end) {
+			Script* script = *it;
+			ASSERT(script != nullptr);
+			ScriptExecResult res = Run(script, ScriptDeferAction::DO_NOTHING);
+			if (res != ScriptExecResult::DEFERRED) {
+				it = _waitingQueue.erase(it);
+				if (res == ScriptExecResult::EXECUTED) { return 1; }
+			} else { it++; }
 		}
+
+		// If here, then we didn't execute anything
+		return 0;
 	}
+
+	// If here: We want to attempt running all non-deferred scripts
+	int scriptsRun = 0;
+
+	// Use std::stable_partition as a driver to Run Scripts that are not deferred
+	// Executed scripts will be removed from the waiting queue in a following erase
+	// call. NOTE: This will iterate over all non-deferred scripts unfortunately (even if justOne is true)
+	auto executed_end = std::stable_partition(_waitingQueue.begin(), defer_partition.begin(),
+		[this, &scriptsRun](Script* script){
+			// Partition: executed (true) before skipped/deferred (false)
+			ASSERT(script != nullptr);
+			bool remove_from_q = false;
+
+			switch (Run(script, ScriptDeferAction::DO_NOTHING)) {
+				case ScriptExecResult::EXECUTED:
+					scriptsRun++;
+					[[fallthrough]];
+				// NOTE: Script execution error means DAGMan has faux reaped the script as a failure (thus consider it as executed)
+				case ScriptExecResult::FAUX_REAPED:
+					remove_from_q = true;
+					break;
+				default:
+					break;
+			}
+
+			return remove_from_q;
+		});
+
+	// Erase scripts that executed from the waiting queue
+	// Waiting Queue Partitioning: [ Executed | Waiting (skipped) | Deferred ]
+	_waitingQueue.erase(_waitingQueue.begin(), executed_end);
 
 	debug_printf(DEBUG_DEBUG_1, "Started %d deferred scripts\n", scriptsRun);
 	return scriptsRun;
@@ -128,9 +173,8 @@ int ScriptQ::ScriptReaper(int pid, int status) {
 	_scriptPidTable.erase(pid);
 	_numScriptsRunning--;
 
-	if (pid != script->_pid) {
-		EXCEPT("Reaper pid (%d) does not match expected script pid (%d)!", pid, script->_pid);
-	}
+	// Ensure reaper pid is the same as the script pid
+	ASSERT(pid == script->_pid);
 
 	script->WriteDebug(status);
 
@@ -138,7 +182,7 @@ int ScriptQ::ScriptReaper(int pid, int status) {
 	if (script->_deferStatus != SCRIPT_DEFER_STATUS_NONE && WEXITSTATUS(status) == script->_deferStatus) {
 		++_scriptDeferredCount;
 		script->_nextRunTime = time(nullptr) + script->_deferTime;
-		_waitingQueue.push(script);
+		_waitingQueue.push_back(script);
 		debug_printf(DEBUG_NORMAL, "Deferring %s script of node %s for %ld seconds (exit status was %d)...\n",
 		             script->GetScriptName(), script->GetNodeName(), script->_deferTime, script->_deferStatus);
 	} else {

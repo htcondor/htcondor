@@ -958,7 +958,8 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		// Now, try to get the reply
 	cmd_sock->decode();
 	if( ! getClassAd(cmd_sock, *reply) ) {
-		newError( CA_COMMUNICATION_ERROR, "Failed to read reply ClassAd" );
+		CAResult caresult = cmd_sock->is_closed() ? CA_REPLY_COMMUNICATION_ERROR : CA_REPLY_TIMED_OUT;
+		newError( caresult, "Failed to read reply ClassAd" );
 		return false;
 	}
 	if( !cmd_sock->end_of_message() ) {
@@ -2591,9 +2592,9 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 
 	classad::ClassAd result_ad;
 	if (!getClassAd(&rSock, result_ad)) {
-		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+		if (err) err->pushf("DAEMON", 1, "Failed to receive response from remote daemon at"
 			" at '%s'\n", _addr.c_str() );
-		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to recieve response from "
+		dprintf(D_FULLDEBUG, "Daemon::getSessionToken() failed to receive response from "
 			"remote daemon at '%s'\n", _addr.c_str());
 		return false;
 	}
@@ -2680,9 +2681,9 @@ Daemon::exchangeSciToken(const std::string &scitoken, std::string &token, Condor
 
 	classad::ClassAd result_ad;
 	if (!getClassAd(&rSock, result_ad)) {
-		err.pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+		err.pushf("DAEMON", 1, "Failed to receive response from remote daemon at"
 			" at '%s'\n", _addr.c_str());
-		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to recieve response from "
+		dprintf(D_FULLDEBUG, "Daemon::exchangeSciToken() failed to receive response from "
 			"remote daemon at '%s'\n", _addr.c_str());
 		return false;
 	}
@@ -2822,9 +2823,9 @@ Daemon::startTokenRequest( const std::string &identity,
 
 	classad::ClassAd result_ad;
 	if (!getClassAd(&rSock, result_ad)) {
-		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
+		if (err) { err->pushf("DAEMON", 1, "Failed to receive "
 			"response from remote daemon at at '%s'", _addr.c_str()); }
-		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to recieve "
+		dprintf(D_FULLDEBUG, "Daemon::startTokenRequest() failed to receive "
 			"response from remote daemon at '%s'\n", _addr.c_str());
 		return false;
 	}
@@ -2925,7 +2926,7 @@ Daemon::finishTokenRequest(const std::string &client_id, const std::string &requ
 		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
 			"response from remote daemon at '%s'",
 			_addr.c_str()); }
-		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to recieve "
+		dprintf(D_FULLDEBUG, "Daemon::finishTokenRequest() failed to receive "
 			"response from remote daemon at '%s'\n",
 			_addr.c_str());
 		return false;
@@ -3121,7 +3122,7 @@ Daemon::approveTokenRequest( const std::string &client_id, const std::string &re
 		if (err) { err->pushf("DAEMON", 1, "Failed to recieve "
 			"response from remote daemon at '%s'\n",
 			_addr.c_str()); }
-		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to recieve "
+		dprintf(D_FULLDEBUG, "Daemon::approveTokenRequest() failed to receive "
 			"response from remote daemon at '%s'\n",
 			_addr.c_str());
 		return false;
@@ -3228,9 +3229,9 @@ Daemon::autoApproveTokens( const std::string &netblock, time_t lifetime,
 
 	classad::ClassAd result_ad;
 	if (!getClassAd(&rSock, result_ad)) {
-		if (err) err->pushf("DAEMON", 1, "Failed to recieve response from remote daemon at"
+		if (err) err->pushf("DAEMON", 1, "Failed to receive response from remote daemon at"
 			" at '%s'\n", _addr.c_str());
-		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to recieve response "
+		dprintf(D_FULLDEBUG, "Daemon::autoApproveTokenRequest() failed to receive response "
 			"from remote daemon at '%s'\n", _addr.c_str());
 		return false;
 	}

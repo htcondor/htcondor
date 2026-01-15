@@ -120,7 +120,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
-static void printJobAds(ClassAdList & jobs);
+static void printJobAds(std::vector<ClassAd*> & jobs);
 static void printJob(ClassAd & ad);
 
 static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, classad::References & attrs, const char * streamid, bool is_filename);
@@ -1169,8 +1169,8 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, std::string sub
 }
 
 static bool AddToClassAdList(void* pv, ClassAd* ad) {
-	ClassAdList * plist = (ClassAdList*)pv;
-	plist->Insert(ad);
+	std::vector<ClassAd*> * plist = (std::vector<ClassAd*>*)pv;
+	plist->push_back(ad);
 	return false; // return false to indicate we took ownership of the ad.
 }
 
@@ -1452,17 +1452,27 @@ static void printJob(ClassAd & ad)
 	// maybe fix that someday, but as far as I know, the non-socket printing
 	// functionality of this code isn't actually used except for debugging.
 	if (longformat) {
+		classad::References order;
+		classad::References * proj = &projection;
+		if (projection.empty()) {
+			// fetch all attributes as a projection because this forces the print order
+			sGetAdAttrs(order, ad, false);
+			proj = &order;
+		}
 		if (use_xml) {
-			fPrintAdAsXML(stdout, ad, projection.empty() ? NULL : &projection);
+			fPrintAdAsXML(stdout, ad, proj);
 		} else if ( use_json ) {
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, false);
+			fPrintAdAsJson(stdout, ad, proj, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
+			fPrintAdAsJson(stdout, ad, proj, true);
 		} else {
-			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
+			// dont use fPrintAd here because it does not print in projection order
+			std::string buffer;
+			sPrintAdAttrs(buffer, ad, *proj);
+			fputs(buffer.c_str(), stdout);
 		}
 		printf("\n");
 	} else {
@@ -1539,15 +1549,12 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 	return false;
 }
 
-static void printJobAds(ClassAdList & jobs)
+static void printJobAds(std::vector<ClassAd*> & jobs)
 {
-	jobs.Open();
-	ClassAd	*job;
-	while (( job = jobs.Next())) {
+	for (ClassAd *job : jobs) {
 		printJob(*job);
 		if (abort_transfer) break;
 	}
-	jobs.Close();
 }
 
 static bool isvalidattrchar(char ch) { return isalnum(ch) || ch == '_'; }
@@ -1892,13 +1899,17 @@ static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistory
 
 	//If we were passed a specific file name then read that.
 	if (fileisuserlog) {
-		ClassAdList jobs;
+		std::vector<ClassAd*> jobs;
 		if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
 			fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
 			exit(1);
 		}
 		printJobAds(jobs);
-		jobs.Clear();
+		
+		for (ClassAd* ad : jobs) {
+			delete ad;
+		}
+		jobs.clear();
 	} else {
 		// If the user specified the name of the file to read, we read that file only.
 		readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);

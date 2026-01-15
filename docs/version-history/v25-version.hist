@@ -1,4 +1,108 @@
-*** 25.5.0 features
+*** 25.7.0 features
+
+- Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
+  :jira:`3449`
+
+*** 25.7.0 bugs
+
+*** 25.0.7 bugs
+
+*** 25.6.0 features
+
+- Added :meth:`~classad2.ClassAd.formatJson` and :meth:`~classad2.ClassAd.formatOld` as
+  aliases for :meth:`~classad2.ClassAd.printJson` and :meth:`~classad2.ClassAd.printOld`,
+  respectively.
+  :jira:`3341`
+
+- The option for the *condor_schedd* to keep job event log files open for
+  a period of time has been removed.
+  This was controlled by the now-removed configuration parameters
+  USERLOG_FILE_CACHE_MAX and USERLOG_FILE_CACHE_CLEAR_INTERVAL.
+  It was disabled by default.
+  :jira:`3367`
+
+- If a docker universe jobs fails on an execution point because the image
+  was built for a machine architecture that does not match the execution
+  point, the hold message now more clearly indicates why.
+  :jira:`3447`
+
+- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
+  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
+  to ``True``.
+  :jira:`3304`
+
+- When the attempt to claim a slot to run a job is refused, the reason for the
+  refusal is now reported back to the *condor_shadow* which logs the reason and
+  adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
+  :jira:`3388`
+
+- The submit knob :macro:`SUBMIT_REQUEST_MISSING_UNITS` now also applies to
+  :subcom:`retry_request_memory` as well.
+  :jira:`3419`
+
+- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
+  DAGMan rescue file by name for state restoration.
+  :jira:`3425`
+
+- Augment the *condor_kbdd* to use the systemd sd-login library to find user
+  sessions, since /usr/run/utmp is no longer available on newer platforms.
+  Also, add idle check support for Mutter(Gnome), which works on both
+  Wayland and X11.
+  :jira:`3452`
+
+- By default, HTCondor will now send extra information to "multi-file" file
+  transfer plug-ins if such is specified in the job.  All such plug-ins
+  should safely ignore this extra information.  To ease the transition if a
+  plug-in does not, the extra information may be disabled by unsetting
+  :macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS` on the relevant EPs.  (We
+  have deliberately not documentation the format of the extra information
+  because this feature is under active development.)
+
+  Plug-in authors may find the
+  :doc:`/apis/file-transfer-plugins/index` documentation helpful.
+  :jira:`3357`
+
+*** 25.6.0 bugs
+
+- Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
+  :subcom:`starter_log` submit command.
+  :jira:`3408`
+
+- The EPs produced by :tool:`htcondor annex` now include the additional
+  configuration distributed with the HTCondor tarball, which should make
+  them less sensitive to version changes.  Additionally, the default
+  configuration for HTCondor now enables the Pelican (OSDF) file transfer
+  plug-in.
+  :jira:`3410`
+
+- Fixed a bug where :tool:`condor_ssh_to_job` when running into a
+  singularity or apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
+  set to true would start out with the current directory one higher than
+  the job.
+  :jira:`3467`
+
+- Fixed a bug in the handling of :subcom:`retry_request_memory` where a
+  list of values using a scale such as ``GB`` would generate an error
+  or fail quietly if the ``B`` was not present.
+  :jira:`3458`
+
+- Fixed an intermittent bug where the *condor_shadow* would occasionally
+  get stuck for 20 minutes trying to reconnect to a non-existent *condor_starter*
+  when file transfer file fails for any reason.
+  :jira:`3429`
+
+*** 25.0.6 features
+
+- Initial support for openSUSE Leap 16.
+  :jira:`3233`
+
+- To eliminate the dependency on the ``libexpat`` library in the Python wheels,
+  we now build the Python wheels without VOMS and EC2 GAHP support.
+  :jira:`3469`
+
+*** 25.0.6 bugs
+
+*** 25.5.1 features
 
 - A new configuration variable :macro:`FORCE_NEGOTIATOR_SLOT_WEIGHT` allows
   an administrator to configure the *condor_negotiator* so it uses its
@@ -6,27 +110,7 @@
   point to declare the weight of a slot.
   :jira:`3346`
 
-- EP administrators may now alter the semantics of self-checkpointing jobs:
-  after a job self-checkpoints and the checkpoint is uploaded, if
-  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
-  be reactivated, and evict the job (with its own
-  :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`
-  ) if not.
-  :jira:`3222`
-
-- The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
-  list to the attributes it will be sending to the *condor_schedd* for resource requests.
-  The *condor_negotiator* now also has a more complete set of known slot attributes which it
-  will remove as well.  These changes should help make the schedd more efficient when building
-  resource requests for matchmaking.
-  :jira:`3358`
-
-- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
-  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
-  to ``True``.
-  :jira:`3304`
-
-- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``true``
+- :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` now defaults to ``True``\,
   causing failure to cleanup ephemeral Logical Volumes to break slot resources.
   If the logical volume is later successfully cleaned up then the associated
   broken resources will be restored.
@@ -36,14 +120,28 @@
   reminders a *condor_startd* is tracking.
   :jira:`3352`
 
-- Fixup the *condor_credmon_oauth* to support Python 3.14.  With this, we believe that
+- The *condor_negotiator* will now apply the :macro:`REMOVE_SIGNIFICANT_ATTRIBUTES`
+  list to the attributes it will be sending to the *condor_schedd* for resource requests.
+  The *condor_negotiator* now also has a more complete set of known slot attributes which it
+  will remove as well.  These changes should help make the *condor_schedd* more efficient when building
+  resource requests for matchmaking.
+  :jira:`3358`
+
+- EP administrators may now alter the semantics of self-checkpointing jobs.
+  After a job self-checkpoints and the checkpoint is uploaded, if
+  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
+  be reactivated then the job is restarted: otherwise the job is evicted with a
+  :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`.
+  :jira:`3222`
+
+- Fix up the *condor_credmon_oauth* to support Python 3.14.  With this, we believe that
   all of HTCondor will work with Python 3.14.
   :jira:`3365`
 
 - Added configuration variables :macro:`JOB_ROUTER_SCHEDD1_ADDRESS_FILE` and
   :macro:`JOB_ROUTER_SCHEDD2_ADDRESS_FILE`. When configured, the *condor_job_router*
-  will first use the address file to locate the source or destination Schedd and
-  only query the Collector if the file does not contain an address. Use of these
+  will first use the address file to locate the source or destination *condor_schedd* and
+  only query the *condor_collector* if the file does not contain an address. Use of these
   configuration variables improves the efficiency of the job router and eliminates
   one source of failure when routing.
   :jira:`1736`
@@ -56,7 +154,12 @@
 - Improved DAGMan's debugging for executed scripts.
   :jira:`3381`
 
-*** 25.5.0 bugs
+*** 25.5.1 bugs
+
+*** 25.0.5 features
+
+- Initial support for Ubuntu 24.04 (noble numbat) on the arm64 platform.
+  :jira:`3414`
 
 *** 25.0.5 bugs
 

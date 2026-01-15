@@ -137,7 +137,6 @@ operator=(const ClassAd &rhs)
 bool ClassAd::
 CopyFrom( const ClassAd &ad )
 {
-	AttrList::const_iterator	itr;
 	ExprTree 					*tree;
 	bool                        succeeded;
 
@@ -145,8 +144,7 @@ CopyFrom( const ClassAd &ad )
 	if (this == &ad) 
 	{
 		succeeded = false;
-	} else 
-	{
+	} else {
 		Clear( );
 		
 		// copy scoping attributes
@@ -156,8 +154,8 @@ CopyFrom( const ClassAd &ad )
 		parentScope = ad.parentScope;
 		
 		this->do_dirty_tracking = false;
-		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
-			if( !( tree = itr->second->Copy( ) ) ) {
+		for( const auto& [attr_name, attr_tree] : ad.attrList ) {
+			if( !( tree = attr_tree->Copy( ) ) ) {
 				Clear( );
 				CondorErrno = ERR_MEM_ALLOC_FAILED;
 				CondorErrMsg = "";
@@ -165,9 +163,9 @@ CopyFrom( const ClassAd &ad )
                 break;
 			}
 			
-			Insert(itr->first, tree);
-			if (ad.do_dirty_tracking && ad.IsAttributeDirty(itr->first)) {
-				dirtyAttrList.insert(itr->first);
+			Insert(attr_name, tree);
+			if (ad.do_dirty_tracking && ad.IsAttributeDirty(attr_name)) {
+				dirtyAttrList.insert(attr_name);
 			}
 		}
 
@@ -219,17 +217,14 @@ SameAs(const ExprTree *tree) const
        } else {
            is_same = true;
            
-           AttrList::const_iterator	itr;
-           for (itr = attrList.begin(); itr != attrList.end(); itr++) {
-               ExprTree *this_tree;
+           for (const auto& [attr_name, tree] : attrList) {
                ExprTree *other_tree;
 
-               this_tree = itr->second;
-               other_tree = other_classad->Lookup(itr->first);
+               other_tree = other_classad->Lookup(attr_name);
                if (other_tree == NULL) {
                    is_same = false;
                    break;
-               } else if (!this_tree->SameAs(other_tree)) {
+               } else if (!tree->SameAs(other_tree)) {
                    is_same = false;
                    break;
                }
@@ -263,9 +258,8 @@ void ClassAd::
 GetComponents( std::vector<std::pair<std::string, ExprTree* > > &attrs ) const
 {
 	attrs.clear( );
-	for( AttrList::const_iterator itr=attrList.begin(); itr!=attrList.end(); 
-		itr++ ) {
-		attrs.emplace_back(itr->first, itr->second);
+	for( const auto& [attr_name, tree] : attrList ) {
+		attrs.emplace_back(attr_name, tree);
 	}
 }
 
@@ -274,10 +268,11 @@ GetComponents(std::vector< std::pair< std::string, ExprTree* > > &attrs,
 	const References &whitelist ) const
 {
 	attrs.clear( );
-	for ( References::const_iterator wl_itr = whitelist.begin(); wl_itr != whitelist.end(); wl_itr++ ) {
-		AttrList::const_iterator attr_itr = attrList.find( *wl_itr );
+	for ( const auto& attr_name : whitelist ) {
+		AttrList::const_iterator attr_itr = attrList.find( attr_name );
 		if ( attr_itr != attrList.end() ) {
-			attrs.emplace_back( attr_itr->first, attr_itr->second );
+			const auto& [found_name, tree] = *attr_itr;
+			attrs.emplace_back( found_name, tree );
 		}
 	}
 }
@@ -559,11 +554,11 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
 
-	std::pair<AttrList::iterator,bool> insert_result = attrList.emplace(attrName, tree);
-	if ( ! insert_result.second) {
-			// replace existing value
-		delete insert_result.first->second;
-		insert_result.first->second = tree;
+	auto [itr, inserted] = attrList.emplace(attrName, tree);
+	if (!inserted) {
+		// replace existing value
+		delete itr->second;
+		itr->second = tree;
 	}
 
 	MarkAttributeDirty(attrName);
@@ -588,11 +583,11 @@ bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
 
-	std::pair<AttrList::iterator,bool> insert_result = attrList.emplace(attrName, tree);
-	if ( ! insert_result.second) {
+	auto [itr, inserted] = attrList.emplace(attrName, tree);
+	if (!inserted) {
 		// replace existing value
-		old_tree = insert_result.first->second;
-		insert_result.first->second = tree;
+		old_tree = itr->second;
+		itr->second = tree;
 	} else {
 		old_tree = nullptr;
 	}
@@ -610,12 +605,12 @@ bool ClassAd::Swap(const std::string& attrName, ExprTree* tree, ExprTree* & old_
 //
 bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 {
-	std::pair<AttrList::iterator,bool> insert_result = attrList.emplace(name, lit);
+	auto [itr, inserted] = attrList.emplace(name, lit);
 
-	if( !insert_result.second ) {
-			// replace existing value
-		delete insert_result.first->second;
-		insert_result.first->second = lit;
+	if(!inserted) {
+		// replace existing value
+		delete itr->second;
+		itr->second = lit;
 	}
 
 	MarkAttributeDirty(name);
@@ -1743,11 +1738,10 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             //recurse on the subtrees!
             std::string                          fnName;
             std::vector<ExprTree*>               args;
-            std::vector<ExprTree*>::iterator     itr;
 
             ((const FunctionCall*)expr)->GetComponents(fnName, args);
-            for( itr = args.begin(); itr != args.end(); itr++){
-                if( !_GetInternalReferences( *itr, ad, state, refs, fullNames) ) {
+            for( auto arg : args ){
+                if( !_GetInternalReferences( arg, ad, state, refs, fullNames) ) {
                     return false;
                 }
             }
@@ -1789,16 +1783,15 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
         case EXPR_LIST_NODE:{
             std::vector<ExprTree*>               exprs;
-            std::vector<ExprTree*>::iterator     itr;
 
             ((const ExprList*)expr)->GetComponents(exprs);
-            for(itr = exprs.begin(); itr != exprs.end(); itr++){
+            for(auto tree : exprs){
                 if( state.depth_remaining <= 0 ) {
                     return false;
                 }
                 state.depth_remaining--;
 
-                bool ret = _GetInternalReferences(*itr, ad, state, refs, fullNames);
+                bool ret = _GetInternalReferences(tree, ad, state, refs, fullNames);
 
                 state.depth_remaining++;
                 if( !ret ) {

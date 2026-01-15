@@ -405,39 +405,6 @@ const char * startdPF_ATTR_VM_MEMORY  = ATTR_VM_MEMORY " AS VMMem   WIDTH   5 PR
 const char * startdPF_ActvtyTime  = ATTR_ENTERED_CURRENT_ACTIVITY " AS '  ActvtyTime' WIDTH 12 NOPREFIX TRUNCATE PRINTAS ACTIVITY_TIME OR -";
 const char * startdPF_ActivityTime = ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH 12 TRUNCATE PRINTAS ACTIVITY_TIME OR -";
 
-const char * const startdNormal_PrintFormat = "SELECT\n"
-	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??\n"
-	ATTR_OPSYS                      " WIDTH -10 OR ??\n"
-	ATTR_ARCH                       " WIDTH  -8 OR ??\n"
-	ATTR_STATE                      " WIDTH  -9 OR ??\n"
-	ATTR_ACTIVITY                   " WIDTH  -8 PRINTAS ACTIVITY_OR_OCU OR ??\n"
-	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
-	ATTR_MEMORY          " AS Mem     WIDTH   4 PRINTF %4d OR ??\n"
-	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -\n"
-	"SUMMARY STANDARD\n";
-
-const char * const startdNormal_java_PrintFormat = "SELECT\n"
-	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??\n"
-	ATTR_JAVA_VENDOR                " WIDTH -10 OR ??\n"
-	ATTR_JAVA_VERSION               " WIDTH  -6 OR ??\n"
-	ATTR_STATE                      " WIDTH  -9 OR ??\n"
-	ATTR_ACTIVITY                   " WIDTH  -8 OR ??\n"
-	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
-	ATTR_MEMORY          " AS Mem     WIDTH   4 PRINTF %4d OR ??\n"
-	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -\n"
-	"SUMMARY STANDARD\n";
-
-const char * const startdNormal_vm_PrintFormat = "SELECT\n"
-	ATTR_NAME                       " WIDTH -34 FIT PRINTF %s OR ??\n"
-	ATTR_VM_TYPE         " AS VmType  WIDTH  -6 OR ??\n"
-	ATTR_VM_NETWORKING_TYPES " AS Network WIDTH  -9 OR ??\n"
-	ATTR_STATE                      " WIDTH  -9 OR ??\n"
-	ATTR_ACTIVITY                   " WIDTH  -8 OR ??\n"
-	ATTR_CONDOR_LOAD_AVG " AS LoadAv  WIDTH   6 TRUNCATE PRINTAS LOAD_AVG OR ??\n"
-	ATTR_VM_MEMORY       " AS VMMem   WIDTH   5 PRINTF %4d OR ??\n"
-	ATTR_ENTERED_CURRENT_ACTIVITY " AS ActivityTime WIDTH AUTO TRUNCATE PRINTAS ACTIVITY_TIME OR -\n"
-	"SUMMARY STANDARD\n";
-
 int ppLastColNoPrefix(void* pv, int index, Formatter * fmt, const char * /*attr*/)
 {
 	int * pcol_count = (int*)pv;
@@ -918,14 +885,14 @@ void PrettyPrinter::ppSetCollectorNormalCols (int width, int & mach_width, const
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	} else {
-		int name_width = wide_display ? -34 : -28;
+		//int name_width = wide_display ? -34 : -28;
 		mach_width = wide_display ? -34 : -18;
 		if (width > 79 && ! wide_display) { 
 			int wid = width - (28+18+11+8+10+4);
 			wid = MIN(wid,50);
 			int nw = MIN(20, wid*2/3);
 			int nm = MIN(30, wid - nw);
-			name_width -= nw;
+			//name_width -= nw;
 			mach_width -= nm;
 		}
 	}

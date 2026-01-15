@@ -1443,9 +1443,8 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 
 			// Specific known bad
 		case CONDOR_UNIVERSE_SCHEDULER:
-			/* Note: May be valid (although requiring a different algorithm)
-			 * starting some time in V6.7. */
-			return_buf += "\nWARNING: Analysis is meaningless for Scheduler universe jobs.\n";
+		case CONDOR_UNIVERSE_LOCAL:
+			return_buf += "\nWARNING: Analysis is not complete for Scheduler or Local universe jobs.\n";
 			break;
 
 			// Unknown

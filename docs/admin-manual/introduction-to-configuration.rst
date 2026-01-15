@@ -12,7 +12,7 @@ read the other configuration-related sections:
 -  The :ref:`admin-manual/introduction-to-configuration:configuration templates` section contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
--  The :doc:`/admin-manual/configuration-macros` section contains
+-  The :doc:`/admin-manual/configuration/index` section contains
    information about the hundreds of individual configuration macros. In
    general, it is best to try to achieve your desired configuration
    using configuration templates before resorting to setting individual
@@ -694,7 +694,7 @@ character (!) to represent the not operation, followed by
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
    defined.
 
--  the version keyword, representing the version number of of the daemon
+-  the version keyword, representing the version number of the daemon
    or tool currently reading this conditional. This keyword is followed
    by an HTCondor version number. That version number can be of the form
    x.y.z or x.y. The version of the daemon or tool is compared to the
@@ -1123,17 +1123,16 @@ determined automatically at run time but which can be overwritten.
 
 ``$(FILESYSTEM_DOMAIN)`` :index:`FILESYSTEM_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See the :doc:`/admin-manual/configuration-macros` section, Shared File
+    evaluated on. See the :ref:`shared_fs_config_options` section, Shared File
     System Configuration File Entries for the full description of its
     use and under what conditions it could be desirable to change it.
 
 ``$(UID_DOMAIN)`` :index:`UID_DOMAIN`
     Defaults to the fully qualified host name of the machine it is
-    evaluated on. See the :doc:`/admin-manual/configuration-macros` section for the full
-    description of this configuration variable.
+    evaluated on. See the :macro:`UID_DOMAIN`.
 
 ``$(CONFIG_ROOT)`` :index:`CONFIG_ROOT`
-   Set to the directory where the the main config file will be read prior to reading any 
+   Set to the directory where the main config file will be read prior to reading any 
    config files. The value will usually be ``/etc/condor`` for an RPM install,
    ``C:\Condor`` for a Windows MSI install and the directory part of the ``CONDOR_CONFIG`` environment
    variable for a tarball install. This variable will not be set when ``CONDOR_CONFIG`` is
@@ -1282,6 +1281,7 @@ incorporates.
        the default is to divide 100% of the machine resources evenly across the slots.
 
     -  :config-template:`AssignAccountingGroup( map_filename [, check_request] )<FEATURE>`
+       
        Sets up a
        *condor_schedd* job transform that assigns an accounting group
        to each job as it is submitted. The accounting group is determined by
@@ -1294,11 +1294,13 @@ incorporates.
        is false, the requested accounting group will be ignored if it is not valid.
 
     -  :config-template:`ScheddUserMapFile( map_name, map_filename )<FEATURE>`
+       
        Defines a
        *condor_schedd* usermap named map_name using the given map
        file.
 
     -  :config-template:`SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )<FEATURE>`
+       
        Sets up a *condor_schedd* job transform that sets the dst_attr
        attribute of each job as it is submitted. The value of dst_attr
        is determined by mapping the src_attr of the job using the
@@ -1424,6 +1426,21 @@ incorporates.
        macro ``DEFAULT_CHECKPOINT_DESTINATION`` to the whole URL.  As an
        example, the default ``DEFAULT_CHECKPOINT_DESTINATION`` is
        ``"$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"``.
+    
+    - :config-template:`PelicanRetryPolicy<FEATURE>`
+
+       Contains Access Point configuration settings that improve error handling
+       when using the Pelican Platform for job file transfers. Persistent
+       transfer errors put the job on hold. Errors that Pelican considers
+       transient, such as brief network interruptions, return the job to Idle in
+       a cool-down mode controlled by :macro:`SYSTEM_ON_VACATE_COOL_DOWN`. By
+       default, the job is rescheduled after a short delay of about 5 to 10
+       minutes. If errors continue after the configured number of retries, the
+       job is placed on hold.
+       
+       The configuration macro :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` is set to
+       ``True`` by default, meaning this template is automatically applied to Access Points.
+       To disable this behavior, set :macro:`AUTO_USE_FEATURE_PelicanRetryPolicy` to ``False``.
 
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines

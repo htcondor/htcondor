@@ -19,6 +19,7 @@ Build-Depends: cmake (>= 3.16),
 #endif
                dh-python,
                libcurl4-openssl-dev,
+               libdbus-1-dev,
                libkrb5-dev,
                libldap2-dev | libldap-dev,
                libmunge-dev,
@@ -71,8 +72,8 @@ Depends: adduser,
          net-tools,
          cryptsetup,
 #if defined(UW_BUILD)
-         pelican (>= 7.18.1),
-         pelican-osdf-compat (>= 7.18.1),
+         pelican (>= 7.22.0),
+         pelican-osdf-compat (>= 7.22.0),
 #endif
          libjs-bootstrap,
          libjs-jquery,
@@ -337,6 +338,7 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends},
+         ${python3:Depends},
          ${shlibs:Depends}
 Conflicts: htcondor-test
 Breaks: htcondor-test

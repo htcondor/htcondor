@@ -232,6 +232,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
             "STARTER_NESTED_SCRATCH":   True,
+            "SINGULARITY_TEST_SANDBOX_TIMEOUT":              "8",
             "SINGULARITY":              "/usr/bin/singularity",
         },
     ) as the_dagman_condor:

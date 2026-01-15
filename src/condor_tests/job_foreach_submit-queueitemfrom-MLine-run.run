@@ -113,7 +113,7 @@ foreach my $line ( @expect2see ) {
 	} else {
 		print "Good just read $read as expected\n";
 		RegisterResult(1,"test_name", "$testname");
-		system("rm $argsprocessing[0].out");
+		unlink "$argsprocessing[0].out";
 	}
 }
 

@@ -55,6 +55,7 @@ int dash_long = 0;
 int dash_add = 0;
 int dash_projects = 0;
 int dash_usage = 0;
+int dash_daily = 0;
 int dash_wide = 0;
 
 
@@ -160,6 +161,16 @@ const char * const projUsage_PrintFormat = "SELECT\n"
 "   NumHeld      AS Held        WIDTH AUTO PRINTF %d\n"
 "SUMMARY STANDARD\n";
 
+// not really a print format, just a way to set the projection
+const char * const dailyStats_Projection = "SELECT\n"
+"   Name?:User AS Name\n"
+"   HourlyJobsLaunched ?: DailyJobsLaunched AS Launched PRINTF %d OR ' '\n"
+"   HourlyJobsFailedToStart ?: DailyJobsFailedToStart AS NoExec PRINTF %d OR ' '\n"
+"   HourlyJobsRequeued ?: DailyJobsRequeued AS Requeued PRINTF %d OR ' '\n"
+"   HourlyJobsHeld ?: DailyJobsHeld AS Held PRINTF %d OR ' '\n"
+"   HourlyJobsSlotTime ?: DailyJobsSlotTime AS SlotHours PRINTF %.2f OR ' '\n"
+"   HourlyJobsWeightedIdle ?: DailyJobsWeightedIdle AS IdleWeight PRINTF %.2f OR ' '\n"
+"SUMMARY NONE\n";
 
 static  int  testing_width = 0;
 int getDisplayWidth() {
@@ -171,7 +182,7 @@ int getDisplayWidth() {
 	return testing_width;
 }
 
-static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
+static void initOutputMask(AttrListPrintMask & prmask, classad::References & attrs, int qdo_mode, bool wide_mode)
 {
 	static const struct {
 		const int mode;
@@ -182,6 +193,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ 1, "projects",      projDefault_PrintFormat },
 		{ 2, "usage",         userUsage_PrintFormat },
 		{ 3, "prjusage",      projUsage_PrintFormat },
+		{ 4, "daily",         dailyStats_Projection },
 	};
 
 	int ixInfo = -1;
@@ -211,6 +223,8 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	if (SetAttrListPrintMaskFromStream(stream, nullptr, prmask, propt, grkeys, nullptr, messages) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
+	// return attributes refs from the projection merged with refs passed in.
+	for (auto & attr : propt.attrs) { attrs.insert(attr); }
 }
 
 int store_ads(void*pv, ClassAd* ad)
@@ -283,6 +297,223 @@ int render_ads(void* pv, ClassAd* ad)
 	}
 
 	return done_with_ad;
+}
+
+struct _process_daily_ads_info {
+	ROD_MAP_BY_KEY & rods;
+	AD_MAP_BY_KEY & ads;
+	time_t start_time{0};    // start time of hourly data (daemon start time)
+	time_t unit_sec{4*3600}; // smallest bucket size of hourly data
+	time_t phase_sec{0};     // how far we are through the first hour bucket
+	time_t now{0};
+	FILE * hfDiag{nullptr}; // write raw ads to this file for diagnostic purposes
+	unsigned int  diag_flags{0};
+	bool rescale_data{false};
+
+	_process_daily_ads_info(ROD_MAP_BY_KEY & _rods, AD_MAP_BY_KEY & _ads) : rods(_rods), ads(_ads) {}
+	void print(FILE* out);
+};
+
+
+int process_daily_ads(void* pv, ClassAd* ad)
+{
+	struct _process_daily_ads_info & info = *(struct _process_daily_ads_info*)pv;
+
+	std::string key;
+	if (!ad->LookupString(ATTR_USER, key) && !ad->LookupString(ATTR_NAME, key)) {
+		formatstr(key, "%06d", (int)info.ads.size()+1);
+	}
+	if (info.ads.count(key)) { formatstr_cat(key, "%06d", (int)info.ads.size()+1); }
+	info.ads.emplace(key, ad);
+
+	ad->LookupInteger("HourlyStatsStartTime", info.start_time);
+	ad->LookupInteger("HourlyStatsUnitSize", info.unit_sec);
+	ad->LookupInteger("HourlyStatsUnitPhase", info.phase_sec);
+	if ( ! info.now) { info.now = time(NULL); }
+
+	// if diagnose flag is passed, unpack the key and ad and print them to the diagnostics file
+	if (info.hfDiag) {
+		if (info.diag_flags & 1) {
+			fprintf(info.hfDiag, "#Key: %s\n", key.c_str());
+		}
+
+		if (info.diag_flags & 2) {
+			fPrintAd(info.hfDiag, *ad);
+			fputc('\n', info.hfDiag);
+		}
+
+		if (info.diag_flags & 4) {
+			return true; // done processing this ad
+		}
+	}
+
+	auto pp = info.rods.emplace(key,MyRowOfValues());
+	if (!pp.second) {
+		fprintf( stderr, "Error: Two results with the same key.\n" );
+	} else {
+		int cols = 6, index;
+		classad::Value name, val;
+		std::string label;
+		name.SetStringValue(key);
+		{
+			MyRowOfValues & rov = pp.first->second;
+			rov.SetMaxCols(1+cols); // reserve space for column data and user label
+			rov += name;
+			/*
+			rov.next(index);
+			rov.next(index);
+			rov.next(index);
+			rov.next(index);
+
+			rov.next(index);
+			rov.next(index);
+			*/
+		}
+
+		// figure out how many hour buckets there are
+		size_t num_hour_buckets = 0;
+		for (const auto & attr : StringTokenIterator("HourlyJobsWeightedIdle HourlyJobsSlotTime HourlyJobsLaunched HourlyJobsFailedToStart HourlyJobsRequeued HourlyJobsHeld")) {
+			auto * expr = ad->Lookup(attr);
+			if (expr && ExprTreeIsArray(expr, num_hour_buckets))
+				break;
+		}
+
+		size_t num_day_buckets = 0;
+		for (const auto & attr : StringTokenIterator("DailyJobsWeightedIdle DailyJobsSlotTime DailyJobsLaunched DailyJobsFailedToStart DailyJobsRequeued DailyJobsHeld")) {
+			auto * expr = ad->Lookup(attr);
+			if (expr && ExprTreeIsArray(expr, num_day_buckets))
+				break;
+		}
+		// DEBUG print raw scaling info
+		// fprintf(stderr, "hour_buckets=%lld, day_buckets=%lld unit=%lld, phase=%lld\n", num_hour_buckets, num_day_buckets, info.unit_sec, info.phase_sec);
+
+		auto pp2 = info.rods.emplace(key+"_0", MyRowOfValues());
+		{
+			MyRowOfValues & rov = pp2.first->second;
+			rov.SetMaxCols(1+cols); // reserve space for column data and user label
+			double hrs;
+			if (num_hour_buckets < 2) {
+				hrs = (info.now - info.start_time) / 3600.0;
+			} else {
+				hrs = info.phase_sec / 3600.0;
+			}
+			formatstr(label, "    last %.1f hrs", hrs);
+			val.SetStringValue(label);
+			rov += val;
+
+			if (ad->EvaluateExpr("HourlyJobsLaunched[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			if (ad->EvaluateExpr("HourlyJobsFailedToStart[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			if (ad->EvaluateExpr("HourlyJobsRequeued[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			if (ad->EvaluateExpr("HourlyJobsHeld[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+			if (ad->EvaluateExpr("HourlyJobsSlotTime[0]/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+			std::string buf("HourlyJobsWeightedIdle[0]");
+			double rescale = (double)(hrs * 3600.0 / info.unit_sec);
+			if (info.rescale_data) { formatstr_cat(buf, "/%f", rescale); }
+			if (ad->EvaluateExpr(buf.c_str(), val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+		}
+
+		if ((info.now - info.start_time) > info.unit_sec || num_hour_buckets > 1) {
+
+			if (num_hour_buckets > 1) {
+				pp2 = info.rods.emplace(key+"_2", MyRowOfValues());
+				{
+					MyRowOfValues & rov = pp2.first->second;
+					rov.SetMaxCols(1+cols); // reserve space for column data and user label
+					double hrs = (info.phase_sec + info.unit_sec) / 3600.0;
+					if (num_hour_buckets == 2) { hrs = (info.now - info.start_time) / 3600.0; }
+					formatstr(label, "    Last %.1f hrs", hrs);
+					val.SetStringValue(label);
+					rov += val;
+
+					if (ad->EvaluateExpr("HourlyJobsLaunched[0] + HourlyJobsLaunched[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("HourlyJobsFailedToStart[0] + HourlyJobsFailedToStart[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("HourlyJobsRequeued[0] + HourlyJobsRequeued[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("HourlyJobsHeld[0] + HourlyJobsHeld[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+					if (ad->EvaluateExpr("(HourlyJobsSlotTime[0] + HourlyJobsSlotTime[1])/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					// scale the weight to the number of buckets, accounting for the partial bucket.
+					std::string buf("(HourlyJobsWeightedIdle[0] + HourlyJobsWeightedIdle[1])");
+					double rescale = (double)(hrs * 3600.0 / info.unit_sec);
+					if (info.rescale_data) { formatstr_cat(buf, "/%f", rescale); }
+					if (ad->EvaluateExpr(buf.c_str(), val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				}
+			}
+
+			if ((info.now - info.start_time) >= info.unit_sec*3) {
+				pp2 = info.rods.emplace(key+"_3", MyRowOfValues());
+				{
+					MyRowOfValues & rov = pp2.first->second;
+					rov.SetMaxCols(1+cols); // reserve space for column data and user label
+					long long hrs = (info.now - info.start_time) / 3600;
+					if (hrs > 24) hrs = 24;
+					formatstr(label, "    Last %lld hrs", hrs);
+					val.SetStringValue(label);
+					rov += val;
+
+					if (ad->EvaluateExpr("sum(HourlyJobsLaunched)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("sum(HourlyJobsFailedToStart)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("sum(HourlyJobsRequeued)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					if (ad->EvaluateExpr("sum(HourlyJobsHeld)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+					// these are not quite correct when the first bucket is partial....
+					if (ad->EvaluateExpr("sum(HourlyJobsSlotTime)/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+					std::string buf("sum(HourlyJobsWeightedIdle)/size(HourlyJobsWeightedIdle)");
+					if (ad->EvaluateExpr(buf.c_str(), val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				}
+			}
+		}
+
+		if ((info.now - info.start_time) > (24*3600)) {
+			pp2 = info.rods.emplace(key+"_4", MyRowOfValues());
+			{
+				MyRowOfValues & rov = pp2.first->second;
+				rov.SetMaxCols(1+cols);
+				val.SetStringValue("    Yesterday");
+				rov += val;
+
+				if (ad->EvaluateExpr("DailyJobsLaunched[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsFailedToStart[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsRequeued[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsHeld[0]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+				if (ad->EvaluateExpr("DailyJobsSlotTime[0]/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsWeightedIdle[0]/size(HourlyJobsWeightedIdle)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			}
+		}
+
+		if ((info.now - info.start_time) > (27*3600)) {
+			pp2 = info.rods.emplace(key+"_5", MyRowOfValues());
+			{
+				MyRowOfValues & rov = pp2.first->second;
+				rov.SetMaxCols(1+cols);
+				
+				ad->EvaluateExpr("formattime(time() - time()%(24*3600) - (24*3600),\"    %A\")", val);
+				rov += val;
+
+				if (ad->EvaluateExpr("DailyJobsLaunched[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsFailedToStart[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsRequeued[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsHeld[1]", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+
+				// these are not quite correct because the first bucket is partial....
+				if (ad->EvaluateExpr("DailyJobsSlotTime[1]/3600.0", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+				if (ad->EvaluateExpr("DailyJobsWeightedIdle[1]/size(HourlyJobsWeightedIdle)", val) && val.IsNumber()) { rov += val; } else { rov.next(index); }
+			}
+		}
+
+	}
+
+	return 0; // return 0 means we are keeping the ad
+}
+
+void _process_daily_ads_info::print(FILE* out)
+{
+	for (auto & [key, ad] : ads) {
+		const char * name = key.c_str();
+		fprintf(out, "%s\n", name);
+	}
 }
 
 // Suspend users is a composite operation where we both disable and edit
@@ -511,6 +742,15 @@ main( int argc, const char *argv[] )
 			dash_usage = 1;
 		}
 		else
+		if (is_dash_arg_colon_prefix(argv[i], "daily", &pcolon, 2)) {
+			dash_daily = 1;
+			if (pcolon) {
+				if (is_arg_prefix(++pcolon, "rescale", 1)) {
+					dash_daily = 2;
+				}
+			}
+		}
+		else
 		if (is_dash_arg_colon_prefix(argv[i], "wide", &pcolon, 1)) {
 			dash_wide = 1;
 			if (pcolon) {
@@ -615,7 +855,12 @@ main( int argc, const char *argv[] )
 	if ((cmd == QUERY_USERREC_ADS) && ! dash_long && prmask.IsEmpty()) {
 		int qdo_mode = dash_projects ? 1 : 0;
 		if (dash_usage) { qdo_mode += 2; }
-		initOutputMask(prmask, qdo_mode, dash_wide);
+		if (dash_daily) { qdo_mode = 4;
+			attrs.insert("HourlyStatsStartTime");
+			attrs.insert("HourlyStatsUnitSize");
+			attrs.insert("HourlyStatsUnitPhase");
+		}
+		initOutputMask(prmask, attrs, qdo_mode, dash_wide);
 	}
 
 	DCSchedd schedd(name, pool);
@@ -706,6 +951,7 @@ main( int argc, const char *argv[] )
 		ROD_MAP_BY_KEY rods;
 		struct _render_ads_info render_info(&rods, &prmask);
 		AD_MAP_BY_KEY ads;
+		struct _process_daily_ads_info daily_info(rods, ads);
 		ClassAd *summary_ad=nullptr;
 		CondorError errstack;
 
@@ -714,6 +960,10 @@ main( int argc, const char *argv[] )
 		if (dash_long) {
 			process_ads = store_ads;
 			process_ads_data = &ads;
+		} else if (dash_daily) {
+			process_ads = process_daily_ads;
+			process_ads_data = &daily_info;
+			daily_info.rescale_data = dash_daily > 1;
 		} else {
 			process_ads = render_ads;
 			process_ads_data = &render_info;
@@ -731,6 +981,8 @@ main( int argc, const char *argv[] )
 			CondorClassAdListWriter writer(dash_long_format);
 			for (const auto &[key, ad]: ads) { writer.writeAd(*ad, stdout); }
 			if (writer.needsFooter()) { writer.writeFooter(stdout); }
+		//} else if (dash_daily) {
+		//	daily_info.print(stdout);
 		} else {
 			std::string line; line.reserve(1024);
 			// render once to set column widths
@@ -1005,6 +1257,7 @@ usage(FILE *out, const char *appname)
 		"    -format <fmt> <attr> Print attribute attr using format fmt\n"
 		);
 	fprintf(out, "    -usage\t\t Display CPU and slot usage\n");
+	fprintf(out, "    -daily\t\t Display Hourly and Daily stats\n");
 
 	fprintf(out, "\n  NAMES is zero or more of:\n"
 		"    <name>\t\t Operate on User or Project named <name>\n"

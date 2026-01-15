@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <charconv>
 
@@ -183,7 +184,7 @@ int DockerAPI::createContainer(
 	}
 
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -321,8 +322,8 @@ int DockerAPI::createContainer(
 
 		int num = pcache()->num_groups(user_name);
 		if (num > 0) {
-			gid_t groups[num];
-			if (pcache()->get_groups(user_name, num, groups)) {
+			std::vector<gid_t> groups(num);
+			if (pcache()->get_groups(user_name, num, groups.data())) {
 				for (int i = 0; i < num; i++) {
 					runArgs.AppendArg("--group-add");
 					std::string suppGroup;
@@ -567,8 +568,8 @@ DockerAPI::pullImage(const std::string &image_name,
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string DockerOutputFile = diag_dir + "/docker_stdout";
-	std::string DockerErrorFile  = diag_dir + "/docker_stderror";
+	std::string DockerOutputFile = diag_dir + "/.docker_stdout";
+	std::string DockerErrorFile  = diag_dir + "/.docker_stderror";
 
 	childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
 	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
@@ -603,7 +604,7 @@ DockerAPI::execInContainer( const std::string &containerName,
 	execArgs.AppendArg("-ti");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -959,7 +960,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 	int written;
 
 	// read with 200 second timeout, no flags, nonblocking
-	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, 0, false)) > 0) {
+	while ((written = condor_read("Docker Socket", uds, buf, 1, 5, CondorRWFlags::Read, false)) > 0) {
 		response.append(buf, written);
 	}
 
@@ -1879,6 +1880,7 @@ DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
 	}
 }
 
+#ifdef LINUX
 static
 size_t convert_number_with_suffix(std::string size) {
 	size_t result = 0;
@@ -1906,6 +1908,7 @@ size_t convert_number_with_suffix(std::string size) {
 	}
 	return result;
 }
+#endif
 
 std::vector<DockerAPI::ImageInfo>
 DockerAPI::getImageInfos() {

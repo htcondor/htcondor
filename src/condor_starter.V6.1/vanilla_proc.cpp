@@ -183,7 +183,7 @@ static bool cgroup_controller_is_writeable(const std::string &controller, std::s
 		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
 
 		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
-			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
+			dprintf(D_ALWAYS, "    Cgroup %s/%s is usable\n", controller.c_str(), relative_cgroup.c_str());
 			return true;
 		}
 	}
@@ -889,11 +889,8 @@ bool VanillaProc::restartCheckpointedJob() {
 		}
 		startd.setClaimId(claimID);
 
-		bool graceful = false;
-		bool got_job_done = false;
 		bool claim_is_closing = false;
-		bool job_is_restarting = true;
-		bool OK = startd.deactivateClaim( graceful, got_job_done, & claim_is_closing, job_is_restarting );
+		bool OK = startd.reactivateClaimCheck(claim_is_closing);
 		if(! OK) {
 			dprintf( D_ERROR, "Attempt to check if this checkpointed job should restart failed: %s\n", startd.error() );
 

@@ -387,7 +387,7 @@ VolumeManager::CreateFilesystem(const std::string &devname, CondorError &err, in
     args.AppendArg("-O");
     args.AppendArg("^has_journal");
     args.AppendArg("-E");
-    args.AppendArg("lazy_itable_init=0");
+    args.AppendArg("lazy_itable_init=1");
     args.AppendArg("-m");
     args.AppendArg("0");
     args.AppendArg("-L");
@@ -818,7 +818,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         std::string per_slot_device = DevicePath(vg_name, lv_name, encrypted);
         while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
             if (strcmp(dev, per_slot_device.c_str()) == MATCH) {
-                dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n",
+                dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, unmounting\n",
                         dev, mnt);
                 int r = umount(mnt);
                 if (r != 0) {
@@ -983,6 +983,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
     ArgList args;
     args.AppendArg(exe);
     args.AppendArg("--noheadings");
+    if ( ! query_lvs) { args.AppendArg("--readonly"); }
     args.AppendArg("--nameprefixes");
     args.AppendArg("--separator");
     args.AppendArg(LVM_REPORT_DELIM);
@@ -1147,6 +1148,10 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
     filter.lv_names.clear();
     filter.QueryNonCondorLVs().SkipThinpool();
 
+    // Reset non-condor usage count so multiple calls don't
+    // create bogus numbers (does a += below)
+    m_non_condor_usage = 0;
+
     // NOTE: Failures here make things wonky but aren't critical failures
     if ( ! getLVMReport(report, err, filter, GetTimeout())) {
         dprintf(D_STATUS, "Warning: Failed to query non-condor LVs: %s\n",
@@ -1155,8 +1160,7 @@ VolumeManager::GetPoolSize(uint64_t& detected_bytes, uint64_t& free_bytes, uint6
     } else {
         for (const auto& lv : report) {
             try {
-                uint64_t used = std::stoll(lv.size);
-                AddNonCondorUsage(used);
+                m_non_condor_usage += std::stoll(lv.size);
             } catch (...) {
                 dprintf(D_STATUS, "Warning: Failed to convert size (%s) for non-condor LV %s\n",
                         lv.size.c_str(), lv.name.c_str());

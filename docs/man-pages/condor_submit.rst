@@ -673,7 +673,7 @@ BASIC COMMANDS
        writes to ``stdout`` will be the list of items.
 
     The optional argument *<varname>* or *<list of varnames>* is the
-    name or names of of variables that will be set to the value of the
+    name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
     the variable ITEM will be used. Leading and trailing whitespace be
     trimmed. The optional argument *<slice>* is a python style slice
@@ -2150,7 +2150,7 @@ COMMANDS FOR THE GRID
  :subcom-def:`use_scitokens` = <True | False | Auto>
     Set this command to ``True`` to indicate that the job requires a scitoken.
     If **scitokens_file** is set, then that file is
-    used for the scitoken filename. Otherwise, the the scitoken filename is looked for in the
+    used for the scitoken filename. Otherwise, the scitoken filename is looked for in the
     ``BEARER_TOKEN_FILE`` environment variable. If **scitokens_file** is set
     then the value of **use_scitokens** defaults to ``True``.  If the filename is not
     defined in on one of these two places, then *condor_submit* will fail with an error message.
@@ -2559,11 +2559,8 @@ ADVANCED COMMANDS
     A comma-separated list of job ClassAd attribute names. The named
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
-    same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see the 
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries` page), but it applies to the job event log, instead of the system
-    event log.
+    same thing as the configuration variable :macro:`EVENT_LOG_INFORMATION_ATTRS`,
+    but it applies to the job event log, instead of the system event log.
 
  :subcom-def:`job_lease_duration` = <number-of-seconds>
     For vanilla, parallel, VM, and java universe jobs only, the duration

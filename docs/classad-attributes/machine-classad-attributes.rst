@@ -100,9 +100,7 @@ Machine ClassAd Attributes
 :classad-attribute-def:`ConsoleIdle`
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
-    with :macro:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
-    :ref:`admin-manual/configuration-macros:condor_startd configuration
-    file macros` section.
+    with :macro:`SLOTS_CONNECTED_TO_CONSOLE`.
 
 :classad-attribute-def:`Cpus`
     The number of CPUs (cores) in this slot. It is 1 for a single CPU
@@ -268,9 +266,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`HasFileTransferPluginMethods`
     A string of comma-separated file transfer protocols that the machine
-    can support. The value can be modified with :macro:`FILETRANSFER_PLUGINS`
-    as defined in :ref:`admin-manual/configuration-macros:condor_starter configuration file
-    entries`.
+    can support. The value can be modified with :macro:`FILETRANSFER_PLUGINS`.
 
 :classad-attribute-def:`HasRotationalScratch`
     A boolean when true indicates that this machine's EXECUTE directory is on a rotational
@@ -363,7 +359,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`JobBusyTimeCount`
     The total number of jobs used to calculate the :ad-attr:`JobBusyTimeAvg`
-    attribute. This is also the the total number times a *condor_starter*
+    attribute. This is also the total number times a *condor_starter*
     has exited.
 
 :classad-attribute-def:`JobBusyTimeMax`
@@ -411,7 +407,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`JobDurationCount`
     The total number of jobs used to calculate the :ad-attr:`JobDurationAvg`
-    attribute. This is also the the total number times a job has exited.
+    attribute. This is also the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
 
@@ -979,9 +975,7 @@ Machine ClassAd Attributes
     This specifies the weight of the slot when calculating usage,
     computing fair shares, and enforcing group quotas. For example,
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
-    two ``SlotWeight = 1`` slots. See the description of :ad-attr:`SlotWeight`
-    in :ref:`admin-manual/configuration-macros:condor_startd configuration
-    file macros`.
+    two ``SlotWeight = 1`` slots. See the :macro:`SLOT_WEIGHT`.
 
 :classad-attribute-def:`StartdIpAddr`
     String with the IP and port address of the *condor_startd* daemon

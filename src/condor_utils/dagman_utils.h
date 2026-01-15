@@ -236,7 +236,9 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-Notification",  {"Notification", "<option>", "Set HTCondor email notification level for DAG", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-outfile_dir",   {"OutfileDir", "<path>", "Directory path to write *.dagman.out file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Priority",      {"Priority", "<priority>", "Default priority for all jobs submitted by DAGMan", DAG_OPT_DISP_ALL}},
-	{"-Remote",        {"RemoteSchedd", "<schedd name>", "Name of remote schedd to submit DAGMan", DAG_OPT_DISP_CSD}}, // Note: -r works for this
+	{"-r",             {"RemoteSchedd", "<schedd name>", "See -Remote", 0}}, // Single letter flag to make -r equeal -remote
+	{"-Remote",        {"RemoteSchedd", "<schedd name>", "Name of remote schedd to submit DAGMan", DAG_OPT_DISP_CSD}},
+	{"-RescueFile",    {"RescueFile", "<filename>", "Run DAG from specified rescue file", DAG_OPT_DISP_ALL}},
 	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-schedd-daemon-ad-file", {"ScheddDaemonAdFile", "<path>", "Submit DAG to Schedd provided by ad file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-suppress_notification", {"SuppressNotification", "True", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
@@ -247,6 +249,14 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-Valgrind",      {"RunValgrind", "True", "Run DAGMan under Valgrind (Linux Only)", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Verbose",       {"Verbose", "True", "Increase error message verbosity for condor_submit_dag", DAG_OPT_DISP_CSD}}, // Note: -v works for this
 	//{"-WaitForDebug",  {"WaitForDebug", "True", "Pause condor_dagman execution until debugger is attached", DAG_OPT_DISP_DAGMAN}}, // Note: Handled in condor_dagman
+};
+
+// Key -> Set of keys it does not work with
+static const std::map<std::string, std::set<std::string, KeyNoCaseCmp>, KeyNoCaseCmp> dagOptsMutualExclusions {
+	{"DoRecovery", {"SaveFile"}},
+	{"DoRescueFrom", {"SaveFile", "RescueFile"}},
+	{"RescueFile", {"SaveFile", "DoRescueFrom"}},
+	{"SaveFile", {"DoRecovery", "DoRescueFrom", "RescueFile"}},
 };
 
 enum class DagOptionSrc {
@@ -363,15 +373,21 @@ public:
 	CLI_BOOL_FLAG & operator[]( DSO::b opt ) { return deep.boolOpts[opt._to_integral()]; }
 	int & operator[]( DSO::i opt ) { return deep.intOpts[opt._to_integral()]; }
 
+	// Check for option mutual exclusion (note if flag is provided then return conflicts as flags)
+	bool checkMutualExclusion(const std::string& opt, std::string& err, const std::string& flag = "");
+
 private:
 	//Shallow options used only by this DAG
 	DagOptionData<SSO> shallow;
 	//Deep options passed down to subdags
 	DagOptionData<DSO> deep;
-	bool is_MultiDag{false};
 	// Map of used bool options to prevent contradictary flags
 	// Used in AutoParse()
 	std::map<std::string, std::string> boolFlagCheck;
+	// Set of options used to check for mutual exclusion
+	std::set<std::string, KeyNoCaseCmp> setOptions;
+	// Multiple DAG files specified
+	bool is_MultiDag{false};
 };
 
 enum class DEBUG_MSG_STREAM {
@@ -413,6 +429,9 @@ public:
 	std::string RescueDagName(const std::string &primaryDagFile, bool multiDags, int rescueDagNum);
 
 	void RenameRescueDagsAfter(const std::string &primaryDagFile, bool multiDags, int rescueDagNum, int maxRescueDagNum);
+
+	// Return rescue DAG number from file or 0 for not matching the rescue dag format
+	int ExtractRescueNum(const std::string& file, const std::string& primaryDagFile, bool multiDags);
 
 	static inline std::string HaltFileName(const std::string &primaryDagFile) { return primaryDagFile + ".halt"; }
 

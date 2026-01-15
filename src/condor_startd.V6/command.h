@@ -102,10 +102,10 @@ int command_classad_handler(int, Stream* );
   some of the commands. 
 */
 // Negotiator sent match information to us
-int match_info( Resource*, char* );
+int match_info( Resource*, const char* );
 
 // Schedd Agent requests a claim
-int request_claim( Resource*, Claim *, char*, Stream* ); 
+int request_claim( Resource*, Claim *, const char*, Stream* ); 
 
 // Accept claim from schedd agent
 bool accept_request_claim(Claim* claim,
@@ -115,7 +115,7 @@ bool accept_request_claim(Claim* claim,
 	std::vector<Resource*> * dslots = nullptr);
 
 // Activate a claim with a given starter
-int activate_claim( Resource*, Stream* ); 
+int activate_claim( Resource* rip, Stream* stream, ClassAd * request_ad, bool send_failure_ad );
 
 // Start draining jobs
 int command_drain_jobs(int dc_cmd, Stream* s );

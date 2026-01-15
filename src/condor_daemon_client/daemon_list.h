@@ -67,14 +67,16 @@ class CollectorList {
 		// Try querying all the collectors until you get a good one
 	QueryResult query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), void* pv, CondorError * errstack = 0);
 
-		// a common case is just wanting a list of ads back, so provide a ready-made callback that does that...
-	static bool fetchAds_callback(void* pv, ClassAd * ad) {
-		ClassAdList * padList = (ClassAdList *)pv;
-		padList->Insert (ad);
-		return false;
-	}
 	QueryResult query (CondorQuery & cQuery, ClassAdList & adList, CondorError *errstack = 0) {
-		return query(cQuery, fetchAds_callback, &adList, errstack);
+		return query(cQuery, CondorQuery::query_callback_cal, &adList, errstack);
+	}
+
+	QueryResult query (CondorQuery & cQuery, std::vector<std::unique_ptr<ClassAd>> &adList, CondorError *errstack = 0) {
+		return query(cQuery, CondorQuery::query_callback_vector_ptr, &adList, errstack);
+	}
+
+	QueryResult query (CondorQuery & cQuery, std::vector<ClassAd> &adList, CondorError *errstack = 0) {
+		return query(cQuery, CondorQuery::query_callback_vector, &adList, errstack);
 	}
 
 private:

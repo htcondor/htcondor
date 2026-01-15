@@ -157,12 +157,9 @@ class AttrListPrintMask
 
 	// display functions
 	int   display (FILE *, ClassAd *, ClassAd *target=NULL);		// output to FILE *
-	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, std::vector<const char *> * pheadings=NULL); // output a list -> FILE *
 	int   display (std::string & out, ClassAd *, ClassAd *target=NULL ); // append to string out. return number of chars added
 	int   render (MyRowOfValues & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
-	int   calc_widths(ClassAd *, ClassAd *target=NULL );          // set column widths
-	int   calc_widths(ClassAdList *, ClassAd *target=NULL);
 	int   display_Headings(FILE *, std::vector<const char *> & headings);
 	char *display_Headings(const char * pszzHead);
 	char *display_Headings(std::vector<const char *> & headings);

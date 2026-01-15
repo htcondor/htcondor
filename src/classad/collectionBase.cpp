@@ -1975,9 +1975,8 @@ TruncateStorageFile(){
 
 bool ClassAdCollection::
 dump_collection(){
-         ClassAdTable::iterator	itr;
-	 for (itr= classadTable.begin();itr!=classadTable.end();itr++){
-		 cout << "dump_collection key= " << itr->first << std::endl;
+	 for (const auto& [key, value] : classadTable){
+		 cout << "dump_collection key= " << key << std::endl;
 	 }
 	 return true;
 }

@@ -1667,7 +1667,7 @@ GahpServer::command_update_token_from_file(const std::string &token_path)
 	static const std::string command = "UPDATE_TOKEN";
 
 	if (token_path.empty()) {
-		dprintf(D_ALWAYS, "GAHP command recieved with empty token file %s.\n",
+		dprintf(D_ALWAYS, "GAHP command received with empty token file %s.\n",
 			token_path.c_str());
 	}
 

@@ -53,6 +53,15 @@ if("${OS_NAME}" MATCHES "^WIN")
 		set(SYS_ARCH "X86_64")
 	endif()
 
+	# VS 2019 16.3 or later support the MultiToolTask builder, which parallelizes
+	# like Ninja.  Turn this on if not already on.
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
+		list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+	endif()
+	if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+		list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+	endif()
+
 endif()
 
 # means user did not specify, so change the default.
@@ -454,6 +463,18 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	  find_library(HAVE_XSS Xss)
 	endif()
 
+	find_package(DBus1)
+	if (DBus1_FOUND)
+	  set(HAVE_DBUS DBus1_FOUND)
+	  include_directories(${DBus1_INCLUDE_DIRS})
+	endif()
+
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(LIBSYSTEMD libsystemd)
+	if (LIBSYSTEMD_FOUND)
+	  set(HAVE_LIBSYSTEMD LIBSYSTEMD_FOUND)
+	endif()
+
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
     if (HAVE_SD_DAEMON_H)
 		# Since systemd-209, libsystemd-daemon.so has been deprecated
@@ -594,14 +615,17 @@ if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
-    if ( APPLE )
-        set( SFTP_SERVER "/usr/libexec/sftp-server" )
-    elseif ("${LINUX_NAME}" MATCHES "openSUSE")  # suse just has to be different
-        set( SFTP_SERVER "/usr/lib/ssh/sftp-server" )
-    elseif ( DEB_SYSTEM_NAME )
-        set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
-    else()
-        set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+    find_file( SFTP_SERVER
+        NAMES sftp-server
+        PATHS /usr/libexec
+              /usr/lib/ssh
+              /usr/lib/openssh
+              /usr/libexec/openssh
+              /usr/libexec/ssh
+        NO_DEFAULT_PATH
+    )
+    if ( NOT SFTP_SERVER )
+        message( WARNING "Could not find sftp-server in any of the expected locations" )
     endif()
 endif()
 

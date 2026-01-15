@@ -176,7 +176,7 @@ echo "TestVar2 = $2"
                     "ErrorType" : "Parameter",
                     "ErrorCode": -1,
                     "ErrorString": "Invalid plugin parameters",
-                    "PluginVersion": "1.0.0",
+                    "PluginVersion": "1.1.0",
                     "PluginLaunched": True,
                 },
             ],
@@ -199,7 +199,7 @@ echo "TestVar2 = $2"
                     "ErrorType" : "Parameter",
                     "ErrorCode": 19,
                     "ErrorString": "Custom failure occurred!",
-                    "PluginVersion": "1.0.0",
+                    "PluginVersion": "1.1.0",
                     "PluginLaunched": False,
                     "DeveloperData" : {
                         "TestVar1" : False,

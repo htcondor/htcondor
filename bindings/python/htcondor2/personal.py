@@ -73,6 +73,8 @@ DEFAULT_CONFIG = {
     "NUM_SLOTS_TYPE_1": "1",
     "SLOT_TYPE_1": "100%",
     "SLOT_TYPE_1_PARTITIONABLE": "TRUE",
+    # Singularity has intermittent issues on startup, turn off for now
+    "SINGULARITY": "/usr/bin/false",
 }
 
 ROLES = ["Personal"]
@@ -522,7 +524,7 @@ class PersonalPool:
             return int(self.who()["MASTER_PID"])
 
     def _daemon_pids(self) -> List[int]:
-        return [int(v) for k, v in self.who() if k.endswith("_PID")]
+        return [int(v) for k, v in self.who().items() if k.endswith("_PID")]
 
     def _is_ready(self) -> bool:
         return self.who().get("IsReady", False)

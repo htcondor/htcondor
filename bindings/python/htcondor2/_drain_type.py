@@ -20,7 +20,7 @@ class DrainType(enum.IntEnum):
 
     .. attribute:: Quick
 
-        Job are immediately soft-killed (generally meaning sent a ``SIGTERM``).
+        Jobs are immediately soft-killed (generally meaning sent a ``SIGTERM``).
         The startd then waits a certain amount of time to allow jobs to shut
         down cleanly before the draining policy becomes the following.
 

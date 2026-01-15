@@ -445,6 +445,31 @@ default=
 type=string
 tags=starter
 
+[ASSIGN_CPU_AFFINITY]
+default=false
+type=bool
+tags=starter
+
+[ENABLE_CHIRP]
+default=true
+type=bool
+tags=starter
+
+[ENABLE_SSH_TO_JOB]
+default=true
+type=bool
+tags=starter
+
+[ENABLE_URL_TRANSFERS]
+default=true
+type=bool
+tags=starter
+
+[MOUNT_PRIVATE_DEV_SHM]
+default=true
+type=bool
+tags=starter
+
 [DAGMAN_LOG_ON_NFS_IS_ERROR]
 default=false
 type=bool
@@ -1064,6 +1089,11 @@ type=int
 description=Slots above this number do not have KeyboardIdle updated
 tags=startd
 restart=true
+
+[STARTD_ENFORCE_DISK_LIMITS]
+default=false
+type=bool
+tags=startd
 
 [STARTD_HAS_BAD_UTMP]
 # XXX This should be a bool
@@ -1855,6 +1885,11 @@ default=auto
 type=string
 customization=seldom
 friendly_name=Ask Singularity to contain pid namespace
+tags=starter
+
+[STARTER_SETS_HOME_ENV]
+default=true
+type=bool
 tags=starter
 
 [UPDATE_INTERVAL]
@@ -3288,6 +3323,11 @@ default=600
 type=int
 tags=schedd,dedicated_scheduler
 
+[ALIVE_INTERVAL]
+default=300
+type=int
+tags=schedd
+
 [SCHEDD_PREEMPTION_REQUIREMENTS]
 default=
 type=string
@@ -3321,6 +3361,11 @@ type=bool
 tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
+
+[QUEUE_CLEAN_INTERVAL]
+default=86400
+type=int
+tags=Schedd
 
 [SCHEDD_SEND_RESCHEDULE]
 default=true
@@ -5366,6 +5411,36 @@ type=int
 default=false
 type=bool
 
+[DOCKER_EXTRA_ARGUMENTS]
+default=
+type=string
+tags=starter
+
+[DOCKER_LOG_DRIVER_NAME]
+default=true
+type=bool
+tags=starter
+
+[DOCKER_MOUNT_VOLUMES]
+default=
+type=string
+tags=starter
+
+[DOCKER_NETWORKS]
+default=
+type=string
+tags=starter
+
+[DOCKER_SKIP_IMAGE_ARCH_CHECK]
+default=false
+type=bool
+tags=starter
+
+[DOCKER_VOLUMES]
+default=
+type=string
+tags=starter
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
@@ -5389,8 +5464,13 @@ version=8.2.8
 type=string
 description=When a slot should be in Owner state
 
+[STASH_PLUGIN]
+default=$(LIBEXEC)/stash_plugin
+description=Full path to the stash/osdf/Pelican plugin
+type=path
+
 [FILETRANSFER_PLUGINS]
-default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
+default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py, $(STASH_PLUGIN)
 win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
 description=List of paths to installed file transfer plugins
 tags=startd
@@ -7269,6 +7349,35 @@ default : @fin
 			endif
 		@end
 	endif
+@fin
+
+[AUTO_USE_FEATURE_PelicanRetryPolicy]
+description=Enable AP policies for improved handling of Pelican file transfer failures
+default=$(IsSchedd)
+type=bool
+tags=schedd
+[$FEATURE.PelicanRetryPolicy]
+description=Pelican file transfer failures that are not permanent result in jobs going into cool down
+default : @fin
+	# These are the default values; they can be overridden later.
+	PelicanRetry_MaxRetries = 4
+	# Delay at least 300 seconds ...
+	PelicanRetry_MinimumDelay = 300
+	# ... and up to 300 more seconds, before retrying.
+	PelicanRetry_RandomDelay = 300
+	# pelican plugin uses 11 for retriable failures (11 << 8 == 2816)
+	pelican_error_subcode_retriable = 2816
+	# pelican plugin uses 5 for a stopped transfer (we're considering it retryable right now (OSPOOL-74)) (5 << 8 == 1280)
+	pelican_error_subcode_stopped = 1280
+	PelicanRetryCondition = ((VacateReasonCode == 12 || VacateReasonCode == 13) && ((VacateReasonSubCode == $(pelican_error_subcode_retriable)) || (VacateReasonSubCode == $(pelican_error_subcode_stopped)))) ?: false
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) PelicanRetry
+	JOB_TRANSFORM_PelicanRetry @=jt
+		REQUIREMENTS (stringListIMember("pelican",WantTransferPluginMethods) || stringListIMember("osdf",WantTransferPluginMethods) || stringListIMember("stash",WantTransferPluginMethods)) && isUndefined(PelicanRetryEnabled)
+		EVALMACRO retry_delay = $(PelicanRetry_MinimumDelay) + random($(PelicanRetry_RandomDelay))
+		SET PelicanRetryEnabled true
+		SET PelicanRetryDelay $(retry_delay)
+	@jt
+	SYSTEM_ON_VACATE_COOL_DOWN = ((PelicanRetryEnabled?:false) && $(PelicanRetryCondition) && ((NumJobCoolDowns?:0) < $(PelicanRetry_MaxRetries)) ? PelicanRetryDelay : ($(SYSTEM_ON_VACATE_COOL_DOWN:0)))
 @fin
 
 [$POLICY.OnlyRegisteredCheckpointDestinations]

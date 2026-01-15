@@ -88,6 +88,7 @@ with _add_dll_dir():
     from ._daemon_type import DaemonType
     from ._ad_type import AdType
     from ._drain_type import DrainType
+    from ._vacate_type import VacateType
     from ._completion_type import CompletionType
     from ._cred_type import CredType
     from ._query_opt import QueryOpt

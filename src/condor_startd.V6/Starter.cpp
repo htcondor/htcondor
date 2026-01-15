@@ -740,7 +740,11 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		}
 		if (add_a2_arg) {
 			if ( ! a2arg.empty()) a2arg += ",";
-			formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			if (param_boolean("STARTER_NESTED_SCRATCH", true)) {
+				formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/scratch/" SANDBOX_STARTER_LOG_FILENAME);
+			} else {
+				formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			}
 			args.AppendArg("-a2");
 			args.AppendArg(a2arg);
 		}

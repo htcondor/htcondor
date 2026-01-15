@@ -748,9 +748,8 @@ all attributes.
     A comma-separated list of attribute names. The named attributes and
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
-    setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries`) but it applies to the job event log instead of the system event log.
+    setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
+    job event log instead of the system event log.
 
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
@@ -1219,6 +1218,10 @@ all attributes.
     This can be put into :macro:`MOUNT_UNDER_SCRATCH` to hide users' home
     directories.
 
+:classad-attribute-def:`OsUser`
+    A string value representing the ``User`` the jobs *condor_shadow* will run
+    as. This is set by Condor.
+
 :classad-attribute-def:`OtherJobRemoveRequirements`
     A string that defines a list of jobs. When the job with this
     attribute defined is removed, all other jobs defined by the list are
@@ -1668,7 +1671,7 @@ all attributes.
 :classad-attribute-def:`JobStarterDebug`
     This attribute causes the *condor_starter* to write a job-specific
     copy of its daemon log in the job's scratch directory.
-    If the value is `True`, then the the logging level matches that of
+    If the value is `True`, then the logging level matches that of
     the regular daemon log.
     If the value is a string, then it specifies a different logging
     level following the syntax of :macro:`<SUBSYS>_DEBUG`.
@@ -2149,7 +2152,7 @@ information for the DAG.
     +------+--------------------------------------+
     | 0    | OK                                   |
     +------+--------------------------------------+
-    | 1    | An error has occured                 |
+    | 1    | An error has occurred                |
     +------+--------------------------------------+
     | 2    | One or more nodes in the DAG have    |
     |      | failed                               |

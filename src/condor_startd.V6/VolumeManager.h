@@ -84,7 +84,6 @@ public:
     inline std::string GetLoopFile() const { return m_loopback_filename; }
     inline int GetTimeout() const { return m_cmd_timeout; }
     inline bool IsThin() const { return m_use_thin_provision; }
-    inline void AddNonCondorUsage(uint64_t used) { m_non_condor_usage += used; }
     inline void SetTotalDisk(uint64_t total) {
         m_total_disk = total;
         m_queried_available_disk = true;

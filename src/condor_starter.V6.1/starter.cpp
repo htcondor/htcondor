@@ -2238,6 +2238,12 @@ Starter::jobEnvironmentReady( void )
 }
 
 
+void
+Starter::prepareJobHookDone() {
+	jobWaitUntilExecuteTime();
+}
+
+
 bool
 Starter::skipJobImmediately() {
 	//
@@ -2690,7 +2696,7 @@ Starter::SpawnJob( void )
 							}
 						}
 					} else {
-						dprintf(D_ALWAYS, "... but DEFAULT_CONTAINER_IMAGE doesn't evaluate to a string, skippping containerizing\n");
+						dprintf(D_ALWAYS, "... but DEFAULT_CONTAINER_IMAGE doesn't evaluate to a string, skipping containerizing\n");
 					}
 				}
 			}
@@ -3815,7 +3821,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		const char * psub = strchr(pre, chRe);
 		const char * pend = psub ? strchr(psub+1,chRe) : psub;
 		if ( ! psub || ! pend ) {
-			dprintf(D_ERROR, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
+			dprintf(D_ERROR, "Assigned%s environment '%s' ignored - missing replacement end marker: %s\n", tag, env_name.c_str(), peq);
 			break;
 		}
 		// at this point if your expression is /aa/bbb/
@@ -4066,7 +4072,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir(int& exit_code, const char * move_to)
+Starter::removeTempExecuteDir([[maybe_unused]] int& exit_code, const char * move_to)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early

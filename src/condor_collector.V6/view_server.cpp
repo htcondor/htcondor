@@ -42,7 +42,7 @@ int ViewServer::HistoryTimer;
 std::string ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 bool ViewServer::KeepHistory;
-HashTable< std::string, int >* ViewServer::FileHash;
+std::map< std::string, int >* ViewServer::FileHash;
 std::vector<ExtIntArray *> *ViewServer::TimesArray;
 std::vector<ExtOffArray *> *ViewServer::OffsetsArray;
 
@@ -121,7 +121,7 @@ void ViewServer::Init()
 		}
 	}
 	GroupHash = new AccHash;
-	FileHash = new HashTable< std::string, int >(hashFunction);
+	FileHash = new std::map<std::string, int>;
 	OffsetsArray = new std::vector< ExtOffArray*>;
 	TimesArray = new std::vector<ExtIntArray*>;
 
@@ -356,7 +356,8 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, time_t F
 	ExtOffArray* offsets = NULL;
 
 		// first find out which vector to use, by checking the hash
-	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
+	auto file_itr = FileHash->find(FileName);
+	if (file_itr == FileHash->end()) {
 
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
@@ -364,11 +365,12 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, time_t F
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
 		file_array_index = OffsetsArray->size();
-		FileHash->insert( FileName, file_array_index );
+		FileHash->emplace(FileName, file_array_index);
 		TimesArray->push_back(times_array);
 		OffsetsArray->push_back(offsets);
 	} else {
 			// otherwise just get the appropriate array
+		file_array_index = file_itr->second;
 		times_array = (TimesArray->at( file_array_index ));
 		offsets = (OffsetsArray->at( file_array_index ));
 	}
@@ -444,7 +446,8 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, time_t F
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
 		// first find out which vector to use, by checking the hash
-	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
+	auto file_itr = FileHash->find(FileName);
+	if (file_itr == FileHash->end()) {
 
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
@@ -452,12 +455,13 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, time_t F
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
 		file_array_index = OffsetsArray->size();
-		FileHash->insert( FileName, file_array_index );
+		FileHash->emplace(FileName, file_array_index);
 		TimesArray->push_back( times_array );
 		OffsetsArray->push_back( offsets );
 	} else {
 
 			// otherwise just get the appropriate array
+		file_array_index = file_itr->second;
 		times_array = (TimesArray->at( file_array_index ));
 		offsets = (OffsetsArray->at( file_array_index ));
 		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", times_array->length());
@@ -786,8 +790,10 @@ void ViewServer::WriteHistory(int /* tid */)
 				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
-				if(FileHash->lookup(DataSet[i][j].OldFileName,
-														oldFileIndex) != -1) {
+				auto new_file_itr = FileHash->end();
+				auto old_file_itr = FileHash->find(DataSet[i][j].OldFileName);
+				if (old_file_itr != FileHash->end()) {
+					oldFileIndex = old_file_itr->second;
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
 					for (auto p: *(*OffsetsArray)[oldFileIndex]) {
@@ -796,24 +802,20 @@ void ViewServer::WriteHistory(int /* tid */)
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;
 					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
-					if(FileHash->lookup(DataSet[i][j].NewFileName,
-														newFileIndex) != -1) {
+					new_file_itr = FileHash->find(DataSet[i][j].NewFileName);
+					if (new_file_itr != FileHash->end()) {
+						newFileIndex = new_file_itr->second;
 							// switch the indices to avoid copying data
-						FileHash->remove(DataSet[i][j].OldFileName);
-						FileHash->remove(DataSet[i][j].NewFileName);
-						FileHash->insert(DataSet[i][j].OldFileName,
-															newFileIndex);
-						FileHash->insert(DataSet[i][j].NewFileName,
-															oldFileIndex);
+						old_file_itr->second = newFileIndex;
+						new_file_itr->second = oldFileIndex;
 					}
 				}
-				else if(FileHash->lookup(DataSet[i][j].NewFileName,
-													newFileIndex) != -1) {
+				else if((new_file_itr = FileHash->find(DataSet[i][j].NewFileName)) != FileHash->end()) {
+					newFileIndex = new_file_itr->second;
 						// if no file got overwritten, then just add to the
 						// hash and arrays
-					FileHash->remove(DataSet[i][j].NewFileName);
-					FileHash->insert(DataSet[i][j].OldFileName,
-															newFileIndex);
+					FileHash->erase(new_file_itr);
+					(*FileHash)[DataSet[i][j].OldFileName] = newFileIndex;
 				}
 				DataSet[i][j].OldStartTime=DataSet[i][j].NewStartTime;
 				DataSet[i][j].NewStartTime=-1;

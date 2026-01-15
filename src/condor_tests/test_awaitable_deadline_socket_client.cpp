@@ -55,6 +55,9 @@ int main( int argc, char ** argv ) {
     ASSERT(r->put("the third string"));
     ASSERT(r->end_of_message());
 
+    // Clean up to prevent memory leaks
+    delete r;
+    delete d;
 
     return 0;
 }
