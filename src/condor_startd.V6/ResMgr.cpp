@@ -1366,8 +1366,16 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 	for(Resource* rip : slots) {
 		if ( ! rip) continue;
-		if (rip->update_is_needed() ||
-			(send_backfill_slots && rip->is_partitionable_slot() && rip->r_backfill_slot)) {
+		bool is_backfill_pslot = rip->is_partitionable_slot() && rip->r_backfill_slot;
+		if (is_backfill_pslot && (rip->update_is_needed() || send_backfill_slots)) {
+			// when a backfill p-slot needs to refresh, first refresh its static resources
+			// against the updated primary_res_in_use collection, this needs to happen *after*
+			// the primary pslot has been updated and res conflicts have been recalculated.
+			// Which is why we do it here - just before we send updates.  This insures that the internal
+			// ad used for claiming matches the update ad. see HTCONDOR-3702
+			rip->refresh_classad_resources(primary_res_in_use);
+		}
+		if (rip->update_is_needed() || (send_backfill_slots && is_backfill_pslot)) {
 			public_ad.Clear(); private_ad.Clear();
 			rip->get_update_ads(public_ad, private_ad); // this clears update_is_needed
 			send_update(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
