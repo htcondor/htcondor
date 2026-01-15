@@ -4,6 +4,11 @@
 
 *** 24.12.16 bugs
 
+- Fixed a bug where a backfill p-slot could get into a state where it
+  would advertise that it had capacity, but refuse every claim with
+  a log message indicating that it had zero CPUs.
+  :jira:`3702`
+
 - In the *condor_schedd* when a transform attempts to set an immutable attribute
   more than once, the second attempt be quietly ignored rather than failing job materialization.
   :jira:`3495`
