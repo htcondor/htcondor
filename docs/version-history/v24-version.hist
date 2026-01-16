@@ -2,6 +2,10 @@
 
 *** 24.0.17 bugs
 
+- Fixed :meth:`htcondor2.Schedd.refreshGSIProxy` to use correct
+  variables and not immediately fail.
+  :jira:`3503`
+
 *** 24.12.16 bugs
 
 - Fixed a bug where a backfill p-slot could get into a state where it
