@@ -534,6 +534,10 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
+	// If we decide to modify a JSON-style cred to add scope/audience
+	// info, jsoncred will hold the modified data. The pointer cred
+	// will be redirected to point at jsoncred's data. In all cases,
+	// clen will hold the size of the data pointed to by cred.
 	size_t clen = credlen;
 	std::string jsoncred;
 
