@@ -42,7 +42,7 @@ const int NO_INLINE_NODE_DESC_END_TEST = 5;
 #ifdef WIN32
   static char dag_config_path[] = "CONFIG > C:\\path\\to\\custom\\dag.conf";
 #else
-  static char dag_config_path[] = "CONFIG > /path/to/custom/dag.conf",
+  static char dag_config_path[] = "CONFIG > /path/to/custom/dag.conf";
 #endif // WIN32
 
 //------------------------------------------------------------------------------------
