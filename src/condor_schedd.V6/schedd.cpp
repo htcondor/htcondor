@@ -11178,26 +11178,6 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	}
 #endif
 
-		/* Setup the array of fds for stdin, stdout, stderr */
-	int* std_fds_p = NULL;
-	int std_fds[3];
-	int pipe_fds[2];
-	pipe_fds[0] = -1;
-	pipe_fds[1] = -1;
-	if( ! daemonCore->Create_Pipe(pipe_fds) ) {
-		dprintf( D_ALWAYS, 
-				 "ERROR: Can't create DC pipe for writing job "
-				 "ClassAd to the %s, aborting\n", name );
-		return false;
-	} 
-		// pipe_fds[0] is the read-end of the pipe.  we want that
-		// setup as STDIN for the handler.  we'll hold onto the
-		// write end of it so we can write the job ad there.
-	std_fds[0] = pipe_fds[0];
-	std_fds[1] = -1;
-	std_fds[2] = -1;
-	std_fds_p = std_fds;
-
         /* Get the handler's nice increment.  For now, we just use the
 		   same config attribute for all handlers. */
     int niceness = param_integer( "SHADOW_RENICE_INCREMENT",0 );
@@ -11250,11 +11230,6 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
 				 "%d.%d, can't spawn %s, aborting\n", 
 				 job_id->cluster, job_id->proc, name );
-		for( int i = 0; i < 2; i++ ) {
-			if( pipe_fds[i] >= 0 ) {
-				daemonCore->Close_Pipe( pipe_fds[i] );
-			}
-		}
 			// our caller will deal with cleaning up the srec
 			// as appropriate...  
 		return false;
@@ -11291,6 +11266,33 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		}
 #endif
 	}
+
+	// serialize the job ad into a string for writing to the pipe
+	std::string ad_str;
+	sPrintAdWithSecrets(ad_str, *job_ad);
+	const char* ptr = ad_str.c_str();
+
+		/* Setup the array of fds for stdin, stdout, stderr */
+	int* std_fds_p = NULL;
+	int std_fds[3];
+	int pipe_fds[2];
+	pipe_fds[0] = -1;
+	pipe_fds[1] = -1;
+	if (!daemonCore->Create_Pipe(pipe_fds, false, false, false, false, ad_str.size())) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: Can't create DC pipe for writing job "
+				 "ClassAd to the %s, aborting\n", name );
+		return false;
+	} 
+		// pipe_fds[0] is the read-end of the pipe.  we want that
+		// setup as STDIN for the handler.  we'll hold onto the
+		// write end of it so we can write the job ad there.
+	std_fds[0] = pipe_fds[0];
+	std_fds[1] = -1;
+	std_fds[2] = -1;
+	std_fds_p = std_fds;
+
+
 	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
 	   priv switching between PRIV_USER (for handling syscalls, moving
@@ -11336,9 +11338,6 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		// 2) dump out the job ad to the write end, since the
 		// handler is now alive and can read from the pipe.
 	ASSERT( job_ad );
-	std::string ad_str;
-	sPrintAdWithSecrets(ad_str, *job_ad);
-	const char* ptr = ad_str.c_str();
 	int len = ad_str.length();
 	while (len) {
 		int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
