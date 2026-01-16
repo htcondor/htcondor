@@ -17,6 +17,10 @@
   more than once, the second attempt be quietly ignored rather than failing job materialization.
   :jira:`3495`
 
+- Fixed a bug where specifying a scope or audience when storing a
+  Vault-managed credential results in a stored token that can't be used.
+  :jira:`3506`
+
 *** 24.0.16 features
 
 - HTCondor tarballs now contain `Pelican 7.22.0 <https://pelicanplatform.org/releases>`_
