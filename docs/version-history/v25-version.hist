@@ -1,5 +1,10 @@
 *** 25.7.0 features
 
+- All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
+  will contain :ad-attr:`Owner` and :ad-attr:`RemoteHost` copied from the associated
+  job record.
+  :jira:`3497`
+
 - Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
   :jira:`3449`
 

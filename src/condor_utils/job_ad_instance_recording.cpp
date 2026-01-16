@@ -111,36 +111,44 @@ initJobEpochHistoryFiles(){
 
 classad::ClassAd *
 copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * other_ad, const char * banner_name ) {
+    if(other_ad == nullptr) {
+        return new ClassAd(* job_ad);
+    }
+
+    // Is this a transfer record we are writing?
+    bool isXfer = false;
+    if( strcmp(banner_name, "INPUT") == MATCH ||
+        strcmp(banner_name, "OUTPUT") == MATCH ||
+        strcmp(banner_name, "CHECKPOINT") == MATCH ||
+        strcmp(banner_name, "COMMON") == MATCH )
+    {
+        isXfer = true;
+    }
+
     std::string paramName;
     formatstr( paramName, "%s_JOB_ATTRS", banner_name );
 
-    // For admins to explicitly specify no attributes, these three
-    // parameters must NOT be in the param table.
-    if(! param_defined_by_config(paramName.c_str())) {
-        if( (strcmp(banner_name, "INPUT") == 0) ||
-          (strcmp(banner_name, "OUTPUT") == 0) ||
-          (strcmp(banner_name, "CHECKPOINT") == 0) ||
-          (strcmp(banner_name, "COMMON") == 0) ) {
-            paramName = "TRANSFER_JOB_ATTRS";
-        }
-    }
-
-
-    if(other_ad == NULL) {
-        return new ClassAd(* job_ad);
+    // If specific transfer record type (i.e. input, output, etc) parameter
+    // is not defined then default to TRANSFER_JOB_ATTRS.
+    if(! param_defined_by_config(paramName.c_str()) && isXfer) {
+        paramName = "TRANSFER_JOB_ATTRS";
     }
 
     std::string attributes;
     param( attributes, paramName.c_str() );
     ClassAd * new_ad = new ClassAd(* other_ad);
 
-    if( attributes.empty() ) {
-        return new_ad;
+    std::vector<std::string> attributeList = split(attributes);
+
+    // Special case attributes to copy into all transfer records
+    if( isXfer ) {
+        attributeList.emplace_back(ATTR_REMOTE_HOST);
     }
 
-    std::vector<std::string> attributeList = split(attributes);
     for( const auto & attribute : attributeList ) {
-        CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+        if(new_ad->Lookup(attribute) == nullptr) { // Only copy attribute if not already in new record
+            CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+        }
     }
 
     return new_ad;
@@ -188,11 +196,20 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 	ClassAd * record = copyEpochJobAttrs( job_ad, other_ad, banner_name );
 
 	// Duplicate the other banner attributes into the record body.
-	if( record->Lookup( ATTR_RUN_INSTANCE_ID ) == NULL ) {
+	if( record->Lookup( ATTR_RUN_INSTANCE_ID ) == nullptr ) {
 		record->InsertAttr( ATTR_RUN_INSTANCE_ID, info.runId );
 	}
-	if( record->Lookup( ATTR_EPOCH_AD_TYPE ) == NULL ) {
+	if( record->Lookup( ATTR_EPOCH_AD_TYPE ) == nullptr ) {
 		record->InsertAttr( ATTR_EPOCH_AD_TYPE, banner_name );
+	}
+	if( record->Lookup( ATTR_CLUSTER_ID ) == nullptr) {
+		record->InsertAttr( ATTR_CLUSTER_ID, info.jid.cluster );
+	}
+	if( record->Lookup( ATTR_PROC_ID ) == nullptr) {
+		record->InsertAttr( ATTR_PROC_ID, info.jid.proc );
+	}
+	if( record->Lookup( ATTR_OWNER ) == nullptr ) {
+		record->InsertAttr( ATTR_OWNER, owner );
 	}
 
 	sPrintAd(info.buffer, * record, filter, nullptr);
@@ -202,16 +219,14 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 	//Buffer contains just the ad at this point
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
 	std::string banner;
-	time_t currentTime = time(NULL); //Get current time to print in banner
+	time_t currentTime = time(nullptr); //Get current time to print in banner
 	formatstr(banner,"*** %s ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
 					 banner_name, info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
 	info.buffer += std::string(ATTR_JOB_EPOCH_WRITE_DATE) + " = " + std::to_string(currentTime) + "\n";
 	info.buffer += banner;
-	if (info.buffer.empty())
-		return false;
-	else
-		return true;
+
+	return ! info.buffer.empty();
 }
 
 //--------------------------------------------------------------
