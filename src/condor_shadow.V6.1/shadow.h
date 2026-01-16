@@ -209,6 +209,11 @@ class UniShadow : public BaseShadow
 		const std::string & cifName, const std::string & content
 	);
 
+	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
+		if( commonFTO == NULL ) { return {}; }
+		return commonFTO->GetInfo().stats;
+	}
+
  protected:
 
 	virtual void logReconnectedEvent( void );

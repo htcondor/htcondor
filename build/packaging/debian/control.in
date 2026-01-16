@@ -338,6 +338,7 @@ Architecture: any
 Section: science
 Depends: condor (= ${binary:Version}),
          ${misc:Depends},
+         ${python3:Depends},
          ${shlibs:Depends}
 Conflicts: htcondor-test
 Breaks: htcondor-test

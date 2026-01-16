@@ -181,7 +181,9 @@ public:
 	 */
 	bool _continueClaim();
 	
-	bool vacateClaim( const char* name );
+	bool vacateClaim( const char* name, bool fast=false );
+
+	bool vacateAllClaims(bool fast = false);
 
 		// request_id: set to the request id (can be used to cancel request)
 		// returns: true/false on success/failure

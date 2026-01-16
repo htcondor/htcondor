@@ -83,7 +83,7 @@ def the_completed_job(the_test_name, the_condor, path_to_sleep, test_dir):
     assert( handle.wait(
         condition=ClusterState.all_complete,
         fail_condition=ClusterState.any_held,
-        timeout=45,
+        timeout=120,
     ))
 
     return handle

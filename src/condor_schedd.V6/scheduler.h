@@ -48,7 +48,6 @@
 #include "enum_utils.h"
 #include "self_draining_queue.h"
 #include "schedd_cron_job_mgr.h"
-#include "named_classad_list.h"
 #include "env.h"
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
@@ -628,10 +627,11 @@ class Scheduler : public Service
 	void			HadException( match_rec* );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
-	int adlist_register( const char *name );
-	int adlist_replace( const char *name, ClassAd *newAd );
-	int adlist_delete( const char *name );
-	int adlist_publish( ClassAd *resAd );
+		// adlist_replace() assumes ownership of newAd object
+	void adlist_register( const char *name );
+	void adlist_replace( const char *name, ClassAd *newAd );
+	void adlist_delete( const char *name );
+	void adlist_publish( ClassAd *resAd );
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
@@ -781,9 +781,10 @@ private:
 	ReliSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
 
-	// The "Cron" manager (Hawkeye) & it's classads
+	// The "Cron" manager (Hawkeye) & its classads, which will be merged
+	// into the schedd's ads sent to the collector
 	ScheddCronJobMgr	*CronJobMgr;
-	NamedClassAdList	 extra_ads;
+	std::map<std::string, ClassAd> extra_ads;
 
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;
@@ -915,7 +916,7 @@ private:
 	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
-	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+	int			make_ad_list(std::vector<ClassAd>& ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
 	int			command_query_job_ads(int, Stream* stream);

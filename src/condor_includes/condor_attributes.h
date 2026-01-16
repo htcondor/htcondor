@@ -961,6 +961,7 @@
 #define ATTR_TRANSFER_OUTPUT_FILES  "TransferOutput"
 #define ATTR_TRANSFER_OUTPUT_REMAPS  "TransferOutputRemaps"
 #define ATTR_TRANSFER_OUTPUT_STATS  "TransferOutputStats"
+#define ATTR_TRANSFER_COMMON_STATS  "TransferCommonStats"
 #define ATTR_TRANSFERRING_INPUT "TransferringInput"
 #define ATTR_TRANSFERRING_OUTPUT "TransferringOutput"
 #define ATTR_TRANSFER_QUEUED "TransferQueued"

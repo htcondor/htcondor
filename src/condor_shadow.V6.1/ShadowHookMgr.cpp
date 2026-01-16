@@ -226,7 +226,7 @@ HookShadowPrepareJobClient::hookExited(int exit_status) {
 	auto job_ad = Shadow->getJobAd();
 	job_ad->Update(updateAd);
 
-	auto uni_shadow = reinterpret_cast<UniShadow *>(Shadow);
+	auto uni_shadow = dynamic_cast<UniShadow *>(Shadow);
 		// Only the UniShadow will launch the ShadowHookMgr; hence assume it's still a UniShadow
 		// in the callback.
 	ASSERT(uni_shadow)
