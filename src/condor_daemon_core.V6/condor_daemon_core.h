@@ -565,13 +565,13 @@ class DaemonCore : public Service
 		Service          *s,
 		bool              include_auth);
 
-    int Register_HTTP_CommandHandler(
-        CommandHandlercpp handlercpp,
-        const char       *handler_descrip,
-        Service          *s);
-    bool HandleHTTP() const { return m_httpCommand.num; }
-    bool HandleUnregistered() const {return m_unregisteredCommand.num;}
-    bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
+	int Register_HTTP_CommandHandler(
+			StdCommandHandler handler,
+			const char       *handler_descrip);
+
+	bool HandleHTTP() const { return m_httpCommand.num; }
+	bool HandleUnregistered() const {return m_unregisteredCommand.num;}
+	bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
 
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
