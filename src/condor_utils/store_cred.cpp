@@ -535,6 +535,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	}
 
 	size_t clen = credlen;
+	std::string jsoncred;
 
 	if (!use_top_file) {
 		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
@@ -549,7 +550,6 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			ad->LookupString("Scopes", scopes);
 			ad->LookupString("Audience", audience);
 		}
-		std::string jsoncred;
 		if ((scopes != "") || (audience != "")) {
 			// Add scopes and/or audience into the JSON-formatted credentials
 			classad::ClassAdJsonParser jsonp;
