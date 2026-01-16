@@ -2024,7 +2024,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 		nonblocking_read,
 		nonblocking_write,
 		psize,
-		NULL);
+		nullptr);
 #endif
 }
 
@@ -2095,7 +2095,6 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 	// These parameters are needed on Windows
 	(void)can_register_read;
 	(void)can_register_write;
-	(void)psize;
 
 	bool failed = false;
 	int filedes[2];
@@ -2137,6 +2136,19 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 
 	read_handle = filedes[0];
 	write_handle = filedes[1];
+
+#ifdef LINUX
+	// Set pipe size, if bigger than the default
+	if (psize > DEFAULT_PIPE_SIZE) {
+		int result = fcntl(write_handle, F_SETPIPE_SZ, psize);
+		if (result != 0) {
+			dprintf(D_ALWAYS, "Cannot set pipe size to %u bytes, error %d: %s\n",
+				psize, errno, strerror(errno));
+		}
+	}
+#endif
+
+// unix
 #endif
 
 	// add PipeHandles to pipeHandleTable
