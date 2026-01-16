@@ -2137,6 +2137,7 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 	read_handle = filedes[0];
 	write_handle = filedes[1];
 
+#ifdef LINUX
 	// Set pipe size, if bigger than the default
 	if (psize > DEFAULT_PIPE_SIZE) {
 		int result = fcntl(write_handle, F_SETPIPE_SZ, psize);
@@ -2145,6 +2146,9 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 				psize, errno, strerror(errno));
 		}
 	}
+#endif
+
+// unix
 #endif
 
 	// add PipeHandles to pipeHandleTable
