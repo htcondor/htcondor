@@ -96,7 +96,7 @@ _collector_query( PyObject *, PyObject * args ) {
 		query.setDesiredAttrs(attributes);
 	}
 
-	ClassAdList adList;
+	std::vector<ClassAd> adList;
 	QueryResult result;
 	{
 		auto * collectorList = (CollectorList *)handle->t;
@@ -110,9 +110,8 @@ _collector_query( PyObject *, PyObject * args ) {
 			return NULL;
 		}
 
-		ClassAd * classAd = NULL;
-		for( adList.Open(); ( classAd = adList.Next() ); ) {
-			PyObject * pyClassAd = py_new_classad2_classad(classAd->Copy());
+		for( auto & classAd : adList ) {
+			PyObject * pyClassAd = py_new_classad2_classad(classAd.Copy());
 			auto rv = PyList_Append( list, pyClassAd );
 			Py_DecRef(pyClassAd);
 
