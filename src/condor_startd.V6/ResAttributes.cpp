@@ -881,7 +881,7 @@ bool MachAttributes::ComputeDevProps(
 	// build a temporary map of common properties using device 0 properties
 	// note that this map does not own the exprtrees it holds.
 	std::map<std::string, classad::ExprTree*, classad::CaseIgnLTStr> common;
-	for (auto & kvp : ip->second) { common[kvp.first] = kvp.second; }
+	for (const auto& [name, inlineExpr] : ip->second) { common[name] = inlineExpr.materialize(); }
 
 	// remove items from the common props map that do not have the same value for all devices
 	// and build a map of property lists for the non-common properties. like the common list above
@@ -899,7 +899,7 @@ bool MachAttributes::ComputeDevProps(
 		while (ct != common.end()) {
 			auto et = ct++;
 			auto it = ad1.find(et->first);
-			if (it != ad1.end() && *it->second == *et->second) {
+			if (it != ad1.end() && *it->second.materialize() == *et->second) {
 				// it matches, so it may be a common attribute
 			} else {
 				// no match, remove from the common list, and reserve space in the props vector
@@ -946,7 +946,7 @@ bool MachAttributes::ComputeDevProps(
 					ClassAd & ad1 = ip->second;
 					auto it = ad1.find(propit.first);
 					if (it != ad1.end()) {
-						props_ad->Insert(propit.first, it->second->Copy());
+						props_ad->Insert(propit.first, it->second.materialize()->Copy());
 					}
 				}
 				if (props_ad->size() <= 0) {
@@ -970,7 +970,7 @@ bool MachAttributes::ComputeDevProps(
 				if (it != ad1.end()) {
 					// copy the expr tree, which right now is a pointer into a m_machres_devProps_map ClassAd
 					// we will insert the copies into an exprList and insert that into the output ad
-					propit.second.push_back(it->second->Copy());
+					propit.second.push_back(it->second.materialize()->Copy());
 				}
 			}
 			if ( ! propit.second.empty()) {
@@ -1080,10 +1080,11 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			// find attributes that are nested ads, we want to store those as properties
 			// rather than leaving them in the ad
 			std::map<std::string, classad::ClassAd*, classad::CaseIgnLTStr> nested;
-			for (auto & it : ad) {
-				if (it.second->GetKind() == classad::ExprTree::CLASSAD_NODE) {
-					nested[it.first] = dynamic_cast<classad::ClassAd*>(it.second);
-					dprintf(D_ALWAYS, "machine resource %s has property ad %s=%s\n", tag, it.first.c_str(), ExprTreeToString(it.second));
+			for (const auto& [name, inlineExpr] : ad) {
+				classad::ExprTree * mat_expr = inlineExpr.materialize();
+				if (mat_expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
+					nested[name] = dynamic_cast<classad::ClassAd*>(mat_expr);
+					dprintf(D_ALWAYS, "machine resource %s has property ad %s=%s\n", tag, name.c_str(), ExprTreeToString(mat_expr));
 				}
 			}
 
@@ -2442,9 +2443,9 @@ CpuAttributes::publish_static(
 			// publish properties of assigned local resources
 			slotres_props_t::const_iterator it = c_slotres_props_map.find(j->first);
 			if (it != c_slotres_props_map.end()) {
-				for (auto & kvp : it->second) {
-					attr = j->first; attr += "_"; attr += kvp.first;
-					cp->Insert(attr, kvp.second->Copy());
+				for (const auto& [name, inlineExpr] : it->second) {
+					attr = j->first; attr += "_"; attr += name;
+					cp->Insert(attr, inlineExpr.materialize()->Copy());
 				}
 			}
 		}

@@ -1420,14 +1420,15 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			// CERequirements is a nested ad. Build the goofy blahp
 			// expression from the names and values of the nested ad.
 			ExprTree *new_cereq = NULL;
-			for (auto & next_attr : *cereq_ad) {
+			for (const auto& [name, inlineExpr] : *cereq_ad) {
 				classad::Value val;
-				next_attr.second->Evaluate( val );
+				ExprTree *expr_tree = inlineExpr.materialize();
+				expr_tree->Evaluate( val );
 				classad::Literal *new_literal = classad::Literal::MakeLiteral( val );
 				if ( new_literal == NULL ) {
 					continue;
 				}
-				classad::AttributeReference *new_ref = classad::AttributeReference::MakeAttributeReference( NULL, next_attr.first, false );
+				classad::AttributeReference *new_ref = classad::AttributeReference::MakeAttributeReference( NULL, name, false );
 				classad::Operation *new_op = classad::Operation::MakeOperation( classad::Operation::EQUAL_OP, new_ref, new_literal );
 				if ( new_cereq == NULL ) {
 					new_cereq = new_op;
@@ -1533,8 +1534,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
-	for (auto & itr : *jobAd) {
-		const char *next_name = itr.first.c_str();
+	for (const auto& [next_name_str, inlineExpr] : *jobAd) {
+		const char* next_name = next_name_str.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1570,7 +1571,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = itr.second->Copy();
+			ExprTree * pTree = inlineExpr.materialize()->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}

@@ -2721,9 +2721,9 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 
 	const char *name;
 	ExprTree *expr;
-	for ( auto itr = update_ad.begin(); itr != update_ad.end(); itr++ ) {
-		name = itr->first.c_str();
-		expr = itr->second;
+	for ( const auto& [attr_name, inlineExpr] : update_ad ) {
+		name = attr_name.c_str();
+		expr = inlineExpr.materialize();
 
 		ASSERT( name );
 		if( !strcmp(name,ATTR_MY_TYPE) ||

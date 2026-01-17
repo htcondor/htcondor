@@ -238,10 +238,8 @@ Unparse( string &buffer, const Value &val )
 		case Value::SCLASSAD_VALUE:
 		case Value::CLASSAD_VALUE: {
 			const ClassAd *ad = NULL;
-			vector< pair<string,ExprTree*> > attrs;
 			val.IsClassAdValue( ad );
-			ad->GetComponents( attrs );
-			UnparseAux( buffer, attrs );
+			UnparseAux( buffer, ad );
 			return;
 		}
 		case Value::SLIST_VALUE:
@@ -343,9 +341,7 @@ Unparse( string &buffer, const ExprTree *tree )
 		}
 
 		case ExprTree::CLASSAD_NODE: {
-			vector< pair<string, ExprTree*> > attrs;
-			((const ClassAd*)tree)->GetComponents( attrs );
-			UnparseAux( buffer, attrs );
+			UnparseAux( buffer, (const ClassAd*)tree );
 			return;
 		}
 
@@ -383,9 +379,122 @@ Unparse( string &buffer, const ClassAd *ad, const References &whitelist )
 		return;
 	}
 
-	vector< pair<string, ExprTree*> > attrs;
-	ad->GetComponents( attrs, whitelist );
-	UnparseAux( buffer, attrs );
+	// Use optimized version that has access to the ClassAd
+	UnparseAux( buffer, ad, &whitelist );
+}
+
+// Inline-aware version that iterates ClassAd attributes without materializing inline values
+void ClassAdUnParser::
+UnparseAux( string &buffer, const ClassAd *ad, const References *whitelist )
+{
+	if( !ad ) {
+		return;
+	}
+
+	string delim;		// NAC
+	if( oldClassAd && !oldClassAdValue ) {	// NAC
+		delim = "\n";	// NAC
+	}					// NAC
+	else {				// NAC
+		delim = "; ";	// NAC
+	}					// NAC
+
+	if( !oldClassAd || oldClassAdValue ) {	// NAC
+		buffer += "[ ";
+	}					// NAC
+
+	bool first = true;
+	for( auto itr = ad->begin(); itr != ad->end(); ++itr ) {
+		if (whitelist && (whitelist->find(itr->first) == whitelist->end())) {
+			continue;
+		}
+		if( !first ) {
+			buffer += delim;	// NAC
+		}
+		first = false;
+
+		auto [name, inlineExpr] = *itr;
+		UnparseAux( buffer, name );
+		buffer += " = ";
+
+		Unparse(buffer, inlineExpr);
+	}
+
+	if( !oldClassAd || oldClassAdValue ) {	// NAC
+		buffer += " ]";
+	}					// NAC
+	else {				// NAC
+		buffer += "\n";	// NAC
+	}					// NAC
+}
+
+bool ClassAdUnParser::
+Unparse(string &buffer, const InlineExpr &expr)
+{
+	// Get the InlineExprStorage from the InlineExpr
+	const InlineExprStorage* val = expr.value();
+	if (!val || !*val) {
+		return false;
+	}
+	if (!val->isInline()) {
+		// Not inline - unparse as ExprTree
+		ExprTree* tree = val->asPtr();
+		if (tree) {
+			Unparse(buffer, tree);
+			return true;
+		}
+		return false;
+	}
+
+	// Get the string buffer if available
+	const InlineStringBuffer* stringBuffer = expr.attrList() ? expr.attrList()->stringBuffer() : nullptr;
+
+	// Unparse the inline value directly
+	int type = val->getInlineType();
+	switch (type) {
+		case 0: // TYPE_ERROR
+			buffer += "error";
+			return true;
+
+		case 1: // TYPE_UNDEFINED
+			buffer += "undefined";
+			return true;
+
+		case 4: // TYPE_BOOL
+			buffer += val->getBool() ? "true" : "false";
+			return true;
+
+		case 2: { // TYPE_INT32
+			int32_t i = val->getInt32();
+			char numBuf[32];
+			snprintf(numBuf, sizeof(numBuf), "%d", i);
+			buffer += numBuf;
+			return true;
+		}
+
+		case 3: { // TYPE_FLOAT32
+			float f = val->getFloat32();
+			char numBuf[64];
+			snprintf(numBuf, sizeof(numBuf), "%.8g", (double)f);
+			buffer += numBuf;
+			return true;
+		}
+
+		case 5: { // TYPE_STRING
+			if (!stringBuffer) {
+				return false; // Can't unparse string without buffer
+			}
+			uint32_t offset, size;
+			val->getStringRef(offset, size);
+			std::string str = stringBuffer->getString(offset, size);
+			// Use the standard string unparsing with proper escaping
+			UnparseString(buffer, str);
+			return true;
+		}
+
+		default:
+			return false;
+	}
 }
 
 
@@ -496,41 +605,6 @@ UnparseAux( string &buffer, string &fnName, vector<ExprTree*>& args )
 		if( itr+1 != args.end( ) ) buffer += ',';
 	}
 	buffer += ")";
-}
-
-void ClassAdUnParser::
-UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
-{
-	vector< pair<string,ExprTree*> >::const_iterator itr;
-
-	string delim;		// NAC
-	if( oldClassAd && !oldClassAdValue ) {	// NAC
-		delim = "\n";	// NAC
-	}					// NAC
-	else {				// NAC
-		delim = "; ";	// NAC
-	}					// NAC
-
-	if( !oldClassAd || oldClassAdValue ) {	// NAC
-		buffer += "[ ";
-	}					// NAC
-	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-	  UnparseAux( buffer, itr->first ); 
-	  buffer += " = ";
-		bool save = oldClassAdValue;
-		oldClassAdValue = true;
-		Unparse( buffer, itr->second );
-		oldClassAdValue = save;
-//		if( itr+1 != attrs.end( ) ) buffer += "; ";
-		if( itr+1 != attrs.end( ) ) buffer += delim;	// NAC
-
-	}
-	if( !oldClassAd || oldClassAdValue ) {	// NAC
-		buffer += " ]";
-	}					// NAC
-	else {				// NAC
-		buffer += "\n";	// NAC
-	}					// NAC
 }
 
 
@@ -721,39 +795,6 @@ UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
 		}
 	} else {
 		Unparse( buffer, op2 );
-	}
-}
-
-
-void PrettyPrint::
-UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
-{
-	vector< pair<string, ExprTree*> >::iterator	itr;
-
-	if( classadIndent > 0 ) {
-		indentLevel += classadIndent;
-		buffer += '\n' + string( indentLevel, ' ' ) + '[';
-		indentLevel += classadIndent;
-	} else {
-		buffer += "[ ";
-	}
-	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-		if( classadIndent > 0 ) {
-			buffer += '\n' + string( indentLevel, ' ' );
-		} 
-		ClassAdUnParser::UnparseAux( buffer, itr->first );
-		buffer +=  " = ";
-		Unparse( buffer, itr->second );
-		if ( itr+1 != attrs.end( ) ) {
-			buffer += "; ";
-		}
-	}
-	if( classadIndent > 0 ) {
-		indentLevel -= classadIndent;
-		buffer += '\n' + string( indentLevel, ' ' ) + ']';
-		indentLevel -= classadIndent;
-	} else {
-		buffer += " ]";
 	}
 }
 

@@ -255,9 +255,10 @@ void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 	std::string attr;
 	int id;
 
-	for (ClassAd::iterator next = ad.begin(); next != ad.end(); /*++next*/) {
-		ClassAd::iterator it = next++; // advance iterator now, in case we want to remove it
-		const char * pattr = it->first.c_str();
+	for (auto next = ad.begin(); next != ad.end(); ) {
+		auto it = next++; // advance iterator now, in case we want to remove it
+		const auto& [pattr_str, inlineExpr] = *it;
+		const char * pattr = pattr_str.c_str();
 		const char * p = pattr;
 
 		// parse attribute nameNNN, looking for trailing NNN
@@ -291,7 +292,7 @@ void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 		}
 
 		// move the right hand side from the input ad into the vector of ads.
-		prios[id-1].Insert(attr, it->second->Copy());
+		prios[id-1].Insert(attr, inlineExpr.materialize()->Copy());
 		prios[id-1].Assign("SubmittorId", id);
 	}
 }

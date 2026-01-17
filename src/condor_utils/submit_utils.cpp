@@ -5268,11 +5268,13 @@ int SubmitHash::SetExtendedJobExprs()
 		{nullptr, nullptr, SimpleSubmitKeyword::f_special_mask } // this terminates
 	};
 	for (auto it = extendedCmds.begin(); it != extendedCmds.end(); ++it) {
-		cmd[0].key = it->first.c_str();
-		cmd[0].attr = it->first.c_str();
+		auto [attrName, inlineExpr] = *it;
+		cmd[0].key = attrName.c_str();
+		cmd[0].attr = attrName.c_str();
 		cmd[0].opts = SimpleSubmitKeyword::f_as_expr;
 		classad::Value val;
-		if (ExprTreeIsLiteral(it->second, val)) {
+		classad::ExprTree* expr = inlineExpr.materialize();
+		if (ExprTreeIsLiteral(expr, val)) {
 			switch (val.GetType()) {
 			case classad::Value::UNDEFINED_VALUE:
 				// just ignore this attribute, we do this so that config can compose

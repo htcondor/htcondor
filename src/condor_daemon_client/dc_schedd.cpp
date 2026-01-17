@@ -735,8 +735,9 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 			// saved SUBMIT_ attributes
 		std::vector<std::pair<std::string, ExprTree *>> replacements;
 		for ( auto itr = job.begin(); itr != job.end(); itr++ ) {
-			lhstr = itr->first.c_str();
-			tree = itr->second;
+			auto [attrName, inlineExpr] = *itr;
+			lhstr = attrName.c_str();
+			tree = inlineExpr.materialize();
 			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
 					// this attr name starts with SUBMIT_
 					// compute new lhs (strip off the SUBMIT_)

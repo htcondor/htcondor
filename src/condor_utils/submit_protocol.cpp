@@ -260,12 +260,14 @@ std::string AbstractScheddQ::send_JobAttributes(const JOB_ID_KEY & key, const cl
 			if ( ! is_cluster && (forced != 1)) continue;
 		}
 
-		if ( ! it->second) {
+		auto [attrName, inlineExpr] = *it;
+		classad::ExprTree* expr = inlineExpr.materialize();
+		if ( ! expr) {
 			formatstr(retval, "Null attribute name or value for job %s\n", keystr);
 			break;
 		}
 		rhs.clear();
-		unparser.Unparse(rhs, it->second);
+		unparser.Unparse(rhs, expr);
 
 		if (this->set_Attribute(key.cluster, key.proc, attr, rhs.c_str(), saflags) == -1) {
 			formatstr(retval, "Failed to set %s=%s for job %s (%d)\n", attr, rhs.c_str(), keystr, errno );

@@ -74,26 +74,26 @@ bool ads_are_same(const ClassAd & aa, const ClassAd & bb)
 {
 	std::string buf;
 	int differences = 0;
-	for (auto & [k,ea] : aa) {
+	for (const auto& [k, ea] : aa) {
 		auto found = bb.find(k);
 		if (found == bb.end()) {
 			++ differences;
-			if (dash_verbose) { fprintf(stderr, "%s=%s MISSING KEY\n", k.c_str(), ExprTreeToString(ea)); }
+			if (dash_verbose) { fprintf(stderr, "%s=%s MISSING KEY\n", k.c_str(), ExprTreeToString(ea.materialize())); }
 		}
-		else if (*found->second != *ea) {
+		else if (*found->second.materialize() != *ea.materialize()) {
 			++ differences;
 			if (dash_verbose) { 
-				fprintf(stderr, "%s=%s  UNEQUAL %s\n", k.c_str(), ExprTreeToString(ea), ExprTreeToString(found->second, buf));
+				fprintf(stderr, "%s=%s  UNEQUAL %s\n", k.c_str(), ExprTreeToString(ea.materialize()), ExprTreeToString(bb.find(k)->second.materialize(), buf));
 			}
 		}
 	}
 
 	// check for keys in bb that are not in aa
-	for (auto & [k,eb] : bb) {
+	for (const auto& [k, eb] : bb) {
 		auto found = aa.find(k);
 		if (found == aa.end()) {
 			++ differences;
-			if (dash_verbose) { fprintf(stderr, "MISSING KEY %s=%s\n", k.c_str(), ExprTreeToString(eb)); }
+			if (dash_verbose) { fprintf(stderr, "MISSING KEY %s=%s\n", k.c_str(), ExprTreeToString(eb.materialize())); }
 		}
 	}
 
@@ -275,8 +275,9 @@ int TransformApplyChanges(bool verbose, JobQueueJob * job, int shadow_code, std:
 {
 	bool autocluster_changing = false;
 
-	for (auto &[key,oldval] : undo.list) {
+	for (auto &[key,oldival] : undo.list) {
 		ExprTree * tree = job->Lookup(key);
+		ExprTree * oldval = undo.list.materialize(oldival);
 
 		// ignore changes that are no change
 		if (tree && oldval && *tree == *oldval) continue;
@@ -333,7 +334,7 @@ class XFormAdUndoEx : public XFormAdUndo
 {
 public:
 	void clear() {
-		for (auto & [k,v] : list) { if (v) delete v; }
+		for (auto & [k,v] : list) { v.release(); }
 		list.clear();
 		deletions.clear();
 	}
@@ -343,7 +344,8 @@ public:
 		unparser.SetOldClassAd( true, true );
 		for (auto & [k,v] : list) {
 			formatstr_cat(out, "%s%s=", indent, k.c_str());
-			if (v) { unparser.Unparse(out, v); } else { out += "<null>"; }
+			ExprTree * tree = list.materialize(v);
+			if (tree) { unparser.Unparse(out, tree); } else { out += "<null>"; }
 			out += "\n";
 		}
 		return out.c_str();

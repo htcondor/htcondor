@@ -28,6 +28,7 @@
 #include <algorithm>
 #include "classad/classad_containers.h"
 #include "classad/exprTree.h"
+#include "classad/classad_inline_value.h"
 #include "classad/classad_flat_map.h"
 #include "classad/flat_set.h"
 
@@ -59,6 +60,103 @@ extern size_t  _expressionCacheMinStringSize;
 // directly setting _useOldClassAdSemantics.
 extern bool _useOldClassAdSemantics;
 void SetOldClassAdSemantics(bool enable);
+
+// Forward declarations for iterator classes
+class ClassAd;
+
+// Custom iterator wrapper that returns InlineExpr to keep InlineValue paired with its ClassAdFlatMap
+class ClassAdIterator {
+public:
+	using BaseIterator = AttrList::iterator;
+	using iterator_category = std::bidirectional_iterator_tag;
+	using value_type = std::pair<const std::string&, InlineExpr>;
+	using difference_type = std::ptrdiff_t;
+
+	// Proxy class to support operator->
+	class Proxy {
+	public:
+		value_type pair;
+		Proxy(value_type p) : pair(p) {}
+		value_type* operator->() { return &pair; }
+	};
+
+	using pointer = Proxy;
+	using reference = value_type;
+
+	ClassAdIterator() : _it(), _map(nullptr) {}
+	ClassAdIterator(BaseIterator it, ClassAdFlatMap* map) : _it(it), _map(map) {}
+
+	reference operator*() const {
+		return std::make_pair(std::ref(_it->first), InlineExpr(_it->second, _map));
+	}
+
+	pointer operator->() const {
+		return Proxy{**this};
+	}
+
+	ClassAdIterator& operator++() { ++_it; return *this; }
+	ClassAdIterator operator++(int) { ClassAdIterator tmp = *this; ++_it; return tmp; }
+	ClassAdIterator& operator--() { --_it; return *this; }
+	ClassAdIterator operator--(int) { ClassAdIterator tmp = *this; --_it; return tmp; }
+
+	bool operator==(const ClassAdIterator& other) const { return _it == other._it; }
+	bool operator!=(const ClassAdIterator& other) const { return _it != other._it; }
+
+	// Allow access to base iterator if needed
+	BaseIterator base() const { return _it; }
+	ClassAdFlatMap* map() const { return _map; }
+
+private:
+	BaseIterator _it;
+	ClassAdFlatMap* _map;
+};
+
+class ClassAdConstIterator {
+public:
+	using BaseIterator = AttrList::const_iterator;
+	using iterator_category = std::bidirectional_iterator_tag;
+	using value_type = std::pair<const std::string&, InlineExpr>;
+	using difference_type = std::ptrdiff_t;
+
+	// Proxy class to support operator->
+	class Proxy {
+	public:
+		value_type pair;
+		Proxy(value_type p) : pair(p) {}
+		const value_type* operator->() const { return &pair; }
+	};
+
+	using pointer = Proxy;
+	using reference = value_type;
+
+	ClassAdConstIterator() : _it(), _map(nullptr) {}
+	ClassAdConstIterator(BaseIterator it, const ClassAdFlatMap* map) : _it(it), _map(map) {}
+	// Allow conversion from non-const iterator
+	ClassAdConstIterator(const ClassAdIterator& other) : _it(other.base()), _map(other.map()) {}
+
+	reference operator*() const {
+		return std::make_pair(std::ref(_it->first), InlineExpr(_it->second, _map));
+	}
+
+	pointer operator->() const {
+		return Proxy{**this};
+	}
+
+	ClassAdConstIterator& operator++() { ++_it; return *this; }
+	ClassAdConstIterator operator++(int) { ClassAdConstIterator tmp = *this; ++_it; return tmp; }
+	ClassAdConstIterator& operator--() { --_it; return *this; }
+	ClassAdConstIterator operator--(int) { ClassAdConstIterator tmp = *this; --_it; return tmp; }
+
+	bool operator==(const ClassAdConstIterator& other) const { return _it == other._it; }
+	bool operator!=(const ClassAdConstIterator& other) const { return _it != other._it; }
+
+	// Allow access to base iterator if needed
+	BaseIterator base() const { return _it; }
+
+private:
+	BaseIterator _it;
+	const ClassAdFlatMap* _map;
+};
 
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
@@ -94,6 +192,27 @@ class ClassAd : public ExprTree
 
 		/**@name Insertion Methods */
 		//@{	
+		/** Inserts an attribute from an InlineExpr into the ClassAd.
+			Properly handles string values by materializing them from the source's buffer.
+			@param attrName The name of the attribute.
+			@param inlineExpr The InlineExpr to insert (contains the value and its source ClassAdFlatMap).
+			@return true if insertion succeeded, false otherwise.
+		*/
+		bool Insert( const std::string &attrName, const InlineExpr& inlineExpr );
+
+		/** Copies an attribute from another ClassAd into this ClassAd.
+			Properly handles string values by materializing them from the source's buffer.
+			@param destAttrName The name of the attribute in this ClassAd.
+			@param source The source ClassAd to copy from.
+			@param sourceAttrName The name of the attribute in the source ClassAd.
+			@return true if the operation succeeded, false otherwise.
+		*/
+		bool CopyExprFrom( const std::string& destAttrName, const ClassAd& source, const std::string& sourceAttrName );
+
+		/** Copy an InlineExpr into this ClassAd. This avoids a Lookup on the
+		    source ad when the caller already has an InlineExpr. */
+		bool CopyExpr(const std::string& destAttrName, const InlineExpr& srcExpr);
+
 		/** Inserts an attribute into the ClassAd.  The setParentScope() method
 				is invoked on the inserted expression.
 			@param attrName The name of the attribute.  
@@ -288,25 +407,41 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute. char *, or std::string   
 			@return The expression bound to the name in the ClassAd, or NULL
 				otherwise.
+			@note Inline values are automatically converted to ExprTree* Literals
+				and cached in the map (becomes out-of-line).
 		*/
 		template<typename StringLikeThing>
 		ExprTree * Lookup( const StringLikeThing &name ) const {
-			ExprTree *tree;
-			AttrList::const_iterator itr;
-
-			itr = attrList.find( name );
+			AttrList::const_iterator itr = attrList.find( name );
 			if (itr != attrList.end()) {
-				tree = itr->second;
-			} else if (chained_parent_ad != NULL) {
-				tree = chained_parent_ad->Lookup(name);
-			} else {
-				tree = NULL;
+				return attrList.materialize(itr);
 			}
-			return tree;
+			if (chained_parent_ad) {
+				return chained_parent_ad->Lookup(name);
+			}
+			return nullptr;
 		}
 
 		ExprTree* LookupExpr(const std::string &name) const
 		{ return Lookup( name ); }
+
+		/** Finds the InlineValue bound to an attribute name.  The lookup only
+				involves this ClassAd; scoping information is ignored.
+			@param attrName The name of the attribute.
+			@return An InlineExpr containing the InlineValue and AttrList reference,
+				or an empty InlineExpr if not found.
+		*/
+		template<typename StringLikeThing>
+		InlineExpr LookupInline( const StringLikeThing &name ) const {
+			AttrList::const_iterator itr = attrList.find( name );
+			if (itr != attrList.end()) {
+				return InlineExpr(itr->second, &attrList);
+			}
+			if (chained_parent_ad) {
+				return chained_parent_ad->LookupInline(name);
+			}
+			return InlineExpr();
+		}
 
 		/** Finds the expression bound to an attribute name, ignoring chained parent.
 		        Behaves just like Lookup(), except any parent ad chained to this
@@ -398,6 +533,14 @@ class ClassAd : public ExprTree
 			@see Delete
 		*/
 		ExprTree *DeepRemove( ExprTree *scopeExpr, const std::string &attrName );
+
+		/** Compact the ClassAd by inlining as many attributes as possible.
+				Iterates through all attributes and attempts to convert them to inline
+				representation. Successfully inlined ExprTree objects are deleted to
+				free memory. Call this periodically to reduce memory usage.
+			@return The number of attributes that were successfully compacted.
+		*/
+		int Compact();
 		//@}
 
 		/**@name Evaluation Methods */
@@ -552,30 +695,97 @@ class ClassAd : public ExprTree
 		bool LookupBool(const std::string &name, bool &value) const
 		{ return EvaluateAttrBoolEquiv(name, value); }
 
+		/** Evaluates an InlineExpr to a Value.
+			This avoids materializing inline values when possible, improving performance.
+			@param inlineExpr The inline expression to evaluate (obtained from LookupInline)
+			@param result The result of the evaluation
+			@param mask Hint about what types are wanted back (default: SAFE_VALUES)
+			@return true if evaluation succeeded, false otherwise
+		*/
+		bool EvaluateExpr( const InlineExpr& inlineExpr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
+
+		/** Evaluate an expression and check if it's boolean-equivalent.
+			This is useful for evaluating expressions obtained from LookupInline
+			without forcing unnecessary conversions of inline values to full Value objects.
+			@param expr The expression to evaluate (can be from materialize() or a Lookup)
+			@param boolValue Output parameter for the boolean value
+			@return true if the expression evaluated to a boolean equivalent, false otherwise
+		*/
+		bool EvaluateExprBoolEquiv( ExprTree* expr, bool& boolValue ) const;
+
+		/** Evaluate an InlineExpr and check if it's boolean-equivalent.
+			This avoids materializing inline values when possible.
+			@param inlineExpr The inline expression to evaluate
+			@param boolValue Output parameter for the boolean value
+			@return true if the expression evaluated to a boolean equivalent, false otherwise
+		*/
+		bool EvaluateExprBoolEquiv( const InlineExpr& inlineExpr, bool& boolValue ) const;
+
+		/** Evaluates an InlineExpr to an integer.
+			@param inlineExpr The inline expression to evaluate
+			@param intValue The value of the expression
+			@return true if inlineExpr evaluated to an integer, false otherwise
+		*/
+		bool EvaluateExprInt( const InlineExpr& inlineExpr, int& intValue ) const;
+		bool EvaluateExprInt( const InlineExpr& inlineExpr, long& intValue ) const;
+		bool EvaluateExprInt( const InlineExpr& inlineExpr, long long& intValue ) const;
+
+		/** Evaluates an InlineExpr to a real.
+			@param inlineExpr The inline expression to evaluate
+			@param realValue The value of the expression
+			@return true if inlineExpr evaluated to a real, false otherwise
+		*/
+		bool EvaluateExprReal( const InlineExpr& inlineExpr, double& realValue ) const;
+
+		/** Evaluates an InlineExpr to a number (integer or real).
+			@param inlineExpr The inline expression to evaluate
+			@param numValue The value of the expression
+			@return true if inlineExpr evaluated to a number, false otherwise
+		*/
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, int& numValue ) const;
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, long& numValue ) const;
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, long long& numValue ) const;
+		bool EvaluateExprNumber( const InlineExpr& inlineExpr, double& numValue ) const;
+
+		/** Evaluates an InlineExpr to a string.
+			@param inlineExpr The inline expression to evaluate
+			@param buf The string value of the expression
+			@return true if inlineExpr evaluated to a string, false otherwise
+		*/
+		bool EvaluateExprString( const InlineExpr& inlineExpr, char* buf, int len ) const;
+		bool EvaluateExprString( const InlineExpr& inlineExpr, std::string& buf ) const;
+
+		/** Evaluates an InlineExpr to a boolean.
+			@param inlineExpr The inline expression to evaluate
+			@param boolValue The value of the expression
+			@return true if inlineExpr evaluated to a boolean value, false otherwise
+		*/
+		bool EvaluateExprBool( const InlineExpr& inlineExpr, bool& boolValue ) const;
+
 		/**@name STL-like Iterators */
 		//@{
 
 		/** Define an iterator we can use on a ClassAd */
-		typedef AttrList::iterator iterator;
+		typedef ClassAdIterator iterator;
 
 		/** Define a constatnt iterator we can use on a ClassAd */
-		typedef AttrList::const_iterator const_iterator;
+		typedef ClassAdConstIterator const_iterator;
 
 		/** Returns an iterator pointing to the beginning of the
 			attribute/value pairs in the ClassAd */
-		iterator begin() { return attrList.begin(); }
+		iterator begin() { return iterator(attrList.begin(), &attrList); }
 
 		/** Returns a constant iterator pointing to the beginning of the
 			attribute/value pairs in the ClassAd */
-		const_iterator begin() const { return attrList.begin(); }
+		const_iterator begin() const { return const_iterator(attrList.begin(), &attrList); }
 
 		/** Returns aniterator pointing past the end of the
 			attribute/value pairs in the ClassAd */
-		iterator end() { return attrList.end(); }
+		iterator end() { return iterator(attrList.end(), &attrList); }
 
 		/** Returns a constant iterator pointing past the end of the
 			attribute/value pairs in the ClassAd */
-		const_iterator end() const { return attrList.end(); }
+		const_iterator end() const { return const_iterator(attrList.end(), &attrList); }
 
         /** Return an interator pointing to the attribute with a particular name.
          */
@@ -591,9 +801,39 @@ class ClassAd : public ExprTree
 		bool empty() const { return attrList.empty(); }
 		//@}
 
+		/**@name Inline-Value-Aware APIs (for optimization) */
+		//@{
+		/** Lookup an attribute without materializing inline values.
+		 *  Returns a pair containing: reference to the ClassAdFlatMap where the value
+		 *  was found, and reference to the InlineValue (or a static zero InlineValue
+		 *  if not found). Use operator bool() on the InlineExpr to check if found.
+		 *  This is intended for internal optimizations that want to avoid
+		 *  unnecessary materialization (e.g., unparsing, serialization).
+		 */
+		InlineExpr LookupInline(const std::string &attrName) const {
+			AttrList::const_iterator itr = attrList.find(attrName);
+			if (itr != attrList.end()) {
+				return InlineExpr(itr->second, &attrList);
+			}
+			if (chained_parent_ad) {
+				return chained_parent_ad->LookupInline(attrName);
+			}
+			return InlineExpr();
+		}
+
+		/** Access to raw inline iterators (do not materialize inline values).
+		 *  These return iterators over std::pair<std::string, InlineValue>.
+		 *  Use for operations that can work with inline values directly.
+		 */
+		typedef AttrList::const_iterator const_inline_iterator;
+
+		const_inline_iterator begin_inline() const { return attrList.begin(); }
+		const_inline_iterator end_inline() const { return attrList.end(); }
+		//@}
+
 		void rehash(size_t s) { attrList.rehash(s);}
 		iterator erase(iterator i) { 
-			return attrList.erase(i);
+			return iterator(attrList.erase(i.base()), &attrList);
 		}
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
@@ -636,51 +876,50 @@ class ClassAd : public ExprTree
 			this->attrList = std::move(rhs.attrList);
 			for( auto & entry : attrList ) {
 				// I wonder what other invariants were forgotten?
-				entry.second->SetParentScope(this);
+				ExprTree* ptr = entry.second.asPtr();
+				if (ptr) {
+					ptr->SetParentScope(this);
+				}
 			}
-			this->dirtyAttrList = std::move(rhs.dirtyAttrList);
+		this->dirtyAttrList = std::move(rhs.dirtyAttrList);
 
-			this->do_dirty_tracking = rhs.do_dirty_tracking;
-			this->chained_parent_ad = rhs.chained_parent_ad;
-			this->parentScope = rhs.parentScope;
+		this->do_dirty_tracking = rhs.do_dirty_tracking;
+		this->chained_parent_ad = rhs.chained_parent_ad;
+		this->parentScope = rhs.parentScope;
 
-			return *this;
+		return *this;
+	}
+
+	ClassAd(ClassAd &&rhs) :
+			alternateScope(rhs.alternateScope),
+			attrList(std::move(rhs.attrList)),
+			dirtyAttrList(std::move(rhs.dirtyAttrList)),
+			do_dirty_tracking(rhs.do_dirty_tracking),
+			chained_parent_ad(rhs.chained_parent_ad),
+			parentScope(rhs.parentScope)
+	{
+			for(auto &entry: attrList ) {
+				// I wonder what other invariants were forgotten?
+				ExprTree* ptr = entry.second.asPtr();
+				if (ptr) {
+					ptr->SetParentScope(this);
+				}
 		}
+	}
 
-		ClassAd(ClassAd &&rhs) : 
-   				alternateScope(rhs.alternateScope),
-				attrList(std::move(rhs.attrList)),
-				dirtyAttrList(std::move(rhs.dirtyAttrList)),
-				do_dirty_tracking(rhs.do_dirty_tracking),
-				chained_parent_ad(rhs.chained_parent_ad),
-				parentScope(rhs.parentScope)
-		{
-				for(auto &entry: attrList ) {
-					// I wonder what other invariants were forgotten?
-					entry.second->SetParentScope(this);
-			}
-		}
+    /** Fill in this ClassAd with the contents of the other ClassAd.
+     *  This ClassAd is cleared of its contents before the copy happens.
+     *  @return true if the copy succeeded, false otherwise.
+     */
+	bool CopyFrom( const ClassAd &ad );
 
-        /** Fill in this ClassAd with the contents of the other ClassAd.
-         *  This ClassAd is cleared of its contents before the copy happens.
-         *  @return true if the copy succeeded, false otherwise.
-         */
-		bool CopyFrom( const ClassAd &ad );
-
-        /** Is this ClassAd the same as the tree?
-         *  Two ClassAds are identical if they have the same
-         *  number of elements, and each is the SameAs() the other. 
-         *  This is a deep comparison.
-         *  @return true if it is the same, false otherwise
-         */
-        virtual bool SameAs(const ExprTree *tree) const;
-
-        /** Are the two ClassAds the same?
-         *  Uses SameAs() to decide if they are the same. 
-         *  @return true if they are, false otherwise.
-         */
-        friend bool operator==(ClassAd &list1, ClassAd &list2);
-
+    /** Are the two ClassAds the same?
+     *  Two ClassAds are identical if they have the same
+     *  number of elements, and each is the SameAs() the other.
+     *  This is a deep comparison.
+     *  @return true if it is the same, false otherwise
+     */
+    virtual bool SameAs(const ExprTree *tree) const;
 		/** Flattens (a partial evaluation operation) the given expression in 
 		  		the context of the classad.
 			@param expr The expression to be flattened.
@@ -845,12 +1084,21 @@ class ClassAd : public ExprTree
 		friend 	class ExprTree;
 		friend 	class EvalState;
 
+		// Helper methods for InsertAttr that try inline storage first, then fall back to literals
+		bool _InsertAttrInteger(const std::string& name, long long value);
+		bool _InsertAttrReal(const std::string& name, double value);
+		bool _InsertAttrBool(const std::string& name, bool value);
+		bool _InsertAttrString(const std::string& name, const char* str, size_t len);
 
 		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
 					EvalState &, PortReferences& ) const;
 
         bool _GetInternalReferences(const ExprTree *expr, const ClassAd *ad,
             EvalState &state, References& refs, bool fullNames) const;
+
+		// Helper for EvaluateExpr methods that take InlineExpr
+		// Avoids unnecessary string allocation when type doesn't match mask
+		bool _EvaluateInlineExpr( const InlineExpr& inlineExpr, Value &result, Value::ValueType mask ) const;
 
 		ClassAd *_GetDeepScope( const std::string& ) const;
 		ClassAd *_GetDeepScope( ExprTree * ) const;
@@ -860,7 +1108,7 @@ class ClassAd : public ExprTree
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
-		int LookupInScope( const std::string&, ExprTree*&, EvalState& ) const;
+		int LookupInScope( const std::string&, InlineExpr&, InlineExprStorage&, EvalState& ) const;
 		AttrList	  attrList;
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;

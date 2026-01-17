@@ -947,14 +947,27 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 			}
 		}
 		for ( const auto& [attr_name,attr_value] : *ad ) {
-			// ignore list type values when computing external refs.
-			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
-			if (attr_value->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+			classad::ExprTree* expr = nullptr;
+			// attr_value is an InlineExpr; for inline literals there are no references to collect.
+			if (attr_value.value() && attr_value.value()->isInline()) {
 				continue;
 			}
-			ad->GetExternalReferences( attr_value, m_projection_references, false );
-			ad->GetInternalReferences( attr_value, m_projection_references, false );
-		}				
+
+			// For out-of-line expressions, materialize to an ExprTree for reference collection.
+			expr = attr_value.materialize();
+			if (!expr) {
+				continue;
+			}
+
+			// Ignore list type values when computing external refs.
+			// This prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs.
+			if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				continue;
+			}
+
+			ad->GetExternalReferences( expr, m_projection_references, false );
+			ad->GetInternalReferences( expr, m_projection_references, false );
+		}
 	}
 }
 

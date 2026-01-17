@@ -232,8 +232,8 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 
 	// (shallow) iterate the attributes in this ad and send them to the schedd
 	//
-	for (const auto & it : ad) {
-		const char * attr = it.first.c_str();
+	for (const auto & [attr_name, inlineExpr] : ad) {
+		const char * attr = attr_name.c_str();
 
 		// skip attributes that are forced into the other sort of ad, or have already been sent.
 		int forced = IsForcedClusterProcAttribute(attr);
@@ -244,7 +244,8 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 			if ( ! is_cluster && (forced != 1)) continue;
 		}
 
-		if ( ! it.second) {
+		classad::ExprTree* expr = inlineExpr.materialize();
+		if ( ! expr) {
 			if (errstack) {
 				errstack->pushf(who, SCHEDD_ERR_SET_ATTRIBUTE_FAILED,
 					"job %d.%d ERROR: %s=NULL", key.cluster, key.proc, attr);
@@ -253,7 +254,7 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 			break;
 		}
 		rhs.clear();
-		unparser.Unparse(rhs, it.second);
+		unparser.Unparse(rhs, expr);
 
 		if (SetAttribute(key.cluster, key.proc, attr, rhs.c_str(), saflags) == -1) {
 			if (errstack) {

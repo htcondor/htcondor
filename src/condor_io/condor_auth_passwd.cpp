@@ -1923,36 +1923,37 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	if (extra_claims) {
 		classad::ClassAdJsonUnParser unparser(true);
 
-		for (auto it = extra_claims->begin(); it != extra_claims->end(); it++) {
+		for (const auto& [claim_name, inlineExpr] : *extra_claims) {
 			std::string value_str;
-			unparser.Unparse(value_str, it->second);
-			switch(it->second->GetKind()) {
+			classad::ExprTree* expr = inlineExpr.materialize();
+			unparser.Unparse(value_str, expr);
+			switch(expr->GetKind()) {
 			case classad::ExprTree::INTEGER_LITERAL: {
-				extra_claims_map[it->first] = value_str;
+				extra_claims_map[claim_name] = value_str;
 				if (!capability) {
-					int64_t ival = ((classad::IntegerLiteral*)it->second)->getInteger();
-					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(ival));
+					int64_t ival = ((classad::IntegerLiteral*)expr)->getInteger();
+					jwt_builder.set_payload_claim(claim_name.c_str(), jwt::traits::kazuho_picojson::value_type(ival));
 				}
 				break;
 			}
 			case classad::ExprTree::BOOLEAN_LITERAL: {
-				extra_claims_map[it->first] = value_str;
+				extra_claims_map[claim_name] = value_str;
 				if (!capability) {
-					bool bval = ((classad::BooleanLiteral*)it->second)->getBool();
-					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(bval));
+					bool bval = ((classad::BooleanLiteral*)expr)->getBool();
+					jwt_builder.set_payload_claim(claim_name.c_str(), jwt::traits::kazuho_picojson::value_type(bval));
 				}
 				break;
 			}
 			case classad::ExprTree::STRING_LITERAL: {
-				extra_claims_map[it->first] = value_str;
+				extra_claims_map[claim_name] = value_str;
 				if (!capability) {
-					const char* sval = ((classad::StringLiteral*)it->second)->getCString();
-					jwt_builder.set_payload_claim(it->first.c_str(), jwt::traits::kazuho_picojson::value_type(sval));
+					const char* sval = ((classad::StringLiteral*)expr)->getCString();
+					jwt_builder.set_payload_claim(claim_name.c_str(), jwt::traits::kazuho_picojson::value_type(sval));
 				}
 				break;
 			}
 			default:
-				dprintf(D_FULLDEBUG, "generate_token(): skipping extra claim %s with type %d\n", it->first.c_str(), (int)it->second->GetKind());
+				dprintf(D_FULLDEBUG, "generate_token(): skipping extra claim %s with type %d\n", claim_name.c_str(), (int)expr->GetKind());
 				break;
 			}
 		}

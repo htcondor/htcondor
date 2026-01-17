@@ -18,6 +18,7 @@
  ***************************************************************/
 
 
+ #include "classad/sink.h"
 #include "classad/common.h"
 #include "classad/classad.h"
 
@@ -369,6 +370,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 	bool	rval;
 
 	sig = NULL;
+	tree = NULL;
 
 	// establish starting point for search
 	if( expr == NULL ) {
@@ -466,9 +468,19 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		 * Expect alternateScope to be removed from a future release.
 		 */
 	if (!current) { return EVAL_UNDEF; }
-	int rc = current->LookupInScope( attributeStr, tree, state );
+	InlineExpr inlineExpr;
+	InlineExprStorage scratch(nullptr);
+	int rc = current->LookupInScope( attributeStr, inlineExpr, scratch, state );
+
 	if ( !expr && !absolute && rc == EVAL_UNDEF && current->alternateScope ) {
-		rc = current->alternateScope->LookupInScope( attributeStr, tree, state );
+		rc = current->alternateScope->LookupInScope( attributeStr, inlineExpr, scratch, state );
+	}
+	if ( rc == EVAL_OK ) {
+		tree = inlineExpr.materialize();
+		// Materialization should always succeed for valid InlineExpr, but be defensive
+		if (!tree) {
+			rc = EVAL_ERROR;
+		}
 	}
 	return rc;
 }

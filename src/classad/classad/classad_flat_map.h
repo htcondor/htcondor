@@ -19,14 +19,18 @@
 
 
 #include "classad/exprTree.h"
+#include "classad/value.h"
 #include <vector>
 #include <algorithm>
 #include <string>
 #include <string.h>
+#include <memory>
 
 namespace classad {
 
 class ExprTree;
+class InlineExprStorage;  // Forward declaration
+class InlineStringBuffer;  // Forward declaration
 
 // ClassAdFlatMap
 //
@@ -57,13 +61,13 @@ class ExprTree;
 struct ClassAdFlatMapOrder {
 	ClassAdFlatMapOrder()  = default;
 
-	bool operator()(const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) noexcept {
+	bool operator()(const std::pair<std::string, InlineExprStorage> &lhs, const std::string &rhs) noexcept {
 		if (lhs.first.size() < rhs.size()) return true;
 		if (lhs.first.size() > rhs.size()) return false;
 		return strcasecmp(lhs.first.c_str(), rhs.c_str()) < 0;	
 	}
 
-	bool operator()(const std::pair<std::string, ExprTree *> &lhs, const char *rhs) noexcept {
+	bool operator()(const std::pair<std::string, InlineExprStorage> &lhs, const char *rhs) noexcept {
 		size_t len = strlen(rhs);
 		if (lhs.first.size() < len) return true;
 		if (lhs.first.size() > len) return false;
@@ -78,11 +82,11 @@ struct ClassAdFlatMapOrder {
 };
 
 // note this needs to be inline for ODR reasons
-inline bool ClassAdFlatMapEqual(const std::pair<std::string, ExprTree *>&lhs, const std::string &rhs) {
+inline bool ClassAdFlatMapEqual(const std::pair<std::string, InlineExprStorage>&lhs, const std::string &rhs) {
 	return 0 == strcasecmp(lhs.first.c_str(), rhs.c_str());
 }
 
-inline bool ClassAdFlatMapEqual(const std::pair<std::string, ExprTree *>&lhs, const char *rhs) {
+inline bool ClassAdFlatMapEqual(const std::pair<std::string, InlineExprStorage>&lhs, const char *rhs) {
 	return 0 == strcasecmp(lhs.first.c_str(), rhs);
 }
 
@@ -91,10 +95,12 @@ class ClassAdFlatMap {
 	public:
 		// Rule of zero for ctors/dtors/assignment/move
 	
-		using keyValue = std::pair<std::string, ExprTree *>;
+		using keyValue = std::pair<std::string, InlineExprStorage>;
 		using container = std::vector<keyValue>;
 		using iterator = container::iterator;
 		using const_iterator = container::const_iterator;
+
+		ClassAdFlatMap() = default;
 
 		// The iterators
 		iterator begin() { return _theVector.begin(); }
@@ -110,9 +116,41 @@ class ClassAdFlatMap {
 
 		void clear() { 
 			for (auto &it: _theVector) {
-				delete it.second;
+				it.second.release();
 			}
 			_theVector.clear();
+			if (_stringBuffer) {
+				_stringBuffer->clear();
+			}
+		}
+
+		// Ensure the string buffer exists (inline string storage helper)
+		InlineStringBuffer* ensureStringBuffer() {
+			if (!_stringBuffer) {
+				_stringBuffer = std::make_unique<InlineStringBuffer>();
+			}
+			return _stringBuffer.get();
+		}
+
+		// Materialize helpers that hide buffer details
+		ExprTree* materialize(const InlineExprStorage& val) const {
+			return const_cast<InlineExprStorage&>(val).materialize(_stringBuffer.get());
+		}
+
+		ExprTree* materialize(const iterator& it) {
+			return it->second.materialize(_stringBuffer.get());
+		}
+
+		ExprTree* materialize(const const_iterator& it) const {
+			return const_cast<InlineExprStorage&>(it->second).materialize(_stringBuffer.get());
+		}
+
+		bool inlineValueToValue(const InlineExprStorage& val, Value& outVal) const {
+			return classad::inlineValueToValue(val, outVal, _stringBuffer.get());
+		}
+
+		const InlineStringBuffer* stringBuffer() const {
+			return _stringBuffer.get();
 		}
 
 		template <typename StringLike>
@@ -137,18 +175,21 @@ class ClassAdFlatMap {
 
 		// This is the hack for compat with clients who expect the hash interface
 		// Ideally should deprecate this in the future
+		// Returns reference to the ExprTree* inside the InlineExprStorage, materializing inline values if necessary
 		ExprTree *&  operator[](const std::string &key) {
 			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
-				return lb->second;
+				lb->second.materialize(_stringBuffer.get());
+				return lb->second.asPtrRef();
 			} else {
-				return _theVector.insert(lb, std::make_pair(key, nullptr))->second;
+				iterator newit = _theVector.insert(lb, std::make_pair(key, InlineExprStorage(nullptr)));
+				return newit->second.asPtrRef();
 			}
 		}
 
 		// This allows clients to safely erase as they iterate
 		iterator erase(const iterator &it) { 
-			delete it->second;
+			it->second.release();
 			return _theVector.erase(it);
 		}
 
@@ -156,10 +197,83 @@ class ClassAdFlatMap {
 		iterator erase(const StringLike &key) { 
 			iterator it = find(key);
 			if (it != _theVector.end()) {
-				delete it->second;
+				it->second.release();
 				return _theVector.erase(it);
 			}
 			return _theVector.end();
+		}
+
+		// Store inline values directly - these create InlineExprStorage internally and move into storage
+		void setBool(const std::string &key, bool value) {
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage::makeBool(value);
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage::makeBool(value)));
+			}
+		}
+
+		void setInt(const std::string &key, int32_t value) {
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage::makeInt32(value);
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage::makeInt32(value)));
+			}
+		}
+
+		void setFloat(const std::string &key, float value) {
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage::makeFloat32(value);
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage::makeFloat32(value)));
+			}
+		}
+
+		void setString(const std::string &key, const std::string &value) {
+			ensureStringBuffer();
+			auto [offset, size] = _stringBuffer->addString(value);
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage::makeStringRef(offset, size);
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage::makeStringRef(offset, size)));
+			}
+		}
+
+		void setExpr(const std::string &key, ExprTree* expr) {
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage(expr);
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage(expr)));
+			}
+		}
+
+		void setUndefined(const std::string &key) {
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage::makeUndefinedLiteral();
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage::makeUndefinedLiteral()));
+			}
+		}
+
+		void setError(const std::string &key) {
+			iterator lb = std::lower_bound(begin(), end(), key, ClassAdFlatMapOrder{});
+			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
+				lb->second.release();
+				lb->second = InlineExprStorage::makeErrorLiteral();
+			} else {
+				_theVector.insert(lb, std::make_pair(key, InlineExprStorage::makeErrorLiteral()));
+			}
 		}
 
 		template <typename StringLike> 
@@ -169,12 +283,13 @@ class ClassAdFlatMap {
 			if (lb != end() && ClassAdFlatMapEqual(*lb, key)) {
 				return std::make_pair(lb, false);
 			} else {
-				iterator newit = _theVector.insert(lb, std::make_pair(key, value));
+				iterator newit = _theVector.insert(lb, std::make_pair(key, InlineExprStorage(value)));
 				return std::make_pair(newit, true);
 			}
 		}
 
 	private:
 		container _theVector;
+		std::unique_ptr<InlineStringBuffer> _stringBuffer;
 };
 }

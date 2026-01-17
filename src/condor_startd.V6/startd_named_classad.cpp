@@ -131,9 +131,8 @@ StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 	if ( ! to || ! from ) { return; }
 
 	const StartdCronJobParams & params = m_job.Params();
-	for( auto i = from->begin(); i != from->end(); ++i ) {
-		const std::string & name = i->first;
-		ExprTree * expr = i->second;
+	for( const auto& [name, inlineExpr] : *from ) {
+		ExprTree * expr = inlineExpr.materialize();
 
 		StartdCronJobParams::Metric metric;
 		if( params.getMetric( name, metric ) ) {
@@ -290,9 +289,8 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 		// where we know we're looking at a new sample value, and not
 		// aggregating old ones.
 		const StartdCronJobParams & params = m_job.Params();
-		for( auto i = from->begin(); i != from->end(); ++i ) {
-			const std::string & name = i->first;
-			ExprTree * expr = i->second;
+		for( const auto& [name, inlineExpr] : *from ) {
+			ExprTree * expr = inlineExpr.materialize();
 
 			StartdCronJobParams::Metric metric;
 			if( params.getMetric( name, metric ) ) {
@@ -367,9 +365,8 @@ StartdNamedClassAd::reset_monitor() {
 	// dprintf( D_FULLDEBUG, "StartdNameClassAd::reset_monitor() for %s\n", GetName() );
 	const StartdCronJobParams & params = m_job.Params();
 	ClassAd accumulator;
-	for( auto i = from->begin(); i != from->end(); ++i ) {
-		const std::string & name = i->first;
-		ExprTree * expr = i->second;
+	for( const auto& [name, inlineExpr] : *from ) {
+		ExprTree * expr = inlineExpr.materialize();
 
 		if( params.isMetric( name ) ) {
 			double initialValue;
@@ -417,10 +414,9 @@ StartdNamedClassAd::unset_monitor() {
 	// dprintf( D_FULLDEBUG, "StartdNameClassAd::unset_monitor() for %s\n", GetName() );
 	const StartdCronJobParams & params = m_job.Params();
 	std::vector<std::string> victims;
-	auto i = from->begin();
-	while (++i != from->end()) {
-		std::string name = i->first;
-		ExprTree * expr = i->second;
+	for (auto i = from->begin(); i != from->end(); ++i) {
+		const auto& [name, inlineExpr] = *i;
+		ExprTree * expr = inlineExpr.materialize();
 
 		if( params.isMetric( name ) ) {
 			double initialValue;

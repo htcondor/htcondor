@@ -388,11 +388,13 @@ VMType::createConfigUsingScript(const char* configfile)
 	std::vector<std::string> name_list;
 
 	const char *name;
-	ExprTree* expr = NULL;
-
 	for( auto itr = m_classAd.begin(); itr != m_classAd.end(); itr++ ) {
 		name = itr->first.c_str();
-		expr = itr->second;
+		classad::InlineExpr inlineExpr = itr->second;
+		classad::ExprTree* expr = inlineExpr.materialize();
+		if (!expr) {
+			continue;
+		}
 		if( !strncasecmp( name, "JobVM", strlen("JobVM") ) ||
 			!strncasecmp( name, "VMPARAM", strlen("VMPARAM") )) {
 

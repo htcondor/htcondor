@@ -216,7 +216,9 @@ public:
 	LogRecord* log = new LogNewClassAd(str.c_str(), GetMyTypeName(*ad), this->GetTableEntryMaker());
 	this->AppendLog(log);
 	for (auto itr = ad->begin(); itr != ad->end(); itr++ ) {
-		log = new LogSetAttribute(str.c_str(),itr->first.c_str(),ExprTreeToString(itr->second));
+		auto [attrName, inlineExpr] = *itr;
+		auto expr = inlineExpr.materialize();
+		log = new LogSetAttribute(str.c_str(),attrName.c_str(),ExprTreeToString(expr));
 		this->AppendLog(log);
 	}
 	return true;

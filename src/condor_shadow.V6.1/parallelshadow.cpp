@@ -603,9 +603,9 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
 	snprintf( node, 9, "%d", nodenum );
 
-	for ( auto itr = ad->begin(); itr != ad->end(); itr++ ) {
-		lhstr = itr->first.c_str();
-		rhstr = ExprTreeToString(itr->second);
+	for ( const auto& [attr_name, inlineExpr] : *ad ) {
+		lhstr = attr_name.c_str();
+		rhstr = ExprTreeToString(inlineExpr.materialize());
 		if( !lhstr || !rhstr ) {
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
@@ -771,13 +771,12 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 		ClassAd* res_download_file_stats = &mpi_res->m_download_file_stats;
 
 		// Calculate upload_stats as a cumulation of all resource upload stats
-		for (auto it = res_upload_file_stats->begin(); it != res_upload_file_stats->end(); it++) {
-			const std::string& attr = it->first;
+		for (const auto& [attr, inlineExpr] : *res_upload_file_stats) {
 
 			// Lookup the value of this attribute. We only count integer values.
 			classad::Value attr_val;
 			long long this_val;
-			it->second->Evaluate(attr_val);
+			inlineExpr.materialize()->Evaluate(attr_val);
 			if (!attr_val.IsIntegerValue(this_val)) {
 				continue;
 			}
@@ -790,13 +789,12 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 		}
 
 		// Calculate download_stats as a cumulation of all resource download stats
-		for (auto it = res_download_file_stats->begin(); it != res_download_file_stats->end(); it++) {
-			const std::string& attr = it->first;
+		for (const auto& [attr, inlineExpr] : *res_download_file_stats) {
 
 			// Lookup the value of this attribute. We only count integer values.
 			classad::Value attr_val;
 			long long this_val;
-			it->second->Evaluate(attr_val);
+			inlineExpr.materialize()->Evaluate(attr_val);
 			if (!attr_val.IsIntegerValue(this_val)) {
 				continue;
 			}

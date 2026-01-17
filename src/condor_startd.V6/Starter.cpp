@@ -228,9 +228,9 @@ Starter::publish( ClassAd* ad )
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
-	for (auto itr = s_ad->begin(); itr != s_ad->end(); itr++) {
-		lhstr = itr->first.c_str();
-		tree = itr->second;
+	for (const auto& [attr_name, inlineExpr] : *s_ad) {
+		lhstr = attr_name.c_str();
+		tree = inlineExpr.materialize();
 		pCopy=0;
 	
 			// insert every attr that's not in the ignored_attr_list

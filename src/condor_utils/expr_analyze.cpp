@@ -236,11 +236,7 @@ int AnalyzeThisSubExpr(
 		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
 			((classad::Literal*)expr)->GetValue(val);
-			unparser.UnparseAux(strLabel, val);
-			if (chatty) {
-				printf("     %d:const : %s\n", kind, strLabel.c_str());
-			}
-			show_work = false;
+			unparser.Unparse(strLabel, val);
 			break;
 		}
 
@@ -1498,10 +1494,11 @@ size_t AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator
 size_t AddClassadMemoryUse (const classad::ClassAd* cad, QuantizingAccumulator & accum, int & num_skipped)
 {
 	accum += sizeof(classad::ClassAd);
-	classad::ClassAd::const_iterator it;
-	for (it = cad->begin(); it != cad->end(); ++it) {
-		accum += it->first.length() * sizeof(char); // TODO: account for std::string overhead.
-		AddExprTreeMemoryUse(it->second, accum, num_skipped);
+	for (auto it = cad->begin(); it != cad->end(); ++it) {
+		auto [attrName, inlineExpr] = *it;
+		accum += attrName.length() * sizeof(char); // TODO: account for std::string overhead.
+		classad::ExprTree* expr = inlineExpr.materialize();
+		AddExprTreeMemoryUse(expr, accum, num_skipped);
 	}
 	return accum.Value();
 }

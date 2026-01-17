@@ -1430,17 +1430,16 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 		for ( attr_it = startd_ad->begin(); attr_it != startd_ad->end(); attr_it++ ) {
 			// ignore list type values when computing external refs.
 			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
-			if (attr_it->second->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+			auto expr = attr_it->second.materialize();
+			if (!expr || (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE)) {
 				continue;
 			}
-			startd_ad->GetExternalReferences( attr_it->second, external_references, true );
+			startd_ad->GetExternalReferences( expr, external_references, true );
 		}
 	}	// while startd_ad
 
 	// Now add external attributes references from negotiator policy exprs; at
-	// this point, we only have to worry about PREEMPTION_REQUIREMENTS.
-	// PREEMPTION_REQUIREMENTS is evaluated in the context of a machine ad
-	// followed by a job ad.  So to help figure out the external (job) attributes
+	// the end of the day, we only care about attributes in startd ads or policy
 	// that are significant, we take a sample startd ad and add any startd_job_exprs
 	// to it.
 	if (!sample_startd_ad) {	// if no startd ads, just return.

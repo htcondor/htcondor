@@ -38,8 +38,9 @@ void MergeClassAds(ClassAd *merge_into, const ClassAd *merge_from,
 
 	for ( auto itr = merge_from->begin(); itr != merge_from->end(); itr++ ) {
 
-		name = itr->first.c_str();
-		expression = itr->second;
+		auto [attr_name, inlineExpr] = *itr;
+		name = attr_name.c_str();
+		expression = inlineExpr.materialize();
 		if (merge_conflicts || !merge_into->LookupExpr(name)) {
 			if( keep_clean_when_possible ) {
 				char *from_expr = NULL;
@@ -89,8 +90,9 @@ int MergeClassAdsIgnoring(ClassAd *merge_into, const ClassAd *merge_from, const 
 	ExprTree   *expression;
 	for ( auto itr = merge_from->begin(); itr != merge_from->end(); itr++ ) {
 
-		name = itr->first.c_str();
-		expression = itr->second;
+		auto [attr_name, inlineExpr] = *itr;
+		name = attr_name.c_str();
+		expression = inlineExpr.materialize();
 		// don't merge attributes if the name is in the ignore list.
 		if (ignore.find(name) != ignore.end())
 			continue;

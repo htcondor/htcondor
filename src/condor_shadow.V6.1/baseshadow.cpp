@@ -1769,15 +1769,14 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 	}
 
 	// Iterate over the list of new stats
-	for (auto it = new_stats.begin(); it != new_stats.end(); it++) {
-		const std::string& attr = it->first;
+	for (const auto& [attr, inlineExpr] : new_stats) {
 		std::string attr_lastrun = attr + "LastRun";
 		std::string attr_total = attr + "Total";
 
 		// Lookup the value of this attribute. We only count integer values.
 		classad::Value attr_val;
 		long long value;
-		it->second->Evaluate(attr_val);
+		inlineExpr.materialize()->Evaluate(attr_val);
 		if (!attr_val.IsIntegerValue(value)) {
 			continue;
 		}

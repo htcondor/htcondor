@@ -157,6 +157,7 @@ view.cpp
 xmlLexer.cpp
 xmlSink.cpp
 xmlSource.cpp
+classad_inline_value.cpp
 )
 
 #####################################################################

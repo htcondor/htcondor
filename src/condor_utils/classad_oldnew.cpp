@@ -581,8 +581,8 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 	int numExprs=0;
 
-	classad::AttrList::const_iterator itor;
-	classad::AttrList::const_iterator itor_end;
+	classad::ClassAd::const_iterator itor;
+	classad::ClassAd::const_iterator itor_end;
 
 	bool haveChainedAd = false;
 
@@ -672,7 +672,6 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
-			classad::ExprTree const *expr = itor->second;
 
 			bool encrypt_it = false;
 
@@ -704,8 +703,11 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 			buf = attr;
 			buf += " = ";
-			unp.Unparse( buf, expr );
-
+			// Try to unparse inline value without materializing
+			if (!unp.Unparse(buf, itor->second)) {
+				dprintf(D_FULLDEBUG, "Failed to unparse expression for attribute: %s; refusing to send partial ad\n", attr.c_str());
+				return false;
+			}
 			if (encrypt_it) {
 				sock->put(SECRET_MARKER);
 
@@ -772,10 +774,15 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		if (blacklist.find(*attr) != blacklist.end())
 			continue;
 
-		classad::ExprTree const *expr = ad.Lookup(*attr);
+		// Use inline lookup to avoid materializing
+		classad::InlineExpr inlineExpr = ad.LookupInline(*attr);
 		buf = *attr;
 		buf += " = ";
-		unp.Unparse( buf, expr );
+		// Try to unparse inline value without materializing
+		if (!unp.Unparse(buf, inlineExpr)) {
+			dprintf(D_FULLDEBUG, "Failed to unparse expression for attribute: %s; refusing to send partial ad\n", attr->c_str());
+			return false;
+		}
 
 		if ( ! crypto_is_noop &&
 			(ClassAdAttributeIsPrivateAny(*attr) ||

@@ -1342,9 +1342,9 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 
 	const char *name;
 	ExprTree *expr = NULL;
-	for( auto itr = m_job_ad->begin(); itr != m_job_ad->end(); itr++ ) {
-		name = itr->first.c_str();
-		expr = itr->second;
+	for( const auto& [attr_name, attr_expr] : *m_job_ad ) {
+		name = attr_name.c_str();
+		expr = attr_expr.materialize();
 		can_send_it = false;
 
 		if( !m_send_all_classad ) {

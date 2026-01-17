@@ -274,27 +274,27 @@ void schedd_capabilities_help(FILE * out, const ClassAd &ad, const std::string &
 		classad::ClassAd* extendedCmds = dynamic_cast<classad::ClassAd*>(extensions);
 		std::map<std::string, std::string, CaseIgnLTYourString> cmd_info;
 		size_t keywidth = 0;
-		for (auto it = extendedCmds->begin(); it != extendedCmds->end(); ++it) {
+		for (const auto& [cmd_name, inlineExpr] : *extendedCmds) {
 			classad::Value val;
-			if (keywidth < it->first.size()) { keywidth = it->first.size(); }
-			cmd_info[it->first] = "expression";
-			if (ExprTreeIsLiteral(it->second, val)) {
+			if (keywidth < cmd_name.size()) { keywidth = cmd_name.size(); }
+			cmd_info[cmd_name] = "expression";
+			if (ExprTreeIsLiteral(inlineExpr.materialize(), val)) {
 				if (val.GetType() == classad::Value::UNDEFINED_VALUE) {
 					continue; // not a real extended command
 				} else if (val.GetType() == classad::Value::ERROR_VALUE) {
-					cmd_info[it->first] = "forbidden";
+					cmd_info[cmd_name] = "forbidden";
 				} else if (val.GetType() == classad::Value::BOOLEAN_VALUE) {
-					cmd_info[it->first] = "boolean true/false"; 
+					cmd_info[cmd_name] = "boolean true/false";
 				} else if (val.GetType() == classad::Value::INTEGER_VALUE) {
 					long long ll;
 					val.IsIntegerValue(ll);
-					cmd_info[it->first] = (ll < 0) ? "signed integer" : "unsigned integer";
+					cmd_info[cmd_name] = (ll < 0) ? "signed integer" : "unsigned integer";
 				} else if (val.GetType() == classad::Value::STRING_VALUE) {
 					std::string str;
 					val.IsStringValue(str);
 					bool is_list = strchr(str.c_str(), ',') != NULL;
 					bool is_file = starts_with_ignore_case(str, "file");
-					cmd_info[it->first] = is_file ? (is_list ? "filename list" : "filename") : (is_list ? "stringlist" : "string");
+				cmd_info[cmd_name] = is_file ? (is_list ? "filename list" : "filename") : (is_list ? "stringlist" : "string");
 				}
 			}
 		}

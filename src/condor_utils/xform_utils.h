@@ -33,7 +33,7 @@ public:
 	classad::AttrList list;
 	classad::ReferencesBySize deletions; // attr is added here when Delete or Rename is used, so we know how to revert correctly
 	XFormAdUndo() {}
-	~XFormAdUndo() { for (auto & [k,v] : list) { if (v) delete v; } }
+	~XFormAdUndo() { for (auto & [k,v] : list) { v.release(); } }
 
 	// use this class to revert changes to the given ad
 	// note that Revert has the side effect of changing all of the

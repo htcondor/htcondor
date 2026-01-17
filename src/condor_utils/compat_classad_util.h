@@ -40,6 +40,8 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char* & cstr);
 bool ExprTreeIsLiteralBool(classad::ExprTree * expr, bool & bval);
 bool ExprTreeIsArray(classad::ExprTree * expr, size_t & num_elms);
 bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute=NULL);
+bool InlineExprIsLiteralNumber(const classad::InlineExpr& inlineExpr, double & rval);
+bool InlineExprIsLiteralNumber(const classad::InlineExpr& inlineExpr, long long & ival);
 bool ExprTreeMayDollarDollarExpand(classad::ExprTree *tree, std::string & unparsed);
 
 // returns true when the expression is a comparision between an attribute ref and a literal

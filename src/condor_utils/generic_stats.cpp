@@ -1225,8 +1225,9 @@ int StatisticsPool::SetVerbosities(classad::References & attrs, int pub_flags, b
          (probe->*(item.Publish))(tmp, pattr, (item.flags & ~IF_NONZERO) | IF_HYPERPUB);
 
          // look to see if any of the published attributes match the whitelist.
-         for (classad::AttrList::const_iterator it = tmp.begin(); it != tmp.end(); ++it) {
-            if (attrs.find(it->first) != attrs.end()) { attr_match = true; break; }
+         for (auto it = tmp.begin(); it != tmp.end(); ++it) {
+            auto [attrName, inlineExpr] = *it;
+            if (attrs.find(attrName) != attrs.end()) { attr_match = true; break; }
          }
       }
 

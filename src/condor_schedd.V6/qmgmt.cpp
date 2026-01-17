@@ -4008,9 +4008,8 @@ int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * Cl
 		add_attrs_from_string_tokens(clusterAttrs, buffer);
 	}
 
-	for (const auto & it : *ad) {
-		const std::string & attr = it.first;
-		const ExprTree * tree = it.second;
+	for (const auto & [attr, attr_expr] : *ad) {
+		const ExprTree * tree = attr_expr.materialize();
 		if (attr.empty() || ! tree) {
 			dprintf(D_ALWAYS, "ERROR: Null attribute name or value for job %d.%d\n", ClusterId, ProcId );
 			return -1;
@@ -6410,8 +6409,9 @@ int UpdateUserRecAttributes(JobQueueKey & key, bool is_project, const ClassAd & 
 	std::string buf;
 	std::string delref;
 
-	for (auto &[attr, tree] : cmdAd) {
+	for (const auto &[attr, inline_tree] : cmdAd) {
 		if (starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) continue;
+		auto tree = inline_tree.materialize();
 
 		// don't allow most special attributes to be set from the command ad
 		// the exception is the DisableReason when creating a disabled user
@@ -6499,7 +6499,8 @@ static bool MakeUserRec(JobQueueKey & key,
 			JobQueue->AddAttrsFromTransaction(key, urec);
 
 			classad::Value val;
-			for (auto &[attr, tree] : *defaults) {
+			for (const auto &[attr, inline_tree] : *defaults) {
+				auto tree = inline_tree.materialize();
 				if (defaults->EvaluateExpr(&urec, tree, val, classad::Value::ALL_VALUES)) {
 					if (val.IsUndefinedValue() || val.IsErrorValue()) {
 						dprintf(D_FULLDEBUG, "Ignoring MakeUserRec default attr %s=%s because it evaluated to %s\n",
@@ -6547,7 +6548,8 @@ static bool MakeProjectRec(
 			// JobQueue->AddAttrsFromTransaction(key, pjad);
 
 			classad::Value val;
-			for (auto &[attr, tree] : *defaults) {
+			for (const auto &[attr, inline_tree] : *defaults) {
+				auto tree = inline_tree.materialize();
 				if (defaults->EvaluateExpr(&pjad, tree, val, classad::Value::ALL_VALUES)) {
 					if (val.IsUndefinedValue() || val.IsErrorValue()) {
 						dprintf(D_FULLDEBUG, "Ignoring MakeProjectRec default attr %s=%s because it evaluated to %s\n",
@@ -6623,7 +6625,7 @@ bool UserRecDestroy(int userrec_id)
 void UserRecFixupDefaultsAd(ClassAd & defaultsAd)
 {
 	classad::References badattrs;
-	for (auto &[attr, tree] : defaultsAd) {
+	for (const auto &[attr, tree] : defaultsAd) {
 		int cat=0, idAttr = IsSpecialUserRecAttrName(attr.c_str(), cat);
 		if (idAttr || starts_with_ignore_case(attr, ATTR_USERREC_OPT_prefix)) {
 			badattrs.insert(attr);
@@ -7909,7 +7911,8 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int /*flags*/, int & t
 		std::string rhs; rhs.reserve(120);
 
 		for (const auto& it : ad) {
-			if (! it.second) continue; // skip if the ExprTree is nullptr
+			auto expr = it.second.materialize();
+			if (!expr) continue;
 
 			if (!IsValidAttrName(it.first.c_str())) {
 				dprintf(D_ERROR, "got invalid attribute named %s for jobset %d\n",
@@ -8061,15 +8064,15 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 			// Make a list of all attribute names in job ad that are not MATCH_ attributes
 		std::vector<std::string> AttrsToExpand;
-		for (auto & itr : *expanded_ad) {
-			if ( strncasecmp(itr.first.c_str(),"MATCH_",6) == 0 ) {
+		for (const auto & [attr_name, _attr_expr] : *expanded_ad) {
+			if ( strncasecmp(attr_name.c_str(),"MATCH_",6) == 0 ) {
 					// We do not want to expand MATCH_XXX attributes,
 					// because these are used to store the result of
 					// previous expansions, which could potentially
 					// contain literal $$(...) in the replacement text.
 				continue;
 			} else {
-				AttrsToExpand.emplace_back(itr.first);
+				AttrsToExpand.emplace_back(attr_name);
 			}
 		}
 
@@ -8346,19 +8349,19 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				// to the job ad.  These attributes were inserted by the
 				// negotiator.
 			size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-			for (auto & itr : *startd_ad) {
-				if( !strncmp(itr.first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-					ExprTree *expr = itr.second;
+			for (const auto & [attr_name, attr_expr] : *startd_ad) {
+				if( !strncmp(attr_name.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
+					ExprTree *expr = attr_expr.materialize();
 					if( !expr ) {
 						continue;
 					}
 					const char *new_value = nullptr;
 					new_value = ExprTreeToString(expr);
 					ASSERT(new_value);
-					expanded_ad->AssignExpr(itr.first,new_value);
+					expanded_ad->AssignExpr(attr_name,new_value);
 
 					std::string match_exp_name = MATCH_EXP;
-					match_exp_name += itr.first;
+					match_exp_name += attr_name;
 					if ( SetAttribute(cluster_id,proc_id,match_exp_name.c_str(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",

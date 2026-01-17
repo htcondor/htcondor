@@ -262,11 +262,11 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, c
 			classad::ClassAdUnParser unp;
 			unp.SetOldClassAd( true, true );
 			std::string line;
-			for (classad::ClassAd::const_iterator itr = ad->begin(); itr != ad->end(); ++itr) {
-				if (includelist->contains(itr->first)) {
-					line = itr->first;
+			for (const auto& [attr_name, inlineExpr] : *ad) {
+				if (includelist->contains(attr_name)) {
+					line = attr_name;
 					line += " = ";
-					unp.Unparse(line, itr->second);
+					unp.Unparse(line, inlineExpr.materialize());
 					line += "\n";
 					fputs(line.c_str(), stdout);
 				}

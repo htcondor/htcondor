@@ -210,11 +210,31 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, const char * & cstr)
 	return false;
 }
 
+bool InlineExprIsLiteralNumber(const classad::InlineExpr& inlineExpr, long long & ival)
+{
+	classad::Value val;
+	if ( ! classad::inlineValueToValue(*inlineExpr.value(), val, nullptr)) {
+		auto expr = inlineExpr.materialize();
+		return ExprTreeIsLiteralNumber(expr, ival);
+	}
+	return val.IsNumber(ival);
+}
+
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, long long & ival)
 {
 	classad::Value val;
 	if ( ! ExprTreeIsLiteral(expr, val)) return false;
 	return val.IsNumber(ival);
+}
+
+bool InlineExprIsLiteralNumber(const classad::InlineExpr& inlineExpr, double & rval)
+{
+	classad::Value val;
+	if ( ! classad::inlineValueToValue(*inlineExpr.value(), val, nullptr)) {
+		auto expr = inlineExpr.materialize();
+		return ExprTreeIsLiteralNumber(expr, rval);
+	}
+	return val.IsNumber(rval);
 }
 
 bool ExprTreeIsLiteralNumber(classad::ExprTree * expr, double & rval)
@@ -771,7 +791,7 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, classad::References *ignored_
 	bool found_diff = false;
 	for ( auto itr = ad2->begin(); itr != ad2->end(); itr++ ) {
 		attr_name = itr->first.c_str();
-		ad2_expr = itr->second;
+		ad2_expr = itr->second.materialize();
 		if( ignored_attrs && ignored_attrs->count(attr_name) > 0 ) {
 			if( verbose ) {
 				dprintf( D_FULLDEBUG, "ClassAdsAreSame(): skipping \"%s\"\n",

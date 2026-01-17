@@ -3439,10 +3439,10 @@ static void quick_get_addr_from_master(const char * master_addr, pid_t pid, std:
 	get_daemon_ready(master_addr, nullptr, 0, ready_ad, session);
 	std::string pid_str = "_" + std::to_string(pid);
 	std::string pid_attr;
-	for (auto & [attr,expr] : ready_ad) {
+	for (const auto & [attr,inlineExpr] : ready_ad) {
 		// fprintf(stderr, "\t%s=%p", attr.c_str(), expr);
 		long long llval = 0;
-		if (attr.ends_with("_PID") && ExprTreeIsLiteralNumber(expr,llval) && llval == pid) {
+		if (attr.ends_with("_PID") && InlineExprIsLiteralNumber(inlineExpr,llval) && llval == pid) {
 			pid_attr = attr;
 			// break;
 		}

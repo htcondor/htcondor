@@ -327,9 +327,9 @@ main(int argc, const char *argv[])
 			}
 
 			// convert the ClassAd of edits into our kvp_list data structure.
-			for (ClassAd::iterator it = ad->begin(); it != ad->end(); ++it) {
-				const char * attr = it->first.c_str();
-				kvp_list[attr] = ExprTreeToString(it->second);
+			for (const auto& [attr_name, inlineExpr] : *ad) {
+				const char * attr = attr_name.c_str();
+				kvp_list[attr] = ExprTreeToString(inlineExpr.materialize());
 			}
 			delete ad;
 		}
