@@ -313,13 +313,13 @@ Submit description file command :subcom:`arc_data_staging[definition]`
 can be used to specify additional elements under the ``<DataStaging>``
 element of the ADL.
 
-The batch Grid Type (for SLURM, PBS, LSF, and SGE)
+The batch Grid Type (for SLURM, PBS, LSF, Flux, and SGE)
 --------------------------------------------------
 
 :index:`batch grid type`
 
-The **batch** grid type is used to submit to a local SLURM, PBS, LSF, or
-SGE system using the **grid** universe and the
+The **batch** grid type is used to submit to a local SLURM, PBS, LSF,
+Flux, or SGE system using the **grid** universe and the
 :subcom:`grid_resource[and batch grid]`
 command by placing a variant of the following into the submit
 description file.
@@ -329,7 +329,7 @@ description file.
     grid_resource = batch slurm
 
 The second argument on the right hand side will be one of ``slurm``,
-``pbs``, ``lsf``, or ``sge``.
+``pbs``, ``lsf``, ``flux``, or ``sge``.
 
 Submission to a batch system on a remote machine using SSH is also
 possible. This is described below.
