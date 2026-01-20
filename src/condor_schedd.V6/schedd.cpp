@@ -9212,6 +9212,9 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
 	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
+	cmd_ad.LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+	cmd_ad.LookupInteger(ATTR_PROC_ID, jobid.proc);
+
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
 		if (!rsock->get_secret(claim_id) || !getClassAd(rsock, slot_ad)) {
@@ -10180,23 +10183,15 @@ Scheduler::StartJob(match_rec *rec)
 	if (job == nullptr) {
 		if (getOCU(id.cluster) != nullptr) {
 			return;
-		} 
+		}
 	}
-
-	/*
-	bool is_ocu_holder = false;
-	GetAttributeBool(rec->cluster,rec->proc, ATTR_OCU_HOLDER, &is_ocu_holder);
-	if (is_ocu_holder) {
-		return;
-	}
-	*/
 
 	switch(rec->status) {
 	case M_UNCLAIMED:
 		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
 		return;
 	case M_STARTD_CONTACT_LIMBO:
-		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
+		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n",
 				  rec->description() );
 		return;
 	case M_ACTIVE:
@@ -10233,7 +10228,7 @@ Scheduler::StartJob(match_rec *rec)
 	}
 
 	if(!(rec->shadowRec = StartJob(rec, &id))) {
-                
+
 			// Start job failed. Throw away the match. The reason being that we
 			// don't want to keep a match around and pay for it if it's not
 			// functioning and we don't know why. We might as well get another

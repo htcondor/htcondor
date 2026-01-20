@@ -371,7 +371,7 @@ public:
 	// returns -1 if the command could not be sent,
 	// otherwise the ActionResult attribute of the reply is returned
 	// which is 1 for success and 0 for error
-	int offerResources(const std::vector< std::pair<std::string, const ClassAd*> > & resources, const std::string & submitter_name, int timeout);
+	int offerResources(const std::vector< std::pair<std::string, const ClassAd*> > & resources, const std::string & submitter_name, int timeout, int clusterID=-1, int procID=-1);
 
 	// offer a single slot to the schedd, optionally for for a given submitter
 	// returns -1 if the command could not be sent,
