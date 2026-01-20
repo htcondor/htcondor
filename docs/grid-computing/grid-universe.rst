@@ -314,7 +314,7 @@ can be used to specify additional elements under the ``<DataStaging>``
 element of the ADL.
 
 The batch Grid Type (for SLURM, PBS, LSF, Flux, and SGE)
---------------------------------------------------
+--------------------------------------------------------
 
 :index:`batch grid type`
 
