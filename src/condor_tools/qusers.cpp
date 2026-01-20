@@ -548,11 +548,11 @@ ClassAd *  suspendUsersOrProjects(
 
 	ClassAd * resultAd = nullptr;
 	if (edits.size() > 0) {
-		ClassAdList adlist;
+		std::vector<ClassAd> adlist;
 
 		if (constraint) {
 			if (edits.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
-				adlist.Insert(new ClassAd(edits));
+				adlist.emplace_back(edits);
 			} else {
 				fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
 				return nullptr;
@@ -560,10 +560,8 @@ ClassAd *  suspendUsersOrProjects(
 		} else if (usernames.size()) {
 			// we need a separate ad for each user, each should contain all of the edit_args
 			for (auto & name : usernames) {
-				// make a copy of the edit_args attributes for each user beyond the first
-				ClassAd * ad = new ClassAd(edits);
-				ad->Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
-				adlist.Insert(ad);
+				adlist.emplace_back(edits);
+				adlist.back().Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
 			}
 		} else {
 			fprintf(stderr, "Error: no name or constraint - don't know which users or projects to %s\n", op.name);
@@ -1113,24 +1111,23 @@ main( int argc, const char *argv[] )
 			delete ad;
 		}
 	} else if (cmd == EDIT_USERREC) {
-		ClassAd * ad = new ClassAd();
+		ClassAd ad;
 		for (auto & line : edit_args) {
-			if ( ! ad->Insert(line)) {
+			if ( ! ad.Insert(line)) {
 				fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
 				rval = 1;
-				delete ad; ad = nullptr;
 				break;
 			}
 		}
-		if (ad && ad->size() > 0) {
+		if (ad.size() > 0) {
 			struct _cmd_properties op(cmd, "edit", dash_projects ? "projects" : "users");
-			ClassAdList adlist;
+			std::vector<ClassAd> adlist;
 			rval = 1; // assume failure
 
 			if (constraint) {
 				op.has_constraint = true;
-				if (ad->AssignExpr(ATTR_REQUIREMENTS, constraint)) {
-					adlist.Insert(ad);
+				if (ad.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+					adlist.emplace_back(ad);
 					rval = 0;
 				} else {
 					fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
@@ -1139,10 +1136,8 @@ main( int argc, const char *argv[] )
 				op.num_ads = usernames.size();
 				// we need a separate ad for each user, each should contain all of the edit_args
 				for (auto & name : usernames) {
-					// make a copy of the edit_args attributes for each user beyond the first
-					if (adlist.Length() > 0) { ad = new ClassAd(*ad); }
-					ad->Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
-					adlist.Insert(ad);
+					adlist.emplace_back(ad);
+					adlist.back().Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
 					rval = 0;
 				}
 			} else {

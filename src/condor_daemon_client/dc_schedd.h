@@ -526,7 +526,7 @@ public:
 		CondorError *errstack);
 
 	ClassAd * updateUserAds(
-		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
+		std::vector<ClassAd> & user_ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
 	ClassAd * updateUserAds(
@@ -573,7 +573,7 @@ public:
 		CondorError *errstack);
 
 	ClassAd * updateProjectAds(
-		ClassAdList & project_ads, // ads must have ATTR_USER attribute at a minimum
+		std::vector<ClassAd> & project_ads, // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
 	ClassAd * updateProjectAds(
@@ -585,7 +585,7 @@ public:
 	ClassAd * generalUpdateUserRecs(
 		int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 		bool is_project,           // set to true if ads are project ads or mixed user and project ads
-		ClassAdListDoesNotDeleteAds & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+		std::vector<ClassAd> & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
 		CondorError *errstack);
 
 	/** Get DAGMan contact information (Address and secret)
