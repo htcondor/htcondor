@@ -5,7 +5,7 @@
 ##Blah common variables
 
 #Supported batch systems (e.g. pbs,lsf)
-supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes
+supported_lrms=pbs,lsf,sge,slurm,condor,nqs,kubernetes,flux
 
 #DGAS logfile 
 BLAHPD_ACCOUNTING_INFO_LOG=
@@ -334,6 +334,11 @@ sge_pe_policy=*
 
 #path to the slurm executables (default is to use PATH)
 #slurm_binpath=
+
+#FLUX
+
+#path to the flux executable (default is to use PATH)
+#flux_binpath=
 
 ##
 #####BNotifier subsection
