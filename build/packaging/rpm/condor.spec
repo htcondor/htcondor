@@ -1476,6 +1476,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jan 30 2026 Tim Theisen <tim@cs.wisc.edu> - 23.10.30-1
+- Special CentOS7 build with Pelican 7.22.0 in the tarball
+
 * Tue Sep 23 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.29-1
 - Fix flocking to pools when there are intermittent network issues
 - HTCondor tarballs now contain Pelican 7.19.3

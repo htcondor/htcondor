@@ -1,3 +1,7 @@
+*** 23.10.30 features
+
+- Special CentOS7 build with `Pelican 7.22.0 <https://pelicanplatform.org/releases>`_ in the tarball.
+
 *** 23.10.29 features
 
 - HTCondor tarballs now contain `Pelican 7.19.3 <https://pelicanplatform.org/releases>`_
