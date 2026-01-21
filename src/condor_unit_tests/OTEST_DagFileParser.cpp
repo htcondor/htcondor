@@ -968,7 +968,7 @@ bool OTEST_DagFileParser() {
 	char *filepart = nullptr;
 	GetFullPathNameA("\\path\\to\\custom\\dag.conf", sizeof(buf), buf, &filepart);
 	std::string config_path("CONFIG > "); config_path += buf;
-	TEST_EXPECTED_RESULTS[SUCCESS_TEST][33] = config_path;
+	std::ranges::replace(TEST_EXPECTED_RESULTS[SUCCESS_TEST], dag_config_path, config_path);
 #endif
 
 	if ( ! make_dag_files()) { return false; }
