@@ -35,6 +35,7 @@
 
 #include <optional>
 #include "guidance.h"
+#include "catalog_utils.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
@@ -410,6 +411,16 @@ class BaseShadow : public Service
 	virtual std::optional<std::string> uniqueCIFName(
 		const std::string & /* cifName */, const std::string & /* content */
 	) { return {}; }
+
+	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
+		ClassAd * /* jobAd */
+	) { return {}; }
+
+	virtual bool computeCommonInputFiles(
+		ClassAd * /* jobAd */,
+		ListOfCatalogs & /* commonFileCatalogs */,
+		int & /* required_version */
+	) { return false; }
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() { return {}; }
 

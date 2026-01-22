@@ -209,6 +209,16 @@ class UniShadow : public BaseShadow
 		const std::string & cifName, const std::string & content
 	);
 
+	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
+		ClassAd * jobAd
+	);
+
+	virtual bool computeCommonInputFiles(
+		ClassAd * jobAd,
+		ListOfCatalogs & commonFileCatalogs,
+		int & required_version
+	);
+
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
 		if( commonFTO == NULL ) { return {}; }
 		return commonFTO->GetInfo().stats;
