@@ -205,10 +205,6 @@ class UniShadow : public BaseShadow
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & cifName, const std::string & content
-	);
-
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
 		ClassAd * jobAd
 	);
