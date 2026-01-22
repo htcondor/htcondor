@@ -1942,16 +1942,6 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 }
 
 
-std::optional<std::string>
-UniShadow::uniqueCIFName( const std::string & cifName, const std::string & content ) {
-	char * startdAddress = NULL;
-	this->remRes->getStartdAddress(startdAddress);
-	auto rval = makeCIFName(* this->jobAd, cifName, startdAddress, content);
-	free( startdAddress );
-	return rval;
-}
-
-
 std::optional<ListOfCatalogs>
 UniShadow::computeCommonInputFileCatalogs(
 	ClassAd * jobAd

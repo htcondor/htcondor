@@ -408,10 +408,6 @@ class BaseShadow : public Service
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & /* cifName */, const std::string & /* content */
-	) { return {}; }
-
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
 		ClassAd * /* jobAd */
 	) { return {}; }
