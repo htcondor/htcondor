@@ -1397,6 +1397,7 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 		req_classad->Assign(ATTR_REMOTE_HOST, schedd_name);
 		std::string tmp;
 		if (req_classad->LookupString(ATTR_USER, tmp)) { ep_event.Ad().Assign(ATTR_REMOTE_USER, tmp); }
+		if (req_classad->LookupString(ATTR_PROJECT_NAME, tmp)) { ep_event.Ad().Assign(ATTR_REMOTE_PROJECT, tmp); }
 		JOB_ID_KEY jid(-1,-1);
 		req_classad->LookupInteger(ATTR_PROC_ID, jid.proc);
 		if (req_classad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster)) {
