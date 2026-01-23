@@ -5,13 +5,17 @@
 #include <string>
 #include <optional>
 #include "compat_classad.h"
-#include "baseshadow.h"
 #include "catalog_utils.h"
+#include "guidance.h"
+#include "condor_attributes.h"
 
 #include "stl_string_utils.h"
 
 std::optional<ListOfCatalogs>
-computeCommonInputFileCatalogs( ClassAd * jobAd, BaseShadow * shadow ) {
+computeCommonInputFileCatalogs(
+	ClassAd * jobAd,
+	const std::string & startdAddress
+) {
 	ListOfCatalogs common_file_catalogs;
 
 	//
@@ -23,7 +27,7 @@ computeCommonInputFileCatalogs( ClassAd * jobAd, BaseShadow * shadow ) {
 		std::string commonInputFiles;
 		jobAd->LookupString( "_x_catalog_" + cifName, commonInputFiles );
 
-		auto internal_catalog_name = shadow->uniqueCIFName(cifName, commonInputFiles);
+		auto internal_catalog_name = makeCIFName(* jobAd, cifName, startdAddress, commonInputFiles);
 		if(! internal_catalog_name) {
 			return {};
 		}
@@ -37,7 +41,12 @@ computeCommonInputFileCatalogs( ClassAd * jobAd, BaseShadow * shadow ) {
 
 
 bool
-computeCommonInputFiles( ClassAd * jobAd, BaseShadow * shadow, ListOfCatalogs & common_file_catalogs, int & required_version ) {
+computeCommonInputFiles(
+	ClassAd * jobAd,
+	const std::string & startdAddress,
+	ListOfCatalogs & common_file_catalogs,
+	int & required_version
+) {
 	std::string common_input_files;
 	bool found_htc25_plumbing =
 		jobAd->LookupString( ATTR_COMMON_INPUT_FILES, common_input_files );
@@ -52,7 +61,7 @@ computeCommonInputFiles( ClassAd * jobAd, BaseShadow * shadow, ListOfCatalogs & 
 		long long int clusterID = 0;
 		ASSERT( jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID ) );
 		formatstr( default_name, "clusterID_%lld", clusterID );
-		auto internal_catalog_name = shadow->uniqueCIFName(default_name, common_input_files);
+		auto internal_catalog_name = makeCIFName(* jobAd, default_name, startdAddress, common_input_files);
 		if(! internal_catalog_name) {
 			return false;
 		}
