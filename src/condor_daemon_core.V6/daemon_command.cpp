@@ -39,18 +39,21 @@
 
 static bool LooksLikeTLSClientHello(const unsigned char *buf, size_t len)
 {
-	return len >= 3 && buf[0] == 0x16 && buf[1] == 0x03 && buf[2] <= 0x05;
+	// buf[2] is the legacy version field. 0x01 is TLS 1.0, 0x03 is TLS 1.2
+	// TLS 1.3 uses 0x03 for backwards compatibility.
+	// We allow up to 0x04 (hypothetical future version) but not higher to avoid false positives.
+	return len >= 3 && buf[0] == 0x16 && buf[1] == 0x03 && buf[2] <= 0x04;
 }
 
 static bool LooksLikeHttpRequest(const char *buf, size_t len)
 {
 	static const char *const methods[] = {
 		"GET ", "POST ", "HEAD ", "PUT ", "DELETE ", "OPTIONS ",
-		"TRACE ", "CONNECT ", "PATCH ", "PRI "
+		"TRACE ", "CONNECT ", "PATCH "
 	};
 	for (auto method : methods) {
 		size_t mlen = strlen(method);
-		if (len >= mlen && strncasecmp(buf, method, mlen) == 0) {
+		if (len >= mlen && strncmp(buf, method, mlen) == 0) {
 			return true;
 		}
 	}

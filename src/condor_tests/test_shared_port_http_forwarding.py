@@ -15,7 +15,6 @@ import tempfile
 from ornithology import action, standup, Condor
 
 FORWARD_ID = "http_api_forward"
-SOCKET_DIR_NAME = "shared_port_sockets"
 
 
 class DomainSocketHTTPServer:
@@ -52,6 +51,7 @@ class DomainSocketHTTPServer:
             try:
                 self._listener.shutdown(socket.SHUT_RDWR)
             except OSError:
+                # Listener might be closed or not connected
                 pass
             self._listener.close()
         if self._thread:
@@ -60,6 +60,7 @@ class DomainSocketHTTPServer:
             try:
                 self.socket_path.unlink()
             except OSError:
+                # File might not exist or be removed by another process
                 pass
 
     def _serve(self):
@@ -70,12 +71,13 @@ class DomainSocketHTTPServer:
             except socket.timeout:
                 continue
             except OSError:
+                # Listener socket closed
                 break
 
             try:
                 self._handle_domain_connection(conn)
-            except Exception:
-                self._log("exception while handling domain connection")
+            except Exception as e:
+                self._log(f"exception while handling domain connection: {e}")
                 conn.close()
                 continue
 

@@ -87,7 +87,9 @@ SharedPortServer::InitAndReconfig() {
 		}
 	}
 
-	m_http_forward_id = configured_http_id;
+	if (!configured_http_id.empty()) {
+		m_http_forward_id = configured_http_id;
+	}
 	if (!m_http_forward_id.empty() && !m_registered_http_handler) {
 		int rc = daemonCore->Register_HTTP_CommandHandler(
 			[this] (int com, Stream *s) {return this->HandleHttpRequest(com, s);},
