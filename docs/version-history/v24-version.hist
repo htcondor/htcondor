@@ -4,6 +4,10 @@
   variables and not immediately fail.
   :jira:`3503`
 
+- Fixed bugs in :tool:`condor_history` that made it very slow on
+  filesystems with rate-limits on I/O operations.
+  :jira:`3512`
+
 *** 24.0.16 features
 
 - HTCondor tarballs now contain `Pelican 7.22.0 <https://pelicanplatform.org/releases>`_
