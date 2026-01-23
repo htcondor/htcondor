@@ -564,8 +564,14 @@ class DaemonCore : public Service
 		const char       *handler_descrip,
 		Service          *s,
 		bool              include_auth);
-    bool HandleUnregistered() const {return m_unregisteredCommand.num;}
-    bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
+
+	int Register_HTTP_CommandHandler(
+			StdCommandHandler handler,
+			const char       *handler_descrip);
+
+	bool HandleHTTP() const { return m_httpCommand.num; }
+	bool HandleUnregistered() const {return m_unregisteredCommand.num;}
+	bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
 
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
@@ -1008,6 +1014,7 @@ class DaemonCore : public Service
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 	int CallUnregisteredCommandHandler(int req, Stream *stream);
+    int CallHTTPCommandHandler(int req, Stream *stream);
 
 
 		// This function is called in order to have
@@ -2040,6 +2047,7 @@ class DaemonCore : public Service
     void                DumpCommandTable(int, const char* = NULL);
 	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
+    CommandEnt          m_httpCommand;
 
     struct SignalEnt
     {
