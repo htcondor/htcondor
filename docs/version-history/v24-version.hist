@@ -6,6 +6,10 @@
   variables and not immediately fail.
   :jira:`3503`
 
+- Fixed bugs in :tool:`condor_history` that made it very slow on
+  filesystems with rate-limits on I/O operations.
+  :jira:`3512`
+
 *** 24.12.16 bugs
 
 - Fixed a bug where a backfill p-slot could get into a state where it
