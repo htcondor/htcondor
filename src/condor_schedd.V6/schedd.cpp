@@ -97,6 +97,8 @@
 #include "../condor_sysapi/sysapi.h"
 #include "classad_merge.h"
 
+#include "cxfer.h"
+
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
 #endif
@@ -10594,10 +10596,62 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 shadow_rec*
 Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 {
+	//
+	// At this point, we've committed to starting this job on this
+	// starter, so this is where we're going to deal with common
+	// file transfer.
+	//
+	shadow_rec * shadowrec = NULL; // fixme: placeholder.
+	// we have to return a shadowrec so that StartJob(match_rec) can
+	// stuff it info the match record; otherwise the match record will
+	// be deleted.  This should be safe (it will be a real shadowrec),
+	// but it looks like the match record owns the shadow record, which
+	// might be inconvient for some of our other data structures...
+	// ... but the real problem is the MAPPING return, where we want to
+	// keep the match but not immediately spawn a shadow.  ASK JAIME;
+	// we may just need to adjust the caller.
+	auto cxfer_type = determine_cxfer_type(mrec, job_id);
+	switch(cxfer_type) {
+		// Configuration forbade (this job) from transferring common files.
+		case CXFER_TYPE::FORBIDDEN:
+			// Continue to normal spwaning; the shadow will fall back.
+			break;
+
+		// This job did not specify any common transfers.
+		case CXFER_TYPE::NONE:
+			// Continue to normal spawning.
+			break;
+
+		// The slot doesn't support (the specified) common transfers,
+		// or some other problem prevented us from determining if the
+		// state was STAGING, MAPPING, or MAPPED.
+		case CXFER_TYPE::CANT:
+			// Continue to normal spawning; the shadow will fall back.
+			break;
+
+		// No other shadow is staging this job's cxfers to this slot.
+		case CXFER_TYPE::STAGING:
+			// Create a shadowrec to pass the -staging flag and queue
+			// it for immediate spawning.
+			return shadowrec;
+
+		// Some other shadow is staging this job's cxfers to this slot.
+		case CXFER_TYPE::MAPPING:
+			// Create a shadowrec to pass the -mapping flag and queue
+			// it to wait for the mapping to complete (and then spawn).
+			return shadowrec;
+
+		// This job's common file catalog(s) are already on this slot.
+		case CXFER_TYPE::READY:
+			// As CXFER_TYPE_MAPPING, but queue for immediate spawning.
+			return shadowrec;
+	}
+
+
 	int		universe = -1;
 	int		rval;
 
-	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
+	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 							&universe);
 	if (rval < 0) {
 		dprintf(D_ALWAYS, "Couldn't find %s Attribute for job "
@@ -12079,10 +12133,10 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	new_rec->preempted = FALSE;
 	new_rec->removed = FALSE;
 	new_rec->conn_fd = fd;
-	new_rec->isZombie = FALSE; 
+	new_rec->isZombie = FALSE;
 	new_rec->keepClaimAttributes = false;
 	if (secret) { new_rec->secret = strdup(secret); }
-	
+
 	if (pid) {
 		add_shadow_rec(new_rec);
 	} else if ( new_rec->match && new_rec->match->pool ) {
