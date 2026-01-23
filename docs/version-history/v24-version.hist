@@ -4,7 +4,7 @@
   variables and not immediately fail.
   :jira:`3503`
 
-- Fixed bugs in *condor_history -backwards* that made it very slow on
+- Fixed bugs in :tool:`condor_history` that made it very slow on
   filesystems with rate-limits on I/O operations.
   :jira:`3512`
 
