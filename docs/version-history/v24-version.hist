@@ -3,7 +3,7 @@
 - Fixed a bug where a backfill p-slot could get into a state where it
   would advertise that it had capacity, but refuse every claim with
   a log message indicating that it had zero CPUs.
-  :jira:`3702`
+  :jira:`3072`
 
 - In the *condor_schedd* when a transform attempts to set an immutable attribute
   more than once, the second attempt be quietly ignored rather than failing job materialization.
@@ -12,6 +12,10 @@
 - Fixed a bug where specifying a scope or audience when storing a
   Vault-managed credential results in a stored token that can't be used.
   :jira:`3506`
+
+- Fixed a bug in the shared-port daemon that caused new network connections
+  to fail if only a few bytes are immeidately available to read.
+  :jira:`3420`
 
 *** 24.0.16 features
 
@@ -60,10 +64,6 @@
 - Fixed a bug where docker universe jobs would bring back a
   file named ``.docker_stderror`` back to the AP after job completion.
   :jira:`3424`
-
-- Fixed a bug in the shared-port daemon that caused new network connections
-  to fail if only a few bytes are immeidately available to read.
-  :jira:`3420`
 
 *** 24.12.15 features
 
