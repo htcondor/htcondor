@@ -14,7 +14,7 @@
   :jira:`3506`
 
 - Fixed a bug in the shared-port daemon that caused new network connections
-  to fail if only a few bytes are immeidately available to read.
+  to fail if only a few bytes are immediately available to read.
   :jira:`3420`
 
 *** 24.0.16 features
