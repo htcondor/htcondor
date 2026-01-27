@@ -87,8 +87,8 @@
 - Initial support for openSUSE Leap 16.
   :jira:`3233`
 
-- To eliminate the dependency on the ``libexpat`` library in the Python wheels,
-  we now build the Python wheels without VOMS and EC2 GAHP support.
+- Strip out VOMS and EC2 GAHP support in the HTCondor Python wheels, so that
+  the HTCondor Python wheel is usable in the python-slim Docker image.
   :jira:`3469`
 
 *** 25.0.6 bugs

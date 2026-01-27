@@ -1,17 +1,21 @@
 *** 24.12.16 bugs
 
-- Fixed a bug where a backfill p-slot could get into a state where it
-  would advertise that it had capacity, but refuse every claim with
-  a log message indicating that it had zero CPUs.
-  :jira:`3702`
+- Fixed a bug where specifying a scope or audience when storing a
+  Vault-managed credential results in a stored token that can't be used.
+  :jira:`3506`
 
 - In the *condor_schedd* when a transform attempts to set an immutable attribute
   more than once, the second attempt be quietly ignored rather than failing job materialization.
   :jira:`3495`
 
-- Fixed a bug where specifying a scope or audience when storing a
-  Vault-managed credential results in a stored token that can't be used.
-  :jira:`3506`
+- Fixed a bug where a backfill p-slot could get into a state where it
+  would advertise that it had capacity, but refuse every claim with
+  a log message indicating that it had zero CPUs.
+  :jira:`3072`
+
+- Fixed a bug in the shared-port daemon that caused new network connections
+  to fail if only a few bytes are immediately available to read.
+  :jira:`3420`
 
 *** 24.0.16 features
 
@@ -25,21 +29,6 @@
 
 *** 24.0.16 bugs
 
-- Added :macro:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT` for administrators
-  to set a longer timeout for plugins to detect their health.
-  :jira:`3455`
-
-- Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
-  :jira:`3474`
-
-- Fix Logical Volume setup timeout on Execution Points enforcing disk usage
-  for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
-  :jira:`3432`
-
-- Fixed issue with Execution Points enforcing disk usage generating an
-  excessive amount of metadata archives filling up ``/etc/lvm/archive``.
-  :jira:`3488`
-
 - Fixed a bug where a job with a floating point value for :ad-attr:`RequestMemory`
   or :ad-attr:`RequestDisk` might not match the slot created to run it.
   :jira:`3423`
@@ -49,21 +38,32 @@
   not constant (e.g. used random() or time()).
   :jira:`3436`
 
-- Fixed a bug where the values of the attributes :ad-attr:`LocalJobsIdle` and
-  :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
-  :jira:`3456`
+- Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
+  :jira:`3474`
 
 - Changed :tool:`condor_history` so that when it prints jobs in ``-long`` format
   it prints them with attributes sorted alphabetically like :tool:`condor_q` does.
   :jira:`3481`
 
+- Fix Logical Volume setup timeout on Execution Points enforcing disk usage
+  for jobs that have a large :subcom:`request_disk` value (``800+ GB``).
+  :jira:`3432`
+
+- Fixed issue with Execution Points enforcing disk usage generating an
+  excessive amount of metadata archives filling up ``/etc/lvm/archive``.
+  :jira:`3488`
+
+- Added :macro:`FILETRANSFER_PLUGIN_CLASSAD_TIMEOUT` for administrators
+  to set a longer timeout for plugins to detect their health.
+  :jira:`3455`
+
 - Fixed a bug where docker universe jobs would bring back a
   file named ``.docker_stderror`` back to the AP after job completion.
   :jira:`3424`
 
-- Fixed a bug in the shared-port daemon that caused new network connections
-  to fail if only a few bytes are immeidately available to read.
-  :jira:`3420`
+- Fixed a bug where the values of the attributes :ad-attr:`LocalJobsIdle` and
+  :ad-attr:`LocalJobsRunning` in the submitter ad were reversed.
+  :jira:`3456`
 
 *** 24.12.15 features
 
