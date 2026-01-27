@@ -1,39 +1,9 @@
 *** 25.6.0 features
 
-- Added :meth:`~classad2.ClassAd.formatJson` and :meth:`~classad2.ClassAd.formatOld` as
-  aliases for :meth:`~classad2.ClassAd.printJson` and :meth:`~classad2.ClassAd.printOld`,
-  respectively.
-  :jira:`3341`
-
-- The option for the *condor_schedd* to keep job event log files open for
-  a period of time has been removed.
-  This was controlled by the now-removed configuration parameters
-  USERLOG_FILE_CACHE_MAX and USERLOG_FILE_CACHE_CLEAR_INTERVAL.
-  It was disabled by default.
-  :jira:`3367`
-
-- If a docker universe jobs fails on an execution point because the image
-  was built for a machine architecture that does not match the execution
-  point, the hold message now more clearly indicates why.
-  :jira:`3447`
-
 - DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
   parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
   to ``True``.
   :jira:`3304`
-
-- When the attempt to claim a slot to run a job is refused, the reason for the
-  refusal is now reported back to the *condor_shadow* which logs the reason and
-  adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
-  :jira:`3388`
-
-- The submit knob :macro:`SUBMIT_REQUEST_MISSING_UNITS` now also applies to
-  :subcom:`retry_request_memory` as well.
-  :jira:`3419`
-
-- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
-  DAGMan rescue file by name for state restoration.
-  :jira:`3425`
 
 - Augment the *condor_kbdd* to use the systemd sd-login library to find user
   sessions, since /usr/run/utmp is no longer available on newer platforms.
@@ -52,6 +22,36 @@
   Plug-in authors may find the
   :doc:`/apis/file-transfer-plugins/index` documentation helpful.
   :jira:`3357`
+
+- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
+  DAGMan rescue file by name for state restoration.
+  :jira:`3425`
+
+- The submit knob :macro:`SUBMIT_REQUEST_MISSING_UNITS` now also applies to
+  :subcom:`retry_request_memory` as well.
+  :jira:`3419`
+
+- Added :meth:`~classad2.ClassAd.formatJson` and :meth:`~classad2.ClassAd.formatOld` as
+  aliases for :meth:`~classad2.ClassAd.printJson` and :meth:`~classad2.ClassAd.printOld`,
+  respectively.
+  :jira:`3341`
+
+- If a docker universe jobs fails on an execution point because the image
+  was built for a machine architecture that does not match the execution
+  point, the hold message now more clearly indicates why.
+  :jira:`3447`
+
+- When the attempt to claim a slot to run a job is refused, the reason for the
+  refusal is now reported back to the *condor_shadow* which logs the reason and
+  adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
+  :jira:`3388`
+
+- The option for the *condor_schedd* to keep job event log files open for
+  a period of time has been removed.
+  This was controlled by the now-removed configuration parameters
+  USERLOG_FILE_CACHE_MAX and USERLOG_FILE_CACHE_CLEAR_INTERVAL.
+  It was disabled by default.
+  :jira:`3367`
 
 *** 25.6.0 bugs
 
