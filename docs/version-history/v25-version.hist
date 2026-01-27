@@ -13,6 +13,14 @@
   this problem.
   :jira:`3507`
 
+- Improved :tool:`condor_watch_q` to sort rows of data display rows with jobs still
+  active in the queue before rows of jobs that have all exited the AP job queue.
+  :jira:`3516`
+
+- Added new command line options to :tool:`condor_watch_q` to control
+  displaying rows of jobs that have all exited the AP job queue.
+  :jira:`3516`
+
 - Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
   :jira:`3449`
 

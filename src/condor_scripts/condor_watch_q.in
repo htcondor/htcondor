@@ -60,7 +60,7 @@ def parse_args():
                 condor_watch_q -exit all,done,0 -exit any,held,1
             """
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=argparse.RawTextHelpFormatter,
         add_help=False,
     )
 
@@ -168,6 +168,46 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "-display-exited",
+        "-no-display-exited",
+        action=NegateAction,
+        nargs=0,
+        default=True,
+        help="Enable/disable displaying rows of jobs that have all exited the queue. Enabled by default.",
+    )
+    parser.add_argument(
+        "-exited-row-decay",
+        action=ExitDisplayDecay,
+        metavar="TIME[unit]",
+        nargs=1,
+        default=(7 * 24 * 60 * 60),
+        help=textwrap.dedent(
+            """
+            Time since the last job in a job exited the queue before no
+            longer than being displayed (if -no-display-exited specified).
+            Default time is one week. Unless specified default unit is in
+            weeks.
+
+            Specifiable units:
+                s = Seconds
+                m = Minutes
+                h = Hours
+                d = Days
+                w = Weeks
+                M = Months
+                y = years
+            """
+        )
+    )
+    parser.add_argument(
+        "-decay-start-at-read",
+        "-no-decay-start-at-read",
+        action=NegateAction,
+        nargs=0,
+        default=False,
+        help="Start all job exited row display decay timer at event read time rather than event write time. Disabled by default",
+    )
+    parser.add_argument(
         "-table",
         "-no-table",
         action=NegateAction,
@@ -238,6 +278,7 @@ def parse_args():
         default=sys.stdout.isatty(),
         help="Enable/disable refreshing output (instead of appending). Enabled by default if connected to a tty.",
     )
+
 
     args, unknown = parser.parse_known_args()
 
@@ -373,6 +414,41 @@ class NegateAction(argparse.Action):
         setattr(args, self.dest, enable)
 
 
+class ExitDisplayDecay(argparse.Action):
+    UNIT_CONVERSION = {
+        "s": 1,
+        "m": 60,
+        "h": 60 * 60,
+        "d": 24 * 60 * 60,
+        "w": 7 * 24 * 60 * 60,
+        "M": 31 * 24 * 60 * 60,
+        "y": 365 * 24 * 60 * 60,
+    }
+
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            if nargs is None:
+                raise ValueError("Requires one argument")
+            elif int(nargs) != 1:
+                raise ValueError("Only one argument allowed")
+            super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, args, values, option_string=None):
+        unit = "w"
+        if not values[-1].isdigit():
+            unit = values[-1]
+            values = values[:-1]
+
+        if unit not in self.UNIT_CONVERSION:
+            parser.error(message=f"Unknown unit specifier provided for -exited-row-decay: {unit}")
+        else:
+            try:
+                decay = int(values) * self.UNIT_CONVERSION[unit]
+            except ValueError:
+                parser.error(message=f"Invalid time value provided for -exited-row-decay")
+
+        setattr(args, self.dest, decay)
+
+
 def cli():
     args = parse_args()
 
@@ -493,7 +569,7 @@ def watch_q(
     else:
         filter_ids.extend(batch_filter_ids)
 
-    tracker = JobStateTracker(event_logs, batch_names, filter_ids, since_cid, num_procs)
+    tracker = JobStateTracker(event_logs, batch_names, filter_ids, since_cid, num_procs, args.decay_start_at_read)
     if len(event_logs) == 0:
         warning("No jobs found, exiting...")
         sys.exit(0)
@@ -549,7 +625,7 @@ def watch_q(
                 specified_clusters,
             )
             rows_by_key, totals = make_rows_from_groups(
-                groups, key, batch_name_to_nodes_total
+                groups, key, batch_name_to_nodes_total, args
             )
 
             headers, rows_by_key = strip_empty_columns(rows_by_key)
@@ -564,11 +640,10 @@ def watch_q(
                 for row in rows_by_key.values():
                     row[key] = abbreviate_path(row[key])
 
+            # Sort so active groups print first
             rows_by_key = sorted(
                 rows_by_key.items(),
-                key=lambda key_row: min(
-                    cluster.cluster_id for cluster in groups[key_row[0]]
-                ),
+                key= lambda item: row_sorter(item, groups),
             )
 
             msg = []
@@ -849,6 +924,7 @@ class Cluster:
         self._proc_count = proc_count
 
         self.job_to_state = {}
+        self.decay_start = None
 
     @property
     def num_jobs(self):
@@ -870,6 +946,24 @@ class Cluster:
     def __iter__(self):
         return iter(self.items())
 
+    def __lt__(self, other):
+        return self.cluster_id < other.cluster_id
+
+    def done(self) -> bool:
+        """Cluster is considered done if all associated jobs have left the queue (completed or removed state)"""
+        return len(self.job_to_state) == sum(
+            [
+                1 if state in EXITED_STATES else 0 for state in self.job_to_state.values()
+            ]
+        )
+
+    def display(self, decay_time) -> bool:
+        """Determine whether cluster should be display based on jobs exiting queue and decay times"""
+        if self.done() and self.decay_start is not None:
+            return time.time() - self.decay_start < decay_time
+
+        return True
+
 
 class JobStateTracker:
     """
@@ -878,7 +972,7 @@ class JobStateTracker:
     (available as the state attribute).
     """
 
-    def __init__(self, event_log_paths, batch_names, filter_ids, since_cid, num_procs):
+    def __init__(self, event_log_paths, batch_names, filter_ids, since_cid, num_procs, decay_start):
         self.event_readers = dict()
         self.deferred_logs = self.open_readers(event_log_paths)
         self.state = collections.defaultdict(lambda: collections.defaultdict(dict))
@@ -889,6 +983,7 @@ class JobStateTracker:
 
         self.cluster_id_to_cluster = {}
         self.num_procs_by_cluster = num_procs
+        self.decay_start_at_read = decay_start
 
     def open_readers(self, logs: dict) -> list:
         deferred_logs = dict()
@@ -961,6 +1056,9 @@ class JobStateTracker:
 
                 cluster[event.proc] = new_status
 
+                if new_status in EXITED_STATES and cluster.done():
+                    cluster.decay_start = time.time() if self.decay_start_at_read else event.timestamp
+
         if len(self.deferred_logs) > 0:
             self.deferred_logs = self.open_readers(self.deferred_logs)
 
@@ -1009,7 +1107,7 @@ def group_clusters(
     return groups, group_nodes_total
 
 
-def make_rows_from_groups(groups, key, cluster_id_to_nodes_total):
+def make_rows_from_groups(groups, key, cluster_id_to_nodes_total, args):
     totals = collections.defaultdict(int)
     rows = {}
 
@@ -1027,9 +1125,24 @@ def make_rows_from_groups(groups, key, cluster_id_to_nodes_total):
         else:
             row_data[key] = attribute_value
 
-        rows[attribute_value] = row_data
+        # Filter out done groups
+        if args.display_exited or any([c.display(args.exited_row_decay) for c in clusters]):
+            rows[attribute_value] = row_data
 
     return rows, totals
+
+
+def row_sorter(item, groups) -> int:
+    clusters = groups[item[0]]
+    # Find the cluster with the smallest ClusterId for ordering
+    canidate = min(clusters)
+
+    # If active jobs then make sort key value a negative number
+    # relative to cluster id such that smaller ids are sorted first
+    if any([not c.done() for c in clusters]):
+        return (sys.maxsize - 1 - canidate.cluster_id) * -1
+
+    return canidate.cluster_id
 
 
 def determine_row_color(row):
@@ -1214,6 +1327,11 @@ ACTIVE_STATES = {
     JobStatus.TRANSFERRING_OUTPUT,
     JobStatus.HELD,
     JobStatus.SUSPENDED,
+}
+
+EXITED_STATES = {
+    JobStatus.REMOVED,
+    JobStatus.COMPLETED,
 }
 
 ALWAYS_INCLUDE = {
