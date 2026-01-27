@@ -4,7 +4,7 @@
   :jira:`3233`
 
 - Strip out VOMS and EC2 GAHP support in the HTCondor Python wheels, so that
-  the HTCondor Python wheel is usable in the python-slim Docker image.
+  the HTCondor Python wheel is usable with the python-slim Docker image.
   :jira:`3469`
 
 *** 25.0.6 bugs
