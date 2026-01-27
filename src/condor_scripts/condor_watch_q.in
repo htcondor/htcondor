@@ -682,7 +682,7 @@ def watch_q(
                 msg += ["Updated at {}".format(now)] + [""]
 
             if len(msg) > terminal_rows:
-                msg = msg[: terminal_rows - 1]
+                msg = msg[: terminal_rows - 2]
                 msg = (
                     "\n".join(msg[:-1])
                     + "\nInsufficient terminal height to display full output!"
