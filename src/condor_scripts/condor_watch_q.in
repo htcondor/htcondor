@@ -664,9 +664,7 @@ def watch_q(
                 msg += [""]
 
             if progress_bar:
-                msg += make_progress_bar(
-                    totals=totals, width=terminal_columns, color=color
-                )
+                msg += make_total_progress_bar(totals, terminal_columns, color)
                 msg += [""]
 
             if summary:
@@ -1459,6 +1457,13 @@ def make_progress_bar(totals, width=None, color=True):
     )
 
     return [bar]
+
+def make_total_progress_bar(totals, width=None, color=True):
+    if width is not None:
+        width = width - 16
+
+    result = "Total Progress: " + make_progress_bar(totals, width, color)[0]
+    return [result]
 
 
 def argmax(collection):
