@@ -648,7 +648,7 @@ def watch_q(
 
             msg = []
 
-            terminal_columns, terminal_rows = get_terminal_size()
+            terminal_columns, terminal_rows = shutil.get_terminal_size()
 
             if table:
                 msg += make_table(
@@ -724,36 +724,6 @@ def watch_q(
             time.sleep(HALF_A_SECOND)
     except KeyboardInterrupt:
         sys.exit(0)
-
-
-terminal_size = collections.namedtuple("terminal_size", ["columns", "lines"])
-
-
-def get_terminal_size():
-    try:
-        return shutil.get_terminal_size()
-    # TODO: remove this once we don't support Python 2 anymore
-    except AttributeError:  # Python 2 doesn't have shutil.get_terminal_size
-        try:
-            if IS_WINDOWS:
-                # https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
-                from ctypes import windll, create_string_buffer
-
-                h = windll.kernel32.GetStdHandle(-12)
-                csbi = create_string_buffer(22)
-                res = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-                if res:
-                    (_, _, _, _, _, left, top, right, bottom, _, _,) = struct.unpack(
-                        "hhhhHhhhhhh", csbi.raw
-                    )
-                    return terminal_size(right - left + 1, bottom - top + 1)
-                else:
-                    raise OSError("Failed to get Windows terminal size")
-            else:
-                rows, cols = os.popen("stty size", "r").read().split()
-                return terminal_size(int(cols), int(rows))
-        except Exception:
-            return terminal_size(80, 24)
 
 
 PROJECTION = [
