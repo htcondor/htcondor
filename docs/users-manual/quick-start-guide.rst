@@ -528,14 +528,15 @@ Mac) convention of appending the directory name with a slash character (/).
         * outfile.txt
         * science3.log
 
-Creating Workflows Via DAGMan
------------------------------
+Creating Workflows with DAGMan
+------------------------------
 
-It is common to have a sequence of jobs that need to run in a particular order
-for some reason such as the output of one is the input of another. While you could
-manually place and manage the jobs in the correct sequence, HTCondor comes built
-in with a workflow manager called DAGMan. This example will be an brief introduction
-into DAGMan. For more detailed information see :ref:`DAGMan documentation`.
+It is common to have a sequence of jobs that need to run in a particular order.
+The most common reason is the output one job becomes the input of another.
+While you could place the first job, and manually check up on the first job
+until it finishes, and only then place the second job, HTCondor comes with a
+workflow manager called DAGMan. Here is a brief introduction to DAGMan. For
+more detailed information see :ref:`DAGMan documentation`.
 
 .. warning::
 
