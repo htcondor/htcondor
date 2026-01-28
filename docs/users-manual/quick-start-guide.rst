@@ -528,6 +528,99 @@ Mac) convention of appending the directory name with a slash character (/).
         * outfile.txt
         * science3.log
 
+Creating Workflows with DAGMan
+------------------------------
+
+It is common to have a sequence of jobs that need to run in a particular order.
+The most common reason is the output one job becomes the input of another.
+While you could place the first job, and manually check up on the first job
+until it finishes, and only then place the second job, HTCondor comes with a
+workflow manager called DAGMan. Here is a brief introduction to DAGMan. For
+more detailed information see :ref:`DAGMan documentation`.
+
+.. warning::
+
+    This example assumes all files are within the same working directory for
+    simplicity. It is important to think about how the workflow directory structure
+    before executing a workflow of jobs.
+
+To start, this example has two jobs. The first is a simulator job that produces
+input for the second analysis job. These simple jobs are described in the HTCondor
+Job Description Language as follows:
+
+.. tabs::
+
+    .. code-tab:: condor-submit Simulation Job
+
+        # simulator.sub
+        executable            = simulator.exe
+        arguments             = "-seed 12345 -outfile science.sim"
+
+        output                = simulation.out
+        error                 = simulation.err
+        log                   = simulation.log
+
+        transfer_output_files = science.sim
+
+        request_cpus          = 2
+        request_memory        = 2G
+        request_disk          = 1G
+
+        queue
+
+    .. code-tab:: condor-submit Analysis Job
+
+        # analyzer.sub
+        executable            = analyzer.exe
+        arguments             = "-infile science.sim"
+
+        output                = analysis.out
+        error                 = analysis.err
+        log                   = analysis.log
+
+        transfer_input_files  = science.sim
+        transfer_output_files = results.txt
+
+        request_cpus          = 1
+        request_memory        = 1G
+        request_disk          = 5G
+
+        queue
+
+From here the two jobs and the dependency between them can be
+described in a DAG file utilizing the DAG Description Language
+(DDL) as follows:
+
+.. code-block:: condor-dagman
+
+    # my-workflow.dag
+
+    # Describe two nodes within the DAG named simulator and analyzer
+    JOB simulator simulator.sub
+    JOB analyzer analyzer.sub
+
+    # Create ordered dependency between simulator and analyzer nodes
+    PARENT simulator CHILD analyzer
+
+This DAG file creates a workflow consisting of two nodes named
+``simulator`` and ``analyzer``. Each node has the similarly named
+submit description files (``*.sub``) to be executed. The DAG also
+informs that the ``analyzer`` node is dependent on the ``simulator``
+node such that the former only executes once the latter executes
+successfully.
+
+From here the workflow can be executed by running the following command:
+
+.. code-block:: console
+
+    $ condor_submit_dag my-workflow.dag
+
+.. note::
+
+    This example is a simple introduction DAGMan workflows and only touches
+    the surface. There is much more in regards to executing/managing DAGMan
+    workflows and various capabilities of DAGMan.
+
 Where to Go from Here
 ---------------------
 
