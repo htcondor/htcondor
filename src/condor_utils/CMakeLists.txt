@@ -44,6 +44,8 @@ add_library(condor_version_obj STATIC condor_version.cpp)
 # Ideally, as we break dependencies, more of these move into just libcondor_utils
 set(CONDOR_API_AND_UTILS_SRC
 basename.cpp
+catalog_utils.h
+catalog_utils.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
