@@ -2422,10 +2422,14 @@ void Resource::refresh_draining_attrs() {
 		}
 	}
 }
-void Resource::refresh_startd_cron_attrs() {
+void Resource::refresh_startd_cron_attrs(const char* cron_name, bool update_collector) {
 	if (r_classad) {
 		// Publish the supplemental Class Ads IS_UPDATE
-		resmgr->adlist_publish(r_id, r_classad, r_id_str );
+		int rval;
+		rval = resmgr->adlist_publish_name(cron_name, r_id, r_classad, r_id_str );
+		if (rval > 0 && update_collector) {
+			update_needed(wf_cronRequest);
+		}
 	}
 }
 

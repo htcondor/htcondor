@@ -302,7 +302,7 @@ public:
 
 	void	refresh_classad_slot_attrs(); // refresh cross-slot attrs into r_classad
 	void	refresh_draining_attrs();    // specialized refresh for changes caused by draining
-	void	refresh_startd_cron_attrs(); // got startd cron updates, refresh now
+	void	refresh_startd_cron_attrs(const char* cron_name, bool update_collector); // got startd cron updates, refresh now
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
 
