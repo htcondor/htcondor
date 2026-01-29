@@ -1852,7 +1852,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		//
 
 		int required_version = 2;
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, this );
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
@@ -1866,7 +1866,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		if(! computeCommonInputFiles( jobAd, this, *common_file_catalogs, required_version )) {
+		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
@@ -1942,11 +1942,27 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 }
 
 
-std::optional<std::string>
-UniShadow::uniqueCIFName( const std::string & cifName, const std::string & content ) {
+std::optional<ListOfCatalogs>
+UniShadow::computeCommonInputFileCatalogs(
+	ClassAd * jobAd
+) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = makeCIFName(* this->jobAd, cifName, startdAddress, content);
+	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress );
+	free( startdAddress );
+	return rval;
+}
+
+
+bool
+UniShadow::computeCommonInputFiles(
+	ClassAd * jobAd,
+	ListOfCatalogs & commonFileCatalogs,
+	int & required_version
+) {
+	char * startdAddress = NULL;
+	this->remRes->getStartdAddress(startdAddress);
+	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version );
 	free( startdAddress );
 	return rval;
 }
