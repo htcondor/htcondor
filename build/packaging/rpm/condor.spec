@@ -1295,6 +1295,20 @@ fi
 # configuration
 
 %changelog
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.16-1
+- Fix problem specifying scope or audience with a Vault-managed credential
+- Fix late materialization bug when job transform sets immutable attribute
+- Fix problem where a backfill slot would refuse claims
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.16-1
+- Fix floating point memory or disk request not fitting into some slots
+- Fix condor_rooster crash when unhibernate rank was not constant
+- Fix memory leak in the htcondor2.JobEventLog.events() Python method
+- condor_history -long now prints attributes in alphabetical order
+- Fix LVM setup to not timeout when creating a large volume
+- LVM creation no longer saves meta data which eventually fills the disk
+- HTCondor tarballs now contain Pelican 7.22.0 and Apptainer 1.4.5
+
 * Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
 - condor_submit checks that output_destination is properly specified
 
