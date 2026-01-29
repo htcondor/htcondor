@@ -32,7 +32,7 @@
 
 *** 25.0.7 bugs
 
-*** 25.6.0 features
+*** 25.6.1 features
 
 - DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
   parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
@@ -44,18 +44,6 @@
   Also, add idle check support for Mutter(Gnome), which works on both
   Wayland and X11.
   :jira:`3452`
-
-- By default, HTCondor will now send extra information to "multi-file" file
-  transfer plug-ins if such is specified in the job.  All such plug-ins
-  should safely ignore this extra information.  To ease the transition if a
-  plug-in does not, the extra information may be disabled by unsetting
-  :macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS` on the relevant EPs.  (We
-  have deliberately not documentation the format of the extra information
-  because this feature is under active development.)
-
-  Plug-in authors may find the
-  :doc:`/apis/file-transfer-plugins/index` documentation helpful.
-  :jira:`3357`
 
 - Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
   DAGMan rescue file by name for state restoration.
@@ -87,7 +75,19 @@
   It was disabled by default.
   :jira:`3367`
 
-*** 25.6.0 bugs
+- By default, HTCondor will now send extra information to "multi-file" file
+  transfer plug-ins if such is specified in the job.  All such plug-ins
+  should safely ignore this extra information.  To ease the transition if a
+  plug-in does not, the extra information may be disabled by unsetting
+  :macro:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS` on the relevant EPs.  (We
+  have deliberately not documentation the format of the extra information
+  because this feature is under active development.)
+
+  Plug-in authors may find the
+  :doc:`/apis/file-transfer-plugins/index` documentation helpful.
+  :jira:`3357`
+
+*** 25.6.1 bugs
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
   :subcom:`starter_log` submit command.
@@ -122,7 +122,7 @@
   :jira:`3233`
 
 - Strip out VOMS and EC2 GAHP support in the HTCondor Python wheels, so that
-  the HTCondor Python wheel is usable in the python-slim Docker image.
+  the HTCondor Python wheel is usable with the python-slim Docker image.
   :jira:`3469`
 
 *** 25.0.6 bugs
