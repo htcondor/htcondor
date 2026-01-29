@@ -617,7 +617,7 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
-%if 0%{?rhel} == 8
+%if 0%{?rhel} == 8 || 0%{?suse_version} >= 1600
        -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
@@ -1321,6 +1321,9 @@ fi
 # configuration
 
 %changelog
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-3
+- Fix python3 dependency on openSUSE 16
+
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
 - Fix condor user creation for Enterprise Linux 10
 
