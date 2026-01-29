@@ -1312,17 +1312,13 @@ fi
 # configuration
 
 %changelog
-* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-3
-- Fix python3 dependency on openSUSE 16
-
-* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-3
-- Fix python3 dependency on openSUSE 16
-
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-2
 - Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
 
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
 - Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
 
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-1
 - DAGMan now uses the new DAG file parser used by condor_dag_checker

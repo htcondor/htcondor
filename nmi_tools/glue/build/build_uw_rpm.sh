@@ -91,7 +91,7 @@ fi
 
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     # Set HTCondor base release to 1 for final release.
-    update_spec_define condor_release "1"
+    update_spec_define condor_release "2"
 else
     # Set HTCondor base release for pre-release build
     update_spec_define condor_release "0.$condor_build_id"
