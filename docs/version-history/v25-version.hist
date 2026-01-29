@@ -1,4 +1,4 @@
-*** 25.6.0 features
+*** 25.6.1 features
 
 - DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
   parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
@@ -53,7 +53,7 @@
   :doc:`/apis/file-transfer-plugins/index` documentation helpful.
   :jira:`3357`
 
-*** 25.6.0 bugs
+*** 25.6.1 bugs
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
   :subcom:`starter_log` submit command.
@@ -88,7 +88,7 @@
   :jira:`3233`
 
 - Strip out VOMS and EC2 GAHP support in the HTCondor Python wheels, so that
-  the HTCondor Python wheel is usable in the python-slim Docker image.
+  the HTCondor Python wheel is usable with the python-slim Docker image.
   :jira:`3469`
 
 *** 25.0.6 bugs
