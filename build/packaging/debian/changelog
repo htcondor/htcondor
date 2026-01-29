@@ -1,3 +1,15 @@
+condor (24.0.16-1) stable; urgency=medium
+
+  * Fix floating point memory or disk request not fitting into some slots
+  * Fix condor_rooster crash when unhibernate rank was not constant
+  * Fix memory leak in the htcondor2.JobEventLog.events() Python method
+  * condor_history -long now prints attributes in alphabetical order
+  * Fix LVM setup to not timeout when creating a large volume
+  * LVM creation no longer saves meta data which eventually fills the disk
+  * HTCondor tarballs now contain Pelican 7.22.0 and Apptainer 1.4.5
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 28 Jan 2026 20:03:00 -0600
+
 condor (24.0.15-1) stable; urgency=medium
 
   * Fix bug where AP would fail to read job credential files
