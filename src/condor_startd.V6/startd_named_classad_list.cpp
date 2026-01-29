@@ -120,30 +120,8 @@ StartdNamedClassAdList::Register( StartdNamedClassAd *ad )
 int
 StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char * r_id_str )
 {
+	int rval = 0;
 	std::list<NamedClassAd *>::iterator iter;
-	for( iter = m_ads.begin(); iter != m_ads.end(); iter++ ) {
-		NamedClassAd		*nad = *iter;
-		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
-		ASSERT( sad );
-
-		if( sad->isResourceMonitor() ) { continue; }
-
-		const char * match_attr = NULL;
-		if ( sad->InSlotList(r_id) && sad->ShouldMergeInto(merged_ad, &match_attr) ) {
-			ClassAd	*ad = nad->GetAd( );
-			if ( NULL != ad ) {
-				dprintf( D_CRON | D_VERBOSE,
-						 "Publishing ClassAd '%s' to %s [%s matches]\n",
-						 nad->GetName(), r_id_str, match_attr ? match_attr : "InSlotList" );
-				sad->MergeInto(merged_ad);
-			}
-		}
-		else if (match_attr) {
-			dprintf( D_CRON | D_VERBOSE,
-						"Rejecting ClassAd '%s' for %s [%s does not match]\n",
-						nad->GetName(), r_id_str, match_attr );
-		}
-	}
 
 	//
 	// Because each (this) slot may have more than one custom resource of a
@@ -161,12 +139,16 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 		StartdNamedClassAd	*sad = dynamic_cast<StartdNamedClassAd*>(nad);
 		ASSERT( sad );
 
-		if(! sad->isResourceMonitor()) { continue; }
+		if(! sad->isResourceMonitor()) {
+			rval += PublishNamedAd(sad, merged_ad, r_id, r_id_str);
+			continue;
+		}
 
 		const char * match_attr = NULL;
 		// dprintf( D_FULLDEBUG, "... adding %s...\n", sad->GetName() );
 		if( sad->InSlotList( r_id ) && sad->ShouldMergeInto( merged_ad, & match_attr ) ) {
 			sad->AggregateInto( & accumulator );
+			rval++;
 		}
 	}
 	// dprintf( D_FULLDEBUG, "... done generating usage report for %s.\n", r_id_str );
@@ -184,7 +166,44 @@ StartdNamedClassAdList::Publish( ClassAd *merged_ad, unsigned r_id, const char *
 	// starter needs them to compute the (per-job) *Usage metrics.  Instead,
 	// we filter them out in Resource::process_update_ad().
 	StartdNamedClassAd::Merge( merged_ad, & accumulator );
-	return 0;
+	return rval;
+}
+
+int
+StartdNamedClassAdList::PublishName(const char* name, ClassAd *merged_ad, unsigned r_id, const char * r_id_str)
+{
+	int rval = 0;
+	for (NamedClassAd* nad: m_ads) {
+		StartdNamedClassAd *sad = dynamic_cast<StartdNamedClassAd *>(nad);
+		if (sad && !strcmp(sad->GetName(), name)) {
+			rval += PublishNamedAd(sad, merged_ad, r_id, r_id_str);
+		}
+	}
+	return rval;
+}
+
+int
+StartdNamedClassAdList::PublishNamedAd(StartdNamedClassAd* sad, ClassAd *merged_ad, unsigned r_id, const char * r_id_str )
+{
+	const char * match_attr = NULL;
+	int rval = 0;
+	if ( sad->InSlotList(r_id) && sad->ShouldMergeInto(merged_ad, &match_attr) ) {
+		ClassAd	*ad = sad->GetAd( );
+		if ( NULL != ad ) {
+			dprintf( D_CRON | D_VERBOSE,
+					 "Publishing ClassAd '%s' to %s [%s matches]\n",
+					 sad->GetName(), r_id_str, match_attr ? match_attr : "InSlotList" );
+			sad->MergeInto(merged_ad);
+			rval++;
+		}
+	}
+	else if (match_attr) {
+		dprintf( D_CRON | D_VERBOSE,
+					"Rejecting ClassAd '%s' for %s [%s does not match]\n",
+					sad->GetName(), r_id_str, match_attr );
+	}
+
+	return rval;
 }
 
 void

@@ -215,12 +215,11 @@ public:
 		}
 	}
 
-	// called from StartdCronJob::Publish after one or more adlist ads with an ad_name prefix are updated
+	// called from StartdCronJob::Publish after an adlist ad with an ad_name prefix is updated
 	// this gives a chance to refresh the startd cron ads right away
 	// TODO: TJ, figure out is this necessary?
-	void adlist_updated(const char * /*ad_name*/, bool update_collector) {
-		// TODO: be more selective about what we refresh here?
-		walk(&Resource::refresh_startd_cron_attrs);
+	void adlist_updated(const char * ad_name, bool update_collector) {
+		walk( [&](Resource* rip) { rip->refresh_startd_cron_attrs(ad_name, update_collector); } );
 		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
 	}
 
@@ -250,6 +249,9 @@ public:
 	int		adlist_clear( StartdCronJob * job )  { return extra_ads.ClearJob( job ); } // delete child ads, and clear the base job ad
 	int		adlist_publish( unsigned r_id, ClassAd *resAd, const char * r_id_str) {
 		return extra_ads.Publish(resAd, r_id, r_id_str);
+	}
+	int		adlist_publish_name(const char* name, unsigned r_id, ClassAd *resAd, const char * r_id_str) {
+		return extra_ads.PublishName(name, resAd, r_id, r_id_str);
 	}
 	void	adlist_reset_monitors( unsigned r_id, ClassAd * forWhom );
 	void	adlist_unset_monitors( unsigned r_id, ClassAd * forWhom );

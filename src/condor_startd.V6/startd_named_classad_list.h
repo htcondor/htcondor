@@ -33,6 +33,8 @@ class StartdNamedClassAdList : public NamedClassAdList
 
 	bool Register( StartdNamedClassAd *ad );
 	int	Publish( ClassAd *ad, unsigned r_id, const char * r_id_str = NULL );
+	int PublishName( const char* name, ClassAd *merged_ad, unsigned r_id, const char * r_id_str = NULL );
+	int PublishNamedAd( StartdNamedClassAd* sad, ClassAd* merged_ad, unsigned r_id, const char * r_id_str = NULL );
 	int DeleteJob ( StartdCronJob * job );
 	int ClearJob ( StartdCronJob * job );
 	virtual NamedClassAd * New( const char *name, ClassAd *ad = NULL );
