@@ -477,7 +477,6 @@ def cli():
             batches=args.batches,
             collector=args.collector,
             schedd=args.schedd,
-            interval=args.interval,
             exit_conditions=args.exit,
             group_by=args.groupby,
             table=args.table,
@@ -535,7 +534,6 @@ def watch_q(
     batches=None,
     collector=None,
     schedd=None,
-    interval=HALF_A_SECOND,
     exit_conditions=None,
     group_by="batch_name",
     table=True,
@@ -729,7 +727,7 @@ def watch_q(
             if args.exit_on_key_press and keyboard.anyKeyPressed():
                 raise KeyboardInterrupt
 
-            time.sleep(interval)
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         sys.exit(0)
 
