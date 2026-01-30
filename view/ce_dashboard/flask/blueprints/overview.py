@@ -5,6 +5,7 @@ import functools
 import xml.etree.ElementTree as ET
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 import time
+from blueprints.landing import get_ce_facility_site_descrip, get_next_prev_sites
 
 #######################
 # Functions to query Topology and cache responses
@@ -188,7 +189,7 @@ overview_linkmap = {
 def handle_allocated_graph(resource):
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
     from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    facility, site, *_ = get_ce_facility_site_descrip(host)
     title = facility if facility!='Unknown' else host
     return render_template('allocated_graph.html', resource=resource,
                            linkmap=overview_linkmap,
@@ -200,21 +201,25 @@ def handle_contributed():
     if time_range not in ['hour','day','week','month','year']:
         time_range = 'week'
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
-    from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    facility, site, name, *_ = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     title = facility if facility!='Unknown' else host
+
     return render_template('contributed.html', host=host, 
                            linkmap=overview_linkmap, time_range=time_range,
-                           page_title=title, ce_facility_name=facility, ce_site_name=site)
+                           page_title=title, page_subtitle = name, ce_facility_name=facility, ce_site_name=site,
+                           next_page=next_site, prev_page=prev_site)
 
 @overview_bp.route('/overview.html')
 def overview():
     host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
-    from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(host)
+    facility, site, name, descrip, health = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     title = facility if facility!='Unknown' else host
-    return render_template('overview.html', page_title=title, ce_facility_name=facility, ce_site_name=site,
-                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap)
+    return render_template('overview.html', 
+                           page_title=title, page_subtitle = name, ce_facility_name=facility, ce_site_name=site,
+                           ce_description=descrip, ce_health=health, linkmap=overview_linkmap, 
+                           next_page=next_site, prev_page=prev_site)
 
 @overview_bp.route('/data/ce_overview')
 def ce_overview_data():
@@ -224,6 +229,11 @@ def ce_overview_data():
 @overview_bp.route('/error-no-data.html')
 def error_no_data():
     from blueprints.landing import get_ce_facility_site_descrip
-    facility, site, descrip, health = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
+    host = request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org')
+    facility, site, name, *_ = get_ce_facility_site_descrip(host)
+    next_site, prev_site = get_next_prev_sites(host)
     msg = request.args.get('msg','No data available')
-    return render_template('error_no_data.html', page_title=facility, ce_name=site, errMsg=msg, linkmap={})
+    return render_template('error_no_data.html', 
+                           page_title=facility, page_subtitle = name, 
+                           ce_name=site, errMsg=msg, linkmap=overview_linkmap,
+                           next_page=next_site, prev_page=prev_site)
