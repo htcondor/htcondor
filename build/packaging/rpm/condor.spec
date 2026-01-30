@@ -265,7 +265,7 @@ Requires: apptainer >= 1.4.5
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+%if 0%{?fedora} >= 42
 # The RPM macros already makes virtual Provides for user and group
 %else
 Provides: user(condor) = 64
@@ -532,7 +532,7 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+%if 0%{?fedora} >= 42
 # RPM handles user creation automagically in these versions
 %else
 getent group condor >/dev/null || groupadd --system --gid 64 condor
@@ -617,7 +617,7 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
-%if 0%{?rhel} == 8
+%if 0%{?rhel} == 8 || 0%{?suse_version} >= 1600
        -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
@@ -1321,6 +1321,10 @@ fi
 # configuration
 
 %changelog
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
+- Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
+
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-1
 - Initial support for openSUSE 16
 - Make HTCondor Python wheel usable with the python-slim Docker image
