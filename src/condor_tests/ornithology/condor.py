@@ -340,12 +340,7 @@ class Condor:
         with env.SetCondorConfig(self.config_file):
             # If we invoke the condor_master via sudo, sudo won't use the path for
             # security reasons, so we have to find the binary ourselves.
-            master_bin = ""
-            for dir in os.environ.get('PATH').split(os.pathsep):
-                candidate = Path(dir) / "condor_master"
-                if candidate.exists() and candidate.is_file():
-                    master_bin = candidate.as_posix()
-                    break
+            master_bin = shutil.which("condor_master")
             cmd = [master_bin, "-f"]
             
             if self.use_sudo:
