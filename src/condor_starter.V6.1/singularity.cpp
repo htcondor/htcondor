@@ -773,7 +773,7 @@ Singularity::canRun([[maybe_unused]] const std::string &image, [[maybe_unused]] 
 
 	MyPopenTimer pgm;
 	Env env;
-	if (pgm.start_program(sandboxArgs, false /*capture stderr*/, &env, false) < 0) {
+	if (pgm.start_program(sandboxArgs, true /*capture stderr*/, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
 			dprintf(D_ALWAYS, "Test launch singularity exec failed, this singularity can run some programs, but not these\n");
 			success =  false;

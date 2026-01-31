@@ -1,18 +1,72 @@
 *** 25.7.0 features
 
+- All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
+  will contain :ad-attr:`Owner` and :ad-attr:`RemoteHost` copied from the associated
+  job record.
+  :jira:`3497`
+
+- Jobs whose classads are larger than 64 kybtes long caused excessive load on the
+  *condor_schedd*. The most common case of such a very large classad is the use
+  of :subcom:`getenv`.  This could cause the :ad-attr:`RecentDaemonCoreDutyCycle` to
+  spike to near 100% for hours, and cause :tool:`condor_submit` to timeout and
+  fail. Pipe buffers in the *condor_schedd* are now appropriately sized to fix
+  this problem.
+  :jira:`3507`
+
+- Improved :tool:`condor_watch_q` to sort rows of data display rows with jobs still
+  active in the queue before rows of jobs that have all exited the AP job queue.
+  :jira:`3516`
+
+- Added new command line options to :tool:`condor_watch_q` to control
+  displaying rows of jobs that have all exited the AP job queue.
+  :jira:`3516`
+
 - Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
   :jira:`3449`
+
+- Added support for submitting jobs to the Flux job management system via the
+  grid universe **batch** type.
+  :jira:`3500`
 
 *** 25.7.0 bugs
 
 *** 25.0.7 bugs
 
-*** 25.6.0 features
+*** 25.6.1 features
+
+- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
+  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
+  to ``True``.
+  :jira:`3304`
+
+- Augment the *condor_kbdd* to use the systemd sd-login library to find user
+  sessions, since /usr/run/utmp is no longer available on newer platforms.
+  Also, add idle check support for Mutter(Gnome), which works on both
+  Wayland and X11.
+  :jira:`3452`
+
+- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
+  DAGMan rescue file by name for state restoration.
+  :jira:`3425`
+
+- The submit knob :macro:`SUBMIT_REQUEST_MISSING_UNITS` now also applies to
+  :subcom:`retry_request_memory` as well.
+  :jira:`3419`
 
 - Added :meth:`~classad2.ClassAd.formatJson` and :meth:`~classad2.ClassAd.formatOld` as
   aliases for :meth:`~classad2.ClassAd.printJson` and :meth:`~classad2.ClassAd.printOld`,
   respectively.
   :jira:`3341`
+
+- If a docker universe jobs fails on an execution point because the image
+  was built for a machine architecture that does not match the execution
+  point, the hold message now more clearly indicates why.
+  :jira:`3447`
+
+- When the attempt to claim a slot to run a job is refused, the reason for the
+  refusal is now reported back to the *condor_shadow* which logs the reason and
+  adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
+  :jira:`3388`
 
 - The option for the *condor_schedd* to keep job event log files open for
   a period of time has been removed.
@@ -20,35 +74,6 @@
   USERLOG_FILE_CACHE_MAX and USERLOG_FILE_CACHE_CLEAR_INTERVAL.
   It was disabled by default.
   :jira:`3367`
-
-- If a docker universe jobs fails on an execution point because the image
-  was built for a machine architecture that does not match the execution
-  point, the hold message now more clearly indicates why.
-  :jira:`3447`
-
-- DAGMan now uses the new DAG file parser introduced for :tool:`condor_dag_checker`. The old
-  parser will be deprecated in the future but can be used by setting :macro:`DAGMAN_USE_OLD_FILE_PARSER`
-  to ``True``.
-  :jira:`3304`
-
-- When the attempt to claim a slot to run a job is refused, the reason for the
-  refusal is now reported back to the *condor_shadow* which logs the reason and
-  adds the reason code to the :ad-attr:`NumVacatesByReason` attribute of the job.
-  :jira:`3388`
-
-- The submit knob :macro:`SUBMIT_REQUEST_MISSING_UNITS` now also applies to
-  :subcom:`retry_request_memory` as well.
-  :jira:`3419`
-
-- Added new ``-RescueFile`` option to :tool:`condor_submit_dag` to specify a
-  DAGMan rescue file by name for state restoration.
-  :jira:`3425`
-
-- Augment the *condor_kbdd* to use the systemd sd-login library to find user
-  sessions, since /usr/run/utmp is no longer available on newer platforms.
-  Also, add idle check support for Mutter(Gnome), which works on both
-  Wayland and X11.
-  :jira:`3452`
 
 - By default, HTCondor will now send extra information to "multi-file" file
   transfer plug-ins if such is specified in the job.  All such plug-ins
@@ -62,7 +87,7 @@
   :doc:`/apis/file-transfer-plugins/index` documentation helpful.
   :jira:`3357`
 
-*** 25.6.0 bugs
+*** 25.6.1 bugs
 
 - Fixed a bug when STARTER_NESTED_SCRATCH was true that broke the
   :subcom:`starter_log` submit command.
@@ -96,8 +121,8 @@
 - Initial support for openSUSE Leap 16.
   :jira:`3233`
 
-- To eliminate the dependency on the ``libexpat`` library in the Python wheels,
-  we now build the Python wheels without VOMS and EC2 GAHP support.
+- Strip out VOMS and EC2 GAHP support in the HTCondor Python wheels, so that
+  the HTCondor Python wheel is usable with the python-slim Docker image.
   :jira:`3469`
 
 *** 25.0.6 bugs

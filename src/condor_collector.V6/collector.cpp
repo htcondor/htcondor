@@ -2326,6 +2326,14 @@ void CollectorDaemon::Exit()
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	
+	// Clean up view collector list
+	for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
+		delete e->collector;
+		delete e->sock;
+	}
+	vc_list.clear();
+	
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;
@@ -2348,6 +2356,14 @@ void CollectorDaemon::Shutdown()
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	
+	// Clean up view collector list
+	for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
+		delete e->collector;
+		delete e->sock;
+	}
+	vc_list.clear();
+	
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;

@@ -15,6 +15,8 @@
               href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
               integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
               crossorigin="anonymous">
+        <link rel="stylesheet" 
+              href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
         <link rel="stylesheet" href="static/htcondorview.css?version=8"/>
     {% endblock stylesheets %}
 
@@ -53,6 +55,23 @@
         function urlEscapeGraphQuery(query) {
             return query.replace(/\n\s*/g,'&').replace(/^\&|\&$/,'').replace(/%/g, '%25');
         }
+
+        /**
+         * Enable bootstrap tooltips
+         */
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
+        </script>
+
+        <script>
+            /**
+             * Util for showing help modals
+             */
+            function showModal(modalId) {
+                const modal = new bootstrap.Modal(document.getElementById(modalId));
+                modal.show();
+            }
         </script>
 
     {% endblock js %}
@@ -60,16 +79,54 @@
     {% block style %}{% endblock style %}
 
     {% block head %}{% endblock head %}
+    
 </head>
 <body>
     <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
-		
-			<div class="navbar-brand abs">
-			   {{ page_title }}
-			</div>
-
 			<div class="navbar-logo">
-			<a href="{{url_for('landing.ce_user_landing_page')}}"><img width=50% src="static/navbar_logo.svg"></a>
+                <a href="{{url_for('landing.ce_user_landing_page')}}"><img width="145px" src="static/navbar_logo.svg"></a>
+			</div>
+		
+			<div class="navbar-brand abs container">
+               <div class="row flex-nowrap">
+                    {% if prev_page %}
+                    <div class="navbar-nav col site-link">
+                        <a class="nav-link" href="{{ prev_page.url }}" 
+                           id="prev-page-link"
+                           data-toggle="tooltip" 
+                           data-placement="left" 
+                            title="{{ prev_page.tooltip }}">
+                            <div style="display: flex; flex-direction: row;">
+                                <i class="bi bi-chevron-left"></i>
+                                <span style="white-space: pre-wrap;">{{ prev_page.title }}</span>
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %} 
+
+                    <div class="col">
+                        <span>{{ page_title }}</span>
+                        {% if page_subtitle %}
+                        <br/>
+                        <span style="font-size: 1rem;"> {{ page_subtitle }} </span>
+                        {% endif %}
+                    </div>
+
+                    {% if next_page %}
+                    <div class="navbar-nav col site-link">
+                        <a class="nav-link" href="{{ next_page.url }}" 
+                            id="next-page-link"
+                            data-toggle="tooltip" 
+                            data-placement="right" 
+                            title="{{ next_page.tooltip }}">
+                            <div style="display: flex; flex-direction: row;">
+                                <span style="white-space: pre-wrap;">{{ next_page.title }}</span>
+                                <i class="bi bi-chevron-right"></i>
+                            </div>
+                        </a>
+                    </div>
+                    {% endif %} 
+               </div>
 			</div>
 
 

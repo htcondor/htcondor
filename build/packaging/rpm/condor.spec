@@ -265,7 +265,7 @@ Requires: apptainer >= 1.4.5
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+%if 0%{?fedora} >= 42
 # The RPM macros already makes virtual Provides for user and group
 %else
 Provides: user(condor) = 64
@@ -532,7 +532,7 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+%if 0%{?fedora} >= 42
 # RPM handles user creation automagically in these versions
 %else
 getent group condor >/dev/null || groupadd --system --gid 64 condor
@@ -617,7 +617,7 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
-%if 0%{?rhel} == 8
+%if 0%{?rhel} == 8 || 0%{?suse_version} >= 1600
        -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
@@ -1104,6 +1104,7 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blparser.conf
 %dir %_sysconfdir/blahp/
 %config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/flux_local_submit_attributes.sh
 %config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
 %config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
 %config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
@@ -1313,6 +1314,38 @@ fi
 # configuration
 
 %changelog
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-2
+- Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
+- Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-1
+- DAGMan now uses the new DAG file parser used by condor_dag_checker
+- The condor keyboard daemon now checks idle time via systemd and Mutter
+- Can now specify DAGMan rescue file by name
+- Adminstrators can now require units on retry_request_memory
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-1
+- Initial support for openSUSE 16
+- Make HTCondor Python wheel usable with the python-slim Docker image
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.16-1
+- Fix problem specifying scope or audience with a Vault-managed credential
+- Fix late materialization bug when job transform sets immutable attribute
+- Fix problem where a backfill slot would refuse claims
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.16-1
+- Fix floating point memory or disk request not fitting into some slots
+- Fix condor_rooster crash when unhibernate rank was not constant
+- Fix memory leak in the htcondor2.JobEventLog.events() Python method
+- condor_history -long now prints attributes in alphabetical order
+- Fix LVM setup to not timeout when creating a large volume
+- LVM creation no longer saves meta data which eventually fills the disk
+- HTCondor tarballs now contain Pelican 7.22.0 and Apptainer 1.4.5
+
 * Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.5.1-1
 - The negotiator can now use its own concept of slot weight (not the EP's)
 - A stuck LVM logical volume will cause the EP slot to be broken and

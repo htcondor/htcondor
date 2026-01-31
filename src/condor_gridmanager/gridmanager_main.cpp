@@ -29,6 +29,7 @@
 #include "globus_utils.h"
 
 #include "gridmanager.h"
+#include "condorresource.h"
 
 char *myUserName = NULL;
 char *SelectionValue = NULL;
@@ -175,12 +176,14 @@ main_config()
 void
 main_shutdown_fast()
 {
+	CondorResource::CleanupAllResources();
 	DC_Exit(0);
 }
 
 void
 main_shutdown_graceful()
 {
+	CondorResource::CleanupAllResources();
 	DC_Exit(0);
 }
 

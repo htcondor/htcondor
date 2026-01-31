@@ -1904,7 +1904,7 @@ all attributes.
 
 :classad-attribute-def:`TransferOutputStats`
     The value of this classad attribute is a nested classad, whose values
-    mirror those for `:ad-attr:`TransferInputStats``, but for the transfer
+    mirror those for :ad-attr:`TransferInputStats`, but for the transfer
     from the EP worker node back to the AP submit point.
 
 :classad-attribute-def:`TransferOutStarted`

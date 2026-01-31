@@ -1276,6 +1276,9 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     resource, while :ad-attr:`RemoteOwner` would hold the name of the entity
     that claimed the resource.
 
+:classad-attribute-def:`RemoteProject`
+    The name of the project which is currently using this resource. 
+
 :classad-attribute-def:`RemoteScheddName`
     The name of the *condor_schedd* which claimed this resource.
 
