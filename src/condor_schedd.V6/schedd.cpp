@@ -97,6 +97,7 @@
 #include "../condor_sysapi/sysapi.h"
 #include "classad_merge.h"
 
+#include "catalog_utils.h"
 #include "cxfer.h"
 
 #ifdef LINUX
@@ -10229,7 +10230,7 @@ Scheduler::StartJob(match_rec *rec)
 		id.proc = rec->proc;
 	}
 
-	if(!(rec->shadowRec = StartJob(rec, &id))) {
+	if(! StartJob(rec, &id)) {
 
 			// Start job failed. Throw away the match. The reason being that we
 			// don't want to keep a match around and pay for it if it's not
@@ -10593,61 +10594,9 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	return true;
 }
 
-shadow_rec*
+bool
 Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 {
-	//
-	// At this point, we've committed to starting this job on this
-	// starter, so this is where we're going to deal with common
-	// file transfer.
-	//
-	shadow_rec * shadowrec = NULL; // fixme: placeholder.
-	// we have to return a shadowrec so that StartJob(match_rec) can
-	// stuff it info the match record; otherwise the match record will
-	// be deleted.  This should be safe (it will be a real shadowrec),
-	// but it looks like the match record owns the shadow record, which
-	// might be inconvient for some of our other data structures...
-	// ... but the real problem is the MAPPING return, where we want to
-	// keep the match but not immediately spawn a shadow.  ASK JAIME;
-	// we may just need to adjust the caller.
-	auto cxfer_type = determine_cxfer_type(mrec, job_id);
-	switch(cxfer_type) {
-		// Configuration forbade (this job) from transferring common files.
-		case CXFER_TYPE::FORBIDDEN:
-			// Continue to normal spwaning; the shadow will fall back.
-			break;
-
-		// This job did not specify any common transfers.
-		case CXFER_TYPE::NONE:
-			// Continue to normal spawning.
-			break;
-
-		// The slot doesn't support (the specified) common transfers,
-		// or some other problem prevented us from determining if the
-		// state was STAGING, MAPPING, or MAPPED.
-		case CXFER_TYPE::CANT:
-			// Continue to normal spawning; the shadow will fall back.
-			break;
-
-		// No other shadow is staging this job's cxfers to this slot.
-		case CXFER_TYPE::STAGING:
-			// Create a shadowrec to pass the -staging flag and queue
-			// it for immediate spawning.
-			return shadowrec;
-
-		// Some other shadow is staging this job's cxfers to this slot.
-		case CXFER_TYPE::MAPPING:
-			// Create a shadowrec to pass the -mapping flag and queue
-			// it to wait for the mapping to complete (and then spawn).
-			return shadowrec;
-
-		// This job's common file catalog(s) are already on this slot.
-		case CXFER_TYPE::READY:
-			// As CXFER_TYPE_MAPPING, but queue for immediate spawning.
-			return shadowrec;
-	}
-
-
 	int		universe = -1;
 	int		rval;
 
@@ -10658,9 +10607,149 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				"(%d.%d) assuming standard.\n",	ATTR_JOB_UNIVERSE,
 				job_id->cluster, job_id->proc);
 	}
-	return start_std( mrec, job_id, universe );
+
+
+	//
+	// At this point, we've committed to starting this job on this
+	// starter, so this is where we're going to deal with common
+	// file transfer.
+	//
+	// Maintain the invariant that the match record only points to job
+	// shadowrecs by not returning the transfer shadow recs.
+	//
+	auto [cxfer_type, catalogs] = determine_cxfer_type(mrec, job_id);
+	switch(cxfer_type) {
+		// Configuration forbade (this job) from transferring common files.
+		case CXFER_TYPE::FORBIDDEN:
+			// Continue to normal spwaning; the shadow will fall back.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: FORBIDDEN.\n", job_id->cluster, job_id->proc );
+			break;
+
+		// This job did not specify any common transfers.
+		case CXFER_TYPE::NONE:
+			// Continue to normal spawning.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: NONE.\n", job_id->cluster, job_id->proc );
+			break;
+
+		// The slot doesn't support (the specified) common transfers,
+		// or some other problem prevented us from determining if the
+		// state was STAGING, MAPPING, or MAPPED.
+		case CXFER_TYPE::CANT:
+			// Continue to normal spawning; the shadow will fall back.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: CANT.\n", job_id->cluster, job_id->proc );
+			break;
+
+		// No other shadow is staging this job's cxfers to this slot.
+		case CXFER_TYPE::STAGING:
+			// Create a shadowrec to pass the -staging flag and queue
+			// it for immediate spawning.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: STAGING.\n", job_id->cluster, job_id->proc );
+
+			// For now, only start one shadow for all of the catalogs.  At
+			// some point, we'll want the efficiency gains from starting one
+			// shadow for _each_ catalog, but by then we may have also agreed
+			// on a larger role for the startd in managing the disk resources.
+			ASSERT(catalogs);
+			{
+				// Create the transfer shadow rec with the list of catalogs
+				// it will provide and then queue it for immediate spawning.
+				mark_serial_job_running(job_id);
+				shadow_rec * transfer_shadow_rec = add_shadow_rec(
+					0, job_id, universe, mrec, -1 , nullptr
+				);
+
+				// Not sure we actually need to carry around the content lists.
+				ListOfCatalogs catalogs_to_stage;
+				for( const auto & catalog : * catalogs ) {
+					const auto & catalogName = catalog.first;
+					auto shadow = getShadowForCatalog( catalogName );
+					if(! shadow) {
+						// dprintf( D_ALWAYS, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
+						catalogToShadowMap[catalogName] = transfer_shadow_rec;
+						catalogs_to_stage.push_back( catalog );
+					}
+				}
+				transfer_shadow_rec->cxfer_catalogs = catalogs_to_stage;
+				transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGING;
+
+				addRunnableJob( transfer_shadow_rec );
+
+
+				// For now, while we're testing, since the transfer shadow
+				// isn't (because we aren't yet passing the flag and the
+				// shadow code to recognize it doesn't exist).
+				return true;
+
+
+				// Create the job shadow rec and queue it for delayed spawning.
+				shadow_rec * job_shadow_rec = add_shadow_rec(
+					0, job_id, universe, mrec, -1 , nullptr
+				);
+				job_shadow_rec->cxfer_catalogs = * catalogs;
+				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				// FIXME: queue for delayed spawning, instead.
+				addRunnableJob( job_shadow_rec );
+
+				mrec->shadowRec = job_shadow_rec;
+				return true;
+			}
+
+		// Some other shadow is staging this job's cxfers to this slot.
+		case CXFER_TYPE::MAPPING:
+			// Create a shadowrec to pass the -mapping flag and queue
+			// it to wait for the mapping to complete (and then spawn).
+			dprintf( D_ALWAYS, "cxfer: %d.%d: MAPPING.\n", job_id->cluster, job_id->proc );
+
+			{
+				shadow_rec * job_shadow_rec = add_shadow_rec(
+					0, job_id, universe, mrec, -1 , nullptr
+				);
+				job_shadow_rec->cxfer_catalogs = * catalogs;
+				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				// FIXME: queue for delayed spawning, instead.
+				mark_serial_job_running(job_id);
+				addRunnableJob( job_shadow_rec );
+
+				mrec->shadowRec = job_shadow_rec;
+				return true;
+			}
+
+		// This job's common file catalog(s) are already on this slot.
+		case CXFER_TYPE::READY:
+			// As CXFER_TYPE_MAPPING, but queue for immediate spawning.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: READY.\n", job_id->cluster, job_id->proc );
+
+			{
+				mark_serial_job_running(job_id);
+				shadow_rec * job_shadow_rec = add_shadow_rec(
+					0, job_id, universe, mrec, -1 , nullptr
+				);
+				job_shadow_rec->cxfer_catalogs = * catalogs;
+				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				addRunnableJob( job_shadow_rec );
+
+				mrec->shadowRec = job_shadow_rec;
+				return true;
+			}
+	}
+
+
+	mrec->shadowRec = start_std( mrec, job_id, universe );
+	return mrec->shadowRec != NULL;
 }
 
+
+// Maintain invariant that all pointers in the map are valid.
+std::optional<shadow_rec *>
+Scheduler::getShadowForCatalog( const std::string & cifName ) {
+	// dprintf( D_ALWAYS, "cxfer: Checking catalog-to-shadow map for %s\n", cifName.c_str() );
+	auto entry = catalogToShadowMap.find( cifName );
+	if( entry == catalogToShadowMap.end() ) { return {}; }
+	return entry->second;
+}
 
 //-----------------------------------------------------------------
 // Start Job Handler

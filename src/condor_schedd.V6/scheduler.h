@@ -60,6 +60,8 @@
 #include "history_queue.h"
 #include "live_job_counters.h"
 
+#include "catalog_utils.h"
+
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
@@ -119,6 +121,13 @@ int init_user_ids(const JobQueueUserRec * user);
 
 class match_rec;
 
+enum class CXFER_STATE {
+	INVALID,
+	MAPPING,
+	STAGING,
+	STAGED,
+};
+
 struct shadow_rec
 {
     int             pid;
@@ -144,9 +153,13 @@ struct shadow_rec
 	bool			exit_already_handled;
 	char*			secret; // Secret provided to spawned daemon for authorization of commands with tools
 
+	// Common transfer management.
+	ListOfCatalogs cxfer_catalogs;
+	CXFER_STATE cxfer_state {CXFER_STATE::INVALID};
+
 	shadow_rec();
 	~shadow_rec();
-}; 
+};
 
 
 struct SubmitterFlockCounters {
@@ -737,8 +750,15 @@ class Scheduler : public Service
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const char *pool);
 
-	OCU *getOCU(int ocu_id); 
+	OCU *getOCU(int ocu_id);
+
+	// Maintains the invariant that all entries in the map are valid pointers.
+	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
+
 private:
+
+	// Managing common transfers.
+	std::unordered_map<std::string, shadow_rec *> catalogToShadowMap;
 
 	// Setup a new security session for a remote negotiator.
 	// Returns a capability that can be included in an ad sent to the collector.
@@ -999,7 +1019,7 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	shadow_rec*		StartJob(match_rec*, PROC_ID*);
+	bool			StartJob(match_rec*, PROC_ID*);
 
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
