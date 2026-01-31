@@ -10678,10 +10678,13 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				// For now, while we're testing, since the transfer shadow
 				// isn't (because we aren't yet passing the flag and the
 				// shadow code to recognize it doesn't exist).
+				// [the mrec will be deleted twice if this isn't set?]
+				mrec->shadowRec = transfer_shadow_rec;
 				return true;
 
 
 				// Create the job shadow rec and queue it for delayed spawning.
+				// FIXME: We don't have a match record for this job yet!
 				shadow_rec * job_shadow_rec = add_shadow_rec(
 					0, job_id, universe, mrec, -1 , nullptr
 				);
