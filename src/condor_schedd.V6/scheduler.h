@@ -60,6 +60,9 @@
 #include "history_queue.h"
 #include "live_job_counters.h"
 
+#include <utility>
+#include <string>
+#include <optional>
 #include "catalog_utils.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
