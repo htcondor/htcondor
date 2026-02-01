@@ -1779,39 +1779,33 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				current.xfer_status == XFER_STATUS_DONE
 			 && current.success == false
 			) {
-				if( current.try_again == true ) {
-					// I'm not sure this case ever actually happens in practice,
-					// but in case it does, this seems like the right thing to do.
-					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_TRANSFER);
+				//
+				// It's massive overkill for a simple two-step protocol, but
+				// let's make this a coroutine so that we can easily make it
+				// more complicated.
+				//
+				// Since we're only talking to one starter at a time, we can
+				// simply record if we've already started this conversation.
+				//
+				static bool in_conversation = false;
+				static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
+
+				if(! in_conversation) {
+					dprintf( D_ZKM, "Starting common input files conversation during environment setup.\n" );
+					in_conversation = true;
+					the_coroutine = std::move(
+						start_input_transfer_failure_conversation(request)
+					);
+					guidance = the_coroutine();
 				} else {
-					//
-					// It's massive overkill for a simple two-step protocol, but
-					// let's make this a coroutine so that we can easily make it
-					// more complicated.
-					//
-					// Since we're only talking to one starter at a time, we can
-					// simply record if we've already started this conversation.
-					//
-					static bool in_conversation = false;
-					static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
+					dprintf( D_ZKM, "Continuing common input files conversation during environment setup.\n" );
+					the_coroutine.set_co_yield_value( request );
+					guidance = the_coroutine();
+				}
 
-					if(! in_conversation) {
-						dprintf( D_ZKM, "Starting common input files conversation during environment setup.\n" );
-						in_conversation = true;
-						the_coroutine = std::move(
-							start_input_transfer_failure_conversation(request)
-						);
-						guidance = the_coroutine();
-					} else {
-						dprintf( D_ZKM, "Continuing common input files conversation during environment setup.\n" );
-						the_coroutine.set_co_yield_value( request );
-						guidance = the_coroutine();
-					}
-
-					if( the_coroutine.handle.done() ) {
-						dprintf( D_ZKM, "Finishing common input files conversation during environment setup.\n" );
-						in_conversation = false;
-					}
+				if( the_coroutine.handle.done() ) {
+					dprintf( D_ZKM, "Finishing common input files conversation during environment setup.\n" );
+					in_conversation = false;
 				}
 			} else {
 				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
