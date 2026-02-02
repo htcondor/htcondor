@@ -1,3 +1,5 @@
+*** 24.0.18 bugs
+
 *** 24.0.17 bugs
 
 - Fixed :meth:`htcondor2.Schedd.refreshGSIProxy` to use correct
