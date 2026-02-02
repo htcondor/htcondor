@@ -5,6 +5,9 @@
   job record.
   :jira:`3497`
 
+- Added new "histogram" option to *htcondor dag*
+  :jira:`3530`
+
 - Jobs whose classads are larger than 64 kybtes long caused excessive load on the
   *condor_schedd*. The most common case of such a very large classad is the use
   of :subcom:`getenv`.  This could cause the :ad-attr:`RecentDaemonCoreDutyCycle` to

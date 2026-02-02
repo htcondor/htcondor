@@ -26,6 +26,7 @@ Synopsis
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
 | **htcondor** **dag** *halt* [**-r/-\-reason** *message*] dagman-job-id
+| **htcondor** **dag** *histogram* [**filename**]
 | **htcondor** **dag** *resume* dagman-job-id
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
@@ -361,6 +362,11 @@ DAG Verbs
 
   **htcondor dag resume** **dagman-job-id**
      Inform specific halted DAGMan process to continue making progress.
+
+  **htcondor dag histogram** [**-i**] [**-c**] **logfile**
+     Display histogram of task execution times from a DAGMan, -c for
+     cumulative statistics over the life of the DAG, -i for instantaneous.
+
 
 .. sidebar:: HTCondor CLI System Nouns
 
