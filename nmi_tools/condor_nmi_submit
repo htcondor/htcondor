@@ -408,7 +408,8 @@ sub parseOptions
 						chomp;
 						next if(/^\s*#/);
 						next if(/^\s*$/);
-						$opt_platforms{$_} = 1;
+						my ($platform, $rest) = split(/,/);
+						$opt_platforms{$platform} = 1;
 					}
 					close(IN);
 					next;
