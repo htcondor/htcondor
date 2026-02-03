@@ -1,3 +1,9 @@
+*** 25.8.0 features
+
+*** 25.8.0 bugs
+
+*** 25.0.8 bugs
+
 *** 25.7.0 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
