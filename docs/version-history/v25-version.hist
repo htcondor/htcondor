@@ -2,11 +2,11 @@
 
 *** 25.8.0 bugs
 
-*** 25.0.8 bugs
-
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
   promptly if it failed to launch a singularity job.
   :jira:`3531`
+
+*** 25.0.8 bugs
 
 *** 25.7.0 features
 
