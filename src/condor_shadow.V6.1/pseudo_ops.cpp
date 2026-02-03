@@ -1491,6 +1491,9 @@ UniShadow::start_common_input_conversation(
 					co_return guidance;
 				}
 
+				// FIXME: Instead of mapping the files here, guide the
+				// starter to split the slot, turning it into a 'data slot'.
+
 				// We could reorder the cases to fall-through here...
 				guidance = do_wiring_up( stagingDir, cifName );
 				request = co_yield guidance;
@@ -1592,6 +1595,7 @@ UniShadow::start_common_input_conversation(
 						co_return guidance;
 					}
 
+					// See FIXME from the previous PROVIDER case.
 
 					// We could reorder the cases to fall-through here...
 					guidance = do_wiring_up( stagingDir, cifName );

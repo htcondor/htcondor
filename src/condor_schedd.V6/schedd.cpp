@@ -10655,7 +10655,14 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				// it will provide and then queue it for immediate spawning.
 				mark_serial_job_running(job_id);
 				shadow_rec * transfer_shadow_rec = add_shadow_rec(
-					0, job_id, universe, mrec, -1 , nullptr
+					0,
+					// FIXME: Either the transfer shadow should use a
+					// different procID (for tracking purposes), or this
+					// shadow rec should be tracked differently than all
+					// others.  Given that this _is_ a live shadow, the
+					// former sounds a lot better.
+					job_id,
+					universe, mrec, -1 , nullptr
 				);
 
 				// Not sure we actually need to carry around the content lists.
@@ -10678,15 +10685,21 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				// For now, while we're testing, since the transfer shadow
 				// isn't (because we aren't yet passing the flag and the
 				// shadow code to recognize it doesn't exist).
-				// [the mrec will be deleted twice if this isn't set?]
+				// [the mrec will be deleted twice if this isn't set]
 				mrec->shadowRec = transfer_shadow_rec;
 				return true;
 
 
 				// Create the job shadow rec and queue it for delayed spawning.
-				// FIXME: We don't have a match record for this job yet!
 				shadow_rec * job_shadow_rec = add_shadow_rec(
-					0, job_id, universe, mrec, -1 , nullptr
+					0, job_id, universe,
+					// Not having a match record is allowed by add_shadow_rec(),
+					// but it's not clear what the rest of the shadow thinks
+					// of this idea.  We don't want to assign a different
+					// proc ID, because it will eventually collide with the
+					// transfer shadow.
+					NULL,
+					-1 , nullptr
 				);
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
@@ -19265,7 +19278,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 		dprintf( D_COMMAND, "REASSIGN_SLOT: from %d.%d to %d.%d\n", vids[0].cluster, vids[0].proc, bid.cluster, bid.proc );
 	}
 
-	// FIXME: Throttling.
+	// This is where throttling code would go, were we ever to implement it.
 
 	JobQueueJob * bAd = GetJobAd( bid.cluster, bid.proc );
 	if(! bAd) {
