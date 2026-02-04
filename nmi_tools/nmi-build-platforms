@@ -1,26 +1,27 @@
-# One platform per line. Comments (starting with #) and blank lines are ignored.
+# CSV File describing build hosts
+# Image|Raw host, ShortName, VM to use, tags
+# Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-build:aarch64_AlmaLinux8-25000602
-docker://htcondor/nmi-build:aarch64_AlmaLinux9-25000602
-docker://htcondor/nmi-build:aarch64_AlmaLinux10-25000602
-docker://htcondor/nmi-build:aarch64_Ubuntu24-25060103
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25000602
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-25000602
-docker://htcondor/nmi-build:x86_64_AlmaLinux9-25000602
-docker://htcondor/nmi-build:x86_64_AlmaLinux10-25000602
-docker://htcondor/nmi-build:x86_64_v2_AlmaLinux10-25000602
-docker://htcondor/nmi-build:x86_64_AmazonLinux2023-25000602
-docker://htcondor/nmi-build:x86_64_Debian12-25000602
-docker://htcondor/nmi-build:x86_64_Debian13-25000602
-docker://htcondor/nmi-build:x86_64_openSUSE15-25000602
-docker://htcondor/nmi-build:x86_64_openSUSE16-25000602
-docker://htcondor/nmi-build:x86_64_SLES15SP5-25000602
-docker://htcondor/nmi-build:x86_64_Ubuntu22-25060103
-docker://htcondor/nmi-build:x86_64_Ubuntu24-25060103
-x86_64_macOS13
+docker://htcondor/nmi-build:aarch64_AlmaLinux8-25000602,arm-AL8,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_AlmaLinux9-25000602,arm-AL9,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_AlmaLinux10-25000602,arm-AL10,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:aarch64_Ubuntu24-25060103,arm-U24,ubuntu-24.04-arm,all
+docker://htcondor/nmi-build:ppc64le_AlmaLinux8-25000602,ppc-AL8,ubuntu-latest,batlab
+docker://htcondor/nmi-build:x86_64_AlmaLinux8-25000602,x86-AL8,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_AlmaLinux9-25000602,x86-AL9,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_AlmaLinux10-25000602,x86-AL10,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_v2_AlmaLinux10-25000602,x86v2-AL10,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_AmazonLinux2023-25000602,x86-A23,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_Debian12-25000602,x86-D12,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_Debian13-25000602,x86-D13,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_openSUSE15-25000602,x86-OS15,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_openSUSE16-25000602,x86-OS16,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_SLES15SP5-25000602,x86-SLES15,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_Ubuntu22-25060103,x86-U22,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_Ubuntu24-25060103,x86-U24,ubuntu-latest,all
+x86_64_macOS13,macos,batlab,batlabonly
 # Windows 9 is really Windows 10 in disquise
-x86_64_Windows9
-
+x86_64_Windows9,win,batlab,batlabonly
 # We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora43-25000602
+docker://htcondor/nmi-build:x86_64_Fedora43-25000602,x86-F43,ubuntu-latest,all

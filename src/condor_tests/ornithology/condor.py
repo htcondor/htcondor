@@ -26,6 +26,8 @@ import re
 import textwrap
 import os
 import sys
+import getpass
+import socket
 
 from .try_os_set import (
     try_os_setegid,
@@ -112,6 +114,7 @@ class Condor:
         clean_local_dir_before: bool = True,
         submit_user : str = None,
         condor_user : str = None,
+        use_sudo: Optional[bool] = None,
     ):
         """
         Parameters
@@ -130,8 +133,23 @@ class Condor:
             If set, the user to switch to when submitting a job.
         condor_user
             If set, the user that HTCondor will run as.
+        use_sudo
+            If ``True``, start condor_master with sudo. If ``None`` (default),
+            checks HTCONDOR_TEST_USE_SUDO environment variable. If ``False``,
+            never use sudo even if environment variable is set.
         """
         self.submit_user = submit_user
+        
+        # Auto-detect sudo mode from environment if not explicitly specified
+        if use_sudo is None:
+            use_sudo = os.environ.get("HTCONDOR_TEST_USE_SUDO") == "1"
+        
+        self.use_sudo = use_sudo
+        
+        # If using sudo but no condor_user specified, default to "condor"
+        if self.use_sudo and condor_user is None:
+            condor_user = "condor"
+        
         self.condor_user = condor_user
         self.local_dir = local_dir
 
@@ -200,7 +218,7 @@ class Condor:
             shutil.rmtree(self.local_dir)
             logger.debug("Removed existing local dir for {}".format(self))
 
-        for dir in (
+        condor_dirs_to_make = [
             self.local_dir,
             self.execute_dir,
             self.lock_dir,
@@ -209,16 +227,36 @@ class Condor:
             self.spool_dir,
             self.passwords_dir,
             self.tokens_dir,
-        ):
+        ]
+
+        # First make the dirs as non-privileged user
+        for dir in condor_dirs_to_make:
             dir.mkdir(parents=True, exist_ok=not self.clean_local_dir_before)
-            # logger.debug("Created dir {}".format(dir))
-            if self.condor_user:
-                try:
-                    shutil.chown(
-                        dir, user=self.condor_user, group=self.condor_user
-                    )
-                except PermissionError:
-                    pass
+
+        # Unprivileged users will write the condor_config file here, cheat by making world writable
+        if self.use_sudo:
+            # chmod 0777 condor dir so we can write config file there as non-root
+            cmd.run_command(
+                ["sudo", "chmod", "0777", f"{self.condor_user}:{self.condor_user}", self.local_dir.as_posix()],
+                echo=False,
+                suppress=True,
+            )
+        # Now chown them if needed
+        for dir in condor_dirs_to_make:
+            if self.use_sudo:
+                cmd.run_command(
+                    ["sudo", "chown", "-R", f"{self.condor_user}:{self.condor_user}", dir.as_posix()],
+                    echo=False,
+                    suppress=True,
+                )
+            else:
+                if self.condor_user:
+                    try:
+                        shutil.chown(
+                            dir, user=self.condor_user, group=self.condor_user
+                        )
+                    except PermissionError:
+                        pass
 
     def _write_config(self):
         # TODO: how to ensure that this always hits the right config?
@@ -252,7 +290,7 @@ class Condor:
             "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND",
         }
 
-        if self.condor_user:
+        if self.condor_user or self.use_sudo:
             try:
                 from pwd import getpwnam
                 from grp import getgrnam
@@ -264,6 +302,11 @@ class Condor:
                 # This should arguably be a setup error if this process
                 # has user-switching privileges.
                 pass
+
+        if self.use_sudo:
+            username = getpass.getuser()
+            fqdn     = socket.getfqdn()
+            base_config["ALLOW_WRITE"] = f"{username}@{fqdn}"
 
         # The need to do this is arguably a HTCondor bug.
         global unique_identifier
@@ -295,9 +338,21 @@ class Condor:
     @skip_if(condor_master_was_started)
     def _start_condor(self):
         with env.SetCondorConfig(self.config_file):
+            # If we invoke the condor_master via sudo, sudo won't use the path for
+            # security reasons, so we have to find the binary ourselves.
+            master_bin = shutil.which("condor_master")
+            cmd = [master_bin, "-f"]
+            
+            if self.use_sudo:
+                cmd = ["sudo", "-E"] + cmd
+                logger.info(
+                    f"Starting condor_master with sudo (will run as {self.condor_user or 'root'})"
+                )
+            
             self.condor_master = subprocess.Popen(
-                ["condor_master", "-f"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
+
             logger.debug(
                 "Started condor_master (pid {})".format(self.condor_master.pid)
             )

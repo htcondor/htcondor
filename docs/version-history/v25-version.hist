@@ -1,3 +1,13 @@
+*** 25.8.0 features
+
+*** 25.8.0 bugs
+
+- Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
+  promptly if it failed to launch a singularity job.
+  :jira:`3531`
+
+*** 25.0.8 bugs
+
 *** 25.7.0 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
@@ -23,6 +33,10 @@
 - Added new command line options to :tool:`condor_watch_q` to control
   displaying rows of jobs that have all exited the AP job queue.
   :jira:`3516`
+
+- Added `-interval` command line option to :tool:`condor_watch_q` to control the
+  refresh rate of the tool.
+  :jira:`3528`
 
 - Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
   :jira:`3449`

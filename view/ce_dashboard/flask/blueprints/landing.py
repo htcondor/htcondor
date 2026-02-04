@@ -88,6 +88,14 @@ class ResourceInfo:
     def __post_init__(self):
         self.hosted = is_hosted_fqdn(self.fqdn)
 
+
+@dataclass
+class HeaderLink:
+    """ Util class containing the text and URL for a header link """
+    title: str
+    tooltip: str
+    url: str
+
 def returnOrAddUnregisteredInfo(resource_info_by_fqdn, fqdn):
     """
     Add an unregistered CE to the resource info dictionary.
@@ -158,7 +166,8 @@ def ce_info_from_collectors(resource_info_by_fqdn):
     coll = htcondor.Collector("collector.opensciencegrid.org:9619")
     try:
         ads = coll.query(htcondor.AdTypes.Schedd,projection=["Name","CollectorHost","OSG_BatchSystems","Status","DaemonStartTime","HTCondorCEVersion","TotalRunningJobs","TotalHeldJobs","TotalIdleJobs"])
-    except:
+    except Exception as e:
+        print(f"Unable to reach collector.opensciencegrid.org:9619: {e}")
         for fqdn in resource_info_by_fqdn:
             resource_info_by_fqdn[fqdn].health="Unknown"
             resource_info_by_fqdn[fqdn].healthInfo="Server collector.opensciencegrid.org unreachable"
@@ -372,8 +381,35 @@ def get_ce_facility_site_descrip(fqdn: str):
     """
     ce_info = get_ce_info(fqdn)
     if ce_info:
-        return ce_info.facility_name, ce_info.site_name, ce_info.description, ce_info.health
-    return "Unknown", "Unknown", "Unknown", "Poor"
+        # Re-extract the original site name from the URL if the health isn't Poor
+        name = ce_info.name if ce_info.health == "Poor" else ce_info.name.split('|',1)[1]
+        return ce_info.facility_name, ce_info.site_name, name, ce_info.description, ce_info.health
+    return "Unknown", "Unknown", "Unknown", "Unknown", "Poor"
+
+def get_next_prev_sites(fqdn: str) -> t.Tuple[t.Optional[HeaderLink], t.Optional[HeaderLink]]:
+    """
+    Given a site FQDN, return the next and previous healthy sites in alphabetical order.
+    """
+    # Get all CE Facility names in sorted order, for the facilities that have links from the homepage
+    healthy_facilities_by_name = sorted(
+        (ce for ce in ce_info_dict.values() if 'overview.html' in ce.name and ce.health != "Poor"), 
+        key=lambda x: x.facility_name)
+    current_index = next((i for i, ri in enumerate(healthy_facilities_by_name) if ri.fqdn == fqdn), 0)
+
+    prev_index = current_index - 1 if current_index > 0  else len(healthy_facilities_by_name) - 1
+    next_index = current_index + 1 if current_index < len(healthy_facilities_by_name) - 1 else 0
+
+    prev_facility = healthy_facilities_by_name[prev_index]
+    next_facility = healthy_facilities_by_name[next_index]
+
+    # TODO re-extracting the original name and link from the parsed facility csv here is a bit hacky
+    prev_link, prev_name = prev_facility.name.split('|',1)
+    next_link, next_name = next_facility.name.split('|',1)
+
+    return (
+        HeaderLink(title='Next\nCE', tooltip=f"{next_facility.facility_name} - {next_name}", url=next_link),
+        HeaderLink(title='Prev\nCE', tooltip=f"{prev_facility.facility_name} - {prev_name}", url=prev_link)
+    )
 
 ##########################################
 # Flask routes
@@ -381,7 +417,7 @@ def get_ce_facility_site_descrip(fqdn: str):
 
 landing_bp = Blueprint('landing', __name__)
 lock = threading.Lock()
-ce_info_dict = {}
+ce_info_dict : dict[str, ResourceInfo] = {}
 ce_info_dict_last_update_time = 0
 
 landing_linkmap = {
