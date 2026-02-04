@@ -215,13 +215,15 @@ public:
 		}
 	}
 
-	// called from StartdCronJob::Publish after one or more adlist ads with an ad_name prefix are updated
-	// this gives a chance to refresh the startd cron ads right away
-	// TODO: TJ, figure out is this necessary?
-	void adlist_updated(const char * /*ad_name*/, bool update_collector) {
-		// TODO: be more selective about what we refresh here?
-		walk(&Resource::refresh_startd_cron_attrs);
-		if (update_collector) rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
+	// called from StartdCronJob::Publish after an adlist ad with an ad_name prefix is updated
+	// This will trigger an update to the collector for the daemon ad and any
+	// affected slot ads.
+	void adlist_updated(const char * ad_name) {
+		StartdNamedClassAd* sad = extra_ads.LookupJob(ad_name);
+		if (sad) {
+			walk( [&](Resource* rip) { if (sad->InSlotList(rip->r_id)) rip->update_needed(Resource::WhyFor::wf_cronRequest); } );
+			rip_update_needed(1<<Resource::WhyFor::wf_cronRequest);
+		}
 	}
 
 private:
