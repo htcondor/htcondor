@@ -217,7 +217,7 @@ of the :macro:`MAX_JOBS_RUNNING` configuration variable to the value 10.
 
        $ condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10" 
        Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
-       schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+       schedd perdita.cs.wisc.edu <192.0.2.32:52067>.
 
 A command that will implement the change just set in the previous
 example.
@@ -242,7 +242,7 @@ was before the command to set it to 10:
 
        $ condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING 
        Successfully unset configuration "MAX_JOBS_RUNNING" on 
-       schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+       schedd perdita.cs.wisc.edu <192.0.2.32:52067>.
 
 A command that will implement the change just set in the previous
 example.

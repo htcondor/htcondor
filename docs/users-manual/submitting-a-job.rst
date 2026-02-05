@@ -1455,7 +1455,7 @@ using the ``-factory`` option.
 .. code-block:: console
 
     > condor_q -factory
-    -- Schedd: submit.example.org : <192.168.101.101:9618?... @ 12/01/20 13:35:00
+    -- Schedd: submit.example.org : <192.0.2.101:9618?... @ 12/01/20 13:35:00
     ID     OWNER          SUBMITTED  LIMIT PRESNT   RUN    IDLE   HOLD NEXTID MODE DIGEST
     77.    bob         12/01  13:30  15000    130     30     80     20   1230      /var/lib/condor/spool/77/condor_submit.77.digest
 

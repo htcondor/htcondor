@@ -256,7 +256,7 @@ no other queued jobs, the output may appear as
 .. code-block:: console
 
     $ condor_q
-    -- Submitter: example.wisc.edu : <128.105.14.44:56550> : example.wisc.edu
+    -- Submitter: example.wisc.edu : <192.0.2.44:56550> : example.wisc.edu
      ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
         6.0   kris            2/13 10:49   0+00:00:03 R  0   97.7 sleep.sh
 
@@ -277,9 +277,9 @@ At job completion, the log file contains
 
 .. code-block:: text
 
-    000 (006.000.000) 02/13 10:49:04 Job submitted from host: <128.105.14.44:46062>
+    000 (006.000.000) 02/13 10:49:04 Job submitted from host: <192.0.2.44:46062>
     ...
-    001 (006.000.000) 02/13 10:49:24 Job executing on host: <128.105.15.5:43051?PrivNet=cs.wisc.edu>
+    001 (006.000.000) 02/13 10:49:24 Job executing on host: <192.0.2.5:43051?PrivNet=cs.wisc.edu>
     ...
     006 (006.000.000) 02/13 10:49:30 Image size of job updated: 100000
             0  -  MemoryUsage of job (MB)

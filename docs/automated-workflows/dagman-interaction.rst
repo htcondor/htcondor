@@ -198,7 +198,7 @@ Removing a DAG
         :caption: Example removing a DAGMan workflow
 
         $ condor_q -nobatch
-        -- Submitter: user.cs.wisc.edu : <128.105.175.125:36165> : user.cs.wisc.edu
+        -- Submitter: user.cs.wisc.edu : <192.0.2.125:36165> : user.cs.wisc.edu
          ID      OWNER          SUBMITTED     RUN_TIME ST PRI SIZE CMD
           9.0   taylor         10/12 11:47   0+00:01:32 R  0   8.7  condor_dagman -f ...
          11.0   taylor         10/12 11:48   0+00:00:00 I  0   3.6  B.exe
