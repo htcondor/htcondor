@@ -118,7 +118,7 @@ long long do_store_cred(
 
 bool store_cred_failed(long long ret, int mode, const char ** errstring=NULL);
 
-int do_check_oauth_creds(const classad::ClassAd* request_ads[], int num_ads, std::string & outputURL, Daemon* d = NULL);
+int do_check_oauth_creds(const std::vector<const classad::ClassAd*>& request_ads, std::string & outputURL, Daemon* d = NULL);
 
 // store a password into a file on unix and into the registry on Windows
 int store_cred_password(const char *user, const char *pass, int mode);
