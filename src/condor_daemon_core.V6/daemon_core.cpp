@@ -2057,7 +2057,7 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 			     bool can_register_write,
 			     bool nonblocking_read,
 			     bool nonblocking_write,
-			     unsigned int psize,
+			     [[maybe_unused]] unsigned int psize,
 				 const char* pipe_name)
 {
 	dprintf(D_DAEMONCORE,"Entering Create_Named_Pipe()\n");
