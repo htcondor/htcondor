@@ -883,7 +883,7 @@ followed by the number of bits in the mask; or as the prefix of a legal
 IPv6 address followed by two colons followed by an asterisk. The latter
 is entirely equivalent to the former, except that it only allows you to
 (implicitly) specify mask bits in groups of sixteen. For example,
-``fe8f:1234::/60`` and ``fe8f:1234::*`` specify the same network mask.
+``2001:db8::/48`` and ``2001:db8:0::*`` specify the same network mask.
 
 The HTCondor security subsystem resolves names in the ALLOW and DENY
 lists and uses all of the resulting IP addresses. Thus, to allow or deny
