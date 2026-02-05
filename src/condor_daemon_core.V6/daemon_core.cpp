@@ -2053,8 +2053,8 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 MSC_DISABLE_WARNING(6211)
 
 int DaemonCore::Create_Named_Pipe( int *pipe_ends,
-			     bool can_register_read,
-			     bool can_register_write,
+			     [[maybe_unused]] bool can_register_read,
+			     [[maybe_unused]] bool can_register_write,
 			     bool nonblocking_read,
 			     bool nonblocking_write,
 			     [[maybe_unused]] unsigned int psize,
@@ -2111,11 +2111,6 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 	}
 		// what follows is the unix implementation of an unnamed pipe,
 		// which is what we do when pipe_name == NULL
-
-	// Shut the compiler up
-	// These parameters are needed on Windows
-	(void)can_register_read;
-	(void)can_register_write;
 
 	bool failed = false;
 	int filedes[2];
@@ -2181,7 +2176,7 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 	return TRUE;
 }
 
-int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonblocking, int psize)
+int DaemonCore::Inherit_Pipe(int fd, [[maybe_unused]] bool is_write, [[maybe_unused]] bool can_register, [[maybe_unused]] bool nonblocking, [[maybe_unused]] int psize)
 {
 	PipeHandle pipe_handle;
 
@@ -2194,13 +2189,6 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 		pipe_handle = new ReadPipeEnd(h, can_register, nonblocking, psize);
 	}
 #else
-		// Shut the compiler up
-		// These parameters are needed on Windows
-	(void)is_write;
-	(void)can_register;
-	(void)nonblocking;
-	(void)psize;
-
 	pipe_handle = fd;
 #endif
 
@@ -5275,9 +5263,8 @@ const std::vector<Sinful> & DaemonCore::InfoCommandSinfulStringsMyself()
 	return m_command_sock_sinfuls;
 }
 
-int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
+int DaemonCore::Shutdown_Fast(pid_t pid, [[maybe_unused]] bool want_core )
 {
-	(void) want_core;		// For windoze
 
 	if ( pid == ppid ) {
 		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill our own parent.\n" );
