@@ -13,36 +13,63 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from htcondor2._utils.ansi import Color, colorize, bold, stylize, AnsiOptions
 
-from typing import Union
+from typing import Union, List, Optional
 
-def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cumulative_mode: bool) -> None:
+class HistogramMode(enum.Enum):
+    CUMULATIVE = enum.auto()
+    INSTANT = enum.auto()
+
+def produce_job_event_histogram(log_file: Union[Path, str], mode: HistogramMode) -> List[str]:
     log_file = Path(log_file)
+
     if not log_file.exists():
         raise FileNotFoundError(f"Could not find file: {str(log_file)}")
+
     if os.access(log_file, os.R_OK) is False:
         raise PermissionError(f"Could not access file: {str(log_file)}")
 
-    # States and their display properties
-    all_states = ["idle", "running", "xfer_in", "xfer_out", "held", "done"]
-    state_labels = {
-        "done":     "Done",
-        "running":  "Running",
-        "xfer_in":  "Xfer In",
-        "xfer_out": "Xfer Out",
-        "idle":     "Idle",
-        "held":     "Held",
-    }
-    # Stack order bottom to top
-    stack_order = ["done", "running", "xfer_in", "xfer_out", "idle", "held"]
+    # State -> (Label, Color)
+    # NOTE: In stack order (done->held : bottom->top)
     # 256-color palette IDs for half-block rendering (fg/bg via AnsiOptions)
-    state_color_ids = {
-        "done":     2,  # green
-        "running":  6,  # cyan
-        "xfer_in":  4,  # blue
-        "xfer_out": 5,  # magenta
-        "idle":     3,  # yellow
-        "held":     1,  # red
+    KEY_LABEL = 0
+    KEY_COLOR = 1
+    STATES = {
+        "done": ("Done", 2),            # green
+        "running": ("Running", 6),      # cyan
+        "xfer_in": ("Xfer In", 4),      # blue
+        "xfer_out": ("Xfer Out", 5),    # magenta
+        "idle": ("Idle", 3),            # yellow
+        "held": ("Held", 1),            # red
     }
+
+    def resolve_transfer_event(event) -> Optional[str]:
+        """Determine state from transfer event"""
+        XFER = {
+            1: "xfer_in",      # IN_QUEUED
+            2: "xfer_in",      # IN_STARTED
+            3: "running",      # IN_FINISHED
+            4: "xfer_out",     # OUT_QUEUED
+            5: "xfer_out",     # OUT_STARTED
+            6: "running",      # OUT_FINISHED
+        }
+        return XFER.get(event.get("Type"))
+
+    # Map of job events to desired states
+    EVENT_TO_STATE = {
+        htcondor2.JobEventType.SUBMIT: "idle",
+        htcondor2.JobEventType.EXECUTE: "running",
+        htcondor2.JobEventType.JOB_HELD: "held",
+        htcondor2.JobEventType.JOB_RELEASED: "idle",
+        htcondor2.JobEventType.JOB_EVICTED: "idle",
+        htcondor2.JobEventType.JOB_TERMINATED: "done",
+        htcondor2.JobEventType.JOB_ABORTED: "done",
+        htcondor2.JobEventType.JOB_STAGE_IN: "xfer_in",
+        htcondor2.JobEventType.JOB_STAGE_OUT: "xfer_out",
+        htcondor2.JobEventType.FILE_TRANSFER: resolve_transfer_event,
+    }
+
+    # List of lines to return (built from top -> bottom of terminal)
+    LINES = list()
 
     # Parse events from the log file
     transitions = []
@@ -53,45 +80,15 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
                 event.get("EventTime"), "%Y-%m-%dT%H:%M:%S"
             )
 
-            new_state = None
-            if event.type == htcondor2.JobEventType.SUBMIT:
-                new_state = "idle"
-            elif event.type == htcondor2.JobEventType.EXECUTE:
-                new_state = "running"
-            elif event.type == htcondor2.JobEventType.JOB_HELD:
-                new_state = "held"
-            elif event.type == htcondor2.JobEventType.JOB_RELEASED:
-                new_state = "idle"
-            elif event.type == htcondor2.JobEventType.JOB_EVICTED:
-                new_state = "idle"
-            elif event.type == htcondor2.JobEventType.JOB_TERMINATED:
-                new_state = "done"
-            elif event.type == htcondor2.JobEventType.JOB_ABORTED:
-                new_state = "done"
-            elif event.type == htcondor2.JobEventType.JOB_STAGE_IN:
-                new_state = "xfer_in"
-            elif event.type == htcondor2.JobEventType.JOB_STAGE_OUT:
-                new_state = "xfer_out"
-            elif event.type == htcondor2.JobEventType.FILE_TRANSFER:
-                try:
-                    ft_type = event.get("Type")
-                    if ft_type in (1, 2):       # IN_QUEUED, IN_STARTED
-                        new_state = "xfer_in"
-                    elif ft_type == 3:           # IN_FINISHED
-                        new_state = "running"
-                    elif ft_type in (4, 5):      # OUT_QUEUED, OUT_STARTED
-                        new_state = "xfer_out"
-                    elif ft_type == 6:           # OUT_FINISHED
-                        new_state = "running"
-                except Exception:
-                    pass
+            res = EVENT_TO_STATE.get(event.type)
+            new_state = res(event) if callable(res) else res
 
             if new_state is not None:
                 transitions.append((timestamp, job_id, new_state))
 
     if not transitions:
-        print("No state-change events found in log file.")
-        return
+        LINES.append("No state-change events found in log file.")
+        return LINES
 
     transitions.sort(key=lambda t: t[0])
 
@@ -100,8 +97,8 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
     total_seconds = (t_end - t_start).total_seconds()
 
     if total_seconds == 0:
-        print("All events have the same timestamp; cannot build histogram.")
-        return
+        LINES.append("All events have the same timestamp; cannot build histogram.")
+        return LINES
 
     # Terminal dimensions
     term_size = shutil.get_terminal_size()
@@ -110,51 +107,45 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
 
     y_label_width = 7   # "NNNNNN "
     chart_width = term_width - y_label_width - 1  # 1 for │
-    chart_height = term_height - 6  # title, blank, x-axis, x-labels, blank, legend
+    chart_height = term_height - 7  # title, blank, x-axis, x-labels, blank, legend, new terminal line
 
     if chart_width < 10 or chart_height < 3:
-        print("Terminal too small for histogram.")
-        return
+        LINES.append("Terminal too small for histogram.")
+        return LINES
 
     # Build time bins
     bin_seconds = total_seconds / chart_width
     bins = []
     event_idx = 0
 
-    if cumulative_mode:
-        # Cumulative: track running state of every job, count jobs per state
-        job_states = {}
-        for col in range(chart_width):
-            bin_end = t_start + timedelta(seconds=(col + 1) * bin_seconds)
-            while event_idx < len(transitions) and transitions[event_idx][0] <= bin_end:
-                _, jid, st = transitions[event_idx]
+    job_states = {}
+    for col in range(chart_width):
+        counts = {s: 0 for s in STATES}
+        bin_end = t_start + timedelta(seconds=(col + 1) * bin_seconds)
+        while event_idx < len(transitions) and transitions[event_idx][0] <= bin_end:
+            _, jid, st = transitions[event_idx]
+            if mode == HistogramMode.CUMULATIVE:
                 job_states[jid] = st
-                event_idx += 1
-
-            counts = {s: 0 for s in all_states}
+            else:
+                counts[st] += 1
+            event_idx += 1
+        if mode == HistogramMode.CUMULATIVE:
             for st in job_states.values():
                 counts[st] += 1
-            bins.append(counts)
-    else:
-        # Instant: count state transitions per time bucket
-        for col in range(chart_width):
-            counts = {s: 0 for s in all_states}
-            bin_end = t_start + timedelta(seconds=(col + 1) * bin_seconds)
-            while event_idx < len(transitions) and transitions[event_idx][0] <= bin_end:
-                _, _, st = transitions[event_idx]
-                counts[st] += 1
-                event_idx += 1
-            bins.append(counts)
+
+        bins.append(counts)
 
     max_total = max(sum(b.values()) for b in bins)
     if max_total == 0:
-        print("No jobs found in log file.")
-        return
+        LINES.append("No jobs found in log file.")
+        return LINES
 
     # Render title
-    mode_label = "Cumulative" if cumulative_mode else "Instant"
-    print(bold(f"DAG Event Log Histogram ({mode_label}): {log_file.name}"))
-    print()
+    mode_label = "Cumulative" if mode == HistogramMode.CUMULATIVE else "Instant"
+    LINES += [
+        bold(f"DAG Event Log Histogram ({mode_label}): {log_file.name}"),
+        ""
+    ]
 
     # Compute nice Y-axis tick marks (~5 labels)
     def nice_num(x, do_round=True):
@@ -190,8 +181,6 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
 
     # Build set of Y values that get labels
     row_labels = {}
-    # Always label bottom (0)
-    row_labels[1] = 0
     # Generate tick values
     tick_val = tick_step
     while tick_val <= max_total:
@@ -207,7 +196,7 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
     def state_at_y(b, y_val):
         """Return the state name at y_val in stacked bar b, or None if empty."""
         cum = 0
-        for state in stack_order:
+        for state in STATES:
             cum += b[state]
             if cum > y_val:
                 return state
@@ -219,7 +208,7 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
         top_threshold = (row - 0.25) * max_total / chart_height
         bot_threshold = (row - 0.75) * max_total / chart_height
 
-        # Y-axis label
+        # Y-axis label (manually print 0 row flush with x-axis)
         if row in row_labels:
             label = f"{row_labels[row]:>6} "
         else:
@@ -237,24 +226,24 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
                 line += " "
             elif top_state == bot_state:
                 # Both same state - full block
-                line += stylize("█", AnsiOptions(color_id=state_color_ids[top_state]))
+                line += stylize("█", AnsiOptions(color_id=STATES[top_state][KEY_COLOR]))
             elif top_state is None and bot_state is not None:
                 # Only bottom half filled
-                line += stylize("▄", AnsiOptions(color_id=state_color_ids[bot_state]))
+                line += stylize("▄", AnsiOptions(color_id=STATES[bot_state][KEY_COLOR]))
             elif top_state is not None and bot_state is None:
                 # Only top half filled
-                line += stylize("▀", AnsiOptions(color_id=state_color_ids[top_state]))
+                line += stylize("▀", AnsiOptions(color_id=STATES[top_state][KEY_COLOR]))
             else:
                 # Different states: ▄ with fg=bottom, bg=top
                 line += stylize("▄", AnsiOptions(
-                    color_id=state_color_ids[bot_state],
-                    highlight=state_color_ids[top_state],
+                    color_id=STATES[bot_state][KEY_COLOR],
+                    highlight=STATES[top_state][KEY_COLOR],
                 ))
 
-        print(line)
+        LINES.append(line)
 
     # X-axis line
-    print("       └" + "─" * chart_width)
+    LINES.append("     0 └" + "─" * chart_width)
 
     # Time labels
     if total_seconds < 86400:
@@ -289,12 +278,22 @@ def print_job_event_histogram(log_file: Union[Path, str], instant_mode: bool, cu
             if 0 <= idx < chart_width:
                 label_chars[idx] = c
 
-    print("        " + "".join(label_chars))
+    LINES.append("        " + "".join(label_chars))
 
     # Legend with double-width swatches and wider spacing
     legend_parts = []
-    for state in stack_order:
-        swatch = stylize("██", AnsiOptions(color_id=state_color_ids[state]))
-        legend_parts.append(swatch + " " + state_labels[state])
-    print()
-    print("  " + "   ".join(legend_parts))
+    for state in STATES:
+        swatch = stylize("██", AnsiOptions(color_id=STATES[state][KEY_COLOR]))
+        legend_parts.append(swatch + " " + STATES[state][KEY_LABEL])
+    LINES += [
+        "",
+        "  " + "   ".join(legend_parts),
+    ]
+
+    return LINES
+
+
+def print_job_event_histogram(log_file: Union[Path, str], mode: HistogramMode) -> None:
+    for line in produce_job_event_histogram(log_file, mode):
+        print(line)
+

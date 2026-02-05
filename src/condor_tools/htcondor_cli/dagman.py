@@ -9,7 +9,7 @@ import shutil
 import math
 import argparse
 
-from htcondor_cli.histogram import print_job_event_histogram
+from htcondor_cli.histogram import print_job_event_histogram, HistogramMode
 
 from htcondor2._utils.ansi import Color, colorize, bold, stylize, AnsiOptions
 from datetime import datetime, timedelta
@@ -20,6 +20,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
+from htcondor_cli import MutualExclusionArgs
 
 JSM_HTC_DAG_SUBMIT = 4
 
@@ -319,36 +320,50 @@ class Histogram(Verb):
     """
 
     options = {
-        "log_file": {
-            "args": ("log_file",),
-            "help": "DAG event log file",
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
         },
-        "cumulative": {
-            "args": ("-c", "--cumulative"),
-            "action": "store_true",
-            "default": False,
-            "help": "Show cumulative job states over time (default mode)",
-        },
-        "instant": {
-            "args": ("-i", "--instant"),
-            "action": "store_true",
-            "default": False,
-            "help": "Show state transitions per time bucket",
-        },
+        "histogram" : MutualExclusionArgs({
+            "cumulative": {
+                "args": ("-c", "--cumulative"),
+                "action": "store_const",
+                "dest": "hist_mode",
+                "const": HistogramMode.CUMULATIVE,
+                "default": HistogramMode.CUMULATIVE,
+                "help": "Show cumulative job states over time (default mode)",
+            },
+            "instant": {
+                "args": ("-i", "--instant"),
+                "action": "store_const",
+                "dest": "hist_mode",
+                "const": HistogramMode.INSTANT,
+                "default": HistogramMode.CUMULATIVE,
+                "help": "Show state transitions per time bucket",
+            },
+        })
     }
 
-    def __init__(self, logger, log_file, **options):
-        instant_mode = options.get("instant", False)
-        cumulative_mode = options.get("cumulative", False)
+    def __init__(self, logger, dag_id, **options):
+        schedd = htcondor.Schedd()
+        # Query schedd
+        try:
+            dag = schedd.query(
+                constraint=f"ClusterId=={dag_id}",
+                projection=["UserLog"]
+            )[0]
+        except IndexError:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
+        except Exception as e:
+            raise RuntimeError(f"Error looking up DAG status: {str(e)}")
 
-        if instant_mode and cumulative_mode:
-            raise RuntimeError("Cannot specify both --cumulative and --instant")
+        if len(dag) == 0:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
 
-        # Default to cumulative if neither specified
-        if not instant_mode:
-            cumulative_mode = True
+        log = dag["UserLog"].replace(".dagman.log", ".nodes.log")
 
-        print_job_event_histogram(log_file, instant_mode, cumulative_mode)
+        print_job_event_histogram(log, options["hist_mode"])
 
 class DAG(Noun):
     """
