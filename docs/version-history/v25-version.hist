@@ -1,5 +1,9 @@
 *** 25.8.0 features
 
+- :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
+  in the summary table.
+  :jira:`3535`
+
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
