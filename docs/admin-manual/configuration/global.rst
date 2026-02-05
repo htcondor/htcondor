@@ -2059,11 +2059,11 @@ More information about networking in HTCondor can be found in
     will resolve to an IP address of the local machine.
 
 :macro-def:`NETWORK_INTERFACE[Networking]`
-    An IP address of the form ``123.123.123.123`` or the name of a
+    An IP address of the form ``192.0.2.123`` or the name of a
     network device, as in the example ``eth0``. The wild card character
-    (``*``) may be used within either. For example, ``123.123.*`` would
-    match a network interface with an IP address of ``123.123.123.123``
-    or ``123.123.100.100``. The default value is ``*``, which matches
+    (``*``) may be used within either. For example, ``192.0.2.*`` would
+    match a network interface with an IP address of ``192.0.2.123``
+    or ``192.0.2.100``. The default value is ``*``, which matches
     all network interfaces.
 
     The effect of this variable depends on the value of
@@ -2123,7 +2123,7 @@ More information about networking in HTCondor can be found in
     to communicate directly.
 
     :macro:`PRIVATE_NETWORK_INTERFACE` defines what IP address of the form
-    ``123.123.123.123`` or name of a network device (as in the example
+    ``192.0.2.123`` or name of a network device (as in the example
     ``eth0``) a given multi-homed machine should use for the private
     network. The asterisk (\*) may be used as a wild card character
     within either the IP address or the device name. If another HTCondor

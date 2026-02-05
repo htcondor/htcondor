@@ -705,7 +705,7 @@ location attribute to your machine ClassAds.
     CondorVersion = "$CondorVersion: 7.6.3 Aug 18 2011 BuildID: 361356 $"
     Requirements = START
     EnteredCurrentActivity = 1316094896
-    MyAddress = "<128.105.175.125:58026>"
+    MyAddress = "<192.0.2.125:58026>"
     EnteredCurrentState = 1316094896
     Memory = 1897
     CkptServer = "pitcher.cs.wisc.edu"
@@ -715,7 +715,7 @@ location attribute to your machine ClassAds.
     Arch = "INTEL"
     Mips = 2634
     Activity = "Idle"
-    StartdIpAddr = "<128.105.175.125:58026>"
+    StartdIpAddr = "<192.0.2.125:58026>"
     TargetType = "Job"
     LoadAvg = 0.210000
     Disk = 92309744

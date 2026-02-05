@@ -54,7 +54,7 @@ Options
     the locally-running daemons will be used.
  **-netblock** *network*
     A netblock of the form *IP_ADDRESS / SUBNET_MASK* specifying the source of authorized
-    requests.  Examples may include ``129.93.12.0/24`` or ``10.0.0.0/26``.
+    requests.  Examples may include ``192.0.2.0/24`` or ``192.0.2.0/26``.
  **-pool** *pool_name*
     Request a token from a daemon in a non-default pool *pool_name*.
  **-type** *type*
@@ -65,12 +65,12 @@ Examples
 --------
 
 To automatically approve token requests to the default *condor_collector* coming from the
-``10.0.0.0/26`` subnet for the next 10 minutes:
+``192.0.2.0/26`` subnet for the next 10 minutes:
 
 .. code-block:: console
 
-    $ condor_token_request_auto_approve -lifetime 600 -netblock 10.0.0.0/26
-    Successfully installed auto-approval rule for netblock 10.0.0.0/26 with lifetime of 0.17 hours
+    $ condor_token_request_auto_approve -lifetime 600 -netblock 192.0.2.0/26
+    Successfully installed auto-approval rule for netblock 192.0.2.0/26 with lifetime of 0.17 hours
     Remote daemon reports no un-approved requests pending.
 
 Exit Status

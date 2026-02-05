@@ -332,12 +332,12 @@ are no unprivileged users logged in to the submit hosts:
    (defaulting to ``/etc/condor/passwords.d/POOL`` on Linux and ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows).
 2. Install an auto-approval rule on the central manager using ``condor_token_request_auto_approve``.
    This automatically approves any daemons starting on a specified network for
-   a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
+   a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.0.2.0/24``
    for the next hour (3600 seconds), run the following command from the central manager:
 
    .. code-block:: console
 
-        $ condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
+        $ condor_token_request_auto_approve -netblock 192.0.2.0/24 -lifetime 3600
 
 3. Within the auto-approval rule's lifetime, start the submit and execute
    hosts inside the appropriate network.  The token requests for the corresponding daemons (the :tool:`condor_master`, *condor_startd*, and *condor_schedd*)
@@ -2016,7 +2016,7 @@ or an IP address of the form
 
 .. code-block:: text
 
-    128.105.128.0
+    192.0.2.0
 
 An example is
 
@@ -2094,10 +2094,10 @@ mask is
 
 .. code-block:: condor-config
 
-    ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
+    ALLOW_WRITE = joesmith@cs.wisc.edu/192.0.2.0/24
 
 User joesmith within the cs.wisc.edu domain is given write authorization
-when originating from machines that match their leftmost 17 bits of the
+when originating from machines that match their leftmost 24 bits of the
 IP address. :index:`of Unix netgroups<single: of Unix netgroups; authorization>`
 
 The special value ``{:local_ips:}`` can be used to represent all IP
@@ -2502,9 +2502,9 @@ Multiple machine entries in the configuration files may be separated by
 either a space or a comma. The machines may be listed by
 
 -  Individual host names, for example: ``condor.cs.wisc.edu``
--  Individual IP address, for example: ``128.105.67.29``
+-  Individual IP address, for example: ``192.0.2.29``
 -  IP subnets (use a trailing ``*``), for example:
-   ``144.105.*, 128.105.67.*``
+   ``192.0.2.*, 198.51.100.*``
 -  Host names with a wild card ``*`` character (only one ``*`` is
    allowed per name), for example: ``*.cs.wisc.edu, sol*.cs.wisc.edu``
 

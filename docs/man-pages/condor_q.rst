@@ -719,7 +719,7 @@ An example that shows the analysis in summary format:
 
     $ condor_q -analyze:summary
 
-    -- Submitter: submit-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> :
+    -- Submitter: submit-1.chtc.wisc.edu : <192.0.2.43:9618?sock=11794_95bb_3> :
      submit-1.chtc.wisc.edu
     Analyzing matches for 5979 slots
                 Autocluster  Matches    Machine     Running  Serving
@@ -736,7 +736,7 @@ An example that shows summary information by machine:
 
     $ condor_q -ana:sum,rev
 
-    -- Submitter: s-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu
+    -- Submitter: s-1.chtc.wisc.edu : <192.0.2.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu
     Analyzing matches for 2885 jobs
                                     Slot  Slot's Req    Job's Req     Both
     Name                            Type  Matches Job  Matches Slot    Match %
@@ -757,7 +757,7 @@ An example with two independent DAGs in the queue:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:35169?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:35169?...
     OWNER  BATCH_NAME    SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
     wenger DAG: 3696    2/12 11:55      _     10      _     10 3698.0 ... 3707.0
     wenger DAG: 3697    2/12 11:55      1      1      1     10 3709.0 ... 3710.0
@@ -781,7 +781,7 @@ column to the output:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
     OWNER  BATCH_NAME        SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
     wenger CMD: /bin/slee   9/13 16:25      _      3      _      1      4 599.0 ...
 
@@ -799,7 +799,7 @@ First of all, non-batch mode with all of the node jobs in the queue:
 
     $ condor_q -nobatch
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger          9/13 16:05   0+00:00:13 R  0    2.4 condor_dagman -p 0
      592.0   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 60
@@ -821,7 +821,7 @@ doesn't do a good job of grouping procs in the same cluster together):
 
     $ condor_q -nobatch -dag
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger             9/13 16:05   0+00:00:27 R  0    2.4 condor_dagman -
      592.0    |-NodeA           9/13 16:05   0+00:00:21 R  0    0.0 sleep 60
@@ -842,7 +842,7 @@ Now, finally, the non-batch (default) mode:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
     OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
     wenger ex1.dag+591   9/13 16:05      _      8      _      5 592.0 ... 596.1
 
@@ -869,7 +869,7 @@ Now here is non-batch mode after proc 0 of each node job has finished:
 
     $ condor_q -nobatch
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger          9/13 16:05   0+00:01:19 R  0    2.4 condor_dagman -p 0
      592.1   wenger          9/13 16:05   0+00:01:13 R  0    0.0 sleep 300
@@ -886,7 +886,7 @@ The same state also with the **-dag** option:
 
     $ condor_q -nobatch -dag
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger             9/13 16:05   0+00:01:30 R  0    2.4 condor_dagman -
      592.1    |-NodeA           9/13 16:05   0+00:01:24 R  0    0.0 sleep 300
@@ -903,7 +903,7 @@ And, finally, that state in batch (default) mode:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
     OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
     wenger ex1.dag+591   9/13 16:05      _      4      _      5 592.1 ... 596.1
 

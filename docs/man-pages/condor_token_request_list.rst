@@ -58,14 +58,14 @@ To list the tokens at the default *condor_collector*:
     $ condor_token_request_list
     RequestId = "4303687"
     ClientId = "worker0000.wisc.edu-960"
-    PeerLocation = "10.0.4.13"
+    PeerLocation = "192.0.2.13"
     AuthenticatedIdentity = "anonymous@ssl"
     RequestedIdentity = "condor@cs.wisc.edu"
     LimitAuthorization = "ADVERTISE_STARTD"
 
     RequestedIdentity = "bucky@cs.wisc.edu"
     AuthenticatedIdentity = "bucky@cs.wisc.edu"
-    PeerLocation = "129.93.244.211"
+    PeerLocation = "192.0.2.211"
     ClientId = "desktop0001.wisc.edu-712"
     RequestId = "4413973"
 
