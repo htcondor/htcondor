@@ -1,5 +1,8 @@
 *** 25.8.0 features
 
+- Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
+  :jira:`3530`
+
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
