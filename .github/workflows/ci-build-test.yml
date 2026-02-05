@@ -208,15 +208,28 @@ jobs:
 
       - name: Build Ubuntu 
         run: |
-          id
+          sudo useradd -m condor
           sudo apt-get install uuid-dev libcurl4-openssl-dev
           sudo pip3 install pytest pytest-httpserver
           mkdir __build && chmod 0777 __build
           cd __build && cmake -GNinja -DWITH_SCITOKENS:bool=false -DWITH_KRB5:bool=false -DWITH_MUNGE:bool=false -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install
+          chmod a+rwx -R /home/runner
 
       - name: Test with rootness
         # Use su to run as condorauto user inside container, test_guidance test is flakey
         run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-junit test.xml -j 40 -R test_cgroup_oom )
+
+      - name: Upload All on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: root-output-for-ubuntu
+          path: |
+            /home/runner
+            __build/Testing
+          retention-days: 2
+          overwrite: true
+
 
   dashboard:
     needs: [build, macbuild, winbuild]
