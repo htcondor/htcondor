@@ -923,11 +923,18 @@ DCStartd::delegateX509Proxy( const char* proxy, time_t expiration_time, time_t *
 }
 
 bool
-DCStartd::vacateClaim( const char* name_vacate, bool fast /*=false*/ )
+DCStartd::vacateClaim( const char* name_vacate, bool fast /*=false*/, bool final_transfer /*=false*/ )
 {
 	setCmdStr( "vacateClaim" );
 
-	int cmd = fast ? VACATE_CLAIM_FAST : VACATE_CLAIM;
+	int cmd;
+	if (final_transfer) {
+		cmd = VACATE_CLAIM_AND_FINAL_XFER;
+	} else if (fast) {
+		cmd = VACATE_CLAIM_FAST;
+	} else {
+		cmd = VACATE_CLAIM;
+	}
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
