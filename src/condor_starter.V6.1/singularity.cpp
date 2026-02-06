@@ -318,6 +318,13 @@ Singularity::setup(ClassAd &machineAd,
 		if (IsDirectory(open_cl_path)) {
 			additional_bind_mounts.emplace_back(open_cl_path);
 		}
+
+		// We don't really know if the GPUs are NVidia, but it doesn'to
+		// seem hurt to have both the nvidia and rocm bind mounts available
+		// if either is needed.  But knob it just to be sure.
+		if (param_boolean("SINGULARITY_ADD_ROCM_FLAG", true)) {
+			sing_args.AppendArg("--rocm");
+		}
 	}
 
 	// Now handle requested bind-mounts.  We will mount everything specified with

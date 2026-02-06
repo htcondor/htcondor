@@ -1892,6 +1892,11 @@ default=true
 type=bool
 tags=starter
 
+[SINGULARITY_ADD_ROCM_FLAG]
+default=true
+type=bool
+tags=starter
+
 [UPDATE_INTERVAL]
 default=300
 type=int
