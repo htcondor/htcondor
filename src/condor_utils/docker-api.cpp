@@ -1122,10 +1122,9 @@ int DockerAPI::detect( CondorError & err ) {
 }
 
 int
-DockerAPI::testImageRuns(CondorError &err) {
+DockerAPI::testImageRuns([[maybe_unused]] CondorError &err) {
 
 #ifndef LINUX
-	(void)err; // shut the compiler up
 	return 0;
 #else
 	TemporaryPrivSentry sentry(PRIV_ROOT);

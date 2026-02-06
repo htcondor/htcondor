@@ -732,10 +732,8 @@ static void compress_path( std::string &path )
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-int SubmitHash::check_and_universalize_path( std::string &path )
+int SubmitHash::check_and_universalize_path( [[maybe_unused]] std::string &path )
 {
-	(void) path;
-
 	int retval = 0;
 #ifdef WIN32
 	/*
@@ -846,7 +844,7 @@ int64_t SubmitHash::calc_image_size_kb( const char *name)
 // other than to make sure that it actually IS a directory on Windows
 // On Linux we already know that by the error code from safe_open below
 //
-static bool check_directory( const char* pathname, int /*flags*/, int err )
+static bool check_directory( [[maybe_unused]] const char* pathname, int /*flags*/, int err )
 {
 #if defined(WIN32)
 	// Make sure that it actually is a directory
@@ -856,8 +854,6 @@ static bool check_directory( const char* pathname, int /*flags*/, int err )
 	return (dwAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
 	// will just do nothing here and leave
-	// it up to the runtime to nicely report errors.
-	(void)pathname;
 	return (err == EISDIR);
 #endif
 }

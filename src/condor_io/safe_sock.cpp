@@ -925,7 +925,7 @@ SafeSock::msgReady() {
 }
 
 /* static */ int
-SafeSock::recvQueueDepth(int port) {
+SafeSock::recvQueueDepth([[maybe_unused]] int port) {
 	int depth = 0;
 #ifdef LINUX
 	FILE *f = NULL;
@@ -967,9 +967,6 @@ SafeSock::recvQueueDepth(int port) {
 		}
 	}
 	fclose(f);
-#else
-	// Shut the compiler up
-	(void)port;
 #endif
 	return depth;
 }
