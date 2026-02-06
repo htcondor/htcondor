@@ -1131,7 +1131,7 @@ WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
 }
 
 int
-WriteUserLog::doRotation( const char *path, int &fd,
+WriteUserLog::doRotation( const char *path, [[maybe_unused]] int &fd,
 						  std::string &rotated, int max_rotations )
 {
 

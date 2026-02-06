@@ -3202,8 +3202,6 @@ grow_prio_recs( [[maybe_unused]] int newsize )
 		PrioRec.reserve(new_size);
 	}
 	dprintf(D_FULLDEBUG,"Dynamically growing PrioRec to %d\n",newsize);
-  #else
-	// no need to grow a std::deque
   #endif
 	return 0;
 }
