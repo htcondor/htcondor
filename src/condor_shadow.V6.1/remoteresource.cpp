@@ -314,7 +314,7 @@ RemoteResource::killStarter( bool graceful, bool final_transfer )
 	// If final_transfer is requested (condor_rm -transfer), use vacateClaim
 	// with final_transfer=true to send VACATE_CLAIM_AND_FINAL_XFER command
 	CondorVersionInfo vi(dc_startd->version());
-	if (final_transfer && vi.built_since_version(25,7,0)) {
+	if (final_transfer && vi.built_since_version(25,8,0)) {
 		dprintf(D_STATUS, "Sending VACATE_CLAIM_AND_FINAL_XFER to startd for final file transfer\n");
 		bool fast = !graceful;
 		if( dc_startd->vacateClaim(machineName, fast, true) ) {
