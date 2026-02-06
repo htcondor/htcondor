@@ -12,19 +12,12 @@ running, then uses condor_rm -transfer to remove it. The test verifies
 that the output file was successfully transferred before the job was removed.
 """
 
-import logging
-import subprocess
 import time
-from pathlib import Path
 
 from ornithology import (
     action,
     ClusterState,
 )
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 
 @action
 def output_file(test_dir):
