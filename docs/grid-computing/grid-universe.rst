@@ -385,9 +385,9 @@ allows SSH authentication without the user typing a password.
 The setup command is :tool:`condor_remote_cluster`, which you should run at
 the command line.
 
-.. code-block:: text
+.. code-block:: console
 
-    condor_remote_cluster --add alice@login.example.edu slurm
+    $ condor_remote_cluster --add alice@login.example.edu slurm
 
 Once this setup command finishes successfully, you can submit jobs for the
 remote batch system by including the username and hostname in the
@@ -418,9 +418,9 @@ for authentication.
 First, run the :tool:`condor_remote_cluster` as you would for a regular
 remote SSH setup.
 
-.. code-block:: text
+.. code-block:: console
 
-    condor_remote_cluster --add alice@login.example.edu slurm
+    $ condor_remote_cluster --add alice@login.example.edu slurm
 
 Second, create an ssh key that's authorized to login to your account on
 your local machine and save the private key on the remote machine.
@@ -438,7 +438,7 @@ In the following examples, we'll use ``/tmp/alice.rvgahp.socket``.
 Fourth, on the remote machine, create a ``~/bosco/glite/bin/rvgahp_ssh``
 shell script like this:
 
-.. code-block:: text
+.. code-block:: bash
 
     #!/bin/bash
     exec ssh -o "ServerAliveInterval 60" -o "BatchMode yes" -i ~/.ssh/id_rsa_rvgahp alice@submithost "/usr/sbin/rvgahp_proxy /tmp/alice.rvgahp.sock"
@@ -457,9 +457,9 @@ Finally, run the *rvgahp_server* program on the remote machine.
 You must ensure it remains running during the entire time you are
 submitting and running jobs on the batch system.
 
-.. code-block:: text
+.. code-block:: console
 
-    ~/bosco/glite/bin/rvgahp_server -b ~/bosco/glite
+    $ ~/bosco/glite/bin/rvgahp_server -b ~/bosco/glite
 
 Now, you can submit jobs for the remote batch system.
 Adding the **--rvgahp-socket** option to your **grid_resource** submit

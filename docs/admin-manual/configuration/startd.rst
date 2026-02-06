@@ -1147,33 +1147,21 @@ needs.
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestMemory` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
-    given by
-
-    .. code-block:: text
-
-          quantize(RequestMemory,{128})
+    given by :ad-expr:`quantize(RequestMemory,{128})`.
 
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTDISK`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestDisk` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
-    given by
-
-    .. code-block:: text
-
-          quantize(RequestDisk,{1024})
+    given by :ad-expr:`quantize(RequestDisk,{1024})`
 
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestCpus` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
-    given by
-
-    .. code-block:: text
-
-          quantize(RequestCpus,{1})
+    given by :ad-expr:`quantize(RequestCpus,{1})`
 
 
 :macro-def:`NUM_SLOTS_TYPE_<N>`

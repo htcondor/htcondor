@@ -912,7 +912,7 @@ HTCondor should constrain the number of running jobs which need the X
 software to 3. The administrator picks XSW as the name of the resource
 and sets the configuration
 
-.. code-block:: text
+.. code-block:: condor-config
 
     XSW_LIMIT = 3
 
@@ -926,7 +926,7 @@ configuration may specify a concurrency limit for all resources that are
 not covered by specifically-named limits. The configuration variable
 :macro:`CONCURRENCY_LIMIT_DEFAULT` sets this value. For example,
 
-.. code-block:: text
+.. code-block:: condor-config
 
     CONCURRENCY_LIMIT_DEFAULT = 1
 
@@ -941,20 +941,20 @@ submit description file or adding an attribute to the job ClassAd. In
 the submit description file, an example job that requires the X software
 adds:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits = XSW
 
 This results in the job ClassAd attribute
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     ConcurrencyLimits = "XSW"
 
 Jobs may declare that they need more than one type of resource. In this
 case, specify a comma-separated list of resources:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits = XSW, DATABASE, FILESERVER
 
@@ -964,7 +964,7 @@ syntax that follows the resource name by a colon character and the
 integer number of resources. For example, if the above job uses three
 units of the file server resource, it is declared with
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits = XSW, DATABASE, FILESERVER:3
 
@@ -973,7 +973,7 @@ member of the set, the configuration may become tedious, as it defines
 each member of the set individually. A shortcut defines a name for a
 set. For example, define the sets called ``LARGE`` and ``SMALL``:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     CONCURRENCY_LIMIT_DEFAULT = 5
     CONCURRENCY_LIMIT_DEFAULT_LARGE = 100
@@ -998,21 +998,21 @@ number of network intensive jobs on each network to 10. Configuration of
 each execute machine advertises which local network it is on. A machine
 on ``"NETWORK_A"`` configures
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NETWORK = "NETWORK_A"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 and a machine on ``"NETWORK_B"`` configures
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NETWORK = "NETWORK_B"
     STARTD_ATTRS = $(STARTD_ATTRS) NETWORK
 
 The configuration for the negotiator sets the concurrency limits:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NETWORK_A_LIMIT = 10
     NETWORK_B_LIMIT = 10
@@ -1020,7 +1020,7 @@ The configuration for the negotiator sets the concurrency limits:
 Each network intensive job identifies itself by specifying the limit
 within the submit description file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits_expr = TARGET.NETWORK
 
@@ -1033,7 +1033,7 @@ the matched machine. The other limit is of a specialized application
 called ``"SWX"`` in this example. The negotiator configuration is
 extended to also include
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SWX_LIMIT = 15
 
@@ -1041,7 +1041,7 @@ The network intensive job that also uses two units of the ``SWX``
 application identifies the needed resources in the single submit
 command:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     concurrency_limits_expr = strcat("SWX:2 ", TARGET.NETWORK)
 
@@ -1121,7 +1121,7 @@ lightweight daemon that should not require a lot of system resources.
 Here is an example configuration that puts the *condor_defrag* daemon
 to work:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DAEMON_LIST = $(DAEMON_LIST) DEFRAG
     DEFRAG_INTERVAL = 3600
@@ -1418,8 +1418,7 @@ may be computed using the following formula:
 
 .. code-block:: text
 
-    stabilization period = 12 * (number of central managers) *
-                              $(HAD_CONNECTION_TIMEOUT)
+    Stabilization Period = 12 * (number of central managers) * $(HAD_CONNECTION_TIMEOUT)
 
 To disable the high availability of central managers mechanism, it is
 sufficient to remove :macro:`HAD`, :macro:`REPLICATION`, and :macro:`NEGOTIATOR` from
@@ -1433,10 +1432,12 @@ commands kill all *condor_had*, *condor_replication*, and all running
 *condor_negotiator* daemons. The last command is invoked on the host
 where the single *condor_negotiator* daemon is to run.
 
-#. condor_off -all -neg
-#. condor_off -all -subsystem -replication
-#. condor_off -all -subsystem -had
-#. condor_on -neg
+.. code-block:: console
+
+    # condor_off -all -neg
+    # condor_off -all -subsystem -replication
+    # condor_off -all -subsystem -had
+    # condor_on -neg
 
 When configuring *condor_had* to control the *condor_negotiator*, if
 the default backoff constant value is too small, it can result in a
@@ -2031,7 +2032,7 @@ The following demonstrates an example configuration for two HTCondorView
 servers, where both HTCondorView servers (and the *condor_collector*)
 are running on the same machine, localhost.localdomain:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     VIEWSERV01 = $(COLLECTOR)
     VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01

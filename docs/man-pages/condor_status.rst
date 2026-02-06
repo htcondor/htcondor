@@ -474,8 +474,9 @@ than 750, the Unix command is
 The **-cod** option displays the status of COD claims within a given
 HTCondor pool.
 
-.. code-block:: text
+.. code-block:: console
 
+    $ condor_status -cod
     Name        ID   ClaimState TimeInState RemoteUser JobId Keyword
     astro.cs.wi COD1 Idle        0+00:00:04 wright
     chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen

@@ -1026,7 +1026,7 @@ respective locations.
 The first time an unknown CA is encountered by tool such as ``condor_status``, the tool
 will prompt the user on whether it should trust the CA; the prompt looks like the following:
 
-.. code-block:: text
+.. code-block:: console
 
    $ condor_status
    The remote host collector.wisc.edu presented an untrusted CA certificate with the following fingerprint:
