@@ -139,11 +139,8 @@ static TEST tests [] =
 };
 
 #define TF(_v_)	( (_v_) ? 'T' : 'F' )
-int main( int argc, const char *argv[] )
+int main( [[maybe_unused]] int argc, [[maybe_unused]] const char *argv[] )
 {
-	(void) argc;
-	(void) argv;
-
 	int failures = 0;
 	const TEST *t = tests;
 	do {

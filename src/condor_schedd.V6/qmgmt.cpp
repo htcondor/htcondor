@@ -3195,7 +3195,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 }
 
 int
-grow_prio_recs( int newsize )
+grow_prio_recs( [[maybe_unused]] int newsize )
 {
   #ifdef PRIO_REC_IS_VECTOR
 	if (new_size > (int)PrioRec.capacity()) {
@@ -3204,7 +3204,6 @@ grow_prio_recs( int newsize )
 	dprintf(D_FULLDEBUG,"Dynamically growing PrioRec to %d\n",newsize);
   #else
 	// no need to grow a std::deque
-	(void)newsize;
   #endif
 	return 0;
 }
@@ -6281,12 +6280,9 @@ void AddClusterEditedAttributes(std::vector<JobQueueKey> & exist_keys)
 }
 
 bool
-ReadProxyFileIntoAd( const char *file, const OwnerInfo *owner, ClassAd &x509_attrs )
+ReadProxyFileIntoAd( [[maybe_unused]] const char *file, [[maybe_unused]] const OwnerInfo *owner, [[maybe_unused]] ClassAd &x509_attrs )
 {
 #if defined(WIN32)
-	(void)file;
-	(void)owner;
-	(void)x509_attrs;
 	return false;
 #else
 	// owner==NULL means don't try to switch our priv state.

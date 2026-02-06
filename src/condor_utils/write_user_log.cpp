@@ -593,14 +593,12 @@ WriteUserLog::setCreatorName( const char *name )
 bool
 WriteUserLog::openFile(
 	const char	 *file,
-	bool		  log_as_user,	// if false, we are logging to the global file
+	[[maybe_unused]] bool		  log_as_user,	// if false, we are logging to the global file
 	bool		  use_lock,		// use the lock
 	bool		  append,		// append mode?
 	FileLockBase *&lock,
-	int			  &fd )
+	[[maybe_unused]] int			  &fd )
 {
-	(void)  log_as_user;	// Quiet warning
-
 	if ( file == NULL ) {
 		dprintf( D_ALWAYS, "WriteUserLog::openFile: NULL filename!\n" );
 		return false;
@@ -1167,8 +1165,6 @@ WriteUserLog::doRotation( const char *path, int &fd,
 		close( fd );
 		fd = -1;
 	}
-# else
-	(void) fd;		// Quiet compiler warnings
 # endif
 
 	// Before time
