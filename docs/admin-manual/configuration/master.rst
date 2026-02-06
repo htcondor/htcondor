@@ -246,7 +246,10 @@ These macros control the :tool:`condor_master`.
     ensure that this cannot be used in such a way as to violate system
     integrity.
 
-:macro-def:`MASTER_BACKOFF_CONSTANT` and :macro-def:`MASTER_<name>_BACKOFF_CONSTANT`
+:macro-def:`MASTER_BACKOFF_CONSTANT`
+    .. faux-definition::
+
+:macro-def:`MASTER_<name>_BACKOFF_CONSTANT`
     When a daemon crashes, :tool:`condor_master` uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -260,7 +263,10 @@ These macros control the :tool:`condor_master`.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
-:macro-def:`MASTER_BACKOFF_FACTOR` and :macro-def:`MASTER_<name>_BACKOFF_FACTOR`
+:macro-def:`MASTER_BACKOFF_FACTOR`
+    .. faux-definition::
+
+:macro-def:`MASTER_<name>_BACKOFF_FACTOR`
     When a daemon crashes, :tool:`condor_master` uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -273,7 +279,10 @@ These macros control the :tool:`condor_master`.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
-:macro-def:`MASTER_BACKOFF_CEILING` and :macro-def:`MASTER_<name>_BACKOFF_CEILING`
+:macro-def:`MASTER_BACKOFF_CEILING`
+    .. faux-definition::
+
+:macro-def:`MASTER_<name>_BACKOFF_CEILING`
     When a daemon crashes, :tool:`condor_master` uses an exponential back off
     delay before restarting it; see the discussion at the end of this
     section for a detailed discussion on how these parameters work
@@ -288,7 +297,10 @@ These macros control the :tool:`condor_master`.
     defined for a specific daemon, the non-daemon-specific value will
     used.
 
-:macro-def:`MASTER_RECOVER_FACTOR` and :macro-def:`MASTER_<name>_RECOVER_FACTOR`
+:macro-def:`MASTER_RECOVER_FACTOR`
+    .. faux-definition::
+
+:macro-def:`MASTER_<name>_RECOVER_FACTOR`
     A macro to set how long a daemon needs to run without crashing
     before it is considered recovered. Once a daemon has recovered, the
     number of restarts is reset, so the exponential back off returns to

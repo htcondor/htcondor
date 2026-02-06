@@ -221,22 +221,40 @@ are probably the most common.
         last ran. It is ignored when :macro:`STARTD_CRON_AUTOPUBLISH` is set
         to ``If_Changed``.
 
-:macro-def:`STARTD_CRON_CONFIG_VAL`, :macro-def:`SCHEDD_CRON_CONFIG_VAL`, and :macro-def:`BENCHMARKS_CONFIG_VAL`
+:macro-def:`STARTD_CRON_CONFIG_VAL`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_CONFIG_VAL`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_CONFIG_VAL`
     This configuration variable can be used to specify the path and
     executable name of the :tool:`condor_config_val` program which the jobs
     (hooks) should use to get configuration information from the daemon.
     If defined, an environment variable by the same name with the same
     value will be passed to all jobs.
 
-:macro-def:`STARTD_CRON_JOBLIST`, :macro-def:`SCHEDD_CRON_JOBLIST`, and :macro-def:`BENCHMARKS_JOBLIST`
+:macro-def:`STARTD_CRON_JOBLIST`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_JOBLIST`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_JOBLIST`
     These configuration variables are defined by a comma and/or white
     space separated list of job names to run. Each is the logical name
     of a job. This name must be unique; no two jobs may have the same
     name. The *condor_startd* reads this configuration variable on startup
-    and on reconfig.  The *condor_schedd* reads this variable and other 
+    and on reconfig.  The *condor_schedd* reads this variable and other
     ``SCHEDD_CRON_*`` variables only on startup.
 
-:macro-def:`STARTD_CRON_MAX_JOB_LOAD`, :macro-def:`SCHEDD_CRON_MAX_JOB_LOAD`, and :macro-def:`BENCHMARKS_MAX_JOB_LOAD`
+:macro-def:`STARTD_CRON_MAX_JOB_LOAD`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_MAX_JOB_LOAD`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_MAX_JOB_LOAD`
     A floating point value representing a threshold for CPU load, such
     that if starting another job would cause the sum of assumed loads
     for all running jobs to exceed this value, no further jobs will be
@@ -247,12 +265,21 @@ are probably the most common.
     implies that only 1 ``BENCHMARKS`` job (at the default, assumed
     load) may be running.
 
-:macro-def:`STARTD_CRON_LOG_NON_ZERO_EXIT` and :macro-def:`SCHEDD_CRON_LOG_NON_ZERO_EXIT`
+:macro-def:`STARTD_CRON_LOG_NON_ZERO_EXIT`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_LOG_NON_ZERO_EXIT`
     If true, each time a cron job returns a non-zero exit code, the
     corresponding daemon will log the cron job's exit code and output.  There
     is no default value, so no logging will occur by default.
 
-:macro-def:`STARTD_CRON_<JobName>_ARGS`, :macro-def:`SCHEDD_CRON_<JobName>_ARGS`, and :macro-def:`BENCHMARKS_<JobName>_ARGS`
+:macro-def:`STARTD_CRON_<JobName>_ARGS`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_ARGS`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_ARGS`
     The command line arguments to pass to the job as it is invoked. The
     first argument will be ``<JobName>``.
 
@@ -269,14 +296,26 @@ are probably the most common.
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable :macro:`STARTD_CRON_JOBLIST`.
 
-:macro-def:`STARTD_CRON_<JobName>_CWD`, :macro-def:`SCHEDD_CRON_<JobName>_CWD`, and :macro-def:`BENCHMARKS_<JobName>_CWD`
+:macro-def:`STARTD_CRON_<JobName>_CWD`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_CWD`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_CWD`
     The working directory in which to start the job.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable :macro:`STARTD_CRON_JOBLIST`,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_ENV`, :macro-def:`SCHEDD_CRON_<JobName>_ENV`, and :macro-def:`BENCHMARKS_<JobName>_ENV`
+:macro-def:`STARTD_CRON_<JobName>_ENV`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_ENV`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_ENV`
     The environment string to pass to the job. The syntax is the same as
     that of :macro:`<DaemonName>_ENVIRONMENT` as defined at
     :ref:`master_config_options`.
@@ -285,7 +324,13 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST`,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_EXECUTABLE`, :macro-def:`SCHEDD_CRON_<JobName>_EXECUTABLE`, and :macro-def:`BENCHMARKS_<JobName>_EXECUTABLE`
+:macro-def:`STARTD_CRON_<JobName>_EXECUTABLE`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_EXECUTABLE`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_EXECUTABLE`
     The full path and executable to run for this job. Note that multiple
     jobs may specify the same executable, although the jobs need to have
     different logical names.
@@ -294,7 +339,13 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST`,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD`, :macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD`, and :macro-def:`BENCHMARKS_<JobName>_JOB_LOAD`
+:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_JOB_LOAD`
     A floating point value that represents the assumed and therefore
     expected CPU load that a job induces on the system. This job load is
     then used to limit the total number of jobs that run concurrently,
@@ -307,7 +358,13 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST`,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_KILL`, :macro-def:`SCHEDD_CRON_<JobName>_KILL`, and :macro-def:`BENCHMARKS_<JobName>_KILL`
+:macro-def:`STARTD_CRON_<JobName>_KILL`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_KILL`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_KILL`
     A boolean value applicable only for jobs with a ``MODE`` of anything
     other than ``WaitForExit``. The default value is ``False``.
 
@@ -390,7 +447,13 @@ are probably the most common.
         STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE = /usr/local/bin/cmr-squid-monitor
         STARTD_CRON_SQUIDs_MONITOR_METRICS = SUM:SQUIDs, PEAK:SQUIDsMemory
 
-:macro-def:`STARTD_CRON_<JobName>_MODE`, :macro-def:`SCHEDD_CRON_<JobName>_MODE`, and :macro-def:`BENCHMARKS_<JobName>_MODE`
+:macro-def:`STARTD_CRON_<JobName>_MODE`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_MODE`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_MODE`
     A string that specifies a mode within which the job operates. Legal
     values are
 
@@ -429,7 +492,13 @@ are probably the most common.
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 
-:macro-def:`STARTD_CRON_<JobName>_PERIOD`, :macro-def:`SCHEDD_CRON_<JobName>_PERIOD`, and :macro-def:`BENCHMARKS_<JobName>_PERIOD`
+:macro-def:`STARTD_CRON_<JobName>_PERIOD`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_PERIOD`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_PERIOD`
     The period specifies time intervals at which the job should be run.
     For periodic jobs, this is the time interval that passes between
     starting the execution of the job. The value may be specified in
@@ -446,7 +515,13 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST`,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_PREFIX`, :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`, and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
+:macro-def:`STARTD_CRON_<JobName>_PREFIX`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_PREFIX`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_PREFIX`
     Specifies a string which is prepended by HTCondor to all attribute
     names that the job generates. The use of prefixes avoids the
     conflicts that would be caused by attributes of the same name
@@ -460,7 +535,10 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST`,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_RECONFIG` and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG`
+:macro-def:`STARTD_CRON_<JobName>_RECONFIG`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_RECONFIG`
     A boolean value that when ``True``, causes the daemon to send an HUP
     signal to the job when the daemon is reconfigured. The job is
     expected to reread its configuration at that time.
@@ -469,7 +547,10 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST` or
     ``SCHEDD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_RECONFIG_RERUN` and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG_RERUN`
+:macro-def:`STARTD_CRON_<JobName>_RECONFIG_RERUN`
+    .. faux-definition::
+
+:macro-def:`SCHEDD_CRON_<JobName>_RECONFIG_RERUN`
     A boolean value that when ``True``, causes the daemon ClassAd hook
     mechanism to re-run the specified job when the daemon is
     reconfigured via :tool:`condor_reconfig`. The default value is ``False``.
@@ -478,7 +559,10 @@ are probably the most common.
     configuration variable :macro:`STARTD_CRON_JOBLIST` or
     ``SCHEDD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_SLOTS` and :macro-def:`BENCHMARKS_<JobName>_SLOTS`
+:macro-def:`STARTD_CRON_<JobName>_SLOTS`
+    .. faux-definition::
+
+:macro-def:`BENCHMARKS_<JobName>_SLOTS`
     Only the slots specified in this comma-separated list may
     incorporate the output of the job specified by ``<JobName>``. If the
     list is not specified, any slot may. Whether or not a specific slot

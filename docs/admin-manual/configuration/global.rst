@@ -1606,7 +1606,10 @@ Please read :ref:`admin-manual/installation-startup-shutdown-reconfiguration:Dae
 details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
-:macro-def:`ALLOW_*` :macro-def:`DENY_*`
+:macro-def:`ALLOW_*`
+    .. faux-definition::
+
+:macro-def:`DENY_*`
     All macros that begin with either :macro:`ALLOW_*` or
     :macro:`DENY_*` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
