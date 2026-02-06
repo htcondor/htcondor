@@ -145,7 +145,7 @@ These settings affect the *condor_starter*.
     .. code-block:: bat
 
         REM set some environment variables
-        set LICENSE_SERVER=192.168.1.202:5012
+        set LICENSE_SERVER=192.0.2.202:5012
         set MY_PARAMS=2
 
         REM Run the actual job now

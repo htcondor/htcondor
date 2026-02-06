@@ -185,7 +185,7 @@ The job will contain (something like) the following:
 
 .. code-block:: text
 
-    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
+    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <192.0.2.53:37317?addrs=192.0.2.53-37317+[2001-db8--1]-37317&noUDP&sock=19966_e869_5>
         WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.
     ...
 

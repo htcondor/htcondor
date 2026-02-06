@@ -27,9 +27,11 @@ Synopsis
 | **htcondor** **dag** *status* dagman-job-id
 | **htcondor** **dag** *halt* [**-r/-\-reason** *message*] dagman-job-id
 | **htcondor** **dag** *resume* dagman-job-id
+| **htcondor** **dag** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] dagman-job-id
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
+| **htcondor** **eventlog** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] eventlog
 
 | **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
 | **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
@@ -218,6 +220,15 @@ Eventlog Verbs
           so one can quickly get a count of all jobs running, idle and exitted
           per site by using this option.
 
+ **htcondor eventlog histogram** *logfile*
+     Display a histogram of job states over time for all jobs present in the
+     provided *logfile*.
+
+     **-i/-\-instant**
+         Show state transitions per time bucket.
+     **-c/-\-cumulative**
+         Show cumulative job states over time. This is the default.
+
 Annex Verbs
 -----------
 
@@ -361,6 +372,15 @@ DAG Verbs
 
   **htcondor dag resume** **dagman-job-id**
      Inform specific halted DAGMan process to continue making progress.
+
+  **htcondor dag histogram** **dagman-job-id**
+      Display a histogram of job states over time for all jobs managed by
+      an active DAG.
+
+      **-i/-\-instant**
+          Show state transitions per time bucket.
+      **-c/-\-cumulative**
+          Show cumulative job states over time. This is the default.
 
 .. sidebar:: HTCondor CLI System Nouns
 
