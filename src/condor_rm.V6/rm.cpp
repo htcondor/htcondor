@@ -152,6 +152,8 @@ usage(int iExitCode)
 		fprintf( stderr,
 				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
 		         "                      (only affects jobs already being removed)\n" );
+	}
+	if( mode == JA_REMOVE_JOBS || mode == JA_TRANSFER_AND_REMOVE_JOBS ) {
 		fprintf( stderr,
 				     "  -transfer           Transfer output files before removing\n" );
 	}
