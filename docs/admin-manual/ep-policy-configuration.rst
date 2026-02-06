@@ -438,7 +438,7 @@ than one job is or can be matched to a single slot. In this example,
 Slot1 is identified as a partitionable slot and has the following
 resources:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     cpu = 10
     memory = 10240
@@ -463,7 +463,7 @@ will never run a job in a slot that won't fit the job.
 After allocation, the partitionable Slot1 advertises that it has the
 following resources still available, which might look like:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     cpu = 7
     memory = 9216
@@ -483,7 +483,7 @@ same value as in slot type definition configuration variable
 configured for one slot, managing all the resources on the machine. To do so,
 set the following configuration variables:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     NUM_SLOTS = 1
     NUM_SLOTS_TYPE_1 = 1
@@ -491,18 +491,16 @@ set the following configuration variables:
     SLOT_TYPE_1_PARTITIONABLE = TRUE
 
 In a pool using dynamic provisioning, jobs must express resources they need in
-the submit description file:
+the submit description file with the following JDL commands:
 
-.. code-block:: text
-
-    request_cpus
-    request_memory
-    request_disk (in kilobytes)
+    - :subcom:`request_cpus`
+    - :subcom:`request_memory`
+    - :subcom:`request_disk` (in kilobytes)
 
 This example shows a portion of the job submit description file for use
 when submitting a job to a pool with dynamic provisioning.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     universe = vanilla
 
@@ -559,7 +557,7 @@ returned to the partitionable slot for use by the new job.
 To enable pslot preemption, the following configuration variable must be
 set for the *condor_negotiator*:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       ALLOW_PSLOT_PREEMPTION = True
 
@@ -670,7 +668,7 @@ takes care of killing all child processes.
 To enable the use of per job PID namespaces, set the configuration to
 include
 
-.. code-block:: text
+.. code-block:: condor-config
 
       USE_PID_NAMESPACES = True
 
@@ -2589,7 +2587,7 @@ The following example shows one possible usage of these settings:
 If the HTCondor daemons reading this configuration are running as root,
 an additional variable must be defined:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     # Specify the user that the boinc_client should run as:
     BOINC_Owner = nobody
@@ -2677,7 +2675,7 @@ when dealing with the Windows installation:
    The Windows client is called *boinc.exe*. Therefore, the
    configuration variable :macro:`BOINC_Executable` is written:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
        BOINC_Executable = C:\PROGRA~1\BOINC\boinc.exe
 
@@ -2691,7 +2689,7 @@ when dealing with the Windows installation:
    :macro:`BOINC_Arguments` configuration
    variable. For Windows, rewrite the argument line as:
 
-   .. code-block:: text
+   .. code-block:: condor-config
 
        BOINC_Arguments = --dir $(BOINC_HOME) \
                  --attach_project http://einstein.phys.uwm.edu [account_key]
@@ -2720,7 +2718,7 @@ when dealing with the Windows installation:
 
    Setting this option causes the addition of the job attribute
 
-   .. code-block:: text
+   .. code-block:: condor-classad
 
        RunAsUser = True
 
@@ -3270,7 +3268,7 @@ combining the lists in this order:
 
 For example, consider the following configuration:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     STARTD_ATTRS = favorite_color, favorite_season
     SLOT1_STARTD_ATTRS = favorite_movie
@@ -3284,7 +3282,7 @@ values for ``favorite_color``, ``favorite_season``, and
 Attributes themselves in the :macro:`STARTD_ATTRS` list can also be defined
 on a per-slot basis. Here is another example:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     favorite_color = "blue"
     favorite_season = "spring"
@@ -3296,21 +3294,21 @@ For this example, the *condor_startd* ClassAds are
 
 slot1:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     favorite_color = "blue"
     favorite_season = "spring"
 
 slot2:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     favorite_color = "green"
     favorite_season = "spring"
 
 slot3:
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     favorite_color = "blue"
     favorite_season = "summer"
@@ -4151,7 +4149,7 @@ machine ClassAd attributes advertise this availability. Both detection
 and advertisement are accomplished by having this configuration for each
 execute machine that has GPUs:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       use feature : GPUs
 
@@ -4165,7 +4163,7 @@ This configuration template refers to macro :macro:`GPU_DISCOVERY_EXTRA`,
 which can be used to define additional command line arguments for the
 :tool:`condor_gpu_discovery` tool. For example, setting
 
-.. code-block:: text
+.. code-block:: condor-config
 
       use feature : GPUs
       GPU_DISCOVERY_EXTRA = -extra
@@ -4279,14 +4277,14 @@ All specification of the resources available is done by configuration of
 the partitionable slot. The machine is identified as having a resource
 consumption policy enabled with
 
-.. code-block:: text
+.. code-block:: condor-config
 
       CONSUMPTION_POLICY = True
 
 A defined slot type that is partitionable may override the machine value
 with
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_<N>_CONSUMPTION_POLICY = True
 
@@ -4295,7 +4293,7 @@ amount of memory, and amount of disk space. Availability of these three
 resources on a machine and within the partitionable slot is always
 defined and have these default values:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
       CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
@@ -4307,7 +4305,7 @@ that the resource this policy cares about allocating are the cores.
 Configuration for the machine includes the definition of the slot type
 and that it is partitionable.
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_1 = cpus=8
       SLOT_TYPE_1_PARTITIONABLE = True
@@ -4321,7 +4319,7 @@ that the only attributes valid within the
 :macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
 must the set to the same value on all machines in the pool.
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_1_CONSUMPTION_POLICY = True
       SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
@@ -4332,7 +4330,7 @@ may be used in a consumption policy, by specifying the resource. Using a
 machine with 4 GPUs as an example custom resource, define the resource
 and include it in the definition of the partitionable slot:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       MACHINE_RESOURCE_NAMES = gpus
       MACHINE_RESOURCE_gpus = 4
@@ -4342,7 +4340,7 @@ and include it in the definition of the partitionable slot:
 
 Add the consumption policy to incorporate availability of the GPUs:
 
-.. code-block:: text
+.. code-block:: condor-config
 
       SLOT_TYPE_2_CONSUMPTION_POLICY = True
       SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu

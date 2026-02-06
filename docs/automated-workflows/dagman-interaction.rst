@@ -143,9 +143,6 @@ Status Information for the DAG in a ClassAd
     .. code-block:: console
 
         $ htcondor dag status <dagman-job-id>
-
-    .. code-block:: text
-
         DAG 1024 [diamond.dag] has been running for 00:00:49
         DAG has submitted 3 job(s), of which:
                 1 is submitted and waiting for resources.

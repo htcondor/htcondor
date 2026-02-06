@@ -1595,7 +1595,7 @@ POLICY COMMANDS
     As an example, if the job is to be removed once the output is
     retrieved with *condor_transfer_data*, then use
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
                          (StageOutFinish == 0))
@@ -1628,7 +1628,7 @@ POLICY COMMANDS
     on hold and an e-mail notification sent, instead of being allowed to
     leave the queue.
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 
@@ -1674,7 +1674,7 @@ POLICY COMMANDS
     command. Assume that the signal identifier for the segmentation
     fault is 11 on the platform where the job will be running.
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 
@@ -1689,7 +1689,7 @@ POLICY COMMANDS
     exited on its own with status 0, this
     **on_exit_remove** expression works well:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 
@@ -2211,7 +2211,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
     may be either the platform-specific name or value of the signal.
     This example shows it both ways for a Linux signal:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         remove_kill_sig = SIGUSR1
         remove_kill_sig = 10
@@ -2232,7 +2232,7 @@ COMMANDS FOR THE VM UNIVERSE
 
     An example that specifies two disk files:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
@@ -2641,7 +2641,7 @@ ADVANCED COMMANDS
     defined is given by the integer value. The job ClassAds introduced
     are given as
 
-    .. code-block:: text
+    .. code-block:: condor-classad
 
         LastMatchName0 = "most-recent-Name"
         LastMatchName1 = "next-most-recent-Name"
@@ -2896,7 +2896,7 @@ and comments.
     Recursive definition of macros is permitted. An example of a
     construction that works is the following:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         foo = bar
         foo =  snap $(foo)
@@ -2905,7 +2905,7 @@ and comments.
 
     Note that both left- and right- recursion works, so
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         foo = bar
         foo =  $(foo) snap
@@ -2914,14 +2914,14 @@ and comments.
 
     The construction
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         foo = $(foo) bar
 
     by itself will not work, as it does not have an initial base case.
     Mutually recursive constructions such as:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         B = bar
         C = $(B)
@@ -2932,14 +2932,14 @@ and comments.
     A default value may be specified, for use if the macro has no
     definition. Consider the example
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         D = $(E:24)
 
     Where ``E`` is not defined within the submit description file, the
     default value 24 is used, resulting in
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         D = 24
 
@@ -2949,11 +2949,11 @@ and comments.
 
     .. code-block:: console
 
-        condor_submit E=99 <submit-file>
+        $ condor_submit E=99 <submit-file>
 
     The value of 99 is used for E, resulting in
 
-    .. code-block:: text
+    .. code-block:: condor-classad
 
         D = 99
 
@@ -2985,7 +2985,7 @@ and comments.
     A common use of this form of the substitution macro is for the
     heterogeneous submission of an executable:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = povray.$$(OpSys).$$(Arch)
 
@@ -3006,7 +3006,7 @@ and comments.
     locations on different machines, the file's path name is given as an
     argument to the program.
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = $$(input_file_path:/usr/foo)
 
@@ -3021,7 +3021,7 @@ and comments.
     For example, to set PYTHONPATH to a subdirectory of the job scratch dir,
     one could set
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
@@ -3044,7 +3044,7 @@ and comments.
     this as a command line argument to the application. In the submit
     description file will be
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = --memory $$([TARGET.Memory * 0.9])
 
@@ -3072,7 +3072,7 @@ and comments.
     functionality evaluates the submitter's home directory in order to
     set the path and file name of a log file:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         log = $ENV(HOME)/jobs/logfile
 
@@ -3220,7 +3220,7 @@ Examples
    and when it terminates, among other things, the various processes in
    this cluster will be written into file ``foo.log``.
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
              ####################
              #
@@ -3247,7 +3247,7 @@ Examples
    machines running more than one version of Linux, and this job needs
    the particular operating system to run correctly.
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
              ####################
              #
@@ -3285,7 +3285,7 @@ Examples
 
    Including the command
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
           periodic_remove = CumulativeSuspensionTime >
                             ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
