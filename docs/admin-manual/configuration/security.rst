@@ -9,7 +9,7 @@ These macros affect the secure operation of HTCondor. Many of these
 macros are described in the :doc:`/admin-manual/security` section.
 
 :macro-def:`SEC_DEFAULT_AUTHENTICATION`
-    .. faux-defintion::
+    .. faux-definition::
 
 :macro-def:`SEC_*_AUTHENTICATION`
     Whether authentication is required for a specified permission level.
@@ -21,7 +21,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     others are specified.
 
 :macro-def:`SEC_DEFAULT_ENCRYPTION`
-    .. faux-defintion::
+    .. faux-definition::
 
 :macro-def:`SEC_*_ENCRYPTION`
     Whether encryption is required for a specified permission level.
@@ -35,7 +35,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     others are specified.
 
 :macro-def:`SEC_DEFAULT_INTEGRITY`
-    .. faux-defintion::
+    .. faux-definition::
 
 :macro-def:`SEC_*_INTEGRITY`
     Whether integrity-checking is required for a specified permission level.
@@ -52,7 +52,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     they are also encrypted.
 
 :macro-def:`SEC_DEFAULT_NEGOTIATION`
-    .. faux-defintion::
+    .. faux-definition::
 
 :macro-def:`SEC_*_NEGOTIATION`
     Whether the client and server should negotiate security parameters (such
@@ -63,7 +63,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     suggested to leave this as the default (``REQUIRED``) at all times.
 
 :macro-def:`SEC_DEFAULT_AUTHENTICATION_METHODS`
-    .. faux-defintion::
+    .. faux-definition::
 
 :macro-def:`SEC_*_AUTHENTICATION_METHODS`
     An ordered list of allowed authentication methods for a given authorization
@@ -84,7 +84,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     default setting if no others are specified.
 
 :macro-def:`SEC_DEFAULT_CRYPTO_METHODS`
-    .. faux-defintion::
+    .. faux-definition::
 
 :macro-def:`SEC_*_CRYPTO_METHODS`
     An ordered list of allowed cryptographic algorithms to use for

@@ -15,5 +15,5 @@ class FakeDefinition(Directive):
 
 def setup(app):
     """Setup sphinx to know of this directive"""
-    app.add_directive('faux-defintion', FakeDefinition)
-    app.add_directive('fake-defintion', FakeDefinition)
+    app.add_directive('faux-definition', FakeDefinition)
+    app.add_directive('fake-definition', FakeDefinition)
