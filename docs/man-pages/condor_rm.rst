@@ -10,7 +10,7 @@ Synopsis
 
 **condor_rm** [**-help** | **-version**]
 
-**condor_rm** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
+**condor_rm** [**-transfer**] [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
 
 **condor_rm** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-transfer**] [**-constraint** *expression*]
 [**-forcex**][**-pool** *hostname[:portnumber]* | **-name** *scheddname* | **-addr** *"<a.b.c.d:port>"*]
