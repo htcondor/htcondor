@@ -4,6 +4,12 @@
   in the summary table.
   :jira:`3535`
 
+- When placing a job with credentials, the client will now find the
+  address of the *condor_credd* via the *condor_schedd* when possible.
+  The client already did this for Kerberos credentials; it now does so
+  for all job credential types.
+  :jira:`3536`
+
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 

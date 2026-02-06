@@ -1681,14 +1681,13 @@ char * get_winreg_string_value(const char * key, const char * valuename)
 }
 #endif
 
-char * find_python3_dot(int minor_ver) {
+char * find_python3_dot([[maybe_unused]] int minor_ver) {
 #ifdef WIN32
 	std::string regKey;
 	formatstr(regKey, "Software\\Python\\PythonCore\\3.%d\\InstallPath", minor_ver);
 	return get_winreg_string_value(regKey.c_str(), "ExecutablePath");
 #else
 	// TODO: add non-windows implementation
-	(void)minor_ver; // Shut the compiler up
 	return nullptr;
 #endif
 }

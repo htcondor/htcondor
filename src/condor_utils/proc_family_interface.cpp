@@ -31,7 +31,7 @@
 #include "proc_family_direct_cgroup_v2.h"
 #endif
 
-ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* subsys)
+ProcFamilyInterface* ProcFamilyInterface::create([[maybe_unused]] FamilyInfo *fi, const char* subsys)
 {
 	// If we want cgroups, use the direct, in-process version if possible
 #ifdef LINUX
@@ -42,8 +42,6 @@ ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* sub
 	if (fi && fi->cgroup && ProcFamilyDirectCgroupV1::can_create_cgroup_v1(scgroup)) {
 		return new ProcFamilyDirectCgroupV1;
 	}
-#else
-	(void)fi; // shut the compiler up
 #endif
 
 	ProcFamilyInterface* ptr;

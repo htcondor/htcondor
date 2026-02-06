@@ -698,7 +698,7 @@ as given in these definitions.
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
         $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
@@ -709,7 +709,7 @@ as given in these definitions.
     to the value 1. For example, to randomly chose an even integer in
     the range 0-8 (inclusive):
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
         $RANDOM_INTEGER(0, 8, 2)
 
@@ -1529,7 +1529,7 @@ after an available machine is chosen.
 A special-purpose Machine Ad substitution macro can be used in string
 attributes in the submit description file. The macro has the form
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
       $$(MachineAdAttribute)
 
@@ -1553,7 +1553,7 @@ executables named
 
 will work correctly for the macro
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
       povray.$$(OpSys).$$(Arch)
 

@@ -102,9 +102,9 @@ has.
     ``localhost`` to be the appropriate host name or IP address within
     this default string:
 
-    .. code-block:: text
+    .. code-block:: console
 
-          gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
+         $ gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 
 :macro-def:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS`
     A boolean value that when ``True`` causes data to be sent to Ganglia
