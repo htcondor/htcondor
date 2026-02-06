@@ -13,6 +13,9 @@
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
+- The old ClassAd syntax is no longer supported in job transforms.
+  :jira:`3538`
+
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
