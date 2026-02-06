@@ -1,5 +1,9 @@
 *** 25.8.0 features
 
+- :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
+  in the summary table.
+  :jira:`3535`
+
 - When placing a job with credentials, the client will now find the
   address of the *condor_credd* via the *condor_schedd* when possible.
   The client already did this for Kerberos credentials; it now does so
