@@ -56,6 +56,7 @@ extensions = [
     'ad-attr',
     'hidden',
     'flatten-history',
+    'fake-definition',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
