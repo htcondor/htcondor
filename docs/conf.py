@@ -47,6 +47,7 @@ extensions = [
     'hidden',
     'dag-cmd',
     'man-page-dummies',
+    'fake-definition',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
