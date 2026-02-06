@@ -292,7 +292,7 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 
 
 bool
-RemoteResource::killStarter( bool graceful )
+RemoteResource::killStarter( bool graceful, bool final_transfer )
 {
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
@@ -309,6 +309,28 @@ RemoteResource::killStarter( bool graceful )
 	if( !graceful ) {
 			// stop any lingering file transfers, if any
 		abortFileTransfer();
+	}
+
+	// If final_transfer is requested (condor_rm -transfer), use vacateClaim
+	// with final_transfer=true to send VACATE_CLAIM_AND_FINAL_XFER command
+	CondorVersionInfo vi(dc_startd->version());
+	if (final_transfer && vi.built_since_version(25,7,0)) {
+		dprintf(D_STATUS, "Sending VACATE_CLAIM_AND_FINAL_XFER to startd for final file transfer\n");
+		bool fast = !graceful;
+		if( dc_startd->vacateClaim(machineName, fast, true) ) {
+			if( state != RR_FINISHED ) {
+				setResourceState( RR_PENDING_DEATH );
+			}
+			if( graceful ) {
+				already_killed_graceful = true;
+			} else {
+				already_killed_fast = true;
+			}
+			return true;
+		}
+		dprintf( D_ALWAYS, "RemoteResource::killStarter(): VACATE_CLAIM_AND_FINAL_XFER failed: %s\n",
+			dc_startd->error() ? dc_startd->error() : "unknown error" );
+		return false;
 	}
 
 	// If we got the job_exit syscall, then we should expect

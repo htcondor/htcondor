@@ -25,6 +25,7 @@
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
+#include "condor_holdcodes.h"
 
 #include <map>
 
@@ -675,10 +676,28 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
-			rip->dprintf( D_ALWAYS, 
+			rip->dprintf( D_ALWAYS,
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
+		default:
+			rip->log_ignore( cmd, s );
+			return FALSE;
+			break;
+		}
+		break;
+	case VACATE_CLAIM_AND_FINAL_XFER:
+		switch( s ) {
+		case claimed_state:
+		case matched_state:
+#if HAVE_BACKFILL
+		case backfill_state:
+#endif /* HAVE_BACKFILL */
+			rip->dprintf( D_ALWAYS,
+						  "State change: received VACATE_CLAIM_AND_FINAL_XFER command\n" );
+			return rip->retire_claim(false, "Claim vacated with final transfer", CONDOR_HOLD_CODE::StartdVacateCommand, HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE);
+			break;
+
 		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;

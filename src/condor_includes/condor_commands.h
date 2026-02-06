@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 206> makeCommandTable() {
+std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -247,6 +247,8 @@ std::array<std::pair<int, const char *>, 206> makeCommandTable() {
 		{VACATE_ALL_FAST, "VACATE_ALL_FAST"},
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given slot
 		{VACATE_CLAIM_FAST, "VACATE_CLAIM_FAST"},
+#define VACATE_CLAIM_AND_FINAL_XFER	(SCHED_VERS+161)  	// vacate and do final transfer
+		{VACATE_CLAIM_AND_FINAL_XFER, "VACATE_CLAIM_AND_FINAL_XFER"},
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 		{REJECTED_WITH_REASON, "REJECTED_WITH_REASON"},
 #define START_AGENT			(SCHED_VERS+77) // have the master start an agenta (Not used)
@@ -655,6 +657,8 @@ std::array<std::pair<int, const char *>, 206> makeCommandTable() {
 //#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)	/* Not used */
 #define UPDATE_JOBAD		   (DCSHADOW_BASE+5)
 		{UPDATE_JOBAD, "UPDATE_JOBAD"},
+#define TRANSFER_SANDBOX_AND_RM_JOB		   (DCSHADOW_BASE+6)
+		{TRANSFER_SANDBOX_AND_RM_JOB, "TRANSFER_SANDBOX_AND_RM_JOB"},
 
 
 /*

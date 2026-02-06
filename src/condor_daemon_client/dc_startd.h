@@ -181,7 +181,7 @@ public:
 	 */
 	bool _continueClaim();
 	
-	bool vacateClaim( const char* name, bool fast=false );
+	bool vacateClaim( const char* name, bool fast=false, bool final_transfer=false );
 
 	bool vacateAllClaims(bool fast = false);
 

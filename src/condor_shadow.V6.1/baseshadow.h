@@ -78,7 +78,7 @@ class BaseShadow : public Service
 			     data members.
 			 <li>calls config()
 			 <li>calls initUserLog()
-			 <li>registers handleJobRemoval on SIGUSR1
+			 <li>registers handleJobRemoval on signals
 			</ul>
 			It should be called right after the constructor.
 			@param job_ad The ClassAd for this job.

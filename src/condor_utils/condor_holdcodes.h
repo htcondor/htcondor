@@ -240,6 +240,10 @@ BETTER_ENUM(OUT_OF_RESOURCES_SUB_CODE, int,
 	Disk = 104
 )
 
+// Hold reason subcode for final transfer on remove
+// Used when condor_rm -transfer triggers a vacate with file transfer
+#define HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE 1
+
 /* Helper functions to decipher hold codes and subcodes.
 
    These functions help determine if a job should be held or vacated based on its hold codes and subcodes.
