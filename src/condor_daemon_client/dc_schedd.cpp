@@ -1762,11 +1762,12 @@ bool DCSchedd::getJobConnectInfo(
 int DCSchedd::offerResources(
 	const std::vector<std::pair<std::string, const ClassAd*>> & resources,
 	const std::string & submitter_name,
-	int timeout)
+	int timeout,
+	int clusterID, int procID)
 {
 	if (resources.empty()) {
 		dprintf(D_ERROR, "offerResources : no resources offered.\n");
-		return -1; 
+		return -1;
 	}
 
 	if (submitter_name.empty()) {
@@ -1792,6 +1793,12 @@ int DCSchedd::offerResources(
 	cmd_ad.InsertAttr(ATTR_NUM_ADS, (int)resources.size());
 	if ( ! submitter_name.empty()) {
 		cmd_ad.InsertAttr(ATTR_SUBMITTER, submitter_name);
+	}
+	if( clusterID != -1 ) {
+		cmd_ad.InsertAttr(ATTR_CLUSTER_ID, clusterID);
+	}
+	if( procID != -1 ) {
+		cmd_ad.InsertAttr(ATTR_PROC_ID, procID);
 	}
 	if ( ! putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH ad to %s\n", this->name());

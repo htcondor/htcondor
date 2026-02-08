@@ -41,6 +41,9 @@
 
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
+#include <utility>
+#include <string>
+#include <optional>
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
