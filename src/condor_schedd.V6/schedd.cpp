@@ -10656,11 +10656,11 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				mark_serial_job_running(job_id);
 				shadow_rec * transfer_shadow_rec = add_shadow_rec(
 					0,
-					// FIXME: Either the transfer shadow should use a
-					// different procID (for tracking purposes), or this
-					// shadow rec should be tracked differently than all
-					// others.  Given that this _is_ a live shadow, the
-					// former sounds a lot better.
+					// FIXME: Start the transfer shadow with its own
+					// proc ID so that it doesn't collide with the job.
+					// (also mark this new job ID runnibg?)
+					// (probably not, but look at the code -- a fake
+					//  proc ID looks like it will just ruin the world)
 					job_id,
 					universe, mrec, -1 , nullptr
 				);
@@ -10703,6 +10703,10 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				);
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				// I don't know if we want to mark the job running yet, but
+				// we sure don't want it to start running anywhere else...
+				// mark_serial_job_running(job_id);
 
 				// FIXME: queue for delayed spawning, instead.
 				addRunnableJob( job_shadow_rec );

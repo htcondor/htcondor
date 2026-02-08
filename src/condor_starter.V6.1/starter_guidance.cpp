@@ -796,6 +796,29 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( "StagingDir", stagingDir.string() );
 			continue_conversation(context);
 			return true;
+		} else if( command == COMMAND_SPLIT_SLOT ) {
+			const ClassAd * secretsAd = s->jic->getMachineSecretsAd();
+			// If we're not talking to a shadow, then who's guidiing us?
+			ASSERT(secretsAd != NULL);
+
+
+			std::string splitClaimID;
+			if(! secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID )) {
+				// ... FIXME ...
+			}
+
+			// FIXME: How much space should be reserved?
+			long long sizeOnDiskInMB = 1000;
+
+
+			ClassAd context;
+			context.InsertAttr( ATTR_COMMAND, COMMAND_SPLIT_SLOT );
+			context.InsertAttr( ATTR_RESULT, true );
+			context.InsertAttr( ATTR_SPLIT_CLAIM_ID, splitClaimID );
+			context.InsertAttr( ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB );
+			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd() );
+			continue_conversation(context);
+			return true;
 		} else if( command == COMMAND_MAP_COMMON_FILES ) {
 			std::string cifName;
 			if(! guidance.LookupString( ATTR_NAME, cifName )) {

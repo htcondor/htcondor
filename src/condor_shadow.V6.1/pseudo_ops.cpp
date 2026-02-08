@@ -1036,6 +1036,24 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 
 bool
+LookupAdInContext( const ClassAd & ad, const std::string attr, ClassAd * & value ) {
+	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
+	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
+	if(! context) {
+		return false;
+	}
+
+	auto * cad = context->Lookup( attr );
+	ClassAd * classAd = dynamic_cast<ClassAd *>(cad);
+	if( classAd ) {
+		value = classAd;
+		return true;
+	}
+	return false;
+}
+
+
+bool
 LookupIntInContext( const ClassAd & ad, const std::string & attr, int & value ) {
 	auto * ctx = ad.Lookup( ATTR_CONTEXT_AD );
 	const ClassAd * context = dynamic_cast<ClassAd *>(ctx);
@@ -1410,6 +1428,118 @@ UniShadow::set_provider_keep_alive( const std::string & cifName ) {
 
 // The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
+UniShadow::start_provider_only_conversation(
+	ClassAd request,
+	ListOfCatalogs common_file_catalogs,
+	bool /* print_waiting */ /* = true */
+) {
+	bool success;
+
+	// Transfer each catalog.  For now, we'll not worry about jobs which
+	// require different subsets of the same set of catalogs; when we do,
+	// the schedd should control which shadows map which files, and this
+	// function's inputs will change accordingly.
+	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
+		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+
+		ClassAd guidance = before_common_file_transfer( cifName, commonInputFiles );
+		request = co_yield guidance;
+		std::string stagingDir;
+		success = after_common_file_transfer( request, cifName, stagingDir );
+		if(! success) {
+			guidance.Clear();
+			guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+			co_return guidance;
+		}
+	}
+
+
+	// Now that we've transferred all the catalogs we're responsible for,
+	// split the splot and use the resulting claim ID to tell the shadow
+	// (a) that we're done transferring and (b) which resources to use to
+	// actually run the job.
+	ClassAd guidance;
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_SPLIT_SLOT );
+	request = co_yield guidance;
+	success = false;
+	LookupBoolInContext( request, ATTR_RESULT, success );
+	if(! success) {
+		// Consider replacing this with a call to evictJob().
+		this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+		this->jobAd->Assign(ATTR_VACATE_REASON, "Starter could not release execution resources after staging common files." );
+		// FIXME: All three of these constants should be changed when we deal
+		// with transfer shadows exiting in the schedd.
+		this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
+		this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
+		remRes->setExitReason(JOB_SHOULD_REQUEUE);
+
+		remRes->killStarter(false);
+
+		guidance.Clear();
+		guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
+		co_return guidance;
+	}
+
+
+	std::string claimID;
+	if(! LookupStringInContext( request, ATTR_SPLIT_CLAIM_ID, claimID )) {
+		// ... FIXME ...
+		EXCEPT("Starter's reply invalid: did not contain split claim ID.\n");
+	}
+
+	ClassAd * slotAd = NULL;
+	if(! LookupAdInContext( request, ATTR_SLOT_AD, slotAd )) {
+		// ... FIXME ...
+		EXCEPT("Starter's reply invalid: did not contain slot ad.\n");
+	}
+
+	// The precise interaction between this value, ATTR_AUTHENTICATED_IDENTITY
+	// in the command ad, the socket's getFullyQualifiedUser(), and
+	// has_daemon_auth when called from a shadow is unclear.  For now, we'll
+	// just leave this unset, since that's actually the only test codepath
+	// anyway, AFAICT.
+	std::string user;
+
+	int sizeOnDiskInMB = -1;
+	if(! LookupIntInContext( request, ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB )) {
+		// ... FIXME ...
+		EXCEPT("Starter's reply invalid: did not contain common input files size-on-disk.\n");
+	}
+
+
+	int clusterID;
+	jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID );
+
+	int procID;
+	jobAd->LookupInteger( ATTR_PROC_ID, procID );
+
+
+	// We shouldn't need the address, since we're a shadow.
+	DCSchedd schedd( getScheddAddr() /*, pool */ );
+	if(! schedd.locate()) {
+		// ... FIXME ...
+		EXCEPT("Failed to locate schedd.\n");
+	}
+
+
+	int timeout = 20;
+	std::vector< std::pair< std::string, const ClassAd * > > resources;
+	resources.emplace_back( claimID, slotAd );
+	int rval = schedd.offerResources(
+		resources, user, timeout,
+		clusterID, procID
+	);
+	if(! rval) {
+		// ... FIXME ...
+		EXCEPT("Failed offerResources().\n");
+	}
+
+	// ... FIXME ...
+}
+
+
+// The parameters are copies to simplify thinking about this coroutine.
+condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_common_input_conversation(
 	ClassAd request,
 	ListOfCatalogs common_file_catalogs,
@@ -1625,7 +1755,7 @@ UniShadow::start_common_input_conversation(
 					}
 					Shadow->getJobAd()->InsertAttr( "CommonFilesMappedTime", time(NULL) );
 
-				    readyCatalogs.insert( cifName );
+					readyCatalogs.insert( cifName );
 					break;
 
 				case SingleProviderSyndicate::INVALID:
