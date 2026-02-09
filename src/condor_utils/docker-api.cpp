@@ -517,9 +517,16 @@ int DockerAPI::startContainer(
 	Env cliEnvironment;
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int childPID = daemonCore->Create_Process( startArgs.GetArg(0), startArgs,
-		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT);
+	OptionalCreateProcessArgs cpArgs;
+	int childPID = daemonCore->CreateProcessNew( startArgs.GetArg(0), startArgs,
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment)
+			.cwd("/")
+			.familyInfo(&fi)
+			.std(childFDs)
+			.jobOptMask(DCJOBOPT_NO_ENV_INHERIT));
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
@@ -576,9 +583,16 @@ DockerAPI::pullImage(const std::string &image_name,
 	}
 
 
-	int childPID = daemonCore->Create_Process( pullArgs.GetArg(0), pullArgs,
-		PRIV_CONDOR_FINAL, reaperId, FALSE, FALSE, &cliEnvironment, "/",
-		nullptr, nullptr, childFDs, nullptr, 0, nullptr, DCJOBOPT_NO_ENV_INHERIT);
+	OptionalCreateProcessArgs cpArgs;
+	int childPID = daemonCore->CreateProcessNew( pullArgs.GetArg(0), pullArgs,
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.reaperID(reaperId)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment)
+			.cwd("/")
+			.std(childFDs)
+			.jobOptMask(DCJOBOPT_NO_ENV_INHERIT));
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed for docker pull.\n" );
@@ -622,9 +636,16 @@ DockerAPI::execInContainer( const std::string &containerName,
 	Env cliEnvironment;
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int childPID = daemonCore->Create_Process( execArgs.GetArg(0), execArgs,
-		PRIV_CONDOR_FINAL, reaperid, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs );
+	OptionalCreateProcessArgs cpArgs;
+	int childPID = daemonCore->CreateProcessNew( execArgs.GetArg(0), execArgs,
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.reaperID(reaperid)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment)
+			.cwd("/")
+			.familyInfo(&fi)
+			.std(childFDs));
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed to condor exec.\n" );

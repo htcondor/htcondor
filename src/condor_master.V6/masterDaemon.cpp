@@ -979,25 +979,18 @@ int daemon::RealStart( )
 		}
 	}
 
-	pid = daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	pid = daemonCore->CreateProcessNew(
 				process_name,	// program to exec
 				args,			// args
-				priv_mode,		// privledge level
-				1,				// which reaper ID to use; use default reaper
-				command_port,	// port to use for command port; TRUE=choose one dynamically
-				udp_command_port,	// port to use for command port; TRUE=choose one dynamically
-				&env,			// environment
-				NULL,			// current working directory
-				&fi,
-				NULL,
-				NULL,
-				NULL,
-				0,
-				NULL,
-				jobopts,
-				NULL,
-				NULL,
-				daemon_sock);
+				cpArgs.priv(priv_mode)				// privilege level
+					.reaperID(1)
+					.wantCommandPort(command_port)		// port to use for command port; TRUE=choose one dynamically
+					.wantUDPCommandPort(udp_command_port)	// port to use for command port; TRUE=choose one dynamically
+					.env(&env)						// environment
+					.familyInfo(&fi)
+					.jobOptMask(jobopts)
+					.daemonSock(daemon_sock));
 
 	if ( priv_mode == PRIV_USER_FINAL ) {
 		uninit_user_ids();

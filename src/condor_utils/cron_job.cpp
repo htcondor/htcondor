@@ -545,19 +545,17 @@ CronJob::StartJobProcess( void )
 # endif
 
 	// Create the process, finally..
-	m_pid = daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	m_pid = daemonCore->CreateProcessNew(
 		GetExecutable(),	// Path to executable
 		final_args,			// argv
-		priv,				// Priviledge level
-		m_reaperId,			// ID Of reaper
-		FALSE,				// Command port?  No
-		FALSE,				// Command port?  No
-		&Params().GetEnv(), // Env to give to child
-		Params().GetCwd(),	// Starting CWD
-		NULL,				// Process family info
-		NULL,				// Socket list
-		m_childFds,			// Stdin/stdout/stderr
-		0 );				// Nice increment
+		cpArgs.priv(priv)				// Privilege level
+			.reaperID(m_reaperId)		// ID Of reaper
+			.wantCommandPort(FALSE)		// Command port?  No
+			.wantUDPCommandPort(FALSE)	// Command port?  No
+			.env(&Params().GetEnv())	// Env to give to child
+			.cwd(Params().GetCwd())		// Starting CWD
+			.std(m_childFds));			// Stdin/stdout/stderr
 
 	// Close the child FDs
 	CleanFd( &m_childFds[0] );
