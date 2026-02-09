@@ -18,6 +18,11 @@
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
+- Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
+  a running job, the job will transfer any output files it has produced
+  back to the submit machine before exiting.
+  :jira:`3519`
+
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit

@@ -236,6 +236,9 @@ class UniShadow : public BaseShadow
 
 	void requestJobRemoval();
 
+	// Flag to track if we should do a final file transfer before removing
+	// Set when we receive TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer)
+	bool transfer_and_remove_requested = false;
 
 	//
 	// Internal implementation details specific to pseudo_request_guidance().

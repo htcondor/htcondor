@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_version.h"
+#include "condor_holdcodes.h"
 
 #include "starter.h"
 #include "jic_shadow.h"
@@ -606,9 +607,12 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		// transfer output files back if requested job really
 		// finished.  may as well do this in the foreground,
 		// since we do not want to be interrupted by anything
-		// short of a hardkill. 
+		// short of a hardkill.
 		// Don't transfer if we haven't started the job.
-	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate) ) {
+		// Also transfer if condor_rm -transfer was used, even if
+		// when_to_transfer_output is ON_EXIT (not just ON_EXIT_OR_EVICT).
+	bool final_transfer_on_rm = (starter->GetVacateSubcode() == HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE);
+	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate || final_transfer_on_rm) ) {
 
 		if ( shadowDisconnected() ) {
 				// trigger retransfer on reconnect
@@ -643,7 +647,9 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 
 			// true if job exited on its own or if we are set to not spool
 			// on eviction.
-		bool final_transfer = !spool_on_evict || (requested_exit == false);
+			// Also true if we got a vacate with the final transfer subcode
+		bool final_transfer = !spool_on_evict || (requested_exit == false) ||
+			(starter->GetVacateSubcode() == HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE);
 
 			// For the final transfer, we obey the output file remaps.
 		if (final_transfer) {

@@ -393,7 +393,10 @@ int handleSignals(int sig)
 		
 		switch (sig)
 		{
-			case SIGUSR1: // remove the job
+			case SIGUSR1: // hold the job
+				iRet =  Shadow->handleJobRemoval(sig); // actually hold
+				break;
+			case SIGUSR2: // remove the job
 				iRet =  Shadow->handleJobRemoval(sig);
 				break;
 			case DC_SIGSUSPEND: // send down a signal to suspend the job
@@ -406,6 +409,9 @@ int handleSignals(int sig)
 				break;
 			case UPDATE_JOBAD:
 				iRet =  Shadow->handleUpdateJobAd(sig);
+				break;
+			case TRANSFER_SANDBOX_AND_RM_JOB: // transfer and remove - for now, same as remove
+				iRet =  Shadow->handleJobRemoval(sig);
 				break;
 			default: 
 				break;
@@ -436,8 +442,14 @@ main_init(int argc, char *argv[])
 							"dummy_reaper");
 
 
-		// register SIGUSR1 (condor_rm) for shutdown...
-	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
+		// register SIGUSR1 (condor_hold) for shutdown...
+	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
+		&handleSignals,"handleSignals");
+		// register SIGUSR2 (condor_rm) for shutdown...
+	daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+		&handleSignals,"handleSignals");
+		// register TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer) for transfer and remove...
+	daemonCore->Register_Signal( TRANSFER_SANDBOX_AND_RM_JOB, "TRANSFER_SANDBOX_AND_RM_JOB",
 		&handleSignals,"handleSignals");
 		// register UPDATE_JOBAD for qedit changes
 	daemonCore->Register_Signal( UPDATE_JOBAD, "UPDATE_JOBAD", 
