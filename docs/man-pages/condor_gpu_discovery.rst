@@ -216,6 +216,7 @@ Tables
 
     * - CUDA
       - OpenCL
+      - Rocm
     * - DeviceName
       - DeviceName
     * - ECCEnabled
@@ -224,6 +225,7 @@ Tables
       - GlobalMemoryMb
     * - DriverVersion
       - OpenCLVersion
+      - AmdDriverVersion
     * - RuntimeVersion
       -
     * - Capability
@@ -355,7 +357,7 @@ memory equally between each repeated device
 
     $ condor_gpu_discovery -divide 5
 
-Use long UUID for all detected GPU devices
+Use long UUID for all detected GPU devices.
 
 .. code:: console
 
