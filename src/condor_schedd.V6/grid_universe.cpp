@@ -583,15 +583,15 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 	}
 
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( "gridmanager" );
-	pid = daemonCore->Create_Process( 
+	OptionalCreateProcessArgs cpArgs;
+	pid = daemonCore->CreateProcessNew(
 		gman_binary,			// Program to exec
 		args,					// Command-line args
-		PRIV_ROOT,				// Run as root, so it can switch to
-		                        //   PRIV_CONDOR
-		rid,					// Reaper ID
-		TRUE, TRUE, nullptr, nullptr, nullptr, nullptr,
-		nullptr, nullptr, 0, nullptr, 0, nullptr, nullptr,
-		daemon_sock.c_str()
+		cpArgs.priv(PRIV_ROOT)				// Run as root, so it can switch to PRIV_CONDOR
+			.reaperID(rid)					// Reaper ID
+			.wantCommandPort(TRUE)
+			.wantUDPCommandPort(TRUE)
+			.daemonSock(daemon_sock.c_str())
 		);
 
 	free(gman_binary);

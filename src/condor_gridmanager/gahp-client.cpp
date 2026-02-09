@@ -786,9 +786,11 @@ GahpServer::Startup(bool force)
 		is_c_gahp = true;
 	}
 
+	OptionalCreateProcessArgs cpArgs;
+
 	if ( (daemonCore->Create_Pipe(stdin_pipefds, is_c_gahp) == FALSE) ||
 	     (daemonCore->Create_Pipe(stdout_pipefds, true, false, true) == FALSE) ||
-	     (daemonCore->Create_Pipe(stderr_pipefds, true, false, true) == FALSE)) 
+	     (daemonCore->Create_Pipe(stderr_pipefds, true, false, true) == FALSE))
 	{
 		dprintf(D_ALWAYS,"GahpServer::Startup - pipe() failed, errno=%d\n",
 			errno);
@@ -806,22 +808,16 @@ GahpServer::Startup(bool force)
 		job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
 	}
 
-	m_gahp_pid = daemonCore->Create_Process(
+	m_gahp_pid = daemonCore->CreateProcessNew(
 			binary_path,	// Name of executable
 			gahp_args,		// Args
-			PRIV_USER_FINAL,// Priv State ---- drop root if we have it
-			m_reaperid,		// id for our registered reaper
-			FALSE,			// do not want a command port
-			FALSE,			// do not want a command port
-			&newenv,	  	// env
-			NULL,			// cwd
-			NULL,			// process family info
-			NULL,			// network sockets to inherit
-			io_redirect, 	// redirect stdin/out/err
-			nullptr,		// fd inherit list
-			0,				// nice increment
-			nullptr,		// signal mask
-			job_opt_mask	// job option flags
+			cpArgs.priv(PRIV_USER_FINAL)	// Priv State ---- drop root if we have it
+				.reaperID(m_reaperid)		// id for our registered reaper
+				.wantCommandPort(FALSE)		// do not want a command port
+				.wantUDPCommandPort(FALSE)	// do not want a command port
+				.env(&newenv)				// env
+				.std(io_redirect)			// redirect stdin/out/err
+				.jobOptMask(job_opt_mask)	// job option flags
 			);
 
 	if ( m_gahp_pid == FALSE ) {
