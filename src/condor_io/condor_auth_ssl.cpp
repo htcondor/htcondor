@@ -2362,10 +2362,15 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 		FamilyInfo fi;
 		fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-		int pid = daemonCore->Create_Process(args.GetArg(0), args,
-					PRIV_CONDOR_FINAL, m_pluginReaperId, FALSE,
-					FALSE, &m_pluginState->m_env, nullptr, &fi, nullptr,
-					std_fds);
+		OptionalCreateProcessArgs cpArgs;
+		int pid = daemonCore->CreateProcessNew(args.GetArg(0), args,
+					cpArgs.priv(PRIV_CONDOR_FINAL)
+						.reaperID(m_pluginReaperId)
+						.wantCommandPort(FALSE)
+						.wantUDPCommandPort(FALSE)
+						.env(&m_pluginState->m_env)
+						.familyInfo(&fi)
+						.std(std_fds));
 		if (pid == 0) {
 			dprintf(D_ALWAYS, "AUTHENTICATE: Failed to spawn plugin %s.\n", plugin_name);
 			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin %s failed (failed to spawn)", plugin_name);
