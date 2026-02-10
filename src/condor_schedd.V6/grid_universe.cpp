@@ -589,8 +589,6 @@ GridUniverseLogic::StartOrFindGManager(const GridUserIdentity& userident, const 
 		args,					// Command-line args
 		cpArgs.priv(PRIV_ROOT)				// Run as root, so it can switch to PRIV_CONDOR
 			.reaperID(rid)					// Reaper ID
-			.wantCommandPort(TRUE)
-			.wantUDPCommandPort(TRUE)
 			.daemonSock(daemon_sock.c_str())
 		);
 
