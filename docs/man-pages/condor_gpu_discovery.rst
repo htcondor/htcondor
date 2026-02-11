@@ -211,7 +211,7 @@ Tables
 ~~~~~~
 
 .. list-table:: Table 1.1 Property Attributes (**-properties**)
-    :widths: 25 25
+    :widths: 25 25 25
     :header-rows: 1
 
     * - CUDA
@@ -219,16 +219,21 @@ Tables
       - Rocm
     * - DeviceName
       - DeviceName
+      - DeviceName
     * - ECCEnabled
       - ECCEnabled
+      - ECCEnabled
     * - GlobalMemoryMb
+      - GlobalMemoryMb
       - GlobalMemoryMb
     * - DriverVersion
       - OpenCLVersion
       - AmdDriverVersion
     * - RuntimeVersion
       -
+      -
     * - Capability
+      -
       -
 
 .. list-table:: Table 1.2 Extra Attributes (**-extra**)
