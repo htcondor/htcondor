@@ -124,12 +124,7 @@ int init_user_ids(const JobQueueUserRec * user);
 
 class match_rec;
 
-enum class CXFER_STATE {
-	INVALID,
-	MAPPING,
-	STAGING,
-	STAGED,
-};
+#include "cxfer_state.h"
 
 struct shadow_rec
 {

@@ -56,6 +56,9 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
+
 static void append_buffer_info( std::string &url, const char *method, char const *path );
 static int use_append( const char *method, const char *path );
 static int use_compress( const char *method, const char *path );
@@ -1194,7 +1197,7 @@ UniShadow::after_common_file_transfer(
 	dprintf( D_ALWAYS, "Finished common files transfer: %s.\n", success ? "success" : "failure" );
 
 	SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
-	ASSERT(cfLock != NULL);
+	// ASSERT(cfLock != NULL);
 
 	if( success ) {
 		// We'll assume that malformed replies are transients.
@@ -1203,8 +1206,10 @@ UniShadow::after_common_file_transfer(
 
 			// We can't just release the cfLock, because that won't do
 			// anything if another shadow is already waiting on us.
-			this->cfLocks.erase(cifName);
-			delete cfLock;
+			if( cfLock != NULL ) {
+				this->cfLocks.erase(cifName);
+				delete cfLock;
+			}
 
 			// Consider replacing this with a call to evictJob().
 			this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
@@ -1218,7 +1223,7 @@ UniShadow::after_common_file_transfer(
 		}
 
 		dprintf( D_TEST, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
-		if(! cfLock->ready( stagingDir )) {
+		if(cfLock != NULL && ! cfLock->ready( stagingDir )) {
 			// We failed to tell the jobs waiting on us that we're
 			// ready.  This job can continue, but the others can't.
 			//
@@ -1233,9 +1238,11 @@ UniShadow::after_common_file_transfer(
 
 		// See previous commentary.
 		SingleProviderSyndicate * cfLock = this->cfLocks[cifName];
-		ASSERT(cfLock != NULL);
-		this->cfLocks.erase(cifName);
-		delete cfLock;
+		// ASSERT(cfLock != NULL);
+		if( cfLock != NULL ) {
+			this->cfLocks.erase(cifName);
+			delete cfLock;
+		}
 
 
 		// Determine if the _request_ failed.  (If it succeeded, then we
@@ -1428,10 +1435,9 @@ UniShadow::set_provider_keep_alive( const std::string & cifName ) {
 
 // The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
-UniShadow::start_provider_only_conversation(
+UniShadow::start_staging_only_conversation(
 	ClassAd request,
-	ListOfCatalogs common_file_catalogs,
-	bool /* print_waiting */ /* = true */
+	ListOfCatalogs common_file_catalogs
 ) {
 	bool success;
 
@@ -1459,7 +1465,7 @@ UniShadow::start_provider_only_conversation(
 	// (a) that we're done transferring and (b) which resources to use to
 	// actually run the job.
 	ClassAd guidance;
-	guidance.InsertAttr( ATTR_COMMAND, COMMAND_SPLIT_SLOT );
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
 	request = co_yield guidance;
 	success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
@@ -1492,6 +1498,8 @@ UniShadow::start_provider_only_conversation(
 		// ... FIXME ...
 		EXCEPT("Starter's reply invalid: did not contain slot ad.\n");
 	}
+	dprintf( D_ALWAYS, "cxfer: slotad:\n" );
+	dPrintAd( D_ALWAYS, * slotAd );
 
 	// The precise interaction between this value, ATTR_AUTHENTICATED_IDENTITY
 	// in the command ad, the socket's getFullyQualifiedUser(), and
@@ -1534,7 +1542,55 @@ UniShadow::start_provider_only_conversation(
 		EXCEPT("Failed offerResources().\n");
 	}
 
-	// ... FIXME ...
+
+	//
+	// Now that we've staged the common files and let the schedd know,
+	// it's keep-alive time.
+	//
+	while( true ) {
+		guidance.Clear();
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+		guidance.InsertAttr(ATTR_RETRY_DELAY, 300);
+		dprintf( D_ALWAYS, "cxfer: Asking starter to sleep for five minutes...\n" );
+		request = co_yield guidance;
+	}
+}
+
+
+// The parameters are copies to simplify thinking about this coroutine.
+condor::cr::Piperator<ClassAd, ClassAd>
+UniShadow::start_mapping_only_conversation(
+	ClassAd request,
+	ListOfCatalogs common_file_catalogs
+) {
+	ClassAd guidance;
+
+
+	// Map each catalog.  The schedd has guaranteed they were available.
+	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
+		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+
+		// FIXME: The single-provider syndicate used to broadcast the staging
+		// directory for a particular startd to all the interested shadows.
+		// We're not using the syndicate anymore; instead, since we want to
+		// "color" the startd with the catalog(s) for later match-making
+		// purposes, we just store the paths there.
+		std::string message;
+		guidance = do_wiring_up(message, cifName);
+		request = co_yield guidance;
+
+		bool success = false;
+		LookupBoolInContext( request, ATTR_RESULT, success );
+		if(! success) {
+			co_return handle_wiring_failure();
+		}
+		Shadow->getJobAd()->InsertAttr( "CommonFilesMappedTime", time(NULL) );
+	}
+
+
+	guidance.Clear();
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+	co_return guidance;
 }
 
 
@@ -1963,27 +2019,21 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 	} else if( requestType == RTYPE_JOB_SETUP ) {
 		dprintf( D_ZKM, "Received request for guidance about job setup.\n" );
 
+		//
+		// The schedd has already decided for us if we're going to stage
+		// common files, xor map them, xor fall back, but we'll also
+		// continue to respect the config flag for safety.
+		//
+		bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+		if( disallowed || cxfer_type == CXFER_STATE::INVALID ) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 
-		//
-		// (HTCONDOR-3168)  The starter-side code for staging or mapping a
-		// list of common files doesn't care (or know) how the shadow chose
-		// the membership of the list, or the name of the list.
-		//
-		// (Also, new vocabulary: a "catalog" is a named list of object
-		// locations.)
-		//
-		// Pending othogonality with Andrew Owen's proposal-in-progress,
-		// we anticipate that the job add will have a string list of
-		// job attribute names; each entry is the name of a catalog, and
-		// each corresponding attribute's value is the list.  The shadow
-		// should proceed through the list in order, using the supplied
-		// names instead of the cluster ID in makeCIFName(), possibly
-		// including the DAGMan job ID (if present) instead.
-		//
-		// The single-provider syndicates will no longer be one-to-one per
-		// shadow, but that's fine; that will encourage multiple common files
-		// transfer to occur simultaneously, if possible.
-		//
+			std::string command;
+			guidance.LookupString(ATTR_COMMAND, command);
+			dprintf( D_TEST, "Sending (job setup) guidance with command %s\n", command.c_str());
+			return GuidanceResult::Command;
+		}
+
 
 		int required_version = 2;
 		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd );
@@ -2012,58 +2062,49 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-		if( disallowed || common_file_catalogs->empty() ) {
-			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
-		} else {
-			int hasCommonFilesTransfer = 0;
-			request.LookupInteger(
-				ATTR_HAS_COMMON_FILES_TRANSFER, hasCommonFilesTransfer
-			);
-			// Even if the job only uses the HTC25 (version 1) syntax,
-			// the version check presently precludes using the version 1
-			// protocol.  This is probably a good thing, since this is
-			// the only place we actually check, meaning that the rest of
-			// the code presumes that multiple common transfers won't
-			// collide.  (The only difference between v1 and v2 is that
-			// a v2 client puts each catalog in its own subdirectory.)
-			if( hasCommonFilesTransfer < 2 ) {
-				// Then, in all cases, we should have already modified the
-				// proc-specific FTO to transfer the common files; see
-				// setStarterInfo().
 
-				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
-				// It would be nice if we fell through to the recording
-				// stanza at the end of this block, instead.
-				return GuidanceResult::Command;
-			}
+		//
+		// Since we're only talking to one starter at a time, we can
+		// simply record if we've already started this conversation.
+		//
+		static bool in_conversation = false;
+		static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
 
+		switch( cxfer_type ) {
+			case CXFER_STATE::INVALID:
+				ASSERT(cxfer_type != CXFER_STATE::INVALID);
+				break;
 
-			//
-			// Since we're only talking to one starter at a time, we can
-			// simply record if we've already started this conversation.
-			//
-			static bool in_conversation = false;
-			static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
-
-			if(! in_conversation) {
-				dprintf( D_ZKM, "Starting common input files conversation during job setup.\n" );
-				in_conversation = true;
-
+			case CXFER_STATE::STAGING:
 				the_coroutine = std::move(
-					this->start_common_input_conversation(request, *common_file_catalogs)
+					this->start_staging_only_conversation(request, *common_file_catalogs)
 				);
-				guidance = the_coroutine();
-			} else {
-				dprintf( D_ZKM, "Continuing common input files conversation during job setup.\n" );
-				the_coroutine.set_co_yield_value( request );
-				guidance = the_coroutine();
-			}
+				break;
 
-			if( the_coroutine.handle.done() ) {
-				dprintf( D_ZKM, "Finishing common input files conversation during job setup.\n" );
-				in_conversation = false;
-			}
+			case CXFER_STATE::MAPPING:
+				the_coroutine = std::move(
+					this->start_mapping_only_conversation(request, *common_file_catalogs)
+				);
+				break;
+
+			default:
+				// .... FIXME ....
+				break;
+		}
+
+		if(! in_conversation) {
+			dprintf( D_ZKM, "Starting common input files conversation during job setup.\n" );
+			in_conversation = true;
+			guidance = the_coroutine();
+		} else {
+			dprintf( D_ZKM, "Continuing common input files conversation during job setup.\n" );
+			the_coroutine.set_co_yield_value( request );
+			guidance = the_coroutine();
+		}
+
+		if( the_coroutine.handle.done() ) {
+			dprintf( D_ZKM, "Finishing common input files conversation during job setup.\n" );
+			in_conversation = false;
 		}
 
 		std::string command;

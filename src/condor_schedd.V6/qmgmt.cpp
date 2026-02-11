@@ -9908,10 +9908,14 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			end = std::upper_bound(first, end, user_str, prio_rec_submitter_ub{});
 		}
 
+// ... so why isn't my job in the priorec array?
+dprintf( D_ALWAYS, "Entering priorec array loop\n" );
 		for (auto p = first; p != end; p++) {
+dprintf( D_ALWAYS, "%d.%d: considering..\n", p->id.cluster, p->id.proc );
 			if ( p->not_runnable /* || p->matched */ ) {
 					// This record has been disabled, because it is no longer runnable
 					// (can't trust the matched flag here like we can in ::negotiate)
+dprintf( D_ALWAYS, "%d.%d: case A\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
@@ -9919,12 +9923,14 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			if ( ! job) {
 					// This ad must have been deleted since we last built
 					// runnable job list.
+dprintf( D_ALWAYS, "%d.%d: case B\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
 			if (PrioRecAutoClusterRejected.contains(p->auto_cluster_id)) {
 					// We have already failed to match a job from this same
 					// autocluster with this machine.  Skip it.
+dprintf( D_ALWAYS, "%d.%d: case C\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
@@ -9935,9 +9941,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			if ( ! Runnable(job, runnable_code)) {
 				// TODO: special case for cooldown here??
 				p->not_runnable = runnable_code != runnable_reason_code::MaxRunningAlready;
+dprintf( D_ALWAYS, "%d.%d: case D\n", p->id.cluster, p->id.proc );
 			} else if (scheduler.FindMrecByJobID(job->jid)) {
 				p->matched = true;
 				runnable_code = runnable_reason_code::AlreadyMatched;
+dprintf( D_ALWAYS, "%d.%d: case E\n", p->id.cluster, p->id.proc );
 			}
 
 		#if 0 // code for debugging stale matched flag
@@ -10001,6 +10009,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			// if we have a match_user, and it doesn't match the job owner
 			// keep looking.
 			if ( ! match_user.empty() && match_user != job->ownerinfo->Name()) {
+dprintf( D_ALWAYS, "%d.%d: case F\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
@@ -10071,6 +10080,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 				if( EvalFloat(ATTR_RANK, my_match_ad, job, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
+dprintf( D_ALWAYS, "%d.%d: case G\n", p->id.cluster, p->id.proc );
 						continue;
 					}
 				}

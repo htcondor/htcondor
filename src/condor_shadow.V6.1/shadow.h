@@ -259,10 +259,14 @@ class UniShadow : public BaseShadow
 		bool print_waiting=true
 	);
 
-	condor::cr::Piperator<ClassAd, ClassAd> start_provider_only_conversation(
+	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(
 		ClassAd request,
-		ListOfCatalogs common_file_catalogs,
-		bool print_waiting /* = true */
+		ListOfCatalogs common_file_catalogs
+	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_mapping_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs
 	);
 
 

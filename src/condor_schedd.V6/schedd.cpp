@@ -5470,6 +5470,8 @@ condor to the user.  In the future we might allocate a dynamic account here.
 int
 aboutToSpawnJobHandler( int cluster, int proc, void* )
 {
+	if( proc <= -1000 ) { return TRUE; }
+
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -5503,7 +5505,7 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 		// is still runnable.
 	int status;
 	if( ! scheduler.isStillRunnable(cluster, proc, status) ) {
-		if( status != -1 ) {  
+		if( status != -1 ) {
 			PROC_ID job_id;
 			job_id.cluster = cluster;
 			job_id.proc = proc;
@@ -9218,6 +9220,20 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	cmd_ad.LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
 	cmd_ad.LookupInteger(ATTR_PROC_ID, jobid.proc);
 
+
+    // This forces a rebuild of the priorec array, which is probably
+    // not what we want, but I'm not happy about writing a special
+    // case to handle blocked jobs woken up by direct attach, either.
+    int status;
+    GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
+    dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+    if( status == JOB_STATUS_BLOCKED ) {
+        status = IDLE;
+        SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
+        dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+    }
+
+
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
 		if (!rsock->get_secret(claim_id) || !getClassAd(rsock, slot_ad)) {
@@ -10653,16 +10669,28 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 			{
 				// Create the transfer shadow rec with the list of catalogs
 				// it will provide and then queue it for immediate spawning.
-				mark_serial_job_running(job_id);
-				shadow_rec * transfer_shadow_rec = add_shadow_rec(
-					0,
-					// FIXME: Start the transfer shadow with its own
-					// proc ID so that it doesn't collide with the job.
-					// (also mark this new job ID runnibg?)
-					// (probably not, but look at the code -- a fake
-					//  proc ID looks like it will just ruin the world)
-					job_id,
-					universe, mrec, -1 , nullptr
+
+				// We need to give the shadow its own "job ID" because that's
+				// how we track all of them.  We can't use the ID of the job
+				// we're actually starting this transfer shadow for, because
+				// we'll need that one for the job shadow.  However, the
+				// schedd requires that a shadow have a corresponding job....
+				// FIXME: who normally owns these?  Clean-up?
+				PROC_ID * transfer_job_id = new PROC_ID(
+					job_id->cluster,
+					-1 * (job_id->proc + 1000)
+				);
+
+				// This is more than we need, but let's optimize later.
+				ClassAd * job_ad = GetJobAd( job_id->cluster, job_id->proc );
+				ClassAd * transfer_job_ad = new ClassAd(* job_ad);
+				transfer_job_ad->InsertAttr(
+					ATTR_PROC_ID, transfer_job_id->proc
+				);
+				// FIXME: how do I add this new job ad so GetJobAd() finds it?
+
+				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
+					transfer_job_id, universe, mrec, -1 , nullptr
 				);
 
 				// Not sure we actually need to carry around the content lists.
@@ -10679,25 +10707,19 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				transfer_shadow_rec->cxfer_catalogs = catalogs_to_stage;
 				transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGING;
 
-				addRunnableJob( transfer_shadow_rec );
-
-
-				// For now, while we're testing, since the transfer shadow
-				// isn't (because we aren't yet passing the flag and the
-				// shadow code to recognize it doesn't exist).
-				// [the mrec will be deleted twice if this isn't set]
+				// Required for consistency?
 				mrec->shadowRec = transfer_shadow_rec;
-				return true;
+
+				// Otherwise, the schedd won't start the actual job because
+				// it already has a match.
+				SetMrecJobID(mrec, *transfer_job_id);
+
+				addRunnableJob( transfer_shadow_rec );
 
 
 				// Create the job shadow rec and queue it for delayed spawning.
 				shadow_rec * job_shadow_rec = add_shadow_rec(
 					0, job_id, universe,
-					// Not having a match record is allowed by add_shadow_rec(),
-					// but it's not clear what the rest of the shadow thinks
-					// of this idea.  We don't want to assign a different
-					// proc ID, because it will eventually collide with the
-					// transfer shadow.
 					NULL,
 					-1 , nullptr
 				);
@@ -10707,11 +10729,14 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				// I don't know if we want to mark the job running yet, but
 				// we sure don't want it to start running anywhere else...
 				// mark_serial_job_running(job_id);
+				// FIXME: ... if we don't do the above now, we need to
+				// remember to do it later.
+				int status = JOB_STATUS_BLOCKED;
+				SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status );
 
-				// FIXME: queue for delayed spawning, instead.
-				addRunnableJob( job_shadow_rec );
+				// FIXME: record for delayed spawning, instead.
+				// addRunnableJob( job_shadow_rec );
 
-				mrec->shadowRec = job_shadow_rec;
 				return true;
 			}
 
@@ -11071,6 +11096,7 @@ bool Scheduler::evalVanillaStartExpr(VanillaMatchAd &vad)
 bool
 Scheduler::isStillRunnable( int cluster, int proc, int &status )
 {
+	if( proc <= -1000 ) { return true; }
 	ClassAd* job = GetJobAd( cluster, proc );
 	if( ! job ) {
 			// job ad disappeared, definitely not still runnable.
@@ -11158,6 +11184,26 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		formatstr(argbuf, "--xfer-queue=%s", m_xfer_queue_contact.c_str());
 		args.AppendArg(argbuf);
 	}
+
+
+	// Will this shadow be staging or mapping common input files?
+	if( srec->cxfer_catalogs.size() > 0 ) {
+		switch( srec->cxfer_state ) {
+			case CXFER_STATE::STAGING:
+				formatstr(argbuf, "--cxfer=staging");
+				break;
+			case CXFER_STATE::MAPPING:
+				formatstr(argbuf, "--cxfer=mapping");
+				break;
+			default:
+				// Is any other case valid?
+				// Is the right response?
+				dprintf( D_ERROR, "%d.%d: Invalid cxfer state when starting shadow, falling back.\n", job_id->cluster, job_id->proc );
+				break;
+		}
+		args.AppendArg(argbuf);
+	}
+
 
 		// pass the private socket ip/port for use just by shadows
 	args.AppendArg(MyShadowSockName);
@@ -11362,16 +11408,22 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		  do we want to delete the result...
 		*/
 
-	srec->pid = 0; 
+	srec->pid = 0;
 	add_shadow_rec( srec );
     time_t now = stats.Tick();
     stats.ShadowsRunning = numShadows;
 
 	OtherPoolStats.Tick(now);
 
+
+	PROC_ID real_job_id = PROC_ID(* job_id);
+	if( real_job_id.proc <= -1000 ) {
+		real_job_id.proc = (-1 * real_job_id.proc) - 1000;
+	}
+
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
-	job_ad = GetExpandedJobAd( *job_id, true );
+	job_ad = GetExpandedJobAd( real_job_id, true );
 	if( ! job_ad ) {
 			// this might happen if the job is asking for
 			// something in $$() that doesn't exist in the machine
@@ -11393,10 +11445,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		return false;
 	}
 	std::string secret;
-	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_CLAIM_ID, secret) == 0) {
+	if (GetPrivateAttributeString(real_job_id.cluster, real_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
 		job_ad->Assign(ATTR_CLAIM_ID, secret);
 	}
-	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_CLAIM_IDS, secret) == 0) {
+	if (GetPrivateAttributeString(real_job_id.cluster, real_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 		job_ad->Assign(ATTR_CLAIM_IDS, secret);
 	}
 
@@ -12544,6 +12596,14 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	int cluster = new_rec->job_id.cluster;
 	int proc = new_rec->job_id.proc;
 
+	bool transfer_proc = false;
+	if( proc <= -1000 ) {
+		// This pollutes the real job ad in a bad way, but for now it'll
+		// let us start a shadow.
+		transfer_proc = true;
+		proc = (-1 * proc) - 1000;
+	}
+
 	if( mrec && !new_rec->is_reconnect ) {
 
 			// we don't want to set any of these things if this is a
@@ -12611,7 +12671,12 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		}
 	}
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
-	add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
+	if(! transfer_proc) {
+		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
+	} else {
+		// FIXME: it's not clear if we want/need to record this somewhere.
+		// add_shadow_birthdate( cluster, -1 * (proc + 1000), new_rec->is_reconnect );
+	}
 	CommitTransactionOrDieTrying();
 	if( new_rec->pid ) {
 		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",

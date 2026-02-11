@@ -796,24 +796,42 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( "StagingDir", stagingDir.string() );
 			continue_conversation(context);
 			return true;
-		} else if( command == COMMAND_SPLIT_SLOT ) {
+		} else if( command == COMMAND_COLOR_SLOT ) {
+			//
+			// Color the slot.
+			//
+			ClassAd colorAd;
+			ClassAd replyAd;
+			bool success = false; // s->jic->colorSlot( colorAd, replyAd );
+			if(! success) {
+				dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
+			}
+			success = false;
+			replyAd.LookupBool( ATTR_RESULT, success );
+			if(! success) {
+				dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
+			}
+
+
+			//
+			// Construct the reply.
+			//
+
 			const ClassAd * secretsAd = s->jic->getMachineSecretsAd();
 			// If we're not talking to a shadow, then who's guidiing us?
 			ASSERT(secretsAd != NULL);
-
-
 			std::string splitClaimID;
 			if(! secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID )) {
 				// ... FIXME ...
 			}
 
+
 			// FIXME: How much space should be reserved?
 			long long sizeOnDiskInMB = 1000;
 
-
 			ClassAd context;
-			context.InsertAttr( ATTR_COMMAND, COMMAND_SPLIT_SLOT );
-			context.InsertAttr( ATTR_RESULT, true );
+			context.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
+			context.InsertAttr( ATTR_RESULT, success );
 			context.InsertAttr( ATTR_SPLIT_CLAIM_ID, splitClaimID );
 			context.InsertAttr( ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB );
 			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd() );

@@ -30,7 +30,7 @@ enum class GuidanceResult : int {
 #define COMMAND_STAGE_COMMON_FILES  "StageCommonFiles"
 #define COMMAND_MAP_COMMON_FILES    "MapCommonFiles"
 #define COMMAND_JOB_SETUP           "DoJobSetup"
-#define COMMAND_SPLIT_SLOT          "SplitSlot"
+#define COMMAND_COLOR_SLOT          "ColorSlot"
 
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 
