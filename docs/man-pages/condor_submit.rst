@@ -1583,22 +1583,17 @@ POLICY COMMANDS
     of priority) for the time in this state.
 
  :subcom-def:`leave_in_queue` = <ClassAd Boolean Expression>
-    When the ClassAd Expression evaluates to ``True``, the job is not
-    removed from the queue upon completion. This allows the user of a
+    When the ClassAd Expression evaluates to ``True``, the job does not
+    leave the queue upon completion. This allows the user of a
     remotely spooled job to retrieve output files in cases where
     HTCondor would have removed them as part of the cleanup associated
-    with completion. The job will only exit the queue once it has been
-    marked for removal (via *condor_rm*, for example) and the
-    **leave_in_queue**, expression has become ``False``.
-    **leave_in_queue** defaults to ``False``.
-
-    As an example, if the job is to be removed once the output is
-    retrieved with *condor_transfer_data*, then use
-
-    .. code-block:: condor-submit
-
-        leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
-                         (StageOutFinish == 0))
+    with completion. The job will only leave the queue when the
+    expression evaluates to ``False``.
+    **leave_in_queue** normally defaults to ``False``.
+    When a job is submitted with spooled data files, **leave_in_queue**
+    defaults to an expression that keeps the job in the queue until
+    it is removed (e.g. with :tool:`condor_rm`), the spooled data files
+    are retrieved, or the job has been in Completed state for 10 days.
 
  :subcom-def:`next_job_start_delay` = <ClassAd Boolean Expression>
     This expression specifies the number of seconds to delay after
