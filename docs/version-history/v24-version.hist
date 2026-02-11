@@ -1,5 +1,9 @@
 *** 24.12.18 bugs
 
+- Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash
+  when using the HIP libraries with the default detection options passed by the *condor_startd*.
+  :jira:`3533`
+
 *** 24.0.18 bugs
 
 *** 24.12.17 bugs
