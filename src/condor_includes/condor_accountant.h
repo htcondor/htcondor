@@ -171,14 +171,6 @@ private:
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
 
   //--------------------------------------------------------
-  // Table prefix constants (used internally by MakeKey)
-  //--------------------------------------------------------
-
-  static constexpr std::string_view AcctPrefix = "Accountant.";
-  static constexpr std::string_view CustomerPrefix = "Customer.";
-  static constexpr std::string_view ResourcePrefix = "Resource.";
-
-  //--------------------------------------------------------
   // Utility functions
   //--------------------------------------------------------
 
