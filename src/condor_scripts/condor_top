@@ -50,6 +50,12 @@ parser.add_option('-l', '--live', action='store_const', const=True, dest='live',
                       default=False, help=(
     'Display results in a live, top-like mode.'))
 
+# schedd history
+parser.add_option('-H', '--history', action='store_true', dest='history',
+                      default=False, help=(
+    'Use the two most recent condor_schedd daemon ads from $(SPOOL)/schedd_daemon_history '
+    'instead of querying the daemon twice.'))
+
 # pool
 parser.add_option('-p', '--pool', dest='pool', default=None, help=(
     'Query the specified Central Manager instead of $(COLLECTOR_HOST). '
@@ -89,6 +95,7 @@ opts, args = parser.parse_args()
 FILES = args
 DAEMON = opts.daemon
 LIVE = opts.live
+HISTORY = opts.history
 POOL = opts.pool
 NAME = opts.name
 DELAY = opts.delay
@@ -166,6 +173,9 @@ PIPE = not sys.stdout.isatty()
 
 # live mode does not apply when piped or using ClassAd files
 if PIPE or FILES:
+    LIVE = False
+
+if HISTORY:
     LIVE = False
 
 ###
@@ -259,6 +269,51 @@ def queryClassAd(pool, daemon, name, direct = False, statistics = 'All:2'):
         ad = ads[0]
 
     return ad
+
+def readScheddHistoryAds(history_path, count = 2):
+    """Returns the last <count> ClassAds from schedd_daemon_history."""
+
+    ads = []
+
+    def flush_block(lines):
+        if not lines:
+            return
+        text = '\n'.join(lines) + '\n\n'
+        try:
+            ad = classad.parseOne(text, parser=classad.Parser.Old)
+        except Exception as exc:
+            raise RuntimeError('Failed to parse schedd history ClassAd in {0}: {1}'.format(
+                history_path, exc))
+        ads.append(ad)
+        lines.clear()
+
+    with open(history_path) as history_file:
+        current_lines = []
+        for raw_line in history_file:
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.startswith('***'):
+                flush_block(current_lines)
+                continue
+            current_lines.append(raw_line.rstrip('\n'))
+        flush_block(current_lines)
+
+    if len(ads) < count:
+        raise RuntimeError(
+            'History file {0} does not contain {1} ClassAds'.format(
+                history_path, count))
+
+    if count == 2:
+        for idx in range(len(ads) - 1, 0, -1):
+            older = ads[idx - 1]
+            newer = ads[idx]
+            if ('DaemonStartTime' in older and 'DaemonStartTime' in newer and
+                    older['DaemonStartTime'] == newer['DaemonStartTime']):
+                return [older, newer]
+        return ads[-2:]
+
+    return ads[-count:]
 
 ###
 
@@ -772,6 +827,10 @@ if __name__ == '__main__':
     # wrap everything to catch Ctrl-C
     try:
 
+        if HISTORY and FILES:
+            sys.stderr.write('Error: -history cannot be combined with ClassAd files.\n')
+            sys.exit(1)
+
         # if we have files, parse them into old and new ClassAds
         if FILES:
             if len(FILES) != 2:
@@ -826,6 +885,40 @@ if __name__ == '__main__':
             NAME = new['Name']
 
         # if we're querying the Collector, first get the "old" ClassAd
+        elif HISTORY:
+            if DAEMON != 'Schedd':
+                sys.stderr.write('Error: -history is only supported for Schedd daemon ads.\n')
+                sys.exit(1)
+            if POOL is not None:
+                sys.stderr.write('Error: -history cannot be used with --pool.\n')
+                sys.exit(1)
+            spool = htcondor.param.get('SPOOL')
+            if not spool:
+                sys.stderr.write('Error: SPOOL is not defined in the configuration; cannot locate schedd history file.\n')
+                sys.exit(1)
+            history_path = os.path.join(spool, 'schedd_daemon_history')
+            try:
+                old, new = readScheddHistoryAds(history_path, 2)
+            except FileNotFoundError:
+                sys.stderr.write('Error: Unable to open {0}\n'.format(history_path))
+                sys.exit(1)
+            except RuntimeError as exc:
+                sys.stderr.write(str(exc) + '\n')
+                sys.exit(1)
+            except Exception as exc:
+                sys.stderr.write(str(exc) + '\n')
+                sys.exit(1)
+
+            if new['MyCurrentTime'] < old['MyCurrentTime']:
+                old, new = (new, old)
+
+            if NAME is None and ('Name' in new):
+                NAME = new['Name']
+
+            if len(getRuntimeAttrs(new)) == 0:
+                sys.stderr.write("Did not get any comparable runtime attributes from daemon ClassAd, exiting early.\n")
+                sys.exit(0)
+
         else:
             if NAME is None:
                 NAME = getDaemonName(POOL, DAEMON, MACHINE)
