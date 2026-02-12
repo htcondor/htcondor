@@ -425,27 +425,6 @@ void print_param_table_info(FILE* out, int param_id, int type_and_flags, const c
 	if (tags) { fprintf(out, " # used by: %s\n", tags); }
 }
 
-
-//#define HAS_LAMBDA
-#ifdef HAS_LAMBDA
-#else
-bool report_obsolete_var(void* pv, HASHITER & it) {
-	std::string * pstr = (std::string*)pv;
-	const char * name = hash_iter_key(it);
-	if (is_known_subsys_prefix(name)) {
-		*pstr += "  ";
-		*pstr += name;
-		MACRO_META * pmet = hash_iter_meta(it);
-		if (pmet) {
-			*pstr += " at ";
-			param_append_location(pmet, *pstr);
-		}
-		*pstr += "\n";
-	}
-	return true; // keep iterating
-}
-#endif
-
 char* EvaluatedValue(char const* value, ClassAd const* ad) {
     classad::Value res;
     ClassAd empty;
