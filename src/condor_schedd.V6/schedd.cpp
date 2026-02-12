@@ -19790,14 +19790,18 @@ Scheduler::maybeWriteDaemonHistory(ClassAd* ad) {
 	}
 	prev_write = now;
 
-	ClassAd history_ad(*ad);
-	constexpr const char *stats_config = "All:2";
+	// create an ad for this history that we can overlay on the ad we sent to the collector
+	// this allows us to add attributes into the history that we did not send to the collector
+	ClassAd history_ad;
+	history_ad.ChainToAd(ad);
 
-	stats.Publish(history_ad, stats_config);
-	daemonCore->dc_stats.Publish(history_ad, stats_config);
-	m_xfer_queue_mgr.publish(&history_ad, stats_config);
-	daemonCore->monitor_data.ExportData(&history_ad);
+	// publish more verbose stats to the daemon history
+	const int pub_level = IF_BASICPUB | IF_VERBOSEPUB | IF_NONZERO  /* | IF_RECENTPUB */;
+	stats.Publish(history_ad, pub_level);
+	daemonCore->dc_stats.Publish(history_ad, pub_level);
+	m_xfer_queue_mgr.publish(&history_ad, pub_level);
 
 	daemonCore->AppendDaemonHistory(&history_ad);
+	history_ad.Unchain();
 }
 
