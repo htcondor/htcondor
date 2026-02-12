@@ -492,6 +492,7 @@ class Schedd():
         )
         return result;
 
+
     def updateProjectRec(self,
         project_attributes : List[classad.ClassAd],
     ) -> classad.ClassAd:
@@ -508,6 +509,55 @@ class Schedd():
         result = userrec_act_dispatcher(self._addr, project_attributes,
             _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
             (0x80000 + 543, None)
+        )
+        return result;
+
+    def enableProjectRec(self,
+        project_spec : Union[List[str], str, classad.ExprTree],
+    ) -> classad.ClassAd:
+        """
+        Enable Project record(s) to the *condor_schedd* daemon.
+
+        :param user_spec: Which project(s) to enable.  A :class:`str`
+             of the project name, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only Project records that
+             match the constraint will be enabled.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, project_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 541, None)
+        )
+        return result;
+
+
+    def disableProjectRec(self,
+        project_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Disable Project record(s) in the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to disable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only Project records that match
+             the constraint will be disabled.
+        :param reason: A free-form justification.  Defaults to
+            "Python-initiated action".
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, project_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 542, reason)
         )
         return result;
 
