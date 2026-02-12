@@ -1,3 +1,17 @@
+condor (24.12.17-1) stable; urgency=medium
+
+  * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+  * Improve condor_history performance on filesystems with I/O rate limits
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 12 Feb 2026 10:21:00 -0600
+
+condor (24.0.17-1) stable; urgency=medium
+
+  * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+  * Improve condor_history performance on filesystems with I/O rate limits
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 12 Feb 2026 09:00:00 -0600
+
 condor (24.12.16-1) stable; urgency=medium
 
   * Fix problem specifying scope or audience with a Vault-managed credential
