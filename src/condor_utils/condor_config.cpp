@@ -647,7 +647,8 @@ bool validate_config(bool abort_if_invalid, int opt)
 	if (deprecation_check) {
 		int errcode, erroffset;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
+		// But not those that start with GROUP
+		if (!re.compile("^(?!GROUP)[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
 			EXCEPT("Programmer error in condor_config: invalid regexp");
 		}
 	}
