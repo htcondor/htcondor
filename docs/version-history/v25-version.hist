@@ -23,6 +23,10 @@
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
+- No longer warn about config knobs with dots in the names if the knob
+  is group quota related, and begins with GROUP.
+  :jira:`3544`
+
 - The old ClassAd syntax is no longer supported in job transforms.
   :jira:`3538`
 
