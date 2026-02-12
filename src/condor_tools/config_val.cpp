@@ -560,7 +560,6 @@ main( int argc, const char* argv[] )
 	const char * debug_flags = NULL;
 	const char * check_configif = NULL;
 	int profile_test_id=0, profile_iter=0;
-	bool    check_config_for_obsolete_syntax = true;
 
 #ifdef WIN32
 	// enable this if you need to debug crashes.
@@ -861,7 +860,7 @@ main( int argc, const char* argv[] )
 	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
 	set_priv_initialize(); // allow uid switching if root
 	config_host(NULL, config_options, root_config);
-	validate_config(false, 0); // validate, but do not abort.
+	validate_config(false); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
 	}
@@ -904,53 +903,6 @@ main( int argc, const char* argv[] )
 			check_configif, 
 			valid ? (bb ? "\ntrue" : "\nfalse") : err_reason.c_str());
 		exit(0);
-	}
-
-	// Check for obsolete syntax in config file
-	check_config_for_obsolete_syntax = param_boolean("ENABLE_DEPRECATION_WARNINGS", check_config_for_obsolete_syntax);
-	if (check_config_for_obsolete_syntax) {
-		Regex re; int errcode = 0; int erroffset = 0;
-		// check for knobs of the form SUBSYS.LOCALNAME.*
-		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS));
-		std::string obsolete_vars;
-		foreach_param_matching(re, HASHITER_NO_DEFAULTS,
-#ifdef HAS_LAMBDA
-			[](void* pv, HASHITER & it) -> bool {
-				std::string * pstr = (std::string*)pv;
-				const char * name = hash_iter_key(it);
-				if (is_known_subsys_prefix(name)) {
-					*pstr += "  ";
-					*pstr += name;
-					MACRO_META * pmet = hash_iter_meta(it);
-					if (pmet) {
-						*pstr += " at ";
-						param_append_location(pmet, *pstr);
-					}
-					*pstr += "\n";
-				}
-				return true; // keep iterating
-			},
-#else
-			report_obsolete_var,
-#endif
-			&obsolete_vars // becomes pv
-		);
-		if ( ! obsolete_vars.empty()) {
-			fprintf(stderr, "WARNING: the following appear to be obsolete SUBSYS.LOCALNAME.* overrides\n%s", obsolete_vars.c_str());
-			fprintf(stderr, 
-				"\n    Use of both SUBSYS. and LOCALNAME. prefixes at the same time is not needed and not supported.\n"
-				  "    To override config for a class of daemons, or for a standard daemon use a SUBSYS. prefix.\n"
-				  "    To override config for a specific member of a class of daemons, just use a LOCALNAME. prefix like this:\n"
-				);
-			StringTokenIterator it(obsolete_vars, "\n");
-			for (const char * line = it.first(); line; line = it.next()) {
-				const char * p1 = strchr(line, '.');
-				if ( ! p1) continue;
-				const char * p2 = p1; while (p2[1] && !isspace(p2[1])) ++p2;
-				std::string name(p1+1, p2-p1);
-				fprintf(stderr, "  %s\n", name.c_str());
-			}
-		}
 	}
 
 	if (dash_summary && (name_arg || addr || mt != CONDOR_QUERY || dt != DT_MASTER || ask_a_daemon)) {

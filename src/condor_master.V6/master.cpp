@@ -643,7 +643,7 @@ main_init( int argc, char* argv[] )
 	
 		// Grab all parameters needed by the master.
 	init_params();
-	validate_config(0, CONFIG_OPT_DEPRECATION_WARNINGS);
+	validate_config(0);
 		// param() for DAEMON_LIST and initialize our daemons object.
 	init_daemon_list();
 	if ( daemons.SetupControllers() < 0 ) {
@@ -1638,7 +1638,7 @@ main_config()
 
 		// Reset our config values
 	init_params();
-	validate_config(0, CONFIG_OPT_DEPRECATION_WARNINGS);
+	validate_config(0);
 
 		// Reset the daemon list
 	init_daemon_list();
