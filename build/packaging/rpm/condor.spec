@@ -1321,6 +1321,18 @@ fi
 # configuration
 
 %changelog
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.7-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
 - Fix condor user creation for Enterprise Linux 10
 - Fix python3 dependency on openSUSE 16
