@@ -1295,6 +1295,14 @@ fi
 # configuration
 
 %changelog
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
 * Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.16-1
 - Fix problem specifying scope or audience with a Vault-managed credential
 - Fix late materialization bug when job transform sets immutable attribute
