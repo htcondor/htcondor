@@ -1047,10 +1047,16 @@ int Starter::execDCStarter(
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
+	OptionalCreateProcessArgs cpArgs;
 	s_pid = daemonCore->
-		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, NULL);
+		CreateProcessNew( final_path, *final_args,
+		                cpArgs.priv(PRIV_ROOT)
+		                	.reaperID(reaper_id)
+		                	.env(env)
+		                	.familyInfo(&fi)
+		                	.socketInheritList(inherit_list)
+		                	.std(std_fds)
+		                	.daemonSock(daemon_sock.c_str()));
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
