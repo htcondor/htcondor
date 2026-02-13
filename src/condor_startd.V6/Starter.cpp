@@ -1052,8 +1052,6 @@ int Starter::execDCStarter(
 		CreateProcessNew( final_path, *final_args,
 		                cpArgs.priv(PRIV_ROOT)
 		                	.reaperID(reaper_id)
-		                	.wantCommandPort(TRUE)
-		                	.wantUDPCommandPort(TRUE)
 		                	.env(env)
 		                	.familyInfo(&fi)
 		                	.socketInheritList(inherit_list)

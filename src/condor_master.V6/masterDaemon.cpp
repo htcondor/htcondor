@@ -984,7 +984,6 @@ int daemon::RealStart( )
 				process_name,	// program to exec
 				args,			// args
 				cpArgs.priv(priv_mode)				// privilege level
-					.reaperID(1)
 					.wantCommandPort(command_port)		// port to use for command port; TRUE=choose one dynamically
 					.wantUDPCommandPort(udp_command_port)	// port to use for command port; TRUE=choose one dynamically
 					.env(&env)						// environment

@@ -1923,8 +1923,7 @@ run_preen_now()
 					FS_Preen,		// program to exec
 					arglist,   		// args
 					cpArgs.priv(PRIV_ROOT)		// privilege level
-						.reaperID(1)
-						.wantCommandPort(false));	// we do _not_ want this process to have a command port; PREEN is not a daemon core process
+					.wantCommandPort(false));	// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 	return TRUE;
 }
