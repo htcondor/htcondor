@@ -1183,7 +1183,7 @@ bool is_crlf_shebang(const char *path)
 
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
 // so we can choose to do file checks.
-int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
+int check_sub_file(void* /*pv*/, SubmitHash * /*sub*/, _submit_file_role role, const char * pathname, int flags)
 {
 	if ((pathname == NULL) && (role != SFR_PSEUDO_EXECUTABLE)) {
 		fprintf(stderr, "\nERROR: NULL filename\n");
