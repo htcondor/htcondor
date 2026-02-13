@@ -23,6 +23,11 @@
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
+- The **copy_to_spool** command in :tool:`condor_submit` is no longer
+  supported.
+  This don't affect the ability to spool a job's full input sandbox.
+  :jira:`3545`
+
 - The old ClassAd syntax is no longer supported in job transforms.
   :jira:`3538`
 
