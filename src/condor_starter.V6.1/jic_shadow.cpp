@@ -2998,6 +2998,31 @@ JICShadow::doneWithInputTransfer() {
 		recordSandboxContents( "in" );
 	}
 
+	if( param_boolean( "_CONDOR_COLOR_FROM_JOB_AD", false )) {
+		ExprTree * c = job_ad->Lookup( "ColorAd" );
+		ClassAd * colorAd = dynamic_cast<ClassAd *>(c);
+		if( colorAd == NULL ) {
+			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: `ColorAd` not a ClassAd, ignoring.\n" );
+		} else {
+			// This shouldn't be #defined in `startd_named_classad.cpp`.
+			colorAd->Assign( "SlotMergeConstraint", true );
+
+			ClassAd replyAd;
+			bool protocol = colorSlot( * colorAd, replyAd );
+			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: protocol = %s\n", protocol ? "TRUE" : "FALSE" );
+
+			bool success = false;
+			if(! replyAd.LookupBool( ATTR_RESULT, success )) {
+				dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD:: ATTR_RESULT lookup failed.\n" );
+			}
+			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: ATTR_RESULT = %s\n", success ? "TRUE" : "FAILED" );
+
+			std::string reason;
+			replyAd.LookupString( ATTR_ERROR_STRING, reason );
+			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: ATTR_REASON = %s\n", reason.c_str() );
+		}
+	}
+
 	// Now that we're done, report successful setup to the base class which tells the starter.
 	// This will either queue a prepare hook. or a queue a DEFERRAL timer to launch the job
 	setupCompleted(0);
