@@ -2791,9 +2791,20 @@ void Claim::receiveUpdateCommand( int c,
 				return;
 			}
 
+			// Dots have special meaning in named ClassAd names.
+			std::string safe_public_claim_id( publicClaimID );
+			std::replace(
+				safe_public_claim_id.begin(),
+				safe_public_claim_id.end(),
+				'.', '_'
+			);
+			// For stupid reasons, extra ads must each have a cron job.  We
+			// always define `kflops` and `mips` because of benchmarks, so
+			// just use those.
+			safe_public_claim_id = "kflops." + safe_public_claim_id;
 			// Because adlist_replace() takes ownership of the `ClassAd *`.
 			ClassAd * copy = new ClassAd( payloadAd );
-			resmgr->adlist_replace( publicClaimID, copy );
+			resmgr->adlist_replace( safe_public_claim_id.c_str(), copy );
 
 			replyAd.InsertAttr( ATTR_RESULT, true );
 			} break;
