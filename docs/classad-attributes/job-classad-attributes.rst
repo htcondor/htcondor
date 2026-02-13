@@ -993,10 +993,10 @@ all attributes.
     
 :classad-attribute-def:`LeaveJobInQueue`
     A boolean expression that defaults to ``False``, causing the job to
-    be removed from the queue upon completion. An exception is if the
-    job is submitted using ``condor_submit -spool``. For this case, the
-    default expression causes the job to be kept in the queue for 10
-    days after completion.
+    leave the queue upon completion.
+    If the job is submitted using ``condor_submit -spool``, the default
+    changes to an expression that keeps the job in the queue until its
+    output files are retrieved or 10 days after completion.
 
 :classad-attribute-def:`MachineAttr<X><N>`
     Machine attribute of name ``<X>`` that is placed into this job

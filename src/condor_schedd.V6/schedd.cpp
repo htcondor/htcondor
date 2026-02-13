@@ -6285,11 +6285,16 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 	}
 
 		// For each job, modify its ClassAd
+		// But only if the start attribute was set
+		// We set these attributes only for jobs in a terminal state
+		// at the time the transfer began.
 	time_t now = time(nullptr);
-	int len = (*jobs).size();
-	for (int i=0; i < len; i++) {
+	time_t dummy = 0;
+	for (const auto& jid: *jobs) {
 			// TODO --- maybe put this in a transaction?
-		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_FINISH,now);
+		if (GetAttributeInt(jid.cluster, jid.proc, ATTR_STAGE_OUT_START, &dummy) >= 0) {
+			SetAttributeInt(jid.cluster, jid.proc, ATTR_STAGE_OUT_FINISH, now);
+		}
 	}
 
 		// Now, deallocate memory
@@ -6791,6 +6796,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case TRANSFER_DATA:
 		case TRANSFER_DATA_WITH_PERMS:
 			{
+			std::vector<PROC_ID> done_jobs;
 			JobQueueJob * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 			JobAdsArrayLen = 0;
 			while (tmp_ad) {
@@ -6800,6 +6806,10 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					jobs->emplace_back(a_job.cluster, a_job.proc);
 					JobAdsArrayLen++;
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
+					int job_status = tmp_ad->Status();
+					if (job_status == COMPLETED || job_status == REMOVED) {
+						done_jobs.emplace_back(tmp_ad->jid);
+					}
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -6808,10 +6818,10 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				JobAdsArrayLen, constraint_string);
 			if (constraint_string) free(constraint_string);
 				// Now set ATTR_STAGE_OUT_START
-			for (i=0; i<JobAdsArrayLen; i++) {
+				// but only for jobs in a terminal state
+			for (const auto& jid: done_jobs) {
 					// TODO --- maybe put this in a transaction?
-				SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,
-								ATTR_STAGE_OUT_START,now);
+				SetAttributeInt(jid.cluster, jid.proc, ATTR_STAGE_OUT_START, now);
 			}
 			}
 			break;

@@ -1,5 +1,10 @@
 *** 25.8.0 features
 
+- Jobs that were submitted with spooled data files and have completed will
+  now leave the queue after a successful retrieval of their output files
+  (e.g. with :tool:`condor_transfer_data`).
+  :jira:`3508`
+
 - Singularity or Apptainer jobs now also pass --rocm to GPU jobs
   to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
   set to false.
