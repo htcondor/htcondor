@@ -19,6 +19,7 @@ TEST_CONFIG = {
     "LOCAL_CREDMON_TOKEN_AUDIENCE":         "https://localhost",
     "ALLOW_DAEMON":                         "*",
     "LOCAL_CREDMON_PRIVATE_KEY":            "$(LOCAL_DIR)/trust_domain_ca_privkey.pem",
+    "LOCAL_CREDMON_PUBLIC_KEY":             "$(LOCAL_DIR)/trust_domain_ca_pubkey.pem",
     "CREDD_DEBUG":                          "D_FULLDEBUG",
     "DAGMAN_MAX_SUBMIT_ATTEMPTS":           "1",
     "DAGMAN_PRODUCE_JOB_CREDENTIALS":       "True",
