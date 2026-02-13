@@ -431,6 +431,8 @@ public:
 
 	virtual void runPrepareJobHook();
 
+	virtual bool colorSlot( const ClassAd & /* colorAd */, ClassAd & /* replyAd */ ) { return false; }
+
 protected:
 
 		// // // // // // // // // // // //

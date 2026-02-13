@@ -55,6 +55,8 @@
 
 #include "filter.h"
 
+#include "starter_commands.h"
+
 extern class Starter *starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
@@ -3881,4 +3883,37 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 void
 JICShadow::resetInputFileCatalog() {
     filetrans->BuildFileCatalog();
+}
+
+
+bool
+JICShadow::colorSlot( const ClassAd & colorAd, ClassAd & replyAd ) {
+	if(! m_job_startd_update_sock) { return false; }
+
+	m_job_startd_update_sock->encode();
+	if(! m_job_startd_update_sock->put((int)STARTER_COMMAND::COLOR)) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to put(STARTER_COMMAND_COLOR)\n" );
+		return false;
+	}
+	if(! putClassAd(m_job_startd_update_sock, colorAd)) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to put(colorAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to end message.\n" );
+		return false;
+	}
+
+
+	m_job_startd_update_sock->decode();
+	if(! getClassAd(m_job_startd_update_sock, replyAd)) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to get(replyAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to end message.\n" );
+		return false;
+	}
+
+	return true;
 }

@@ -40,6 +40,9 @@
 // for starter exit codes
 #include "exit.h"
 
+// for the STARTER_COMMAND enumeration
+#include "starter_commands.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Claim
 ///////////////////////////////////////////////////////////////////////////
@@ -2764,10 +2767,41 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 	}
 }
 
-void Claim::receiveUpdateCommand(int cmd, ClassAd &/*payload_ad*/, ClassAd &/*reply_ad*/)
-{
-	ASSERT(cmd != 0 && cmd != 1); // 0 is update, and 1 is final_update
+void Claim::receiveUpdateCommand( int c,
+	const ClassAd & payloadAd, ClassAd & replyAd
+) {
+	STARTER_COMMAND command{c};
 
+	switch( command ) {
+		case STARTER_COMMAND::UPDATE:
+			ASSERT(command != STARTER_COMMAND::UPDATE);
+			break;
+
+		case STARTER_COMMAND::FINAL_UPDATE:
+			ASSERT(command != STARTER_COMMAND::FINAL_UPDATE);
+			break;
+
+		case STARTER_COMMAND::COLOR: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+			// Because adlist_replace() takes ownership of the `ClassAd *`.
+			ClassAd * copy = new ClassAd( payloadAd );
+			resmgr->adlist_replace( publicClaimID, copy );
+
+			replyAd.InsertAttr( ATTR_RESULT, true );
+			} break;
+
+		default:
+			dprintf( D_ALWAYS, "Ignoring unknown starter command %d\n", c );
+			break;
+	}
 }
 
 bool
