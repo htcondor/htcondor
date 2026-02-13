@@ -806,56 +806,6 @@ DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 }
 
 int
-SendSpoolFile( char const *filename )
-{
-	int	rval = -1;
-
-		CurrentSysCall = CONDOR_SendSpoolFile;
-
-		qmgmt_sock->encode();
-		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-		neg_on_error( qmgmt_sock->put(filename) );
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-		qmgmt_sock->decode();
-		neg_on_error( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			neg_on_error( qmgmt_sock->code(terrno) );
-			neg_on_error( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return rval;
-		}
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-
-int
-SendSpoolFileIfNeeded( ClassAd& ad )
-{
-	int	rval = -1;
-
-	CurrentSysCall = CONDOR_SendSpoolFileIfNeeded;
-
-	qmgmt_sock->encode();
-	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-	neg_on_error( putClassAd(qmgmt_sock, ad) );
-	neg_on_error( qmgmt_sock->end_of_message() );
-
-	qmgmt_sock->decode();
-	neg_on_error( qmgmt_sock->code(rval) );
-	if( rval < 0 ) {
-		neg_on_error( qmgmt_sock->code(terrno) );
-		neg_on_error( qmgmt_sock->end_of_message() );
-		errno = terrno;
-		return rval;
-	}
-	neg_on_error( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-
-int
 CloseSocket()
 {
 	CurrentSysCall = CONDOR_CloseSocket;
