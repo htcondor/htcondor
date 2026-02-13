@@ -40,16 +40,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 unique_identifier = 0
+true_exe = "/usr/bin/true" if sys.platform == "darwin" else "/bin/true"
+if sys.platform == "win32" : true_exe = "$(LOCAL_DIR)/condor_tests/success.exe"
 
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
     "SHARED_PORT_PORT": "0",
-    "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
-    "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
-    "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
-    "MAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
-    "SENDMAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
+    "MAIL": true_exe,
+    "SENDMAIL": true_exe,
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
@@ -62,7 +61,7 @@ DEFAULT_PARAMS = {
     "MachineMaxVacateTime": "2",
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
-    "STARTER_LIST": "STARTER",  # no standard universe starter
+    "PROCD_ADDRESS": "$(PROCD_ADDRESS)_$(PERSONAL_INSTANCE_ID)", # if we start multiple condors each must have a different PROCD_ADDRESS
     "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
 }
 
@@ -134,6 +133,7 @@ class Condor:
         self.condor_user = condor_user
         self.local_dir = local_dir
 
+        # TODO: don't assume paths, get these from config
         self.execute_dir = self.local_dir / "execute"
         self.lock_dir = self.local_dir / "lock"
         self.log_dir = self.local_dir / "log"
@@ -234,21 +234,19 @@ class Condor:
 
         param_lines += ["#", "# ROLES", "#"]
         param_lines += [
-            "use ROLE: CentralManager",
-            "use ROLE: Submit",
-            "use ROLE: Execute",
+            "DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
         ]
 
         base_config = {
             "LOCAL_DIR": self.local_dir.as_posix(),
-            "EXECUTE": self.execute_dir.as_posix(),
-            "LOCK": self.lock_dir.as_posix(),
-            "LOG": self.log_dir.as_posix(),
-            "RUN": self.run_dir.as_posix(),
-            "SPOOL": self.spool_dir.as_posix(),
-            "SEC_PASSWORD_DIRECTORY": self.passwords_dir.as_posix(),
-            "SEC_TOKEN_SYSTEM_DIRECTORY": self.tokens_dir.as_posix(),
-            "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND",
+            #"EXECUTE": "$(LOCAL_DIR)/execute",
+            "LOCK": "$(LOCAL_DIR)/lock",
+            #"LOG": "$(LOCAL_DIR)/log",
+            "RUN": "$(LOCAL_DIR)/run",
+            #"SPOOL": "$(LOCAL_DIR)/spool",
+            "SEC_PASSWORD_DIRECTORY": "$(LOCAL_DIR)/passwords.d",
+            "SEC_TOKEN_SYSTEM_DIRECTORY": "$(LOCAL_DIR)/tokens.d",
+            # "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND:1",
         }
 
         if self.condor_user:
@@ -264,16 +262,16 @@ class Condor:
                 # has user-switching privileges.
                 pass
 
-        # The need to do this is arguably a HTCondor bug.
+        # 
         global unique_identifier
         unique_identifier += 1
-        if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
-            base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
-                htcondor.param["PROCD_ADDRESS"],
-                os.getpid(),
-                time.time(),
-                unique_identifier,
-            )
+        base_config["PERSONAL_INSTANCE_ID"] = "{}".format(unique_identifier)
+
+        # win32 default for PROCD_ADDRESS can end up being too long when running tests
+        # so we want to use a different value than the default
+        # $Fddub() extracts the last 2 components of LOCAL_DIR as posix with no trailing /
+        if sys.platform == "win32":
+            base_config["PROCD_ADDRESS"] = r"\\.\pipe\$Fddub(LOCAL_DIR)/{}_$(PERSONAL_INSTANCE_ID)".format(os.getpid())
 
         param_lines += ["#", "# BASE PARAMS", "#"]
         param_lines += ["{} = {}".format(k, v) for k, v in base_config.items()]
@@ -537,7 +535,10 @@ class Condor:
     def get_local_schedd(self):
         """Return the :class:`htcondor.Schedd` for this pool's schedd."""
         with self.use_config():
-            return htcondor.Schedd()
+            #htcondor.enable_debug("D_HOSTNAME D_CAT")
+            sched = htcondor.Schedd()
+            #htcondor.disable_debug()
+            return sched
 
     def get_local_collector(self):
         """Return the :class:`htcondor.Collector` for this pool's collector."""
