@@ -5,6 +5,10 @@
   set to false.
   :jira:`3537`
 
+- HTCondor now more quickly detects when the network connection between
+  two daemons is broken or disconnected.
+  :jira:`3547`
+
 - :tool:`condor_top` now supports a `-history` option to read the most
   recently recorded on disk performance statistics.  Runs much faster,
   and works even when the *condor_schedd* is slow or not running.
