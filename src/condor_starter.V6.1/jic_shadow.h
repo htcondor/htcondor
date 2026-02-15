@@ -268,9 +268,11 @@ public:
 
 	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
 
+	virtual bool colorSlot( const ClassAd & colorAd, ClassAd & replyAd );
+
 private:
 
-    void _remove_files_from_output();
+	void _remove_files_from_output();
 
 	void updateShadowWithPluginResults( const char * which, FileTransfer * ft );
 
