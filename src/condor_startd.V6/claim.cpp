@@ -115,6 +115,19 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 }
 
 
+std::string
+claim_specific_ad_name( const char * publicClaimID ) {
+	std::string s( publicClaimID );
+
+	// Dots have special meaning in named ClassAd names.
+	std::replace( s.begin(), s.end(), '.', '_' );
+
+	// For stupid reasons, extra ads must each have a cron job.  We
+	// always define `kflops` and `mips` because of benchmarks, so
+	// just use those.
+	return "kflops." + s;
+}
+
 Claim::~Claim()
 {
 	if( c_type == CLAIM_COD ) {
@@ -122,6 +135,15 @@ Claim::~Claim()
 				 c_id->id(),
 				 c_client->c_owner.c_str() );
 	}
+
+
+	// If the starter colored this slot, uncolor it now.
+	const char * publicClaimID = publicClaimId();
+	if( publicClaimID ) {
+		std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+		resmgr->adlist_delete( claimSpecificAdName.c_str() );
+	}
+
 
 	// The resources assigned to this claim must have been freed by now.
 	// TODO: this should not happen on *every* claim delete
@@ -155,7 +177,7 @@ Claim::~Claim()
 
 			// if we have a pending deactivate reply, send it now.
 			sendDeactivateReply(false);
-	
+
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -175,7 +197,7 @@ Claim::~Claim()
 	setRequestStream( NULL );
 	setDeactivateStream(nullptr); // we should never get here with an open socket, but just in case...
 
-	if( c_global_job_id ) { 
+	if( c_global_job_id ) {
 		free( c_global_job_id );
 	}
 	if( c_cod_keyword ) {
@@ -2790,21 +2812,11 @@ void Claim::receiveUpdateCommand( int c,
 				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
 				return;
 			}
+			std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
 
-			// Dots have special meaning in named ClassAd names.
-			std::string safe_public_claim_id( publicClaimID );
-			std::replace(
-				safe_public_claim_id.begin(),
-				safe_public_claim_id.end(),
-				'.', '_'
-			);
-			// For stupid reasons, extra ads must each have a cron job.  We
-			// always define `kflops` and `mips` because of benchmarks, so
-			// just use those.
-			safe_public_claim_id = "kflops." + safe_public_claim_id;
 			// Because adlist_replace() takes ownership of the `ClassAd *`.
 			ClassAd * copy = new ClassAd( payloadAd );
-			resmgr->adlist_replace( safe_public_claim_id.c_str(), copy );
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), copy );
 
 			replyAd.InsertAttr( ATTR_RESULT, true );
 			} break;

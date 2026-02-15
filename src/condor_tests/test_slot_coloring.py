@@ -82,11 +82,6 @@ def the_slot_ads(the_condor, the_running_job):
 
 
 @action
-def the_startd_event_log(the_condor, the_running_job):
-	return None
-
-
-@action
 def the_extra_ads(the_condor, the_running_job):
 	result = the_condor.run_command(
 		args=['condor_who', '-l', '-snapshot'],
@@ -102,8 +97,29 @@ def the_extra_ads(the_condor, the_running_job):
 	return ads
 
 
+@action
+def the_cleaned_up_ads(
+	the_condor, the_running_job,
+	# Make sure that we've recorded these before we perturb the state.
+	the_extra_ads, the_slot_ads
+):
+	result_ad = the_running_job.remove()
+	# assert something about the result_ad here
+
+	# See previous comment about this constant.
+	time.sleep(3)
+
+	result = the_condor.status(
+		ad_type=htcondor2.AdType.Slot,
+	)
+	assert(len(result) > 0)
+
+	return result
+
+
 class TestSlotColoring:
 
+	# This is an implementation details, but may be useful for debugging.
 	def test_extra_ads(self, the_extra_ads):
 		for extra_ad in the_extra_ads:
 			assert extra_ad.get('ColorAttr', 0) == 7
@@ -114,7 +130,6 @@ class TestSlotColoring:
 			assert slot_ad.get('ColorAttr', 0) == 7
 
 
-	def test_startd_event_log(self, the_startd_event_log):
-		pass
-
-
+	def test_color_cleanup(self, the_cleaned_up_ads):
+		for slot_ad in the_cleaned_up_ads:
+			assert slot_ad.get('ColorAttr', -1) == -1
