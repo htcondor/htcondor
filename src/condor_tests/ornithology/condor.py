@@ -204,6 +204,7 @@ class Condor:
             self._write_config()
             self._start_condor()
             self._wait_for_ready()
+            self._make_job_queue_log_public_if_root()
         except BaseException:
             logger.exception(
                 "Encountered error during setup of {}, cleaning up!".format(self)
@@ -807,6 +808,14 @@ class Condor:
         """
         return self.submit(htcondor.Submit.from_dag(str(dagfile)))
 
+    def _make_job_queue_log_public_if_root(self):
+        if self.use_sudo:
+            # If we're running condor_master as root, then the job queue log will be owned by root and not readable by the unprivileged user running this code, so chmod it to be world-readable
+            cmd.run_command(
+                ["sudo", "chmod", "0666", self.job_queue_log.as_posix()],
+                echo=False,
+                suppress=True,
+            )
 
 RE_PORT_HOST = re.compile(r"\d+\.\d+\.\d+\.\d+:\d+")
 

@@ -41,6 +41,16 @@ static const double PriorityDelta = 0.5;
 template <typename K, typename AD> class ClassAdLog;
 struct GroupEntry;
 
+// The three logical tables stored in the Accountant database.
+// Used as the first argument to Set/GetAttribute* to identify
+// which table a record belongs to, replacing the old string-prefix
+// concatenation pattern.
+enum class AccountantTable {
+	Acct,       // Singleton global state (e.g. LastUpdateTime)
+	Customer,   // Per-customer/group accounting records
+	Resource    // Per-resource match records
+};
+
 class Accountant {
 
 public:
@@ -78,7 +88,7 @@ public:
 
   double GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
-  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
+  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const std::string& customerName, ClassAd *ad); // Help function for above
 
   void CheckMatches(std::vector<ClassAd *>& ResourceList);  // Remove matches that are not claimed
 
@@ -97,7 +107,7 @@ public:
   void DisplayLog();
   void DisplayMatches();
 
-  ClassAd* GetClassAd(const std::string& Key);
+  ClassAd* GetClassAd(AccountantTable table, const std::string& Key);
 
   // This maps submitter names to their assigned accounting group.
   // When called with a defined group name, it maps that group name to itself.
@@ -161,14 +171,6 @@ private:
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
 
   //--------------------------------------------------------
-  // Static values
-  //--------------------------------------------------------
-
-  static std::string AcctRecord;
-  static std::string CustomerRecord;
-  static std::string ResourceRecord;
-
-  //--------------------------------------------------------
   // Utility functions
   //--------------------------------------------------------
 
@@ -178,17 +180,25 @@ private:
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& CustomerName);
   static std::string GetDomain(const std::string& CustomerName);
 
-  bool DeleteClassAd(const std::string& Key);
+  bool DeleteClassAd(AccountantTable table, const std::string& Key);
 
-  void SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue);
-  void SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue);
-  void SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
+  void SetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, int64_t AttrValue);
+  void SetAttributeFloat(AccountantTable table, const std::string& Key, const std::string& AttrName, double AttrValue);
+  void SetAttributeString(AccountantTable table, const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
 
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue);
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue);
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue);
-  bool GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue);
-  bool GetAttributeString(const std::string& Key, const std::string& AttrName, std::string& AttrValue);
+  bool GetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, int& AttrValue);
+  bool GetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, long& AttrValue);
+  bool GetAttributeInt(AccountantTable table, const std::string& Key, const std::string& AttrName, long long& AttrValue);
+  bool GetAttributeFloat(AccountantTable table, const std::string& Key, const std::string& AttrName, double& AttrValue);
+  bool GetAttributeString(AccountantTable table, const std::string& Key, const std::string& AttrName, std::string& AttrValue);
+
+  static std::string MakeKey(AccountantTable table, const std::string& key);
+
+  // Iterate over all records in a specific table, calling the callback
+  // with the entity key (prefix stripped) and the ClassAd.
+  // Callback returns true to continue, false to stop early.
+  template<typename Fn>
+  void ForEachInTable(AccountantTable table, Fn&& callback);
 
   void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<std::string, int>& gnmap);
 };

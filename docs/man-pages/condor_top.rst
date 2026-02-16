@@ -12,7 +12,7 @@ Synopsis
 
 **condor_top** [**-h** ]
 
-**condor_top** [**-l** ]
+**condor_top** [**-l** ] [**-H** ]
 [**-p** *centralmanagerhostname[:portname]*] [**-n** *name*]
 [**-d** *delay*] [**-c** *columnset*] [**-s** *sortcolumn*]
 [--**attrs=<attr1,attr2,...>**] [*daemon options* ]
@@ -55,6 +55,13 @@ HTCondor daemon, in which case the *condor_collector* will not be
 queried but rather the statistics will be computed and displayed
 immediately from the two ClassAds. Only -c, -s, and -attrs options are
 considered when passing ClassAds via files.
+
+When monitoring a *condor_schedd*, passing **-H** (or **-history**)
+reads the two most recent daemon ClassAds from the
+:file:`$(SPOOL)/schedd_daemon_history` file instead of querying the
+schedd twice. This mode disables live output, cannot be combined with
+file input, and ignores the **-p** option because the data are sourced
+locally.
 
 The following subprocess stat columns may be displayed (\*default):
 
@@ -101,6 +108,11 @@ Options
     Displays the list of options.
  **-l**
     Puts *condor_top* in to a live, continually updating mode.
+ **-H**, **-history**, **--history**
+    When monitoring a *condor_schedd*, read the two most recent daemon
+    ClassAds from :file:`$(SPOOL)/schedd_daemon_history` instead of
+    querying the daemon twice. This mode disables live updates, ignores
+    **-p**, and cannot be combined with file input.
  **-p** *centralmanagerhostname[:portname]*
     Query the daemon via the specified central manager. If omitted, the
     value of the configuration variable :macro:`COLLECTOR_HOST` is used.

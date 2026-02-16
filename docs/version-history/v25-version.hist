@@ -5,10 +5,28 @@
   (e.g. with :tool:`condor_transfer_data`).
   :jira:`3508`
 
+- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
+  generated submit file.  There is a new option ``-getenv`` to 
+  allow this.
+  :jira:`3549`
+
 - Singularity or Apptainer jobs now also pass --rocm to GPU jobs
   to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
   set to false.
   :jira:`3537`
+
+- HTCondor now more quickly detects when the network connection between
+  two daemons is broken or disconnected.
+  :jira:`3547`
+
+- :tool:`condor_top` now supports a `-history` option to read the most
+  recently recorded on disk performance statistics.  Runs much faster,
+  and works even when the *condor_schedd* is slow or not running.
+  :jira:`3582`
+
+- Updated list of default environment variables that *condor_dagman* always
+  grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
+  :jira:`1913`
 
 - :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
   in the summary table.
@@ -22,6 +40,18 @@
 
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
+
+- The **copy_to_spool** command in :tool:`condor_submit` is no longer
+  supported.
+  This don't affect the ability to spool a job's full input sandbox.
+  :jira:`3545`
+
+- No longer warn about config knobs with dots in the names if the knob
+  is group quota related, and begins with GROUP.
+  :jira:`3544`
+
+- The old ClassAd syntax is no longer supported in job transforms.
+  :jira:`3538`
 
 *** 25.8.0 bugs
 

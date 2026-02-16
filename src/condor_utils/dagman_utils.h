@@ -155,7 +155,7 @@ namespace DagmanShallowOptions {
 	);
 
 	BETTER_ENUM(b, long,
-		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, CopyToSpool, DryRun,
+		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, DryRun,
 		OnlyDumpDot
 	);
 
@@ -304,7 +304,6 @@ public:
 			param(appendFile, "DAGMAN_INSERT_SUB_FILE");
 			shallow.stringOpts[str::AppendFile] = appendFile;
 			shallow.boolOpts[b::DoSubmit] = true;
-			shallow.boolOpts[b::CopyToSpool] = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 			shallow.intOpts[i::MaxIdle] = -1;
 			shallow.intOpts[i::MaxJobs] = -1;
 			shallow.intOpts[i::MaxPre] = -1;

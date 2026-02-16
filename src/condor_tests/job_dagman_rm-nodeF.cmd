@@ -5,8 +5,6 @@ transfer_input_files = CondorTest.pm, Condor.pm, CondorUtils.pm, CondorPersonal.
 log = job_dagman_rm-nodeF.log
 output = job_dagman_rm-nodeF.out
 error = job_dagman_rm-nodeF.err
-# Note: we need getenv = true for the node job to talk to the schedd of
-# the personal condor that's running the test.
-getenv       = true
+getenv = CONDOR*,PATH
 notification = NEVER
 queue

@@ -115,14 +115,14 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	/*	Set up DAGMan proper jobs getenv filter
 	*	Update DAGMAN_MANAGER_JOB_APPEND_GETENV Macro documentation if base
 	*	getEnv value changes. -Cole Bollig 2023-02-21
+	*	Note: We want to make sure the following list of variables always
+	*	      for DAGMan. - Cole Bollig 2026-2-16
 	*/
-	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL,ASAN_OPTIONS,LSAN_OPTIONS";
+	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL,ASAN_OPTIONS,LSAN_OPTIONS,BEARER_TOKEN,BEARER_TOKEN_FILE";
 	auto_free_ptr conf_getenvVars = param("DAGMAN_MANAGER_JOB_APPEND_GETENV");
 	if (conf_getenvVars && strcasecmp(conf_getenvVars.ptr(),"true") == MATCH) {
 		getEnv = "true";
 	} else {
-		//Scitoken related variables
-		getEnv += ",BEARER_TOKEN,BEARER_TOKEN_FILE,XDG_RUNTIME_DIR";
 		//Add user defined via flag vars to getenv
 		for (const auto& vars : options[deep::slist::GetFromEnv]) {
 			if (vars.empty()) continue;
@@ -176,10 +176,6 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "# requeued by the schedd if it exits abnormally or\n");
 	fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
 	fprintf(pSubFile, "on_exit_remove = %s\n", removeExpr.c_str() );
-
-	if (!usingPythonBindings) {
-		fprintf(pSubFile, "copy_to_spool = %s\n", options[shallow::b::CopyToSpool] ? "True" : "False" );
-	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Be sure to change MIN_SUBMIT_FILE_VERSION in dagman_main.cpp

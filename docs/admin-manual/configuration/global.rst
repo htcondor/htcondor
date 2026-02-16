@@ -338,17 +338,20 @@ and `shared_fs_config_options`_.
     temporary files created by text editors as configuration files.
 
 :macro-def:`CONDOR_IDS`
-    The User ID (UID) and Group ID (GID) pair that the HTCondor daemons
-    should run as, if the daemons are spawned as root.
+    This setting is ignored when HTCondor is not started as root on Unix platforms.
+    When HTCondor is started as root, every daemon switches the effective UID
+    and GID to some non-root user and group.  This is for security reasons.
+    Daemons will retain the real user and group IDs, so that they can 
+    temporarily switch back to root privileges when necessary, such as
+    when reading some system file, or when changing the ownership of a file.
+    This setting defines the non-root effective user and group id HTCondor daemons
+    should run at when they were started with root privileges.
     :index:`CONDOR_IDS environment variable`\ :index:`CONDOR_IDS<single: CONDOR_IDS; environment variables>`
     This value can also be specified in the :macro:`CONDOR_IDS` environment
-    variable. If the HTCondor daemons are not started as root, then
-    neither this :macro:`CONDOR_IDS` configuration macro nor the
-    :macro:`CONDOR_IDS` environment variable are used. The value is given by
-    two integers, separated by a period. For example,
+    variable.  The value is given by two integers, separated by a period. For example,
     CONDOR_IDS = 1234.1234. If this pair is not specified in either the
     configuration file or in the environment, and the HTCondor daemons
-    are spawned as root, then HTCondor will search for a condor user on
+    are spawned as root, then HTCondor will search for an account named "condor" on
     the system, and run as that user's UID and GID. See
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     on UIDs in HTCondor for more details.
