@@ -32,6 +32,11 @@
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
+- The **copy_to_spool** command in :tool:`condor_submit` is no longer
+  supported.
+  This don't affect the ability to spool a job's full input sandbox.
+  :jira:`3545`
+
 - No longer warn about config knobs with dots in the names if the knob
   is group quota related, and begins with GROUP.
   :jira:`3544`

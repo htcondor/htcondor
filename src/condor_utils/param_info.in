@@ -631,13 +631,6 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_COPY_TO_SPOOL]
-default=false
-type=bool
-customization=expert
-tags=dagman,dagman_main
-restart=never
-
 [DAGMAN_DEBUG]
 default=
 type=string

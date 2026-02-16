@@ -165,9 +165,6 @@ bool allow_crlf_script = false;
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
 
-std::string LastExecutable; // used to pass executable between the check_file callback and SendExecutableb
-bool     SpoolLastExecutable;
-
 time_t get_submit_time()
 {
 	if ( ! submit_time) {
@@ -230,7 +227,6 @@ void cleanup_vars(SubmitHash & hash, const std::vector<std::string> & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 bool is_crlf_shebang(const char * path);
-int  SendLastExecutable(SubmitHash &submit_hash);
 int  MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
 
@@ -1187,7 +1183,7 @@ bool is_crlf_shebang(const char *path)
 
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
 // so we can choose to do file checks.
-int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
+int check_sub_file(void* /*pv*/, SubmitHash * /*sub*/, _submit_file_role role, const char * pathname, int flags)
 {
 	if ((pathname == NULL) && (role != SFR_PSEUDO_EXECUTABLE)) {
 		fprintf(stderr, "\nERROR: NULL filename\n");
@@ -1238,9 +1234,6 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 
 		if (!ename) transfer_it = false;
 
-        LastExecutable = empty_if_null(ename);
-		SpoolLastExecutable = false;
-
 		// ensure the executables exist and spool them only if no
 		// $$(arch).$$(opsys) are specified  (note that if we are simply
 		// dumping the class-ad to a file, we won't actually transfer
@@ -1267,17 +1260,6 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 						"should probably run 'dos2unix %s' -- or a similar "
 						"tool -- before you resubmit.\n", ename );
 					return 1; // abort
-				}
-			}
-
-			if (role == SFR_EXECUTABLE) {
-				bool param_exists;
-				SpoolLastExecutable = sub->submit_param_bool( SUBMIT_KEY_CopyToSpool, "CopyToSpool", false, &param_exists );
-				if ( ! param_exists) {
-						// In so many cases, copy_to_spool=true would just add
-						// needless overhead.  Therefore, (as of 6.9.3), the
-						// default is false.
-					SpoolLastExecutable = false;
 				}
 			}
 		}
@@ -1434,7 +1416,6 @@ int send_cluster_ad(SubmitHash & hash, int ClusterId, bool is_interactive, bool 
 	// if this submission is using jobsets, send the jobset ad first
 	rval = send_jobset_ad(hash, ClusterId);
 	if (rval >= 0) {
-		SendLastExecutable(hash); // if spooling the exe, send it now.
 		rval = MySendJobAttributes(JOB_ID_KEY(ClusterId,-1), *clusterAd, setattrflags);
 		if (rval < 0) {
 			fprintf( stderr, "\nERROR: Failed to queue job.\n" );
@@ -2295,8 +2276,6 @@ static int queue_item(int num, const std::vector<std::string> & vars, SubmitHash
 				exit(1);
 			}
 
-			SendLastExecutable(submit_hash); // if spooling the exe, send it now.
-
 			// before sending proc0 ad, send the cluster ad
 			classad::ClassAd * cad = job->GetChainedParentAd();
 			if (cad) {
@@ -2487,44 +2466,6 @@ init_params()
 	}
 
 	protectedUrlMap = getProtectedURLMap();
-}
-
-
-int SendLastExecutable(SubmitHash &submit_hash)
-{
-	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.c_str();
-	bool copy_to_spool = SpoolLastExecutable;
-	std::string SpoolEname(ename ? ename : "");
-
-	// spool executable if necessary
-	if ( ename && copy_to_spool ) {
-
-		char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
-		SpoolEname = chkptname;
-		free(chkptname);
-		int ret = MyQ->send_SpoolFile(SpoolEname.c_str());
-
-		if (ret < 0) {
-			fprintf( stderr,
-						"\nERROR: Request to transfer executable %s failed\n",
-						SpoolEname.c_str() );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-
-		// ret will be 0 if the SchedD gave us the go-ahead to send
-		// the file. if it's not, the SchedD is using ickpt sharing
-		// and already has a copy, so no need
-		//
-		if ((ret == 0) && MyQ->send_SpoolFileBytes(submit_hash.full_path(ename,false)) < 0) {
-			fprintf( stderr,
-						"\nERROR: failed to transfer executable file %s\n", 
-						ename );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-	}
-	return 0;
 }
 
 

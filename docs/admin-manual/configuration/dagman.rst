@@ -676,15 +676,6 @@ Debug output
 HTCondor attributes
 -------------------
 
-:macro-def:`DAGMAN_COPY_TO_SPOOL`
-    A boolean value that when ``True`` copies the :tool:`condor_dagman`
-    binary to the spool directory when a DAG is submitted. Setting this
-    variable to ``True`` allows long-running DAGs to survive a DAGMan
-    version upgrade. For running large numbers of small DAGs, leave this
-    variable unset or set it to ``False``. The default value if not
-    defined is ``False``. **Note: users should rarely change this
-    setting.**
-
 :macro-def:`DAGMAN_INSERT_SUB_FILE`
     A file name of a file containing submit description file commands to
     be inserted into the ``.condor.sub`` file created by

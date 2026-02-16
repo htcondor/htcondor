@@ -194,7 +194,6 @@
 #define SUBMIT_KEY_StreamOutput "stream_output"
 #define SUBMIT_KEY_StreamError "stream_error"
 
-#define SUBMIT_KEY_CopyToSpool "copy_to_spool"
 #define SUBMIT_KEY_LeaveInQueue "leave_in_queue"
 
 #define SUBMIT_KEY_PeriodicHoldCheck "periodic_hold"

@@ -384,26 +384,6 @@ void FreeJobAd(ClassAd *&ad);
 
 #endif
 
-
-/** Initiate transfer of job's initial checkpoint file (the executable).
-	Follow with a call to SendSpoolFileBytes.
-	@param filename Name of initial checkpoint file destination
-	@return -1 on failure; 0 on success
-*/
-int SendSpoolFile(char const *filename);
-
-/** Actually transfer the initial checkpoint file (the executable).
-	@param filename Name of initial checkpoint file source.
-*/
-int SendSpoolFileBytes(char const *filename);
-
-/** New way of initializing transfer of ICKPT file.
-    @return -1 on failure
-            0 if client should send file
-            1 if client need not send file since it's already there
-*/
-int SendSpoolFileIfNeeded(ClassAd& ad);
-
 #ifdef SCHEDD_INTERNAL_DECLARATIONS
 //we DON'T want to see the external qmanager's definition of WalkJobQueue in the schedd because the internal implementation is very different.
 #else

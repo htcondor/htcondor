@@ -177,10 +177,6 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	fprintf(pSubFile, "# is killed (e.g., during a reboot).\n");
 	fprintf(pSubFile, "on_exit_remove = %s\n", removeExpr.c_str() );
 
-	if (!usingPythonBindings) {
-		fprintf(pSubFile, "copy_to_spool = %s\n", options[shallow::b::CopyToSpool] ? "True" : "False" );
-	}
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Be sure to change MIN_SUBMIT_FILE_VERSION in dagman_main.cpp
 	// if the arguments passed to condor_dagman change in an
