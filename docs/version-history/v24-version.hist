@@ -10,6 +10,11 @@
   filesystems with rate-limits on I/O operations.
   :jira:`3512`
 
+- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
+  path incorrectly when using late materialization and a different executable
+  for each job.
+  :jira:`3546`
+
 *** 24.0.16 features
 
 - HTCondor tarballs now contain `Pelican 7.22.0 <https://pelicanplatform.org/releases>`_
