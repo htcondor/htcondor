@@ -1,7 +1,7 @@
 *** 25.8.0 features
 
-- :tool:`condor_run` no longer passes "getenv = true" to the
-  generated submit file.  There is a new option -getenv to 
+- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
+  generated submit file.  There is a new option ``-getenv`` to 
   allow this.
   :jira:`3549`
   
