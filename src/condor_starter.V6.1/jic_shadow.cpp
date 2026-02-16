@@ -3004,9 +3004,6 @@ JICShadow::doneWithInputTransfer() {
 		if( colorAd == NULL ) {
 			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: `ColorAd` not a ClassAd, ignoring.\n" );
 		} else {
-			// This shouldn't be #defined in `startd_named_classad.cpp`.
-			colorAd->Assign( "SlotMergeConstraint", true );
-
 			ClassAd replyAd;
 			bool protocol = colorSlot( * colorAd, replyAd );
 			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: protocol = %s\n", protocol ? "TRUE" : "FALSE" );

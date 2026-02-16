@@ -2816,6 +2816,23 @@ void Claim::receiveUpdateCommand( int c,
 
 			// Because adlist_replace() takes ownership of the `ClassAd *`.
 			ClassAd * copy = new ClassAd( payloadAd );
+
+			// It seems brave to allow random strangers to determine which
+			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
+			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
+			std::string assignment;
+			if( this->rip() != NULL ) {
+				formatstr( assignment, "SlotMergeConstraint = SlotID == %d", this->rip()->r_id );
+			} else {
+				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+			// Presumably this actually insert-or-update.
+			copy->Insert( assignment );
+
 			resmgr->adlist_replace( claimSpecificAdName.c_str(), copy );
 
 			replyAd.InsertAttr( ATTR_RESULT, true );
