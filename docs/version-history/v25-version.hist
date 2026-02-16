@@ -10,6 +10,10 @@
   and works even when the *condor_schedd* is slow or not running.
   :jira:`3582`
 
+- Updated list of default environment variables that *condor_dagman* always
+  grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
+  :jira:`1913`
+
 - :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
   in the summary table.
   :jira:`3535`
