@@ -577,19 +577,17 @@ ProcFamilyProxy::start_procd()
 	std_io[1] = -1;
 	std_io[2] = pipe_ends[1];
 
-	// use Create_Process to start the procd
+	// use CreateProcessNew to start the procd
 	//
-	m_procd_pid = daemonCore->Create_Process(exe.c_str(),
+	OptionalCreateProcessArgs cpArgs;
+	m_procd_pid = daemonCore->CreateProcessNew(exe.c_str(),
 	                                         args,
-	                                         PRIV_ROOT,
-	                                         m_reaper_id,
-	                                         FALSE,
-	                                         FALSE,
-	                                         &env,
-	                                         NULL,
-	                                         NULL,
-	                                         NULL,
-	                                         std_io);
+	                                         cpArgs.priv(PRIV_ROOT)
+	                                         	.reaperID(m_reaper_id)
+	                                         	.wantCommandPort(FALSE)
+	                                         	.wantUDPCommandPort(FALSE)
+	                                         	.env(&env)
+	                                         	.std(std_io));
 	if (m_procd_pid == FALSE) {
 		dprintf(D_ALWAYS, "start_procd: unable to execute the procd\n");
 		daemonCore->Close_Pipe(pipe_ends[0]);

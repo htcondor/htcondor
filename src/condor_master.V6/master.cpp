@@ -643,7 +643,7 @@ main_init( int argc, char* argv[] )
 	
 		// Grab all parameters needed by the master.
 	init_params();
-	validate_config(0, CONFIG_OPT_DEPRECATION_WARNINGS);
+	validate_config(0);
 		// param() for DAEMON_LIST and initialize our daemons object.
 	init_daemon_list();
 	if ( daemons.SetupControllers() < 0 ) {
@@ -1638,7 +1638,7 @@ main_config()
 
 		// Reset our config values
 	init_params();
-	validate_config(0, CONFIG_OPT_DEPRECATION_WARNINGS);
+	validate_config(0);
 
 		// Reset the daemon list
 	init_daemon_list();
@@ -1918,12 +1918,12 @@ run_preen_now()
 	}
 	free(args);
 
-	preen_pid = daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	preen_pid = daemonCore->CreateProcessNew(
 					FS_Preen,		// program to exec
 					arglist,   		// args
-					PRIV_ROOT,		// privledge level
-					1,				// which reaper ID to use; use default reaper
-					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
+					cpArgs.priv(PRIV_ROOT)		// privilege level
+					.wantCommandPort(false));	// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 	return TRUE;
 }

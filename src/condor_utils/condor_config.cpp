@@ -636,21 +636,10 @@ Output is via a giant EXCEPT string because the dprintf
 system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
-bool validate_config(bool abort_if_invalid, int opt)
+bool validate_config(bool abort_if_invalid)
 {
-	bool deprecation_check = (opt & CONFIG_OPT_DEPRECATION_WARNINGS);
 	unsigned int invalid_entries = 0;
-	unsigned int deprecated_entries = 0;
 	std::string invalid_out = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
-	std::string deprecated_out;
-	Regex re;
-	if (deprecation_check) {
-		int errcode, erroffset;
-		// check for knobs of the form SUBSYS.LOCALNAME.*
-		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
-			EXCEPT("Programmer error in condor_config: invalid regexp");
-		}
-	}
 
 	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	while( ! hash_iter_done(it) ) {
@@ -667,17 +656,6 @@ bool validate_config(bool abort_if_invalid, int opt)
 			invalid_out += "\n";
 			invalid_entries++;
 		}
-		if (deprecation_check && re.match(name)) {
-			deprecated_out += "   ";
-			deprecated_out += name;
-			MACRO_META * pmet = hash_iter_meta(it);
-			if (pmet) {
-				deprecated_out += " at ";
-				param_append_location(pmet, deprecated_out);
-			}
-			deprecated_out += "\n";
-			deprecated_entries++;
-		}
 		hash_iter_next(it);
 	}
 	hash_iter_delete(&it);
@@ -688,12 +666,6 @@ bool validate_config(bool abort_if_invalid, int opt)
 			dprintf(D_ALWAYS, "%s", invalid_out.c_str());
 			return false;
 		}
-	}
-	if (deprecated_entries > 0) {
-		dprintf(D_ALWAYS,
-			"WARNING: Some configuration variables appear to be an unsupported form of SUBSYS.LOCALNAME.* override\n"
-			"       The supported form is just LOCALNAME.* Variables are:\n%s",
-			deprecated_out.c_str());
 	}
 	return true;
 }
@@ -784,8 +756,7 @@ bool config_ex(int config_options)
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
 	bool result = real_config(NULL, wantsQuiet, config_options, NULL);
 	if (!result) { return result; }
-	int validate_opt = config_options & (CONFIG_OPT_DEPRECATION_WARNINGS | CONFIG_OPT_WANT_QUIET);
-	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT), validate_opt);
+	return validate_config(!(config_options & CONFIG_OPT_NO_EXIT));
 }
 
 
