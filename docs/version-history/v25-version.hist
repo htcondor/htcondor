@@ -1,5 +1,10 @@
 *** 25.8.0 features
 
+- :tool:`condor_run` no longer passes "getenv = true" to the
+  generated submit file.  There is a new option -getenv to 
+  allow this.
+  :jira:`3549`
+  
 - Singularity or Apptainer jobs now also pass --rocm to GPU jobs
   to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
   set to false.
