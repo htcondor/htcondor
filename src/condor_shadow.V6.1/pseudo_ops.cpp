@@ -1515,12 +1515,17 @@ UniShadow::start_staging_only_conversation(
 	}
 
 
-	int clusterID;
+	int clusterID = 0;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID );
 
-	int procID;
+	int procID = 0;
 	jobAd->LookupInteger( ATTR_PROC_ID, procID );
-
+	if( procID < 0 ) {
+		procID = (-1 * procID) - 1000;
+	} else {
+		// ... FIXME ...
+		dprintf( D_ALWAYS, "start_staging_only_conversation(): procIDs should be negative.\n" );
+	}
 
 	// We shouldn't need the address, since we're a shadow.
 	DCSchedd schedd( getScheddAddr() /*, pool */ );
@@ -2070,31 +2075,32 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		static bool in_conversation = false;
 		static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
 
-		switch( cxfer_type ) {
-			case CXFER_STATE::INVALID:
-				ASSERT(cxfer_type != CXFER_STATE::INVALID);
-				break;
-
-			case CXFER_STATE::STAGING:
-				the_coroutine = std::move(
-					this->start_staging_only_conversation(request, *common_file_catalogs)
-				);
-				break;
-
-			case CXFER_STATE::MAPPING:
-				the_coroutine = std::move(
-					this->start_mapping_only_conversation(request, *common_file_catalogs)
-				);
-				break;
-
-			default:
-				// .... FIXME ....
-				break;
-		}
-
 		if(! in_conversation) {
 			dprintf( D_ZKM, "Starting common input files conversation during job setup.\n" );
 			in_conversation = true;
+
+			switch( cxfer_type ) {
+				case CXFER_STATE::INVALID:
+					ASSERT(cxfer_type != CXFER_STATE::INVALID);
+					break;
+
+				case CXFER_STATE::STAGING:
+					the_coroutine = std::move(
+						this->start_staging_only_conversation(request, *common_file_catalogs)
+					);
+					break;
+
+				case CXFER_STATE::MAPPING:
+					the_coroutine = std::move(
+						this->start_mapping_only_conversation(request, *common_file_catalogs)
+					);
+					break;
+
+				default:
+					// .... FIXME ....
+					break;
+			}
+
 			guidance = the_coroutine();
 		} else {
 			dprintf( D_ZKM, "Continuing common input files conversation during job setup.\n" );
