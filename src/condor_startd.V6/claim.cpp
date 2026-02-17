@@ -2824,13 +2824,15 @@ void Claim::receiveUpdateCommand( int c,
 			if( this->rip() != NULL ) {
 				formatstr( assignment, "SlotMergeConstraint = SlotID == %d", this->rip()->r_id );
 			} else {
+				delete copy;
+
 				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
 				dprintf( D_ALWAYS, "%s\n", reason );
 				replyAd.InsertAttr( ATTR_RESULT, false );
 				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
 				return;
 			}
-			// Presumably this actually insert-or-update.
+			// Presumably this is actually insert-or-update.
 			copy->Insert( assignment );
 
 			resmgr->adlist_replace( claimSpecificAdName.c_str(), copy );
