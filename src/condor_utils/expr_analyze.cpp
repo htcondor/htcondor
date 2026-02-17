@@ -222,6 +222,13 @@ int AnalyzeThisSubExpr(
 	const char * pop = "";
 	int ix_me = -1, ix_left = -1, ix_right = -1, ix_grip = -1;
 
+	if (depth > 500) {
+		if (chatty) {
+			printf("Potential recursive expression tree detected at depth %d, stopping analysis.\n", depth);
+		}
+		return 0;
+	}
+
 	std::string strLabel;
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
