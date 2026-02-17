@@ -219,8 +219,8 @@ The available output data are as follows:
     = on hold, R = running, I = idle (waiting for a machine to execute
     on), C = completed, X = removed, S = suspended (execution of a
     running job temporarily suspended on execute node), < = transferring
-    input (or queued to do so), and > = transferring output (or queued
-    to do so).
+    input (or queued to do so), > = transferring output (or queued
+    to do so), and 'c' for in cooldown status.
  PRI
     (Non-batch mode only) User specified priority of the job, displayed
     as an integer, with higher numbers corresponding to better priority.
