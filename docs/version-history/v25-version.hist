@@ -23,7 +23,7 @@
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
 
-- htcondor job status and :tool:`condor_q` now indicate when a job is
+- :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
   in the cooldown state.
   :jira:`2535`
 
