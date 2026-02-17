@@ -22,7 +22,9 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "condor_url.h"
 #include "file_transfer.h"
+#include "file_transfer_internal.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
 #include "basename.h"
@@ -42,6 +44,8 @@
 #include "condor_url.h"
 #include "my_popen.h"
 #include "file_transfer_stats.h"
+#include "pelican_transfer.h"
+#include "stageout_transform.h"
 #include "utc_time.h"
 #include "AWSv4-utils.h"
 #include "AWSv4-impl.h"
@@ -58,6 +62,10 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+
+#include <curl/curl.h>
 
 
 // not sure why, but enabling this leads to crashes in some tests (which are linux only...)
@@ -66,43 +74,121 @@
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
 
-// Transfer commands are sent from the upload side to the download side.
-// 0 - finished
-// 1 - use socket default (on or off) for next file
-// 2 - force encryption on for next file.
-// 3 - force encryption off for next file.
-// 4 - do an x509 credential delegation (using the socket default)
-// 5 - send a URL and have the download side fetch it
-// 6 - send a request to make a directory
-// 999 - send a classad telling what to do.
-//
-// 999 subcommands (999 is followed by a filename and then a ClassAd):
-// 7 - ClassAd contains information about a URL upload performed by
-//     the upload side.
-// 8 - ClassAd contains information about a list of files which will be
-//     sent later that may be eligible for reuse.  This is command requires
-//     a response indicating if the download side already has one of the
-//     files available.
-// 9 - ClassAd contains a list of URLs that need to be signed for the uploader
-//     to proceed.
-enum class TransferCommand {
-	Unknown = -1,
-	Finished = 0,
-	XferFile = 1,
-	EnableEncryption = 2,
-	DisableEncryption = 3,
-	XferX509 = 4,
-	DownloadUrl = 5,
-	Mkdir = 6,
-	Other = 999
-};
+// FileTransferItem method implementations
 
-enum class TransferSubCommand {
-	Unknown = -1,
-	UploadUrl = 7,
-	ReuseInfo = 8,
-	SignUrls = 9
-};
+FileTransferItem::FileTransferItem(const FileTransferItem& other)
+	: m_src_scheme(other.m_src_scheme),
+	  m_dest_scheme(other.m_dest_scheme),
+	  m_src_name(other.m_src_name),
+	  m_dest_dir(other.m_dest_dir),
+	  m_dest_url(other.m_dest_url),
+	  m_xfer_queue(other.m_xfer_queue),
+	  is_domainsocket(other.is_domainsocket),
+	  is_directory(other.is_directory),
+	  is_symlink(other.is_symlink),
+	  m_file_mode(other.m_file_mode),
+	  m_file_size(other.m_file_size)
+{
+	if (other.m_url_ad) {
+		m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
+	}
+}
+
+FileTransferItem& FileTransferItem::operator=(const FileTransferItem& other) {
+	if (this != &other) {
+		m_src_scheme = other.m_src_scheme;
+		m_dest_scheme = other.m_dest_scheme;
+		m_src_name = other.m_src_name;
+		m_dest_dir = other.m_dest_dir;
+		m_dest_url = other.m_dest_url;
+		m_xfer_queue = other.m_xfer_queue;
+		is_domainsocket = other.is_domainsocket;
+		is_directory = other.is_directory;
+		is_symlink = other.is_symlink;
+		m_file_mode = other.m_file_mode;
+		m_file_size = other.m_file_size;
+		if (other.m_url_ad) {
+			m_url_ad = std::make_unique<ClassAd>(*other.m_url_ad);
+		} else {
+			m_url_ad.reset();
+		}
+	}
+	return *this;
+}
+
+void FileTransferItem::setSrcName(const std::string &src) {
+	m_src_name = src;
+	const char *scheme_end = IsUrl(src.c_str());
+	if (scheme_end) {
+		m_src_scheme = std::string(src.c_str(), scheme_end - src.c_str());
+	}
+}
+
+void FileTransferItem::setDestUrl(const std::string &dest_url) {
+	m_dest_url = dest_url;
+	const char *scheme_end = IsUrl(dest_url.c_str());
+	if (scheme_end) {
+		m_dest_scheme = std::string(dest_url.c_str(), scheme_end - dest_url.c_str());
+	}
+}
+
+bool FileTransferItem::operator<(const FileTransferItem &other) const {
+	// Ordering of transfers:
+	// - Destination URLs first (allows these plugins to alter CEDAR transfers on
+	//   stageout)
+	// - CEDAR-based transfers (move any credentials prior to source URLs; assume
+	//   credentials are already present for stageout).
+	// - Source URLs last.
+	//      - Protected URLs (require a transfer queues permission)
+	//      - All other source URLs
+
+	auto is_dest_url = !m_dest_scheme.empty();
+	auto other_is_dest_url = !other.m_dest_scheme.empty();
+	if (is_dest_url && !other_is_dest_url) {
+		return true;
+	}
+	if (!is_dest_url && other_is_dest_url) {
+		return false;
+	}
+	if (is_dest_url) {
+		if (m_dest_scheme == other.m_dest_scheme) {
+			return false;
+		} else {
+			return m_dest_scheme < other.m_dest_scheme;
+		}
+	}
+
+	auto is_src_url = !m_src_scheme.empty();
+	auto other_is_src_url = !other.m_src_scheme.empty();
+	if (is_src_url && !other_is_src_url) {
+		return false;
+	}
+	if (!is_src_url && other_is_src_url) {
+		return true;
+	}
+	if (is_src_url) { // Both are URLs
+		// Check if src has specified queue for permissions
+		if (hasQueue() && !other.hasQueue()) {
+			return true;
+		} else if (!hasQueue() && other.hasQueue()) {
+			return false;
+		} else if (hasQueue() && other.hasQueue() && m_xfer_queue != other.m_xfer_queue) {
+			return m_xfer_queue < other.m_xfer_queue;
+		}
+		if (m_src_scheme == other.m_src_scheme) {
+			return false;
+		} else {
+			return m_src_scheme < other.m_src_scheme;
+		}
+	}
+	return false;
+}
+
+// Helper function to determine if a transfer command is a URL download
+inline bool isUrlDownload(TransferCommand cmd, TransferSubCommand subcmd) {
+	return (cmd == TransferCommand::DownloadUrl) ||
+	       (cmd == TransferCommand::Other && subcmd == TransferSubCommand::DownloadUrlWithAd);
+}
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -139,140 +225,6 @@ const char IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
  * it to be sorted in a list.  This allows, for example, all the CEDAR-based
  * transfers to be performed prior to the non-CEDAR transfers.
  */
-class FileTransferItem {
-public:
-	const std::string &srcName() const { return m_src_name; }
-	const std::string &destDir() const { return m_dest_dir; }
-	const std::string &destUrl() const { return m_dest_url; }
-	const std::string &srcScheme() const { return m_src_scheme; }
-	const std::string &xferQueue() const { return m_xfer_queue; }
-	filesize_t fileSize() const { return m_file_size; }
-	void setDestDir(const std::string &dest) { m_dest_dir = dest; }
-	void setXferQueue(const std::string &queue) { m_xfer_queue = queue; }
-	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
-	void setDomainSocket(bool value) { is_domainsocket = value; }
-	void setSymlink(bool value) { is_symlink = value; }
-	void setDirectory(bool value) { is_directory = value; }
-	bool isDomainSocket() const {return is_domainsocket;}
-	bool isSymlink() const {return is_symlink;}
-	bool isDirectory() const {return is_directory;}
-	bool isSrcUrl() const {return !m_src_scheme.empty();}
-	bool isDestUrl() const {return !m_dest_scheme.empty();}
-	bool hasQueue() const { return !m_xfer_queue.empty(); }
-	condor_mode_t fileMode() const {return m_file_mode;}
-	void setFileMode(condor_mode_t new_mode) {m_file_mode = new_mode;}
-
-	void setSrcName(const std::string &src) {
-		m_src_name = src;
-		const char *scheme_end = IsUrl(src.c_str());
-		if (scheme_end) {
-			m_src_scheme = std::string(src.c_str(), scheme_end - src.c_str());
-		}
-	}
-
-	void setDestUrl(const std::string &dest_url) {
-		m_dest_url = dest_url;
-		const char *scheme_end = IsUrl(dest_url.c_str());
-		if (scheme_end) {
-			m_dest_scheme = std::string(dest_url.c_str(), scheme_end - dest_url.c_str());
-		}
-	}
-
-    //
-    // This function is used by std::stable_sort() in FileTransfer::DoUpload()
-    // to group transfers.  This function used to also sort all transfers,
-    // but it no longer does; now it only sorts URLs.  (It should probably stop
-    // doing that, too, but that's another ticket.)  This is because
-    // ExpandeFileTransferList() -- which converts a list of source names
-    // into a std::vector<FileTransferItem> -- creates new non-URL
-    // FileTransferItems when it "expands" the name of a directory into
-    // the FileTransferItem which creates the directory and the
-    // FileTransferItems which populate the directory.  Obviously, creating
-    // the directory must come before populating it.
-    //
-    // Before, this almost always happened because the "source" of a directory
-    // would always sort before the source of any of the files in the
-    // directory.  However, after HTCONDOR-583 fixed a problem where file
-    // transfer would ignore directories in SPOOL, it became very easy to
-    // write job submit files which would have two different "sources" (the
-    // SPOOL and the input directory) for the same directory.  When
-    // ExpandFileTransferList() removes duplicate directories, it removes
-    // the directories which appear later in the list, because the directory
-    // needs to be created before any files in it (and the input directory,
-    // for example, could have a file in it that's not in SPOOL).  Sorting
-    // the list of non-URL FileTransferItems may undo this ordering (for
-    // instance, if SPOOL sorts before the IWD, a file from SPOOL would be
-    // transferred before the directory "sourced" in IWD would be created,
-    // because transfers from IWD are listed first (to make sure that files
-    // in SPOOL win)).
-    //
-
-	bool operator<(const FileTransferItem &other) const {
-		// Ordering of transfers:
-		// - Destination URLs first (allows these plugins to alter CEDAR transfers on
-		//   stageout)
-		// - CEDAR-based transfers (move any credentials prior to source URLs; assume
-		//   credentials are already present for stageout).
-		// - Source URLs last.
-		//      - Protected URLs (require a transfer queues permission)
-		//      - All other source URLs
-
-		auto is_dest_url = !m_dest_scheme.empty();
-		auto other_is_dest_url = !other.m_dest_scheme.empty();
-		if (is_dest_url && !other_is_dest_url) {
-			return true;
-		}
-		if (!is_dest_url && other_is_dest_url) {
-			return false;
-		}
-		if (is_dest_url) {
-			if (m_dest_scheme == other.m_dest_scheme) {
-				return false;
-			} else {
-				return m_dest_scheme < other.m_dest_scheme;
-			}
-		}
-
-		auto is_src_url = !m_src_scheme.empty();
-		auto other_is_src_url = !other.m_src_scheme.empty();
-		if (is_src_url && !other_is_src_url) {
-			return false;
-		}
-		if (!is_src_url && other_is_src_url) {
-			return true;
-		}
-		if (is_src_url) { // Both are URLs
-			// Check if src has specified queue for permissions
-			if (hasQueue() && !other.hasQueue()) {
-				return true;
-			} else if (!hasQueue() && other.hasQueue()) {
-				return false;
-			} else if (hasQueue() && other.hasQueue() && m_xfer_queue != other.m_xfer_queue) {
-				return m_xfer_queue < other.m_xfer_queue;
-			}
-			if (m_src_scheme == other.m_src_scheme) {
-				return false;
-			} else {
-				return m_src_scheme < other.m_src_scheme;
-			}
-		}
-		return false;
-	}
-
-private:
-	std::string m_src_scheme;
-	std::string m_dest_scheme;
-	std::string m_src_name;
-	std::string m_dest_dir;
-	std::string m_dest_url;
-	std::string m_xfer_queue;
-	bool is_domainsocket{false};
-	bool is_directory{false};
-	bool is_symlink{false};
-	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
-	filesize_t m_file_size{0};
-};
-
 void
 dPrintFileTransferList( int flags, const FileTransferList & list, const std::string & header ) {
 	std::string message = header;
@@ -304,6 +256,108 @@ struct upload_info {
 struct download_info {
 	FileTransfer *myobj;
 };
+
+// Check if the peer supports the given URL schemes
+// Sends a list of desired schemes and receives back a list of supported schemes
+// Returns true if all desired schemes are supported, false otherwise
+bool FileTransfer::CheckUrlSchemeSupport(ReliSock *sock, const std::vector<std::string>& desired_schemes, std::string& error_msg, DCTransferQueue &xfer_queue, filesize_t sandbox_size, FTProtocolBits &protocolState) {
+	if (!sock) {
+		error_msg = "No socket provided";
+		return false;
+	}
+
+	if (desired_schemes.empty()) {
+		// No schemes to check, trivially true
+		return true;
+	}
+
+	// Send the TransferCommand::Other header
+	if (!sock->snd_int(static_cast<int>(TransferCommand::Other), false) ||
+	    !sock->end_of_message()) {
+		error_msg = "Failed to send TransferCommand";
+		return false;
+	}
+
+	// Send a dummy filename (required by protocol)
+	if (!sock->put("_scheme_check_") || !sock->end_of_message()) {
+		error_msg = "Failed to send filename";
+		return false;
+	}
+
+	// Here, we must wait for the go-ahead from the transfer peer.
+	if (!ReceiveTransferGoAhead(sock, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
+		error_msg = "Failed to receive go-ahead from peer";
+		return false;
+	}
+	// Obtain the transfer token from the transfer queue.
+	if (!ObtainAndSendTransferGoAhead(xfer_queue, false, sock, sandbox_size, "", protocolState.I_go_ahead_always)) {
+		error_msg = "Failed to obtain and send go-ahead";
+		return false;
+	}
+
+	// Build ClassAd with desired schemes
+	ClassAd request_ad;
+	request_ad.Assign("SubCommand", static_cast<int>(TransferSubCommand::CheckUrlSchemes));
+
+	classad::ExprList scheme_list;
+	for (const auto& scheme : desired_schemes) {
+		scheme_list.push_back(classad::Literal::MakeString(scheme));
+	}
+	request_ad.Insert("DesiredSchemes", scheme_list.Copy());
+
+	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) {
+		error_msg = "Failed to send request ClassAd";
+		return false;
+	}
+
+	// Receive the response ClassAd
+	sock->decode();
+	ClassAd response_ad;
+	if (!getClassAd(sock, response_ad) || !sock->end_of_message()) {
+		error_msg = "Failed to receive response ClassAd";
+		return false;
+	}
+
+	// Check if there was an error
+	std::string remote_error;
+	if (response_ad.LookupString("Error", remote_error)) {
+		error_msg = "Remote error: " + remote_error;
+		return false;
+	}
+
+	// Extract supported schemes from response
+	classad::Value value;
+	if (!response_ad.EvaluateAttr("SupportedSchemes", value) ||
+	    (value.GetType() != classad::Value::SLIST_VALUE &&
+	     value.GetType() != classad::Value::LIST_VALUE)) {
+		error_msg = "Response missing SupportedSchemes list";
+		return false;
+	}
+
+	classad_shared_ptr<classad::ExprList> supported_list;
+	value.IsSListValue(supported_list);
+
+	// Just take the strings from the list
+	std::unordered_set<std::string> supported_schemes;
+	for (auto expr : (*supported_list)) {
+		std::string scheme_value;
+		classad::Value val;
+		if (expr->Evaluate(val) && val.IsStringValue(scheme_value)) {
+			supported_schemes.insert(scheme_value);
+		}
+	}
+
+	// Check if all desired schemes are supported
+	for (const auto& scheme : desired_schemes) {
+		if (supported_schemes.find(scheme) == supported_schemes.end()) {
+			formatstr(error_msg, "URL scheme '%s' not supported by peer", scheme.c_str());
+			return false;
+		}
+	}
+
+	dprintf(D_FULLDEBUG, "CheckUrlSchemeSupport: All desired schemes are supported\n");
+	return true;
+}
 
 FileTransfer::FileTransfer()
 {
@@ -2374,6 +2428,114 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
     return i;
 
+// Helper function to handle URL downloads with optional metadata ClassAd
+// Returns rc (0 on success, GET_FILE_PLUGIN_FAILED on error)
+int
+FileTransfer::HandleUrlDownload(
+	CondorError& errstack,
+	const std::string& URL,
+	const std::string& fullname,
+	ClassAd* url_metadata,  // Optional metadata to copy into transfer job
+	bool all_transfers_succeeded,
+	int rc,
+	ClassAd* thisTransfer,
+	ClassAd& pluginStatsAd,
+	const std::string& LocalProxyName,
+	bool& isDeferredTransfer,
+	bool& file_transfer_plugin_timed_out,
+	bool& file_transfer_plugin_exec_failed,
+	int& plugin_exit_code,
+	std::map<std::string, std::vector<ClassAd>>& deferredTransfers
+#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+	, std::map<int, ClassAd>& deferredTransfersById
+#endif
+)
+{
+	if( !I_support_filetransfer_plugins ) {
+		// we shouldn't get here, because a job shouldn't match to a machine that won't
+		// support URL transfers if the job needs URL transfers.  but if we do get here,
+		// give a nice error message.
+		errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer URL file = %s .", UrlSafePrint(URL));
+		dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", UrlSafePrint(URL));
+		return GET_FILE_PLUGIN_FAILED;
+	}
+
+	if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
+		// Determine which plugin to invoke, and whether it supports multiple file transfer.
+		FileTransferPlugin & plugin = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
+	   #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+	   #else
+		std::string pluginPath = plugin.path;
+	   #endif
+		bool thisPluginSupportsMultifile = plugin.multi_file();
+
+		if( thisPluginSupportsMultifile ) {
+			// Do not send the file right now!
+			// Instead, add it to a deferred list, which we'll deal with
+			// after the main download loop.
+			dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s until end of download loop.\n", UrlSafePrint(URL) );
+			thisTransfer->Clear();
+			thisTransfer->InsertAttr( "Url", URL );
+			thisTransfer->InsertAttr( "LocalFileName", fullname );
+
+			// Copy all attributes from the metadata ClassAd if provided
+			if (url_metadata) {
+				thisTransfer->Update(*url_metadata);
+			}
+
+			// Add this result to our deferred transfers map.
+		#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+			auto found = deferredTransfersById.emplace(plugin.id, * thisTransfer);
+			if ( ! found.second) {
+				// key already existed, so append the new transfer string
+				found.first->second += thisTransferString;
+			}
+		#else
+			if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
+				std::vector<ClassAd> entry;
+				entry.push_back(* thisTransfer);
+				deferredTransfers.insert( std::make_pair( pluginPath, entry ) );
+			}
+			else {
+				deferredTransfers[pluginPath].push_back( * thisTransfer );
+			}
+		#endif
+
+			isDeferredTransfer = true;
+		}
+	}
+
+	if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
+		dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
+
+		// Copy metadata into pluginStatsAd if provided
+		if (url_metadata) {
+			pluginStatsAd.Update(*url_metadata);
+		}
+
+		int exit_status = 0;
+		TransferPluginResult result = InvokeFileTransferPlugin(errstack, exit_status, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
+		// If transfer failed, set rc to error code that ReliSock recognizes
+		switch( result ) {
+			case TransferPluginResult::TimedOut:
+				file_transfer_plugin_timed_out = true;
+				[[fallthrough]];
+			case TransferPluginResult::InvalidCredentials:
+			case TransferPluginResult::Error:
+				rc = GET_FILE_PLUGIN_FAILED;
+				plugin_exit_code = exit_status;
+				break;
+			case TransferPluginResult::ExecFailed:
+				file_transfer_plugin_exec_failed = true;
+				break;
+			case TransferPluginResult::Success:
+				break;
+		}
+	}
+
+	return rc;
+}
+
 filesize_t
 FileTransfer::DoDownload(ReliSock *s)
 {
@@ -2581,7 +2743,7 @@ FileTransfer::DoDownload(ReliSock *s)
 			break;
 		}
 
-		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && xfer_command == TransferCommand::DownloadUrl)) {
+		if ((xfer_command == TransferCommand::EnableEncryption) || (PeerDoesS3Urls && isUrlDownload(xfer_command, TransferSubCommand::Unknown))) {
 			bool cryp_ret = s->set_crypto_mode(true);
 			if (!cryp_ret) {
 				dprintf(D_ERROR,"DoDownload: failed to enable crypto on incoming file, exiting at %d\n",__LINE__);
@@ -3053,6 +3215,110 @@ FileTransfer::DoDownload(ReliSock *s)
 				}
 				s->decode();
 				continue;
+			} else if (subcommand == TransferSubCommand::CheckUrlSchemes) {
+				// Peer is checking which URL schemes we support
+				dprintf(D_FULLDEBUG, "DoDownload: Received CheckUrlSchemes request\n");
+
+				// Extract desired schemes from request
+				classad::Value value;
+				std::vector<std::string> desired_schemes;
+				if (file_info.EvaluateAttr("DesiredSchemes", value) &&
+				    (value.GetType() == classad::Value::SLIST_VALUE ||
+				     value.GetType() == classad::Value::LIST_VALUE)) {
+					classad_shared_ptr<classad::ExprList> scheme_list;
+					value.IsSListValue(scheme_list);
+					for (auto expr : (*scheme_list)) {
+						std::string scheme_value;
+						classad::Value val;
+						if (expr->Evaluate(val) && val.IsStringValue(scheme_value)) {
+							desired_schemes.push_back(scheme_value);
+						}
+					}
+				}
+
+				// Build list of supported schemes based on available plugins
+				CondorError err;
+				std::string method_list = GetSupportedMethods(err);
+				std::vector<std::string> supported_schemes;
+
+				// Parse the comma-separated method list
+				StringTokenIterator methods(method_list);
+				std::unordered_set<std::string> supported_methods_set;
+				for (const char* method = methods.first(); method != NULL; method = methods.next()) {
+					supported_methods_set.insert(method);
+				}
+
+				// Check which desired schemes are supported
+				for (const auto& scheme : desired_schemes) {
+					if (supported_methods_set.count(scheme)) {
+						supported_schemes.push_back(scheme);
+					}
+				}
+
+				// Build response ClassAd
+				ClassAd response_ad;
+				classad::ExprList supported_list;
+				for (const auto& scheme : supported_schemes) {
+					supported_list.push_back(classad::Literal::MakeString(scheme));
+				}
+				response_ad.Insert("SupportedSchemes", supported_list.Copy());
+
+				// Send response
+				if (!s->end_of_message()) {
+					dprintf(D_ERROR, "DoDownload: exiting at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				s->encode();
+				if (!putClassAd(s, response_ad) || !s->end_of_message()) {
+					dprintf(D_ERROR, "DoDownload: Failed to send scheme check response at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				s->decode();
+				rc = 0;
+				continue;
+			} else if (subcommand == TransferSubCommand::StageoutTransform) {
+				// Starter is requesting stageout transform for output files
+				dprintf(D_FULLDEBUG, "DoDownload: Received StageoutTransform request\n");
+
+				// Extract item count from the request ClassAd
+				long long item_count = 0;
+				if (!file_info.LookupInteger("ItemCount", item_count)) {
+					dprintf(D_ERROR, "DoDownload: StageoutTransform request missing ItemCount at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				// Handle the stageout transform protocol
+				if (!HandleStageoutTransform(s, &_fix_me_copy_, item_count)) {
+					dprintf(D_ERROR, "DoDownload: Failed to handle stageout transform at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				rc = 0;
+				continue;
+			} else if (subcommand == TransferSubCommand::DownloadUrlWithAd) {
+
+				std::string URL;
+				if (!file_info.LookupString("Url", URL)) {
+					dprintf(D_ERROR, "DoDownload: ClassAd missing Url attribute at %d\n", __LINE__);
+					return_and_resetpriv(-1);
+				}
+
+				dprintf(D_FULLDEBUG, "DoDownload: Received URL with ClassAd: %s\n", UrlSafePrint(URL));
+
+				// Use helper to handle the URL download, passing the ClassAd metadata
+				rc = HandleUrlDownload(
+					errstack,
+					URL, fullname, &file_info,
+					all_transfers_succeeded, rc,
+					thisTransfer.get(), pluginStatsAd, LocalProxyName, isDeferredTransfer,
+					file_transfer_plugin_timed_out, file_transfer_plugin_exec_failed,
+					plugin_exit_code, deferredTransfers
+				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+					, deferredTransfers
+				#endif
+				);
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
@@ -3075,79 +3341,18 @@ FileTransfer::DoDownload(ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			if( !I_support_filetransfer_plugins ) {
-				// we shouldn't get here, because a job shouldn't match to a machine that won't
-				// support URL transfers if the job needs URL transfers.  but if we do get here,
-				// give a nice error message.
-				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer URL file = %s .", UrlSafePrint(URL));  // URL file in err msg
-				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", UrlSafePrint(URL));
-				rc = GET_FILE_PLUGIN_FAILED;
-			}
-
-			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
-
-				// Determine which plugin to invoke, and whether it supports multiple
-				// file transfer.
-				FileTransferPlugin & plugin = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
-			   #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-			   #else
-				std::string pluginPath = plugin.path;
-			   #endif
-				bool thisPluginSupportsMultifile = plugin.multi_file();
-
-				if( thisPluginSupportsMultifile ) {
-					// Do not send the file right now!
-					// Instead, add it to a deferred list, which we'll deal with
-					// after the main download loop.
-					dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
-						" until end of download loop.\n", UrlSafePrint(URL) );
-					thisTransfer->Clear();
-					thisTransfer->InsertAttr( "Url", URL );
-					thisTransfer->InsertAttr( "LocalFileName", fullname );
-
-					// Add this result to our deferred transfers map.
-				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
-					auto found = deferredTransfers.emplace(plugin.id, * thisTransfer.get());
-					if ( ! found.second) {
-						// key already existed, so append the new transfer string
-						found.first->second += thisTransferString;
-					}
-				#else
-					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
-						std::vector<ClassAd> entry;
-						entry.push_back(* thisTransfer);
-						deferredTransfers.insert( std::make_pair( pluginPath, entry ) );
-					}
-					else {
-						deferredTransfers[pluginPath].push_back( * thisTransfer );
-					}
-				#endif
-
-					isDeferredTransfer = true;
-				}
-			}
-
-			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
-				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
-				int exit_status = 0;
-				TransferPluginResult result = InvokeFileTransferPlugin(errstack, exit_status, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
-				// If transfer failed, set rc to error code that ReliSock recognizes
-				switch( result ) {
-					case TransferPluginResult::TimedOut:
-						file_transfer_plugin_timed_out = true;
-						[[fallthrough]];
-					case TransferPluginResult::InvalidCredentials:
-					case TransferPluginResult::Error:
-						rc = GET_FILE_PLUGIN_FAILED;
-						plugin_exit_code = exit_status;
-						break;
-					case TransferPluginResult::ExecFailed:
-						file_transfer_plugin_exec_failed = true;
-						break;
-					case TransferPluginResult::Success:
-						break;
-				}
-			}
+			// Use helper to handle the URL download with no metadata
+			rc = HandleUrlDownload(
+				errstack,
+				URL, fullname, nullptr,
+				all_transfers_succeeded, rc,
+				thisTransfer.get(), pluginStatsAd, LocalProxyName, isDeferredTransfer,
+				file_transfer_plugin_timed_out, file_transfer_plugin_exec_failed,
+				plugin_exit_code, deferredTransfers
+			#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+				, deferredTransfers
+			#endif
+			);
 
 		} else if ( xfer_command == TransferCommand::XferX509 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -4356,7 +4561,7 @@ FileTransfer::DoCheckpointUploadFromStarter( ReliSock * s )
 	FileTransferList filelist = checkpointList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
-	_ft_protocol_bits protocolState;
+	FTProtocolBits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	std::string checkpointDestination;
@@ -4433,7 +4638,7 @@ FileTransfer::DoCheckpointUploadFromShadow(ReliSock * s)
 	FileTransferList filelist = inputList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
-	_ft_protocol_bits protocolState;
+	FTProtocolBits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	filelist.insert( filelist.end(), checkpointList.begin(), checkpointList.end() );
@@ -4464,7 +4669,7 @@ FileTransfer::DoNormalUpload(ReliSock * s)
 	FileTransferList filelist;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
-	_ft_protocol_bits protocolState;
+	FTProtocolBits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	if( inHandleCommands ) { filelist = this->inputList; }
@@ -4486,7 +4691,7 @@ FileTransfer::computeFileList(
     std::unordered_set<std::string> & skip_files,
     filesize_t & sandbox_size,
     DCTransferQueue & xfer_queue,
-    _ft_protocol_bits & protocolState,
+    FTProtocolBits & protocolState,
     bool should_invoke_output_plugins
 ) {
 		// Declaration to make the return_and_reset_priv macro happy.
@@ -4511,6 +4716,8 @@ FileTransfer::computeFileList(
 	// dprintf( D_ALWAYS, "FilesToSend: '%s'\n", join(*FilesToSend, ",").c_str() );
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before ExpandFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
+
+
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandFileTransferList():" );
 
 	// Presently, `inHandleCommands` will only be set on the shadow.  The conditional
@@ -4585,6 +4792,36 @@ FileTransfer::computeFileList(
 		return_and_resetpriv( -1 );
 	}
 
+	// If Pelican transfer is enabled and supported, prepare the file list
+	// This removes normal files and adds a Pelican URL with metadata
+	// This must be done AFTER xfer_info is sent because the checks for support
+	// preparation require communication with the peer (which always assumes
+	// commands come after the xfer_info)
+	if (inHandleCommands && ShouldInputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing input file list for transfer\n");
+		if (!PreparePelicanInputTransferList(filelist, &_fix_me_copy_, m_jobid, this, s, xfer_queue, sandbox_size, protocolState)) {
+			dprintf(D_ALWAYS, "Pelican: Failed to prepare transfer list, falling back to normal transfer\n");
+			// Continue with normal transfer on failure
+		}
+	}
+
+	// For output files (starter side), check if Pelican should be used
+	// The actual transformation happens via RequestStageoutTransform protocol
+	// This is the opposite direction from input - !inHandleCommands means starter side
+	if (!inHandleCommands && s && should_invoke_output_plugins && ShouldOutputUsePelicanTransfer(&_fix_me_copy_, PeerDoesPelicanTransfer)) {
+		dprintf(D_FULLDEBUG, "Pelican: Preparing output file list for transfer\n");
+
+		// Request stageout transform from the shadow
+		std::string error_msg;
+		FileTransferList transformed_list = RequestStageoutTransform(this, s, filelist, error_msg, xfer_queue, sandbox_size, protocolState);
+
+		// Update the filelist with the transformed list from shadow
+		filelist = transformed_list;
+
+		dprintf(D_FULLDEBUG, "Pelican: Successfully applied stageout transform, filelist now has %zu items\n",
+			filelist.size());
+	}
+
 	std::string tag;
 	if( ftcb.hasUser() ) {
 		tag = ftcb.getUser();
@@ -4605,7 +4842,7 @@ FileTransfer::computeFileList(
 	for (auto &fileitem : filelist) {
 			// Pre-calculate if the uploader will be doing some uploads;
 			// if so, we want to determine this now so we can sort correctly.
-		if ( should_invoke_output_plugins ) {
+		if ( should_invoke_output_plugins && !fileitem.isDestUrl()) {
 			std::string local_output_url;
 			if (OutputDestination) {
 				local_output_url = OutputDestination;
@@ -4928,7 +5165,7 @@ FileTransfer::uploadFileList(
 	std::unordered_set<std::string> & skip_files,
 	const filesize_t & sandbox_size,
 	DCTransferQueue & xfer_queue,
-	_ft_protocol_bits & protocolState)
+	FTProtocolBits & protocolState)
 {
 	int rc = 0;
 	filesize_t total_bytes = 0;
@@ -5128,6 +5365,14 @@ FileTransfer::uploadFileList(
 
 		if ( fileitem.isSrcUrl() ) {
 			file_command = TransferCommand::DownloadUrl;
+			// If this URL has an associated ClassAd,
+			// use the new protocol with TransferCommand::Other
+			if (fileitem.getUrlAd() != nullptr) {
+				file_command = TransferCommand::Other;
+				file_subcommand = TransferSubCommand::DownloadUrlWithAd;
+				dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:10 for URL with ClassAd: %s\n",
+				        UrlSafePrint(filename));
+			}
 		}
 
 		int multifilePluginId = -1;
@@ -5222,7 +5467,7 @@ FileTransfer::uploadFileList(
 
 		// now enable the crypto decision we made; if we are sending a URL down the pipe
 		// (potentially embedding an authorization itself), ensure we encrypt.
-		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && (file_command == TransferCommand::DownloadUrl))) {
+		if (file_command == TransferCommand::EnableEncryption || (PeerDoesS3Urls && isUrlDownload(file_command, file_subcommand))) {
 			bool cryp_ret = s->set_crypto_mode(true);
 			if (!cryp_ret) {
 				dprintf(D_ERROR,"DoUpload: failed to enable crypto on outgoing file, exiting at %d\n",__LINE__);
@@ -5347,6 +5592,10 @@ FileTransfer::uploadFileList(
 					ClassAd xfer_ad;
 					xfer_ad.InsertAttr( "Url", local_output_url );
 					xfer_ad.InsertAttr( "LocalFileName", fullname );
+					auto file_ad = fileitem.getUrlAd();
+					if (file_ad != nullptr) {
+						xfer_ad.Update(*file_ad);
+					}
 
 					currentUploadRequests.push_back(xfer_ad);
 					currentUploadDeferred ++;
@@ -5424,6 +5673,10 @@ FileTransfer::uploadFileList(
 					// report the results:
 					file_info.Assign("Filename", source_filename);
 					file_info.Assign("OutputDestination", local_output_url);
+					auto file_ad = fileitem.getUrlAd();
+					if (file_ad != nullptr) {
+						file_info.Update(*file_ad);
+					}
 
 					// If failed, put the ErrStack into the classad
 					if (result != TransferPluginResult::Success) {
@@ -5456,6 +5709,26 @@ FileTransfer::uploadFileList(
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.length();
 				}
+			} else if(file_subcommand == TransferSubCommand::DownloadUrlWithAd) {
+				// Send a ClassAd with the URL and any associated metadata
+				ClassAd *url_ad = fileitem.getUrlAd();
+				if (url_ad) {
+					file_info.Update(*url_ad);
+				}
+				file_info.Assign("Url", fullname);
+				file_info.Assign("LocalFileName", dest_filename);
+
+				dprintf(D_FULLDEBUG, "FILETRANSFER: Sending DownloadUrlWithAd for %s\n", UrlSafePrint(fullname));
+				if(!putClassAd(s, file_info, 0)) {
+					dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+
+				std::string junkbuf;
+				sPrintAd(junkbuf, file_info);
+				bytes = junkbuf.length();
+
+				rc = 0;
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
 					static_cast<int>(file_subcommand), UrlSafePrint(filename));
@@ -6366,6 +6639,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
 	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 	PeerKnowsProtectedURLs = peer_version.built_since_version(23, 1, 0);
+	PeerDoesPelicanTransfer = peer_version.built_since_version(25, 6, 0);
 }
 
 
@@ -6745,6 +7019,39 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 }
 
 
+// Helper function to unparse a ClassAd with private attributes redacted
+// Sadly, the various ClassAd printing functions do not use the new-style
+// syntax so we needed this small helper.  Without this, private attributes
+// would be printed in full when doing file transfer plugins.
+static std::string UnparseWithRedaction(const ClassAd& ad, classad::ClassAdUnParser& unparser) {
+	std::vector<std::string> private_attrs;
+
+	// Iterate through all attributes and collect private ones
+	for (auto itr = ad.begin(); itr != ad.end(); ++itr) {
+		const std::string& attr = itr->first;
+		if (ClassAdAttributeIsPrivateAny(attr.c_str())) {
+			private_attrs.push_back(attr);
+		}
+	}
+
+	// If there are no private attributes, just unparse the original
+	if (private_attrs.empty()) {
+		std::string buffer;
+		unparser.Unparse(buffer, &ad);
+		return buffer;
+	}
+
+	// Make a copy and redact private attributes
+	ClassAd redacted_ad(ad);
+	for (const auto& attr : private_attrs) {
+		redacted_ad.InsertAttr(attr, "**REDACTED**");
+	}
+
+	std::string buffer;
+	unparser.Unparse(buffer, &redacted_ad);
+	return buffer;
+}
+
 FileTransfer::walkargs_t
 FileTransfer::mergePluginSpecificEnvironment(
     const FileTransferPlugin & plugin, Env & plugin_env
@@ -6920,17 +7227,24 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 
 	std::string transfer_files_string;
+	std::string transfer_files_string_for_log;
+	classad::ClassAdUnParser unparser;
+
 	for( const auto & classAd : nonfile_ads ) {
 		std::string buffer;
-		classad::ClassAdUnParser unparser;
 		unparser.Unparse( buffer, & classAd );
 		transfer_files_string += buffer;
+
+		// Create redacted version for logging
+		transfer_files_string_for_log += UnparseWithRedaction(classAd, unparser);
 	}
 	for( const auto & classAd : pluginInputAds ) {
 		std::string buffer;
-		classad::ClassAdUnParser unparser;
 		unparser.Unparse( buffer, & classAd );
 		transfer_files_string += buffer;
+
+		// Create redacted version for logging
+		transfer_files_string_for_log += UnparseWithRedaction(classAd, unparser);
 	}
 
 
@@ -7015,7 +7329,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		plugin_args.GetArgsStringForLogging(arglog);
 		// note - test_curl_plugin.py depends on seeing the word 'invoking' in the starter log.
 		dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", arglog.c_str() );
-		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input: %s\n", transfer_files_string.c_str() );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input: %s\n", transfer_files_string_for_log.c_str() );
 		if ( ! walkargs.env.empty()) {
 			arglog.clear();
 			plugin_env.getDelimitedStringForDisplay(arglog);
@@ -8555,7 +8869,7 @@ FileTransfer::addSandboxRelativePath(
 			fti.setDestDir( parent );
 			fti.setDirectory( true );
 			// dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
-			ftl.emplace_back( fti );
+			ftl.emplace_back( std::move(fti) );
 
 			pathsAlreadyPreserved.insert( partialPath );
 		}
@@ -8567,7 +8881,7 @@ FileTransfer::addSandboxRelativePath(
 	fti.setSrcName( source );
 	// At some point, we'd like to be able to store target _name_, too.
 	fti.setDestDir( condor_dirname( destination.c_str() ) );
-	ftl.emplace_back(fti);
+	ftl.emplace_back(std::move(fti));
 }
 
 void

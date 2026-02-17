@@ -5467,6 +5467,26 @@ default=$(LIBEXEC)/stash_plugin
 description=Full path to the stash/osdf/Pelican plugin
 type=path
 
+[ENABLE_PELICAN_FILE_TRANSFER]
+default=false
+description=Enable Pelican-based file transfer for job sandboxes
+type=bool
+
+[PELICAN_REGISTRATION_SOCKET]
+default=$(SPOOL)/pelican_registration.sock
+description=Path to the Unix domain socket for Pelican registration service used by the AP. Note: The full socket path must not exceed the system's maximum Unix domain socket path length (typically 108 bytes on Linux); if $(SPOOL) is long (typically true in CI/test environments), override this default with a shorter path.
+type=path
+
+[PELICAN_CA_FILE]
+default=
+description=Path to CA certificate file for TLS verification of Pelican servers
+type=path
+
+[PELICAN_ALLOWED_USERS]
+default=
+description=Comma-separated list of users allowed to use Pelican transfers. If empty, all users are allowed when Pelican is enabled.
+type=string
+
 [FILETRANSFER_PLUGINS]
 default=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin, $(LIBEXEC)/box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py, $(STASH_PLUGIN)
 win32_default=$(LIBEXEC)\curl_plugin.exe, $(LIBEXEC)\data_plugin.exe, $(LIBEXEC)\box_plugin.py, $(LIBEXEC)/gdrive_plugin.py, $(LIBEXEC)/onedrive_plugin.py
