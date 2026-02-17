@@ -800,17 +800,28 @@ Starter::handleJobSetupCommand(
 			//
 			// Color the slot.
 			//
-			ClassAd colorAd;
+			classad::ExprTree * e = guidance.Lookup( "ColorAd" );
+			ClassAd * colorAd = dynamic_cast<ClassAd *>(e);
+			if( colorAd == NULL ) {
+				// ... FIXME ...
+			} else {
+				dPrintAd( D_ALWAYS, * colorAd );
+			}
+
 			ClassAd replyAd;
-			bool success = false; // s->jic->colorSlot( colorAd, replyAd );
+			// bool success = s->jic->colorSlot( colorAd, replyAd );
+			/* FIXME: postmerge */ bool success = false;
 			if(! success) {
 				dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
+				/// ... FIXME ...
 			}
 			success = false;
 			replyAd.LookupBool( ATTR_RESULT, success );
 			if(! success) {
 				dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
+				// ... FIXME ...
 			}
+			/* FIXME: postmerge */ success = true;
 
 
 			//
@@ -818,7 +829,7 @@ Starter::handleJobSetupCommand(
 			//
 
 			const ClassAd * secretsAd = s->jic->getMachineSecretsAd();
-			// If we're not talking to a shadow, then who's guidiing us?
+			// If we're not talking to a shadow, then who's guiding us?
 			ASSERT(secretsAd != NULL);
 			std::string splitClaimID;
 			if(! secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID )) {
@@ -849,6 +860,11 @@ Starter::handleJobSetupCommand(
 			if(! guidance.LookupString( "StagingDir", stagingDir )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", "StagingDir" );
 				return false;
+			}
+
+			if( stagingDir.empty() ) {
+				// Assume the staging directory is in our machine ad.
+				// FIXME
 			}
 
 			std::filesystem::path location(stagingDir);

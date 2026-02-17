@@ -1023,15 +1023,20 @@ private:
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
-										Env const *env, 
+										Env const *env,
 										const char* name, bool want_udp );
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
-	
+
 	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);
 
 	static void		token_request_callback(bool success, void *miscdata);
+
+	// This vector does NOT own its match records; it is an optimization.
+	// I'd indicate that with a shared_ptr<>, but that won't work if the
+	// owner doesn't hold onto one, and it doesn't.
+	std::vector<match_rec *> matchesHeldByBlockedJobs;
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;

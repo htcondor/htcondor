@@ -1445,27 +1445,63 @@ UniShadow::start_staging_only_conversation(
 	// require different subsets of the same set of catalogs; when we do,
 	// the schedd should control which shadows map which files, and this
 	// function's inputs will change accordingly.
+
+	std::map<std::string, std::string> cifNameToStagingDirMap;
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
 		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
+		std::string stagingDir;
 		ClassAd guidance = before_common_file_transfer( cifName, commonInputFiles );
 		request = co_yield guidance;
-		std::string stagingDir;
 		success = after_common_file_transfer( request, cifName, stagingDir );
 		if(! success) {
 			guidance.Clear();
 			guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
 			co_return guidance;
 		}
+
+		cifNameToStagingDirMap[cifName] = stagingDir;
+	}
+
+	//
+	// Although the starter could color (and recolor) the slot after each
+	// common files transfer, it seems a little more flexible to let the
+	// shadow decide when it happens and what the color is.  This also
+	// lets us side-step adding global state to the starter tracking which
+	// coloring has already been done (because the startd command to color
+	// a slot replaces the previous color).
+	//
+	ClassAd guidance;
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
+
+	ClassAd * commonCatalogsAd = new ClassAd();
+	commonCatalogsAd->InsertAttr( ATTR_VERSION, 1 );
+
+	// Let's avoid worrying about whether or not the internal catalog names
+	// are valid ClassAd attribute names by making those names values and
+	// constructing a list of catalog ads.  This should also be more readily
+	// extensible (to say, including the simple name from the job ad).
+	std::vector<ExprTree *> catalogAds;
+	for( const auto & [cifName, stagingDir] : cifNameToStagingDirMap ) {
+		ClassAd * catalogAd = new ClassAd();
+		catalogAd->InsertAttr( ATTR_NAME, cifName );
+		catalogAd->InsertAttr( "StagingDir", stagingDir );
+		catalogAds.push_back( catalogAd );
+	}
+
+	classad::ExprList * ccList = new classad::ExprList( catalogAds );
+	if(! ccList) {
+		// ... FIXME ...
+		dprintf( D_ALWAYS, "cxfer: ExprList( catalogAds ) == NULL\n" );
+	} else {
+		commonCatalogsAd->Insert( "CommonCatalogsList", ccList );
 	}
 
 
-	// Now that we've transferred all the catalogs we're responsible for,
-	// split the splot and use the resulting claim ID to tell the shadow
-	// (a) that we're done transferring and (b) which resources to use to
-	// actually run the job.
-	ClassAd guidance;
-	guidance.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
+	ClassAd * colorAd = new ClassAd();
+	colorAd->Insert( "CommonCatalogsAd", dynamic_cast<ExprTree*>(commonCatalogsAd) );
+	guidance.Insert( "ColorAd", dynamic_cast<ExprTree*>(colorAd) );
+
 	request = co_yield guidance;
 	success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );

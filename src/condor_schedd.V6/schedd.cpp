@@ -9221,17 +9221,24 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	cmd_ad.LookupInteger(ATTR_PROC_ID, jobid.proc);
 
 
-    // This forces a rebuild of the priorec array, which is probably
-    // not what we want, but I'm not happy about writing a special
-    // case to handle blocked jobs woken up by direct attach, either.
-    int status;
-    GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
-    dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
-    if( status == JOB_STATUS_BLOCKED ) {
-        status = IDLE;
-        SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
-        dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
-    }
+	// This forces a rebuild of the priorec array, which we probably don't
+	// want, but does allow the job which spawned the transfer shadow to
+	// match the newly-available resource.
+	//
+	// Once it's (hopefully) been matched, it'll be in BLOCKED state because
+	// we haven't updated the transfer shadow's record to indicate that it's
+	// completed transfer.  That's OK, because if we do that _after_ we
+	// assign resources, we can start all the unblocked shadowrecs with
+	// assigned matches in one go.
+
+	int status;
+	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
+	dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+	if( status == JOB_STATUS_BLOCKED ) {
+		status = IDLE;
+		SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
+		dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+	}
 
 
 	for (int i = 0; i < num_ads; i++) {
@@ -9260,6 +9267,55 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read eom\n");
 		return 0;
 	}
+
+
+	//
+	// FIXME: How does the schedd know this command came from one of its own
+	// shadows, and how does it know which one?  We could assume that if the
+	// nominated job has cxfer catalogs, the corresponding shadow was the one
+	// which contacted us, but for now it's simpler to look for the
+	// corresponding transfer shadow record directly.
+	//
+	// (Using FAMILY security is a pretty strong indicator, but a capability
+	// would also allow us to specify the shadow rec directly.)
+	//
+	PROC_ID transfer_shadow_id( jobid.cluster, (-1 * jobid.proc ) - 1000 );
+	// FIXME: I'd love to call FindSrecByPid(), instead...
+	shadow_rec * transfer_shadow_rec = FindSrecByProcID(transfer_shadow_id);
+	if( transfer_shadow_rec != NULL &&
+		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING
+	) {
+		// Setting this allows subsequent matches needing these catalogs
+		// (on this EP) to start immediately.
+		transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGED;
+
+		// One or more match records now have shadow recs which point to
+		// jobs which were in the BLOCKED state only because their
+		// common files were not yet available.
+		//
+		// We could walk the match records looking for these cases.  Even
+		// if we assume half our jobs are non-Docker container universe
+		// jobs (that is, half our jobs will at least _try_ common file
+		// transfer), we'd still be better off with a list of blocked
+		// match records, because we should have many fewer of those at
+		// any given time -- they represent real resources somewhere --
+		// than we do jobs.
+		auto list(matchesHeldByBlockedJobs);
+		for( auto * mrec : list ) {
+			shadow_rec * srec = mrec->shadowRec;
+
+			if( transfer_shadow_rec->cxfer_catalogs == srec->cxfer_catalogs ) {
+				int status = JOB_STATUS_IDLE;
+				SetAttributeInt(mrec->cluster, mrec->proc, ATTR_JOB_STATUS, status);
+				std::erase( matchesHeldByBlockedJobs, mrec );
+
+				// Why _are_ these two separate commands?
+				mark_serial_job_running( & srec->job_id );
+				addRunnableJob( srec );
+			}
+		}
+	}
+
 
 	ClassAd reply_ad;
 	reply_ad.Assign(ATTR_ACTION_RESULT, OK);
@@ -10687,7 +10743,6 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				transfer_job_ad->InsertAttr(
 					ATTR_PROC_ID, transfer_job_id->proc
 				);
-				// FIXME: how do I add this new job ad so GetJobAd() finds it?
 
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
 					transfer_job_id, universe, mrec, -1 , nullptr
@@ -10717,25 +10772,20 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				addRunnableJob( transfer_shadow_rec );
 
 
-				// Create the job shadow rec and queue it for delayed spawning.
-				shadow_rec * job_shadow_rec = add_shadow_rec(
-					0, job_id, universe,
-					NULL,
-					-1 , nullptr
-				);
-				job_shadow_rec->cxfer_catalogs = * catalogs;
-				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
-
-				// I don't know if we want to mark the job running yet, but
-				// we sure don't want it to start running anywhere else...
-				// mark_serial_job_running(job_id);
-				// FIXME: ... if we don't do the above now, we need to
-				// remember to do it later.
+				//
+				// We don't have to enqueue this job here, just mark it as
+				// blocked, as long as we unmark it when the transfer shadow
+				// offers us a resource.
+				//
+				// We do NOT add anything to the list of match records blocked
+				// waiting for common file transfer, because this job's
+				// allocated resources are currently being held by the
+				// transfer shadow.  We'll correct that when the transfer
+				// shadow hands the resources back.
+				//
 				int status = JOB_STATUS_BLOCKED;
-				SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status );
+				SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 
-				// FIXME: record for delayed spawning, instead.
-				// addRunnableJob( job_shadow_rec );
 
 				return true;
 			}
@@ -10753,9 +10803,17 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
 
-				// FIXME: queue for delayed spawning, instead.
-				mark_serial_job_running(job_id);
-				addRunnableJob( job_shadow_rec );
+
+				//
+				// If this job (and the job which triggered the transfer shadow)
+				// were moved to a blocked queue instead of just being marked
+				// blocked, we wouldn't have to rebuild the prio-rec array
+				// when a transfer shadow offered us resources.
+				//
+				int status = JOB_STATUS_BLOCKED;
+				SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status );
+				matchesHeldByBlockedJobs.push_back(mrec);
+
 
 				mrec->shadowRec = job_shadow_rec;
 				return true;
