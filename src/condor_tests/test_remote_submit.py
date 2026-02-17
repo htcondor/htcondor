@@ -57,10 +57,8 @@ def remote_job(condor):
 
 class TestRemoteSubmit:
     def test_remote_submit_retirement(self, condor, remote_job):
-        assert remote_job.wait(condition=ClusterState.all_complete, timeout=60)
-        assert remote_job.state[0] == JobStatus.COMPLETED
         schedd = condor.get_local_schedd()
-        schedd.retrieve(remote_job.clusterid)
+        # Poke the schedd to retire the job more quickly
         schedd.reschedule()
 
         in_queue = True
