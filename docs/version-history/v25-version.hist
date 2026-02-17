@@ -54,6 +54,10 @@
   promptly if it failed to launch a singularity job.
   :jira:`3531`
 
+- Fixed a bug that could cause :tool:`condor_q` -analyze to crash given invalid
+  job requirements expressions.
+  :jira:`2629`
+
 *** 25.0.8 bugs
 
 *** 25.7.0 features
