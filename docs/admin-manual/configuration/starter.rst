@@ -145,7 +145,7 @@ These settings affect the *condor_starter*.
     .. code-block:: bat
 
         REM set some environment variables
-        set LICENSE_SERVER=192.168.1.202:5012
+        set LICENSE_SERVER=192.0.2.202:5012
         set MY_PARAMS=2
 
         REM Run the actual job now
@@ -583,6 +583,11 @@ These settings affect the *condor_starter*.
     could be used for any global option for all singularity or apptainer commands.
     Debugging singularity or apptainer problems may be aided by setting this to -v
     or -d.
+
+:macro-def:`SINGULARITY_ADD_ROCM_FLAG`
+    A boolean value that defaults to true.  When true, HTCONDOR will pass --rocm 
+    flag to singularity, in order to support AMD gpus.  This should not cause problems
+    on machines without AMD gpus.
 
 :macro-def:`USE_DEFAULT_CONTAINER`
     A boolean value or classad expression evaluating to boolean in the context of the Slot

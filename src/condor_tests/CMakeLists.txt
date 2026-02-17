@@ -189,8 +189,10 @@ if (BUILD_TESTING)
 	# platform specific tests
 	if(LINUX)
 
-		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_ec2_basic.accessKey;src/condor_tests/job_ec2_basic.secretKey;src/condor_tests/job_ec2_basic.userDataFile;${CMAKE_BINARY_DIR}/src/condor_tests/queryAPI-sim")
-		add_dependencies(job_ec2_basic queryAPI-sim)
+		if (EXPAT_FOUND AND HAVE_EXT_CURL AND HAVE_PTHREADS)
+			condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_ec2_basic.accessKey;src/condor_tests/job_ec2_basic.secretKey;src/condor_tests/job_ec2_basic.userDataFile;${CMAKE_BINARY_DIR}/src/condor_tests/queryAPI-sim")
+			add_dependencies(job_ec2_basic queryAPI-sim)
+		endif()
 		condor_pl_test( job_hyperthread_check "hyper thread testing test" "quick;ctest" CTEST DEPENDS src/condor_tests/count_cpus)
 
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_procapi_pidtracking-byenv.cmd;src/condor_tests/x_pid_tracking.pl")
@@ -505,6 +507,8 @@ endif()
 			condor_pl_test(test_cif_preen "Test preening CIF leftovers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_knob "Test cif/container image knob" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_cif_prepare_job_hook "Test cif/prepare job hook timing" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_slot_coloring "Test slot coloring" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_hung_plugin "Test hung plug-in handling." "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()

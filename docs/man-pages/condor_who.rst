@@ -203,19 +203,19 @@ Example 3 Verbose sample output.
      
     Daemon       PID      Exit       Addr                     Log, Log.Old 
     ------       ---      ----       ----                     ---, ------- 
-    Collector    6788                <128.105.136.32:7977> CollectorLog, CollectorLog.old 
-    Credd        8148                <128.105.136.32:9620> CredLog, CredLog.old 
-    Master       5976                <128.105.136.32:64980> MasterLog, 
+    Collector    6788                <192.0.2.32:7977> CollectorLog, CollectorLog.old 
+    Credd        8148                <192.0.2.32:9620> CredLog, CredLog.old 
+    Master       5976                <192.0.2.32:64980> MasterLog, 
     Match MatchLog, MatchLog.old 
     Negotiator   6600 NegotiatorLog, NegotiatorLog.old 
-    Schedd       6336                <128.105.136.32:64985> SchedLog, SchedLog.old 
+    Schedd       6336                <192.0.2.32:64985> SchedLog, SchedLog.old 
     Shadow ShadowLog, 
     Slot1 StarterLog.slot1, 
-    Slot2        7272                <128.105.136.32:65026> StarterLog.slot2, 
+    Slot2        7272                <192.0.2.32:65026> StarterLog.slot2, 
     Slot3 StarterLog.slot3, 
     Slot4 StarterLog.slot4, 
     SoftKill SoftKillLog, 
-    Startd       7416                <128.105.136.32:64984> StartLog, StartLog.old 
+    Startd       7416                <192.0.2.32:64984> StartLog, StartLog.old 
     Starter StarterLog, 
     TOOL                                                      TOOLLog, 
      

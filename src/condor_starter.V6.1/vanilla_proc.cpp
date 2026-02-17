@@ -949,9 +949,11 @@ VanillaProc::outOfMemoryEvent() {
 	// But sometimes the job dies before we can poll for memory on systems 
 	// that don't have a memory.peak, and we get 0 MB. Assume job hit
 	// memory limit, and report that number, not the confusing 0 bytes used.
-	if (usageMB == 0) {
+	bool should_hold = param_boolean("STARTER_ALWAYS_HOLD_ON_OOM", true);
+	if ((usageMB == 0) || (should_hold)) {
 		usageMB = m_memory_limit / (1024 * 1024);
 	}
+
 	//
 	//  Cgroup memory limits are limits, not reservations.
 	//  For many reasons, a job could be below the memory limit,
@@ -974,7 +976,6 @@ VanillaProc::outOfMemoryEvent() {
 	// a quickly-growing job can have a last-reported memory significantly
 	// lower than the limit.  In this case we want to always hold the job
 	// and report and out-of-memory condition
-	bool should_hold = param_boolean("STARTER_ALWAYS_HOLD_ON_OOM", true);
 
 	if (!should_hold) {
 		if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {

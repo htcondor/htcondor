@@ -9,8 +9,10 @@ import shutil
 import math
 import argparse
 
-from htcondor2._utils.ansi import Color, colorize
-from datetime import datetime
+from htcondor_cli.histogram import print_job_event_histogram, HistogramMode
+
+from htcondor2._utils.ansi import Color, colorize, bold, stylize, AnsiOptions
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from htcondor_cli.eventlog import convert_seconds_to_dhms
@@ -18,6 +20,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
+from htcondor_cli import MutualExclusionArgs
 
 JSM_HTC_DAG_SUBMIT = 4
 
@@ -311,6 +314,57 @@ class Resume(Verb):
         logger.info(msg)
 
 
+class Histogram(Verb):
+    """
+    Displays a stacked histogram of job states over time from a DAG event log
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
+        },
+        "histogram" : MutualExclusionArgs({
+            "cumulative": {
+                "args": ("-c", "--cumulative"),
+                "action": "store_const",
+                "dest": "hist_mode",
+                "const": HistogramMode.CUMULATIVE,
+                "default": HistogramMode.CUMULATIVE,
+                "help": "Show cumulative job states over time (default mode)",
+            },
+            "instant": {
+                "args": ("-i", "--instant"),
+                "action": "store_const",
+                "dest": "hist_mode",
+                "const": HistogramMode.INSTANT,
+                "default": HistogramMode.CUMULATIVE,
+                "help": "Show state transitions per time bucket",
+            },
+        })
+    }
+
+    def __init__(self, logger, dag_id, **options):
+        schedd = htcondor.Schedd()
+        # Query schedd
+        try:
+            dag = schedd.query(
+                constraint=f"ClusterId=={dag_id}",
+                projection=["UserLog"]
+            )[0]
+        except IndexError:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
+        except Exception as e:
+            raise RuntimeError(f"Error looking up DAG status: {str(e)}")
+
+        if len(dag) == 0:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
+
+        log = dag["UserLog"].replace(".dagman.log", ".nodes.log")
+
+        print_job_event_histogram(log, options["hist_mode"])
+
 class DAG(Noun):
     """
     Run operations on HTCondor DAGs
@@ -328,6 +382,9 @@ class DAG(Noun):
     class resume(Resume):
         pass
 
+    class histogram(Histogram):
+        pass
+
     """
     class resources(Resources):
         pass
@@ -335,7 +392,7 @@ class DAG(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status, cls.halt, cls.resume]
+        return [cls.submit, cls.status, cls.halt, cls.resume, cls.histogram]
 
 
 class DAGMan:

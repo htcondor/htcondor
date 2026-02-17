@@ -189,7 +189,7 @@ example shows the queue of jobs before and after a job is removed.
 
     $ condor_q -nobatch
 
-    -- Schedd: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+    -- Schedd: froth.cs.wisc.edu : <192.0.2.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
      125.0   raman           4/11 14:37   0+00:00:00 R  0   1.4  sleepy
      132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello
@@ -201,7 +201,7 @@ example shows the queue of jobs before and after a job is removed.
 
     $ condor_q -nobatch
 
-    -- Schedd: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+    -- Schedd: froth.cs.wisc.edu : <192.0.2.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
      125.0   raman           4/11 14:37   0+00:00:00 R  0   1.4  sleepy
 
@@ -246,7 +246,7 @@ the priority of a job to -15,
 
     $ condor_q -nobatch raman
 
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+    -- Submitter: froth.cs.wisc.edu : <192.0.2.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
      126.0   raman           4/11 15:06   0+00:00:00 I  0   0.3  hello
 
@@ -256,7 +256,7 @@ the priority of a job to -15,
 
     $ condor_q -nobatch raman
 
-    -- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+    -- Submitter: froth.cs.wisc.edu : <192.0.2.44:33847> : froth.cs.wisc.edu
      ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD
      126.0   raman           4/11 15:06   0+00:00:00 I  -15 0.3  hello
 

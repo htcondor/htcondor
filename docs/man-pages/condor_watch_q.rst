@@ -79,6 +79,14 @@ Behavior Options
     Enable/disable tool exit via key press from keyboard.
     Enabled by default if connected to a ``tty``.
 
+ **-interval** *N*
+    Refresh interval in seconds. Defaults to 0.5 (half a second).
+
+    .. warning::
+
+        This affects key press detection for exiting. To exit immediately
+        with long intervals, press CONTROL-C.
+
 Display Options
 '''''''''''''''
 

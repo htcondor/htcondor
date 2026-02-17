@@ -2,9 +2,9 @@
 #define   _CONDOR_STARTER_COMMANDS_H
 
 enum class STARTER_COMMAND : int {
-    UPDATE = 0,
-    FINAL_UPDATE =1,
-    COLOR = 2
+	UPDATE = 0,
+	FINAL_UPDATE = 1,
+	COLOR = 2
 };
 
 #endif /* _CONDOR_STARTER_COMMANDS_H */

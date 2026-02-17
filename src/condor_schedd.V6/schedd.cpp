@@ -20060,11 +20060,29 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 // Write Schedd ClassAd to daemon history?
 void
 Scheduler::maybeWriteDaemonHistory(ClassAd* ad) {
+	if (!ad) {
+		return;
+	}
+
 	static time_t prev_write = 0;
 	time_t now = time(nullptr);
-	if (now - prev_write > WriteHistRecordInterval) {
-		prev_write = now;
-		daemonCore->AppendDaemonHistory(ad);
+	if (now - prev_write <= WriteHistRecordInterval) {
+		return;
 	}
+	prev_write = now;
+
+	// create an ad for this history that we can overlay on the ad we sent to the collector
+	// this allows us to add attributes into the history that we did not send to the collector
+	ClassAd history_ad;
+	history_ad.ChainToAd(ad);
+
+	// publish more verbose stats to the daemon history
+	const int pub_level = IF_BASICPUB | IF_VERBOSEPUB | IF_NONZERO  /* | IF_RECENTPUB */;
+	stats.Publish(history_ad, pub_level);
+	daemonCore->dc_stats.Publish(history_ad, pub_level);
+	m_xfer_queue_mgr.publish(&history_ad, pub_level);
+
+	daemonCore->AppendDaemonHistory(&history_ad);
+	history_ad.Unchain();
 }
 

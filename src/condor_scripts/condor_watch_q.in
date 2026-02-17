@@ -115,6 +115,14 @@ def parse_args():
         help="Which schedd to contact for queries, if needed. Defaults to the local schedd.",
     )
 
+    parser.add_argument(
+        "-interval",
+        action="store",
+        default=HALF_A_SECOND,
+        type=float,
+        help="Interval in seconds between refreshes. Default: %(default)f"
+    )
+
     # BEHAVIOR OPTIONS
 
     parser.add_argument(
@@ -719,7 +727,7 @@ def watch_q(
             if args.exit_on_key_press and keyboard.anyKeyPressed():
                 raise KeyboardInterrupt
 
-            time.sleep(HALF_A_SECOND)
+            time.sleep(args.interval)
     except KeyboardInterrupt:
         sys.exit(0)
 

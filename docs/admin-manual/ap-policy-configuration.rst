@@ -43,7 +43,7 @@ automatically assigns an accounting group to jobs based on the
 submitting user, and one that shows one possible way to transform
 Vanilla jobs to Docker jobs.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
 
@@ -88,7 +88,7 @@ a major component of the default error message output if a user attempts
 to submit a job which fails to meet the requirements. Therefore, choose
 a descriptive name. For the three example submit requirements described:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NAMES = NotStandardUniverse, MinimalRequestMemory, NotChris
 
@@ -99,7 +99,7 @@ chosen name listed in :macro:`SUBMIT_REQUIREMENT_NAMES`. The value is a
 boolean ClassAd expression. The three example criterion result in these
 configuration variable definitions:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1
     SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512
@@ -116,7 +116,7 @@ and the job ClassAd, which is the ``TARGET.`` name space. Note that
 Further configuration may associate a rejection reason with a submit
 requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs."
     SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \
@@ -137,7 +137,7 @@ will include the ``<Name>`` chosen for the submit requirement.
 Completing the presentation of the example submit requirements, upon an
 attempt to submit a standard universe job, :tool:`condor_submit` would print
 
-.. code-block:: text
+.. code-block:: console
 
     Submitting job(s).
     ERROR: Failed to commit job submission into the queue.
@@ -162,7 +162,7 @@ to allow HTCondor administrators to provide their users with advance
 warning of new submit requirements. For example, if you want to increase
 the minimum request memory, you could use the following configuration.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES)
     SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024
@@ -173,7 +173,7 @@ When a user runs :tool:`condor_submit` to submit a job with :ad-attr:`RequestMem
 between 512 and 1024, they will see (something like) the following,
 assuming that the job meets all the other requirements.
 
-.. code-block:: text
+.. code-block:: console
 
     Submitting job(s).
     WARNING: Committed job submission into the queue with the following warning:
@@ -183,9 +183,9 @@ assuming that the job meets all the other requirements.
 
 The job will contain (something like) the following:
 
-.. code-block:: text
+.. code-block:: console
 
-    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
+    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <192.0.2.53:37317?addrs=192.0.2.53-37317+[2001-db8--1]-37317&noUDP&sock=19966_e869_5>
         WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.
     ...
 
@@ -295,7 +295,7 @@ Each execute machine defines the configuration variable
 :macro:`DedicatedScheduler`, which identifies the dedicated scheduler it is
 managed by. The local configuration file contains a modified form of
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DedicatedScheduler = "DedicatedScheduler@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -306,7 +306,7 @@ string "full.host.name".
 If running personal HTCondor, the name of the scheduler includes the
 user name it was started as, so the configuration appears as:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -321,7 +321,7 @@ requirements on a resource for it to be considered dedicated.
 Job ClassAds from the dedicated scheduler contain the attribute
 ``Scheduler``. The attribute is defined by a string of the form
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     Scheduler = "DedicatedScheduler@full.host.name"
 
@@ -336,7 +336,7 @@ Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
     run jobs that require the dedicated resource. To enact this policy,
     configure the following expressions:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         START     = Scheduler =?= $(DedicatedScheduler)
         SUSPEND   = False
@@ -368,7 +368,7 @@ Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
     To implement this, configure the machine as a dedicated resource as
     above, modifying only the :macro:`START` expression:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         START = True
 
@@ -385,7 +385,7 @@ Policy Scenario: Adding Desktop Resources To The Mix
     set in the global configuration. Locally, the configuration is
     modified to this hybrid policy by adding a second case.
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
         PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
@@ -428,7 +428,7 @@ beginning. Thus, the administrator should be careful when enabling
 preemption of these dedicated resources. Enable dedicated preemption
 with the configuration:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     STARTD_JOB_ATTRS = JobPrio
     SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
@@ -467,7 +467,7 @@ configuration variable.
 The submit description file for a parallel universe job which must not
 cross group boundaries contains
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +WantParallelSchedulingGroups = True
 

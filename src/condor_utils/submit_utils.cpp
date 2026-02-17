@@ -732,10 +732,8 @@ static void compress_path( std::string &path )
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-int SubmitHash::check_and_universalize_path( std::string &path )
+int SubmitHash::check_and_universalize_path( [[maybe_unused]] std::string &path )
 {
-	(void) path;
-
 	int retval = 0;
 #ifdef WIN32
 	/*
@@ -846,7 +844,7 @@ int64_t SubmitHash::calc_image_size_kb( const char *name)
 // other than to make sure that it actually IS a directory on Windows
 // On Linux we already know that by the error code from safe_open below
 //
-static bool check_directory( const char* pathname, int /*flags*/, int err )
+static bool check_directory( [[maybe_unused]] const char* pathname, int /*flags*/, int err )
 {
 #if defined(WIN32)
 	// Make sure that it actually is a directory
@@ -856,8 +854,6 @@ static bool check_directory( const char* pathname, int /*flags*/, int err )
 	return (dwAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
 	// will just do nothing here and leave
-	// it up to the runtime to nicely report errors.
-	(void)pathname;
 	return (err == EISDIR);
 #endif
 }
@@ -9862,6 +9858,7 @@ credd_has_tokens(
 	const std::string & token_names,
 	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
+	Daemon* credd,
 	std::string & URL,
 	std::string & error_string
 ) {
@@ -9899,7 +9896,7 @@ credd_has_tokens(
 	}
 
 	std::string url;
-	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
+	int rv = do_check_oauth_creds(req_ads, url, credd);
 	if (rv > 0) { URL = url; }
 	else if (rv < 0) {
 		// this little bit of nonsense preserves the pre 8.9.9 error messages to stdout
@@ -10008,6 +10005,34 @@ process_job_credentials(
 		}
 	}
 
+	Daemon credd(DT_CREDD);
+
+	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+	// in either case we want to initialize our credd object from the passed-in one if we can.
+	if (schedd_or_credd) {
+		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+		if (schedd) {
+			std::string credd_address;
+			if (schedd->getCreddAddress(credd_address)) {
+				// when we init the credd from the schedd's locationAd,
+				// it will pick up the CreddIpAddr in the locationAd and
+				// use it to set the addr field of the daemon object
+				// And it will use the name, machine, and version of the schedd
+				// TODO: does the location ad need to know the name of the credd?
+				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+			} else {
+				if (schedd->name() && ! schedd->isLocal()) {
+					// this is a Hail Mary, if the address of the credd is not known,
+					// and the schedd is remote we hope that the credd name and the schedd name are the same.
+					// if this is a local schedd, we are better off using a default credd.
+					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+				}
+			}
+		} else if (schedd_or_credd->type() == DT_CREDD) {
+			credd = *schedd_or_credd;
+		}
+	}
+
 	if (!token_ads.empty()) {
 		// Contact the credd to see if it has all of the tokens
 		// requested by the job.
@@ -10017,7 +10042,11 @@ process_job_credentials(
 		//    acquire some missing tokens
 		// 3. Provide an error message explaining why one or more tokens
 		//    are unavailable.
-		if( credd_has_tokens(token_names, token_ads, DashDryRun, URL, error_string) ) {
+		if (!credd.locate()) {
+			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
+			return 1;
+		}
+		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					return 0;
@@ -10074,34 +10103,6 @@ process_job_credentials(
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
-
-			Daemon credd(DT_CREDD);
-
-			// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
-			// in either case we want to initialize our credd object from the passed-in one if we can.
-			if (schedd_or_credd) {
-				DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
-				if (schedd) {
-					std::string credd_address;
-					if (schedd->getCreddAddress(credd_address)) {
-						// when we init the credd from the schedd's locationAd,
-						// it will pick up the CreddIpAddr in the locationAd and
-						// use it to set the addr field of the daemon object
-						// And it will use the name, machine, and version of the schedd
-						// TODO: does the location ad need to know the name of the credd?
-						credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
-					} else {
-						if (schedd->name() && ! schedd->isLocal()) {
-							// this is a Hail Mary, if the address of the credd is not known,
-							// and the schedd is remote we hope that the credd name and the schedd name are the same.
-							// if this is a local schedd, we are better off using a default credd.
-							credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
-						}
-					}
-				} else if (schedd_or_credd->type() == DT_CREDD) {
-					credd = *schedd_or_credd;
-				}
-			}
 
 			// if we did not init the credd object from an ad, we need to locate now.
 			if (credd.locate()) {

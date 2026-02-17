@@ -1,3 +1,43 @@
+*** 25.8.0 features
+
+- Singularity or Apptainer jobs now also pass --rocm to GPU jobs
+  to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
+  set to false.
+  :jira:`3537`
+
+- :tool:`condor_top` now supports a `-history` option to read the most
+  recently recorded on disk performance statistics.  Runs much faster,
+  and works even when the *condor_schedd* is slow or not running.
+  :jira:`3582`
+
+- :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
+  in the summary table.
+  :jira:`3535`
+
+- When placing a job with credentials, the client will now find the
+  address of the *condor_credd* via the *condor_schedd* when possible.
+  The client already did this for Kerberos credentials; it now does so
+  for all job credential types.
+  :jira:`3536`
+
+- Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
+  :jira:`3530`
+
+- No longer warn about config knobs with dots in the names if the knob
+  is group quota related, and begins with GROUP.
+  :jira:`3544`
+
+- The old ClassAd syntax is no longer supported in job transforms.
+  :jira:`3538`
+
+*** 25.8.0 bugs
+
+- Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
+  promptly if it failed to launch a singularity job.
+  :jira:`3531`
+
+*** 25.0.8 bugs
+
 *** 25.7.0 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
@@ -20,6 +60,10 @@
 - Added new command line options to :tool:`condor_watch_q` to control
   displaying rows of jobs that have all exited the AP job queue.
   :jira:`3516`
+
+- Added `-interval` command line option to :tool:`condor_watch_q` to control the
+  refresh rate of the tool.
+  :jira:`3528`
 
 - Added python bindings to the Startd object equivalent to the :tool:`condor_vacate` command.
   :jira:`3449`

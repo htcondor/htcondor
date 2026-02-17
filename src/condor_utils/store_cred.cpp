@@ -2296,8 +2296,7 @@ int queryCredential( const char* user, Daemon *d ) {
 */
 
 int do_check_oauth_creds (
-	const classad::ClassAd* request_ads[],
-	int num_ads,
+	const std::vector<const classad::ClassAd*>& request_ads,
 	std::string & outputURL,
 	Daemon* d /* = NULL*/)
 {
@@ -2306,10 +2305,7 @@ int do_check_oauth_creds (
 	std::string daemonid;
 
 	outputURL.clear();
-	if (num_ads < 0) {
-		return -1;
-	}
-	if (num_ads == 0) {
+	if (request_ads.empty()) {
 		return 0;
 	}
 
@@ -2338,11 +2334,11 @@ int do_check_oauth_creds (
 
 	bool sent = false;
 	sock->encode();
-	if ( ! sock->put(num_ads)) {
+	if ( ! sock->put(request_ads.size())) {
 		sent = false;
 	} else {
 		sent = true;
-		for (int ii = 0; ii < num_ads; ++ii) {
+		for (size_t ii = 0; ii < request_ads.size(); ++ii) {
 			// to insure backward compability, there are 3 fields that *must* be set to empty strings
 			// if they are missing or undefined. 8.9.9 and later will handle missing fields correctly
 			// but 8.9.* < 8.9.9 will leak values from one attribute to the other 
