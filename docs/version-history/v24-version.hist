@@ -1,5 +1,10 @@
 *** 24.0.18 bugs
 
+- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
+  path incorrectly when using late materialization and a different executable
+  for each job.
+  :jira:`3546`
+
 *** 24.0.17 bugs
 
 - Fixed :meth:`htcondor2.Schedd.refreshGSIProxy` to use correct
@@ -9,11 +14,6 @@
 - Fixed bugs in :tool:`condor_history` that made it very slow on
   filesystems with rate-limits on I/O operations.
   :jira:`3512`
-
-- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
-  path incorrectly when using late materialization and a different executable
-  for each job.
-  :jira:`3546`
 
 *** 24.0.16 features
 
