@@ -29,7 +29,7 @@ def the_condor(test_dir):
 		config={
 			'STARTD_DEBUG':					'D_CATEGORY D_SUBSECOND D_TEST',
 			'STARTER_DEBUG':				'D_CATEGORY D_SUBSECOND D_TEST',
-			'_CONDOR_COLOR_FROM_JOB_AD':	'TRUE',
+			'TESTING_COLOR_FROM_JOB_AD':	'TRUE',
 			# By making this explicit, I don't have to look it up later.
 			'UPDATE_INTERVAL':				'2',
 		},
