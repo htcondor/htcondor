@@ -5,6 +5,10 @@
   (e.g. with :tool:`condor_transfer_data`).
   :jira:`3508`
 
+- :tool:`htcondor dag status` now also shows information about jobs
+  transfering sandboxes and in the transfer queue.
+  :jira:`3517`
+
 - :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
   generated submit file.  There is a new option ``-getenv`` to 
   allow this.
