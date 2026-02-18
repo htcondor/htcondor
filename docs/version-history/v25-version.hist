@@ -23,7 +23,7 @@
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
 
-- The negotiator now has access to the :ad-addr:`RemoteUserFloor` to avoid
+- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
   going beneath a user's floor number of resources while preempting.
   :jira:`3226`
 
