@@ -164,6 +164,30 @@ class Status(Verb):
             if JobStatus[dag[0]['JobStatus']] == "HELD":
                 logger.info(f"Hold Reason: {dag[0]['HoldReason']}")
 
+        # Query for subjobs of this DAG that are in a file transfer state.
+        # TransferQueued, TransferringInput, and TransferringOutput are boolean attributes
+        # set on the job ad (used by condor_q -io); JobStatus==6 is never actually set.
+        # These jobs are likely already counted in DAG_JobsIdle or DAG_JobsRunning, so
+        # they are shown as supplementary context rather than separate totals.
+        n_xfer_queued = 0
+        n_xfer_input = 0
+        n_xfer_output = 0
+        if ad.get('DAG_JobsSubmitted', 0) > 0:
+            try:
+                xfer_jobs = schedd.query(
+                    constraint=f"DAGManJobId == {dag_id} && (TransferQueued =?= true || TransferringInput =?= true || TransferringOutput =?= true)",
+                    projection=["TransferQueued", "TransferringInput", "TransferringOutput"]
+                )
+                for j in xfer_jobs:
+                    if j.get("TransferQueued"):
+                        n_xfer_queued += 1
+                    if j.get("TransferringInput"):
+                        n_xfer_input += 1
+                    if j.get("TransferringOutput"):
+                        n_xfer_output += 1
+            except Exception:
+                pass
+
         # Show some information about the jobs running under this DAG
         if ad.get('DAG_JobsSubmitted') != None:
             failed_jobs = ad.get('DAG_JobsSubmitted', 0) - ad.get('DAG_JobsIdle', 0) - ad.get('DAG_JobsHeld', 0) - ad.get('DAG_JobsRunning', 0) - ad.get('DAG_JobsCompleted', 0)
@@ -178,6 +202,12 @@ class Status(Verb):
                 logger.info(f"\t    {self.multi(ad.get('DAG_JobsCompleted'),True)} completed.")
             if failed_jobs > 0:
                 logger.info(f"\t    {self.multi(failed_jobs,True)} failed.")
+            if n_xfer_queued > 0:
+                logger.info(f"\t    {self.multi(n_xfer_queued)} in the file transfer queue.")
+            if n_xfer_input > 0:
+                logger.info(f"\t    {self.multi(n_xfer_input)} transferring input files to the EP.")
+            if n_xfer_output > 0:
+                logger.info(f"\t    {self.multi(n_xfer_output)} transferring output files back.")
 
         # Show some information about the nodes running under this DAG
         if ad.get('DAG_NodesTotal') != None:
