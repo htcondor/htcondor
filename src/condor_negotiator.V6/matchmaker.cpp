@@ -1541,6 +1541,7 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 	external_references.erase(ATTR_LAST_HEARD_FROM);
 	external_references.erase(ATTR_REMOTE_USER);
 	external_references.erase(ATTR_REMOTE_OWNER);
+	external_references.erase(ATTR_REMOTE_USER_FLOOR);
 	external_references.erase(ATTR_REMOTE_USER_PRIO);
 	external_references.erase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
 	external_references.erase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
@@ -5488,6 +5489,10 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
+
+		int user_floor = accountant.GetFloor(remoteUser);
+		ad->Assign(ATTR_REMOTE_USER_FLOOR, user_floor);
+		
 		formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.c_str());
 		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
