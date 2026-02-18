@@ -425,10 +425,11 @@ that values may change. See the
     slot.
 
 :index:`RemoteUserFloor<single: RemoteUserFloor; ClassAd attribute, ephemeral>` \ ``RemoteUserFloor``
-    A floating point value representing the user priority floor of the
-    job currently running on the slot. This version of the attribute,
-    with no slot represented in the attribute name, refers to the
-    current slot being evaluated.
+    An integer value representing the resource/slot floor (minimum
+    number of slots guaranteed to the user) for the job currently
+    running on the slot. This version of the attribute, with no slot
+    represented in the attribute name, refers to the current slot being
+    evaluated.
 
 :index:`RemoteUserResourcesInUse<single: RemoteUserResourcesInUse; ClassAd attribute, ephemeral>`\ ``RemoteUserResourcesInUse``
     The integer number of slots currently utilized by the user of the
