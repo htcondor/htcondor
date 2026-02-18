@@ -693,6 +693,7 @@
 #define ATTR_REMOTE_SLOT_ID  "RemoteSlotID"
 #define ATTR_REMOTE_SPOOL_DIR  "RemoteSpoolDir"
 #define ATTR_REMOTE_USER  "RemoteUser"
+#define ATTR_REMOTE_USER_FLOOR  "RemoteUserFloor"
 #define ATTR_REMOTE_USER_PRIO  "RemoteUserPrio"
 #define ATTR_REMOTE_USER_RESOURCES_IN_USE  "RemoteUserResourcesInUse"
 #define ATTR_REMOVE_KILL_SIG  "RemoveKillSig"

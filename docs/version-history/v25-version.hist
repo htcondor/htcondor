@@ -28,6 +28,10 @@
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
 
+- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
+  going beneath a user's floor number of resources while preempting.
+  :jira:`3226`
+
 - :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
   in the cooldown state.
   :jira:`2535`
