@@ -5492,7 +5492,6 @@ addRemoteUserPrios( ClassAd	*ad )
 
 		int user_floor = accountant.GetFloor(remoteUser);
 		ad->Assign(ATTR_REMOTE_USER_FLOOR, user_floor);
-		
 		formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.c_str());
 		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
