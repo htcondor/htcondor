@@ -424,17 +424,17 @@ sub DoChild
         }
 
         print "\tPython version: ";
-        system ("$perl --version");
+        system ("\"$perl\" --version");
         print "\tPython exe: ";
-        system ("$perl -c \"import sys; print(sys.executable)\"");
+        system ("\"$perl\" -c \"import sys; print(sys.executable)\"");
         print "\tPython-bindings version: ";
-        system ("$perl -c \"import htcondor2; print(htcondor2.version())\"");
+        system ("\"$perl\" -c \"import htcondor2; print(htcondor2.version())\"");
     }
 
     if (exists($needs->{pytest})) {
         print "run_test $$: $testname is pytest, checking pytest version\n";
         if($iswindows){
-            system( "$perl -m pytest -s --version" );
+            system( "\"$perl\" -m pytest -s --version" );
         } else {
             system( "$perl -m pytest --version 2>&1" );
         }
@@ -489,7 +489,7 @@ sub DoChild
         my $dtm = ""; if (defined $ENV{TIMED_CMD_DEBUG_WAIT}) {$dtm = ":$ENV{TIMED_CMD_DEBUG_WAIT}";}
         my $verb = ($hush == 0) ? "" : "-v";
         my $timeout = "-t 12M";
-        $res = system("timed_cmd.exe -jgd$dtm $verb -o $runout $timeout $perl $test_program");
+        $res = system("timed_cmd.exe -jcd$dtm $verb -o $runout $timeout $perl $test_program");
     } else {
         if( $hush == 0 ) { debug( "Child Starting: $perl $test_program > $runout\n",6); }
         $res = system("$perl $test_program > $runout 2>&1");
