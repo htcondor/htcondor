@@ -8,7 +8,7 @@ Starter Daemon Configuration Options
 These settings affect the *condor_starter*.
 
 :macro-def:`ASSUME_COMPATIBLE_MULTIFILE_PLUGINS`
-    All multi-file file transfefr plug-ins read from ClassAd-formatted input
+    All multi-file file transfer plug-ins read from ClassAd-formatted input
     file, and are expected to both parse any valid ClassAd and ignore any
     attributes it doesn't recognize.  To allow plug-ins which don't meet this
     expectation to continue to work while they're being fixed, you may set
@@ -133,12 +133,6 @@ These settings affect the *condor_starter*.
     .. code-block:: bash
 
         exec "$@"
-
-    For the C type shells (*csh*, *tcsh*), the last line should be:
-
-    .. code-block:: csh
-
-        exec $*:q
 
     On Windows, the end should look like:
 
@@ -525,13 +519,13 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_JOB`
     A boolean value specifying whether this startd should run jobs under
-    Singularity.  This can be an expression evaluted in the context of the slot
+    Singularity.  This can be an expression evaluated in the context of the slot
     ad and the job ad, where the slot ad is the "MY.", and the job ad is the
     "TARGET.". The default value is ``False``.
 
 :macro-def:`SINGULARITY_IMAGE_EXPR`
     The path to the Singularity container image file.  This can be an
-    expression evaluted in the context of the slot ad and the job ad, where the
+    expression evaluated in the context of the slot ad and the job ad, where the
     slot ad is the "MY.", and the job ad is the "TARGET.".  The default value
     is ``"SingularityImage"``.
 
@@ -551,7 +545,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_BIND_EXPR`
     A string value containing a list of bind mount specifications to be passed
-    to Singularity.  This can be an expression evaluted in the context of the
+    to Singularity.  This can be an expression evaluated in the context of the
     slot ad and the job ad, where the slot ad is the "MY.", and the job ad is
     the "TARGET.". The default value is ``"SingularityBind"``.
 
@@ -570,7 +564,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
-    to the Singularity command line. This can be an expression evaluted in the context of the
+    to the Singularity command line. This can be an expression evaluated in the context of the
     slot ad and the job ad, where the slot ad is the "MY.", and the job ad is the "TARGET.".
 :macro-def:`SINGULARITY_RUN_TEST_BEFORE_JOB`
     A boolean value which defaults to true.  When true, before running a singularity
