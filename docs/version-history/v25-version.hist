@@ -19,6 +19,10 @@
   set to false.
   :jira:`3537`
 
+- When cgroups are active, *condor_startds* now advertise
+  :ad-attr:`CgroupEnforced` to be true.
+  :jira:`3555`
+
 - HTCondor now more quickly detects when the network connection between
   two daemons is broken or disconnected.
   :jira:`3547`

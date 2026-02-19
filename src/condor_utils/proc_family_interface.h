@@ -86,6 +86,9 @@ public:
 																 //
 	// call prior to destroying the ProcFamily class to insure that cleanup happens before we exit.
 	virtual bool quit(void(*notify)(void*me, int pid, int status),void*me) = 0;
+	//
+	// Can we enforce memory limits with cgroups?
+	virtual bool cgroup_enforceable() const { return false;}
 };
 
 #endif
