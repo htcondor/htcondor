@@ -388,6 +388,34 @@ These settings affect the *condor_starter*.
     Currently, this causes the job to go on hold with ``ETIME`` (62) as
     the hold reason subcode.
 
+:macro-def:`REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT`
+    A boolean value that defaults to ``True``. When ``True``, the
+    *condor_starter* redirects stderr to stdout when invoking file transfer
+    plugins, allowing both output streams to be captured together. When
+    ``False``, stderr from file transfer plugins is not captured. This
+    setting affects whether plugin error messages can be logged to the
+    StarterLog as controlled by :macro:`LOG_FILETRANSFER_PLUGIN_STDOUT_ON_SUCCESS`
+    and :macro:`LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE`.
+
+:macro-def:`LOG_FILETRANSFER_PLUGIN_STDOUT_ON_SUCCESS`
+    A string value specifying the debug level at which to log the stdout
+    (and stderr, if :macro:`REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT` is ``True``)
+    of file transfer plugins that succeed. The value should be a valid debug
+    category and verbosity level such as ``D_ALWAYS``, ``D_FULLDEBUG``, or
+    ``D_STATUS``. If not set, stdout from successful plugins is not logged.
+    This can be useful for debugging file transfer issues or monitoring
+    plugin behavior. The default is to not log output from successful plugins.
+
+:macro-def:`LOG_FILETRANSFER_PLUGIN_STDOUT_ON_FAILURE`
+    A string value specifying the debug level at which to log the stdout
+    (and stderr, if :macro:`REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT` is ``True``)
+    of file transfer plugins that fail. The value should be a valid debug
+    category and verbosity level such as ``D_ALWAYS``, ``D_FULLDEBUG``, or
+    ``D_STATUS``. The default value is ``D_ALWAYS``, meaning that output
+    from failed plugins is logged to the StarterLog by default. This helps
+    administrators and users diagnose file transfer problems. When a plugin
+    fails, up to 16KB of its most recent output is included in the log.
+
 :macro-def:`ENABLE_CHIRP`
     A boolean value that defaults to ``True``. An administrator would
     set the value to ``False`` to disable Chirp remote file access from
