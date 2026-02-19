@@ -809,8 +809,7 @@ Starter::handleJobSetupCommand(
 			}
 
 			ClassAd replyAd;
-			// bool success = s->jic->colorSlot( colorAd, replyAd );
-			/* FIXME: postmerge */ bool success = false;
+			bool success = s->jic->colorSlot( * colorAd, replyAd );
 			if(! success) {
 				dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
 				/// ... FIXME ...
@@ -821,7 +820,6 @@ Starter::handleJobSetupCommand(
 				dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
 				// ... FIXME ...
 			}
-			/* FIXME: postmerge */ success = true;
 
 
 			//
@@ -864,7 +862,32 @@ Starter::handleJobSetupCommand(
 
 			if( stagingDir.empty() ) {
 				// Assume the staging directory is in our machine ad.
-				// FIXME
+				ClassAd * machineAd = s->jic->machClassAd();
+				if(! machineAd) {
+					// ... FIXME ...
+				} else {
+					// It's sad, but the least-awful way to extract the
+					// `StagingDir` corresponding to the cifName we're mapping
+					// is to evaluate a textual ClassAd expression.
+
+					std::string expression;
+					formatstr(
+						expression,
+						// This assumes that there is exactly one matching Name.
+						"join(evalInEachContext( ifthenelse( Name == \"%s\", StagingDir, undefined ), CommonCatalogsAd.CommonCatalogsList ))",
+						cifName.c_str()
+					);
+
+					// FIXME: This is awful.  Doing `EvaluateExpr( expression, value )`
+					// would be cleaner; hopefully extracting a std::string from
+					// a classad::Value isn't arduous.
+					machineAd->AssignExpr( "_condor_rval", expression.c_str() );
+					if(! machineAd->LookupString( "_condor_rval", stagingDir )) {
+						dprintf( D_ALWAYS, "Failed to find staging directory for '%s' in slot coloring.\n", cifName.c_str() );
+						// ... FIXME ...
+					}
+					dprintf( D_ALWAYS, "cxfer: found '%s' -> '%s'\n", cifName.c_str(), stagingDir.c_str() );
+				}
 			}
 
 			std::filesystem::path location(stagingDir);

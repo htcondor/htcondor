@@ -484,6 +484,11 @@ main_init(int argc, char *argv[])
 		EXCEPT( "Failed to read job ad!" );
 	}
 
+	// Arguably, the schedd should fix this for us.
+	if( cxfer_type != CXFER_STATE::INVALID ) {
+		ad->Assign( ATTR_PROC_ID, proc );
+	}
+
 	startShadow( ad );
 }
 

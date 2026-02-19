@@ -12732,8 +12732,16 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	if(! transfer_proc) {
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 	} else {
-		// FIXME: it's not clear if we want/need to record this somewhere.
-		// add_shadow_birthdate( cluster, -1 * (proc + 1000), new_rec->is_reconnect );
+		// FIXME: We can't call add_shadow_birthdate() because it assumes
+		// that there's an entry for cluster.proc in the job queue log.
+		// (It doesn't break anything, but it doesn't do anything and it
+		// produces a lot of log spam.)  For now, the shadow internally sets
+		// ATTR_NUM_SHADOW_STARTS to 1 unconditionally, but recording it
+		// properly is probably wise.  (The epoch-writing code needs
+		// ATTR_NUM_SHADOWS_STARTS to have a value.)  The shadow is also
+		// adjusting the recieved job ad to set its proc ID to match the
+		// one passed on the command-line, so that its dprintf output will
+		// have the correct header.
 	}
 	CommitTransactionOrDieTrying();
 	if( new_rec->pid ) {
