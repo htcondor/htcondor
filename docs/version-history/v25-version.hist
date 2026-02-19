@@ -7,6 +7,10 @@
   references :ad-attr:`Requirements`.
   :jira:`2629`
 
+- Fixed a bug in *condor_status* where the Offline-GPUs column of the ``-gpus``
+  output was always empty.
+  :jira:`3558`
+
 *** 25.0.7 bugs
 
 *** 25.0.6 features
