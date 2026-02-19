@@ -201,7 +201,7 @@ static std::string s_strStep;
 int AnalyzeThisSubExpr(
 	ClassAd *myad,
 	classad::ExprTree* expr,
-	classad::References & inline_attrs, // expand attrs with these names inline
+	const classad::References * inline_attrs, // expand attrs with these names inline
 	std::vector<AnalSubExpr> & clauses,
 	bool & varres, bool must_store, int depth,
 	const anaFormattingOptions & fmt)
@@ -257,10 +257,11 @@ int AnalyzeThisSubExpr(
 			}
 			if (absolute) {
 				left = NULL;
-			} else if ( ! left && inline_attrs.find(strAttr) != inline_attrs.end()) {
+			} else if ( ! left && inline_attrs && inline_attrs->count(strAttr)) {
 				// special case for inline_attrs and CurrentTime expressions, we want behave as if the *value* of the
 				// attribute were here rather than just the attr reference.
 				left = myad->LookupExpr(strAttr);
+				inline_attrs = nullptr; // no more inlining from here on down the tree
 				if (chatty) printf("              : inlining %s = %p\n", strAttr.c_str(), left);
 			}
 			show_work = false;
@@ -715,12 +716,35 @@ const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buf
 	return temp_buffer.c_str();
 }
 
+// helper function to return a copy of inline_attrs with an attribute removed if necessary
+// and return the original inline_attrs if it does not contain that attribute
+static classad::References * adjust_inline_attrs(
+	classad::References & _inline_attrs,
+	const char * attrRequirements,
+	classad::References & adjusted_attrs)
+{
+	classad::References * inline_attrs = &_inline_attrs;
+	if (_inline_attrs.count(attrRequirements)) {
+		for (const auto & attr : _inline_attrs) { adjusted_attrs.insert(attr); }
+		adjusted_attrs.erase(attrRequirements);
+		inline_attrs = &adjusted_attrs;
+	}
+	return inline_attrs;
+}
+
 const char * PrintNumberedExprTreeClauses(
 	std::string & out,
-	ClassAd* ad, ExprTree *tree,
-	classad::References & inline_attrs,
+	ClassAd* ad, const char * attrRequirements,
+	classad::References & _inline_attrs,
 	anaFormattingOptions & fmt)
 {
+	ExprTree *tree = ad->Lookup(attrRequirements);
+	if ( ! tree) return out.c_str();
+
+	// make sure that attrRequirements is not in inline_attrs
+	classad::References adjusted_attrs;
+	classad::References * inline_attrs = adjust_inline_attrs(_inline_attrs, attrRequirements, adjusted_attrs);
+
 	bool variable_result = false; // set to true if the time is a factor in evaluation
 	std::vector<AnalSubExpr> subs;
 	AnalyzeThisSubExpr(ad, tree, inline_attrs, subs, variable_result, true, 0, fmt);
@@ -755,7 +779,7 @@ const char * PrintNumberedExprTreeClauses(
 void AnalyzeRequirementsForEachTarget(
 	ClassAd *request,
 	const char * attrConstraint, // must be an attribute in the request ad
-	classad::References & inline_attrs, // expand these attrs inline
+	classad::References & _inline_attrs, // expand these attrs inline
 	std::vector<ClassAd *> targets,
 	std::string & return_buf,
 	const anaFormattingOptions & fmt)
@@ -763,6 +787,12 @@ void AnalyzeRequirementsForEachTarget(
 	int console_width = fmt.console_width;
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
 	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
+
+	// We don't want to include the constraint attr (e.g. "Requirements") in the set of inlineable attrs.
+	// This is an easy (and usually safe) error to make at the call site, so just account for it here
+	// by building an adjusted collection that we pass down. HTCONDOR-2629
+	classad::References adjusted_attrs;
+	classad::References * inline_attrs = adjust_inline_attrs(_inline_attrs, attrConstraint, adjusted_attrs);
 
 	DefaultAnalysisMatchDescriminator def_descrim;
 	AnalysisMatchDescriminator & matches = fmt.match_descrim ? *fmt.match_descrim : def_descrim;
