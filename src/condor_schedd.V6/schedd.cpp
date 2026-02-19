@@ -10919,7 +10919,7 @@ Scheduler::StartJobHandler( int /* timerID */ )
 		callAboutToSpawnJobHandler( cluster, proc, srec );
 
 		bool wantPS = 0;
-		job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS);
+		if(job_ad) { job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS); }
 
 		if( (universe == CONDOR_UNIVERSE_MPI) || 
 			(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
