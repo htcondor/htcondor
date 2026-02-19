@@ -74,6 +74,16 @@ details. The other set replace functionality of the
     The arguments for the *condor_starter* to use when invoking the
     prepare job hook specified by ``<Keyword>``.
 
+:macro-def:`<Keyword>_HOOK_PREPARE_JOB_BEFORE_TRANSFER`
+    For the fetch work hooks, the full path to the program invoked by
+    the *condor_starter* immediately before transferring the job's input
+    files. This hook provides a chance to execute commands to set up or
+    validate the job environment, and/or edit the job ClassAd that is used
+    by the *condor_starter*. See
+    :ref:`admin-manual/ep-policy-configuration:job hooks that fetch work` for
+    more details on this hook's behavior. ``<Keyword>`` is the hook keyword
+    defined to distinguish between sets of hooks.
+
 :macro-def:`<Keyword>_HOOK_UPDATE_JOB_INFO`
     This configuration variable is used by both fetch work hooks and by
     *condor_job_router* hooks.
