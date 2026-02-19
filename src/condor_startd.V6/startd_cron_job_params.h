@@ -41,8 +41,9 @@ class StartdCronJobParams : public ClassAdCronJobParams
 	};
   	typedef std::map< std::string, Metric > Metrics;
 
-	StartdCronJobParams( const char			*job_name,
-						 const CronJobMgr	&mgr );
+	StartdCronJobParams(const char *job_name, const char * param_base, const char * mgr_name)
+		: ClassAdCronJobParams(job_name, param_base, mgr_name) {}
+	StartdCronJobParams(const char *job_name, const CronJobMgr &mgr);
 	~StartdCronJobParams( void ) { };
 
 	// Finish initialization

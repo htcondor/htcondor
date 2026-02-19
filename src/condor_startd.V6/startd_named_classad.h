@@ -25,14 +25,16 @@
 
 // A name / ClassAd pair to manage together
 class StartdCronJob;
+class StartdCronJobParams;
 class StartdNamedClassAd : public NamedClassAd
 {
   public:
-	StartdNamedClassAd( const char *name, StartdCronJob &job, ClassAd * ad = NULL );
+	StartdNamedClassAd( const char *name, const StartdCronJob *job, ClassAd * ad = NULL );
 	~StartdNamedClassAd( void ) { };
+	const StartdCronJobParams & Params() { return m_params; }
 	bool InSlotList( unsigned slot ) const;
 	StartdNamedClassAd * NewPeer( const char * name, ClassAd * ad = NULL ) { return new StartdNamedClassAd(name, m_job, ad); }
-	bool IsJob(StartdCronJob * job) const { return &m_job == job; }
+	bool IsJob(const StartdCronJob * job) const { return m_job == job; }
 	bool ShouldMergeInto(ClassAd * merge_into, const char ** pattr_used);
 	bool MergeInto(ClassAd *merge_to);
 
@@ -47,7 +49,9 @@ class StartdNamedClassAd : public NamedClassAd
 	void Aggregate( ClassAd * to, ClassAd * from );
 
 	static AttrNameSet dont_merge_attrs;
-	StartdCronJob	&m_job;
+	static StartdCronJobParams global_params;
+	const StartdCronJobParams & m_params;
+	const StartdCronJob * m_job{nullptr};
 };
 
 #endif

@@ -24,13 +24,18 @@
 #include "startd_cron_job.h"
 #include "startd_named_classad.h"
 
-// Named classAds
-StartdNamedClassAd::StartdNamedClassAd( const char *name,
-										StartdCronJob &job,
-										ClassAd * ad /*=NULL*/)
-		: NamedClassAd( name, ad ), m_job( job )
+
+StartdNamedClassAd::StartdNamedClassAd( const char *name, const StartdCronJob *job, ClassAd * ad)
+	: NamedClassAd(name, ad)
+	, m_params(job ? job->Params() : global_params)
+	, m_job(job)
 {
 }
+
+// This will produce knobs STARTD_global_foo when global_params("foo") is called
+// we don't really use this for anything, it exists so that StartdNamedClassAd instances
+// with job=nullptr have a valid params class.
+StartdCronJobParams StartdNamedClassAd::global_params("global","STARTD","_");
 
 // attributes that are defined only for StartdNamedClassAds (i.e STARTD_CRON ads)
 //
@@ -48,10 +53,11 @@ static const char * const dont_merge_these[] = {
 };
 AttrNameSet StartdNamedClassAd::dont_merge_attrs(dont_merge_these, dont_merge_these+(sizeof(dont_merge_these)/sizeof(const char *)));
 
+
 bool
 StartdNamedClassAd::InSlotList( unsigned slot_id ) const
 {
-	return m_job.Params().InSlotList( slot_id );
+	return m_params.InSlotList(slot_id);
 }
 
 
@@ -113,7 +119,7 @@ StartdNamedClassAd::MergeInto(ClassAd *merge_into)
 
 bool
 StartdNamedClassAd::isResourceMonitor() {
-	return m_job.isResourceMonitor();
+	return m_job && m_job->isResourceMonitor();
 }
 
 bool
@@ -130,7 +136,7 @@ void
 StartdNamedClassAd::Aggregate( ClassAd * to, ClassAd * from ) {
 	if ( ! to || ! from ) { return; }
 
-	const StartdCronJobParams & params = m_job.Params();
+	const StartdCronJobParams & params = Params();
 	for( auto i = from->begin(); i != from->end(); ++i ) {
 		const std::string & name = i->first;
 		ExprTree * expr = i->second;
@@ -289,7 +295,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 		// The per-job value for PEAK metrics can only be calculated here,
 		// where we know we're looking at a new sample value, and not
 		// aggregating old ones.
-		const StartdCronJobParams & params = m_job.Params();
+		const StartdCronJobParams & params = Params();
 		for( auto i = from->begin(); i != from->end(); ++i ) {
 			const std::string & name = i->first;
 			ExprTree * expr = i->second;
@@ -365,7 +371,7 @@ StartdNamedClassAd::reset_monitor() {
 	if( from == NULL ) { return; }
 
 	// dprintf( D_FULLDEBUG, "StartdNameClassAd::reset_monitor() for %s\n", GetName() );
-	const StartdCronJobParams & params = m_job.Params();
+	const StartdCronJobParams & params = Params();
 	ClassAd accumulator;
 	for( auto i = from->begin(); i != from->end(); ++i ) {
 		const std::string & name = i->first;
@@ -415,7 +421,7 @@ StartdNamedClassAd::unset_monitor() {
 	if( from == NULL ) { return; }
 
 	// dprintf( D_FULLDEBUG, "StartdNameClassAd::unset_monitor() for %s\n", GetName() );
-	const StartdCronJobParams & params = m_job.Params();
+	const StartdCronJobParams & params = Params();
 	std::vector<std::string> victims;
 	auto i = from->begin();
 	while (++i != from->end()) {
