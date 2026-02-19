@@ -13383,7 +13383,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 
 			default:
 				// all other universes	
-				if( rec->match ) {
+				if( /* rec->match */ true ) {
 						//
 						// If we're in graceful shutdown mode, we only want to
 						// send a vacate command to jobs that do not have a lease
@@ -13404,7 +13404,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						//
 						// Send a vacate if appropriate
 						//
-					if ( ! skip_vacate ) {
+					if ( (! skip_vacate) && rec->match ) {
 						send_vacate( rec->match, DEACTIVATE_CLAIM );
 						dprintf( D_ALWAYS, 
 								"Sent vacate command to %s for job %d.%d\n",
@@ -13421,7 +13421,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						daemonCore->Send_Signal( rec->pid, SIGKILL );
 						dprintf( D_ALWAYS, 
 								"Sent signal %d to %s [pid %d] for job %d.%d\n",
-								SIGKILL, rec->match->peer, rec->pid, cluster, proc );
+								SIGKILL, rec->match ? rec->match->peer : "<no match>", rec->pid, cluster, proc );
 							// Keep iterating and preempting more without
 							// decrementing n here.  Why?  Because we didn't
 							// really preempt this job: we just killed the
@@ -13444,6 +13444,11 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						   case, the shadow is on its way out, anyway,
 						   so there's no reason to send it a signal.
 						*/
+					//
+					// The above is no longer true because of job reconnnect,
+					// at least in some (perhaps buggy) cases.  Go ahead and
+					// treat these shadows the same as others.
+					//
 				}
 			} // SWITCH
 				// if we're here, we really preempted it, so
