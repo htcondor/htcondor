@@ -11,6 +11,8 @@ from ._daemon_command import DaemonCommand
 from ._security_context import SecurityContext
 
 from .htcondor2_impl import (
+    _enable_debug,
+    _reload_config,
     _send_command,
     _ping,
     _send_alive,
@@ -36,6 +38,28 @@ def _daemon_type_from_ad_type(ad_type: AdType):
     }
     # Should raise HTCondorEnumError.
     return map.get(ad_type, None)
+
+
+def enable_debug(flags : str = None) -> None:
+    '''
+    Enable debug messages, optionally setting the debug flags.
+
+    :param str flags:  Optional debug flags; defaults to ``None``
+                       which uses the default flags from TOOL_DEBUG.
+                       Or from whatever subsystem was set by calling set_subsystem.
+    '''
+    _enable_debug(flags)
+
+def reload_config(root_config_file : str = None) -> None:
+    '''
+    Reload the HTCondor config, optionally using the given root_config_file.
+
+    :param str root_config_file:  Optional path to root config file; defaults to ``None``
+                       If no root_config_file is given, the default config files are reloaded.
+                       If root_config_file is specified, config is loaded from that file as if
+                       that file had been set as the CONDOR_CONFIG environment variable.
+    '''
+    _reload_config(root_config_file)
 
 
 def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str]):
