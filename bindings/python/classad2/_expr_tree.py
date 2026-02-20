@@ -73,7 +73,7 @@ class ExprTree:
         return _classad_to_repr(self._handle)
 
 
-    def eval(self, scope : ClassAd = None, target : ClassAd = None):
+    def eval(self, scope : Optional[ClassAd] = None, target : Optional[ClassAd] = None):
         R"""
         Evaluate the expression and return the corresponding Python type;
         either a :class:`classad2.ClassAd`, a boolean, a string, a
@@ -105,7 +105,7 @@ class ExprTree:
         return _exprtree_eval(self._handle, scope, target)
 
 
-    def simplify(self, scope : ClassAd = None, target : ClassAd = None):
+    def simplify(self, scope : Optional[ClassAd] = None, target : Optional[ClassAd] = None):
         """
         Evaluate the expression and return an :class:`ExprTree`.
 
