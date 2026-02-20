@@ -2120,12 +2120,13 @@ int SubmitHash::SetLeaveInQueue()
 				 */
 				formatstr(
 					buffer,
-					"%s == %d && (time() - (%s ?: time())) < %d && %s is Undefined",
+					"%s == %d && (time() - (%s ?: time())) < %d && (%s ?: 0) >= %s",
 					ATTR_JOB_STATUS,
 					COMPLETED,
 					ATTR_COMPLETION_DATE,
 					60 * 60 * 24 * 10,
-					ATTR_STAGE_OUT_FINISH
+					ATTR_STAGE_OUT_FINISH,
+					ATTR_ENTERED_CURRENT_STATUS
 				);
 				AssignJobExpr(ATTR_JOB_LEAVE_IN_QUEUE, buffer.c_str());
 			}
