@@ -114,13 +114,12 @@ def long_main():
     # Note that we need to unset APPTAINER_CACHEDIR in this case but not in the local terminal case because the wrapper
     # HTCondor job has a different environment and populating this value causes Snakemake to fail when it tries to write
     # to spool (a read-only filesystem from the perspective of the EP job).
-    command = f"""
-    source $(conda info --base)/etc/profile.d/conda.sh && \
-    conda activate spras && \
-    unset APPTAINER_CACHEDIR && \
-    snakemake -s {args.snakefile} --profile {args.profile} --htcondor-jobdir {args.htcondor_jobdir}
-    """
 
+    # source $(conda info --base)/etc/profile.d/conda.sh && \
+    # conda activate snakemake-env && \
+    # unset APPTAINER_CACHEDIR && \
+    command = f"""snakemake -s {args.snakefile} --profile {args.profile} --htcondor-jobdir {args.htcondor_jobdir} --verbose"""
+    
     try:
         subprocess.run(command, shell=True, executable='/bin/bash', check=True)
         return 0
