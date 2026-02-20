@@ -2817,13 +2817,9 @@ void Claim::receiveUpdateCommand( int c,
 			// Because adlist_replace() takes ownership of the `ClassAd *`.
 			ClassAd * copy = new ClassAd( payloadAd );
 
-			// It seems brave to allow random strangers to determine which
-			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
-			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
-			std::string assignment;
-			if( this->rip() != NULL ) {
-				formatstr( assignment, "SlotMergeConstraint = SlotID == %d", this->rip()->r_id );
-			} else {
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
 				delete copy;
 
 				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
@@ -2832,11 +2828,29 @@ void Claim::receiveUpdateCommand( int c,
 				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
 				return;
 			}
+
+
+			// It seems brave to allow random strangers to determine which
+			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
+			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
+			std::string assignment;
+			formatstr( assignment, "SlotMergeConstraint = SlotID == %d", rip->r_id );
+
 			// Presumably this is actually insert-or-update.
 			copy->Insert( assignment );
 
-			resmgr->adlist_replace( claimSpecificAdName.c_str(), copy );
 
+			// It's not enough to give this coloring ad its own name in the
+			// table of extra ads; we need to make sure that the coloring
+			// attributes from different starters don't collide with each
+			// other in the resulting machine ads.
+			ClassAd * shim = new ClassAd();
+			// This is awful.
+			std::string slot_name = rip->r_name;
+			slot_name = "colors_of_" + slot_name.substr( 0, slot_name.find("@") );
+			shim->Insert( slot_name.c_str(), copy );
+
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), shim );
 			replyAd.InsertAttr( ATTR_RESULT, true );
 			} break;
 

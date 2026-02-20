@@ -1534,8 +1534,6 @@ UniShadow::start_staging_only_conversation(
 		// ... FIXME ...
 		EXCEPT("Starter's reply invalid: did not contain slot ad.\n");
 	}
-	dprintf( D_ALWAYS, "cxfer: slotad:\n" );
-	dPrintAd( D_ALWAYS, * slotAd );
 
 	// The precise interaction between this value, ATTR_AUTHENTICATED_IDENTITY
 	// in the command ad, the socket's getFullyQualifiedUser(), and

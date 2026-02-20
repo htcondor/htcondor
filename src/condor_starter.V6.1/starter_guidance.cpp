@@ -643,12 +643,18 @@ Starter::handleJobSetupCommand(
 			context_p = dynamic_cast<ClassAd *>(guidance.Lookup( ATTR_CONTEXT_AD ));
 			if( context_p != NULL ) { context.CopyFrom(* context_p); }
 
+/*
+			// In the current design, the _starter_ should never wait for
+			// common file transfer to finish; that's the schedd's job.  This
+			// command should thus only be used by the transfer shadow, so
+			// printing this out is just more confusing than helpful.
 			bool first_wait = true;
 			context.LookupBool( "FirstWait", first_wait );
 			if( first_wait ) {
 				context.InsertAttr( "FirstWait", false );
 				dprintf( D_ALWAYS, "Waiting for common files to be transferred.\n" );
 			}
+*/
 
 			daemonCore->Register_Timer( retry_delay, 0,
 				[continue_conversation, context](int /* timerID */) -> void { continue_conversation(context); },
@@ -866,27 +872,43 @@ Starter::handleJobSetupCommand(
 				if(! machineAd) {
 					// ... FIXME ...
 				} else {
-					// It's sad, but the least-awful way to extract the
-					// `StagingDir` corresponding to the cifName we're mapping
-					// is to evaluate a textual ClassAd expression.
+					// For now, to avoid the color ads colliding and creating
+					// new types of exotic subatomic particles, the startd
+					// names coloring ads from a slot "colors_of_<slot-name>".
+					// We don't know the name of the slot which transferred
+					// the common files, so we have to check all of them.
+					std::vector< std::pair< std::string, ExprTree *> > components;
+					machineAd->GetComponents(components);
+					for( auto & [name, value] : components ) {
+						if(! starts_with( name, "colors_of_" ) ) { continue; }
 
-					std::string expression;
-					formatstr(
-						expression,
-						// This assumes that there is exactly one matching Name.
-						"join(evalInEachContext( ifthenelse( Name == \"%s\", StagingDir, undefined ), CommonCatalogsAd.CommonCatalogsList ))",
-						cifName.c_str()
-					);
+						// It's sad, but the least-awful way to extract the
+						// `StagingDir` corresponding to the cifName we're mapping
+						// is to evaluate a textual ClassAd expression.
+						std::string expression;
+						formatstr(
+							expression,
+							// This assumes that there is exactly one matching Name.
+							"join(evalInEachContext( ifthenelse( Name == \"%s\", StagingDir, undefined ), %s.CommonCatalogsAd.CommonCatalogsList ))",
+							cifName.c_str(),
+							name.c_str()
+						);
 
-					// FIXME: This is awful.  Doing `EvaluateExpr( expression, value )`
-					// would be cleaner; hopefully extracting a std::string from
-					// a classad::Value isn't arduous.
-					machineAd->AssignExpr( "_condor_rval", expression.c_str() );
-					if(! machineAd->LookupString( "_condor_rval", stagingDir )) {
-						dprintf( D_ALWAYS, "Failed to find staging directory for '%s' in slot coloring.\n", cifName.c_str() );
+						// FIXME: This is awful.  Doing `EvaluateExpr( expression, value )`
+						// would be cleaner; hopefully extracting a std::string from
+						// a classad::Value isn't arduous.
+						machineAd->AssignExpr( "_condor_rval", expression.c_str() );
+						if( machineAd->LookupString( "_condor_rval", stagingDir ) ) {
+							dprintf( D_ALWAYS, "Found staging directory for '%s' in slot coloring.\n", cifName.c_str() );
+							continue;
+						}
+					}
+
+					if(! stagingDir.empty()) {
+						dprintf( D_ALWAYS, "cxfer: found '%s' -> '%s'\n", cifName.c_str(), stagingDir.c_str() );
+					} else {
 						// ... FIXME ...
 					}
-					dprintf( D_ALWAYS, "cxfer: found '%s' -> '%s'\n", cifName.c_str(), stagingDir.c_str() );
 				}
 			}
 
