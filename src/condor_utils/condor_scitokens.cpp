@@ -185,7 +185,12 @@ htcondor::init_scitokens()
 	g_init_tried = true;
 
 	if (scitoken_config_set_str_ptr) {
+		// scitokens-cpp's default cache location is under the current
+		// users's home directory. At some sites, the condor user doesn't
+		// have a home directory, so request another location that we're
+		// more confident will exist.
 		std::string cache_loc;
+		char* err = nullptr;
 		param(cache_loc, "SEC_SCITOKENS_CACHE");
 		// CRUFT: 'auto' is no longer the default value
 		if (cache_loc == "auto") {
@@ -198,11 +203,20 @@ htcondor::init_scitokens()
 		}
 		if (!cache_loc.empty()) {
 			dprintf(D_SECURITY|D_VERBOSE, "Setting SciTokens cache directory to %s\n", cache_loc.c_str());
-			char *err = nullptr;
 			if (scitoken_config_set_str_ptr("keycache.cache_home", cache_loc.c_str(), &err) < 0) {
-				dprintf(D_ALWAYS, "Failed to set SciTokens cache directory to %s: %s\n", cache_loc.c_str(), err);
+				dprintf(D_ERROR, "Failed to set SciTokens cache directory to %s: %s\n", cache_loc.c_str(), err);
 				free(err);
+				err = nullptr;
 			}
+		}
+
+		// In case the on-disk cache location isn't useable, request that
+		// scitokens-cpp fall back to an in-memory cache.
+		if (scitoken_config_set_str_ptr("keycache.allow_in_memory", "true", &err) < 0) {
+			// This probably means our scitokens-cpp is older than 1.4.0.
+			dprintf(D_SECURITY|D_VERBOSE, "Failed to enable SciTokens in-memory cache option: %s\n", err);
+			free(err);
+			err = nullptr;
 		}
 	}
 
