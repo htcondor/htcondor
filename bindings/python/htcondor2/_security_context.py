@@ -1,3 +1,4 @@
+from typing import Optional
 
 
 class SecurityContext():
@@ -6,13 +7,13 @@ class SecurityContext():
     authentication between with an HTCondor daemon over the network.
     """
 
-    def __init__(self, token: str = None):
+    def __init__(self, token: Optional[str] = None):
         self._preferred_token = token
 
     def _getPreferredToken(self):
         return self._preferred_token
 
-    def _setPreferredToken(self, token: str = None):
+    def _setPreferredToken(self, token: Optional[str] = None):
         self._preferred_token = token
 
     def _delPreferredToken(self):

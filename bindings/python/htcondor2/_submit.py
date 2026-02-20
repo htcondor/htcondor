@@ -3,6 +3,7 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Optional,
 )
 
 from pathlib import Path
@@ -282,7 +283,7 @@ class Submit(MutableMapping):
         _submit_setqargs(self, self._handle, args)
 
 
-    def itemdata(self, qargs : str = None) -> Union[ Iterator[str], Iterator[dict] ]:
+    def itemdata(self, qargs : Optional[str] = None) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
         Returns an iterator over the itemdata specified by the given
         arguments to a queue statement,
