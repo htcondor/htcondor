@@ -1,12 +1,5 @@
 *** 25.0.8 bugs
 
-- Fixed a bug where an job with a circular :ad-attr:`Requirements` expression
-  would result in a crash in *condor_q* when the ``-better`` option was passed.
-  The crash was fixed, and *condor_submit* was changed to report an error
-  when the submit file has a :subcom:`Requirements` command that
-  references :ad-attr:`Requirements`.
-  :jira:`2629`
-
 *** 25.0.7 bugs
 
 *** 25.0.6 features
