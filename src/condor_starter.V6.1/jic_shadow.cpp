@@ -662,6 +662,13 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		int timeout = param_integer( "STARTER_UPLOAD_TIMEOUT", 200 );
 		filetrans->setClientSocketTimeout(timeout);
 
+		bool blocking = false;
+		#if defined(_WIN32)
+		blocking = true;
+		#endif
+		blocking = param_boolean("STARTER_OUTPUT_TRANSFER_SHOULD_BLOCK", blocking);
+		dprintf(D_FULLDEBUG, "Transfer will be %sblocking\n", blocking ? "" : "non-");
+
 		// Warning! On unix, the following file transfer call returns
 		// immediately after creating a child process to perform the transfer.
 		// On windows, the transfer is done in-process and the function
