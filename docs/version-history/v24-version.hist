@@ -5,6 +5,9 @@
   for each job.
   :jira:`3546`
 
+- Update Annex's knowledge about the Delta HPC system.
+  :jira:`3559`
+
 *** 24.0.17 bugs
 
 - Fixed :meth:`htcondor2.Schedd.refreshGSIProxy` to use correct
