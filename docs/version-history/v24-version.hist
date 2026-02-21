@@ -22,6 +22,9 @@
   for each job.
   :jira:`3546`
 
+- Update Annex's knowledge about the Delta HPC system.
+  :jira:`3559`
+
 *** 24.12.17 bugs
 
 *** 24.0.17 bugs
