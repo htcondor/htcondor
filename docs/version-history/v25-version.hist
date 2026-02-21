@@ -111,6 +111,10 @@
   grid universe **batch** type.
   :jira:`3500`
 
+- HTCondor tarballs now contain `Pelican 7.23.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.23.0.
+
 *** 25.7.0 bugs
 
 *** 25.0.7 bugs
