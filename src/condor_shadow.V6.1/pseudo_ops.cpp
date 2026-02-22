@@ -1441,10 +1441,10 @@ UniShadow::start_staging_only_conversation(
 ) {
 	bool success;
 
-	// Transfer each catalog.  For now, we'll not worry about jobs which
-	// require different subsets of the same set of catalogs; when we do,
-	// the schedd should control which shadows map which files, and this
-	// function's inputs will change accordingly.
+	// Transfer each catalog.  The caller has filtered the list in the
+	// job ad, if appropriate.  (Since we never need to map the catalogs
+	// in a transfer shadow, we don't need to know which ones weren't
+	// transferred.)
 
 	std::map<std::string, std::string> cifNameToStagingDirMap;
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
@@ -2099,6 +2099,31 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
 			return GuidanceResult::Command;
+		}
+
+		//
+		// The schedd may have decided that we don't need to transfer every
+		// catalog that the job requires.  Check for `TransferTheseCatalogs`.
+		//
+		// FIXME: Everything about how this algorithm ended up being coded
+		// makes me sad, not just the comma separator.  There's probably a
+		// one-liner in C++23's std::ranges, maybe copying on a projection?
+		//
+		std::string transfer_these_catalogs;
+		if( jobAd->LookupString( "TransferTheseCatalogs", transfer_these_catalogs ) ) {
+			ListOfCatalogs filtered;
+			for( const auto & name : split(transfer_these_catalogs, ",") ) {
+				auto in = std::find_if(
+					(* common_file_catalogs).begin(),
+					(* common_file_catalogs).end(),
+					[name](const auto & e) { return e.first == name; }
+				);
+				if( in != common_file_catalogs->end() ) {
+					filtered.push_back( * in );
+				}
+			}
+
+			* common_file_catalogs = filtered;
 		}
 
 

@@ -9300,11 +9300,20 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		// match records, because we should have many fewer of those at
 		// any given time -- they represent real resources somewhere --
 		// than we do jobs.
-		auto list(matchesHeldByBlockedJobs);
-		for( auto * mrec : list ) {
+		auto copy(matchesHeldByBlockedJobs);
+
+		for( auto * mrec : copy ) {
 			shadow_rec * srec = mrec->shadowRec;
 
-			if( transfer_shadow_rec->cxfer_catalogs == srec->cxfer_catalogs ) {
+			size_t found = 0;
+			for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+				auto sr = getShadowForCatalog( catalogName );
+				if( sr && (*sr)->cxfer_state == CXFER_STATE::STAGED ) {
+					++found;
+				}
+			}
+
+			if( found == srec->cxfer_catalogs.size() ) {
 				int status = JOB_STATUS_IDLE;
 				SetAttributeInt(mrec->cluster, mrec->proc, ATTR_JOB_STATUS, status);
 				std::erase( matchesHeldByBlockedJobs, mrec );
@@ -10748,6 +10757,7 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 					transfer_job_id, universe, mrec, -1 , nullptr
 				);
 
+
 				// Not sure we actually need to carry around the content lists.
 				ListOfCatalogs catalogs_to_stage;
 				for( const auto & catalog : * catalogs ) {
@@ -11254,8 +11264,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				formatstr(argbuf, "--cxfer=mapping");
 				break;
 			default:
-				// Is any other case valid?
-				// Is the right response?
+				// FIXME: Is any other case valid?
+				// FIXME: Is the right response?
 				dprintf( D_ERROR, "%d.%d: Invalid cxfer state when starting shadow, falling back.\n", job_id->cluster, job_id->proc );
 				break;
 		}
@@ -11509,6 +11519,35 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	if (GetPrivateAttributeString(real_job_id.cluster, real_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 		job_ad->Assign(ATTR_CLAIM_IDS, secret);
 	}
+
+	// Starting just one shadow per catalog would simplify managing partially
+	// overlapping lifetimes*, because we could just shoot that single shadow
+	// in the head, but for now we don't do that (mostly for record-keeping
+	// woes, although I guess extra shadows are rather inefficient).  As a
+	// result, not all shadows should transfer every catalog required by
+	// the corresponding job.  We can't record this in the job ad, because
+	// the list of required catalogs need to be correct for the job.  Instead,
+	// we mutate the job ad here.  (We don't want to pass them on the command
+	// line because the internal IDs are _huge_ and we don't have the submit
+	// language IDs.)
+	//
+	// *: That is, cluster 7 could have two types of jobs: both required
+	//    catalog A, but half require B (but not C), and half require C
+	//    (but not B).  The schedd will spawn two transfer shadows: one
+	//    transferring A and B xor C, and the other C xor B.
+	if( job_id->proc < 1000 ) {
+		// FIXME: This would be safer as a ClassAd list of strings, but that
+		// turns out to be a pain to generate from C++.
+		// Also, this shouldn't be written as an explicit loop.
+		std::vector<std::string> names;
+		for( const auto & [name, content] : srec->cxfer_catalogs ) {
+			names.push_back(name);
+		}
+		std::string catalogs = join( names, "," );
+
+		job_ad->Assign( "TransferTheseCatalogs", catalogs );
+	}
+
 
 	FamilyInfo fi;
 	FamilyInfo *fip = NULL;
