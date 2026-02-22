@@ -122,14 +122,19 @@ class TestSlotColoring:
 	# This is an implementation details, but may be useful for debugging.
 	def test_extra_ads(self, the_extra_ads):
 		for extra_ad in the_extra_ads:
-			assert extra_ad.get('ColorAttr', 0) == 7
+			colorAd = extra_ad.get('colors_of_slot1_1')
+			assert colorAd != None
+			assert colorAd.get('ColorAttr', 0) == 7
 
 
 	def test_slot_ads(self, the_slot_ads):
 		for slot_ad in the_slot_ads:
-			assert slot_ad.get('ColorAttr', 0) == 7
+			colorAd = slot_ad.get('colors_of_slot1_1', None)
+			assert colorAd != None
+			assert colorAd.get('ColorAttr', 0) == 7
 
 
 	def test_color_cleanup(self, the_cleaned_up_ads):
 		for slot_ad in the_cleaned_up_ads:
-			assert slot_ad.get('ColorAttr', -1) == -1
+			colorAd = slot_ad.get('colors_of_slot1_1', None)
+			assert colorAd is None
