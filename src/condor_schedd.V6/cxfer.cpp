@@ -46,7 +46,7 @@ determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
 	ClassAd * jobAd = GetJobAd(* jobID);
 	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, m_rec->peer );
 	if(! common_file_catalogs) {
-		dprintf( D_ERROR, "Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );
+		dprintf( D_ERROR, "cxfer: Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );
 		return {CXFER_TYPE::CANT, {}};
 	}
 	// Even though we don't (presently) care if the common files could be
@@ -54,7 +54,7 @@ determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
 	// call this function to add `MY.CommonFiles` to the list of catalogs.
 	int required_version = 2;
 	if(! computeCommonInputFiles( jobAd, m_rec->peer, * common_file_catalogs, required_version )) {
-		dprintf( D_ERROR, "Failed to constructo unique name for " ATTR_COMMON_INPUT_FILES " catalog, falling back to uncommon transfer.\n" );
+		dprintf( D_ERROR, "cxfer: Failed to construct unique name for " ATTR_COMMON_INPUT_FILES " catalog, falling back to uncommon transfer.\n" );
 		return {CXFER_TYPE::CANT, {}};
 	}
 	// If we don't find any common file catalogs, return CXFER_TYPE::None.
@@ -63,12 +63,20 @@ determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
 	}
 
 
-	// We now have a list of all common the file catalogs for this job.  If
-	// any catalog has not started staging, return CXFER_TYPE::STAGING.  If
-	// any catalog has not finished staging, return CXFER_TYPE::MAPPING.  If
-	// all of them have been staged, return CXFER_TYPE::READY.
+	//
+	// We now have a list of all common the file catalogs for this job.
+	//
+	// (a)  If any catalog has not started staging, return CXFER_TYPE::STAGING.
+	// (b)  If each catalog has been staged, return CXFER_TYPE::READY.
+	// (c)  Otherwise, at least one catalog has started staging but not
+	//      finished; return CXFER_TYPE::MAPPING.
+	//
+
+	size_t staged = 0;
+	size_t staging = 0;
+
 	for( const auto & [cifName, commonInputFiles] : * common_file_catalogs ) {
-		dprintf( D_ALWAYS, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
+		// dprintf( D_ALWAYS, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
 		// I don't know how the schedd decides which shadows to spawn when
 		// it does reconnects after a fast shutdown, so I don't know how much
@@ -82,15 +90,17 @@ determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
 		if( entry ) {
 			switch((*entry)->cxfer_state) {
 				case CXFER_STATE::INVALID:
-					dprintf( D_ERROR, "Common transfer state unset in transfer shadow record, falling back to uncommon transfer.\n" );
+					dprintf( D_ERROR, "cxfer: Common transfer state unset in transfer shadow record, falling back to uncommon transfer.\n" );
 					return {CXFER_TYPE::CANT, common_file_catalogs};
 				case CXFER_STATE::STAGING:
-					return {CXFER_TYPE::MAPPING, common_file_catalogs};
+					++staging;
+					continue;
 				case CXFER_STATE::STAGED:
+					++staged;
 					continue;
 				case CXFER_STATE::MAPPING:
 					// Then we have become terribly confused somehow.
-					dprintf( D_ERROR, "Common transfer state set to waiting in transfer shadow record, falling back to uncommon transfer.\n" );
+					dprintf( D_ERROR, "cxfer: Common transfer state set to waiting in transfer shadow record, falling back to uncommon transfer.\n" );
 					return {CXFER_TYPE::CANT, common_file_catalogs};
 			}
 		} else {
@@ -98,5 +108,13 @@ determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
 		}
 	}
 
-	return {CXFER_TYPE::READY, common_file_catalogs};
+	if( staged == common_file_catalogs->size() ) {
+		return {CXFER_TYPE::READY, common_file_catalogs};
+	} else if( staging != 0 ) {
+		return {CXFER_TYPE::MAPPING, common_file_catalogs};
+	} else {
+		// Then we have become terribly confused somehow.
+		dprintf( D_ERROR, "cxfer: Inconsistency in common file catalog: all entries were either staging or staged, but the some of those two states is not the total size.  Falling back to uncommon transfer.\n" );
+		return {CXFER_TYPE::CANT, common_file_catalogs};
+	}
 }
