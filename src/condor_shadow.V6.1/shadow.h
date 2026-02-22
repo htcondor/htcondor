@@ -244,19 +244,32 @@ class UniShadow : public BaseShadow
 	ClassAd before_common_file_transfer(
 		const std::string & cifName, const std::string & commonInputFiles
 	);
+
 	bool after_common_file_transfer(
-	    const ClassAd & request,
-	    const std::string & cifName,
-	    std::string & stagingDir
+		const ClassAd & request,
+		const std::string & cifName,
+		std::string & stagingDir
 	);
 
 	ClassAd handle_wiring_failure();
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(
-	    ClassAd request,
-	    ListOfCatalogs common_file_catalogs,
-	    bool print_waiting=true
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs,
+		bool print_waiting=true
 	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs
+	);
+
+	condor::cr::Piperator<ClassAd, ClassAd> start_mapping_only_conversation(
+		ClassAd request,
+		ListOfCatalogs common_file_catalogs
+	);
+
+
 
 	void set_provider_keep_alive( const std::string & cifName );
 	int producer_keep_alive = -1;

@@ -523,11 +523,6 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     )
     assert successful_staging_commands == count
 
-    keyfile_touches = count_shadow_log_lines(
-        the_condor, "Producer elected"
-    )
-    assert keyfile_touches == count
-
     job_evictions = count_shadow_log_lines(
         the_condor, "is being evicted from"
     )
@@ -548,13 +543,6 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
             the_condor, "Waiting for common files to be transferred"
         )
         assert common_transfer_waits == cf_waits
-
-
-def lock_dir_is_clean(the_lock_dir):
-    syndicate_dir = the_lock_dir / "syndicate"
-
-    files = list(syndicate_dir.iterdir())
-    assert len(files) == 0
 
 
 def epoch_log_has_common_ad(the_condor):
@@ -583,7 +571,7 @@ def count_starter_log_lines(the_condor, the_phrase):
     return count
 
 
-def starter_log_is_as_expected(the_condor, cf_xfers, cf_waits):
+def starter_log_is_as_expected(the_condor, cf_xfers, cf_waits, cf_maps):
     common_transfer_begins = count_starter_log_lines(
         the_condor, "Starting common files transfer."
     )
@@ -599,6 +587,11 @@ def starter_log_is_as_expected(the_condor, cf_xfers, cf_waits):
     )
     assert common_transfer_waits == cf_waits
 
+    common_transfer_maps = count_starter_log_lines(
+        the_condor, "Mapping common files into job's initial working"
+    )
+    assert common_transfer_maps == cf_maps
+
 
 # ---- the tests --------------------------------------------------------------
 
@@ -609,25 +602,51 @@ class TestCIF:
         output_is_as_expected(
             completed_cif_job, "input A\nII input\ninput line 3\n"
         )
-        shadow_log_is_as_expected(the_condor, 1, 1, 0)
-        lock_dir_is_clean(the_lock_dir)
+
+        shadow_log_is_as_expected(the_condor,
+            count=1, cf_xfers=1, cf_waits=0
+        )
         error_is_as_expected(
             completed_cif_job, "fake credential information"
         )
 
-        starter_log_is_as_expected(the_condor, 1, 0)
+        starter_log_is_as_expected(the_condor,
+                     cf_xfers=1, cf_waits=0, cf_maps=1
+        )
         assert epoch_log_has_common_ad(the_condor)
 
 
+    #
+    # FIXME: because the transfer shadow isn't cleaned up immediately
+    # after the last job using it exits the run state, this test isn't
+    # verifying that we handle starting the second transfer shadow
+    # correctly.  To test that, we should set the catalog linger timer to
+    # 1 second and then sleep for however long the interval timer is between
+    # the first four jobs completing and the last four jobs being released.
+    #
+    # This will require adjusting the numbers here to match.
+    #
     def test_many_cif_jobs(self, the_big_lock_dir, the_big_condor, completed_cif_jobs):
         output_is_as_expected(
             completed_cif_jobs, "input A\nII input\ninput line 3\n"
         )
-        shadow_log_is_as_expected(the_big_condor, 2, 2, 6)
-        lock_dir_is_clean(the_big_lock_dir)
-        starter_log_is_as_expected(the_big_condor, 2, 6)
+        shadow_log_is_as_expected(the_big_condor,
+            count=1, cf_xfers=1, cf_waits=0
+        )
+        starter_log_is_as_expected(the_big_condor,
+                     cf_xfers=1, cf_waits=0, cf_maps=8
+        )
 
 
+    #
+    # The point of this test is to verify that we handled multiple catalogs
+    # correctly (that each job got the right answer).  It also verifies that
+    # doing so doesn't cause any loss of staging efficiency.
+    #
+    # FIXME: See above for a possible variant of this test.  We might not
+    # gain anything from having both tests, so it's unclear if we want to
+    # add this variant or the previous one; this one seems "harder".
+    #
     def test_multi_cif_jobs(self, the_multi_lock_dir, the_multi_condor, completed_multi_jobs):
         output_is_as_expected(
             completed_multi_jobs[0],
@@ -637,8 +656,19 @@ class TestCIF:
             completed_multi_jobs[1],
             "-- input A\n-- II input\n-- input line 3\n"
         )
-        # This test doesn't include the delay necessary to make sure that
-        # transferring common files takes longer than starting / scheduling
-        # a the next shadow, so just ignore wait lines completely.
-        shadow_log_is_as_expected(the_multi_condor, 4, 4, None)
-        lock_dir_is_clean(the_multi_lock_dir)
+
+        shadow_log_is_as_expected(the_multi_condor,
+            count=2, cf_xfers=2, cf_waits=0
+        )
+        starter_log_is_as_expected(the_multi_condor,
+                     cf_xfers=2, cf_waits=0, cf_maps=8
+        )
+
+
+    #
+    # We could add a more-complicated test, where we have two sets of common
+    # files each of which consists of more than one catalog.
+    #
+    # We could also add a further twist, where that cluster's two sets of
+    # jobs have a common catalog in common, but that's not presently supported.
+    #

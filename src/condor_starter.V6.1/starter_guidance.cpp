@@ -643,12 +643,18 @@ Starter::handleJobSetupCommand(
 			context_p = dynamic_cast<ClassAd *>(guidance.Lookup( ATTR_CONTEXT_AD ));
 			if( context_p != NULL ) { context.CopyFrom(* context_p); }
 
+/*
+			// In the current design, the _starter_ should never wait for
+			// common file transfer to finish; that's the schedd's job.  This
+			// command should thus only be used by the transfer shadow, so
+			// printing this out is just more confusing than helpful.
 			bool first_wait = true;
 			context.LookupBool( "FirstWait", first_wait );
 			if( first_wait ) {
 				context.InsertAttr( "FirstWait", false );
 				dprintf( D_ALWAYS, "Waiting for common files to be transferred.\n" );
 			}
+*/
 
 			daemonCore->Register_Timer( retry_delay, 0,
 				[continue_conversation, context](int /* timerID */) -> void { continue_conversation(context); },
@@ -796,6 +802,56 @@ Starter::handleJobSetupCommand(
 			context.InsertAttr( "StagingDir", stagingDir.string() );
 			continue_conversation(context);
 			return true;
+		} else if( command == COMMAND_COLOR_SLOT ) {
+			//
+			// Color the slot.
+			//
+			classad::ExprTree * e = guidance.Lookup( "ColorAd" );
+			ClassAd * colorAd = dynamic_cast<ClassAd *>(e);
+			if( colorAd == NULL ) {
+				// ... FIXME ...
+			} else {
+				dPrintAd( D_ALWAYS, * colorAd );
+			}
+
+			ClassAd replyAd;
+			bool success = s->jic->colorSlot( * colorAd, replyAd );
+			if(! success) {
+				dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
+				/// ... FIXME ...
+			}
+			success = false;
+			replyAd.LookupBool( ATTR_RESULT, success );
+			if(! success) {
+				dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
+				// ... FIXME ...
+			}
+
+
+			//
+			// Construct the reply.
+			//
+
+			const ClassAd * secretsAd = s->jic->getMachineSecretsAd();
+			// If we're not talking to a shadow, then who's guiding us?
+			ASSERT(secretsAd != NULL);
+			std::string splitClaimID;
+			if(! secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID )) {
+				// ... FIXME ...
+			}
+
+
+			// FIXME: How much space should be reserved?
+			long long sizeOnDiskInMB = 1000;
+
+			ClassAd context;
+			context.InsertAttr( ATTR_COMMAND, COMMAND_COLOR_SLOT );
+			context.InsertAttr( ATTR_RESULT, success );
+			context.InsertAttr( ATTR_SPLIT_CLAIM_ID, splitClaimID );
+			context.InsertAttr( ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB );
+			context.Insert( ATTR_SLOT_AD, s->jic->getMachineAd() );
+			continue_conversation(context);
+			return true;
 		} else if( command == COMMAND_MAP_COMMON_FILES ) {
 			std::string cifName;
 			if(! guidance.LookupString( ATTR_NAME, cifName )) {
@@ -808,6 +864,52 @@ Starter::handleJobSetupCommand(
 			if(! guidance.LookupString( "StagingDir", stagingDir )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", "StagingDir" );
 				return false;
+			}
+
+			if( stagingDir.empty() ) {
+				// Assume the staging directory is in our machine ad.
+				ClassAd * machineAd = s->jic->machClassAd();
+				if(! machineAd) {
+					// ... FIXME ...
+				} else {
+					// For now, to avoid the color ads colliding and creating
+					// new types of exotic subatomic particles, the startd
+					// names coloring ads from a slot "colors_of_<slot-name>".
+					// We don't know the name of the slot which transferred
+					// the common files, so we have to check all of them.
+					std::vector< std::pair< std::string, ExprTree *> > components;
+					machineAd->GetComponents(components);
+					for( auto & [name, value] : components ) {
+						if(! starts_with( name, "colors_of_" ) ) { continue; }
+
+						// It's sad, but the least-awful way to extract the
+						// `StagingDir` corresponding to the cifName we're mapping
+						// is to evaluate a textual ClassAd expression.
+						std::string expression;
+						formatstr(
+							expression,
+							// This assumes that there is exactly one matching Name.
+							"join(evalInEachContext( ifthenelse( Name == \"%s\", StagingDir, undefined ), %s.CommonCatalogsAd.CommonCatalogsList ))",
+							cifName.c_str(),
+							name.c_str()
+						);
+
+						// FIXME: This is awful.  Doing `EvaluateExpr( expression, value )`
+						// would be cleaner; hopefully extracting a std::string from
+						// a classad::Value isn't arduous.
+						machineAd->AssignExpr( "_condor_rval", expression.c_str() );
+						if( machineAd->LookupString( "_condor_rval", stagingDir ) ) {
+							dprintf( D_ALWAYS, "Found staging directory for '%s' in slot coloring.\n", cifName.c_str() );
+							continue;
+						}
+					}
+
+					if(! stagingDir.empty()) {
+						dprintf( D_ALWAYS, "cxfer: found '%s' -> '%s'\n", cifName.c_str(), stagingDir.c_str() );
+					} else {
+						// ... FIXME ...
+					}
+				}
 			}
 
 			std::filesystem::path location(stagingDir);

@@ -44,6 +44,9 @@
 #include "set_user_priv_from_ad.h"
 #include <algorithm>
 
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
+
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
@@ -161,8 +164,16 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
         // the mpi shadow, at least...and a good idea in general.
 	jobAd->Assign(ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString());
 
+	if( cxfer_type != CXFER_STATE::INVALID ) {
+		int numShadowStarts;
+		if(! jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts )) {
+			jobAd->Assign( ATTR_NUM_SHADOW_STARTS, 1 );
+		}
+	}
+
+
 	DebugId = display_dprintf_header;
-	
+
 	config();
 
 		// Make sure we've got enough swap space to run

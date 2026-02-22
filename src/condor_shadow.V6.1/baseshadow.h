@@ -35,6 +35,8 @@
 
 #include <optional>
 #include "guidance.h"
+#include <utility>
+#include <string>
 #include "catalog_utils.h"
 
 /* Forward declaration to prevent loops... */
