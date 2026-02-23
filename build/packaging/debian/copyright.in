@@ -224,6 +224,10 @@ Copyright: 1990-2013, HTCondor Team, Computer Sciences Department,
            1993-2012, NVIDIA Corporation.
 License: Apache-2.0
 
+Files: src/vendor/zip-views-1.0/*
+Copyright: 2020, CommitThis Ltd
+License: Expat
+
 Files: src/vendor/jwt-cpp/*
 Copyright: 2018, Dominik Thalhammer
 License: Expat
