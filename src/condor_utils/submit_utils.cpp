@@ -2120,7 +2120,7 @@ int SubmitHash::SetLeaveInQueue()
 				 */
 				formatstr(
 					buffer,
-					"%s == %d && (time() - (%s ?: time())) < %d && (%s ?: 0) >= %s",
+					"%s == %d && (time() - (%s ?: time())) < %d && (%s ?: 0) < %s",
 					ATTR_JOB_STATUS,
 					COMPLETED,
 					ATTR_COMPLETION_DATE,
