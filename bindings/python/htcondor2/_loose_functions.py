@@ -40,7 +40,7 @@ def _daemon_type_from_ad_type(ad_type: AdType):
     return map.get(ad_type, None)
 
 
-def enable_debug(flags : str = None) -> None:
+def enable_debug(flags : Optional[str] = None) -> None:
     '''
     Enable debug messages, optionally setting the debug flags.
 
@@ -50,7 +50,7 @@ def enable_debug(flags : str = None) -> None:
     '''
     _enable_debug(flags)
 
-def reload_config(root_config_file : str = None) -> None:
+def reload_config(root_config_file : Optional[str] = None) -> None:
     '''
     Reload the HTCondor config, optionally using the given root_config_file.
 
@@ -151,7 +151,7 @@ def set_ready_state(state : str = "Ready") -> None:
     _set_ready_state(state, addr)
 
 
-def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, security : SecurityContext = None) -> classad.ClassAd:
+def ping(location : Union[str, classad.ClassAd], authz : Optional[str] = None, security : Optional[SecurityContext] = None) -> classad.ClassAd:
     """
     Send a ping command to an HTCondor daemon.
 
