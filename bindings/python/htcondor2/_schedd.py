@@ -371,11 +371,20 @@ class Schedd():
         if isinstance(since, int):
             since = f"ClusterID == {since}"
         elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+            pattern = re.compile(r'(\d+)\.(\d+)')
+            matches = pattern.fullmatch(since)
+            if matches is not None:
+                since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
+            else:
+                pattern = re.compile(r'(\d+)')
+                matches = pattern.fullmatch(r'(\d+)')
+                if matches is not None:
+                    since = f"ClusterID == {matches[1]}"
+                else:
+                    try:
+                        e = classad.ExprTree(since)
+                    except classad.ClassAdException:
+                        raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
         elif isinstance(since, classad.ExprTree):
             since = str(since)
         elif since is None:
