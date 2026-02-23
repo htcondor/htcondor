@@ -863,8 +863,6 @@ main( int argc, const char* argv[] )
 		dprintf_set_tool_debug("TOOL", debug_flags);
 	}
 
-	// temporary, to get rid of build warning.
-	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
 
 	// handle check-if to valididate config's if/else parsing and help users to write
 	// valid if conditions.
@@ -981,7 +979,14 @@ main( int argc, const char* argv[] )
 							const char * equal_begin = is_herefile ? "@=end" : "= ";
 							const char * equal_end = is_herefile ? "\n@end" : "";
 
-							if (expand_dumped_variables) {
+							if (dash_default) {
+								std::string upname = name;
+								bool def_is_herefile = def_val && strchr(def_val, '\n');
+								const char * eq_begin = def_is_herefile ? "@=end" : "= ";
+								const char * eq_end = def_is_herefile ? "\n@end" : "";
+								const char * tval = def_is_herefile ? indent_herefile(def_val, "   ", rawvalbuf) : def_val;
+								fprintf(stdout, "%s %s%s%s\n", upname.c_str(), eq_begin, tval ? tval : "", eq_end);
+							} else if (expand_dumped_variables) {
 								std::string upname = name; //upname.upper_case();
 								auto_free_ptr val(param(name));
 								const char * tval = is_herefile ? indent_herefile(val, "   ", rawvalbuf) : val.ptr();
@@ -1180,7 +1185,9 @@ main( int argc, const char* argv[] )
 								continue;
 
 							name_used = names[ii];
-							if (expand_dumped_variables || ! raw_supported) {
+							if (dash_default && !def_value.empty()) {
+								printf("%s %s\n", name_used.c_str(), RemotePrintValue(def_value.c_str(), "   ", herevalbuf, "end"));
+							} else if (expand_dumped_variables || ! raw_supported) {
 								printf("%s %s\n", name_used.c_str(), RemotePrintValue(value, "   ", herevalbuf, "end"));
 							} else {
 								printf("%s %s\n", name_used.c_str(), RemotePrintValue(RemoteRawValuePart(raw_value), "   ", herevalbuf, "end"));
@@ -1236,13 +1243,21 @@ main( int argc, const char* argv[] )
 						}
 					}
 					continue;
-				} else if (dash_raw || verbose) {
+				} else if (dash_raw || dash_default || verbose) {
 					name_used = tmp;
 					upper_case(name_used);
 					value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value, usage_report);
-					if ( ! verbose && ! raw_value.empty()) {
+					if ( ! verbose) {
+						if (dash_default) {
+							free(value);
+							value = def_value.empty() ? NULL : strdup(def_value.c_str());
+						} else if ( ! raw_value.empty()) {
+							free(value);
+							value = strdup(RemoteRawValuePart(raw_value));
+						}
+					} else if (dash_default) {
 						free(value);
-						value = strdup(RemoteRawValuePart(raw_value));
+						value = def_value.empty() ? NULL : strdup(def_value.c_str());
 					}
 					if (verbose && show_param_info) {
 						param_id = param_default_get_id(tmp, NULL);
@@ -1288,7 +1303,9 @@ main( int argc, const char* argv[] )
 				}
 				raw_supported = true;  // local lookups always support raw
 				if ( ! name_used.empty()) {
-					if (dash_raw) {
+					if (dash_default) {
+						value = def_val ? strdup(def_val) : NULL;
+					} else if (dash_raw) {
 						value = strdup(val ? val : "");
 					} else {
 						value = param(name_used.c_str());
@@ -1308,7 +1325,12 @@ main( int argc, const char* argv[] )
 				} else {
 					name_used = tmp;
 					upper_case(name_used);
-					value = NULL;
+					if (dash_default) {
+						const char * dval = param_default_string(tmp, subsys);
+						value = dval ? strdup(dval) : NULL;
+					} else {
+						value = NULL;
+					}
 				}
 			}
 			if( value == NULL ) {
