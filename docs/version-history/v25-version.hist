@@ -5,6 +5,10 @@
   (e.g. with :tool:`condor_transfer_data`).
   :jira:`3508`
 
+- :tool:`condor_config_val` now has a -default option to shows the default
+  value of a knob.
+  :jira:`2683`
+
 - :tool:`htcondor dag status` now also shows information about jobs
   transfering sandboxes and in the transfer queue.
   :jira:`3517`
