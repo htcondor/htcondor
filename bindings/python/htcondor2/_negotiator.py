@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from ._common_imports import (
     classad,
@@ -31,7 +31,7 @@ class Negotiator():
     Consult `User Priorities and Negotiation <https://htcondor.readthedocs.io/en/latest/admin-manual/cm-configuration.html#configuration-for-central-managers>`_ before using these functions.
     """
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         """
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.  :py:obj:`None` means the

@@ -295,6 +295,10 @@ if (BUILD_TESTING)
 			condor_pl_test(test_std_pipe_handler "Test Register_Pipe(std::function)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_std_pipe_handlerd")
 
 			condor_pl_test(test_job_spec_hack "Test job_spec_hack()" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_remote_submit "Test remote submit" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			condor_pl_test(test_plugin_classad_transfer "Test transferring ClassAds to plug-ins" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_check_reactivate_after_checkpoint "Test CHECK_REACTIVATE_AFTER_CHECKPOINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -320,7 +324,6 @@ if (BUILD_TESTING)
 			condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_service_nodes "Test the DAGMan service nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_service_nodes_lifetime "Test lifetime of DAGMan service nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -365,7 +368,6 @@ endif()
 			condor_pl_test(test_dagman_futile_nodes_efficiency "Test DAGMan is not inefficiently setting nodes to futile" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_check_q_and_exit "Test DAGMan verify running jobs mechanism" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_submit_requirements "Test submit requirements" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
-			condor_pl_test(test_remote_submit "Test remote submit" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
 			condor_pl_test(test_dagman_utils_parse_crash "Test DAGMan utils doesn't segfault" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_protected_url_xfers "test attribute setting for mapped AP protected URL transfers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_chirp_to_dagman_log "Test chirp events get written to DAGMan log" "dagman;quick;ctest;noasan" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -435,7 +437,6 @@ endif()
 				condor_pl_test(test_checkpoint_preen "Test checkpoint_destination cleanup via preen" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_check_reactivate_after_checkpoint "Test CHECK_REACTIVATE_AFTER_CHECKPOINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				# This trips a race condition that causes friction but isn't
 				# actually a bug, and may not ever be fixed, so just skip it.
@@ -450,8 +451,6 @@ endif()
 
 			condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_plugins_dont_see_directories "Plug-ins shouldn't see directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_plugin_classad_transfer "Test transferring ClassAds to plug-ins" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
 			condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")

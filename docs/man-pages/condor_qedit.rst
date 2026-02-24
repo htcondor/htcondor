@@ -1,10 +1,8 @@
-      
 
 *condor_qedit*
 ===============
 
 modify job attributes
-:index:`condor_qedit<single: condor_qedit; HTCondor commands>`\ :index:`condor_qedit command`
 
 Synopsis
 --------
@@ -99,6 +97,16 @@ A job's ClassAd attributes may be viewed with
 Exit Status
 -----------
 
-*condor_qedit* will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
+0  -  Success
 
+1  -  Failure
+
+See Also
+--------
+
+:tool:`condor_q`, :tool:`condor_submit`, :tool:`condor_prio`, :tool:`condor_hold`, :tool:`condor_release`
+
+Availability
+------------
+
+Linux, MacOS, Windows

@@ -6,8 +6,15 @@
   :jira:`3508`
 
 - :tool:`htcondor dag status` now also shows information about jobs
-  transfering sandboxes and in the transfer queue.
+  transferring sandboxes and in the transfer queue.
   :jira:`3517`
+
+- In the python bindings, functions arguments that used to have a default
+  of the `None` type now take a python Optional.  This is more compliant
+  with PEP 484, and is more in line with what python linting tools
+  expect.  There should be no changes needed for clients of the python
+  bindings.
+  :jira:`3353`
 
 - :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
   generated submit file.  There is a new option ``-getenv`` to 
@@ -110,6 +117,10 @@
 - Added support for submitting jobs to the Flux job management system via the
   grid universe **batch** type.
   :jira:`3500`
+
+- HTCondor tarballs now contain `Pelican 7.23.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.23.0.
 
 *** 25.7.0 bugs
 
