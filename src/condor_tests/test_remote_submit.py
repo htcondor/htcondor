@@ -32,11 +32,11 @@ def condor(test_dir):
         yield condor
 
 @action
-def remote_job(condor):
+def remote_job(condor, path_to_sleep):
     schedd = condor.get_local_schedd()
     jdl = htcondor.Submit(
-        """
-        executable = /bin/sleep
+        f"""
+        executable = {path_to_sleep}
         arguments = 0
         log = the_job.log
         """
