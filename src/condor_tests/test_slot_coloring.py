@@ -119,7 +119,7 @@ def the_cleaned_up_ads(
 
 class TestSlotColoring:
 
-	# This is an implementation details, but may be useful for debugging.
+	# This is an implementation detail, but may be useful for debugging.
 	def test_extra_ads(self, the_extra_ads):
 		for extra_ad in the_extra_ads:
 			colorAd = extra_ad.get('colors_of_slot1_1')

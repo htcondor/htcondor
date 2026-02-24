@@ -187,8 +187,6 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 
 	//If any attributes are set to -1 write to shadow log and return
 	if (info.jid.cluster < 0 || (0 < info.jid.proc && info.jid.proc < -1000) || info.runId < 0){
-		// FIXME: When will this buffer() ever be nonempty?  Isn't this
-		// the only function that writes to it?
 		dprintf(D_FULLDEBUG,"Missing attribute(s) [%s]: Not writing to job run instance file. Printing current Job Ad:\n%s",missingAttrs.c_str(),info.buffer.c_str());
 		return false;
 	}
