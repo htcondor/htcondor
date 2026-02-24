@@ -15,6 +15,10 @@
   output was always empty.
   :jira:`3558`
 
+- Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
+  argument from being the string representation of an expression.
+  :jira:`3435`
+
 *** 24.0.18 bugs
 
 - Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
