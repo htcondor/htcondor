@@ -26,16 +26,17 @@ def condor(test_dir):
         local_dir=test_dir / "condor",
         raw_config="""
             SCHEDD_INTERVAL = 5
+            PERIODIC_EXPR_INTERVAL = 5
         """,
     ) as condor:
         yield condor
 
 @action
-def remote_job(condor):
+def remote_job(condor, path_to_sleep):
     schedd = condor.get_local_schedd()
     jdl = htcondor.Submit(
-        """
-        executable = /bin/sleep
+        f"""
+        executable = {path_to_sleep}
         arguments = 0
         log = the_job.log
         """
