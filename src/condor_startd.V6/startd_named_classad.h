@@ -29,9 +29,10 @@ class StartdCronJobParams;
 class StartdNamedClassAd : public NamedClassAd
 {
   public:
-	StartdNamedClassAd( const char *name, const StartdCronJob *job, ClassAd * ad = NULL );
+	StartdNamedClassAd( const char *name, const StartdCronJob *job, ClassAd * ad = NULL )
+		: NamedClassAd(name, ad) , m_job(job) {}
 	~StartdNamedClassAd( void ) { };
-	const StartdCronJobParams & Params() { return m_params; }
+	const StartdCronJobParams & Params() const;
 	bool InSlotList( unsigned slot ) const;
 	StartdNamedClassAd * NewPeer( const char * name, ClassAd * ad = NULL ) { return new StartdNamedClassAd(name, m_job, ad); }
 	bool IsJob(const StartdCronJob * job) const { return m_job == job; }
@@ -50,7 +51,6 @@ class StartdNamedClassAd : public NamedClassAd
 
 	static AttrNameSet dont_merge_attrs;
 	static StartdCronJobParams global_params;
-	const StartdCronJobParams & m_params;
 	const StartdCronJob * m_job{nullptr};
 };
 

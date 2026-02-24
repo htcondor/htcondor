@@ -24,12 +24,10 @@
 #include "startd_cron_job.h"
 #include "startd_named_classad.h"
 
-
-StartdNamedClassAd::StartdNamedClassAd( const char *name, const StartdCronJob *job, ClassAd * ad)
-	: NamedClassAd(name, ad)
-	, m_params(job ? job->Params() : global_params)
-	, m_job(job)
-{
+// Note: a reconfig will delete and replace the Params() member of a CronJob
+// so don't try and hold a pointer or a ref to this.
+const StartdCronJobParams & StartdNamedClassAd::Params() const {
+	return m_job ? m_job->Params() : global_params;
 }
 
 // This will produce knobs STARTD_global_foo when global_params("foo") is called
@@ -57,7 +55,7 @@ AttrNameSet StartdNamedClassAd::dont_merge_attrs(dont_merge_these, dont_merge_th
 bool
 StartdNamedClassAd::InSlotList( unsigned slot_id ) const
 {
-	return m_params.InSlotList(slot_id);
+	return Params().InSlotList(slot_id);
 }
 
 
