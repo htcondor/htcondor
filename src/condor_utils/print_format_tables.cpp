@@ -898,7 +898,7 @@ bool render_strings_from_list ( classad::Value & value, ClassAd*, Formatter & fm
 
 bool render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt )
 {
-	if( ! value.IsListValue() ) {
+	if( ! value.IsListValue() && ! value.IsStringValue() ) {
 		return false;
 	}
 	std::string buffer;

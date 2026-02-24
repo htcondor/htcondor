@@ -787,3 +787,58 @@ the job sandbox and set the environment variable KRB5CCNAME
 :index:`KRB5CCNAME<pair: KRB5CCNAME; environment variables for jobs>`
 to point to the credential cache. The condor_starter will also monitor the .cc file in the
 credential directory and place fresh copies into the job sandbox as needed.
+
+Credential Propagation by Job Universe
+'''''''''''''''''''''''''''''''''''''''
+
+The way credentials are propagated to jobs varies by job universe. This section
+describes how Kerberos and OAuth credentials are made available to different
+job universes.
+
+**Kerberos Credentials**
+
+For **Vanilla, Container, and Parallel** universe jobs:
+
+* The Kerberos credential is written in the job's scratch directory
+* The environment variable ``KRB5CCNAME`` is set to point to the credential
+* The job also has an AFS token obtained using the Kerberos credential
+* The EP must be running a credd and krb credmon
+* The starter and EP credmon keep the credential and AFS token refreshed without
+  contacting the AP
+
+For **Local** universe jobs:
+
+* The job has an AFS token obtained using the Kerberos credential
+* The starter writes the credential into a directory under the job's scratch directory,
+  but does **not** set ``KRB5CCNAME`` in the environment to point to it
+* The AP credmon keeps the credential and AFS token refreshed
+* The starter overwrites the credential file with the refreshed credential
+
+For **Scheduler** universe jobs:
+
+* The job has an AFS token obtained using the Kerberos credential
+* The job does **not** have access to the Kerberos credential itself
+* The AP credmon keeps the credential and AFS token refreshed
+
+**OAuth Credentials**
+
+For **Vanilla, Container, and Parallel** universe jobs:
+
+* All of the job's requested OAuth credentials are written in a directory under
+  the job's scratch directory
+* The environment variable ``_CONDOR_CREDS`` 
+  :index:`_CONDOR_CREDS<pair: _CONDOR_CREDS; environment variables for jobs>`
+  is set to point to this directory
+* The starter periodically polls the shadow to obtain refreshed credentials
+
+For **Local** universe jobs:
+
+* All of the job's requested OAuth credentials are written in a directory under
+  the job's scratch directory
+* The environment variable ``_CONDOR_CREDS`` is set to point to this directory
+* The starter periodically copies refreshed credentials out of the credd's
+  credential directory
+
+For **Scheduler** universe jobs:
+
+* The job does **not** have access to OAuth credentials
