@@ -26,6 +26,7 @@ def condor(test_dir):
         local_dir=test_dir / "condor",
         raw_config="""
             SCHEDD_INTERVAL = 5
+            PERIODIC_EXPR_INTERVAL = 5
         """,
     ) as condor:
         yield condor
