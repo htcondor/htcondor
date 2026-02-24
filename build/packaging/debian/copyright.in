@@ -112,6 +112,7 @@ Files:  build/cmake/CondorConfigure.cmake
         src/condor_unit_tests/async_freader_tests.cpp
         src/condor_unit_tests/CMakeLists.txt
         src/condor_unit_tests/consumption_policy_tests.cpp
+        src/condor_unit_tests/generic_stats_tests.cpp
         src/condor_unit_tests/ring_buffer_tests.cpp
         src/condor_userlog/CMakeLists.txt
         src/condor_utils/ClassAdLogPlugin.h
@@ -128,7 +129,7 @@ Files:  build/cmake/CondorConfigure.cmake
         src/ec2_gahp/CMakeLists.txt
         src/gangliad/CMakeLists.txt
         src/safefile/CMakeLists.txt
-Copyright: 1990-2012 Red Hat, Inc.
+Copyright: 1990-2013 Red Hat, Inc.
 License: Apache-2.0
 
 Files: build/cmake/macros/JoinPaths.cmake
