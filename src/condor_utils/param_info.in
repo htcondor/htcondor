@@ -4729,8 +4729,8 @@ description=Default modification to a memory resource request
 tags=startd
 
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk,{1024})
-version=7.7.6
+default=quantize(RequestDisk,{Target.DiskQuantum?:1024})
+version=24.12.18
 type=string
 description=Default modification to a disk resource request
 tags=startd

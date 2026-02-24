@@ -276,8 +276,8 @@ License: Khronos
  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-Files: view/htcondorview.js
-Copyright: 2013 Google Inc
+Files: view/ce_dashboard/flask/static/htcondorview.js
+Copyright: 2012, 2013 Google Inc
 License: Apache-2.0
 
 Files: debian/*
