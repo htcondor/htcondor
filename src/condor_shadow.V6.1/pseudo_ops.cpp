@@ -1609,11 +1609,6 @@ UniShadow::start_mapping_only_conversation(
 	for( const auto & [cifName, commonInputFiles] : common_file_catalogs ) {
 		dprintf( D_ZKM, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
 
-		// FIXME: The single-provider syndicate used to broadcast the staging
-		// directory for a particular startd to all the interested shadows.
-		// We're not using the syndicate anymore; instead, since we want to
-		// "color" the startd with the catalog(s) for later match-making
-		// purposes, we just store the paths there.
 		std::string message;
 		guidance = do_wiring_up(message, cifName);
 		request = co_yield guidance;
