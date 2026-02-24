@@ -341,7 +341,7 @@ _collector_query_hack_for_demo_purposes( PyObject *, PyObject * ) {
 		return NULL;
 	}
 
-	std::vector<ClassAd> reply;
+	std::vector<std::unique_ptr<ClassAd>> reply;
 	QueryResult qr = collector_list->query(query, reply);
 
 	if( qr != Q_OK ) {
@@ -354,7 +354,7 @@ _collector_query_hack_for_demo_purposes( PyObject *, PyObject * ) {
 	for( auto & ad : reply ) {
 		std::string adAsJSON;
 		classad::ClassAdJsonUnParser cajup;
-		cajup.Unparse( adAsJSON, &ad );
+		cajup.Unparse( adAsJSON, ad.get() );
 
 		int rv = PyList_Append( result, PyUnicode_FromString( adAsJSON.c_str() ) );
 		if( rv == -1 ) {
