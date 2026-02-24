@@ -155,7 +155,7 @@ CronJobMgr::CreateMgrParams( const char &base )
 CronJobParams *
 CronJobMgr::CreateJobParams( const char *job_name )
 {
-	return new CronJobParams( job_name, *this );
+	return new CronJobParams( job_name, GetParamBase() );
 }
 
 CronJob *

@@ -31,7 +31,7 @@ StartdCronJob::StartdCronJob( ClassAdCronJobParams *params,
 		: ClassAdCronJob( params, mgr )
 {
 	// Register it with the Resource Manager
-	StartdNamedClassAd * ad = new StartdNamedClassAd( GetName(), *this );
+	StartdNamedClassAd * ad = new StartdNamedClassAd( GetName(), this );
 	resmgr->adlist_register( ad );
 }
 
@@ -89,7 +89,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	int rval = 0; // set to 1 to indicate the ad has changed.
 	StartdNamedClassAd * sad = resmgr->adlist_find( ad_name );
 	if ( ! sad ) {
-		sad = new StartdNamedClassAd( ad_name, *this, ad );
+		sad = new StartdNamedClassAd( ad_name, this, ad );
 		// maybe we should be inserting this after the base ad for this cron job?
 		dprintf( D_CRON, "StartdCronJob::Publish() Adding 'extra' ClassAd for '%s'\n", ad_name );
 		resmgr->adlist_register( sad );
