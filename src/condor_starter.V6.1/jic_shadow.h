@@ -317,11 +317,13 @@ private:
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferStatusCallback(FileTransfer * ftrans) {
+		dprintf(D_FULLDEBUG, "JEF transferStatusCallback()\n");
 		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
 			return transferInputStatus(ftrans);
 		} else if (ftrans->GetInfo().type == FileTransfer::TransferType::UploadFilesType) {
 			return transferOutputStatus(ftrans);
 		}
+		dprintf(D_FULLDEBUG, "  not calling any callbacks\n");
 		return 1;
 	}
 	int transferInputStatus(FileTransfer *);

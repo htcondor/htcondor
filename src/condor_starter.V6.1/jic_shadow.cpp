@@ -618,6 +618,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 				// when the shadow reconnects
 			transient_failure = true;
 
+			dprintf(D_FULLDEBUG,"JEF transferOutput(): shadow disconnected\n");
 			return false;
 		}
 
@@ -709,6 +710,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 					);
 				}
 			}
+			dprintf(D_FULLDEBUG,"JEF transferOutputStart() returning false, transient_failure=%d, in_progress=%d, m_output_transfer_active=%d, m_ft_rval=%d\n", (int)transient_failure, (int)in_progress, (int)m_output_transfer_active,m_ft_rval);
 			return false;
 		}
 	}
@@ -718,6 +720,7 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 	// that if we ever come through here again to retry the whole
 	// job cleanup process we don't attempt to transfer again.
 	m_did_output_transfer = true;
+	dprintf(D_FULLDEBUG,"JEF transferOutputStart() returning true, m_did_output_transfer=true\n");
 	return true;
 }
 
@@ -728,6 +731,7 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 
 	if (filetrans->transferIsInProgress()) {
 		in_progress = true;
+		dprintf(D_FULLDEBUG,"JEF transferOutputFinish() returning false, transient_failure=%d, in_progress=true\n",(int)transient_failure);
 		return false;
 	} else {
 		m_output_transfer_active = false;
@@ -786,11 +790,13 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 			}
 
 			m_did_output_transfer = false;
+			dprintf(D_FULLDEBUG,"JEF transferOutputFinish() returning false, transient_failure=%d, in_progress=%d\n",(int)transient_failure, (int)in_progress);
 			return false;
 		}
 	}
 
 	m_did_output_transfer = true;
+dprintf(D_FULLDEBUG,"JEF transferOutputFinish() returning true, transient_failure=%d, in_progress=%d\n",(int)transient_failure,(int)in_progress);
 	return true;
 }
 
@@ -2819,6 +2825,7 @@ JICShadow::verifyXferProgressing(int /*timerid*/) {
 int
 JICShadow::transferInputStatus(FileTransfer *ftrans)
 {
+	dprintf(D_FULLDEBUG, "JEF transferInputStatus()\n");
 	ASSERT(ftrans);
 	const FileTransfer::FileTransferInfo & ft_info = ftrans->GetInfo();
 
@@ -3012,7 +3019,9 @@ JICShadow::doneWithInputTransfer() {
 int
 JICShadow::transferOutputStatus(FileTransfer *ftrans)
 {
+	dprintf(D_FULLDEBUG,"JEF transferOutputStatus()\n");
 	if (!m_output_transfer_active) {
+		dprintf(D_FULLDEBUG,"  output transfer not active\n");
 		// This must be a checkpoint transfer, which is still done blocking.
 		// The caller of the blocking function handles everything.
 		return 1;
@@ -3028,6 +3037,7 @@ JICShadow::transferOutputStatus(FileTransfer *ftrans)
 	if (info.in_progress) {
 		// a status ping message. xfer is still making progress!
 		//this->file_xfer_last_alive_time = time(nullptr);
+		dprintf(D_FULLDEBUG,"JEF output transfer is in progress\n");
 		return 1;
 	}
 
