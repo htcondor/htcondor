@@ -10864,6 +10864,46 @@ Scheduler::getShadowForCatalog( const std::string & cifName ) {
 	return entry->second;
 }
 
+
+// Don't inadvertently create empty vectors.
+// Note that the returned vector is a copy, and does not own the pointers.
+std::optional<std::vector<match_rec *>>
+Scheduler::getMatchesBySinful( const std::string & sinful ) {
+	auto entry = matchesBySinfulMap.find( sinful );
+	if( entry == matchesBySinfulMap.end() ) { return {}; }
+	return entry->second;
+}
+
+
+// Remove empty vectors.
+bool
+Scheduler::removeMatchFromSinful( const std::string & sinful, match_rec * match ) {
+	auto entry = matchesBySinfulMap.find( sinful );
+	if( entry == matchesBySinfulMap.end() ) { return false; }
+
+	std::erase_if( matchesBySinfulMap[sinful], [match](match_rec * m) { return m == match; } );
+
+	if( matchesBySinfulMap[sinful].size() == 0 ) {
+		matchesBySinfulMap.erase( sinful );
+	}
+	return true;
+}
+
+
+// Don't duplicate match records.
+bool
+Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
+	auto v = matchesBySinfulMap[sinful];
+	if( std::find(v.begin(), v.end(), match) == v.end() ) {
+		matchesBySinfulMap[sinful].push_back(match);
+		return true;
+	}
+
+	return false;
+}
+
+
+
 //-----------------------------------------------------------------
 // Start Job Handler
 //-----------------------------------------------------------------
@@ -16531,6 +16571,8 @@ Scheduler::AddMrec(
 		OptimizeMachineAdForMatchmaking( rec->my_match_ad );
 	}
 
+	addMatchToSinful( peer, rec );
+
 	return rec;
 }
 
@@ -16585,7 +16627,48 @@ Scheduler::unlinkMrec(match_rec* match)
 	}
 
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
-			 match->description(), match->cluster, match->proc ); 
+			 match->description(), match->cluster, match->proc );
+
+
+	if( match->peer ) {
+		removeMatchFromSinful( match->peer, match );
+	}
+
+	// If every other claim against this match's startd points to a transfer
+	// shadow, then start a timer to release those claims unless another claim
+	// arrives in time.  To avoid a loop, only do this for transfer matches.
+	if( match->shadowRec && match->peer ) {
+		switch( match->shadowRec->cxfer_state ) {
+			case CXFER_STATE::INVALID:
+				break;
+			case CXFER_STATE::MAPPING: {
+				auto matches = getMatchesBySinful( match->peer );
+				if( matches ) {
+					size_t count = 0;
+					for( const auto & match : * matches ) {
+						if( match->shadowRec ) {
+							switch( match->shadowRec->cxfer_state ) {
+								case CXFER_STATE::INVALID:
+								case CXFER_STATE::MAPPING:
+									break;
+								case CXFER_STATE::STAGED:
+								case CXFER_STATE::STAGING:
+									++count;
+							}
+						}
+					}
+
+					if( count == matches->size() ) {
+						dprintf( D_ALWAYS, "FIXME: scheduler timer to send_vacate(match, RELEASE_CLAIM) for %lu matches\n", count );
+					}
+				}
+				}break;
+			case CXFER_STATE::STAGING:
+				break;
+			case CXFER_STATE::STAGED:
+				break;
+		}
+	}
 
 
 	PROC_ID jobId;
@@ -16626,8 +16709,8 @@ Scheduler::unlinkMrec(match_rec* match)
 		// Remove this match from the associated shadowRec.
 	if (match->shadowRec)
 		match->shadowRec->match = NULL;
-	
-	numMatches--; 
+
+	numMatches--;
 	return 0;
 }
 
