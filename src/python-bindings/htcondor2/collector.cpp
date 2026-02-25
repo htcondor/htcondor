@@ -111,7 +111,7 @@ _collector_query( PyObject *, PyObject * args ) {
 		}
 
 		for( auto & classAd : adList ) {
-			PyObject * pyClassAd = py_new_classad2_classad(classAd->Copy());
+			PyObject * pyClassAd = py_new_classad2_classad(classAd.release());
 			auto rv = PyList_Append( list, pyClassAd );
 			Py_DecRef(pyClassAd);
 
