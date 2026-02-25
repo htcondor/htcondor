@@ -1036,7 +1036,8 @@ int parse_autoformat_args (
 	const char *popts,
 	AttrListPrintMask & print_mask,
 	classad::References & attr_refs,
-	bool diagnostic)
+	bool diagnostic,
+	bool append)
 {
 	bool flabel = false;
 	bool fCapV  = false;
@@ -1063,7 +1064,9 @@ int parse_autoformat_args (
 			++popts;
 		}
 	}
-	print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+	if ( ! append) {
+		print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
+	}
 
 	if (fJobId) {
 		if (fheadings || print_mask.has_headings()) {
@@ -1093,7 +1096,7 @@ int parse_autoformat_args (
 		int wid = 0;
 		int opts = FormatOptionNoTruncate;
 		if (fheadings || print_mask.has_headings()) {
-			const char * hd = fheadings ? parg : "(expr)";
+			const char * hd = parg;
 			wid = 0 - (int)strlen(hd);
 			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 			print_mask.set_heading(hd);

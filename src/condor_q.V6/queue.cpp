@@ -283,6 +283,8 @@ static	char		*scheddAddr;	// used by format_remote_host()
 static CollectorList * Collectors = NULL;
 
 static std::vector<const char *> autoformat_args;
+static std::vector<const char *> append_autoformat_args;
+static const char * append_autoformat_opts = nullptr;
 
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
@@ -1266,6 +1268,25 @@ processCommandLineArguments (int argc, const char *argv[])
 			i+=2;
 		}
 		else
+		if (is_dash_arg_colon_prefix(dash_arg, "appendautoformat", &pcolon, 4) ||
+			is_dash_arg_colon_prefix(dash_arg, "aaf", &pcolon, 3)) {
+				// make sure we have at least one more argument
+			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: -appendautoformat requires at least one attribute parameter\n" );
+				exit( 1 );
+			}
+			if (pcolon) append_autoformat_opts = pcolon + 1;
+			// process all arguments that don't begin with "-" as part of appendautoformat.
+			while (i+1 < argc && *(argv[i+1]) != '-') {
+				++i;
+				append_autoformat_args.push_back(argv[i]);
+			}
+			// if list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
+		}
+		else
 		if (is_dash_arg_colon_prefix(dash_arg, "autoformat", &pcolon, 5) ||
 			is_dash_arg_colon_prefix(dash_arg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
@@ -1775,6 +1796,19 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 	}
 
+	// append extra autoformat columns after whatever standard or custom format was set up
+	if ( ! append_autoformat_args.empty()) {
+		append_autoformat_args.push_back(nullptr);
+		int nargs = (int)append_autoformat_args.size();
+		classad::References refs;
+		parse_autoformat_args(nargs, &append_autoformat_args[0], 0, append_autoformat_opts, app.prmask, refs, dash_dry_run, true);
+
+		app.attrs.insert(refs.begin(), refs.end());
+
+		// Widen output to accommodate appended columns
+		app.prmask.SetOverallWidth(0);
+	}
+
 	// convert cluster and cluster.proc into constraints
 	// if there is a -dag argument, then we look up all children of the dag
 	// as well as the dag itself.
@@ -2168,6 +2202,9 @@ usage (const char *myName, int other)
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
+		"\t-appendautoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
+		"\t-aaf[:jlhVr,tng] <attr> [attr2 [...]]\n"
+		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-format <fmt> <attr>\t Print attribute attr using format fmt\n"
 		"\t-print-format <file>\t Use <file> to set display attributes and formatting\n"
 		"\t\t\t\t (experimental, see htcondor-wiki for more information)\n"
