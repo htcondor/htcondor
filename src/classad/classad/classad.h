@@ -633,7 +633,7 @@ class ClassAd : public ExprTree
 			// In the order listed in the header, so that we don't miss any.
 			this->alternateScope = rhs.alternateScope;
 
-			this->attrList = std::move(rhs.attrList);
+			std::swap(this->attrList, rhs.attrList);
 			for( auto & entry : attrList ) {
 				// I wonder what other invariants were forgotten?
 				entry.second->SetParentScope(this);
