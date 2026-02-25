@@ -637,12 +637,20 @@ main( int argc, const char* argv[] )
 		} else if (is_arg_prefix(arg, "raw", 3)) {
 			dash_raw = true;
 		} else if (is_arg_prefix(arg, "default", 3)) {
+			if (verbose) {
+				fprintf(stderr, "-default cannot be used with -verbose\n");
+				usage();
+			}
 			dash_default = true;
 		} else if (is_arg_prefix(arg, "config", 2)) {
 			print_config_sources = true;
 		} else if (is_arg_prefix(arg, "reconfig", 5)) {
 			reconfig_source = use_next_arg("reconfig", argv, i);
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
+			if (dash_default) {
+				fprintf(stderr, "-verbose cannot be used with -default\n");
+				usage();
+			}
 			verbose = true;
 			if (pcolon) {
 				for (const auto& opt: StringTokenIterator(pcolon+1, ":,")) {
