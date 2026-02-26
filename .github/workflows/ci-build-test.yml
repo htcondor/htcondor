@@ -153,7 +153,7 @@ jobs:
 
     # Use htcondor build containers for the real work
     container:
-      image: htcondor/nmi-build:x86_64_Ubuntu24-25000700
+      image: htcondor/nmi-build:x86_64_Ubuntu24-25070000
       env:
         OMP_NUM_THREADS: 4
       options: --cpus 4
