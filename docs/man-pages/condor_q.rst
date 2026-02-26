@@ -595,6 +595,14 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
+ **-appendautoformat[:jlhVr,tng]** *attr1 [attr2 ...]* or **-aaf[:jlhVr,tng]** *attr1 [attr2 ...]*
+    (output option) Like **-autoformat**, but instead of replacing the
+    standard output columns, appends the specified attribute(s) as
+    additional columns after whatever standard or custom format is in
+    effect. This allows adding extra information to the default
+    *condor_q* output without losing the standard columns. The same
+    formatting qualifiers as **-autoformat** are supported.
+
  **-print-format** *file*
     Read output formatting information from the given custom print format file.
     see :doc:`/classads/print-formats` for more information about custom print format files.

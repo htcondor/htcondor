@@ -39,6 +39,12 @@
   and works even when the *condor_schedd* is slow or not running.
   :jira:`3582`
 
+- :tool:`condor_q` now supports a ``-appendautoformat`` (``-aaf``) option
+  that works like ``-autoformat`` (``-af``) but appends the specified
+  attributes as additional columns after the standard output columns,
+  rather than replacing them.
+  :jira:`3571`
+
 - Updated list of default environment variables that *condor_dagman* always
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
