@@ -2205,6 +2205,8 @@ usage (const char *myName, int other)
 		"\t-appendautoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
 		"\t-aaf[:jlhVr,tng] <attr> [attr2 [...]]\n"
 		"\t    Like -af, but appends attr(s) after the standard columns\n"
+		"\t    Note: For -appendautoformat/-aaf, only jlhVr options affect formatting;\n"
+		"\t          separator options ,tng are ignored and existing separators are used.\n"
 		"\t-format <fmt> <attr>\t Print attribute attr using format fmt\n"
 		"\t-print-format <file>\t Use <file> to set display attributes and formatting\n"
 		"\t\t\t\t (experimental, see htcondor-wiki for more information)\n"
