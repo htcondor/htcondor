@@ -750,17 +750,27 @@ class Scheduler : public Service
 
 	OCU *getOCU(int ocu_id);
 
+
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
+
 
 	// Don't inadvertently create empty vectors.
 	// Note that the returned vector is a copy, and does not own the pointers.
 	std::optional<std::vector<match_rec *>> getMatchesBySinful( const std::string & sinful );
+
 	// Remove empty vectors from the map.
 	bool removeMatchFromSinful( const std::string & sinful, match_rec * match );
+
 	// Prevents duplicate entries.
 	bool addMatchToSinful( const std::string & sinful, match_rec * match );
 
+
+	// Start a timer to release the corresponding claim.
+	bool mark_catalog_dead( const std::string & catalogName );
+
+	// Stop the timer, if any, waiting to release the claim.
+	bool mark_catalog_live( const std::string & catalogName );
 
 private:
 
@@ -1050,7 +1060,9 @@ private:
 	// This map does NOT own its match records; it is an optimization.
 	// I'd indicate that with a shared_ptr<>, but that won't work if the
 	// owner doesn't hold onto one, and it doesn't.
-	std::map<std::string, std::vector<match_rec *>> matchesBySinfulMap;
+	std::unordered_map<std::string, std::vector<match_rec *>> matchesBySinfulMap;
+
+	std::unordered_map<std::string, int> catalogToTimerMap;
 
 	std::map<std::string, match_rec *> matches;
 	std::map<PROC_ID, match_rec *> matchesByJobID;

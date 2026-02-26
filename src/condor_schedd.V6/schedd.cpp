@@ -10813,6 +10813,10 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
 
+				for( const auto & [name, _] : * catalogs ) {
+					mark_catalog_live( name );
+				}
+
 
 				//
 				// If this job (and the job which triggered the transfer shadow)
@@ -10823,7 +10827,6 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				int status = JOB_STATUS_BLOCKED;
 				SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status );
 				matchesHeldByBlockedJobs.push_back(mrec);
-
 
 				mrec->shadowRec = job_shadow_rec;
 				return true;
@@ -10841,6 +10844,11 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 				);
 				job_shadow_rec->cxfer_catalogs = * catalogs;
 				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				for( const auto & [name, _] : * catalogs ) {
+					mark_catalog_live( name );
+				}
+
 
 				addRunnableJob( job_shadow_rec );
 
@@ -10902,6 +10910,53 @@ Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
 	return false;
 }
 
+
+bool
+Scheduler::mark_catalog_dead( const std::string & catalogName ) {
+	// dprintf( D_ALWAYS, "mark_catalog_dead(%s)\n",catalogName.c_str() );
+	if( catalogToTimerMap.contains( catalogName ) ) {
+		// ... FIXME ...
+		// dprintf( D_ALWAYS, "mark_catalog_dead(%s): no such timer\n",catalogName.c_str() );
+		return false;
+	}
+
+	// FIXME: manifest constant, param table entry
+	int keep_common_idle = param_integer( "KEEP_COMMON_IDLE", 300 );
+	catalogToTimerMap[catalogName] = daemonCore->Register_Timer(
+		keep_common_idle, TIMER_NEVER,
+		[this, catalogName](int /* timerID */) -> void {
+			auto shadow = getShadowForCatalog( catalogName );
+			if(! shadow) {
+				dprintf( D_ALWAYS, "Found no shadow for catalog scheduled for clean-up: '%s'\n", catalogName.c_str() );
+				return;
+			}
+			if(! (* shadow)->match) {
+				dprintf( D_ALWAYS, "Found a shadow with no match record while cleaning up catalog '%s'\n", catalogName.c_str() );
+				return;
+			}
+			// dprintf( D_ALWAYS, "mark_catalog_live(%s): releasing claim\n",catalogName.c_str() );
+			send_vacate( (* shadow)->match, RELEASE_CLAIM );
+		},
+		"terminate transfer shadow lease"
+	);
+
+	return true;
+}
+
+
+bool
+Scheduler::mark_catalog_live( const std::string & catalogName ) {
+	// dprintf( D_ALWAYS, "mark_catalog_live(%s)\n",catalogName.c_str() );
+	if(! catalogToTimerMap.contains(catalogName)) {
+		// dprintf( D_ALWAYS, "mark_catalog_live(%s): no such timer\n",catalogName.c_str() );
+		return false;
+	}
+
+	// dprintf( D_ALWAYS, "mark_catalog_live(%s): erasing timer\n",catalogName.c_str() );
+	daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
+	catalogToTimerMap.erase(catalogName);
+	return true;
+}
 
 
 //-----------------------------------------------------------------
@@ -13763,7 +13818,7 @@ Scheduler::child_exit(int pid, int status)
 	int             StartJobsFlag=TRUE;
 	PROC_ID	        job_id;
 	bool            srec_was_local_universe = false;
-	std::string        claim_id;
+	std::string     claim_id;
 	// if we do not start a new job, should we keep the claim?
 	bool            keep_claim = false; // by default, no
 	bool            srec_keep_claim_attributes;
@@ -16659,7 +16714,11 @@ Scheduler::unlinkMrec(match_rec* match)
 					}
 
 					if( count == matches->size() ) {
-						dprintf( D_ALWAYS, "FIXME: scheduler timer to send_vacate(match, RELEASE_CLAIM) for %lu matches\n", count );
+						for( const auto & match : * matches ) {
+							for( const auto & [name, _] : match->shadowRec->cxfer_catalogs ) {
+								mark_catalog_dead( name );
+							}
+						}
 					}
 				}
 				}break;
