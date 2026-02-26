@@ -1,6 +1,12 @@
 Vacate Reason Codes
 ===================
 
+A job can be vacated either because of a hold, or a non hold reason.  The hold
+reasons follow:
+
+.. include:: /codes-other-values/hold-table.rst
+
+The non hold reasons are listed in the following table.
 
     +---------------------------------------+-------------------------------------+--------------------------+
     | | Integer VacateReasonCode            | | Reason for Vacate                 | | VacateReasonSubCode    |
