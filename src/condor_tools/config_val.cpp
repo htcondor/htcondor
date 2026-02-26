@@ -1081,7 +1081,7 @@ main( int argc, const char* argv[] )
 		} else {
 			target = new DaemonAllowLocateFull(dt, name, pool);
 		}
-		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
+		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_ADMIN) ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
 					 daemonString(dt) );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
