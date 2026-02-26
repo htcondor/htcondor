@@ -114,7 +114,7 @@ public:
 		int m_cmd{-1};
 		Sock *m_sock{nullptr};
 		bool m_raw_protocol{false};
-		bool m_force_auth{false};
+		sec_req m_force_auth{SEC_REQ_UNDEFINED};
 		bool m_resume_response{true};
 		CondorError *m_errstack{nullptr};
 		int m_subcmd{-1};
@@ -205,13 +205,13 @@ public:
 									ClassAd* ad,
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
-									bool force_authentication=false);
+									sec_req force_authentication=SEC_REQ_UNDEFINED);
 
 	bool	FillInSecurityPolicyAdFromCache( DCpermission auth_level,
 									ClassAd* &ad,
 									bool raw_protocol=false,
 									bool use_tmp_sec_session=false,
-									bool force_authentication=false);
+									sec_req force_authentication=SEC_REQ_UNDEFINED);
 
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
@@ -354,7 +354,7 @@ public:
 	DCpermission m_cached_auth_level;
 	bool m_cached_raw_protocol;
 	bool m_cached_use_tmp_sec_session;
-	bool m_cached_force_authentication;
+	sec_req m_cached_force_authentication;
 	ClassAd m_cached_policy_ad;
 	bool m_cached_return_value;
 

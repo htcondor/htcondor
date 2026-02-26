@@ -936,7 +936,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ? SecMan::SEC_REQ_REQUIRED : SecMan::SEC_REQ_UNDEFINED ) )
 				{
 						// our policy is invalid even without the other
 						// side getting involved.
@@ -1495,7 +1495,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					our_policy,
 					false,
 					false,
-					m_comTable[m_cmd_index].force_authentication ) )
+					m_comTable[m_cmd_index].force_authentication ? SecMan::SEC_REQ_REQUIRED : SecMan::SEC_REQ_UNDEFINED ) )
 				{
 					dprintf( D_ERROR, "DC_AUTHENTICATE: "
 							 "Our security policy is invalid!\n" );

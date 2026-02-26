@@ -694,8 +694,8 @@ public:
 	void setPreferredToken(const std::string& token) { m_preferred_token = token; m_use_new_sec_context_id = true; }
 	const std::string& getPreferredToken() { return m_preferred_token; }
 
-	void setForceAuthentication(bool force) { m_force_auth = force; }
-	bool getForceAuthentication() { return m_force_auth; }
+	void setForceAuthentication(SecMan::sec_req force) { m_force_auth = force; }
+	SecMan::sec_req getForceAuthentication() { return m_force_auth; }
 
 protected:
 	// Data members
@@ -723,7 +723,7 @@ protected:
 	bool _is_configured;
 	bool _locate_local_only{false};
 	bool m_should_try_token_request{false};
-	bool m_force_auth{false};
+	SecMan::sec_req m_force_auth{SecMan::SEC_REQ_UNDEFINED};
 	SecMan _sec_man;
 	// If our target daemon is the default collector
 	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,

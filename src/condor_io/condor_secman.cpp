@@ -445,7 +445,7 @@ bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
-								bool force_authentication )
+								sec_req force_authentication )
 {
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -468,8 +468,11 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// respect the old restrictions and is only checked by newer servers,
 	// which will prefer its value.
 
-	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
-		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication = sec_req_param(
+		"SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	if (force_authentication > sec_authentication) {
+		sec_authentication = force_authentication;
+	}
 	sec_req sec_authentication_new = sec_authentication;
 
 	sec_req sec_encryption = sec_req_param(
@@ -658,7 +661,7 @@ bool
 SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* &ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
-								bool force_authentication )
+								sec_req force_authentication )
 {
 	if ((m_cached_auth_level == auth_level) &&
 		(m_cached_raw_protocol == raw_protocol) &&
@@ -972,7 +975,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol, bool force_auth, bool resume_response,
+		int cmd,Sock *sock,bool raw_protocol, SecMan::sec_req force_auth, bool resume_response,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string& context_tag, const std::string& preferred_token,
@@ -1073,7 +1076,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	std::string m_cmd_description;
 	Sock *m_sock;
 	bool m_raw_protocol;
-	bool m_force_auth;
+	SecMan::sec_req m_force_auth;
 	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
 	CondorError m_internal_errstack;
 	StartCommandCallbackType *m_callback_fn;
@@ -3307,7 +3310,7 @@ SecMan::SecMan() :
 	m_cached_auth_level(UNSET_PERM),
 	m_cached_raw_protocol(false),
 	m_cached_use_tmp_sec_session(false),
-	m_cached_force_authentication(false),
+	m_cached_force_authentication(SEC_REQ_UNDEFINED),
 	m_cached_return_value(false) {
 
 	// the list of ClassAd attributes we need to resume a session

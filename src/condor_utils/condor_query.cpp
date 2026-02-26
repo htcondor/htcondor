@@ -543,8 +543,10 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
-	bool orig_auth = collector.getForceAuthentication();
-	collector.setForceAuthentication(requireAuth);
+	SecMan::sec_req orig_auth = collector.getForceAuthentication();
+	if (requireAuth) {
+		collector.setForceAuthentication(SecMan::SEC_REQ_PREFERRED);
+	}
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
 	if (!(sock = collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
