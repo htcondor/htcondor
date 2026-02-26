@@ -214,7 +214,7 @@ htcondor::init_scitokens()
 		// scitokens-cpp fall back to an in-memory cache.
 		if (scitoken_config_set_str_ptr("keycache.allow_in_memory", "true", &err) < 0) {
 			// This probably means our scitokens-cpp is older than 1.4.0.
-			dprintf(D_SECURITY|D_VERBOSE, "Failed to enable SciTokens in-memory cache option: %s\n", err);
+			dprintf(D_SECURITY, "Failed to enable SciTokens in-memory cache option: %s\n", err);
 			free(err);
 			err = nullptr;
 		}
