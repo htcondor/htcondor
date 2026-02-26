@@ -706,8 +706,7 @@ all attributes.
     hold.  The below table defines all possible values used by 
     attributes :ad-attr:`HoldReasonCode`, :ad-attr:`NumHoldsByReason`, and :ad-attr:`HoldReasonSubCode`. 
 
-    .. include:: ../codes-other-values/hold-reason-codes.rst
-        :start-line: 3
+    .. include:: ../codes-other-values/hold-table.rst
 
 :classad-attribute-def:`HoldReasonSubCode`
     An integer value that represents further information to go along
@@ -1957,15 +1956,12 @@ all attributes.
 
 :classad-attribute-def:`VacateReasonCode`
     An integer value that represents the reason why a job's most
-    recent exeuction attempt failed.
-    The below table defines values used by
-    attributes :ad-attr:`VacateReasonCode` and
-    :ad-attr:`VacateReasonSubCode`.
+    recent execution attempt failed. The below table defines values used by
+    attributes :ad-attr:`VacateReasonCode` and :ad-attr:`VacateReasonSubCode`.
     Values defined for :ad-attr:`HoldReasonCode` are also valid values for
     :ad-attr:`VacateReasonCode`.
 
-    .. include:: ../codes-other-values/vacate-reason-codes.rst
-        :start-line: 3
+    .. include:: ../codes-other-values/vacate-code-table.rst
 
 :classad-attribute-def:`VacateReasonSubCode`
     An integer value that represents further information to go along
