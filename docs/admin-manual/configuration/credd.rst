@@ -58,6 +58,14 @@ These macros affect the *condor_credd* and its credmon plugin.
     half of :macro:`CREDMON_OAUTH_TOKEN_MINIMUM`.  This is currently implemented
     only in the vault credmon, not the default oauth credmon.
 
+:macro-def:`OAUTH2_CREDMON_PROVIDER_NAMES`
+    A comma and/or space separated list of provider names that the OAuth2
+    credential monitor should handle.  When a job requests OAuth credentials
+    with a provider name in this list, the default OAuth2 credmon will manage
+    those credentials.  The default value is ``*``, meaning the OAuth2 credmon
+    handles all providers not claimed by other credmon types (such as
+    :macro:`LOCAL_CREDMON_PROVIDER_NAMES` or :macro:`VAULT_CREDMON_PROVIDER_NAMES`).
+
 :macro-def:`LOCAL_CREDMON_PROVIDER_NAMES`
     A comma and/or space separated list of provider names that should use the
     local credmon to generate SciTokens credentials. When a job requests OAuth
@@ -167,3 +175,12 @@ These macros affect the *condor_credd* and its credmon plugin.
     A space-and/or-comma-separated list of hostnames of Vault servers
     that the *condor_credd* will accept Vault credentials for.
     The default (unset) means accept credentials for any Vault server.
+
+:macro-def:`VAULT_CREDMON_PROVIDER_NAMES`
+    A comma and/or space separated list of provider names that the Vault
+    credential monitor should handle.  When a job requests OAuth credentials
+    with a provider name in this list, the Vault credmon will manage those
+    credentials.  The default value is ``*``, meaning the Vault credmon handles
+    all providers not claimed by other credmon types.  This knob is only
+    meaningful when :macro:`SEC_CREDENTIAL_STORER` is also configured to point
+    to the Vault credential storer.

@@ -51,6 +51,7 @@ Central Manager Configuration
     credd.rst
     defrag.rst
     gangliad.rst
+    adstash.rst
 
 Access Point Configuration
 --------------------------
