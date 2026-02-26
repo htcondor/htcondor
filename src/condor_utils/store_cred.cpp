@@ -2305,9 +2305,6 @@ int do_check_oauth_creds (
 	std::string daemonid;
 
 	outputURL.clear();
-	if (request_ads.empty()) {
-		return 0;
-	}
 
 	if (! d) {
 		Daemon my_credd(DT_CREDD);

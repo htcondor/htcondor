@@ -14517,8 +14517,20 @@ size_t pidHash(const int &pid)
 //
 bool locate_and_advertise_local_credd(bool force) {
 
+	bool update_info = true;
+	bool new_check_creds = false;
+
 	Daemon local_credd(DT_CREDD);
 	local_credd.locate_local();
+
+	if (param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true)) {
+		std::string names;
+		new_check_creds = param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES") ||
+		                  param(names, "LOCAL_CREDMON_PROVIDER_NAMES") ||
+		                  param(names, "LOCAL_CREDMON_PROVIDER_NAME") ||
+		                  param(names, "CLIENT_CREDMON_PROVIDER_NAMES");
+	}
+
 	if ( ! force) {
 		// look to see if the credd address has changed
 		// if it has not then we are done
@@ -14526,11 +14538,20 @@ bool locate_and_advertise_local_credd(bool force) {
 		daemonCore->ContactInfoExtra().LookupString(ATTR_CREDD_IP_ADDR, credd_addr);
 		if ( ! local_credd.addr()) {
 			if (credd_addr.empty())
-				return false;
+				update_info = false;
 		} else {
 			if (credd_addr == local_credd.addr())
-				return false;
+				update_info = false;
 		}
+
+		// check if SubmitAlwaysCheckCreds has changed
+		bool old_check_creds = false;
+		daemonCore->ContactInfoExtra().LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, old_check_creds);
+		update_info |= old_check_creds != new_check_creds;
+	}
+
+	if (!update_info) {
+		return false;
 	}
 
 	// update the extra contact info, and tell daemon core to write a new address file.
@@ -14545,6 +14566,7 @@ bool locate_and_advertise_local_credd(bool force) {
 	}
 	if (Name) daemonCore->ContactInfoExtra().Assign(ATTR_NAME, Name);
 	daemonCore->ContactInfoExtra().Assign(ATTR_MACHINE, get_local_fqdn());
+	daemonCore->ContactInfoExtra().Assign(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, new_check_creds);
 	DC_Enable_And_Drop_Addr_File();
 	return true;
 }
@@ -15124,6 +15146,7 @@ Scheduler::Init()
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
 	CopyAttribute(ATTR_CREDD_IP_ADDR, *m_adSchedd, daemonCore->ContactInfoExtra());
+	CopyAttribute(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, *m_adSchedd, daemonCore->ContactInfoExtra());
 
 	// Record the transfer queue expression so the negotiator can predict
 	// which transfer queue a job will use if it starts in the schedd.

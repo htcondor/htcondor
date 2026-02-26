@@ -6641,9 +6641,14 @@ int SubmitHash::SetAccountingGroup()
 int SubmitHash::SetOAuth()
 {
 	RETURN_IF_ABORT();
-	std::string tokens;
+	classad::References tokens;
 	if (NeedsOAuthServices(false, tokens)) {
-		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
+		std::string tokens_str;
+		for (const auto& name: tokens) {
+			if (!tokens_str.empty()) tokens_str += ',';
+			tokens_str += name;
+		}
+		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens_str.c_str());
 	}
 
 	return 0;
@@ -7765,13 +7770,10 @@ int SubmitHash::FixupTransferInputFiles()
 // that are required by configuration.
 bool SubmitHash::NeedsOAuthServices(
 	bool add_local,	// in: Add local issuer/client services mentioned in configuration
-	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
-	std::vector<ClassAd> * request_ads /*=NULL*/, // out: optional list of request classads for the services
-	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
+	classad::References & service_names)   // out: set of services names for OAuthServicesNeeded job attribute
+	const
 {
-	if (request_ads) { request_ads->clear(); }
-	if (ads_error) { ads_error->clear(); }
-	services.clear();
+	service_names.clear();
 
 	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
 	if (tokens_needed.empty() && !add_local) {
@@ -7786,10 +7788,6 @@ bool SubmitHash::NeedsOAuthServices(
 	for (auto name = sti.first(); name != NULL; name = sti.next()) {
 		enabled_services.insert(name);
 	}
-
-	// this will be populated with the fully qualifed service names
-	// that have been enabled, these names will include the handle suffix
-	classad::References service_names;
 
 	// scan the submit keys for things that match the form
 	// <service>_OAUTH_[PERMISSIONS|RESOURCE](_<handle>)?
@@ -7855,30 +7853,25 @@ bool SubmitHash::NeedsOAuthServices(
 	// service names mentioned in our configuration.
 	if (add_local) {
 		std::string names;
-		if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
-			param(names, "LOCAL_CREDMON_PROVIDER_NAME");
-		}
-		for (const auto& name: StringTokenIterator(names)) {
-			service_names.insert(name);
-		}
-		if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+		if (param(names, "SUBMIT_ADD_LOCAL_CREDMON_PROVIDER_NAMES")) {
 			for (const auto& name: StringTokenIterator(names)) {
 				service_names.insert(name);
+			}
+		} else {
+			if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+				param(names, "LOCAL_CREDMON_PROVIDER_NAME");
+			}
+			for (const auto& name: StringTokenIterator(names)) {
+				service_names.insert(name);
+			}
+			if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+				for (const auto& name: StringTokenIterator(names)) {
+					service_names.insert(name);
+				}
 			}
 		}
 	}
 
-	// return the string that we will use for the OAuthServicesNeeded job attribute
-	for (auto name = service_names.begin(); name != service_names.end(); ++name){
-		if (!services.empty()) services += ",";
-		services += *name;
-	}
-
-	// at this point, service_names has the list fully qualified service names, including the handle suffix
-	// now we need to build services ads for these
-	if (request_ads) {
-		build_oauth_service_ads(service_names, *request_ads, *ads_error);
-	}
 	return !service_names.empty();
 }
 
@@ -9855,7 +9848,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 
 bool
 credd_has_tokens(
-	const std::string & token_names,
+	const classad::References & token_names,
 	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
 	Daemon* credd,
@@ -9866,7 +9859,12 @@ credd_has_tokens(
 
 	if (IsDebugLevel(D_SECURITY)) {
 		char *myname = my_username();
-		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", token_names.c_str(), myname);
+		std::string creds_str;
+		for (const auto& name: token_names) {
+			if (!creds_str.empty()) creds_str += ',';
+			creds_str += name;
+		}
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", creds_str.c_str(), myname);
 		free(myname);
 	}
 
@@ -9878,7 +9876,7 @@ credd_has_tokens(
 		std::string buf;
 		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
 		size_t i = 0;
-		for (const auto& name: StringTokenIterator(token_names)) {
+		for (const auto& name: token_names) {
 			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, token_ads[i], "\t"));
 			buf.clear();
 			i++;
@@ -9932,19 +9930,11 @@ process_job_credentials(
 	std::string & URL,
 	std::string & error_string
 ) {
-	std::string token_names;
+	classad::References token_names;
 	std::vector<ClassAd> token_ads;
 	CredSorter sorter;
 
 	error_string.clear();
-
-	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
-
-	if (submit_hash.NeedsOAuthServices(add_local, token_names, &token_ads, &error_string)) {
-		if ( !error_string.empty()) {
-			return 1;
-		}
-	}
 
 	std::string storer;
 	if(param(storer, "SEC_CREDENTIAL_STORER")) {
@@ -10005,6 +9995,9 @@ process_job_credentials(
 		}
 	}
 
+	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
+	bool always_check_credd = false;
+
 	Daemon credd(DT_CREDD);
 
 	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
@@ -10028,12 +10021,26 @@ process_job_credentials(
 					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
 				}
 			}
+			ClassAd* schedd_ad = schedd->locationAd();
+			if (schedd_ad && schedd_ad->LookupBool(ATTR_SUBMIT_ALWAYS_CHECK_CREDS, always_check_credd)) {
+				add_local = false;
+			}
 		} else if (schedd_or_credd->type() == DT_CREDD) {
 			credd = *schedd_or_credd;
 		}
 	}
 
-	if (!token_ads.empty()) {
+	if (submit_hash.NeedsOAuthServices(add_local, token_names)) {
+		if (error_string.empty()) {
+				// does this need to be in SubmitHash?
+			submit_hash.build_oauth_service_ads(token_names, token_ads, error_string);
+		}
+		if ( !error_string.empty()) {
+			return 1;
+		}
+	}
+
+	if (!token_ads.empty() || always_check_credd) {
 		// Contact the credd to see if it has all of the tokens
 		// requested by the job.
 		// The credd can send one of three responses:
@@ -10055,7 +10062,7 @@ process_job_credentials(
 					return 1;
 				}
 			}
-			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", token_names.c_str());
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything\n");
 
 		} else if(! error_string.empty()) {
 			return 1;

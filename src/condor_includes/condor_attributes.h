@@ -786,6 +786,7 @@
 #define ATTR_STREAM_INPUT  "StreamIn"
 #define ATTR_STREAM_OUTPUT  "StreamOut"
 #define ATTR_STREAM_ERROR  "StreamErr"
+#define ATTR_SUBMIT_ALWAYS_CHECK_CREDS  "SubmitAlwaysCheckCreds"
 #define ATTR_SUBMIT_EVENT_NOTES  "SubmitEventNotes"
 #define ATTR_SUBMIT_EVENT_USER_NOTES  "SubmitEventUserNotes"
 #define ATTR_SUBMITTER "Submitter"
