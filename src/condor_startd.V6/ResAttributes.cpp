@@ -796,6 +796,18 @@ int MachAttributes::RefreshDevIds(
 
 	int num_res = 0;
 	for (const auto & nfr : found->second.ids) {
+#if 1
+		bool available= false;
+		if (nfr.is_assigned_and_available(assign_to, assign_to_sub, available)) {
+			devids.emplace_back(nfr.id); // add to Assigned list
+			if (offline_ids.count(nfr.id)) {
+				// don't count offline ids as Available even though it is assigned
+			} else if (available) {
+				// count as available (at this point we ignore res conflicts)
+				num_res += 1;
+			}
+		}
+#else
 		if (nfr.owner.id == assign_to && (assign_to_sub == 0 || nfr.owner.dyn_id == assign_to_sub)) {
 			devids.emplace_back(nfr.id);
 			if (offline_ids.count(nfr.id)) {
@@ -804,6 +816,7 @@ int MachAttributes::RefreshDevIds(
 				num_res += 1;
 			}
 		}
+#endif
 	}
 	return num_res;
 }
