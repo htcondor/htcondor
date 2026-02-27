@@ -122,10 +122,8 @@ claim_specific_ad_name( const char * publicClaimID ) {
 	// Dots have special meaning in named ClassAd names.
 	std::replace( s.begin(), s.end(), '.', '_' );
 
-	// For stupid reasons, extra ads must each have a cron job.  We
-	// always define `kflops` and `mips` because of benchmarks, so
-	// just use those.
-	return "kflops." + s;
+	// For stupid reasons, extra ads must each have a cron job.
+	return COLORING_NAMESPACE + s;
 }
 
 Claim::~Claim()
