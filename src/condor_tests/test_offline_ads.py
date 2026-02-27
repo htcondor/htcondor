@@ -85,15 +85,19 @@ def advertised_offline_ad(condor_offline, offline_machine_name):
     """Advertise a machine ad with Offline=true and wait for it to appear in the
     collector's in-memory store.  Returns the queried ClassAd, or None on timeout."""
     collector = condor_offline.get_local_collector()
-    collector.advertise(
-        [_machine_ad(offline_machine_name, Offline=True)],
-        "UPDATE_STARTD_AD",
-    )
+    ad = _machine_ad(offline_machine_name, Offline=True)
     constraint = f'Name == "{offline_machine_name}" && Offline == true'
+    advertised = False
     for _ in range(30):
-        ads = collector.query(htcondor.AdTypes.Startd, constraint)
-        if ads:
-            return ads[0]
+        try:
+            if not advertised:
+                collector.advertise([ad], "UPDATE_STARTD_AD")
+                advertised = True
+            ads = collector.query(htcondor.AdTypes.Startd, constraint)
+            if ads:
+                return ads[0]
+        except Exception:
+            pass  # Collector may be momentarily busy under load.
         time.sleep(1)
     return None
 
