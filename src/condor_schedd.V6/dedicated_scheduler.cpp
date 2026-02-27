@@ -55,7 +55,7 @@ extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 extern char* Name;
 
-extern void mark_job_running(PROC_ID*);
+extern void mark_job_running(const PROC_ID &);
 
 /*
   Stash this value as a static variable to this whole file, since we
@@ -1895,7 +1895,7 @@ DedicatedScheduler::spawnJobs( )
 
 			// add job to run queue, though the shadow pid is still 0,
 			// since there's not really a shadow just yet.
-		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1, nullptr );
+		srec = scheduler.add_shadow_rec( 0, id, univ, mrec, -1, nullptr );
 
 		srec->is_reconnect = allocation->is_reconnect;
 
@@ -2045,7 +2045,7 @@ DedicatedScheduler::shadowSpawned( shadow_rec* srec )
 	if (! allocation->is_reconnect) {
 		for( i=0; i < allocation->num_procs; i++ ) {
 			id.proc = i;
-			mark_job_running( &id );
+			mark_job_running( id );
 		}
 		return true;
 	}
