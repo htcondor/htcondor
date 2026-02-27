@@ -353,6 +353,13 @@ sub emit_subs {
 		print FHO 'echo $*' . "\n";
 	}
 
+	open (FHO, ">cmd_true.cmd") || die "error writing to cmd_true.cmd: $!\n";
+	if (CondorUtils::is_windows()) {
+		print FHO '@exit 0' . "\n";
+	} else {
+		print FHO '#!/bin/true' . "\n";
+	}
+
 	my $iter = 0;
 	my @subs = ();
 

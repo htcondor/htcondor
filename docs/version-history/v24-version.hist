@@ -4,7 +4,43 @@
   when using the HIP libraries with the default detection options passed by the *condor_startd*.
   :jira:`3533`
 
+- Fixed issue where jobs could match Execution Points utilizing :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  only for them to immediately be kicked off due to unavailable disk space due to quantization
+  issues between HTCondor and LVM. This would could cause lots of unnecessary job churn when
+  Execution Points are very busy.
+  :jira:`3490`
+
+- Fixed a bug where an job with a circular :ad-attr:`Requirements[type=Job]` expression
+  would result in a crash in *condor_q* when the ``-better`` option was passed.
+  The crash was fixed, and *condor_submit* was changed to report an error
+  when the submit file has a :subcom:`requirements` command that
+  references :ad-attr:`Requirements[type=Job]`.
+  :jira:`2629`
+
+- Fixed a bug in *condor_status* where the Offline-GPUs column of the ``-gpus``
+  output was always empty.
+  :jira:`3558`
+
+- Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
+  argument from being the string representation of an expression.
+  :jira:`3435`
+
+*** 24.0.18 features
+
+- Enable the in-memory cache option in newer versions of the scitokens-cpp
+  library. This allows the library to continue operating when the on-disk
+  cache is not useable.
+  :jira:`3560`
+
 *** 24.0.18 bugs
+
+- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`executable`
+  path incorrectly when using late materialization and a different executable
+  for each job.
+  :jira:`3546`
+
+- Update Annex's knowledge about the Delta HPC system.
+  :jira:`3559`
 
 *** 24.12.17 bugs
 

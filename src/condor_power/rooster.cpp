@@ -256,18 +256,15 @@ Rooster::wakeUp(ClassAd *startd_ad)
 	std_fds[1] = stdout_pipe_fds[1];
 	std_fds[2] = stdout_pipe_fds[1];
 
-	int pid = daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	int pid = daemonCore->CreateProcessNew(
 		m_wakeup_args.GetArg(0),
 		m_wakeup_args,
-		PRIV_CONDOR_FINAL,
-		0,
-		FALSE,
-		FALSE,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		std_fds);
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.reaperID(0)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.std(std_fds));
 
 	daemonCore->Close_Pipe(stdin_pipe_fds[0]);
 	daemonCore->Close_Pipe(stdout_pipe_fds[1]);

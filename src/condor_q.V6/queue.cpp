@@ -265,7 +265,6 @@ static	bool		current_run = true;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
 static	bool		dash_idle = false;
-static	bool		dash_goodput = false;
 static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
 static  const char * dry_run_file = NULL;
@@ -843,7 +842,6 @@ enum {
 	QDO_JobNormal,
 	QDO_JobRuntime,
 	QDO_JobIdle,
-	QDO_JobGoodput,
 	QDO_JobGridInfo,
 	QDO_JobGridEC2Info,
 	QDO_JobHold,
@@ -1501,14 +1499,6 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 		}
 		else
-		if (is_dash_arg_prefix(dash_arg, "goodput", 2)) {
-			// goodput and show_io require the same column
-			// real-estate, so they're mutually exclusive
-			dash_goodput = true;
-			show_io = false;
-			qdo_mode = QDO_JobGoodput;
-		}
-		else
 		if (is_dash_arg_prefix(dash_arg, "cputime", 2)) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
@@ -1549,10 +1539,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "io", 2)) {
-			// goodput and show_io require the same column
-			// real-estate, so they're mutually exclusive
 			show_io = true;
-			dash_goodput = false;
 			qdo_mode = QDO_JobIO;
 		}
 		else if (is_dash_arg_prefix(dash_arg, "dag", 2)) {
@@ -1758,7 +1745,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "normal", "run", "goodput", "grid", "grid:ec2", "hold", "holdcodes", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "normal", "run", "grid", "grid:ec2", "hold", "holdcodes", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -1969,6 +1956,12 @@ local_render_job_status_char (std::string & result, ClassAd*ad, Formatter &)
 		put_result[0] = transfer_queued ? 'q' : ' ';
 		put_result[1] = '>';
 	}
+	time_t cooldown = 0;
+	ad->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cooldown);
+	// If cooldown expiry in the future, we are in cooldown now
+	if (cooldown > time(nullptr)) {
+		put_result[1] = 'c';
+	}
 	result = put_result;
 	return true;
 }
@@ -2132,7 +2125,6 @@ usage (const char *myName, int other)
 		"\t-dag\t\t\t Sort DAG jobs under their DAGMan\n"
 		"\t-expert\t\t\t Display shorter error messages\n"
 		"\t-grid\t\t\t Get information about grid jobs\n"
-		"\t-goodput\t\t Display job goodput statistics\n"
 		"\t-help [Universe|State]\t Display this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\t Get information about jobs on hold\n"
 		"\t-hold-codes\t\t Display first job for each unique hold code and subcode\n"
@@ -2340,7 +2332,6 @@ SUMMARY STANDARD
 extern const char * const jobDefault_PrintFormat;
 extern const char * const jobRuntime_PrintFormat;
 extern const char * const jobIdle_PrintFormat;
-extern const char * const jobGoodput_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
 extern const char * const jobGridEC2_PrintFormat;
 extern const char * const jobHold_PrintFormat;
@@ -2361,7 +2352,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 #if 1
 	//PRAGMA_REMIND("tj: do I need to do anything to adjust the summarize mask here?")
 #else
-	if ( dash_run || dash_goodput || dash_grid ) 
+	if ( dash_run || dash_grid )
 		summarize = false;
 	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
 		summarize = false;
@@ -2407,7 +2398,6 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ QDO_JobNormal,      "",         jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
 		{ QDO_JobIdle,        "IDLE",     jobIdle_PrintFormat },
-		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
 		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
 		{ QDO_JobGridEC2Info, "GRID_EC2", jobGridEC2_PrintFormat },
 		{ QDO_JobHold,        "HOLD",     jobHold_PrintFormat },
@@ -4410,17 +4400,6 @@ const char * const jobIdle_PrintFormat = "SELECT\n"
 "   LastRemoteHost AS LAST_HOST WIDTH 0\n"
 "SUMMARY NONE\n";
 
-const char * const jobGoodput_PrintFormat = "SELECT\n"
-"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
-"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
-"   Owner         AS  OWNER          WIDTH -14 PRINTAS OWNER OR ??\n"
-"   QDate         AS '  SUBMITTED'   WIDTH 11  PRINTAS QDATE OR ??\n"
-"   RemoteUserCpu AS '    RUN_TIME'  WIDTH 12  PRINTAS CPU_TIME OR ??\n"
-"   JobStatus     AS GOODPUT         WIDTH 8   PRINTAS STDU_GOODPUT OR ??\n"
-"   RemoteUserCpu AS CPU_UTIL        WIDTH 9   PRINTAS CPU_UTIL OR ??\n"
-"   BytesSent     AS 'Mb/s'          WIDTH 7   PRINTAS STDU_MPBS OR ??\n"
-"SUMMARY NONE\n";
-
 const char * const jobGrid_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
@@ -4507,7 +4486,7 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", local_render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_JOB_LAST_REMOTE_WALL_CLOCK "\0"},
 	{ "DAG_OWNER",       ATTR_OWNER, 0, local_render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, local_render_grid_resource, ATTR_EC2_REMOTE_VM_NAME "\0" },
-	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, local_render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, local_render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" ATTR_JOB_COOL_DOWN_EXPIRATION "\0"},
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", local_render_memory_usage, ATTR_MEMORY_USAGE "\0" },
 	{ "OWNER",           ATTR_OWNER, 0, local_render_owner, ATTR_NICE_USER_deprecated "\0" },
 	{ "REMOTE_HOST",     ATTR_OWNER, 0, local_render_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },

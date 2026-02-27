@@ -13,8 +13,6 @@ public:
 	virtual int get_ExtendedHelp(std::string &content) = 0;
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 ) = 0;
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 ) = 0;
-	virtual int send_SpoolFile(char const *filename) = 0;
-	virtual int send_SpoolFileBytes(char const *filename) = 0;
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack) = 0;
 	virtual int  get_type() = 0;
 	virtual bool has_late_materialize(int &ver) = 0;
@@ -60,8 +58,6 @@ public:
 	virtual int get_ExtendedHelp(std::string &content);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
-	virtual int send_SpoolFile(char const *filename);
-	virtual int send_SpoolFileBytes(char const *filename);
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
 	virtual int  get_type() { return AbstractQ_TYPE_SCHEDD_RPC; }
 	virtual bool has_late_materialize(int &ver); // version check for late materialize
