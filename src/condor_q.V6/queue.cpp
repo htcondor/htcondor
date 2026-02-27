@@ -140,6 +140,48 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 	return 0;
 }
 
+static int parse_append_format_args(int argc, const char * argv[], AttrListPrintMask & prmask, classad::References & attrs, bool diagnostic)
+{
+	// if the last column of the existing format is set to width 0, set it to a non-zero width instead
+	// so that the column gets auto-width adjusted to match the data. (setting the last column to width 0
+	// is a trick we use to prevent the last column heading from being space padded on the right.
+	int lastcol = prmask.ColCount()-1;
+	prmask.adjust_formats([](void*pv, int index, Formatter*fmt, const char *attr) -> int {
+			if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
+				fmt->width = 3;
+				// this is a complete hack, but the default formats that use 0 width for the last column
+				// want left aligned data.
+				fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
+			}
+			return 1;
+		}, &lastcol);
+
+	ClassAd ad;
+	const char * pcolon;
+	for (int i = 0; i < argc; ++i)
+	{
+		if (is_dash_arg_colon_prefix(argv[i], "aaf", &pcolon, 3)) {
+			const char * format_char = nullptr;
+			if (pcolon) {
+				++pcolon; // check to see if rV formating options have been passed
+				if (*pcolon == 'r') { format_char = "r"; ++pcolon; }
+				else if (*pcolon == 'V') { format_char = "V"; ++pcolon; }
+				if (*pcolon) {
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. -aaf:r or -aff:V are permitted.\n", pcolon);
+					return -1;
+				}
+			}
+			int ixNext = parse_autoformat_args(argc, argv, i+1, format_char, prmask, attrs, diagnostic, true);
+			if (ixNext < 0) {
+				return -ixNext;
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	return 0;
+}
 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, show_held = 0, dash_dag = 0;
 static  int dash_batch_specified = 0, dash_batch_is_default = 1, dash_batch = 0;
@@ -284,7 +326,7 @@ static CollectorList * Collectors = NULL;
 
 static std::vector<const char *> autoformat_args;
 static std::vector<const char *> append_autoformat_args;
-static const char * append_autoformat_opts = nullptr;
+static bool can_use_append_autoformat_args = false;
 
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
@@ -1268,15 +1310,14 @@ processCommandLineArguments (int argc, const char *argv[])
 			i+=2;
 		}
 		else
-		if (is_dash_arg_colon_prefix(dash_arg, "appendautoformat", &pcolon, 4) ||
-			is_dash_arg_colon_prefix(dash_arg, "aaf", &pcolon, 3)) {
+		if (is_dash_arg_colon_prefix(dash_arg, "aaf", &pcolon, 3)) {
 				// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
-				fprintf( stderr, "Error: -appendautoformat requires at least one attribute parameter\n" );
+				fprintf( stderr, "Error: -aaf requires at least one attribute parameter\n" );
 				exit( 1 );
 			}
-			if (pcolon) append_autoformat_opts = pcolon + 1;
 			// process all arguments that don't begin with "-" as part of appendautoformat.
+			append_autoformat_args.push_back(argv[i]);
 			while (i+1 < argc && *(argv[i+1]) != '-') {
 				++i;
 				append_autoformat_args.push_back(argv[i]);
@@ -1783,11 +1824,14 @@ processCommandLineArguments (int argc, const char *argv[])
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
+		can_use_append_autoformat_args = ! dash_batch; // built in formats that are not batch mode can use append_autoformat
 		// if the user did not specify -wide or -wide:<num>, and the width of the screen cannot be
 		// determined (because we are writing to a pipe or file), then don't truncate the output to fit the screen
-		if ( ! dash_wide && (getConsoleWindowSize() < 0)) widescreen = true;
+		if ( ! dash_wide && (getConsoleWindowSize() < 0 || ! append_autoformat_args.empty())) widescreen = true;
 		initOutputMask(app.prmask, qdo_mode, widescreen);
 	} else {
+		can_use_append_autoformat_args = (qdo_mode == (QDO_Custom | QDO_PrintFormat)); // custom print formats can use append_autoformat
+
 		// handle flags that just set a constraint when used with a formatting option, but
 		// set a constraint and a format when used alone.
 		if (dash_factory) {
@@ -1796,17 +1840,24 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 	}
 
-	// append extra autoformat columns after whatever standard or custom format was set up
+	// incorporate the -aaf (append autoformat) columns into the output format.
 	if ( ! append_autoformat_args.empty()) {
-		append_autoformat_args.push_back(nullptr);
+		if ( ! can_use_append_autoformat_args) {
+			if (dash_batch) {
+				fprintf(stderr, "Error: -aaf cannot be used with -batch mode output (the default), did you intend to use -af ?\n");
+			} else {
+				fprintf(stderr, "Error: output formatting options conflict with -aaf options\n");
+			}
+			exit(1);
+		}
+
 		int nargs = (int)append_autoformat_args.size();
+		append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[cargs] is.
 		classad::References refs;
-		parse_autoformat_args(nargs, &append_autoformat_args[0], 0, append_autoformat_opts, app.prmask, refs, dash_dry_run, true);
-
+		if (parse_append_format_args(nargs, &append_autoformat_args[0], app.prmask, refs, dash_dry_run) < 0) {
+			exit(1);
+		}
 		app.attrs.insert(refs.begin(), refs.end());
-
-		// Widen output to accommodate appended columns
-		app.prmask.SetOverallWidth(0);
 	}
 
 	// convert cluster and cluster.proc into constraints
@@ -2448,7 +2499,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		const int mode;
 		const char * tag;
 		const char * fmt;
-	} info[] = {
+	} info[]{
 		{ QDO_JobNormal,      "",         jobDefault_PrintFormat },
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
 		{ QDO_JobIdle,        "IDLE",     jobIdle_PrintFormat },

@@ -1084,24 +1084,40 @@ int parse_autoformat_args (
 
 		const char * parg = argv[ixArg];
 		const char * pattr = parg;
-
+		const char * hd = parg;
+		std::string exprstr;
 		if ( ! IsValidClassAdExpression(pattr, &attr_refs, NULL)) {
-			if (diagnostic) {
-				printf ("Arg %d --- quitting on invalid expression: [%s]\n", ixArg, pattr);
+			// if expression does not parse, and we are in append mode, look for print format keyword AS
+			// and treat the expression as everything before that and the label as everything after.
+			hd = strstr(parg, " AS ");
+			if (append && hd) {
+				exprstr.assign(parg,hd);
+				if ( ! IsValidClassAdExpression(exprstr.c_str(), &attr_refs, nullptr)) {
+					if (diagnostic) {
+						printf ("Arg %d --- quitting on invalid expression: [%s]\n", ixArg, pattr);
+					}
+				}
+				pattr = exprstr.c_str();
+				hd += 4;
+				while (isspace(*hd)) ++hd;
+				// TODO: scan hd for other custom print format keywords.
+			} else {
+				if (diagnostic) {
+					printf ("Arg %d --- quitting on invalid expression: [%s]\n", ixArg, pattr);
+				}
+				return -ixArg;
 			}
-			return -ixArg;
 		}
 
 		std::string lbl = "";
 		int wid = 0;
 		int opts = FormatOptionNoTruncate;
 		if (fheadings || print_mask.has_headings()) {
-			const char * hd = parg;
 			wid = 0 - (int)strlen(hd);
 			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 			print_mask.set_heading(hd);
 		}
-		else if (flabel) { formatstr(lbl, "%s = ", parg); wid = 0; opts = 0; }
+		else if (flabel) { formatstr(lbl, "%s = ", hd); wid = 0; opts = 0; }
 
 		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 		if (diagnostic) {
