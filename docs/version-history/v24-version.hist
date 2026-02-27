@@ -25,6 +25,13 @@
   argument from being the string representation of an expression.
   :jira:`3435`
 
+*** 24.0.18 features
+
+- Enable the in-memory cache option in newer versions of the scitokens-cpp
+  library. This allows the library to continue operating when the on-disk
+  cache is not useable.
+  :jira:`3560`
+
 *** 24.0.18 bugs
 
 - Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
