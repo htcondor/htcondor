@@ -193,7 +193,7 @@ public:
 	}
 
 	// same as is_owned, but returns true for p-slots when owner is either the pslot or child d-slot. (i.e. Assigned)
-	// And also returns a bool to indicate whether the NFR is currently Availble to the slot (subid matches exactly)
+	// And also returns a bool to indicate whether the NFR is currently Available to the slot (subid matches exactly)
 	int is_assigned_and_available(int slot_id, int sub_id, bool & available) const {
 		if (owner.id == slot_id) {
 			if (owner.dyn_id == sub_id) { available = true; return 1; } // owned by this slot
