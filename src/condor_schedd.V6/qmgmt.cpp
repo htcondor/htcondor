@@ -9192,7 +9192,7 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 	return true;
 }
 
-extern void mark_job_stopped(PROC_ID* job_id);
+extern void mark_job_stopped(const PROC_ID & job_id);
 
 int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 {
@@ -9254,10 +9254,10 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 				 ( universe != CONDOR_UNIVERSE_PARALLEL || proc == 0 ) ) {
 				scheduler.stats.JobsRestartReconnectsLeaseExpired += 1;
 			}
-			mark_job_stopped(&job_id);
+			mark_job_stopped(job_id);
 		}
 	}
-		
+
 	int wall_clock_ckpt = 0;
 	GetAttributeInt(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT, &wall_clock_ckpt);
 	if (wall_clock_ckpt) {
