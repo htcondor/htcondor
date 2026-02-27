@@ -18,10 +18,12 @@ Build-Depends: cmake (>= 3.16),
                default-jdk,
 #endif
                dh-python,
+               dh-sequence-builtusing,
+               libc-dev-bin,
                libcurl4-openssl-dev,
                libdbus-1-dev,
                libkrb5-dev,
-               libldap2-dev | libldap-dev,
+               libldap-dev,
                libmunge-dev,
                libpam0g-dev,
                libpcre2-dev,
@@ -95,6 +97,7 @@ Breaks: htcondor,
         condor-upgrade-checks
 Replaces: htcondor,
           condor-upgrade-checks
+Built-Using: ${dh-builtusing:libc-dev-bin} [!amd64]
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
