@@ -123,7 +123,7 @@ claim_specific_ad_name( const char * publicClaimID ) {
 	std::replace( s.begin(), s.end(), '.', '_' );
 
 	// For stupid reasons, extra ads must each have a cron job.
-	return COLORING_NAMESPACE + s;
+	return COLORING_NAMESPACE "." + s;
 }
 
 Claim::~Claim()
