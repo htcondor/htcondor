@@ -15,7 +15,7 @@ std::tuple<
 	CXFER_TYPE,
 	std::optional<ListOfCatalogs>
 >
-determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
+determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	// Admins can disable all common file transfers.
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
 	if( disallowed ) {
@@ -43,7 +43,7 @@ determine_cxfer_type( match_rec * m_rec, PROC_ID * jobID ) {
 
 
 	// Now we start looking at the job ad.
-	ClassAd * jobAd = GetJobAd(* jobID);
+	ClassAd * jobAd = GetJobAd(jobID);
 	auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, m_rec->peer );
 	if(! common_file_catalogs) {
 		dprintf( D_ERROR, "cxfer: Failed to construct unique name(s) for catalog(s), falling back to uncommon transfer.\n" );

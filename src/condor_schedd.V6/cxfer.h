@@ -20,6 +20,6 @@ std::tuple<
     CXFER_TYPE,
     std::optional<ListOfCatalogs>
 >
-determine_cxfer_type(match_rec * mrec, PROC_ID * jobID );
+determine_cxfer_type(match_rec * mrec, const PROC_ID & jobID );
 
 #endif /* _CONDOR_CXFER_H */
