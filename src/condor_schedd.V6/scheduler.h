@@ -583,7 +583,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( int timerID = -1 );
-	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+	void			makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
 	bool 	enqueueFinishedJob( int cluster, int proc );
@@ -610,7 +610,7 @@ class Scheduler : public Service
 	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
 		// Used by the GridUserIdentity class and some others
-	const ExprTree*	getGridParsedSelectionExpr() const 
+	const ExprTree*	getGridParsedSelectionExpr() const
 					{ return m_parsed_gridman_selection_expr; };
 	const char*		getGridUnparsedSelectionExpr() const
 					{ return m_unparsed_gridman_selection_expr; };
@@ -620,7 +620,7 @@ class Scheduler : public Service
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
-	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
+	shadow_rec*     add_shadow_rec( int pid, const PROC_ID &, int univ, match_rec*,
 									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
@@ -999,16 +999,15 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	shadow_rec*		StartJob(match_rec*, PROC_ID*);
-
-	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
-	shadow_rec*		start_sched_universe_job(PROC_ID*);
+	shadow_rec*		StartJob(match_rec*, const PROC_ID &);
+	shadow_rec*		start_std(match_rec*, const PROC_ID &, int univ);
+	shadow_rec*		start_sched_universe_job(const PROC_ID &);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 
 										const char* name, bool want_udp );
-	void			check_zombie(int, PROC_ID*);
-	void			kill_zombie(int, PROC_ID*);
+	void			check_zombie(int, const PROC_ID &);
+	void			kill_zombie(int, const PROC_ID &);
 	int				is_alive(shadow_rec* srec);
 	
 	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);
