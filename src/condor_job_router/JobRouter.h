@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "HashTable.h"
 #include "RoutedJob.h"
 
 #include "classad/classad_distribution.h"

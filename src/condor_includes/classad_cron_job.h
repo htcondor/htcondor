@@ -29,7 +29,8 @@ class ClassAdCronJobParams : public CronJobParams
 {
   public:
 	ClassAdCronJobParams( const char		*job_name,
-						  const CronJobMgr	&mgr );
+						  const char * param_base,
+						  const char * mgr_name);
 	virtual ~ClassAdCronJobParams( void ) { };
 
 	// Finish initialization

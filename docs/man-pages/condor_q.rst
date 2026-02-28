@@ -134,13 +134,6 @@ following columns of information, with one line of output per job:
 
         ID, OWNER, STATUS, INSTANCE ID, CMD
 
-If the **-goodput** option is specified, *condor_q* displays the
-following columns of information, with one line of output per job:
-
-.. code-block:: text
-
-        ID, OWNER, SUBMITTED, RUN_TIME, GOODPUT, CPU_UTIL, Mb/s
-
 If the **-io** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
@@ -219,8 +212,8 @@ The available output data are as follows:
     = on hold, R = running, I = idle (waiting for a machine to execute
     on), C = completed, X = removed, S = suspended (execution of a
     running job temporarily suspended on execute node), < = transferring
-    input (or queued to do so), and > = transferring output (or queued
-    to do so).
+    input (or queued to do so), > = transferring output (or queued
+    to do so), and 'c' for in cooldown status.
  PRI
     (Non-batch mode only) User specified priority of the job, displayed
     as an integer, with higher numbers corresponding to better priority.
@@ -274,34 +267,6 @@ The available output data are as follows:
  INSTANCE ID
     (**-grid:ec2** only) Usually EC2 instance ID; may be blank or the
     client token, depending on job progress.
- GOODPUT
-    (**-goodput** only) The percentage of RUN_TIME for this job which
-    has been saved in a checkpoint. A low GOODPUT value indicates that
-    the job is failing to checkpoint. If a job has not yet attempted a
-    checkpoint, this column contains ``[?????]``.
- CPU_UTIL
-    (**-goodput** only) The ratio of CPU_TIME to RUN_TIME for
-    checkpointed work. A low CPU_UTIL indicates that the job is not
-    running efficiently, perhaps because it is I/O bound or because the
-    job requires more memory than available on the remote workstations.
-    If the job has not (yet) checkpointed, this column contains
-    ``[??????]``.
- Mb/s
-    (**-goodput** only) The network usage of this job, in Megabits per
-    second of run-time.
-    READ The total number of bytes the application has read from files
-    and sockets.
-    WRITE The total number of bytes the application has written to files
-    and sockets.
-    SEEK The total number of seek operations the application has
-    performed on files.
-    XPUT The effective throughput (average bytes read and written per
-    second) from the application's point of view.
-    BUFSIZE The maximum number of bytes to be buffered per file.
-    BLOCKSIZE The desired block size for large data transfers. These
-    fields are updated when a job produces a checkpoint or completes. If
-    a job has not yet produced a checkpoint, this information is not
-    available.
  INPUT
     (**-io** only) BytesRecvd.
  OUTPUT
@@ -473,8 +438,6 @@ Options
     (output option) Get information only about jobs submitted to grid
     resources and display it in a format better-suited for EC2 than the
     default.
- **-goodput**
-    (output option) Display job goodput statistics.
  **-help [Universe | State]**
     (output option) Print usage info, and, optionally, additionally
     print job universes or job states.
@@ -559,7 +522,7 @@ Options
     character after the last value. It is like the **-format** option
     without format strings. This output option does not work in
     conjunction with any of the options **-run**, **-currentrun**,
-    **-hold**, **-grid**, **-goodput**, or **-io**.
+    **-hold**, **-grid**, or **-io**.
 
     It is assumed that no attribute names begin with a dash character,
     so that the next word that begins with dash is the start of the next

@@ -34,7 +34,7 @@ import os
 import sys
 import htcondor2 as htcondor
 import re
-
+import classad2
 
 #Custom class to help build job ads for history files
 class HistAdsViaCluster():
@@ -605,6 +605,73 @@ def pyBindGetScheddHist(default_condor):
     return ads
 
 #===============================================================================================
+
+PBH_TEST_CASES = {
+    'since.cluster': {
+        'args': {
+            'since':  '4',
+        },
+        'expected': [
+            { 'ProcId': 4, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 3, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 2, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 1, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 0, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+        ],
+    },
+    'since.cluster_and_proc': {
+        'args': {
+            'since':  '4.1',
+        },
+        'expected': [
+            { 'ProcId': 4, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 3, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 2, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 1, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 0, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+        ],
+    },
+    'since.constraint': {
+        'args': {
+            'since':  'ClusterID == 4',
+        },
+        'expected': [
+            { 'ProcId': 4, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 3, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 2, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 1, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+            { 'ProcId': 0, 'ClusterId': 5, 'HistoryType': "SCHEDD" },
+        ],
+    }
+}
+
+
+@action(params={name: name for name in PBH_TEST_CASES.keys()})
+def pbh_test_case_name(request):
+    return request.param
+
+
+@action
+def pbh_expected(pbh_test_case_name):
+    ads = PBH_TEST_CASES[pbh_test_case_name]['expected']
+    return [classad2.ClassAd(ad) for ad in ads]
+
+
+@action
+def pbh_test_case_args(pbh_test_case_name):
+    return PBH_TEST_CASES[pbh_test_case_name]['args']
+
+
+@action
+def pbh_actual(default_condor, writeHistoryFile, pbh_test_case_args):
+    projection = ["ClusterId", "ProcId", "HistoryType"]
+    with default_condor.use_config():
+        return htcondor.Schedd().history(
+            projection=projection,
+            ** pbh_test_case_args
+        )
+
+
 class TestCondorHistory:
 
     def test_condor_history(self, testName, testInfo, testOutputFile):
@@ -756,3 +823,7 @@ class TestCondorHistory:
         record = pyBindGetScheddHist[0]
         # Make sure DaemonCore wrote write date attribute to record
         assert "RecordWriteDate" in record
+
+
+    def test_python_bindings_harder(self, pbh_expected, pbh_actual):
+        assert pbh_expected == pbh_actual

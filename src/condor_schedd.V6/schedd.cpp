@@ -6290,11 +6290,16 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 	}
 
 		// For each job, modify its ClassAd
+		// But only if the start attribute was set
+		// We set these attributes only for jobs in a terminal state
+		// at the time the transfer began.
 	time_t now = time(nullptr);
-	int len = (*jobs).size();
-	for (int i=0; i < len; i++) {
+	time_t dummy = 0;
+	for (const auto& jid: *jobs) {
 			// TODO --- maybe put this in a transaction?
-		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_FINISH,now);
+		if (GetAttributeInt(jid.cluster, jid.proc, ATTR_STAGE_OUT_START, &dummy) >= 0) {
+			SetAttributeInt(jid.cluster, jid.proc, ATTR_STAGE_OUT_FINISH, now);
+		}
 	}
 
 		// Now, deallocate memory
@@ -6796,6 +6801,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case TRANSFER_DATA:
 		case TRANSFER_DATA_WITH_PERMS:
 			{
+			std::vector<PROC_ID> done_jobs;
 			JobQueueJob * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 			JobAdsArrayLen = 0;
 			while (tmp_ad) {
@@ -6805,6 +6811,10 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					jobs->emplace_back(a_job.cluster, a_job.proc);
 					JobAdsArrayLen++;
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
+					int job_status = tmp_ad->Status();
+					if (job_status == COMPLETED || job_status == REMOVED) {
+						done_jobs.emplace_back(tmp_ad->jid);
+					}
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -6813,10 +6823,10 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				JobAdsArrayLen, constraint_string);
 			if (constraint_string) free(constraint_string);
 				// Now set ATTR_STAGE_OUT_START
-			for (i=0; i<JobAdsArrayLen; i++) {
+				// but only for jobs in a terminal state
+			for (const auto& jid: done_jobs) {
 					// TODO --- maybe put this in a transaction?
-				SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,
-								ATTR_STAGE_OUT_START,now);
+				SetAttributeInt(jid.cluster, jid.proc, ATTR_STAGE_OUT_START, now);
 			}
 			}
 			break;
@@ -9943,7 +9953,7 @@ Scheduler::checkReconnectQueue( int /* timerID */ )
 
 
 void
-Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad ) 
+Scheduler::makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad )
 {
 	int cluster = job.cluster;
 	int proc = job.proc;
@@ -11437,7 +11447,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		  pipe.
 		*/
 		mrec->last_alive = time(nullptr);
-		SetAttributeInt( job_id.cluster, job_id.proc, 
+		SetAttributeInt( job_id.cluster, job_id.proc,
 						 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 	}
 
@@ -11593,7 +11603,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// ad and/or if the machine ad is already gone for some
 			// reason.  so, verify the job is still here...
 		if( ! GetJobAd(job_id) ) {
-			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d " 
+			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d "
 					"but that job is already known to exist",
 					job_id.cluster, job_id.proc );
 		}
@@ -11601,10 +11611,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// the job is still there, it just failed b/c of $$()
 			// woes... abort.
 		dprintf( D_ALWAYS, "ERROR: Failed to get classad for job "
-				 "%d.%d, can't spawn %s, aborting\n", 
+				 "%d.%d, can't spawn %s, aborting\n",
 				 job_id.cluster, job_id.proc, name );
 			// our caller will deal with cleaning up the srec
-			// as appropriate...  
+			// as appropriate...
 		return false;
 	}
 	std::string secret;
@@ -11702,11 +11712,16 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName(name);
-	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-	                                  true, true, env, NULL, fip, NULL, 
-	                                  std_fds_p, NULL, niceness,
-									  NULL, create_process_opts,
-									  NULL, NULL, daemon_sock.c_str());
+	OptionalCreateProcessArgs cpArgs;
+	pid = daemonCore->CreateProcessNew( path, args,
+	                                  cpArgs.priv(PRIV_ROOT)
+	                                        .reaperID(rid)
+	                                        .env(env)
+	                                        .familyInfo(fip)
+	                                        .std(std_fds_p)
+	                                        .niceInc(niceness)
+	                                        .jobOptMask(create_process_opts)
+	                                        .daemonSock(daemon_sock.c_str()));
 	if( pid == FALSE ) {
 		std::string arg_string;
 		args.GetArgsStringForDisplay(arg_string);
@@ -12089,7 +12104,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 			// on hold.
 			set_priv( priv );  // back to regular privs...
 
-			holdJob(job_id.cluster, job_id.proc, 
+			holdJob(job_id.cluster, job_id.proc,
 				"Spooled executable is not executable!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
 				false, true);
@@ -12108,7 +12123,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		userJob->LookupString(ATTR_JOB_CMD,a_out_name);
 		if (a_out_name.length()==0) {
 			set_priv( priv );  // back to regular privs...
-			holdJob(job_id.cluster, job_id.proc, 
+			holdJob(job_id.cluster, job_id.proc,
 				"Executable unknown - not specified in job ad!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, ENOENT,
 				false, true);
@@ -12296,7 +12311,7 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		// shared between versions of Condor which view the type
 		// of that attribute differently, calamity would arise.
 
-	if (GetAttributeInt(job_id.cluster, job_id.proc, 
+	if (GetAttributeInt(job_id.cluster, job_id.proc,
 						   ATTR_CORE_SIZE, &core_size_truncated) == 0) {
 		// make the hard limit be what is specified.
 		core_size = (size_t)core_size_truncated;
@@ -14876,16 +14891,16 @@ Scheduler::check_zombie(int pid, const PROC_ID & job_id)
 	}
 	case HELD:
 		if( !job || !scheduler.WriteHoldToUserLog(job)) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Failed to write hold event to the user log for job %d.%d\n",
 					 job_id.cluster, job_id.proc );
 		}
 		break;
 	case REMOVED:
 		if( !job || !scheduler.WriteAbortToUserLog(job)) {
-			dprintf( D_ALWAYS, 
+			dprintf( D_ALWAYS,
 					 "Failed to write abort event to the user log for job %d.%d\n",
-					 job_id.cluster, job_id.proc ); 
+					 job_id.cluster, job_id.proc );
 		}
 			// No break, fall through and do the deed...
 			//@fallthrough@

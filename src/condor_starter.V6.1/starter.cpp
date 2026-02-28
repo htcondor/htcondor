@@ -1457,22 +1457,18 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	daemonCore->CreateProcessNew(
 		ssh_to_job_sshd_setup.c_str(),
 		setup_args,
-		PRIV_USER_FINAL,
-		setup_reaper,
-		FALSE,
-		FALSE,
-		&setup_env,
-		GetWorkingDir(0),
-		NULL,
-		NULL,
-		setup_std_fds,
-		NULL,
-		0,
-		NULL,
-		setup_opt_mask);
+		cpArgs.priv(PRIV_USER_FINAL)
+			.reaperID(setup_reaper)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&setup_env)
+			.cwd(GetWorkingDir(0))
+			.std(setup_std_fds)
+			.jobOptMask(setup_opt_mask));
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
 

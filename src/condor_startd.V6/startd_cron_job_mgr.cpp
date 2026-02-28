@@ -43,6 +43,7 @@ StartdCronJobMgr::Initialize( const char *name )
 {
 	int status;
 
+	// "startd", "startd", "_cron"
 	SetName( name, name, "_cron" );
 	
 #if 0
@@ -117,7 +118,7 @@ StartdCronJobMgr::ShutdownOk( void )
 StartdCronJobParams *
 StartdCronJobMgr::CreateJobParams( const char *job_name )
 {
-	return new StartdCronJobParams( job_name, *this );
+	return new StartdCronJobParams( job_name, GetParamBase(), GetName() );
 }
 
 StartdCronJob *
