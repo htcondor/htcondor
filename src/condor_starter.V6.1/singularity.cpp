@@ -283,15 +283,23 @@ Singularity::setup(ClassAd &machineAd,
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
 	std::string bind_spec = slot_dir;
+
+	// If file xfer is off, the job iwd is the pwd of submit, and we want to bind mount that to the target_dir
+	if (job_iwd != execute_dir) {
+		bind_spec = job_iwd;
+	} 
+
 	if (has_target) {
 		bind_spec += ":";
 		bind_spec += target_dir;
-		// Only change PWD to our new target dir if that's where we should startup.
-		if (job_iwd == execute_dir) {
-			// replace the slot_dir prefix of execute dir with target_dir
-			std::string pwd{execute_dir};
-			replace_str(pwd, slot_dir, target_dir);
+		// replace the slot_dir prefix of execute dir with target_dir
+		std::string pwd{execute_dir};
+		replace_str(pwd, slot_dir, target_dir);
 
+		if (job_iwd != execute_dir) {
+			sing_args.AppendArg("--pwd");
+			sing_args.AppendArg(target_dir);
+		} else {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(pwd);
 		}

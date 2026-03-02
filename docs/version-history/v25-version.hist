@@ -86,6 +86,10 @@
   promptly if it failed to launch a singularity job.
   :jira:`3531`
 
+- Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
+  was off, that caused jobs to start in the users home directory.
+  :jira:`3575`
+
 *** 25.0.8 bugs
 
 *** 25.7.1 features
