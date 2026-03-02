@@ -146,7 +146,7 @@ static int parse_append_format_args(int argc, const char * argv[], AttrListPrint
 	// so that the column gets auto-width adjusted to match the data. (setting the last column to width 0
 	// is a trick we use to prevent the last column heading from being space padded on the right.
 	int lastcol = prmask.ColCount()-1;
-	prmask.adjust_formats([](void*pv, int index, Formatter*fmt, const char *attr) -> int {
+	prmask.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
 			if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
 				fmt->width = 3;
 				// this is a complete hack, but the default formats that use 0 width for the last column
