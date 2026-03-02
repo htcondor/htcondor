@@ -220,6 +220,7 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 	int r = setns(fd, 0);
+	int uts_setns_errno = errno;
 	close(fd);
 	if (r < 0) {
 		// This means an unprivileged singularity, most likely
@@ -231,9 +232,72 @@ int main( int argc, char *argv[] )
 			exit(1);
 		}
 		r = setns(fd, 0);
+		int user_setns_errno = errno;
 		close(fd);
 		if (r < 0) {
-			fprintf(stderr, "Can't setns to user namespace: %s\n", strerror(errno));
+			fprintf(stderr, "Can't setns to user namespace: %s\n", strerror(user_setns_errno));
+			fprintf(stderr, "  Prior setns to uts namespace failed with: %s (errno %d)\n",
+				strerror(uts_setns_errno), uts_setns_errno);
+			fprintf(stderr, "  Target pid: %d, our pid: %d\n", pid, getpid());
+			fprintf(stderr, "  Our uid: %d, euid: %d, gid: %d, egid: %d\n",
+				getuid(), geteuid(), getgid(), getegid());
+
+			// Show our user namespace vs the target's user namespace
+			char linkbuf[256];
+			ssize_t len;
+
+			len = readlink("/proc/self/ns/user", linkbuf, sizeof(linkbuf) - 1);
+			if (len > 0) {
+				linkbuf[len] = '\0';
+				fprintf(stderr, "  Our user namespace:    %s\n", linkbuf);
+			} else {
+				fprintf(stderr, "  Our user namespace:    (readlink failed: %s)\n", strerror(errno));
+			}
+
+			formatstr(filename, "/proc/%d/ns/user", pid);
+			len = readlink(filename.c_str(), linkbuf, sizeof(linkbuf) - 1);
+			if (len > 0) {
+				linkbuf[len] = '\0';
+				fprintf(stderr, "  Target user namespace: %s\n", linkbuf);
+			} else {
+				fprintf(stderr, "  Target user namespace: (readlink failed: %s)\n", strerror(errno));
+			}
+
+			// Show whether we're already in the same user namespace
+			std::string our_ns, target_ns;
+			len = readlink("/proc/self/ns/user", linkbuf, sizeof(linkbuf) - 1);
+			if (len > 0) { linkbuf[len] = '\0'; our_ns = linkbuf; }
+			formatstr(filename, "/proc/%d/ns/user", pid);
+			len = readlink(filename.c_str(), linkbuf, sizeof(linkbuf) - 1);
+			if (len > 0) { linkbuf[len] = '\0'; target_ns = linkbuf; }
+			if (!our_ns.empty() && !target_ns.empty()) {
+				fprintf(stderr, "  Same user namespace: %s\n",
+					(our_ns == target_ns) ? "yes" : "no");
+			}
+
+			// Show the target's uid_map to understand namespace mapping
+			formatstr(filename, "/proc/%d/uid_map", pid);
+			int mapfd = open(filename.c_str(), O_RDONLY);
+			if (mapfd >= 0) {
+				char mapbuf[1024];
+				int n = read(mapfd, mapbuf, sizeof(mapbuf) - 1);
+				close(mapfd);
+				if (n > 0) {
+					mapbuf[n] = '\0';
+					fprintf(stderr, "  Target uid_map:\n");
+					// Print each line indented
+					char *line = mapbuf;
+					while (line && *line) {
+						char *nl = strchr(line, '\n');
+						if (nl) *nl = '\0';
+						fprintf(stderr, "    %s\n", line);
+						if (nl) line = nl + 1; else break;
+					}
+				}
+			} else {
+				fprintf(stderr, "  Target uid_map: (can't open: %s)\n", strerror(errno));
+			}
+
 			exit(1);
 		}
 	}
