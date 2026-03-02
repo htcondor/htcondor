@@ -75,7 +75,7 @@ Depends: adduser,
          pelican (>= 7.23.0),
          pelican-osdf-compat (>= 7.23.0),
 #endif
-         libjs-bootstrap,
+         libjs-bootstrap5,
          libjs-jquery,
          jq,
          ${lib:Depends},
