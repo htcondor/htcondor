@@ -245,10 +245,12 @@ int main( int argc, char *argv[] )
 			// Show our user namespace vs the target's user namespace
 			char linkbuf[256];
 			ssize_t len;
+			std::string our_ns, target_ns;
 
 			len = readlink("/proc/self/ns/user", linkbuf, sizeof(linkbuf) - 1);
 			if (len > 0) {
 				linkbuf[len] = '\0';
+				our_ns = linkbuf;
 				fprintf(stderr, "  Our user namespace:    %s\n", linkbuf);
 			} else {
 				fprintf(stderr, "  Our user namespace:    (readlink failed: %s)\n", strerror(errno));
@@ -258,18 +260,12 @@ int main( int argc, char *argv[] )
 			len = readlink(filename.c_str(), linkbuf, sizeof(linkbuf) - 1);
 			if (len > 0) {
 				linkbuf[len] = '\0';
+				target_ns = linkbuf;
 				fprintf(stderr, "  Target user namespace: %s\n", linkbuf);
 			} else {
 				fprintf(stderr, "  Target user namespace: (readlink failed: %s)\n", strerror(errno));
 			}
 
-			// Show whether we're already in the same user namespace
-			std::string our_ns, target_ns;
-			len = readlink("/proc/self/ns/user", linkbuf, sizeof(linkbuf) - 1);
-			if (len > 0) { linkbuf[len] = '\0'; our_ns = linkbuf; }
-			formatstr(filename, "/proc/%d/ns/user", pid);
-			len = readlink(filename.c_str(), linkbuf, sizeof(linkbuf) - 1);
-			if (len > 0) { linkbuf[len] = '\0'; target_ns = linkbuf; }
 			if (!our_ns.empty() && !target_ns.empty()) {
 				fprintf(stderr, "  Same user namespace: %s\n",
 					(our_ns == target_ns) ? "yes" : "no");
