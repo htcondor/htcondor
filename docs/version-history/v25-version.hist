@@ -86,6 +86,10 @@
 - The old ClassAd syntax is no longer supported in job transforms.
   :jira:`3538`
 
+- Bootstrap CSS framework used in OAuth Credmon login page updated
+  to version 5.3.8.
+  :jira:`3576`
+
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
