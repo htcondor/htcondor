@@ -1,3 +1,7 @@
+*** 24.12.19 bugs
+
+*** 24.0.19 bugs
+
 *** 24.12.18 bugs
 
 - Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash

@@ -1,4 +1,4 @@
-*** 25.8.0 features
+*** 25.9.0 features
 
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
@@ -90,7 +90,7 @@
   to version 5.3.8.
   :jira:`3576`
 
-*** 25.8.0 bugs
+*** 25.9.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
   promptly if it failed to launch a singularity job.
@@ -100,9 +100,9 @@
   was off, that caused jobs to start in the users home directory.
   :jira:`3575`
 
-*** 25.0.8 bugs
+*** 25.0.9 bugs
 
-*** 25.7.1 features
+*** 25.8.0 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
   will contain :ad-attr:`Owner` and :ad-attr:`RemoteHost` copied from the associated
@@ -140,9 +140,9 @@
 
 - The condor package now requires pelican-7.23.0.
 
-*** 25.7.1 bugs
+*** 25.8.0 bugs
 
-*** 25.0.7 bugs
+*** 25.0.8 bugs
 
 *** 25.6.1 features
 
