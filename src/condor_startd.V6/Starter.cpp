@@ -226,6 +226,18 @@ Starter::publish( ClassAd* ad )
 		return;
 	}
 
+	// LVM setting disk quantum does not get set by intial static ad
+	// Check if not set and using LVM to get actual value
+	const auto * volman = resmgr->getVolumeManager();
+	bool volman_setup = volman && volman->is_enabled() && volman->IsSetup();
+	long long disk_quantum = 0;
+	if (volman_setup && (!s_ad->LookupInteger(ATTR_STARTD_DISK_QUANTUM, disk_quantum) || disk_quantum <= 0)) {
+		disk_quantum = volman->GetDiskQuantum();
+		if (disk_quantum > 0) {
+			s_ad->Assign(ATTR_STARTD_DISK_QUANTUM, disk_quantum);
+		}
+	}
+
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
 	for (auto itr = s_ad->begin(); itr != s_ad->end(); itr++) {

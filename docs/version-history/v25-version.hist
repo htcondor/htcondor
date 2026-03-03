@@ -1,4 +1,4 @@
-*** 25.7.1 features
+*** 25.7.2 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
   will contain :ad-attr:`Owner` and :ad-attr:`RemoteHost` copied from the associated
@@ -36,7 +36,9 @@
 
 - The condor package now requires pelican-7.23.0.
 
-*** 25.7.1 bugs
+*** 25.7.2 bugs
+
+*** 25.0.8 bugs
 
 *** 25.0.7 bugs
 

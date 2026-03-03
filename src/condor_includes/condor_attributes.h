@@ -755,6 +755,7 @@
 #define ATTR_STARTD_IP_ADDR  "StartdIpAddr"
 #define ATTR_STARTD_PRINCIPAL  "StartdPrincipal"
 #define ATTR_STARTD_SENDS_ALIVES  "StartdSendsAlives"
+#define ATTR_STARTD_DISK_QUANTUM  "DiskQuantum"
 #define ATTR_STARTER_EXIT_STATUS "StarterExitStatus"
 #define ATTR_STARTER_HANDLES_ALIVES "_condor_StartdHandlesAlives"
 #define ATTR_STARTUP_LIMIT_UUID          "StartupLimitUUID"

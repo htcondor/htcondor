@@ -74,10 +74,10 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '25.7.1'
+release = '25.7.2'
 
 rst_epilog = """
-.. |release_date| replace:: March 3, 2026
+.. |release_date| replace:: March 12, 2026
 
 .. role:: config(code)
     :language: condor-config
