@@ -32,11 +32,11 @@ Release Notes:
 
 New Features:
 
-.. include-history:: features 25.7.2 25.0.8 24.12.18 24.0.18
+.. include-history:: features 25.7.2 25.0.8 25.0.7 24.12.18 24.12.17 24.0.18 24.0.17
 
 Bugs Fixed:
 
-.. include-history:: bugs 25.7.2 25.0.8 24.12.18 24.0.18
+.. include-history:: bugs 25.7.2 25.0.8 25.0.7 24.12.18 24.12.17 24.0.18 24.0.17
 
 Version 25.6.1
 --------------
