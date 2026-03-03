@@ -926,6 +926,25 @@ display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 	return display(out, rov);
 }
 
+static const char * kind_name(CustomFormatFn::FormatKind kind) {
+	constexpr const char * akind[]{
+		"PRF",
+		"INTF",
+		"FLTF",
+		"STRF",
+		"VALF",
+		"INTR",
+		"FLTR",
+		"STRR",
+		"VALR"
+	};
+	if (kind >= CustomFormatFn::FormatKind::PRINTF_FMT && kind <= CustomFormatFn::FormatKind::VALUE_CUSTOM_RENDER) {
+		return akind[kind];
+	}
+	return "???";
+}
+
+
 
 void AttrListPrintMask::
 dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const char *> * pheadings /*=NULL*/)
@@ -938,6 +957,7 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const 
 
 	std::string item;
 	std::string scratch;
+	char fhlat[6] = {0,0,0,0,0,0};
 
 	// for each item registered in the print mask
 	for (auto *fmt: formats) {
@@ -966,8 +986,21 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const 
 			}
 		}
 
-		formatstr(item, "FMT: %4d %05x %d %d %d %d %s %s\n",
-			fmt->width, fmt->options, fmt->fmt_letter, fmt->fmt_type, fmt->fmtKind, fmt->altKind,
+		fhlat[0] = (fmt->options & FormatOptionFitToData) ? 'f' : '.';
+		fhlat[1] = (fmt->options & FormatOptionHideMe) ? 'h' : '.';
+		fhlat[2] = (fmt->options & FormatOptionLeftAlign) ? 'l' : '.';
+		fhlat[3] = (fmt->options & FormatOptionAutoWidth) ? 'a' : '.';
+		fhlat[4] = (fmt->options & FormatOptionNoTruncate) ? '.' : 't';
+
+		// fmt_letter should be a printf format char, a custom char like V or 0
+		char letter = fmt->fmt_letter;
+		if (letter < ' ') { letter = '.'; }
+		char ftype = ".ifcspvrTY"[(fmt->fmt_type>=0 && fmt->fmt_type<=PFT_DATE) ? fmt->fmt_type : 0];
+
+		const char * kind = kind_name(CustomFormatFn::FormatKind(fmt->fmtKind));
+
+		formatstr(item, "FMT:      %4d %s[%05x]   %c   %c %4s %x %s %s\n",
+			fmt->width, fhlat, fmt->options, letter, ftype, kind, fmt->altKind,
 			fmt->printfFmt ? fmt->printfFmt : "", fnName);
 		out += item;
 	}

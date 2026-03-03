@@ -1,5 +1,10 @@
 *** 24.12.19 bugs
 
+- Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
+  for some output formats. This bug would result in colmns after the Name column not
+  being properly aligned when the longest name exceeded 34 characters.
+  :jira:`3255`
+
 *** 24.0.19 bugs
 
 *** 24.12.18 bugs
