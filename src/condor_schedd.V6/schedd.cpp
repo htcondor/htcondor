@@ -12805,8 +12805,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 
 	bool transfer_proc = false;
 	if( proc <= -1000 ) {
-		// This pollutes the real job ad in a bad way, but for now it'll
-		// let us start a shadow.
+		// FIXME: This pollutes the real job ad in a bad way, but for now
+		// it'll let us start a shadow.
 		transfer_proc = true;
 		proc = (-1 * proc) - 1000;
 	}
@@ -13076,102 +13076,110 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 				 cluster, proc );
 	}
 
-	BeginTransaction();
-
-	int job_status = IDLE;
-	GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
-
 	if( pid ) {
 			// we only need to update this if we spawned a shadow.
 		update_remote_wall_clock(cluster, proc);
 	}
 
-		/*
-		  For ATTR_REMOTE_HOST and ATTR_CLAIM_ID, we only want to save
-		  what we have in ATTR_LAST_* if we actually spawned a
-		  shadow...
-		*/
-	if( pid ) {
-		char* last_host = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_HOST, &last_host );
-		if( last_host ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_HOST,
-								last_host );
-			free( last_host );
-			last_host = NULL;
-		}
-
-        char* last_pool = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_POOL, &last_pool );
-		if( last_pool ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_POOL,
-								last_pool );
-			free( last_pool );
-			last_pool = NULL;
-		} else {
-            // If RemotePool is not defined, be sure to remove the last remote pool (if it exists)
-             DeleteAttribute( cluster, proc, ATTR_LAST_REMOTE_POOL );
-        }
-
-	}
-
-	if( pid ) {
-		char* last_claim = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
-		if( last_claim ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_ID, 
-								last_claim );
-			free( last_claim );
-			last_claim = NULL;
-		}
-
-		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_IDS, &last_claim );
-		if( last_claim ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_IDS, 
-								last_claim );
-			free( last_claim );
-			last_claim = NULL;
-		}
-	}
-
-		//
-		// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
-		// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
-		// flag is set. This means that we want this job to reconnect
-		// when the schedd comes back online.
-		//
-	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
-		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_ID );
-		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
-		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_IDS );
-		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
-		DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
-		DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
-		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
-		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
-		DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
+	if( proc <= -1000 ) {
+		// Don't even try to do any record-keeping that modifies the job ad
+		// if we're delete the shadow rec of a transfer shadow.
 	} else {
-		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
-					    "Not removing %s and %s attributes.\n",
-					    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
+		BeginTransaction();
+
+
+		int job_status = IDLE;
+		GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
+
+			/*
+			  For ATTR_REMOTE_HOST and ATTR_CLAIM_ID, we only want to save
+			  what we have in ATTR_LAST_* if we actually spawned a
+			  shadow...
+			*/
+		if( pid ) {
+			char* last_host = NULL;
+			GetAttributeStringNew( cluster, proc, ATTR_REMOTE_HOST, &last_host );
+			if( last_host ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_HOST,
+									last_host );
+				free( last_host );
+				last_host = NULL;
+			}
+
+	        char* last_pool = NULL;
+			GetAttributeStringNew( cluster, proc, ATTR_REMOTE_POOL, &last_pool );
+			if( last_pool ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_POOL,
+									last_pool );
+				free( last_pool );
+				last_pool = NULL;
+			} else {
+	            // If RemotePool is not defined, be sure to remove the last remote pool (if it exists)
+	             DeleteAttribute( cluster, proc, ATTR_LAST_REMOTE_POOL );
+	        }
+
+		}
+
+		if( pid ) {
+			char* last_claim = NULL;
+			GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
+			if( last_claim ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_ID,
+									last_claim );
+				free( last_claim );
+				last_claim = NULL;
+			}
+
+			GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_IDS, &last_claim );
+			if( last_claim ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_IDS,
+									last_claim );
+				free( last_claim );
+				last_claim = NULL;
+			}
+		}
+
+			//
+			// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
+			// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
+			// flag is set. This means that we want this job to reconnect
+			// when the schedd comes back online.
+			//
+		if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
+			DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_ID );
+			DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
+			DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_IDS );
+			DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
+			DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
+			DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
+			DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
+			DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
+			DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
+			DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
+			DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
+			DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
+		} else {
+			dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
+						    "Not removing %s and %s attributes.\n",
+						    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
+		}
+
+		// If job not in a terminal state, rotate the MachineAttr attributes
+		// so we are ready for the next match...
+		if (job_status != COMPLETED && job_status != REMOVED) {
+			InsertMachineAttrs(cluster, proc, nullptr, true);
+		}
+
+		DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
+
+
+			// we want to commit all of the above changes before we
+			// call check_zombie() since it might do it's own
+			// transactions of one sort or another...
+			// Nothing written in this transaction requires immediate sync to disk.
+		CommitNonDurableTransactionOrDieTrying();
 	}
 
-	// If job not in a terminal state, rotate the MachineAttr attributes
-	// so we are ready for the next match...
-	if (job_status != COMPLETED && job_status != REMOVED) {
-		InsertMachineAttrs(cluster, proc, nullptr, true);
-	}
-
-	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
-
-		// we want to commit all of the above changes before we
-		// call check_zombie() since it might do it's own
-		// transactions of one sort or another...
-		// Nothing written in this transaction requires immediate sync to disk.
-	CommitNonDurableTransactionOrDieTrying();
 
 	if( ! rec->keepClaimAttributes ) {
 			// We do _not_ want to call check_zombie if we are detaching
@@ -13185,7 +13193,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// "ACTIVE", it's just "CLAIMED"
 	if( rec->match ) {
 			// Be careful, since there might not be a match record
-			// for this shadow record anymore... 
+			// for this shadow record anymore...
 		rec->match->setStatus( M_CLAIMED );
 	}
 
@@ -17130,8 +17138,15 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 				// to update the queue persistently all in one transaction, even
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
 			}
-			SetAttributeInt( mrec->cluster, mrec->proc, 
-							 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
+
+			// Of things with cluster.proc IDs, only transfer shadows shouldn't
+			// have a corresponding job record.
+			// FIXME: On the other hand, we'll probably need this to make "job
+			// reconnect" work correctly for transfer shadows.
+			if( mrec->proc < -1000 ) {
+				SetAttributeInt( mrec->cluster, mrec->proc,
+								 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
+			}
 		}
 	}
 	CommitNonDurableTransactionOrDieTrying();

@@ -1554,7 +1554,13 @@ BaseShadow::updateJobInQueue( update_t type )
 		// Note that we force a non-durable update for X509 updates; if the
 		// schedd crashes, we don't really care when the proxy was updated
 		// on the worker node.
-	return job_updater->updateJob( type, 0 );
+
+	// Don't was the shadow's time with an update it can't store.
+	if( getProc() <= -1000 ) {
+		return job_updater->updateJob( type, 0 );
+	} else {
+		return true;
+	}
 }
 
 
