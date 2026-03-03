@@ -231,9 +231,14 @@ int main( int argc, char *argv[] )
 			exit(1);
 		}
 		r = setns(fd, 0);
+		int user_setns_errno = errno;
 		close(fd);
 		if (r < 0) {
-			fprintf(stderr, "Can't setns to user namespace: %s\n", strerror(errno));
+			fprintf(stderr, "Can't setns to user namespace: %s\n", strerror(user_setns_errno));
+			fprintf(stderr, "condor_ssh_to_job cannot enter the namespace of the containerized job.\n");
+			fprintf(stderr, "This is probably because the container runtime is installed as setuid,\n");
+			fprintf(stderr, "but htcondor itself was not installed as root, so it does not have the\n");
+			fprintf(stderr, "permissions to enter the user namespace.\n");
 			exit(1);
 		}
 	}
