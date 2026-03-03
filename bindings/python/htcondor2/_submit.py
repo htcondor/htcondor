@@ -447,7 +447,6 @@ _NewOptionNames = {
     "import_env":               "ImportEnv",
     "include_env":              "GetFromEnv",
     "insert_env":               "AddToEnv",
-    "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
     "dorecov":                  "DoRecovery",

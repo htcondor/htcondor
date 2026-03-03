@@ -254,10 +254,6 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	args.AppendArg("-CsdVersion");
 	args.AppendArg(CondorVersion());
 
-	if (options[shallow::b::DumpRescueDag]) {
-		args.AppendArg("-DumpRescue");
-	}
-
 	if (options[shallow::i::Priority] != 0) {
 		args.AppendArg("-Priority");
 		args.AppendArg(std::to_string(options[shallow::i::Priority]));

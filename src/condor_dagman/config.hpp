@@ -32,7 +32,6 @@ namespace DagmanConfigOptions {
 		RetryNodeFirst,                // Retry a failed node with retries before other nodes in the ready queue
 		MungeNodeNames,                // Munge node names for multi-DAG runs to make unique node names
 		AllowIllegalChars,             // Allow Node names to contain illegal characters
-		PartialRescue,                 // Write partial rescue DAG
 		RescueResetRetry,              // Reset Node Retries when writing rescue file
 		GenerateSubdagSubmit,          // Generate the *.condor.sub file for sub-DAGs at run time
 		RemoveTempSubFiles,            // Remove temporary inline desc node submit files created for shell condor_submit
@@ -97,7 +96,6 @@ public:
 		boolOpts[static_cast<size_t>(b::MungeNodeNames)] = true;
 		boolOpts[static_cast<size_t>(b::AbortDuplicates)] = true;
 		boolOpts[static_cast<size_t>(b::AbortOnScarySubmit)] = true;
-		boolOpts[static_cast<size_t>(b::PartialRescue)] = true;
 		boolOpts[static_cast<size_t>(b::RescueResetRetry)] = true;
 		boolOpts[static_cast<size_t>(b::GenerateSubdagSubmit)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveJobs)] = true;

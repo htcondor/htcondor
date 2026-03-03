@@ -176,7 +176,8 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	pid_t my_pid;
 
 #ifdef D_CATEGORY_MASK
-	int HdrFlags = (DebugHeaderOptions|flags) & ~D_CATEGORY_RESERVED_MASK;
+	//int HdrFlags = (DebugHeaderOptions|flags) & ~D_CATEGORY_RESERVED_MASK;
+	int HdrFlags = flags;
 #else
 	int HdrFlags = DebugFlags|flags;
 #endif
