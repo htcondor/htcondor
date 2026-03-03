@@ -10,8 +10,8 @@ from ornithology import *
 import htcondor2
 import pytest
 import os
+import sys
 import json
-import subprocess
 
 from time import sleep
 from pathlib import Path
@@ -19,7 +19,7 @@ from shutil import rmtree
 from typing import Callable, Tuple, Any
 
 #-----------------------------------------------------------------------------------------
-PYTHON3 = None
+PYTHON3 = sys.executable
 TIMEOUT = 120
 DAG_FILENAME = "test.dag"
 
@@ -351,19 +351,9 @@ TEST_CASES = {
 
 #-----------------------------------------------------------------------------------------
 @action
-def locate_python3() -> None:
-    """Locate python3 binaries"""
-    global PYTHON3
-
-    CMD = "where" if os.name == "nt" else "which"
-    p = subprocess.run([CMD, "python3"], capture_output=True, text=True, check=True)
-    PYTHON3 = Path(p.stdout.strip().split('\n')[0]) # get the first path
-
+def run_dags(default_condor, test_dir):
     assert PYTHON3 is not None
 
-#-----------------------------------------------------------------------------------------
-@action
-def run_dags(default_condor, test_dir, locate_python3):
     TESTS = dict()
 
     for TEST, SETUP in TEST_CASES.items():
