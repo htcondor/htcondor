@@ -1556,7 +1556,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		// on the worker node.
 
 	// Don't was the shadow's time with an update it can't store.
-	if( getProc() <= -1000 ) {
+	if( getProc() > -1000 ) {
 		return job_updater->updateJob( type, 0 );
 	} else {
 		return true;

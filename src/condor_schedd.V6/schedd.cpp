@@ -17143,7 +17143,7 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 			// have a corresponding job record.
 			// FIXME: On the other hand, we'll probably need this to make "job
 			// reconnect" work correctly for transfer shadows.
-			if( mrec->proc < -1000 ) {
+			if( mrec->proc > -1000 ) {
 				SetAttributeInt( mrec->cluster, mrec->proc,
 								 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 			}
