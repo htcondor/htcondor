@@ -29,6 +29,7 @@
 #include <optional>
 #include "guidance.h"
 #include "catalog_utils.h"
+#include "condor_holdcodes.h"
 
 class ShadowHookMgr;
 
@@ -257,6 +258,14 @@ class UniShadow : public BaseShadow
 		ClassAd request,
 		ListOfCatalogs common_file_catalogs,
 		bool print_waiting=true
+	);
+
+
+	// Use only with start_staging_only_conversation():
+	// 		co_return VACATE_REQEUEST_ABORT(...);
+	ClassAd vacate_requeue_abort(
+		const std::string & holdMessage, CONDOR_HOLD_CODE holdCode, int holdSubCode,
+		const char * file, int line
 	);
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(

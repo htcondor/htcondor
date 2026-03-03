@@ -1433,6 +1433,33 @@ UniShadow::set_provider_keep_alive( const std::string & cifName ) {
 }
 
 
+ClassAd
+UniShadow::vacate_requeue_abort(
+	const std::string & holdMessage, CONDOR_HOLD_CODE holdCode, int holdSubCode,
+	const char * file, int line
+) {
+	dprintf( D_ALWAYS, "%s:%d: %s\n", file, line, holdMessage.c_str() );
+
+    // FIXME: This should almost certainly result in a cooldown.
+
+	// Consider replacing this with a call to evictJob().
+	this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
+	this->jobAd->Assign(ATTR_VACATE_REASON, holdMessage );
+	this->jobAd->Assign(ATTR_VACATE_REASON_CODE, holdCode);
+	this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, holdSubCode);
+	remRes->setExitReason(JOB_SHOULD_REQUEUE);
+	remRes->killStarter(false);
+
+
+	ClassAd guidance;
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+	return guidance;
+}
+
+
+#define VACATE_REQUEUE_ABORT(x,y,z) vacate_requeue_abort(x, y, z, __FILE__, __LINE__)
+
+
 // The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_staging_only_conversation(
@@ -1491,8 +1518,7 @@ UniShadow::start_staging_only_conversation(
 
 	classad::ExprList * ccList = new classad::ExprList( catalogAds );
 	if(! ccList) {
-		// ... FIXME ...
-		dprintf( D_ALWAYS, "cxfer: ExprList( catalogAds ) == NULL\n" );
+		EXCEPT( "Shadow unable to allocate memory in UniShadow::start_staging_only_conversation().\n" );
 	} else {
 		commonCatalogsAd->Insert( "CommonCatalogsList", ccList );
 	}
@@ -1506,33 +1532,33 @@ UniShadow::start_staging_only_conversation(
 	success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
 	if(! success) {
-		// Consider replacing this with a call to evictJob().
-		this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
-		this->jobAd->Assign(ATTR_VACATE_REASON, "Starter could not release execution resources after staging common files." );
-		// FIXME: All three of these constants should be changed when we deal
-		// with transfer shadows exiting in the schedd.
-		this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-		this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
-		remRes->setExitReason(JOB_SHOULD_REQUEUE);
-
-		remRes->killStarter(false);
-
-		guidance.Clear();
-		guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
-		co_return guidance;
+		// It's possible that a different starter would reply properly,
+		// so abort this attempt and leave the job in the queue idle.
+		co_return VACATE_REQUEUE_ABORT(
+			"Starter could not release execution resources after staging common files.",
+			CONDOR_HOLD_CODE::JobNotStarted, 2
+		);
 	}
 
 
 	std::string claimID;
 	if(! LookupStringInContext( request, ATTR_SPLIT_CLAIM_ID, claimID )) {
-		// ... FIXME ...
-		EXCEPT("Starter's reply invalid: did not contain split claim ID.\n");
+		// It's possible that a different starter would reply properly,
+		// so abort this attempt and leave the job in the queue idle.
+		co_return VACATE_REQUEUE_ABORT(
+			"Starter's reply invalid: did not contain split claim ID, aborting.",
+			CONDOR_HOLD_CODE::JobNotStarted, 2
+		);
 	}
 
 	ClassAd * slotAd = NULL;
 	if(! LookupAdInContext( request, ATTR_SLOT_AD, slotAd )) {
-		// ... FIXME ...
-		EXCEPT("Starter's reply invalid: did not contain slot ad.\n");
+		// It's possible that a different starter would reply properly,
+		// so abort this attempt and leave the job in the queue idle.
+		co_return VACATE_REQUEUE_ABORT(
+			"Starter's reply invalid: did not contain slot ad.",
+			CONDOR_HOLD_CODE::JobNotStarted, 2
+		);
 	}
 
 	// The precise interaction between this value, ATTR_AUTHENTICATED_IDENTITY
@@ -1544,8 +1570,12 @@ UniShadow::start_staging_only_conversation(
 
 	int sizeOnDiskInMB = -1;
 	if(! LookupIntInContext( request, ATTR_COMMON_INPUT_FILES_SIZE_MB, sizeOnDiskInMB )) {
-		// ... FIXME ...
-		EXCEPT("Starter's reply invalid: did not contain common input files size-on-disk.\n");
+		// It's possible that a different starter would reply properly,
+		// so abort this attempt and leave the job in the queue idle.
+		co_return VACATE_REQUEUE_ABORT(
+			"Starter's reply invalid: did not contain common input files size-on-disk.",
+			CONDOR_HOLD_CODE::JobNotStarted, 2
+		);
 	}
 
 
@@ -1557,15 +1587,13 @@ UniShadow::start_staging_only_conversation(
 	if( procID < 0 ) {
 		procID = (-1 * procID) - 1000;
 	} else {
-		// ... FIXME ...
-		dprintf( D_ALWAYS, "start_staging_only_conversation(): procIDs should be negative.\n" );
+		EXCEPT( "start_staging_only_conversation(): procIDs must be negative.\n" );
 	}
 
 	// We shouldn't need the address, since we're a shadow.
 	DCSchedd schedd( getScheddAddr() /*, pool */ );
 	if(! schedd.locate()) {
-		// ... FIXME ...
-		EXCEPT("Failed to locate schedd.\n");
+		EXCEPT( "start_staging_only_conversation(): failed to locate schedd.\n");
 	}
 
 
@@ -1577,8 +1605,13 @@ UniShadow::start_staging_only_conversation(
 		clusterID, procID
 	);
 	if(! rval) {
-		// ... FIXME ...
-		EXCEPT("Failed offerResources().\n");
+		// Assuming that it's most likely that offerResources() failed
+		// because the schedd was busy, we should try again later when
+		// it isn't.
+		co_return VACATE_REQUEUE_ABORT(
+			"Failed to offer schedd resources, aborting to try again when it's less busy.\n",
+			CONDOR_HOLD_CODE::JobNotStarted, 2
+		);
 	}
 
 
@@ -1711,9 +1744,6 @@ UniShadow::start_common_input_conversation(
 					co_return guidance;
 				}
 
-				// FIXME: Instead of mapping the files here, guide the
-				// starter to split the slot, turning it into a 'data slot'.
-
 				// We could reorder the cases to fall-through here...
 				guidance = do_wiring_up( stagingDir, cifName );
 				request = co_yield guidance;
@@ -1814,8 +1844,6 @@ UniShadow::start_common_input_conversation(
 						guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
 						co_return guidance;
 					}
-
-					// See FIXME from the previous PROVIDER case.
 
 					// We could reorder the cases to fall-through here...
 					guidance = do_wiring_up( stagingDir, cifName );
