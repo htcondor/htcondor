@@ -32,6 +32,9 @@ if (WITH_CURL)
 		set (CURL_DOWNLOAD_MD5SUM 533e8a3b1228d5945a6a512537bea4c7)
 
 		if (WINDOWS)
+                        # curl is built with LDAP support on Windows, requiring wldap32.lib and CURL_STATICLIB
+                        # to be defined.  If we change this, then the addition of wldap32.lib to CURL_FOUND below
+                        # will need to be removed.
 			set (CURL_CONFIGURE echo "Nothing to configure")
 			set (CURL_MAKE echo "No make necessary")
 			set (CURL_INSTALL ${CMAKE_COMMAND} -E copy_directory . ${CURL_INSTALL_LOC}/lib && ${CMAKE_COMMAND} -E copy_directory curl ${CURL_INSTALL_LOC}/include/curl )
@@ -71,7 +74,8 @@ if (WITH_CURL)
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
 			set(CURL_LIB "${CURL_INSTALL_LOC}/lib/libcurl.lib")
-			set(CURL_FOUND "${CURL_LIB}")
+			# curl is built with LDAP support on Windows, requires wldap32.lib.
+			set(CURL_FOUND "${CURL_LIB};wldap32.lib")
 		else()
 			# libcurl is dependent on these libraries on some
 			# platforms.
@@ -87,6 +91,22 @@ if (WITH_CURL)
 	if (CURL_FOUND)
 		set( CURL_FOUND ${CURL_FOUND} PARENT_SCOPE )
 		set( HAVE_EXT_CURL ON PARENT_SCOPE )
+
+		# Capture the libcurl SONAME for dlopen users (mirrors LIBSSL_SO handling)
+		if (LINUX AND DLOPEN_SECURITY_LIBS)
+			set(_curl_lib_candidate "")
+			foreach(_curl_lib ${CURL_FOUND})
+				if (EXISTS ${_curl_lib})
+					set(_curl_lib_candidate ${_curl_lib})
+					break()
+				endif()
+			endforeach()
+			if (_curl_lib_candidate)
+				find_so_name(LIBCURL_SO ${_curl_lib_candidate})
+				set( LIBCURL_SO ${LIBCURL_SO} PARENT_SCOPE )
+			endif()
+		endif()
+
 		message (STATUS "external configured (CURL_FOUND=${CURL_FOUND})")
 	endif(CURL_FOUND)
 
