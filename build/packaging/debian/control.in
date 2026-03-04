@@ -21,10 +21,11 @@ Build-Depends: cmake (>= 3.16),
 #if !defined(BOOKWORM) && !defined(JAMMY)
                dh-sequence-builtusing,
 #endif
+               lib-dev-bin,
                libcurl4-openssl-dev,
                libdbus-1-dev,
                libkrb5-dev,
-               libldap2-dev | libldap-dev,
+               libldap-dev,
                libmunge-dev,
                libpam0g-dev,
                libpcre2-dev,
