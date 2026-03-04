@@ -9227,8 +9227,17 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
 	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
-	cmd_ad.LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
-	cmd_ad.LookupInteger(ATTR_PROC_ID, jobid.proc);
+	//
+	// The schedd generally trusts the shadows it spawns, so for now
+	// we're going to assume that the job ID supplied in the command ad (if
+	// any) is the correct one if the connection used the FAMILY security
+	// method.  Changing this later won't be a problem since a schedd and
+	// its shadows must be from the same version of HTCondor.
+	//
+	if( 0 == strcmp( rsock->getAuthenticationMethodUsed(), "FAMILY" ) ) {
+		cmd_ad.LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+		cmd_ad.LookupInteger(ATTR_PROC_ID, jobid.proc);
+	}
 
 
 	// This forces a rebuild of the priorec array, which we probably don't
@@ -9241,9 +9250,8 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	// assign resources, we can start all the unblocked shadowrecs with
 	// assigned matches in one go.
 
-	int status;
+	int status = -1;
 	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
-	dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
 	if( status == JOB_STATUS_BLOCKED ) {
 		status = IDLE;
 		SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
@@ -9279,18 +9287,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	}
 
 
-	//
-	// FIXME: How does the schedd know this command came from one of its own
-	// shadows, and how does it know which one?  We could assume that if the
-	// nominated job has cxfer catalogs, the corresponding shadow was the one
-	// which contacted us, but for now it's simpler to look for the
-	// corresponding transfer shadow record directly.
-	//
-	// (Using FAMILY security is a pretty strong indicator, but a capability
-	// would also allow us to specify the shadow rec directly.)
-	//
 	PROC_ID transfer_shadow_id( jobid.cluster, (-1 * jobid.proc ) - 1000 );
-	// FIXME: I'd love to call FindSrecByPid(), instead...
 	shadow_rec * transfer_shadow_rec = FindSrecByProcID(transfer_shadow_id);
 	if( transfer_shadow_rec != NULL &&
 		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING
