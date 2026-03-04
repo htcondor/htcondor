@@ -11660,3 +11660,29 @@ DaemonCore::AppendDaemonHistory(ClassAd* ad) {
 
 	close(fd);
 }
+
+
+#if defined(WINDOWS)
+
+int
+DaemonCore::CallImmediatelyButReapLater( std::function<void(void)> f, int reaperID ) {
+	return 0;
+}
+
+#else
+
+int
+ftc_start_func(void * v, Stream *) {
+	int rv = (*(std::function<int(void)> *)v)();
+	delete v;
+	return rv;
+}
+
+
+int
+DaemonCore::ForkToCall( std::function<int(void)> f, int reaperID ) {
+	auto * v = new std::function<int(void)>(f);
+	return Create_Thread( & ftc_start_func, v, NULL, reaperID );
+}
+
+#endif
