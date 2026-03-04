@@ -11665,7 +11665,8 @@ DaemonCore::AppendDaemonHistory(ClassAd* ad) {
 #if defined(WINDOWS)
 
 int
-DaemonCore::CallImmediatelyButReapLater( std::function<void(void)> f, int reaperID ) {
+DaemonCore::CallImmediatelyButReapLater( std::function<int(void)> f, int reaperID ) {
+	// FIXME
 	return 0;
 }
 
@@ -11681,8 +11682,13 @@ ftc_start_func(void * v, Stream *) {
 
 int
 DaemonCore::ForkToCall( std::function<int(void)> f, int reaperID ) {
+	// FIXME: Is it actually necessary to copy `f` to the heap?  It doesn't
+	// really go out of scope until after the fork() has happened,
+	// and we know that Create_Thread() doesn't return in the fork()d child.
 	auto * v = new std::function<int(void)>(f);
-	return Create_Thread( & ftc_start_func, v, NULL, reaperID );
+	int rv = Create_Thread( & ftc_start_func, v, NULL, reaperID );
+	delete v;
+	return rv;
 }
 
 #endif
