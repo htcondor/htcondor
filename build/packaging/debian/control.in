@@ -21,7 +21,7 @@ Build-Depends: cmake (>= 3.16),
 #if !defined(BOOKWORM) && !defined(JAMMY)
                dh-sequence-builtusing,
 #endif
-               lib-dev-bin,
+               libc-dev-bin,
                libcurl4-openssl-dev,
                libdbus-1-dev,
                libkrb5-dev,
