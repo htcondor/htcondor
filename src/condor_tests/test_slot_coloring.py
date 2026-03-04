@@ -9,6 +9,7 @@ from ornithology import (
     Condor,
     action,
     ClusterState,
+    JobStatus,
 )
 
 import time
@@ -105,6 +106,13 @@ def the_cleaned_up_ads(
 ):
 	result_ad = the_running_job.remove()
 	# assert something about the result_ad here
+
+    # Make sure the removal has actually happened before
+    # starting the clean-up timer.
+	assert the_running_job.wait(
+		timeout=20,
+		condition=lambda cs: cs.all_status(JobStatus.REMOVED),
+	)
 
 	# See previous comment about this constant.
 	time.sleep(3)
