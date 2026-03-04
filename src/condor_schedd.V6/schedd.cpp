@@ -11363,11 +11363,22 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			case CXFER_STATE::MAPPING:
 				formatstr(argbuf, "--cxfer=mapping");
 				break;
-			default:
-				// FIXME: Is any other case valid?
-				// FIXME: Is the right response?
-				dprintf( D_ERROR, "%d.%d: Invalid cxfer state when starting shadow, falling back.\n", job_id.cluster, job_id.proc );
-				break;
+			case CXFER_STATE::STAGED:
+			case CXFER_STATE::INVALID:
+				// It is my intention that this case only trigger if something
+				// has gone terribly wrong, but my confidence in this case
+				// isn't so high I want to risk killing the schedd.  However,
+				// we should leave this note in the logs so we can develop
+				// that confidence.
+				dprintf( D_ALWAYS, "%d.%d: Invalid cxfer state when starting shadow, deleting shadow rec.\n", job_id.cluster, job_id.proc );
+
+				// Since we're not killing the schedd, we have to decide how
+				// to proceed.  We almost certainly shouldn't actually start
+				// these malrecorded shadows, and likewise _should_ clean up
+				// the records.
+				mark_job_stopped( job_id );
+				delete_shadow_rec( srec );
+				return;
 		}
 		args.AppendArg(argbuf);
 	}
