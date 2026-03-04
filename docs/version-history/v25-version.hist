@@ -86,6 +86,12 @@
 - The old ClassAd syntax is no longer supported in job transforms.
   :jira:`3538`
 
+- Removed deprecated full rescue file for DAGMan. With this comes the removal of
+  the configuration option ``DAGMAN_WRITE_PARTIAL_RESCUE`` and the command line
+  option ``-DumpRescue`` for :tool:`condor_submit_dag`.  This has been deprecated since
+  2011, so there should be no problems with compatability.
+  :jira:`3565`
+
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
   :jira:`3576`
