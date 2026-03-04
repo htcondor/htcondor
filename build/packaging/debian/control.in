@@ -18,6 +18,9 @@ Build-Depends: cmake (>= 3.16),
                default-jdk,
 #endif
                dh-python,
+#if !defined(BOOKWORM) && !defined(JAMMY)
+               dh-sequence-builtusing,
+#endif
                libcurl4-openssl-dev,
                libdbus-1-dev,
                libkrb5-dev,
@@ -95,6 +98,9 @@ Breaks: htcondor,
         condor-upgrade-checks
 Replaces: htcondor,
           condor-upgrade-checks
+#if !defined(BOOKWORM) && !defined(JAMMY)
+Built-Using: ${dh-builtusing:libc-dev-bin} [!amd64]
+#endif
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -188,6 +194,7 @@ Description: distributed workload management system - single node configuration
  for the first time. It only configures the IPv4 loopback address, turns on
  basic security, and shortens many timers to be more responsive.
 
+#if defined(UW_BUILD)
 Package: condor-ap
 Architecture: any
 Section: science
@@ -232,6 +239,7 @@ Description: distributed workload management system - single node configuration
  This example configuration is good for installing an Execution Point.
  After installation, one could join a pool or start an annex.
 
+#endif
 Package: condor-annex-ec2
 Architecture: any
 Section: science
