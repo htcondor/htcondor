@@ -5,6 +5,13 @@
   being properly aligned when the longest name exceeded 34 characters.
   :jira:`3255`
 
+- When the *condor_collector* reponds to a locate query for Startd ads, it will now search
+  both the Startd daemon ad table and the Startd slot ad table to satisfy the locate.  This
+  fixes a bug where :tool:`condor_vacate` would not be able to find the address of the Startd
+  when given a slot name.
+  :jira:`3580`
+
+
 *** 24.0.19 bugs
 
 *** 24.12.18 bugs
