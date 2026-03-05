@@ -99,6 +99,10 @@ override_dh_auto_install:
 	rm debian/tmp/usr/share/doc/condor/README
 	# This isn't ready for release yet.
 	rm -fr debian/tmp/usr/lib/python3/dist-packages/classad3
+#if !defined(UW_BUILD)
+	# Temporarily remove sif file until apptainer is fully supported
+	rm -f debian/tmp/usr/libexec/condor/exit_37.sif
+#endif
 
 
 override_dh_fixperms-arch:
