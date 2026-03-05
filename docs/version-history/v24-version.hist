@@ -1,6 +1,15 @@
 *** 24.12.19 bugs
 
+- Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
+  for some output formats. This bug would result in colmns after the Name column not
+  being properly aligned when the longest name exceeded 34 characters.
+  :jira:`3255`
+
 *** 24.0.19 bugs
+
+- Fixed a bug for **batch** grid universe jobs where submitting to a remote
+  system would fail if the username on the remote system contained a dot.
+  :jira:`3581`
 
 *** 24.12.18 bugs
 
