@@ -57,6 +57,11 @@
   going beneath a user's floor number of resources while preempting.
   :jira:`3226`
 
+- When a job exceeds its memory request, instead of reporting the memory 
+  measured in the last polling period, the error message reports the 
+  size of the provisioned memory to more accurately report what happened.
+  :jira:`3514`
+
 - :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
   in the cooldown state.
   :jira:`2535`
