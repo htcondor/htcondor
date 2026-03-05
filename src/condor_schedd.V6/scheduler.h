@@ -48,7 +48,6 @@
 #include "enum_utils.h"
 #include "self_draining_queue.h"
 #include "schedd_cron_job_mgr.h"
-#include "named_classad_list.h"
 #include "env.h"
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
@@ -296,43 +295,14 @@ class match_rec
 
 };
 
-class GridUserIdentity {
-	public:
-			// The default constructor is not recommended as it
-			// has no real identity.  It only exists so
-			// we can put UserIdentities in various templates.
-		GridUserIdentity() : m_username(""), m_osname(""), m_auxid(""), m_ownerinfo(nullptr) { }
-		GridUserIdentity(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-		}
-		GridUserIdentity(JobQueueJob& job_ad);
-		const GridUserIdentity & operator=(const GridUserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;
-			m_ownerinfo = src.m_ownerinfo;
-			return *this;
-		}
-		bool operator==(const GridUserIdentity & rhs) {
-			return m_username == rhs.m_username && 
-				m_auxid == rhs.m_auxid && m_ownerinfo == rhs.m_ownerinfo;
-		}
-		const std::string& username() const { return m_username; }
-		const std::string& osname() const { return m_osname; }
-		const std::string& auxid() const { return m_auxid; }
-		const JobQueueUserRec* ownerinfo() const { return  m_ownerinfo; }
+struct GridUserIdentity {
+	GridUserIdentity() = default;
+	GridUserIdentity(JobQueueJob& job_ad);
 
-			// For use in HashTables
-		static size_t HashFcn(const GridUserIdentity & index);
+	auto operator<=>(const GridUserIdentity&) const = default;
 	
-	private:
-		std::string m_username;
-		std::string m_osname;
-		std::string m_auxid;
-		const JobQueueUserRec* m_ownerinfo;
+	const JobQueueUserRec* m_ownerinfo{nullptr};
+	std::string m_auxid;
 };
 
 
@@ -556,19 +526,19 @@ class Scheduler : public Service
 	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status );
 
-	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
-	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
-	bool			WriteAbortToUserLog( PROC_ID job_id );
-	bool			WriteHoldToUserLog( PROC_ID job_id );
-	bool			WriteReleaseToUserLog( PROC_ID job_id );
-	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
-	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
-	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
-	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
-	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
-	bool			WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
-	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
+	WriteUserLog*	InitializeUserLog(const JobQueueJob* ad);
+	bool			WriteSubmitToUserLog(const JobQueueJob* job, bool do_fsync, const char * warning );
+	bool			WriteAbortToUserLog(const JobQueueJob* job);
+	bool			WriteHoldToUserLog(const JobQueueJob* job);
+	bool			WriteReleaseToUserLog(const JobQueueJob* job);
+	bool			WriteExecuteToUserLog(const JobQueueJob* job, const char* sinful = NULL);
+	bool			WriteEvictToUserLog(const JobQueueJob* job, bool checkpointed = false);
+	bool			WriteTerminateToUserLog(const JobQueueJob* job, int status);
+	bool			WriteRequeueToUserLog(const JobQueueJob* job, int status, const char * reason);
+	bool			WriteAttrChangeToUserLog(const JobQueueJob* job, const char* attr, const char* attr_value, const char* old_value);
+	bool			WriteClusterSubmitToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteClusterRemoveToUserLog(const JobQueueCluster* cluster, bool do_fsync );
+	bool			WriteFactoryPauseToUserLog(const JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
@@ -613,7 +583,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( int timerID = -1 );
-	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+	void			makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
 	bool 	enqueueFinishedJob( int cluster, int proc );
@@ -640,7 +610,7 @@ class Scheduler : public Service
 	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
 		// Used by the GridUserIdentity class and some others
-	const ExprTree*	getGridParsedSelectionExpr() const 
+	const ExprTree*	getGridParsedSelectionExpr() const
 					{ return m_parsed_gridman_selection_expr; };
 	const char*		getGridUnparsedSelectionExpr() const
 					{ return m_unparsed_gridman_selection_expr; };
@@ -650,17 +620,18 @@ class Scheduler : public Service
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
-	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
+	shadow_rec*     add_shadow_rec( int pid, const PROC_ID &, int univ, match_rec*,
 									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
-	int adlist_register( const char *name );
-	int adlist_replace( const char *name, ClassAd *newAd );
-	int adlist_delete( const char *name );
-	int adlist_publish( ClassAd *resAd );
+		// adlist_replace() assumes ownership of newAd object
+	void adlist_register( const char *name );
+	void adlist_replace( const char *name, ClassAd *newAd );
+	void adlist_delete( const char *name );
+	void adlist_publish( ClassAd *resAd );
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
@@ -738,6 +709,8 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
+	std::map<GridUserIdentity, GridJobCounts> GridJobOwners;
+
 	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const OwnerInfo *user, const char * new_spool_dir="##");
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const OwnerInfo *user);
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const OwnerInfo *user);
@@ -808,9 +781,10 @@ private:
 	ReliSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
 
-	// The "Cron" manager (Hawkeye) & it's classads
+	// The "Cron" manager (Hawkeye) & its classads, which will be merged
+	// into the schedd's ads sent to the collector
 	ScheddCronJobMgr	*CronJobMgr;
-	NamedClassAdList	 extra_ads;
+	std::map<std::string, ClassAd> extra_ads;
 
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;
@@ -869,7 +843,6 @@ private:
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 	ProjectInfoMap  ProjectInfo;   // map of JobQueueProjectRec ads by project name
 
-	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	std::queue<shadow_rec*> RunnableJobQueue;
@@ -909,12 +882,6 @@ private:
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;
 
-		// Get the associated GridJobCounts object for a given
-		// user identity.  If necessary, will create a new one for you.
-		// You can read or write the values, but don't go
-		// deleting the pointer!
-	GridJobCounts * GetGridJobCounts(GridUserIdentity user_identity);
-
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;
 	char* m_unparsed_gridman_selection_expr;
@@ -949,7 +916,7 @@ private:
 	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
-	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+	int			make_ad_list(std::vector<ClassAd>& ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
 	int			command_query_job_ads(int, Stream* stream);
@@ -977,7 +944,7 @@ private:
 	// AFAICT, reapers should be be registered void to begin with.
 	int				child_exit_from_reaper(int a, int b) { child_exit(a, b); return 0; }
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
-	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
+	void			scheduler_univ_job_leave_queue(JobQueueJob *job, int status);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
 	void			attempt_shutdown( int timerID = -1 );
@@ -1032,16 +999,15 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	shadow_rec*		StartJob(match_rec*, PROC_ID*);
-
-	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
-	shadow_rec*		start_sched_universe_job(PROC_ID*);
+	shadow_rec*		StartJob(match_rec*, const PROC_ID &);
+	shadow_rec*		start_std(match_rec*, const PROC_ID &, int univ);
+	shadow_rec*		start_sched_universe_job(const PROC_ID &);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 
 										const char* name, bool want_udp );
-	void			check_zombie(int, PROC_ID*);
-	void			kill_zombie(int, PROC_ID*);
+	void			check_zombie(int, const PROC_ID &);
+	void			kill_zombie(int, const PROC_ID &);
 	int				is_alive(shadow_rec* srec);
 	
 	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);

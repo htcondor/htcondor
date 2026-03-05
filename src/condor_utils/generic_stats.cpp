@@ -132,6 +132,41 @@ void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pa
    ad.Assign(pattr, str);
 }
 
+// specialization of PublishDebug to dump the internal data storage
+// of stats_entry_daily. 
+//
+template <class T>
+void stats_entry_daily<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+    std::string str;
+
+    str += std::to_string(this->value);
+    formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
+        this->hours.ixHead, this->hours.cItems, this->hours.cMax, this->hours.cAlloc);
+    if (this->hours.pbuf) {
+        for (int ix = 0; ix < this->hours.cAlloc; ++ix) {
+            str += !ix ? "[" : (ix == this->hours.cMax ? "|" : ",");
+            str += std::to_string(this->hours.pbuf[ix]);
+        }
+        str += "]";
+    }
+    formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
+        this->days.ixHead, this->days.cItems, this->days.cMax, this->days.cAlloc);
+    if (this->days.pbuf) {
+        for (int ix = 0; ix < this->days.cAlloc; ++ix) {
+            str += !ix ? "[" : (ix == this->days.cMax ? "|" : ",");
+            str += std::to_string(this->days.pbuf[ix]);
+        }
+        str += "]";
+    }
+
+    std::string attr(pattr);
+    if (flags & this->PubDecorateAttr)
+        attr += "Debug";
+
+    ad.Assign(pattr, str);
+}
+
+
 
 // Determine if enough time has passed to Advance the recent buffers,
 // returns an advance count. 
@@ -1538,6 +1573,9 @@ template class stats_entry_sum_ema_rate<uint64_t>;
 template class stats_entry_ema<int>;
 template class stats_entry_ema<double>;
 template class stats_entry_probe<double>;
+template class stats_entry_daily<int>;
+template class stats_entry_daily<long long>;
+template class stats_entry_daily<double>;
 
 //
 // This is how you use the generic_stats functions.

@@ -464,7 +464,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 
 	if( !getClassAdEx(sock, *clientAd, m_get_ad_options) )
 	{
-		dprintf (D_ALWAYS,"Command %d on Sock not followed by ClassAd (or timeout occured)\n",
+		dprintf (D_ALWAYS,"Command %d on Sock not followed by ClassAd (or timeout occurred)\n",
 				command);
 		delete clientAd;
 		sock->end_of_message();

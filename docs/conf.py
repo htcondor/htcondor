@@ -47,10 +47,11 @@ extensions = [
     'hidden',
     'dag-cmd',
     'man-page-dummies',
+    'fake-definition',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+#templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -74,10 +75,10 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '25.6.0'
+release = '25.8.0'
 
 rst_epilog = """
-.. |release_date| replace:: January 8, 2026
+.. |release_date| replace:: April 2, 2026
 
 .. role:: config(code)
     :language: condor-config

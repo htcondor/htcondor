@@ -591,22 +591,6 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, Daemon& collector, Con
 	return (Q_OK);
 }
 
-// callback used by fetchAds
-static bool fetchAds_callback(void* pv, ClassAd * ad) { ClassAdList * padList = (ClassAdList *)pv; padList->Insert (ad); return false; }
-
-// fetch all ads from the collector that satisfy the constraints
-QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
-{
-	return processAds(fetchAds_callback, &adList, poolName, errstack);
-}
-
-QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, Daemon& collector, CondorError* errstack)
-{
-	return processAds(fetchAds_callback, &adList, collector, errstack);
-}
-
 void CondorQuery::
 setGenericQueryType(const char* genericType) {
 	if(genericQueryType) {

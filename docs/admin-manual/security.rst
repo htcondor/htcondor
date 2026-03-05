@@ -332,12 +332,12 @@ are no unprivileged users logged in to the submit hosts:
    (defaulting to ``/etc/condor/passwords.d/POOL`` on Linux and ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows).
 2. Install an auto-approval rule on the central manager using ``condor_token_request_auto_approve``.
    This automatically approves any daemons starting on a specified network for
-   a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
+   a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.0.2.0/24``
    for the next hour (3600 seconds), run the following command from the central manager:
 
    .. code-block:: console
 
-        $ condor_token_request_auto_approve -netblock 192.168.0.0/24 -lifetime 3600
+        $ condor_token_request_auto_approve -netblock 192.0.2.0/24 -lifetime 3600
 
 3. Within the auto-approval rule's lifetime, start the submit and execute
    hosts inside the appropriate network.  The token requests for the corresponding daemons (the :tool:`condor_master`, *condor_startd*, and *condor_schedd*)
@@ -947,10 +947,7 @@ It is
 especially useful when operating at large scale over high latency
 networks or in situations where it is inconvenient to set up one of the
 other methods of authentication between the submit and execute
-daemons. See the description of
-:macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` in
-:ref:`admin-manual/configuration-macros:configuration file entries relating to
-security` for details.
+daemons. See :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`.
 
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION``, then HTCondor uses a default
@@ -1029,7 +1026,7 @@ respective locations.
 The first time an unknown CA is encountered by tool such as ``condor_status``, the tool
 will prompt the user on whether it should trust the CA; the prompt looks like the following:
 
-.. code-block:: text
+.. code-block:: console
 
    $ condor_status
    The remote host collector.wisc.edu presented an untrusted CA certificate with the following fingerprint:
@@ -2019,7 +2016,7 @@ or an IP address of the form
 
 .. code-block:: text
 
-    128.105.128.0
+    192.0.2.0
 
 An example is
 
@@ -2097,10 +2094,10 @@ mask is
 
 .. code-block:: condor-config
 
-    ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
+    ALLOW_WRITE = joesmith@cs.wisc.edu/192.0.2.0/24
 
 User joesmith within the cs.wisc.edu domain is given write authorization
-when originating from machines that match their leftmost 17 bits of the
+when originating from machines that match their leftmost 24 bits of the
 IP address. :index:`of Unix netgroups<single: of Unix netgroups; authorization>`
 
 The special value ``{:local_ips:}`` can be used to represent all IP
@@ -2505,9 +2502,9 @@ Multiple machine entries in the configuration files may be separated by
 either a space or a comma. The machines may be listed by
 
 -  Individual host names, for example: ``condor.cs.wisc.edu``
--  Individual IP address, for example: ``128.105.67.29``
+-  Individual IP address, for example: ``192.0.2.29``
 -  IP subnets (use a trailing ``*``), for example:
-   ``144.105.*, 128.105.67.*``
+   ``192.0.2.*, 198.51.100.*``
 -  Host names with a wild card ``*`` character (only one ``*`` is
    allowed per name), for example: ``*.cs.wisc.edu, sol*.cs.wisc.edu``
 
@@ -2634,8 +2631,7 @@ the most restrictive security level possible.
 The most secure use of this feature allows HTCondor users to set
 attributes in the configuration file which are not used by HTCondor
 directly. These are custom attributes published by various HTCondor
-daemons with the :macro:`<SUBSYS>_ATTRS` setting described in
-:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`.
+daemons with the :macro:`<SUBSYS>_ATTRS` setting.
 It is secure to grant access only to modify attributes that are used by HTCondor
 to publish information. Granting access to modify settings used to control
 the behavior of HTCondor is not secure. The goal is to ensure no one can

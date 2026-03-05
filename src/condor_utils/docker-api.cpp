@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <charconv>
 
@@ -183,7 +184,7 @@ int DockerAPI::createContainer(
 	}
 
 	if ( ! add_env_to_args_for_docker(runArgs, env)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -321,8 +322,8 @@ int DockerAPI::createContainer(
 
 		int num = pcache()->num_groups(user_name);
 		if (num > 0) {
-			gid_t groups[num];
-			if (pcache()->get_groups(user_name, num, groups)) {
+			std::vector<gid_t> groups(num);
+			if (pcache()->get_groups(user_name, num, groups.data())) {
 				for (int i = 0; i < num; i++) {
 					runArgs.AppendArg("--group-add");
 					std::string suppGroup;
@@ -516,9 +517,16 @@ int DockerAPI::startContainer(
 	Env cliEnvironment;
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int childPID = daemonCore->Create_Process( startArgs.GetArg(0), startArgs,
-		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT);
+	OptionalCreateProcessArgs cpArgs;
+	int childPID = daemonCore->CreateProcessNew( startArgs.GetArg(0), startArgs,
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment)
+			.cwd("/")
+			.familyInfo(&fi)
+			.std(childFDs)
+			.jobOptMask(DCJOBOPT_NO_ENV_INHERIT));
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
@@ -575,9 +583,16 @@ DockerAPI::pullImage(const std::string &image_name,
 	}
 
 
-	int childPID = daemonCore->Create_Process( pullArgs.GetArg(0), pullArgs,
-		PRIV_CONDOR_FINAL, reaperId, FALSE, FALSE, &cliEnvironment, "/",
-		nullptr, nullptr, childFDs, nullptr, 0, nullptr, DCJOBOPT_NO_ENV_INHERIT);
+	OptionalCreateProcessArgs cpArgs;
+	int childPID = daemonCore->CreateProcessNew( pullArgs.GetArg(0), pullArgs,
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.reaperID(reaperId)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment)
+			.cwd("/")
+			.std(childFDs)
+			.jobOptMask(DCJOBOPT_NO_ENV_INHERIT));
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed for docker pull.\n" );
@@ -603,7 +618,7 @@ DockerAPI::execInContainer( const std::string &containerName,
 	execArgs.AppendArg("-ti");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
-		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
+		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
 		return -8;
 	}
 
@@ -621,9 +636,16 @@ DockerAPI::execInContainer( const std::string &containerName,
 	Env cliEnvironment;
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int childPID = daemonCore->Create_Process( execArgs.GetArg(0), execArgs,
-		PRIV_CONDOR_FINAL, reaperid, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs );
+	OptionalCreateProcessArgs cpArgs;
+	int childPID = daemonCore->CreateProcessNew( execArgs.GetArg(0), execArgs,
+		cpArgs.priv(PRIV_CONDOR_FINAL)
+			.reaperID(reaperid)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment)
+			.cwd("/")
+			.familyInfo(&fi)
+			.std(childFDs));
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed to condor exec.\n" );
@@ -1121,10 +1143,9 @@ int DockerAPI::detect( CondorError & err ) {
 }
 
 int
-DockerAPI::testImageRuns(CondorError &err) {
+DockerAPI::testImageRuns([[maybe_unused]] CondorError &err) {
 
 #ifndef LINUX
-	(void)err; // shut the compiler up
 	return 0;
 #else
 	TemporaryPrivSentry sentry(PRIV_ROOT);

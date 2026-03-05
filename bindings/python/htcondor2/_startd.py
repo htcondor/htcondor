@@ -11,11 +11,13 @@ from ._common_imports import (
 )
 
 from ._drain_type import DrainType
+from ._vacate_type import VacateType
 from ._completion_type import CompletionType
 from ._history_src import HistorySrc
 
 from .htcondor2_impl import (
     _startd_drain_jobs,
+    _startd_vacate_slots,
     _startd_cancel_drain_jobs,
     _history_query,
 )
@@ -27,7 +29,7 @@ class Startd():
     `draining <https://htcondor.readthedocs.io/en/latest/admin-manual/cm-configuration.html#defragmenting-dynamic-slots>`_.
     """
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         """
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.  :py:obj:`None` means the
@@ -79,8 +81,29 @@ class Startd():
           int(drain_type), int(on_completion), check_expr, start_expr, reason
         )
 
+    def vacateSlot(self, slot_name : Optional[str] = None, vacate_fast : VacateType = VacateType.Graceful) -> None:
+        """
+        Evict the job running on an active slot. Eviction is graceful unless
+        vacate_fast is set to VacateType.Fast.
 
-    def cancelDrainJobs(self, request_id : str = None) -> None:
+        :param slot_name:  The name of the slot.
+        :param vacate_fast:  :py:obj:`Fast` to evict fast. :py:obj:`None` or :py:obj:`Graceful` to evict graceful.
+        """
+        if slot_name is None or slot_name == "":
+            raise ValueError("slot_name must be a non-empty string");
+        _startd_vacate_slots(self._addr, slot_name, vacate_fast)
+
+    def vacate(self, vacate_fast : VacateType = VacateType.Graceful) -> None:
+        """
+        Evict all jobs running on active slots. Eviction is graceful unless
+        vacate_fast is set to VacateType.Fast.
+
+        :param vacate_fast:  :py:obj:`Fast` to evict fast. :py:obj:`None` or :py:obj:`Graceful` to evict graceful.
+        """
+        _startd_vacate_slots(self._addr, None, vacate_fast)
+
+
+    def cancelDrainJobs(self, request_id : Optional[str] = None) -> None:
         """
         Cancel a draining request.
 

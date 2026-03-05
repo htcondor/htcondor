@@ -241,6 +241,28 @@ bool ExprTreeIsLiteralString(classad::ExprTree * expr, std::string & sval)
 	return val.IsStringValue(sval);
 }
 
+bool ExprTreeIsArray(classad::ExprTree * expr, size_t & num_elms)
+{
+	if ( ! expr) return false;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind();
+	if (kind == classad::ExprTree::EXPR_ENVELOPE) {
+		expr = ((classad::CachedExprEnvelope*)expr)->get();
+		if ( ! expr) return false;
+		kind = expr->GetKind();
+	}
+
+	if (kind == classad::ExprTree::EXPR_LIST_NODE) {
+		std::vector<classad::ExprTree*> exprs;
+		((const classad::ExprList*)expr)->GetComponents( exprs );
+		num_elms = exprs.size();
+		return true;
+	}
+
+	return false;
+}
+
+
 bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_absolute /*=NULL*/)
 {
 	if ( ! expr) return false;
@@ -563,6 +585,57 @@ int GetAttrRefsOfScope(classad::ExprTree * expr, classad::References &attrs, con
 	 return walk_attr_refs(expr, AccumAttrsOfScopes, &tmp);
 }
 
+class AttrsScopesOrUnscoped {
+public:
+	AttrsScopesOrUnscoped() : attrs(nullptr) {}
+	classad::References *attrs;
+	classad::References scopes; // scopes we care about
+};
+
+int AccumAttrsOfScopeOrUnscoped(void *pv, const std::string &attr, const std::string &scope, bool /*absolute*/)
+{
+	AttrsScopesOrUnscoped &ctx = *(AttrsScopesOrUnscoped *)pv;
+	if (scope.empty() || ctx.scopes.find(scope) != ctx.scopes.end()) {
+		ctx.attrs->insert(attr);
+	}
+	return 1;
+}
+
+class AttrsTwoScopesOrUnscoped {
+public:
+	AttrsTwoScopesOrUnscoped(classad::References &a1, const std::string &s1,
+	                        classad::References &a2, const std::string &s2)
+	    : scope1_attrs(a1), scope2_attrs(a2), scope1(s1), scope2(s2) {}
+
+	classad::References &scope1_attrs;
+	classad::References &scope2_attrs;
+	std::string scope1;
+	std::string scope2;
+};
+
+int AccumAttrsOfScopesOrUnscoped(void *pv, const std::string &attr, const std::string &scope, bool /*absolute*/)
+{
+	AttrsTwoScopesOrUnscoped &ctx = *(AttrsTwoScopesOrUnscoped *)pv;
+	if (scope.empty()) {
+		ctx.scope1_attrs.insert(attr);
+		ctx.scope2_attrs.insert(attr);
+	} else if (scope == ctx.scope1) {
+		ctx.scope1_attrs.insert(attr);
+	} else if (scope == ctx.scope2) {
+		ctx.scope2_attrs.insert(attr);
+	}
+	return 1;
+}
+
+// add attribute references to two scope sets in a single walk. Unscoped references go to both sets.
+int GetAttrRefsOfScopesOrUnscoped(classad::ExprTree *expr,
+    classad::References &scope1_attrs, const std::string &scope1,
+    classad::References &scope2_attrs, const std::string &scope2)
+{
+	AttrsTwoScopesOrUnscoped ctx(scope1_attrs, scope1, scope2_attrs, scope2);
+	return walk_attr_refs(expr, AccumAttrsOfScopesOrUnscoped, &ctx);
+}
+
 
 // edit the given expr changing attribute references as the mapping indicates
 int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
@@ -655,10 +728,14 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 		}
 		break;
 
-		case classad::ExprTree::EXPR_ENVELOPE:
+		case classad::ExprTree::EXPR_ENVELOPE: {
+			classad::ExprTree *inner = SkipExprEnvelope(tree);
+			if (inner) { iret += RewriteAttrRefs(inner, mapping); }
+		}
+		break;
+
 		default:
-			// unknown or unallowed node.
-			ASSERT(0);
+			// unknown or unhandled node kind; leave untouched.
 		break;
 	}
 	return iret;

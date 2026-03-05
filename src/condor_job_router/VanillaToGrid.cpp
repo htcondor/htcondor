@@ -30,6 +30,9 @@
 
 #include "JobRouter.h"
 #include "submit_job.h"
+#include "Scheduler.h"
+
+extern JobRouter *job_router;
 
 bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, const char * gridresource, bool is_sandboxed)
 {
@@ -218,7 +221,8 @@ static void set_job_status_idle(classad::ClassAd const &orig, classad::ClassAd &
 	int old_update_status = IDLE;
 	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
 	if ( set_job_status_simple(orig,update,IDLE) && old_update_status == RUNNING ) {
-		WriteEvictEventToUserLog( orig );
+		UserRecord* urec = job_router->GetScheduler()->GetJobUser(&orig);
+		WriteEvictEventToUserLog(orig, urec);
 	}
 }
 
@@ -226,7 +230,8 @@ static void set_job_status_running(classad::ClassAd const &orig, classad::ClassA
 	int old_update_status = IDLE;
 	update.EvaluateAttrInt( ATTR_JOB_STATUS, old_update_status );
 	if ( set_job_status_simple(orig,update,RUNNING) && old_update_status == IDLE ) {
-		WriteExecuteEventToUserLog( orig );
+		UserRecord* urec = job_router->GetScheduler()->GetJobUser(&orig);
+		WriteExecuteEventToUserLog(orig, urec);
 	}
 }
 

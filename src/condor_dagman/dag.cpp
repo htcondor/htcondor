@@ -107,12 +107,18 @@ Dag::~Dag()
 		delete node;
 	}
 
+	// Delete all service node objects in _service_nodes
+	for (auto *node : _service_nodes) {
+		delete node;
+	}
+
 	for (auto &[_, splice] : _splices) {
 		delete splice;
 	}
 
 	// And remove them from the vector
 	_nodes.clear();
+	_service_nodes.clear();
 
 	delete _preScriptQ;
 	delete _postScriptQ;
@@ -2005,32 +2011,26 @@ void Dag::RemoveRunningScripts() const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool overwrite, bool parseFailed, bool isPartial) /* const */
-{
-	std::string rescueDagFile;
+void Dag::Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum) const {
+	static std::string rescue_dag = ""; // Only one rescue DAG per execution (i.e. overwrite if DAG failure then execute final)
 	std::string headerInfo;
-	if (parseFailed) {
-		rescueDagFile = dagFile;
-		rescueDagFile += ".parse_failed";
-		formatstr(headerInfo,"# \"Rescue\" DAG file, created after failure parsing\n#   the %s DAG file\n", dagFile);
-	} else {
+
+	if (rescue_dag.empty()) {
 		int nextRescue = dagmanUtils.FindLastRescueDagNum(dagFile, multiDags, maxRescueDagNum) + 1;
-		if (overwrite && nextRescue > 1) {
-			nextRescue--;
-		}
 		if (nextRescue > maxRescueDagNum) {
 			nextRescue = maxRescueDagNum;
 		}
-		rescueDagFile = dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
-		formatstr(headerInfo,"# Rescue DAG file, created after running\n#   the %s DAG file\n", dagFile);
+		rescue_dag = dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
 	}
+
+	formatstr(headerInfo, "# Rescue DAG file, created after running\n#   the %s DAG file\n", dagFile.c_str());
 
 	// Note: there could possibly be a race condition here if two
 	// DAGMans are running on the same DAG at the same time.  That
 	// should be avoided by the lock file, though, so I'm not doing
 	// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue(rescueDagFile.c_str(), headerInfo.c_str(), parseFailed, isPartial);
+	WriteRescue(rescue_dag, headerInfo, RescueFileType::DEFAULT);
 }
 
 //-----------------------------------------------------------------------------
@@ -2066,7 +2066,7 @@ void Dag::WriteSavePoint(Node* node) {
 	//Write save file
 	std::string headerInfo;
 	formatstr(headerInfo, "# Save file written at Start Node %s\n", node->GetNodeName());
-	WriteRescue(saveFile.c_str(), headerInfo.c_str(), false, true, true);
+	WriteRescue(saveFile, headerInfo, RescueFileType::SAVE_POINT);
 	if (dagOpts[deep::b::UseDagDir]) {
 		if ( ! tmpDir.Cd2MainDir(errMsg)) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to change back to original directory: %s\n", errMsg.c_str());
@@ -2074,31 +2074,43 @@ void Dag::WriteSavePoint(Node* node) {
 	}
 }
 
-static const char *RESCUE_DAG_VERSION = "2.0.1";
 
 //-----------------------------------------------------------------------------
-void Dag::WriteRescue(const char * rescue_file, const char * headerInfo, bool parseFailed, bool isPartial, bool isSavePoint) /* const */
-{
-	debug_printf(DEBUG_NORMAL, "Writing %s to %s...\n", isSavePoint ? "Save File" : "Rescue DAG", rescue_file);
+void Dag::WriteRescue(const std::string& rescue_file, const std::string& headerInfo, RescueFileType rescue_type) const {
+	static const char *RESCUE_DAG_VERSION = "2.1.0";
 
-	FILE *fp = safe_fopen_wrapper_follow(rescue_file, "w");
+	bool reset_retries = true;
+	const char* rescue_file_type = "Rescue DAG";
+
+	// Set type specific information (i.e. retry rescues and type name)
+	switch (rescue_type) {
+		case RescueFileType::SAVE_POINT:
+			rescue_file_type = "Save File";
+			break;
+		case RescueFileType::DEFAULT:
+			reset_retries = config[conf::b::RescueResetRetry];
+			[[fallthrough]];
+		default:
+			break;
+	}
+
+	debug_printf(DEBUG_NORMAL, "Writing %s to %s...\n", rescue_file_type, rescue_file.c_str());
+
+	FILE *fp = safe_fopen_wrapper_follow(rescue_file.c_str(), "w");
 	if ( ! fp) {
-		debug_printf(DEBUG_QUIET, "Could not open %s for writing.\n", rescue_file);
+		debug_printf(DEBUG_QUIET, "Could not open %s for writing.\n", rescue_file.c_str());
 		return;
 	}
 
-	bool reset_retries_upon_rescue = isSavePoint ? true : config[conf::b::RescueResetRetry];
+	fprintf(fp, "%s", headerInfo.c_str());
 
-	fprintf(fp,"%s",headerInfo);
+	time_t timestamp = time(nullptr);
+	const struct tm *tm = gmtime(&timestamp);
 
-	time_t timestamp;
-	(void)time(&timestamp);
-	const struct tm *tm;
-	tm = gmtime(&timestamp);
-	fprintf(fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1, tm->tm_mday,
-	        tm->tm_year + 1900, tm->tm_hour, tm->tm_min, tm->tm_sec);
-	fprintf(fp, "# Rescue DAG version: %s (%s)\n", RESCUE_DAG_VERSION, isPartial ? "partial" : "full");
-
+	fprintf(fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n",
+	        tm->tm_mon + 1, tm->tm_mday, tm->tm_year + 1900,
+	        tm->tm_hour, tm->tm_min, tm->tm_sec);
+	fprintf(fp, "# Rescue DAG version: %s\n", RESCUE_DAG_VERSION);
 	fprintf(fp, "#\n");
 	fprintf(fp, "# Total number of Nodes: %d\n", NumNodes(true));
 	fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
@@ -2106,158 +2118,41 @@ void Dag::WriteRescue(const char * rescue_file, const char * headerInfo, bool pa
 
 	// Print the names of failed nodes
 	fprintf(fp, "#   ");
-	for (auto & node : _nodes) {
+	for (const auto& node : _nodes) {
 		if (node->GetStatus() == Node::STATUS_ERROR) {
 			fprintf(fp, "%s,", node->GetNodeName());
 		}
 	}
 	fprintf(fp, "<ENDLIST>\n\n");
 
-	// REJECT tells DAGMan to reject this DAG if we try to run it (which we shouldn't).
-	if (parseFailed && !isPartial) {
-		fprintf(fp, "REJECT\n\n");
-	}
-
-	// Print the CONFIG file, if any.
-	if (!config[conf::str::DagConfig].empty() && !isPartial) {
-		fprintf(fp, "CONFIG %s\n\n", config[conf::str::DagConfig].c_str());
-	}
-
-	// Print the node status file, if any.
-	if (_statusFileName && !isPartial) {
-		fprintf(fp, "NODE_STATUS_FILE %s\n\n", _statusFileName);
-	}
-
-	// Print the jobstate.log file, if any.
-	if (_jobstateLog.LogFile() && !isPartial) {
-		fprintf(fp, "JOBSTATE_LOG %s\n\n", _jobstateLog.LogFile());
-	}
-
 	// Print per-node information.
-	for (auto & node : _nodes) {
-		WriteNodeToRescue(fp, node, reset_retries_upon_rescue, isPartial);
-	}
-
-	// Print Dependency Section
-	if ( ! isPartial) {
-		fprintf(fp, "\n");
-		for (auto & node : _nodes) {
-			if ( ! node->NoChildren()) {
-				fprintf(fp, "PARENT %s CHILD ", node->GetNodeName());
-
-				node->VisitChildren(*this, [](Dag&, Node*, Node* child, void* pv) -> int {
-						fprintf((FILE*)pv, " %s", child->GetNodeName());
-						return 1;
-					}, fp);
-				fprintf(fp, "\n");
-			}
-		}
-	}
-
-	// Print "throttle by node category" settings.
-	if ( ! isPartial) {
-		_catThrottles.PrintThrottles(fp);
-	}
-
-	fclose(fp);
-}
-
-//-----------------------------------------------------------------------------
-void
-Dag::WriteNodeToRescue(FILE *fp, Node *node, bool reset_retries_upon_rescue, bool isPartial)
-{
-		// Print the JOB/DATA line.
-	const char *keyword = "";
-	if (node->GetType() == NodeType::FINAL) {
-		keyword = "FINAL";
-	} else {
-		keyword = node->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
-	}
-
-	if ( ! isPartial) {
-		fprintf(fp, "\n%s %s %s ", keyword, node->GetNodeName(), node->GetDagFile() ? node->GetDagFile() : node->GetCmdFile());
-		if (strcmp(node->GetDirectory(), "")) {
-			fprintf(fp, "DIR %s ", node->GetDirectory());
-		}
-		if (node->GetNoop()) {
-			fprintf(fp, "NOOP ");
-		}
-		fprintf(fp, "\n");
-
-		// Print the SCRIPT PRE line, if any.
-		if (node->_scriptPre != nullptr) {
-			WriteScriptToRescue(fp, node->_scriptPre);
+	for (const auto& node : _nodes) {
+		// Never mark a FINAL node as done.
+		// Also avoid a possible race condition where the node
+		// has been skipped but is not yet marked as DONE.
+		if (node->GetStatus() == Node::STATUS_DONE && node->GetType() != NodeType::FINAL) {
+			fprintf(fp, "DONE %s\n", node->GetNodeName());
 		}
 
-		// Print the PRE_SKIP line, if any.
-		if (node->HasPreSkip() != 0) {
-			fprintf(fp, "PRE_SKIP %s %d\n", node->GetNodeName(), node->GetPreSkip());
-		}
+		if (node->GetRetryMax() > 0 && !reset_retries) {
+			int max = node->GetRetryMax();
+			int curr = node->GetRetries();
+			ASSERT(curr <= max);
 
-		// Print the SCRIPT POST line, if any.
-		if (node->_scriptPost != nullptr) {
-			WriteScriptToRescue(fp, node->_scriptPost);
-		}
+			int remaining = max - curr;
+			int retry_abort_val = std::numeric_limits<int>::max();
+			fprintf(fp, "# %d of %d retries already performed; %d remaining\n",
+			        curr, max, remaining);
 
-		// Print the VARS line, if any.
-		if (node->HasVars()) {
-			std::string vars;
-			vars.reserve(500);
-			vars = "";
-			node->PrintVars(vars);
-			fprintf(fp, "VARS %s", node->GetNodeName());
-			fprintf(fp, "%s\n", vars.c_str());
-		}
-
-		// Print the ABORT-DAG-ON line, if any.
-		if (node->HasAbortCode()) {
-			fprintf(fp, "ABORT-DAG-ON %s %d", node->GetNodeName(), node->GetAbortCode());
-			if (node->HasAbortReturnValue()) {
-				fprintf(fp, " RETURN %d", node->GetAbortReturnValue());
+			fprintf(fp, "RETRY %s %d", node->GetNodeName(), remaining);
+			if (node->HasAbortRetry(retry_abort_val)) {
+				fprintf(fp, " UNLESS-EXIT %d", retry_abort_val);
 			}
 			fprintf(fp, "\n");
 		}
-
-		// Print the PRIORITY line, if any.
-		// Note: when gittrac #2167 gets merged, we need to think
-		// about how this code will interact with that code.
-		// wenger/nwp 2011-08-24
-		if (node->GetExplicitPrio() != 0) {
-			fprintf(fp, "PRIORITY %s %d\n", node->GetNodeName(), node->GetExplicitPrio());
-		}
-
-		// Print the CATEGORY line, if any.
-		if (node->GetThrottleInfo()) {
-			fprintf(fp, "CATEGORY %s %s\n", node->GetNodeName(), node->GetThrottleInfo()->_category->c_str());
-		}
 	}
 
-	// Never mark a FINAL node as done.
-	// Also avoid a possible race condition where the node
-	// has been skipped but is not yet marked as DONE.
-	if (node->GetStatus() == Node::STATUS_DONE && node->GetType() != NodeType::FINAL) {
-		fprintf(fp, "DONE %s\n", node->GetNodeName());
-	}
-
-	// Print the RETRY line, if any.
-	node->WriteRetriesToRescue(fp, reset_retries_upon_rescue);
-}
-
-//-----------------------------------------------------------------------------
-void
-Dag::WriteScriptToRescue(FILE *fp, Script *script)
-{
-	const char *type = nullptr;
-	switch(script->GetType()) {
-		case ScriptType::PRE: type = "PRE"; break;
-		case ScriptType::POST: type = "POST"; break;
-		case ScriptType::HOLD: type = "HOLD"; break;
-	}
-	fprintf(fp, "SCRIPT ");
-	if (script->_deferStatus != SCRIPT_DEFER_STATUS_NONE) {
-		fprintf(fp, "DEFER %d %lld ", script->_deferStatus, (long long)script->_deferTime);
-	}
-	fprintf(fp, "%s %s %s\n", type, script->GetNode()->GetNodeName(), script->GetCmd());
+	fclose(fp);
 }
 
 //-------------------------------------------------------------------------
@@ -3114,6 +3009,7 @@ Dag::CheckThrottleCats()
 {
 	for (const auto& throttle: *_catThrottles.GetThrottles()) {
 		ThrottleByCategory::ThrottleInfo *info = throttle.second;
+		debug_dprintf(D_TEST, DEBUG_NORMAL, "CHECK CATEGORY %s %d %d\n", info->_category->c_str(), info->_totalJobs, info->_maxJobs);
 		debug_printf(DEBUG_DEBUG_1, "Category %s has %d jobs, throttle setting of %d\n",
 		             info->_category->c_str(), info->_totalJobs, info->_maxJobs);
 		ASSERT(info->_totalJobs >= 0);
@@ -3265,9 +3161,9 @@ Dag::ChooseDotFileName(std::string &dot_file_name)
 //---------------------------------------------------------------------------
 bool Dag::Add(Node* node)
 {
-	auto insertJobResult = _nodeNameHash.insert(std::make_pair(node->GetNodeName(), node));
+	auto insertJobResult = _nodeNameHash.emplace(node->GetNodeName(), node);
 	ASSERT(insertJobResult.second == true);
-	auto insertIdResult = _nodeIDHash.insert(std::make_pair(node->GetNodeID(), node));
+	auto insertIdResult = _nodeIDHash.emplace(node->GetNodeID(), node);
 	ASSERT(insertIdResult.second == true);
 
 	// Final node status is set to STATUS_NOT_READY here, so it
@@ -3363,7 +3259,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 					auto findResult = ht->find(id);
 					if (findResult == ht->end()) {
 						// Node not found.
-						auto insertResult = ht->insert(std::make_pair(id, node));
+						auto insertResult = ht->emplace(id, node);
 						ASSERT(insertResult.second == true);
 					} else {
 						// Node was found.
@@ -3401,7 +3297,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 				auto findResult = ht->find(id);
 				if (findResult == ht->end()) {
 					// Node not found.
-					auto insertResult = ht->insert(std::make_pair(id, node));
+					auto insertResult = ht->emplace(id, node);
 					ASSERT(insertResult.second == true);
 				} else {
 					// Node was found.
@@ -3437,7 +3333,7 @@ Dag::LogEventNodeLookup(const ULogEvent* event, bool &submitEventIsSane)
 					// std::map::find() returns an iterator pointing to the desired element, or end() if not found
 					if (findResult == ht->end()) {
 						// Node not found.
-						auto insertResult = ht->insert(std::make_pair(id, node));
+						auto insertResult = ht->emplace(id, node);
 						// std::map::insert() returns a pair, second element is the success bool
 						ASSERT(insertResult.second == true);
 					} else {
@@ -3662,7 +3558,7 @@ Dag::ProcessSuccessfulSubmit(Node *node, const CondorID &condorID)
 	node->SetCondorID(condorID);
 	ASSERT(NodeIsNoop(node->GetID()) == node->GetNoop());
 	int id = GetIndexID(node->GetID());
-	auto result = GetEventIDHash(node->GetNoop())->insert(std::make_pair(id, node));
+	auto result = GetEventIDHash(node->GetNoop())->emplace(id, node);
 	// std::map::insert() returns a pair, second element is the success bool
 	ASSERT(result.second == true);
 
@@ -4003,7 +3899,7 @@ Dag::PrefixAllNodeNames(const std::string &prefix)
 	// Then, reindex all the nodes keyed by their new name
 	for (auto & node : _nodes) {
 		key = node->GetNodeName();
-		auto insertResult = _nodeNameHash.insert(std::make_pair(key, node));
+		auto insertResult = _nodeNameHash.emplace(key, node);
 		if (insertResult.second != true) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two nodes have an identical name, which means another
@@ -4016,10 +3912,10 @@ Dag::PrefixAllNodeNames(const std::string &prefix)
 }
 
 //---------------------------------------------------------------------------
-bool 
+bool
 Dag::InsertSplice(std::string spliceName, Dag *splice_dag)
 {
-	auto insertResult = _splices.insert(std::make_pair(spliceName, splice_dag));
+	auto insertResult = _splices.emplace(spliceName, splice_dag);
 	return insertResult.second;
 }
 
@@ -4110,7 +4006,7 @@ Dag::LiftSplices(SpliceLayer layer)
 		om = nullptr;
 
 		for (const auto& [desc_name, desc] : splice->InlineDescriptions) {
-			const auto& [_, success] = InlineDescriptions.insert(std::make_pair(desc_name, desc));
+			const auto& [_, success] = InlineDescriptions.emplace(desc_name, desc);
 			if ( ! success && InlineDescriptions[desc_name] != desc) {
 				// If we have splices using differing descriptions using the same name abort
 				debug_printf(DEBUG_NORMAL, "WARNING: Conflicting inline descriptions using the same name '%s' between %s%s and splice %s.\n",
@@ -4227,7 +4123,7 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 
 		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: node %s\n", key.c_str());
 
-		auto insertResult = _nodeNameHash.insert(std::make_pair(key, (*nodes)[i]));
+		auto insertResult = _nodeNameHash.emplace(key, (*nodes)[i]);
 		if (insertResult.second == false) {
 			debug_printf(DEBUG_QUIET,  "Found name collision while taking ownership of node: %s\n",
 			             key.c_str());
@@ -4249,7 +4145,7 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 	// 3. Update our node id hash to include the new nodes.
 	for (i = 0; i < nodes->size(); i++) {
 		key_id = (*nodes)[i]->GetNodeID();
-		auto insertResult = _nodeIDHash.insert(std::make_pair(key_id, (*nodes)[i])) ;
+		auto insertResult = _nodeIDHash.emplace(key_id, (*nodes)[i]) ;
 		if (insertResult.second != true) {
 			debug_error(1, DEBUG_QUIET, "Found node id collision while taking ownership of node: %s\n",
 			           (*nodes)[i]->GetNodeName());

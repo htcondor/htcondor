@@ -1457,22 +1457,18 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	daemonCore->CreateProcessNew(
 		ssh_to_job_sshd_setup.c_str(),
 		setup_args,
-		PRIV_USER_FINAL,
-		setup_reaper,
-		FALSE,
-		FALSE,
-		&setup_env,
-		GetWorkingDir(0),
-		NULL,
-		NULL,
-		setup_std_fds,
-		NULL,
-		0,
-		NULL,
-		setup_opt_mask);
+		cpArgs.priv(PRIV_USER_FINAL)
+			.reaperID(setup_reaper)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&setup_env)
+			.cwd(GetWorkingDir(0))
+			.std(setup_std_fds)
+			.jobOptMask(setup_opt_mask));
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
 
@@ -2238,6 +2234,12 @@ Starter::jobEnvironmentReady( void )
 }
 
 
+void
+Starter::prepareJobHookDone() {
+	jobWaitUntilExecuteTime();
+}
+
+
 bool
 Starter::skipJobImmediately() {
 	//
@@ -2690,7 +2692,7 @@ Starter::SpawnJob( void )
 							}
 						}
 					} else {
-						dprintf(D_ALWAYS, "... but DEFAULT_CONTAINER_IMAGE doesn't evaluate to a string, skippping containerizing\n");
+						dprintf(D_ALWAYS, "... but DEFAULT_CONTAINER_IMAGE doesn't evaluate to a string, skipping containerizing\n");
 					}
 				}
 			}
@@ -3815,7 +3817,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		const char * psub = strchr(pre, chRe);
 		const char * pend = psub ? strchr(psub+1,chRe) : psub;
 		if ( ! psub || ! pend ) {
-			dprintf(D_ERROR, "Assigned%s environment '%s' ignored - missing replacment end marker: %s\n", tag, env_name.c_str(), peq);
+			dprintf(D_ERROR, "Assigned%s environment '%s' ignored - missing replacement end marker: %s\n", tag, env_name.c_str(), peq);
 			break;
 		}
 		// at this point if your expression is /aa/bbb/

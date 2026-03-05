@@ -22,6 +22,7 @@
 #include "condor_config.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
+#include <vector>
 
 static std::string gce_proxy_host;
 static int gce_proxy_port;
@@ -391,7 +392,7 @@ create_success_result( int req_id, std::vector<std::string> *result_list)
 		index_count = result_list->size();
 	}
 
-	const char *tmp_result[index_count + 1];
+	std::vector<const char *> tmp_result(index_count + 1);
 
 	tmp_result[0] = GCE_COMMAND_SUCCESS_OUTPUT;
 
@@ -403,7 +404,7 @@ create_success_result( int req_id, std::vector<std::string> *result_list)
 		}
 	}
 
-	return create_output_string (req_id, tmp_result, i);
+	return create_output_string (req_id, tmp_result.data(), i);
 }
 
 std::string

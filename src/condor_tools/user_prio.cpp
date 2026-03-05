@@ -1017,7 +1017,6 @@ main(int argc, const char* argv[])
 
 	if (fromCollector || (negotiatorCanDoDirect && ! GroupRollup)) {
 		CondorQuery query(ACCOUNTING_AD);
-		ClassAdList ads;
 		CondorError errstack;
 		QueryResult q;
 
@@ -1048,24 +1047,19 @@ main(int argc, const char* argv[])
 
 		if (fromCollector) {
 			CollectorList * collectors = CollectorList::create(pool_name);
-			q = collectors->query(query, ads, &errstack);
+			q = collectors->query(query, accountingAds, &errstack);
 			delete collectors;
 			if (q != Q_OK) {
 				fprintf(stderr, "Can't query collector for ads: %s\n", errstack.getFullText().c_str());
 				exit(1);
 			}
 		} else {
-			q = query.fetchAds(ads, negotiator.addr(), &errstack);
+			q = query.fetchAds(accountingAds, negotiator.addr(), &errstack);
 			if (q != Q_OK) {
 				fprintf(stderr, "Can't query negotiator for ads: %s\n", errstack.getFullText().c_str());
 				exit(1);
 			}
 		}
-        ads.Open();
-        while (ClassAd* oneAd = ads.Next()) {
-			accountingAds.push_back(*oneAd);
-		}
-		ads.Close();
 
 	} else { // oldWay
 

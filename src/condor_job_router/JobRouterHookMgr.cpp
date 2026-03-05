@@ -26,6 +26,7 @@
 #include "Scheduler.h"
 #include "submit_job.h"
 #include <algorithm>
+#include "NewClassAdJobLogConsumer.h"
 
 extern JobRouter* job_router;
 
@@ -227,7 +228,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	}
 
 	TemporaryPrivSentry sentry(true);
-	if (init_user_ids_from_ad(r_job->src_ad) == false) {
+	if (init_user_ids_from_ad(*job_router->GetScheduler()->GetJobUser(&r_job->src_ad)) == false) {
 		delete translate_client;
 		return -1;
 	}
@@ -297,7 +298,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	}
 
 	TemporaryPrivSentry sentry(true);
-	if (init_user_ids_from_ad(r_job->src_ad) == false) {
+	if (init_user_ids_from_ad(*job_router->GetScheduler()->GetJobUser(&r_job->src_ad)) == false) {
 		delete status_client;
 		return -1;
 	}
@@ -376,7 +377,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	}
 
 	TemporaryPrivSentry sentry(true);
-	if (init_user_ids_from_ad(r_job->src_ad) == false) {
+	if (init_user_ids_from_ad(*job_router->GetScheduler()->GetJobUser(&r_job->src_ad)) == false) {
 		delete exit_client;
 		return -1;
 	}
@@ -451,7 +452,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	}
 
 	TemporaryPrivSentry sentry(true);
-	if (init_user_ids_from_ad(r_job->src_ad) == false) {
+	if (init_user_ids_from_ad(*job_router->GetScheduler()->GetJobUser(&r_job->src_ad)) == false) {
 		delete cleanup_client;
 		return -1;
 	}

@@ -73,6 +73,8 @@ DEFAULT_CONFIG = {
     "NUM_SLOTS_TYPE_1": "1",
     "SLOT_TYPE_1": "100%",
     "SLOT_TYPE_1_PARTITIONABLE": "TRUE",
+    # Singularity has intermittent issues on startup, turn off for now
+    "SINGULARITY": "/usr/bin/false",
 }
 
 ROLES = ["Personal"]

@@ -71,7 +71,7 @@ Scheduler::~Scheduler()
 }
 
 UserRecord * Scheduler::GetUserAd(const std::string & username) { return m_consumer->GetUserAd(username); }
-UserRecord * Scheduler::GetJobUser(ClassAd * jobad) { return m_consumer->GetJobUser(jobad); }
+UserRecord * Scheduler::GetJobUser(const ClassAd * jobad) { return m_consumer->GetJobUser(jobad); }
 
 
 void Scheduler::init() { config(); }

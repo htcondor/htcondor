@@ -64,6 +64,7 @@ condor_exe_test(async_freader_tests async_freader_tests.cpp "${CONDOR_TOOL_LIBS}
 
 # formly boost-testy unit tests that each link to a stand-alone exe
 condor_exe_test ( _ring_buffer_tester ring_buffer_tests.cpp "" OFF )
+condor_exe_test ( _generic_stats_tester generic_stats_tests.cpp "${CONDOR_TOOL_LIBS}" OFF )
 condor_exe_test ( _consumption_policy_tester consumption_policy_tests.cpp "condor_utils" OFF )
 
 

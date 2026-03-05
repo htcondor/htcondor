@@ -429,6 +429,8 @@ public:
 		return -1;
 	}
 
+	virtual void runPrepareJobHook();
+
 protected:
 
 		// // // // // // // // // // // //

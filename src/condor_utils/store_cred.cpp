@@ -534,7 +534,12 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
+	// If we decide to modify a JSON-style cred to add scope/audience
+	// info, jsoncred will hold the modified data. The pointer cred
+	// will be redirected to point at jsoncred's data. In all cases,
+	// clen will hold the size of the data pointed to by cred.
 	size_t clen = credlen;
+	std::string jsoncred;
 
 	if (!use_top_file) {
 		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
@@ -549,7 +554,6 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 			ad->LookupString("Scopes", scopes);
 			ad->LookupString("Audience", audience);
 		}
-		std::string jsoncred;
 		if ((scopes != "") || (audience != "")) {
 			// Add scopes and/or audience into the JSON-formatted credentials
 			classad::ClassAdJsonParser jsonp;
@@ -1567,7 +1571,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	}
 
 	if ( ! got_message || !sock->end_of_message()) {
-		dprintf(D_ALWAYS, "store_cred: did not recieve a valid command\n");
+		dprintf(D_ALWAYS, "store_cred: did not receive a valid command\n");
 		answer = FAILURE_PROTOCOL_MISMATCH;
 		goto cleanup_and_exit;
 	}
@@ -2292,8 +2296,7 @@ int queryCredential( const char* user, Daemon *d ) {
 */
 
 int do_check_oauth_creds (
-	const classad::ClassAd* request_ads[],
-	int num_ads,
+	const std::vector<const classad::ClassAd*>& request_ads,
 	std::string & outputURL,
 	Daemon* d /* = NULL*/)
 {
@@ -2302,10 +2305,7 @@ int do_check_oauth_creds (
 	std::string daemonid;
 
 	outputURL.clear();
-	if (num_ads < 0) {
-		return -1;
-	}
-	if (num_ads == 0) {
+	if (request_ads.empty()) {
 		return 0;
 	}
 
@@ -2334,11 +2334,11 @@ int do_check_oauth_creds (
 
 	bool sent = false;
 	sock->encode();
-	if ( ! sock->put(num_ads)) {
+	if ( ! sock->put(request_ads.size())) {
 		sent = false;
 	} else {
 		sent = true;
-		for (int ii = 0; ii < num_ads; ++ii) {
+		for (size_t ii = 0; ii < request_ads.size(); ++ii) {
 			// to insure backward compability, there are 3 fields that *must* be set to empty strings
 			// if they are missing or undefined. 8.9.9 and later will handle missing fields correctly
 			// but 8.9.* < 8.9.9 will leak values from one attribute to the other 

@@ -347,6 +347,10 @@ def retry_memory_max_with_units_job_hash(test_dir, path_to_python, test_script):
 # These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
+    if os.environ.get("HTCONDOR_TEST_USE_SUDO") == "1":
+        # When using sudo, we should have root
+        return True
+
     with open('/proc/self/cgroup') as fd:
         proc_self_cgroup = fd.read()
 

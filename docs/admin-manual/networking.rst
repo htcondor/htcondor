@@ -87,9 +87,7 @@ As an optimization for daemons and tools communicating with another
 daemon that is running on the same host, each HTCondor daemon can be
 configured to write its IP address and port number into a well-known
 file. The file names are controlled using the :macro:`<SUBSYS>_ADDRESS_FILE`
-configuration variables, as described in the
-:ref:`admin-manual/configuration-macros:daemoncore configuration file entries`
-section.
+configuration variables.
 
 All HTCondor tools and daemons that need to communicate with the
 *condor_negotiator* will either use the :macro:`NEGOTIATOR_ADDRESS_FILE` or
@@ -160,12 +158,6 @@ example:
     COLLECTOR_HOST = $(CONDOR_HOST):0
     COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
-Configuration definition of ``COLLECTOR_ADDRESS_FILE`` is in the
-:ref:`admin-manual/configuration-macros:Daemoncore configuration file entries`
-section and :macro:`COLLECTOR_HOST` is in the
-:ref:`admin-manual/configuration-macros:HTCondor-wide configuration file entries`
-section.
-
 Restricting Port Usage to Operate with Firewalls
 ''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -183,17 +175,14 @@ and dynamic (apparently random) ports for everything else. See
 assigned port is desired for the *condor_collector* daemon.
 
 All of the HTCondor daemons on a machine may be configured to share a
-single port. See the :ref:`admin-manual/configuration-macros:condor_shared_port
-configuration file macros` section for more information.
+single port. See the :ref:`shared_port_config_options` section for more information.
 
 The configuration variables :macro:`HIGHPORT` and
 :macro:`LOWPORT` facilitate setting a restricted range
 of ports that HTCondor will use. This may be useful when some machines
 are behind a firewall. The configuration macros :macro:`HIGHPORT` and
-:macro:`LOWPORT` will restrict dynamic ports to the range specified. The
-configuration variables are fully defined in the 
-:ref:`admin-manual/configuration-macros:network-related configuration file
-entries` section. All of these ports must be greater than 0 and less than 65,536.
+:macro:`LOWPORT` will restrict dynamic ports to the range specified.
+All of these ports must be greater than 0 and less than 65,536.
 In general, use ports greater than 1024, in order to avoid port
 conflicts with standard services on the machine. Another reason for
 using ports greater than 1024 is that daemons and tools are often not
@@ -202,9 +191,7 @@ run as root, and only root may listen to a port lower than 1024.
 The range of ports assigned may be restricted based on incoming
 (listening) and outgoing (connect) ports with the configuration
 variables :macro:`IN_HIGHPORT`, :macro:`IN_LOWPORT`, :macro:`OUT_HIGHPORT`,
-and :macro:`OUT_LOWPORT` See
-the :ref:`admin-manual/configuration-macros:network-related configuration
-file entries` section for complete definitions of these configuration variables.
+and :macro:`OUT_LOWPORT`.
 A range of ports lower than 1024 for daemons running as root is appropriate for
 incoming ports, but not for outgoing ports. The use of ports below 1024
 (versus above 1024) has security implications; therefore, it is inappropriate to
@@ -292,7 +279,7 @@ case the network topology might look something like this:
    flowchart LR
     start((Internet)) --> NAT
     start -- blocked\nby Firewall --o Firewall
-    NAT[NAT\nbox\n@1.2.3.4]
+    NAT[NAT\nbox\n@192.0.2.1]
     NAT --> Condor
 
     subgraph Firewall
@@ -300,15 +287,15 @@ case the network topology might look something like this:
     end
 
 That, our HTCondor daemon has an addresss of 10.1.2.3, but in order
-to route IP traffic to it, we need to send packets to address 1.2.3.4
+to route IP traffic to it, we need to send packets to address 192.0.2.1
 The configuration parameter :macro:`TCP_FORWARDING_HOST` does just this.
 In this case, on the HTCondor daemon side, setting
 
 .. code-block:: condor-config
 
-   TCP_FORWARDING_HOST = 1.2.3.4
+   TCP_FORWARDING_HOST = 192.0.2.1
 
-Will cause this daemon to advertise it's address as 1.2.3.4, and any other
+Will cause this daemon to advertise it's address as 192.0.2.1, and any other
 daemon wanting to make a connection to it will use this address.
 
 Reducing Port Usage with the *condor_shared_port* Daemon
@@ -896,7 +883,7 @@ followed by the number of bits in the mask; or as the prefix of a legal
 IPv6 address followed by two colons followed by an asterisk. The latter
 is entirely equivalent to the former, except that it only allows you to
 (implicitly) specify mask bits in groups of sixteen. For example,
-``fe8f:1234::/60`` and ``fe8f:1234::*`` specify the same network mask.
+``2001:db8::/48`` and ``2001:db8:0::*`` specify the same network mask.
 
 The HTCondor security subsystem resolves names in the ALLOW and DENY
 lists and uses all of the resulting IP addresses. Thus, to allow or deny
@@ -912,14 +899,14 @@ brackets around the address. For instance:
 
 .. code-block:: condor-config
 
-    COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+    COLLECTOR_HOST = [2001:db8:1086:0:21e:68ff:fe0f:6462]:5332
 
 If you do not (or may not) specify a port, do not use the square
 brackets. For instance:
 
 .. code-block:: condor-config
 
-    NETWORK_INTERFACE = 1234:5678::90ab
+    NETWORK_INTERFACE = 2001:db8::90ab
 
 IPv6 without DNS
 ''''''''''''''''
@@ -930,13 +917,13 @@ changing colons to dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
 
 .. code-block:: text
 
-    2607:f388:1086:0:21b:24ff:fedf:b520
+    2001:db8:1086:0:21b:24ff:fedf:b520
 
 becomes
 
 .. code-block:: text
 
-    2607-f388-1086-0-21b-24ff-fedf-b520.example.com
+    2001-db8-1086-0-21b-24ff-fedf-b520.example.com
 
 assuming
 

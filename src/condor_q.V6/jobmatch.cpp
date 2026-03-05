@@ -1320,7 +1320,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 		ExprTree * exprReq = request->Lookup(ATTR_REQUIREMENTS);
 		if (exprReq) {
 			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot", nullptr };
-			PrintNumberedExprTreeClauses(pretty_req, request, exprReq, inline_attrs, fmt);
+			PrintNumberedExprTreeClauses(pretty_req, request, ATTR_REQUIREMENTS, inline_attrs, fmt);
 			return_buf += pretty_req;
 			return_buf += "\n";
 			pretty_req.clear();
@@ -1443,9 +1443,8 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 
 			// Specific known bad
 		case CONDOR_UNIVERSE_SCHEDULER:
-			/* Note: May be valid (although requiring a different algorithm)
-			 * starting some time in V6.7. */
-			return_buf += "\nWARNING: Analysis is meaningless for Scheduler universe jobs.\n";
+		case CONDOR_UNIVERSE_LOCAL:
+			return_buf += "\nWARNING: Analysis is not complete for Scheduler or Local universe jobs.\n";
 			break;
 
 			// Unknown
@@ -1598,7 +1597,7 @@ const char * doSlotRunAnalysisToBuffer(std::string & return_buf, ClassAd *slot, 
 
 			tree = slot->LookupExpr(ATTR_REQUIREMENTS);
 			if (tree) {
-				return_buf += PrintNumberedExprTreeClauses(pretty_req, slot, tree, inline_attrs, fmt);
+				return_buf += PrintNumberedExprTreeClauses(pretty_req, slot, ATTR_REQUIREMENTS, inline_attrs, fmt);
 				return_buf += "\n";
 			}
 

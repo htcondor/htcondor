@@ -806,56 +806,6 @@ DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 }
 
 int
-SendSpoolFile( char const *filename )
-{
-	int	rval = -1;
-
-		CurrentSysCall = CONDOR_SendSpoolFile;
-
-		qmgmt_sock->encode();
-		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-		neg_on_error( qmgmt_sock->put(filename) );
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-		qmgmt_sock->decode();
-		neg_on_error( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			neg_on_error( qmgmt_sock->code(terrno) );
-			neg_on_error( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return rval;
-		}
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-
-int
-SendSpoolFileIfNeeded( ClassAd& ad )
-{
-	int	rval = -1;
-
-	CurrentSysCall = CONDOR_SendSpoolFileIfNeeded;
-
-	qmgmt_sock->encode();
-	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-	neg_on_error( putClassAd(qmgmt_sock, ad) );
-	neg_on_error( qmgmt_sock->end_of_message() );
-
-	qmgmt_sock->decode();
-	neg_on_error( qmgmt_sock->code(rval) );
-	if( rval < 0 ) {
-		neg_on_error( qmgmt_sock->code(terrno) );
-		neg_on_error( qmgmt_sock->end_of_message() );
-		errno = terrno;
-		return rval;
-	}
-	neg_on_error( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-
-int
 CloseSocket()
 {
 	CurrentSysCall = CONDOR_CloseSocket;
@@ -1046,10 +996,55 @@ GetAllJobsByConstraint_imp( char const *constraint, char const *projection, Clas
 	return nullptr;
 }
 
-void
+int
 GetAllJobsByConstraint( char const *constraint, char const *projection, ClassAdList &list)
 {
 	GetAllJobsByConstraint_imp(constraint,projection,list);
+	return (errno == ETIMEDOUT) ? -1 : 0;
+}
+
+int
+GetAllJobsByConstraint(char const *constraint, char const *projection, std::vector<ClassAd> &list)
+{
+	int rval = -1;
+
+	CurrentSysCall = CONDOR_GetAllJobsByConstraint;
+
+	qmgmt_sock->encode();
+	if (!qmgmt_sock->code(CurrentSysCall) ||
+	    !qmgmt_sock->put(constraint) ||
+	    !qmgmt_sock->put(projection) ||
+	    !qmgmt_sock->end_of_message())
+	{
+		goto network_error;
+	}
+
+	qmgmt_sock->decode();
+	while (true) {
+		if (!qmgmt_sock->code(rval)) {
+			goto network_error;
+		}
+		if( rval < 0 ) {
+			// No more ads
+			break;
+		}
+
+		ClassAd ad;
+		if (!getClassAd(qmgmt_sock, ad)) {
+			goto network_error;
+		}
+		list.emplace_back(std::move(ad));
+	}
+
+	if (!qmgmt_sock->code(terrno) || !qmgmt_sock->end_of_message()) {
+		goto network_error;
+	}
+	errno = terrno;
+	return 0;
+
+ network_error:
+	errno = ETIMEDOUT;
+	return -1;
 }
 
 int

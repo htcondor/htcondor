@@ -19,9 +19,7 @@ ClassAd Attributes Added by the *condor_collector*
 :classad-attribute-def:`UpdatesHistory`
     A bitmap representing the status of the most recent updates received
     from the daemon. This attribute is only added if
-    :macro:`COLLECTOR_DAEMON_HISTORY_SIZE` is non-zero. See
-    the :ref:`admin-manual/configuration-macros:condor_collector configuration
-    file entries` section for more information on this setting. This attribute
+    :macro:`COLLECTOR_DAEMON_HISTORY_SIZE` is non-zero. This attribute
     is added if :macro:`COLLECTOR_DAEMON_STATS` is ``True``.
 
 :classad-attribute-def:`UpdatesLost`

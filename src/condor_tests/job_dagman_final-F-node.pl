@@ -2,15 +2,17 @@
 
 $outfile = "job_dagman_final-F.nodes.out";
 
-system("echo 'Job for node $ARGV[0]' >> $outfile");
-
-system("echo '  DAG_STATUS=$ARGV[2]' >> $outfile");
-system("echo '  FAILED_COUNT=$ARGV[3]' >> $outfile");
+open my $fh, ">>", $outfile or die "Cannot open $outfile: $!";
+print $fh "Job for node $ARGV[0]\n";
+print $fh "  DAG_STATUS=$ARGV[2]\n";
+print $fh "  FAILED_COUNT=$ARGV[3]\n";
 
 if ($ARGV[1]) {
-	system("echo '  FAILED done with $ARGV[0]' >> $outfile");
+	print $fh "  FAILED done with $ARGV[0]\n";
+	close $fh;
 	exit($ARGV[1]);
 } else {
-	system("echo '  OK done with $ARGV[0]' >> $outfile");
+	print $fh "  OK done with $ARGV[0]\n";
+	close $fh;
 	exit(0);
 }

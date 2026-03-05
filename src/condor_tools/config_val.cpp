@@ -425,27 +425,6 @@ void print_param_table_info(FILE* out, int param_id, int type_and_flags, const c
 	if (tags) { fprintf(out, " # used by: %s\n", tags); }
 }
 
-
-//#define HAS_LAMBDA
-#ifdef HAS_LAMBDA
-#else
-bool report_obsolete_var(void* pv, HASHITER & it) {
-	std::string * pstr = (std::string*)pv;
-	const char * name = hash_iter_key(it);
-	if (is_known_subsys_prefix(name)) {
-		*pstr += "  ";
-		*pstr += name;
-		MACRO_META * pmet = hash_iter_meta(it);
-		if (pmet) {
-			*pstr += " at ";
-			param_append_location(pmet, *pstr);
-		}
-		*pstr += "\n";
-	}
-	return true; // keep iterating
-}
-#endif
-
 char* EvaluatedValue(char const* value, ClassAd const* ad) {
     classad::Value res;
     ClassAd empty;
@@ -560,7 +539,6 @@ main( int argc, const char* argv[] )
 	const char * debug_flags = NULL;
 	const char * check_configif = NULL;
 	int profile_test_id=0, profile_iter=0;
-	bool    check_config_for_obsolete_syntax = true;
 
 #ifdef WIN32
 	// enable this if you need to debug crashes.
@@ -659,12 +637,20 @@ main( int argc, const char* argv[] )
 		} else if (is_arg_prefix(arg, "raw", 3)) {
 			dash_raw = true;
 		} else if (is_arg_prefix(arg, "default", 3)) {
+			if (verbose) {
+				fprintf(stderr, "-default cannot be used with -verbose\n");
+				usage();
+			}
 			dash_default = true;
 		} else if (is_arg_prefix(arg, "config", 2)) {
 			print_config_sources = true;
 		} else if (is_arg_prefix(arg, "reconfig", 5)) {
 			reconfig_source = use_next_arg("reconfig", argv, i);
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
+			if (dash_default) {
+				fprintf(stderr, "-verbose cannot be used with -default\n");
+				usage();
+			}
 			verbose = true;
 			if (pcolon) {
 				for (const auto& opt: StringTokenIterator(pcolon+1, ":,")) {
@@ -861,7 +847,7 @@ main( int argc, const char* argv[] )
 	if (root_config) { config_options |= CONFIG_OPT_USE_THIS_ROOT_CONFIG | CONFIG_OPT_NO_EXIT; }
 	set_priv_initialize(); // allow uid switching if root
 	config_host(NULL, config_options, root_config);
-	validate_config(false, 0); // validate, but do not abort.
+	validate_config(false); // validate, but do not abort.
 	if (print_config_sources) {
 		PrintConfigSources();
 	}
@@ -885,8 +871,6 @@ main( int argc, const char* argv[] )
 		dprintf_set_tool_debug("TOOL", debug_flags);
 	}
 
-	// temporary, to get rid of build warning.
-	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
 
 	// handle check-if to valididate config's if/else parsing and help users to write
 	// valid if conditions.
@@ -904,53 +888,6 @@ main( int argc, const char* argv[] )
 			check_configif, 
 			valid ? (bb ? "\ntrue" : "\nfalse") : err_reason.c_str());
 		exit(0);
-	}
-
-	// Check for obsolete syntax in config file
-	check_config_for_obsolete_syntax = param_boolean("ENABLE_DEPRECATION_WARNINGS", check_config_for_obsolete_syntax);
-	if (check_config_for_obsolete_syntax) {
-		Regex re; int errcode = 0; int erroffset = 0;
-		// check for knobs of the form SUBSYS.LOCALNAME.*
-		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS));
-		std::string obsolete_vars;
-		foreach_param_matching(re, HASHITER_NO_DEFAULTS,
-#ifdef HAS_LAMBDA
-			[](void* pv, HASHITER & it) -> bool {
-				std::string * pstr = (std::string*)pv;
-				const char * name = hash_iter_key(it);
-				if (is_known_subsys_prefix(name)) {
-					*pstr += "  ";
-					*pstr += name;
-					MACRO_META * pmet = hash_iter_meta(it);
-					if (pmet) {
-						*pstr += " at ";
-						param_append_location(pmet, *pstr);
-					}
-					*pstr += "\n";
-				}
-				return true; // keep iterating
-			},
-#else
-			report_obsolete_var,
-#endif
-			&obsolete_vars // becomes pv
-		);
-		if ( ! obsolete_vars.empty()) {
-			fprintf(stderr, "WARNING: the following appear to be obsolete SUBSYS.LOCALNAME.* overrides\n%s", obsolete_vars.c_str());
-			fprintf(stderr, 
-				"\n    Use of both SUBSYS. and LOCALNAME. prefixes at the same time is not needed and not supported.\n"
-				  "    To override config for a class of daemons, or for a standard daemon use a SUBSYS. prefix.\n"
-				  "    To override config for a specific member of a class of daemons, just use a LOCALNAME. prefix like this:\n"
-				);
-			StringTokenIterator it(obsolete_vars, "\n");
-			for (const char * line = it.first(); line; line = it.next()) {
-				const char * p1 = strchr(line, '.');
-				if ( ! p1) continue;
-				const char * p2 = p1; while (p2[1] && !isspace(p2[1])) ++p2;
-				std::string name(p1+1, p2-p1);
-				fprintf(stderr, "  %s\n", name.c_str());
-			}
-		}
 	}
 
 	if (dash_summary && (name_arg || addr || mt != CONDOR_QUERY || dt != DT_MASTER || ask_a_daemon)) {
@@ -1050,7 +987,14 @@ main( int argc, const char* argv[] )
 							const char * equal_begin = is_herefile ? "@=end" : "= ";
 							const char * equal_end = is_herefile ? "\n@end" : "";
 
-							if (expand_dumped_variables) {
+							if (dash_default) {
+								std::string upname = name;
+								bool def_is_herefile = def_val && strchr(def_val, '\n');
+								const char * eq_begin = def_is_herefile ? "@=end" : "= ";
+								const char * eq_end = def_is_herefile ? "\n@end" : "";
+								const char * tval = def_is_herefile ? indent_herefile(def_val, "   ", rawvalbuf) : def_val;
+								fprintf(stdout, "%s %s%s%s\n", upname.c_str(), eq_begin, tval ? tval : "", eq_end);
+							} else if (expand_dumped_variables) {
 								std::string upname = name; //upname.upper_case();
 								auto_free_ptr val(param(name));
 								const char * tval = is_herefile ? indent_herefile(val, "   ", rawvalbuf) : val.ptr();
@@ -1249,7 +1193,9 @@ main( int argc, const char* argv[] )
 								continue;
 
 							name_used = names[ii];
-							if (expand_dumped_variables || ! raw_supported) {
+							if (dash_default && !def_value.empty()) {
+								printf("%s %s\n", name_used.c_str(), RemotePrintValue(def_value.c_str(), "   ", herevalbuf, "end"));
+							} else if (expand_dumped_variables || ! raw_supported) {
 								printf("%s %s\n", name_used.c_str(), RemotePrintValue(value, "   ", herevalbuf, "end"));
 							} else {
 								printf("%s %s\n", name_used.c_str(), RemotePrintValue(RemoteRawValuePart(raw_value), "   ", herevalbuf, "end"));
@@ -1305,13 +1251,21 @@ main( int argc, const char* argv[] )
 						}
 					}
 					continue;
-				} else if (dash_raw || verbose) {
+				} else if (dash_raw || dash_default || verbose) {
 					name_used = tmp;
 					upper_case(name_used);
 					value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value, usage_report);
-					if ( ! verbose && ! raw_value.empty()) {
+					if ( ! verbose) {
+						if (dash_default) {
+							free(value);
+							value = def_value.empty() ? NULL : strdup(def_value.c_str());
+						} else if ( ! raw_value.empty()) {
+							free(value);
+							value = strdup(RemoteRawValuePart(raw_value));
+						}
+					} else if (dash_default) {
 						free(value);
-						value = strdup(RemoteRawValuePart(raw_value));
+						value = def_value.empty() ? NULL : strdup(def_value.c_str());
 					}
 					if (verbose && show_param_info) {
 						param_id = param_default_get_id(tmp, NULL);
@@ -1357,7 +1311,9 @@ main( int argc, const char* argv[] )
 				}
 				raw_supported = true;  // local lookups always support raw
 				if ( ! name_used.empty()) {
-					if (dash_raw) {
+					if (dash_default) {
+						value = def_val ? strdup(def_val) : NULL;
+					} else if (dash_raw) {
 						value = strdup(val ? val : "");
 					} else {
 						value = param(name_used.c_str());
@@ -1377,7 +1333,12 @@ main( int argc, const char* argv[] )
 				} else {
 					name_used = tmp;
 					upper_case(name_used);
-					value = NULL;
+					if (dash_default) {
+						const char * dval = param_default_string(tmp, subsys);
+						value = dval ? strdup(dval) : NULL;
+					} else {
+						value = NULL;
+					}
 				}
 			}
 			if( value == NULL ) {

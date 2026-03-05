@@ -87,13 +87,6 @@ override_dh_auto_install:
 	rm -f debian/tmp/usr/sbin/condor_configure
 	rm -f debian/tmp/usr/sbin/condor_install
 #endif
-	# create blahp files
-	mkdir --mode 0755 debian/tmp/etc/blahp
-	for batch_system in condor kubernetes lsf nqs pbs sge slurm; do \\
-		mv debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh debian/tmp/etc/blahp/; \\
-		ln -s ../../../etc/blahp/$${batch_system}_local_submit_attributes.sh \\
-			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \\
-	done
 #if defined(UW_BUILD)
 	# tar up the tests
 	(cd obj-*; make tests-tar-pkg)
@@ -106,6 +99,10 @@ override_dh_auto_install:
 	rm debian/tmp/usr/share/doc/condor/README
 	# This isn't ready for release yet.
 	rm -fr debian/tmp/usr/lib/python3/dist-packages/classad3
+#if !defined(UW_BUILD)
+	# Temporarily remove sif file until apptainer is fully supported
+	rm -f debian/tmp/usr/libexec/condor/exit_37.sif
+#endif
 
 
 override_dh_fixperms-arch:
@@ -151,8 +148,8 @@ override_dh_installdocs:
 	dh_installdocs
 	for html in `find debian -name "*.html"` ; do \\
 	    sed -i \\
-		-e 's#https://maxcdn.bootstrapcdn.com/bootstrap/[^/]*/css/bootstrap.min.css#file:///usr/share/javascript/bootstrap/css/bootstrap.min.css#' \\
-		-e 's#https://maxcdn.bootstrapcdn.com/bootstrap/.*/js/bootstrap.min.js#file:///usr/share/javascript/bootstrap/js/bootstrap.min.js#' \\
+		-e 's#https://cdn.jsdelivr.net/npm/bootstrap[^/]*/dist/css/bootstrap.min.css#file:///usr/share/javascript/bootstrap5/css/bootstrap.min.css#' \\
+		-e 's#https://cdn.jsdelivr.net/npm/bootstrap[^/]*/dist/js/bootstrap.bundle.min.js#file:///usr/share/javascript/bootstrap5/js/bootstrap.bundle.min.js#' \\
 		-e 's#[htps:]*//code.jquery.com/jquery-[^/]*\\.min\\.js#file:///usr/share/javascript/jquery/jquery.min.js#' \\
 		$${html} ; \\
 	done

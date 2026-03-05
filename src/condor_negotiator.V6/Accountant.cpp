@@ -23,26 +23,21 @@
 #include <climits>
 #include <math.h>
 #include <iomanip>
-#include <charconv>
 
 #include "condor_accountant.h"
+#include "AccountantDB.h"
+#include "ClassAdLogAccountantDB.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_state.h"
 #include "condor_attributes.h"
 #include "enum_utils.h"
-#include "classad_log.h"
-#include "HashTable.h"
 #include "NegotiationUtils.h"
 #include "matchmaker.h"
 #include <string>
 #include <deque>
 
 #define MIN_PRIORITY_FACTOR (1.0)
-
-std::string Accountant::AcctRecord="Accountant.";
-std::string Accountant::CustomerRecord="Customer.";
-std::string Accountant::ResourceRecord="Resource.";
 
 static char const *PriorityAttr="Priority";
 static char const *CeilingAttr="Ceiling";
@@ -77,7 +72,6 @@ GCC_DIAG_OFF(float-equal)
 Accountant::Accountant()
 {
   MinPriority=0.5;
-  AcctLog=NULL;
   DiscountSuspendedResources = false;
   UseSlotWeights = false;
   DefaultPriorityFactor = 1e3;
@@ -93,10 +87,7 @@ Accountant::Accountant()
 // Destructor
 //------------------------------------------------------------------
 
-Accountant::~Accountant()
-{
-  if (AcctLog) delete AcctLog;
-}
+Accountant::~Accountant() = default;
 
 //------------------------------------------------------------------
 // Initialize (or re-configure) and read configuration parameters
@@ -181,9 +172,9 @@ void Accountant::Initialize(GroupEntry* root_group)
   dprintf( D_ACCOUNTANT, "MAX_ACCOUNTANT_DATABASE_SIZE=%d\n",
 		   MaxAcctLogSize );
 
-  if (!AcctLog) {
-    AcctLog=new ClassAdLog<std::string,ClassAd*>();
-    if (!AcctLog->InitLogFile(LogFileName.c_str())) {
+  if (!db) {
+    db = std::make_unique<ClassAdLogAccountantDB>();
+    if (!db->Initialize(LogFileName.c_str())) {
       EXCEPT("Failed to initialize Accountant log!");
     }
     dprintf(D_ACCOUNTANT,"Accountant::Initialize - LogFileName=%s\n",
@@ -193,13 +184,11 @@ void Accountant::Initialize(GroupEntry* root_group)
   // get last update time
 
   LastUpdateTime=0;
-  GetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
+  db->GetAttributeInt(AccountantTable::Acct, "",LastUpdateTimeAttr,LastUpdateTime);
 
   // if at startup, do a sanity check to make certain number of resource
   // records for a user and what the user record says jives
   if ( first_time ) {
-	  std::string HK;
-	  ClassAd* ad;
 	  std::vector<std::string> users;
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
@@ -213,18 +202,14 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  dprintf(D_ACCOUNTANT,"Sanity check on number of resources per user\n");
 
 		// first find all the users
-	  AcctLog->table.startIterations();
-	  while (AcctLog->table.iterate(HK,ad)) {
-		char const *key = HK.c_str();
-			// skip records that are not customer records...
-		if (strncmp(CustomerRecord.c_str(),key,CustomerRecord.length())) continue;
-		char const *thisUser = &(key[CustomerRecord.length()]);
-		if (! isalpha(*thisUser)) {
-			dprintf(D_ALWAYS, "questionable user %s\n", thisUser);
+	  db->ForEachInTable(AccountantTable::Customer, [&](const std::string& thisUser, ClassAd*) -> bool {
+		if (!thisUser.empty() && !isalpha(thisUser[0])) {
+			dprintf(D_ALWAYS, "questionable user %s\n", thisUser.c_str());
 		}
 			// if we made it here, append to our list of users
-		users.emplace_back( thisUser );
-	  }
+		users.emplace_back(thisUser);
+		return true;
+	  });
 		// ok, now vector users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
@@ -241,7 +226,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 			dprintf(D_ALWAYS,
 				"FIXING - Customer %s using %d resources, but only found %d\n",
 				user.c_str(),resources_used,resources_used_really);
-			SetAttributeInt(CustomerRecord+user,ResourcesUsedAttr,resources_used_really);
+			db->SetAttributeInt(AccountantTable::Customer, user,ResourcesUsedAttr,resources_used_really);
 			if ( resources_used > resources_used_really ) {
 				total_overestimated_resources += 
 					( resources_used - resources_used_really );
@@ -255,7 +240,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 			dprintf(D_ALWAYS,
 				"FIXING - Customer record %s using %f weighted resources, but found %f\n",
 				user.c_str(),resourcesRW_used,resourcesRW_used_really);
-			SetAttributeFloat(CustomerRecord+user,WeightedResourcesUsedAttr,resourcesRW_used_really);
+			db->SetAttributeFloat(AccountantTable::Customer, user,WeightedResourcesUsedAttr,resourcesRW_used_really);
 			if ( resourcesRW_used > resourcesRW_used_really ) {
 				total_overestimated_resourcesRW += 
 					( resourcesRW_used - resourcesRW_used_really );
@@ -307,7 +292,7 @@ bool Accountant::UsingWeightedSlots() const {
 int Accountant::GetResourcesUsed(const std::string& CustomerName) 
 {
   int ResourcesUsed=0;
-  GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,ResourcesUsedAttr,ResourcesUsed);
   return ResourcesUsed;
 }
 
@@ -318,7 +303,7 @@ int Accountant::GetResourcesUsed(const std::string& CustomerName)
 double Accountant::GetWeightedResourcesUsed(const std::string& CustomerName)
 {
   double WeightedResourcesUsed=0.0;
-  GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   return WeightedResourcesUsed;
 }
 
@@ -332,7 +317,7 @@ double Accountant::GetPriority(const std::string& CustomerName)
     // PriorityFactor.
   double PriorityFactor=GetPriorityFactor(CustomerName);
   double Priority=MinPriority;
-  GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,PriorityAttr,Priority);
   if (Priority<MinPriority) {
     Priority=MinPriority;
     // Warning!  This read function has a side effect of a write.
@@ -344,7 +329,7 @@ double Accountant::GetPriority(const std::string& CustomerName)
 int Accountant::GetCeiling(const std::string& CustomerName) 
 {
   int ceiling = -1; // Bogus value
-  GetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,CeilingAttr,ceiling);
   if (ceiling < 0) {
     ceiling = -1; // Meaning unlimited
   }
@@ -354,7 +339,7 @@ int Accountant::GetCeiling(const std::string& CustomerName)
 int Accountant::GetFloor(const std::string& CustomerName) 
 {
   int floor = 0; // unlimited value
-  GetAttributeInt(CustomerRecord+CustomerName,FloorAttr,floor);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,FloorAttr,floor);
   if (floor < 0) {
     floor = 0; // Meaning no floor at all
   }
@@ -381,7 +366,7 @@ double Accountant::getGroupPriorityFactor(const std::string& CustomerName)
 double Accountant::GetPriorityFactor(const std::string& CustomerName) 
 {
   double PriorityFactor=0;
-  GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,PriorityFactorAttr,PriorityFactor);
   if (PriorityFactor < MIN_PRIORITY_FACTOR) {
     PriorityFactor=DefaultPriorityFactor;
 	double groupPriorityFactor = 0.0;
@@ -416,19 +401,14 @@ void Accountant::ResetAllUsage()
 {
   dprintf(D_ACCOUNTANT,"Accountant::ResetAllUsage\n");
   time_t T=time(0);
-  std::string HK;
-  ClassAd* ad;
-
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ad)) {
-	char const *key = HK.c_str();
-	if (strncmp(CustomerRecord.c_str(),key,CustomerRecord.length())) continue;
-	AcctLog->BeginTransaction();
-    SetAttributeFloat(key,AccumulatedUsageAttr,0);
-    SetAttributeFloat(key,WeightedAccumulatedUsageAttr,0);
-    SetAttributeInt(key,BeginUsageTimeAttr,T);
-	AcctLog->CommitTransaction();
-  }
+  db->ForEachInTable(AccountantTable::Customer, [&](const std::string& customerName, ClassAd*) -> bool {
+	db->BeginTransaction();
+    db->SetAttributeFloat(AccountantTable::Customer, customerName, AccumulatedUsageAttr, 0);
+    db->SetAttributeFloat(AccountantTable::Customer, customerName, WeightedAccumulatedUsageAttr, 0);
+    db->SetAttributeInt(AccountantTable::Customer, customerName, BeginUsageTimeAttr, T);
+	db->CommitTransaction();
+	return true;
+  });
   return;
 }
 
@@ -439,11 +419,11 @@ void Accountant::ResetAllUsage()
 void Accountant::ResetAccumulatedUsage(const std::string& CustomerName) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::ResetAccumulatedUsage - CustomerName=%s\n",CustomerName.c_str());
-  AcctLog->BeginTransaction();
-  SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,0);
-  SetAttributeFloat(CustomerRecord+CustomerName,WeightedAccumulatedUsageAttr,0);
-  SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,time(0));
-  AcctLog->CommitTransaction();
+  db->BeginTransaction();
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,AccumulatedUsageAttr,0);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedAccumulatedUsageAttr,0);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,BeginUsageTimeAttr,time(0));
+  db->CommitTransaction();
 }
 
 //------------------------------------------------------------------
@@ -453,9 +433,9 @@ void Accountant::ResetAccumulatedUsage(const std::string& CustomerName)
 void Accountant::DeleteRecord(const std::string& CustomerName) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::DeleteRecord - CustomerName=%s\n",CustomerName.c_str());
-  AcctLog->BeginTransaction();
-  DeleteClassAd(CustomerRecord+CustomerName);
-  AcctLog->CommitTransaction();
+  db->BeginTransaction();
+  db->DeleteClassAd(AccountantTable::Customer, CustomerName);
+  db->CommitTransaction();
 }
 
 //------------------------------------------------------------------
@@ -470,7 +450,7 @@ void Accountant::SetPriorityFactor(const std::string& CustomerName, double Prior
       PriorityFactor = MIN_PRIORITY_FACTOR;
   }
   dprintf(D_ACCOUNTANT,"Accountant::SetPriorityFactor - CustomerName=%s, PriorityFactor=%8.3f\n",CustomerName.c_str(),PriorityFactor);
-  SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,PriorityFactorAttr,PriorityFactor);
 }
 
 //------------------------------------------------------------------
@@ -480,7 +460,7 @@ void Accountant::SetPriorityFactor(const std::string& CustomerName, double Prior
 void Accountant::SetPriority(const std::string& CustomerName, double Priority) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.c_str(),Priority);
-  SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,PriorityAttr,Priority);
 }
 //
 //------------------------------------------------------------------
@@ -490,7 +470,7 @@ void Accountant::SetPriority(const std::string& CustomerName, double Priority)
 void Accountant::SetCeiling(const std::string& CustomerName, int ceiling) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetCeiling - CustomerName=%s, Ceiling=%d\n",CustomerName.c_str(),ceiling);
-  SetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,CeilingAttr,ceiling);
 }
 
 //
@@ -501,7 +481,7 @@ void Accountant::SetCeiling(const std::string& CustomerName, int ceiling)
 void Accountant::SetFloor(const std::string& CustomerName, int floor) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetFloor - CustomerName=%s, Floor=%d\n",CustomerName.c_str(),floor);
-  SetAttributeInt(CustomerRecord+CustomerName,FloorAttr, floor);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,FloorAttr, floor);
 }
 
 
@@ -512,7 +492,7 @@ void Accountant::SetFloor(const std::string& CustomerName, int floor)
 void Accountant::SetAccumUsage(const std::string& CustomerName, double AccumulatedUsage) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetAccumUsage - CustomerName=%s, Usage=%8.3f\n",CustomerName.c_str(),AccumulatedUsage);
-  SetAttributeFloat(CustomerRecord+CustomerName,WeightedAccumulatedUsageAttr,AccumulatedUsage);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedAccumulatedUsageAttr,AccumulatedUsage);
 }
 
 //------------------------------------------------------------------
@@ -522,7 +502,7 @@ void Accountant::SetAccumUsage(const std::string& CustomerName, double Accumulat
 void Accountant::SetBeginTime(const std::string& CustomerName, int BeginTime) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetBeginTime - CustomerName=%s, BeginTime=%8d\n",CustomerName.c_str(),BeginTime);
-  SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,BeginTime);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,BeginUsageTimeAttr,BeginTime);
 }
 
 //------------------------------------------------------------------
@@ -532,7 +512,7 @@ void Accountant::SetBeginTime(const std::string& CustomerName, int BeginTime)
 void Accountant::SetLastTime(const std::string& CustomerName, int LastTime) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetLastTime - CustomerName=%s, LastTime=%8d\n",CustomerName.c_str(),LastTime);
-  SetAttributeInt(CustomerRecord+CustomerName,LastUsageTimeAttr,LastTime);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,LastUsageTimeAttr,LastTime);
 }
 
 
@@ -560,11 +540,11 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
       // For CP matches, maintain a count of matches during this negotiation cycle:
       int num_cp_matches = 0;
-      if (!GetAttributeInt(ResourceRecord+ResourceName, NumCpMatches, num_cp_matches)) num_cp_matches = 0;
+      if (!db->GetAttributeInt(AccountantTable::Resource, ResourceName, NumCpMatches, num_cp_matches)) num_cp_matches = 0;
 	  std::string suffix;
       formatstr(suffix, "_cp_match_%03d", num_cp_matches);
       num_cp_matches += 1;
-      SetAttributeInt(ResourceRecord+ResourceName, NumCpMatches, num_cp_matches);
+      db->SetAttributeInt(AccountantTable::Resource, ResourceName, NumCpMatches, num_cp_matches);
 
       // Now insert a match under a unique pseudonym for resource name,
       // and using match cost for slot weight:
@@ -573,7 +553,7 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
   } else {
       // Check if the resource is used
 	  std::string RemoteUser;
-      if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,RemoteUser)) {
+      if (db->GetAttributeString(AccountantTable::Resource, ResourceName,RemoteUserAttr,RemoteUser)) {
         if (CustomerName==RemoteUser) {
     	  dprintf(D_ACCOUNTANT,"Match already existed!\n");
           return;
@@ -584,27 +564,27 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
   }
 
   int ResourcesUsed=0;
-  GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,ResourcesUsedAttr,ResourcesUsed);
   double WeightedResourcesUsed=0.0;
-  GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   time_t UnchargedTime=0;
-  GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,UnchargedTimeAttr,UnchargedTime);
   double WeightedUnchargedTime=0.0;
-  GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
 
-  AcctLog->BeginTransaction(); 
+  db->BeginTransaction(); 
   
   // Update customer's resource usage count
   ResourcesUsed += 1;
-  SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,ResourcesUsedAttr,ResourcesUsed);
   WeightedResourcesUsed += SlotWeight;
-  SetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   // add negative "uncharged" time if match starts after last update
   UnchargedTime-=T-LastUpdateTime;
   WeightedUnchargedTime-=(T-LastUpdateTime)*SlotWeight;
-  SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  SetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,UnchargedTimeAttr,UnchargedTime);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
   // Do everything we just to update the customer's record a second time if
   // there is a group record to update
@@ -618,31 +598,31 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
 
-  GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-  GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-  GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-  GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+  db->GetAttributeInt(AccountantTable::Customer, GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+  db->GetAttributeFloat(AccountantTable::Customer, GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  db->GetAttributeInt(AccountantTable::Customer, GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  db->GetAttributeFloat(AccountantTable::Customer, GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   // Update customer's group resource usage count
   GroupWeightedResourcesUsed += SlotWeight;
   GroupResourcesUsed += 1;
 
   dprintf(D_ACCOUNTANT, "GroupWeightedResourcesUsed=%f SlotWeight=%f\n", GroupWeightedResourcesUsed,SlotWeight);
-  SetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+  db->SetAttributeFloat(AccountantTable::Customer, GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  db->SetAttributeInt(AccountantTable::Customer, GroupName,ResourcesUsedAttr,GroupResourcesUsed);
   // add negative "uncharged" time if match starts after last update 
   GroupUnchargedTime-=T-LastUpdateTime;
   WeightedGroupUnchargedTime-=(T-LastUpdateTime)*SlotWeight;
-  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-  SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+  db->SetAttributeInt(AccountantTable::Customer, GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  db->SetAttributeFloat(AccountantTable::Customer, GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   // If this is a nested group (group_a.b.c), update usage up the tree
   std::string GroupNamePart = GroupName;
   while (GroupNamePart.length() > 0) {
 	double GroupHierWeightedResourcesUsed = 0.0;
-  	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	db->GetAttributeFloat(AccountantTable::Customer, GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed += SlotWeight;
-  	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	db->SetAttributeFloat(AccountantTable::Customer, GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 
   	size_t last_dot = GroupNamePart.find_last_of(".");
   	if (last_dot == std::string::npos) {
@@ -654,17 +634,17 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
 
   // Set resource's info: user, and start-time
-  SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
-  SetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
-  SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
+  db->SetAttributeString(AccountantTable::Resource, ResourceName,RemoteUserAttr,CustomerName);
+  db->SetAttributeFloat(AccountantTable::Resource, ResourceName,SlotWeightAttr,SlotWeight);
+  db->SetAttributeInt(AccountantTable::Resource, ResourceName,StartTimeAttr,T);
 
   std::string str;
   if (ResourceAd->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS, str)) {
-    SetAttributeString(ResourceRecord+ResourceName,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
+    db->SetAttributeString(AccountantTable::Resource, ResourceName,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
     IncrementLimits(str);
   }    
 
-  AcctLog->CommitNondurableTransaction();
+  db->CommitNondurableTransaction();
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Added match between customer %s and resource %s\n",CustomerName.c_str(),ResourceName.c_str());
 }
@@ -683,7 +663,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   dprintf(D_ACCOUNTANT,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.c_str());
 
   int num_cp_matches = 0;
-  if (GetAttributeInt(ResourceRecord+ResourceName, NumCpMatches, num_cp_matches)) {
+  if (db->GetAttributeInt(AccountantTable::Resource, ResourceName, NumCpMatches, num_cp_matches)) {
       // If this attribute is present, this p-slot match is a placeholder for one or more
       // pseudo-matches with resource name having a suffix of "_cp_match_xxx".   These
       // special matches are created to allow proper accounting for resources having a
@@ -693,29 +673,29 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
       // "traditional" p-slot record is removed and replaced by a d-slot match.
 
       // Delete the placeholder p-slot rec
-      DeleteClassAd(ResourceRecord+ResourceName);
+      db->DeleteClassAd(AccountantTable::Resource, ResourceName);
       return;
   }
 
   std::string CustomerName;
-  if (!GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName)) {
-      DeleteClassAd(ResourceRecord+ResourceName);
+  if (!db->GetAttributeString(AccountantTable::Resource, ResourceName,RemoteUserAttr,CustomerName)) {
+      db->DeleteClassAd(AccountantTable::Resource, ResourceName);
       return;
   }
   time_t StartTime=0;
-  GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
+  db->GetAttributeInt(AccountantTable::Resource, ResourceName,StartTimeAttr,StartTime);
   int ResourcesUsed=0;
-  GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,ResourcesUsedAttr,ResourcesUsed);
   double WeightedResourcesUsed=0;
-  GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   
   time_t UnchargedTime=0;
-  GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  db->GetAttributeInt(AccountantTable::Customer, CustomerName,UnchargedTimeAttr,UnchargedTime);
   double WeightedUnchargedTime=0.0;
-  GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
+  db->GetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
   
   double SlotWeight=1.0;
-  GetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
+  db->GetAttributeFloat(AccountantTable::Resource, ResourceName,SlotWeightAttr,SlotWeight);
   
   int GroupResourcesUsed=0;
   double GroupWeightedResourcesUsed=0.0;
@@ -726,27 +706,27 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   std::string GroupName = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName)->name;
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
   
-  GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-  GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-  GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-  GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
-  GetAttributeFloat(CustomerRecord+GroupName,HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed);
+  db->GetAttributeInt(AccountantTable::Customer, GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+  db->GetAttributeFloat(AccountantTable::Customer, GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  db->GetAttributeInt(AccountantTable::Customer, GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  db->GetAttributeFloat(AccountantTable::Customer, GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+  db->GetAttributeFloat(AccountantTable::Customer, GroupName,HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed);
   
-  AcctLog->BeginTransaction();
+  db->BeginTransaction();
   // Update customer's resource usage count
   if   (ResourcesUsed>0) ResourcesUsed -= 1;
-  SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,ResourcesUsedAttr,ResourcesUsed);
   WeightedResourcesUsed -= SlotWeight;
   if( WeightedResourcesUsed < 0 ) {
       WeightedResourcesUsed = 0;
   }
-  SetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   // update uncharged time
   if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
   UnchargedTime+=T-StartTime;
   WeightedUnchargedTime+=(T-StartTime)*SlotWeight;
-  SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  SetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
+  db->SetAttributeInt(AccountantTable::Customer, CustomerName,UnchargedTimeAttr,UnchargedTime);
+  db->SetAttributeFloat(AccountantTable::Customer, CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
   // Do everything we just to update the customer's record a second time if
   // there is a group record to update
@@ -762,10 +742,10 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   std::string GroupNamePart = GroupName;
   while (GroupNamePart.length() > 0) {
 	double GroupHierWeightedResourcesUsed = 0.0;
-  	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	db->GetAttributeFloat(AccountantTable::Customer, GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed -= SlotWeight;
 	if (GroupHierWeightedResourcesUsed < 0) GroupHierWeightedResourcesUsed = 0;
-  	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
+  	db->SetAttributeFloat(AccountantTable::Customer, GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 
   	size_t last_dot = GroupNamePart.find_last_of(".");
   	if (last_dot == std::string::npos) {
@@ -777,17 +757,17 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%d GroupWeightedResourcesUsed= %f SlotWeight=%f\n",
           GroupResourcesUsed ,GroupWeightedResourcesUsed,SlotWeight);
 
-  SetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  db->SetAttributeFloat(AccountantTable::Customer, GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
 
-  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+  db->SetAttributeInt(AccountantTable::Customer, GroupName,ResourcesUsedAttr,GroupResourcesUsed);
   // update uncharged time
   GroupUnchargedTime+=T-StartTime;
   WeightedGroupUnchargedTime+=(T-StartTime)*SlotWeight;
-  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-  SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+  db->SetAttributeInt(AccountantTable::Customer, GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  db->SetAttributeFloat(AccountantTable::Customer, GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
-  DeleteClassAd(ResourceRecord+ResourceName);
-  AcctLog->CommitNondurableTransaction();
+  db->DeleteClassAd(AccountantTable::Resource, ResourceName);
+  db->CommitNondurableTransaction();
 
   dprintf(D_ACCOUNTANT, "(ACCOUNTANT) Removed match between customer %s and resource %s\n",
           CustomerName.c_str(),ResourceName.c_str());
@@ -799,13 +779,14 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
 
 void Accountant::DisplayLog()
 {
-  std::string HK;
-  ClassAd* ad;
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ad)) {
-    printf("------------------------------------------------\nkey = %s\n",HK.c_str());
+  auto printEntry = [](const std::string& key, ClassAd* ad) -> bool {
+    printf("------------------------------------------------\nkey = %s\n",key.c_str());
     fPrintAd(stdout, *ad);
-  }
+    return true;
+  };
+  db->ForEachInTable(AccountantTable::Acct, printEntry);
+  db->ForEachInTable(AccountantTable::Customer, printEntry);
+  db->ForEachInTable(AccountantTable::Resource, printEntry);
 }
 
 //------------------------------------------------------------------
@@ -814,18 +795,12 @@ void Accountant::DisplayLog()
 
 void Accountant::DisplayMatches()
 {
-  std::string HK;
-  ClassAd* ad;
-  std::string ResourceName;
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ad)) {
-	char const *key = HK.c_str();
-    if (strncmp(ResourceRecord.c_str(),key,ResourceRecord.length())) continue;
-    ResourceName=key+ResourceRecord.length();
+  db->ForEachInTable(AccountantTable::Resource, [&](const std::string& ResourceName, ClassAd* ad) -> bool {
     std::string RemoteUser;
     ad->LookupString(RemoteUserAttr,RemoteUser);
     printf("Customer=%s , Resource=%s\n",RemoteUser.c_str(),ResourceName.c_str());
-  }
+    return true;
+  });
 }
 
 //------------------------------------------------------------------
@@ -848,26 +823,21 @@ void Accountant::UpdatePriorities()
   }
   double AgingFactor=::pow(0.5,double(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
-  SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
+  db->SetAttributeInt(AccountantTable::Acct, "",LastUpdateTimeAttr,LastUpdateTime);
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%lld\n",AgingFactor,(long long)TimePassed);
-
-  std::string HK;
-  ClassAd* ad;
 
 	  // Each iteration of the loop should be atomic for consistency,
 	  // but instead of doing one transaction per iteration, wrap the
 	  // whole loop in one transaction for efficiency.
-  AcctLog->BeginTransaction();
+  db->BeginTransaction();
 
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ad)) {
-	char const *key = HK.c_str();
-	if (strncmp(CustomerRecord.c_str(),key,CustomerRecord.length())) continue;
-		UpdateOnePriority(T, TimePassed, AgingFactor, key, ad);
-  }
+  db->ForEachInTable(AccountantTable::Customer, [&](const std::string& customerName, ClassAd* ad) -> bool {
+		UpdateOnePriority(T, TimePassed, AgingFactor, customerName, ad);
+		return true;
+  });
 
-  AcctLog->CommitTransaction();
+  db->CommitTransaction();
 
   // Check if the log needs to be truncated
   struct stat statbuf;
@@ -875,7 +845,7 @@ void Accountant::UpdatePriorities()
     dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
 			 "can't stat database (%s)", LogFileName.c_str() );
   } else if( statbuf.st_size > MaxAcctLogSize ) {
-	  AcctLog->TruncLog();
+	  db->Compact();
 	  dprintf( D_ACCOUNTANT, "Accountant::UpdatePriorities - "
 			   "truncating database (prev size=%lu)\n", 
 			   (unsigned long)statbuf.st_size ); 
@@ -896,7 +866,7 @@ void Accountant::UpdatePriorities()
 }
 
 void
-Accountant::UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
+Accountant::UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const std::string& customerName, ClassAd *ad) {
 
 	double Priority, OldPrio, PriorityFactor;
 	int UnchargedTime;
@@ -909,7 +879,7 @@ Accountant::UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, c
 	double WeightedResourcesUsed;
 	int BeginUsageTime;
     // lookup values in the ad
-	
+
     if (ad->LookupFloat(PriorityAttr,Priority)==0) Priority=0;
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
@@ -955,46 +925,46 @@ Accountant::UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, c
     WeightedAccumulatedUsage+=WeightedResourcesUsed*TimePassed+WeightedUnchargedTime;
 
 	if (OldPrio != Priority) {
-    	SetAttributeFloat(key,PriorityAttr,Priority);
+    	db->SetAttributeFloat(AccountantTable::Customer, customerName, PriorityAttr, Priority);
 	}
 
 	if (OldAccumulatedUsage != AccumulatedUsage) {
-    	SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
+    	db->SetAttributeFloat(AccountantTable::Customer, customerName, AccumulatedUsageAttr, AccumulatedUsage);
 	}
 
 	if (OldWeightedAccumulatedUsage != WeightedAccumulatedUsage) {
-    	SetAttributeFloat(key,WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage);
+    	db->SetAttributeFloat(AccountantTable::Customer, customerName, WeightedAccumulatedUsageAttr, WeightedAccumulatedUsage);
 	}
 
     if (AccumulatedUsage>0 && BeginUsageTime==0) {
-		SetAttributeInt(key,BeginUsageTimeAttr,T);
+		db->SetAttributeInt(AccountantTable::Customer, customerName, BeginUsageTimeAttr, T);
 	}
 
     if (RecentUsage>0) {
-		SetAttributeInt(key,LastUsageTimeAttr,T);
+		db->SetAttributeInt(AccountantTable::Customer, customerName, LastUsageTimeAttr, T);
 	}
 
 		// This attribute is almost always 0, so don't write it unless needed
 	int oldUnchargedTime = -1;
-	GetAttributeInt(key,UnchargedTimeAttr, oldUnchargedTime);
+	db->GetAttributeInt(AccountantTable::Customer, customerName, UnchargedTimeAttr, oldUnchargedTime);
 	if (oldUnchargedTime != 0) {
-    	SetAttributeInt(key,UnchargedTimeAttr,0);
+    	db->SetAttributeInt(AccountantTable::Customer, customerName, UnchargedTimeAttr, 0);
 	}
 
 	double oldWeightedUnchargedTime = -1.0;
-	GetAttributeFloat(key,WeightedUnchargedTimeAttr, oldWeightedUnchargedTime);
+	db->GetAttributeFloat(AccountantTable::Customer, customerName, WeightedUnchargedTimeAttr, oldWeightedUnchargedTime);
 	if (oldWeightedUnchargedTime != 0.0) {
-    	SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
+    	db->SetAttributeFloat(AccountantTable::Customer, customerName, WeightedUnchargedTimeAttr, 0.0);
 	}
 
     if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0 && !set_prio_factor) {
-		DeleteClassAd(key);
+		db->DeleteClassAd(AccountantTable::Customer, customerName);
 	}
 
 	// This isn't logged, but clear out the submitterLimit and share
 	ad->Assign("SubmitterLimit", 0.0);
 	ad->Assign("SubmitterShare", 0.0);
-    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",key,OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
+    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",customerName.c_str(),OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f (unweighted %8.3f), UnchargedTime=%8.3f (unweighted %d), AccumulatedUsage=%5.3f (unweighted %5.3f), BeginUsageTime=%d\n",WeightedRecentUsage,RecentUsage,WeightedUnchargedTime,UnchargedTime,WeightedAccumulatedUsage,AccumulatedUsage,BeginUsageTime);
 
 }
@@ -1008,16 +978,14 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
 {
   dprintf(D_ACCOUNTANT,"(Accountant) Checking Matches\n");
 
-  std::string HK;
-  ClassAd* ad;
   std::string ResourceName;
   std::string CustomerName;
 
 	  // Create a hash table for speedier lookups of Resource ads.
-  HashTable<std::string,ClassAd *> resource_hash(hashFunction);
+  std::map<std::string,ClassAd *> resource_hash;
   for (ClassAd *ResourceAd: ResourceList) {
     ResourceName = GetResourceName(ResourceAd);
-    bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
+    auto [it, success] = resource_hash.emplace(ResourceName, ResourceAd);
     if (!success) {
       dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.c_str());
       dPrintAd(D_FULLDEBUG, *ResourceAd);
@@ -1025,25 +993,23 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
   }
 
   // Remove matches that were broken
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ad)) {
-    char const *key = HK.c_str();
-    if (strncmp(ResourceRecord.c_str(),key,ResourceRecord.length())) continue;
-    ResourceName=key+ResourceRecord.length();
-	ClassAd *ResourceAd = nullptr;
-    if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
-      dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.c_str());
-      RemoveMatch(ResourceName);
+  db->ForEachInTable(AccountantTable::Resource, [&](const std::string& resName, ClassAd* resAd) -> bool {
+    auto itr = resource_hash.find(resName);
+    if (itr == resource_hash.end()) {
+      dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",resName.c_str());
+      RemoveMatch(resName);
     }
 	else {
 		// Here we need to figure out the CustomerName.
-      ad->LookupString(RemoteUserAttr,CustomerName);
+      ClassAd* ResourceAd = itr->second;
+      resAd->LookupString(RemoteUserAttr,CustomerName);
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
-        dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.c_str(),CustomerName.c_str());
-        RemoveMatch(ResourceName);
+        dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",resName.c_str(),CustomerName.c_str());
+        RemoveMatch(resName);
       }
     }
-  }
+    return true;
+  });
 
   // Scan startd ads and add matches that are not registered
   for (ClassAd *ResourceAd: ResourceList) {
@@ -1064,8 +1030,6 @@ void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList)
 ClassAd* Accountant::ReportState(const std::string& CustomerName) {
     dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.c_str());
 
-    std::string HK;
-    ClassAd* ResourceAd;
     time_t StartTime;
 
     ClassAd* ad = new ClassAd();
@@ -1076,23 +1040,20 @@ ClassAd* Accountant::ReportState(const std::string& CustomerName) {
     if (isGroup && (cgrp != CustomerName)) return ad;
 
     int ResourceNum=1;
-    AcctLog->table.startIterations();
-    while (AcctLog->table.iterate(HK,ResourceAd)) {
-        if (strncmp(ResourceRecord.c_str(), HK.c_str(), ResourceRecord.length())) continue;
-
+    db->ForEachInTable(AccountantTable::Resource, [&](const std::string& resourceName, ClassAd* ResourceAd) -> bool {
         std::string rname;
-        if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
+        if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) return true;
 
         if (isGroup) {
 			std::string rgrp = GroupEntry::GetAssignedGroup(hgq_root_group, rname)->name;
-            if (cgrp != rgrp) continue;
+            if (cgrp != rgrp) return true;
         } else {
             // customername is a traditional submitter: group.username@host
-            if (CustomerName != rname) continue;
+            if (CustomerName != rname) return true;
 
 			std::string tmp;
             formatstr(tmp, "Name%d", ResourceNum);
-            ad->Assign(tmp, HK.c_str()+ResourceRecord.length());
+            ad->Assign(tmp, resourceName);
 
             if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
             formatstr(tmp, "StartTime%d", ResourceNum);
@@ -1100,7 +1061,8 @@ ClassAd* Accountant::ReportState(const std::string& CustomerName) {
         }
 
         ResourceNum++;
-    }
+        return true;
+    });
 
     return ad;
 }
@@ -1116,26 +1078,22 @@ void Accountant::CheckResources(const std::string& CustomerName, int& NumResourc
     // This is a defunct group:
     if (isGroup && (cgrp != CustomerName)) return;
 
-    std::string HK;
-    ClassAd* ResourceAd;
-    AcctLog->table.startIterations();
-    while (AcctLog->table.iterate(HK, ResourceAd)) {
-        if (strncmp(ResourceRecord.c_str(), HK.c_str(), ResourceRecord.length())) continue;
-
+    db->ForEachInTable(AccountantTable::Resource, [&](const std::string&, ClassAd* ResourceAd) -> bool {
 		std::string rname;
-        if (ResourceAd->LookupString(RemoteUserAttr, rname) == 0) continue;
+        if (ResourceAd->LookupString(RemoteUserAttr, rname) == 0) return true;
 
         if (isGroup) {
-            if (cgrp != GroupEntry::GetAssignedGroup(hgq_root_group, rname)->name) continue;
+            if (cgrp != GroupEntry::GetAssignedGroup(hgq_root_group, rname)->name) return true;
         } else {
-            if (CustomerName != rname) continue;
+            if (CustomerName != rname) return true;
         }
 
         NumResources += 1;
         double SlotWeight = 1.0;
         ResourceAd->LookupFloat(SlotWeightAttr, SlotWeight);
         NumResourcesRW += SlotWeight;
-    }
+        return true;
+    });
 }
 
 
@@ -1167,18 +1125,12 @@ ClassAd* Accountant::ReportState(bool rollup) {
     // attributes up the group hierarchy
     ReportGroups(hgq_root_group, ad, rollup, gnmap);
 
-    std::string HK;
-    ClassAd* CustomerAd = NULL;
-    AcctLog->table.startIterations();
-    while (AcctLog->table.iterate(HK,CustomerAd)) {
-        if (strncmp(CustomerRecord.c_str(), HK.c_str(), CustomerRecord.length())) continue;
-		std::string CustomerName = HK.c_str()+CustomerRecord.length();
-
+    db->ForEachInTable(AccountantTable::Customer, [&](const std::string& CustomerName, ClassAd* CustomerAd) -> bool {
         bool isGroup=false;
         GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
 
         // entries for acct groups are now handled in ReportGroups(), above
-        if (isGroup) continue;
+        if (isGroup) return true;
 
         std::string cgname(cgrp->name);
         int snum = EntryNum++;
@@ -1249,7 +1201,8 @@ ClassAd* Accountant::ReportState(bool rollup) {
         if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
         formatstr(tmp, "LastUsageTime%d", snum);
         ad->Assign(tmp, LastUsageTime);
-    }
+        return true;
+    });
 
     // total number of accountant entries, for acct groups and submittors
     ad->Assign("NumSubmittors", EntryNum-1);
@@ -1265,10 +1218,9 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     // begin by loading straight "non-rolled" data into the attributes for (group)
 	std::string CustomerName = group->name;
 
-    ClassAd* CustomerAd = NULL;
-	std::string HK(CustomerRecord + CustomerName);
-    if (AcctLog->table.lookup(HK, CustomerAd) == -1) {
-        dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist", HK.c_str());
+    ClassAd* CustomerAd = GetClassAd(AccountantTable::Customer, CustomerName);
+    if (CustomerAd == nullptr) {
+        dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"Customer.%s\" to exist", CustomerName.c_str());
         return;
     } 
 
@@ -1432,15 +1384,9 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 	long long result_limit = 0;
 	bool has_limit = queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, result_limit);
 
-	std::string HK;
-	ClassAd* CustomerAd = NULL;
-	AcctLog->table.startIterations();
-	while (AcctLog->table.iterate(HK, CustomerAd)) {
-		if (strncmp(CustomerRecord.c_str(), HK.c_str(), CustomerRecord.length())) continue;
-		std::string CustomerName = HK.c_str() + CustomerRecord.length();
-
+	db->ForEachInTable(AccountantTable::Customer, [&](const std::string& CustomerName, ClassAd* CustomerAd) -> bool {
 		if (has_limit && ads.Length() >= result_limit) {
-			break;
+			return false;
 		}
 
 		bool isGroup = false;
@@ -1497,7 +1443,8 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 		} else {
 			delete ad;
 		}
-	}
+		return true;
+	});
 
 	return true;
 }
@@ -1646,132 +1593,12 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& Cu
 }
 
 //------------------------------------------------------------------
-// Get Class Ad
+// Get Class Ad (delegates to db)
 //------------------------------------------------------------------
 
-ClassAd* Accountant::GetClassAd(const std::string& Key)
+ClassAd* Accountant::GetClassAd(AccountantTable table, const std::string& Key)
 {
-  ClassAd* ad=NULL;
-  std::ignore = AcctLog->table.lookup(Key,ad);
-  return ad;
-}
-
-//------------------------------------------------------------------
-// Delete Class Ad
-//------------------------------------------------------------------
-
-bool Accountant::DeleteClassAd(const std::string& Key)
-{
-  ClassAd* ad=NULL;
-  if (AcctLog->table.lookup(Key,ad)==-1)
-	  return false;
-
-  LogDestroyClassAd* log=new LogDestroyClassAd(Key.c_str());
-  AcctLog->AppendLog(log);
-  return true;
-}
-
-//------------------------------------------------------------------
-// Set an Integer attribute
-//------------------------------------------------------------------
-
-void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue)
-{
-  if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
-    AcctLog->AppendLog(log);
-  }
-  char value[24] = { 0 };
-  std::to_chars(value, value+sizeof(value)-1, AttrValue);
-  LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
-  AcctLog->AppendLog(log);
-}
-  
-//------------------------------------------------------------------
-// Set a Float attribute
-//------------------------------------------------------------------
-
-void Accountant::SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue)
-{
-  if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
-    AcctLog->AppendLog(log);
-  }
-  
-  char value[255];
-  snprintf(value,sizeof(value),"%f",AttrValue);
-  LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
-  AcctLog->AppendLog(log);
-}
-
-//------------------------------------------------------------------
-// Set a String attribute
-//------------------------------------------------------------------
-
-void Accountant::SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue)
-{
-  if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
-    LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*");
-    AcctLog->AppendLog(log);
-  }
-  
-  std::string value;
-  formatstr(value,"\"%s\"",AttrValue.c_str());
-  LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value.c_str());
-  AcctLog->AppendLog(log);
-}
-
-//------------------------------------------------------------------
-// Retrieve a Integer attribute
-//------------------------------------------------------------------
-
-bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue)
-{
-  ClassAd* ad;
-  if (AcctLog->table.lookup(Key,ad)==-1) return false;
-  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
-  return true;
-}
-
-bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue)
-{
-  ClassAd* ad;
-  if (AcctLog->table.lookup(Key,ad)==-1) return false;
-  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
-  return true;
-}
-
-bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue)
-{
-  ClassAd* ad;
-  if (AcctLog->table.lookup(Key,ad)==-1) return false;
-  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
-  return true;
-}
-
-//------------------------------------------------------------------
-// Retrieve a Float attribute
-//------------------------------------------------------------------
-
-bool Accountant::GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue)
-{
-  ClassAd* ad;
-  if (AcctLog->table.lookup(Key,ad)==-1) return false;
-  if (ad->LookupFloat(AttrName,AttrValue)==0) return false;
-  return true;
-}
-
-//------------------------------------------------------------------
-// Retrieve a String attribute
-//------------------------------------------------------------------
-
-bool Accountant::GetAttributeString(const std::string& Key, const std::string& AttrName, std::string& AttrValue)
-{
-  ClassAd* ad;
-  if (AcctLog->table.lookup(Key,ad)==-1) return false;
-
-  if (ad->LookupString(AttrName,AttrValue)==0) return false;
-  return true;
+  return db->GetClassAd(table, Key);
 }
 
 //------------------------------------------------------------------
@@ -1819,7 +1646,7 @@ void Accountant::LoadLimits(std::vector<ClassAd *> &resourceList)
 		if (GetResourceState(resourceAd, state) && matched_state == state) {
 			 std::string name = GetResourceName(resourceAd);
 			 std::string str;
-			GetAttributeString(ResourceRecord+name,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
+			db->GetAttributeString(AccountantTable::Resource, name,ATTR_MATCHED_CONCURRENCY_LIMITS,str);
 			IncrementLimits(str);
 		}
 	}

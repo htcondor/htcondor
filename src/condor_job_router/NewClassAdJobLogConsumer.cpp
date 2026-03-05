@@ -226,11 +226,11 @@ UserRecord * NewClassAdJobLogConsumer::GetUserAd(const std::string & username)
 	return nullptr;
 }
 
-UserRecord * NewClassAdJobLogConsumer::GetJobUser(ClassAd* ad)
+UserRecord * NewClassAdJobLogConsumer::GetJobUser(const ClassAd* ad)
 {
 	// if we were passed a jobad, and it has a cached userrec id we just use it.
 	unsigned int userrec_id = 0;
-	JobClassAd * jobad = dynamic_cast<JobClassAd*>(ad);
+	const JobClassAd * jobad = dynamic_cast<const JobClassAd*>(ad);
 	if (jobad && jobad->userrec_id) {
 		userrec_id = jobad->userrec_id;
 	} else {
@@ -245,7 +245,7 @@ UserRecord * NewClassAdJobLogConsumer::GetJobUser(ClassAd* ad)
 
 	if (userrec_id) {
 		// stash the userrec id in the jobad if we were passed one
-		if (jobad) { jobad->userrec_id = userrec_id; }
+		if (jobad) { const_cast<JobClassAd*>(jobad)->userrec_id = userrec_id; }
 		// and return the ad if we have it
 		auto it = m_userAds.find(userrec_id);
 		if (it != m_userAds.end()) return &it->second;

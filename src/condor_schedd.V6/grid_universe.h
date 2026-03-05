@@ -24,7 +24,7 @@
 #include <map>
 #include <string>
 
-class GridUserIdentity;
+struct GridUserIdentity;
 class JobQueueUserRec;
 
 class GridUniverseLogic : public Service

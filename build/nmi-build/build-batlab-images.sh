@@ -58,6 +58,7 @@ if [ "$ARCH" = 'aarch64' ]; then
     buildimage aarch64_AlmaLinux8 linux/arm64 arm64v8/almalinux:8 &
     buildimage aarch64_AlmaLinux9 linux/arm64 arm64v8/almalinux:9 &
     buildimage aarch64_AlmaLinux10 linux/arm64 arm64v8/almalinux:10 &
+    buildimage aarch64_Ubuntu24 linux/arm64 arm64v8/ubuntu:noble &
 else
     buildimage ppc64le_AlmaLinux8 linux/ppc64le ppc64le/almalinux:8 &
     buildimage x86_64_AlmaLinux8 linux/x86_64 almalinux:8 &
@@ -67,8 +68,10 @@ else
     buildimage x86_64_AmazonLinux2023 linux/x86_64 amazonlinux:2023 &
     buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &
     buildimage x86_64_Debian13 linux/x86_64 debian:trixie &
-    buildimage x86_64_Fedora42 linux/x86_64 fedora:42 &
+    buildimage x86_64_Fedora43 linux/x86_64 fedora:43 &
     buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
+    buildimage x86_64_openSUSE16 linux/x86_64 opensuse/leap:16.0 &
+    buildimage x86_64_SLES15SP5 linux/x86_64 registry.suse.com/suse/sle15:15.5 &
     buildimage x86_64_Ubuntu22 linux/x86_64 ubuntu:jammy &
     buildimage x86_64_Ubuntu24 linux/x86_64 ubuntu:noble &
 fi

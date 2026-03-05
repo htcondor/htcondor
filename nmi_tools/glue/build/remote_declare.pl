@@ -49,7 +49,7 @@ my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 $| = 1;
 
 my $boos = 1; # build out of source
-if ($ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|Rocky|Debian|Ubuntu/) {
+if ($ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|SLES|Rocky|Debian|Ubuntu/) {
 	$boos = 0; # No need to shuffle stuff around streamlined builds
 }
 if ($boos) {
@@ -128,7 +128,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$TAR_TASK 4h\n";
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
 }    
-elsif ($ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|Rocky|Debian|Ubuntu/) {
+elsif ($ENV{NMI_PLATFORM} =~ /AlmaLinux|AmazonLinux|CentOS|Fedora|openSUSE|SLES|Rocky|Debian|Ubuntu/) {
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
     print TASKLIST "$EXTRACT_TARBALLS_TASK 4h\n";

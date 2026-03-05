@@ -26,6 +26,8 @@ import re
 import textwrap
 import os
 import sys
+import getpass
+import socket
 
 from .try_os_set import (
     try_os_setegid,
@@ -40,16 +42,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 unique_identifier = 0
+true_exe = "/usr/bin/true" if sys.platform == "darwin" else "/bin/true"
+if sys.platform == "win32" : true_exe = "$(LOCAL_DIR)/condor_tests/success.exe"
 
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
     "SHARED_PORT_PORT": "0",
-    "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
-    "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
-    "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
-    "MAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
-    "SENDMAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
+    "MAIL": true_exe,
+    "SENDMAIL": true_exe,
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
@@ -62,7 +63,7 @@ DEFAULT_PARAMS = {
     "MachineMaxVacateTime": "2",
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
-    "STARTER_LIST": "STARTER",  # no standard universe starter
+    "PROCD_ADDRESS": "$(PROCD_ADDRESS)_$(PERSONAL_INSTANCE_ID)", # if we start multiple condors each must have a different PROCD_ADDRESS
     "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}",
     "SINGULARITY": "/usr/bin/false"
 }
@@ -112,6 +113,7 @@ class Condor:
         clean_local_dir_before: bool = True,
         submit_user : str = None,
         condor_user : str = None,
+        use_sudo: Optional[bool] = None,
     ):
         """
         Parameters
@@ -130,11 +132,27 @@ class Condor:
             If set, the user to switch to when submitting a job.
         condor_user
             If set, the user that HTCondor will run as.
+        use_sudo
+            If ``True``, start condor_master with sudo. If ``None`` (default),
+            checks HTCONDOR_TEST_USE_SUDO environment variable. If ``False``,
+            never use sudo even if environment variable is set.
         """
         self.submit_user = submit_user
+        
+        # Auto-detect sudo mode from environment if not explicitly specified
+        if use_sudo is None:
+            use_sudo = os.environ.get("HTCONDOR_TEST_USE_SUDO") == "1"
+        
+        self.use_sudo = use_sudo
+        
+        # If using sudo but no condor_user specified, default to "condor"
+        if self.use_sudo and condor_user is None:
+            condor_user = "condor"
+        
         self.condor_user = condor_user
         self.local_dir = local_dir
 
+        # TODO: don't assume paths, get these from config
         self.execute_dir = self.local_dir / "execute"
         self.lock_dir = self.local_dir / "lock"
         self.log_dir = self.local_dir / "log"
@@ -186,6 +204,7 @@ class Condor:
             self._write_config()
             self._start_condor()
             self._wait_for_ready()
+            self._make_job_queue_log_public_if_root()
         except BaseException:
             logger.exception(
                 "Encountered error during setup of {}, cleaning up!".format(self)
@@ -200,7 +219,7 @@ class Condor:
             shutil.rmtree(self.local_dir)
             logger.debug("Removed existing local dir for {}".format(self))
 
-        for dir in (
+        condor_dirs_to_make = [
             self.local_dir,
             self.execute_dir,
             self.lock_dir,
@@ -209,16 +228,36 @@ class Condor:
             self.spool_dir,
             self.passwords_dir,
             self.tokens_dir,
-        ):
+        ]
+
+        # First make the dirs as non-privileged user
+        for dir in condor_dirs_to_make:
             dir.mkdir(parents=True, exist_ok=not self.clean_local_dir_before)
-            # logger.debug("Created dir {}".format(dir))
-            if self.condor_user:
-                try:
-                    shutil.chown(
-                        dir, user=self.condor_user, group=self.condor_user
-                    )
-                except PermissionError:
-                    pass
+
+        # Unprivileged users will write the condor_config file here, cheat by making world writable
+        if self.use_sudo:
+            # chmod 0777 condor dir so we can write config file there as non-root
+            cmd.run_command(
+                ["sudo", "chmod", "0777", f"{self.condor_user}:{self.condor_user}", self.local_dir.as_posix()],
+                echo=False,
+                suppress=True,
+            )
+        # Now chown them if needed
+        for dir in condor_dirs_to_make:
+            if self.use_sudo:
+                cmd.run_command(
+                    ["sudo", "chown", "-R", f"{self.condor_user}:{self.condor_user}", dir.as_posix()],
+                    echo=False,
+                    suppress=True,
+                )
+            else:
+                if self.condor_user:
+                    try:
+                        shutil.chown(
+                            dir, user=self.condor_user, group=self.condor_user
+                        )
+                    except PermissionError:
+                        pass
 
     def _write_config(self):
         # TODO: how to ensure that this always hits the right config?
@@ -235,24 +274,22 @@ class Condor:
 
         param_lines += ["#", "# ROLES", "#"]
         param_lines += [
-            "use ROLE: CentralManager",
-            "use ROLE: Submit",
-            "use ROLE: Execute",
+            "DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD",
         ]
 
         base_config = {
             "LOCAL_DIR": self.local_dir.as_posix(),
-            "EXECUTE": self.execute_dir.as_posix(),
-            "LOCK": self.lock_dir.as_posix(),
-            "LOG": self.log_dir.as_posix(),
-            "RUN": self.run_dir.as_posix(),
-            "SPOOL": self.spool_dir.as_posix(),
-            "SEC_PASSWORD_DIRECTORY": self.passwords_dir.as_posix(),
-            "SEC_TOKEN_SYSTEM_DIRECTORY": self.tokens_dir.as_posix(),
-            "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND",
+            #"EXECUTE": "$(LOCAL_DIR)/execute",
+            "LOCK": "$(LOCAL_DIR)/lock",
+            #"LOG": "$(LOCAL_DIR)/log",
+            "RUN": "$(LOCAL_DIR)/run",
+            #"SPOOL": "$(LOCAL_DIR)/spool",
+            "SEC_PASSWORD_DIRECTORY": "$(LOCAL_DIR)/passwords.d",
+            "SEC_TOKEN_SYSTEM_DIRECTORY": "$(LOCAL_DIR)/tokens.d",
+            # "STARTD_DEBUG": "D_FULLDEBUG D_COMMAND:1",
         }
 
-        if self.condor_user:
+        if self.condor_user or self.use_sudo:
             try:
                 from pwd import getpwnam
                 from grp import getgrnam
@@ -265,16 +302,21 @@ class Condor:
                 # has user-switching privileges.
                 pass
 
-        # The need to do this is arguably a HTCondor bug.
+        if self.use_sudo:
+            username = getpass.getuser()
+            fqdn     = socket.getfqdn()
+            base_config["ALLOW_WRITE"] = f"{username}@{fqdn}"
+
+        # 
         global unique_identifier
         unique_identifier += 1
-        if htcondor.param["PROCD_ADDRESS"] == r"\\.\pipe\condor_procd_pipe":
-            base_config["PROCD_ADDRESS"] = "{}_{}_{}_{}".format(
-                htcondor.param["PROCD_ADDRESS"],
-                os.getpid(),
-                time.time(),
-                unique_identifier,
-            )
+        base_config["PERSONAL_INSTANCE_ID"] = "{}".format(unique_identifier)
+
+        # win32 default for PROCD_ADDRESS can end up being too long when running tests
+        # so we want to use a different value than the default
+        # $Fddub() extracts the last 2 components of LOCAL_DIR as posix with no trailing /
+        if sys.platform == "win32":
+            base_config["PROCD_ADDRESS"] = r"\\.\pipe\$Fddub(LOCAL_DIR)/{}_$(PERSONAL_INSTANCE_ID)".format(os.getpid())
 
         param_lines += ["#", "# BASE PARAMS", "#"]
         param_lines += ["{} = {}".format(k, v) for k, v in base_config.items()]
@@ -295,9 +337,21 @@ class Condor:
     @skip_if(condor_master_was_started)
     def _start_condor(self):
         with env.SetCondorConfig(self.config_file):
+            # If we invoke the condor_master via sudo, sudo won't use the path for
+            # security reasons, so we have to find the binary ourselves.
+            master_bin = shutil.which("condor_master")
+            cmd = [master_bin, "-f"]
+            
+            if self.use_sudo:
+                cmd = ["sudo", "-E"] + cmd
+                logger.info(
+                    f"Starting condor_master with sudo (will run as {self.condor_user or 'root'})"
+                )
+            
             self.condor_master = subprocess.Popen(
-                ["condor_master", "-f"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
+
             logger.debug(
                 "Started condor_master (pid {})".format(self.condor_master.pid)
             )
@@ -538,7 +592,10 @@ class Condor:
     def get_local_schedd(self):
         """Return the :class:`htcondor.Schedd` for this pool's schedd."""
         with self.use_config():
-            return htcondor.Schedd()
+            #htcondor.enable_debug("D_HOSTNAME D_CAT")
+            sched = htcondor.Schedd()
+            #htcondor.disable_debug()
+            return sched
 
     def get_local_collector(self):
         """Return the :class:`htcondor.Collector` for this pool's collector."""
@@ -752,6 +809,14 @@ class Condor:
         """
         return self.submit(htcondor.Submit.from_dag(str(dagfile)))
 
+    def _make_job_queue_log_public_if_root(self):
+        if self.use_sudo:
+            # If we're running condor_master as root, then the job queue log will be owned by root and not readable by the unprivileged user running this code, so chmod it to be world-readable
+            cmd.run_command(
+                ["sudo", "chmod", "0666", self.job_queue_log.as_posix()],
+                echo=False,
+                suppress=True,
+            )
 
 RE_PORT_HOST = re.compile(r"\d+\.\d+\.\d+\.\d+:\d+")
 

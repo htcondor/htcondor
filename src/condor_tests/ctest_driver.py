@@ -104,9 +104,19 @@ def write_base_config(prefix_path, java=False):
 def main():
     args = parse_args()
 
-    rundir = os.path.abspath(
-        os.path.join(args.working_dir, "src", "condor_tests", args.test + "_ctest")
+    rundir_parent = os.path.abspath(
+        os.path.join(args.working_dir, "src", "condor_tests")
     )
+    
+    rundir = os.path.abspath(
+        os.path.join(rundir_parent, args.test + "_ctest")
+    )
+
+    # Ensure helper scripts are in place.
+    for helper in ["run_test.pl", "Condor.pm", "CondorUtils.pm", "CondorPersonal.pm", "CondorTest.pm"]:
+        if not os.path.exists(os.path.join(rundir_parent, helper)):
+            shutil.copy(os.path.join(args.source_dir, "src", "condor_tests", helper), rundir_parent)
+
     if os.path.exists(rundir):
         shutil.rmtree(rundir)
     os.makedirs(rundir)

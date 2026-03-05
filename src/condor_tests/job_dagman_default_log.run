@@ -54,24 +54,6 @@ foreach $name (@logfiles) {
 }
 unlink $nodelog if (-e $nodelog);
 
-#
-#sub print_core_file_info {
-#	my $core = shift;
-#	if (-s $core) {
-#		print "\tfound core file: $core\n";
-#		if (CondorUtils::is_windows()) {
-#			system("type $core");
-#		} else {
-#			my $fileinfo = `file $core`;
-#			print "\t$fileinfo";
-#			my ($dagman) = $fileinfo =~ m/execfn:\s*'(.*)'/;
-#			if (defined $dagman) {
-#				system("echo bt | gdb --quiet $dagman $core");
-#			}
-#		}
-#	}
-#}
-
 $abnormal = sub 
 {
 	my %info = @_;

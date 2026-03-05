@@ -367,6 +367,7 @@ public:
 		 */
 	bool getJobClaimId(std::string &result) const;
 
+	void prepareJobHookDone();
 
 protected:
 	std::vector<UserProc *> m_job_list;

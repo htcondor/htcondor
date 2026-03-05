@@ -35,7 +35,8 @@ class JobTransforms {
 		const PROC_ID & jid,
 		classad::References * xform_attrs,
 		CondorError *errorStack,
-		bool is_late_mat = false);
+		bool is_late_mat = false,
+		bool project_is_cluster_attr = false);
 
 	bool shouldTransform() { return !transforms_list.empty(); }
 

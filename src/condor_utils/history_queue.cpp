@@ -274,8 +274,13 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 
 	Stream *inherit_list[] = {state.GetStream(), NULL};
 
-	pid_t pid = daemonCore->Create_Process(history_helper.ptr(), args, PRIV_ROOT, m_rid,
-		false, false, NULL, NULL, NULL, inherit_list);
+	OptionalCreateProcessArgs cpArgs;
+	pid_t pid = daemonCore->CreateProcessNew(history_helper.ptr(), args,
+		cpArgs.priv(PRIV_ROOT)
+			.reaperID(m_rid)
+			.wantCommandPort(false)
+			.wantUDPCommandPort(false)
+			.socketInheritList(inherit_list));
 	if (!pid) {
 		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
 	}

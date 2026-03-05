@@ -24,6 +24,7 @@
 #include "condor_attributes.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope
 #include "qmgmt.h"
+#include "qmgmt_startup_limits.h"
 #include "schedd_stats.h" // for schedd_runtime_probe
 
 // this is a placeholder for a future class that will compactly hold a set of jobs
@@ -455,6 +456,11 @@ bool AutoCluster::config(const classad::References &basic_attrs, const char* sig
 		for (const auto & basic_attr : basic_attrs) {
 			required_attrs.insert(basic_attr);
 		}
+
+		// Ensure job-only startup limit attributes participate in autocluster signatures.
+		classad::References limit_refs;
+		StartupLimitsCollectJobRefs(limit_refs);
+		required_attrs.insert(limit_refs.begin(), limit_refs.end());
 
 		// If the configuration specifies a whitelist of attributes, add them to the required attrs list
 		std::string other_attrs;

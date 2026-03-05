@@ -31,7 +31,7 @@ StartdCronJob::StartdCronJob( ClassAdCronJobParams *params,
 		: ClassAdCronJob( params, mgr )
 {
 	// Register it with the Resource Manager
-	StartdNamedClassAd * ad = new StartdNamedClassAd( GetName(), *this );
+	StartdNamedClassAd * ad = new StartdNamedClassAd( GetName(), this );
 	resmgr->adlist_register( ad );
 }
 
@@ -89,7 +89,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	int rval = 0; // set to 1 to indicate the ad has changed.
 	StartdNamedClassAd * sad = resmgr->adlist_find( ad_name );
 	if ( ! sad ) {
-		sad = new StartdNamedClassAd( ad_name, *this, ad );
+		sad = new StartdNamedClassAd( ad_name, this, ad );
 		// maybe we should be inserting this after the base ad for this cron job?
 		dprintf( D_CRON, "StartdCronJob::Publish() Adding 'extra' ClassAd for '%s'\n", ad_name );
 		resmgr->adlist_register( sad );
@@ -139,13 +139,13 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 		break;
 	}
 
-	// Update our internal (policy) ads immediately.  Otherwise, this cron
-	// job's output won't effect anything until the next UPDATE_INTERVAL.
-	// The flag argument must be at least A_PUBLIC | A_UPDATE to pass the
-	// check in ResMgr::adlist_publish(), which is the (only) update we
-	// actually want.  (We can't call it directly, because we need to
-	// update the internal ad for each Resource.)
-	resmgr->adlist_updated(ad_name, wants_update);
+	// Our internal (policy) ads will be refreshed at the next evaluation.
+	// If the admin wants an immediate update sent the collector, then
+	// we request that here.
+	if (wants_update) {
+		dprintf(D_STATUS,"JEF Calling ResMgr::adlist_updated(%s)\n",ad_name);
+		resmgr->adlist_updated(ad_name);
+	}
 	return rval;
 }
 

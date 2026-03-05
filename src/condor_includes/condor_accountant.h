@@ -25,6 +25,7 @@
 
 #include "condor_state.h"
 
+#include <memory>
 #include <vector>
 #include <map>
 #include <set>
@@ -38,7 +39,8 @@ static const double PriorityDelta = 0.5;
 // request matched against them
 #define CP_MATCH_COST "_cp_match_cost"
 
-template <typename K, typename AD> class ClassAdLog;
+#include "AccountantDB.h"
+
 struct GroupEntry;
 
 class Accountant {
@@ -78,7 +80,7 @@ public:
 
   double GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
-  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
+  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const std::string& customerName, ClassAd *ad); // Help function for above
 
   void CheckMatches(std::vector<ClassAd *>& ResourceList);  // Remove matches that are not claimed
 
@@ -97,7 +99,7 @@ public:
   void DisplayLog();
   void DisplayMatches();
 
-  ClassAd* GetClassAd(const std::string& Key);
+  ClassAd* GetClassAd(AccountantTable table, const std::string& Key);
 
   // This maps submitter names to their assigned accounting group.
   // When called with a defined group name, it maps that group name to itself.
@@ -152,21 +154,13 @@ private:
   // Data members
   //--------------------------------------------------------
 
-  ClassAdLog<std::string, ClassAd*> * AcctLog;
+  std::unique_ptr<AccountantDB> db;
   time_t LastUpdateTime;
 
   std::map<std::string, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
-
-  //--------------------------------------------------------
-  // Static values
-  //--------------------------------------------------------
-
-  static std::string AcctRecord;
-  static std::string CustomerRecord;
-  static std::string ResourceRecord;
 
   //--------------------------------------------------------
   // Utility functions
@@ -177,18 +171,6 @@ private:
   int IsClaimed(ClassAd* ResourceAd, std::string& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& CustomerName);
   static std::string GetDomain(const std::string& CustomerName);
-
-  bool DeleteClassAd(const std::string& Key);
-
-  void SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue);
-  void SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue);
-  void SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
-
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue);
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue);
-  bool GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue);
-  bool GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue);
-  bool GetAttributeString(const std::string& Key, const std::string& AttrName, std::string& AttrValue);
 
   void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<std::string, int>& gnmap);
 };

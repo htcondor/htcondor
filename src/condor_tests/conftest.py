@@ -74,7 +74,7 @@ def get_base_test_dir(config):
     return base_dir
 
 
-'''
+# I need this, don't remove it.
 @pytest.hookimpl(tryfirst=True)
 def pytest_report_header(config):
     return [
@@ -90,7 +90,6 @@ def pytest_report_header(config):
         ),
         "",
     ]
-'''
 
 
 class TestDir:
@@ -216,6 +215,10 @@ def pytest_runtest_protocol(item, nextitem):
 
 @pytest.fixture(scope="class")
 def default_condor(test_dir):
+    """
+    Default Condor instance for tests.
+    Automatically uses sudo if HTCONDOR_TEST_USE_SUDO=1 environment variable is set.
+    """
     with Condor(local_dir=test_dir / "condor") as condor:
         yield condor
 

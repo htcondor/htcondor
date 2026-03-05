@@ -417,7 +417,7 @@ Table 4.2: Evaluation examples for the ``=?=`` operator
 
 
 The ``=!=`` operator is similar to the ``!=`` operator. It checks if the
-left hand side operand is not identical in both type and value to the
+left hand side operand is not identical in both type and value to
 the right hand side operand, returning ``FALSE`` when they are
 identical.
 
@@ -599,7 +599,7 @@ expression that contains a ClassAd function.
     FauxType = "DBMS"
     Name = "random-test"
     Machine = "f05.cs.wisc.edu"
-    MyAddress = "<128.105.149.105:34000>"
+    MyAddress = "<192.0.2.105:34000>"
     DaemonStartTime = 1153192799
     UpdateSequenceNumber = 1
 

@@ -134,7 +134,7 @@ class Schedd():
     Client object for a *condor_schedd*.
     '''
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         '''
         :param location:  A :class:`classad2.ClassAd` specifying a remote
             *condor_schedd* daemon, as returned by :meth:`Collector.locate`.
@@ -492,6 +492,7 @@ class Schedd():
         )
         return result;
 
+
     def updateProjectRec(self,
         project_attributes : List[classad.ClassAd],
     ) -> classad.ClassAd:
@@ -508,6 +509,55 @@ class Schedd():
         result = userrec_act_dispatcher(self._addr, project_attributes,
             _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
             (0x80000 + 543, None)
+        )
+        return result;
+
+    def enableProjectRec(self,
+        project_spec : Union[List[str], str, classad.ExprTree],
+    ) -> classad.ClassAd:
+        """
+        Enable Project record(s) to the *condor_schedd* daemon.
+
+        :param user_spec: Which project(s) to enable.  A :class:`str`
+             of the project name, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only Project records that
+             match the constraint will be enabled.
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        result = userrec_act_dispatcher(self._addr, project_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 541, None)
+        )
+        return result;
+
+
+    def disableProjectRec(self,
+        project_spec : Union[List[str], str, classad.ExprTree],
+        reason : str = None
+    ) -> classad.ClassAd:
+        """
+        Disable Project record(s) in the *condor_schedd* daemon.
+
+        :param user_spec: Which user(s) to disable.  A :class:`str`
+             of the username, a :class:`list` of such
+             strings, or a :class:`classad2.ExprTree` constraint.
+             When a constraint is used, only Project records that match
+             the constraint will be disabled.
+        :param reason: A free-form justification.  Defaults to
+            "Python-initiated action".
+        :return:  A ClassAd describing the changes made.  This
+                  ClassAd is currently undocumented.
+        """
+
+        if reason is None:
+            reason = "Python-initiated action"
+
+        result = userrec_act_dispatcher(self._addr, project_spec,
+            _schedd_act_on_userrec_list, _schedd_act_on_userrec_constraint,
+            (0x80000 + 542, reason)
         )
         return result;
 
@@ -588,11 +638,20 @@ class Schedd():
         if isinstance(since, int):
             since = f"ClusterID == {since}"
         elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+            pattern = re.compile(r'(\d+)\.(\d+)')
+            matches = pattern.fullmatch(since)
+            if matches is not None:
+                since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
+            else:
+                pattern = re.compile(r'(\d+)')
+                matches = pattern.fullmatch(r'(\d+)')
+                if matches is not None:
+                    since = f"ClusterID == {matches[1]}"
+                else:
+                    try:
+                        e = classad.ExprTree(since)
+                    except classad.ClassAdException:
+                        raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
         elif isinstance(since, classad.ExprTree):
             since = str(since)
         elif since is None:
@@ -911,7 +970,7 @@ class Schedd():
         )
 
 
-    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
+    def refreshGSIProxy(self, cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
         """
         Refresh a (running) job's GSI proxy.
 
@@ -923,7 +982,7 @@ class Schedd():
             ``-1`` to use the value specific by :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`.
         :return:  The remaining lifetime.
         """
-        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proxy), str(proxy_filename), int(lifetime))
+        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proc), str(proxy_filename), int(lifetime))
 
 
     def reschedule(self) -> None:

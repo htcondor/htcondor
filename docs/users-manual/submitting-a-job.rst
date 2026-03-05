@@ -346,7 +346,7 @@ file.
     in the config file.  Example might be X86_64.
 
 ``$(OPSYS)`` ``$(OPSYSVER)`` ``$(OPSYSANDVER)`` ``$(OPSYSMAJORVER)``
-    These submit file macros are availle at submit time, and mimic
+    These submit file macros are available at submit time, and mimic
     the classad attributes of the same names.
 
 ``$(SUBMIT_FILE)``
@@ -505,7 +505,7 @@ character (!) to represent the not operation, followed by
    results in ``X = -1``, when ``MY_UNDEFINED_VARIABLE`` is not yet
    defined.
 
--  the version keyword, representing the version number of of the daemon
+-  the version keyword, representing the version number of the daemon
    or tool currently reading this conditional. This keyword is followed
    by an HTCondor version number. That version number can be of the form
    x.y.z or x.y. The version of the daemon or tool is compared to the
@@ -698,7 +698,7 @@ as given in these definitions.
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
         $RANDOM_CHOICE(0,1,2,3,4,5,6,7,8)
 
@@ -709,7 +709,7 @@ as given in these definitions.
     to the value 1. For example, to randomly chose an even integer in
     the range 0-8 (inclusive):
 
-    .. code-block:: text
+    .. code-block:: condor-classad-expr
 
         $RANDOM_INTEGER(0, 8, 2)
 
@@ -1429,7 +1429,7 @@ If Late Materialization of jobs is paused due to an error in materialization or 
 was used to hold the cluster id, a ``Job Materialization Paused`` event will be written to the UserLog of the
 Cluster ad. This event will indicate the reason for the pause.
 
-When ``condor_release`` is used to release the the cluster id of a Late Materialization job factory,
+When ``condor_release`` is used to release the cluster id of a Late Materialization job factory,
 and materialization  was paused because of a previous use of *condor_hold*, a ``Job Materialization Resumed``
 event will be written to the UserLog of the Cluster ad.
 
@@ -1455,7 +1455,7 @@ using the ``-factory`` option.
 .. code-block:: console
 
     > condor_q -factory
-    -- Schedd: submit.example.org : <192.168.101.101:9618?... @ 12/01/20 13:35:00
+    -- Schedd: submit.example.org : <192.0.2.101:9618?... @ 12/01/20 13:35:00
     ID     OWNER          SUBMITTED  LIMIT PRESNT   RUN    IDLE   HOLD NEXTID MODE DIGEST
     77.    bob         12/01  13:30  15000    130     30     80     20   1230      /var/lib/condor/spool/77/condor_submit.77.digest
 
@@ -1470,7 +1470,7 @@ because of an error, the ``MODE`` field will show ``Held`` or ``Errs`` to indica
 there is a problem. ``Errs`` indicates a problem reloading the factory, ``Held``
 indicates a problem materializing jobs.
 
-In case of a factory problem, use ``condor_q -factory -long`` to see the the factory information
+In case of a factory problem, use ``condor_q -factory -long`` to see the factory information
 and the ``JobMaterializePauseReason`` attribute.
 
 Removing a Factory
@@ -1529,7 +1529,7 @@ after an available machine is chosen.
 A special-purpose Machine Ad substitution macro can be used in string
 attributes in the submit description file. The macro has the form
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
       $$(MachineAdAttribute)
 
@@ -1553,7 +1553,7 @@ executables named
 
 will work correctly for the macro
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
       povray.$$(OpSys).$$(Arch)
 

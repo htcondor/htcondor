@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% import 'utils.jinja' as utils %}
+
 {% block style %}
     <style>
         .graph .vizchart {
@@ -21,9 +23,20 @@
     </style>
 {% endblock style %}
 
+{% block js %}
+    {{ super() }}
+    <script src="static/util.js"></script>
+    <script>
+        $(document).ready(function() {
+            registerKeyboardNavigation();
+        });
+    </script>
+{% endblock js %}
+
 {% block body %}
 
     <div class="container-fluid">
+
 
 <div class="row">
 <div class="col">
@@ -41,7 +54,24 @@ Contribution of compute capacity from the
                         dst_id: "table-now",
 						has_fullscreen_link: false,
 						data_url: "/data/ce_overview?r=day",
-						graph_query: "filter=Type=P&limit=lastDate&filter=Cpus>0&group=Date;Date,Project,Field,Organization,Cpus&addRowIfEmpty=None&ceil=Cpus,Cpus&unselect=Cpus&rename=Date=Last Update Time&rename=Project=Projects&rename=Field=Fields&rename=Organization=Organizations&rename=Cpus=Cpus&rename=Date=CE Health&allowHtml=True&set_val=CE Health={{ ce_health }}&intensify=health",
+						graph_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            limit=lastDate
+                            filter=Cpus>0
+                            group=Date;Date,Project,Field,Organization,Cpus
+                            addRowIfEmpty=None
+                            ceil=Cpus,Cpus
+                            unselect=Cpus
+                            rename=Date=Last Update Time
+                            rename=Project=Projects
+                            rename=Field=Fields
+                            rename=Organization=Organizations
+                            rename=Cpus=Cpus
+                            rename=Date=CE Health
+                            allowHtml=True
+                            set_val=CE Health=Good
+                            intensify=health
+                        `)
                     });
                 </script>
 
@@ -55,7 +85,21 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Cpus&order=Date&pivot=Date;Project;Cpus&legend.position=in&add=CpusAllocated,CpusUnallocated,CpusContributed&unselect=CpusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+                                   action_url: "showModal('cpus-past-week-modal')",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=Cpus
+                                        order=Date
+                                        pivot=Date;Project;Cpus
+                                        legend.position=in
+                                        add=CpusAllocated,CpusUnallocated,CpusContributed
+                                        unselect=CpusUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                   `)
 			                    });
 			                </script>
 			</div>
@@ -65,7 +109,23 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project2",
 			                       title: "Memory Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Memory&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
+                                   action_url: "showModal('memory-past-week-modal')",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=MemoryAllocated,MemoryUnallocated
+                                        div=Memory,1000,Memory
+                                        unselect=Memory
+                                        order=Date
+                                        pivot=Date;Project;Memory
+                                        legend.position=in
+                                        vAxis.format=short
+                                        add=MemoryAllocated,MemoryUnallocated,MemoryContributed
+                                        unselect=MemoryUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        chart=area
+                                    `)
 			                    });
 			                </script>
 			</div>
@@ -78,7 +138,21 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Disk&order=Date&pivot=Date;Project;Disk&legend.position=in&add=DiskAllocated,DiskUnallocated,DiskContributed&unselect=DiskUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+                                   action_url: "showModal('disk-past-week-modal')",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=DiskAllocated,DiskUnallocated
+                                        order=Date
+                                        pivot=Date;Project;Disk
+                                        legend.position=in
+                                        add=DiskAllocated,DiskUnallocated,DiskContributed
+                                        unselect=DiskUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                    `)
 			                    });
 			                </script>
 			</div>
@@ -88,9 +162,112 @@ Contribution of compute capacity from the
 			                       dst_id: "cpu-by-project4",
 			                       title: "BCUs Past Week (1core/4GB Mem/4GB Disk)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Bcus&order=Date&pivot=Date;Project;Bcus&legend.position=in&add=BcusAllocated,BcusUnallocated,BcusContributed&unselect=BcusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+                                   action_url: "showModal('bcus-past-week-modal')",
+			                       graph_query: urlEscapeGraphQuery(`
+                                        vAxis.maxValue=3
+                                        filter=Type=R
+                                        q=Bcus
+                                        order=Date
+                                        pivot=Date;Project;Bcus
+                                        legend.position=in
+                                        add=BcusAllocated,BcusUnallocated,BcusContributed
+                                        unselect=BcusUnallocated
+                                        series.0.areaOpacity=1
+                                        series.1.areaOpacity=0.05
+                                        vAxis.format=short
+                                        chart=area
+                                   `)
 			                    });
 			                </script>
+			</div>
+        </div>
+
+		<div class="row">
+            <div class="col-6 htcv-col-6" id="mem-per-cpu">
+                <script>
+                    new HTCondorView({
+                        dst_id: "mem-per-cpu",
+                        title: "Memory per CPU (in GBs)",
+                        data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('memory-per-cpu-modal')",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=MemoryAllocated,MemoryUnallocated,CpusAllocated,CpusUnallocated
+                            order=Date
+                            pivot=Date;Project;Memory,Cpus
+                            unselect=CpusAllocated Memory,CpusUnallocated Memory,MemoryAllocated Cpus,MemoryUnallocated Cpus
+
+                            rename=CpusAllocated Cpus=CpusAllocated
+                            rename=CpusUnallocated Cpus=CpusUnallocated
+                            rename=MemoryAllocated Memory=MemoryAllocated
+                            rename=MemoryUnallocated Memory=MemoryUnallocated
+
+                            add=CpusAllocated,CpusUnallocated,CpusContributed
+                            add=MemoryAllocated,MemoryUnallocated,MemoryContributed
+
+                            unselect=CpusUnallocated,MemoryUnallocated
+
+                            div=MemoryAllocated,CpusAllocated,MemoryPerCpuAllocated
+                            div=MemoryContributed,CpusContributed,MemoryPerCpuContributed
+                            div=MemoryPerCpuAllocated,1000,MemoryPerCpuAllocated
+                            div=MemoryPerCpuContributed,1000,MemoryPerCpuContributed
+
+                            unselect=MemoryAllocated,MemoryContributed,CpusAllocated,CpusContributed,MemoryPerCpuAllocated,MemoryPerCpuContributed
+
+                            rename=MemoryPerCpuAllocated=Memory (GB) Per CPU - Allocated
+                            rename=MemoryPerCpuContributed=Memory (GB) Per CPU - Contributed
+
+                            series.0.areaOpacity=1
+                            series.1.areaOpacity=0.05
+                            legend.position=in
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
+			</div>
+            <div class="col-6 htcv-col-6" id="disk-per-cpu">
+                <script>
+                    new HTCondorView({
+                        dst_id: "disk-per-cpu",
+                        title: "Disk per CPU (in GBs)",
+                        data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('disk-per-cpu-modal')",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=DiskAllocated,DiskUnallocated,CpusAllocated,CpusUnallocated
+                            order=Date
+                            pivot=Date;Project;Disk,Cpus
+                            unselect=CpusAllocated Disk,CpusUnallocated Disk,DiskAllocated Cpus,DiskUnallocated Cpus
+
+                            rename=CpusAllocated Cpus=CpusAllocated
+                            rename=CpusUnallocated Cpus=CpusUnallocated
+                            rename=DiskAllocated Disk=DiskAllocated
+                            rename=DiskUnallocated Disk=DiskUnallocated
+
+                            add=CpusAllocated,CpusUnallocated,CpusContributed
+                            add=DiskAllocated,DiskUnallocated,DiskContributed
+
+                            unselect=CpusUnallocated,DiskUnallocated
+
+                            div=DiskAllocated,CpusAllocated,DiskPerCpuAllocated
+                            div=DiskContributed,CpusContributed,DiskPerCpuContributed
+
+                            unselect=DiskAllocated,DiskContributed,CpusAllocated,CpusContributed
+
+                            rename=DiskPerCpuAllocated=Disk (GB) Per CPU - Allocated
+                            rename=DiskPerCpuContributed=Disk (GB) Per CPU - Contributed
+
+                            series.0.areaOpacity=1
+                            series.1.areaOpacity=0.05
+                            legend.position=in
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
 			</div>
         </div>
 
@@ -101,7 +278,21 @@ Contribution of compute capacity from the
                         dst_id: "col-chart",
                         title: "Groups Served per Day",
 						data_url: "/data/ce_overview?r=week",
-						graph_query: "filter=Type=P&filter=Cpus>0&extract_regexp=Date=-(.*) .*&group=Date;Project,Organization,Field&rename=Project=Projects&rename=Organization=Organizations&rename=Field=Fields&order=Date&addRowIfEmpty=Nobody Served This Week&vAxis.maxValue=2&chart=column&legend.position=in",
+                        action_url: "showModal('groups-per-day-modal')",
+						graph_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            filter=Cpus>0
+                            extract_regexp=Date=-(.*) .*
+                            group=Date;Project,Organization,Field
+                            rename=Project=Projects
+                            rename=Organization=Organizations
+                            rename=Field=Fields
+                            order=Date
+                            addRowIfEmpty=Nobody Served This Week
+                            vAxis.maxValue=2
+                            chart=column
+                            legend.position=in
+                        `)
                     });
                 </script>
             </div>
@@ -111,12 +302,106 @@ Contribution of compute capacity from the
                         dst_id: "cpu-by-day",
                         title: "CPU (l), Memory (r), Disk (r) Allocated per Day",
 						data_url: "/data/ce_overview?r=week",
-						graph_query: "vAxis.maxValue=3&filter=Type=R&q=Allocated&group=Date;Cpus,Memory,Disk&div=Memory,1000,Memory&unselect=Memory&extract_regexp=Date=-(.*) .*&group=Date;avg(Cpus),avg(Memory),avg(Disk)&mult=avgCpus,24,CPU Hours&mult=avgMemory,24,Mem GB Hours&mult=avgDisk,24,Disk GB Hours&unselect=avgCpus,avgMemory,avgDisk&order=Date&vAxes.0.minValue=0&vAxes.1.minValue=0&vAxes.0.title=CPU Hours&vAxes.1.title=GB Hours&series.0.targetAxisIndex=0&series.1.targetAxisIndex=1&series.2.targetAxisIndex=1&legend.position=in&vAxis.format=short&chartArea.left=13%25&chartArea.right=13%25&chart=column",
+                        action_url: "showModal('resources-per-day-modal')",
+						graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=Allocated
+
+                            group=Date;Cpus,Memory,Disk
+                            div=Memory,1000,Memory
+
+                            unselect=Memory
+                            extract_regexp=Date=-(.*) .*
+                            group=Date;avg(Cpus),avg(Memory),avg(Disk)
+
+                            mult=avgCpus,24,CPU Hours
+                            mult=avgMemory,24,Mem GB Hours
+                            mult=avgDisk,24,Disk GB Hours
+
+                            unselect=avgCpus,avgMemory,avgDisk
+                            order=Date
+
+                            vAxes.0.minValue=0
+                            vAxes.1.minValue=0
+                            vAxes.0.title=CPU Hours
+                            vAxes.1.title=GB Hours
+                            
+                            series.0.targetAxisIndex=0
+                            series.1.targetAxisIndex=1
+                            series.2.targetAxisIndex=1
+                            
+                            legend.position=in
+                            vAxis.format=short
+                            chartArea.left=13%
+                            chartArea.right=13%
+                            chart=column
+                        `)
                     });
                 </script>
             </div>
 		</div>
+  
+		<div class="row">
+            <div class="col-6 htcv-col-6" id="glidein-limits">
+                <script>
+                    new HTCondorView({
+                        dst_id: "glidein-limits",
+                        title: "Maximum Concurrent Resource-Limited Glideins per Day",
+						data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('resource-limited-per-day-modal')",
+                        graph_query: urlEscapeGraphQuery(`
+                            filter=Type=R
+                            q=EPs
+                            group=Date;EPsCpuLimited,EPsMemoryLimited,EPsDiskLimited,EPsRunning
 
+                            div=EPsCpuLimited,EPsRunning,FractionCpuLimited
+                            mult=FractionCpuLimited,100,PercentCpuLimited
+
+                            div=EPsMemoryLimited,EPsRunning,FractionMemoryLimited
+                            mult=FractionMemoryLimited,100,PercentMemoryLimited
+
+                            div=EPsDiskLimited,EPsRunning,FractionDiskLimited
+                            mult=FractionDiskLimited,100,PercentDiskLimited
+
+                            extract_regexp=Date=-(.*) .*
+                            group=Date;max(PercentCpuLimited),max(PercentMemoryLimited),max(PercentDiskLimited)
+                            order=Date
+
+                            rename=maxPercentCpuLimited=% CPU Limited
+                            rename=maxPercentMemoryLimited=% Memory Limited
+                            rename=maxPercentDiskLimited=% Disk Limited
+
+                            legend.position=in
+                            vAxis.format=short
+                            vAxes.0.title=% Running EPs
+                            chart=column
+                        `)
+                    });
+                </script>
+            </div>
+            <div class="col-6 htcv-col-6" id="eps-running">
+                <script>
+                    new HTCondorView({
+                        dst_id: "eps-running",
+                        title: "Running Execution Points Past Week",
+						data_url: "/data/ce_overview?r=week",
+                        action_url: "showModal('eps-past-week-modal')",
+                        graph_query: urlEscapeGraphQuery(`
+                            vAxis.maxValue=3
+                            filter=Type=R
+                            q=EPsRunning
+                            order=Date
+                            pivot=Date;Project;EPsRunning
+                            legend.position=in
+                            series.0.areaOpacity=0.5
+                            vAxis.format=short
+                            chart=area
+                        `)
+                    });
+                </script>
+            </div>
+        </div>
 
 		<p><p>
         <div class="row">
@@ -126,8 +411,26 @@ Contribution of compute capacity from the
                         dst_id: "pie-by-project",
                         title: "CPU Allocation Percentage by Project",
 						data_url: "/data/ce_overview",
-						graph_query: "filter=Type=P&group=Project;Cpus&filter=Cpus>0&order=-Cpus&chart=pie&tooltip.text=percentage&tooltip.isHtml=false&sliceVisibilityThreshold=0",
-						table_query: "filter=Type=P&group=Project,Field,Organization;avg(Cpus),max(Cpus)&filter=maxCpus>0&order=-avgCpus&ceil=maxCpus,maxCpus&unselect=maxCpus&make_url=Project=https://osg-htc.org/services/ospool/projects?project=*",
+                        action_url: "showModal('allocation-modal')",
+						graph_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            group=Project;Cpus
+                            filter=Cpus>0
+                            order=-Cpus
+                            chart=pie
+                            tooltip.text=percentage
+                            tooltip.isHtml=false
+                            sliceVisibilityThreshold=0
+                        `),
+						table_query: urlEscapeGraphQuery(`
+                            filter=Type=P
+                            group=Project,Field,Organization;avg(Cpus),max(Cpus)
+                            filter=maxCpus>0
+                            order=-avgCpus
+                            ceil=maxCpus,maxCpus
+                            unselect=maxCpus
+                            make_url=Project=https://osg-htc.org/services/ospool/projects?project=*
+                        `)
                     });
                 </script>
             </div>
@@ -159,6 +462,133 @@ Contribution of compute capacity from the
         </div>
         <!-- End of Bootstrap Modal -->
 
+        <!-- Help Modal for Cpus Allocated -->
+        {% call utils.bootstrap_modal('cpus-past-week-modal', 'About: CPUs Past Week') %}
+            <p>Displays the CPUs contributed by this site and allocated to project jobs.</p>
+            <ul>
+                <li>CPUs Contributed: Total count of CPUs made available for use by projects at this site.</li>
+                <li>CPUs Allocated: CPUs utilized by jobs running at this site.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for Memory Past Week -->
+        {% call utils.bootstrap_modal('memory-past-week-modal', 'About: Memory Past Week') %}
+            <p>Displays the memory contributed by this site and allocated to project jobs.</p>
+            <ul>
+                <li>Memory Contributed: Total amount of memory (in GB) made available for use by projects at this site.</li>
+                <li>Memory Allocated: Memory (in GB) utilized by jobs running at this site.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for Disk Past Week -->
+        {% call utils.bootstrap_modal('disk-past-week-modal', 'About: Disk Past Week') %}
+            <p>Displays the disk contributed by this site and allocated to project jobs.</p>
+            <ul>
+                <li>Disk Contributed: Total amount of disk space (in GB) made available for use by projects at this site.</li>
+                <li>Disk Allocated: Disk space (in GB) utilized by jobs running at this site.</li>
+            </ul>
+        {% endcall %}
+
+        <!-- Help Modal for BCUs Past Week -->
+        {% call utils.bootstrap_modal('bcus-past-week-modal', 'About: BCUs Past Week') %}
+            <p>
+                Displays the Basic Compute Units (BCUs) contributed by this site and allocated to project jobs.
+                1 BCU is defined as 1 CPU core, 4 GB of memory, and 4 GB of disk. Total BCUs are calculated 
+                based on the most constrained resource.
+            </p>
+            <p>
+                For example, if a site contributes the following:
+            </p>
+            <ul>
+                <li>2 CPU cores</li>
+                <li>16 GB of memory</li>
+                <li>16 GB of disk</li>
+            </ul>
+            <p>
+                Its BCU contribution would be 2 BCUs, since the CPU cores are the limiting factor.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Memory Past Week -->
+        {% call utils.bootstrap_modal('memory-per-cpu-modal', 'About: Memory per CPU') %}
+            <p>Displays the ratio between memory and cpus contributed by this site and allocated to project jobs.</p>
+            <ul>
+                <li>Memory per CPU - Contributed: Amount of memory (in GB) made available for use by projects at this site for each CPU contributed.</li>
+                <li>Memory per CPU - Allocated: Memory (in GB) utilized by jobs running at this site for each CPU utilized by those jobs.</li>
+            </ul>
+            <p>
+                The difference between the Contributed and Allocated Memory per CPU is an indicator of the efficiency of resource utilization at a site.
+                When the allocated ratio is larger than the contributed ratio, it suggests that jobs are using more memory per CPU than what was provisioned,
+                and may become memory starved.
+
+                When the allocated ratio is smaller, it indicates that jobs are using less memory per CPU than what was provisioned, and may become CPU starved.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Disk Past Week -->
+        {% call utils.bootstrap_modal('disk-per-cpu-modal', 'About: Disk per CPU') %}
+            <p>Displays the ratio between disk and cpus contributed by this site and allocated to project jobs.</p>
+            <ul>
+                <li>Disk per CPU - Contributed: Amount of disk (in GB) made available for use by projects at this site for each CPU contributed.</li>
+                <li>Disk per CPU - Allocated: disk (in GB) utilized by jobs running at this site for each CPU utilized by those jobs.</li>
+            </ul>
+
+            <p>
+                The difference between the Contributed and Allocated Disk per CPU is an indicator of the efficiency of resource utilization at a site.
+                When the allocated ratio is larger than the contributed ratio, it suggests that jobs are using more disk per CPU than what was provisioned,
+                and may become disk starved.
+
+                When the allocated ratio is smaller, it indicates that jobs are using less disk per CPU than what was provisioned, and may become CPU starved.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Groups Served Per Day -->
+        {% call utils.bootstrap_modal('groups-per-day-modal', 'About: Groups Served per Day') %}
+            <p>Displays the count of different organizational units that have utilized resources at this site.</p>
+        {% endcall %}
+
+        <!-- Help Modal for Resources Past Day -->
+        {% call utils.bootstrap_modal('resources-per-day-modal', 'About: CPU (l), Memory (r), Disk (r) Allocated per Day') %}
+            <p>
+                Displays the sum total of resources contributed by the site per day, multiplied by the duration
+                for which they were contributed. For example, if 4 CPUs were allocated for 5 hours, that would 
+                contribute 20 CPU Hours to the total for that day.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Resource Limited Glideins per day -->
+        {% call utils.bootstrap_modal('resource-limited-per-day-modal', 'About: Maximum Concurrent Resource-Limited Glideins Per Day') %}
+            <p>
+                For each resource type, display the maximum percentage of running Execution Points (EPs)
+                that were limited by that resource on a given day. Here, "limited" is defined as having over 
+                90% of a resource contributed to the EP allocated to running jobs. 
+            </p>
+            <p>
+                For example, if an EP has 16 GB of memory and jobs running on the EP occupy 15 GB of memory, 
+                then the EP would be considered memory-limited. If 8 of the 10 EPs running at the site were memory-limited, 
+                then the site would be 80% memory-limited at that time.
+            </p>
+            <p>
+                Values displayed are the maximum percentages observed on that day. If, at any point in the day,
+                90% of concurrently running EPs were CPU-limited, the value for that day would be 90%.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for EPs Running Past Week -->
+        {% call utils.bootstrap_modal('eps-past-week-modal', 'About: Running Execution Points Past Week') %}
+            <p>
+                Displays the count of running execution points at this site.
+            </p>
+        {% endcall %}
+
+        <!-- Help Modal for Cpu Allocation Percentage by Project -->
+        {% call utils.bootstrap_modal('allocation-modal', 'About: CPU Allocation Percentage by Project') %}
+            <p>
+                For the given time range (day, week, or month), display the percentage of total CPU allocation
+                at the site used by each project that ran jobs at the site.
+            </p>
+        {% endcall %}
+
     </div>
 
         
@@ -174,6 +604,7 @@ Contribution of compute capacity from the
             if (!hostParam) {
                 window.location.href = "/";
             }
+
 
             // Show the modal if the cookie does not exist
             if (!cookieExists) {

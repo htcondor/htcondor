@@ -27,6 +27,7 @@
 
 #include "basename.h"
 #include "qmgmt.h"
+#include "qmgmt_startup_limits.h"
 #include "condor_qmgr.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
@@ -56,7 +57,12 @@
 #include "jobsets.h"
 #include "exit.h"
 #include "credmon_interface.h"
+#include <memory>
 #include <algorithm>
+#include <vector>
+#include <deque>
+#include <unordered_map>
+#include <unordered_set>
 #include <math.h>
 #include <param_info.h>
 #include <shortfile.h>
@@ -274,8 +280,7 @@ int JobsSeenOnQueueWalk = -1;
 
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
-typedef HashTable<int, int> ClusterSizeHashTable_t;
-static ClusterSizeHashTable_t *ClusterSizeHashTable = nullptr;
+static std::map<int, int> ClusterSizeHashTable;
 static std::set<int> ClustersNeedingCleanup;
 static int defer_cleanup_timer_id = -1;
 static std::set<int> ClustersNeedingMaterialize;
@@ -296,6 +301,7 @@ static void ScheduleJobQueueLogFlush();
 
 bool qmgmt_all_users_trusted = false;
 static std::vector<std::string> super_users;
+std::vector<std::string> ocu_super_users;
 static const char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
@@ -746,7 +752,7 @@ ClusterCleanup(int cluster_id)
 	}
 
 	// remove entry in ClusterSizeHashTable 
-	ClusterSizeHashTable->remove(cluster_id);
+	ClusterSizeHashTable.erase(cluster_id);
 
 	// delete the cluster classad
 	JobQueue->DestroyClassAd( key );
@@ -1030,10 +1036,10 @@ DeferredClusterCleanupTimerCallback(int /* tid */)
 		bool do_cleanup = true;
 
 		// first get the proc count for this cluster, if it is zero then we *might* want to do cleanup
-		int *numOfProcs = nullptr;
-		if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
-			do_cleanup = *numOfProcs <= 0;
-			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has %d procs, setting do_cleanup=%d\n", cluster_id, *numOfProcs, do_cleanup);
+		auto size_it = ClusterSizeHashTable.find(cluster_id);
+		if (size_it != ClusterSizeHashTable.end()) {
+			do_cleanup = size_it->second <= 0;
+			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has %d procs, setting do_cleanup=%d\n", cluster_id, size_it->second, do_cleanup);
 		} else {
 			dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has no entry in ClusterSizeHashTable, setting do_cleanup=%d\n", cluster_id, do_cleanup);
 		}
@@ -1112,39 +1118,33 @@ static
 int
 IncrementClusterSize(int cluster_num)
 {
-	int 	*numOfProcs = nullptr;
-
-	if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
-		// First proc we've seen in this cluster; set size to 1
-		ClusterSizeHashTable->insert(cluster_num,1);
+	int cnt = 1;
+	auto it = ClusterSizeHashTable.find(cluster_num);
+	if (it != ClusterSizeHashTable.end()) {
+		it->second++;
+		cnt = it->second;
 	} else {
-		// We've seen this cluster_num go by before; increment proc count
-		(*numOfProcs)++;
+		ClusterSizeHashTable.emplace(cluster_num, 1);
+		cnt = 1;
 	}
-
-		// return the number of procs in this cluster
-	if ( numOfProcs ) {
-		return *numOfProcs;
-	} else {
-		return 1;
-	}
+	return cnt;
 }
 
 static
 int
 DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 {
-	int 	*numOfProcs = nullptr;
+	int numOfProcs = 0;
 
-	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
-		// We've seen this cluster_num go by before; increment proc count
-		// NOTICE that numOfProcs is a _reference_ to an int which we
-		// fetched out of the hash table via the call to lookup() above.
-		(*numOfProcs)--;
+	auto it = ClusterSizeHashTable.find(cluster_id);
+	if (it != ClusterSizeHashTable.end()) {
+		// We've seen this cluster_num go by before; decrement proc count
+		it->second--;
+		numOfProcs = it->second;
 
-		bool cleanup_now = (*numOfProcs <= 0);
+		bool cleanup_now = (numOfProcs <= 0);
 		if (clusterAd) {
-			clusterAd->SetClusterSize(*numOfProcs);
+			clusterAd->SetClusterSize(numOfProcs);
 			if (scheduler.getAllowLateMaterialize()) {
 				// if there is a job factory, and it doesn't want us to do cleanup
 				// then schedule deferred cleanup even if the cluster is not yet empty
@@ -1160,18 +1160,13 @@ DecrementClusterSize(int cluster_id, JobQueueCluster * clusterAd)
 		//    checkpoint file and the entry in the ClusterSizeHashTable.
 		if ( cleanup_now ) {
 			ClusterCleanup(cluster_id);
-			numOfProcs = nullptr;
+			numOfProcs = 0;
 		}
 	}
 	TotalJobsCount--;
 	
 		// return the number of procs in this cluster
-	if ( numOfProcs ) {
-		return *numOfProcs;
-	} else {
-		// if it isn't in our hashtable, there are no procs, so return 0
-		return 0;
-	}
+	return numOfProcs;
 }
 
 // CRUFT: Everything in this function is cruft, but not necessarily all
@@ -1518,6 +1513,22 @@ InitQmgmt()
 			"NOTE: QUEUE_ALL_USERS_TRUSTED=TRUE - "
 			"all queue access checks disabled!\n"
 			);
+	}
+
+	auto_free_ptr ocu_super(param("OCU_SUPER_USERS"));
+	
+	// Make sure to clear if removed on reconfig
+	if (ocu_super) {
+		ocu_super_users = split(ocu_super);
+	} else  {
+		ocu_super_users.clear();
+	}
+
+	if( IsFulldebug(D_FULLDEBUG) && !ocu_super_users.empty()) {
+		dprintf( D_FULLDEBUG, "OCU Super Users:\n" );
+		for (const auto &username : ocu_super_users) {
+			dprintf( D_FULLDEBUG, "\t%s\n", username.c_str() );
+		}
 	}
 
 	delete queue_super_user_may_impersonate_regex;
@@ -2261,7 +2272,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	if( !JobQueue->InitLogFile(job_queue_name,max_historical_logs) ) {
 		EXCEPT("Failed to initialize job queue log!");
 	}
-	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;
 
@@ -2900,8 +2910,7 @@ DestroyJobQueue( )
 	DirtyJobIDs.clear();
 
 		// There's also our hashtable of the size of each cluster
-	delete ClusterSizeHashTable;
-	ClusterSizeHashTable = nullptr;
+	ClusterSizeHashTable.clear();
 	TotalJobsCount = 0;
 
 	delete queue_super_user_may_impersonate_regex;
@@ -3186,25 +3195,23 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 }
 
 int
-grow_prio_recs( int newsize )
+grow_prio_recs( [[maybe_unused]] int newsize )
 {
   #ifdef PRIO_REC_IS_VECTOR
 	if (new_size > (int)PrioRec.capacity()) {
 		PrioRec.reserve(new_size);
 	}
 	dprintf(D_FULLDEBUG,"Dynamically growing PrioRec to %d\n",newsize);
-  #else
-	// no need to grow a std::deque
-	(void)newsize;
   #endif
 	return 0;
 }
 
-// test an unqualified username "bob" or a fully qualfied username "bob@domain" to see
-// if it is a queue superuser
-static bool isQueueSuperUserName( const char* user )
+// test if the list contains a given username
+// names may be domain-qualified (bob@domain) or unqualified (bob)
+// on unix, list elements may be an os group
+bool ContainsUserName(const std::vector<std::string>& users_list, const char* user)
 {
-	if( !user || super_users.empty() ) {
+	if( !user || users_list.empty() ) {
 		return false;
 	}
 
@@ -3217,17 +3224,17 @@ static bool isQueueSuperUserName( const char* user )
 	bool is_local_user = is_same_user(user, owner, COMPARE_DOMAIN_FULL, scheduler.uidDomain());
 #endif
 
-	for (const auto &superuser : super_users) {
+	for (const auto &listuser : users_list) {
 #ifdef UNIX
-        if (superuser[0] == '%' && is_local_user) {
+        if (listuser[0] == '%' && is_local_user) {
             // this is a user group, so check user against the group membership
-            struct group* gr = getgrnam(&superuser[1]);
+            struct group* gr = getgrnam(&listuser[1]);
             if (gr) {
                 for (char** gmem=gr->gr_mem;  *gmem != nullptr;  ++gmem) {
                     if (strcmp(owner, *gmem) == 0) return true;
                 }
             } else {
-                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", &superuser[1]);
+                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", &listuser[1]);
             }
             continue;
         }
@@ -3235,7 +3242,7 @@ static bool isQueueSuperUserName( const char* user )
 #else
 		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
 #endif
-		if (is_same_user(user, superuser.c_str(), opt, scheduler.uidDomain())) {
+		if (is_same_user(user, listuser.c_str(), opt, scheduler.uidDomain())) {
 			return true;
 		}
 	}
@@ -3247,7 +3254,7 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 	if ( ! user) return false;
 	if (user->IsInherentlySuper()) return true;
 	if (user->isStaleConfigSuper()) {
-		bool super = isQueueSuperUserName(user->Name());
+		bool super = ContainsUserName(super_users, user->Name());
 		const_cast<JobQueueUserRec *>(user)->setConfigSuper(super);
 	}
 	return user->IsSuperUser();
@@ -4312,7 +4319,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			errno = EACCES;
 			return -1;
 		}
-		bool is_super = isQueueSuperUserName(user.c_str());
+		bool is_super = isQueueSuperUser(EffectiveUserRec(Q_SOCK));
 		dprintf(D_COMMAND | D_VERBOSE, "SetAttributeByConstraint w/ OnlyMyJobs owner = \"%s\" (isQueueSuperUser = %d)\n", owner.c_str(), is_super);
 		if (is_super) {
 			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
@@ -5091,7 +5098,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		const OwnerInfo* urec = scheduler.lookup_owner_const(owner);
 
 		if (IsDebugVerbose(D_SECURITY)) {
-			bool is_super = isQueueSuperUserName(sock_owner);
+			bool is_super = isQueueSuperUser(EffectiveUserRec(Q_SOCK));
 			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner, urec != nullptr);
 			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i urec_exists %i\n",
 				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner, urec!=nullptr);
@@ -5240,7 +5247,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// SuperUserAllowedToSetOwnerTo
 			if (!qmgmt_all_users_trusted
 				&& !is_same_user(user, sock_user, COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())
-				&& !isQueueSuperUserName(sock_user))
+				&& !isQueueSuperUser(EffectiveUserRec(Q_SOCK)))
 			{
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting User to \"%s\" when active User is \"%s\"\n",
@@ -5572,14 +5579,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			std::string raw_attribute = attr_name;
 			raw_attribute += "_RAW";
 			JobQueue->SetAttribute(key, raw_attribute.c_str(), attr_value, flags & SetAttribute_SetDirty);
-			if( flags & SHOULDLOG ) {
+			if( (flags & SHOULDLOG) && job) {
 				char* old_val = nullptr;
 				ExprTree *ltree = nullptr;
 				ltree = job->LookupExpr(raw_attribute);
 				if( ltree ) {
 					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
-				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.c_str(), attr_value, old_val);
+				scheduler.WriteAttrChangeToUserLog(job, raw_attribute.c_str(), attr_value, old_val);
 			}
 
 			int64_t lvalue = 0;
@@ -5687,13 +5694,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SetAttribute_SetDirty);
-	if( flags & SHOULDLOG ) {
+	if( (flags & SHOULDLOG) && job ) {
 		const char* old_val = nullptr;
-		if (job) {
-			ExprTree *tree = job->LookupExpr(attr_name);
-			if (tree) { old_val = ExprTreeToString(tree); }
-		}
-		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
+		ExprTree *tree = job->LookupExpr(attr_name);
+		if (tree) { old_val = ExprTreeToString(tree); }
+		scheduler.WriteAttrChangeToUserLog(job, attr_name, attr_value, old_val);
 	}
 
 	if( flags & NONDURABLE ) {
@@ -6076,6 +6081,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 	// In effect, they are making attributes that are set by a submit transform pseudo-immutable. (the root cause of HTCONDOR-1369)
 	// TODO: make it possible to declare only some transforms as cluster-only
 	bool transform_factory_and_job = param_boolean("TRANSFORM_FACTORY_AND_JOB_ADS", true);
+	bool project_is_cluster_attr = scheduler.HasPersistentProjectInfo();
 
 	for(const JobQueueKey jid : new_keys) {
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) {
@@ -6120,6 +6126,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 					// we already transformed the factory cluster ad, disable transforms
 					// for proc ads if ...and_jobs is false
 					do_transforms = transform_factory_and_job;
+					has_job_factory = true; // make sure the transform knows this is a factory job
 				}
 			}
 		}
@@ -6128,7 +6135,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 		// apply job transforms to the procAd.
 		// If the transforms fail, bail on the transaction.
 		if (do_transforms) {
-			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack, has_job_factory);
+			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack, has_job_factory, project_is_cluster_attr);
 			if  (rval < 0) {
 				if ( errorStack ) {
 					errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
@@ -6271,12 +6278,9 @@ void AddClusterEditedAttributes(std::vector<JobQueueKey> & exist_keys)
 }
 
 bool
-ReadProxyFileIntoAd( const char *file, const OwnerInfo *owner, ClassAd &x509_attrs )
+ReadProxyFileIntoAd( [[maybe_unused]] const char *file, [[maybe_unused]] const OwnerInfo *owner, [[maybe_unused]] ClassAd &x509_attrs )
 {
 #if defined(WIN32)
-	(void)file;
-	(void)owner;
-	(void)x509_attrs;
 	return false;
 #else
 	// owner==NULL means don't try to switch our priv state.
@@ -7497,21 +7501,13 @@ AbortTransactionAndRecomputeClusters()
 			-Todd 2/2000
 		*/
 		//TODO: move cluster count from hashtable into the cluster's JobQueueJob object.
-		ClusterSizeHashTable->clear();
+		ClusterSizeHashTable.clear();
 		JobQueueBase *job = nullptr;
 		JobQueueKey key;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->Iterate(key, job)) {
 			if (key.cluster > 0 && key.proc >= 0) { // look at job ads only.
-				int *numOfProcs = nullptr;
-				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(key.cluster,numOfProcs) == -1 ) {
-					// First proc we've seen in this cluster; set size to 1
-					ClusterSizeHashTable->insert(key.cluster,1);
-				} else {
-					// We've seen this cluster_num go by before; increment proc count
-					(*numOfProcs)++;
-				}
+				IncrementClusterSize(key.cluster);
 			}
 		}
 
@@ -7521,12 +7517,11 @@ AbortTransactionAndRecomputeClusters()
 		while (JobQueue->Iterate(key, job)) {
 			if (key.cluster > 0 && key.proc == -1) { // look at cluster ads only
 				auto * cad = dynamic_cast<JobQueueCluster*>(job);
-				int *numOfProcs = nullptr;
-				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(key.cluster,numOfProcs) == -1 ) {
+				auto it = ClusterSizeHashTable.find(key.cluster);
+				if (it == ClusterSizeHashTable.end()) {
 					cad->SetClusterSize(0); // not in the cluster size hash table, so there are no procs...
 				} else {
-					cad->SetClusterSize(*numOfProcs); // copy num of procs into the cluster object.
+					cad->SetClusterSize(it->second); // copy num of procs into the cluster object.
 				}
 			}
 		}
@@ -8968,98 +8963,6 @@ FreeJobAd(ClassAd *&ad)
 }
 */
 
-static int
-RecvSpoolFileBytes(const char *path)
-{
-	filesize_t	size = 0;
-	Q_SOCK->getReliSock()->decode();
-	if (Q_SOCK->getReliSock()->get_file(&size, path) < 0) {
-		dprintf(D_ALWAYS,
-		        "Failed to receive file from client in SendSpoolFile.\n");
-		Q_SOCK->getReliSock()->end_of_message();
-		return -1;
-	}
-	IGNORE_RETURN chmod(path,00755);
-	Q_SOCK->getReliSock()->end_of_message();
-	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
-	return 0;
-}
-
-int
-SendSpoolFile(char const *)
-{
-	char * path = nullptr;
-
-		// We ignore the filename that was passed by the client.
-		// It is only there for backward compatibility reasons.
-
-	path = GetSpooledExecutablePath(active_cluster_num, Spool);
-	ASSERT( path );
-
-	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
-		EXCEPT( "SendSpoolFile called when Q_SOCK is NULL" );
-	}
-
-	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
-		int terrno = errno;;
-		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
-		Q_SOCK->getReliSock()->put(-1);
-		Q_SOCK->getReliSock()->put(terrno);
-		Q_SOCK->getReliSock()->end_of_message();
-		free(path);
-		return -1;
-	}
-
-	/* Tell client to go ahead with file transfer. */
-	Q_SOCK->getReliSock()->encode();
-	Q_SOCK->getReliSock()->put(0);
-	Q_SOCK->getReliSock()->end_of_message();
-
-	int rv = RecvSpoolFileBytes(path);
-	free(path); path = nullptr;
-	return rv;
-}
-
-int
-SendSpoolFileIfNeeded(ClassAd& /*ad*/)
-{
-	if ( !Q_SOCK || !Q_SOCK->getReliSock() ) {
-		EXCEPT( "SendSpoolFileIfNeeded called when Q_SOCK is NULL" );
-	}
-	Q_SOCK->getReliSock()->encode();
-
-	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
-	ASSERT( path );
-
-	struct stat exe_stat = {};
-	if (stat(path, &exe_stat) == 0) {
-		Q_SOCK->getReliSock()->put(1);
-		Q_SOCK->getReliSock()->end_of_message();
-		free(path);
-		return 0;
-	}
-
-	if( !make_parents_if_needed( path, 0755, PRIV_CONDOR ) ) {
-		dprintf(D_ALWAYS, "Failed to create spool directory for %s.\n", path);
-		Q_SOCK->getReliSock()->put(-1);
-		Q_SOCK->getReliSock()->end_of_message();
-		free(path);
-		return -1;
-	}
-
-	/* Tell client to go ahead with file transfer. */
-	Q_SOCK->getReliSock()->put(0);
-	Q_SOCK->getReliSock()->end_of_message();
-
-	if (RecvSpoolFileBytes(path) == -1) {
-		free(path); path = nullptr;
-		return -1;
-	}
-
-	free(path); path = nullptr;
-	return 0;
-}
-
 } /* should match the extern "C" */
 
 
@@ -9289,7 +9192,7 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 	return true;
 }
 
-extern void mark_job_stopped(PROC_ID* job_id);
+extern void mark_job_stopped(const PROC_ID & job_id);
 
 int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 {
@@ -9326,7 +9229,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 		}
 		dprintf( D_FULLDEBUG, "Job %d.%d was left marked as removed, "
 				 "cleaning up now\n", cluster, proc );
-		scheduler.WriteAbortToUserLog( job_id );
+		scheduler.WriteAbortToUserLog(job);
 		DestroyProc( cluster, proc );
 	}
 	else if ( status == SUSPENDED || status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
@@ -9351,10 +9254,10 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 				 ( universe != CONDOR_UNIVERSE_PARALLEL || proc == 0 ) ) {
 				scheduler.stats.JobsRestartReconnectsLeaseExpired += 1;
 			}
-			mark_job_stopped(&job_id);
+			mark_job_stopped(job_id);
 		}
 	}
-		
+
 	int wall_clock_ckpt = 0;
 	GetAttributeInt(cluster,proc,ATTR_JOB_WALL_CLOCK_CKPT, &wall_clock_ckpt);
 	if (wall_clock_ckpt) {
@@ -9820,10 +9723,19 @@ bool UniverseUsesVanillaStartExpr(int universe)
  * any user; o.w. only get jobs for specified user.
  * If pool is non-empty, check whether jobs can flock there
  */
-void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu)
+void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, const char* pool, bool is_ocu, bool is_new_match)
 {
 	JobQueueJob *job = nullptr;
 	runnable_reason_code runnable_code;
+	std::unordered_set<std::string> blocked_limits;
+
+	if (!StartupLimitsEmpty()) {
+		std::string slotname = "<none>";
+		if (my_match_ad) { my_match_ad->LookupString(ATTR_NAME, slotname); }
+		dprintf(D_FULLDEBUG,
+			"StartupLimit scan begin match for user=%s pool=%s slot=%s new_match=%d\n",
+			user ? user : "<any>", pool ? pool : "<none>", slotname.c_str(), (int)is_new_match);
+	}
 
 	// indicate failure by setting proc to -1.  do this now
 	// so if we bail out early anywhere, we say we failed.
@@ -9860,6 +9772,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 	bool consider_startd_rank = my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank);
 	std::string remoteOwner;
 	my_match_ad->LookupString(ATTR_REMOTE_OWNER, remoteOwner);
+	std::string remoteProject;
+	my_match_ad->LookupString(ATTR_REMOTE_PROJECT, remoteProject);
 
 #ifdef USE_VANILLA_START
 	std::string job_attr("JOB");
@@ -9941,17 +9855,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			}
 		#endif
 
+			bool OCUWanted = false;
+			job->LookupBool(ATTR_OCU_WANTED, OCUWanted);
 			if (is_ocu) {
+				// OCU ad should have ATTR_REMOTE_OWNER set to the owner of the OCU claim
+				// ... or, the job should belong to a project that has an OCU claim
 
-				// OCU ad should have ATTR_OWNER set to the owner of the OCU claim
-				std::string owner;
-				my_match_ad->LookupString(ATTR_OWNER, owner);
-
-				if (owner == job->ownerinfo->Name()) {
+				if ((remoteOwner == job->ownerinfo->Name()) ||
+					(job->project ? remoteProject == job->project->Name() : false)) {
 					// Our OCU claim
 					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
-					job->LookupBool("OCUWanted", OCUWanted);
 					if (!OCUWanted) {
 						continue;
 					}
@@ -9963,6 +9877,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 					if ( ! OCUWilling) {
 						continue;
 					}
+				}
+			} else {
+				// Not an OCU claim, so skip any jobs that are OCU only
+				if (OCUWanted) {
+					continue;
 				}
 			}
 
@@ -10006,6 +9925,23 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id);
 					// Move along to the next job in the prio rec array
 				continue;
+			}
+
+			if (!StartupLimitsEmpty()) {
+				// External startup limits: deny starting if rate is exceeded
+				if (!StartupLimitsAllowJob(job, my_match_ad, user, pool, &blocked_limits)) {
+					if (!blocked_limits.empty()) {
+						dprintf(D_FULLDEBUG | D_MATCH,
+							"StartupLimit denied job %d.%d user=%s pool=%s blocked=%zu\n",
+							job->jid.cluster, job->jid.proc, job->ownerinfo->Name(), pool ? pool : "<none>", blocked_limits.size());
+					}
+					continue;
+				} else if (!blocked_limits.empty()) {
+					dprintf(D_FULLDEBUG | D_MATCH,
+						"StartupLimit allowed job %d.%d user=%s pool=%s after prior blocks=%zu\n",
+						job->jid.cluster, job->jid.proc, job->ownerinfo->Name(), pool ? pool : "<none>", blocked_limits.size());
+					blocked_limits.clear();
+				}
 			}
 
 				// Now check of the job can be started - this checks various schedd limits
@@ -10080,6 +10016,16 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 					ocu_claims++;
 					my_match_ad->Assign(ocu_claim_stat_attr, ocu_claims);
 				}
+
+				// Set OCU state to 'R'unning
+				int ocu_id = -1;
+				my_match_ad->LookupInteger(ATTR_OCU_ID, ocu_id);
+				if (ocu_id != -1) {
+					OCU *ocu = scheduler.getOCU(ocu_id);
+					if (ocu) {
+						ocu->state = 'R';
+					}
+				}
 			}
 			return;
 
@@ -10103,6 +10049,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 		PrioRecAutoClusterRejected.clear();
 
 	} while( rebuilt_prio_rec_array );
+
+	// No runnable job found for this match; record ignores only for new matches
+	if (is_new_match && !blocked_limits.empty()) {
+		StartupLimitsRecordIgnoredMatches(blocked_limits, user, pool);
+	}
 
 	// no more jobs to run anywhere.  nothing more to do.  failure.
 }

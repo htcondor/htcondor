@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 204> makeCommandTable() {
+std::array<std::pair<int, const char *>, 206> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -400,6 +400,10 @@ std::array<std::pair<int, const char *>, 204> makeCommandTable() {
 		{PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS"},
 #define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+158)
 		{PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS"},
+#define CREATE_STARTUP_LIMIT      (SCHED_VERS+159)
+		{CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT"},
+#define QUERY_STARTUP_LIMITS      (SCHED_VERS+160)
+		{QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

@@ -339,7 +339,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 }
 
 void
-GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, groupQuotasHashType* groupQuotasHash, double hgq_total_quota, Accountant &accountant, const std::function<void(GroupEntry *, int)> &fn, bool global_accept_surplus) {
+GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, groupQuotasHashType &groupQuotasHash, double hgq_total_quota, Accountant &accountant, const std::function<void(GroupEntry *, int)> &fn, bool global_accept_surplus) {
 	// Why not just wait until next negotiation?
 	// A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
 	// slots that were not used due to rejection.
@@ -368,7 +368,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 		//negotiation_cycle_stats[0]->slot_share_iterations += 1;
 
 		// make sure working values are reset for this iteration
-		groupQuotasHash->clear();
+		groupQuotasHash.clear();
 		for (GroupEntry* group : hgq_groups) {
 			group->allocated = 0;
 			group->subtree_requested = 0;
@@ -400,7 +400,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 		for (GroupEntry* group : hgq_groups) {
 			dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
 					group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-			groupQuotasHash->insert(group->name, group->quota);
+			groupQuotasHash.emplace(group->name, group->quota);
 			requested_total += group->requested;
 			allocated_total += group->allocated;
 			if (group->allocated > 0) served_groups += 1;

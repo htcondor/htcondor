@@ -425,8 +425,6 @@ Matchmaker ()
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
 	
-	stashedAds = new AdHash(hashFunction);
-
 	MatchList = NULL;
 	cachedAutoCluster = -1;
 	cachedName = NULL;
@@ -448,8 +446,6 @@ Matchmaker ()
 	update_collector_tid = -1;
 
 	update_interval = 5*MINUTE;
-
-	groupQuotasHash = NULL;
 
 	prevLHF = 0;
 	Collectors = 0;
@@ -523,8 +519,6 @@ Matchmaker::
 	free(NegotiatorName);
 	if (publicAd) delete publicAd;
     if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
-	if (groupQuotasHash) delete groupQuotasHash;
-	if (stashedAds) delete stashedAds;
     if (strSlotConstraint) free(strSlotConstraint), strSlotConstraint = NULL;
 
 	for (auto* stats : negotiation_cycle_stats) {
@@ -1022,7 +1016,7 @@ DELETE_USER_commandHandler (int, Stream *strm)
 	}
 
 	// reset usage
-	dprintf (D_ALWAYS,"Deleting accountanting record of %s\n", submitter.c_str());
+	dprintf (D_ALWAYS,"Deleting accounting record of %s\n", submitter.c_str());
 	accountant.DeleteRecord(submitter);
 	
 	return TRUE;
@@ -1547,6 +1541,7 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 	external_references.erase(ATTR_LAST_HEARD_FROM);
 	external_references.erase(ATTR_REMOTE_USER);
 	external_references.erase(ATTR_REMOTE_OWNER);
+	external_references.erase(ATTR_REMOTE_USER_FLOOR);
 	external_references.erase(ATTR_REMOTE_USER_PRIO);
 	external_references.erase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
 	external_references.erase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
@@ -1602,8 +1597,6 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 bool Matchmaker::
 getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQuota, double& groupUsage)
 {
-	ASSERT(groupQuotasHash);
-
     groupName = "";
 	groupQuota = 0.0;
 	groupUsage = 0.0;
@@ -1617,11 +1610,13 @@ getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQu
 
     groupName = group->name;
 
-	if (groupQuotasHash->lookup(groupName, groupQuota) == -1) {
+	auto itr = groupQuotasHash.find(groupName);
+	if (itr == groupQuotasHash.end()) {
 		// hash lookup failed, must not be a group name
 		return false;
 	}
 
+	groupQuota = itr->second;
 	groupUsage = accountant.GetWeightedResourcesUsed(groupName);
 
 	return true;
@@ -1785,11 +1780,6 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	// ----- Recalculate priorities for schedds
 	accountant.UpdatePriorities();
 	accountant.CheckMatches( startdAds );
-
-	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(hashFunction);
-		ASSERT(groupQuotasHash);
-    }
 
 	int cPoolsize = 0;
     double weightedPoolsize = 0;
@@ -1984,9 +1974,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		dprintf(D_FULLDEBUG, "Updating collector with accounting information\n");
 			// for all of the names of active submitters
 		for (const auto& name : names) {
-			std::string key = "Customer." + name;  // hashkey is "Customer" followed by name
-
-			ClassAd *accountingAd = accountant.GetClassAd(key);
+				ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, name);
 			if (accountingAd) {
 
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
@@ -2036,7 +2024,7 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	std::string CustomerName = group->name;
 
-	ClassAd *CustomerAd = accountant.GetClassAd(std::string("Customer.") + CustomerName);
+	ClassAd *CustomerAd = accountant.GetClassAd(AccountantTable::Customer, CustomerName);
 
     if (CustomerAd == NULL) {
         dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.c_str());
@@ -2441,12 +2429,9 @@ negotiateWithGroup ( bool isFloorRound,
 				submitterPrioFactor);
 
 				if (spin_pie == 1) {
-					std::string key("Customer.");  // hashkey is "Customer" followed by name
-					key += submitterName;
-
 					// Save away the submitter share on the first pie spin to put in
 					// the accounting ad to publish to the AccountingAd.
-					ClassAd *accountingAd = accountant.GetClassAd(key);
+					ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, submitterName);
 					if (accountingAd) {
 						accountingAd->Assign("SubmitterShare", submitterShare);
 						accountingAd->Assign("SubmitterLimit", submitterShare * slotWeightTotal);
@@ -3105,10 +3090,11 @@ obtainAdsFromCollector (
 				oldAdEntry = NULL;
 
 				std::string adID = MachineAdID(ad);
-				stashedAds->lookup( adID, oldAdEntry);
-				// if we find it...
 				oldSequence = -1;
-				if( oldAdEntry ) {
+				auto itr = stashedAds.find(adID);
+				if (itr != stashedAds.end()) {
+					// if we find it...
+					oldAdEntry = itr->second;
 					oldSequence = oldAdEntry->sequenceNum;
 					oldAd = oldAdEntry->oldAd;
 				}
@@ -3156,13 +3142,13 @@ obtainAdsFromCollector (
 						delete(oldAdEntry->oldAd);
 						delete(oldAdEntry->remoteHost);
 						delete(oldAdEntry);
-						stashedAds->remove(adID);
+						stashedAds.erase(adID);
 					}
 					MapEntry *me = new MapEntry;
 					me->sequenceNum = newSequence;
 					me->remoteHost = strdup(remoteHost);
 					me->oldAd = new ClassAd(*ad);
-					stashedAds->insert(adID, me);
+					stashedAds.emplace(adID, me);
 				} else {
 					/*
 					  We have a stashed copy of this ad, and it's the
@@ -5503,6 +5489,9 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
+
+		int user_floor = accountant.GetFloor(remoteUser);
+		ad->Assign(ATTR_REMOTE_USER_FLOOR, user_floor);
 		formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.c_str());
 		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
@@ -5597,7 +5586,10 @@ reeval(ClassAd *ad)
 	ad->LookupInteger("CurMatches", cur_matches);
 
 	std::string adID = MachineAdID(ad);
-	stashedAds->lookup( adID, oldAdEntry);
+	auto itr = stashedAds.find(adID);
+	if (itr != stashedAds.end()) {
+		oldAdEntry = itr->second;
+	}
 		
 	cur_matches++;
 	ad->Assign("CurMatches", cur_matches);

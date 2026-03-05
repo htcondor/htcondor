@@ -48,7 +48,7 @@ instructions corresponding to your operating system:
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 10 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
-  openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
+  openSUSE LEAP 15 and 16;
   Debian 12 and 13; and Ubuntu 22.04 and 24.04.
 * :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 13 and later.
 
@@ -67,7 +67,7 @@ misbehaving jobs.
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 10 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
-  openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
+  openSUSE LEAP 15 and 16;
   Debian 12 and 13; and Ubuntu 22.04 and 24.04.
 * :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 13 and later.
 

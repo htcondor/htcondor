@@ -42,14 +42,17 @@ class SharedPortServer: Service {
 
  private:
 	bool m_registered_handlers;
+	bool m_registered_http_handler{false};
 	std::string m_shared_port_server_ad_file;
 	int m_publish_addr_timer;
 	SharedPortClient m_shared_port_client;
 	std::string m_default_id;
+	std::string m_http_forward_id;
 	ForkWork forker;
 
 	int HandleConnectRequest(int cmd,Stream *sock);
 	int HandleDefaultRequest(int cmd,Stream *sock);
+	int HandleHttpRequest(int cmd,Stream *sock);
 	int PassRequest(Sock *sock, const char *shared_port_id);
 	void PublishAddress(int timerID = -1);
 };

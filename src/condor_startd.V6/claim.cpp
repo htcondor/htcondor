@@ -126,7 +126,7 @@ Claim::~Claim()
 	if( c_rip != NULL && c_rip->r_classad != NULL ) {
 		resmgr->adlist_unset_monitors( c_rip->r_id, c_rip->r_classad );
 	} else if (c_rip && ! c_rip->is_broken_slot()) { // d-slots are marked as broken just before they are deleted.
-		dprintf( D_BACKTRACE, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
+		dprintf( D_FULLDEBUG, "Unable to unset monitors in claim destructor.  The StartOfJob* attributes will be stale.  (%p, %p)\n", c_rip, c_rip == NULL ? NULL : c_rip->r_classad );
 	}
 
 		// Cancel any daemonCore events associated with this claim
@@ -255,6 +255,9 @@ Claim::publish( ClassAd* cad )
 		if( !c_client->c_owner.empty() ) {
 			cad->Assign(ATTR_REMOTE_OWNER, c_client->c_owner);
 		}
+		if( !c_client->c_project.empty() ) {
+			cad->Assign(ATTR_REMOTE_PROJECT, c_client->c_project);
+		}
 		if( !c_client->c_acctgrp.empty() ) {
 			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
@@ -367,6 +370,7 @@ Claim::unpublish( ClassAd* cad )
 		ATTR_REMOTE_SCHEDD_NAME,
 		ATTR_REMOTE_USER,
 		ATTR_REMOTE_OWNER,
+		ATTR_REMOTE_PROJECT,
 		ATTR_ACCOUNTING_GROUP,
 		ATTR_CLIENT_MACHINE,
 		ATTR_CONCURRENCY_LIMITS,

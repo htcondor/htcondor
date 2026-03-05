@@ -732,10 +732,8 @@ static void compress_path( std::string &path )
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-int SubmitHash::check_and_universalize_path( std::string &path )
+int SubmitHash::check_and_universalize_path( [[maybe_unused]] std::string &path )
 {
-	(void) path;
-
 	int retval = 0;
 #ifdef WIN32
 	/*
@@ -846,7 +844,7 @@ int64_t SubmitHash::calc_image_size_kb( const char *name)
 // other than to make sure that it actually IS a directory on Windows
 // On Linux we already know that by the error code from safe_open below
 //
-static bool check_directory( const char* pathname, int /*flags*/, int err )
+static bool check_directory( [[maybe_unused]] const char* pathname, int /*flags*/, int err )
 {
 #if defined(WIN32)
 	// Make sure that it actually is a directory
@@ -856,8 +854,6 @@ static bool check_directory( const char* pathname, int /*flags*/, int err )
 	return (dwAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
 	// will just do nothing here and leave
-	// it up to the runtime to nicely report errors.
-	(void)pathname;
 	return (err == EISDIR);
 #endif
 }
@@ -2124,13 +2120,13 @@ int SubmitHash::SetLeaveInQueue()
 				 */
 				formatstr(
 					buffer,
-					"%s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
+					"%s == %d && (time() - (%s ?: time())) < %d && (%s ?: 0) < %s",
 					ATTR_JOB_STATUS,
 					COMPLETED,
 					ATTR_COMPLETION_DATE,
-					ATTR_COMPLETION_DATE,
-					ATTR_COMPLETION_DATE,
-					60 * 60 * 24 * 10
+					60 * 60 * 24 * 10,
+					ATTR_STAGE_OUT_FINISH,
+					ATTR_ENTERED_CURRENT_STATUS
 				);
 				AssignJobExpr(ATTR_JOB_LEAVE_IN_QUEUE, buffer.c_str());
 			}
@@ -3419,6 +3415,12 @@ int SubmitHash::SetAutoAttributes()
 		}
 	}
 
+	bool ocu_wanted = false;
+	if (job->LookupBool("OCUWanted", ocu_wanted)) {
+		// If the job wants OCU, force very long mjrt
+		AssignJobVal(ATTR_MAX_JOB_RETIREMENT_TIME, std::numeric_limits<int>::max());
+	}
+
 	// set a default lease duration for jobs that don't have one and can reconnect
 	//
 	if (universeCanReconnect(JobUniverse) && ! job->Lookup(ATTR_JOB_LEASE_DURATION)) {
@@ -3549,6 +3551,8 @@ int SubmitHash::SetArguments()
 	if (shell && !IsInteractiveJob) {
 		arglist.AppendArg("-c");
 		arglist.AppendArg(shell);
+		free(shell);
+		shell = nullptr;
 		std::string value;
 		args_success = arglist.GetArgsStringV2Raw(value);
 		if (args_success) {
@@ -3559,6 +3563,8 @@ int SubmitHash::SetArguments()
 			ABORT_AND_RETURN(1);
 		}
 	}
+	free(shell);
+	shell = nullptr;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -3924,14 +3930,16 @@ int SubmitHash::SetJobRetries()
 // return is a vector of intermediate numbers in the sequence, and the final value
 // stored in the given ad as attr.
 //
-static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, ConstraintHolder & last, int scale)
+static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, ConstraintHolder & last, int scale, bool check_units, size_t & errpos)
 {
 	int64_t number = 0;
 	char unit = 0;
 	const char * endp = nullptr;
 	const char * p = line;
+	const char * misu = nullptr; // position of first missing units
 	// loop parsing the numbers in the sequence
 	while (parse_int64_bytes(p, number, scale, &unit, ",", &endp)) {
+		if ( ! unit && ! misu) { misu = p; }
 		seq.push_back(number);
 		p = endp;
 		while (isspace(*p)) ++p;
@@ -3949,23 +3957,41 @@ static int parse_expr_sequence(const char * line, std::vector<int64_t> &seq, Con
 			return 1;
 		}
 	}
+	// if there were missing units, and units should be checked, return 2 rather than success.
+	if (misu && check_units) {
+		errpos = (size_t)(misu - line);
+		return 2;
+	}
 	return 0;
 }
 
-int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char * line, const char * incr /*=nullptr*/)
+int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, const char * subkey, int scale, const char * line, const char * incr /*=nullptr*/)
 {
 	ClassAd tmp;
 	std::string set_attr_body;
 	std::vector<int64_t> seq;
 	ConstraintHolder last;
-	if (line && 0 != parse_expr_sequence(line, seq, last, scale)) {
-		if ( ! last.empty()) {
-			push_error(stderr, "%s=%s is invalid. must be an expression or number\n", attr, last.c_str());
-		} else {
-			// we don't expect to get here unless new error returns are added to parse_expr_sequence
-			push_error(stderr, "could not parse %s\n", line);
+	auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
+	size_t errpos = 0;
+	const char * scale_label = (scale == 1024*1024) ? "defaults to megabytes, but " : "";
+
+	if (line) {
+		int rval = parse_expr_sequence(line, seq, last, scale, missingUnitsIs, errpos);
+		if (rval == 2) { // return value of 2 is units are missing.
+			if (0 == strcasecmp("error", missingUnitsIs)) {
+				push_error(stderr, "%s=%s %smust contain a units suffix (i.e K, M, G, or T)\n", subkey, line+errpos, scale_label);
+				ABORT_AND_RETURN(1);
+			}
+			push_warning(stderr, "%s=%s %sshould contain a units suffix (i.e K, M, G, or T)\n", subkey, line+errpos, scale_label);
+		} else if (rval != 0) {
+			if ( ! last.empty()) {
+				push_error(stderr, "%s=%s is invalid. must be an expression or number\n", subkey, last.c_str());
+			} else {
+				// we don't expect to get here unless new error returns are added to parse_expr_sequence
+				push_error(stderr, "while processing %s could not parse %s\n", subkey, line);
+			}
+			ABORT_AND_RETURN(1);
 		}
-		ABORT_AND_RETURN(1);
 	}
 
 	// if there is a sequence, make sure that is an increasing sequence
@@ -3974,7 +4000,7 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 		for (auto v2 : seq) {
 			if (v2 <= v1) {
 				push_error(stderr, "%s must have an increasing sequence of values, but %lld is not greater than %lld\n",
-					attr, (long long)v2, (long long)v1); // long long cast needed by gcc..
+					subkey, (long long)v2, (long long)v1); // long long cast needed by gcc..
 				ABORT_AND_RETURN(1);
 			}
 			v1 = v2;
@@ -4033,11 +4059,19 @@ int SubmitHash::SetBuiltInOnEvictCheck(const char * attr, int scale, const char 
 		// if no sequence, but there is an increment, we use a strategy of
 		// applying the increment on each retry with a cap of the max value
 		// the increment may either be a constant, in which case we make Request* + <incr>
-		// or it may be an expression that already references Requst*
+		// or it may be an expression that already references Request*
 		// TODO: handle the case where it is an expression that defines a constant?
 		int64_t inclit;
 		std::string inc_expr;
-		if (parse_int64_bytes(incr, inclit, scale)) {
+		char unit = 0;
+		if (parse_int64_bytes(incr, inclit, scale, &unit)) {
+			if ( ! unit && missingUnitsIs) {
+				if (0 == strcasecmp("error", missingUnitsIs)) {
+					push_error(stderr, "%s retry increment %s %smust contain a units suffix (i.e K, M, G or T)\n", attr, incr, scale_label);
+					ABORT_AND_RETURN(1);
+				}
+				push_warning(stderr, "%s retry increment %s %sshould contain a units suffix (i.e K, M, G or T)\n", attr, incr, scale_label);
+			}
 			if (inclit <= 0) {
 				push_error(stderr, "%s retry increment must be a positive number or an expression that references %s\n", attr, attr);
 				ABORT_AND_RETURN(1);
@@ -4318,8 +4352,12 @@ int SubmitHash::SetExecutable()
 	if (shell && !IsInteractiveJob) {
 			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
+			free(shell);
+			shell = nullptr;
 			return 0;
 	}
+	free(shell);
+	shell = nullptr;
 
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
 	if ( ! ename && IsInteractiveJob) {
@@ -5303,63 +5341,30 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 			if (missingUnitsIs && ! unit) {
 				// If all characters in string are numeric (with no unit suffix)
 					if (0 == strcasecmp("error", missingUnitsIs)) {
-						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+						push_error(stderr, "\nERROR: request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, G or T)\n", mem.ptr());
 						ABORT_AND_RETURN(1);
 					}
-					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", mem.ptr());
+					push_warning(stderr, "\nWARNING: request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, G or T)\n", mem.ptr());
 			}
 			AssignJobVal(ATTR_REQUEST_MEMORY, req_memory_mb);
 
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
-				SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, ++endp);
+				SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, SUBMIT_KEY_RequestMemory, 1024*1024, ++endp);
 			} else {
 				// check for retry_request_memory, retry_request_memory_max and retry_request_memory_increase
 				// may either use retry_request_memory=<list> OR retry_request_memory_max=<val> and/or retry_request_memory_increase=<val>
 				auto_free_ptr rrm(submit_param(SUBMIT_KEY_RetryRequestMemory));
 				auto_free_ptr rrmax(submit_param(SUBMIT_KEY_RetryRequestMemoryMax));
 				auto_free_ptr rrmincr(submit_param(SUBMIT_KEY_RetryRequestMemoryIncrease));
-				
-				// Check units for retry_request_memory if it's a literal value
-				if (rrm) {
-					char unit = 0;
-					int64_t retry_memory_mb = 0;
-					const char * endp = nullptr;
-					if (parse_int64_bytes(rrm, retry_memory_mb, 1024 * 1024, &unit, ",", &endp)) {
-						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-						if (missingUnitsIs && ! unit) {
-							if (0 == strcasecmp("error", missingUnitsIs)) {
-								push_error(stderr, "\nERROR: retry_request_memory=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
-								ABORT_AND_RETURN(1);
-							}
-							push_warning(stderr, "\nWARNING: retry_request_memory=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrm.ptr());
-						}
-					}
-				}
-				
-				// Check units for retry_request_memory_max if it's a literal value
-				if (rrmax) {
-					char unit = 0;
-					int64_t retry_max_mb = 0;
-					if (parse_int64_bytes(rrmax, retry_max_mb, 1024 * 1024, &unit)) {
-						auto_free_ptr missingUnitsIs = param("SUBMIT_REQUEST_MISSING_UNITS");
-						if (missingUnitsIs && ! unit) {
-							if (0 == strcasecmp("error", missingUnitsIs)) {
-								push_error(stderr, "\nERROR: retry_request_memory_max=%s defaults to megabytes, but must contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
-								ABORT_AND_RETURN(1);
-							}
-							push_warning(stderr, "\nWARNING: retry_request_memory_max=%s defaults to megabytes, but should contain a units suffix (i.e K, M, or B)\n", rrmax.ptr());
-						}
-					}
-				}
-				
+
 				if (rrm) {
 					if (rrmincr) {
 						push_warning(stderr, "\nWARNING: retry_request_memory_increase will be ignored because retry_request_memory was used");
 					}
-					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, rrm);
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, SUBMIT_KEY_RetryRequestMemory, 1024*1024, rrm);
 				} else if (rrmax || rrmincr) {
-					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, 1024*1024, rrmax, rrmincr);
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_MEMORY, SUBMIT_KEY_RetryRequestMemoryMax, 1024*1024, rrmax, rrmincr);
 				}
 			}
 		} else if (YourStringNoCase("undefined") == mem) {
@@ -5411,7 +5416,7 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
-				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, 1024, ++endp);
+				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, ++endp);
 			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
@@ -5846,10 +5851,18 @@ int SubmitHash::SetRequirements()
 		// Insert dummy values for attributes of the job to which we
 		// want to detect references.  Otherwise, unqualified references
 		// get classified as external references.
-	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
+	req_ad.Assign(ATTR_REQUEST_MEMORY,0); // for use by checks_reqmem below
 	req_ad.Assign(ATTR_VM_CKPT_MAC, "");
+	req_ad.Assign(ATTR_REQUIREMENTS, true); // so we can detect circular Requirements
 
-	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
+	if ( ! answer.empty() && ! GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs)) {
+		// could not get references, if it is because Requirements references Requirements
+		push_warning(stderr, "Could not get attribute references from Requirements: %s\n", answer.c_str());
+	}
+	if (job_refs.count(ATTR_REQUIREMENTS) || machine_refs.count(ATTR_REQUIREMENTS)) {
+		push_error(stderr, ATTR_REQUIREMENTS " = %s\nIs Circular. Did you intend to use $(Requirements) ?\n", answer.c_str());
+		ABORT_AND_RETURN(1);
+	}
 
 	bool	checks_arch = machine_refs.count( ATTR_ARCH );
 	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
@@ -6489,6 +6502,11 @@ int SubmitHash::SetRequirements()
 				" where x and y are positive integers.\n" );
 			ABORT_AND_RETURN(1);
 		}
+	}
+
+	bool ocu_wanted = false;
+	if (job->LookupBool(ATTR_OCU_WANTED, ocu_wanted) && ocu_wanted) {
+		answer += " && TARGET." ATTR_OCU " =?= true";
 	}
 
 	AssignJobExpr(ATTR_REQUIREMENTS, answer.c_str());
@@ -8270,7 +8288,16 @@ ClassAd* SubmitHash::make_job_ad (
 	job = new DeltaClassAd(*procAd);
 
 	// really a command, needs to happen before any calls to check_open
-	JobDisableFileChecks = submit_param_bool(SUBMIT_CMD_skip_filechecks, NULL, false);
+	JobDisableFileChecks = false;
+	auto_free_ptr filechecks(submit_param(SUBMIT_CMD_skip_filechecks));
+	if (filechecks) {
+		if (YourStringNoCase("warn") == filechecks.ptr()) {
+			FileChecksAreWarnings = true;
+		} else if ( ! string_is_boolean_param(filechecks, JobDisableFileChecks)) {
+			push_error(stderr, "SUBMIT_CMD_skip_filechecks=%s is invalid, must be 'warn' or a boolean\n", filechecks.ptr());
+			abort_code = 1;
+		}
+	}
 	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
 	SetIWD();		// must be called very early
@@ -9597,7 +9624,7 @@ static const DIGEST_FIXUP_KEY aDigestFixupAttrs[] = {
 
 // while building a submit digest, fixup right hand side for certain key=rhs pairs
 // for now this is mostly used to promote some paths to fully qualified paths.
-void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
+void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs, bool has_pending_expansions)
 {
 	const DIGEST_FIXUP_KEY* found = NULL;
 	found = BinaryLookup<DIGEST_FIXUP_KEY>(aDigestFixupAttrs, COUNTOF(aDigestFixupAttrs), key, strcasecmp);
@@ -9623,7 +9650,10 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	if (found->id == idKeyUniverse && topping) { rhs = topping; }
 
 	// the Executable and InitialDir should be expanded to a fully qualified path here.
-	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo)) {
+	// HTCONDOR-3546 TJ : I don't see why we fixup idKeyExecutable at all here since
+	// SetExecutable calls full_path which uses FACTORY.IWD.  I'm doing the conservative
+	// change by checking has_pending_expansions, but we can probably remove the idKeyExecutable case entirely
+	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo && !has_pending_expansions)) {
 		if (rhs.empty()) return;
 		const char * path = rhs.c_str();
 		if (strstr(path, "$$(")) return; // don't fixup if there is a pending $$() expansion.
@@ -9813,7 +9843,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 			if (iret > 0) {
 				has_pending_expansions = true;
 			}
-			fixup_rhs_for_digest(key, rhs);
+			fixup_rhs_for_digest(key, rhs, has_pending_expansions);
 		} else {
 			rhs = "";
 		}
@@ -9848,6 +9878,7 @@ credd_has_tokens(
 	const std::string & token_names,
 	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
+	Daemon* credd,
 	std::string & URL,
 	std::string & error_string
 ) {
@@ -9885,7 +9916,7 @@ credd_has_tokens(
 	}
 
 	std::string url;
-	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
+	int rv = do_check_oauth_creds(req_ads, url, credd);
 	if (rv > 0) { URL = url; }
 	else if (rv < 0) {
 		// this little bit of nonsense preserves the pre 8.9.9 error messages to stdout
@@ -9994,6 +10025,34 @@ process_job_credentials(
 		}
 	}
 
+	Daemon credd(DT_CREDD);
+
+	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+	// in either case we want to initialize our credd object from the passed-in one if we can.
+	if (schedd_or_credd) {
+		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+		if (schedd) {
+			std::string credd_address;
+			if (schedd->getCreddAddress(credd_address)) {
+				// when we init the credd from the schedd's locationAd,
+				// it will pick up the CreddIpAddr in the locationAd and
+				// use it to set the addr field of the daemon object
+				// And it will use the name, machine, and version of the schedd
+				// TODO: does the location ad need to know the name of the credd?
+				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+			} else {
+				if (schedd->name() && ! schedd->isLocal()) {
+					// this is a Hail Mary, if the address of the credd is not known,
+					// and the schedd is remote we hope that the credd name and the schedd name are the same.
+					// if this is a local schedd, we are better off using a default credd.
+					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+				}
+			}
+		} else if (schedd_or_credd->type() == DT_CREDD) {
+			credd = *schedd_or_credd;
+		}
+	}
+
 	if (!token_ads.empty()) {
 		// Contact the credd to see if it has all of the tokens
 		// requested by the job.
@@ -10003,7 +10062,11 @@ process_job_credentials(
 		//    acquire some missing tokens
 		// 3. Provide an error message explaining why one or more tokens
 		//    are unavailable.
-		if( credd_has_tokens(token_names, token_ads, DashDryRun, URL, error_string) ) {
+		if (!credd.locate()) {
+			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
+			return 1;
+		}
+		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					return 0;
@@ -10060,34 +10123,6 @@ process_job_credentials(
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
-
-			Daemon credd(DT_CREDD);
-
-			// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
-			// in either case we want to initialize our credd object from the passed-in one if we can.
-			if (schedd_or_credd) {
-				DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
-				if (schedd) {
-					std::string credd_address;
-					if (schedd->getCreddAddress(credd_address)) {
-						// when we init the credd from the schedd's locationAd,
-						// it will pick up the CreddIpAddr in the locationAd and
-						// use it to set the addr field of the daemon object
-						// And it will use the name, machine, and version of the schedd
-						// TODO: does the location ad need to know the name of the credd?
-						credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
-					} else {
-						if (schedd->name() && ! schedd->isLocal()) {
-							// this is a Hail Mary, if the address of the credd is not known,
-							// and the schedd is remote we hope that the credd name and the schedd name are the same.
-							// if this is a local schedd, we are better off using a default credd.
-							credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
-						}
-					}
-				} else if (schedd_or_credd->type() == DT_CREDD) {
-					credd = *schedd_or_credd;
-				}
-			}
 
 			// if we did not init the credd object from an ad, we need to locate now.
 			if (credd.locate()) {

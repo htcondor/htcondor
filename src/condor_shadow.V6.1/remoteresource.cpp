@@ -44,6 +44,7 @@
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "shadow.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -965,7 +966,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
 	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
@@ -979,7 +980,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		}
 
 		int required_version = 2;
-		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
+		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
@@ -1206,6 +1207,20 @@ RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 
 	// Timer is not periodic, so since it has now fired, the tid is invalid. Clear it.
 	no_update_received_tid = -1;
+}
+
+
+void
+RemoteResource::processResultAd( ClassAd * const resultAd ) {
+	dprintf( D_MACHINE | D_VERBOSE, "Processing result ad:\n" );
+	dPrintAd( D_MACHINE | D_VERBOSE, * resultAd );
+}
+
+
+void
+RemoteResource::processInvocationAd( ClassAd * const invocationAd ) {
+	dprintf( D_MACHINE | D_VERBOSE, "Processing invocation ad:\n" );
+	dPrintAd( D_MACHINE | D_VERBOSE, * invocationAd );
 }
 
 
@@ -1507,6 +1522,23 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
 
+
+				// ToddT and I are both working on tickets that will require
+				// looking at each ad individually, so to minimize merge
+				// conflicts, make this a call-out to another function.
+				for( const auto & result : results ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(result);
+					if( ad == nullptr ) { continue; }
+					processResultAd( ad );
+				}
+
+				for( const auto & invocation : invocations ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(invocation);
+					if( ad == nullptr ) { continue; }
+					processInvocationAd( ad );
+				}
+
+
 				updateAdOwnsResultList = false;
 				resultList = new classad::ExprList( results );
 				invocationList = new classad::ExprList( invocations );
@@ -1517,6 +1549,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// attribute name were always just "PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
+
+			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
+				auto stats = shadow->getCommonTransferInfoStats();
+				if( stats ) {
+					c.Insert( "TransferCommonStats", (* stats).Copy() );
+				}
+			}
 
 			// Arguably, the epoch log would be easier to parse if the
 			// attribute name were always just "PluginResultList".

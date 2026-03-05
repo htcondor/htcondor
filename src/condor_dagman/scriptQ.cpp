@@ -74,7 +74,7 @@ ScriptExecResult ScriptQ::Run(Script *script, ScriptDeferAction act) {
 	_dag->GetJobstateLog().WriteScriptStarted(script->GetNode(), script->_type);
 	if (int pid = script->BackgroundRun(*_dag, _scriptReaperId)) {
 		_numScriptsRunning++;
-		auto insertResult = _scriptPidTable.insert(std::make_pair(pid, script));
+		auto insertResult = _scriptPidTable.emplace(pid, script);
 		ASSERT(insertResult.second == true);
 		debug_printf(DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid, script->GetExecuted());
 		return ScriptExecResult::EXECUTED;

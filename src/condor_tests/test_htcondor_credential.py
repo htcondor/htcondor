@@ -42,6 +42,7 @@ def the_condor(local_dir):
             LOCAL_CREDMON_TOKEN_AUDIENCE        = https://localhost
             ALLOW_DAEMON                        = *
             LOCAL_CREDMON_PRIVATE_KEY           = $(LOCAL_DIR)/trust_domain_ca_privkey.pem
+            LOCAL_CREDMON_PUBLIC_KEY            = $(LOCAL_DIR)/trust_domain_ca_pubkey.pem
         """,
     ) as the_condor:
         yield the_condor

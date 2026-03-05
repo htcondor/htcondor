@@ -706,8 +706,7 @@ all attributes.
     hold.  The below table defines all possible values used by 
     attributes :ad-attr:`HoldReasonCode`, :ad-attr:`NumHoldsByReason`, and :ad-attr:`HoldReasonSubCode`. 
 
-    .. include:: ../codes-other-values/hold-reason-codes.rst
-        :start-line: 3
+    .. include:: ../codes-other-values/hold-table.rst
 
 :classad-attribute-def:`HoldReasonSubCode`
     An integer value that represents further information to go along
@@ -748,9 +747,8 @@ all attributes.
     A comma-separated list of attribute names. The named attributes and
     their values are written in the job event log whenever any event is
     being written to the log. This is the same as the configuration
-    setting ``EVENT_LOG_INFORMATION_ATTRS`` (see
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries`) but it applies to the job event log instead of the system event log.
+    setting :macro:`EVENT_LOG_INFORMATION_ATTRS` but it applies to the
+    job event log instead of the system event log.
 
 :classad-attribute-def:`JobBatchName`
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
@@ -994,10 +992,10 @@ all attributes.
     
 :classad-attribute-def:`LeaveJobInQueue`
     A boolean expression that defaults to ``False``, causing the job to
-    be removed from the queue upon completion. An exception is if the
-    job is submitted using ``condor_submit -spool``. For this case, the
-    default expression causes the job to be kept in the queue for 10
-    days after completion.
+    leave the queue upon completion.
+    If the job is submitted using ``condor_submit -spool``, the default
+    changes to an expression that keeps the job in the queue until its
+    output files are retrieved or 10 days after completion.
 
 :classad-attribute-def:`MachineAttr<X><N>`
     Machine attribute of name ``<X>`` that is placed into this job
@@ -1218,6 +1216,10 @@ all attributes.
     to string value the home directory of the Unix user the job runs as.
     This can be put into :macro:`MOUNT_UNDER_SCRATCH` to hide users' home
     directories.
+
+:classad-attribute-def:`OsUser`
+    A string value representing the ``User`` the jobs *condor_shadow* will run
+    as. This is set by Condor.
 
 :classad-attribute-def:`OtherJobRemoveRequirements`
     A string that defines a list of jobs. When the job with this
@@ -1668,7 +1670,7 @@ all attributes.
 :classad-attribute-def:`JobStarterDebug`
     This attribute causes the *condor_starter* to write a job-specific
     copy of its daemon log in the job's scratch directory.
-    If the value is `True`, then the the logging level matches that of
+    If the value is `True`, then the logging level matches that of
     the regular daemon log.
     If the value is a string, then it specifies a different logging
     level following the syntax of :macro:`<SUBSYS>_DEBUG`.
@@ -1901,7 +1903,7 @@ all attributes.
 
 :classad-attribute-def:`TransferOutputStats`
     The value of this classad attribute is a nested classad, whose values
-    mirror those for `:ad-attr:`TransferInputStats``, but for the transfer
+    mirror those for :ad-attr:`TransferInputStats`, but for the transfer
     from the EP worker node back to the AP submit point.
 
 :classad-attribute-def:`TransferOutStarted`
@@ -1954,15 +1956,12 @@ all attributes.
 
 :classad-attribute-def:`VacateReasonCode`
     An integer value that represents the reason why a job's most
-    recent exeuction attempt failed.
-    The below table defines values used by
-    attributes :ad-attr:`VacateReasonCode` and
-    :ad-attr:`VacateReasonSubCode`.
+    recent execution attempt failed. The below table defines values used by
+    attributes :ad-attr:`VacateReasonCode` and :ad-attr:`VacateReasonSubCode`.
     Values defined for :ad-attr:`HoldReasonCode` are also valid values for
     :ad-attr:`VacateReasonCode`.
 
-    .. include:: ../codes-other-values/vacate-reason-codes.rst
-        :start-line: 3
+    .. include:: ../codes-other-values/vacate-code-table.rst
 
 :classad-attribute-def:`VacateReasonSubCode`
     An integer value that represents further information to go along
@@ -2149,7 +2148,7 @@ information for the DAG.
     +------+--------------------------------------+
     | 0    | OK                                   |
     +------+--------------------------------------+
-    | 1    | An error has occured                 |
+    | 1    | An error has occurred                |
     +------+--------------------------------------+
     | 2    | One or more nodes in the DAG have    |
     |      | failed                               |

@@ -43,7 +43,7 @@ automatically assigns an accounting group to jobs based on the
 submitting user, and one that shows one possible way to transform
 Vanilla jobs to Docker jobs.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
 
@@ -88,7 +88,7 @@ a major component of the default error message output if a user attempts
 to submit a job which fails to meet the requirements. Therefore, choose
 a descriptive name. For the three example submit requirements described:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NAMES = NotStandardUniverse, MinimalRequestMemory, NotChris
 
@@ -99,7 +99,7 @@ chosen name listed in :macro:`SUBMIT_REQUIREMENT_NAMES`. The value is a
 boolean ClassAd expression. The three example criterion result in these
 configuration variable definitions:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NotStandardUniverse = JobUniverse != 1
     SUBMIT_REQUIREMENT_MinimalRequestMemory = RequestMemory > 512
@@ -116,7 +116,7 @@ and the job ClassAd, which is the ``TARGET.`` name space. Note that
 Further configuration may associate a rejection reason with a submit
 requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NotStandardUniverse_REASON = "This pool does not accept standard universe jobs."
     SUBMIT_REQUIREMENT_MinimalRequestMemory_REASON = strcat( "The job only requested ", \
@@ -137,7 +137,7 @@ will include the ``<Name>`` chosen for the submit requirement.
 Completing the presentation of the example submit requirements, upon an
 attempt to submit a standard universe job, :tool:`condor_submit` would print
 
-.. code-block:: text
+.. code-block:: console
 
     Submitting job(s).
     ERROR: Failed to commit job submission into the queue.
@@ -162,7 +162,7 @@ to allow HTCondor administrators to provide their users with advance
 warning of new submit requirements. For example, if you want to increase
 the minimum request memory, you could use the following configuration.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     SUBMIT_REQUIREMENT_NAMES = OneGig $(SUBMIT_REQUIREMENT_NAMES)
     SUBMIT_REQUIREMENT_OneGig = RequestMemory > 1024
@@ -173,7 +173,7 @@ When a user runs :tool:`condor_submit` to submit a job with :ad-attr:`RequestMem
 between 512 and 1024, they will see (something like) the following,
 assuming that the job meets all the other requirements.
 
-.. code-block:: text
+.. code-block:: console
 
     Submitting job(s).
     WARNING: Committed job submission into the queue with the following warning:
@@ -183,9 +183,9 @@ assuming that the job meets all the other requirements.
 
 The job will contain (something like) the following:
 
-.. code-block:: text
+.. code-block:: console
 
-    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <128.105.136.53:37317?addrs=128.105.136.53-37317+[fc00--1]-37317&noUDP&sock=19966_e869_5>
+    000 (452.000.000) 10/06 13:40:45 Job submitted from host: <192.0.2.53:37317?addrs=192.0.2.53-37317+[2001-db8--1]-37317&noUDP&sock=19966_e869_5>
         WARNING: Committed job submission into the queue with the following warning: As of <date>, the minimum requested memory will be 1024.
     ...
 
@@ -219,8 +219,7 @@ have the same value for each potentially running *condor_schedd*
 daemon. In addition, the value chosen for the variable :macro:`SCHEDD_NAME`
 will need to include the at symbol (@), such that HTCondor will not
 modify the value set for this variable. See the description of
-:macro:`MASTER_NAME` in the :ref:`admin-manual/configuration-macros:condor_master
-configuration file macros` section for defaults and composition of valid values
+:macro:`MASTER_NAME` in the :ref:`master_config_options` section for defaults and composition of valid values
 for :macro:`SCHEDD_NAME`. As an example, include in each local configuration a value
 similar to:
 
@@ -296,7 +295,7 @@ Each execute machine defines the configuration variable
 :macro:`DedicatedScheduler`, which identifies the dedicated scheduler it is
 managed by. The local configuration file contains a modified form of
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DedicatedScheduler = "DedicatedScheduler@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -307,7 +306,7 @@ string "full.host.name".
 If running personal HTCondor, the name of the scheduler includes the
 user name it was started as, so the configuration appears as:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
     STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
@@ -322,7 +321,7 @@ requirements on a resource for it to be considered dedicated.
 Job ClassAds from the dedicated scheduler contain the attribute
 ``Scheduler``. The attribute is defined by a string of the form
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     Scheduler = "DedicatedScheduler@full.host.name"
 
@@ -337,7 +336,7 @@ Policy Scenario: Machine Runs Only Jobs That Require Dedicated Resources
     run jobs that require the dedicated resource. To enact this policy,
     configure the following expressions:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         START     = Scheduler =?= $(DedicatedScheduler)
         SUSPEND   = False
@@ -369,7 +368,7 @@ Policy Scenario: Run Both Jobs That Do and Do Not Require Dedicated Resources
     To implement this, configure the machine as a dedicated resource as
     above, modifying only the :macro:`START` expression:
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         START = True
 
@@ -386,7 +385,7 @@ Policy Scenario: Adding Desktop Resources To The Mix
     set in the global configuration. Locally, the configuration is
     modified to this hybrid policy by adding a second case.
 
-    .. code-block:: text
+    .. code-block:: condor-config
 
         SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
         PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
@@ -429,7 +428,7 @@ beginning. Thus, the administrator should be careful when enabling
 preemption of these dedicated resources. Enable dedicated preemption
 with the configuration:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     STARTD_JOB_ATTRS = JobPrio
     SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
@@ -468,7 +467,7 @@ configuration variable.
 The submit description file for a parallel universe job which must not
 cross group boundaries contains
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     +WantParallelSchedulingGroups = True
 
@@ -564,8 +563,7 @@ machine (correctly) interprets this situation as the *condor_schedd*
 daemon is no longer running. This machine's :tool:`condor_master` daemon then
 acquires the lock and runs the *condor_schedd* daemon.
 
-See the :ref:`admin-manual/configuration-macros:condor_master configuration
-file macros` section for details relating to the configuration variables used
+See the :ref:`master_config_options` section for details relating to the configuration variables used
 to set timing and polling intervals.
 
 Performance Tuning of the AP
@@ -586,9 +584,9 @@ The *condor_schedd* is single threaded.  Practically, this means that it only
 does one thing at a time, and often when it may be "busy" doing that one thing,
 it is actually waiting on the system for some i/o to complete.  As such, it
 will rarely appear to use 100% of a cpu in any system monitoring tool.  To help
-guage how busy the schedd is, it keeps track of a metric called
+gauge how busy the schedd is, it keeps track of a metric called
 :ad-attr:`RecentDaemonCoreDutyCycle`.  This is a floating point value that
-ranges from 0.0 (completely idle) to 1.0 (competely busy).  Values over 0.95
+ranges from 0.0 (completely idle) to 1.0 (completely busy).  Values over 0.95
 indicate the schedd is overloaded.  In extreme cases :tool:`condor_q` and
 :tool:`condor_submit` may timeout and fail trying to communicate to an
 overloaded schedd.  An administrator can see this attribute by running
@@ -605,7 +603,7 @@ While the *condor_schedd* and the machine it runs on can be tuned to handle a
 greater rate of jobs, every machine has some limit of jobs it can support.  The
 main strategy for supporting more jobs in the system as a whole is simply by
 running more schedds, or horizontal scaling.  This may require partitioning
-users onto differening access points, or submiting remotely, but at the end
+users onto different access points, or submitting remotely, but at the end
 of the day, the best way to scale out a very large HTCondor system is by adding
 more *condor_schedd*'s.
 
@@ -660,11 +658,11 @@ method, called HTCondor file transfer, or "cedar" file transfer, copies files
 from the AP to the EP.  Obviously, this uses cpu, disk and network bandwidth on
 the AP.  To the degree possible, changing large input file file transfers from
 cedar, to http transfers from some third party server, moves the load off of
-the AP, and onto an http server.  If one http server isn't sufficent there are
+the AP, and onto an http server.  If one http server isn't sufficient there are
 many methods for scaling http servers to handle additional load.
 
-Limiting CPU or I/O bound procesing on the AP
-'''''''''''''''''''''''''''''''''''''''''''''
+Limiting CPU or I/O bound processing on the AP
+''''''''''''''''''''''''''''''''''''''''''''''
 
 The machine the *condor_schedd* runs on is typically a machine users can log
 into, to prepare and submit jobs.  Sometimes, users will start long-running,
@@ -728,9 +726,9 @@ The solution is for users to set a :subcom:`checkpoint_destination` -- or the
 administrator to choose a default for them
 (see :macro:`use feature:DefaultCheckpointDestination`).  This allows HTCondor
 to store and retrieve checkpoints from third-party storage services (e.g., a
-Pelican data federation or S3).  Of course, superceded checkpoints, and
+Pelican Platform data federation or S3).  Of course, superseded checkpoints, and
 checkpoints from jobs which have completed, must also be deleted.  This
-requires addtional configuration.  Specifically, although HTCondor's
+requires additional configuration.  Specifically, although HTCondor's
 file-transfer plug-ins know how to upload and download files, they don't know
 how to delete them; some other method must be specified to HTCondor.  See
 :ref:`self-checkpointing-jobs` for details.

@@ -49,6 +49,7 @@
 #include <regex>
 
 #include "catalog_utils.h"
+#include "job_ad_instance_recording.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -1152,6 +1153,23 @@ UniShadow::after_common_file_transfer(
 	bool success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
 
+
+	// This produces a second record for non-CEDAR transfers, which
+	// is sub-optimal.  We can't, in general (because of simultaneous
+	// transfers) avoid having up to one COMMON record per common files
+	// group, but we should avoid having two.
+	//
+	// The plugin results are transferred before file transfer completes
+	// (from the point of view of code that isn't in the FTO itself),
+	// so only write an entry if here if CEDAR is the _only_ protocol.
+	const ClassAd & statsAd = this->commonFTO->GetInfo().stats;
+	std::string protocols;
+	if( statsAd.LookupString("Protocols", protocols) ) {
+		if( 0 == strcasecmp( protocols.c_str(), "cedar" ) ) {
+			writeAdWithContextToEpoch( & statsAd, jobAd, "COMMON" );
+		}
+	}
+
 	CommonFilesEvent cfFinishEvent;
 	cfFinishEvent.setType( CommonFilesEventType::TransferFinished );
 	uLog.writeEvent( & cfFinishEvent, jobAd );
@@ -1481,6 +1499,11 @@ UniShadow::start_common_input_conversation(
 				if(! success) {
 					co_return handle_wiring_failure();
 				}
+				// Do NOT add CommonFilesMappedTime to the list of attributes
+				// that gets passed through to the shadow.  It's only useful
+				// for a specific job epoch.
+				Shadow->getJobAd()->InsertAttr( "CommonFilesMappedTime", time(NULL) );
+
 				break;
 
 			case SingleProviderSyndicate::UNREADY:
@@ -1496,6 +1519,7 @@ UniShadow::start_common_input_conversation(
 				if(! success) {
 					co_return handle_wiring_failure();
 				}
+				Shadow->getJobAd()->InsertAttr( "CommonFilesMappedTime", time(NULL) );
 				break;
 
 			case SingleProviderSyndicate::INVALID:
@@ -1577,6 +1601,7 @@ UniShadow::start_common_input_conversation(
 					if(! success) {
 						co_return handle_wiring_failure();
 					}
+					Shadow->getJobAd()->InsertAttr( "CommonFilesMappedTime", time(NULL) );
 
 
 					readyCatalogs.insert( cifName );
@@ -1594,6 +1619,7 @@ UniShadow::start_common_input_conversation(
 					if(! success) {
 						co_return handle_wiring_failure();
 					}
+					Shadow->getJobAd()->InsertAttr( "CommonFilesMappedTime", time(NULL) );
 
 				    readyCatalogs.insert( cifName );
 					break;
@@ -1826,7 +1852,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		//
 
 		int required_version = 2;
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, this );
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
@@ -1840,7 +1866,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		if(! computeCommonInputFiles( jobAd, this, *common_file_catalogs, required_version )) {
+		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
@@ -1873,6 +1899,8 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				// setStarterInfo().
 
 				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+				// It would be nice if we fell through to the recording
+				// stanza at the end of this block, instead.
 				return GuidanceResult::Command;
 			}
 
@@ -1914,11 +1942,27 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 }
 
 
-std::optional<std::string>
-UniShadow::uniqueCIFName( const std::string & cifName, const std::string & content ) {
+std::optional<ListOfCatalogs>
+UniShadow::computeCommonInputFileCatalogs(
+	ClassAd * jobAd
+) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = makeCIFName(* this->jobAd, cifName, startdAddress, content);
+	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress );
+	free( startdAddress );
+	return rval;
+}
+
+
+bool
+UniShadow::computeCommonInputFiles(
+	ClassAd * jobAd,
+	ListOfCatalogs & commonFileCatalogs,
+	int & required_version
+) {
+	char * startdAddress = NULL;
+	this->remRes->getStartdAddress(startdAddress);
+	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version );
 	free( startdAddress );
 	return rval;
 }

@@ -198,7 +198,7 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	std::vector<ClassAd*> ads;
+	std::vector<std::unique_ptr<ClassAd>> ads;
 	Sock *sock = nullptr;
 
 	switch( command ) {
@@ -244,7 +244,7 @@ int main( int argc, char *argv[] )
 			return 1;
 		}
 		if (cAttrs > 0) {
-			ads.push_back(ad);
+			ads.emplace_back(ad);
 		} else {
 			delete ad;
 			ad = 0; // so we don't double delete it
@@ -266,7 +266,7 @@ int main( int argc, char *argv[] )
 
 	// If the command is unspecified, guess.
 	if( command == -1 ) {
-		ClassAd * c = ads.front();
+		ClassAd * c = ads.front().get();
 		std::string myType;
 		c->LookupString( ATTR_MY_TYPE, myType );
 		if( myType.empty() ) {
@@ -311,7 +311,7 @@ int main( int argc, char *argv[] )
 
 		int success_count = 0;
 		int failure_count = 0;
-		for (ClassAd *ad : ads) {
+		for (auto &ad : ads) {
 
 				// If there's no "MyAddress", generate one..
 			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
@@ -386,6 +386,7 @@ int main( int argc, char *argv[] )
 				sock = NULL;
 			}
 		}
+
 		if( sock ) {
 			CondorVersionInfo const *ver = sock->get_peer_version();
 			if( !ver || ver->built_since_version(7,7,3) ) {

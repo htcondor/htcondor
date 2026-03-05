@@ -43,31 +43,6 @@ enum CondorQStrCategories
 };
 
 
-#if 0
-enum CondorQIntCategories
-{
-	CQ_CLUSTER_ID,
-	CQ_PROC_ID,
-	CQ_STATUS,
-	CQ_UNIVERSE,
-
-	CQ_INT_THRESHOLD
-};
-
-/* a list of all types of direct DB query defined here */
-enum CondorQQueryType
-{
-	AVG_TIME_IN_QUEUE
-};
-
-
-enum CondorQFltCategories
-{
-	CQ_FLT_THRESHOLD
-};
-
-#endif
-
 class DCSChedd; // forward ref
 
 class CondorQ
@@ -83,21 +58,11 @@ class CondorQ
 
 	// add constraints
 	int add (CondorQStrCategories, const char *);
-#if 0
-	int add (CondorQIntCategories, int);
-	int addDBConstraint (CondorQIntCategories, int);
-	int add (CondorQFltCategories, float);
-#endif
 	int addAND (const char *);  // custom
 	int addOR (const char *);  // custom
 
 	int addSchedd (const char *);  // what schedd are we querying?
-	int addScheddBirthdate (time_t value);  // what 
-	// fetch the job ads from the schedd corresponding to the given classad
-	// which pass the criterion specified by the constraints; default is
-	// from the local schedd
-	int fetchQueue (ClassAdList &, const std::vector<std::string> &attrs, ClassAd * = 0, CondorError* errstack = 0);
-	int fetchQueueFromHost (ClassAdList &, const std::vector<std::string> &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
+
 	int fetchQueueFromHostAndProcess (const char * schedd_host, const std::vector<std::string> &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
 
 	int initQueryAd(ClassAd & request_ad, const std::vector<std::string> &attrs, int fetch_opts, int match_limit);
@@ -134,7 +99,6 @@ class CondorQ
 	
 	// helper functions
 	int fetchQueueFromHostAndProcessV2 ( const char * host, const std::vector<std::string> &attrs, int fetch_opts, int match_limit, condor_q_process_func process_func, void * process_func_data, int connect_timeout, int useFastPath, CondorError* errstack = 0, ClassAd ** psummary_ad=NULL);
-	int getAndFilterAds( const char * constraint, const std::vector<std::string> &attrs, int match_limit, ClassAdList &, int useAll );
 	int getFilterAndProcessAds( const char * constraint, const std::vector<std::string> &attrs, int match_limit, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 

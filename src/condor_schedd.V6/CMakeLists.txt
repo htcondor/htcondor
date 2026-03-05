@@ -39,6 +39,7 @@ qmgmt_common.cpp
 qmgmt.cpp
 qmgmt_factory.cpp
 qmgmt_receivers.cpp
+qmgmt_startup_limits.cpp
 schedd.cpp
 schedd_cron_job.cpp
 schedd_cron_job_mgr.cpp

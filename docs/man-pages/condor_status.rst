@@ -122,10 +122,7 @@ Options
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
     ClassAd. *WhichStatistics* is specified using the same syntax as
-    defined for :macro:`STATISTICS_TO_PUBLISH`. A definition is in the
-    HTCondor Administrator's manual section on configuration
-    (:ref:`admin-manual/configuration-macros:htcondor-wide configuration file
-    entries`).
+    defined for :macro:`STATISTICS_TO_PUBLISH`.
  **-storage**
     (Query option) Display attributes of machines with network storage
     resources.
@@ -477,8 +474,9 @@ than 750, the Unix command is
 The **-cod** option displays the status of COD claims within a given
 HTCondor pool.
 
-.. code-block:: text
+.. code-block:: console
 
+    $ condor_status -cod
     Name        ID   ClaimState TimeInState RemoteUser JobId Keyword
     astro.cs.wi COD1 Idle        0+00:00:04 wright
     chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen

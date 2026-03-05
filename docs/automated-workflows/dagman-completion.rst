@@ -220,7 +220,7 @@ DAGMan has two ways of restarting a failed DAG: Rescue and Recovery.
 Rescue mode is most common for resubmitting a DAG manually while recovery
 mode is most likely to occur automatically if a crash or something occurs.
 
-If the DAG has failed, it can be be restarted such that work that needs
+If the DAG has failed, it can be restarted such that work that needs
 to be executed (including previously failed part) are ran. Resubmission should
 be done via a Rescue DAG if the file exists, otherwise DAGMan will use
 Recovery mode. To determine if Rescue mode is possible check the DAG
@@ -350,80 +350,6 @@ Special Cases
    since each sub-DAG is it's own job running in the queue along with the
    top-level DAG. The Rescue DAG files will be created relative to the specified
    DAG description files.
-
-Partial versus Full Rescue DAGs
-'''''''''''''''''''''''''''''''
-
-By default the Rescue DAG file is written as a partial DAG file that is
-not intended to be used directly with :tool:`condor_submit_dag`. This partial file
-only contains information about completed nodes and remaining retries for
-non-completed nodes. Partial Rescue DAG files are parsed in combination of
-the original DAG description file that contains the actual DAG structure. This
-allows updates to the original DAG files structure to take effect when ran
-in rescues mode.
-
-.. note::
-
-    If a partial Rescue DAG contains a :dag-cmd:`DONE` specification for a node that
-    is removed from the original DAG description file will produce an error
-    unless :macro:`DAGMAN_USE_STRICT` is set to zero in which case a warning
-    will be produced. Commenting out the :dag-cmd:`DONE` line in the Rescue DAG file
-    will avoid an error or warning.
-
-If the default of writing a partial Rescue DAG is turned off by setting
-:macro:`DAGMAN_WRITE_PARTIAL_RESCUE` to ``False``, then DAGMan will produce
-a full Rescue DAG that contains the majority DAG information (i.e. DAG structure,
-state, Scripts, VARS, etc.). In contrary to the partial Rescue DAG that is
-parsed in combination with the original DAG description file, a full Rescue DAG is
-to be submitted directly via the :tool:`condor_submit_dag`. For example:
-
-.. code-block:: console
-    :caption: Example re-running full rescue DAG
-
-    $ condor_submit_dag diamond.dag.rescue002
-
-Attempting to re-submit the original DAG file, if the Rescue DAG file is
-a complete DAG, will result in a parse failure.
-
-.. warning::
-
-    The full Rescue DAG functionality is deprecated and slated to be removed
-    during the lifetime of the HTCondor V24 feature series.
-
-Rescue for Parse Failure
-''''''''''''''''''''''''
-
-.. sidebar:: Example Parse Failure Rescue DAG
-
-    .. code-block:: console
-        :caption: Example running DAG to produce parse failure rescue file
-
-        $ condor_submit_dag -DumpRescue diamond.dag
-
-    The following example would produce the file ``diamond.dag.parse_failed``
-    if the ``diamond.dag`` failed to parse.
-
-    .. note::
-
-        The parse failure Rescue DAG cannot be used when resubmitting
-        a failed DAG.
-
-When using the **-DumpRescue** flag for :tool:`condor_submit_dag` or
-:tool:`condor_dagman`, DAGMan will produce a special Rescue DAG file
-if a the parsing of DAG description files fail. This special Rescue DAG file
-will contain whatever DAGMan has successfully parsed up to the point of
-failure. This may be helpful for debugging parse errors with complex DAG's.
-Especially DAG's using splices.
-
-To distinguish between a usable Rescue DAG file and a parse failure DAG file,
-the parse failure Rescue DAG file has a different naming scheme. In which
-the file is named ``<dag file>.parse_failed``. Further more, the parse failure
-rescue DAG contains the :dag-cmd:`REJECT` command which prevents the parse failure
-Rescue DAG from being executed by DAGMan. This is because the special Rescue
-DAG is written in the full format regardless of :macro:`DAGMAN_WRITE_PARTIAL_RESCUE`.
-Due to the nature of the full Recuse file being syntactically correct DAG
-file, it will be perceived as a successfully executed workflow despite
-being an incomplete DAG.
 
 :index:`DAG recovery<single: DAGMan; DAG recovery>`
 

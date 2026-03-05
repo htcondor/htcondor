@@ -29,7 +29,7 @@ Contents of the file or ``stdin`` must contain a complete ClassAd. Each
 line must be terminated by a newline character, including the last line
 of the file. Lines are of the form
 
-.. code-block:: text
+.. code-block:: condor-classad
 
     <attribute> = <value>
 

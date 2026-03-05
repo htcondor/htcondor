@@ -46,7 +46,7 @@ def setup_simple_dag(script: Path) -> Path:
     dag_file = Path(TEST_DAG_FILENAME)
     with open(str(dag_file), "w") as f:
         f.write(f"""
-SUBMIT_DESCRIPTION touch @=desc
+SUBMIT-DESCRIPTION touch @=desc
     executable = {script}
     arguments  = "$(dag_node_name)"
     error      = job.debug
@@ -75,7 +75,7 @@ def setup_subdags(script: Path) -> Path:
     root_dag = Path(TEST_DAG_FILENAME)
     with open(str(root_dag), "w") as f:
         f.write(f"""
-SUBMIT_DESCRIPTION touch @=desc
+SUBMIT-DESCRIPTION touch @=desc
     executable = {script}
     arguments  = "$(dag_node_name)"
     error      = job.debug
@@ -92,7 +92,7 @@ SUBDAG EXTERNAL D {TEST_SUBDAG_FILENAME}
 
     with open(TEST_SUBDAG_FILENAME, "w") as f:
         f.write(f"""
-SUBMIT_DESCRIPTION touch @=desc
+SUBMIT-DESCRIPTION touch @=desc
     executable = {script}
     arguments  = "$(dag_node_name)"
     error      = job.debug

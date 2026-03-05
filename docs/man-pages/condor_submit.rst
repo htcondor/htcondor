@@ -673,7 +673,7 @@ BASIC COMMANDS
        writes to ``stdout`` will be the list of items.
 
     The optional argument *<varname>* or *<list of varnames>* is the
-    name or names of of variables that will be set to the value of the
+    name or names of variables that will be set to the value of the
     current item when queuing the job. If no *<varname>* is specified
     the variable ITEM will be used. Leading and trailing whitespace be
     trimmed. The optional argument *<slice>* is a python style slice
@@ -1583,22 +1583,17 @@ POLICY COMMANDS
     of priority) for the time in this state.
 
  :subcom-def:`leave_in_queue` = <ClassAd Boolean Expression>
-    When the ClassAd Expression evaluates to ``True``, the job is not
-    removed from the queue upon completion. This allows the user of a
+    When the ClassAd Expression evaluates to ``True``, the job does not
+    leave the queue upon completion. This allows the user of a
     remotely spooled job to retrieve output files in cases where
     HTCondor would have removed them as part of the cleanup associated
-    with completion. The job will only exit the queue once it has been
-    marked for removal (via *condor_rm*, for example) and the
-    **leave_in_queue**, expression has become ``False``.
-    **leave_in_queue** defaults to ``False``.
-
-    As an example, if the job is to be removed once the output is
-    retrieved with *condor_transfer_data*, then use
-
-    .. code-block:: text
-
-        leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
-                         (StageOutFinish == 0))
+    with completion. The job will only leave the queue when the
+    expression evaluates to ``False``.
+    **leave_in_queue** normally defaults to ``False``.
+    When a job is submitted with spooled data files, **leave_in_queue**
+    defaults to an expression that keeps the job in the queue until
+    it is removed (e.g. with :tool:`condor_rm`), the spooled data files
+    are retrieved, or the job has been in Completed state for 10 days.
 
  :subcom-def:`next_job_start_delay` = <ClassAd Boolean Expression>
     This expression specifies the number of seconds to delay after
@@ -1628,7 +1623,7 @@ POLICY COMMANDS
     on hold and an e-mail notification sent, instead of being allowed to
     leave the queue.
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 
@@ -1674,7 +1669,7 @@ POLICY COMMANDS
     command. Assume that the signal identifier for the segmentation
     fault is 11 on the platform where the job will be running.
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 
@@ -1689,7 +1684,7 @@ POLICY COMMANDS
     exited on its own with status 0, this
     **on_exit_remove** expression works well:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
           on_exit_remove = (ExitBySignal == False) && (ExitCode == 0)
 
@@ -2150,7 +2145,7 @@ COMMANDS FOR THE GRID
  :subcom-def:`use_scitokens` = <True | False | Auto>
     Set this command to ``True`` to indicate that the job requires a scitoken.
     If **scitokens_file** is set, then that file is
-    used for the scitoken filename. Otherwise, the the scitoken filename is looked for in the
+    used for the scitoken filename. Otherwise, the scitoken filename is looked for in the
     ``BEARER_TOKEN_FILE`` environment variable. If **scitokens_file** is set
     then the value of **use_scitokens** defaults to ``True``.  If the filename is not
     defined in on one of these two places, then *condor_submit* will fail with an error message.
@@ -2211,7 +2206,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
     may be either the platform-specific name or value of the signal.
     This example shows it both ways for a Linux signal:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         remove_kill_sig = SIGUSR1
         remove_kill_sig = 10
@@ -2232,7 +2227,7 @@ COMMANDS FOR THE VM UNIVERSE
 
     An example that specifies two disk files:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
@@ -2414,15 +2409,6 @@ ADVANCED COMMANDS
     machine ClassAd attributes that are evaluated against a matched
     machine. After evaluation, the list sets **concurrency_limits**.
 
- :subcom-def:`copy_to_spool` = <True | False>
-    If
-    **copy_to_spool** is ``True``, then *condor_submit* copies the executable to the
-    local spool directory before running it on a remote host. As copying
-    can be quite time consuming and unnecessary, the default value is
-    ``False`` for all job universes.
-    When ``False``, *condor_submit* does not copy the executable to a
-    local spool directory.
-
  :subcom-def:`coresize` = <size>
     Should the user's program abort and produce a core file,
     **coresize** specifies the maximum size in bytes of the core file
@@ -2559,11 +2545,8 @@ ADVANCED COMMANDS
     A comma-separated list of job ClassAd attribute names. The named
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
-    same thing as the configuration variable
-    ``EVENT_LOG_INFORMATION_ATTRS`` (see the 
-    :ref:`admin-manual/configuration-macros:daemon logging configuration file
-    entries` page), but it applies to the job event log, instead of the system
-    event log.
+    same thing as the configuration variable :macro:`EVENT_LOG_INFORMATION_ATTRS`,
+    but it applies to the job event log, instead of the system event log.
 
  :subcom-def:`job_lease_duration` = <number-of-seconds>
     For vanilla, parallel, VM, and java universe jobs only, the duration
@@ -2644,7 +2627,7 @@ ADVANCED COMMANDS
     defined is given by the integer value. The job ClassAds introduced
     are given as
 
-    .. code-block:: text
+    .. code-block:: condor-classad
 
         LastMatchName0 = "most-recent-Name"
         LastMatchName1 = "next-most-recent-Name"
@@ -2899,7 +2882,7 @@ and comments.
     Recursive definition of macros is permitted. An example of a
     construction that works is the following:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         foo = bar
         foo =  snap $(foo)
@@ -2908,7 +2891,7 @@ and comments.
 
     Note that both left- and right- recursion works, so
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         foo = bar
         foo =  $(foo) snap
@@ -2917,14 +2900,14 @@ and comments.
 
     The construction
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         foo = $(foo) bar
 
     by itself will not work, as it does not have an initial base case.
     Mutually recursive constructions such as:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         B = bar
         C = $(B)
@@ -2935,14 +2918,14 @@ and comments.
     A default value may be specified, for use if the macro has no
     definition. Consider the example
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         D = $(E:24)
 
     Where ``E`` is not defined within the submit description file, the
     default value 24 is used, resulting in
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         D = 24
 
@@ -2952,11 +2935,11 @@ and comments.
 
     .. code-block:: console
 
-        condor_submit E=99 <submit-file>
+        $ condor_submit E=99 <submit-file>
 
     The value of 99 is used for E, resulting in
 
-    .. code-block:: text
+    .. code-block:: condor-classad
 
         D = 99
 
@@ -2988,7 +2971,7 @@ and comments.
     A common use of this form of the substitution macro is for the
     heterogeneous submission of an executable:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         executable = povray.$$(OpSys).$$(Arch)
 
@@ -3009,7 +2992,7 @@ and comments.
     locations on different machines, the file's path name is given as an
     argument to the program.
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = $$(input_file_path:/usr/foo)
 
@@ -3024,7 +3007,7 @@ and comments.
     For example, to set PYTHONPATH to a subdirectory of the job scratch dir,
     one could set
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
@@ -3047,7 +3030,7 @@ and comments.
     this as a command line argument to the application. In the submit
     description file will be
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         arguments = --memory $$([TARGET.Memory * 0.9])
 
@@ -3075,7 +3058,7 @@ and comments.
     functionality evaluates the submitter's home directory in order to
     set the path and file name of a log file:
 
-    .. code-block:: text
+    .. code-block:: condor-submit
 
         log = $ENV(HOME)/jobs/logfile
 
@@ -3223,7 +3206,7 @@ Examples
    and when it terminates, among other things, the various processes in
    this cluster will be written into file ``foo.log``.
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
              ####################
              #
@@ -3250,7 +3233,7 @@ Examples
    machines running more than one version of Linux, and this job needs
    the particular operating system to run correctly.
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
              ####################
              #
@@ -3288,7 +3271,7 @@ Examples
 
    Including the command
 
-   .. code-block:: text
+   .. code-block:: condor-submit
 
           periodic_remove = CumulativeSuspensionTime >
                             ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
