@@ -118,7 +118,9 @@ usr/libexec/condor/cred_producer_krb
 usr/libexec/condor/credmon
 usr/libexec/condor/curl_plugin
 usr/libexec/condor/data_plugin
+#if defined(UW_BUILD)
 usr/libexec/condor/exit_37.sif
+#endif
 usr/libexec/condor/gdrive_plugin.py
 usr/libexec/condor/get_orted_cmd.sh
 usr/libexec/condor/htcondor_docker_test
