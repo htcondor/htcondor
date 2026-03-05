@@ -563,7 +563,10 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 		// do startd ad locates in the daemon ad table
 		if (whichAds == STARTD_AD) {
 			whichAds = STARTDAEMON_AD;
-			label = STARTD_DAEMON_ADTYPE;
+			label = STARTD_DAEMON_ADTYPE " OR " STARTD_SLOT_ADTYPE;
+			num_adtypes = 2; // so we can also look in the Machine (i.e. Slot) table
+			is_multi_query = true;
+			target = STARTD_DAEMON_ADTYPE "," STARTD_SLOT_ADTYPE;
 		}
 	}
 
