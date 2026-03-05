@@ -127,6 +127,11 @@
   this problem.
   :jira:`3507`
 
+- When a job exceeds its memory request, instead of reporting the memory 
+  measured in the last polling period, the error message reports the 
+  size of the provisioned memory to more accurately report what happened.
+  :jira:`3514`
+
 - Improved :tool:`condor_watch_q` to sort rows of data display rows with jobs still
   active in the queue before rows of jobs that have all exited the AP job queue.
   :jira:`3516`
