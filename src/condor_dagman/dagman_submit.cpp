@@ -475,9 +475,9 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 		auto * ScheddQ = new ActualScheddQ();
 		if (ScheddQ->Connect(schedd, errstack) == 0) {
 			delete ScheddQ;
-			// TODO: report connection failure?
-			// "\nERROR: Failed to connect to local queue manager\n%s\n",
-			// errstack.getFullText(true).c_str() );
+			debug_printf(DEBUG_NORMAL, "ERROR: Failed to connect to local queue manager: %s\n",
+			             errstack.getFullText(true).c_str());
+			errstack.clear();
 			goto finis;
 		}
 		MyQ = ScheddQ;
@@ -657,7 +657,17 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 		success = MyQ->disconnect(true, errstack);
 		if ( ! success) {
 			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetNodeName(), errstack.getFullText().c_str());
-		} else { node->SetNumSubmitted(proc_id+1); }
+		} else {
+			node->SetNumSubmitted(proc_id+1);
+
+			// Print Schedd Warnings
+			if ( ! errstack.empty()) {
+				debug_printf(DEBUG_NORMAL, " Queue warning: %s\n", errstack.message());
+			}
+		}
+
+		// Clear out any error/warning messages as we have already printed them
+		errstack.clear();
 	}
 
 finis:
@@ -666,6 +676,11 @@ finis:
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		MyQ->disconnect(false, errstack);
 		delete MyQ; MyQ = nullptr;
+
+		if ( ! errstack.empty()) {
+			debug_printf(DEBUG_NORMAL, "ERROR: Issue disconnecting from local queue manager: %s\n",
+			             errstack.getFullText().c_str());
+		}
 	}
 	// report errors from submit
 	if (rval < 0) {

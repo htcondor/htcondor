@@ -86,6 +86,10 @@
 - The old ClassAd syntax is no longer supported in job transforms.
   :jira:`3538`
 
+- Improved DAGMan debugging when to print warnings produced by *condor_schedd*\'s
+  :ref:`submit-requirements`.
+  :jira:`3573`
+
 - Removed deprecated full rescue file for DAGMan. With this comes the removal of
   the configuration option ``DAGMAN_WRITE_PARTIAL_RESCUE`` and the command line
   option ``-DumpRescue`` for :tool:`condor_submit_dag`.  This has been deprecated since
