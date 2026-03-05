@@ -7,6 +7,10 @@
 
 *** 24.0.19 bugs
 
+- Fixed a bug for **batch** grid universe jobs where submitting to a remote
+  system would fail if the username on the remote system contained a dot.
+  :jira:`3581`
+
 *** 24.12.18 bugs
 
 - Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash
