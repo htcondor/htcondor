@@ -237,14 +237,14 @@ Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp >= 0.6.2
+Requires: scitokens-cpp
 Requires: systemd-libs
 %endif
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.22.0 or pelican-debug >= 7.22.0)
-Requires: pelican-osdf-compat >= 7.22.0
+Requires: (pelican >= 7.23.0 or pelican-debug >= 7.23.0)
+Requires: pelican-osdf-compat >= 7.23.0
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
