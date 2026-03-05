@@ -11,6 +11,10 @@
   cache is not useable.
   :jira:`3560`
 
+- HTCondor tarballs now contain `Pelican 7.23.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.23.0.
+
 *** 24.0.18 bugs
 
 - Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
