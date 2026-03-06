@@ -99,6 +99,7 @@
 
 #include "catalog_utils.h"
 #include "cxfer.h"
+#include "classad_string_utils.h"
 
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
@@ -11682,16 +11683,13 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	//    (but not B).  The schedd will spawn two transfer shadows: one
 	//    transferring A and B xor C, and the other C xor B.
 	if( job_id.proc < 1000 ) {
-		// FIXME: This would be safer as a ClassAd list of strings, but that
-		// turns out to be a pain to generate from C++.
-		// Also, this shouldn't be written as an explicit loop.
+		// This can't be the best way to write this.
 		std::vector<std::string> names;
 		for( const auto & [name, content] : srec->cxfer_catalogs ) {
 			names.push_back(name);
 		}
-		std::string catalogs = join( names, "," );
 
-		job_ad->Assign( "TransferTheseCatalogs", catalogs );
+		AssignClassAdStringList( * job_ad, ATTR_TRANSFER_THESE_CATALOGS, names );
 	}
 
 

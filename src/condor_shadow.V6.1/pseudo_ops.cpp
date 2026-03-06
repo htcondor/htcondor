@@ -50,13 +50,14 @@
 
 #include "catalog_utils.h"
 #include "job_ad_instance_recording.h"
+#include "cxfer_state.h"
+#include "classad_string_utils.h"
+
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
-
-#include "cxfer_state.h"
 extern CXFER_STATE cxfer_type;
 
 static void append_buffer_info( std::string &url, const char *method, char const *path );
@@ -2125,8 +2126,6 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// The schedd may have decided that we don't need to transfer every
 		// catalog that the job requires.  Check for `TransferTheseCatalogs`.
 		//
-		// FIXME: `TransferTheseCatalogs` should be a ClassAd list of strings.
-		//
 		// I tried refactoring this to use std::[ranges::]set_intersection().
 		// The required sorting made the code rather ugly, but it turns out
 		// that set_intersection() has an (effectively) undocumented
@@ -2137,11 +2136,14 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// ranges be assignable to the output range, even though there's no
 		// need to copy from both ranges.
 		//
-		std::string transfer_these_catalogs;
-		if( jobAd->LookupString( "TransferTheseCatalogs", transfer_these_catalogs ) ) {
+
+		auto transfer_these_catalogs = LookupClassAdStringList(
+			* jobAd, ATTR_TRANSFER_THESE_CATALOGS
+		);
+		if( transfer_these_catalogs ) {
 			ListOfCatalogs filtered;
 
-			for( const auto & name : split(transfer_these_catalogs, ",") ) {
+			for( const auto & name : * transfer_these_catalogs ) {
 				auto in = std::find_if(
 					(* common_file_catalogs).begin(),
 					(* common_file_catalogs).end(),
