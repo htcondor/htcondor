@@ -2125,13 +2125,22 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// The schedd may have decided that we don't need to transfer every
 		// catalog that the job requires.  Check for `TransferTheseCatalogs`.
 		//
-		// FIXME: Everything about how this algorithm ended up being coded
-		// makes me sad, not just the comma separator.  There's probably a
-		// one-liner in C++23's std::ranges, maybe copying on a projection?
+		// FIXME: `TransferTheseCatalogs` should be a ClassAd list of strings.
+		//
+		// I tried refactoring this to use std::[ranges::]set_intersection().
+		// The required sorting made the code rather ugly, but it turns out
+		// that set_intersection() has an (effectively) undocumented
+		// requirement that the types of the two ranges be the same.  (The
+		// non-ranges implementation calls the comparator twice, with the
+		// left- and right- hand sides swapped, but only allows you to supply
+		// one; the ranges implementation requires that the elements of both
+		// ranges be assignable to the output range, even though there's no
+		// need to copy from both ranges.
 		//
 		std::string transfer_these_catalogs;
 		if( jobAd->LookupString( "TransferTheseCatalogs", transfer_these_catalogs ) ) {
 			ListOfCatalogs filtered;
+
 			for( const auto & name : split(transfer_these_catalogs, ",") ) {
 				auto in = std::find_if(
 					(* common_file_catalogs).begin(),
