@@ -150,7 +150,7 @@ def key(key):
             providers[provider] = {}
             providers[provider]['logged_in'] = False
             if 'Scopes' in provider_ad:
-                providers[provider]['requested_scopes'] = [s.rstrip().lstrip() for s in provider_ad['Scopes'].split(',')]
+                providers[provider]['requested_scopes'] = [s.rstrip().lstrip() for s in provider_ad['Scopes'].split(' ')]
             if 'Audience' in provider_ad:
                 providers[provider]['requested_resource'] = provider_ad['Audience']
 
@@ -180,7 +180,7 @@ def oauth_login(provider):
     oauth_kwargs['client_id'] = provider_ad['ClientId']
     oauth_kwargs['redirect_uri'] = provider_ad['ReturnUrl']
     if 'Scopes' in provider_ad: # pass scope to the OAuth2Session object if requested
-        scope = [s.rstrip().lstrip() for s in provider_ad['Scopes'].split(',')]
+        scope = [s.rstrip().lstrip() for s in provider_ad['Scopes'].split(' ')]
         oauth_kwargs['scope'] = scope
 
     auth_url_kwargs = {}
@@ -281,12 +281,9 @@ def oauth_return(provider):
         'refresh_token': refresh_token_string
         }
     if 'Scopes' in provider_ad and provider_ad['Scopes'] != "":
-        # add scopes to the .top file, with blanks removed, for check
-        #  that makes sure the scopes don't change for a given request
-        refresh_token['scopes'] = provider_ad['Scopes'].replace(" ","")
+        refresh_token['scopes'] = provider_ad['Scopes']
     if 'Audience' in provider_ad and provider_ad['Audience'] != "":
-        # likewise for the audience
-        refresh_token['audience'] = provider_ad['Audience'].replace(" ","")
+        refresh_token['audience'] = provider_ad['Audience']
 
     # create a metadata file for refreshing the token
     metadata = {
