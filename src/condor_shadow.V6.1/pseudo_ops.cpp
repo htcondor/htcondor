@@ -1578,18 +1578,6 @@ UniShadow::start_staging_only_conversation(
 		);
 	}
 
-
-	int clusterID = 0;
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID );
-
-	int procID = 0;
-	jobAd->LookupInteger( ATTR_PROC_ID, procID );
-	if( procID < 0 ) {
-		procID = (-1 * procID) - 1000;
-	} else {
-		EXCEPT( "start_staging_only_conversation(): procIDs must be negative.\n" );
-	}
-
 	// We shouldn't need the address, since we're a shadow.
 	DCSchedd schedd( getScheddAddr() /*, pool */ );
 	if(! schedd.locate()) {
@@ -1597,13 +1585,22 @@ UniShadow::start_staging_only_conversation(
 	}
 
 
+	// This API makes me sad.
+	char * originalClaimID = NULL;
+	remRes->getClaimId( originalClaimID );
+	if( originalClaimID == NULL ) {
+		EXCEPT( "start_staging_only_conversation(): failed to acquire original claim ID.\n");
+	}
+
 	int timeout = 20;
 	std::vector< std::pair< std::string, const ClassAd * > > resources;
 	resources.emplace_back( claimID, slotAd );
 	int rval = schedd.offerResources(
 		resources, user, timeout,
-		clusterID, procID
+		originalClaimID
 	);
+	free( originalClaimID );
+
 	if(! rval) {
 		// Assuming that it's most likely that offerResources() failed
 		// because the schedd was busy, we should try again later when

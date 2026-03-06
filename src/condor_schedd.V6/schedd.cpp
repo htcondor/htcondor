@@ -9228,15 +9228,53 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
 	//
-	// The schedd generally trusts the shadows it spawns, so for now
-	// we're going to assume that the job ID supplied in the command ad (if
-	// any) is the correct one if the connection used the FAMILY security
-	// method.  Changing this later won't be a problem since a schedd and
-	// its shadows must be from the same version of HTCondor.
+	// We don't want to trust everyone with WRITE access to the schedd
+	// with the ability to notify the schedd that staging of common files
+	// completed.  We could attempt to base this particular trust on being
+	// the parent of the only process which has the right to to do this;
+	// the easiest way to do that would be to pass a secret capability to
+	// that process.
 	//
-	if( 0 == strcmp( rsock->getAuthenticationMethodUsed(), "FAMILY" ) ) {
-		cmd_ad.LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
-		cmd_ad.LookupInteger(ATTR_PROC_ID, jobid.proc);
+	// The original claim ID is a secret capability that we already pass to
+	// the shadow.  The collector and negotiator know it, but we trust them;
+	// the EP knows it, and if it wants to cause jobs running on itself to
+	// fail, it has easier ways to make that happen.
+	//
+
+	std::string claimID;
+	cmd_ad.LookupString(ATTR_CLAIM_ID, claimID);
+	if(! claimID.empty()) {
+		match_rec * match = FindMrecByClaimID( claimID.c_str() );
+		if( match ) {
+			jobid.cluster = match->cluster;
+			jobid.proc = match->proc;
+
+			if( jobid.proc <= -1000 ) {
+				jobid.proc = (-1 * jobid.proc) - 1000;
+			} else {
+				// This is an alarming logical inconsistency; only the
+				// transfer shadow should be calling this function with
+				// a claim ID, and that claim ID's match record should
+				// have a corresponding proc ID.  For now, assume this
+				// is confusion occuring in the client rather than an
+				// indication of a problem in the schedd.
+				//
+				// For that reason, log this problem and then unset
+				// `jobid`; better to force the user to remove a job
+				// stuck in blocked state than risk confusing the
+				// schedd by unblocking a job that shouldn't be.
+				dprintf( D_ALWAYS, "CmdDirectAttach(): client's capability pointed to a match record (%d.%d) of the wrong type; ignoring it.\n", jobid.cluster, jobid.proc );
+				jobid.cluster = -1;
+				jobid.proc = -1;
+			}
+		} else {
+			// The client supplied us a claim ID that either doesn't exist
+			// or doesn't correspond to a live match record.  This should
+			// only happen if the match record was destroyed between when
+			// the shadow sent this command and when the schedd handled it;
+			// anything else indicates a fairly logical error or an attack.
+			dprintf( D_ALWAYS, "CmdDirectAttach(): client's capability referred to an unknown match record; ignoring it.\n" );
+		}
 	}
 
 
