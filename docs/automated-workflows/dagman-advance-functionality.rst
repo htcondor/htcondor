@@ -444,7 +444,9 @@ When the :dag-cmd:`PROVISIONER` node is defined in a DAG, DAGMan will run the :d
 node before all other nodes and wait for the provisioner node's job to state it is ready.
 To achieve this, the provisioner node's job must set it's job ClassAd attribute
 :ad-attr:`ProvisionerState` to the enumerated value ``ProvisionerState::PROVISIONING_COMPLETE``
-(currently: 2). Once notified, DAGMan will begin running the other nodes.
+(currently: 2). Once notified, DAGMan will begin running the other nodes. If the
+:dag-cmd:`PROVISIONER` node exits before notifying DAGMan of successful provisioning
+then DAGMan will exit immediately.
 
 The :dag-cmd:`PROVISIONER` node runs for a set amount of time defined in its job.
 It does not get terminated automatically at the end of a DAG workflow. The expectation

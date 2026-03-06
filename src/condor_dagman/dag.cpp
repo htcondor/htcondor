@@ -831,6 +831,12 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT (_isSplice == false);
 
+	// If the provisioner node job exits before it gave the DAG
+	// a go ahead then fail here
+	if (node->GetType() == PROVISIONER && !_provisioner_ready) {
+		debug_error(1, DEBUG_QUIET, "ERROR: Provisioner node %s job exited before giving DAGMan the go ahead!\n", node->GetNodeName());
+	}
+
 	// If not late materialization (handled else where) do final node processing
 	// once all jobs have left the queue - Cole Bollig 2025-04-16
 	if (node->AllProcsDone()) {

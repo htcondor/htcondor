@@ -96,6 +96,10 @@
   2011, so there should be no problems with compatability.
   :jira:`3565`
 
+- Improved DAGMan's debugging error when the provisioner node exits prior to notifying
+  DAGMan of successful resource provisioning.
+  :jira:`3582`
+
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
   :jira:`3576`
