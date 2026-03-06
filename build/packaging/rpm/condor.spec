@@ -1223,6 +1223,9 @@ rm -rf %{buildroot}
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
+# Experimental - not for wider deployment
+%_bindir/condor_login
+%_sbindir/condor_placementd
 
 %files -n python3-condor
 %defattr(-,root,root,-)
