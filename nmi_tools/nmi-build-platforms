@@ -1,5 +1,5 @@
 # CSV File describing build hosts
-# Image|Raw host, ShortName, VM to use, tags
+# Image|Raw host, ShortName, VM to use, colon-separated tags
 # Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
@@ -19,7 +19,7 @@ docker://htcondor/nmi-build:x86_64_openSUSE15-25070200,x86-OS15,ubuntu-latest,al
 docker://htcondor/nmi-build:x86_64_openSUSE16-25070200,x86-OS16,ubuntu-latest,all
 docker://htcondor/nmi-build:x86_64_SLES15SP5-25070200,x86-SLES15,batlab,batlab
 docker://htcondor/nmi-build:x86_64_Ubuntu22-25070200,x86-U22,ubuntu-latest,all
-docker://htcondor/nmi-build:x86_64_Ubuntu24-25070200,x86-U24,ubuntu-latest,all
+docker://htcondor/nmi-build:x86_64_Ubuntu24-25070200,x86-U24,ubuntu-latest,all:ubunturoot
 x86_64_macOS13,macos,batlab,batlabonly
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9,win,batlab,batlabonly
