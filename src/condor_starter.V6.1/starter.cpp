@@ -3590,7 +3590,7 @@ Starter::PublishToEnv( Env* proc_env )
 			}
 		}
 
-		const ClassAd * msec = jic->getMachineSecetsAd();
+		const ClassAd * msec = jic->getMachineSecretsAd();
 		if (msec) {
 			// give the job access to the split claim id, (if there is one)
 			// we unparse so that the value will have "" and internal "" will be escaped

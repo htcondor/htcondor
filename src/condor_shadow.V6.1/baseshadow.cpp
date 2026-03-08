@@ -44,6 +44,9 @@
 #include "set_user_priv_from_ad.h"
 #include <algorithm>
 
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
+
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
@@ -161,8 +164,16 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
         // the mpi shadow, at least...and a good idea in general.
 	jobAd->Assign(ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString());
 
+	if( cxfer_type != CXFER_STATE::INVALID ) {
+		int numShadowStarts;
+		if(! jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts )) {
+			jobAd->Assign( ATTR_NUM_SHADOW_STARTS, 1 );
+		}
+	}
+
+
 	DebugId = display_dprintf_header;
-	
+
 	config();
 
 		// Make sure we've got enough swap space to run
@@ -1543,7 +1554,13 @@ BaseShadow::updateJobInQueue( update_t type )
 		// Note that we force a non-durable update for X509 updates; if the
 		// schedd crashes, we don't really care when the proxy was updated
 		// on the worker node.
-	return job_updater->updateJob( type, 0 );
+
+	// Don't was the shadow's time with an update it can't store.
+	if( getProc() > -1000 ) {
+		return job_updater->updateJob( type, 0 );
+	} else {
+		return true;
+	}
 }
 
 
@@ -1659,26 +1676,27 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
-// and pid in our log entries. 
+// and pid in our log entries.
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	constexpr int cchpid = 10 * (sizeof(pid_t)/4); // 10 chars for 32 bit pids, 19 chars for 64 bit pids
 	static char pidbuf[cchpid+2 +1 + cchpid+2 +2] = {0}; // room for "()>()" + cchpid digits for each pid plus trailing \0
-	static pid_t mypid = 0;
-	int mycluster = -1;
-	int myproc = -1;
 
-	// show the shadow pid when we first start up
-	// then if we fork show the forked pid also
-	if (daemonCore) {
-		pid_t tpid = daemonCore->getpid();
-		if (!pidbuf[0]) {
-			mypid = tpid;
-			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)", mypid);
-		} else if (tpid != mypid) {
-			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)>(%d)", mypid, tpid);
-		}
+	static pid_t mypid = 0;
+	static int mycluster = -1;
+	static int myproc = -1;
+
+	// DaemonCore doesn't know that its PID has changed after a fork().  This
+	// won't work if the FTO/shadow ever starts clone()ing children, but then
+	// this becomes a problem to fix in DaemonCore->getPid().
+	pid_t current_pid = getpid();
+	if( mypid == 0 ) {
+		mypid = current_pid;
+		snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)", mypid);
+	} else if( mypid != current_pid ) {
+		snprintf(pidbuf, sizeof(pidbuf)-1, "(%d>%d)", mypid, current_pid);
+		mypid = current_pid;
 	}
 
 	if (Shadow) {

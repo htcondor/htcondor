@@ -1,0 +1,11 @@
+#ifndef   _CONDOR_CXFER_STATE_H
+#define   _CONDOR_CXFER_STATE_H
+
+enum class CXFER_STATE {
+	INVALID,
+	MAPPING,
+	STAGING,
+	STAGED,
+};
+
+#endif /* _CONDOR_CXFER_STATE_H */

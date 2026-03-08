@@ -40,6 +40,9 @@
 // for starter exit codes
 #include "exit.h"
 
+// for the STARTER_COMMAND enumeration
+#include "starter_commands.h"
+
 ///////////////////////////////////////////////////////////////////////////
 // Claim
 ///////////////////////////////////////////////////////////////////////////
@@ -112,6 +115,19 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 }
 
 
+std::string
+claim_specific_ad_name( const char * publicClaimID ) {
+	std::string s( publicClaimID );
+
+	// Dots have special meaning in named ClassAd names.
+	std::replace( s.begin(), s.end(), '.', '_' );
+
+	// For stupid reasons, extra ads must each have a cron job.  We
+	// always define `kflops` and `mips` because of benchmarks, so
+	// just use those.
+	return "kflops." + s;
+}
+
 Claim::~Claim()
 {
 	if( c_type == CLAIM_COD ) {
@@ -119,6 +135,15 @@ Claim::~Claim()
 				 c_id->id(),
 				 c_client->c_owner.c_str() );
 	}
+
+
+	// If the starter colored this slot, uncolor it now.
+	const char * publicClaimID = publicClaimId();
+	if( publicClaimID ) {
+		std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+		resmgr->adlist_delete( claimSpecificAdName.c_str() );
+	}
+
 
 	// The resources assigned to this claim must have been freed by now.
 	// TODO: this should not happen on *every* claim delete
@@ -152,7 +177,7 @@ Claim::~Claim()
 
 			// if we have a pending deactivate reply, send it now.
 			sendDeactivateReply(false);
-	
+
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -172,7 +197,7 @@ Claim::~Claim()
 	setRequestStream( NULL );
 	setDeactivateStream(nullptr); // we should never get here with an open socket, but just in case...
 
-	if( c_global_job_id ) { 
+	if( c_global_job_id ) {
 		free( c_global_job_id );
 	}
 	if( c_cod_keyword ) {
@@ -2764,10 +2789,75 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 	}
 }
 
-void Claim::receiveUpdateCommand(int cmd, ClassAd &/*payload_ad*/, ClassAd &/*reply_ad*/)
-{
-	ASSERT(cmd != 0 && cmd != 1); // 0 is update, and 1 is final_update
+void Claim::receiveUpdateCommand( int c,
+	const ClassAd & payloadAd, ClassAd & replyAd
+) {
+	STARTER_COMMAND command{c};
 
+	switch( command ) {
+		case STARTER_COMMAND::UPDATE:
+			ASSERT(command != STARTER_COMMAND::UPDATE);
+			break;
+
+		case STARTER_COMMAND::FINAL_UPDATE:
+			ASSERT(command != STARTER_COMMAND::FINAL_UPDATE);
+			break;
+
+		case STARTER_COMMAND::COLOR: {
+			const char * publicClaimID = publicClaimId();
+			if(! publicClaimID) {
+				const char * reason = "Claim object does not have public claim ID during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+			std::string claimSpecificAdName = claim_specific_ad_name( publicClaimID );
+
+			// Because adlist_replace() takes ownership of the `ClassAd *`.
+			ClassAd * copy = new ClassAd( payloadAd );
+
+
+			auto * rip = this->rip();
+			if( rip == NULL ) {
+				delete copy;
+
+				const char * reason = "Claim object has NULL resource pointer during coloring attempt, ignoring.";
+				dprintf( D_ALWAYS, "%s\n", reason );
+				replyAd.InsertAttr( ATTR_RESULT, false );
+				replyAd.InsertAttr( ATTR_ERROR_STRING, reason );
+				return;
+			}
+
+
+			// It seems brave to allow random strangers to determine which
+			// slots are colored by this ad.  Also, ATTR_SLOT_MERGE_CONSTRAINT
+			// shouldn't be #defined (only) in `startd_named_classad.cpp`.
+			std::string assignment;
+			formatstr( assignment, "SlotMergeConstraint = SlotID == %d", rip->r_id );
+
+			// Presumably this is actually insert-or-update.
+			copy->Insert( assignment );
+
+
+			// It's not enough to give this coloring ad its own name in the
+			// table of extra ads; we need to make sure that the coloring
+			// attributes from different starters don't collide with each
+			// other in the resulting machine ads.
+			ClassAd * shim = new ClassAd();
+			// This is awful.
+			std::string slot_name = rip->r_name;
+			slot_name = "colors_of_" + slot_name.substr( 0, slot_name.find("@") );
+			shim->Insert( slot_name.c_str(), copy );
+
+			resmgr->adlist_replace( claimSpecificAdName.c_str(), shim );
+			replyAd.InsertAttr( ATTR_RESULT, true );
+			} break;
+
+		default:
+			dprintf( D_ALWAYS, "Ignoring unknown starter command %d\n", c );
+			break;
+	}
 }
 
 bool
