@@ -841,7 +841,7 @@ Starter::handleJobSetupCommand(
 			}
 
 
-			// FIXME: How much space should be reserved?
+			// (HTCONDOR-3521)  How much space should be reserved?
 			long long sizeOnDiskInMB = 1000;
 
 			ClassAd context;
