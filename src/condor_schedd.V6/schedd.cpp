@@ -126,6 +126,8 @@ extern GridUniverseLogic* _gridlogic;
 #include "enum_utils.h"
 #include "credmon_interface.h"
 
+#include <ranges>
+
 #ifdef WIN32
 #define DIR_DELIM_STR "\\"
 #else
@@ -11683,13 +11685,10 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	//    (but not B).  The schedd will spawn two transfer shadows: one
 	//    transferring A and B xor C, and the other C xor B.
 	if( job_id.proc < 1000 ) {
-		// This can't be the best way to write this.
-		std::vector<std::string> names;
-		for( const auto & [name, content] : srec->cxfer_catalogs ) {
-			names.push_back(name);
-		}
-
-		AssignClassAdStringList( * job_ad, ATTR_TRANSFER_THESE_CATALOGS, names );
+		AssignClassAdStringList(
+			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
+			std::ranges::views::keys( srec->cxfer_catalogs )
+		);
 	}
 
 

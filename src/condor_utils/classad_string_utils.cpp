@@ -7,6 +7,7 @@
 
 #include "classad_string_utils.h"
 
+
 std::optional< std::vector<std::string> >
 LookupClassAdStringList( const classad::ClassAd & ad, const std::string & attribute ) {
     classad::ExprTree * tree = ad.Lookup( attribute );
@@ -36,7 +37,7 @@ bool
 AssignClassAdStringList(
     classad::ClassAd & ad,
     const std::string & attribute,
-    const std::vector< std::string > & list
+    const std::ranges::view auto & list
 ) {
     classad::ExprList * el = new classad::ExprList();
     if( el == NULL ) { return false; }
@@ -48,3 +49,29 @@ AssignClassAdStringList(
     ad.Insert( attribute, el );
     return true;
 }
+
+
+// It makes me sad that `catalog_utils.h` needs `compat_classad.h`.
+#include "compat_classad.h"
+#include "catalog_utils.h"
+
+// It seems like this shouldn't be necessary here, but an `auto` parameter
+// in a function signature actually means `template`, so it wasn't required
+// by the declaration of this function in the header.
+#include <ranges>
+
+
+// In this declaration, the reference inside `declval<>()` is critical, because
+// the template _names_ in the type returned by  std::ranges::views::keys<T>()
+// varies depending on whether the argument can be _promoted_ to reference!
+using the_keys_type = decltype( std::ranges::views::keys(
+    std::declval<ListOfCatalogs &>()
+) );
+
+
+template bool
+AssignClassAdStringList(
+    classad::ClassAd & ad,
+    const std::string & attribute,
+    const the_keys_type & list
+);

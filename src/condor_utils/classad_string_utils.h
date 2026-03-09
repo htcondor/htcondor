@@ -22,7 +22,7 @@ bool
 AssignClassAdStringList(
     classad::ClassAd & ad,
     const std::string & attribute,
-    const std::vector< std::string > & list
+    const std::ranges::view auto & list
 );
 
 #endif /* _CONDOR_CLASSAD_STRING_UTILS_H */
