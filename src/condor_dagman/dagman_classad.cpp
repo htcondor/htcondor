@@ -179,13 +179,6 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 	Qmgr_connection *queue = OpenConnection();
 	if ( ! queue) { return parentDAG; }
 
-
-	SetAttribute(ATTR_DAGMAN_MAXJOBS, dagOpts[shallow::i::MaxJobs]);
-	SetAttribute(ATTR_DAGMAN_MAXIDLE, dagOpts[shallow::i::MaxIdle]);
-	SetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, dagOpts[shallow::i::MaxPre]);
-	SetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, dagOpts[shallow::i::MaxPost]);
-	SetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagOpts[shallow::i::MaxHold]);
-
 	const char* addr = daemonCore->InfoCommandSinfulString();
 	if (addr) {
 		SetAttribute(ATTR_DAG_ADDRESS, addr);
@@ -239,6 +232,23 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 }
 
 //---------------------------------------------------------------------------
+void DagmanClassad::AdvertiseThrottles(const Throttles& throttles, bool open_connection) {
+	Qmgr_connection *queue = nullptr;
+	if (open_connection) {
+		queue = OpenConnection();
+		if ( ! queue) { return; }
+	}
+
+	SetAttribute(ATTR_DAGMAN_MAXJOBS, throttles[Throttle::MAX_NODES]);
+	SetAttribute(ATTR_DAGMAN_MAXIDLE, throttles[Throttle::MAX_IDLE]);
+	SetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, throttles[Throttle::MAX_PRE]);
+	SetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, throttles[Throttle::MAX_POST]);
+	SetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, throttles[Throttle::MAX_HOLD]);
+
+	if (open_connection) { CloseConnection(queue); }
+}
+
+//---------------------------------------------------------------------------
 void
 DagmanClassad::Update(Dagman &dagman)
 {
@@ -279,22 +289,27 @@ DagmanClassad::Update(Dagman &dagman)
 	ClassAd stats_ad;
 	dagman.stats.Publish(stats_ad);
 	SetAttribute(ATTR_DAG_STATS, stats_ad);
-	
-	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
-	// users. Start by declaring variables for these properties.
-	int oldMaxJobs = dagman.options[shallow::i::MaxJobs];
 
-	// Look up the current values of these properties in the condor_dagman job ad.
-	GetAttribute(ATTR_DAGMAN_MAXIDLE, dagman.options[shallow::i::MaxIdle]);
-	GetAttribute(ATTR_DAGMAN_MAXJOBS, dagman.options[shallow::i::MaxJobs]);
-	GetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, dagman.options[shallow::i::MaxPre]);
-	GetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, dagman.options[shallow::i::MaxPost]);
-	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagman.options[shallow::i::MaxHold]);
+	// TODO: Remove ability for qedit to change throttles?
+	// Look up current DAGMan classad throttles
+	Throttles throttles = dagman.throttles;
+	GetAttribute(ATTR_DAGMAN_MAXIDLE, throttles[Throttle::MAX_IDLE]);
+	GetAttribute(ATTR_DAGMAN_MAXJOBS, throttles[Throttle::MAX_NODES]);
+	GetAttribute(ATTR_DAGMAN_MAXPRESCRIPTS, throttles[Throttle::MAX_PRE]);
+	GetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, throttles[Throttle::MAX_POST]);
+	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, throttles[Throttle::MAX_HOLD]);
 
-	int newMaxJobs = dagman.options[shallow::i::MaxJobs];
-	if (newMaxJobs != 0 && newMaxJobs != oldMaxJobs && dagman.config[conf::b::EnforceNewJobLimits]) {
-		dagman.dag->EnforceNewJobsLimit();
+	if (throttles != dagman.throttles) {
+		int oldMaxNodes = dagman.throttles[Throttle::MAX_NODES];
+		dagman.SetThrottles(throttles);
+		AdvertiseThrottles(dagman.throttles, false);
+
+		int limit = dagman.throttles[Throttle::MAX_NODES];
+		if (dagman.config[conf::b::EnforceNewJobLimits] && limit && limit != oldMaxNodes) {
+			dagman.dag->EnforceNewJobsLimit();
+		}
 	}
+
 	// It's possible that certain DAGMan attributes were changed in the job ad.
 	// If this happened, update the internal values in our dagman data structure.
 	// Update our internal dag values according to whatever is in the job ad.

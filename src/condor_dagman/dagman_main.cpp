@@ -66,6 +66,19 @@ static void Usage() {
 	DC_Exit(EXIT_ERROR);
 }
 
+void Dagman::SetThrottles(Throttles userThrottles) {
+	debug_printf(DEBUG_NORMAL, "Setting DAGMan throttles:\n");
+	throttles = adminThrottles | userThrottles;
+
+	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
+		Throttle t = static_cast<Throttle>(i);
+		auto [_, type] = *(ThrottleType.find(t));
+		std::string padded(type);
+		padded.append(30 - padded.length(), '-');
+		debug_printf(DEBUG_NORMAL, "\t%s: %d\n", padded.c_str(), throttles[t]);
+	}
+}
+
 // In Config() we get DAGMan-related configuration values.  This
 // is a three-step process:
 // 1. Get the name of the DAGMan-specific config file (if any).
@@ -75,6 +88,22 @@ static void Usage() {
 bool Dagman::Config() {
 	// Note: debug_printfs are DEBUG_NORMAL here because when we
 	// get here we haven't processed command-line arguments yet.
+
+	int admin_min_scan_int = -1;
+
+	// Check/set admin controlled throttle limits before processing user configuration
+	if ( ! param_boolean("DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING", false)) {
+		debug_printf(DEBUG_NORMAL, "Administrator set throttle limits enabled\n");
+		// Allow admin to set min for scan interval since this can increase CPU usage
+		admin_min_scan_int = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
+
+		adminThrottles[Throttle::MAX_IDLE] = param_integer("DAGMAN_MAX_JOBS_IDLE", MAX_IDLE_DEFAULT, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_NODES] = param_integer("DAGMAN_MAX_JOBS_SUBMITTED", 0, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_PRE] = param_integer("DAGMAN_MAX_PRE_SCRIPTS", 20, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_HOLD] = param_integer( "DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_POST] = param_integer("DAGMAN_MAX_POST_SCRIPTS", 20, 0, INT_MAX);
+		adminThrottles[Throttle::MAX_INT_SUBMITS] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, 1000);
+	}
 
 	// Get and process the DAGMan-specific config file (if any)
 	// before getting any of the other parameters.
@@ -128,6 +157,11 @@ bool Dagman::Config() {
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n", config[conf::b::AggressiveSubmit] ? "True" : "False");
 
 	config[conf::i::LogScanInterval] = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
+	if (admin_min_scan_int > 0 && config[conf::i::LogScanInterval] < admin_min_scan_int) {
+		debug_printf(DEBUG_NORMAL, "Warning: Specified scan interval %d is less than administrator limit\n",
+		             config[conf::i::LogScanInterval]);
+		config[conf::i::LogScanInterval] = admin_min_scan_int;
+	}
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n", config[conf::i::LogScanInterval]);
 
 	config[conf::dbl::ScheddUpdateInterval] = param_double("DAGMAN_QUEUE_UPDATE_INTERVAL", 120, 1, std::numeric_limits<double>::max());
@@ -841,6 +875,18 @@ void main_init(int argc, char ** const argv) {
 			}
 		}
 	}
+
+	// Wait for all configuration and arg parsing/checking to be done before setting throttles
+	Throttles user_throttles;
+	user_throttles[Throttle::MAX_IDLE] = dagOpts[shallow::i::MaxIdle];
+	user_throttles[Throttle::MAX_NODES] = dagOpts[shallow::i::MaxJobs];
+	user_throttles[Throttle::MAX_PRE] = dagOpts[shallow::i::MaxPre];
+	user_throttles[Throttle::MAX_HOLD] = dagOpts[shallow::i::MaxHold];
+	user_throttles[Throttle::MAX_POST] = dagOpts[shallow::i::MaxPost];
+	user_throttles[Throttle::MAX_INT_SUBMITS] = dagman.config[conf::i::SubmitsPerInterval];
+	dagman.SetThrottles(user_throttles);
+
+	dagman._dagmanClassad->AdvertiseThrottles(dagman.throttles);
 
 	// ...done checking arguments.
 

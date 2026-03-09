@@ -25,6 +25,7 @@
 #include "condor_id.h"
 #include "condor_qmgr.h"
 #include "../condor_utils/dagman_utils.h"
+#include "throttles.hpp"
 
 class DCSchedd;
 class Dagman;
@@ -98,6 +99,9 @@ class DagmanClassad : public ScheddClassad {
 
 	// Initialize the DAGMan job's classad and return parent DAG cluster ID
 	int Initialize(DagmanOptions& dagOpts);
+
+	// Advertise the current DAGMan throttles
+	void AdvertiseThrottles(const Throttles& throttles, bool open_connection=true);
 
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
