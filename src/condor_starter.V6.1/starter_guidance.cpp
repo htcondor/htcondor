@@ -806,11 +806,12 @@ Starter::handleJobSetupCommand(
 			//
 			// Color the slot.
 			//
-			classad::ExprTree * e = guidance.Lookup( "ColorAd" );
+			classad::ExprTree * e = guidance.Lookup( ATTR_COLOR_AD );
 			ClassAd * colorAd = dynamic_cast<ClassAd *>(e);
 			if( colorAd == NULL ) {
-				// ... FIXME ...
-			} else {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_COLOR_AD );
+				return false;
+            } else {
 				dPrintAd( D_ALWAYS, * colorAd );
 			}
 
@@ -818,13 +819,11 @@ Starter::handleJobSetupCommand(
 			bool success = s->jic->colorSlot( * colorAd, replyAd );
 			if(! success) {
 				dprintf( D_ALWAYS, "Unable to color slot because of a communications failure.\n" );
-				/// ... FIXME ...
 			}
 			success = false;
 			replyAd.LookupBool( ATTR_RESULT, success );
 			if(! success) {
 				dprintf( D_ALWAYS, "The startd failed to color the slot.\n" );
-				// ... FIXME ...
 			}
 
 
@@ -836,8 +835,9 @@ Starter::handleJobSetupCommand(
 			// If we're not talking to a shadow, then who's guiding us?
 			ASSERT(secretsAd != NULL);
 			std::string splitClaimID;
-			if(! secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID )) {
-				// ... FIXME ...
+			success = secretsAd->LookupString( ATTR_SPLIT_CLAIM_ID, splitClaimID );
+			if(! success) {
+			    dprintf( D_ALWAYS, "The secrets ad did not contain %s, or it wasn't a string.\n", ATTR_SPLIT_CLAIM_ID );
 			}
 
 
@@ -870,7 +870,13 @@ Starter::handleJobSetupCommand(
 				// Assume the staging directory is in our machine ad.
 				ClassAd * machineAd = s->jic->machClassAd();
 				if(! machineAd) {
-					// ... FIXME ...
+					dprintf( D_ALWAYS, "s->jic->machClassAd() returned NULL.\n" );
+
+					ClassAd context;
+					context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
+					context.InsertAttr( ATTR_RESULT, false );
+					continue_conversation(context);
+					return true;
 				} else {
 					// For now, to avoid the color ads colliding and creating
 					// new types of exotic subatomic particles, the startd
@@ -894,20 +900,22 @@ Starter::handleJobSetupCommand(
 							name.c_str()
 						);
 
-						// FIXME: This is awful.  Doing `EvaluateExpr( expression, value )`
-						// would be cleaner; hopefully extracting a std::string from
-						// a classad::Value isn't arduous.
-						machineAd->AssignExpr( "_condor_rval", expression.c_str() );
-						if( machineAd->LookupString( "_condor_rval", stagingDir ) ) {
-							dprintf( D_ALWAYS, "Found staging directory for '%s' in slot coloring.\n", cifName.c_str() );
-							continue;
+						classad::Value v;
+						if( machineAd->EvaluateExpr( expression, v ) ) {
+							v.IsStringValue( stagingDir );
 						}
 					}
 
 					if(! stagingDir.empty()) {
 						dprintf( D_ALWAYS, "cxfer: found '%s' -> '%s'\n", cifName.c_str(), stagingDir.c_str() );
 					} else {
-						// ... FIXME ...
+						dprintf( D_ALWAYS, "Failed to find staging directory for '%s'.\n", cifName.c_str() );
+
+						ClassAd context;
+						context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
+						context.InsertAttr( ATTR_RESULT, false );
+						continue_conversation(context);
+						return true;
 					}
 				}
 			}

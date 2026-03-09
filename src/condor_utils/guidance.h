@@ -20,6 +20,7 @@ enum class GuidanceResult : int {
 #define ATTR_EVENT_TYPE             "EventType"
 #define ATTR_RETRY_DELAY            "RetryDelay"
 #define ATTR_JOB_ENVIRONMENT_READY  "JobEnvironmentReady"
+#define ATTR_COLOR_AD               "ColorAd"
 
 #define COMMAND_RUN_DIAGNOSTIC      "RunDiagnostic"
 #define COMMAND_RETRY_TRANSFER      "RetryTransfer"

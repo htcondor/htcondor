@@ -10788,7 +10788,6 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// we're actually starting this transfer shadow for, because
 				// we'll need that one for the job shadow.  However, the
 				// schedd requires that a shadow have a corresponding job....
-				// FIXME: who normally owns these?  Clean-up?
 				PROC_ID transfer_job_id(
 					job_id.cluster,
 					-1 * (job_id.proc + 1000)

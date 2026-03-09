@@ -1527,7 +1527,7 @@ UniShadow::start_staging_only_conversation(
 
 	ClassAd * colorAd = new ClassAd();
 	colorAd->Insert( "CommonCatalogsAd", dynamic_cast<ExprTree*>(commonCatalogsAd) );
-	guidance.Insert( "ColorAd", dynamic_cast<ExprTree*>(colorAd) );
+	guidance.Insert( ATTR_COLOR_AD, dynamic_cast<ExprTree*>(colorAd) );
 
 	request = co_yield guidance;
 	success = false;
@@ -2186,8 +2186,8 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 					);
 					break;
 
-				default:
-					// .... FIXME ....
+				case CXFER_STATE::STAGED:
+					ASSERT(cxfer_type != CXFER_STATE::STAGED);
 					break;
 			}
 
