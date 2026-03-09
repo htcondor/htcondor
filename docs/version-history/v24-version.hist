@@ -1,6 +1,78 @@
+*** 24.12.19 bugs
+
+- Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
+  for some output formats. This bug would result in colmns after the Name column not
+  being properly aligned when the longest name exceeded 34 characters.
+  :jira:`3255`
+
+- When the *condor_collector* reponds to a locate query for Startd ads, it will now search
+  both the Startd daemon ad table and the Startd slot ad table to satisfy the locate.  This
+  fixes a bug where :tool:`condor_vacate` would not be able to find the address of the Startd
+  when given a slot name.
+  :jira:`3580`
+
+
+*** 24.0.19 bugs
+
+- Fixed a bug for **batch** grid universe jobs where submitting to a remote
+  system would fail if the username on the remote system contained a dot.
+  :jira:`3581`
+
 *** 24.12.18 bugs
 
+- Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash
+  when using the HIP libraries with the default detection options passed by the *condor_startd*.
+  :jira:`3533`
+
+- Fixed issue where jobs could match Execution Points utilizing :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  only for them to immediately be kicked off due to unavailable disk space due to quantization
+  issues between HTCondor and LVM. This would could cause lots of unnecessary job churn when
+  Execution Points are very busy.
+  :jira:`3490`
+
+- Fixed a bug where an job with a circular :ad-attr:`Requirements[type=Job]` expression
+  would result in a crash in *condor_q* when the ``-better`` option was passed.
+  The crash was fixed, and *condor_submit* was changed to report an error
+  when the submit file has a :subcom:`requirements` command that
+  references :ad-attr:`Requirements[type=Job]`.
+  :jira:`2629`
+
+- Fixed a bug in *condor_status* where the Offline-GPUs column of the ``-gpus``
+  output was always empty.
+  :jira:`3558`
+
+- Fixed a bug where a backfill p-slot would have no assigned GPUs after
+  a reconfig.
+  :jira:`3072`
+
+- Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
+  argument from being the string representation of an expression.
+  :jira:`3435`
+
+*** 24.0.18 features
+
+- Enable the in-memory cache option in newer versions of the scitokens-cpp
+  library. This allows the library to continue operating when the on-disk
+  cache is not useable.
+  :jira:`3560`
+
+- HTCondor tarballs now contain `Pelican 7.23.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.23.0.
+
 *** 24.0.18 bugs
+
+- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`executable`
+  path incorrectly when using late materialization and a different executable
+  for each job.
+  :jira:`3546`
+
+- Fixed a bug where new STARTD_CRON values didn't trigger an immediate
+  update of slot ads to the collector when configured to do so.
+  :jira:`3526`
+
+- Update Annex's knowledge about the Delta HPC system.
+  :jira:`3559`
 
 *** 24.12.17 bugs
 

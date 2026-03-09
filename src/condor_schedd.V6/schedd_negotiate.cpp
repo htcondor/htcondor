@@ -186,7 +186,14 @@ ScheddNegotiate::nextJob()
 						// negotiator has to see clusterid and procid or it will not be happy.  Sad but true.
 						m_current_job_ad.Assign(ATTR_CLUSTER_ID, m_current_job_id.cluster);
 						m_current_job_ad.Assign(ATTR_PROC_ID, OCU_qkey2);
-						m_current_job_ad.Assign(ATTR_REQUIREMENTS, true);
+						// Don't match OCU claims to draining slots
+						ExprTree *existing_req = m_current_job_ad.LookupExpr(ATTR_REQUIREMENTS);
+						if (existing_req) {
+							std::string req = std::string("(") + ExprTreeToString(existing_req) + ") && (Draining =!= true)";
+							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, req.c_str());
+						} else {
+							m_current_job_ad.AssignExpr(ATTR_REQUIREMENTS, "Draining =!= true");
+						}
 						return true;
 					} 
 					dprintf(D_MATCH,

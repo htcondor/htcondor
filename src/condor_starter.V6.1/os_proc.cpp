@@ -249,6 +249,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	fds[0] = -2; fds[1] = -2; fds[2] = -2;
 
 	size_t *core_size_ptr = nullptr;
+	size_t core_size = 0;
 	int job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
 	int *affinity_mask = nullptr;
 	std::string args_string;
@@ -391,7 +392,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// no size limit.
 		// RLIM_INFINITY is unsigned, but its value and type size vary.
 		long long core_size_ad;
-		size_t core_size;
 #if !defined(WIN32)
 		if ( JobAd->LookupInteger( ATTR_CORE_SIZE, core_size_ad ) ) {
 			if ( core_size_ad < 0 ) {

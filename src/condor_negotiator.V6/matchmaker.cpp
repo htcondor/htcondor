@@ -1541,6 +1541,7 @@ compute_significant_attrs(std::vector<ClassAd *> & startdAds, std::string & sig_
 	external_references.erase(ATTR_LAST_HEARD_FROM);
 	external_references.erase(ATTR_REMOTE_USER);
 	external_references.erase(ATTR_REMOTE_OWNER);
+	external_references.erase(ATTR_REMOTE_USER_FLOOR);
 	external_references.erase(ATTR_REMOTE_USER_PRIO);
 	external_references.erase(ATTR_REMOTE_USER_RESOURCES_IN_USE);
 	external_references.erase(ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
@@ -1973,9 +1974,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		dprintf(D_FULLDEBUG, "Updating collector with accounting information\n");
 			// for all of the names of active submitters
 		for (const auto& name : names) {
-			std::string key = "Customer." + name;  // hashkey is "Customer" followed by name
-
-			ClassAd *accountingAd = accountant.GetClassAd(key);
+				ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, name);
 			if (accountingAd) {
 
 				ClassAd updateAd(*accountingAd); // copy all fields from Accountant Ad
@@ -2025,7 +2024,7 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	std::string CustomerName = group->name;
 
-	ClassAd *CustomerAd = accountant.GetClassAd(std::string("Customer.") + CustomerName);
+	ClassAd *CustomerAd = accountant.GetClassAd(AccountantTable::Customer, CustomerName);
 
     if (CustomerAd == NULL) {
         dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.c_str());
@@ -2430,12 +2429,9 @@ negotiateWithGroup ( bool isFloorRound,
 				submitterPrioFactor);
 
 				if (spin_pie == 1) {
-					std::string key("Customer.");  // hashkey is "Customer" followed by name
-					key += submitterName;
-
 					// Save away the submitter share on the first pie spin to put in
 					// the accounting ad to publish to the AccountingAd.
-					ClassAd *accountingAd = accountant.GetClassAd(key);
+					ClassAd *accountingAd = accountant.GetClassAd(AccountantTable::Customer, submitterName);
 					if (accountingAd) {
 						accountingAd->Assign("SubmitterShare", submitterShare);
 						accountingAd->Assign("SubmitterLimit", submitterShare * slotWeightTotal);
@@ -5493,6 +5489,9 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
+
+		int user_floor = accountant.GetFloor(remoteUser);
+		ad->Assign(ATTR_REMOTE_USER_FLOOR, user_floor);
 		formatstr(expr, "%s(%s)", RESOURCES_IN_USE_BY_USER_FN_NAME, QuoteAdStringValue(remoteUser.c_str(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.c_str());
 		if (getGroupInfoFromUserId(remoteUser.c_str(), temp_groupName, temp_groupQuota, temp_groupUsage)) {

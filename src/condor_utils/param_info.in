@@ -631,13 +631,6 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
-[DAGMAN_COPY_TO_SPOOL]
-default=false
-type=bool
-customization=expert
-tags=dagman,dagman_main
-restart=never
-
 [DAGMAN_DEBUG]
 default=
 type=string
@@ -1892,6 +1885,11 @@ default=true
 type=bool
 tags=starter
 
+[SINGULARITY_ADD_ROCM_FLAG]
+default=true
+type=bool
+tags=starter
+
 [UPDATE_INTERVAL]
 default=300
 type=int
@@ -2619,6 +2617,10 @@ type=bool
 default=
 type=string
 tags=email
+
+[SEC_USE_LOW_DATA_MODE]
+default=false
+type=bool
 
 [SEC_TCP_SESSION_TIMEOUT]
 default=20
@@ -4731,8 +4733,8 @@ description=Default modification to a memory resource request
 tags=startd
 
 [MODIFY_REQUEST_EXPR_REQUESTDISK]
-default=quantize(RequestDisk,{1024})
-version=7.7.6
+default=quantize(RequestDisk,{Target.DiskQuantum?:1024})
+version=24.12.18
 type=string
 description=Default modification to a disk resource request
 tags=startd

@@ -1,3 +1,24 @@
+condor (25.0.7-1) stable; urgency=medium
+
+  * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+  * Improve condor_history performance on filesystems with I/O rate limits
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 12 Feb 2026 10:24:00 -0600
+
+condor (24.12.17-1) stable; urgency=medium
+
+  * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+  * Improve condor_history performance on filesystems with I/O rate limits
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 12 Feb 2026 10:21:00 -0600
+
+condor (24.0.17-1) stable; urgency=medium
+
+  * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+  * Improve condor_history performance on filesystems with I/O rate limits
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 12 Feb 2026 09:00:00 -0600
+
 condor (25.6.1-1) stable; urgency=medium
 
   * DAGMan now uses the new DAG file parser used by condor_dag_checker

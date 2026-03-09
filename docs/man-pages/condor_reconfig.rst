@@ -1,15 +1,13 @@
-      
 
 *condor_reconfig*
 ==================
 
 Reconfigure HTCondor daemons
-:index:`condor_reconfig<single: condor_reconfig; HTCondor commands>`\ :index:`condor_reconfig command`
 
 Synopsis
 --------
 
-**condor_reconfig** [**-help | -version** ]
+**condor_reconfig** [**-help** | **-version** ]
 
 **condor_reconfig** [**-debug** ]
 [**-pool** *centralmanagerhostname[:portnumber]*] [
@@ -70,12 +68,6 @@ Options
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor_master* daemon.
 
-Exit Status
------------
-
-*condor_reconfig* will exit with a status value of 0 (zero) upon
-success, and it will exit with the value 1 (one) upon failure.
-
 Examples
 --------
 
@@ -103,3 +95,20 @@ single machine named **cae17** within the pool of machines that has
 
     $ condor_reconfig -pool condor.cae.wisc.edu -name cae17
 
+
+Exit Status
+-----------
+
+0  -  Success
+
+1  -  Failure
+
+See Also
+--------
+
+:tool:`condor_restart`, :tool:`condor_on`, :tool:`condor_off`, :tool:`condor_config_val`
+
+Availability
+------------
+
+Linux, MacOS, Windows

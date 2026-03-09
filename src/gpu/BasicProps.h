@@ -19,6 +19,7 @@ class BasicProps {
 		int	      xNACK {-1};
 		int	      warpSize {-1};
 		int	      driverVersion {-1};
+		int       hipDetection{0};
 
 		void setUUIDFromBuffer( const unsigned char buffer[16] );
 };

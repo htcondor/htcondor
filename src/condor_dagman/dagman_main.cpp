@@ -274,13 +274,6 @@ bool Dagman::Config() {
 	config[conf::i::MaxRescueNum] = param_integer("DAGMAN_MAX_RESCUE_NUM", MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n", config[conf::i::MaxRescueNum]);
 
-	config[conf::b::PartialRescue] = param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", true);
-	if ( ! config[conf::b::PartialRescue]) {
-		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
-		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
-	}
-	debug_printf(DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n", config[conf::b::PartialRescue] ? "True" : "False");
-
 	config[conf::b::RescueResetRetry] = param_boolean("DAGMAN_RESET_RETRIES_UPON_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_RESET_RETRIES_UPON_RESCUE setting: %s\n", config[conf::b::RescueResetRetry] ? "True" : "False");
 
@@ -336,6 +329,11 @@ bool Dagman::Config() {
 		debug_cache_set_size(config[conf::i::DebugCacheSize]);
 		debug_cache_enable();
 	}
+
+	// Reconfigure debug logging levels for two reasons:
+	//      1. Initial configuration done in pre_dc_init (doesn't respect set ALL_DEBUG or DAGMAN_DEBUG)
+	//      2. All user defined ALL_DEBUG and DAGMAN_DEBUG values to take effect
+	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, dagman.debugLog.c_str());
 
 	return true;
 }
@@ -429,9 +427,6 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 	inShutdownRescue = true;
 
 	debug_printf(DEBUG_QUIET, "Aborting DAG...\n");
-	// Avoid writing two different rescue DAGs if the "main" DAG and
-	// the final node (if any) both fail.
-	static bool wroteRescue = false;
 	// If statement here in case failure occurred during parsing
 	if (dagman.dag) {
 		dagman.dag->SetStatus(dagStatus, true);
@@ -441,10 +436,8 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 		// unrecoverable state...
 		if (exitVal != EXIT_OKAY) {
 			if (dagman.config[conf::i::MaxRescueNum] > 0) {
-				dagman.dag->Rescue(dagman.options.primaryDag().c_str(), dagman.options.isMultiDag(),
-				                   dagman.config[conf::i::MaxRescueNum], wroteRescue, false,
-				                   dagman.config[conf::b::PartialRescue]);
-				wroteRescue = true;
+				dagman.dag->Rescue(dagman.options.primaryDag(), dagman.options.isMultiDag(),
+				                   dagman.config[conf::i::MaxRescueNum]);
 			} else {
 				debug_printf(DEBUG_QUIET, "No rescue DAG written because DAGMAN_MAX_RESCUE_NUM is 0\n");
 			}
@@ -932,13 +925,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_VERBOSE, "Parsing %s ...\n", file.c_str());
 
 		if ( ! dp.process(dagman, *(dagman.dag), file, dag_id++)) {
-			if (dagman.options[shallow::b::DumpRescueDag]) {
-				// Dump the rescue DAG so we can see what we got
-				// in the failed parse attempt.
-				debug_printf(DEBUG_QUIET, "Dumping rescue DAG because of -DumpRescue flag\n");
-				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], false, true, false);
-			}
-			
 			// I guess we're setting bForce to true here in case we're
 			// in recovery mode and we have any leftover jobs from
 			// before (e.g., user did condor_hold, modified DAG file
@@ -1010,13 +996,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_QUIET, "USING RESCUE DAG %s\n", dagman.rescueFileToRun.c_str());
 
 		if ( ! dp.process(dagman, *(dagman.dag), dagman.rescueFileToRun)) {
-			if (dagOpts[shallow::b::DumpRescueDag]) {
-				// Dump the rescue DAG so we can see what we got
-				// in the failed parse attempt.
-				debug_printf(DEBUG_QUIET, "Dumping rescue DAG because of -DumpRescue flag\n");
-				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], true, false);
-			}
-			
 			// I guess we're setting bForce to true here in case we're
 			// in recovery mode and we have any leftover jobs from
 			// before (e.g., user did condor_hold, modified DAG (or
@@ -1070,13 +1049,6 @@ void main_init(int argc, char ** const argv) {
 			debug_printf(DEBUG_NORMAL, "Writing .dot file: %s\n", dagman.dag->GetDotFileName());
 		}
 		ExitSuccess();
-	}
-
-	if (dagOpts[shallow::b::DumpRescueDag]) {
-		debug_printf(DEBUG_QUIET, "Dumping rescue DAG and exiting because of -DumpRescue flag\n");
-		dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], false, false, false);
-		ExitSuccess();
-		return;
 	}
 
 	//------------------------------------------------------------------------
@@ -1514,20 +1486,19 @@ void main_pre_dc_init (int, char*[]) {
 #endif
 
 	// Convert the DAGMan log file name to an absolute path if it's not one already
-	std::string fullLogFile;
 	const char* logFile = GetEnv("_CONDOR_DAGMAN_LOG");
 	if (logFile) {
 		if ( ! fullpath(logFile)) {
-			dircat(dagman.workingDir.c_str(), logFile, fullLogFile);
-			SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
-		} else { fullLogFile = logFile; }
+			dircat(dagman.workingDir.c_str(), logFile, dagman.debugLog);
+			SetEnv("_CONDOR_DAGMAN_LOG", dagman.debugLog.c_str());
+		} else { dagman.debugLog = logFile; }
 	} else {
-		dircat(dagman.workingDir.c_str(), "default.dagman.out", fullLogFile);
-		SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
+		dircat(dagman.workingDir.c_str(), "default.dagman.out", dagman.debugLog);
+		SetEnv("_CONDOR_DAGMAN_LOG", dagman.debugLog.c_str());
 	}
 
-	// Manually setup debugging file since default log is disabled
-	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, fullLogFile.c_str());
+	// Manually setup debugging file since default log is disabled (once here to enable initial logging)
+	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, dagman.debugLog.c_str());
 }
 
 void main_pre_command_sock_init() {

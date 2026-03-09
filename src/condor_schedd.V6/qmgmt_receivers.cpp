@@ -1127,10 +1127,14 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		neg_on_error( syscall_sock->code(filename) );
 		neg_on_error( syscall_sock->end_of_message() );;
 
-		errno = 0;
-		rval = SendSpoolFile(filename.c_str());
-		terrno = errno;
+		rval = -2;
+		terrno = EINVAL;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		neg_on_error( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(terrno) );
+		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	}
 
@@ -1142,11 +1146,14 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		neg_on_error( getClassAd(syscall_sock, ad) );
 		neg_on_error( syscall_sock->end_of_message() );;
 
-		errno = 0;
-		rval = SendSpoolFileIfNeeded(ad);
-		terrno = errno;
+		rval = -2;
+		terrno = EINVAL;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
+		syscall_sock->encode();
+		neg_on_error( syscall_sock->code(rval) );
+		//neg_on_error( syscall_sock->code(terrno) );
+		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	}
 

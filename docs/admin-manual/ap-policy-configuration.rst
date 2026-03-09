@@ -68,6 +68,8 @@ owner to one or more accounting groups has been configured via
 The SL6ToDocker transform above is most likely incomplete, as it assumes
 a custom attribute (``WantSL6``) that your pool may or may not use.
 
+.. _submit-requirements:
+
 Submit Requirements
 -------------------
 

@@ -1,5 +1,6 @@
 from typing import (
     List,
+    Optional,
 )
 
 from ._common_imports import (
@@ -22,7 +23,7 @@ class Placementd():
     placement tokens for an AP.
     """
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         """
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.  :py:obj:`None` means the
@@ -43,8 +44,8 @@ class Placementd():
     def userLogin(self,
         username : str,
         authorizations : str,
-        project : str = None,
-        requester : str = None,
+        project : Optional[str] = None,
+        requester : Optional[str] = None,
     ) -> classad.ClassAd:
         """
         Request a user placement token.
@@ -60,7 +61,7 @@ class Placementd():
         return _placement_user_login(self._addr, username, authorizations, project, requester)
 
     def queryUsers(self,
-        username : str = None,
+        username : Optional[str] = None,
     ) -> List[classad.ClassAd]:
         """
         Query information about users who are currently authorized.
@@ -73,9 +74,9 @@ class Placementd():
         return _placement_query_users(self._addr, username)
 
     def queryTokens(self,
-        username : str = None,
+        username : Optional[str] = None,
         valid_only : bool = False,
-        token_id : str = None,
+        token_id : Optional[str] = None,
     ) -> List[classad.ClassAd]:
         """
         Query information about issued tokens.
@@ -93,7 +94,7 @@ class Placementd():
         return _placement_query_tokens(self._addr, username, valid_only, token_id)
 
     def queryAuthorizations(self,
-        username : str = None,
+        username : Optional[str] = None,
     ) -> List[classad.ClassAd]:
         """
         Query information about defined authorizations.

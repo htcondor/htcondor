@@ -283,15 +283,23 @@ Singularity::setup(ClassAd &machineAd,
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
 	std::string bind_spec = slot_dir;
+
+	// If file xfer is off, the job iwd is the pwd of submit, and we want to bind mount that to the target_dir
+	if (job_iwd != execute_dir) {
+		bind_spec = job_iwd;
+	} 
+
 	if (has_target) {
 		bind_spec += ":";
 		bind_spec += target_dir;
-		// Only change PWD to our new target dir if that's where we should startup.
-		if (job_iwd == execute_dir) {
-			// replace the slot_dir prefix of execute dir with target_dir
-			std::string pwd{execute_dir};
-			replace_str(pwd, slot_dir, target_dir);
+		// replace the slot_dir prefix of execute dir with target_dir
+		std::string pwd{execute_dir};
+		replace_str(pwd, slot_dir, target_dir);
 
+		if (job_iwd != execute_dir) {
+			sing_args.AppendArg("--pwd");
+			sing_args.AppendArg(target_dir);
+		} else {
 			sing_args.AppendArg("--pwd");
 			sing_args.AppendArg(pwd);
 		}
@@ -317,6 +325,13 @@ Singularity::setup(ClassAd &machineAd,
 		static const char* open_cl_path = "/etc/OpenCL/vendors";
 		if (IsDirectory(open_cl_path)) {
 			additional_bind_mounts.emplace_back(open_cl_path);
+		}
+
+		// We don't really know if the GPUs are NVidia, but it doesn'to
+		// seem hurt to have both the nvidia and rocm bind mounts available
+		// if either is needed.  But knob it just to be sure.
+		if (param_boolean("SINGULARITY_ADD_ROCM_FLAG", true)) {
+			sing_args.AppendArg("--rocm");
 		}
 	}
 

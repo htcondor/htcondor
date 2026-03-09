@@ -1,5 +1,66 @@
 *** 25.8.0 features
 
+- Jobs that were submitted with spooled data files and have completed will
+  now leave the queue after a successful retrieval of their output files
+  (e.g. with :tool:`condor_transfer_data`).
+  :jira:`3508`
+
+- :tool:`condor_config_val` now has a -default option to shows the default
+  value of a knob.
+  :jira:`2683`
+
+- :tool:`htcondor dag status` now also shows information about jobs
+  transferring sandboxes and in the transfer queue.
+  :jira:`3517`
+
+- In the python bindings, functions arguments that used to have a default
+  of the `None` type now take a python Optional.  This is more compliant
+  with PEP 484, and is more in line with what python linting tools
+  expect.  There should be no changes needed for clients of the python
+  bindings.
+  :jira:`3353`
+
+- :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
+  generated submit file.  There is a new option ``-getenv`` to 
+  allow this.
+  :jira:`3549`
+
+- Singularity or Apptainer jobs now also pass --rocm to GPU jobs
+  to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
+  set to false.
+  :jira:`3537`
+
+- When cgroups are active, *condor_startds* now advertise
+  :ad-attr:`CgroupEnforced` to be true.
+  :jira:`3555`
+
+- HTCondor now more quickly detects when the network connection between
+  two daemons is broken or disconnected.
+  :jira:`3547`
+
+- :tool:`condor_top` now supports a `-history` option to read the most
+  recently recorded on disk performance statistics.  Runs much faster,
+  and works even when the *condor_schedd* is slow or not running.
+  :jira:`3582`
+
+- :tool:`condor_q` now supports a ``-aaf`` option
+  that works like ``-autoformat`` (``-af``) but appends the specified
+  attributes as additional columns after the standard output columns,
+  rather than replacing them.
+  :jira:`3571`
+
+- Updated list of default environment variables that *condor_dagman* always
+  grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
+  :jira:`1913`
+
+- The negotiator now has access to the :ad-attr:`RemoteUserFloor` to avoid
+  going beneath a user's floor number of resources while preempting.
+  :jira:`3226`
+
+- :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
+  in the cooldown state.
+  :jira:`2535`
+
 - :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
   in the summary table.
   :jira:`3535`
@@ -17,6 +78,35 @@
   a running job, the job will transfer any output files it has produced
   back to the submit machine before exiting.
   :jira:`3519`
+- The **copy_to_spool** command in :tool:`condor_submit` is no longer
+  supported.
+  This don't affect the ability to spool a job's full input sandbox.
+  :jira:`3545`
+
+- No longer warn about config knobs with dots in the names if the knob
+  is group quota related, and begins with GROUP.
+  :jira:`3544`
+
+- The old ClassAd syntax is no longer supported in job transforms.
+  :jira:`3538`
+
+- Improved DAGMan debugging when to print warnings produced by *condor_schedd*\'s
+  :ref:`submit-requirements`.
+  :jira:`3573`
+
+- Removed deprecated full rescue file for DAGMan. With this comes the removal of
+  the configuration option ``DAGMAN_WRITE_PARTIAL_RESCUE`` and the command line
+  option ``-DumpRescue`` for :tool:`condor_submit_dag`.  This has been deprecated since
+  2011, so there should be no problems with compatability.
+  :jira:`3565`
+
+- Improved DAGMan's debugging error when the provisioner node exits prior to notifying
+  DAGMan of successful resource provisioning.
+  :jira:`3582`
+
+- Bootstrap CSS framework used in OAuth Credmon login page updated
+  to version 5.3.8.
+  :jira:`3576`
 
 *** 25.8.0 bugs
 
@@ -24,9 +114,13 @@
   promptly if it failed to launch a singularity job.
   :jira:`3531`
 
-*** 25.0.8 bugs
+- Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
+  was off, that caused jobs to start in the users home directory.
+  :jira:`3575`
 
-*** 25.7.0 features
+*** 25.0.9 bugs
+
+*** 25.7.2 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
   will contain :ad-attr:`Owner` and :ad-attr:`RemoteHost` copied from the associated
@@ -40,6 +134,11 @@
   fail. Pipe buffers in the *condor_schedd* are now appropriately sized to fix
   this problem.
   :jira:`3507`
+
+- When a job exceeds its memory request, instead of reporting the memory 
+  measured in the last polling period, the error message reports the 
+  size of the provisioned memory to more accurately report what happened.
+  :jira:`3514`
 
 - Improved :tool:`condor_watch_q` to sort rows of data display rows with jobs still
   active in the queue before rows of jobs that have all exited the AP job queue.
@@ -60,9 +159,9 @@
   grid universe **batch** type.
   :jira:`3500`
 
-*** 25.7.0 bugs
+*** 25.7.2 bugs
 
-*** 25.0.7 bugs
+*** 25.0.8 bugs
 
 *** 25.6.1 features
 
