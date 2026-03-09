@@ -51,6 +51,7 @@ command_handler(int cmd, Stream* stream )
 			case DEACTIVATE_CLAIM:
 			case DEACTIVATE_CLAIM_FORCIBLY:
 			case DEACTIVATE_CLAIM_JOB_DONE:
+			case DEACTIVATE_CLAIM_FINAL_XFER:
 			case REACTIVATE_CLAIM_CHECK:
 				stream->encode();
 
@@ -79,6 +80,7 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM:
 	case DEACTIVATE_CLAIM_FORCIBLY:
 	case DEACTIVATE_CLAIM_JOB_DONE:
+	case DEACTIVATE_CLAIM_FINAL_XFER:
 	case REACTIVATE_CLAIM_CHECK:
 		rval = deactivate_claim(stream, rip, cmd);
 		break;
@@ -89,8 +91,9 @@ command_handler(int cmd, Stream* stream )
 int
 deactivate_claim(Stream *stream, Resource *rip, int cmd)
 {
-	bool graceful = cmd == DEACTIVATE_CLAIM;
+	bool graceful = cmd == DEACTIVATE_CLAIM || cmd == DEACTIVATE_CLAIM_FINAL_XFER;
 	bool job_done = cmd == DEACTIVATE_CLAIM_JOB_DONE;
+	bool final_xfer = cmd == DEACTIVATE_CLAIM_FINAL_XFER;
 
 	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, rip);
 	ep_event.Ad().Assign("Force", !graceful);
@@ -121,6 +124,7 @@ deactivate_claim(Stream *stream, Resource *rip, int cmd)
 			claim_is_closing = true;
 		}
 	}
+	if (final_xfer) claim_is_closing = true;
 	if (claim_is_closing) ep_event.Ad().Assign("Closing", true);
 
 	if (job_done) {
@@ -156,7 +160,9 @@ deactivate_claim(Stream *stream, Resource *rip, int cmd)
 	if( cmd == REACTIVATE_CLAIM_CHECK ) { return rval; }
 
 	if( rip->r_cur && ! job_done) {
-		if(graceful) {
+		if (final_xfer) {
+			rval = rip->deactivate_claim_final_xfer();
+		} else if(graceful) {
 			rval = rip->deactivate_claim();
 		} else {
 			rval = rip->deactivate_claim_forcibly();
@@ -680,24 +686,6 @@ command_name_handler(int cmd, Stream* stream )
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
-		default:
-			rip->log_ignore( cmd, s );
-			return FALSE;
-			break;
-		}
-		break;
-	case VACATE_CLAIM_AND_FINAL_XFER:
-		switch( s ) {
-		case claimed_state:
-		case matched_state:
-#if HAVE_BACKFILL
-		case backfill_state:
-#endif /* HAVE_BACKFILL */
-			rip->dprintf( D_ALWAYS,
-						  "State change: received VACATE_CLAIM_AND_FINAL_XFER command\n" );
-			return rip->retire_claim(false, "Claim vacated with final transfer", CONDOR_HOLD_CODE::StartdVacateCommand, HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE);
-			break;
-
 		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;

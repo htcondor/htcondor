@@ -239,6 +239,7 @@ public:
 	bool isActive( void );
 	bool isRunning( void );	
 	bool deactivateClaim( bool graceful, bool job_done, bool claim_closing );
+	bool deactivateClaimFinalXfer( void );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
 	bool starterKillFamily();

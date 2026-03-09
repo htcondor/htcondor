@@ -247,8 +247,8 @@ std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 		{VACATE_ALL_FAST, "VACATE_ALL_FAST"},
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given slot
 		{VACATE_CLAIM_FAST, "VACATE_CLAIM_FAST"},
-#define VACATE_CLAIM_AND_FINAL_XFER	(SCHED_VERS+161)  	// vacate and do final transfer
-		{VACATE_CLAIM_AND_FINAL_XFER, "VACATE_CLAIM_AND_FINAL_XFER"},
+#define DEACTIVATE_CLAIM_FINAL_XFER	(SCHED_VERS+161)  	// deactivate claim and do final transfer
+		{DEACTIVATE_CLAIM_FINAL_XFER, "DEACTIVATE_CLAIM_FINAL_XFER"},
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
 		{REJECTED_WITH_REASON, "REJECTED_WITH_REASON"},
 #define START_AGENT			(SCHED_VERS+77) // have the master start an agenta (Not used)

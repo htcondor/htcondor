@@ -311,28 +311,6 @@ RemoteResource::killStarter( bool graceful, bool final_transfer )
 		abortFileTransfer();
 	}
 
-	// If final_transfer is requested (condor_rm -transfer), use vacateClaim
-	// with final_transfer=true to send VACATE_CLAIM_AND_FINAL_XFER command
-	CondorVersionInfo vi(dc_startd->version());
-	if (final_transfer && vi.built_since_version(25,8,0)) {
-		dprintf(D_STATUS, "Sending VACATE_CLAIM_AND_FINAL_XFER to startd for final file transfer\n");
-		bool fast = !graceful;
-		if( dc_startd->vacateClaim(machineName, fast, true) ) {
-			if( state != RR_FINISHED ) {
-				setResourceState( RR_PENDING_DEATH );
-			}
-			if( graceful ) {
-				already_killed_graceful = true;
-			} else {
-				already_killed_fast = true;
-			}
-			return true;
-		}
-		dprintf( D_ALWAYS, "RemoteResource::killStarter(): VACATE_CLAIM_AND_FINAL_XFER failed: %s\n",
-			dc_startd->error() ? dc_startd->error() : "unknown error" );
-		return false;
-	}
-
 	// If we got the job_exit syscall, then we should expect
 	// deactivateClaim() to fail, because the starter exits right
 	// after that. But old starters (prior to 8.7.8) wait around
@@ -345,10 +323,11 @@ RemoteResource::killStarter( bool graceful, bool final_transfer )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		dprintf(D_STATUS, "Sending %s to startd\n",
-			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
+		const char *cmd_name = final_transfer ? "DEACTIVATE_CLAIM_FINAL_XFER" :
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY");
+		dprintf(D_STATUS, "Sending %s to startd\n", cmd_name);
 		still_cleaning = false;
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning, final_transfer)) {
 			break;
 		}
 		const char * errmsg = dc_startd->error();
