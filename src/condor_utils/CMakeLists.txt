@@ -302,6 +302,7 @@ filesystem_remap.cpp
 filesystem_remap.h
 file_transfer.cpp
 file_transfer.h
+file_transfer_internal.h
 file_transfer_stats.cpp
 file_transfer_stats.h
 forkwork.cpp
@@ -396,6 +397,8 @@ param_info.cpp
 param_info.h
 param_info_help.cpp
 param_info_tables.h
+pelican_transfer.cpp
+pelican_transfer.h
 perm.h
 PluginManager.h
 printf_format.cpp
@@ -437,6 +440,8 @@ spooled_job_files.h
 spool_version.cpp
 spool_version.h
 ssl_version_hack.h
+stageout_transform.cpp
+stageout_transform.h
 stat_info.cpp
 stat_info.h
 status_string.cpp
@@ -627,6 +632,18 @@ else()
 	endif()
 endif()
 
+if (WINDOWS)
+	# libcurl is built as a static library on Windows; this must be defined
+	# the same way.  This is exactly what modern CMake was designed to help
+	# avoid; going this route to minimize changes.
+	#
+	# On non-Windows platforms, this build currently assumes that libcurl is
+	# provided as a shared (dynamic) library, so CURL_STATICLIB is *not* set
+	# there.  This assumption is matched elsewhere in the code base; that
+        # also would benefit from future CMake modernizations.
+	target_compile_definitions(condor_utils_objects PRIVATE CURL_STATICLIB)
+endif()
+
 add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 
@@ -650,6 +667,12 @@ condor_shared_lib(condor_utils
 )
 if (WINDOWS)
 	target_link_libraries(condor_utils PUBLIC "${CONDOR_WIN_LIBS}")
+endif()
+
+# libcurl is required for Pelican integration
+# Only link if not using dlopen (DLOPEN_SECURITY_LIBS); dlopen builds load it at runtime
+if (NOT DLOPEN_SECURITY_LIBS)
+	target_link_libraries(condor_utils PUBLIC ${CURL_FOUND})
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -698,6 +721,9 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
     target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
+	if (NOT DLOPEN_SECURITY_LIBS)
+		target_link_libraries(condor_utils_s PUBLIC ${CURL_FOUND})
+	endif()
 endif(LINUX OR APPLE)
 
 if (LINUX)
