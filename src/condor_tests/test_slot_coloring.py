@@ -69,13 +69,15 @@ def the_running_job(test_dir, the_lock_file, the_condor):
 
 @action
 def the_slot_ads(the_condor, the_running_job):
-	# Sleep for the UPDATE_INTERVAL + 1 to make sure the startd has updated
-	# the slot ads in the collector.
-	time.sleep(3)
+	# Poll until the collector has slot ads with ColorAttr set.
+	for i in range(0, 30):
+		result = the_condor.status(
+			ad_type=htcondor2.AdType.Slot,
+		)
+		if len(result) > 0 and all(ad.get('ColorAttr', 0) == 7 for ad in result):
+			break
+		time.sleep(1)
 
-	result = the_condor.status(
-		ad_type=htcondor2.AdType.Slot,
-	)
 	assert(len(result) > 0)
 
 	return result
@@ -106,12 +108,15 @@ def the_cleaned_up_ads(
 	result_ad = the_running_job.remove()
 	# assert something about the result_ad here
 
-	# See previous comment about this constant.
-	time.sleep(3)
+	# Poll until the collector has slot ads with ColorAttr removed.
+	for i in range(0, 30):
+		result = the_condor.status(
+			ad_type=htcondor2.AdType.Slot,
+		)
+		if len(result) > 0 and all(ad.get('ColorAttr', -1) == -1 for ad in result):
+			break
+		time.sleep(1)
 
-	result = the_condor.status(
-		ad_type=htcondor2.AdType.Slot,
-	)
 	assert(len(result) > 0)
 
 	return result
