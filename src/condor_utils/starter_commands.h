@@ -3,7 +3,7 @@
 
 enum class STARTER_COMMAND : int {
 	UPDATE = 0,
-	FINAL_UPDATE =1,
+	FINAL_UPDATE = 1,
 	COLOR = 2
 };
 

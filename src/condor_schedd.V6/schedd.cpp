@@ -97,6 +97,10 @@
 #include "../condor_sysapi/sysapi.h"
 #include "classad_merge.h"
 
+#include "catalog_utils.h"
+#include "cxfer.h"
+#include "classad_string_utils.h"
+
 #ifdef LINUX
 #include "proc_family_direct_cgroup_v2.h"
 #endif
@@ -121,6 +125,8 @@ extern GridUniverseLogic* _gridlogic;
 #include "condor_vm_universe_types.h"
 #include "enum_utils.h"
 #include "credmon_interface.h"
+
+#include <ranges>
 
 #ifdef WIN32
 #define DIR_DELIM_STR "\\"
@@ -5470,6 +5476,8 @@ condor to the user.  In the future we might allocate a dynamic account here.
 int
 aboutToSpawnJobHandler( int cluster, int proc, void* )
 {
+	if( proc <= -1000 ) { return TRUE; }
+
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
 
@@ -5503,7 +5511,7 @@ aboutToSpawnJobHandlerDone( int cluster, int proc,
 		// is still runnable.
 	int status;
 	if( ! scheduler.isStillRunnable(cluster, proc, status) ) {
-		if( status != -1 ) {  
+		if( status != -1 ) {
 			PROC_ID job_id;
 			job_id.cluster = cluster;
 			job_id.proc = proc;
@@ -9225,6 +9233,76 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
 	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
+	//
+	// We don't want to trust everyone with WRITE access to the schedd
+	// with the ability to notify the schedd that staging of common files
+	// completed.  We could attempt to base this particular trust on being
+	// the parent of the only process which has the right to to do this;
+	// the easiest way to do that would be to pass a secret capability to
+	// that process.
+	//
+	// The original claim ID is a secret capability that we already pass to
+	// the shadow.  The collector and negotiator know it, but we trust them;
+	// the EP knows it, and if it wants to cause jobs running on itself to
+	// fail, it has easier ways to make that happen.
+	//
+
+	std::string claimID;
+	cmd_ad.LookupString(ATTR_CLAIM_ID, claimID);
+	if(! claimID.empty()) {
+		match_rec * match = FindMrecByClaimID( claimID.c_str() );
+		if( match ) {
+			jobid.cluster = match->cluster;
+			jobid.proc = match->proc;
+
+			if( jobid.proc <= -1000 ) {
+				jobid.proc = (-1 * jobid.proc) - 1000;
+			} else {
+				// This is an alarming logical inconsistency; only the
+				// transfer shadow should be calling this function with
+				// a claim ID, and that claim ID's match record should
+				// have a corresponding proc ID.  For now, assume this
+				// is confusion occuring in the client rather than an
+				// indication of a problem in the schedd.
+				//
+				// For that reason, log this problem and then unset
+				// `jobid`; better to force the user to remove a job
+				// stuck in blocked state than risk confusing the
+				// schedd by unblocking a job that shouldn't be.
+				dprintf( D_ALWAYS, "CmdDirectAttach(): client's capability pointed to a match record (%d.%d) of the wrong type; ignoring it.\n", jobid.cluster, jobid.proc );
+				jobid.cluster = -1;
+				jobid.proc = -1;
+			}
+		} else {
+			// The client supplied us a claim ID that either doesn't exist
+			// or doesn't correspond to a live match record.  This should
+			// only happen if the match record was destroyed between when
+			// the shadow sent this command and when the schedd handled it;
+			// anything else indicates a fairly logical error or an attack.
+			dprintf( D_ALWAYS, "CmdDirectAttach(): client's capability referred to an unknown match record; ignoring it.\n" );
+		}
+	}
+
+
+	// This forces a rebuild of the priorec array, which we probably don't
+	// want, but does allow the job which spawned the transfer shadow to
+	// match the newly-available resource.
+	//
+	// Once it's (hopefully) been matched, it'll be in BLOCKED state because
+	// we haven't updated the transfer shadow's record to indicate that it's
+	// completed transfer.  That's OK, because if we do that _after_ we
+	// assign resources, we can start all the unblocked shadowrecs with
+	// assigned matches in one go.
+
+	int status = -1;
+	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
+	if( status == JOB_STATUS_BLOCKED ) {
+		status = IDLE;
+		SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
+		dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+	}
+
+
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
 		if (!rsock->get_secret(claim_id) || !getClassAd(rsock, slot_ad)) {
@@ -9251,6 +9329,53 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read eom\n");
 		return 0;
 	}
+
+
+	PROC_ID transfer_shadow_id( jobid.cluster, (-1 * jobid.proc ) - 1000 );
+	shadow_rec * transfer_shadow_rec = FindSrecByProcID(transfer_shadow_id);
+	if( transfer_shadow_rec != NULL &&
+		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING
+	) {
+		// Setting this allows subsequent matches needing these catalogs
+		// (on this EP) to start immediately.
+		transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGED;
+
+		// One or more match records now have shadow recs which point to
+		// jobs which were in the BLOCKED state only because their
+		// common files were not yet available.
+		//
+		// We could walk the match records looking for these cases.  Even
+		// if we assume half our jobs are non-Docker container universe
+		// jobs (that is, half our jobs will at least _try_ common file
+		// transfer), we'd still be better off with a list of blocked
+		// match records, because we should have many fewer of those at
+		// any given time -- they represent real resources somewhere --
+		// than we do jobs.
+		auto copy(matchesHeldByBlockedJobs);
+
+		for( auto * mrec : copy ) {
+			shadow_rec * srec = mrec->shadowRec;
+
+			size_t found = 0;
+			for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+				auto sr = getShadowForCatalog( catalogName );
+				if( sr && (*sr)->cxfer_state == CXFER_STATE::STAGED ) {
+					++found;
+				}
+			}
+
+			if( found == srec->cxfer_catalogs.size() ) {
+				int status = JOB_STATUS_IDLE;
+				SetAttributeInt(mrec->cluster, mrec->proc, ATTR_JOB_STATUS, status);
+				std::erase( matchesHeldByBlockedJobs, mrec );
+
+				// Why _are_ these two separate commands?
+				mark_serial_job_running( srec->job_id );
+				addRunnableJob( srec );
+			}
+		}
+	}
+
 
 	ClassAd reply_ad;
 	reply_ad.Assign(ATTR_ACTION_RESULT, OK);
@@ -10193,23 +10318,15 @@ Scheduler::StartJob(match_rec *rec)
 	if (job == nullptr) {
 		if (getOCU(id.cluster) != nullptr) {
 			return;
-		} 
+		}
 	}
-
-	/*
-	bool is_ocu_holder = false;
-	GetAttributeBool(rec->cluster,rec->proc, ATTR_OCU_HOLDER, &is_ocu_holder);
-	if (is_ocu_holder) {
-		return;
-	}
-	*/
 
 	switch(rec->status) {
 	case M_UNCLAIMED:
 		dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->description());
 		return;
 	case M_STARTD_CONTACT_LIMBO:
-		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
+		dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n",
 				  rec->description() );
 		return;
 	case M_ACTIVE:
@@ -10245,7 +10362,8 @@ Scheduler::StartJob(match_rec *rec)
 		id.proc = rec->proc;
 	}
 
-	if(!(rec->shadowRec = StartJob(rec, id))) {
+	if(! StartJob(rec, id)) {
+
 			// Start job failed. Throw away the match. The reason being that we
 			// don't want to keep a match around and pay for it if it's not
 			// functioning and we don't know why. We might as well get another
@@ -10608,7 +10726,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 	return true;
 }
 
-shadow_rec*
+bool
 Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 {
 	int		universe = -1;
@@ -10621,7 +10739,277 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				"(%d.%d) assuming standard.\n",	ATTR_JOB_UNIVERSE,
 				job_id.cluster, job_id.proc);
 	}
-	return start_std( mrec, job_id, universe );
+
+
+	//
+	// At this point, we've committed to starting this job on this
+	// starter, so this is where we're going to deal with common
+	// file transfer.
+	//
+	// Maintain the invariant that the match record only points to job
+	// shadowrecs by not returning the transfer shadow recs.
+	//
+	auto [cxfer_type, catalogs] = determine_cxfer_type(mrec, job_id);
+	switch(cxfer_type) {
+		// Configuration forbade (this job) from transferring common files.
+		case CXFER_TYPE::FORBIDDEN:
+			// Continue to normal spwaning; the shadow will fall back.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: FORBIDDEN.\n", job_id.cluster, job_id.proc );
+			break;
+
+		// This job did not specify any common transfers.
+		case CXFER_TYPE::NONE:
+			// Continue to normal spawning.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: NONE.\n", job_id.cluster, job_id.proc );
+			break;
+
+		// The slot doesn't support (the specified) common transfers,
+		// or some other problem prevented us from determining if the
+		// state was STAGING, MAPPING, or MAPPED.
+		case CXFER_TYPE::CANT:
+			// Continue to normal spawning; the shadow will fall back.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: CANT.\n", job_id.cluster, job_id.proc );
+			break;
+
+		// No other shadow is staging this job's cxfers to this slot.
+		case CXFER_TYPE::STAGING:
+			// Create a shadowrec to pass the -staging flag and queue
+			// it for immediate spawning.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: STAGING.\n", job_id.cluster, job_id.proc );
+
+			// For now, only start one shadow for all of the catalogs.  At
+			// some point, we'll want the efficiency gains from starting one
+			// shadow for _each_ catalog, but by then we may have also agreed
+			// on a larger role for the startd in managing the disk resources.
+			ASSERT(catalogs);
+			{
+				// Create the transfer shadow rec with the list of catalogs
+				// it will provide and then queue it for immediate spawning.
+
+				// We need to give the shadow its own "job ID" because that's
+				// how we track all of them.  We can't use the ID of the job
+				// we're actually starting this transfer shadow for, because
+				// we'll need that one for the job shadow.  However, the
+				// schedd requires that a shadow have a corresponding job....
+				PROC_ID transfer_job_id(
+					job_id.cluster,
+					-1 * (job_id.proc + 1000)
+				);
+
+				// This is more than we need, but let's optimize later.
+				ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
+				ClassAd * transfer_job_ad = new ClassAd(* job_ad);
+				transfer_job_ad->InsertAttr(
+					ATTR_PROC_ID, transfer_job_id.proc
+				);
+
+				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
+					transfer_job_id, universe, mrec, -1 , nullptr
+				);
+
+
+				// Not sure we actually need to carry around the content lists.
+				ListOfCatalogs catalogs_to_stage;
+				for( const auto & catalog : * catalogs ) {
+					const auto & catalogName = catalog.first;
+					auto shadow = getShadowForCatalog( catalogName );
+					if(! shadow) {
+						// dprintf( D_ALWAYS, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
+						catalogToShadowMap[catalogName] = transfer_shadow_rec;
+						catalogs_to_stage.push_back( catalog );
+					}
+				}
+				transfer_shadow_rec->cxfer_catalogs = catalogs_to_stage;
+				transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGING;
+
+				// Required for consistency?
+				mrec->shadowRec = transfer_shadow_rec;
+
+				// Otherwise, the schedd won't start the actual job because
+				// it already has a match.
+				SetMrecJobID(mrec, transfer_job_id);
+
+				addRunnableJob( transfer_shadow_rec );
+
+
+				//
+				// We don't have to enqueue this job here, just mark it as
+				// blocked, as long as we unmark it when the transfer shadow
+				// offers us a resource.
+				//
+				// We do NOT add anything to the list of match records blocked
+				// waiting for common file transfer, because this job's
+				// allocated resources are currently being held by the
+				// transfer shadow.  We'll correct that when the transfer
+				// shadow hands the resources back.
+				//
+				int status = JOB_STATUS_BLOCKED;
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, status);
+
+
+				return true;
+			}
+
+		// Some other shadow is staging this job's cxfers to this slot.
+		case CXFER_TYPE::MAPPING:
+			// Create a shadowrec to pass the -mapping flag and queue
+			// it to wait for the mapping to complete (and then spawn).
+			dprintf( D_ALWAYS, "cxfer: %d.%d: MAPPING.\n", job_id.cluster, job_id.proc );
+
+			{
+				shadow_rec * job_shadow_rec = add_shadow_rec(
+					0, job_id, universe, mrec, -1 , nullptr
+				);
+				job_shadow_rec->cxfer_catalogs = * catalogs;
+				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				for( const auto & [name, _] : * catalogs ) {
+					mark_catalog_live( name );
+				}
+
+
+				//
+				// If this job (and the job which triggered the transfer shadow)
+				// were moved to a blocked queue instead of just being marked
+				// blocked, we wouldn't have to rebuild the prio-rec array
+				// when a transfer shadow offered us resources.
+				//
+				int status = JOB_STATUS_BLOCKED;
+				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, status );
+				matchesHeldByBlockedJobs.push_back(mrec);
+
+				mrec->shadowRec = job_shadow_rec;
+				return true;
+			}
+
+		// This job's common file catalog(s) are already on this slot.
+		case CXFER_TYPE::READY:
+			// As CXFER_TYPE_MAPPING, but queue for immediate spawning.
+			dprintf( D_ALWAYS, "cxfer: %d.%d: READY.\n", job_id.cluster, job_id.proc );
+
+			{
+				mark_serial_job_running(job_id);
+				shadow_rec * job_shadow_rec = add_shadow_rec(
+					0, job_id, universe, mrec, -1 , nullptr
+				);
+				job_shadow_rec->cxfer_catalogs = * catalogs;
+				job_shadow_rec->cxfer_state = CXFER_STATE::MAPPING;
+
+				for( const auto & [name, _] : * catalogs ) {
+					mark_catalog_live( name );
+				}
+
+
+				addRunnableJob( job_shadow_rec );
+
+				mrec->shadowRec = job_shadow_rec;
+				return true;
+			}
+	}
+
+
+	mrec->shadowRec = start_std( mrec, job_id, universe );
+	return mrec->shadowRec != NULL;
+}
+
+
+// Maintain invariant that all pointers in the map are valid.
+std::optional<shadow_rec *>
+Scheduler::getShadowForCatalog( const std::string & cifName ) {
+	// dprintf( D_ALWAYS, "cxfer: Checking catalog-to-shadow map for %s\n", cifName.c_str() );
+	auto entry = catalogToShadowMap.find( cifName );
+	if( entry == catalogToShadowMap.end() ) { return {}; }
+	return entry->second;
+}
+
+
+// Don't inadvertently create empty vectors.
+// Note that the returned vector is a copy, and does not own the pointers.
+std::optional<std::vector<match_rec *>>
+Scheduler::getMatchesBySinful( const std::string & sinful ) {
+	auto entry = matchesBySinfulMap.find( sinful );
+	if( entry == matchesBySinfulMap.end() ) { return {}; }
+	return entry->second;
+}
+
+
+// Remove empty vectors.
+bool
+Scheduler::removeMatchFromSinful( const std::string & sinful, match_rec * match ) {
+	auto entry = matchesBySinfulMap.find( sinful );
+	if( entry == matchesBySinfulMap.end() ) { return false; }
+
+	std::erase_if( matchesBySinfulMap[sinful], [match](match_rec * m) { return m == match; } );
+
+	if( matchesBySinfulMap[sinful].size() == 0 ) {
+		matchesBySinfulMap.erase( sinful );
+	}
+	return true;
+}
+
+
+// Don't duplicate match records.
+bool
+Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
+	auto v = matchesBySinfulMap[sinful];
+	if( std::find(v.begin(), v.end(), match) == v.end() ) {
+		matchesBySinfulMap[sinful].push_back(match);
+		return true;
+	}
+
+	return false;
+}
+
+
+bool
+Scheduler::mark_catalog_dead( const std::string & catalogName ) {
+	if( catalogToTimerMap.contains( catalogName ) ) {
+	    dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
+		return false;
+	}
+
+    // Why do we use manifest constants for attributes but not config knobs?
+	int keep_common_idle = param_integer( "KEEP_COMMON_IDLE", 300 );
+	catalogToTimerMap[catalogName] = daemonCore->Register_Timer(
+		keep_common_idle, TIMER_NEVER,
+		[this, catalogName](int /* timerID */) -> void {
+			auto shadow = getShadowForCatalog( catalogName );
+			if(! shadow) {
+				dprintf( D_ALWAYS, "Found no shadow for catalog scheduled for clean-up: '%s'\n", catalogName.c_str() );
+				return;
+			}
+			if(! (* shadow)->match) {
+				dprintf( D_ALWAYS, "Found a shadow with no match record while cleaning up catalog '%s'\n", catalogName.c_str() );
+				return;
+			}
+
+			// Once we've vacated the match, the corresponding shadow must
+			// die.  Avoid a race condition where we try to start a job using
+			// this shadow's catalogs before the this shadow's reaper runs.
+			//
+			// It would be better still to tell the transfer shadow that it's
+			// time to due; that should be less work for the schedd and easier
+			// to avoid confusing events in the job event and shadow logs.
+			unregister_shadow_catalogs( * shadow );
+			send_vacate( (* shadow)->match, RELEASE_CLAIM );
+		},
+		"terminate transfer shadow lease"
+	);
+
+	return true;
+}
+
+
+bool
+Scheduler::mark_catalog_live( const std::string & catalogName ) {
+	if(! catalogToTimerMap.contains(catalogName)) {
+	    dprintf( D_ZKM, "mark_catalog_live(%s): catalog not dead, ignoring.\n", catalogName.c_str() );
+		return false;
+	}
+
+	daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
+	catalogToTimerMap.erase(catalogName);
+	return true;
 }
 
 
@@ -10690,7 +11078,7 @@ Scheduler::StartJobHandler( int /* timerID */ )
 		callAboutToSpawnJobHandler( cluster, proc, srec );
 
 		bool wantPS = 0;
-		job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS);
+		if(job_ad) { job_ad->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantPS); }
 
 		if( (universe == CONDOR_UNIVERSE_MPI) || 
 			(universe == CONDOR_UNIVERSE_PARALLEL) || wantPS ) {
@@ -10925,6 +11313,7 @@ bool Scheduler::evalVanillaStartExpr(VanillaMatchAd &vad)
 bool
 Scheduler::isStillRunnable( int cluster, int proc, int &status )
 {
+	if( proc <= -1000 ) { return true; }
 	ClassAd* job = GetJobAd( cluster, proc );
 	if( ! job ) {
 			// job ad disappeared, definitely not still runnable.
@@ -11012,6 +11401,37 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		formatstr(argbuf, "--xfer-queue=%s", m_xfer_queue_contact.c_str());
 		args.AppendArg(argbuf);
 	}
+
+
+	// Will this shadow be staging or mapping common input files?
+	if( srec->cxfer_catalogs.size() > 0 ) {
+		switch( srec->cxfer_state ) {
+			case CXFER_STATE::STAGING:
+				formatstr(argbuf, "--cxfer=staging");
+				break;
+			case CXFER_STATE::MAPPING:
+				formatstr(argbuf, "--cxfer=mapping");
+				break;
+			case CXFER_STATE::STAGED:
+			case CXFER_STATE::INVALID:
+				// It is my intention that this case only trigger if something
+				// has gone terribly wrong, but my confidence in this case
+				// isn't so high I want to risk killing the schedd.  However,
+				// we should leave this note in the logs so we can develop
+				// that confidence.
+				dprintf( D_ALWAYS, "%d.%d: Invalid cxfer state when starting shadow, deleting shadow rec.\n", job_id.cluster, job_id.proc );
+
+				// Since we're not killing the schedd, we have to decide how
+				// to proceed.  We almost certainly shouldn't actually start
+				// these malrecorded shadows, and likewise _should_ clean up
+				// the records.
+				mark_job_stopped( job_id );
+				delete_shadow_rec( srec );
+				return;
+		}
+		args.AppendArg(argbuf);
+	}
+
 
 		// pass the private socket ip/port for use just by shadows
 	args.AppendArg(MyShadowSockName);
@@ -11223,9 +11643,15 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	OtherPoolStats.Tick(now);
 
+
+	PROC_ID real_job_id = PROC_ID(job_id);
+	if( real_job_id.proc <= -1000 ) {
+		real_job_id.proc = (-1 * real_job_id.proc) - 1000;
+	}
+
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
-	job_ad = GetExpandedJobAd( job_id, true );
+	job_ad = GetExpandedJobAd( real_job_id, true );
 	if( ! job_ad ) {
 			// this might happen if the job is asking for
 			// something in $$() that doesn't exist in the machine
@@ -11247,12 +11673,35 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		return false;
 	}
 	std::string secret;
-	if (GetPrivateAttributeString(job_id.cluster, job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
+	if (GetPrivateAttributeString(real_job_id.cluster, real_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
 		job_ad->Assign(ATTR_CLAIM_ID, secret);
 	}
-	if (GetPrivateAttributeString(job_id.cluster, job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
+	if (GetPrivateAttributeString(real_job_id.cluster, real_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 		job_ad->Assign(ATTR_CLAIM_IDS, secret);
 	}
+
+	// Starting just one shadow per catalog would simplify managing partially
+	// overlapping lifetimes*, because we could just shoot that single shadow
+	// in the head, but for now we don't do that (mostly for record-keeping
+	// woes, although I guess extra shadows are rather inefficient).  As a
+	// result, not all shadows should transfer every catalog required by
+	// the corresponding job.  We can't record this in the job ad, because
+	// the list of required catalogs need to be correct for the job.  Instead,
+	// we mutate the job ad here.  (We don't want to pass them on the command
+	// line because the internal IDs are _huge_ and we don't have the submit
+	// language IDs.)
+	//
+	// *: That is, cluster 7 could have two types of jobs: both required
+	//    catalog A, but half require B (but not C), and half require C
+	//    (but not B).  The schedd will spawn two transfer shadows: one
+	//    transferring A and B xor C, and the other C xor B.
+	if( job_id.proc < 1000 ) {
+		AssignClassAdStringList(
+			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
+			std::ranges::views::keys( srec->cxfer_catalogs )
+		);
+	}
+
 
 	FamilyInfo fi;
 	FamilyInfo *fip = NULL;
@@ -11315,13 +11764,13 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	OptionalCreateProcessArgs cpArgs;
 	pid = daemonCore->CreateProcessNew( path, args,
 	                                  cpArgs.priv(PRIV_ROOT)
-	                                  	.reaperID(rid)
-	                                  	.env(env)
-	                                  	.familyInfo(fip)
-	                                  	.std(std_fds_p)
-	                                  	.niceInc(niceness)
-	                                  	.jobOptMask(create_process_opts)
-	                                  	.daemonSock(daemon_sock.c_str()));
+	                                        .reaperID(rid)
+	                                        .env(env)
+	                                        .familyInfo(fip)
+	                                        .std(std_fds_p)
+	                                        .niceInc(niceness)
+	                                        .jobOptMask(create_process_opts)
+	                                        .daemonSock(daemon_sock.c_str()));
 	if( pid == FALSE ) {
 		std::string arg_string;
 		args.GetArgsStringForDisplay(arg_string);
@@ -12100,10 +12549,10 @@ Scheduler::add_shadow_rec( int pid, const PROC_ID & job_id, int univ,
 	new_rec->preempted = FALSE;
 	new_rec->removed = FALSE;
 	new_rec->conn_fd = fd;
-	new_rec->isZombie = FALSE; 
+	new_rec->isZombie = FALSE;
 	new_rec->keepClaimAttributes = false;
 	if (secret) { new_rec->secret = strdup(secret); }
-	
+
 	if (pid) {
 		add_shadow_rec(new_rec);
 	} else if ( new_rec->match && new_rec->match->pool ) {
@@ -12403,6 +12852,14 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	int cluster = new_rec->job_id.cluster;
 	int proc = new_rec->job_id.proc;
 
+	bool transfer_proc = false;
+	if( proc <= -1000 ) {
+		// FIXME: This pollutes the real job ad in a bad way, but for now
+		// it'll let us start a shadow.
+		transfer_proc = true;
+		proc = (-1 * proc) - 1000;
+	}
+
 	if( mrec && !new_rec->is_reconnect ) {
 
 			// we don't want to set any of these things if this is a
@@ -12470,7 +12927,20 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		}
 	}
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
-	add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
+	if(! transfer_proc) {
+		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
+	} else {
+		// FIXME: We can't call add_shadow_birthdate() because it assumes
+		// that there's an entry for cluster.proc in the job queue log.
+		// (It doesn't break anything, but it doesn't do anything and it
+		// produces a lot of log spam.)  For now, the shadow internally sets
+		// ATTR_NUM_SHADOW_STARTS to 1 unconditionally, but recording it
+		// properly is probably wise.  (The epoch-writing code needs
+		// ATTR_NUM_SHADOWS_STARTS to have a value.)  The shadow is also
+		// adjusting the recieved job ad to set its proc ID to match the
+		// one passed on the command-line, so that its dprintf output will
+		// have the correct header.
+	}
 	CommitTransactionOrDieTrying();
 	if( new_rec->pid ) {
 		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
@@ -12610,7 +13080,6 @@ update_remote_wall_clock(int cluster, int proc)
 }
 
 
-
 void
 Scheduler::delete_shadow_rec(int pid)
 {
@@ -12624,6 +13093,19 @@ Scheduler::delete_shadow_rec(int pid)
 
 
 void
+Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
+    if( srec->cxfer_state != CXFER_STATE::INVALID ) {
+		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+			auto other = getShadowForCatalog( catalogName );
+			if( * other == srec ) {
+				catalogToShadowMap.erase( catalogName );
+			}
+		}
+	}
+}
+
+
+void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
 	if ( rec->is_reconnect && !rec->reconnect_done ) {
@@ -12632,6 +13114,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		scheduler.stats.JobsRestartReconnectsAttempting += -1;
 		scheduler.stats.JobsRestartReconnectsInterrupted += 1;
 	}
+
+	unregister_shadow_catalogs(rec);
+
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
 		// add_shadow_rec() wasn't called, do simple cleanup
 		// TODO Failure to spawn a reconnect shadow should probably still
@@ -12655,102 +13140,110 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 				 cluster, proc );
 	}
 
-	BeginTransaction();
-
-	int job_status = IDLE;
-	GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
-
 	if( pid ) {
 			// we only need to update this if we spawned a shadow.
 		update_remote_wall_clock(cluster, proc);
 	}
 
-		/*
-		  For ATTR_REMOTE_HOST and ATTR_CLAIM_ID, we only want to save
-		  what we have in ATTR_LAST_* if we actually spawned a
-		  shadow...
-		*/
-	if( pid ) {
-		char* last_host = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_HOST, &last_host );
-		if( last_host ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_HOST,
-								last_host );
-			free( last_host );
-			last_host = NULL;
-		}
-
-        char* last_pool = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_REMOTE_POOL, &last_pool );
-		if( last_pool ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_POOL,
-								last_pool );
-			free( last_pool );
-			last_pool = NULL;
-		} else {
-            // If RemotePool is not defined, be sure to remove the last remote pool (if it exists)
-             DeleteAttribute( cluster, proc, ATTR_LAST_REMOTE_POOL );
-        }
-
-	}
-
-	if( pid ) {
-		char* last_claim = NULL;
-		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
-		if( last_claim ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_ID, 
-								last_claim );
-			free( last_claim );
-			last_claim = NULL;
-		}
-
-		GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_IDS, &last_claim );
-		if( last_claim ) {
-			SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_IDS, 
-								last_claim );
-			free( last_claim );
-			last_claim = NULL;
-		}
-	}
-
-		//
-		// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
-		// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
-		// flag is set. This means that we want this job to reconnect
-		// when the schedd comes back online.
-		//
-	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
-		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_ID );
-		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
-		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_IDS );
-		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
-		DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
-		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
-		DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
-		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
-		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
-		DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
+	if( proc <= -1000 ) {
+		// Don't even try to do any record-keeping that modifies the job ad
+		// if we're delete the shadow rec of a transfer shadow.
 	} else {
-		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
-					    "Not removing %s and %s attributes.\n",
-					    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
+		BeginTransaction();
+
+
+		int job_status = IDLE;
+		GetAttributeInt( cluster, proc, ATTR_JOB_STATUS, &job_status );
+
+			/*
+			  For ATTR_REMOTE_HOST and ATTR_CLAIM_ID, we only want to save
+			  what we have in ATTR_LAST_* if we actually spawned a
+			  shadow...
+			*/
+		if( pid ) {
+			char* last_host = NULL;
+			GetAttributeStringNew( cluster, proc, ATTR_REMOTE_HOST, &last_host );
+			if( last_host ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_HOST,
+									last_host );
+				free( last_host );
+				last_host = NULL;
+			}
+
+	        char* last_pool = NULL;
+			GetAttributeStringNew( cluster, proc, ATTR_REMOTE_POOL, &last_pool );
+			if( last_pool ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_REMOTE_POOL,
+									last_pool );
+				free( last_pool );
+				last_pool = NULL;
+			} else {
+	            // If RemotePool is not defined, be sure to remove the last remote pool (if it exists)
+	             DeleteAttribute( cluster, proc, ATTR_LAST_REMOTE_POOL );
+	        }
+
+		}
+
+		if( pid ) {
+			char* last_claim = NULL;
+			GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_ID, &last_claim );
+			if( last_claim ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_ID,
+									last_claim );
+				free( last_claim );
+				last_claim = NULL;
+			}
+
+			GetAttributeStringNew( cluster, proc, ATTR_PUBLIC_CLAIM_IDS, &last_claim );
+			if( last_claim ) {
+				SetAttributeString( cluster, proc, ATTR_LAST_PUBLIC_CLAIM_IDS,
+									last_claim );
+				free( last_claim );
+				last_claim = NULL;
+			}
+		}
+
+			//
+			// If the job is not in a terminal state (i.e. COMPLETED or REMOVED), then
+			// do not remove the ClaimId or RemoteHost if the keepClaimAttributes
+			// flag is set. This means that we want this job to reconnect
+			// when the schedd comes back online.
+			//
+		if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
+			DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_ID );
+			DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
+			DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_IDS );
+			DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
+			DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
+			DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
+			DeleteAttribute( cluster, proc, ATTR_REMOTE_POOL );
+			DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
+			DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
+			DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
+			DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
+			DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
+		} else {
+			dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
+						    "Not removing %s and %s attributes.\n",
+						    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
+		}
+
+		// If job not in a terminal state, rotate the MachineAttr attributes
+		// so we are ready for the next match...
+		if (job_status != COMPLETED && job_status != REMOVED) {
+			InsertMachineAttrs(cluster, proc, nullptr, true);
+		}
+
+		DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
+
+
+			// we want to commit all of the above changes before we
+			// call check_zombie() since it might do it's own
+			// transactions of one sort or another...
+			// Nothing written in this transaction requires immediate sync to disk.
+		CommitNonDurableTransactionOrDieTrying();
 	}
 
-	// If job not in a terminal state, rotate the MachineAttr attributes
-	// so we are ready for the next match...
-	if (job_status != COMPLETED && job_status != REMOVED) {
-		InsertMachineAttrs(cluster, proc, nullptr, true);
-	}
-
-	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
-
-		// we want to commit all of the above changes before we
-		// call check_zombie() since it might do it's own
-		// transactions of one sort or another...
-		// Nothing written in this transaction requires immediate sync to disk.
-	CommitNonDurableTransactionOrDieTrying();
 
 	if( ! rec->keepClaimAttributes ) {
 			// We do _not_ want to call check_zombie if we are detaching
@@ -12764,7 +13257,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// "ACTIVE", it's just "CLAIMED"
 	if( rec->match ) {
 			// Be careful, since there might not be a match record
-			// for this shadow record anymore... 
+			// for this shadow record anymore...
 		rec->match->setStatus( M_CLAIMED );
 	}
 
@@ -13111,7 +13604,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 
 			default:
 				// all other universes	
-				if( rec->match ) {
+				if( /* rec->match */ true ) {
 						//
 						// If we're in graceful shutdown mode, we only want to
 						// send a vacate command to jobs that do not have a lease
@@ -13132,7 +13625,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						//
 						// Send a vacate if appropriate
 						//
-					if ( ! skip_vacate ) {
+					if ( (! skip_vacate) && rec->match ) {
 						send_vacate( rec->match, DEACTIVATE_CLAIM );
 						dprintf( D_ALWAYS, 
 								"Sent vacate command to %s for job %d.%d\n",
@@ -13149,7 +13642,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						daemonCore->Send_Signal( rec->pid, SIGKILL );
 						dprintf( D_ALWAYS, 
 								"Sent signal %d to %s [pid %d] for job %d.%d\n",
-								SIGKILL, rec->match->peer, rec->pid, cluster, proc );
+								SIGKILL, rec->match ? rec->match->peer : "<no match>", rec->pid, cluster, proc );
 							// Keep iterating and preempting more without
 							// decrementing n here.  Why?  Because we didn't
 							// really preempt this job: we just killed the
@@ -13172,6 +13665,11 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						   case, the shadow is on its way out, anyway,
 						   so there's no reason to send it a signal.
 						*/
+					//
+					// The above is no longer true because of job reconnnect,
+					// at least in some (perhaps buggy) cases.  Go ahead and
+					// treat these shadows the same as others.
+					//
 				}
 			} // SWITCH
 				// if we're here, we really preempted it, so
@@ -13407,7 +13905,7 @@ Scheduler::child_exit(int pid, int status)
 	int             StartJobsFlag=TRUE;
 	PROC_ID	        job_id;
 	bool            srec_was_local_universe = false;
-	std::string        claim_id;
+	std::string     claim_id;
 	// if we do not start a new job, should we keep the claim?
 	bool            keep_claim = false; // by default, no
 	bool            srec_keep_claim_attributes;
@@ -13881,14 +14379,28 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		dprintf(D_ALWAYS, "not holding job %d.%d because of successful eviction transform\n", job_id.cluster, job_id.proc);
 	} else
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
-		long long ival = 0;
-		classad::Value val;
-		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
+
+		int vacateReasonCode = 0;
+		int vacateReasonSubCode = 0;
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &vacateReasonCode);
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &vacateReasonSubCode);
+		bool should_cool_down = shouldCoolJobBasedOnCodes(vacateReasonCode, vacateReasonSubCode);
+		long long cooldown_duration = 20;
+
+		// Don't evaluate m_jobCoolDownExpr unnecessarily.
+		if(! should_cool_down) {
+			long long ival = 0;
+			classad::Value val;
+			should_cool_down = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0);
+			if( ival > 0 ) { cooldown_duration = ival; }
+		}
+
+		if( should_cool_down ) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
 			cnt++;
 			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + ival);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + cooldown_duration);
 			stats.JobsCoolDown += 1;
 			OTHER.JobsCoolDown += 1;
 		}
@@ -16215,6 +16727,8 @@ Scheduler::AddMrec(
 		OptimizeMachineAdForMatchmaking( rec->my_match_ad );
 	}
 
+	addMatchToSinful( peer, rec );
+
 	return rec;
 }
 
@@ -16269,7 +16783,52 @@ Scheduler::unlinkMrec(match_rec* match)
 	}
 
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
-			 match->description(), match->cluster, match->proc ); 
+			 match->description(), match->cluster, match->proc );
+
+
+	if( match->peer ) {
+		removeMatchFromSinful( match->peer, match );
+	}
+
+	// If every other claim against this match's startd points to a transfer
+	// shadow, then start a timer to release those claims unless another claim
+	// arrives in time.  To avoid a loop, only do this for transfer matches.
+	if( match->shadowRec && match->peer ) {
+		switch( match->shadowRec->cxfer_state ) {
+			case CXFER_STATE::INVALID:
+				break;
+			case CXFER_STATE::MAPPING: {
+				auto matches = getMatchesBySinful( match->peer );
+				if( matches ) {
+					size_t count = 0;
+					for( const auto & match : * matches ) {
+						if( match->shadowRec ) {
+							switch( match->shadowRec->cxfer_state ) {
+								case CXFER_STATE::INVALID:
+								case CXFER_STATE::MAPPING:
+									break;
+								case CXFER_STATE::STAGED:
+								case CXFER_STATE::STAGING:
+									++count;
+							}
+						}
+					}
+
+					if( count == matches->size() ) {
+						for( const auto & match : * matches ) {
+							for( const auto & [name, _] : match->shadowRec->cxfer_catalogs ) {
+								mark_catalog_dead( name );
+							}
+						}
+					}
+				}
+				}break;
+			case CXFER_STATE::STAGING:
+				break;
+			case CXFER_STATE::STAGED:
+				break;
+		}
+	}
 
 
 	PROC_ID jobId;
@@ -16310,8 +16869,8 @@ Scheduler::unlinkMrec(match_rec* match)
 		// Remove this match from the associated shadowRec.
 	if (match->shadowRec)
 		match->shadowRec->match = NULL;
-	
-	numMatches--; 
+
+	numMatches--;
 	return 0;
 }
 
@@ -16657,8 +17216,15 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 				// to update the queue persistently all in one transaction, even
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
 			}
-			SetAttributeInt( mrec->cluster, mrec->proc, 
-							 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
+
+			// Of things with cluster.proc IDs, only transfer shadows shouldn't
+			// have a corresponding job record.
+			// FIXME: On the other hand, we'll probably need this to make "job
+			// reconnect" work correctly for transfer shadows.
+			if( mrec->proc > -1000 ) {
+				SetAttributeInt( mrec->cluster, mrec->proc,
+								 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
+			}
 		}
 	}
 	CommitNonDurableTransactionOrDieTrying();
@@ -19141,7 +19707,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 		dprintf( D_COMMAND, "REASSIGN_SLOT: from %d.%d to %d.%d\n", vids[0].cluster, vids[0].proc, bid.cluster, bid.proc );
 	}
 
-	// FIXME: Throttling.
+	// This is where throttling code would go, were we ever to implement it.
 
 	JobQueueJob * bAd = GetJobAd( bid.cluster, bid.proc );
 	if(! bAd) {

@@ -58,7 +58,7 @@ import htcondor2
 
 @action
 def the_cs_local_dir(test_dir):
-    return test_dir / "cs.d"
+    return test_dir / "test_condor_submit.d"
 
 
 @action
@@ -207,7 +207,7 @@ def completed_cs_jobs(the_cs_condor, the_cs_user_dir, the_cs_job_script):
 
 @action
 def the_dagman_local_dir(test_dir):
-    return test_dir / "dm.d"
+    return test_dir / "test_dagman.d"
 
 
 @action
@@ -352,7 +352,7 @@ def the_container_image(test_dir, pytestconfig):
 
 @action
 def the_container_local_dir(test_dir):
-    return test_dir / "cc.d"
+    return test_dir / "test_container.d"
 
 
 @action
@@ -511,11 +511,6 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     )
     assert successful_staging_commands == count
 
-    keyfile_touches = count_shadow_log_lines(
-        the_condor, "Producer elected"
-    )
-    assert keyfile_touches == count
-
     job_evictions = count_shadow_log_lines(
         the_condor, "is being evicted from"
     )
@@ -536,13 +531,6 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
             the_condor, "Waiting for common files to be transferred"
         )
         assert common_transfer_waits == cf_waits
-
-
-def lock_dir_is_clean(the_lock_dir):
-    syndicate_dir = the_lock_dir / "syndicate"
-
-    files = list(syndicate_dir.iterdir())
-    assert len(files) == 0
 
 
 # ---- Singularity checks -----------------------------------------------------
@@ -605,7 +593,6 @@ class TestCIFCatalogs:
         # Specifically, A should be transferred twice, B once, and C once.
         # If we later care about how many transfers waited, see `test_cif.py`.
         shadow_log_is_as_expected(the_cs_condor, 4, 4, None)
-        lock_dir_is_clean(the_cs_lock_dir)
 
 
     def test_dagman(self, the_dagman_lock_dir, the_dagman_condor, completed_dagman_jobs):
@@ -620,7 +607,6 @@ class TestCIFCatalogs:
         # Specifically, A should be transferred once, B once, and C once.
         # If we later care about how many transfers waited, see `test_cif.py`.
         shadow_log_is_as_expected(the_dagman_condor, 3, 3, None)
-        lock_dir_is_clean(the_dagman_lock_dir)
 
 
     @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
@@ -640,4 +626,3 @@ class TestCIFCatalogs:
         # transferred three times, but the last two won't be common
         # transfers, which is what we're counting here.)
         shadow_log_is_as_expected(the_container_condor, 3, 3, None)
-        lock_dir_is_clean(the_container_lock_dir)

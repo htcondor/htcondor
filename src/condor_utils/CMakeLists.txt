@@ -49,6 +49,8 @@ catalog_utils.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
+classad_string_utils.cpp
+classad_string_utils.h
 compat_classad.cpp
 compat_classad.h
 compat_classad_util.cpp
