@@ -22,7 +22,7 @@
 
 *** 24.0.18 bugs
 
-- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`Executable`
+- Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`executable`
   path incorrectly when using late materialization and a different executable
   for each job.
   :jira:`3546`

@@ -1,3 +1,11 @@
+condor (24.0.18-1) stable; urgency=medium
+
+  * Enable use of in-memory SciTokens cache, if disk cache not usable
+  * Fix condor_submit using different executables with late materialization
+  * HTCondor tarballs now contain Pelican 7.23.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 13:49:00 -0500
+
 condor (24.0.17-1) stable; urgency=medium
 
   * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method

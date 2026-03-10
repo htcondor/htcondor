@@ -1492,6 +1492,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.18-1
+- Enable use of in-memory SciTokens cache, if disk cache not usable
+- Fix condor_submit using different executables with late materialization
+- HTCondor tarballs now contain Pelican 7.23.0
+
 * Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.17-1
 - Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
 - Improve condor_history performance on filesystems with I/O rate limits
