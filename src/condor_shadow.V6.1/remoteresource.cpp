@@ -976,7 +976,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
 			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
@@ -989,7 +989,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
 			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			return;
