@@ -1,3 +1,28 @@
+condor (25.0.8-1) stable; urgency=medium
+
+  * All changes in 24.12.18
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 13:57:00 -0500
+
+condor (24.12.18-1) stable; urgency=medium
+
+  * Improve AMD GPU detection when using RCOM6/HIP libraries
+  * Fix for new jobs getting kicked off LVM EP due to quantization mismatch
+  * condor_submit now reports an error for circular requirement expressions
+  * condor_status now correctly reports offline GPUs
+  * Can use use a string for 'since' with htcondor.Schedd.history()
+  * Fix for backfill GPUs disappearing on reconfig
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 13:57:00 -0500
+
+condor (24.0.18-1) stable; urgency=medium
+
+  * Enable use of in-memory SciTokens cache, if disk cache not usable
+  * Fix condor_submit using different executables with late materialization
+  * HTCondor tarballs now contain Pelican 7.23.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 13:49:00 -0500
+
 condor (25.0.7-1) stable; urgency=medium
 
   * Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method

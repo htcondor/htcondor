@@ -21,13 +21,13 @@
   output was always empty.
   :jira:`3558`
 
-- Fixed a bug where a backfill p-slot would have no assigned GPUs after
-  a reconfig.
-  :jira:`3072`
-
 - Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
   argument from being the string representation of an expression.
   :jira:`3435`
+
+- Fixed a bug where a backfill p-slot would have no assigned GPUs after
+  a reconfig.
+  :jira:`3072`
 
 *** 24.0.18 features
 
@@ -46,6 +46,10 @@
   path incorrectly when using late materialization and a different executable
   for each job.
   :jira:`3546`
+
+- Fixed a bug where new STARTD_CRON values didn't trigger an immediate
+  update of slot ads to the collector when configured to do so.
+  :jira:`3526`
 
 - Update Annex's knowledge about the Delta HPC system.
   :jira:`3559`
