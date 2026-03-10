@@ -1295,6 +1295,14 @@ fi
 # configuration
 
 %changelog
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
+- Improve AMD GPU detection when using RCOM6/HIP libraries
+- Fix for new jobs getting kicked off LVM EP due to quantization mismatch
+- condor_submit now reports an error for circular requirement expressions
+- condor_status now correctly reports offline GPUs
+- Can use use a string for 'since' with htcondor.Schedd.history()
+- Fix for backfill GPUs disappearing on reconfig
+
 * Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.18-1
 - Enable use of in-memory SciTokens cache, if disk cache not usable
 - Fix condor_submit using different executables with late materialization
