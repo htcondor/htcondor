@@ -21,13 +21,13 @@
   output was always empty.
   :jira:`3558`
 
-- Fixed a bug where a backfill p-slot would have no assigned GPUs after
-  a reconfig.
-  :jira:`3072`
-
 - Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
   argument from being the string representation of an expression.
   :jira:`3435`
+
+- Fixed a bug where a backfill p-slot would have no assigned GPUs after
+  a reconfig.
+  :jira:`3072`
 
 *** 24.0.18 features
 
