@@ -1216,7 +1216,7 @@ UniShadow::after_common_file_transfer(
 			this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 			this->jobAd->Assign(ATTR_VACATE_REASON, "Starter sent malformed reply when asked to stage common files." );
 			this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 1);
+			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, JOB_NOT_STARTED_SUB_CODE::CommonTransferBadReply);
 			remRes->setExitReason(JOB_SHOULD_REQUEUE);
 			remRes->killStarter(false);
 
@@ -1280,7 +1280,7 @@ UniShadow::after_common_file_transfer(
 			this->jobAd->Assign(ATTR_VACATE_REASON, "Common file transfer failed to start.");
 			// See comment below about which codes we're using here.
 			this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 2);
+			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, JOB_NOT_STARTED_SUB_CODE::CommonTransferFailed);
 			remRes->setExitReason(JOB_SHOULD_REQUEUE);
 			remRes->killStarter(false);
 		}
@@ -1369,7 +1369,7 @@ UniShadow::handle_wiring_failure() {
 	this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 	this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
 	this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
-	this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, 3);
+	this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, JOB_NOT_STARTED_SUB_CODE::CommonMappingFailed);
 	remRes->setExitReason(JOB_SHOULD_REQUEUE);
 	remRes->killStarter(false);
 
@@ -1440,8 +1440,6 @@ UniShadow::vacate_requeue_abort(
 	const char * file, int line
 ) {
 	dprintf( D_ALWAYS, "%s:%d: %s\n", file, line, holdMessage.c_str() );
-
-    // FIXME: This should almost certainly result in a cooldown.
 
 	// Consider replacing this with a call to evictJob().
 	this->jobAd->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
@@ -1533,11 +1531,11 @@ UniShadow::start_staging_only_conversation(
 	success = false;
 	LookupBoolInContext( request, ATTR_RESULT, success );
 	if(! success) {
-		// It's possible that a different starter would reply properly,
+		// It's possible that a different starter would succeed,
 		// so abort this attempt and leave the job in the queue idle.
 		co_return VACATE_REQUEUE_ABORT(
 			"Starter could not release execution resources after staging common files.",
-			CONDOR_HOLD_CODE::JobNotStarted, 2
+			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::SlotColoringFailed
 		);
 	}
 
@@ -1548,7 +1546,7 @@ UniShadow::start_staging_only_conversation(
 		// so abort this attempt and leave the job in the queue idle.
 		co_return VACATE_REQUEUE_ABORT(
 			"Starter's reply invalid: did not contain split claim ID, aborting.",
-			CONDOR_HOLD_CODE::JobNotStarted, 2
+			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply
 		);
 	}
 
@@ -1558,7 +1556,7 @@ UniShadow::start_staging_only_conversation(
 		// so abort this attempt and leave the job in the queue idle.
 		co_return VACATE_REQUEUE_ABORT(
 			"Starter's reply invalid: did not contain slot ad.",
-			CONDOR_HOLD_CODE::JobNotStarted, 2
+			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply
 		);
 	}
 
@@ -1575,7 +1573,7 @@ UniShadow::start_staging_only_conversation(
 		// so abort this attempt and leave the job in the queue idle.
 		co_return VACATE_REQUEUE_ABORT(
 			"Starter's reply invalid: did not contain common input files size-on-disk.",
-			CONDOR_HOLD_CODE::JobNotStarted, 2
+			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply
 		);
 	}
 
@@ -1608,7 +1606,7 @@ UniShadow::start_staging_only_conversation(
 		// it isn't.
 		co_return VACATE_REQUEUE_ABORT(
 			"Failed to offer schedd resources, aborting to try again when it's less busy.\n",
-			CONDOR_HOLD_CODE::JobNotStarted, 2
+			CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::OfferResourcesFailed
 		);
 	}
 
@@ -2103,7 +2101,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
 			holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
@@ -2115,7 +2113,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
 			holdJob( "Internal error: failed to construct unique name for catalog.",
-				CONDOR_HOLD_CODE::JobNotStarted, 4
+				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_ABORT );
