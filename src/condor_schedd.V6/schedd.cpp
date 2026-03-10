@@ -10979,6 +10979,15 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 				dprintf( D_ALWAYS, "Found a shadow with no match record while cleaning up catalog '%s'\n", catalogName.c_str() );
 				return;
 			}
+
+			// Once we've vacated the match, the corresponding shadow must
+			// die.  Avoid a race condition where we try to start a job using
+			// this shadow's catalogs before the this shadow's reaper runs.
+			//
+			// It would be better still to tell the transfer shadow that it's
+			// time to due; that should be less work for the schedd and easier
+			// to avoid confusing events in the job event and shadow logs.
+			unregister_shadow_catalogs( * shadow );
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
 		},
 		"terminate transfer shadow lease"
@@ -13068,7 +13077,6 @@ update_remote_wall_clock(int cluster, int proc)
 }
 
 
-
 void
 Scheduler::delete_shadow_rec(int pid)
 {
@@ -13082,6 +13090,19 @@ Scheduler::delete_shadow_rec(int pid)
 
 
 void
+Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
+    if( srec->cxfer_state != CXFER_STATE::INVALID ) {
+		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+			auto other = getShadowForCatalog( catalogName );
+			if( * other == srec ) {
+				catalogToShadowMap.erase( catalogName );
+			}
+		}
+	}
+}
+
+
+void
 Scheduler::delete_shadow_rec( shadow_rec *rec )
 {
 	if ( rec->is_reconnect && !rec->reconnect_done ) {
@@ -13090,6 +13111,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		scheduler.stats.JobsRestartReconnectsAttempting += -1;
 		scheduler.stats.JobsRestartReconnectsInterrupted += 1;
 	}
+
+	unregister_shadow_catalogs(rec);
+
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
 		// add_shadow_rec() wasn't called, do simple cleanup
 		// TODO Failure to spawn a reconnect shadow should probably still

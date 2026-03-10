@@ -754,6 +754,9 @@ class Scheduler : public Service
 	// Maintains the invariant that all entries in the map are valid pointers.
 	std::optional<shadow_rec *> getShadowForCatalog( const std::string & cifName );
 
+	// If a shadow has gone away (or we know it's about to go way), remove
+	// the (soon to be) dangling pointers from the catalog-to-shadow map.
+	void unregister_shadow_catalogs( shadow_rec * srec );
 
 	// Don't inadvertently create empty vectors.
 	// Note that the returned vector is a copy, and does not own the pointers.

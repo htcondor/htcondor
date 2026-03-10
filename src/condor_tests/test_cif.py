@@ -15,6 +15,7 @@ from ornithology import (
 )
 
 import os
+import time
 from pathlib import Path
 import shutil
 
@@ -167,6 +168,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SLOT1_3_USER":     "kittie",
             "SLOT1_4_USER":     "jrandom",
             "STARTER_NESTED_SCRATCH":   False,
+            "KEEP_COMMON_IDLE": 5,
         },
     ) as the_condor:
         yield the_condor
@@ -258,18 +260,14 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         fail_condition=ClusterState.any_held
     )
 
-    # This test used to overlap releasing some jobs while others were still
-    # running, to make sure that "delayed" concurrent re-use worked properly.
-    # We could stagger the start of either (or both) halves of the jobs,
-    # but we're also using this test to verify obseverability, which means
-    # we need to check for a specific number of times what jobs wait for
-    # common file transfer to happen.  That leads to a race, because we don't
-    # know that the common file transfer has completed by the time wait()
-    # returns (which only knows about shadow start-up).
     #
-    # Of course, we intend to add common files transfer events to the job
-    # event log later on in this PR, so maybe using those (after checking
-    # them after the fact in test_one_cif_job) would work well.
+    # The 'multi' test below verifies that sequential re-use works if
+    # KEEP_COMMON_IDLE doesn't expire, so we'll use this test to verify
+    # that common files work if it does expire.
+    #
+    # Wait for KEEP_COMMON_IDLE + 1 seconds to force it to expire.
+    #
+    time.sleep(6)
 
     # Release the other four jobs.
     jobIDs = [ f"{job_handle.clusterid}.{x}" for x in range(4,8) ]
@@ -503,16 +501,18 @@ def error_is_as_expected(completed_cif_job, the_expected_error):
         assert text == the_expected_error
 
 
-def count_shadow_log_lines(the_condor, the_phrase):
+def count_shadow_log_lines(the_condor, the_phrase, the_filter = None):
     shadow_log = the_condor.shadow_log.open()
     lines = list(filter(
         lambda line: the_phrase in line,
         shadow_log.read(),
     ))
+    if the_filter is not None:
+        lines = [line for line in lines if the_filter(line)]
     return len(lines)
 
 
-def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
+def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits, ignore_evictions = None):
     staging_commands_sent = count_shadow_log_lines(
         the_condor, "StageCommonFiles"
     )
@@ -524,7 +524,8 @@ def shadow_log_is_as_expected(the_condor, count, cf_xfers, cf_waits):
     assert successful_staging_commands == count
 
     job_evictions = count_shadow_log_lines(
-        the_condor, "is being evicted from"
+        the_condor, "is being evicted from",
+        ignore_evictions
     )
     assert job_evictions == 0
 
@@ -616,25 +617,16 @@ class TestCIF:
         assert epoch_log_has_common_ad(the_condor)
 
 
-    #
-    # FIXME: because the transfer shadow isn't cleaned up immediately
-    # after the last job using it exits the run state, this test isn't
-    # verifying that we handle starting the second transfer shadow
-    # correctly.  To test that, we should set the catalog linger timer to
-    # 1 second and then sleep for however long the interval timer is between
-    # the first four jobs completing and the last four jobs being released.
-    #
-    # This will require adjusting the numbers here to match.
-    #
     def test_many_cif_jobs(self, the_big_lock_dir, the_big_condor, completed_cif_jobs):
         output_is_as_expected(
             completed_cif_jobs, "input A\nII input\ninput line 3\n"
         )
         shadow_log_is_as_expected(the_big_condor,
-            count=1, cf_xfers=1, cf_waits=0
+            count=2, cf_xfers=2, cf_waits=0,
+            ignore_evictions=lambda l: ".-10" not in l
         )
         starter_log_is_as_expected(the_big_condor,
-                     cf_xfers=1, cf_waits=0, cf_maps=8
+                     cf_xfers=2, cf_waits=0, cf_maps=8
         )
 
 
@@ -642,10 +634,6 @@ class TestCIF:
     # The point of this test is to verify that we handled multiple catalogs
     # correctly (that each job got the right answer).  It also verifies that
     # doing so doesn't cause any loss of staging efficiency.
-    #
-    # FIXME: See above for a possible variant of this test.  We might not
-    # gain anything from having both tests, so it's unclear if we want to
-    # add this variant or the previous one; this one seems "harder".
     #
     def test_multi_cif_jobs(self, the_multi_lock_dir, the_multi_condor, completed_multi_jobs):
         output_is_as_expected(

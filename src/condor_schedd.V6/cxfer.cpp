@@ -76,8 +76,6 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	size_t staging = 0;
 
 	for( const auto & [cifName, commonInputFiles] : * common_file_catalogs ) {
-		// dprintf( D_ALWAYS, "%s = %s\n", cifName.c_str(), commonInputFiles.c_str() );
-
 		// I don't know how the schedd decides which shadows to spawn when
 		// it does reconnects after a fast shutdown, so I don't know how much
 		// of this will have to be changed to deal with that.  However, since
@@ -114,7 +112,7 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 		return {CXFER_TYPE::MAPPING, common_file_catalogs};
 	} else {
 		// Then we have become terribly confused somehow.
-		dprintf( D_ERROR, "cxfer: Inconsistency in common file catalog: all entries were either staging or staged, but the some of those two states is not the total size.  Falling back to uncommon transfer.\n" );
+		dprintf( D_ERROR, "cxfer: Inconsistency in common file catalog: all entries were either staging or staged, but the sum of those two states is not the total size.  Falling back to uncommon transfer.\n" );
 		return {CXFER_TYPE::CANT, common_file_catalogs};
 	}
 }
