@@ -395,6 +395,97 @@ class Histogram(Verb):
 
         print_job_event_histogram(log, options["hist_mode"])
 
+class Throttle(Verb):
+    """
+    Change DAGMans throttles.
+    """
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
+        },
+        "max_nodes": {
+            "args": ("--nodes",),
+            "type": int,
+            "action": "store",
+            "dest": "max_nodes",
+            "default": None,
+            "metavar": "N",
+            "help": "Set maximum number of submitted nodes.",
+        },
+        "max_idle": {
+            "args": ("--idle",),
+            "type": int,
+            "action": "store",
+            "dest": "max_idle",
+            "default": None,
+            "metavar": "N",
+            "help": "Set maximum number of idle jobs.",
+        },
+        "max_pre": {
+            "args": ("--pre",),
+            "type": int,
+            "action": "store",
+            "dest": "max_pre",
+            "default": None,
+            "metavar": "N",
+            "help": "Set maximum number of executing pre-scripts.",
+        },
+        "max_hold": {
+            "args": ("--hold",),
+            "type": int,
+            "action": "store",
+            "dest": "max_hold",
+            "default": None,
+            "metavar": "N",
+            "help": "Set maximum number of executing hold-scripts.",
+        },
+        "max_post": {
+            "args": ("--post",),
+            "type": int,
+            "action": "store",
+            "dest": "max_post",
+            "default": None,
+            "metavar": "N",
+            "help": "Set maximum number of executing post-scripts.",
+        },
+        "max_submits": {
+            "args": ("--submissions",),
+            "type": int,
+            "action": "store",
+            "dest": "max_submits",
+            "default": None,
+            "metavar": "N",
+            "help": "Set maximum number of node submissions per submit interval.",
+        },
+    }
+
+    def __init__(self, logger, dag_id, **options):
+        dm = htcondor.DAGMan(dag_id)
+
+        result = dm.throttle(**options)
+
+        if isinstance(result, str):
+            raise RuntimeError(result)
+
+        ATTR_TO_DISPLAY = {
+            "DAGMan_MaxIdle": "Maximum Idle Jobs",
+            "DAGMan_MaxPreScripts": "Maximum Pre Scripts",
+            "DAGMan_MaxHoldScripts": "Maximum Hold Scripts",
+            "DAGMan_MaxPostScripts": "Maximum Post Scripts",
+            "DAGMan_MaxJobs": "Maximum Submitted Nodes",
+            "DAGMan_MaxSubmitsPerInterval": "Maximum Submits Per Interval",
+        }
+
+        logger.info(f"DAGMan {dag_id} set throttles:")
+
+        for attr, value in result.items():
+            display = ATTR_TO_DISPLAY.get(attr)
+            if display is not None:
+                logger.info(f"\t{display.ljust(30, '-')}: {value}")
+
+
 class DAG(Noun):
     """
     Run operations on HTCondor DAGs
@@ -415,6 +506,9 @@ class DAG(Noun):
     class histogram(Histogram):
         pass
 
+    class throttle(Throttle):
+        pass
+
     """
     class resources(Resources):
         pass
@@ -422,7 +516,7 @@ class DAG(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status, cls.halt, cls.resume, cls.histogram]
+        return [cls.submit, cls.status, cls.halt, cls.resume, cls.histogram, cls.throttle]
 
 
 class DAGMan:

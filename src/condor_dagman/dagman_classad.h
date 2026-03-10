@@ -88,7 +88,7 @@ class ScheddClassad {
 };
 
 class DagmanClassad : public ScheddClassad {
-  public:
+public:
 	/** Constructor.
 	*/
 	DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd );
@@ -101,12 +101,15 @@ class DagmanClassad : public ScheddClassad {
 	int Initialize(DagmanOptions& dagOpts);
 
 	// Advertise the current DAGMan throttles
-	void AdvertiseThrottles(const Throttles& throttles, bool open_connection=true);
+	void AdvertiseThrottles(const Throttles& throttles);
+
+	// Recover throttles stored in ClassAd (for when DAGMan goes away)
+	void RecoverThrottles(Throttles& throttles);
 
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
 	*/
-	void Update(Dagman &dagman );
+	void Update(const Dagman &dagman);
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A string to receive the Owner value.
@@ -119,7 +122,7 @@ class DagmanClassad : public ScheddClassad {
 	// Get status stored in AP for recovery purposes
 	int GetStatus();
 
-  private:
+private:
 
 	bool isSubDag{false};
 };

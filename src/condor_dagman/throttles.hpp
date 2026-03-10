@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <map>
+#include "condor_attributes.h"
 
 enum class Throttle {
 	MAX_IDLE = 0,             // Maximum number of jobs idle in the queue
@@ -31,15 +31,25 @@ enum class Throttle {
 	_SIZE // !!!!! Must be final item in enum !!!!!
 };
 
-const std::map<Throttle, const char*> ThrottleType = {
-	{Throttle::MAX_IDLE , "Maximum Idle Jobs"},
-	{Throttle::MAX_PRE , "Maximum Pre Scripts"},
-	{Throttle::MAX_HOLD , "Maximum Hold Scripts"},
-	{Throttle::MAX_POST , "Maximum Post Scripts"},
-	{Throttle::MAX_NODES , "Maximum Submitted Nodes"},
-	{Throttle::MAX_INT_SUBMITS , "Maximum Submits Per Interval"}
-};
+// Keep inline with Throttle enum order
+constexpr std::array<const char*, static_cast<size_t>(Throttle::_SIZE)> THROTTLE_DISPLAY = {{
+	"Maximum Idle Jobs",
+	"Maximum Pre Scripts",
+	"Maximum Hold Scripts",
+	"Maximum Post Scripts",
+	"Maximum Submitted Nodes",
+	"Maximum Submits Per Interval"
+}};
 
+// Keep inline with Throttle enum order
+constexpr std::array<const char*, static_cast<size_t>(Throttle::_SIZE)> THROTTLE_ATTR = {{
+	ATTR_DAGMAN_MAXIDLE,
+	ATTR_DAGMAN_MAXPRESCRIPTS,
+	ATTR_DAGMAN_MAXHOLDSCRIPTS,
+	ATTR_DAGMAN_MAXPOSTSCRIPTS,
+	ATTR_DAGMAN_MAXJOBS,
+	ATTR_DAGMAN_MAXSUBMITSPERINT
+}};
 
 class Throttles {
 public:
@@ -50,21 +60,11 @@ public:
 		return value <= 0 || check < value;
 	}
 
-	bool operator==(const Throttles& rhs) const {
-		Throttles self = *this;
-
-		for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
-			const Throttle t = static_cast<Throttle>(i);
-			if (self[t] != rhs[t]) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	int operator[](Throttle t) const { return values[static_cast<size_t>(t)]; }
 	int& operator[](Throttle t) { return values[static_cast<size_t>(t)]; }
+
+	int operator[](size_t i) const { return values[i]; }
+	int& operator[](size_t i) { return values[i]; }
 
 	// Note: Use bitwise operator to join two Throttles with the
 	// this object taking precedence for setting the max/min of a value
@@ -72,18 +72,27 @@ public:
 	// Note: Negative numbers and 0 constitue no limit
 	Throttles operator|(const Throttles& rhs) const {
 		Throttles result;
-		Throttles self = *this;
 
 		for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
-			const Throttle t = static_cast<Throttle>(i);
-			if (self[t] > 0 && (rhs[t] > self[t] || rhs[t] <= 0)) {
-				result[t] = self[t];
+			if (values[i] > 0 && (rhs[i] > values[i] || rhs[i] <= 0)) {
+				result[i] = values[i];
 			} else {
-				result[t] = rhs[t];
+				result[i] = rhs[i];
 			}
 		}
 
 		return result;
+	}
+
+	// Inherit any set throttle values (N >= 0) from right hand side (used for recovery)
+	Throttles& operator^=(const Throttles& rhs) {
+		for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
+			if (rhs[i] >= 0) {
+				values[i] = rhs[i];
+			}
+		}
+
+		return *this;
 	}
 
 private:

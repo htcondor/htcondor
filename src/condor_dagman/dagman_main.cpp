@@ -67,15 +67,22 @@ static void Usage() {
 }
 
 void Dagman::SetThrottles(Throttles userThrottles) {
-	debug_printf(DEBUG_NORMAL, "Setting DAGMan throttles:\n");
+	int oldMaxNodes = throttles[Throttle::MAX_NODES];
+
 	throttles = adminThrottles | userThrottles;
 
+	_dagmanClassad->AdvertiseThrottles(throttles);
+
+	debug_printf(DEBUG_NORMAL, "Setting DAGMan throttles:\n");
 	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
-		Throttle t = static_cast<Throttle>(i);
-		auto [_, type] = *(ThrottleType.find(t));
-		std::string padded(type);
+		std::string padded(THROTTLE_DISPLAY[i]);
 		padded.append(30 - padded.length(), '-');
-		debug_printf(DEBUG_NORMAL, "\t%s: %d\n", padded.c_str(), throttles[t]);
+		debug_printf(DEBUG_NORMAL, "\t%s: %d\n", padded.c_str(), throttles[i]);
+	}
+
+	int limit = throttles[Throttle::MAX_NODES];
+	if (config[conf::b::EnforceNewJobLimits] && limit && limit != oldMaxNodes) {
+		dag->EnforceNewJobsLimit();
 	}
 }
 
@@ -884,9 +891,9 @@ void main_init(int argc, char ** const argv) {
 	user_throttles[Throttle::MAX_HOLD] = dagOpts[shallow::i::MaxHold];
 	user_throttles[Throttle::MAX_POST] = dagOpts[shallow::i::MaxPost];
 	user_throttles[Throttle::MAX_INT_SUBMITS] = dagman.config[conf::i::SubmitsPerInterval];
-	dagman.SetThrottles(user_throttles);
 
-	dagman._dagmanClassad->AdvertiseThrottles(dagman.throttles);
+	dagman._dagmanClassad->RecoverThrottles(user_throttles);
+	dagman.SetThrottles(user_throttles);
 
 	// ...done checking arguments.
 
