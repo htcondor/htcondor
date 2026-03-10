@@ -4,7 +4,7 @@ condor (24.0.18-1) stable; urgency=medium
   * Fix condor_submit using different executables with late materialization
   * HTCondor tarballs now contain Pelican 7.23.0
 
- -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Feb 2026 13:49:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 13:49:00 -0500
 
 condor (24.0.17-1) stable; urgency=medium
 
