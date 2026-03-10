@@ -18,7 +18,10 @@ logger.setLevel(logging.DEBUG)
 # Standup a condor with user-space cgroup v2 enabled
 @standup
 def condor(test_dir):
-    with Condor(test_dir / "condor", config={"CREATE_CGROUP_WITHOUT_ROOT": "true"}) as condor:
+    with Condor(test_dir / "condor", config={
+        "CREATE_CGROUP_WITHOUT_ROOT": "true",
+        "LOCAL_UNIVERSE_CGROUP_ENFORCEMENT": "true",
+        }) as condor:
         yield condor
 
 # Standup a condor with user-space cgroup v2 enabled and job hook
@@ -344,6 +347,33 @@ def retry_memory_max_with_units_job_hash(test_dir, path_to_python, test_script):
             "request_disk": "200mb"
             }
 
+@action
+def local_universe_job_hash(test_dir, path_to_python, test_script):
+    return {
+            "executable": path_to_python,
+            "arguments": test_script,
+            "universe": "local",
+            "output": "local_output",
+            "error": "local_error",
+            "log": "local_oom_log",
+            "request_memory": "50m",
+            "request_cpus": "1",
+            "request_disk": "200m"
+            }
+
+@action
+def completed_local_test_job(condor, local_universe_job_hash):
+    clj = condor.submit(
+        {**local_universe_job_hash}, count=1
+    )
+    assert clj.wait(
+        condition=ClusterState.all_held,
+        timeout=120,
+        verbose=True,
+        fail_condition=ClusterState.any_complete,
+    )
+    return clj
+
 # These tests only works if we start in a writeable (delegated)
 # cgroup.  Return true if this is so
 def CgroupIsWriteable():
@@ -430,3 +460,7 @@ class TestCgroupOOM:
             verbose=True,
             fail_condition=ClusterState.any_held,
         )
+
+    def test_local_universe_oom(self, completed_local_test_job):
+        # Test that a local universe job that exceeds memory is put on hold
+        assert completed_local_test_job.state.all_held()
