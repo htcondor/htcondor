@@ -107,3 +107,18 @@ class JobEventType(enum.IntEnum):
     DATAFLOW_JOB_SKIPPED    = 46
     COMMON_FILES            = 47
 
+    # STARTD_EVENTLOG events
+    EP_STARTUP          = 100
+    EP_READY            = 101
+    EP_RECONFIG         = 102
+    EP_SHUTDOWN         = 103
+    EP_REQUEST_CLAIM    = 104
+    EP_RELEASE_CLAIM    = 105
+    EP_ACTIVATE_CLAIM   = 106
+    EP_DEACTIVATE_CLAIM = 107
+    EP_VACATE_CLAIM     = 108
+    EP_DRAIN            = 109
+    EP_RESOURCE_BREAK   = 110,
+    EP_RESOURCE_MEND    = 111,
+
+
