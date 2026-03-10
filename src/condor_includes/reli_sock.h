@@ -284,6 +284,8 @@ public:
 
 	bool is_closed() const {return rcv_msg.m_closed;}
 
+	void SetLowDataMode(bool mode) {rcv_msg.m_low_data_mode = mode;}
+
 	// serialize and deserialize
 	const char * deserialize(const char *);	// restore state from buffer
 	void serialize(std::string& outbuf) const;	// save state into buffer
@@ -348,6 +350,7 @@ protected:
 		ChainBuf	buf;
 		int			ready;
 		bool m_closed;
+		bool m_low_data_mode;
 		bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key);
 	} rcv_msg;
 
@@ -401,6 +404,7 @@ protected:
 	bool m_has_backlog;
 	bool m_read_would_block;
 	bool m_non_blocking;
+	bool m_read_broken;
 
 	// Message digest covering communications prior to enabling encryption
 	// When encryption is enabled, this digest is included in the authenticated

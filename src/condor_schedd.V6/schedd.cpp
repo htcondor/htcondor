@@ -9870,13 +9870,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 				// If we already have a match for this OCU, then delete this match
 				if (ocu->mrec) {
-					dprintf(D_ALWAYS, "OCU %d already has a match record (%s), deleting new match record %s\n", ocu->ocu_id, ocu->mrec->description(), slot->description());
-					DelMrec(slot);
+					dprintf(D_ALWAYS, "OCU %d already has a match record (%s), ignoring new match record %s\n", ocu->ocu_id, ocu->mrec->description(), slot->description());
+					//DelMrec(slot);
 				} else {
 					dprintf(D_FULLDEBUG, "Assigning match %s to OCU %d\n", slot->description(), ocu->ocu_id);
 					ocu->mrec = slot;
+					ocu->state = 'I'; // mark OCU as (Claimed) Idle
 				}
-				ocu->state = 'I'; // mark OCU as Idle
 			} else {
 				scheduler.StartJob(slot);
 			}

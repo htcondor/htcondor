@@ -43,6 +43,12 @@
   and works even when the *condor_schedd* is slow or not running.
   :jira:`3582`
 
+- :tool:`condor_q` now supports a ``-aaf`` option
+  that works like ``-autoformat`` (``-af``) but appends the specified
+  attributes as additional columns after the standard output columns,
+  rather than replacing them.
+  :jira:`3571`
+
 - Updated list of default environment variables that *condor_dagman* always
   grabs from the users environment to **not** include ``XDG_RUNTIME_DIR``.
   :jira:`1913`
@@ -80,15 +86,37 @@
 - The old ClassAd syntax is no longer supported in job transforms.
   :jira:`3538`
 
+- Improved DAGMan debugging when to print warnings produced by *condor_schedd*\'s
+  :ref:`submit-requirements`.
+  :jira:`3573`
+
+- Removed deprecated full rescue file for DAGMan. With this comes the removal of
+  the configuration option ``DAGMAN_WRITE_PARTIAL_RESCUE`` and the command line
+  option ``-DumpRescue`` for :tool:`condor_submit_dag`.  This has been deprecated since
+  2011, so there should be no problems with compatability.
+  :jira:`3565`
+
+- Improved DAGMan's debugging error when the provisioner node exits prior to notifying
+  DAGMan of successful resource provisioning.
+  :jira:`3582`
+
+- Bootstrap CSS framework used in OAuth Credmon login page updated
+  to version 5.3.8.
+  :jira:`3576`
+
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
   promptly if it failed to launch a singularity job.
   :jira:`3531`
 
-*** 25.0.8 bugs
+- Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
+  was off, that caused jobs to start in the users home directory.
+  :jira:`3575`
 
-*** 25.7.1 features
+*** 25.0.9 bugs
+
+*** 25.7.2 features
 
 - All file transfer records written to the :macro:`JOB_EPOCH_HISTORY` archive
   will contain :ad-attr:`Owner` and :ad-attr:`RemoteHost` copied from the associated
@@ -102,6 +130,11 @@
   fail. Pipe buffers in the *condor_schedd* are now appropriately sized to fix
   this problem.
   :jira:`3507`
+
+- When a job exceeds its memory request, instead of reporting the memory 
+  measured in the last polling period, the error message reports the 
+  size of the provisioned memory to more accurately report what happened.
+  :jira:`3514`
 
 - Improved :tool:`condor_watch_q` to sort rows of data display rows with jobs still
   active in the queue before rows of jobs that have all exited the AP job queue.
@@ -122,13 +155,9 @@
   grid universe **batch** type.
   :jira:`3500`
 
-- HTCondor tarballs now contain `Pelican 7.23.0 <https://pelicanplatform.org/releases>`_
+*** 25.7.2 bugs
 
-- The condor package now requires pelican-7.23.0.
-
-*** 25.7.1 bugs
-
-*** 25.0.7 bugs
+*** 25.0.8 bugs
 
 *** 25.6.1 features
 

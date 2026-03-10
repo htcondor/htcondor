@@ -269,8 +269,9 @@ int parse_autoformat_args (
 	int ixArg,
 	const char *popts,
 	AttrListPrintMask & print_mask,
-	classad::References & attrs, // out: returns attributes refereced by the expressions added to print_mask
-	bool diagnostic);
+	classad::References & attrs, // out: returns attributes referenced by the expressions added to print_mask
+	bool diagnostic,
+	bool append = false); // when true, don't reset column separators (for -aaf)
 
 // functions & classes in make_printmask.cpp
 

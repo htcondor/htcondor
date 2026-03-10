@@ -155,8 +155,7 @@ namespace DagmanShallowOptions {
 	);
 
 	BETTER_ENUM(b, long,
-		PostRun = 0, DumpRescueDag, RunValgrind, DoSubmit, DoRecovery, DryRun,
-		OnlyDumpDot
+		PostRun = 0, RunValgrind, DoSubmit, DoRecovery, DryRun, OnlyDumpDot
 	);
 
 	BETTER_ENUM(slist, long,
@@ -217,7 +216,6 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-DoRescueFrom",  {"DoRescueFrom", "<N>", "Run DAG rescue of given number", DAG_OPT_DISP_ALL}},
 	{"-Dot",           {"OnlyDumpDot", "True", "Have DAGMan dump DOT file and exit", DAG_OPT_DISP_DAGMAN}},
 	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
-	{"-DumpRescue",    {"DumpRescueDag", "True", "DAGMan dump rescue DAG and exit", DAG_OPT_DISP_ALL}},
 	{"-f",             {"Force", "True", "See -Force", 0}}, // Single letter flag to make -f equal to -Force
 	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},

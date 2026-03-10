@@ -9858,8 +9858,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 
 				if ((remoteOwner == job->ownerinfo->Name()) ||
 					(job->project ? remoteProject == job->project->Name() : false)) {
-					// Our OCU claim
-					bool OCUWanted = false;
 					// Only match our own OCU claim if OCUWanted is true
 					if (!OCUWanted) {
 						continue;

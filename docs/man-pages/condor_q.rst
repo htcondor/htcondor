@@ -558,6 +558,17 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
+ **-aaf[:Vr]** *attr1 [attr2 ...]*
+    (output option) Like **-autoformat**, but instead of replacing the
+    standard output columns, appends the specified attribute(s) as
+    additional columns after whatever standard format or **-print-format* file is in
+    effect.
+    Accepts the **-autoformat** V or r format qualifiers which will affect only
+    the appended columns.
+    This option allows adding extra information to the default
+    *condor_q* output without losing the standard columns. Appended columns will
+    use the column separator and row terminator characters from the format that is appended to.
+
  **-print-format** *file*
     Read output formatting information from the given custom print format file.
     see :doc:`/classads/print-formats` for more information about custom print format files.

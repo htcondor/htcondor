@@ -2998,25 +2998,25 @@ JICShadow::doneWithInputTransfer() {
 		recordSandboxContents( "in" );
 	}
 
-	if( param_boolean( "_CONDOR_COLOR_FROM_JOB_AD", false )) {
+	if( param_boolean( "TESTING_COLOR_FROM_JOB_AD", false )) {
 		ExprTree * c = job_ad->Lookup( "ColorAd" );
 		ClassAd * colorAd = dynamic_cast<ClassAd *>(c);
 		if( colorAd == NULL ) {
-			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: `ColorAd` not a ClassAd, ignoring.\n" );
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: `ColorAd` not a ClassAd, ignoring.\n" );
 		} else {
 			ClassAd replyAd;
 			bool protocol = colorSlot( * colorAd, replyAd );
-			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: protocol = %s\n", protocol ? "TRUE" : "FALSE" );
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: protocol = %s\n", protocol ? "TRUE" : "FALSE" );
 
 			bool success = false;
 			if(! replyAd.LookupBool( ATTR_RESULT, success )) {
-				dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD:: ATTR_RESULT lookup failed.\n" );
+				dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD:: ATTR_RESULT lookup failed.\n" );
 			}
-			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: ATTR_RESULT = %s\n", success ? "TRUE" : "FAILED" );
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: ATTR_RESULT = %s\n", success ? "TRUE" : "FAILED" );
 
 			std::string reason;
 			replyAd.LookupString( ATTR_ERROR_STRING, reason );
-			dprintf( D_TEST, "_CONDOR_COLOR_FROM_JOB_AD: ATTR_REASON = %s\n", reason.c_str() );
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: ATTR_REASON = %s\n", reason.c_str() );
 		}
 	}
 

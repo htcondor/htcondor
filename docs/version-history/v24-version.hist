@@ -1,3 +1,23 @@
+*** 24.12.19 bugs
+
+- Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
+  for some output formats. This bug would result in colmns after the Name column not
+  being properly aligned when the longest name exceeded 34 characters.
+  :jira:`3255`
+
+- When the *condor_collector* reponds to a locate query for Startd ads, it will now search
+  both the Startd daemon ad table and the Startd slot ad table to satisfy the locate.  This
+  fixes a bug where :tool:`condor_vacate` would not be able to find the address of the Startd
+  when given a slot name.
+  :jira:`3580`
+
+
+*** 24.0.19 bugs
+
+- Fixed a bug for **batch** grid universe jobs where submitting to a remote
+  system would fail if the username on the remote system contained a dot.
+  :jira:`3581`
+
 *** 24.12.18 bugs
 
 - Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash
@@ -36,12 +56,20 @@
   cache is not useable.
   :jira:`3560`
 
+- HTCondor tarballs now contain `Pelican 7.23.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.23.0.
+
 *** 24.0.18 bugs
 
 - Fixed a bug in :tool:`condor_submit` that could expand the :subcom:`executable`
   path incorrectly when using late materialization and a different executable
   for each job.
   :jira:`3546`
+
+- Fixed a bug where new STARTD_CRON values didn't trigger an immediate
+  update of slot ads to the collector when configured to do so.
+  :jira:`3526`
 
 - Update Annex's knowledge about the Delta HPC system.
   :jira:`3559`

@@ -451,18 +451,6 @@ Rescue/retry
     retries is allowed when running the Rescue DAG. If not defined,
     :macro:`DAGMAN_RESET_RETRIES_UPON_RESCUE` defaults to ``True``.
 
-:macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE`
-    A boolean value that controls whether :tool:`condor_dagman` writes a
-    partial or a full DAG file as a Rescue DAG. If not defined,
-    :macro:`DAGMAN_WRITE_PARTIAL_RESCUE` defaults to ``True``. **Note: users
-    should rarely change this setting.**
-
-    .. warning::
-
-        :macro:`DAGMAN_WRITE_PARTIAL_RESCUE[Deprecation Warning]` is deprecated
-        as the writing of full Rescue DAG's is deprecated. This is slated to be
-        removed during the lifetime of the HTCondor V24 feature series.
-
 :macro-def:`DAGMAN_RETRY_SUBMIT_FIRST`
     A boolean value that controls whether a failed submit is retried
     first (before any other submits) or last (after all other ready jobs
