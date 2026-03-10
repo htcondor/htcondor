@@ -124,7 +124,6 @@ deactivate_claim(Stream *stream, Resource *rip, int cmd)
 			claim_is_closing = true;
 		}
 	}
-	if (final_xfer) claim_is_closing = true;
 	if (claim_is_closing) ep_event.Ad().Assign("Closing", true);
 
 	if (job_done) {
