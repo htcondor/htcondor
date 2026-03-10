@@ -55,6 +55,11 @@ extern const char* public_schedd_addr;	// in shadow_v61_main.C
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
 
+// To know if the schedd wants us to do common file transfer.  If not, this
+// is where we alter the input list to compensate.
+#include "cxfer_state.h"
+extern CXFER_STATE cxfer_type;
+
 // for remote syscalls...
 ReliSock *syscall_sock;
 RemoteResource *thisRemoteResource;
@@ -967,7 +972,10 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
+	// We now also only do common file transfer if the schedd says to.
+	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
+	disallowed |= cxfer_type == CXFER_STATE::INVALID;
 	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
 		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
