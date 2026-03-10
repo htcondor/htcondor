@@ -1,3 +1,11 @@
+condor (25.7.2-1) stable; urgency=medium
+
+  * Improve schedd performance with large job records by sizing pipe buffers
+  * condor_watch_q display improvements
+  * When a job runs out of memory, report how much memory was provisioned
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 14:19:00 -0500
+
 condor (25.0.8-1) stable; urgency=medium
 
   * All changes in 24.12.18

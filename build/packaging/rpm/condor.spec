@@ -1314,6 +1314,11 @@ fi
 # configuration
 
 %changelog
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.7.2-1
+- Improve schedd performance with large job records by sizing pipe buffers
+- condor_watch_q display improvements
+- When a job runs out of memory, report how much memory was provisioned
+
 * Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.8-1
 - All changes in 24.12.18
 
