@@ -13878,14 +13878,28 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		dprintf(D_ALWAYS, "not holding job %d.%d because of successful eviction transform\n", job_id.cluster, job_id.proc);
 	} else
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
-		long long ival = 0;
-		classad::Value val;
-		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
+
+		int vacateReasonCode = 0;
+		int vacateReasonSubCode = 0;
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &vacateReasonCode);
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &vacateReasonSubCode);
+		bool should_cool_down = shouldCoolJobBasedOnCodes(vacateReasonCode, vacateReasonSubCode);
+		long long cooldown_duration = 20;
+
+		// Don't evaluate m_jobCoolDownExpr unnecessarily.
+		if(! should_cool_down) {
+			long long ival = 0;
+			classad::Value val;
+			should_cool_down = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0);
+			if( ival > 0 ) { cooldown_duration = ival; }
+		}
+
+		if( should_cool_down ) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
 			cnt++;
 			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + ival);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + cooldown_duration);
 			stats.JobsCoolDown += 1;
 			OTHER.JobsCoolDown += 1;
 		}
