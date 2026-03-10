@@ -1321,6 +1321,9 @@ fi
 # configuration
 
 %changelog
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.8-1
+- All changes in 24.12.18
+
 * Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
 - Improve AMD GPU detection when using RCOM6/HIP libraries
 - Fix for new jobs getting kicked off LVM EP due to quantization mismatch
