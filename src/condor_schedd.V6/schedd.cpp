@@ -2788,17 +2788,6 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	ClassAd resultAd;
 	ReliSock* rsock = (ReliSock*)stream;
-	auto * rsock_user = EffectiveUserRec(rsock);
-	// TODO: more fine-grained user check? I think this does nothing when NULL is the first arg...
-	if ( ! UserCheck2(NULL, rsock_user) || ! isQueueSuperUser(rsock_user)) {
-		resultAd.Assign(ATTR_RESULT, EACCES);
-		resultAd.Assign(ATTR_ERROR_STRING, "Permission denied");
-		if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
-			return FALSE;
-		}
-		return TRUE;
-	}
 
 	int rval = 0;
 	int num_ads = 0;
@@ -15506,10 +15495,10 @@ Scheduler::Register()
 
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 
 	//disable these until we decide permissions
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
