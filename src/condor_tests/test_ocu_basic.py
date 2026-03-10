@@ -5,8 +5,9 @@
 # 2. Submit an OCUWanted job (this creates the SubmitterData the schedd
 #    needs before it will negotiate for OCU claims)
 # 3. Create an OCU via the Python API
-# 4. Wait for the OCU-wanting job to complete on the OCU slot
-# 5. Submit a non-OCU job and verify it does NOT run on the OCU slot
+# 4. Wait for the OCU-wanting job to start running on the OCU slot
+# 5. While the OCU job is still running (so the OCU slot persists),
+#    submit a non-OCU job and verify it does NOT run on the OCU slot
 
 import logging
 import time
@@ -40,11 +41,13 @@ def condor(test_dir):
 def ocu_job_handle(condor, test_dir, path_to_sleep):
 	"""Submit a job that wants an OCU slot.  This must happen before
 	the OCU is created so the schedd has a SubmitterData record for
-	our user, which is required for the OCU to be negotiated."""
+	our user, which is required for the OCU to be negotiated.
+	The job sleeps long enough to remain running while we submit
+	and verify the non-OCU job."""
 	handle = condor.submit(
 		description={
 			"executable": path_to_sleep,
-			"arguments": "0",
+			"arguments": "300",
 			"log": (test_dir / "ocu_job.log").as_posix(),
 			"leave_in_queue": True,
 			"should_transfer_files": False,
@@ -85,23 +88,19 @@ def the_ocu(condor, ocu_job_handle):
 
 
 @action
-def ocu_job_ad(condor, ocu_job_handle, the_ocu):
-	"""Wait for the OCU-wanting job to complete, then return its ad."""
+def ocu_slot_name(condor, ocu_job_handle, the_ocu):
+	"""Wait for the OCU job to start running, then extract the slot name.
+	We keep the OCU job running so the OCU slot persists while we test
+	that a non-OCU job avoids it."""
 	ocu_job_handle.wait(
-		condition=ClusterState.all_complete,
+		condition=ClusterState.all_running,
 		fail_condition=ClusterState.any_held,
 		verbose=True,
 		timeout=120,
 	)
 
 	for ad in ocu_job_handle.query():
-		return ad
-
-
-@action
-def ocu_slot_name(ocu_job_ad):
-	"""Extract the slot name the OCU job ran on."""
-	return get_remote_host(ocu_job_ad)
+		return get_remote_host(ad)
 
 
 @action
@@ -154,10 +153,9 @@ class TestOCUBasic:
 		assert "OCUId" in the_ocu
 		assert "OCUName" in the_ocu
 
-	def test_ocu_job_ran_on_ocu_slot(self, ocu_job_ad):
-		"""Verify a job with OCUWanted=true ran on a slot with OCU=true."""
-		host = get_remote_host(ocu_job_ad)
-		assert host is not None
+	def test_ocu_job_ran_on_ocu_slot(self, ocu_slot_name):
+		"""Verify a job with OCUWanted=true was matched to a slot."""
+		assert ocu_slot_name is not None
 
 	def test_non_ocu_job_avoided_ocu_slot(self, non_ocu_job_ad, ocu_slot_name):
 		"""Verify a normal job did NOT run on the OCU slot."""
