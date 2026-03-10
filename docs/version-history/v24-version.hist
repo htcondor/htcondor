@@ -31,8 +31,8 @@
   :jira:`3490`
 
 - Fixed a bug where an job with a circular :ad-attr:`Requirements[type=Job]` expression
-  would result in a crash in *condor_q* when the ``-better`` option was passed.
-  The crash was fixed, and *condor_submit* was changed to report an error
+  would result in a crash in :tool:`condor_q` when the ``-better`` option was passed.
+  The crash was fixed, and :tool:`condor_submit` was changed to report an error
   when the submit file has a :subcom:`requirements` command that
   references :ad-attr:`Requirements[type=Job]`.
   :jira:`2629`
@@ -41,13 +41,13 @@
   output was always empty.
   :jira:`3558`
 
-- Fixed a bug where a backfill p-slot would have no assigned GPUs after
-  a reconfig.
-  :jira:`3072`
-
 - Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
   argument from being the string representation of an expression.
   :jira:`3435`
+
+- Fixed a bug where a backfill p-slot would have no assigned GPUs after
+  a reconfig.
+  :jira:`3072`
 
 *** 24.0.18 features
 
