@@ -118,7 +118,7 @@ class JobEventType(enum.IntEnum):
     EP_DEACTIVATE_CLAIM = 107
     EP_VACATE_CLAIM     = 108
     EP_DRAIN            = 109
-    EP_RESOURCE_BREAK   = 110,
-    EP_RESOURCE_MEND    = 111,
+    EP_RESOURCE_BREAK   = 110
+    EP_RESOURCE_MEND    = 111
 
 
