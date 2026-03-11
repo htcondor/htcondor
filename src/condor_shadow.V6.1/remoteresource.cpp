@@ -963,21 +963,32 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// If the starter is too old for common file transfer, fall back on
 	// per-proc file transfer.
 	//
-	CondorVersionInfo cvi( starter_version.c_str() );
 	// `#define CFT_VERSION 2` went in with HTCONDOR-3168, which was first
-	// actually released as part of 25.2.FIXME.
+	// actually released as part of 25.2.x.
 	//
 	// CFT_VERSION = 1 starters (set in HTCONDOR-3051, and released as 24.9.0)
 	// can successfully do common file transfer if and only if there were no
 	// catalogs specified and the job ad has the test syntax from HTC25.  As
 	// a result, those will be treated as needing the fall-back as well.
 	//
-	// We now also only do common file transfer if the schedd says to.
+	CondorVersionInfo cvi( starter_version.c_str() );
+	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
+
+	//
+	// If the admin has turned off common file transfer, fall back on
+	// per-proc file transfer.
 	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-	bool forbidden = cxfer_type == CXFER_STATE::INVALID;
-	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
-	if(! (disallowed || forbidden || impossible)) {
+
+	//
+	// If the schedd did not specify staging or mapping, fall back on
+	// per-proc file transfer.  (The schedd checks the previous conditions
+	// before deciding to specify staging or mapping, so these checks
+	// ought to be redundant.)
+	//
+	bool required = cxfer_type == CXFER_STATE::INVALID;
+
+    if( impossible || disallowed || required ) {
 		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
