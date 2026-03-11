@@ -169,10 +169,6 @@ Requires: openssh-server
 # net-tools needed to provide netstat for condor_who
 Requires: net-tools
 
-# Perl modules required for condor_gather_info
-Requires: perl(Date::Manip)
-Requires: perl(FindBin)
-
 # cryptsetup needed for encrypted LVM execute partitions
 Requires: cryptsetup
 
@@ -766,8 +762,6 @@ install -m 0644 %{SOURCE1} %{buildroot}%{_sysusersdir}/condor.conf
 
 mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
-
-# Install perl modules
 
 #Fixups for packaged build, should have been done by cmake
 
