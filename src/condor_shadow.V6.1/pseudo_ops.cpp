@@ -2096,11 +2096,11 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		int required_version = 2;
 		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			holdJob( "Internal error: failed to construct unique name for catalog.",
+			holdJob( "Internal error: failed to compute common input file catalogs.",
 				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
@@ -2109,10 +2109,10 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		}
 
 		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			holdJob( "Internal error: failed to construct unique name for catalog.",
+			holdJob( "Internal error: failed to compute common input files",
 				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 

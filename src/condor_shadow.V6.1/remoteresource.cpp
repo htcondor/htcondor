@@ -975,15 +975,16 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	// We now also only do common file transfer if the schedd says to.
 	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
-	disallowed |= cxfer_type == CXFER_STATE::INVALID;
-	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
+	bool forbidden = cxfer_type == CXFER_STATE::INVALID;
+	bool impossible = (! cvi.built_since_version( 25, 2, 0 ));
+	if(! (disallowed || forbidden || impossible)) {
 		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+			shadow->holdJob( "Internal error: failed to compute common input file catalogs.",
 				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
@@ -992,11 +993,11 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 
 		int required_version = 2;
 		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
-			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
+			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
-			shadow->holdJob( "Internal error: failed to construct unique name for catalog.",
+			shadow->holdJob( "Internal error: failed to comput input files.",
 				CONDOR_HOLD_CODE::JobNotStarted, JOB_NOT_STARTED_SUB_CODE::CatalogNameError
 			);
 
