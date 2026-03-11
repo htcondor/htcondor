@@ -24,6 +24,7 @@
 #include "get_daemon_name.h"
 #include "token_utils.h"
 #include "condor_auth_passwd.h"
+#include "dc_schedd.h"
 #include <sqlite3.h>
 
 GCC_DIAG_OFF(float-equal)
@@ -385,6 +386,9 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	std::string token_jti;
 	long long token_exp;
 	auto user_it = m_users.end();
+	DCSchedd schedd;
+	bool create_user = true;
+	bool create_project = false;
 
 	if (!rsock->get_encryption()) {
 		result_ad.Assign(ATTR_ERROR_STRING, "Request to server was not encrypted.");
@@ -489,6 +493,100 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		}
 		if (user_it->second.exp - time(nullptr) < lifetime) {
 			lifetime = user_it->second.exp - time(nullptr);
+		}
+	}
+
+	// Check the status of the user/project record in the schedd.
+	// If they don't exist, create them.
+	// If they exist and are disabled, don't issue a token.
+	if (!schedd.locate()) {
+		dprintf(D_ERROR, "Failed to locate schedd\n");
+		result_ad.Assign(ATTR_ERROR_STRING, "Failed to locate schedd");
+		result_ad.Assign(ATTR_ERROR_CODE, 12);
+		goto send_reply;
+	} else {
+		ClassAd query_ad;
+		ClassAd* summary_ad = nullptr;
+		std::string constraint;
+		int user_enabled = 1;
+		int project_enabled = 1;
+		formatstr(constraint, "%s == \"%s\"", ATTR_USER, token_identity.c_str());
+		if (!project.empty()) {
+			create_project = true;
+			formatstr_cat(constraint, " || %s == \"%s\"", ATTR_NAME, project.c_str());
+		}
+		schedd.makeUsersQueryAd(query_ad, constraint.c_str(), nullptr);
+		if (!project.empty()) {
+			query_ad.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE "," PROJECT_ADTYPE);
+		}
+		auto process_func = [&](void*, ClassAd* ad) -> int {
+			if (ad->Lookup(ATTR_USER)) {
+				create_user = false;
+				ad->LookupInteger(ATTR_ENABLED, user_enabled);
+			} else if (ad->Lookup(ATTR_NAME)) {
+				create_project = false;
+				ad->LookupInteger(ATTR_ENABLED, project_enabled);
+			}
+			return 1;
+		};
+		int rval = schedd.queryUsers(query_ad, process_func, nullptr, 10, &err, &summary_ad);
+		if (rval != 0) {
+			dprintf(D_ERROR, "Failed to contact schedd: %s\n", err.getFullText().c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.Assign(ATTR_ERROR_CODE, err.code());
+			goto send_reply;
+		}
+		if (!user_enabled) {
+			dprintf(D_ERROR, "User %s is disabled, not issuing token\n", token_identity.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, "User is disabled");
+			result_ad.Assign(ATTR_ERROR_CODE, 12);
+			goto send_reply;
+		}
+		if (!project_enabled) {
+			dprintf(D_ERROR, "Project %s is disabled, not issuing token\n", token_identity.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, "Project is disabled");
+			result_ad.Assign(ATTR_ERROR_CODE, 12);
+			goto send_reply;
+		}
+	}
+	if (create_user) {
+		const char *names[] = { token_identity.c_str() };
+		std::unique_ptr<ClassAd> schedd_reply_ad(schedd.addUsers(names, 1, &err));
+		if (!schedd_reply_ad) {
+			dprintf(D_ERROR, "Failed to contact schedd: %s\n", err.getFullText().c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.Assign(ATTR_ERROR_CODE, err.code());
+			goto send_reply;
+		}
+		int rval = -1;
+		schedd_reply_ad->LookupInteger(ATTR_RESULT, rval);
+		if (rval != 0) {
+			std::string err_str;
+			schedd_reply_ad->LookupString(ATTR_ERROR_STRING, err_str);
+			dprintf(D_ERROR, "Failed to add user record in schedd: %d %s\n", rval, err_str.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, err_str);
+			result_ad.Assign(ATTR_ERROR_CODE, 12);
+			goto send_reply;
+		}
+	}
+	if (create_project) {
+		const char *names[] = { project.c_str() };
+		std::unique_ptr<ClassAd> schedd_reply_ad(schedd.addProjects(names, 1, &err));
+		if (!schedd_reply_ad) {
+			dprintf(D_ERROR, "Failed to contact schedd: %s\n", err.getFullText().c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
+			result_ad.Assign(ATTR_ERROR_CODE, err.code());
+			goto send_reply;
+		}
+		int rval = -1;
+		schedd_reply_ad->LookupInteger(ATTR_RESULT, rval);
+		if (rval != 0) {
+			std::string err_str;
+			schedd_reply_ad->LookupString(ATTR_ERROR_STRING, err_str);
+			dprintf(D_ERROR, "Failed to add project record in schedd: %d %s\n", rval, err_str.c_str());
+			result_ad.Assign(ATTR_ERROR_STRING, err_str);
+			result_ad.Assign(ATTR_ERROR_CODE, 12);
+			goto send_reply;
 		}
 	}
 
