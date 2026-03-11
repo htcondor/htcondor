@@ -23,6 +23,10 @@
   system would fail if the username on the remote system contained a dot.
   :jira:`3581`
 
+- Fixed a bug where some of the values reported for job execution time were
+  very large if the Access Point daemons restarted while the job was running.
+  :jira:`3592`
+
 *** 24.12.18 bugs
 
 - Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash
