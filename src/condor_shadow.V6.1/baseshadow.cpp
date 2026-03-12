@@ -170,6 +170,15 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 			jobAd->Assign( ATTR_NUM_SHADOW_STARTS, 1 );
 		}
 	}
+	if( cxfer_type == CXFER_STATE::STAGING ) {
+	    // Until (and unless) we can handle restarting transfer shadows
+	    // (after a schedd restart), ask that the starter not waste any
+	    // time waiting for a reconnect to happen.  Since 0 has a special
+	    // meaning, avoid it; since we're choosing a non-zero number, pick
+	    // one that will allow for reconnection after a transient network
+	    // failure, since the starter can't tell the difference.
+	    jobAd->Assign( ATTR_JOB_LEASE_DURATION, 20 );
+	}
 
 
 	DebugId = display_dprintf_header;
