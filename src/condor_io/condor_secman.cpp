@@ -456,7 +456,7 @@ bool
 SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
-								bool force_authentication )
+								sec_req request_authentication )
 {
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -479,8 +479,11 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// respect the old restrictions and is only checked by newer servers,
 	// which will prefer its value.
 
-	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
-		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication = sec_req_param(
+		"SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	if (request_authentication > sec_authentication) {
+		sec_authentication = request_authentication;
+	}
 	sec_req sec_authentication_new = sec_authentication;
 
 	sec_req sec_encryption = sec_req_param(
@@ -666,12 +669,12 @@ bool
 SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* &ad, 
 								bool raw_protocol,
 								bool use_tmp_sec_session,
-								bool force_authentication )
+								sec_req request_authentication )
 {
 	if ((m_cached_auth_level == auth_level) &&
 		(m_cached_raw_protocol == raw_protocol) &&
 		(m_cached_use_tmp_sec_session == use_tmp_sec_session) &&
-		(m_cached_force_authentication == force_authentication)) {
+		(m_cached_request_authentication == request_authentication)) {
 
 			// A Hit!
 		if (m_cached_return_value) {
@@ -685,10 +688,10 @@ SecMan::FillInSecurityPolicyAdFromCache(DCpermission auth_level, ClassAd* &ad,
 	m_cached_auth_level = auth_level;
 	m_cached_raw_protocol = raw_protocol;
 	m_cached_use_tmp_sec_session = use_tmp_sec_session;
-	m_cached_force_authentication = force_authentication;
+	m_cached_request_authentication = request_authentication;
 	
 	m_cached_policy_ad.Clear(); 
-	m_cached_return_value = FillInSecurityPolicyAd(auth_level, &m_cached_policy_ad, raw_protocol, use_tmp_sec_session, force_authentication);
+	m_cached_return_value = FillInSecurityPolicyAd(auth_level, &m_cached_policy_ad, raw_protocol, use_tmp_sec_session, request_authentication);
 	ad = & m_cached_policy_ad;
 	return m_cached_return_value;
 }
@@ -980,7 +983,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol, bool force_auth, bool resume_response,
+		int cmd,Sock *sock,bool raw_protocol, bool request_auth, bool resume_response,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
@@ -989,7 +992,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_subcmd(subcmd),
 		m_sock(sock),
 		m_raw_protocol(raw_protocol),
-		m_force_auth(force_auth),
+		m_request_auth(request_auth),
 		m_errstack(errstack),
 		m_callback_fn(callback_fn),
 		m_misc_data(misc_data),
@@ -1078,7 +1081,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	std::string m_cmd_description;
 	Sock *m_sock;
 	bool m_raw_protocol;
-	bool m_force_auth;
+	bool m_request_auth;
 	CondorError* m_errstack; // caller's errstack, if any, o.w. internal
 	CondorError m_internal_errstack;
 	StartCommandCallbackType *m_callback_fn;
@@ -1187,7 +1190,7 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_cmd,
 		req.m_sock,
 		req.m_raw_protocol,
-		req.m_force_auth,
+		req.m_request_auth,
 		req.m_resume_response,
 		req.m_errstack,
 		req.m_subcmd,
@@ -1618,7 +1621,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	} else {
 		if( !m_sec_man.FillInSecurityPolicyAd(
 				CLIENT_PERM, &m_auth_info,
-				m_raw_protocol,	m_use_tmp_sec_session, m_force_auth) )
+				m_raw_protocol,	m_use_tmp_sec_session, m_request_auth ? SecMan::SEC_REQ_PREFERRED : SecMan::SEC_REQ_UNDEFINED) )
 		{
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
@@ -2756,7 +2759,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
 		m_raw_protocol,
-		m_force_auth,
+		m_request_auth,
 		m_want_resume_response,
 		m_errstack,
 		m_cmd,
@@ -3300,7 +3303,7 @@ SecMan::SecMan() :
 	m_cached_auth_level(UNSET_PERM),
 	m_cached_raw_protocol(false),
 	m_cached_use_tmp_sec_session(false),
-	m_cached_force_authentication(false),
+	m_cached_request_authentication(SEC_REQ_UNDEFINED),
 	m_cached_return_value(false) {
 
 	// the list of ClassAd attributes we need to resume a session
@@ -3329,7 +3332,7 @@ SecMan::SecMan(const SecMan & rhs/* copy */) :
 	m_cached_auth_level(rhs.m_cached_auth_level), 
 	m_cached_raw_protocol(rhs.m_cached_raw_protocol), 
 	m_cached_use_tmp_sec_session(rhs.m_cached_use_tmp_sec_session), 
-	m_cached_force_authentication(rhs.m_cached_force_authentication),
+	m_cached_request_authentication(rhs.m_cached_request_authentication),
 	m_cached_return_value(rhs.m_cached_return_value) {
 
 	sec_man_ref_count++;
@@ -3344,7 +3347,7 @@ SecMan::operator=(SecMan && rhs)  noexcept {
 	this->m_cached_auth_level   = rhs.m_cached_auth_level;
 	this->m_cached_raw_protocol = rhs.m_cached_raw_protocol;
 	this->m_cached_use_tmp_sec_session = rhs.m_cached_use_tmp_sec_session;
-	this->m_cached_force_authentication = rhs.m_cached_force_authentication;
+	this->m_cached_request_authentication = rhs.m_cached_request_authentication;
 	this->m_cached_policy_ad = std::move(rhs.m_cached_policy_ad);
 	this->m_cached_return_value = rhs.m_cached_return_value;
 	return *this;
