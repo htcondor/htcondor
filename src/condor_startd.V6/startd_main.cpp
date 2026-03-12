@@ -414,6 +414,10 @@ main_init( int, char* argv[] )
 								  "VACATE_CLAIM_FAST",
 								  command_name_handler,
 								  "command_name_handler", ADMINISTRATOR );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FINAL_XFER,
+								  "DEACTIVATE_CLAIM_FINAL_XFER",
+								  command_handler,
+								  "command_handler", DAEMON );
 
 		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",

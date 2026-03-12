@@ -102,6 +102,10 @@ actionWord( JobAction action, bool past )
 		return past ? "removed locally (remote state unknown)" : "remove";
 		break;
 
+	case JA_TRANSFER_AND_REMOVE_JOBS:
+		return past ? "marked for removal after file transfer" : "remove";
+		break;
+
 	case JA_VACATE_JOBS:
 		return past ? "vacated" : "vacate";
 		break;
@@ -135,7 +139,7 @@ usage(int iExitCode)
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
-	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
+	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS || mode == JA_TRANSFER_AND_REMOVE_JOBS ) {
 		fprintf( stderr, "  -reason reason      Use the given RemoveReason\n");
 	} else if( mode == JA_RELEASE_JOBS ) {
 		fprintf( stderr, "  -reason reason      Use the given ReleaseReason\n");
@@ -144,10 +148,14 @@ usage(int iExitCode)
 		fprintf( stderr, "  -subcode number     Set HoldReasonSubCode\n");
 	}
 
-	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
+	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS || mode == JA_TRANSFER_AND_REMOVE_JOBS ) {
 		fprintf( stderr,
 				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
 		         "                      (only affects jobs already being removed)\n" );
+	}
+	if( mode == JA_REMOVE_JOBS || mode == JA_TRANSFER_AND_REMOVE_JOBS ) {
+		fprintf( stderr,
+				     "  -transfer           Transfer output files before removing\n" );
 	}
 	if( mode == JA_VACATE_JOBS || mode == JA_VACATE_FAST_JOBS ) {
 		fprintf( stderr,
@@ -317,11 +325,19 @@ main( int argc, char *argv[] )
                              "-forcex is only valid with condor_rm\n" );
 					usage();
 				}
+			} else if (is_dash_arg_prefix(arg, "transfer", 2)) {
+				if( mode == JA_REMOVE_JOBS ) {
+					mode = JA_TRANSFER_AND_REMOVE_JOBS;
+				} else {
+					fprintf( stderr,
+							 "-transfer is only valid with condor_rm\n" );
+					usage();
+				}
 			} else if (is_dash_arg_prefix(arg, "fast", (mode == JA_VACATE_JOBS) ? 1 : 2)) {
 				if( mode == JA_VACATE_JOBS ) {
 					mode = JA_VACATE_FAST_JOBS;
 				} else {
-                    fprintf( stderr, 
+                    fprintf( stderr,
                              "-fast is only valid with condor_vacate_job\n" );
 					usage();
 				}
@@ -389,6 +405,9 @@ main( int argc, char *argv[] )
 			break;
 		case JA_REMOVE_JOBS:
 			actionReason = strdup("via condor_rm");
+			break;
+		case JA_TRANSFER_AND_REMOVE_JOBS:
+			actionReason = strdup("via condor_rm -transfer");
 			break;
 		case JA_HOLD_JOBS:
 			actionReason = strdup("via condor_hold");
@@ -515,6 +534,9 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 	case JA_REMOVE_JOBS:
 		ad = schedd->removeJobs( constraint, actionReason, errstack, result_type );
 		break;
+	case JA_TRANSFER_AND_REMOVE_JOBS:
+		ad = schedd->transferAndRemoveJobs( constraint, actionReason, errstack, result_type );
+		break;
 	case JA_HOLD_JOBS:
 		ad = schedd->holdJobs( constraint, actionReason, holdReasonSubCode, errstack, result_type );
 		break;
@@ -588,6 +610,9 @@ doWorkByList( const std::vector<std::string>& ids, CondorError *errstack )
 		break;
 	case JA_REMOVE_JOBS:
 		rval = schedd->removeJobs( ids, actionReason, errstack );
+		break;
+	case JA_TRANSFER_AND_REMOVE_JOBS:
+		rval = schedd->transferAndRemoveJobs( ids, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
 		rval = schedd->holdJobs( ids, actionReason, holdReasonSubCode, errstack );

@@ -2007,6 +2007,18 @@ Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 
 
 bool
+Claim::deactivateClaimFinalXfer( void )
+{
+	if( isActive()) {
+		starterVacateJob("Claim deactivated with final transfer",
+			CONDOR_HOLD_CODE::ClaimDeactivated,
+			HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE, true);
+	}
+	return true;
+}
+
+
+bool
 Claim::removeClaim( bool graceful )
 {
 	if( isActive() ) {

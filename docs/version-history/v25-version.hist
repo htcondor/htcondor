@@ -78,6 +78,10 @@
 - Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
+- Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
+  a running job, the job will transfer any output files it has produced
+  back to the submit machine before exiting.
+  :jira:`3519`
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
   supported.
   This don't affect the ability to spool a job's full input sandbox.

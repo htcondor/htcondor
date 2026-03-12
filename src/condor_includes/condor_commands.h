@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 206> makeCommandTable() {
+std::array<std::pair<int, const char *>, 208> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -404,6 +404,8 @@ std::array<std::pair<int, const char *>, 206> makeCommandTable() {
 		{CREATE_STARTUP_LIMIT, "CREATE_STARTUP_LIMIT"},
 #define QUERY_STARTUP_LIMITS      (SCHED_VERS+160)
 		{QUERY_STARTUP_LIMITS, "QUERY_STARTUP_LIMITS"},
+#define DEACTIVATE_CLAIM_FINAL_XFER	(SCHED_VERS+161)  	// deactivate claim and do final transfer
+		{DEACTIVATE_CLAIM_FINAL_XFER, "DEACTIVATE_CLAIM_FINAL_XFER"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},
@@ -655,6 +657,8 @@ std::array<std::pair<int, const char *>, 206> makeCommandTable() {
 //#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)	/* Not used */
 #define UPDATE_JOBAD		   (DCSHADOW_BASE+5)
 		{UPDATE_JOBAD, "UPDATE_JOBAD"},
+#define TRANSFER_SANDBOX_AND_RM_JOB		   (DCSHADOW_BASE+6)
+		{TRANSFER_SANDBOX_AND_RM_JOB, "TRANSFER_SANDBOX_AND_RM_JOB"},
 
 
 /*

@@ -292,7 +292,7 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 
 
 bool
-RemoteResource::killStarter( bool graceful )
+RemoteResource::killStarter( bool graceful, bool final_transfer )
 {
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
@@ -323,10 +323,11 @@ RemoteResource::killStarter( bool graceful )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		dprintf(D_STATUS, "Sending %s to startd\n",
-			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
+		const char *cmd_name = final_transfer ? "DEACTIVATE_CLAIM_FINAL_XFER" :
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY");
+		dprintf(D_STATUS, "Sending %s to startd\n", cmd_name);
 		still_cleaning = false;
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning, final_transfer)) {
 			break;
 		}
 		const char * errmsg = dc_startd->error();

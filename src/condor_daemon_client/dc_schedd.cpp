@@ -95,6 +95,22 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
+DCSchedd::transferAndRemoveJobs( const char* constraint, const char* reason,
+								 CondorError * errstack,
+								 action_result_type_t result_type )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::transferAndRemoveJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_TRANSFER_AND_REMOVE_JOBS, constraint, NULL,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
+					  errstack );
+}
+
+
+ClassAd*
 DCSchedd::removeXJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
@@ -157,6 +173,17 @@ DCSchedd::removeXJobs( const std::vector<std::string>& ids, const char* reason,
 					   action_result_type_t result_type )
 {
 	return actOnJobs( JA_REMOVE_X_JOBS, NULL, &ids,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
+					  errstack );
+}
+
+
+ClassAd*
+DCSchedd::transferAndRemoveJobs( const std::vector<std::string>& ids, const char* reason,
+								 CondorError * errstack,
+								 action_result_type_t result_type )
+{
+	return actOnJobs( JA_TRANSFER_AND_REMOVE_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -1449,6 +1476,7 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_HOLD_JOBS:
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
+		case JA_TRANSFER_AND_REMOVE_JOBS:
 		case JA_RELEASE_JOBS:
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
@@ -1576,6 +1604,8 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
 				 (action==JA_REMOVE_X_JOBS)?
 				 "removed locally (remote state unknown)":
+				 (action==JA_TRANSFER_AND_REMOVE_JOBS)?
+				 "marked for removal after file transfer":
 				 (action==JA_HOLD_JOBS)?"held":
 				 (action==JA_RELEASE_JOBS)?"released":
 				 (action==JA_SUSPEND_JOBS)?"suspended":
@@ -1595,10 +1625,11 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 job_id.proc ); 
 		break;
 
-	case AR_PERMISSION_DENIED: 
+	case AR_PERMISSION_DENIED:
 		formatstr( buf, "Permission denied to %s job %d.%d",
 				 (action==JA_REMOVE_JOBS)?"remove":
 				 (action==JA_REMOVE_X_JOBS)?"force removal of":
+				 (action==JA_TRANSFER_AND_REMOVE_JOBS)?"transfer and remove":
 				 (action==JA_HOLD_JOBS)?"hold":
 				 (action==JA_RELEASE_JOBS)?"release":
 				 (action==JA_VACATE_JOBS)?"vacate":
@@ -1638,16 +1669,16 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		if( action == JA_HOLD_JOBS ) {
 			formatstr( buf, "Job %d.%d already held",
 					 job_id.cluster, job_id.proc );
-		} else if( action == JA_REMOVE_JOBS ) { 
+		} else if( action == JA_REMOVE_JOBS || action == JA_TRANSFER_AND_REMOVE_JOBS ) {
 			formatstr( buf, "Job %d.%d already marked for removal",
 					 job_id.cluster, job_id.proc );
-		}else if( action == JA_SUSPEND_JOBS ) { 
+		}else if( action == JA_SUSPEND_JOBS ) {
 			formatstr( buf, "Job %d.%d already suspended",
 					 job_id.cluster, job_id.proc );
-		}else if( action == JA_CONTINUE_JOBS ) { 
+		}else if( action == JA_CONTINUE_JOBS ) {
 			formatstr( buf, "Job %d.%d already running",
 					 job_id.cluster, job_id.proc );
-		} else if( action == JA_REMOVE_X_JOBS ) { 
+		} else if( action == JA_REMOVE_X_JOBS ) {
 				// pfc: due to the immediate nature of a forced
 				// remove, i'm not sure this should ever happen, but
 				// just in case...
