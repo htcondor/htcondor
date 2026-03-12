@@ -9316,6 +9316,14 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 		slot_ad.LookupString(ATTR_NAME, slot_name);
 
+		//
+		// This does _not_ start any jobs: it queues an attempt to contact
+		// the startd whose resources we're about to claim.  This results in
+		// the counter-intuitive behavior where the job which caused the
+		// schedd to spawn a transfer shadow will start _after_ jobs which
+		// merely blocked waiting for one, because the latter have already
+		// claimed their resources.
+		//
 			// TODO handle pre-claimed slots
 			// TODO handle slots already in use
 		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str(),
