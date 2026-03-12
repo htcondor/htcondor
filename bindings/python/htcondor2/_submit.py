@@ -366,7 +366,7 @@ class Submit(MutableMapping):
 
 
     @staticmethod
-    def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
+    def from_dag(filename : Union[Path, str], options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
         """
         Returns a :class:`Submit` object that can be used to submit the
         DAG specified in the file `filename`.
@@ -392,7 +392,7 @@ class Submit(MutableMapping):
                 raise TypeError("options values must be int, bool, or str")
             internal_options[internal_key] = str(value)
 
-        subfile = _submit_from_dag(filename, internal_options)
+        subfile = _submit_from_dag(str(filename), internal_options)
         subfile_text = Path(subfile).read_text()
         return Submit(subfile_text)
 
