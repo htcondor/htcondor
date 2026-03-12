@@ -508,6 +508,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		ClassAd query_ad;
 		ClassAd* summary_ad = nullptr;
 		std::string constraint;
+		const char* projection = ATTR_MY_TYPE "," ATTR_ENABLED "," ATTR_USER "," ATTR_NAME;
 		int user_enabled = 1;
 		int project_enabled = 1;
 		formatstr(constraint, "%s == \"%s\"", ATTR_USER, token_identity.c_str());
@@ -515,15 +516,17 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 			create_project = true;
 			formatstr_cat(constraint, " || %s == \"%s\"", ATTR_NAME, project.c_str());
 		}
-		schedd.makeUsersQueryAd(query_ad, constraint.c_str(), nullptr);
+		schedd.makeUsersQueryAd(query_ad, constraint.c_str(), projection);
 		if (!project.empty()) {
 			query_ad.Assign(ATTR_TARGET_TYPE, OWNER_ADTYPE "," PROJECT_ADTYPE);
 		}
 		auto process_func = [&](void*, ClassAd* ad) -> int {
-			if (ad->Lookup(ATTR_USER)) {
+			std::string ad_type;
+			ad->LookupString(ATTR_MY_TYPE, ad_type);
+			if (strcasecmp(ad_type.c_str(), "Owner") == MATCH) {
 				create_user = false;
 				ad->LookupInteger(ATTR_ENABLED, user_enabled);
-			} else if (ad->Lookup(ATTR_NAME)) {
+			} else if (strcasecmp(ad_type.c_str(), "Project") == MATCH) {
 				create_project = false;
 				ad->LookupInteger(ATTR_ENABLED, project_enabled);
 			}
