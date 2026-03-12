@@ -501,6 +501,7 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 
 		// We've only got one remote resource, so if it successfully
 		// reconnected, we can safely log our reconnect event
+	logReconnectRecord(true, time(nullptr), false);
 	logReconnectedEvent();
 
 	// If the shadow started in reconnect mode, check the job ad to see
