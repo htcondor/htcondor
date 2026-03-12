@@ -122,7 +122,7 @@ get_distribution() {
         . /etc/os-release
     fi
 
-    ARCH=$(arch)
+    ARCH=$(uname -m) # $(uname -m) is $(arch)
     repo_arch='noarch'
 
     if [ "$ID" = 'almalinux' ]; then

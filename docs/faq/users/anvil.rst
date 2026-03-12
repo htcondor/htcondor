@@ -43,7 +43,7 @@ following command.  (Don't copy the ``$``; in this and other examples
 further down the page, the ``$`` just signifies something you type in,
 rather than something that the computer prints out.)
 
-.. code-block:: text
+.. code-block:: console
 
     $ mybalance
 
@@ -68,7 +68,7 @@ Submit the job on the access point, indicating that you want it to run
 on your own resource (the Anvil allocation, in this case) with the
 ``--annex-name`` option:
 
-.. code-block:: text
+.. code-block:: console
 
     $ htcondor job submit example.submit --annex-name example
     Job 123 was submitted and will run only on the annex 'example'.
@@ -123,7 +123,7 @@ it may take a while.  Once the request is done, it will display:
 
 Check on the status of the annex to make sure it has started up correctly.
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor annex status example
 	Annex 'example' is not established.
@@ -136,7 +136,7 @@ Check on the status of the annex to make sure it has started up correctly.
 
 Give Anvil a few more minutes to grant your request and then check again.
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor annex status example
 	Annex 'example' is established.
@@ -155,7 +155,7 @@ Give Anvil a few more minutes to grant your request and then check again.
 After some time has passed, check the status of the job to make sure
 that it started running.
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor job status 123
 	Job will only run on your annex named 'example'.
@@ -165,7 +165,7 @@ We want to make sure the job is indeed running on the correct annex
 resources.  There are two different ways we could do this.  We could ask
 the annex itself:
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor annex status example
 	Annex 'example' is established.
@@ -182,7 +182,7 @@ This indicates that the annex is running jobs, but we don't know for
 sure that it's the one we just submitted.  Instead, let's ask the job
 itself what resources it is running on.
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor job resources 123
 	Job is using annex 'example', resource slot1_1@a000.anvil.rcac.purdue.edu.
@@ -194,7 +194,7 @@ At this point we know that our job is running on the correct resources,
 so we can wait for it to finish running.  After some time has passed, we
 ask for its status again:
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor job status 123
 	Job is completed.
@@ -205,7 +205,7 @@ terminated.  We could just wait for the annex time out automatically
 (after 20 minutes of being idle), but we would rather shut the annex down
 explicitly to avoid wasting our allocation.
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor annex shutdown example
 	Shutting down annex 'example'...
@@ -222,7 +222,7 @@ Reference
 You can run either of the following commands for an up-to-date summary
 of their corresponding options.
 
-.. code-block:: text
+.. code-block:: console
 
 	$ htcondor job --help
 	$ htcondor annex --help

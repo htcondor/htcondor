@@ -31,7 +31,7 @@ later will show the Hold Code and Hold Subcode, in the output of condor_q -hold:
 
 .. code-block:: console
 
-   -- Schedd: ap1000: <1.2.3.4:9618...>
+   -- Schedd: ap1000: <192.0.2.1:9618...>
  ID      OWNER          HELD_SINCE  CODE/SUB HOLD_REASON
  215.0   scientist      6/9  17:29    32/0   Error from slot1@ep: Job has gone over cgroup memory limit of 20096 megabytes
 

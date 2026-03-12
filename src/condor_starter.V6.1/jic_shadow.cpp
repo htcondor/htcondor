@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_version.h"
+#include "condor_holdcodes.h"
 
 #include "starter.h"
 #include "jic_shadow.h"
@@ -54,6 +55,8 @@
 #include <algorithm>
 
 #include "filter.h"
+
+#include "starter_commands.h"
 
 extern class Starter *starter;
 ReliSock *syscall_sock = NULL;
@@ -606,9 +609,12 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 		// transfer output files back if requested job really
 		// finished.  may as well do this in the foreground,
 		// since we do not want to be interrupted by anything
-		// short of a hardkill. 
+		// short of a hardkill.
 		// Don't transfer if we haven't started the job.
-	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate) ) {
+		// Also transfer if condor_rm -transfer was used, even if
+		// when_to_transfer_output is ON_EXIT (not just ON_EXIT_OR_EVICT).
+	bool final_transfer_on_rm = (starter->GetVacateSubcode() == HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE);
+	if( filetrans && m_job_setup_done && ((requested_exit == false) || transfer_at_vacate || final_transfer_on_rm) ) {
 
 		if ( shadowDisconnected() ) {
 				// trigger retransfer on reconnect
@@ -643,7 +649,9 @@ JICShadow::transferOutputStart(bool& transient_failure, bool& in_progress)
 
 			// true if job exited on its own or if we are set to not spool
 			// on eviction.
-		bool final_transfer = !spool_on_evict || (requested_exit == false);
+			// Also true if we got a vacate with the final transfer subcode
+		bool final_transfer = !spool_on_evict || (requested_exit == false) ||
+			(starter->GetVacateSubcode() == HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE);
 
 			// For the final transfer, we obey the output file remaps.
 		if (final_transfer) {
@@ -2996,6 +3004,28 @@ JICShadow::doneWithInputTransfer() {
 		recordSandboxContents( "in" );
 	}
 
+	if( param_boolean( "TESTING_COLOR_FROM_JOB_AD", false )) {
+		ExprTree * c = job_ad->Lookup( "ColorAd" );
+		ClassAd * colorAd = dynamic_cast<ClassAd *>(c);
+		if( colorAd == NULL ) {
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: `ColorAd` not a ClassAd, ignoring.\n" );
+		} else {
+			ClassAd replyAd;
+			bool protocol = colorSlot( * colorAd, replyAd );
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: protocol = %s\n", protocol ? "TRUE" : "FALSE" );
+
+			bool success = false;
+			if(! replyAd.LookupBool( ATTR_RESULT, success )) {
+				dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD:: ATTR_RESULT lookup failed.\n" );
+			}
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: ATTR_RESULT = %s\n", success ? "TRUE" : "FAILED" );
+
+			std::string reason;
+			replyAd.LookupString( ATTR_ERROR_STRING, reason );
+			dprintf( D_TEST, "TESTING_COLOR_FROM_JOB_AD: ATTR_REASON = %s\n", reason.c_str() );
+		}
+	}
+
 	// Now that we're done, report successful setup to the base class which tells the starter.
 	// This will either queue a prepare hook. or a queue a DEFERRAL timer to launch the job
 	setupCompleted(0);
@@ -3881,4 +3911,37 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 void
 JICShadow::resetInputFileCatalog() {
     filetrans->BuildFileCatalog();
+}
+
+
+bool
+JICShadow::colorSlot( const ClassAd & colorAd, ClassAd & replyAd ) {
+	if(! m_job_startd_update_sock) { return false; }
+
+	m_job_startd_update_sock->encode();
+	if(! m_job_startd_update_sock->put((int)STARTER_COMMAND::COLOR)) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to put(STARTER_COMMAND_COLOR)\n" );
+		return false;
+	}
+	if(! putClassAd(m_job_startd_update_sock, colorAd)) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to put(colorAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to end message.\n" );
+		return false;
+	}
+
+
+	m_job_startd_update_sock->decode();
+	if(! getClassAd(m_job_startd_update_sock, replyAd)) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to get(replyAd)\n" );
+		return false;
+	}
+	if(! m_job_startd_update_sock->end_of_message()) {
+		dprintf( D_ALWAYS, "colorSlot(): Failed to end message.\n" );
+		return false;
+	}
+
+	return true;
 }

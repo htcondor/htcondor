@@ -449,7 +449,7 @@ _schedd_act_on_userrec_list(PyObject *, PyObject * args) {
         if (list_of_ads) {
             PyErr_SetString(PyExc_HTCondorException, "Disable mixed users and projects not implemented.");
         } else if (is_project) {
-            PyErr_SetString(PyExc_HTCondorException, "Disable Projects not implemented.");
+            result = schedd.disableProjects(&name_vec[0], num_names, reason_string, &errstack);
         } else {
             result = schedd.disableUsers(&name_vec[0], num_names, reason_string, &errstack);
         }

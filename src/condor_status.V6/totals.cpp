@@ -378,7 +378,7 @@ update (ClassAd *ad, int options)
 void StartdServerTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%9.9s %5.5s %7.7s %11.11s %11.11s %11.11s\n", "Machines", 
+	fprintf (file, "%9.9s %5.5s %7.7s %11.11s %11.11s %11.11s\n", "Slots",
 					"Avail", "Memory", "Disk", "MIPS", "KFLOPS");
 }
 

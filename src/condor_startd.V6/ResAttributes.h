@@ -198,6 +198,22 @@ public:
 		}
 		return 0;
 	}
+
+	// same as is_owned, but returns true for p-slots when owner is either the pslot or child d-slot. (i.e. Assigned)
+	// And also returns a bool to indicate whether the NFR is currently Available to the slot (subid matches exactly)
+	int is_assigned_and_available(int slot_id, int sub_id, bool & available) const {
+		if (owner.id == slot_id) {
+			if (owner.dyn_id == sub_id) { available = true; return 1; } // owned by this slot
+			if ( ! sub_id) { available = false; return 1; } // owned by a child d-slot, so inherited, not owned
+		}
+		if (bkowner.id == slot_id && (sub_id == 0 || bkowner.dyn_id == sub_id)) {
+			available = (bkowner.dyn_id == sub_id);
+			// if the NFR is backfill owned by the given slot, and *also* by any active slot
+			if (owner.dyn_id > 0 || owner.active) return 3;
+			return 2;
+		}
+		return 0;
+	}
 };
 
 class NonFungibleType

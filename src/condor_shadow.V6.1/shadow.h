@@ -205,8 +205,14 @@ class UniShadow : public BaseShadow
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & cifName, const std::string & content
+	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
+		ClassAd * jobAd
+	);
+
+	virtual bool computeCommonInputFiles(
+		ClassAd * jobAd,
+		ListOfCatalogs & commonFileCatalogs,
+		int & required_version
 	);
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
@@ -230,6 +236,9 @@ class UniShadow : public BaseShadow
 
 	void requestJobRemoval();
 
+	// Flag to track if we should do a final file transfer before removing
+	// Set when we receive TRANSFER_SANDBOX_AND_RM_JOB (condor_rm -transfer)
+	bool transfer_and_remove_requested = false;
 
 	//
 	// Internal implementation details specific to pseudo_request_guidance().

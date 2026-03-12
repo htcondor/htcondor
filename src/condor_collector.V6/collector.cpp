@@ -563,7 +563,10 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 		// do startd ad locates in the daemon ad table
 		if (whichAds == STARTD_AD) {
 			whichAds = STARTDAEMON_AD;
-			label = STARTD_DAEMON_ADTYPE;
+			label = STARTD_DAEMON_ADTYPE " OR " STARTD_SLOT_ADTYPE;
+			num_adtypes = 2; // so we can also look in the Machine (i.e. Slot) table
+			is_multi_query = true;
+			target = STARTD_DAEMON_ADTYPE "," STARTD_SLOT_ADTYPE;
 		}
 	}
 
@@ -2326,6 +2329,14 @@ void CollectorDaemon::Exit()
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	
+	// Clean up view collector list
+	for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
+		delete e->collector;
+		delete e->sock;
+	}
+	vc_list.clear();
+	
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;
@@ -2348,6 +2359,14 @@ void CollectorDaemon::Shutdown()
 		daemonCore->Cancel_Timer(UpdateTimerId);
 		UpdateTimerId = -1;
 	}
+	
+	// Clean up view collector list
+	for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
+		delete e->collector;
+		delete e->sock;
+	}
+	vc_list.clear();
+	
 	free( CollectorName );
 	delete ad;
 	delete collectorsToUpdate;

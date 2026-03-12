@@ -5,14 +5,29 @@ on:
     types: [labeled, pull_request]
 
 jobs:
-  ubuntu_asan_build:
+  resolve-ubunturoot-image:
     # Only run with the "asan" label
     if: github.event.action == 'labeled' && contains(github.event.pull_request.labels.*.name, 'asan')
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.extract.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract ubunturoot image from nmi-build-platforms
+        id: extract
+        run: |
+          IMAGE=$(.github/workflows/scripts/extract_ubunturoot_image.py)
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+  ubuntu_asan_build:
+    needs: resolve-ubunturoot-image
     runs-on: ubuntu-latest
 
     # Use htcondor build containers for the real work
     container:
-      image: htcondor/nmi-build:x86_64_Ubuntu24-25060000
+      image: ${{ needs.resolve-ubunturoot-image.outputs.image }}
       env:
         OMP_NUM_THREADS: 4
       options: --cpus 4
@@ -29,7 +44,7 @@ jobs:
       - name: Run tests with Address Sanitizer
         run: |
           mkdir -p $GITHUB_WORKSPACE/asan && chown condorauto $GITHUB_WORKSPACE/asan && chmod 0777 $GITHUB_WORKSPACE/asan
-          su condorauto -c "cd __build && ASAN_OPTIONS="log_path=$GITHUB_WORKSPACE/asan/condor:exitcode=0" LSAN_OPTIONS="exitcode=0:suppressions=$GITHUB_WORKSPACE/build/lsan.supp:print_suppressions=0" LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.8 ctest --output-junit test.xml -j 20 --label-exclude noasan"
+          su condorauto -c "cd __build && ASAN_OPTIONS="log_path=$GITHUB_WORKSPACE/asan/condor:exitcode=0" LSAN_OPTIONS="exitcode=0:suppressions=$GITHUB_WORKSPACE/build/lsan.supp:print_suppressions=0" LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.8 ctest --output-junit test.xml -j 10 --label-exclude noasan"
 
       # The upload on fail step frequently fails because running condor
       # processes are mutating files as upload tries to read them, which

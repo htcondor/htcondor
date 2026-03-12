@@ -285,19 +285,16 @@ main_init( int argc, char ** const argv )
 		std_fds[1] = workers[i].result_pipe[1];
 		std_fds[2] = fileno(stderr);
 
-		workers[i].pid = 
-			daemonCore->Create_Process (
+		OptionalCreateProcessArgs cpArgs;
+		workers[i].pid =
+			daemonCore->CreateProcessNew(
 										exec_name.c_str(),
 										args,
-										PRIV_UNKNOWN,
-										reaper_id,
-										FALSE,			// no command port
-										FALSE,			// no command port
-										NULL,
-										NULL,
-										NULL,
-										NULL,
-										std_fds);
+										cpArgs.priv(PRIV_UNKNOWN)
+											.reaperID(reaper_id)
+											.wantCommandPort(FALSE)		// no command port
+											.wantUDPCommandPort(FALSE)	// no command port
+											.std(std_fds));
 
 
 		if (workers[i].pid > 0) {

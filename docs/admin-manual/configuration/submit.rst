@@ -36,11 +36,8 @@ Job Submission Configuration Options
     not specify how much it needs using the
     :subcom:`request_memory[and JOB_DEFAULT_REQUESTMEMORY]`
     submit command. If this variable is not defined, then the default is
-    defined by the expression
+    defined by the expression :ad-expr:`128`
 
-    .. code-block:: text
-
-          128
 
 :macro-def:`JOB_DEFAULT_REQUESTDISK`
     The amount of disk in KiB to acquire for a job, if the job does not

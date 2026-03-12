@@ -39,6 +39,11 @@ input for node ``B``. This can be described as a DAGMan workflow as follows:
     https://www.youtube.com/watch?v=C2RkdxE_ph0 .  A link to the slides is
     available in the videos' description.
 
+.. note::
+
+    Visit `OSG DAGMan Github tutorial <https://github.com/OSGConnect/tutorial-dagman-intermediate>`_
+    for an interactive tutorial on learning DAGMan.
+
 .. toctree::
    :maxdepth: 2
    :glob:

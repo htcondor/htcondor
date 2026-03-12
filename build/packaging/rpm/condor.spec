@@ -237,14 +237,14 @@ Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp >= 0.6.2
+Requires: scitokens-cpp
 Requires: systemd-libs
 %endif
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.22.0 or pelican-debug >= 7.22.0)
-Requires: pelican-osdf-compat >= 7.22.0
+Requires: (pelican >= 7.23.0 or pelican-debug >= 7.23.0)
+Requires: pelican-osdf-compat >= 7.23.0
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
@@ -265,7 +265,7 @@ Requires: apptainer >= 1.4.5
 Recommends: bash-completion
 
 #From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10
+%if 0%{?fedora} >= 42
 # The RPM macros already makes virtual Provides for user and group
 %else
 Provides: user(condor) = 64
@@ -532,7 +532,7 @@ if [ $1 == 0 ]; then
 fi
 
 %pre
-%if 0%{?fedora} >= 42 || 0%{?rhel} >= 10 || 0%{?suse_version} >= 1600
+%if 0%{?fedora} >= 42
 # RPM handles user creation automagically in these versions
 %else
 getent group condor >/dev/null || groupadd --system --gid 64 condor
@@ -617,7 +617,7 @@ make -C docs man
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
 %endif
-%if 0%{?rhel} == 8
+%if 0%{?rhel} == 8 || 0%{?suse_version} >= 1600
        -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
@@ -1104,6 +1104,7 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blparser.conf
 %dir %_sysconfdir/blahp/
 %config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/flux_local_submit_attributes.sh
 %config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
 %config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
 %config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
@@ -1222,6 +1223,9 @@ rm -rf %{buildroot}
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
+# Experimental - not for wider deployment
+%_bindir/condor_login
+%_sbindir/condor_placementd
 
 %files -n python3-condor
 %defattr(-,root,root,-)
@@ -1313,6 +1317,71 @@ fi
 # configuration
 
 %changelog
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.7.2-1
+- Improve schedd performance with large job records by sizing pipe buffers
+- condor_watch_q display improvements
+- When a job runs out of memory, report how much memory was provisioned
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.8-1
+- All changes in 24.12.18
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
+- Improve AMD GPU detection when using RCOM6/HIP libraries
+- Fix for new jobs getting kicked off LVM EP due to quantization mismatch
+- condor_submit now reports an error for circular requirement expressions
+- condor_status now correctly reports offline GPUs
+- Can use use a string for 'since' with htcondor.Schedd.history()
+- Fix for backfill GPUs disappearing on reconfig
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.18-1
+- Enable use of in-memory SciTokens cache, if disk cache not usable
+- Fix condor_submit using different executables with late materialization
+- HTCondor tarballs now contain Pelican 7.23.0
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.7-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-2
+- Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-2
+- Fix condor user creation for Enterprise Linux 10
+- Fix python3 dependency on openSUSE 16
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.6.1-1
+- DAGMan now uses the new DAG file parser used by condor_dag_checker
+- The condor keyboard daemon now checks idle time via systemd and Mutter
+- Can now specify DAGMan rescue file by name
+- Adminstrators can now require units on retry_request_memory
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.6-1
+- Initial support for openSUSE 16
+- Make HTCondor Python wheel usable with the python-slim Docker image
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.16-1
+- Fix problem specifying scope or audience with a Vault-managed credential
+- Fix late materialization bug when job transform sets immutable attribute
+- Fix problem where a backfill slot would refuse claims
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.16-1
+- Fix floating point memory or disk request not fitting into some slots
+- Fix condor_rooster crash when unhibernate rank was not constant
+- Fix memory leak in the htcondor2.JobEventLog.events() Python method
+- condor_history -long now prints attributes in alphabetical order
+- Fix LVM setup to not timeout when creating a large volume
+- LVM creation no longer saves meta data which eventually fills the disk
+- HTCondor tarballs now contain Pelican 7.22.0 and Apptainer 1.4.5
+
 * Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 25.5.1-1
 - The negotiator can now use its own concept of slot weight (not the EP's)
 - A stuck LVM logical volume will cause the EP slot to be broken and

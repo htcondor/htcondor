@@ -56,6 +56,7 @@ extensions = [
     'ad-attr',
     'hidden',
     'flatten-history',
+    'fake-definition',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -80,7 +81,7 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-        'display_version': False
+    'display_version': False, # Note: This feature is gone in v3 of sphinx_rtd_theme (produces warning)
 }
 
 # Enable Github edits

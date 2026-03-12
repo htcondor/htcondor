@@ -29,7 +29,7 @@ class Startd():
     `draining <https://htcondor.readthedocs.io/en/latest/admin-manual/cm-configuration.html#defragmenting-dynamic-slots>`_.
     """
 
-    def __init__(self, location : classad.ClassAd = None):
+    def __init__(self, location : Optional[classad.ClassAd] = None):
         """
         :param location:  A ClassAd with a ``MyAddress`` attribute, such as
             might be returned by :meth:`htcondor2.Collector.locate`.  :py:obj:`None` means the
@@ -81,7 +81,7 @@ class Startd():
           int(drain_type), int(on_completion), check_expr, start_expr, reason
         )
 
-    def vacateSlot(self, slot_name : str = None, vacate_fast : VacateType = VacateType.Graceful) -> None:
+    def vacateSlot(self, slot_name : Optional[str] = None, vacate_fast : VacateType = VacateType.Graceful) -> None:
         """
         Evict the job running on an active slot. Eviction is graceful unless
         vacate_fast is set to VacateType.Fast.
@@ -103,7 +103,7 @@ class Startd():
         _startd_vacate_slots(self._addr, None, vacate_fast)
 
 
-    def cancelDrainJobs(self, request_id : str = None) -> None:
+    def cancelDrainJobs(self, request_id : Optional[str] = None) -> None:
         """
         Cancel a draining request.
 

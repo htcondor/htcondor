@@ -240,6 +240,7 @@ DaemonCore::DaemonCore()
 	m_proc_family = NULL;
 
 	m_unregisteredCommand.num = 0;
+	m_httpCommand.num = 0;
 
 	sec_man = new SecMan();
 	audit_log_callback_fn = 0;
@@ -399,6 +400,10 @@ DaemonCore::~DaemonCore()
 	if ( m_unregisteredCommand.num ) {
 		free( m_unregisteredCommand.command_descrip );
 		free( m_unregisteredCommand.handler_descrip );
+	}
+	if ( m_httpCommand.num ) {
+		free( m_httpCommand.command_descrip );
+		free( m_httpCommand.handler_descrip );
 	}
 
 	for (auto &s : sigTable) {
@@ -929,6 +934,22 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 	m_unregisteredCommand.service = s;
 	m_unregisteredCommand.num = 1;
 	m_unregisteredCommand.is_cpp = include_auth;
+	return 1;
+}
+
+int DaemonCore::Register_HTTP_CommandHandler(
+	StdCommandHandler handler,
+	const char* handler_descrip)
+{
+	if (m_httpCommand.num) {
+		dprintf(D_ERROR, "DaemonCore: HTTP command handler already registered\n");
+		return -1;
+	}
+	m_httpCommand.std_handler = handler;
+	m_httpCommand.command_descrip = strdup("HTTP HANDLER");
+	m_httpCommand.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
+	m_httpCommand.num = 1;
+	m_httpCommand.is_cpp = true;
 	return 1;
 }
 
@@ -2024,7 +2045,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 		nonblocking_read,
 		nonblocking_write,
 		psize,
-		NULL);
+		nullptr);
 #endif
 }
 
@@ -2032,11 +2053,11 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 MSC_DISABLE_WARNING(6211)
 
 int DaemonCore::Create_Named_Pipe( int *pipe_ends,
-			     bool can_register_read,
-			     bool can_register_write,
+			     [[maybe_unused]] bool can_register_read,
+			     [[maybe_unused]] bool can_register_write,
 			     bool nonblocking_read,
 			     bool nonblocking_write,
-			     unsigned int psize,
+			     [[maybe_unused]] unsigned int psize,
 				 const char* pipe_name)
 {
 	dprintf(D_DAEMONCORE,"Entering Create_Named_Pipe()\n");
@@ -2091,12 +2112,6 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 		// what follows is the unix implementation of an unnamed pipe,
 		// which is what we do when pipe_name == NULL
 
-	// Shut the compiler up
-	// These parameters are needed on Windows
-	(void)can_register_read;
-	(void)can_register_write;
-	(void)psize;
-
 	bool failed = false;
 	int filedes[2];
 	if ( pipe(filedes) == -1 ) {
@@ -2137,6 +2152,19 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 
 	read_handle = filedes[0];
 	write_handle = filedes[1];
+
+#ifdef LINUX
+	// Set pipe size, if bigger than the default
+	if (psize > DEFAULT_PIPE_SIZE) {
+		int result = fcntl(write_handle, F_SETPIPE_SZ, psize);
+		if (result != 0) {
+			dprintf(D_ALWAYS, "Cannot set pipe size to %u bytes, error %d: %s\n",
+				psize, errno, strerror(errno));
+		}
+	}
+#endif
+
+// unix
 #endif
 
 	// add PipeHandles to pipeHandleTable
@@ -2148,7 +2176,7 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 	return TRUE;
 }
 
-int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonblocking, int psize)
+int DaemonCore::Inherit_Pipe(int fd, [[maybe_unused]] bool is_write, [[maybe_unused]] bool can_register, [[maybe_unused]] bool nonblocking, [[maybe_unused]] int psize)
 {
 	PipeHandle pipe_handle;
 
@@ -2161,13 +2189,6 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 		pipe_handle = new ReadPipeEnd(h, can_register, nonblocking, psize);
 	}
 #else
-		// Shut the compiler up
-		// These parameters are needed on Windows
-	(void)is_write;
-	(void)can_register;
-	(void)nonblocking;
-	(void)psize;
-
 	pipe_handle = fd;
 #endif
 
@@ -4439,6 +4460,39 @@ DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
 }
 
 int
+DaemonCore::CallHTTPCommandHandler(int req, Stream *stream)
+{
+	double handler_start_time = 0;
+	if (!m_httpCommand.num) {
+		dprintf(D_ALWAYS,
+			"Received HTTP/TLS request (%d) from %s but no HTTP handler registered.\n",
+			req,
+			stream->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_COMMAND, "Calling HTTP handler <%s> for request %d from %s\n",
+			m_httpCommand.handler_descrip,
+			req,
+			stream->peer_description());
+
+	handler_start_time = _condor_debug_get_time_double();
+
+	// call the handler function
+	int result = FALSE;
+	if (m_httpCommand.std_handler) {
+		result = m_httpCommand.std_handler(req, stream);
+	}
+
+	double handler_time = _condor_debug_get_time_double() - handler_start_time;
+
+	dprintf(D_COMMAND, "Return from HTTP handler <%s> (%.3fs)\n",
+			m_httpCommand.handler_descrip, handler_time);
+
+	return result;
+}
+
+int
 DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool check_payload,float time_spent_on_sec,float time_spent_waiting_for_payload)
 {
 	int result = FALSE;
@@ -5209,9 +5263,8 @@ const std::vector<Sinful> & DaemonCore::InfoCommandSinfulStringsMyself()
 	return m_command_sock_sinfuls;
 }
 
-int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
+int DaemonCore::Shutdown_Fast(pid_t pid, [[maybe_unused]] bool want_core )
 {
-	(void) want_core;		// For windoze
 
 	if ( pid == ppid ) {
 		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill our own parent.\n" );
@@ -8484,6 +8537,7 @@ int DaemonCore::Create_Process(
 	// we don't want to do this, because we are sharing memory.
 	if (family_info && m_proc_family && family_info->cgroup && !UseCloneToCreateProcesses()) {
 		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
+		family_info->cgroup_active = m_proc_family->cgroup_enforceable();
 	}
 #endif
 

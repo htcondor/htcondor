@@ -35,6 +35,7 @@
 
 #include <optional>
 #include "guidance.h"
+#include "catalog_utils.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
@@ -77,7 +78,7 @@ class BaseShadow : public Service
 			     data members.
 			 <li>calls config()
 			 <li>calls initUserLog()
-			 <li>registers handleJobRemoval on SIGUSR1
+			 <li>registers handleJobRemoval on signals
 			</ul>
 			It should be called right after the constructor.
 			@param job_ad The ClassAd for this job.
@@ -407,9 +408,15 @@ class BaseShadow : public Service
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
-	virtual std::optional<std::string> uniqueCIFName(
-		const std::string & /* cifName */, const std::string & /* content */
+	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
+		ClassAd * /* jobAd */
 	) { return {}; }
+
+	virtual bool computeCommonInputFiles(
+		ClassAd * /* jobAd */,
+		ListOfCatalogs & /* commonFileCatalogs */,
+		int & /* required_version */
+	) { return false; }
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() { return {}; }
 

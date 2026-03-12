@@ -65,6 +65,40 @@ Long winded comment:
 
 ---
 
+**.. faux-definition::** and **.. fake-definition::** are custom directives to allow nice looking
+multi-term definition lists. By default RST allows the following format to create a terminology to
+definition list:
+
+```
+Term 1
+    Definition
+
+Term 2
+    Definition
+
+Term 3
+    Definition
+```
+
+However, to make nice looking HTML pages that show multiple terminology items associated with a single
+definition as multiple lines you can do the following:
+
+```
+Term 1-A
+    .. faux-definition::
+
+Term 1-B
+    Definition
+
+Term 2
+    Definition
+
+Term 3
+    Definition
+```
+
+---
+
 **.. include-history::** is a directive to help create release version histories where entries are
 stored in a single place to reduce the amount of copying of an entry between multiple releases. This
 also automates the process of having all version history entries that are propagated upwards to feature

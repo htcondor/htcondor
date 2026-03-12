@@ -501,30 +501,6 @@ Node::AddVar(const std::string& name, const std::string& value, bool prepend) {
 }
 
 //---------------------------------------------------------------------------
-int
-Node::PrintVars(std::string &vars) {
-	int num_vars = 0;
-	for (auto & it : varsFromDag) {
-		vars.push_back(' ');
-		vars.append(it._name);
-		vars.push_back('=');
-		vars.push_back('\"');
-		// now we print the value, but we have to re-escape certain characters
-		const char * p = it._value.data();
-		while (*p) {
-			char c = *p++;
-			if (c == '\"' || c == '\\') {
-				vars.push_back('\\');
-			}
-			vars.push_back(c);
-		}
-		vars.push_back('\"');
-		++num_vars;
-	}
-	return num_vars;
-}
-
-//---------------------------------------------------------------------------
 bool
 Node::AddChildren(const std::vector<Node*>& children, std::string &whynot) {
 	// check if all of this can be our child, and if all are ok being our children
@@ -915,28 +891,3 @@ Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	return good_state;
 }
 
-//---------------------------------------------------------------------------
-void
-Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
-	if (retry_max > 0) {
-		ASSERT(retries <= retry_max);
-
-		int retriesLeft = (retry_max - retries);
-
-		if (GetStatus() == Node::STATUS_ERROR && retries < retry_max &&
-		    have_retry_abort_val && retval == retry_abort_val)
-		{
-			fprintf(fp, "# %d of %d retries performed; remaining attempts aborted after node returned %d\n",
-			        retries, retry_max, retval);
-		} else if ( ! reset_retries) {
-				fprintf(fp, "# %d of %d retries already performed; %d remaining\n",
-				        retries, retry_max, retriesLeft);
-		}
-
-		fprintf(fp, "RETRY %s %d", GetNodeName(), reset_retries ? retry_max : retriesLeft);
-		if (have_retry_abort_val) {
-			fprintf(fp, " UNLESS-EXIT %d", retry_abort_val);
-		}
-		fprintf(fp, "\n");
-	}
-}

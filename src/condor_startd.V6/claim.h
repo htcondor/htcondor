@@ -239,6 +239,7 @@ public:
 	bool isActive( void );
 	bool isRunning( void );	
 	bool deactivateClaim( bool graceful, bool job_done, bool claim_closing );
+	bool deactivateClaimFinalXfer( void );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
 	bool starterKillFamily();
@@ -292,7 +293,7 @@ public:
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update );
 
-	void receiveUpdateCommand(int cmd, ClassAd &payload_ad, ClassAd &reply_ad);
+	void receiveUpdateCommand(int cmd, const ClassAd &payload_ad, ClassAd &reply_ad);
 
 		// registered callback for premature closure of connection from
 		// schedd requesting this claim

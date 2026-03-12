@@ -295,7 +295,7 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 pelican pelican-osdf-compat
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 libsqlite3-0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
         apt-get download libscitokens0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
@@ -316,7 +316,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
-        libgomp munge-libs pelican pelican-osdf-compat pcre2 scitokens-cpp
+        libgomp munge-libs pelican pelican-osdf-compat pcre2 sqlite-libs scitokens-cpp
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi

@@ -824,7 +824,10 @@ These macros control the *condor_schedd*.
     :macro:`SYSTEM_PERIODIC_HOLD`
     There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD[SCHED]` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>`
+:macro-def:`SYSTEM_PERIODIC_HOLD[SCHED]`
+    .. faux-definition::
+
+:macro-def:`SYSTEM_PERIODIC_HOLD_<Name>`
     This expression behaves identically to the job expression
     ``periodic_hold``, but it is evaluated for every job in the queue.
     It defaults to ``False``. When ``True``, it causes the job to stop
@@ -847,13 +850,19 @@ These macros control the *condor_schedd*.
           (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
         endif
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_REASON` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_REASON`
+:macro-def:`SYSTEM_PERIODIC_HOLD_REASON`
+    .. faux-definition::
+
+:macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_REASON`
     This string expression is evaluated when the job is placed on hold
     due to :macro:`SYSTEM_PERIODIC_HOLD` or :macro:`SYSTEM_PERIODIC_HOLD_<Name>` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute :ad-attr:`HoldReason`. Otherwise, a default description is used.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE` and :macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE`
+:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE`
+    .. faux-definition::
+
+:macro-def:`SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE`
     This integer expression is evaluated when the job is placed on hold
     due to :macro:`SYSTEM_PERIODIC_HOLD` or :macro:`SYSTEM_PERIODIC_HOLD_<Name>` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
@@ -875,7 +884,10 @@ These macros control the *condor_schedd*.
     :macro:`SYSTEM_PERIODIC_RELEASE`
     There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_RELEASE` and :macro-def:`SYSTEM_PERIODIC_RELEASE_<Name>`
+:macro-def:`SYSTEM_PERIODIC_RELEASE`
+    .. faux-definition::
+
+:macro-def:`SYSTEM_PERIODIC_RELEASE_<Name>`
     This expression behaves identically to a job's definition of a
     :subcom:`periodic_release[and SYSTEM_PERIODIC_RELEASE]`
     expression in a submit description file, but it is evaluated for
@@ -906,7 +918,10 @@ These macros control the *condor_schedd*.
     :macro:`SYSTEM_PERIODIC_REMOVE`
     There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_REMOVE` and :macro-def:`SYSTEM_PERIODIC_REMOVE_<Name>`
+:macro-def:`SYSTEM_PERIODIC_REMOVE`
+    .. faux-definition::
+
+:macro-def:`SYSTEM_PERIODIC_REMOVE_<Name>`
     This expression behaves identically to the job expression
     ``periodic_remove``, but it is evaluated for every job in the queue.
     As it is in the configuration file, it is easy for an administrator
@@ -933,7 +948,10 @@ These macros control the *condor_schedd*.
     from the machine it is running on, and returned to the queue as Idle.  See also
     :macro:`SYSTEM_PERIODIC_VACATE` There is no default value.
 
-:macro-def:`SYSTEM_PERIODIC_VACATE` and :macro-def:`SYSTEM_PERIODIC_VACATE_<Name>`
+:macro-def:`SYSTEM_PERIODIC_VACATE`
+    .. faux-definition::
+
+:macro-def:`SYSTEM_PERIODIC_VACATE_<Name>`
     This expression behaves identically to the job expression
     ``periodic_vacate``, but it is evaluated for every running job in the queue.
     As it is in the configuration file, it is easy for an administrator

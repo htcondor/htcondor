@@ -215,6 +215,10 @@ def pytest_runtest_protocol(item, nextitem):
 
 @pytest.fixture(scope="class")
 def default_condor(test_dir):
+    """
+    Default Condor instance for tests.
+    Automatically uses sudo if HTCONDOR_TEST_USE_SUDO=1 environment variable is set.
+    """
     with Condor(local_dir=test_dir / "condor") as condor:
         yield condor
 

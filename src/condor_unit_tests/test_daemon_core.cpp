@@ -174,13 +174,15 @@ main_init(int argc, char ** /*argv*/)
 		ArgList al;
 		al.AppendArg("/bin/ls");
 		al.AppendArg("-l");
-		result = daemonCore->Create_Process(
+		OptionalCreateProcessArgs cpArgs;
+		result = daemonCore->CreateProcessNew(
 					"/bin/ls",
-					al);
+					al,
+					cpArgs);
 		if ( result == FALSE ) {
-			printf("*** Create_Process failed\n");
+			printf("*** CreateProcessNew failed\n");
 		} else {
-			printf("*** Create_Process SUCCEEDED!!\n");
+			printf("*** CreateProcessNew SUCCEEDED!!\n");
 		}
 		if ( !daemonCore->Send_Signal(result,10) ) {
 			printf("*** Send_Signal 10 to child failed!!!\n");
