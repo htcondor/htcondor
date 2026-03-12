@@ -559,6 +559,7 @@ ClassAd *  suspendUsersOrProjects(
 			}
 		} else if (usernames.size()) {
 			// we need a separate ad for each user, each should contain all of the edit_args
+			adlist.reserve(usernames.size());
 			for (auto & name : usernames) {
 				adlist.emplace_back(edits);
 				adlist.back().Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
@@ -1135,6 +1136,7 @@ main( int argc, const char *argv[] )
 			} else if (usernames.size()) {
 				op.num_ads = usernames.size();
 				// we need a separate ad for each user, each should contain all of the edit_args
+				adlist.reserve(usernames.size());
 				for (auto & name : usernames) {
 					adlist.emplace_back(ad);
 					adlist.back().Assign(dash_projects ? ATTR_NAME : ATTR_USER, name);
