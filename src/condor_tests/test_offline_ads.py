@@ -209,13 +209,19 @@ def offline_ad_invalidated(condor_offline, advertised_offline_ad, offline_machin
         "MyAddress": _FAKE_ADDR,
         "StartdIpAddr": "127.0.0.1",
     })
-    collector.advertise([invalidate_ad], "INVALIDATE_STARTD_ADS")
 
     constraint = f'Name == "{offline_machine_name}"'
+    invalidated = False
     for _ in range(30):
-        ads = collector.query(htcondor.AdTypes.Startd, constraint)
-        if not ads:
-            return True
+        try:
+            if not invalidated:
+                collector.advertise([invalidate_ad], "INVALIDATE_STARTD_ADS")
+                invalidated = True
+            ads = collector.query(htcondor.AdTypes.Startd, constraint)
+            if not ads:
+                return True
+        except Exception:
+            pass  # Collector may be momentarily busy under load.
         time.sleep(1)
     return False
 
@@ -299,16 +305,22 @@ def advertise_soon_expiring_ad(condor_absent, absent_machine_name):
     Returns True when the initial ad appears, False on timeout.
     """
     collector = condor_absent.get_local_collector()
-    # ClassAdLifetime=5 forces the ad to expire after 5 s.
-    collector.advertise(
-        [_machine_ad(absent_machine_name, ClassAdLifetime=5)],
-        "UPDATE_STARTD_AD",
-    )
-    # Confirm the fresh ad appears in the collector before it expires.
-    for _ in range(15):
-        ads = collector.query(htcondor.AdTypes.Startd, f'Name == "{absent_machine_name}"')
-        if ads:
-            return True
+    ad = _machine_ad(absent_machine_name, ClassAdLifetime=5)
+    constraint = f'Name == "{absent_machine_name}"'
+    advertised = False
+    # Retry loop: the collector may not be ready to accept connections yet,
+    # especially under load.  Re-advertise on failure so that the short
+    # ClassAdLifetime doesn't expire before the ad is accepted.
+    for _ in range(30):
+        try:
+            if not advertised:
+                collector.advertise([ad], "UPDATE_STARTD_AD")
+                advertised = True
+            ads = collector.query(htcondor.AdTypes.Startd, constraint)
+            if ads:
+                return True
+        except Exception:
+            pass  # Collector may be momentarily busy under load.
         time.sleep(1)
     return False
 

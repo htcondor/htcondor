@@ -228,6 +228,9 @@ inline const char * EffectiveUserName(const Sock * sock) {
 
 static bool isOCUSuperUser(ReliSock* sock) {
 	auto * rsock_user = EffectiveUserRec(sock);
+	if ( ! rsock_user) {
+		return false;
+	}
 	if (isQueueSuperUser(rsock_user)) {
 		return true;
 	}
