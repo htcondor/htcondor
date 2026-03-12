@@ -5,7 +5,7 @@ import logging
 import argparse
 from pathlib import Path
 
-from htcondor_cli import NOUNS, GLOBAL_OPTIONS
+from htcondor_cli import NOUNS, GLOBAL_OPTIONS, MutualExclusionArgs
 
 
 # Override ArgumentParser to not exit on error
@@ -51,14 +51,23 @@ def parse_args():
             dest="verb",
         )
 
+        def add_verb_argument(destination, details):
+            kwargs = details.copy()
+            args = kwargs.pop("args")
+            destination.add_argument(*args, **kwargs)
+
         # Add verbs to parser
         for verb_cls in noun_cls.verbs():
             verb = verb_cls.__name__
             verb_parser = noun_subparser.add_parser(verb, description=verb_cls.__doc__)
             for option_name in verb_cls.options:
-                kwargs = verb_cls.options[option_name].copy()
-                args = kwargs.pop("args")
-                verb_parser.add_argument(*args, **kwargs)
+                if isinstance(verb_cls.options[option_name], MutualExclusionArgs):
+                    mutex = verb_cls.options[option_name]
+                    group = mutex.make_group(verb_parser)
+                    for name in mutex:
+                        add_verb_argument(group, mutex[name])
+                else:
+                    add_verb_argument(verb_parser, verb_cls.options[option_name])
 
     # Parse args and get the dict representation
     try:

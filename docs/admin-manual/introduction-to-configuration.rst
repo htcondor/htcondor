@@ -156,7 +156,7 @@ Configuration File Macros
 
 Macro definitions are of the form:
 
-.. code-block:: text
+.. code-block:: condor-config
 
     <macro_name> = <macro_definition>
 
@@ -1175,7 +1175,7 @@ Configuration Templates: Using Predefined Sets of Configuration
 Predefined sets of configuration can be identified and incorporated into
 the configuration using the syntax
 
-.. code-block:: text
+.. code-block:: condor-config
 
       use <category name> : <template name>
 

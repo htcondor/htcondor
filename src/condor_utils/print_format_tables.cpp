@@ -268,22 +268,6 @@ bool render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/
 	return true;
 }
 
-bool render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/)
-{
-	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
-		return false;
-
-	int ckpt_time = 0;
-	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
-	if (ckpt_time == 0) return false;
-	double util = cputime/ckpt_time*100.0;
-	if (util > 100.0) util = 100.0;
-	else if (util < 0.0) return false;
-	cputime = util;
-	// printf(result_format, "  %6.1f%%", util);
-	return true;
-}
-
 bool render_dag_owner (std::string & out, ClassAd *ad, Formatter & fmt)
 {
 	if (ad->LookupExpr(ATTR_DAGMAN_JOB_ID)) {
@@ -686,57 +670,6 @@ bool render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 	return false;
 }
 
-bool render_goodput (double & goodput_time, ClassAd *ad, Formatter & /*fmt*/)
-{
-	int job_status;
-	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
-		return false;
-
-	time_t ckpt_time = 0;
-	time_t shadow_bday = 0;
-	time_t last_ckpt = 0;
-	double wall_clock = 0.0;
-	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
-	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday && last_ckpt > shadow_bday) {
-		wall_clock += last_ckpt - shadow_bday;
-	}
-	if (wall_clock <= 0.0) return false;
-
-	goodput_time = ckpt_time/wall_clock*100.0;
-	if (goodput_time > 100.0) goodput_time = 100.0;
-	else if (goodput_time < 0.0) return false;
-	//sprintf(put_result, " %6.1f%%", goodput_time);
-	return true;
-}
-
-bool render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
-{
-	double bytes_sent;
-	if ( ! ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent))
-		return false;
-
-	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
-	time_t shadow_bday = 0;
-	time_t last_ckpt = 0;
-	int job_status = IDLE;
-	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
-	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday && last_ckpt > shadow_bday) {
-		wall_clock += last_ckpt - shadow_bday;
-	}
-	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
-	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
-	if (total_mbits <= 0) return false;
-	mbps = total_mbits / wall_clock;
-	// sprintf(result_format, " %6.2f", mbps);
-	return true;
-}
-
 const char * format_utime_double (double utime, Formatter & /*fmt*/)
 {
 	return format_time((time_t)utime);
@@ -898,7 +831,7 @@ bool render_strings_from_list ( classad::Value & value, ClassAd*, Formatter & fm
 
 bool render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt )
 {
-	if( ! value.IsListValue() ) {
+	if( ! value.IsListValue() && ! value.IsStringValue() ) {
 		return false;
 	}
 	std::string buffer;
@@ -916,7 +849,6 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "BUFFER_IO_MISC",  ATTR_JOB_UNIVERSE, 0, render_buffer_io_misc, ATTR_FILE_SEEK_COUNT "\0" ATTR_BUFFER_SIZE "\0" ATTR_BUFFER_BLOCK_SIZE "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
 	{ "CONDOR_PLATFORM", "CondorPlatform", 0, render_condor_platform, NULL },
 	{ "CONDOR_VERSION",  ATTR_CONDOR_VERSION, 0, render_version, NULL },
-	{ "CPU_UTIL",        ATTR_JOB_REMOTE_USER_CPU, "%.1f", render_cpu_util, ATTR_JOB_COMMITTED_TIME "\0" },
 	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 #if 0
 	//This was a collision between history table and prettyPrint table
@@ -958,8 +890,6 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "READABLE_MB",     ATTR_MEMORY, 0, format_readable_mb, NULL },
 	{ "REMOTE_HOST",     ATTR_OWNER, 0, render_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
 	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, 0, format_utime_double, NULL },
-	{ "STDU_GOODPUT",    ATTR_JOB_STATUS, "%.1f", render_goodput, ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_LAST_CKPT_TIME "\0" },
-	{ "STDU_MPBS",       ATTR_BYTES_SENT, "%.2f", render_mbps, ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_LAST_CKPT_TIME "\0" ATTR_JOB_STATUS "\0" ATTR_BYTES_RECVD "\0"},
 	{ "STRINGS_FROM_LIST", NULL, 0, render_strings_from_list, NULL },
 	{ "TIME",            ATTR_KEYBOARD_IDLE, 0, format_real_time, NULL },
 	{ "UNIQUE",          NULL, 0, render_unique_strings, NULL },

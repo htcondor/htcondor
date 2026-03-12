@@ -8,7 +8,7 @@ __pycache__
 /_build/
 
 # Ignore dynamically produced javascript for documentation
-docs/_static/js/config-macro-redirect.js
+docs/_static/generated/js/*
 
 # vscode files
 .vscode/

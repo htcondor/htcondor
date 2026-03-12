@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% import 'utils.jinja' as utils %}
+
 {% block style %}
     <style>
         .graph .vizchart {
@@ -29,6 +31,7 @@ Contribution of compute capacity from the
                         dst_id: "{{ resource }}-by-project",
                         title: "{{ resource }} Allocation by Project",
                         data_url: "/data/ce_overview",
+                        action_url: "showModal('allocation-modal')",
                         graph_query: urlEscapeGraphQuery(`
                             vAxis.title={{ vaxis }}
                             filter=Type=P
@@ -59,6 +62,12 @@ Contribution of compute capacity from the
                 </script>
             </div>
         </div>
+
+        {% call utils.bootstrap_modal('allocation-modal', 'About: ' + resource + ' Allocation by Project') %}
+            <p>
+                Displays the usage of {{resource}} on EPs at this site, partitioned by research project.
+            </p>
+        {% endcall %}
 
     </div>
 

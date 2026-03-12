@@ -8,6 +8,16 @@
     </style>
 {% endblock style %}
 
+{% block js %}
+    {{ super() }}
+    <script src="static/util.js"></script>
+    <script>
+        $(document).ready(function() {
+            registerKeyboardNavigation();
+        });
+    </script>
+{% endblock js %}
+
 {% block body %}
 
     <div class="container-fluid">

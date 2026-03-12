@@ -279,7 +279,7 @@ case the network topology might look something like this:
    flowchart LR
     start((Internet)) --> NAT
     start -- blocked\nby Firewall --o Firewall
-    NAT[NAT\nbox\n@1.2.3.4]
+    NAT[NAT\nbox\n@192.0.2.1]
     NAT --> Condor
 
     subgraph Firewall
@@ -287,15 +287,15 @@ case the network topology might look something like this:
     end
 
 That, our HTCondor daemon has an addresss of 10.1.2.3, but in order
-to route IP traffic to it, we need to send packets to address 1.2.3.4
+to route IP traffic to it, we need to send packets to address 192.0.2.1
 The configuration parameter :macro:`TCP_FORWARDING_HOST` does just this.
 In this case, on the HTCondor daemon side, setting
 
 .. code-block:: condor-config
 
-   TCP_FORWARDING_HOST = 1.2.3.4
+   TCP_FORWARDING_HOST = 192.0.2.1
 
-Will cause this daemon to advertise it's address as 1.2.3.4, and any other
+Will cause this daemon to advertise it's address as 192.0.2.1, and any other
 daemon wanting to make a connection to it will use this address.
 
 Reducing Port Usage with the *condor_shared_port* Daemon
@@ -883,7 +883,7 @@ followed by the number of bits in the mask; or as the prefix of a legal
 IPv6 address followed by two colons followed by an asterisk. The latter
 is entirely equivalent to the former, except that it only allows you to
 (implicitly) specify mask bits in groups of sixteen. For example,
-``fe8f:1234::/60`` and ``fe8f:1234::*`` specify the same network mask.
+``2001:db8::/48`` and ``2001:db8:0::*`` specify the same network mask.
 
 The HTCondor security subsystem resolves names in the ALLOW and DENY
 lists and uses all of the resulting IP addresses. Thus, to allow or deny
@@ -899,14 +899,14 @@ brackets around the address. For instance:
 
 .. code-block:: condor-config
 
-    COLLECTOR_HOST = [2607:f388:1086:0:21e:68ff:fe0f:6462]:5332
+    COLLECTOR_HOST = [2001:db8:1086:0:21e:68ff:fe0f:6462]:5332
 
 If you do not (or may not) specify a port, do not use the square
 brackets. For instance:
 
 .. code-block:: condor-config
 
-    NETWORK_INTERFACE = 1234:5678::90ab
+    NETWORK_INTERFACE = 2001:db8::90ab
 
 IPv6 without DNS
 ''''''''''''''''
@@ -917,13 +917,13 @@ changing colons to dashes, and appending ``$(DEFAULT_DOMAIN_NAME)``. So,
 
 .. code-block:: text
 
-    2607:f388:1086:0:21b:24ff:fedf:b520
+    2001:db8:1086:0:21b:24ff:fedf:b520
 
 becomes
 
 .. code-block:: text
 
-    2607-f388-1086-0-21b-24ff-fedf-b520.example.com
+    2001-db8-1086-0-21b-24ff-fedf-b520.example.com
 
 assuming
 

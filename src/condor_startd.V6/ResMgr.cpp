@@ -815,6 +815,9 @@ ResMgr::init_resources( void )
 	m_hook_mgr->initialize();
 #endif
 
+	// register the "#coloring" namespace for extra ads for use by Starters
+	auto * coloringBaseAd = new StartdNamedClassAd(COLORING_NAMESPACE, nullptr, nullptr);
+	adlist_register(coloringBaseAd);
 }
 
 

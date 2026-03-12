@@ -20,10 +20,6 @@
 
 #include "condor_common.h"
 
-#if (HAVE_LINUX_TCP_H) && (HAVE_TCP_USER_TIMEOUT)
-#  include <linux/tcp.h>	// get definition for TCP_USER_TIMEOUT
-#endif
-
 #include "sock.h"
 #include "condor_io.h"
 #include "condor_uid.h"

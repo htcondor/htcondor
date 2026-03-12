@@ -347,7 +347,7 @@ operate on the job queue just after a job's deferral time states that it
 is to begin execution. HTCondor attempts to start a job when the
 following pseudo-code boolean expression evaluates to ``True``:
 
-.. code-block:: text
+.. code-block:: condor-classad-expr
 
        ( time() + SCHEDD_INTERVAL ) >= ( DeferralTime - CronPrepTime )
 
@@ -660,8 +660,9 @@ ClassAd does by trying the :tool:`condor_status` command. Try the
 about the resources available in your pool. Type :tool:`condor_status` and
 hit enter to see a summary similar to the following:
 
-.. code-block:: text
+.. code-block:: console
 
+    $ condor_status
     Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
     amul.cs.wisc.edu   LINUX      INTEL  Claimed   Busy     0.990  1896  0+00:07:04
@@ -705,7 +706,7 @@ location attribute to your machine ClassAds.
     CondorVersion = "$CondorVersion: 7.6.3 Aug 18 2011 BuildID: 361356 $"
     Requirements = START
     EnteredCurrentActivity = 1316094896
-    MyAddress = "<128.105.175.125:58026>"
+    MyAddress = "<192.0.2.125:58026>"
     EnteredCurrentState = 1316094896
     Memory = 1897
     CkptServer = "pitcher.cs.wisc.edu"
@@ -715,7 +716,7 @@ location attribute to your machine ClassAds.
     Arch = "INTEL"
     Mips = 2634
     Activity = "Idle"
-    StartdIpAddr = "<128.105.175.125:58026>"
+    StartdIpAddr = "<192.0.2.125:58026>"
     TargetType = "Job"
     LoadAvg = 0.210000
     Disk = 92309744

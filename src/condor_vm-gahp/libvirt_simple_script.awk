@@ -137,7 +137,7 @@ END {
     # To see full input ad to script set D_FULLDEBUG
     if(attrs["JobVMNetworking"] == "true")
     {
-	if(index(attrs["JobVMNetworkingType"],"nat") != 0)
+	if(index(tolower(attrs["JobVMNetworkingType"]),"nat") != 0)
 	{
 	    print "<interface type='network'><source network='default'/>" ;
             if(attrs["JobVM_MACADDR"] != "")

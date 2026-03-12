@@ -528,7 +528,7 @@ org.htcondor.version="%s"
             right PACKAGE_LIST for the execute image
 
         """
-        args = [f"--build-arg=BASE_IMAGE={base_image}", f"--platform={arch}"]
+        args = [f"--build-arg=BASE_IMAGE={base_image}", f"--platform={arch}", f"--network=host"]
         if image == "execute":
             args.append(f"--build-arg=PACKAGE_LIST=packagelist-{distro}.txt")
 

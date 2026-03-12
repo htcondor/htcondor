@@ -23,6 +23,6 @@ the ``busybox.sif`` file to run; see below.
 You can use ``singularity pull`` to obtain ``busybox.sif`` from Docker Hub;
 run this command in the same directory that you created the submit file in:
 
-.. code-block:: text
+.. code-block:: console
 
 	$ singularity pull busybox.sif docker://busybox:latest

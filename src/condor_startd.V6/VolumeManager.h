@@ -64,19 +64,27 @@ public:
     // Return the number of system devices currently existing for LV
     int CountLVDevices(const std::string& lv);
 
-    // Add disk info to ClassAd
+    // Add disk info to Startd Record
     void PublishDiskInfo(ClassAd& ad) {
         if (m_queried_available_disk) {
             ad.Assign(ATTR_LVM_DETECTED_DISK, (long long)m_total_disk);
             if (m_total_disk > 0) {
                 ad.Assign(ATTR_LVM_NON_CONDOR_USAGE, (long long)m_non_condor_usage);
             }
+            if (m_disk_quantum_kb > 0) {
+                ad.Assign(ATTR_STARTD_DISK_QUANTUM, (long long)m_disk_quantum_kb);
+            }
         }
+    }
+
+    // Get Discovered disk quantum
+    long long GetDiskQuantum() const {
+        return static_cast<long long>(m_disk_quantum_kb);
     }
 
 #ifdef LINUX
     static bool is_enabled() { return true; }
-    bool IsSetup();
+    bool IsSetup() const;
 
     inline std::string GetVG() const { return m_volume_group_name; }
     inline std::string GetPool() const { return m_pool_lv_name; }
@@ -153,9 +161,10 @@ private:
     int m_cmd_timeout{VOLUME_MANAGER_TIMEOUT};
 #else
     static bool is_enabled() { return false; }
-    bool IsSetup() { return false; };
+    bool IsSetup() const { return false; };
     inline std::string GetBackingDevice() const { return "<none>"; }
 #endif // LINUX
+    uint64_t m_disk_quantum_kb{0};
     uint64_t m_total_disk{0};
     uint64_t m_non_condor_usage{0};
     bool m_queried_available_disk{false};

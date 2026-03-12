@@ -338,17 +338,20 @@ and `shared_fs_config_options`_.
     temporary files created by text editors as configuration files.
 
 :macro-def:`CONDOR_IDS`
-    The User ID (UID) and Group ID (GID) pair that the HTCondor daemons
-    should run as, if the daemons are spawned as root.
+    This setting is ignored when HTCondor is not started as root on Unix platforms.
+    When HTCondor is started as root, every daemon switches the effective UID
+    and GID to some non-root user and group.  This is for security reasons.
+    Daemons will retain the real user and group IDs, so that they can 
+    temporarily switch back to root privileges when necessary, such as
+    when reading some system file, or when changing the ownership of a file.
+    This setting defines the non-root effective user and group id HTCondor daemons
+    should run at when they were started with root privileges.
     :index:`CONDOR_IDS environment variable`\ :index:`CONDOR_IDS<single: CONDOR_IDS; environment variables>`
     This value can also be specified in the :macro:`CONDOR_IDS` environment
-    variable. If the HTCondor daemons are not started as root, then
-    neither this :macro:`CONDOR_IDS` configuration macro nor the
-    :macro:`CONDOR_IDS` environment variable are used. The value is given by
-    two integers, separated by a period. For example,
+    variable.  The value is given by two integers, separated by a period. For example,
     CONDOR_IDS = 1234.1234. If this pair is not specified in either the
     configuration file or in the environment, and the HTCondor daemons
-    are spawned as root, then HTCondor will search for a condor user on
+    are spawned as root, then HTCondor will search for an account named "condor" on
     the system, and run as that user's UID and GID. See
     :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     on UIDs in HTCondor for more details.
@@ -1606,7 +1609,10 @@ Please read :ref:`admin-manual/installation-startup-shutdown-reconfiguration:Dae
 details on DaemonCore. There are certain configuration file settings
 that DaemonCore uses which affect all HTCondor daemons.
 
-:macro-def:`ALLOW_*` :macro-def:`DENY_*`
+:macro-def:`ALLOW_*`
+    .. faux-definition::
+
+:macro-def:`DENY_*`
     All macros that begin with either :macro:`ALLOW_*` or
     :macro:`DENY_*` are settings for HTCondor's security.
     See :ref:`admin-manual/security:authorization` on Setting
@@ -2059,11 +2065,11 @@ More information about networking in HTCondor can be found in
     will resolve to an IP address of the local machine.
 
 :macro-def:`NETWORK_INTERFACE[Networking]`
-    An IP address of the form ``123.123.123.123`` or the name of a
+    An IP address of the form ``192.0.2.123`` or the name of a
     network device, as in the example ``eth0``. The wild card character
-    (``*``) may be used within either. For example, ``123.123.*`` would
-    match a network interface with an IP address of ``123.123.123.123``
-    or ``123.123.100.100``. The default value is ``*``, which matches
+    (``*``) may be used within either. For example, ``192.0.2.*`` would
+    match a network interface with an IP address of ``192.0.2.123``
+    or ``192.0.2.100``. The default value is ``*``, which matches
     all network interfaces.
 
     The effect of this variable depends on the value of
@@ -2123,7 +2129,7 @@ More information about networking in HTCondor can be found in
     to communicate directly.
 
     :macro:`PRIVATE_NETWORK_INTERFACE` defines what IP address of the form
-    ``123.123.123.123`` or name of a network device (as in the example
+    ``192.0.2.123`` or name of a network device (as in the example
     ``eth0``) a given multi-homed machine should use for the private
     network. The asterisk (\*) may be used as a wild card character
     within either the IP address or the device name. If another HTCondor

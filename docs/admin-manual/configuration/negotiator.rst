@@ -278,7 +278,10 @@ These macros affect the *condor_negotiator*.
     machines that are quite close to shutting down, since the match
     would likely be a waste of time.
 
-:macro-def:`NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT`  or :macro-def:`GROUP_DYNAMIC_MACH_CONSTRAINT`
+:macro-def:`NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT`
+    .. faux-definition::
+
+:macro-def:`GROUP_DYNAMIC_MACH_CONSTRAINT`
     This optional expression specifies which machine ClassAds should be
     counted when computing the size of the pool. It applies both for
     group quota allocation and when there are no groups. The default is

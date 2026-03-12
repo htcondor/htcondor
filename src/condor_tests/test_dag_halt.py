@@ -56,7 +56,7 @@ JOB A @=NodeA
     executable = {act_on_dag_script}
     arguments  = "$(dag_node_name) $(ACTION) $(DAGManJobId)"
     universe   = local
-    getenv     = true
+    getenv     = CONDOR*, PYTHON*, PATH
     error      = {error_file}
 
     ACTION = {default_action}

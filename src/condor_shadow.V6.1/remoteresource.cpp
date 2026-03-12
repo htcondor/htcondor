@@ -966,7 +966,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
 	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
@@ -980,7 +980,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		}
 
 		int required_version = 2;
-		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
+		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
@@ -2156,6 +2156,14 @@ RemoteResource::reconnect( void )
 	if( ! gjid ) {
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
+	}
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
 	}
 	if( lease_duration < 0 ) { 
 			// if it's our first time, figure out what we've got to

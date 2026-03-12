@@ -79,6 +79,14 @@ Behavior Options
     Enable/disable tool exit via key press from keyboard.
     Enabled by default if connected to a ``tty``.
 
+ **-interval** *N*
+    Refresh interval in seconds. Defaults to 0.5 (half a second).
+
+    .. warning::
+
+        This affects key press detection for exiting. To exit immediately
+        with long intervals, press CONTROL-C.
+
 Display Options
 '''''''''''''''
 
@@ -90,6 +98,20 @@ The following options control the output.
         - ``batch``: Group by :ad-attr:`JobBatchName` (default).
         - ``log``: Group by job event log.
         - ``cluster``: Group by :ad-attr:`ClusterId`.
+
+ **-display-exited/-no-display-exited**
+    Enable/disable displaying rows of jobs that have all exited the queue.
+    Enabled by default.
+
+ **-exited-row-decay** *TIME[unit]*
+    Time since the last job in a job exited the queue before no
+    longer than being displayed (if -no-display-exited specified).
+    Default time is one week. Unless specified default unit is in
+    weeks. See table 1.2 for unit specifier options.
+
+ **-decay-start-at-read/-no-decay-start-at-read**
+    Start all job exited row display decay timers at event read time
+    rather than event write time. Disabled by default.
 
  **-table/-no-table**
     Enable/disable the table.
@@ -160,6 +182,27 @@ A variety of options for output formatting are provided, including:
       - Job is completed
     * - \!
       - Job is held, suspended, or removed
+
+.. list-table:: Table 1.2 condor_watch_q exited row decay unit specifiers
+    :widths: 10 45
+    :header-rows: 1
+
+    * - Unit
+      - Conversion
+    * - s
+      - Seconds
+    * - m
+      - Minutes
+    * - h
+      - Hours
+    * - d
+      - Days
+    * - w
+      - Weeks
+    * - M
+      - Months
+    * - y
+      - Years
 
 A minimal language for exiting when certain conditions are met by the
 tracked jobs is provided.

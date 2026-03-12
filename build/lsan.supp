@@ -25,3 +25,10 @@ leak:/usr/bin/bash
 
 # There are surely bona-fide leaks here, but there are thousands of output files
 leak:PyObject_
+
+# Binaries that get libasan injected into them
+leak:/usr/bin/cp
+leak:/usr/bin/expr
+leak:/usr/bin/mktemp
+leak:/usr/bin/sort
+leak:/usr/bin/tail

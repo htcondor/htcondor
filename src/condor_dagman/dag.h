@@ -45,6 +45,11 @@ enum SpliceLayer {
 	DESCENDENTS,
 };
 
+enum class RescueFileType {
+	DEFAULT = 0,          // Regular rescue file i.e. no more forward progress + clean exit
+	SAVE_POINT = 1,       // Save point file (which is rescue file format)
+};
+
 
 // non-exe failure codes for return value integers -- we
 // represent DAGMan, batch-system, or other external errors
@@ -322,10 +327,7 @@ public:
 
 	void CheckAllJobs(); // Verify all job events good once DAG is finished
 
-	void Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool overwrite,
-	            bool parseFailed = false, bool isPartial = false);
-	void WriteRescue(const char * rescue_file, const char * headerInfo, bool parseFailed = false,
-	                 bool isPartial = false, bool isSavePoint = false);
+	void Rescue(const std::string& dagFile, bool multiDags, int maxRescueDagNum) const;
 
 	// Print various node information
 	void PrintNodeList() const;
@@ -465,8 +467,6 @@ private:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	void WriteSavePoint(Node* node); // Write a node save point file
-	void WriteNodeToRescue(FILE *fp, Node *node, bool reset_retries_upon_rescue, bool isPartial);
-	static void WriteScriptToRescue( FILE *fp, Script *script );
 
 	void PrintDagFiles(const std::list<std::string> &dagFiles);
 	void PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bool recovery);
@@ -486,6 +486,8 @@ private:
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(std::string &dot_file_name);
 
+	// Internal actual writing of rescue file
+	void WriteRescue(const std::string& rescue_file, const std::string& headerInfo, RescueFileType rescue_type) const;
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 

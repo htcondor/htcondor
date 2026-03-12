@@ -70,6 +70,15 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 	return resource;
 }
 
+void
+CondorResource::CleanupAllResources()
+{
+	for (auto &elem : ResourcesByName) {
+		delete elem.second;
+	}
+	ResourcesByName.clear();
+}
+
 CondorResource::CondorResource( const char *resource_name, const char *pool_name,
                                 const Proxy *proxy, const std::string &scitokens_file )
 	: BaseResource( resource_name )
