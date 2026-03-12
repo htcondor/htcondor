@@ -13815,8 +13815,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		check_eviction_transforms = true;
 	} else if (exit_code == JOB_SHOULD_REQUEUE) {
 		int code = 0;
+		int subcode = 0;
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
-		if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode);
+		if (shouldHoldJobBasedOnCodes(code, subcode)) {
+			// even though the shadow is telling us to requeue the job,
+			// the vacate codes say we should hold, so check for
+			// eviction transforms
 			check_eviction_transforms = true;
 		}
 	}
