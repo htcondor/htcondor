@@ -3285,6 +3285,12 @@ FileTransfer::DoDownload(ReliSock *s)
 				if (plugin_exit_code > 0) {
 					hold_subcode = plugin_exit_code << 8;
 				}
+				
+				dprintf(D_FULLDEBUG, "DoDownload: file transfer failed for %s, plugin_exit_code %d, hold code %d, subcode %d\n", 
+						UrlSafePrint(fullname), plugin_exit_code, hold_code, hold_subcode);
+				if (shouldVacateJobBasedOnCodes(hold_code, plugin_exit_code)) {
+					hold_subcode = plugin_exit_code;
+				}
 
 				if( file_transfer_plugin_timed_out ) {
 					hold_subcode = ETIME;
@@ -3292,12 +3298,13 @@ FileTransfer::DoDownload(ReliSock *s)
 
 				if( file_transfer_plugin_exec_failed) {
 					try_again = true; // not our fault, try again elsewhere
+					hold_subcode = CONDOR_HOLD_SUBCODE::FileTransferPluginExecFailed;
 				}
 
 				dprintf(D_ALWAYS,
 						"DoDownload: consuming rest of transfer and failing "
-						"after encountering the following error: %s\n",
-						error_buf.c_str());
+						"after encountering the following error (rc=%d,hold_subcode=%d): %s\n",
+						rc, hold_subcode, error_buf.c_str());
 			}
 			else {
 				// Assume we had some transient problem (e.g. network timeout)
@@ -3468,7 +3475,7 @@ FileTransfer::DoDownload(ReliSock *s)
 				    // This makes sense as a shell-ism, but it might be
 				    // simpler and easier going forward just to use the
 				    // negated enumeration values.
-					hold_subcode = -1;
+					hold_subcode = CONDOR_HOLD_SUBCODE::FileTransferPluginExecFailed;
 				} else if( result == TransferPluginResult::InvalidCredentials ) {
 					hold_subcode = -2;
 				}
@@ -5539,6 +5546,12 @@ FileTransfer::uploadFileList(
 					hold_subcode = plugin_exit_code << 8;
 				}
 
+				dprintf(D_FULLDEBUG, "DoUpload: file transfer failed for %s, plugin_exit_code %d, hold code %d, subcode %d\n", 
+						UrlSafePrint(fullname), plugin_exit_code, hold_code, hold_subcode);
+				if (shouldVacateJobBasedOnCodes(hold_code, plugin_exit_code)) {
+					hold_subcode = plugin_exit_code;
+				}
+
 				if (rc == PUT_FILE_OPEN_FAILED) {
 					// In this case, put_file() has transmitted a zero-byte
 					// file in place of the failed one. This means there is an
@@ -6511,7 +6524,7 @@ FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* sourc
 	auto it = plugin_table->find(method);
 	if (it == plugin_table->end()) {
 		// no plugin for this type!!!
-		dprintf ( D_ALWAYS, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin for type %s not found! (l=%d)\n", method.c_str(), __LINE__);
 		return null_plugin_ad;
 	}
 	return Plugin(it->second);
@@ -6563,7 +6576,8 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	if (it == plugin_table->end()) {
 		// no plugin for this type!!!
 		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str());
-		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
+		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found! (l=%d)\n", method.c_str(), __LINE__);
+		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginNotFound;
 		return TransferPluginResult::Error;
 	}
 	FileTransferPlugin & plugin_obj = Plugin(it->second);
@@ -6617,7 +6631,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 			drop_privs
 		);
 	if (plugin_exec_result != 0) {
-		exit_status = errno;
+		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginExecFailed;
 		std::string message;
 		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin.c_str(), strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
@@ -6800,12 +6814,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	std::string input_filename;
 	std::string output_filename;
 
-	// TODO: use plugin.name instead ?
 	const char * label = plugin.path.c_str();
 	if (plugin.bad_plugin) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
 		// e.pushf(...)
+		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginNotOperational;
 		return TransferPluginResult::Error;
 	}
 
@@ -7056,7 +7070,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	);
 
 	if (plugin_exec_result != 0) {
-		exit_status = errno;
+		exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginExecFailed;
 		std::string message;
 
 		pi.result = TransferPluginResult::ExecFailed;
@@ -7273,6 +7287,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 				output_filename.c_str()
 			);
 
+			exit_status = CONDOR_HOLD_SUBCODE::FileTransferPluginNoResultReported;
 			if( result != TransferPluginResult::Success ) { return result; }
 			return TransferPluginResult::Error;
 		}
