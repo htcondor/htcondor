@@ -13091,9 +13091,16 @@ Scheduler::delete_shadow_rec(int pid)
 
 void
 Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
-    if( srec->cxfer_state != CXFER_STATE::INVALID ) {
+	if( srec == NULL ) {
+		dprintf( D_ZKM, "unregister_shadow_catalogs(NULL): ignoring\n" );
+		return;
+	}
+	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
+			// To avoid a race condition, we call this function when we call
+			// send_vacate(), so it's fine if the catalog isn't registered.
+			if(! other) { continue; }
 			if( * other == srec ) {
 				catalogToShadowMap.erase( catalogName );
 			}
