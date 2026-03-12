@@ -2582,7 +2582,7 @@ DCSchedd::queryOCU(const ClassAd &ocu_ad, CondorError *errstack) {
 int DCSchedd::queryUsers(
 	const classad::ClassAd & query_ad,
 	// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
-	int (*process_func)(void*, ClassAd *ad),
+	std::function<int (void*data, ClassAd *ad)> process_func,
 	void * process_func_data,
 	int connect_timeout,
 	CondorError *errstack,
