@@ -1457,22 +1457,18 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	daemonCore->Create_Process(
+	OptionalCreateProcessArgs cpArgs;
+	daemonCore->CreateProcessNew(
 		ssh_to_job_sshd_setup.c_str(),
 		setup_args,
-		PRIV_USER_FINAL,
-		setup_reaper,
-		FALSE,
-		FALSE,
-		&setup_env,
-		GetWorkingDir(0),
-		NULL,
-		NULL,
-		setup_std_fds,
-		NULL,
-		0,
-		NULL,
-		setup_opt_mask);
+		cpArgs.priv(PRIV_USER_FINAL)
+			.reaperID(setup_reaper)
+			.wantCommandPort(FALSE)
+			.wantUDPCommandPort(FALSE)
+			.env(&setup_env)
+			.cwd(GetWorkingDir(0))
+			.std(setup_std_fds)
+			.jobOptMask(setup_opt_mask));
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
 
@@ -3581,7 +3577,21 @@ Starter::PublishToEnv( Env* proc_env )
 			if (contains_anycase(tags, "GPUs") && param_boolean("AUTO_SET_NVIDIA_VISIBLE_DEVICES",true)) {
 				classad::Value val;
 				const char * env_value = nullptr;
-				if (mad->EvaluateExpr("join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))", val)
+				std::string firstGPUuuid;
+				std::string joinExpression;
+				mad->EvaluateExpr("AvailableGPUS[0].id", val);
+
+				// condor_gpu_discovery identifies MIG devices with a UUID that starts with "MIG-"
+				// but NVIDIA_VISIBLE_DEVICES expects these to begin with MIG-, not GPU-MIG-
+				//
+				// But, non-mig need to begin with GPU-uuid
+				if (val.IsStringValue(firstGPUuuid) && firstGPUuuid.starts_with("MIG-")) {
+					joinExpression = "join(\",\",evalInEachContext(DeviceUuid, AvailableGPUs))";
+				} else {
+					joinExpression = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+				}
+
+				if (mad->EvaluateExpr(joinExpression, val)
 					&& val.IsStringValue(env_value) && strlen(env_value) > 0) {
 					proc_env->SetEnv("NVIDIA_VISIBLE_DEVICES", env_value);
 					// HTCONDOR-3350 updated cuda runtime only works with a list when the ids are long

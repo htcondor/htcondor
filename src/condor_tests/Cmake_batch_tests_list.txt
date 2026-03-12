@@ -77,7 +77,6 @@ job_dagman_splice-Q
 job_dagman_splice-R
 job_dagman_pre_skip-A
 job_dagman_pre_skip-B
-job_dagman_pre_skip-C
 job_dagman_always_run_post-A
 job_dagman_always_run_post-B
 job_dagman_always_run_post-C

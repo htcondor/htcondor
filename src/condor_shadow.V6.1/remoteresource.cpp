@@ -44,6 +44,7 @@
 #include "catalog_utils.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "shadow.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -291,7 +292,7 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 
 
 bool
-RemoteResource::killStarter( bool graceful )
+RemoteResource::killStarter( bool graceful, bool final_transfer )
 {
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
@@ -322,10 +323,11 @@ RemoteResource::killStarter( bool graceful )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		dprintf(D_STATUS, "Sending %s to startd\n",
-			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
+		const char *cmd_name = final_transfer ? "DEACTIVATE_CLAIM_FINAL_XFER" :
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY");
+		dprintf(D_STATUS, "Sending %s to startd\n", cmd_name);
 		still_cleaning = false;
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning, final_transfer)) {
 			break;
 		}
 		const char * errmsg = dc_startd->error();
@@ -965,7 +967,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	//
 	bool disallowed = param_boolean("FORBID_COMMON_FILE_TRANSFER", false);
 	if( disallowed || (! cvi.built_since_version( 25, 2, 0 )) ) {
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, shadow );
+		auto common_file_catalogs = shadow->computeCommonInputFileCatalogs( jobAd );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
@@ -979,7 +981,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		}
 
 		int required_version = 2;
-		if(! computeCommonInputFiles( jobAd, shadow, *common_file_catalogs, required_version )) {
+		if(! shadow->computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
 			dprintf( D_ERROR, "Failed to construct unique name for catalog, can't run job!\n" );
 
 			// We don't have a mechanism to inform the submitter of internal
@@ -1548,6 +1550,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			// attribute name were always just "PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
+
+			if( 0 == strcasecmp( prefix.c_str(), "Common" ) ) {
+				auto stats = shadow->getCommonTransferInfoStats();
+				if( stats ) {
+					c.Insert( "TransferCommonStats", (* stats).Copy() );
+				}
+			}
 
 			// Arguably, the epoch log would be easier to parse if the
 			// attribute name were always just "PluginResultList".
@@ -2148,6 +2157,14 @@ RemoteResource::reconnect( void )
 	if( ! gjid ) {
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
+	}
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
 	}
 	if( lease_duration < 0 ) { 
 			// if it's our first time, figure out what we've got to

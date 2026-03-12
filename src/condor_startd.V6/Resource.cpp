@@ -670,6 +670,17 @@ Resource::deactivate_claim( void )
 
 
 int
+Resource::deactivate_claim_final_xfer( void )
+{
+	dprintf(D_ALWAYS, "Called deactivate_claim_final_xfer()\n");
+	if( state() == claimed_state ) {
+		return r_cur->deactivateClaimFinalXfer();
+	}
+	return FALSE;
+}
+
+
+int
 Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");

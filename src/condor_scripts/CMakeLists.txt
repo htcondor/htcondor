@@ -27,6 +27,8 @@ install ( FILES condor_check_config DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SC
 install ( FILES check-url DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( DIRECTORY annex DESTINATION ${C_LIBEXEC} FILE_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES annex/path-facility.multi-pilot annex/path-facility.pilot annex/perlmutter.multi-pilot annex/path-facility.sh annex/annex-local-universe.py DESTINATION ${C_LIBEXEC}/annex PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+# This isn't intended for release, and ends up in the testing package, instead.
+install ( FILES common_transfer_savings.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 # These files should be installed without execute bits set
 install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/delta.fragment annex/expanse.fragment annex/perlmutter.fragment annex/spark.fragment DESTINATION ${C_LIBEXEC}/annex)

@@ -269,8 +269,9 @@ int parse_autoformat_args (
 	int ixArg,
 	const char *popts,
 	AttrListPrintMask & print_mask,
-	classad::References & attrs, // out: returns attributes refereced by the expressions added to print_mask
-	bool diagnostic);
+	classad::References & attrs, // out: returns attributes referenced by the expressions added to print_mask
+	bool diagnostic,
+	bool append = false); // when true, don't reset column separators (for -aaf)
 
 // functions & classes in make_printmask.cpp
 
@@ -423,11 +424,9 @@ bool		render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/);
 bool 		render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/);
 bool 		render_condor_platform(std::string & str, ClassAd*, Formatter & /*fmt*/);
 bool 		render_cpu_time (double & cputime, ClassAd *ad, Formatter &);
-bool 		render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/);
 bool 		render_dag_owner (std::string & out, ClassAd *ad, Formatter & fmt);
 bool 		render_due_date (long long & dt, ClassAd *al, Formatter &);
 bool 		render_elapsed_time (long long & tm, ClassAd *al , Formatter &);
-bool 		render_goodput (double & goodput_time, ClassAd *ad, Formatter & /*fmt*/);
 bool 		render_grid_job_id (std::string & jid, ClassAd *ad, Formatter & /*fmt*/ );
 bool 		render_grid_resource (std::string & result, ClassAd * ad, Formatter & /*fmt*/ );
 bool 		render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt */ );
@@ -436,7 +435,6 @@ bool 		render_job_cmd_and_args (std::string & val, ClassAd * ad, Formatter & /*f
 bool 		render_job_description (std::string & out, ClassAd *ad, Formatter &);
 bool 		render_job_id (std::string & result, ClassAd* ad, Formatter &);
 bool 		render_job_status_char (std::string & result, ClassAd*ad, Formatter &);
-bool 		render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/);
 bool 		render_memory_usage (double & mem_used_mb, ClassAd *ad, Formatter &);
 bool 		render_owner (std::string & out, ClassAd *ad, Formatter & /*fmt*/);
 bool 		render_platform (std::string & str, ClassAd* al, Formatter & /*fmt*/);

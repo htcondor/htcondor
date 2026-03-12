@@ -94,8 +94,9 @@ exit 0
     """
     filename = test_dir / 'singularity_tester.sh'
     write_file(filename, mock_singularity)
-    os.chmod(filename, stat.S_IRWXU)
+    os.chmod(filename, 0o755)
     write_file(test_dir / 'ignored.sif', "")
+    os.chmod(test_dir / 'ignored.sif', 0o755)
     return filename
 
 # Setup a personal condor with SINGULARITY pointing at the mocking wrapper

@@ -7,6 +7,9 @@ from pathlib import Path
 import htcondor2 as htcondor
 import traceback
 
+from htcondor_cli.histogram import print_job_event_histogram, HistogramMode
+from htcondor_cli import MutualExclusionArgs
+
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from datetime import datetime
@@ -368,6 +371,36 @@ class Follow(Verb):
             pass
 
 
+class Histogram(Verb):
+    options = {
+        "log_file": {
+            "args": ("log_file",),
+            "help": "Log file",
+        },
+        "histogram" : MutualExclusionArgs({
+            "cumulative": {
+                "args": ("-c", "--cumulative"),
+                "action": "store_const",
+                "dest": "hist_mode",
+                "const": HistogramMode.CUMULATIVE,
+                "default": HistogramMode.CUMULATIVE,
+                "help": "Show cumulative job states over time (default mode)",
+            },
+            "instant": {
+                "args": ("-i", "--instant"),
+                "action": "store_const",
+                "dest": "hist_mode",
+                "const": HistogramMode.INSTANT,
+                "default": HistogramMode.CUMULATIVE,
+                "help": "Show state transitions per time bucket",
+            },
+        })
+    }
+
+    def __init__(self, logger, log_file, **options):
+        print_job_event_histogram(log_file, options["hist_mode"])
+
+
 class EventLog(Noun):
     """
     Interacts with eventlogs
@@ -379,6 +412,9 @@ class EventLog(Noun):
     class follow(Follow):
         pass
 
+    class histogram(Histogram):
+        pass
+
     @classmethod
     def verbs(cls):
-        return [cls.read, cls.follow]
+        return [cls.read, cls.follow, cls.histogram]

@@ -134,13 +134,6 @@ following columns of information, with one line of output per job:
 
         ID, OWNER, STATUS, INSTANCE ID, CMD
 
-If the **-goodput** option is specified, *condor_q* displays the
-following columns of information, with one line of output per job:
-
-.. code-block:: text
-
-        ID, OWNER, SUBMITTED, RUN_TIME, GOODPUT, CPU_UTIL, Mb/s
-
 If the **-io** option is specified, *condor_q* displays the following
 columns of information, with one line of output per job:
 
@@ -219,8 +212,8 @@ The available output data are as follows:
     = on hold, R = running, I = idle (waiting for a machine to execute
     on), C = completed, X = removed, S = suspended (execution of a
     running job temporarily suspended on execute node), < = transferring
-    input (or queued to do so), and > = transferring output (or queued
-    to do so).
+    input (or queued to do so), > = transferring output (or queued
+    to do so), and 'c' for in cooldown status.
  PRI
     (Non-batch mode only) User specified priority of the job, displayed
     as an integer, with higher numbers corresponding to better priority.
@@ -274,34 +267,6 @@ The available output data are as follows:
  INSTANCE ID
     (**-grid:ec2** only) Usually EC2 instance ID; may be blank or the
     client token, depending on job progress.
- GOODPUT
-    (**-goodput** only) The percentage of RUN_TIME for this job which
-    has been saved in a checkpoint. A low GOODPUT value indicates that
-    the job is failing to checkpoint. If a job has not yet attempted a
-    checkpoint, this column contains ``[?????]``.
- CPU_UTIL
-    (**-goodput** only) The ratio of CPU_TIME to RUN_TIME for
-    checkpointed work. A low CPU_UTIL indicates that the job is not
-    running efficiently, perhaps because it is I/O bound or because the
-    job requires more memory than available on the remote workstations.
-    If the job has not (yet) checkpointed, this column contains
-    ``[??????]``.
- Mb/s
-    (**-goodput** only) The network usage of this job, in Megabits per
-    second of run-time.
-    READ The total number of bytes the application has read from files
-    and sockets.
-    WRITE The total number of bytes the application has written to files
-    and sockets.
-    SEEK The total number of seek operations the application has
-    performed on files.
-    XPUT The effective throughput (average bytes read and written per
-    second) from the application's point of view.
-    BUFSIZE The maximum number of bytes to be buffered per file.
-    BLOCKSIZE The desired block size for large data transfers. These
-    fields are updated when a job produces a checkpoint or completes. If
-    a job has not yet produced a checkpoint, this information is not
-    available.
  INPUT
     (**-io** only) BytesRecvd.
  OUTPUT
@@ -473,8 +438,6 @@ Options
     (output option) Get information only about jobs submitted to grid
     resources and display it in a format better-suited for EC2 than the
     default.
- **-goodput**
-    (output option) Display job goodput statistics.
  **-help [Universe | State]**
     (output option) Print usage info, and, optionally, additionally
     print job universes or job states.
@@ -559,7 +522,7 @@ Options
     character after the last value. It is like the **-format** option
     without format strings. This output option does not work in
     conjunction with any of the options **-run**, **-currentrun**,
-    **-hold**, **-grid**, **-goodput**, or **-io**.
+    **-hold**, **-grid**, or **-io**.
 
     It is assumed that no attribute names begin with a dash character,
     so that the next word that begins with dash is the start of the next
@@ -594,6 +557,17 @@ Options
 
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
+
+ **-aaf[:Vr]** *attr1 [attr2 ...]*
+    (output option) Like **-autoformat**, but instead of replacing the
+    standard output columns, appends the specified attribute(s) as
+    additional columns after whatever standard format or **-print-format* file is in
+    effect.
+    Accepts the **-autoformat** V or r format qualifiers which will affect only
+    the appended columns.
+    This option allows adding extra information to the default
+    *condor_q* output without losing the standard columns. Appended columns will
+    use the column separator and row terminator characters from the format that is appended to.
 
  **-print-format** *file*
     Read output formatting information from the given custom print format file.
@@ -719,7 +693,7 @@ An example that shows the analysis in summary format:
 
     $ condor_q -analyze:summary
 
-    -- Submitter: submit-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> :
+    -- Submitter: submit-1.chtc.wisc.edu : <192.0.2.43:9618?sock=11794_95bb_3> :
      submit-1.chtc.wisc.edu
     Analyzing matches for 5979 slots
                 Autocluster  Matches    Machine     Running  Serving
@@ -736,7 +710,7 @@ An example that shows summary information by machine:
 
     $ condor_q -ana:sum,rev
 
-    -- Submitter: s-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu
+    -- Submitter: s-1.chtc.wisc.edu : <192.0.2.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu
     Analyzing matches for 2885 jobs
                                     Slot  Slot's Req    Job's Req     Both
     Name                            Type  Matches Job  Matches Slot    Match %
@@ -757,7 +731,7 @@ An example with two independent DAGs in the queue:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:35169?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:35169?...
     OWNER  BATCH_NAME    SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
     wenger DAG: 3696    2/12 11:55      _     10      _     10 3698.0 ... 3707.0
     wenger DAG: 3697    2/12 11:55      1      1      1     10 3709.0 ... 3710.0
@@ -781,7 +755,7 @@ column to the output:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
     OWNER  BATCH_NAME        SUBMITTED   DONE   RUN    IDLE   HOLD  TOTAL JOB_IDS
     wenger CMD: /bin/slee   9/13 16:25      _      3      _      1      4 599.0 ...
 
@@ -799,7 +773,7 @@ First of all, non-batch mode with all of the node jobs in the queue:
 
     $ condor_q -nobatch
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger          9/13 16:05   0+00:00:13 R  0    2.4 condor_dagman -p 0
      592.0   wenger          9/13 16:05   0+00:00:07 R  0    0.0 sleep 60
@@ -821,7 +795,7 @@ doesn't do a good job of grouping procs in the same cluster together):
 
     $ condor_q -nobatch -dag
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger             9/13 16:05   0+00:00:27 R  0    2.4 condor_dagman -
      592.0    |-NodeA           9/13 16:05   0+00:00:21 R  0    0.0 sleep 60
@@ -842,7 +816,7 @@ Now, finally, the non-batch (default) mode:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
     OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
     wenger ex1.dag+591   9/13 16:05      _      8      _      5 592.0 ... 596.1
 
@@ -869,7 +843,7 @@ Now here is non-batch mode after proc 0 of each node job has finished:
 
     $ condor_q -nobatch
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger          9/13 16:05   0+00:01:19 R  0    2.4 condor_dagman -p 0
      592.1   wenger          9/13 16:05   0+00:01:13 R  0    0.0 sleep 300
@@ -886,7 +860,7 @@ The same state also with the **-dag** option:
 
     $ condor_q -nobatch -dag
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
      ID      OWNER/NODENAME      SUBMITTED     RUN_TIME ST PRI SIZE CMD
      591.0   wenger             9/13 16:05   0+00:01:30 R  0    2.4 condor_dagman -
      592.1    |-NodeA           9/13 16:05   0+00:01:24 R  0    0.0 sleep 300
@@ -903,7 +877,7 @@ And, finally, that state in batch (default) mode:
 
     $ condor_q
 
-    -- Schedd: wenger@manta.cs.wisc.edu : <128.105.14.228:9619?...
+    -- Schedd: wenger@manta.cs.wisc.edu : <192.0.2.228:9619?...
     OWNER  BATCH_NAME     SUBMITTED   DONE   RUN    IDLE  TOTAL JOB_IDS
     wenger ex1.dag+591   9/13 16:05      _      4      _      5 592.1 ... 596.1
 

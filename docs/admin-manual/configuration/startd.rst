@@ -839,7 +839,28 @@ htcondor for running backfill jobs` for details.
     :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
     section.
 
-:macro-def:`BOINC_Arguments` :macro-def:`BOINC_Environment` :macro-def:`BOINC_Error` :macro-def:`BOINC_Executable` :macro-def:`BOINC_InitialDir` :macro-def:`BOINC_Output` :macro-def:`BOINC_Owner` :macro-def:`BOINC_Universe`
+:macro-def:`BOINC_Arguments`
+    .. faux-definition::
+
+:macro-def:`BOINC_Environment`
+    .. faux-definition::
+
+:macro-def:`BOINC_Error`
+    .. faux-definition::
+
+:macro-def:`BOINC_Executable`
+    .. faux-definition::
+
+:macro-def:`BOINC_InitialDir`
+    .. faux-definition::
+
+:macro-def:`BOINC_Output`
+    .. faux-definition::
+
+:macro-def:`BOINC_Owner`
+    .. faux-definition::
+
+:macro-def:`BOINC_Universe`
      These relate to the BOINC backfill system.
 
 The following macros only apply to the *condor_startd* daemon when it
@@ -1147,33 +1168,21 @@ needs.
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestMemory` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
-    given by
-
-    .. code-block:: text
-
-          quantize(RequestMemory,{128})
+    given by :ad-expr:`quantize(RequestMemory,{128})`.
 
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTDISK`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestDisk` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
-    given by
-
-    .. code-block:: text
-
-          quantize(RequestDisk,{1024})
+    given by :ad-expr:`quantize(RequestDisk,{1024})`
 
 
 :macro-def:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
     An integer expression used by the *condor_startd* daemon to modify
     the evaluated value of the :ad-attr:`RequestCpus` job ClassAd attribute,
     before it used to provision a dynamic slot. The default value is
-    given by
-
-    .. code-block:: text
-
-          quantize(RequestCpus,{1})
+    given by :ad-expr:`quantize(RequestCpus,{1})`
 
 
 :macro-def:`NUM_SLOTS_TYPE_<N>`

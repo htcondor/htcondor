@@ -32,12 +32,11 @@ class CronJobMgr;
 class CronJobParams : public CronParamBase
 {
   public:
-	CronJobParams( const char *job_name, const CronJobMgr &mgr );
+	CronJobParams( const char *job_name, const char *param_base );
 	virtual ~CronJobParams( void );
 
 	// Finish initialization
 	virtual bool Initialize( void );
-	virtual const CronJobMgr &GetMgr( void ) { return m_mgr; };
 
 	// Force job recreation?
 	bool Compatible( const CronJobParams &other ) const {
@@ -97,7 +96,6 @@ class CronJobParams : public CronParamBase
 	bool InitPeriod( const std::string &period );
 
   protected:
-	const CronJobMgr&m_mgr;				// My manager
 	CronJobMode		 m_mode;			// Job's scheduling mode
 	const char		*m_modestr;			// Mode's string
 	CronJob			*m_job;				// The associated job

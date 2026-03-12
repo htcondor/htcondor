@@ -2,7 +2,7 @@
 
 $failfile = "job_dagman_retry-B-nodeD.fail";
 if (-e $failfile) {
-	system("rm -f $failfile");
+	unlink $failfile;
 	print "Node job fails\n";
 	exit 1;
 } else {

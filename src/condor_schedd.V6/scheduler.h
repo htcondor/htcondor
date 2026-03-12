@@ -48,7 +48,6 @@
 #include "enum_utils.h"
 #include "self_draining_queue.h"
 #include "schedd_cron_job_mgr.h"
-#include "named_classad_list.h"
 #include "env.h"
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
@@ -584,7 +583,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( int timerID = -1 );
-	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+	void			makeReconnectRecords( const PROC_ID & job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
 	bool 	enqueueFinishedJob( int cluster, int proc );
@@ -611,7 +610,7 @@ class Scheduler : public Service
 	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
 		// Used by the GridUserIdentity class and some others
-	const ExprTree*	getGridParsedSelectionExpr() const 
+	const ExprTree*	getGridParsedSelectionExpr() const
 					{ return m_parsed_gridman_selection_expr; };
 	const char*		getGridUnparsedSelectionExpr() const
 					{ return m_unparsed_gridman_selection_expr; };
@@ -621,17 +620,18 @@ class Scheduler : public Service
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
-	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
+	shadow_rec*     add_shadow_rec( int pid, const PROC_ID &, int univ, match_rec*,
 									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
 
 		// Used to manipulate the "extra ads" (read:Hawkeye)
-	int adlist_register( const char *name );
-	int adlist_replace( const char *name, ClassAd *newAd );
-	int adlist_delete( const char *name );
-	int adlist_publish( ClassAd *resAd );
+		// adlist_replace() assumes ownership of newAd object
+	void adlist_register( const char *name );
+	void adlist_replace( const char *name, ClassAd *newAd );
+	void adlist_delete( const char *name );
+	void adlist_publish( ClassAd *resAd );
 
 		// Used by both the Scheduler and DedicatedScheduler during
 		// negotiation
@@ -781,9 +781,10 @@ private:
 	ReliSock*		shadowCommandrsock;
 	SafeSock*		shadowCommandssock;
 
-	// The "Cron" manager (Hawkeye) & it's classads
+	// The "Cron" manager (Hawkeye) & its classads, which will be merged
+	// into the schedd's ads sent to the collector
 	ScheddCronJobMgr	*CronJobMgr;
-	NamedClassAdList	 extra_ads;
+	std::map<std::string, ClassAd> extra_ads;
 
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;
@@ -915,7 +916,7 @@ private:
 	void		updateSubmitterAd(SubmitterData &subData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
-	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+	int			make_ad_list(std::vector<ClassAd>& ads, ClassAd * pQueryAd=NULL);
 	int			handleMachineAdsQuery( Stream * stream, ClassAd & queryAd );
 	int			command_query_ads(int, Stream* stream);
 	int			command_query_job_ads(int, Stream* stream);
@@ -998,16 +999,15 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 	void claimStartdForUs(DCMsgCallback *cb);
 
-	shadow_rec*		StartJob(match_rec*, PROC_ID*);
-
-	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
-	shadow_rec*		start_sched_universe_job(PROC_ID*);
+	shadow_rec*		StartJob(match_rec*, const PROC_ID &);
+	shadow_rec*		start_std(match_rec*, const PROC_ID &, int univ);
+	shadow_rec*		start_sched_universe_job(const PROC_ID &);
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 
 										const char* name, bool want_udp );
-	void			check_zombie(int, PROC_ID*);
-	void			kill_zombie(int, PROC_ID*);
+	void			check_zombie(int, const PROC_ID &);
+	void			kill_zombie(int, const PROC_ID &);
 	int				is_alive(shadow_rec* srec);
 	
 	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);

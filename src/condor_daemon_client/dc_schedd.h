@@ -128,6 +128,18 @@ public:
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_TOTALS );
 
+		/** Transfer output files and then remove jobs matching constraint.
+			@param constraint What jobs to act on
+			@param reason Why the action is being done
+			@param result_type What kind of results you want
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* transferAndRemoveJobs( const char* constraint, const char* reason,
+									CondorError * errstack,
+									action_result_type_t result_type = AR_TOTALS );
+
 		/** Force the local removal of jobs in the X state that match
 			the given constraint, regardless of whether they've been
 			successfully removed remotely.
@@ -185,6 +197,21 @@ public:
 	ClassAd* removeJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
+
+		/** Transfer output files and then remove jobs specified in the
+			given list.  The list should contain a comma-seperated list
+			of cluster.proc job ids.  Also, set ATTR_REMOVE_REASON to
+			the given reason.
+			@param ids What jobs to act on
+			@param reason Why the action is being done
+			@param result_type What kind of results you want
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* transferAndRemoveJobs( const std::vector<std::string>& ids, const char* reason,
+									CondorError * errstack,
+									action_result_type_t result_type = AR_LONG );
 
 		/** Force the local removal of jobs in the X state specified
 			in the given list, regardless of whether they've
@@ -475,7 +502,7 @@ public:
 	int queryUsers(
 		const classad::ClassAd & query_ad,
 		// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
-		int (*process_func)(void*, ClassAd *ad),
+		std::function<int (void*data, ClassAd *ad)> process_func,
 		void * process_func_data,
 		int connect_timeout,
 		CondorError *errstack,

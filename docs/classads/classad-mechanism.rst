@@ -599,7 +599,7 @@ expression that contains a ClassAd function.
     FauxType = "DBMS"
     Name = "random-test"
     Machine = "f05.cs.wisc.edu"
-    MyAddress = "<128.105.149.105:34000>"
+    MyAddress = "<192.0.2.105:34000>"
     DaemonStartTime = 1153192799
     UpdateSequenceNumber = 1
 

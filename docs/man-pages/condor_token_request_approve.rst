@@ -71,7 +71,7 @@ To approve the tokens at the default *condor_collector*, one-by-one:
     $ condor_token_request_approve                                                                                               
     RequestedIdentity = "bucky@cs.wisc.edu"
     AuthenticatedIdentity = "anonymous@ssl"
-    PeerLocation = "10.0.0.42"
+    PeerLocation = "192.0.2.42"
     ClientId = "bird.cs.wisc.edu-516"
     RequestId = "8414912"
 

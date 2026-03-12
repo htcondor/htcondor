@@ -9,7 +9,7 @@ if ($ARGV[1]) {
 	# Make sure node status file is regenerated *after* this node starts
 	# before we copy it.
 	if (-e $infile) {
-		system("rm $infile");
+		unlink $infile;
 	}
 	while (! -e $infile) {
 		sleep(1);

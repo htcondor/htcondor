@@ -936,7 +936,7 @@ static void *worker_function( void *ptr )
 const unsigned int requestPoolSize = 4096;
 bool initializedRequestMap = false;
 unsigned char requestMap[ requestPoolSize ];
-unsigned char requests[ requestPoolSize * sizeof( Request ) ];
+alignas(Request) unsigned char requests[ requestPoolSize * sizeof( Request ) ];
 
 void * Request::operator new( size_t i ) noexcept {
 	static unsigned int index = 0;

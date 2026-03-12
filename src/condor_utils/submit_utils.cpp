@@ -732,10 +732,8 @@ static void compress_path( std::string &path )
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-int SubmitHash::check_and_universalize_path( std::string &path )
+int SubmitHash::check_and_universalize_path( [[maybe_unused]] std::string &path )
 {
-	(void) path;
-
 	int retval = 0;
 #ifdef WIN32
 	/*
@@ -846,7 +844,7 @@ int64_t SubmitHash::calc_image_size_kb( const char *name)
 // other than to make sure that it actually IS a directory on Windows
 // On Linux we already know that by the error code from safe_open below
 //
-static bool check_directory( const char* pathname, int /*flags*/, int err )
+static bool check_directory( [[maybe_unused]] const char* pathname, int /*flags*/, int err )
 {
 #if defined(WIN32)
 	// Make sure that it actually is a directory
@@ -856,8 +854,6 @@ static bool check_directory( const char* pathname, int /*flags*/, int err )
 	return (dwAttribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
 	// will just do nothing here and leave
-	// it up to the runtime to nicely report errors.
-	(void)pathname;
 	return (err == EISDIR);
 #endif
 }
@@ -2124,13 +2120,13 @@ int SubmitHash::SetLeaveInQueue()
 				 */
 				formatstr(
 					buffer,
-					"%s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
+					"%s == %d && (time() - (%s ?: time())) < %d && (%s ?: 0) < %s",
 					ATTR_JOB_STATUS,
 					COMPLETED,
 					ATTR_COMPLETION_DATE,
-					ATTR_COMPLETION_DATE,
-					ATTR_COMPLETION_DATE,
-					60 * 60 * 24 * 10
+					60 * 60 * 24 * 10,
+					ATTR_STAGE_OUT_FINISH,
+					ATTR_ENTERED_CURRENT_STATUS
 				);
 				AssignJobExpr(ATTR_JOB_LEAVE_IN_QUEUE, buffer.c_str());
 			}
@@ -5855,10 +5851,18 @@ int SubmitHash::SetRequirements()
 		// Insert dummy values for attributes of the job to which we
 		// want to detect references.  Otherwise, unqualified references
 		// get classified as external references.
-	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
+	req_ad.Assign(ATTR_REQUEST_MEMORY,0); // for use by checks_reqmem below
 	req_ad.Assign(ATTR_VM_CKPT_MAC, "");
+	req_ad.Assign(ATTR_REQUIREMENTS, true); // so we can detect circular Requirements
 
-	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
+	if ( ! answer.empty() && ! GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs)) {
+		// could not get references, if it is because Requirements references Requirements
+		push_warning(stderr, "Could not get attribute references from Requirements: %s\n", answer.c_str());
+	}
+	if (job_refs.count(ATTR_REQUIREMENTS) || machine_refs.count(ATTR_REQUIREMENTS)) {
+		push_error(stderr, ATTR_REQUIREMENTS " = %s\nIs Circular. Did you intend to use $(Requirements) ?\n", answer.c_str());
+		ABORT_AND_RETURN(1);
+	}
 
 	bool	checks_arch = machine_refs.count( ATTR_ARCH );
 	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
@@ -8284,7 +8288,16 @@ ClassAd* SubmitHash::make_job_ad (
 	job = new DeltaClassAd(*procAd);
 
 	// really a command, needs to happen before any calls to check_open
-	JobDisableFileChecks = submit_param_bool(SUBMIT_CMD_skip_filechecks, NULL, false);
+	JobDisableFileChecks = false;
+	auto_free_ptr filechecks(submit_param(SUBMIT_CMD_skip_filechecks));
+	if (filechecks) {
+		if (YourStringNoCase("warn") == filechecks.ptr()) {
+			FileChecksAreWarnings = true;
+		} else if ( ! string_is_boolean_param(filechecks, JobDisableFileChecks)) {
+			push_error(stderr, "SUBMIT_CMD_skip_filechecks=%s is invalid, must be 'warn' or a boolean\n", filechecks.ptr());
+			abort_code = 1;
+		}
+	}
 	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
 	SetIWD();		// must be called very early
@@ -9611,7 +9624,7 @@ static const DIGEST_FIXUP_KEY aDigestFixupAttrs[] = {
 
 // while building a submit digest, fixup right hand side for certain key=rhs pairs
 // for now this is mostly used to promote some paths to fully qualified paths.
-void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
+void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs, bool has_pending_expansions)
 {
 	const DIGEST_FIXUP_KEY* found = NULL;
 	found = BinaryLookup<DIGEST_FIXUP_KEY>(aDigestFixupAttrs, COUNTOF(aDigestFixupAttrs), key, strcasecmp);
@@ -9637,7 +9650,10 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	if (found->id == idKeyUniverse && topping) { rhs = topping; }
 
 	// the Executable and InitialDir should be expanded to a fully qualified path here.
-	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo)) {
+	// HTCONDOR-3546 TJ : I don't see why we fixup idKeyExecutable at all here since
+	// SetExecutable calls full_path which uses FACTORY.IWD.  I'm doing the conservative
+	// change by checking has_pending_expansions, but we can probably remove the idKeyExecutable case entirely
+	if (found->id == idKeyInitialDir || (found->id == idKeyExecutable && !pseudo && !has_pending_expansions)) {
 		if (rhs.empty()) return;
 		const char * path = rhs.c_str();
 		if (strstr(path, "$$(")) return; // don't fixup if there is a pending $$() expansion.
@@ -9827,7 +9843,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 			if (iret > 0) {
 				has_pending_expansions = true;
 			}
-			fixup_rhs_for_digest(key, rhs);
+			fixup_rhs_for_digest(key, rhs, has_pending_expansions);
 		} else {
 			rhs = "";
 		}
@@ -9862,6 +9878,7 @@ credd_has_tokens(
 	const std::string & token_names,
 	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
+	Daemon* credd,
 	std::string & URL,
 	std::string & error_string
 ) {
@@ -9899,7 +9916,7 @@ credd_has_tokens(
 	}
 
 	std::string url;
-	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
+	int rv = do_check_oauth_creds(req_ads, url, credd);
 	if (rv > 0) { URL = url; }
 	else if (rv < 0) {
 		// this little bit of nonsense preserves the pre 8.9.9 error messages to stdout
@@ -10008,6 +10025,34 @@ process_job_credentials(
 		}
 	}
 
+	Daemon credd(DT_CREDD);
+
+	// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
+	// in either case we want to initialize our credd object from the passed-in one if we can.
+	if (schedd_or_credd) {
+		DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
+		if (schedd) {
+			std::string credd_address;
+			if (schedd->getCreddAddress(credd_address)) {
+				// when we init the credd from the schedd's locationAd,
+				// it will pick up the CreddIpAddr in the locationAd and
+				// use it to set the addr field of the daemon object
+				// And it will use the name, machine, and version of the schedd
+				// TODO: does the location ad need to know the name of the credd?
+				credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
+			} else {
+				if (schedd->name() && ! schedd->isLocal()) {
+					// this is a Hail Mary, if the address of the credd is not known,
+					// and the schedd is remote we hope that the credd name and the schedd name are the same.
+					// if this is a local schedd, we are better off using a default credd.
+					credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
+				}
+			}
+		} else if (schedd_or_credd->type() == DT_CREDD) {
+			credd = *schedd_or_credd;
+		}
+	}
+
 	if (!token_ads.empty()) {
 		// Contact the credd to see if it has all of the tokens
 		// requested by the job.
@@ -10017,7 +10062,11 @@ process_job_credentials(
 		//    acquire some missing tokens
 		// 3. Provide an error message explaining why one or more tokens
 		//    are unavailable.
-		if( credd_has_tokens(token_names, token_ads, DashDryRun, URL, error_string) ) {
+		if (!credd.locate()) {
+			formatstr( error_string, "ERROR: locate(credd) %s failed!\n", credd.name() ? credd.name() : "" );
+			return 1;
+		}
+		if( credd_has_tokens(token_names, token_ads, DashDryRun, &credd, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					return 0;
@@ -10074,34 +10123,6 @@ process_job_credentials(
 			}
 
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
-
-			Daemon credd(DT_CREDD);
-
-			// the passed in daemon object should be a DCSchedd, but it is permitted to be a DT_CREDD
-			// in either case we want to initialize our credd object from the passed-in one if we can.
-			if (schedd_or_credd) {
-				DCSchedd * schedd = dynamic_cast<DCSchedd*>(schedd_or_credd);
-				if (schedd) {
-					std::string credd_address;
-					if (schedd->getCreddAddress(credd_address)) {
-						// when we init the credd from the schedd's locationAd,
-						// it will pick up the CreddIpAddr in the locationAd and
-						// use it to set the addr field of the daemon object
-						// And it will use the name, machine, and version of the schedd
-						// TODO: does the location ad need to know the name of the credd?
-						credd = Daemon(schedd->locationAd(), DT_CREDD, schedd->pool());
-					} else {
-						if (schedd->name() && ! schedd->isLocal()) {
-							// this is a Hail Mary, if the address of the credd is not known,
-							// and the schedd is remote we hope that the credd name and the schedd name are the same.
-							// if this is a local schedd, we are better off using a default credd.
-							credd = Daemon(DT_CREDD, schedd->name(), schedd->pool());
-						}
-					}
-				} else if (schedd_or_credd->type() == DT_CREDD) {
-					credd = *schedd_or_credd;
-				}
-			}
 
 			// if we did not init the credd object from an ad, we need to locate now.
 			if (credd.locate()) {

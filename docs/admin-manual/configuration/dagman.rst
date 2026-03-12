@@ -144,7 +144,7 @@ General
     +---------------+--------------------+--------------------+--------------------+
     |    HTCondor   |   CONDOR_CONFIG    |       CONDOR_*     |                    |
     +---------------+--------------------+--------------------+--------------------+
-    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |   XDG_RUNTIME_DIR  |
+    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |                    |
     +---------------+--------------------+--------------------+--------------------+
     |     Misc.     |     PEGASUS_*      |                    |                    |
     +---------------+--------------------+--------------------+--------------------+
@@ -451,18 +451,6 @@ Rescue/retry
     retries is allowed when running the Rescue DAG. If not defined,
     :macro:`DAGMAN_RESET_RETRIES_UPON_RESCUE` defaults to ``True``.
 
-:macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE`
-    A boolean value that controls whether :tool:`condor_dagman` writes a
-    partial or a full DAG file as a Rescue DAG. If not defined,
-    :macro:`DAGMAN_WRITE_PARTIAL_RESCUE` defaults to ``True``. **Note: users
-    should rarely change this setting.**
-
-    .. warning::
-
-        :macro:`DAGMAN_WRITE_PARTIAL_RESCUE[Deprecation Warning]` is deprecated
-        as the writing of full Rescue DAG's is deprecated. This is slated to be
-        removed during the lifetime of the HTCondor V24 feature series.
-
 :macro-def:`DAGMAN_RETRY_SUBMIT_FIRST`
     A boolean value that controls whether a failed submit is retried
     first (before any other submits) or last (after all other ready jobs
@@ -675,15 +663,6 @@ Debug output
 
 HTCondor attributes
 -------------------
-
-:macro-def:`DAGMAN_COPY_TO_SPOOL`
-    A boolean value that when ``True`` copies the :tool:`condor_dagman`
-    binary to the spool directory when a DAG is submitted. Setting this
-    variable to ``True`` allows long-running DAGs to survive a DAGMan
-    version upgrade. For running large numbers of small DAGs, leave this
-    variable unset or set it to ``False``. The default value if not
-    defined is ``False``. **Note: users should rarely change this
-    setting.**
 
 :macro-def:`DAGMAN_INSERT_SUB_FILE`
     A file name of a file containing submit description file commands to

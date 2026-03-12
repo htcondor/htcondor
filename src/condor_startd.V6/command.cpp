@@ -25,6 +25,7 @@
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
+#include "condor_holdcodes.h"
 
 #include <map>
 
@@ -50,6 +51,7 @@ command_handler(int cmd, Stream* stream )
 			case DEACTIVATE_CLAIM:
 			case DEACTIVATE_CLAIM_FORCIBLY:
 			case DEACTIVATE_CLAIM_JOB_DONE:
+			case DEACTIVATE_CLAIM_FINAL_XFER:
 			case REACTIVATE_CLAIM_CHECK:
 				stream->encode();
 
@@ -78,6 +80,7 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM:
 	case DEACTIVATE_CLAIM_FORCIBLY:
 	case DEACTIVATE_CLAIM_JOB_DONE:
+	case DEACTIVATE_CLAIM_FINAL_XFER:
 	case REACTIVATE_CLAIM_CHECK:
 		rval = deactivate_claim(stream, rip, cmd);
 		break;
@@ -88,8 +91,9 @@ command_handler(int cmd, Stream* stream )
 int
 deactivate_claim(Stream *stream, Resource *rip, int cmd)
 {
-	bool graceful = cmd == DEACTIVATE_CLAIM;
+	bool graceful = cmd == DEACTIVATE_CLAIM || cmd == DEACTIVATE_CLAIM_FINAL_XFER;
 	bool job_done = cmd == DEACTIVATE_CLAIM_JOB_DONE;
+	bool final_xfer = cmd == DEACTIVATE_CLAIM_FINAL_XFER;
 
 	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, rip);
 	ep_event.Ad().Assign("Force", !graceful);
@@ -155,7 +159,9 @@ deactivate_claim(Stream *stream, Resource *rip, int cmd)
 	if( cmd == REACTIVATE_CLAIM_CHECK ) { return rval; }
 
 	if( rip->r_cur && ! job_done) {
-		if(graceful) {
+		if (final_xfer) {
+			rval = rip->deactivate_claim_final_xfer();
+		} else if(graceful) {
 			rval = rip->deactivate_claim();
 		} else {
 			rval = rip->deactivate_claim_forcibly();
@@ -675,7 +681,7 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
-			rip->dprintf( D_ALWAYS, 
+			rip->dprintf( D_ALWAYS,
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
@@ -1392,15 +1398,29 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 		goto abort;
 	}
 
+	// Not gonna refuse, so populate EP claim event with information about the claimant
+	if (ep_eventlog.isEnabled()) {
+		req_classad->Assign(ATTR_REMOTE_HOST, schedd_name);
+		std::string tmp;
+		if (req_classad->LookupString(ATTR_USER, tmp)) { ep_event.Ad().Assign(ATTR_REMOTE_USER, tmp); }
+		if (req_classad->LookupString(ATTR_PROJECT_NAME, tmp)) { ep_event.Ad().Assign(ATTR_REMOTE_PROJECT, tmp); }
+		JOB_ID_KEY jid(-1,-1);
+		req_classad->LookupInteger(ATTR_PROC_ID, jid.proc);
+		if (req_classad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster)) {
+			jid.sprint(tmp);
+			ep_event.Ad().Assign(ATTR_JOB_ID, tmp);
+		}
+		if (claim_pslot) { ep_event.Ad().Assign("PSlotClaim", true); }
+	}
+
 		// We decided to accept the request, save the schedd's
 		// stream, the rank and the classad of this request.
 	claim->setRequestStream( stream );
-	claim->setjobad( req_classad );
+	claim->setjobad( req_classad ); req_classad = nullptr; // give request ad (aka jobad) to the claim
 	claim->setrank( rank );
 	claim->setoldrank( oldrank );
 
 	claim->client()->c_scheddName = schedd_name;
-	ep_event.Ad().Assign(ATTR_REMOTE_HOST, schedd_name);
 
 	// Claimed for a temporary CM
 	if (claim_pslot) {
@@ -1413,7 +1433,6 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 		if (pslot != claim->rip()) {
 			pslot->change_state(claimed_state);
 		}
-		ep_event.Ad().Assign("PSlotClaim", true);
 	}
 
 #if HAVE_BACKFILL
@@ -1436,25 +1455,21 @@ request_claim( Resource* rip, Claim *claim, const char* id, Stream* stream )
 		// process
 	success = accept_request_claim( claim, secure_claim_id, send_claimed_ad, send_leftovers, &new_dslots );
 
-	ep_event.Ad().Assign("Success", success);
-	if (req_classad && ep_eventlog.isEnabled()) {
-		std::string tmp;
-		if (req_classad->LookupString(ATTR_USER, tmp)) {
-			ep_event.Ad().Assign(ATTR_REMOTE_USER, tmp);
-			tmp.clear();
-		}
-		JOB_ID_KEY jid(-1,-1);
-		req_classad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
-		req_classad->LookupInteger(ATTR_PROC_ID, jid.proc);
-		jid.sprint(tmp);
-		ep_event.Ad().Assign(ATTR_JOB_ID, tmp);
+	// WARNING! when the above fails, it might delete the claim object
 
-		tmp.clear();
-		for (auto * rip : new_dslots) {
-			if ( ! tmp.empty()) tmp += ", ";
-			tmp += rip->r_id_str;
+	ep_event.Ad().Assign("Success", success);
+	if (ep_eventlog.isEnabled()) {
+		if (success) {
+			std::string tmp;
+			for (auto * rip : new_dslots) {
+				if ( ! tmp.empty()) tmp += ", ";
+				tmp += rip->r_id_str;
+			}
+			ep_event.Ad().Assign("NewSlots", tmp);
+		} else {
+			// failure at this point will be because we could not send the success reply
+			ep_event.Ad().Assign("Error", EIO); // TODO: define error codes?
 		}
-		ep_event.Ad().Assign("NewSlots", tmp);
 	}
 	ep_eventlog.flush();
 
@@ -1471,7 +1486,7 @@ abort:
 		}
 	}
 	ep_event.Ad().Assign("Success", false);
-	ep_event.Ad().Assign("Error", return_code);
+	ep_event.Ad().Assign("Error", ENOENT); // TODO: define error codes?
 	ep_eventlog.flush();
 	return return_code;
 }

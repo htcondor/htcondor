@@ -87,7 +87,13 @@ def find_templates(dir: str):
 
 def generate_old_redirect_page(dir: str):
     """Write javascript to redirect old monolithic configuration macro URLs to new locations"""
-    javascript = Path(dir) / "_static" / "js" / "config-macro-redirect.js"
+    gen_dir = Path(dir) / "_static" / "generated" / "js"
+    try:
+        gen_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        warn(f"Failed to ensure/create '{gen_dir}': {e}")
+
+    javascript = gen_dir / "config-macro-redirect.js"
     with open(javascript, "w") as f:
         f.write("""
 // Map of tag -> URL end

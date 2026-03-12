@@ -101,7 +101,7 @@ public:
 			       it should restart a job after uploading its checkpoint.
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning);
+	bool deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning, bool final_transfer=false);
 
 		/** Send the command to this startd to ask if claim_is_closing would be returned if we deactivated.
 			Used by starter to check if it should restart a job after uploading its checkpoint.
@@ -181,7 +181,9 @@ public:
 	 */
 	bool _continueClaim();
 	
-	bool vacateClaim( const char* name );
+	bool vacateClaim( const char* name, bool fast=false );
+
+	bool vacateAllClaims(bool fast = false);
 
 		// request_id: set to the request id (can be used to cancel request)
 		// returns: true/false on success/failure
