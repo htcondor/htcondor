@@ -478,12 +478,12 @@ class Throttle(Verb):
             "DAGMan_MaxSubmitsPerInterval": "Maximum Submits Per Interval",
         }
 
-        logger.info(f"DAGMan {dag_id} set throttles:")
+        print(f"DAGMan {dag_id} set throttles:")
 
         for attr, value in result.items():
             display = ATTR_TO_DISPLAY.get(attr)
             if display is not None:
-                logger.info(f"\t{display.ljust(30, '-')}: {value}")
+                print(f"\t{display.ljust(30, '-')}: {value}")
 
 
 class DAG(Noun):

@@ -79,6 +79,9 @@ public:
 			} else {
 				result[i] = rhs[i];
 			}
+
+			// We accept negative numbers as infinity but set to zero for consistency
+			if (result[i] < 0) { result[i] = 0; }
 		}
 
 		return result;
