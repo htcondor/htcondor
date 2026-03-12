@@ -1,5 +1,15 @@
 *** 25.8.0 features
 
+- The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
+  file each time it successfully reconnects to a disconnected starter or
+  gives up trying.  Each record contains timing information about when the
+  job was activated, the last known contact time, whether the reconnect
+  succeeded, the configured lease duration, and whether the starter is
+  known to be dead.  This is controlled by the new configuration knobs
+  :macro:`SHADOW_LOG_RECONNECT` (default ``True``) and
+  :macro:`SHADOW_RECONNECT_LOG`.
+  :jira:`3593`
+
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
   (e.g. with :tool:`condor_transfer_data`).
