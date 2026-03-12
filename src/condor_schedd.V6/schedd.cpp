@@ -9345,6 +9345,12 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		// (on this EP) to start immediately.
 		transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGED;
 
+		// Start the lease on newly-staged catalogs, in case for some
+		// reason we fail to start any jobs using them.
+		for( const auto & [catalogName, contents] : transfer_shadow_rec->cxfer_catalogs ) {
+			mark_catalog_dead( catalogName );
+		}
+
 		// One or more match records now have shadow recs which point to
 		// jobs which were in the BLOCKED state only because their
 		// common files were not yet available.
@@ -10993,7 +10999,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			// this shadow's catalogs before the this shadow's reaper runs.
 			//
 			// It would be better still to tell the transfer shadow that it's
-			// time to due; that should be less work for the schedd and easier
+			// time to die; that should be less work for the schedd and easier
 			// to avoid confusing events in the job event and shadow logs.
 			unregister_shadow_catalogs( * shadow );
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
