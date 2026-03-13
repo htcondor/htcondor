@@ -1858,6 +1858,9 @@ DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
 
 		size_t firstSlash = annotatedName.find('/');
 		size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+		if (secondSlash == std::string::npos) {
+			return "";
+		}
 		std::string raw_name = annotatedName.substr(secondSlash + 1);;
 		return raw_name;
 	} else {
@@ -1867,9 +1870,19 @@ DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
 
 static
 size_t convert_number_with_suffix(std::string size) {
+	if (size.empty()) {
+		dprintf(D_ALWAYS, "Warning: empty size string in convert_number_with_suffix\n");
+		return 0;
+	}
+	
 	size_t result = 0;
-	std::from_chars(&size[0], &size[size.size() - 1], result);
-	char unit = size.size() > 2 ? size[size.size() - 2] : '?';
+	auto [ptr, ec] = std::from_chars(size.data(), size.data() + size.size(), result);
+	if (ec != std::errc()) {
+		dprintf(D_ALWAYS, "Warning: failed to parse number in size string: %s\n", size.c_str());
+		return 0;
+	}
+	
+	char unit = size.size() > 1 ? size[size.size() - 1] : '?';
 	switch (unit) {
 		case 'K':
 		case 'k':
@@ -1888,7 +1901,7 @@ size_t convert_number_with_suffix(std::string size) {
 			result *= (1024ll * 1024 * 1024 * 1024);
 			break;
 		default:
-			dprintf(D_ALWAYS, "Warning: unknown unit suffix %c in number %sn", unit, size.c_str());
+			dprintf(D_ALWAYS, "Warning: unknown unit suffix %c in number %s\n", unit, size.c_str());
 	}
 	return result;
 }
@@ -1935,19 +1948,25 @@ DockerAPI::getImageInfos() {
 		while (readLine(line, *src, false)) {
 			chomp(line);
 			size_t first_space = line.find(' ');
-			size_t second_space = line.find(' ', first_space + 1);
-			if (first_space != std::string::npos) {
-				std::string imageName = line.substr(0, first_space);
-				if (imageName == "<none>") {
-					// How does this happen?  Don't know, but it does
-					continue;
-				}
-
-				std::string sha       = line.substr(first_space + 1, second_space - first_space - 1);
-				std::string size      = line.substr(second_space + 1);
-				size_t size_in_bytes = convert_number_with_suffix(size);
-				result.emplace_back(imageName, sha, "", size_in_bytes);
+			if (first_space == std::string::npos) {
+				continue;
 			}
+			
+			size_t second_space = line.find(' ', first_space + 1);
+			if (second_space == std::string::npos) {
+				continue;
+			}
+			
+			std::string imageName = line.substr(0, first_space);
+			if (imageName == "<none>") {
+				// How does this happen?  Don't know, but it does
+				continue;
+			}
+
+			std::string sha       = line.substr(first_space + 1, second_space - first_space - 1);
+			std::string size      = line.substr(second_space + 1);
+			size_t size_in_bytes = convert_number_with_suffix(size);
+			result.emplace_back(imageName, sha, "", size_in_bytes);
 		}
 	}
 
@@ -1989,18 +2008,24 @@ DockerAPI::getImageInfos() {
 		while (readLine(line, *src, false)) {
 			chomp(line);
 			size_t space = line.find(' ');
-			if (space != std::string::npos) {
-				// output is sha256:fullshaid lastTagtime
-				size_t colon = line.find(':');
-				std::string shaName     = line.substr(colon + 1, space - colon - 1);
-				std::string lastTagTime = line.substr(space + 1);
+			if (space == std::string::npos) {
+				continue;
+			}
+			
+			// output is sha256:fullshaid lastTagtime
+			size_t colon = line.find(':');
+			if (colon == std::string::npos || colon >= space) {
+				continue;
+			}
+			
+			std::string shaName     = line.substr(colon + 1, space - colon - 1);
+			std::string lastTagTime = line.substr(space + 1);
 
-				// Find the image with this sha, and add the lastTagTime
-				for (auto &imageInfo: result) {
-					//imageInfo.sha256 is the short sha, shaName is the long sha
-					if (shaName.starts_with(imageInfo.sha256)) {
-						imageInfo.lastTagTime = lastTagTime;
-					}
+			// Find the image with this sha, and add the lastTagTime
+			for (auto &imageInfo: result) {
+				//imageInfo.sha256 is the short sha, shaName is the long sha
+				if (shaName.starts_with(imageInfo.sha256)) {
+					imageInfo.lastTagTime = lastTagTime;
 				}
 			}
 		}
