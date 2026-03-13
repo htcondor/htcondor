@@ -60,6 +60,7 @@ def the_condor(test_dir, the_lock_dir):
         config={
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
+            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_ZKM D_FULLDEBUG"
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
@@ -292,9 +293,9 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
     #
     # Wait for KEEP_COMMON_IDLE + 1 seconds to force it to expire.
     # ... apparently it can take a _long_ time for the shadows to exit
-    #     after the job completes.
+    #     after the last job completes.
     #
-    time.sleep(7)
+    time.sleep(20)
 
     return job_handle
 

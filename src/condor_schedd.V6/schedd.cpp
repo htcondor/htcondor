@@ -16962,6 +16962,9 @@ Scheduler::SetMrecJobID(match_rec *match, PROC_ID job_id) {
 	match->proc = job_id.proc;
 	if( match->proc != -1 ) {
 		auto [it, success] = matchesByJobID.emplace(job_id, match);
+		if(! success) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "SetMrecJobID() called for job ID %d.%d, which could not be emplaced.\n", job_id.cluster, job_id.proc );
+		}
 		ASSERT(success);
 	}
 }
