@@ -1,9 +1,10 @@
 #!/bin/bash
-# This script runs on the execute node.
-# It prints the CUDA_VISIBLE_DEVICES environment variable
-# to show which GPU HTCondor assigned to the job.
 #
-# This script does not perform any real GPU computation.
+# gpu_check.sh
+#
+# This script is executed on the HTCondor execute node.
+# It demonstrates how GPU assignments are exposed
+# to the job environment.
 
 echo "=== HTCondor GPU Job Check ==="
 echo "Hostname: $(hostname)"
