@@ -13117,6 +13117,13 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
 			if(! other) { continue; }
 			if( * other == srec ) {
 				catalogToShadowMap.erase( catalogName );
+
+				// We could reduce code duplication here by calling
+				// mark_catalog_live(), but that would be confusing.
+				if( catalogToTimerMap.contains( catalogName ) ) {
+				    daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
+				    catalogToTimerMap.erase(catalogName);
+				}
 			}
 		}
 	}
@@ -13137,7 +13144,8 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	// need to mark them dead, because there's no grace period here --
 	// the shadow is already gone, and the only other thing that marking
 	// them dead does in send a vacate command to the corresponding match,
-	// which is equally unnecessary.
+	// which is equally unnecessary.  This function also removes any
+	// corresponding kill timers.
 	unregister_shadow_catalogs(rec);
 
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
