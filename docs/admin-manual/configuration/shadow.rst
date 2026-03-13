@@ -106,11 +106,12 @@ These settings affect the *condor_shadow*.
     :macro:`SHADOW_RECONNECT_LOG` each time it successfully reconnects
     to a disconnected starter, or when it gives up trying to reconnect
     because the job lease expired. Each record contains the following
-    comma-separated fields: the epoch time the job was activated, the
-    last epoch time the shadow heard from the starter, whether the
-    reconnect succeeded, the epoch time of the reconnect attempt, the
-    configured lease duration in seconds, a timeout version identifier,
-    and whether the starter process is known to be dead.
+    comma-separated fields: The cluster.proc of the job id,
+    the epoch time the job was activated, the last epoch time the 
+    shadow heard from the starter, whether the reconnect succeeded, 
+    the epoch time of the reconnect attempt, the configured lease 
+    duration in seconds, a timeout version identifier, and whether the 
+    starter process is known to be dead.
 
 :macro-def:`SHADOW_RECONNECT_LOG`
     The full path and file name of the CSV file where the
