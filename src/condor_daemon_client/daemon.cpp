@@ -1340,7 +1340,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// the collector for the address.
 		CondorQuery			query(adtype);
 		ClassAd*			scan;
-		ClassAdList			ads;
+		std::vector<ClassAd> ads;
 
 		if( (_type == DT_STARTD && ! strchr(_name.c_str(), '@')) ||
 			_type == DT_HAD ) { 
@@ -1395,16 +1395,14 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// We need to query the collector
 		CollectorList * collectors = CollectorList::create(_pool.c_str());
 		CondorError errstack;
-		if (collectors->query (query, ads) != Q_OK) {
+		if (collectors->query (query, ads, &errstack) != Q_OK) {
 			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;
 		};
 		delete collectors;
 
-		ads.Open();
-		scan = ads.Next();
-		if(!scan) {
+		if (ads.empty()) {
 			dprintf( D_ALWAYS, "Can't find address for %s %s\n",
 			         daemonString(_type), _name.c_str() );
 			formatstr( buf, "Can't find address for %s %s", 
@@ -1412,6 +1410,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			newError( CA_LOCATE_FAILED, buf.c_str() );
 			return false; 
 		}
+		scan = &ads[0];
 
 		if ( ! getInfoFromAd( scan ) ) {
 			return false;

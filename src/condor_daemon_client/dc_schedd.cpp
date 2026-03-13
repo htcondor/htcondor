@@ -2905,17 +2905,19 @@ ClassAd * DCSchedd::removeUsers(
 }
 
 ClassAd * DCSchedd::updateUserAds(
-	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
+	std::vector<ClassAd> & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
 	CondorError * errstack)
 {
 	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
+	if (user_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateUserAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	std::vector<const ClassAd*> ads;
-	ads.reserve(user_ads.Length());
-	user_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(user_ads.size());
+	for (auto& cmdAd: user_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -2925,6 +2927,10 @@ ClassAd * DCSchedd::updateUserAds(
 {
 	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
+	if (ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateUserAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
@@ -3023,17 +3029,19 @@ ClassAd * DCSchedd::removeProjects(
 }
 
 ClassAd * DCSchedd::updateProjectAds(
-	ClassAdList & project_ads, // ads must have ATTR_NAME attribute at a minimum
+	std::vector<ClassAd> & project_ads, // ads must have ATTR_NAME attribute at a minimum
 	CondorError *errstack)
 {
 	const bool is_project{true};
 	int connect_timeout = 20;
+	if (project_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateProjectAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	std::vector<const ClassAd*> ads;
-	ads.reserve(project_ads.Length());
-	project_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = project_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(project_ads.size());
+	for (auto& cmdAd: project_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -3043,6 +3051,10 @@ ClassAd * DCSchedd::updateProjectAds(
 {
 	const bool is_project{true};
 	int connect_timeout = 20;
+	if (ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateProjectAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -3050,15 +3062,17 @@ ClassAd * DCSchedd::updateProjectAds(
 ClassAd * DCSchedd::generalUpdateUserRecs(
 	int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 	bool is_project,           // set to true if ads are project ads or mixed user and project ads
-	ClassAdListDoesNotDeleteAds & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+	std::vector<ClassAd> & userrec_ads, // ads must have ATTR_USER or ATTR_NAME
 	CondorError *errstack)
 {
 	int connect_timeout = 20;
+	if (userrec_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::generalUpdateUserRecs", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 	std::vector<const ClassAd*> ads;
-	ads.reserve(userrec_ads.Length());
-	userrec_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = userrec_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(userrec_ads.size());
+	for (auto& cmdAd: userrec_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (cmd, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
