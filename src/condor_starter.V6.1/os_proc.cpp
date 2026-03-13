@@ -1173,7 +1173,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		pid = findChildProc(pid);
 
 	ArgList args;
-	args.AppendArg("/usr/bin/nsenter");
+	args.AppendArg("condor_nsenter"); // argv[0] is ignored, but let's set it to something reasonable
 	args.AppendArg("-t"); // target pid
 	char buf[32];
 	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, pid); *p = '\0';}
@@ -1265,6 +1265,10 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	if (bin_dir.empty()) bin_dir = "/usr/bin";
 	bin_dir += "/condor_nsenter";
 
+	std::string nsenter_for_display;
+	args.GetArgsStringForDisplay(nsenter_for_display);
+
+	dprintf(D_ALWAYS, "About to exec condor_nsenter with args %s\n", nsenter_for_display.c_str());
     std::string create_process_err_msg;
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
