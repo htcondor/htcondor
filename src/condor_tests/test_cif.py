@@ -289,6 +289,13 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
         condition=ClusterState.all_complete,
     )
 
+    #
+    # Wait for KEEP_COMMON_IDLE + 1 seconds to force it to expire.
+    # ... apparently it can take a _long_ time for the shadows to exit
+    #     after the job completes.
+    #
+    time.sleep(7)
+
     return job_handle
 
 
@@ -628,6 +635,14 @@ class TestCIF:
         starter_log_is_as_expected(the_big_condor,
                      cf_xfers=2, cf_waits=0, cf_maps=8
         )
+
+        # We also want to verify that the shadows die before we shut down
+        # `the_big_condor` in this test's (implicit) clean-up phase.
+        shadow_exits = count_shadow_log_lines(
+            the_big_condor, "EXITING WITH STATUS"
+        )
+        assert(shadow_exits == 10)
+
 
 
     #
