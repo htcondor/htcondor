@@ -13,6 +13,10 @@
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
+- :meth:`htcondor2.send_commmand` no longer incorrectly requires a `target`
+   parameter.
+  :jira:`3597`
+
 *** 24.0.18 features
 
 - Enable the in-memory cache option in newer versions of the scitokens-cpp
