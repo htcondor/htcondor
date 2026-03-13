@@ -2263,7 +2263,7 @@ CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, 
 }
 
 void
-CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) // release non-fungable resource ids
+CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot) // release non-fungable resource ids
 {
 	if (! map) return;
 
@@ -2290,6 +2290,8 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 		//   Gpus = 1
 
 		j.second = map->RefreshDevIds(j.first, ids->second, slot_id, slot_sub_id);
+		// assigned ids are reversed in backfill slots to reduce collisions with primary slots
+		if (backfill_slot && ids->second.size() > 1) { std::reverse(ids->second.begin(), ids->second.end()); }
 	}
 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
