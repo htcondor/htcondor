@@ -13,8 +13,8 @@
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
-- :meth:`htcondor2.send_commmand` no longer incorrectly requires a `target`
-   parameter.
+- The :meth:`htcondor2.send_commmand` method no longer incorrectly requires
+  a `target` parameter.
   :jira:`3597`
 
 *** 24.0.18 features
