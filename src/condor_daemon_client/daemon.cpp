@@ -1395,7 +1395,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// We need to query the collector
 		CollectorList * collectors = CollectorList::create(_pool.c_str());
 		CondorError errstack;
-		if (collectors->query (query, ads) != Q_OK) {
+		if (collectors->query (query, ads, &errstack) != Q_OK) {
 			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;

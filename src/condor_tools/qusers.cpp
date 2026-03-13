@@ -1115,8 +1115,9 @@ main( int argc, const char *argv[] )
 		ClassAd ad;
 		for (auto & line : edit_args) {
 			if ( ! ad.Insert(line)) {
-				fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
+				fprintf(stderr, "Error: not a valid classad assignment: %s\n", line);
 				rval = 1;
+				ad.Clear();
 				break;
 			}
 		}
