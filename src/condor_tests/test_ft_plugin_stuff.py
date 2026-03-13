@@ -42,7 +42,11 @@ def tor_job_requirements(tor_job):
 
 @action
 def nph_job(default_condor, path_to_sleep, test_dir):
-    name = Path(path_to_sleep).name
+    # The idea here is that the job will fail the first time because the
+    # output remap points to a bad URL. This used to cause the job to be held, but
+    # with the fix in HTCONDOR-2952 the job should just go back to idle in the event 
+    # that an EP failed to launch a transfer plugin. The second time the job runs, it should 
+    # succeed because the remap expression is designed to only point to the bad URL on the first attempt.
     handle = default_condor.submit(
         {
             "executable":               path_to_sleep,
@@ -52,20 +56,20 @@ def nph_job(default_condor, path_to_sleep, test_dir):
 
             "log":                      test_dir / "nph_job.log",
 
-            "transfer_output_files":    name,
-            "transfer_output_remaps":   f'"{name}=badname://foo/bar"',
+            "transfer_output_files":    path_to_sleep,
+            "+TransferOutputRemaps":   f'NumJobStarts > 0 ? "" :  "{path_to_sleep}=badname://foo/bar"',
             "requirements":             'TARGET.HasFileTransferPluginMethods =!= undefined',
         },
         count=1,
     )
 
     handle.wait(
-        condition=ClusterState.all_held,
-        fail_condition=ClusterState.any_complete,
+        condition=ClusterState.all_complete,
+        fail_condition=ClusterState.any_held,
         timeout=60,
     )
 
-    return handle
+    return handle, default_condor.get_local_schedd()
 
 @action
 def trailing_semi_job(default_condor, test_dir):
@@ -77,7 +81,7 @@ def trailing_semi_job(default_condor, test_dir):
             "should_transfer_files":    "True",
             "arguments":                "one two three",
 
-            "log":                      test_dir / "nph_job.log",
+            "log":                      test_dir / "trailing_semi_job.log",
 
             "transfer_output_remaps":   '"one=sandbox/job_one;two=sandbox/job_two;three=sandbox/job_three;"',
             "output":                   "job_stdout",
@@ -102,7 +106,12 @@ class TestFTPluginStuff:
         assert 'badname' in tor_job_requirements
 
     def test_no_plugin_hold(self, nph_job):
-        assert nph_job.state.all_held()
+        # Verify the job did not go on hold, retried output transfer after plugin failure, and completed successfully.
+        assert nph_job[0].state.all_complete()
+        assert nph_job[1].history(
+            constraint=f'ClusterID == {nph_job[0].clusterid} && ProcID == 0',
+            projection=["NumOutputTransferStarts"],
+        )[0]["NumOutputTransferStarts"] == 2
 
     def test_trailing_semi_remap(self, trailing_semi_job):
         assert os.path.isfile("job_stdout")
