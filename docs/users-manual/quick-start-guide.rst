@@ -528,6 +528,84 @@ Mac) convention of appending the directory name with a slash character (/).
         * outfile.txt
         * science3.log
 
+Submitting a GPU Job
+--------------------
+
+This example demonstrates how to submit a job that requests GPU resources.
+HTCondor can automatically match jobs that need GPUs with execution points
+that have GPU devices available.
+
+The submit description file shows how to request a GPU using the
+:subcom:`request_gpus` command:
+
+.. code-block:: condor-submit
+
+    # gpu_simple.sub -- simple GPU job example
+    # This job requests one GPU and demonstrates how GPU assignments
+    # are exposed to the job via the CUDA_VISIBLE_DEVICES environment variable.
+
+    universe = vanilla
+
+    # Script executed on the execute node
+    executable = gpu_check.sh
+
+    # Request one CPU core and one GPU device
+    request_cpus = 1
+    request_gpus = 1
+
+    # Memory requirement for the job
+    request_memory = 2GB
+
+    # Standard HTCondor log, output, and error files
+    output = gpu.out
+    error  = gpu.err
+    log    = gpu.log
+
+    queue
+
+When HTCondor assigns a GPU to your job, it sets the ``CUDA_VISIBLE_DEVICES``
+environment variable to indicate which GPU device(s) have been allocated.
+Most GPU-accelerated applications automatically use this environment variable
+to determine which GPU to use.
+
+Here is an example executable script that checks for GPU assignment:
+
+.. code-block:: bash
+
+    #!/bin/bash
+    # gpu_check.sh
+    # This script runs on the execute node and prints GPU information
+
+    echo "=== HTCondor GPU Job Check ==="
+    echo "Hostname: $(hostname)"
+    echo "Date: $(date)"
+
+    echo
+    echo "CUDA_VISIBLE_DEVICES = $CUDA_VISIBLE_DEVICES"
+    echo
+
+    # If NVIDIA utilities are available, show GPU info
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        echo "nvidia-smi output:"
+        nvidia-smi
+    else
+        echo "nvidia-smi not found (this is OK on non-NVIDIA systems)"
+    fi
+
+    echo
+    echo "Job completed successfully."
+
+Remember to make the script executable on Linux or Mac systems:
+
+.. code-block:: shell
+
+    chmod u+x gpu_check.sh
+
+This example can be used to verify GPU job submission works correctly,
+even on systems without physical GPUs. The job will match with execution
+points that have GPUs available. For actual GPU computation, replace
+``gpu_check.sh`` with your GPU-accelerated application.
+
 Creating Workflows with DAGMan
 ------------------------------
 
