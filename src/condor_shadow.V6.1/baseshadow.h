@@ -412,14 +412,16 @@ class BaseShadow : public Service
 
 	// Returns false iff there was an error computing an output parameters.
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
-		ClassAd * /* jobAd */
+		ClassAd * /* jobAd */,
+		std::map<std::string, std::string> * = NULL
 	) { return {ListOfCatalogs()}; }
 
 	// Return false iff there was an error computing an output parameter.
 	virtual bool computeCommonInputFiles(
 		ClassAd * /* jobAd */,
 		ListOfCatalogs & /* commonFileCatalogs */,
-		int & /* required_version */
+		int & /* required_version */,
+		std::map<std::string, std::string> * = NULL
 	) { return true; }
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() { return {}; }

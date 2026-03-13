@@ -12,7 +12,8 @@ using ListOfCatalogs = std::vector< std::pair< std::string, std::string > >;
 std::optional<ListOfCatalogs>
 computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
-	const std::string & startdAddress
+	const std::string & startdAddress,
+	std::map< std::string, std::string > * internalToSimpleNameMap = NULL
 );
 
 bool
@@ -20,7 +21,8 @@ computeCommonInputFiles(
 	ClassAd * jobAd,
 	const std::string & startdAddress,
 	ListOfCatalogs & commonFileCatalogs,
-	int & required_version
+	int & required_version,
+	std::map< std::string, std::string > * internalToSimpleNameMap = NULL
 );
 
 

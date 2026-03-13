@@ -207,13 +207,15 @@ class UniShadow : public BaseShadow
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
 	virtual std::optional<ListOfCatalogs> computeCommonInputFileCatalogs(
-		ClassAd * jobAd
+		ClassAd * jobAd,
+		std::map<std::string, std::string> * externalToSimpleNameMap
 	);
 
 	virtual bool computeCommonInputFiles(
 		ClassAd * jobAd,
 		ListOfCatalogs & commonFileCatalogs,
-		int & required_version
+		int & required_version,
+		std::map<std::string, std::string> * externalToSimpleNameMap
 	);
 
 	virtual std::optional<ClassAd> getCommonTransferInfoStats() {
@@ -270,7 +272,8 @@ class UniShadow : public BaseShadow
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_staging_only_conversation(
 		ClassAd request,
-		ListOfCatalogs common_file_catalogs
+		ListOfCatalogs common_file_catalogs,
+		std::map<std::string, std::string> externalToSimpleNameMap
 	);
 
 	condor::cr::Piperator<ClassAd, ClassAd> start_mapping_only_conversation(

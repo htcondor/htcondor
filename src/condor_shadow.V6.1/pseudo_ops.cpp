@@ -1463,7 +1463,8 @@ UniShadow::vacate_requeue_abort(
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_staging_only_conversation(
 	ClassAd request,
-	ListOfCatalogs common_file_catalogs
+	ListOfCatalogs common_file_catalogs,
+	std::map<std::string, std::string> externalToSimpleNameMap
 ) {
 	bool success;
 
@@ -1512,6 +1513,9 @@ UniShadow::start_staging_only_conversation(
 		ClassAd * catalogAd = new ClassAd();
 		catalogAd->InsertAttr( ATTR_NAME, cifName );
 		catalogAd->InsertAttr( "StagingDir", stagingDir );
+		// Arguably, ATTR_NAME should become ATTR_INTERNAL_NAME and
+		// this attribute should become ATTR_NAME.
+		catalogAd->InsertAttr( "SimpleName", externalToSimpleNameMap[cifName] );
 		catalogAds.push_back( catalogAd );
 	}
 
@@ -2094,7 +2098,8 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 
 		int required_version = 2;
-		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd );
+		std::map<std::string, std::string> externalToSimpleNameMap;
+		auto common_file_catalogs = computeCommonInputFileCatalogs( jobAd, & externalToSimpleNameMap );
 		if(! common_file_catalogs) {
 			dprintf( D_ERROR, "Failed to compute common input file catalogs, can't run job!\n" );
 
@@ -2108,7 +2113,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			return GuidanceResult::Command;
 		}
 
-		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version )) {
+		if(! computeCommonInputFiles( jobAd, *common_file_catalogs, required_version, & externalToSimpleNameMap )) {
 			dprintf( D_ERROR, "Failed to compute common input files, can't run job!\n" );
 			// We don't have a mechanism to inform the submitter of internal
 			// errors like this, so for now we're stuck putting the job on hold.
@@ -2132,7 +2137,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		// left- and right- hand sides swapped, but only allows you to supply
 		// one; the ranges implementation requires that the elements of both
 		// ranges be assignable to the output range, even though there's no
-		// need to copy from both ranges.
+		// need to copy from both ranges.)
 		//
 
 		auto transfer_these_catalogs = LookupClassAdStringList(
@@ -2174,7 +2179,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 				case CXFER_STATE::STAGING:
 					the_coroutine = std::move(
-						this->start_staging_only_conversation(request, *common_file_catalogs)
+						this->start_staging_only_conversation(request, *common_file_catalogs, externalToSimpleNameMap)
 					);
 					break;
 
@@ -2213,11 +2218,12 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 
 std::optional<ListOfCatalogs>
 UniShadow::computeCommonInputFileCatalogs(
-	ClassAd * jobAd
+	ClassAd * jobAd,
+	std::map<std::string, std::string> * externalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress );
+	auto rval = ::computeCommonInputFileCatalogs( jobAd, startdAddress, externalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }
@@ -2227,11 +2233,12 @@ bool
 UniShadow::computeCommonInputFiles(
 	ClassAd * jobAd,
 	ListOfCatalogs & commonFileCatalogs,
-	int & required_version
+	int & required_version,
+	std::map<std::string, std::string> * externalToSimpleNameMap
 ) {
 	char * startdAddress = NULL;
 	this->remRes->getStartdAddress(startdAddress);
-	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version );
+	auto rval = ::computeCommonInputFiles( jobAd, startdAddress, commonFileCatalogs, required_version, externalToSimpleNameMap );
 	free( startdAddress );
 	return rval;
 }
