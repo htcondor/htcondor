@@ -597,9 +597,9 @@ Here is an example executable script that checks for GPU assignment:
 
 Remember to make the script executable on Linux or Mac systems:
 
-.. code-block:: shell
+.. code-block:: console
 
-    chmod u+x gpu_check.sh
+    $ chmod u+x gpu_check.sh
 
 This example can be used to verify GPU job submission works correctly,
 even on systems without physical GPUs. The job will match with execution
