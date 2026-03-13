@@ -13133,6 +13133,11 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		scheduler.stats.JobsRestartReconnectsInterrupted += 1;
 	}
 
+	// This shadow is no longer responsible for any catalogs.  We don't
+	// need to mark them dead, because there's no grace period here --
+	// the shadow is already gone, and the only other thing that marking
+	// them dead does in send a vacate command to the corresponding match,
+	// which is equally unnecessary.
 	unregister_shadow_catalogs(rec);
 
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
@@ -14100,7 +14105,7 @@ Scheduler::child_exit(int pid, int status)
 		// of how the job exited
 		delete_shadow_rec( pid );
 
-	} 
+	}
 
 	//
 	// If the job was a local universe job, we will want to
@@ -16840,7 +16845,7 @@ Scheduler::unlinkMrec(match_rec* match)
 						}
 					}
 				}
-				}break;
+				} break;
 			case CXFER_STATE::STAGING:
 				break;
 			case CXFER_STATE::STAGED:
