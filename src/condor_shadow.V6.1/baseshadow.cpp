@@ -44,6 +44,7 @@
 #include "set_user_priv_from_ad.h"
 #include <algorithm>
 #include "log_rotate.h"
+#include "safe_open.h"
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -465,7 +466,7 @@ BaseShadow::logReconnectRecord(bool success, time_t reconnect_time, bool starter
 		m_reconnect_record.m_timeout_version_id.empty() ? "default" : m_reconnect_record.m_timeout_version_id.c_str(),
 		starter_known_dead ? "true" : "false");
 
-	int fd = open(m_reconnect_log_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	int fd = safe_open_wrapper(m_reconnect_log_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
 	if (fd < 0) {
 		dprintf(D_ALWAYS, "Failed to open reconnect log %s: %s\n",
 			m_reconnect_log_path.c_str(), strerror(errno));
