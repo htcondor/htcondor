@@ -13110,6 +13110,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
 		return;
 	}
 	if( srec->cxfer_state != CXFER_STATE::INVALID ) {
+		std::vector< std::string > removedCatalogs;
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
 			// To avoid a race condition, we call this function when we call
@@ -13121,8 +13122,46 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
 				// We could reduce code duplication here by calling
 				// mark_catalog_live(), but that would be confusing.
 				if( catalogToTimerMap.contains( catalogName ) ) {
-				    daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
-				    catalogToTimerMap.erase(catalogName);
+					daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
+					catalogToTimerMap.erase( catalogName );
+					removedCatalogs.push_back( catalogName );
+				}
+			}
+		}
+
+		// Although the jobs are still blocked on a common catalog,
+		// the blocked state must be synonymous with the existence
+		// of at least one transfer shadow; otherwise, the jobs
+		// will never unblock.  For now, rather than do anything
+		// clever, just unblock all of the relevant blocked jobs;
+		// StartJob() will reblock them, or start a new transfer
+		// shadow, as appropriate.
+		//
+		// Doing things this way makes a single pass over the blocked
+		// matches, with each pass doing a set intersection; we could
+		// only one catalog at a time in the main loop, at the cost of
+		// iterating the blocked matches more than once.
+		for( match_rec * m : matchesHeldByBlockedJobs ) {
+			if( m->shadowRec != NULL ) {
+				auto * sr = m->shadowRec;
+				const auto & jobCatalogs = sr->cxfer_catalogs;
+				bool anyJobCatalogInRemovedCatalogs = std::any_of(
+					removedCatalogs.begin(), removedCatalogs.end(),
+					[jobCatalogs](const std::string & e) -> bool {
+						return jobCatalogs.end() != std::find_if(
+							jobCatalogs.begin(), jobCatalogs.end(),
+							[e](const auto & f) { return f.first == e; }
+						);
+					}
+				);
+				if( anyJobCatalogInRemovedCatalogs ) {
+					dprintf( D_ALWAYS, "Unblocking job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
+
+					int status = JOB_STATUS_IDLE;
+					SetAttributeInt( sr->job_id.cluster, sr->job_id.proc, ATTR_JOB_STATUS, status);
+
+					mark_serial_job_running( sr->job_id );
+					addRunnableJob( sr );
 				}
 			}
 		}
@@ -14962,7 +15001,8 @@ Scheduler::kill_zombie(int, const PROC_ID & job_id )
 void
 Scheduler::check_zombie(int pid, const PROC_ID & job_id)
 {
- 
+	if( job_id.proc <= -1000 ) { return; }
+
 	int	  status = -1;
 
 	if( GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS,
@@ -15033,11 +15073,11 @@ Scheduler::check_zombie(int pid, const PROC_ID & job_id)
 		// but I need to check to see if the job uses the CronTab
 		// scheduling. If it does, then we'll call out to have the
 		// next execution time calculated for it
-		// 11.01.2005 - Andy - pavlo@cs.wisc.edu 
+		// 11.01.2005 - Andy - pavlo@cs.wisc.edu
 		//
 	if ( cronTabs.find(job_id) != cronTabs.end()) {
 			//
-			// Set the force flag to true so it will always 
+			// Set the force flag to true so it will always
 			// calculate the next execution time
 			//
 		ClassAd *job_ad = GetJobAd( job_id.cluster, job_id.proc );
@@ -19144,6 +19184,24 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		 srec->universe != CONDOR_UNIVERSE_JAVA &&
 		 srec->universe != CONDOR_UNIVERSE_VM) )
 	{
+		stream->encode();
+		stream->put((int)0);
+		stream->end_of_message();
+		return FALSE;
+	}
+
+	//
+	// If this was a transfer shadow, don't attempt to re-use its match;
+	// the startd won't recognize the claim ID, probably because it wasn't
+	// updated after the split.
+	//
+	// Additionally, if this was a transfer shadow, unregister the catalogs
+	// for which it was responsible.
+	//
+	if( srec->cxfer_state == CXFER_STATE::STAGING || srec->cxfer_state == CXFER_STATE::STAGED ) {
+		unregister_shadow_catalogs( srec );
+
+		// Don't reuse this shadow.
 		stream->encode();
 		stream->put((int)0);
 		stream->end_of_message();
