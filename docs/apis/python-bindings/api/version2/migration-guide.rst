@@ -150,7 +150,6 @@ that they are no longer necessary.
 
 .. rubric:: Classes or methods only in Version 1:
 
-* :meth:`htcondor.Schedd.refreshGSIProxy`
 * :meth:`htcondor.Submit.jobs`
 * :meth:`htcondor.Submit.procs`
 

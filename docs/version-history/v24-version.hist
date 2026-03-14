@@ -27,6 +27,10 @@
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
+- The :meth:`htcondor2.send_commmand` method no longer incorrectly requires
+  a `target` parameter.
+  :jira:`3597`
+
 *** 24.12.18 bugs
 
 - Improve AMD GPU detection when using ROCM6/HIP libraries and fix a potential crash
