@@ -29,7 +29,7 @@ def _daemon_type_from_ad_type(ad_type: AdType):
     return map.get(ad_type, None)
 
 
-def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str]):
+def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str] = None):
     """
     Send a command to an HTCondor daemon.
 
