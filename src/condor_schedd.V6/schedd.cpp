@@ -9283,7 +9283,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 	// This forces a rebuild of the priorec array, which we probably don't
 	// want, but does allow the job which spawned the transfer shadow to
-	// match the newly-available resource.
+	// match the newly-available resource, which we do want.
 	//
 	// Once it's (hopefully) been matched, it'll be in BLOCKED state because
 	// we haven't updated the transfer shadow's record to indicate that it's
@@ -10975,15 +10975,21 @@ Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
 bool
 Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 	if( catalogToTimerMap.contains( catalogName ) ) {
-	    dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
+		dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
 		return false;
 	}
 
-    // Why do we use manifest constants for attributes but not config knobs?
+	// unregister_shadow_catalogs() needs the PID of the shadow currently responsible
+	// for the catalog so that it won't erase entries that have been made in the map
+	// since then.
+	auto shadow = getShadowForCatalog( catalogName );
+	int shadow_pid = (* shadow)->pid;
+
+	// Why do we use manifest constants for attributes but not config knobs?
 	int keep_common_idle = param_integer( "KEEP_COMMON_IDLE", 300 );
 	catalogToTimerMap[catalogName] = daemonCore->Register_Timer(
 		keep_common_idle, TIMER_NEVER,
-		[this, catalogName](int /* timerID */) -> void {
+		[this, catalogName, shadow_pid](int /* timerID */) -> void {
 			auto shadow = getShadowForCatalog( catalogName );
 			if(! shadow) {
 				dprintf( D_ALWAYS, "Found no shadow for catalog scheduled for clean-up: '%s'\n", catalogName.c_str() );
@@ -11001,7 +11007,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			// It would be better still to tell the transfer shadow that it's
 			// time to die; that should be less work for the schedd and easier
 			// to avoid confusing events in the job event and shadow logs.
-			unregister_shadow_catalogs( * shadow );
+			unregister_shadow_catalogs( * shadow, shadow_pid );
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
 		},
 		"terminate transfer shadow lease"
@@ -13104,7 +13110,7 @@ Scheduler::delete_shadow_rec(int pid)
 
 
 void
-Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
+Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 	if( srec == NULL ) {
 		dprintf( D_ZKM, "unregister_shadow_catalogs(NULL): ignoring\n" );
 		return;
@@ -13116,7 +13122,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec ) {
 			// To avoid a race condition, we call this function when we call
 			// send_vacate(), so it's fine if the catalog isn't registered.
 			if(! other) { continue; }
-			if( * other == srec ) {
+			if( * other == srec && (* other)->pid == shadow_pid ) {
 				catalogToShadowMap.erase( catalogName );
 
 				// We could reduce code duplication here by calling
@@ -13185,7 +13191,10 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	// them dead does in send a vacate command to the corresponding match,
 	// which is equally unnecessary.  This function also removes any
 	// corresponding kill timers.
-	unregister_shadow_catalogs(rec);
+	//
+	// Since we're unregistering catalogs because this shadow rec is being
+	// deleted, make sure to delete this shadow's maps.
+	unregister_shadow_catalogs(rec, rec->pid);
 
 	if ( FindSrecByProcID(rec->job_id) == NULL ) {
 		// add_shadow_rec() wasn't called, do simple cleanup
@@ -19199,7 +19208,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	// for which it was responsible.
 	//
 	if( srec->cxfer_state == CXFER_STATE::STAGING || srec->cxfer_state == CXFER_STATE::STAGED ) {
-		unregister_shadow_catalogs( srec );
+		unregister_shadow_catalogs( srec, shadow_pid );
 
 		// Don't reuse this shadow.
 		stream->encode();

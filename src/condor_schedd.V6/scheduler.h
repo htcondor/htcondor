@@ -756,7 +756,7 @@ class Scheduler : public Service
 
 	// If a shadow has gone away (or we know it's about to go way), remove
 	// the (soon to be) dangling pointers from the catalog-to-shadow map.
-	void unregister_shadow_catalogs( shadow_rec * srec );
+	void unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid );
 
 	// Don't inadvertently create empty vectors.
 	// Note that the returned vector is a copy, and does not own the pointers.
