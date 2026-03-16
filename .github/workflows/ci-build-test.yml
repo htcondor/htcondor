@@ -121,6 +121,9 @@ jobs:
 
       - name: Build
         run: (mkdir __build && cd __build && cmake -GNinja -DWITH_VOMS:bool=false .. && ninja -j4 install)
+      # pytest and thus ornitholgy aren't installed correctly, so for now, just run one random perl test
+      - name: test
+        run: ( cd __build && ctest --output-junit test.xml -j 40 -R job_dagman_vars )
 
   winbuild:
     runs-on: windows-latest
