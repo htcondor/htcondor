@@ -11672,21 +11672,27 @@ DaemonCore::CallImmediatelyButReapLater( std::function<int(void)> f, int reaperI
 
 #else
 
+typedef std::function<int(void)> ForkToCallFunc;
+
 int
 ftc_start_func(void * v, Stream *) {
-	int rv = (*(std::function<int(void)> *)v)();
-	delete v;
+	ForkToCallFunc ** ftcf = (ForkToCallFunc **)v;
+	ForkToCallFunc * f = * ftcf;
+	int rv = (*f)();
+	delete f;
 	return rv;
 }
 
 
 int
-DaemonCore::ForkToCall( std::function<int(void)> f, int reaperID ) {
-	// FIXME: Is it actually necessary to copy `f` to the heap?  It doesn't
-	// really go out of scope until after the fork() has happened,
-	// and we know that Create_Thread() doesn't return in the fork()d child.
-	auto * v = new std::function<int(void)>(f);
-	int rv = Create_Thread( & ftc_start_func, v, NULL, reaperID );
+DaemonCore::ForkToCall( ForkToCallFunc f, int reaperID ) {
+	// In addition to its many other sins, Create_Thread() requires that its
+	// second argument have been malloc()d if not NULL.  Ths least-crazy way
+	// to deal with this is to store new'd pointer therea.
+	ForkToCallFunc ** ftcf = (ForkToCallFunc **)malloc(sizeof(ForkToCallFunc *));
+	ForkToCallFunc * v = new ForkToCallFunc(f);
+	* ftcf = v;
+	auto rv = Create_Thread( & ftc_start_func, ftcf, NULL, reaperID );
 	delete v;
 	return rv;
 }
