@@ -692,7 +692,7 @@ endif()
 
 # Common externals
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.46)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.22.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
