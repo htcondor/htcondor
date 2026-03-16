@@ -9,7 +9,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate matrix from CSV
         id: set-matrix
@@ -39,7 +39,7 @@ jobs:
         run: echo "platform_name=$(echo ${{ matrix.instance.container }} | sed -e 's/htcondor\/nmi-build://g' -e 's/-[0-9]*$//g')" >> $GITHUB_OUTPUT
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build
         run: |
@@ -107,7 +107,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install python
         uses: actions/setup-python@v5
@@ -129,7 +129,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install VC++ Build Tools
         uses: ilammy/msvc-dev-cmd@v1
@@ -160,7 +160,7 @@ jobs:
       image: ${{ steps.extract.outputs.image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract ubunturoot image from nmi-build-platforms
         id: extract
@@ -180,7 +180,7 @@ jobs:
       options: --cpus 4
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Ubuntu Native Package
         run: ./build-on-linux.sh .
@@ -225,7 +225,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Ubuntu 
         run: |
