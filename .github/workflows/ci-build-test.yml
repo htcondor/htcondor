@@ -116,6 +116,9 @@ jobs:
         run: |
           pip install pytest pytest-httpserver
 
+      - name: hack for broken reverse DNS
+        run: sudo sed -i -e "s/localhost/localhost $(hostname)/g" /etc/hosts
+
       - name: Build
         run: (mkdir __build && cd __build && cmake -GNinja -DWITH_VOMS:bool=false .. && ninja -j4 install)
 
