@@ -125,7 +125,7 @@ public:
 			bool bool_val = false;
 			classad::Value eval_result;
 			if (EvalExprToBool(tree, &ad, NULL, eval_result)
-				&& eval_result.IsBooleanValue(bool_val)
+				&& eval_result.IsBooleanValueEquiv(bool_val)
 				&& bool_val) {
 				hard_value = 1;
 			}
@@ -1050,7 +1050,7 @@ void AnalyzeRequirementsForEachTarget(
 			classad::Value eval_result;
 			bool bool_val;
 			if (EvalExprToBool(subs[ix].tree, request, target, eval_result) && 
-				eval_result.IsBooleanValue(bool_val) && 
+				eval_result.IsBooleanValueEquiv(bool_val) &&
 				bool_val) {
 				matches.add(subs[ix].matchAry, target);
 			}
