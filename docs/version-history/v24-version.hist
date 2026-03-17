@@ -1,5 +1,9 @@
 *** 24.12.19 bugs
 
+- Fixed a bug that would cause the startd to crash if a custom :param:`DOCKER`
+  docker wrapper emitted unexpected output to the "images" subcommand.
+  :jira:`3596`
+
 - Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
   for some output formats. This bug would result in colmns after the Name column not
   being properly aligned when the longest name exceeded 34 characters.
@@ -11,6 +15,9 @@
   when given a slot name.
   :jira:`3580`
 
+- Fixed a bug in :tool:`condor_q` match analysis that would always count subexpressions that
+  evaluated to a double or integer as not matching.
+  :jira:`3601`
 
 *** 24.0.19 bugs
 
@@ -27,7 +34,7 @@
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
-- The :meth:`htcondor2.send_commmand` method no longer incorrectly requires
+- The :meth:`htcondor2.send_command` method no longer incorrectly requires
   a `target` parameter.
   :jira:`3597`
 
