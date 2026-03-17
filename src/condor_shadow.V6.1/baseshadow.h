@@ -40,6 +40,20 @@
 /* Forward declaration to prevent loops... */
 class RemoteResource;
 
+struct ReconnectRecord {
+	time_t m_activation_time{0};       // T1: when claim was activated
+	time_t m_last_contact_time{0};     // T2: last successful communication
+	int m_lease_duration{0};           // T4: configured lease duration in seconds
+	std::string m_timeout_version_id;  // ID1: timeout version identifier
+
+	void reset() {
+		m_activation_time = 0;
+		m_last_contact_time = 0;
+		m_lease_duration = 0;
+		m_timeout_version_id.clear();
+	}
+};
+
 /** This is the base class for the various incarnations of the Shadow.<p>
 
 	If you want to change something related to the shadow,
@@ -78,7 +92,7 @@ class BaseShadow : public Service
 			     data members.
 			 <li>calls config()
 			 <li>calls initUserLog()
-			 <li>registers handleJobRemoval on SIGUSR1
+			 <li>registers handleJobRemoval on signals
 			</ul>
 			It should be called right after the constructor.
 			@param job_ad The ClassAd for this job.
@@ -121,7 +135,7 @@ class BaseShadow : public Service
 		*/
 	[[noreturn]]
 	PREFAST_NORETURN
-	void reconnectFailed( const char* reason );
+	void reconnectFailed( const char* reason, bool starter_known_dead = false );
 
 	virtual bool shouldAttemptReconnect(RemoteResource *) { return true;};
 
@@ -402,6 +416,8 @@ class BaseShadow : public Service
 			or just with JOB_SHOULD_REQUEUE. */
 	bool attemptingReconnectAtStartup;
 
+	ReconnectRecord m_reconnect_record;
+
 	bool isDataflowJob = false;
 
 	void logDataflowJobSkippedEvent();
@@ -439,6 +455,14 @@ class BaseShadow : public Service
 	double prev_run_bytes_recvd;
 
 	bool began_execution;
+
+	bool m_log_reconnect{true};
+	std::string m_reconnect_log_path;
+	long long m_reconnect_log_max_size{10 * 1024 * 1024};
+	int m_reconnect_log_max_num{4};
+
+	void logReconnectRecord(bool success, time_t reconnect_time, bool starter_known_dead);
+	void rotateReconnectLog();
 
 	void emailHoldEvent( const char* reason );
 

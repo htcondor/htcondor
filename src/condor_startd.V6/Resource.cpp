@@ -670,6 +670,17 @@ Resource::deactivate_claim( void )
 
 
 int
+Resource::deactivate_claim_final_xfer( void )
+{
+	dprintf(D_ALWAYS, "Called deactivate_claim_final_xfer()\n");
+	if( state() == claimed_state ) {
+		return r_cur->deactivateClaimFinalXfer();
+	}
+	return FALSE;
+}
+
+
+int
 Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
@@ -1468,7 +1479,7 @@ Resource::eval_state( void )
 void
 Resource::reconfig( void )
 {
-	r_attr->reconfig_DevIds(resmgr->m_attr, r_id, r_sub_id);
+	r_attr->reconfig_DevIds(resmgr->m_attr, r_id, r_sub_id, r_backfill_slot);
 #if HAVE_JOB_HOOKS
 	if (m_hook_keyword) {
 		free(m_hook_keyword);

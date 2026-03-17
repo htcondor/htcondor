@@ -43,6 +43,8 @@
 
 #include "set_user_priv_from_ad.h"
 #include <algorithm>
+#include "log_rotate.h"
+#include "safe_open.h"
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -328,6 +330,16 @@ void BaseShadow::config()
 	m_cleanup_retry_delay = param_integer("SHADOW_JOB_CLEANUP_RETRY_DELAY", 30);
 
 	m_lazy_queue_update = param_boolean("SHADOW_LAZY_QUEUE_UPDATE", true);
+
+	m_log_reconnect = param_boolean("SHADOW_LOG_RECONNECT", true);
+	if (!param(m_reconnect_log_path, "SHADOW_RECONNECT_LOG")) {
+		std::string log_dir;
+		param(log_dir, "LOG");
+		formatstr(m_reconnect_log_path, "%s/ShadowReconnectLog", log_dir.c_str());
+	}
+	param(m_reconnect_record.m_timeout_version_id, "SHADOW_RECONNECT_TIMEOUT_VERSION");
+	m_reconnect_log_max_size = param_integer("SHADOW_RECONNECT_LOG_MAX", 10 * 1024 * 1024);
+	m_reconnect_log_max_num = param_integer("SHADOW_RECONNECT_LOG_MAX_NUM", 4);
 }
 
 
@@ -412,12 +424,72 @@ BaseShadow::nextReconnectDelay( int attempts ) const
 
 
 void
-BaseShadow::reconnectFailed( const char* reason )
+BaseShadow::rotateReconnectLog()
+{
+	if (m_reconnect_log_max_size <= 0) {
+		return;
+	}
+
+	struct stat st;
+	if (stat(m_reconnect_log_path.c_str(), &st) < 0) {
+		return; // file doesn't exist yet, nothing to rotate
+	}
+
+	if (st.st_size < m_reconnect_log_max_size) {
+		return;
+	}
+
+	time_t now = time(nullptr);
+	setBaseName(m_reconnect_log_path.c_str());
+	rotateTimestamp(nullptr, m_reconnect_log_max_num, now);
+	cleanUpOldLogFiles(m_reconnect_log_max_num);
+}
+
+void
+BaseShadow::logReconnectRecord(bool success, time_t reconnect_time, bool starter_known_dead)
+{
+	if (!m_log_reconnect || m_reconnect_log_path.empty()) {
+		return;
+	}
+
+	rotateReconnectLog();
+
+	// CSV format: First field is JOBID (cluster.proc), followed by ID1,T1,T2,B1,T3,T4,ID2,B2
+	std::string csv_line;
+	formatstr(csv_line, "%d.%d,%lld,%lld,%s,%lld,%d,%s,%s\n",
+		getCluster(), getProc(),
+		(long long)m_reconnect_record.m_activation_time,
+		(long long)m_reconnect_record.m_last_contact_time,
+		success ? "true" : "false",
+		(long long)reconnect_time,
+		m_reconnect_record.m_lease_duration,
+		m_reconnect_record.m_timeout_version_id.empty() ? "default" : m_reconnect_record.m_timeout_version_id.c_str(),
+		starter_known_dead ? "true" : "false");
+
+	int fd = safe_open_wrapper(m_reconnect_log_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Failed to open reconnect log %s: %s\n",
+			m_reconnect_log_path.c_str(), strerror(errno));
+		return;
+	}
+
+	ssize_t written = write(fd, csv_line.c_str(), csv_line.length());
+	if (written < 0 || (size_t)written != csv_line.length()) {
+		dprintf(D_ALWAYS, "Failed to write to reconnect log %s: %s\n",
+			m_reconnect_log_path.c_str(), strerror(errno));
+	}
+
+	close(fd);
+}
+
+void
+BaseShadow::reconnectFailed( const char* reason, bool starter_known_dead )
 {
 		// try one last time to release the claim, write a UserLog event
-		// about it, and exit with a special status. 
+		// about it, and exit with a special status.
 	dprintf( D_ALWAYS, "Reconnect FAILED: %s\n", reason );
-	
+
+	logReconnectRecord(false, time(nullptr), starter_known_dead);
 	logReconnectFailedEvent( reason );
 
 		// if the shadow was born disconnected, exit with 

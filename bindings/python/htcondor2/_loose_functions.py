@@ -35,6 +35,7 @@ def _daemon_type_from_ad_type(ad_type: AdType):
         AdType.HAD: DaemonType.HAD,
         AdType.Credd: DaemonType.Credd,
         AdType.Placementd: DaemonType.Credd,
+        AdType.Collector: DaemonType.Collector,
     }
     # Should raise HTCondorEnumError.
     return map.get(ad_type, None)
@@ -62,7 +63,7 @@ def reload_config(root_config_file : Optional[str] = None) -> None:
     _reload_config(root_config_file)
 
 
-def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str]):
+def send_command(ad : classad.ClassAd, dc : DaemonCommand, target : Optional[str] = None):
     """
     Send a command to an HTCondor daemon.
 

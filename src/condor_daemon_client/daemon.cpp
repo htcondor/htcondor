@@ -654,7 +654,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	return startCommand_internal( req, timeout, &_sec_man );
 }
@@ -679,7 +679,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, Condor
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	auto rc = startCommand_internal(req, timeout, &_sec_man);
 
@@ -777,7 +777,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorErr
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	return startCommand_internal(req, timeout, &_sec_man);
 }
@@ -801,7 +801,7 @@ Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack
 	req.m_preferred_token = m_preferred_token;
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
-	req.m_force_auth = m_force_auth;
+	req.m_request_auth = m_request_auth;
 
 	StartCommandResult rc = startCommand_internal(req, timeout, &_sec_man);
 	switch(rc) {
@@ -1340,7 +1340,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// the collector for the address.
 		CondorQuery			query(adtype);
 		ClassAd*			scan;
-		ClassAdList			ads;
+		std::vector<ClassAd> ads;
 
 		if( (_type == DT_STARTD && ! strchr(_name.c_str(), '@')) ||
 			_type == DT_HAD ) { 
@@ -1395,16 +1395,14 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			// We need to query the collector
 		CollectorList * collectors = CollectorList::create(_pool.c_str());
 		CondorError errstack;
-		if (collectors->query (query, ads) != Q_OK) {
+		if (collectors->query (query, ads, &errstack) != Q_OK) {
 			delete collectors;
 			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;
 		};
 		delete collectors;
 
-		ads.Open();
-		scan = ads.Next();
-		if(!scan) {
+		if (ads.empty()) {
 			dprintf( D_ALWAYS, "Can't find address for %s %s\n",
 			         daemonString(_type), _name.c_str() );
 			formatstr( buf, "Can't find address for %s %s", 
@@ -1412,6 +1410,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			newError( CA_LOCATE_FAILED, buf.c_str() );
 			return false; 
 		}
+		scan = &ads[0];
 
 		if ( ! getInfoFromAd( scan ) ) {
 			return false;

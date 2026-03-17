@@ -148,12 +148,27 @@ jobs:
       - name: build
         run: (cmake --build . --verbose --config Release --parallel 4)
 
+  resolve-ubunturoot-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.extract.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract ubunturoot image from nmi-build-platforms
+        id: extract
+        run: |
+          IMAGE=$(.github/workflows/scripts/extract_ubunturoot_image.py)
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
   ubuntunative:
+    needs: resolve-ubunturoot-image
     runs-on: ubuntu-latest
 
     # Use htcondor build containers for the real work
     container:
-      image: htcondor/nmi-build:x86_64_Ubuntu24-25070200
+      image: ${{ needs.resolve-ubunturoot-image.outputs.image }}
       env:
         OMP_NUM_THREADS: 4
       options: --cpus 4

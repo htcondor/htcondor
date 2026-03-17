@@ -111,8 +111,11 @@ public:
 	int 	suspend_claim(); // suspend the claim
 	int 	continue_claim(); // continue the claim
 
-		// Gracefully kill starter but keep claim	
-	int		deactivate_claim( void );	
+		// Gracefully kill starter but keep claim
+	int		deactivate_claim( void );
+
+		// Gracefully kill starter with final file transfer, close claim
+	int		deactivate_claim_final_xfer( void );
 
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
