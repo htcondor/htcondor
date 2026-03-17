@@ -467,7 +467,7 @@ class Throttle(Verb):
         result = dm.throttle(**options)
 
         if isinstance(result, str):
-            raise RuntimeError(result)
+            raise RuntimeError(f"ERROR: {result}")
 
         ATTR_TO_DISPLAY = {
             "DAGMan_MaxIdle": "Maximum Idle Jobs",

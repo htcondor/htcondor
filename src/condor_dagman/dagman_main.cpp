@@ -1579,6 +1579,7 @@ int main(int argc, char **argv, char** envp) {
 		if (pos == std::string::npos) { continue; }
 
 		std::string key = env.substr(0, pos);
+		trim(key);
 		istring_view check(key.c_str());
 
 		auto it = std::ranges::find(ENV_FILTER, check);

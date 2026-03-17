@@ -233,7 +233,7 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 
 //---------------------------------------------------------------------------
 void DagmanClassad::AdvertiseThrottles(const Throttles& throttles) {
-	Qmgr_connection *queue = queue = OpenConnection();
+	Qmgr_connection *queue = OpenConnection();
 	if ( ! queue) { return; }
 
 	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
@@ -246,7 +246,7 @@ void DagmanClassad::AdvertiseThrottles(const Throttles& throttles) {
 //---------------------------------------------------------------------------
 void
 DagmanClassad::RecoverThrottles(Throttles& throttles) {
-	Qmgr_connection *queue = queue = OpenConnection();
+	Qmgr_connection *queue = OpenConnection();
 	if ( ! queue) { return; }
 
 	Throttles recovered;

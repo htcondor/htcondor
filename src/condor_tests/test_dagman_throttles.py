@@ -302,6 +302,7 @@ TEST_CASES = {
         ])
     ),
     # Ensure user cannot override default throttle values (to large number / infinite)
+    # Note: Also check case insensitivity
     "CLEVER_USER_OVERRIDE_VALUES": DagTestCase(
         throttle_via_python,
         {
@@ -323,10 +324,10 @@ TEST_CASES = {
         Config.DEFAULT,
         "\n".join([
             "# Attempting to disable all admin controls!",
-            "ENV SET _CONDOR_DAGMAN_USER_LOG_SCAN_INTERVAL=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_JOBS_IDLE=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_JOBS_SUBMITTED=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_PRE_SCRIPTS=0",
+            "ENV SET _CONDOR_DAGMAN_user_LOG_SCAN_INTERVAL=0",
+            "ENV SET _CONDOR_DAGMAN_MAX_jobs_IDLE=0",
+            "ENV SET _CONDOR_dagman_MAX_JOBS_SUBMITTED=0",
+            "ENV SET _condor_DAGMAN_MAX_PRE_SCRIPTS=0",
             "ENV SET _CONDOR_DAGMAN_MAX_HOLD_SCRIPTS=0",
             "ENV SET _CONDOR_DAGMAN_MAX_POST_SCRIPTS=0",
             "ENV SET _CONDOR_DAGMAN_MAX_SUBMITS_PER_INTERVAL=0"
