@@ -109,7 +109,7 @@ bool Dagman::Config() {
 		adminThrottles[Throttle::MAX_PRE] = param_integer("DAGMAN_MAX_PRE_SCRIPTS", 20, 0, INT_MAX);
 		adminThrottles[Throttle::MAX_HOLD] = param_integer( "DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX);
 		adminThrottles[Throttle::MAX_POST] = param_integer("DAGMAN_MAX_POST_SCRIPTS", 20, 0, INT_MAX);
-		adminThrottles[Throttle::MAX_INT_SUBMITS] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, 1000);
+		adminThrottles[Throttle::MAX_INT_SUBMITS] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", 1000, 1, INT_MAX);
 	}
 
 	// Get and process the DAGMan-specific config file (if any)
@@ -157,7 +157,7 @@ bool Dagman::Config() {
 	config[conf::b::ReportGraphMetrics] = param_boolean("DAGMAN_REPORT_GRAPH_METRICS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REPORT_GRAPH_METRICS setting: %s\n", config[conf::b::ReportGraphMetrics] ? "True" : "False");
 
-	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, 1000);
+	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, INT_MAX);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
 
 	config[conf::b::AggressiveSubmit] = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", false);

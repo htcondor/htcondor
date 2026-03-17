@@ -346,14 +346,11 @@ Node job submission/removal
         can not be set via the environment via ``_CONDOR_*``.
 
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
-    An integer that controls how many individual jobs :tool:`condor_dagman`
-    will submit in a row before servicing other requests (such as a
-    :tool:`condor_rm`). The legal range of values is 1 to 1000. If defined
-    with a value less than 1, the value 1 will be used. If defined with
-    a value greater than 1000, the value 1000 will be used. If not
-    defined, it defaults to 100. This default may be automatically
-    decreased if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.
+    An integer value that controls the maximum number of success node submissions
+    in a single submit interval before do other work such as scanning the ``*.nodes.log``
+    file for new status information. This value has a minimum value of 1 which
+    will be used if any lower value is provided. This value default to 100 but may
+    be decreased automatically if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value,
 
     .. note::
 
