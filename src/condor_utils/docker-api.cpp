@@ -1882,7 +1882,8 @@ size_t convert_number_with_suffix(std::string size) {
 		return 0;
 	}
 	
-	char unit = size.size() > 1 ? size[size.size() - 1] : '?';
+	// Size is like 104Mb
+	char unit = size.size() > 2 ? size[size.size() - 2] : '?';
 	switch (unit) {
 		case 'K':
 		case 'k':
