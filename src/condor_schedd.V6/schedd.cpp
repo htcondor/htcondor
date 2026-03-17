@@ -5584,7 +5584,7 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 		ASSERT( srec == NULL );
 		return true;
 		break;
-		
+
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_PARALLEL:
 			// There's only one shadow, for all the procs, and it
@@ -5614,7 +5614,7 @@ Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 
 			// no match: complain and then try the next job...
 	dprintf( D_ALWAYS, "match for job %d.%d was deleted - not "
-			 "forking a shadow\n", srec->job_id.cluster, 
+			 "forking a shadow\n", srec->job_id.cluster,
 			 srec->job_id.proc );
 	mark_job_stopped( srec->job_id );
 	delete_shadow_rec( srec );
@@ -11371,7 +11371,7 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 
 	default:
 		EXCEPT( "StartJobHandler: Unknown status (%d) for job %d.%d",
-				status, cluster, proc ); 
+				status, cluster, proc );
 		break;
 	}
 	return false;
@@ -11577,7 +11577,7 @@ Scheduler::tryNextJob()
 		// implements job bursting, and returns the proper delay for the timer.
 			Register_Timer( jobThrottle(),
 							(TimerHandlercpp)&Scheduler::StartJobHandler,
-							"start_job", this ); 
+							"start_job", this );
 	} else {
 		ExpediteStartJobs();
 	}
@@ -11717,6 +11717,14 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
 			std::ranges::views::keys( srec->cxfer_catalogs )
 		);
+
+		if( srec->matchInfo != nullptr ) {
+			job_ad->Update( * srec->matchInfo );
+			delete srec->matchInfo;
+			srec->matchInfo = NULL;
+		} else {
+			dprintf( D_ZKM, "Transfer shadow rec had no matchInfo ad; how did that happen?\n" );
+		}
 	}
 
 
@@ -12551,6 +12559,10 @@ shadow_rec::~shadow_rec()
 		free(secret);
 		secret = nullptr;
 	}
+	if( matchInfo ) {
+		delete matchInfo;
+		matchInfo = nullptr;
+	}
 }
 
 struct shadow_rec *
@@ -12860,23 +12872,26 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	}
 	shadowsByProcID.emplace(new_rec->job_id, new_rec);
 
+	// If we're looking at a transfer shadow, store all the changes we
+	// would make to the job log to an in-memory ClassAd, instead.
+	bool transfer_proc = false;
+	if( new_rec->job_id.proc <= -1000 ) {
+		transfer_proc = true;
+	}
+
 		// To improve performance and to keep our sanity in case we
 		// get killed in the middle of this operation, do all of these
 		// queue management ops within a transaction.
-	BeginTransaction();
+	if(! transfer_proc) {
+		BeginTransaction();
+	} else {
+		if( new_rec->matchInfo != nullptr ) { delete new_rec->matchInfo; }
+		new_rec->matchInfo = new ClassAd();
+	}
 
 	match_rec* mrec = new_rec->match;
 	int cluster = new_rec->job_id.cluster;
 	int proc = new_rec->job_id.proc;
-
-	bool transfer_proc = false;
-	if( proc <= -1000 ) {
-		transfer_proc = true;
-		// (HTCONDOR-3603)
-		// This pollutes the real job ad in a bad way, but for now
-		// it'll let us start a shadow.
-		proc = (-1 * proc) - 1000;
-	}
 
 	if( mrec && !new_rec->is_reconnect ) {
 
@@ -12886,28 +12901,48 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			// or, in the case of ATTR_LAST_JOB_LEASE_RENEWAL,
 			// clobbers accurate info with a now-bogus value.
 
-		SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claim_id.claimId() );
-		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
-		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		mrec->last_alive = time(nullptr);
-		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
-		                 mrec->last_alive );
+		if(! transfer_proc) {
+			SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claim_id.claimId() );
+			SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
+			SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
+			SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
+		} else {
+			// What's the ClassAd primitive equivalent of SetPrivateAttributeString()?
+			new_rec->matchInfo->InsertAttr( ATTR_CLAIM_ID, mrec->claim_id.claimId() );
+			new_rec->matchInfo->InsertAttr( ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
+			new_rec->matchInfo->InsertAttr( ATTR_STARTD_IP_ADDR, mrec->peer );
+			new_rec->matchInfo->InsertAttr( ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
+		}
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
 			char* tmp = NULL;
 			mrec->my_match_ad->LookupString(ATTR_NAME, &tmp );
 			if( tmp ) {
-				SetAttributeString( cluster, proc, ATTR_REMOTE_HOST, tmp );
+				if(! transfer_proc) {
+					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST, tmp );
+				} else {
+					new_rec->matchInfo->InsertAttr( ATTR_REMOTE_HOST, tmp );
+				}
 				have_remote_host = true;
 				free( tmp );
 				tmp = NULL;
 			}
 			int slot = 1;
 			mrec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot );
-			SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
-			InsertMachineAttrs(cluster,proc,mrec->my_match_ad,false);
+			if(! transfer_proc) {
+				SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
+				InsertMachineAttrs(cluster,proc,mrec->my_match_ad,false);
+			} else {
+				new_rec->matchInfo->InsertAttr( ATTR_REMOTE_SLOT_ID, slot );
+				// We could could rewrite InsertMachineAttrs() to work against
+				// a ClassAd as well, but it doesn't appear to do anything
+				// that anyone cares about for transfer shadows.
+				// FIXME: InsertMachineAttrs().
+			}
 		}
+
 		if( ! have_remote_host ) {
 				// CRUFT
 			dprintf( D_ALWAYS, "ERROR: add_shadow_rec() doesn't have %s "
@@ -12919,35 +12954,58 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 					// make local copy of static hostname buffer
 				std::string hostname = get_hostname(addr);
 				if (hostname.length() > 0) {
-					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
-										hostname.c_str() );
+					if(! transfer_proc) {
+						SetAttributeString( cluster, proc, ATTR_REMOTE_HOST, hostname.c_str() );
+					} else {
+						new_rec->matchInfo->InsertAttr( ATTR_REMOTE_HOST, hostname.c_str() );
+					}
 					dprintf( D_FULLDEBUG, "Used inverse DNS lookup (%s)\n",
 							 hostname.c_str() );
 				} else {
 						// Error looking up host info...
 						// Just use the sinful string
-					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
-										mrec->peer );
+					if(! transfer_proc) {
+						SetAttributeString( cluster, proc, ATTR_REMOTE_HOST, mrec->peer );
+					} else {
+						new_rec->matchInfo->InsertAttr( ATTR_REMOTE_HOST, mrec->peer );
+					}
 					dprintf( D_ALWAYS, "Inverse DNS lookup failed! "
 							 "Using ip/port %s", mrec->peer );
 				}
 			}
 		}
+
 		if( mrec->pool ) {
-			SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->pool);
+			if(! transfer_proc) {
+				SetAttributeString(cluster, proc, ATTR_REMOTE_POOL, mrec->pool);
+			} else {
+				new_rec->matchInfo->InsertAttr( ATTR_REMOTE_POOL, mrec->pool );
+			}
 		}
+
 		if ( mrec->auth_hole_id ) {
-			SetAttributeString(cluster,
-			                   proc,
-			                   ATTR_STARTD_PRINCIPAL,
-			                   mrec->auth_hole_id->c_str());
+			if(! transfer_proc) {
+				SetAttributeString(cluster, proc, ATTR_STARTD_PRINCIPAL, mrec->auth_hole_id->c_str());
+			} else {
+				new_rec->matchInfo->InsertAttr( ATTR_STARTD_PRINCIPAL, mrec->auth_hole_id->c_str() );
+			}
 		}
 	}
-	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
+
 	if(! transfer_proc) {
+		GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
+		CommitTransactionOrDieTrying();
+
+		if( new_rec->pid ) {
+			dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
+				 new_rec->pid, cluster, proc );
+		}
+		RecomputeAliveInterval(cluster,proc);
+		return new_rec;
 	} else {
 		new_rec->universe = CONDOR_UNIVERSE_VANILLA;
+
 		// (HTCONDOR-3603)
 		// We can't call add_shadow_birthdate() because it assumes
 		// that there's an entry for cluster.proc in the job queue log.
@@ -12959,15 +13017,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		// adjusting the received job ad to set its proc ID to match the
 		// one passed on the command-line, so that its dprintf output will
 		// have the correct header.
+
+		return new_rec;
 	}
-	CommitTransactionOrDieTrying();
-	if( new_rec->pid ) {
-		dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
-				 new_rec->pid, cluster, proc );
-		//scheduler.display_shadow_recs();
-	}
-	RecomputeAliveInterval(cluster,proc);
-	return new_rec;
 }
 
 

@@ -154,6 +154,7 @@ struct shadow_rec
 	// Common transfer management.
 	ListOfCatalogs cxfer_catalogs;
 	CXFER_STATE cxfer_state {CXFER_STATE::INVALID};
+	ClassAd * matchInfo {nullptr};
 
 	shadow_rec();
 	~shadow_rec();
