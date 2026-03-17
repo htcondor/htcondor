@@ -193,6 +193,26 @@ General
 Throttling
 ----------
 
+:macro-def:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING`
+    A boolean value that defaults to ``False``. When ``True`` users can set
+    any value for the various DAGMan throttles. When ``False`` DAGMan will
+    limit any user specified throttle values to the bounds of the configured
+    throttles (maximum/minimum) unless the configured value is ``0``. This
+    applies to the following options:
+
+    1. :macro:`DAGMAN_MAX_JOBS_IDLE`
+    2. :macro:`DAGMAN_MAX_JOBS_SUBMITTED`
+    3. :macro:`DAGMAN_MAX_PRE_SCRIPTS`
+    4. :macro:`DAGMAN_MAX_HOLD_SCRIPTS`
+    5. :macro:`DAGMAN_MAX_POST_SCRIPTS`
+    6. :macro:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
+    7. :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL`
+
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
+
 :macro-def:`DAGMAN_MAX_JOBS_IDLE`
     An integer value that controls the maximum number of idle procs
     allowed within the DAG before :tool:`condor_dagman` temporarily stops
@@ -212,6 +232,11 @@ Throttling
     :tool:`condor_submit_dag` **-maxidle** command-line argument (see
     :doc:`/man-pages/condor_submit_dag`).
 
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
+
 :macro-def:`DAGMAN_MAX_JOBS_SUBMITTED`
     An integer value that controls the maximum number of node jobs
     (clusters) within the DAG that will be submitted to HTCondor at one
@@ -221,12 +246,22 @@ Throttling
     option can be overridden by the :tool:`condor_submit_dag`
     **-maxjobs** command-line argument (see :doc:`/man-pages/condor_submit_dag`).
 
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
+
 :macro-def:`DAGMAN_MAX_PRE_SCRIPTS`
     An integer defining the maximum number of PRE scripts that any given
     :tool:`condor_dagman` will run at the same time. The value 0 allows any
     number of PRE scripts to run. The default value if not defined is
     20. Note that the :macro:`DAGMAN_MAX_PRE_SCRIPTS` value can be overridden
     by the :tool:`condor_submit_dag` **-maxpre** command line option.
+
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
 
 :macro-def:`DAGMAN_MAX_POST_SCRIPTS`
     An integer defining the maximum number of POST scripts that any
@@ -236,10 +271,20 @@ Throttling
     overridden by the :tool:`condor_submit_dag` **-maxpost** command line
     option.
 
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
+
 :macro-def:`DAGMAN_MAX_HOLD_SCRIPTS`
     An integer defining the maximum number of HOLD scripts that any
     given :tool:`condor_dagman` will run at the same time. The default value
     0 allows any number of HOLD scripts to run.
+
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
 
 :macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
     A boolean that determines if after changing some of these throttle limits,
@@ -295,6 +340,11 @@ Node job submission/removal
     if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
     this will be noted in the ``dagman.out`` file.
 
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
+
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
     An integer that controls how many individual jobs :tool:`condor_dagman`
     will submit in a row before servicing other requests (such as a
@@ -305,8 +355,15 @@ Node job submission/removal
     decreased if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
     this will be noted in the ``dagman.out`` file.
 
-    **Note: The maximum rate at which DAGMan can submit jobs is
-    DAGMAN_MAX_SUBMITS_PER_INTERVAL / DAGMAN_USER_LOG_SCAN_INTERVAL.**
+    .. note::
+
+        The maximum rate at which DAGMan can submit jobs is
+        **DAGMAN_MAX_SUBMITS_PER_INTERVAL / DAGMAN_USER_LOG_SCAN_INTERVAL**
+
+    .. note::
+
+        To ensure users can not bypass administrator throttle limiting this option
+        can not be set via the environment via ``_CONDOR_*``.
 
 :macro-def:`DAGMAN_MAX_SUBMIT_ATTEMPTS`
     An integer that controls how many times in a row :tool:`condor_dagman`
@@ -410,6 +467,12 @@ Node job submission/removal
     The executable that :tool:`condor_dagman` will use to remove HTCondor
     jobs. If not defined, :tool:`condor_dagman` looks for :tool:`condor_rm` in the
     path. **Note: users should rarely change this setting.**
+
+:macro-def:`DAGMAN_AGGRESSIVE_SUBMIT`
+    A boolean value that defaults to ``False``. When ``True`` DAGMan prioritizes
+    job submission such that it does not stop early if the time spent submitting
+    jobs is greater than the :macro:`DAGMAN_USER_LOG_SCAN_INTERVAL`. Assuming there
+    are still jobs to be submitted within the DAGs throttle limits.
 
 :macro-def:`DAGMAN_ABORT_ON_SCARY_SUBMIT`
     A boolean value that controls whether to abort a DAG upon detection
