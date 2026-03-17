@@ -12871,9 +12871,10 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 
 	bool transfer_proc = false;
 	if( proc <= -1000 ) {
-		// FIXME: This pollutes the real job ad in a bad way, but for now
-		// it'll let us start a shadow.
 		transfer_proc = true;
+		// (HTCONDOR-3603)
+		// This pollutes the real job ad in a bad way, but for now
+		// it'll let us start a shadow.
 		proc = (-1 * proc) - 1000;
 	}
 
@@ -12905,14 +12906,13 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			int slot = 1;
 			mrec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot );
 			SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
-
 			InsertMachineAttrs(cluster,proc,mrec->my_match_ad,false);
 		}
 		if( ! have_remote_host ) {
 				// CRUFT
 			dprintf( D_ALWAYS, "ERROR: add_shadow_rec() doesn't have %s "
 					 "for of remote resource for setting %s, using "
-					 "inferior alternatives!\n", ATTR_NAME, 
+					 "inferior alternatives!\n", ATTR_NAME,
 					 ATTR_REMOTE_HOST );
 			condor_sockaddr addr;
 			if( mrec->peer && mrec->peer[0] && addr.from_sinful(mrec->peer) ) {
@@ -12926,7 +12926,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 				} else {
 						// Error looking up host info...
 						// Just use the sinful string
-					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST, 
+					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
 										mrec->peer );
 					dprintf( D_ALWAYS, "Inverse DNS lookup failed! "
 							 "Using ip/port %s", mrec->peer );
@@ -12947,14 +12947,16 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	if(! transfer_proc) {
 		add_shadow_birthdate( cluster, proc, new_rec->is_reconnect );
 	} else {
-		// FIXME: We can't call add_shadow_birthdate() because it assumes
+		new_rec->universe = CONDOR_UNIVERSE_VANILLA;
+		// (HTCONDOR-3603)
+		// We can't call add_shadow_birthdate() because it assumes
 		// that there's an entry for cluster.proc in the job queue log.
 		// (It doesn't break anything, but it doesn't do anything and it
 		// produces a lot of log spam.)  For now, the shadow internally sets
 		// ATTR_NUM_SHADOW_STARTS to 1 unconditionally, but recording it
 		// properly is probably wise.  (The epoch-writing code needs
 		// ATTR_NUM_SHADOWS_STARTS to have a value.)  The shadow is also
-		// adjusting the recieved job ad to set its proc ID to match the
+		// adjusting the received job ad to set its proc ID to match the
 		// one passed on the command-line, so that its dprintf output will
 		// have the correct header.
 	}
@@ -17300,10 +17302,9 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 				// if startds are sending updates asynchronously.  -Todd Tannenbaum 
 			}
 
+			// (HTCONDOR-3603)
 			// Of things with cluster.proc IDs, only transfer shadows shouldn't
 			// have a corresponding job record.
-			// FIXME: On the other hand, we'll probably need this to make "job
-			// reconnect" work correctly for transfer shadows.
 			if( mrec->proc > -1000 ) {
 				SetAttributeInt( mrec->cluster, mrec->proc,
 								 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
