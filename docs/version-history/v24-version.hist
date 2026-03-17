@@ -1,5 +1,9 @@
 *** 24.12.19 bugs
 
+- Fixed a bug that would cause the startd to crash if a custom :param:`DOCKER`
+  docker wrapper emitted unexpected output to the "images" subcommand.
+  :jira:`3596`
+
 - Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
   for some output formats. This bug would result in colmns after the Name column not
   being properly aligned when the longest name exceeded 34 characters.
