@@ -688,13 +688,13 @@ function bls_start_job_wrapper ()
   
   print_blahp_job_env
 
+  echo "old_home=\`pwd\`"
+
   if [ "$blah_run_in_workdir" == "yes" ] ; then
-    echo "old_home=$bls_opt_workdir"
     echo "new_home=$bls_opt_workdir"
 
     echo 'job_wait_cleanup () { wait "$job_pid"; }'
   else
-    echo "old_home=\`pwd\`"
     # Set the temporary home (including cd'ing into it)
     if [ "x$bls_opt_run_dir" != "x" ] ; then
       run_dir="$bls_opt_run_dir"
