@@ -32,12 +32,15 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_version.h"
+#include "condor_query.h"
 #include "internet.h"
 #include "daemon.h"
+#include "daemon_list.h"
 #include "dc_startd.h"
 #include "dc_collector.h"
 #include "basename.h"
 #include "match_prefix.h"
+#include "stl_string_utils.h"
 
 // Global variables
 int cmd = 0;
@@ -51,6 +54,8 @@ const char *cancel_request_id = NULL;
 const char *draining_check_expr = NULL;
 const char *draining_start_expr = NULL;
 int dash_verbose = 0;
+bool dash_wait = false;
+int wait_poll_interval = 60;
 
 // pass the exit code through dprintf_SetExitCode so that it knows
 // whether to print out the on-error buffer or not.
@@ -120,8 +125,59 @@ main( int argc, const char *argv[] )
 
 	if( ! rval ) {
 		fprintf( stderr, "Attempt to send %s to startd %s failed\n%s\n",
-				 getCommandString(cmd), startd.addr(), startd.error() ); 
+				 getCommandString(cmd), startd.addr(), startd.error() );
 		return 1;
+	}
+
+	if( dash_wait && cmd == DRAIN_JOBS ) {
+		// Build a constraint matching all slots from this startd by
+		// matching on the startd's MyAddress (sinful string), which is
+		// shared by all slots belonging to the same startd.
+		std::string constraint;
+		formatstr(constraint, "%s == \"%s\"", ATTR_MY_ADDRESS, startd.addr());
+
+		fprintf(stderr, "Waiting for draining to complete on %s...\n", startd.name());
+
+		while (true) {
+			sleep(wait_poll_interval);
+
+			CondorQuery poll_query(STARTD_AD);
+			poll_query.addANDConstraint(constraint.c_str());
+
+			std::vector<ClassAd> poll_ads;
+			CollectorList *collectors = CollectorList::create(pool);
+			QueryResult qr = collectors->query(poll_query, poll_ads);
+			delete collectors;
+
+			if (qr != Q_OK) {
+				fprintf(stderr, "WARNING: collector query failed (%s), will retry...\n",
+					getStrQueryResult(qr));
+				continue;
+			}
+
+			if (poll_ads.empty()) {
+				// Slots have disappeared — startd may have exited
+				fprintf(stderr, "Startd %s is no longer advertising slots.\n", startd.name());
+				break;
+			}
+
+			int total = (int)poll_ads.size();
+			int drained = 0;
+			for (auto &ad : poll_ads) {
+				std::string state;
+				ad.LookupString(ATTR_STATE, state);
+				if (state == "Drained") {
+					drained++;
+				}
+			}
+
+			fprintf(stderr, "  %d / %d slots drained on %s\n", drained, total, startd.name());
+
+			if (drained == total) {
+				fprintf(stderr, "All %d slots on %s are now drained.\n", total, startd.name());
+				break;
+			}
+		}
 	}
 
 	dprintf_SetExitCode(0);
@@ -259,6 +315,9 @@ parseArgv( int argc, const char* argv[] )
 			if( i+1 >= argc ) another(argv[i]);
 			draining_start_expr = argv[++i];
 		}
+		else if (is_dash_arg_prefix(argv[i], "wait", 2)) {
+			dash_wait = true;
+		}
 		else if( argv[i][0] != '-' ) {
 			break;
 		}
@@ -294,6 +353,10 @@ parseArgv( int argc, const char* argv[] )
 			fprintf(stderr, "ERROR: cannot use -reason with -cancel\n");
 			exit(2);
 		}
+		if (dash_wait) {
+			fprintf(stderr, "ERROR: -wait may not be used with -cancel\n");
+			exit(2);
+		}
 	}
 }
 
@@ -319,5 +382,6 @@ usage( const char *str )
 	fprintf( stderr, "-request-id <id>  Specific request id to cancel (optional).\n" );
 	fprintf( stderr, "-check <expr>     Must be true for all slots to be drained or request is aborted.\n" );
 	fprintf( stderr, "-start <expr>     Change START expression to this while draining.\n" );
+	fprintf( stderr, "-wait             Block until draining is complete, polling every 60 seconds.\n" );
 	exit( 1 );
 }
