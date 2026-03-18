@@ -11,6 +11,8 @@
 ##     - SLEEP     -> sleep for specified time
 ##     - SIGNAL    -> Send specified signal to self  (as defined by python signal module)
 ##     - EXIT      -> Exit immediately with specified code
+##     - EXITNOAD  -> Exit immediately with specified code without producing a result ClassAd (i.e. for simulating a plugin failure that doesn't produce a result ad)
+##     - EXITBADAD -> Exit immediately with specified code producing an unparseable ClassAd (i.e. for simulating EP disk filling failure where the plugin attempts to write an ad but fails to do so correctly)
 ##     - ERROR     -> Mimic a transfer failure using information encoded in
 ##                    URL to create returned ClassAd
 ##     - SUCCESS   -> As ERROR but successful transfer
@@ -486,7 +488,7 @@ class DebugPlugin:
 
         return info
 
-    def transfer_file(self, url: str, local_file: str, upload: bool) -> dict:
+    def transfer_file(self, url: str, local_file: str, upload: bool) -> tuple[dict, str]:
         """Mock transfer a file to produce return ClassAd from information encoded from URL"""
         self.reset_per()
         now = int(time.time())
@@ -505,6 +507,9 @@ class DebugPlugin:
             "ConnectionTimeSeconds": 0,
             "TransferUrl": url,
         }
+
+        # And a result string, only used when simulating an unparseable ad for EXITBADAD command
+        RESULT_STR = ""
 
         try:
             # Parse main command from start of URL: cmd/.../...
@@ -547,7 +552,7 @@ class DebugPlugin:
                 RESULT.update(self.process_url(info))
 
             # EXIT (debug://exit/<code>) -> Inform plugin to exit right now with the specific code
-            elif cmd == "EXIT":
+            elif cmd == "EXIT" or cmd == "EXITNOAD" or cmd == "EXITBADAD":
                 try:
                     # Limit exit code range 0-123 (negatives are turned into absolute values)
                     code = sorted([0, abs(int(info.split("/")[0])), 123])[1]
@@ -598,7 +603,15 @@ class DebugPlugin:
         # Add general debugging Developer Data to output
         RESULT["DeveloperData"] = self.get_dev_data()
 
-        return RESULT
+        # Deal with EXITBADAD command which produces an unparseable ClassAd by writing a string instead of a dict (i.e. an ad) to the output file
+        if cmd == "EXITBADAD":
+            RESULT_STR = "This is not a ClassAd!!!" 
+
+        # Deal with EXITNOAD command which produces no output at all by returning an empty dict so that no file is created
+        if cmd == "EXITNOAD":
+            RESULT = {}
+
+        return RESULT, RESULT_STR
 
 
 # ----------------------------------------------------------------------------
@@ -695,9 +708,12 @@ def parse_args() -> None:
         plugin = DebugPlugin()
         for url in recursive(args.testing):
             debug(DebugLevel.DEBUGGING, f"{url} yields:")
-            result = plugin.transfer_file(url, "TESTING-DUMMY", args.upload)
+            result, result_string = plugin.transfer_file(url, "TESTING-DUMMY", args.upload)
             try:
-                print(classad.ClassAd(result))
+                if result_string:
+                    print(result_string)
+                else:   
+                    print(classad.ClassAd(result))
             except Exception as e:
                 error(f"Error: Failed to convert results to ClassAd: {e}")
                 error(result)
@@ -771,8 +787,11 @@ def main() -> None:
                 # Process transfer ClassAd for action
                 try:
                     url = ad["Url"]
-                    outfile_dict = plugin.transfer_file(url, ad["LocalFileName"], args.upload)
-                    outfile.write(str(classad.ClassAd(outfile_dict)))
+                    outfile_dict, outfile_string = plugin.transfer_file(url, ad["LocalFileName"], args.upload)
+                    if (len(outfile_string) > 0):
+                        outfile.write(outfile_string)
+                    elif len(outfile_dict) > 0:   # Note: do not create a file if dict empty since some commands (i.e. EXITNOAD) are meant to simulate failures that don't produce a result ad
+                        outfile.write(str(classad.ClassAd(outfile_dict)))
                 except Exception as err:
                     error(f"Error: Failure to process {url}: {err}")
                     try:

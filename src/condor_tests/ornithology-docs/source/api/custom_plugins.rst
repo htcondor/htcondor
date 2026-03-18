@@ -64,7 +64,7 @@ on the command. The following are the available main commands:
           2. **ERROR**
           3. **ERR**
 
-*EXIT*
+*EXIT*, *EXITNOAD*, and *EXITBADAD*
     - **Format**: ``schema://exit/<value>``
     - **Example**: ``debug://exit/1``
     - **Description**: Informs the plugin to exit immediately with an
@@ -80,6 +80,19 @@ on the command. The following are the available main commands:
       3. The provided value was out of the range of ``0`` - ``123``.
          Will choose the closest exit code in that range (likely ``123``).
 
+      The difference between the three commands is how the plugin handles
+      the output file and result ClassAd: 
+
+        1. **EXIT**: The plugin will write a result ClassAd to the output file
+        before exiting with that code.
+        
+        2. **EXITNOAD**: The plugin will not write anything to the output file
+        and will exit with the provided code. This can be used to simulate a
+        plugin failure that doesn't produce a result ad.
+        
+        3. **EXITBADAD**: The plugin will write a string that is not a ClassAd
+        to the output file before exiting with the provided code. This can
+        
 *SLEEP*
     - **Format**: ``schema://sleep/<value>``
     - **Example**: ``debug://sleep/20``
