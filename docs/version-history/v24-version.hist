@@ -1,3 +1,5 @@
+*** 24.0.20 bugs
+
 *** 24.0.19 bugs
 
 - Fixed a bug where an Nvidia GPU that has been subdivided in MIG subdevices
