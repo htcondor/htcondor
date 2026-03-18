@@ -46,7 +46,7 @@ import re
 import enum
 import subprocess
 import datetime
-from typing import Union
+from typing import Union, Tuple
 
 # ----------------------------------------------------------------------------
 EXIT_SUCCESS = 0
@@ -488,7 +488,7 @@ class DebugPlugin:
 
         return info
 
-    def transfer_file(self, url: str, local_file: str, upload: bool) -> tuple[dict, str]:
+    def transfer_file(self, url: str, local_file: str, upload: bool) -> Tuple[dict, str]:
         """Mock transfer a file to produce return ClassAd from information encoded from URL"""
         self.reset_per()
         now = int(time.time())
