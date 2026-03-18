@@ -10916,6 +10916,14 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				mrec->shadowRec = job_shadow_rec;
 				return true;
 			}
+
+		// At least one of the shadows providing catalogs for this job
+		// was asked to retire, but we haven't reaped it yet.  For now,
+		// just throw the match away.  (Our only caller is [also] StartJob(),
+		// which deletes the match record, etc, if we return false.)
+		case CXFER_TYPE::RETIRING:
+			dprintf( D_ALWAYS, "cxfer %d.%d: RETIRING.\n", job_id.cluster, job_id.proc );
+			return false;
 	}
 
 
@@ -11001,13 +11009,17 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			}
 
 			// Once we've vacated the match, the corresponding shadow must
-			// die.  Avoid a race condition where we try to start a job using
-			// this shadow's catalogs before the this shadow's reaper runs.
+			// die.  We don't want to start jobs which use this transfer
+			// shadow's catalog(s), but we also don't want to start another
+			// transfer shadow while the other one is still running (if only
+			// because we'd then need to come up with a unique ID to prevent
+			// the schedd from blowing an assert).
 			//
-			// It would be better still to tell the transfer shadow that it's
-			// time to die; that should be less work for the schedd and easier
-			// to avoid confusing events in the job event and shadow logs.
-			unregister_shadow_catalogs( * shadow, shadow_pid );
+			// Instead of calling unregister_shadow_catalogs(), set this
+			// shadow's cxfer state to RETIRING, and then treat that as
+			// a non-error abort if determine_cxfer_type().
+
+			(* shadow)->cxfer_state = CXFER_STATE::RETIRING;
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
 		},
 		"terminate transfer shadow lease"
@@ -11431,6 +11443,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 				break;
 			case CXFER_STATE::STAGED:
 			case CXFER_STATE::INVALID:
+			case CXFER_STATE::RETIRING:
 				// It is my intention that this case only trigger if something
 				// has gone terribly wrong, but my confidence in this case
 				// isn't so high I want to risk killing the schedd.  However,
@@ -11724,6 +11737,24 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			srec->matchInfo = NULL;
 		} else {
 			dprintf( D_ZKM, "Transfer shadow rec had no matchInfo ad; how did that happen?\n" );
+		}
+
+		//
+		// If mark the catalogs live when we start blocking for common transfer
+		// (e.g., CXFER_TYPE::MAPPING), and then mark the catalogs dead when
+		// that transfer completes, the lease will expire (which it shouldn't
+		// until all of the newly-unblocked jobs have finished).
+		//
+		// We usually don't notice because the prompting job will pass through
+		// the CXFER_TYPE::READY state and mark the catalogs alive again, but
+		// if the lease time is short enough, the prompting job might not get
+		// its match (from the split claim) before the lease expires.
+		//
+		// So mark the catalogs live again here, where we're actually spawning
+		// the shadow.
+		//
+		for( const auto & [name, _] : srec->cxfer_catalogs ) {
+			mark_catalog_live( name );
 		}
 	}
 
@@ -16941,6 +16972,8 @@ Scheduler::unlinkMrec(match_rec* match)
 								case CXFER_STATE::INVALID:
 								case CXFER_STATE::MAPPING:
 									break;
+								case CXFER_STATE::RETIRING:
+									break;
 								case CXFER_STATE::STAGED:
 								case CXFER_STATE::STAGING:
 									++count;
@@ -16960,6 +16993,8 @@ Scheduler::unlinkMrec(match_rec* match)
 			case CXFER_STATE::STAGING:
 				break;
 			case CXFER_STATE::STAGED:
+				break;
+			case CXFER_STATE::RETIRING:
 				break;
 		}
 	}

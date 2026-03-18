@@ -14,6 +14,7 @@ enum class CXFER_TYPE {
     STAGING,
     MAPPING,
     READY,
+    RETIRING,
 };
 
 std::tuple<

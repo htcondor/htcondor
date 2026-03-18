@@ -2192,6 +2192,10 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 				case CXFER_STATE::STAGED:
 					ASSERT(cxfer_type != CXFER_STATE::STAGED);
 					break;
+
+				case CXFER_STATE::RETIRING:
+					ASSERT(cxfer_type != CXFER_STATE::RETIRING);
+				    break;
 			}
 
 			guidance = the_coroutine();

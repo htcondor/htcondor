@@ -100,6 +100,10 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 					// Then we have become terribly confused somehow.
 					dprintf( D_ERROR, "cxfer: Common transfer state set to waiting in transfer shadow record, falling back to uncommon transfer.\n" );
 					return {CXFER_TYPE::CANT, common_file_catalogs};
+				case CXFER_STATE::RETIRING:
+					// This transfer shadow's lease expired and we have asked
+					// it to retire, but we haven't reaped it yet.
+					return {CXFER_TYPE::RETIRING, common_file_catalogs};
 			}
 		} else {
 			return {CXFER_TYPE::STAGING, common_file_catalogs};
