@@ -4,8 +4,6 @@
 """<<CONDOR_TESTREQ_CONFIG
 	# make sure that file transfer plugins are enabled (might be disabled by default)
 	ENABLE_URL_TRANSFERS = true
-    STARTER_DEBUG = D_PID D_FULLDEBUG D_SYSCALLS
-    SHADOW_DEBUG = D_PID D_FULLDEBUG D_SYSCALLS
 """
 #endtestreq
 
@@ -64,11 +62,6 @@ def nph_job(default_condor, path_to_sleep, test_dir):
         },
         count=1,
     )
-    handle.wait(
-        condition=ClusterState.all_complete,
-        fail_condition=ClusterState.any_held,
-        timeout=60,
-    )
     return handle, default_condor.get_local_schedd()
 
 @action
@@ -92,11 +85,6 @@ def nph_input_job(default_condor, path_to_sleep, test_dir):
         },
         count=1,
     )
-    handle.wait(
-        condition=ClusterState.all_complete,
-        fail_condition=ClusterState.any_held,
-        timeout=60,
-    )
     return handle, default_condor.get_local_schedd()
 
 @action
@@ -118,11 +106,6 @@ def missing_result_input(default_condor, path_to_sleep, test_dir):
             "+TransferInput":   f'NumShadowStarts > 1 ? "" :  "debug://exitnoad/0"',
         },
         count=1,
-    )
-    handle.wait(
-        condition=ClusterState.all_complete,
-        fail_condition=ClusterState.any_held,
-        timeout=60,
     )
     return handle, default_condor.get_local_schedd()
 
@@ -150,11 +133,6 @@ def missing_result_output(default_condor, path_to_sleep, test_dir):
         },
         count=1,
     )
-    handle.wait(
-        condition=ClusterState.all_complete,
-        fail_condition=ClusterState.any_held,
-        timeout=60,
-    )
     return handle, default_condor.get_local_schedd()
 '''
 
@@ -178,11 +156,6 @@ def bad_result_input(default_condor, path_to_sleep, test_dir):
         },
         count=1,
     )
-    handle.wait(
-        condition=ClusterState.all_complete,
-        fail_condition=ClusterState.any_held,
-        timeout=60,
-    )
     return handle, default_condor.get_local_schedd()
 
 @action
@@ -203,13 +176,6 @@ def trailing_semi_job(default_condor, test_dir):
         },
         count=1,
     )
-
-    handle.wait(
-        condition=ClusterState.any_complete,
-        fail_condition=ClusterState.all_held,
-        timeout=60,
-    )
-
     return handle
 
 
@@ -220,6 +186,11 @@ class TestFTPluginStuff:
         assert 'badname' in tor_job_requirements
 
     def test_no_remap_plugin_vacate(self, nph_job):
+        nph_job[0].wait(
+            condition=ClusterState.all_complete,
+            fail_condition=ClusterState.any_held,
+            timeout=60,
+        )
         # Verify the job did not go on hold, retried output transfer after plugin failure, and completed successfully.
         assert nph_job[0].state.all_complete()
         # Verify the job went through a vacate cycle with the expected subcode for a missing plugin (-1001)
@@ -229,6 +200,11 @@ class TestFTPluginStuff:
         )[1]["VacateReasonSubCode"] == -1001
 
     def test_no_input_plugin_vacate(self, nph_input_job):
+        nph_input_job[0].wait(
+            condition=ClusterState.all_complete,
+            fail_condition=ClusterState.any_held,
+            timeout=60,
+        )
         # Verify the job did not go on hold, retried input transfer after plugin failure, and completed successfully.
         assert nph_input_job[0].state.all_complete()
         # Verify the job went through a vacate cycle with the expected subcode for a missing plugin (-1001)
@@ -238,6 +214,11 @@ class TestFTPluginStuff:
         )[1]["VacateReasonSubCode"] == -1001
 
     def test_input_no_plugin_results_vacate(self, missing_result_input):
+        missing_result_input[0].wait(
+            condition=ClusterState.all_complete,
+            fail_condition=ClusterState.any_held,
+            timeout=60,
+        )
         # Verify the job did not go on hold, retried input transfer after plugin failure, and completed successfully.
         assert missing_result_input[0].state.all_complete()
         # Verify the job went through a vacate cycle with the expected subcode for a missing plugin results file (-1004)
@@ -250,6 +231,11 @@ class TestFTPluginStuff:
     This test is commented out for now as it results in the shadow/starter disconnecting multiple times... will fix at
     a later date.
     def test_output_no_plugin_results_vacate(self, missing_result_output):
+        missing_result_output[0].wait(
+            condition=ClusterState.all_complete,
+            fail_condition=ClusterState.any_held,
+            timeout=60,
+        )
         # Verify the job did not go on hold, retried output transfer after plugin failure, and completed successfully.
         assert missing_result_output[0].state.all_complete()
         # Verify the job went through a vacate cycle with the expected subcode for a missing plugin results file (-1004)
@@ -260,6 +246,11 @@ class TestFTPluginStuff:
     '''
 
     def test_input_bad_plugin_results_vacate(self, bad_result_input):
+        bad_result_input[0].wait(
+            condition=ClusterState.all_complete,
+            fail_condition=ClusterState.any_held,
+            timeout=60,
+        )
         # Verify the job did not go on hold, retried input transfer after plugin failure, and completed successfully.
         assert bad_result_input[0].state.all_complete()
         # Verify the job went through a vacate cycle with the expected subcode for a missing plugin results file (-1004)
@@ -269,6 +260,11 @@ class TestFTPluginStuff:
         )[1]["VacateReasonSubCode"] == -1004
 
     def test_trailing_semi_remap(self, trailing_semi_job):
+        trailing_semi_job.wait(
+            condition=ClusterState.any_complete,
+            fail_condition=ClusterState.all_held,
+            timeout=60,
+        )
         assert os.path.isfile("job_stdout")
         assert os.path.isfile("job_stderr")
         assert os.path.isfile("sandbox/job_one")
