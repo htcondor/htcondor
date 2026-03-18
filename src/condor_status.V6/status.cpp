@@ -1526,8 +1526,7 @@ main (int argc, char *argv[])
 		classad::References refs;
 		const char * pcolon;
 		for (int i = 0; i < nargs; ++i) {
-			if (is_dash_arg_colon_prefix(append_autoformat_args[i], "aaf", &pcolon, 3) ||
-				is_dash_arg_colon_prefix(append_autoformat_args[i], "appendautoformat", &pcolon, 5)) {
+			if (is_dash_arg_colon_prefix(append_autoformat_args[i], "aaf", &pcolon, 3)) {
 				const char * format_char = nullptr;
 				if (pcolon) {
 					++pcolon;
