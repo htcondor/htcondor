@@ -1598,7 +1598,8 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		}
 
 		dprintf( D_FULLDEBUG,
-				 "FileTransfer::UploadFiles: sent TransKey=%s\n", TransKey );
+				 "FileTransfer::UploadFiles: sent TransKey ending with ...%s\n", 
+				 	strlen(TransKey) > 6 ? TransKey + strlen(TransKey) - 5 : "" );
 
 		sock_to_use = &sock;
 	} else {
@@ -3288,7 +3289,7 @@ FileTransfer::DoDownload(ReliSock *s)
 				
 				dprintf(D_FULLDEBUG, "DoDownload: file transfer failed for %s, plugin_exit_code %d, hold code %d, subcode %d\n", 
 						UrlSafePrint(fullname), plugin_exit_code, hold_code, hold_subcode);
-				if (shouldVacateJobBasedOnCodes(hold_code, plugin_exit_code)) {
+				if (plugin_exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, plugin_exit_code)) {
 					hold_subcode = plugin_exit_code;
 				}
 
@@ -3462,6 +3463,9 @@ FileTransfer::DoDownload(ReliSock *s)
 				} else if( result == TransferPluginResult::Error ) {
 					if(! exit_by_signal) {
 						hold_subcode = exit_status << 8;
+						if (exit_status < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_status)) {
+							hold_subcode = exit_status;
+						}
 					} else {
 					    // ETIME used the low 8 bits of the hold_subcode first.
 					    // On most Linux systems, ETIME is 62, which is
@@ -5177,9 +5181,14 @@ FileTransfer::uploadFileList(
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
 					has_failure = true;
+					int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
+					int hold_subcode = exit_code << 8;
+					if (exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_code)) {
+						hold_subcode = exit_code;
+					}
 					xfer_info.setError(error_desc,
-					            FILETRANSFER_HOLD_CODE::UploadFileError,
-					            exit_by_signal ? exit_signal : exit_code << 8
+					            hold_code,
+					            exit_by_signal ? exit_signal : hold_subcode
 					).line(__LINE__);
 				}
 			}
@@ -5380,18 +5389,25 @@ FileTransfer::uploadFileList(
 						} else {
 							std::string error_message;
 							formatstr( error_message,
-								"InvokeMultiUploadPlugin() failed (%d); %s %d.",
+								"InvokeMultiUploadPlugin() failed (%d); %s %d. (l=%d)",
 								(int)result,
 								exit_by_signal ? "signal" : "exit code",
-								exit_by_signal ? exit_signal : exit_code
+								exit_by_signal ? exit_signal : exit_code,
+								__LINE__
 							);
 							dprintf( D_ALWAYS, "%s\n", error_message.c_str() );
 
 							if(! has_failure) {
 								has_failure = true;
+								int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
+								int hold_subcode = exit_code << 8;
+								if (exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_code)) {
+									hold_subcode = exit_code;
+									rc = PUT_FILE_PLUGIN_FAILED;
+								}
 								xfer_info.setError( error_message,
-									FILETRANSFER_HOLD_CODE::UploadFileError,
-									exit_by_signal ? exit_signal : exit_code << 8
+									hold_code,
+									exit_by_signal ? exit_signal : hold_subcode
 								).line(__LINE__);
 							}
 
@@ -5548,7 +5564,7 @@ FileTransfer::uploadFileList(
 
 				dprintf(D_FULLDEBUG, "DoUpload: file transfer failed for %s, plugin_exit_code %d, hold code %d, subcode %d\n", 
 						UrlSafePrint(fullname), plugin_exit_code, hold_code, hold_subcode);
-				if (shouldVacateJobBasedOnCodes(hold_code, plugin_exit_code)) {
+				if (plugin_exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, plugin_exit_code)) {
 					hold_subcode = plugin_exit_code;
 				}
 
@@ -5676,9 +5692,14 @@ FileTransfer::uploadFileList(
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!has_failure) {
 				has_failure = true;
+				int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
+				int hold_subcode = exit_code << 8;
+				if (exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_code)) {
+					hold_subcode = exit_code;
+				}
 				xfer_info.setError(error_desc,
-				                   FILETRANSFER_HOLD_CODE::UploadFileError,
-				                   exit_by_signal ? exit_signal : exit_code << 8
+				                   hold_code,
+				                   exit_by_signal ? exit_signal : hold_subcode
 				).line(__LINE__);
 			}
 		}
