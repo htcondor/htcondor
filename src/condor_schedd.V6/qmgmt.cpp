@@ -9817,7 +9817,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 			if ( p->not_runnable /* || p->matched */ ) {
 					// This record has been disabled, because it is no longer runnable
 					// (can't trust the matched flag here like we can in ::negotiate)
-					dprintf( D_ZKM, "%d.%d: case A\n", p->id.cluster, p->id.proc );
+				dprintf( D_ZKM, "%d.%d: case A\n", p->id.cluster, p->id.proc );
 				continue;
 			}
 
