@@ -754,7 +754,8 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
 							m_ft_info.spooled_files.c_str());
 		} else {
-			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
+			std::string buf;
+			dprintf( D_FULLDEBUG, "Sandbox transfer failed.  m_ft_info: %s\n", m_ft_info.dump(buf));
 			// Failed to transfer.
 			// JICShadow::transferOutputMopUp() will figure out what to do
 			// when you call it after JICShadow::transferOutput() returns.
