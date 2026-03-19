@@ -3462,7 +3462,7 @@ FileTransfer::DoDownload(ReliSock *s)
 					hold_subcode = ETIME;
 				} else if( result == TransferPluginResult::Error ) {
 					if(! exit_by_signal) {
-						hold_subcode = exit_status << 8;
+						exit_status > 0 ? hold_subcode = exit_status << 8 : hold_subcode = 0;
 						if (exit_status < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_status)) {
 							hold_subcode = exit_status;
 						}
@@ -5182,7 +5182,8 @@ FileTransfer::uploadFileList(
 				if (!has_failure) {
 					has_failure = true;
 					int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-					int hold_subcode = exit_code << 8;
+					int hold_subcode = 0;
+					exit_code > 0 ? hold_subcode = exit_code << 8 : hold_subcode = 0;
 					if (exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_code)) {
 						hold_subcode = exit_code;
 					}
@@ -5400,7 +5401,8 @@ FileTransfer::uploadFileList(
 							if(! has_failure) {
 								has_failure = true;
 								int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-								int hold_subcode = exit_code << 8;
+								int hold_subcode = 0;
+								exit_code > 0 ? hold_subcode = exit_code << 8 : hold_subcode = 0;
 								if (exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_code)) {
 									hold_subcode = exit_code;
 									rc = PUT_FILE_PLUGIN_FAILED;
@@ -5693,7 +5695,8 @@ FileTransfer::uploadFileList(
 			if (!has_failure) {
 				has_failure = true;
 				int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
-				int hold_subcode = exit_code << 8;
+				int hold_subcode = 0;
+				exit_code > 0 ? hold_subcode = exit_code << 8 : hold_subcode = 0;
 				if (exit_code < 0 && shouldVacateJobBasedOnCodes(hold_code, exit_code)) {
 					hold_subcode = exit_code;
 				}
