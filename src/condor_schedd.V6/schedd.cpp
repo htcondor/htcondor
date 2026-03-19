@@ -12970,7 +12970,6 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 				// We could could rewrite InsertMachineAttrs() to work against
 				// a ClassAd as well, but it doesn't appear to do anything
 				// that anyone cares about for transfer shadows.
-				// FIXME: InsertMachineAttrs().
 			}
 		}
 
@@ -13216,6 +13215,23 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					daemonCore->Cancel_Timer( catalogToTimerMap[catalogName] );
 					catalogToTimerMap.erase( catalogName );
 					removedCatalogs.push_back( catalogName );
+				}
+
+				// Unblock the prompting job; the loop below won't, because
+				// the prompting job doesn't have a match yet (and is never
+				// block once it does).
+				if( srec->job_id.proc <= -1000 ) {
+					int prompting_proc = (-1 * jobid.proc) - 1000;
+					int status = -1;
+					GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
+					if( status == JOB_STATUS_BLOCKED ) {
+						status = JOB_STATUS_IDLE;
+						SetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, status);
+					} else {
+						dprintf( D_ZKM, "unregister_shadow_catalogs(): prompting job not blocked, which seems wrong; carrying on.\n" );
+					}
+				} else {
+					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
 				}
 			}
 		}
