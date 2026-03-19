@@ -91,8 +91,10 @@ on the command. The following are the available main commands:
         plugin failure that doesn't produce a result ad.
         
         3. **EXITBADAD**: The plugin will write a string that is not a ClassAd
-        to the output file before exiting with the provided code. This can
-        
+        to the output file before exiting with the provided code. This can be
+        used to simulate a plugin that produces malformed or non-parseable
+        result data instead of a valid result ClassAd.
+
 *SLEEP*
     - **Format**: ``schema://sleep/<value>``
     - **Example**: ``debug://sleep/20``
