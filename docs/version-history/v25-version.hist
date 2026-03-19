@@ -23,6 +23,10 @@
   support python 3.12.
   :jira:`2213`
 
+- :tool:`condor_ssh_to_job` now work with container universe jobs where
+  the singularity or apptainer runtime uses the setuid flow.
+  :jira:`3308`
+
 - :tool:`htcondor dag status` now also shows information about jobs
   transferring sandboxes and in the transfer queue.
   :jira:`3517`
