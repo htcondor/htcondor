@@ -8160,7 +8160,8 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	}
 	
 	/* Insert the version into the ClassAd */
-	baseJob.Assign( ATTR_VERSION, CondorVersion() );
+	baseJob.Assign( ATTR_VERSION, getScheddVersion());
+	baseJob.Assign( ATTR_SUBMIT_VERSION, CondorVersion() );
 	baseJob.Assign( ATTR_PLATFORM, CondorPlatform() );
 #endif
 
