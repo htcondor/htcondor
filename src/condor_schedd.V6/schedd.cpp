@@ -14088,7 +14088,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			is_badput = true;
 
-			// The startd will have already released the claim, so we should remove the match
+			// The startd will have already released the claim, so clean up or reset the match as appropriate
 			CleanupMatchForJobExit(srec);
 			
 				// If the job has a CronTab schedule, we will want
