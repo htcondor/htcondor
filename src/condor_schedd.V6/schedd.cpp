@@ -13221,9 +13221,9 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				// the prompting job doesn't have a match yet (and is never
 				// block once it does).
 				if( srec->job_id.proc <= -1000 ) {
-					int prompting_proc = (-1 * jobid.proc) - 1000;
+					int prompting_proc = (-1 * srec->job_id.proc) - 1000;
 					int status = -1;
-					GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
+					GetAttributeInt( srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, &status );
 					if( status == JOB_STATUS_BLOCKED ) {
 						status = JOB_STATUS_IDLE;
 						SetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, status);
