@@ -11,6 +11,14 @@ build:
   tools:
     python: "3.11"
 
+# Only build main branch
+versions:
+  only:
+    - main
+
+# Tell RTD that "latest" should exist
+default_version: latest
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: src/condor_tests/ornithology-docs/source/conf.py
