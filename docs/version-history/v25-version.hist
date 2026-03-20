@@ -2,6 +2,8 @@
 
 *** 25.10.0 bugs
 
+*** 25.0.10 bugs
+
 *** 25.8.0 features
 
 - The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
