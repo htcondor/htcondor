@@ -13218,8 +13218,8 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				}
 
 				// Unblock the prompting job; the loop below won't, because
-				// the prompting job doesn't have a match yet (and is never
-				// block once it does).
+				// the prompting job doesn't have a match yet (and never
+				// blocks once it does).
 				if( srec->job_id.proc <= -1000 ) {
 					int prompting_proc = (-1 * srec->job_id.proc) - 1000;
 					int status = -1;
@@ -13227,8 +13227,12 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					if( status == JOB_STATUS_BLOCKED ) {
 						status = JOB_STATUS_IDLE;
 						SetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, status);
+
+						// At this point, we should check for matches blocked
+						// on these catalogs and choose one to switch from
+						// MAPPING to STAGING.
 					} else {
-						dprintf( D_ZKM, "unregister_shadow_catalogs(): prompting job not blocked, which seems wrong; carrying on.\n" );
+						dprintf( D_ALWAYS, "Prompting job (%d.%d) status was %d instead of %d (JOB_STATUS_BLOCKED).\n", status, JOB_STATUS_BLOCKED );
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
