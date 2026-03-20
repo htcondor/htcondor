@@ -13203,8 +13203,6 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 		std::vector< std::string > removedCatalogs;
 		for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
 			auto other = getShadowForCatalog( catalogName );
-			// To avoid a race condition, we call this function when we call
-			// send_vacate(), so it's fine if the catalog isn't registered.
 			if(! other) { continue; }
 			if( * other == srec && (* other)->pid == shadow_pid ) {
 				catalogToShadowMap.erase( catalogName );
@@ -13223,7 +13221,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				if( srec->job_id.proc <= -1000 ) {
 					int prompting_proc = (-1 * srec->job_id.proc) - 1000;
 					int status = -1;
-					GetAttributeInt( srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, &status );
+					GetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, &status );
 					if( status == JOB_STATUS_BLOCKED ) {
 						status = JOB_STATUS_IDLE;
 						SetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, status);
@@ -13232,7 +13230,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						// on these catalogs and choose one to switch from
 						// MAPPING to STAGING.
 					} else {
-						dprintf( D_ALWAYS, "Prompting job (%d.%d) status was %d instead of %d (JOB_STATUS_BLOCKED).\n", status, JOB_STATUS_BLOCKED );
+						dprintf( D_ALWAYS, "Prompting job (%d.%d) status was %d instead of %d (JOB_STATUS_BLOCKED).\n", srec->job_id.cluster, prompting_proc, status, JOB_STATUS_BLOCKED );
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
