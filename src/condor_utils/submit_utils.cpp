@@ -5417,6 +5417,12 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
 				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, ++endp);
+			} else {
+				// check for retry_request_disk
+				auto_free_ptr rrd(submit_param(SUBMIT_KEY_RetryRequestDisk));
+				if (rrd) {
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, rrd);
+				}
 			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
