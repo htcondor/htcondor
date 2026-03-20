@@ -46,7 +46,7 @@
   with PEP 484, and is more in line with what python linting tools
   expect.  There should be no changes needed for clients of the python
   bindings.
-  :jira:`3353`
+  :jira:`3553`
 
 - :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
   generated submit file.  There is a new option ``-getenv`` to 
@@ -87,7 +87,7 @@
 
 - :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
   in the cooldown state.
-  :jira:`2535`
+  :jira:`3525`
 
 - :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
   in the summary table.
@@ -106,6 +106,7 @@
   a running job, the job will transfer any output files it has produced
   back to the submit machine before exiting.
   :jira:`3519`
+
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
   supported.
   This don't affect the ability to spool a job's full input sandbox.
@@ -130,7 +131,7 @@
 
 - Improved DAGMan's debugging error when the provisioner node exits prior to notifying
   DAGMan of successful resource provisioning.
-  :jira:`3582`
+  :jira:`3542`
 
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
