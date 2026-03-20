@@ -19,6 +19,10 @@
   value of a knob.
   :jira:`2683`
 
+- Failed URL transfer where the URL was longer than about 100 bytes would
+  never have the URL scheme logged in the hold message or user log.
+  :jira:`3412`
+
 - All of the :tool:`htcondor` subtools (which are written in Python)
   support python 3.12.
   :jira:`2213`

@@ -580,7 +580,7 @@ BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_co
 			if (end == std::string::npos) {
 				end = old_reason.length() - 1;
 			}
-			if (end > pos && end < pos + 150) { // sanity check
+			if (end > pos) { // Sanity check
 				url_file = old_reason.substr(pos, end);
 				url_file_type = getURLType(url_file.c_str(), true);
 			}
