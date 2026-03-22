@@ -970,8 +970,8 @@
   :jira:`2720`
 
 - The *condor_startd* now advertises a new attribute,
-  :ad-attr:`SingularityUserNamespaces` which is ``true`` when apptainer
-  or singularity work and are using Linux user namespaces, and ``false``
+  :ad-attr:`SingularityUserNamespaces` which is ``true`` when Apptainer
+  or Singularity work and are using Linux user namespaces, and ``false``
   when it is using setuid mode.
   :jira:`2818`
 
