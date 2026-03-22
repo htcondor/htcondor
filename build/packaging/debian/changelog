@@ -10,7 +10,7 @@ condor (24.12.18-1) stable; urgency=medium
   * Fix for new jobs getting kicked off LVM EP due to quantization mismatch
   * condor_submit now reports an error for circular requirement expressions
   * condor_status now correctly reports offline GPUs
-  * Can use use a string for 'since' with htcondor.Schedd.history()
+  * Can use a string for 'since' with htcondor.Schedd.history()
   * Fix for backfill GPUs disappearing on reconfig
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 10 Mar 2026 13:57:00 -0500
