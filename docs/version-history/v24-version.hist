@@ -1,6 +1,6 @@
 *** 24.12.19 bugs
 
-- Fixed a bug that would cause the startd to crash if a custom :param:`DOCKER`
+- Fixed a bug that would cause the startd to crash if a custom :macro:`DOCKER`
   docker wrapper emitted unexpected output to the "images" subcommand.
   :jira:`3596`
 
