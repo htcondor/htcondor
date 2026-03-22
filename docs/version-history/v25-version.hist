@@ -29,12 +29,12 @@
   never have the URL scheme logged in the hold message or user log.
   :jira:`3412`
 
-- All of the :tool:`htcondor` subtools (which are written in Python)
+- All of the :tool:`htcondor` sub-tools (which are written in Python)
   support python 3.12.
   :jira:`2213`
 
 - :tool:`condor_ssh_to_job` now work with container universe jobs where
-  the singularity or apptainer runtime uses the setuid flow.
+  the Singularity or Apptainer runtime uses the setuid flow.
   :jira:`3308`
 
 - :tool:`htcondor dag status` now also shows information about jobs
@@ -109,10 +109,10 @@
 
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
   supported.
-  This don't affect the ability to spool a job's full input sandbox.
+  This does not affect the ability to spool a job's full input sandbox.
   :jira:`3545`
 
-- No longer warn about config knobs with dots in the names if the knob
+- No longer warn about configuration knobs with dots in the names if the knob
   is group quota related, and begins with GROUP.
   :jira:`3544`
 
@@ -126,7 +126,7 @@
 - Removed deprecated full rescue file for DAGMan. With this comes the removal of
   the configuration option ``DAGMAN_WRITE_PARTIAL_RESCUE`` and the command line
   option ``-DumpRescue`` for :tool:`condor_submit_dag`.  This has been deprecated since
-  2011, so there should be no problems with compatability.
+  2011, so there should be no problems with compatibility.
   :jira:`3565`
 
 - Improved DAGMan's debugging error when the provisioner node exits prior to notifying
@@ -140,7 +140,7 @@
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
-  promptly if it failed to launch a singularity job.
+  promptly if it failed to launch a Singularity job.
   :jira:`3531`
 
 - Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
@@ -262,7 +262,7 @@
   :jira:`3410`
 
 - Fixed a bug where :tool:`condor_ssh_to_job` when running into a
-  singularity or apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
+  Singularity or Apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
   set to true would start out with the current directory one higher than
   the job.
   :jira:`3467`
