@@ -133,6 +133,10 @@
   The default is ``False``.
   :jira:`3393`
 
+- The :macro:`VM_NETWORKING_TYPE` knob is now case insensitive,
+  matching the documentation.
+  :jira:`3557`
+
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
   :jira:`3576`
