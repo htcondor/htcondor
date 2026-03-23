@@ -14500,8 +14500,8 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				if( exit_code == JOB_CKPTED
 				 || exit_code == JOB_SHOULD_REQUEUE
 				 || exit_code == JOB_NOT_STARTED ) {
-					handleNowClaim = true;
-					handleOCUClaim = true;
+					if( srec->match->m_now_job.isJobKey() ) { handleNowClaim = true; }
+					if( srec->match->is_ocu ) { handleOCUClaim = true; }
 				}
 
 				if( (! handleNowClaim) && srec != NULL && srec->match ) {
@@ -14514,7 +14514,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 					}
 				} else {
 					// Not brave enough to make this an EXCEPT()ion.
-					dprintf( D_ZKM, "Transfer shadow record missing or missing its match.\n" );
+					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing or missing its match.\n" );
 				}
 				break;
 
@@ -14541,6 +14541,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				}
 
 
+				// Does `condor_rm` even work on transfer shadows?
 				if( srec && (! srec->removed) && srec->match ) {
 					// Data slots are deliberately fragile.
 					DelMrec(srec->match);
