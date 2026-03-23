@@ -197,6 +197,8 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+	long long param_longlong( const char *name, long long default_value = 0,
+					    long long min_value = LONG_MIN, long long max_value = LONG_LONG_MAX, bool use_param_table = true );
 	bool param_longlong( const char *name, long long int &value,
 						bool use_default, long long default_value,
 						bool check_ranges = true,
