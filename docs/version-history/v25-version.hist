@@ -129,7 +129,7 @@
 
 - Added new configuration parameter :macro:`SEC_USE_LOW_DATA_MODE`.
   When set to ``True``, daemons will reject large data messages from
-  unauthenticted clients.
+  unauthenticated clients.
   The default is ``False``.
   :jira:`3393`
 
