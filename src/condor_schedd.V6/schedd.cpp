@@ -11725,7 +11725,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	//    catalog A, but half require B (but not C), and half require C
 	//    (but not B).  The schedd will spawn two transfer shadows: one
 	//    transferring A and B xor C, and the other C xor B.
-	if( job_id.proc < 1000 ) {
+	if( job_id.proc <= -1000 ) {
 		AssignClassAdStringList(
 			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
 			std::ranges::views::keys( srec->cxfer_catalogs )
@@ -13215,9 +13215,11 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					removedCatalogs.push_back( catalogName );
 				}
 
-				// Unblock the prompting job; the loop below won't, because
-				// the prompting job doesn't have a match yet (and never
-				// blocks once it does).
+				// Unblock the prompting job if necessary; the loop below
+				// won't, because the prompting job doesn't block with a
+				// match.  In the usual case, we won't have to do anything,
+				// because the transfer shadow won't exit before the
+				// promping job.
 				if( srec->job_id.proc <= -1000 ) {
 					int prompting_proc = (-1 * srec->job_id.proc) - 1000;
 					int status = -1;
@@ -13226,11 +13228,11 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 						status = JOB_STATUS_IDLE;
 						SetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, status);
 
-						// At this point, we should check for matches blocked
-						// on these catalogs and choose one to switch from
-						// MAPPING to STAGING.
+						// (HTCONDOR-3610)  At this point, we should check
+						// for matches blocked on these catalogs and choose
+						// one to switch from MAPPING to STAGING.
 					} else {
-						dprintf( D_ALWAYS, "Prompting job (%d.%d) status was %d instead of %d (JOB_STATUS_BLOCKED).\n", srec->job_id.cluster, prompting_proc, status, JOB_STATUS_BLOCKED );
+						dprintf( D_ZKM, "unregister_shadow_catalogs(): prompting job (%d.%d) had status %d.\n", srec->job_id.cluster, prompting_proc, status );
 					}
 				} else {
 					dprintf( D_ZKM, "unregister_shadow_catalogs(): shadow record includes a non-transfer shadow's job ID.  Something has gone wrong; not unblocking the prompting job.\n" );
@@ -14239,7 +14241,7 @@ Scheduler::child_exit(int pid, int status)
 
 			// Now call this method to perform the correct
 			// action based on our status code
-			this->jobExitCode( job_id, wExitStatus );
+			this->shadowExitCode( job_id, wExitStatus );
 
 		 	// We never want to try to start jobs if we have
 		 	// either of these exit codes
@@ -14404,30 +14406,156 @@ int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_bo
 	return shadow_code;
 }
 
-/**
- * Based on the exit status code for a job, we will preform
- * an appropriate action on the job in the queue. If an exception
- * also occured, we will report that ourselves as well.
- * 
- * Much of this logic was originally in child_exit() but it has been
- * moved into a separate function so that it can be called in cases
- * where the job isn't really exiting.
- * 
- * @param job_id - the identifier for the job
- * @param exit_code - we use this to determine the action to take on the job
- * @return true if the job was updated successfully
- * @see exit.h
- * @see condor_error_policy.h
- **/
+//
+// React appropriately to the exit code of the shadow.
+//
 bool
-Scheduler::jobExitCode( PROC_ID job_id, int exit_code ) 
+Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 {
-	bool ret = true; 
-	
+	shadow_rec *srec = this->FindSrecByProcID( job_id );
+
+	// We'll ignore the statistics updates for transfer shadows for now,
+	// since adding the transfer shadows in will confuse their meaning.
+	//
+	// Note that this function (and/or this switch statement) might be
+	// considerably simplified by having some sort of (soft or hard)
+	// "job" state associated with a transfer shadow.
+	bool handleNowClaim = false;
+	bool handleOCUClaim = false;
+	if( job_id.proc <= -1000 ) {
+		switch( exit_code ) {
+			case JOB_NO_MEM:
+				this->swap_space_exhausted();
+				break;
+
+
+			//
+			// Presently, a transfer shadow can't exit "successfully", only --
+			// at best -- as a result of the schedd deliberately vacating its
+			// match.  At some point, we'll probably have the schedd command
+			// the shadow to die, instead, at which point we can have a specific
+			// "successful" exit code.
+			//
+			// However, that doesn't matter: once we've lost the shadow, the
+			// staged catalogs are gone, and a disk-only slot is useless:
+			// if we claimed the p-slot, we're better off returning the
+			// disk to our p-slot and making a decision based on the complete
+			// set of available resources; if we haven't, since we can't (yet)
+			// make use of disk-only slots, so we want to return the resources
+			// to the negotiator.
+			//
+
+			// Presently, this should never happen.
+			case JOB_EXITED_AND_CLAIM_CLOSING:
+				if( srec != NULL && srec->match ) {
+					 srec->match->needs_release_claim = false;
+				}
+				//@fallthrough@
+
+			// Presently, this should never happen.  Called out
+			// separately because we may support reconnect for
+			// data slots at some point.
+			case JOB_RECONNECT_FAILED:
+
+			// Since a transfer shadow doesn't _run_ a job,
+			// these should never happen.
+			case JOB_EXITED:
+			case JOB_KILLED:
+			case JOB_COREDUMPED:
+			case JOB_EXEC_FAILED:
+			case JOB_NOT_STARTED:
+
+			// (HTCONDOR-3615)  Deferred jobs normally start running and _then_
+			// start transfer; since common file jobs do the opposite, we need
+			// to handle "late" starts better.
+			//
+			// This should never happen (the transfer shadow's starter should
+			// never attempt to starta job).
+			case JOB_MISSED_DEFERRAL_TIME:
+
+			// Likewise, since the transfer shadow doesn't correspond
+			// to a job, all of these exit codes are at best incorrect.
+			// However, I don't know which of them will be generated
+			// under which failure circumstances.  Luckily, we don't
+			// care.
+			//
+			// FIXME: The machinery to detect that the job _can't_
+			// succeed because of invalid sources in a common catalog
+			// should be identical to that of normal jobs and take
+			// place in this function.  (Even if we have to replace it
+			// with a hack until we've figured out the storage issue,
+			// we need know that it was a transfer issue rather than
+			// any other.)  (An exit code other than JOB_SHOULD_REQUEUE
+			// would be super-helpful here, because we had to throw
+			// away the update from the shadow with the ATTR_VACATE_*
+			// attributes we'd normally check.)
+			case JOB_SHOULD_HOLD:
+			case JOB_SHOULD_REMOVE:
+			case JOB_SHOULD_REQUEUE:
+
+			// As far as I can tell, the shadow no longer generates these.
+			case JOB_CKPTED:
+			case JOB_NO_CKPT_FILE:
+
+				if( exit_code == JOB_CKPTED
+				 || exit_code == JOB_SHOULD_REQUEUE
+				 || exit_code == JOB_NOT_STARTED ) {
+					handleNowClaim = true;
+					handleOCUClaim = true;
+				}
+
+				if( (! handleNowClaim) && srec != NULL && srec->match ) {
+					if( handleOCUClaim ) {
+						// (HTCONDOR-3614)  Coalesce split OCU slots.
+						srec->match->setStatus(M_CLAIMED);
+						SetMrecJobID(srec->match, -1, -1);
+					} else {
+						DelMrec( srec->match );
+					}
+				} else {
+					// Not brave enough to make this an EXCEPT()ion.
+					dprintf( D_ZKM, "Transfer shadow record missing or missing its match.\n" );
+				}
+				break;
+
+
+			case JOB_SHADOW_USAGE:
+				EXCEPT( "Transfer shadow (%d.%d) exited with incorrect usage!", job_id.cluster, job_id.proc );
+				break;
+
+			case JOB_BAD_STATUS:
+				EXCEPT( "Transfer shadow (%d.%d) exited because job status was not RUNNING.", job_id.cluster, job_id.proc );
+				break;
+
+			case DPRINTF_ERROR:
+				dprintf( D_ALWAYS, "Transfer shadow (%d.%d) had fatal error writing to its log!\n", job_id.cluster, job_id.proc );
+				//@fallthrough@
+			case JOB_EXCEPTION:
+				if( exit_code == JOB_EXCEPTION ) {
+					dprintf( D_ALWAYS, "Transfer shadow (%d.%d) exited with an exception code!\n", job_id.cluster, job_id.proc );
+				}
+				//@fallthrough@
+			default:
+				if( exit_code != DPRINTF_ERROR && exit_code != JOB_EXCEPTION ) {
+					dprintf( D_ALWAYS, "Transfer shadow (%d.%d) exited with unknown value %d!\n", job_id.cluster, job_id.proc, exit_code );
+				}
+
+
+				if( srec && (! srec->removed) && srec->match ) {
+					// Data slots are deliberately fragile.
+					DelMrec(srec->match);
+				}
+				break;
+		}
+		return true;
+	}
+
+
+	bool ret = true;
+
 		// Try to get the shadow record.
 		// If we are unable to get the srec, then we need to be careful
 		// down in the logic below
-	shadow_rec *srec = this->FindSrecByProcID( job_id );
 	JobQueueJob * job_ad = GetJobAd( job_id );
 
 		// Get job status.  Note we only except if there is no job status AND the job
@@ -17448,7 +17576,7 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 				ASSERT( srec );
 				mrec->needs_release_claim = false;
 				DelMrec( mrec );
-				jobExitCode( srec->job_id, JOB_RECONNECT_FAILED );
+				shadowExitCode( srec->job_id, JOB_RECONNECT_FAILED );
 				srec->exit_already_handled = true;
 				daemonCore->Send_Signal( srec->pid, SIGKILL );
 			}
@@ -19340,7 +19468,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 			shadow_pid, prev_job_id.cluster, prev_job_id.proc,
 			previous_job_exit_reason );
 
-		jobExitCode( prev_job_id, previous_job_exit_reason );
+		shadowExitCode( prev_job_id, previous_job_exit_reason );
 		srec->exit_already_handled = true;
 	}
 
@@ -19425,7 +19553,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 					"to new job %d.%d\n",
 					shadow_pid, new_job_id.cluster, new_job_id.proc);
 
-			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
+			shadowExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}
 	}
@@ -19463,7 +19591,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 				"Failed to get ok when switching shadow %d to a new job.\n",
 				shadow_pid);
 
-			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
+			shadowExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}
 	}

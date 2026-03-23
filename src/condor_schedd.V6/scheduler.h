@@ -993,7 +993,7 @@ private:
 	void			tryNextJob();
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
-	bool			jobExitCode( PROC_ID job_id, int exit_code );
+	bool			shadowExitCode( PROC_ID job_id, int exit_code );
 	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);
 	
