@@ -2874,7 +2874,7 @@ and comments.
                 <macro_name> = <string>
 
     Several pre-defined macros are supplied by the submit description file
-    parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
+    parser. The ``$(JobListId)``, ``$(ClusterId)`` or ``$(Cluster)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
     :index:`cluster identifier<single: cluster identifier; job ID>`\ :ad-attr:`ClusterId` job
@@ -3125,6 +3125,9 @@ will not be modified during :subcom:`queue` processing.
  JobId
     Set to ``$(ClusterId).$(ProcId)`` so that it will expand to the full
     id of the job.
+ JobListId
+    Set to ``$(ClusterId)`` so that it will expand to the :ad-attr:`ClusterId` attribute
+    of the job. Before version 25.10 it will expand nothing.
  Node
     For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE#
     depending on the parallel universe type For other universes it is

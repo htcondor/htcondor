@@ -4,6 +4,9 @@
   like :subcom:`retry_request_memory` but for the ``Disk`` resource.
   :jira:`3552`
 
+- Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
+  :jira:`3586`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs

@@ -293,6 +293,11 @@ static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
 static char jid[] = "$(ClusterId).$(ProcId)";
 static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
+// a convenience so you can use $(JobListId) in your submit description
+static char jid_cluster[] = "$(ClusterId)";
+static condor_params::string_value JobListIdMacroDef = { jid_cluster, 0 };
+
+
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
 	{ "$", &UnliveSubmitFileMacroDef }, // placeholder because the table is not allowed to be empty in all compilers
@@ -348,6 +353,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
 	{ "JobId",     &JobIdMacroDef },
+	{ "JobListId", &JobListIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
