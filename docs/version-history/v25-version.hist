@@ -4,6 +4,9 @@
   like :subcom:`retry_request_memory` but for the ``Disk`` resource.
   :jira:`3552`
 
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
+  :jira:`3564`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
