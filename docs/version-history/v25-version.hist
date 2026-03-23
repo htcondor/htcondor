@@ -127,6 +127,12 @@
   DAGMan of successful resource provisioning.
   :jira:`3542`
 
+- Added new configuration parameter :macro:`SEC_USE_LOW_DATA_MODE`.
+  When set to ``True``, daemons will reject large data messages from
+  unauthenticated clients.
+  The default is ``False``.
+  :jira:`3393`
+
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
   :jira:`3576`
