@@ -11662,35 +11662,39 @@ DaemonCore::AppendDaemonHistory(ClassAd* ad) {
 }
 
 
-#if defined(WINDOWS)
-
-int
-DaemonCore::CallImmediatelyButReapLater( std::function<int(void)> f, int reaperID ) {
-	// FIXME
-	return 0;
-}
-
-#else
-
-typedef std::function<int(void)> ForkToCallFunc;
+typedef std::function<int(void)> CTFunc;
 
 int
 ftc_start_func(void * v, Stream *) {
-	ForkToCallFunc ** ftcf = (ForkToCallFunc **)v;
-	ForkToCallFunc * f = * ftcf;
+	CTFunc ** ftcf = (CTFunc **)v;
+	CTFunc * f = * ftcf;
 	int rv = (*f)();
 	delete f;
 	return rv;
 }
 
 
+#if defined(WINDOWS)
+
 int
-DaemonCore::ForkToCall( ForkToCallFunc f, int reaperID ) {
+DaemonCore::CallImmediatelyButReapLater( CTFunc f, int reaperID ) {
+	CTFunc ** ftcf = (CTFunc **)malloc(sizeof(CTFunc *));
+	CTFunc * v = new CTFunc(f);
+	* ftcf = v;
+	auto rv = Create_Thread( & ftc_start_func, ftcf, NULL, reaperID );
+	delete v;
+	return rv;
+}
+
+#else
+
+int
+DaemonCore::ForkToCall( CTFunc f, int reaperID ) {
 	// In addition to its many other sins, Create_Thread() requires that its
 	// second argument have been malloc()d if not NULL.  Ths least-crazy way
-	// to deal with this is to store new'd pointer therea.
-	ForkToCallFunc ** ftcf = (ForkToCallFunc **)malloc(sizeof(ForkToCallFunc *));
-	ForkToCallFunc * v = new ForkToCallFunc(f);
+	// to deal with this is to store new'd pointer there.
+	CTFunc ** ftcf = (CTFunc **)malloc(sizeof(CTFunc *));
+	CTFunc * v = new CTFunc(f);
 	* ftcf = v;
 	auto rv = Create_Thread( & ftc_start_func, ftcf, NULL, reaperID );
 	delete v;
