@@ -66,8 +66,8 @@ jobs:
           su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install"
 
       - name: test
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
-        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40 -E guidance" )
+        # Use su to run as condorauto user inside container
+        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40" )
 
         # Report the memory used by the build & test run, because I'm curious
       - name: memory usage
@@ -238,7 +238,7 @@ jobs:
           chmod a+rwx /home/runner
 
       - name: Test with rootness
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
+        # Use su to run as condorauto user inside container
         run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-junit test.xml -j 40 -R test_cgroup_oom )
 
       - name: Upload All on Failure
