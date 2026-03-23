@@ -323,7 +323,7 @@
 
 - EP administrators may now alter the semantics of self-checkpointing jobs.
   After a job self-checkpoints and the checkpoint is uploaded, if
-  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
+  :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` is set, the EP will check if the slot could
   be reactivated then the job is restarted: otherwise the job is evicted with a
   :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`.
   :jira:`3222`
