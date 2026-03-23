@@ -1,7 +1,5 @@
 *** 24.12.20 bugs
 
-*** 24.0.20 bugs
-
 - There are five configuration macros type as long integers.
   (:macro:`PREEN_COREFILE_MAX_SIZE`, :macro:`EVENT_LOG_MAX_SIZE`,
   :macro:`EVENT_LOG_MAX_ROTATIONS`, :macro:`ANNEX_DEFAULT_LEASE_DURATION`,
@@ -10,6 +8,8 @@
   by :data:`htcondor2.param`, and looking up large values (more than
   approximately 2 billion) will no longer cause the process to abort.
   :jira:`3616`
+
+*** 24.0.20 bugs
 
 *** 24.12.19 bugs
 
