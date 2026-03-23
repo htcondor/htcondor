@@ -1,5 +1,9 @@
 *** 25.10.0 features
 
+- Add new submit command :subcom:`retry_request_disk`, which operates
+  like :subcom:`retry_request_memory` but for the ``Disk`` resource.
+  :jira:`3552`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs

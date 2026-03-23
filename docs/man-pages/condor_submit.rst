@@ -796,6 +796,20 @@ COMMANDS FOR MATCHMAKING
     ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ ^ 40 numbers of bytes.
 
+ :subcom-def:`retry_request_disk` = <quantity> [, <quantity2> [...]]
+    The amount of disk in Kb the job should request if it is evicted from
+    a slot for using more than the original ``request_disk`` value.
+
+    The value can be a single quantity, or a comma separated list of quantities.
+    If more than one quantity is specified, each must be larger than the previous one.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ ^ 10 numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ ^ 20 numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ ^ 30 numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ ^ 40 numbers of bytes.
+
+
  :subcom-def:`request_memory` = <quantity>
     The amount of memory this job needs in Mb. If not specified, the value is set 
     by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
