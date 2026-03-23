@@ -2204,12 +2204,12 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 
 #if defined(WINDOWS)
 		ActiveTransferTid = daemonCore->CallImmediatelyButReapLater(
-			[info, s]() -> int { return FileTransfer::DownloadThread(info, s); },
+			[info, s]() -> int { int rv = FileTransfer::DownloadThread(info, s); free(info); return rv; },
 			ReaperId
 		);
 #else
 		ActiveTransferTid = daemonCore->ForkToCall(
-			[info, s]() -> int { return FileTransfer::DownloadThread(info, s); },
+			[info, s]() -> int { int rv = FileTransfer::DownloadThread(info, s); free(info); return rv; },
 			ReaperId
 		);
 #endif /* defined(WINDOWS) */
