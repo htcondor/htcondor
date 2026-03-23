@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[CHECK_REACTIVATE_AFTER_CHECKPOINT]
+default=true
+type=bool
+
 [STARTER_DIAGNOSTIC_send_ep_logs]
 default=$(LIBEXEC)/condor_diagnostic_send_ep_logs
 
