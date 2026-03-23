@@ -4,29 +4,29 @@
 
 *** 24.12.19 bugs
 
-- Fixed a bug that would cause the startd to crash if a custom :param:`DOCKER`
-  docker wrapper emitted unexpected output to the "images" subcommand.
+- Fixed a bug that would cause the startd to crash if a custom :macro:`DOCKER`
+  docker wrapper emitted unexpected output to the "images" sub-command.
   :jira:`3596`
 
 - Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
-  for some output formats. This bug would result in colmns after the Name column not
+  for some output formats. This bug would result in columns after the Name column not
   being properly aligned when the longest name exceeded 34 characters.
   :jira:`3255`
 
-- When the *condor_collector* reponds to a locate query for Startd ads, it will now search
+- When the *condor_collector* responds to a locate query for Startd ads, it will now search
   both the Startd daemon ad table and the Startd slot ad table to satisfy the locate.  This
   fixes a bug where :tool:`condor_vacate` would not be able to find the address of the Startd
   when given a slot name.
   :jira:`3580`
 
-- Fixed a bug in :tool:`condor_q` match analysis that would always count subexpressions that
+- Fixed a bug in :tool:`condor_q` match analysis that would always count sub-expressions that
   evaluated to a double or integer as not matching.
   :jira:`3601`
 
 *** 24.0.19 bugs
 
-- Fixed a bug where an Nvidia GPU that has been subdivided in MIG subdevices
-  would not properly pass the device names in the various nvidia related
+- Fixed a bug where an NVIDIA GPU that has been subdivided in MIG sub-devices
+  would not properly pass the device names in the various NVIDIA related
   environment variables.
   :jira:`3567`
 
@@ -37,6 +37,11 @@
 - Fixed a bug where some of the values reported for job execution time were
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
+
+- Fixed a bug where an administrator couldn't query a daemon's configuration
+  using :tool:`condor_config_val` when authentication is required for READ
+  level authorization.
+  :jira:`3572`
 
 - The :meth:`htcondor2.send_command` method no longer incorrectly requires
   a `target` parameter.
