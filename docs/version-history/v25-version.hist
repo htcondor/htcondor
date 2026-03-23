@@ -66,6 +66,10 @@
   :ad-attr:`CgroupEnforced` to be true.
   :jira:`3555`
 
+- Enabling/disabling AP users now requires ADMINISTRATOR authorization.
+  Previously, WRITE with queue superuser authorization was required.
+  :jira:`3550`
+
 - HTCondor now more quickly detects when the network connection between
   two daemons is broken or disconnected.
   :jira:`3547`
@@ -136,6 +140,16 @@
 - Improved DAGMan's debugging error when the provisioner node exits prior to notifying
   DAGMan of successful resource provisioning.
   :jira:`3542`
+
+- Added new configuration parameter :macro:`SEC_USE_LOW_DATA_MODE`.
+  When set to ``True``, daemons will reject large data messages from
+  unauthenticated clients.
+  The default is ``False``.
+  :jira:`3393`
+
+- The :macro:`VM_NETWORKING_TYPE` knob is now case insensitive,
+  matching the documentation.
+  :jira:`3557`
 
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
@@ -319,7 +333,7 @@
 
 - EP administrators may now alter the semantics of self-checkpointing jobs.
   After a job self-checkpoints and the checkpoint is uploaded, if
-  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
+  :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` is set, the EP will check if the slot could
   be reactivated then the job is restarted: otherwise the job is evicted with a
   :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`.
   :jira:`3222`

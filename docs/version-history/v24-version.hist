@@ -38,6 +38,11 @@
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
+- Fixed a bug where an administrator couldn't query a daemon's configuration
+  using :tool:`condor_config_val` when authentication is required for READ
+  level authorization.
+  :jira:`3572`
+
 - The :meth:`htcondor2.send_command` method no longer incorrectly requires
   a `target` parameter.
   :jira:`3597`

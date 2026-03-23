@@ -594,6 +594,6 @@ These settings affect the *condor_starter*.
     image to use, either starting with docker:, ending in .sif for a sif file, or otherwise
     an exploded directory for singularity/apptainer to run.
 
-:macro-def:`REACTIVATE_ON_RESTART`
+:macro-def:`CHECK_REACTIVATE_AFTER_CHECKPOINT`
     A boolean value.  If true, self-checkpointing jobs will not restart after
     uploading a checkpoint if the slot would not otherwise be reactivatable.
