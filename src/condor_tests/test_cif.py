@@ -267,9 +267,10 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
     # KEEP_COMMON_IDLE doesn't expire, so we'll use this test to verify
     # that common files work if it does expire.
     #
-    # Wait for KEEP_COMMON_IDLE + 1 seconds to force it to expire.
+    # It can take a _long_ time for the last shadow to be reaped after
+    # the last job's termination event is written.
     #
-    time.sleep(6)
+    time.sleep(20)
 
     # Release the other four jobs.
     jobIDs = [ f"{job_handle.clusterid}.{x}" for x in range(4,8) ]
@@ -292,9 +293,8 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
     )
 
     #
-    # Wait for KEEP_COMMON_IDLE + 1 seconds to force it to expire.
-    # ... apparently it can take a _long_ time for the shadows to exit
-    #     after the last job completes.
+    # It can take a _long_ time for the last shadow to be reaped after
+    # the last job's termination event is written.
     #
     time.sleep(20)
 
