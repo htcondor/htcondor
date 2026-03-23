@@ -56,6 +56,10 @@
   :ad-attr:`CgroupEnforced` to be true.
   :jira:`3555`
 
+- Enabling/disabling AP users now requires ADMINISTRATOR authorization.
+  Previously, WRITE with queue superuser authorization was required.
+  :jira:`3550`
+
 - HTCondor now more quickly detects when the network connection between
   two daemons is broken or disconnected.
   :jira:`3547`
