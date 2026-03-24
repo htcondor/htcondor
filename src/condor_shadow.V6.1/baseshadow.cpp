@@ -452,6 +452,8 @@ BaseShadow::logReconnectRecord(bool success, time_t reconnect_time, bool starter
 		return;
 	}
 
+	TemporaryPrivSentry sentry(PRIV_CONDOR);
+
 	rotateReconnectLog();
 
 	// CSV format: First field is JOBID (cluster.proc), followed by ID1,T1,T2,B1,T3,T4,ID2,B2
