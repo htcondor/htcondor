@@ -1,3 +1,9 @@
+*** 25.10.0 features
+
+*** 25.10.0 bugs
+
+*** 25.0.10 bugs
+
 *** 25.8.0 features
 
 - The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
@@ -19,9 +25,17 @@
   value of a knob.
   :jira:`2683`
 
+- Failed URL transfer where the URL was longer than about 100 bytes would
+  never have the URL scheme logged in the hold message or user log.
+  :jira:`3412`
+
 - All of the :tool:`htcondor` subtools (which are written in Python)
   support python 3.12.
   :jira:`2213`
+
+- :tool:`condor_ssh_to_job` now work with container universe jobs where
+  the singularity or apptainer runtime uses the setuid flow.
+  :jira:`3308`
 
 - :tool:`htcondor dag status` now also shows information about jobs
   transferring sandboxes and in the transfer queue.

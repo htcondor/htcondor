@@ -13732,6 +13732,23 @@ int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_bo
 	return shadow_code;
 }
 
+void
+Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
+{
+	if( srec != NULL && !srec->removed && srec->match ) {
+		// Don't delete matches we're trying to use for a now job.
+		if(! srec->match->m_now_job.isJobKey()) {
+			if (!srec->match->is_ocu) {
+				DelMrec(srec->match);
+			} else {
+				// In the OCU case, move claim back to Claimed/Idle
+				srec->match->setStatus(M_CLAIMED);
+				SetMrecJobID(srec->match, -1, -1);
+			}
+		}
+	}
+}
+
 /**
  * Based on the exit status code for a job, we will preform
  * an appropriate action on the job in the queue. If an exception
@@ -13833,8 +13850,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		check_eviction_transforms = true;
 	} else if (exit_code == JOB_SHOULD_REQUEUE) {
 		int code = 0;
+		int subcode = 0;
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
-		if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode);
+		if (shouldHoldJobBasedOnCodes(code, subcode)) {
+			// even though the shadow is telling us to requeue the job,
+			// the vacate codes say we should hold, so check for
+			// eviction transforms
 			check_eviction_transforms = true;
 		}
 	}
@@ -13941,18 +13963,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_CKPTED:
 		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
-			if( srec != NULL && !srec->removed && srec->match ) {
-				// Don't delete matches we're trying to use for a now job.
-				if(! srec->match->m_now_job.isJobKey()) {
-					if (!srec->match->is_ocu) {
-						DelMrec(srec->match);
-					} else {
-						// In the OCU case, move claim back to Claimed/Idle
-						srec->match->setStatus(M_CLAIMED);
-						SetMrecJobID(srec->match, -1, -1);
-					}
-				}
-			}
+			CleanupMatchForJobExit(srec);
             switch (exit_code) {
                case JOB_CKPTED:
                   stats.JobsCheckpointed += 1;
@@ -14081,6 +14092,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				set_job_status( job_id.cluster, job_id.proc, HELD );
 			}
 			is_badput = true;
+
+			// The startd will have already released the claim, so clean up or reset the match as appropriate
+			CleanupMatchForJobExit(srec);
 			
 				// If the job has a CronTab schedule, we will want
 				// to remove cached scheduling object so that if
