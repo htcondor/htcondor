@@ -228,9 +228,10 @@ all attributes.
     this may be different that the operating system that is actually running.
 
 :classad-attribute-def:`CondorVersion`
-    A string that describes the HTCondor version of the `condor_submit`
-    command that created this job.  Note this may be different than the
-    version of the HTCondor daemon that runs the job.
+    A string that describes the HTCondor version of the *condor_schedd*
+    the job was submitted to.  In the case of a remote submit, this 
+    may be different that the version of the :tool:`condor_submit` command.
+    That version is stored in the ad-attr:`SubmitVersion` attribute.
 
 :classad-attribute-def:`ContainerImageSource`
     For Container universe jobs, the string that names the container image source
@@ -1729,6 +1730,9 @@ all attributes.
 :classad-attribute-def:`SubmitterNegotiatingGroup`
     The accounting group name under which the resource negotiated when
     it was claimed, as set by the *condor_negotiator*.
+
+:classad-attribute-def:`SubmitVersion`
+    The version of the :tool:`condor_submit` used to submit this job.
 
 :classad-attribute-def:`SuccessCheckpointExitBySignal`
     Specifies if the ``executable`` exits with a signal after a successful
