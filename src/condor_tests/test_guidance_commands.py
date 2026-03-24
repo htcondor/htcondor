@@ -102,6 +102,11 @@ def the_condor(test_dir, path_to_shadow_wrapper):
             "SHADOW_DEBUG":                 "D_FULLDEBUG",
             "STARTD_ENVIRONMENT":           ";http_proxy=;https_proxy=",
 
+            # Prevent shadow recycling so each job gets a fresh shadow
+            # process.  The static the_index in send_guidance_from_job_ad()
+            # is not reset between recycled jobs, causing flaky failures.
+            "SHADOW_WORKLIFE":              0,
+
             # For simplicity, so that each test job gets its own starter log.
             "STARTER_LOG_NAME_APPEND":      "JobID",
         },

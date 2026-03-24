@@ -7,6 +7,9 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
+  :jira:`3564`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
@@ -167,6 +170,11 @@
 - Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
   was off, that caused jobs to start in the users home directory.
   :jira:`3575`
+
+- Fixed a minor bug whereby the Access Point is unaware that the Execution Point relinquishes a
+  match when the EP's :macro:`WANT_HOLD` is triggered.  This can result in the AP failing to
+  activate the next job in a job list due to VacateReasonCode 1033 ( :ad-attr:`ActivationRefusedUnclaimed` ).
+  :jira:`3609`
 
 *** 25.0.9 bugs
 
