@@ -4,6 +4,13 @@
   :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
   :jira:`3584`
 
+- Add new submit command :subcom:`retry_request_disk`, which operates
+  like :subcom:`retry_request_memory` but for the ``Disk`` resource.
+  :jira:`3552`
+
+- Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
+  :jira:`3564`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
@@ -33,12 +40,12 @@
   never have the URL scheme logged in the hold message or user log.
   :jira:`3412`
 
-- All of the :tool:`htcondor` subtools (which are written in Python)
+- All of the :tool:`htcondor` sub-tools (which are written in Python)
   support python 3.12.
   :jira:`2213`
 
 - :tool:`condor_ssh_to_job` now work with container universe jobs where
-  the singularity or apptainer runtime uses the setuid flow.
+  the Singularity or Apptainer runtime uses the setuid flow.
   :jira:`3308`
 
 - :tool:`htcondor dag status` now also shows information about jobs
@@ -50,7 +57,7 @@
   with PEP 484, and is more in line with what python linting tools
   expect.  There should be no changes needed for clients of the python
   bindings.
-  :jira:`3353`
+  :jira:`3553`
 
 - :tool:`condor_run` no longer passes :jdl:`getenv = true` to the
   generated submit file.  There is a new option ``-getenv`` to 
@@ -65,6 +72,10 @@
 - When cgroups are active, *condor_startds* now advertise
   :ad-attr:`CgroupEnforced` to be true.
   :jira:`3555`
+
+- Enabling/disabling AP users now requires ADMINISTRATOR authorization.
+  Previously, WRITE with queue superuser authorization was required.
+  :jira:`3550`
 
 - HTCondor now more quickly detects when the network connection between
   two daemons is broken or disconnected.
@@ -91,7 +102,7 @@
 
 - :tool:`htcondor job status` and :tool:`condor_q` now indicate when a job is
   in the cooldown state.
-  :jira:`2535`
+  :jira:`3525`
 
 - :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
   in the summary table.
@@ -110,12 +121,13 @@
   a running job, the job will transfer any output files it has produced
   back to the submit machine before exiting.
   :jira:`3519`
+
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
   supported.
-  This don't affect the ability to spool a job's full input sandbox.
+  This does not affect the ability to spool a job's full input sandbox.
   :jira:`3545`
 
-- No longer warn about config knobs with dots in the names if the knob
+- No longer warn about configuration knobs with dots in the names if the knob
   is group quota related, and begins with GROUP.
   :jira:`3544`
 
@@ -129,12 +141,22 @@
 - Removed deprecated full rescue file for DAGMan. With this comes the removal of
   the configuration option ``DAGMAN_WRITE_PARTIAL_RESCUE`` and the command line
   option ``-DumpRescue`` for :tool:`condor_submit_dag`.  This has been deprecated since
-  2011, so there should be no problems with compatability.
+  2011, so there should be no problems with compatibility.
   :jira:`3565`
 
 - Improved DAGMan's debugging error when the provisioner node exits prior to notifying
   DAGMan of successful resource provisioning.
-  :jira:`3582`
+  :jira:`3542`
+
+- Added new configuration parameter :macro:`SEC_USE_LOW_DATA_MODE`.
+  When set to ``True``, daemons will reject large data messages from
+  unauthenticated clients.
+  The default is ``False``.
+  :jira:`3393`
+
+- The :macro:`VM_NETWORKING_TYPE` knob is now case insensitive,
+  matching the documentation.
+  :jira:`3557`
 
 - Bootstrap CSS framework used in OAuth Credmon login page updated
   to version 5.3.8.
@@ -143,12 +165,17 @@
 *** 25.8.0 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
-  promptly if it failed to launch a singularity job.
+  promptly if it failed to launch a Singularity job.
   :jira:`3531`
 
 - Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
   was off, that caused jobs to start in the users home directory.
   :jira:`3575`
+
+- Fixed a minor bug whereby the Access Point is unaware that the Execution Point relinquishes a
+  match when the EP's :macro:`WANT_HOLD` is triggered.  This can result in the AP failing to
+  activate the next job in a job list due to VacateReasonCode 1033 ( :ad-attr:`ActivationRefusedUnclaimed` ).
+  :jira:`3609`
 
 *** 25.0.9 bugs
 
@@ -265,7 +292,7 @@
   :jira:`3410`
 
 - Fixed a bug where :tool:`condor_ssh_to_job` when running into a
-  singularity or apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
+  Singularity or Apptainer enabled job with :macro:`SINGULARITY_TARGET_DIR`
   set to true would start out with the current directory one higher than
   the job.
   :jira:`3467`
@@ -318,7 +345,7 @@
 
 - EP administrators may now alter the semantics of self-checkpointing jobs.
   After a job self-checkpoints and the checkpoint is uploaded, if
-  :macro:`REACTIVATE_ON_RESTART` is set, the EP will check if the slot could
+  :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` is set, the EP will check if the slot could
   be reactivated then the job is restarted: otherwise the job is evicted with a
   :doc:`vacate reason <../codes-other-values/vacate-reason-codes>`.
   :jira:`3222`
