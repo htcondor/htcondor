@@ -1564,11 +1564,28 @@ UniShadow::start_staging_only_conversation(
 		);
 	}
 
-	// The precise interaction between this value, ATTR_AUTHENTICATED_IDENTITY
-	// in the command ad, the socket's getFullyQualifiedUser(), and
-	// has_daemon_auth when called from a shadow is unclear.  For now, we'll
-	// just leave this unset, since that's actually the only test codepath
-	// anyway, AFAICT.
+	//
+	// I don't know if this, strictly speaking, is supposed to be the
+	// ATTR_USER or the ATTR_OWNER from the job ad, but it's consistently
+	// referred to as the "submitter" in cmdDirectAttach(), and the job ad
+	// doesn't include ATTR_SUBMITTER; one wonders what the startd was
+	// originally intended to set this to.  A magic string from config?
+	//
+	// It turns out to be nontrivial to determine what the submitter
+	// string ought to be, so just don't set this at all; if it isn't
+	// set, and we send along a claim ID that the schedd recognizes,
+	// it will pass that claim ID's match's `user` field as the `owner`
+	// parameter to the MainScheddNegotiator object, which in turns
+	// passes it down to the new match records, preventing them from
+	// being empty and causing empty submitter strings from being sent
+	// to the negotiator.
+	//
+	// This doesn't fix the problem for other callers of cmdDirectAttach(),
+	// but I'd almost rather the engineering effort going into excising
+	// 'owner', 'user', and 'submitter' from the codebase and replacing
+	// them all with correct usages of a trio of arbitrary strings, just
+	// so we have a chance of keeping thing straight.
+	//
 	std::string user;
 
 	int sizeOnDiskInMB = -1;

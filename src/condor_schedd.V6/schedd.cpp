@@ -1562,6 +1562,8 @@ Scheduler::count_jobs()
 
 		// set JobsRunning/JobsFlocked for owners
 	for (const auto& [id, rec]: matches) {
+		// Transfer shadows aren't jobs, so ignore the matches they're using.
+		if( rec->shadowRec && rec->shadowRec->job_id.proc <= -1000 ) { continue; }
 		SubmitterData * SubDat;
 		if (user_is_the_new_owner) {
 			SubDat = insert_submitter(rec->user);
@@ -9224,11 +9226,6 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		// jobs from the authenticated user identity.
 	cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter);
 
-		// TODO handle alternate submitter names
-	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
-
-	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
-	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
 	//
 	// We don't want to trust everyone with WRITE access to the schedd
@@ -9270,6 +9267,12 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				jobid.cluster = -1;
 				jobid.proc = -1;
 			}
+
+			// This doesn't resolve the TODO above, but it will at least
+			// prevent the negotiator from seeing an empty submitter string.
+			if( slot_submitter.empty() ) {
+				slot_submitter = match->user;
+			}
 		} else {
 			// The client supplied us a claim ID that either doesn't exist
 			// or doesn't correspond to a live match record.  This should
@@ -9280,6 +9283,11 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		}
 	}
 
+		// TODO handle alternate submitter names
+	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
+
+	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
+	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
 	// This forces a rebuild of the priorec array, which we probably don't
 	// want, but does allow the job which spawned the transfer shadow to
