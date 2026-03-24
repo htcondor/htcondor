@@ -9967,7 +9967,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, const char * user, c
 				if( EvalFloat(ATTR_RANK, my_match_ad, job, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
-dprintf( D_ALWAYS, "%d.%d: case G\n", p->id.cluster, p->id.proc );
+						dprintf( D_ZKM, "%d.%d: case G\n", p->id.cluster, p->id.proc );
 						continue;
 					}
 				}

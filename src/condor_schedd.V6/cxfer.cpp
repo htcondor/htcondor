@@ -76,12 +76,6 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	size_t staging = 0;
 
 	for( const auto & [cifName, commonInputFiles] : * common_file_catalogs ) {
-		// I don't know how the schedd decides which shadows to spawn when
-		// it does reconnects after a fast shutdown, so I don't know how much
-		// of this will have to be changed to deal with that.  However, since
-		// this case doesn't work with the previous shadow logic anyway, we
-		// can save that for later.
-
 		// The cifName is unique in this AP's LOCK directory, so a
 		// single-level lookup table is sufficient.
 		auto entry = scheduler.getShadowForCatalog( cifName );

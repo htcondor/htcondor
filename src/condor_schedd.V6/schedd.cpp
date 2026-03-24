@@ -9275,7 +9275,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 			// or doesn't correspond to a live match record.  This should
 			// only happen if the match record was destroyed between when
 			// the shadow sent this command and when the schedd handled it;
-			// anything else indicates a fairly logical error or an attack.
+			// anything else indicates a fairly serious logical error or an attack.
 			dprintf( D_ALWAYS, "CmdDirectAttach(): client's capability referred to an unknown match record; ignoring it.\n" );
 		}
 	}
