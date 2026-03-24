@@ -41,6 +41,20 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 		return {CXFER_TYPE::CANT, {}};
 	}
 
+	//
+	// It might be wiser to have the startd not advertise that it
+	// `hasCommonFilesTransfer` if it can't successfully map any
+	// catalog it has thus stored, but since we want to deal with
+	// older startds anyway, we'll just check here for now.
+	//
+	std::string lvmBackingStore;
+	m_rec->my_match_ad->LookupString(
+		ATTR_LVM_BACKING_STORE, lvmBackingStore
+	);
+	if(! lvmBackingStore.empty()) {
+		return {CXFER_TYPE::CANT, {}};
+	}
+
 
 	// Now we start looking at the job ad.
 	ClassAd * jobAd = GetJobAd(jobID);
