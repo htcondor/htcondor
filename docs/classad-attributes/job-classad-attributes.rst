@@ -1841,7 +1841,7 @@ all attributes.
     (00:00:00 UTC Jan 1, 1970).
 
 :classad-attribute-def:`TransferInStarted`
-    : When the job actually started to transfer files, the most recent
+    When the job actually started to transfer files, the most recent
     time it transferred its input sandbox, measured in seconds from the
     epoch. This will be later than :ad-attr:`TransferInQueued` (if set).
     (00:00:00 UTC Jan 1, 1970).
