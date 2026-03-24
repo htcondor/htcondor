@@ -10765,13 +10765,13 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 		// Configuration forbade (this job) from transferring common files.
 		case CXFER_TYPE::FORBIDDEN:
 			// Continue to normal spwaning; the shadow will fall back.
-			dprintf( D_ALWAYS, "cxfer: %d.%d: FORBIDDEN.\n", job_id.cluster, job_id.proc );
+			dprintf( D_VERBOSE, "cxfer: %d.%d: FORBIDDEN.\n", job_id.cluster, job_id.proc );
 			break;
 
 		// This job did not specify any common transfers.
 		case CXFER_TYPE::NONE:
 			// Continue to normal spawning.
-			dprintf( D_ALWAYS, "cxfer: %d.%d: NONE.\n", job_id.cluster, job_id.proc );
+			dprintf( D_VERBOSE, "cxfer: %d.%d: NONE.\n", job_id.cluster, job_id.proc );
 			break;
 
 		// The slot doesn't support (the specified) common transfers,
@@ -10779,14 +10779,14 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 		// state was STAGING, MAPPING, or MAPPED.
 		case CXFER_TYPE::CANT:
 			// Continue to normal spawning; the shadow will fall back.
-			dprintf( D_ALWAYS, "cxfer: %d.%d: CANT.\n", job_id.cluster, job_id.proc );
+			dprintf( D_VERBOSE, "cxfer: %d.%d: CANT.\n", job_id.cluster, job_id.proc );
 			break;
 
 		// No other shadow is staging this job's cxfers to this slot.
 		case CXFER_TYPE::STAGING:
 			// Create a shadowrec to pass the -staging flag and queue
 			// it for immediate spawning.
-			dprintf( D_ALWAYS, "cxfer: %d.%d: STAGING.\n", job_id.cluster, job_id.proc );
+			dprintf( D_VERBOSE, "cxfer: %d.%d: STAGING.\n", job_id.cluster, job_id.proc );
 
 			// For now, only start one shadow for all of the catalogs.  At
 			// some point, we'll want the efficiency gains from starting one
@@ -10825,7 +10825,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					const auto & catalogName = catalog.first;
 					auto shadow = getShadowForCatalog( catalogName );
 					if(! shadow) {
-						// dprintf( D_ALWAYS, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
+						// dprintf( D_VERBOSE, "cxfer: catalogToShadowMap[%s] = %p\n", catalogName.c_str(), transfer_shadow_rec );
 						catalogToShadowMap[catalogName] = transfer_shadow_rec;
 						catalogs_to_stage.push_back( catalog );
 					}
@@ -10865,7 +10865,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 		case CXFER_TYPE::MAPPING:
 			// Create a shadowrec to pass the -mapping flag and queue
 			// it to wait for the mapping to complete (and then spawn).
-			dprintf( D_ALWAYS, "cxfer: %d.%d: MAPPING.\n", job_id.cluster, job_id.proc );
+			dprintf( D_VERBOSE, "cxfer: %d.%d: MAPPING.\n", job_id.cluster, job_id.proc );
 
 			{
 				shadow_rec * job_shadow_rec = add_shadow_rec(
@@ -10896,7 +10896,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 		// This job's common file catalog(s) are already on this slot.
 		case CXFER_TYPE::READY:
 			// As CXFER_TYPE_MAPPING, but queue for immediate spawning.
-			dprintf( D_ALWAYS, "cxfer: %d.%d: READY.\n", job_id.cluster, job_id.proc );
+			dprintf( D_VERBOSE, "cxfer: %d.%d: READY.\n", job_id.cluster, job_id.proc );
 
 			{
 				mark_serial_job_running(job_id);
@@ -10935,7 +10935,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 // Maintain invariant that all pointers in the map are valid.
 std::optional<shadow_rec *>
 Scheduler::getShadowForCatalog( const std::string & cifName ) {
-	// dprintf( D_ALWAYS, "cxfer: Checking catalog-to-shadow map for %s\n", cifName.c_str() );
+	// dprintf( D_VERBOSE, "cxfer: Checking catalog-to-shadow map for %s\n", cifName.c_str() );
 	auto entry = catalogToShadowMap.find( cifName );
 	if( entry == catalogToShadowMap.end() ) { return {}; }
 	return entry->second;

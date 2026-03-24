@@ -78,7 +78,7 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
     with Condor(
         local_dir=the_cs_local_dir,
         config={
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -227,7 +227,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
     with Condor(
         local_dir=the_dagman_local_dir,
         config={
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -379,7 +379,7 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
     with Condor(
         local_dir=the_container_local_dir,
         config={
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,

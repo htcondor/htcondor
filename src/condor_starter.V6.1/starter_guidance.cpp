@@ -392,7 +392,7 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 //
 // This allows root to hardlink each file into place (root can traverse
 // the directory tree even if the starters are running as different OS
-// acconts).  Since the file permisisons are 0444, they can be read, but
+// accounts).  Since the file permisisons are 0444, they can be read, but
 // the source hardlink can not be deleted (because of ownership or that
 // the source directory isn't writable).  Simultaneously, the starter
 // will be able to clean up the destination hardlinks as normal.
@@ -554,7 +554,7 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
-			dprintf( D_ACCOUNTANT, "Created mapped directory '%s'\n", relative_path.string().c_str() );
+			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( dir.string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
@@ -582,7 +582,7 @@ mapContentsOfDirectoryInto(
 				dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): Failed to create_hard_link(%s, %s): %s (%d)\n", entry.path().string().c_str(), (sandbox/relative_path).string().c_str(), ec.message().c_str(), ec.value() );
 				return false;
 			}
-			dprintf( D_ACCOUNTANT, "Mapped common file '%s'\n", relative_path.string().c_str() );
+			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
 
 			int rv = chown( entry.path().string().c_str(), get_user_uid(), get_user_gid() );
 			if( rv != 0 ) {
