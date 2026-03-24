@@ -572,6 +572,11 @@ recycleShadow(int previous_job_exit_reason)
 	if( shadow_worklife_expires && time(NULL) > shadow_worklife_expires ) {
 		return false;
 	}
+	// This doesn't (currently) happen, but (at least for now) we wouldn't
+	// want to re-use this shadow even if it did.
+	if( cxfer_type == CXFER_STATE::STAGING ) {
+		return false;
+	}
 
 	dprintf(D_ALWAYS,"Reporting job exit reason %d and attempting to fetch new job.\n",
 			previous_job_exit_reason );
