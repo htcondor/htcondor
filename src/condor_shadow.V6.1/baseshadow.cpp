@@ -177,7 +177,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	    // meaning, avoid it; since we're choosing a non-zero number, pick
 	    // one that will allow for reconnection after a transient network
 	    // failure, since the starter can't tell the difference.
-	    jobAd->Assign( ATTR_JOB_LEASE_DURATION, 20 );
+	    int duration = param_integer( "DATA_SLOT_MAX_DISCONNECT_DURATION", 20 );
+	    jobAd->Assign( ATTR_JOB_LEASE_DURATION, duration );
 	}
 
 
@@ -1564,7 +1565,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		// schedd crashes, we don't really care when the proxy was updated
 		// on the worker node.
 
-	// Don't was the shadow's time with an update it can't store.
+	// Don't waste the schedd's time with an update it can't store.
 	if( getProc() > -1000 ) {
 		return job_updater->updateJob( type, 0 );
 	} else {
