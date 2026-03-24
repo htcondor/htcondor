@@ -276,63 +276,6 @@ TEST_CASES = {
             "DAGMan_MaxSubmitsPerInterval": 10,
         }),
     ),
-    # Ensure user cannot disable admin throttle limiting
-    "CLEVER_USER_DISABLE_LIMIT": DagTestCase(
-        throttle_via_python,
-        {
-            "max_nodes": 0,
-            "max_idle": 0,
-            "max_pre": 0,
-            "max_hold": 0,
-            "max_post": 0,
-            "max_submits": 0,
-        },
-        classad2.ClassAd({
-            "DAGMan_MaxJobs": 0,
-            "DAGMan_MaxIdle": 1000,
-            "DAGMan_MaxPreScripts": 20,
-            "DAGMan_MaxHoldScripts": 20,
-            "DAGMan_MaxPostScripts": 20,
-            "DAGMan_MaxSubmitsPerInterval": 100,
-        }),
-        Config.DEFAULT,
-        "\n".join([
-            "# Attempting to disable all admin controls!",
-            "ENV SET _CONDOR_DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING=True",
-        ])
-    ),
-    # Ensure user cannot override default throttle values (to large number / infinite)
-    # Note: Also check case insensitivity
-    "CLEVER_USER_OVERRIDE_VALUES": DagTestCase(
-        throttle_via_python,
-        {
-            "max_nodes": 0,
-            "max_idle": 0,
-            "max_pre": 0,
-            "max_hold": 0,
-            "max_post": 0,
-            "max_submits": 0,
-        },
-        classad2.ClassAd({
-            "DAGMan_MaxJobs": 0,
-            "DAGMan_MaxIdle": 1000,
-            "DAGMan_MaxPreScripts": 20,
-            "DAGMan_MaxHoldScripts": 20,
-            "DAGMan_MaxPostScripts": 20,
-            "DAGMan_MaxSubmitsPerInterval": 100,
-        }),
-        Config.DEFAULT,
-        "\n".join([
-            "# Attempting to disable all admin controls!",
-            "ENV SET _CONDOR_DAGMAN_user_LOG_SCAN_INTERVAL=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_jobs_IDLE=0",
-            "ENV SET _CONDOR_dagman_MAX_JOBS_SUBMITTED=0",
-            "ENV SET _condor_DAGMAN_MAX_PRE_SCRIPTS=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_HOLD_SCRIPTS=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_POST_SCRIPTS=0",
-            "ENV SET _CONDOR_DAGMAN_MAX_SUBMITS_PER_INTERVAL=0"
-        ])
-    ),
     # Verify the ability to set specific throttles without effecting others
     "SET_SPECIFIC": DagTestCase(
         throttle_via_python,
@@ -409,7 +352,7 @@ JOB LONG @=desc
             condor = limitless_condor
 
         with ChangeDir(TEST):
-            DAG = htcondor2.Submit.from_dag(DAG_FILE)
+            DAG = htcondor2.Submit.from_dag(str(DAG_FILE))
             HANDLE = condor.submit(DAG)
             TESTS[TEST] = (HANDLE, DETAILS.conf, DETAILS.execute, DETAILS.throttles, DETAILS.expected)
 

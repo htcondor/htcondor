@@ -1558,36 +1558,7 @@ void main_pre_command_sock_init() {
 	daemonCore->m_create_family_session = false;
 }
 
-int main(int argc, char **argv, char** envp) {
-	constexpr static std::array<istring_view, 9> ENV_FILTER = {
-		// Remove any environment set throttle values so users can not work around admin throttling
-		"_CONDOR_DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING",
-		"_CONDOR_DAGMAN_USER_LOG_SCAN_INTERVAL",
-		"_CONDOR_DAGMAN_MAX_JOBS_IDLE",
-		"_CONDOR_DAGMAN_MAX_JOBS_SUBMITTED",
-		"_CONDOR_DAGMAN_MAX_PRE_SCRIPTS",
-		"_CONDOR_DAGMAN_MAX_HOLD_SCRIPTS",
-		"_CONDOR_DAGMAN_MAX_POST_SCRIPTS",
-		"_CONDOR_DAGMAN_MAX_SUBMITS_PER_INTERVAL",
-		"_CONDOR_DAGMAN_USER_LOG_SCAN_INTERVAL"
-	};
-
-	// Filter out any environment variables we don't want to take effect ever
-	for (int i = 0; envp[i]; i++) {
-		std::string env(envp[i]);
-		auto pos = env.find("=");
-		if (pos == std::string::npos) { continue; }
-
-		std::string key = env.substr(0, pos);
-		trim(key);
-		istring_view check(key.c_str());
-
-		auto it = std::ranges::find(ENV_FILTER, check);
-		if (it != ENV_FILTER.end()) {
-			UnsetEnv(key.c_str());
-		}
-	}
-
+int main(int argc, char **argv) {
 	set_mySubSystem("DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN);
 	DC_Disable_Default_Log();
 
