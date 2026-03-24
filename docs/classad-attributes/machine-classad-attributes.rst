@@ -1553,4 +1553,5 @@ The following attributes are advertised when
     The instance's identifier with its provider (on its platform).
 
 :classad-attribute-def:`CloudInterruptible`
-    ``"True"`` if the instance, and ``"False"`` otherwise.
+    ``"True"`` if the instance may be evicted by the cloud system at anytime
+    (e.g. a spot instance), and ``"False"`` otherwise.
