@@ -303,9 +303,14 @@ def _convert_local_datetime_to_utc_ts(dt):
 
 
 def _parse_ads_generator(input, parser : Parser = Parser.Auto):
+    seekable = True
     total_offset = 0
     if not isinstance(input, str):
-        total_offset = input.tell()
+        try:
+            total_offset = input.tell()
+        except io.UnsupportedOperation:
+            total_offset = None
+            seekable = False
 
     input_string = "".join(input)
     while True:
@@ -313,8 +318,9 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
 
         input_string = input_string[offset:]
         if not isinstance(input, str):
-            total_offset += offset
-            input.seek(total_offset, 0)
+            if seekable:
+                total_offset += offset
+                input.seek(total_offset, 0)
 
         if ad is None or offset == 0:
             return
@@ -334,10 +340,14 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
 #
 def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
     '''
-    Returns a generator which will parse each ad in the input.
+    Returns a generator which will parse each ad in *input(.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
+
+    Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
+    read *input* one ad at a time, but note for some type os :class:`IO`, you
+    must specify the serialization format.
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
@@ -349,16 +359,17 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
     return _parse_ads_generator(input, parser)
 
 
-def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) -> ClassAd:
+def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
     Parses all of the ads in the input, merges them into one, and returns it.
 
-    If *input* is a single string,
-    ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
-    ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
+    Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
+    Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
-    If *input* is an iterator,
-    each serialized ad must be in its own string.
+    Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
+    read *input* one ad at a time, (and then :func:`update` the previous
+    result),  but note for some type os :class:`IO`, you must specify the
+    serialization format.
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
@@ -367,8 +378,8 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
                     are in the :const:`ParserType.Old or
                     :const:`ParserType.New` formats.
     '''
-    total_offset = 0
     seekable = True
+    total_offset = 0
     if not isinstance(input, str):
         try:
             total_offset = input.tell()
@@ -410,9 +421,12 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
 
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
-    :param parser:  Which parser to use (serialization format to assume).
+    :param parser:  Which parser to use (serialization format to assume).  If
+                    unspecified, attempt to determine if the serialized ads
+                    are in the :const:`ParserType.Old or
+                    :const:`ParserType.New` formats.
     :raises ClassAdException:  If ``input`` is not a string and can
-      not be rewound.
+                               not be rewound.
     '''
     if isinstance(input, str):
         (firstAd, offset) = _classad_parse_next(input, int(parser))
