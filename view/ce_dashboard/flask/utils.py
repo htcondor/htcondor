@@ -1,5 +1,6 @@
 import pickle
 import threading
+import htcondor2 as htcondor
 from urllib.error import HTTPError
 from urllib.request import urlopen
 import json
@@ -94,7 +95,7 @@ def cache_response_to_disk(seconds_to_cache: int = None, file_name: str = None):
     return decorator
 
 
-def make_data_response(response_body: str, cached_response: bool, browser_cache_minutes: int = None) -> Response:
+def make_data_response(response_body: str, cached_response: bool | str, browser_cache_minutes: int | None = None) -> Response:
     """
     Creates an HTTP response for with specified caching headers and metadata.
 
