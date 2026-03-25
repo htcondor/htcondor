@@ -1,6 +1,6 @@
  ###############################################################
  #
- # Copyright (C) 2022, Condor Team, Computer Sciences Department,
+ # Copyright (C) 2026, Condor Team, Computer Sciences Department,
  # University of Wisconsin-Madison, WI.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,14 +26,14 @@ if (WITH_KRB5)
 
 	if ( NOT KRB5_FOUND AND WINDOWS )
 
-		condor_pre_external( KRB5 krb5-1.19.2 "lib;include" "include/krb5.h")
+		condor_pre_external( KRB5 krb5-1.22.2 "lib;include" "include/krb5.h")
 
 		set (KRB5_DOWNLOAD ${KRB5_VER}.tar.gz)
 		set (KRB5_DOWNLOAD_MD5SUM eb51b7724111e1a458a8c9a261d45a31)
 
 		if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-			set (KRB5_DOWNLOAD ${KRB5_VER}-VC140-Win64.tar.gz)
-			set (KRB5_DOWNLOAD_MD5SUM d6c53f922839d9a4b48d810493cd46f4)
+			set (KRB5_DOWNLOAD ${KRB5_VER}-Win64.tar.gz)
+			set (KRB5_DOWNLOAD_MD5SUM 790450614dd517f4d09460ca1bcaa71c)
 		endif ()
 
 		set (KRB5_CONFIGURE echo "No configuration necessary")

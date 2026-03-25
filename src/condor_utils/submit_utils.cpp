@@ -293,6 +293,11 @@ static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
 static char jid[] = "$(ClusterId).$(ProcId)";
 static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
+// a convenience so you can use $(JobListId) in your submit description
+static char jid_cluster[] = "$(ClusterId)";
+static condor_params::string_value JobListIdMacroDef = { jid_cluster, 0 };
+
+
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
 	{ "$", &UnliveSubmitFileMacroDef }, // placeholder because the table is not allowed to be empty in all compilers
@@ -348,6 +353,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
 	{ "JobId",     &JobIdMacroDef },
+	{ "JobListId", &JobListIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
@@ -5417,6 +5423,12 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 			// check for a second memory value for when request_meory = a, b
 			if (endp && endp[0] == ',' && endp[1]) {
 				SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, ++endp);
+			} else {
+				// check for retry_request_disk
+				auto_free_ptr rrd(submit_param(SUBMIT_KEY_RetryRequestDisk));
+				if (rrd) {
+					SetBuiltInOnEvictCheck(ATTR_REQUEST_DISK, SUBMIT_KEY_RequestDisk, 1024, rrd);
+				}
 			}
 		} else if (YourStringNoCase("undefined") == disk) {
 		} else {
@@ -8160,7 +8172,14 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	}
 	
 	/* Insert the version into the ClassAd */
-	baseJob.Assign( ATTR_VERSION, CondorVersion() );
+	const char *schedd_version = getScheddVersion();
+	
+	// Schedd version is "" for dry-run
+	if (schedd_version && *schedd_version) {
+		baseJob.Assign( ATTR_VERSION, getScheddVersion());
+	}
+
+	baseJob.Assign( ATTR_SUBMIT_VERSION, CondorVersion() );
 	baseJob.Assign( ATTR_PLATFORM, CondorPlatform() );
 #endif
 

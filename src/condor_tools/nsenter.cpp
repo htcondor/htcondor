@@ -25,6 +25,17 @@
 #include <grp.h>
 #include <signal.h>
 #include <algorithm>
+#include <cstdio>
+#include <cerrno>
+#include <string.h>
+#include <vector>
+#include <string>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sched.h>
 
 // condor_nsenter
 // 
@@ -80,6 +91,35 @@ void reset_pty_and_exit(int signo) {
 	exit(signo);
 }
 
+int enter_ns(pid_t pid, const char *ns) {
+	struct stat st;
+	char buf[256];
+	sprintf(buf, "/proc/self/ns/%s", ns);
+	stat(buf, &st);
+	long my_ns = st.st_ino;
+	sprintf(buf, "/proc/%d/ns/%s", pid, ns);
+	stat(buf, &st);
+	long your_ns = st.st_ino;
+
+	// It is an error to try to setns to a namespace we are already in.
+	if (your_ns == my_ns) {
+		// Quietly return, this is probably not a problem
+		return 0;
+	}
+	int fd = open(buf, O_RDONLY);
+	int r = setns(fd, 0);
+	close(fd);
+	if (r < 0) {
+		fprintf(stderr, "cannot setns %s: %s\n", ns, strerror(errno));
+		fprintf(stderr, "condor_ssh_to_job cannot enter the namespace of the containerized job.\n");
+		fprintf(stderr, "This is probably because the container runtime is installed as setuid,\n");
+		fprintf(stderr, "but htcondor itself was not installed as root, so it does not have the\n");
+		fprintf(stderr, "permissions to enter the user namespace.\n");
+		exit(-1);
+	}
+	return 0;
+}
+
 int main( int argc, char *argv[] )
 {
 	std::string condor_prefix;
@@ -115,7 +155,7 @@ int main( int argc, char *argv[] )
 
 		// supplemental groups, colon separated
 		if(is_arg_prefix(argv[i],"-groups")) {
-			supp_groups = argv[i + 1];
+			//supp_groups = argv[i + 1];
 			i++;
 		}
 	}
@@ -190,6 +230,7 @@ int main( int argc, char *argv[] )
 	// copy DISPLAY from outside to inside.  sshd has set this,
 	// it is the only one from the outside we need on the inside,
 	// and one way that an ssh-to-job shell is different than the job.
+
 	std::string display;
 	if (getenv("DISPLAY")) {
 		formatstr(display, "DISPLAY=%s", getenv("DISPLAY"));
@@ -213,65 +254,15 @@ int main( int argc, char *argv[] )
 
 	// start changing namespaces.  Note that once we do this, things
 	// get funny in this process
-	formatstr(filename, "/proc/%d/ns/uts", pid);
-	int fd = open(filename.c_str(), O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "Can't open uts namespace: %d %s\n", errno, strerror(errno));
-		exit(1);
-	}
-	int r = setns(fd, 0);
-	close(fd);
-	if (r < 0) {
-		// This means an unprivileged singularity, most likely
-		// need to set user namespace instead.
-		formatstr(filename, "/proc/%d/ns/user", pid);
-		fd = open(filename.c_str(), O_RDONLY);
-		if (fd < 0) {
-			fprintf(stderr, "Can't open user namespace: %d %s\n", errno, strerror(errno));
-			exit(1);
-		}
-		r = setns(fd, 0);
-		int user_setns_errno = errno;
-		close(fd);
-		if (r < 0) {
-			fprintf(stderr, "Can't setns to user namespace: %s\n", strerror(user_setns_errno));
-			fprintf(stderr, "condor_ssh_to_job cannot enter the namespace of the containerized job.\n");
-			fprintf(stderr, "This is probably because the container runtime is installed as setuid,\n");
-			fprintf(stderr, "but htcondor itself was not installed as root, so it does not have the\n");
-			fprintf(stderr, "permissions to enter the user namespace.\n");
-			exit(1);
-		}
-	}
+	enter_ns(pid, "user");
+	enter_ns(pid, "uts");
+	enter_ns(pid, "pid");
+	enter_ns(pid, "mnt");
 
-	// now the pid namespace
-	formatstr(filename, "/proc/%d/ns/pid", pid);
-	fd = open(filename.c_str(), O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "Can't open pid namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-	r = setns(fd, 0);
-	close(fd);
+	int r = setgroups(0, nullptr);
 	if (r < 0) {
-		fprintf(stderr, "Can't setns to pid namespace: %s\n", strerror(errno));
-		exit(1);
+		fprintf(stderr, "Can't setgroups to 0: %s\n", strerror(errno));
 	}
-
-	// finally the mnt namespace
-	formatstr(filename, "/proc/%d/ns/mnt", pid);
-	fd = open(filename.c_str(), O_RDONLY);
-	if (fd < 0) {
-		fprintf(stderr, "Can't open mnt namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-	r = setns(fd, 0);
-	close(fd);
-	if (r < 0) {
-		fprintf(stderr, "Can't setns to mnt namespace: %s\n", strerror(errno));
-		exit(1);
-	}
-
-	setgroups(0, nullptr);
 
 	if (supp_groups != nullptr) {
 		std::vector<gid_t> setgroups_vec;
@@ -350,10 +341,11 @@ int main( int argc, char *argv[] )
 		ioctl(0, TIOCSWINSZ, &win);
 
 		// Finally, launch the shell
-		execle("/bin/sh", "/bin/sh", "-l", "-i", nullptr, envp.data());
+		execle("/bin/sh", "sh", "-l", "-i", nullptr, envp.data());
  
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
+		sleep(2);
 		exit(errno);
 
 	} else {
@@ -425,4 +417,3 @@ int main( int argc, char *argv[] )
 	}
 	return 0;
 }
-

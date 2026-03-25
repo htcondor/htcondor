@@ -1,22 +1,60 @@
+*** 24.12.20 bugs
+
+- There are five configuration macros type as long integers.
+  (:macro:`PREEN_COREFILE_MAX_SIZE`, :macro:`EVENT_LOG_MAX_SIZE`,
+  :macro:`EVENT_LOG_MAX_ROTATIONS`, :macro:`ANNEX_DEFAULT_LEASE_DURATION`,
+  and
+  :macro:`ANNEX_DEFAULT_UNCLAIMED_TIMEOUT`.)  These are now properly handled
+  by :data:`htcondor2.param`, and looking up large values (more than
+  approximately 2 billion) will no longer cause the process to abort.
+  :jira:`3616`
+
+*** 24.0.20 bugs
+
 *** 24.12.19 bugs
 
+- Fixed a bug that would cause the startd to crash if a custom :macro:`DOCKER`
+  docker wrapper emitted unexpected output to the "images" sub-command.
+  :jira:`3596`
+
 - Fixed a bug where :tool:`condor_status` would not adjust the Name column width to fit data
-  for some output formats. This bug would result in colmns after the Name column not
+  for some output formats. This bug would result in columns after the Name column not
   being properly aligned when the longest name exceeded 34 characters.
   :jira:`3255`
 
-- When the *condor_collector* reponds to a locate query for Startd ads, it will now search
+- When the *condor_collector* responds to a locate query for Startd ads, it will now search
   both the Startd daemon ad table and the Startd slot ad table to satisfy the locate.  This
   fixes a bug where :tool:`condor_vacate` would not be able to find the address of the Startd
   when given a slot name.
   :jira:`3580`
 
+- Fixed a bug in :tool:`condor_q` match analysis that would always count sub-expressions that
+  evaluated to a double or integer as not matching.
+  :jira:`3601`
 
 *** 24.0.19 bugs
+
+- Fixed a bug where an NVIDIA GPU that has been subdivided in MIG sub-devices
+  would not properly pass the device names in the various NVIDIA related
+  environment variables.
+  :jira:`3567`
 
 - Fixed a bug for **batch** grid universe jobs where submitting to a remote
   system would fail if the username on the remote system contained a dot.
   :jira:`3581`
+
+- Fixed a bug where some of the values reported for job execution time were
+  very large if the Access Point daemons restarted while the job was running.
+  :jira:`3592`
+
+- Fixed a bug where an administrator couldn't query a daemon's configuration
+  using :tool:`condor_config_val` when authentication is required for READ
+  level authorization.
+  :jira:`3572`
+
+- The :meth:`htcondor2.send_command` method no longer incorrectly requires
+  a `target` parameter.
+  :jira:`3597`
 
 *** 24.12.18 bugs
 
@@ -31,8 +69,8 @@
   :jira:`3490`
 
 - Fixed a bug where an job with a circular :ad-attr:`Requirements[type=Job]` expression
-  would result in a crash in *condor_q* when the ``-better`` option was passed.
-  The crash was fixed, and *condor_submit* was changed to report an error
+  would result in a crash in :tool:`condor_q` when the ``-better`` option was passed.
+  The crash was fixed, and :tool:`condor_submit` was changed to report an error
   when the submit file has a :subcom:`requirements` command that
   references :ad-attr:`Requirements[type=Job]`.
   :jira:`2629`
@@ -41,13 +79,13 @@
   output was always empty.
   :jira:`3558`
 
-- Fixed a bug where a backfill p-slot would have no assigned GPUs after
-  a reconfig.
-  :jira:`3072`
-
 - Fixed a bug in :meth:`htcondor2.Schedd.history` which prevented its `since`
   argument from being the string representation of an expression.
   :jira:`3435`
+
+- Fixed a bug where a backfill p-slot would have no assigned GPUs after
+  a reconfig.
+  :jira:`3072`
 
 *** 24.0.18 features
 
@@ -950,8 +988,8 @@
   :jira:`2720`
 
 - The *condor_startd* now advertises a new attribute,
-  :ad-attr:`SingularityUserNamespaces` which is ``true`` when apptainer
-  or singularity work and are using Linux user namespaces, and ``false``
+  :ad-attr:`SingularityUserNamespaces` which is ``true`` when Apptainer
+  or Singularity work and are using Linux user namespaces, and ``false``
   when it is using setuid mode.
   :jira:`2818`
 

@@ -9,7 +9,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate matrix from CSV
         id: set-matrix
@@ -39,7 +39,7 @@ jobs:
         run: echo "platform_name=$(echo ${{ matrix.instance.container }} | sed -e 's/htcondor\/nmi-build://g' -e 's/-[0-9]*$//g')" >> $GITHUB_OUTPUT
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build
         run: |
@@ -66,8 +66,8 @@ jobs:
           su condorauto -c "cd __build && cmake -GNinja -DWITH_LIBVIRT:bool=false -DWITH_VOMS:bool=false .. && ninja -j 4 install"
 
       - name: test
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
-        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40 -E guidance" )
+        # Use su to run as condorauto user inside container
+        run: ( su condorauto -c "cd __build && ctest --output-junit test.xml -j 40" )
 
         # Report the memory used by the build & test run, because I'm curious
       - name: memory usage
@@ -86,7 +86,7 @@ jobs:
 
       - name: Upload All on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-output-for-${{ matrix.instance.abbrev }}
           path: __build/src/condor_tests
@@ -96,7 +96,7 @@ jobs:
       - name: Upload Artifact with Test Results on failure or success
         # Always upload, even if build or tests fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tests-for-${{ matrix.instance.abbrev }}
           path: __build/test.xml
@@ -107,7 +107,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install python
         uses: actions/setup-python@v5
@@ -116,14 +116,20 @@ jobs:
         run: |
           pip install pytest pytest-httpserver
 
+      - name: hack for broken reverse DNS
+        run: sudo sed -i -e "s/localhost/localhost $(hostname)/g" /etc/hosts
+
       - name: Build
         run: (mkdir __build && cd __build && cmake -GNinja -DWITH_VOMS:bool=false .. && ninja -j4 install)
+      # pytest and thus ornitholgy aren't installed correctly, so for now, just run one random perl test
+      - name: test
+        run: ( cd __build && ctest --output-junit test.xml -j 40 -R job_dagman_vars )
 
   winbuild:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install VC++ Build Tools
         uses: ilammy/msvc-dev-cmd@v1
@@ -154,7 +160,7 @@ jobs:
       image: ${{ steps.extract.outputs.image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract ubunturoot image from nmi-build-platforms
         id: extract
@@ -174,13 +180,13 @@ jobs:
       options: --cpus 4
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Ubuntu Native Package
         run: ./build-on-linux.sh .
 
       - name: Upload .debs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: debs
           path: |
@@ -195,7 +201,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download .debs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           merge-multiple: true
 
@@ -219,7 +225,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build Ubuntu 
         run: |
@@ -232,12 +238,12 @@ jobs:
           chmod a+rwx /home/runner
 
       - name: Test with rootness
-        # Use su to run as condorauto user inside container, test_guidance test is flakey
+        # Use su to run as condorauto user inside container
         run: ( cd __build && HTCONDOR_TEST_USE_SUDO=1 ctest --output-junit test.xml -j 40 -R test_cgroup_oom )
 
       - name: Upload All on Failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: root-output-for-ubuntu
           path: |
@@ -253,7 +259,7 @@ jobs:
     if: always()
     steps:
          - name: Download test xml output artifacts
-           uses: actions/download-artifact@v4
+           uses: actions/download-artifact@v6
            with:
              pattern: tests-for-*
 

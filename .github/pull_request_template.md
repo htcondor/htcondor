@@ -11,7 +11,7 @@
 - [ ] Check for regression test(s) of new features and bugfixes (if the feature doesn't require root)
 - [ ] Check for documentation, if needed  (documentation [build logs](https://app.readthedocs.org/projects/htcondor/builds/))
 - [ ] Check for version history, if needed
-- [ ] Check BaTLab dashboard for successful build (https://batlab.chtc.wisc.edu/results/workspace.php) and test for either the PR or a workspace build by the developer that has the Jira ticket as a comment.
+- [ ] Check BaTLab dashboard for successful build (https://batlab-ap2001.chtc.wisc.edu/results/workspace.php) and test for either the PR or a workspace build by the developer that has the Jira ticket as a comment.
 - [ ] Check that each commit message references the Jira ticket (HTCONDOR-xxx)
 
 ## After the above

@@ -25,6 +25,7 @@
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
+#include "condor_holdcodes.h"
 
 #include <map>
 
@@ -50,6 +51,7 @@ command_handler(int cmd, Stream* stream )
 			case DEACTIVATE_CLAIM:
 			case DEACTIVATE_CLAIM_FORCIBLY:
 			case DEACTIVATE_CLAIM_JOB_DONE:
+			case DEACTIVATE_CLAIM_FINAL_XFER:
 			case REACTIVATE_CLAIM_CHECK:
 				stream->encode();
 
@@ -78,6 +80,7 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM:
 	case DEACTIVATE_CLAIM_FORCIBLY:
 	case DEACTIVATE_CLAIM_JOB_DONE:
+	case DEACTIVATE_CLAIM_FINAL_XFER:
 	case REACTIVATE_CLAIM_CHECK:
 		rval = deactivate_claim(stream, rip, cmd);
 		break;
@@ -88,8 +91,9 @@ command_handler(int cmd, Stream* stream )
 int
 deactivate_claim(Stream *stream, Resource *rip, int cmd)
 {
-	bool graceful = cmd == DEACTIVATE_CLAIM;
+	bool graceful = cmd == DEACTIVATE_CLAIM || cmd == DEACTIVATE_CLAIM_FINAL_XFER;
 	bool job_done = cmd == DEACTIVATE_CLAIM_JOB_DONE;
+	bool final_xfer = cmd == DEACTIVATE_CLAIM_FINAL_XFER;
 
 	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, rip);
 	ep_event.Ad().Assign("Force", !graceful);
@@ -155,7 +159,9 @@ deactivate_claim(Stream *stream, Resource *rip, int cmd)
 	if( cmd == REACTIVATE_CLAIM_CHECK ) { return rval; }
 
 	if( rip->r_cur && ! job_done) {
-		if(graceful) {
+		if (final_xfer) {
+			rval = rip->deactivate_claim_final_xfer();
+		} else if(graceful) {
 			rval = rip->deactivate_claim();
 		} else {
 			rval = rip->deactivate_claim_forcibly();
@@ -675,7 +681,7 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
-			rip->dprintf( D_ALWAYS, 
+			rip->dprintf( D_ALWAYS,
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;

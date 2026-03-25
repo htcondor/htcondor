@@ -209,6 +209,13 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 			         machineName ? machineName:"", dc_startd->addr() );
 			// Record the activation start time (HTCONDOR-861).
 			activation.StartTime = time(NULL);
+			shadow->m_reconnect_record.m_activation_time = activation.StartTime;
+			{
+				int ld = 0;
+				if (jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, ld)) {
+					shadow->m_reconnect_record.m_lease_duration = ld;
+				}
+			}
 				// first, set a timeout on the socket
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
@@ -292,7 +299,7 @@ RemoteResource::activateClaim(int & refuse_code, std::string & refuse_reason)
 
 
 bool
-RemoteResource::killStarter( bool graceful )
+RemoteResource::killStarter( bool graceful, bool final_transfer )
 {
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
@@ -323,10 +330,11 @@ RemoteResource::killStarter( bool graceful )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		dprintf(D_STATUS, "Sending %s to startd\n",
-			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY"));
+		const char *cmd_name = final_transfer ? "DEACTIVATE_CLAIM_FINAL_XFER" :
+			m_got_job_done ? "DEACTIVATE_CLAIM_JOB_DONE" : (graceful ? "DEACTIVATE_CLAIM" : "DEACTIVATE_CLAIM_FORCIBLY");
+		dprintf(D_STATUS, "Sending %s to startd\n", cmd_name);
 		still_cleaning = false;
-		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing, &still_cleaning, final_transfer)) {
 			break;
 		}
 		const char * errmsg = dc_startd->error();
@@ -2125,6 +2133,7 @@ RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
 	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
+	shadow->m_reconnect_record.m_last_contact_time = last_job_lease_renewal;
 }
 
 
@@ -2157,7 +2166,16 @@ RemoteResource::reconnect( void )
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
 	}
-	if( lease_duration < 0 ) { 
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
+		shadow->m_reconnect_record.m_activation_time = activation.StartTime;
+	}
+	if( lease_duration < 0 ) {
 			// if it's our first time, figure out what we've got to
 			// work with...
 		dprintf( D_FULLDEBUG, "Trying to reconnect job %s\n", gjid );
@@ -2166,6 +2184,7 @@ RemoteResource::reconnect( void )
 			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 					ATTR_JOB_LEASE_DURATION );
 		}
+		shadow->m_reconnect_record.m_lease_duration = lease_duration;
 		if( ! last_job_lease_renewal ) {
 				// if we were spawned in reconnect mode, this should
 				// be set.  if we're just trying a reconnect because
@@ -2307,7 +2326,7 @@ RemoteResource::locateReconnectStarter( void )
 			// found.  either way, we know the job is gone, and can
 			// safely give up and restart.
 		resourceExit(JOB_SHOULD_REQUEUE, -1);
-		shadow->reconnectFailed( "Job not found at execution machine" );
+		shadow->reconnectFailed( "Job not found at execution machine", true );
 		break;
 
 	case CA_NOT_AUTHENTICATED:
@@ -2315,7 +2334,7 @@ RemoteResource::locateReconnectStarter( void )
 			// other daemon is now listening on the port. Either
 			// way, our claim, and thus the job, is dead.
 		resourceExit(JOB_SHOULD_REQUEUE, -1);
-		shadow->reconnectFailed("Claim not found at execution machine");
+		shadow->reconnectFailed("Claim not found at execution machine", true);
 		break;
 
 	case CA_CONNECT_FAILED:

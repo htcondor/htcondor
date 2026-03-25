@@ -191,6 +191,36 @@ def UserNamespacesFunctional():
         print("unshare command failed, test cannot work, skipping test\n")
         return False
 
+@action
+def ssh_job_hash():
+    return {
+            "universe": "container",
+            "container_image": "empty.sif",
+            "executable": "/bin/sleep",
+            "arguments": "600",
+            "should_transfer_files": "yes",
+            "when_to_transfer_output": "on_exit",
+            "output": "ssh_output",
+            "error": "ssh_error",
+            "log": "ssh_log",
+            }
+
+@action
+def running_ssh_job(condor, ssh_job_hash):
+    job = condor.submit(ssh_job_hash, count=1)
+    assert job.wait(
+        condition=ClusterState.all_running,
+        timeout=60,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+    return job
+
+@action
+def ssh_to_container_job(condor, running_ssh_job):
+    cp = condor.run_command(['condor_ssh_to_job', '-auto-retry', f'{running_ssh_job.clusterid}.0', '/bin/echo', 'hello_from_container'])
+    return cp
+
 @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
 @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
 @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
@@ -199,3 +229,6 @@ class TestContainerUni:
             assert completed_test_job['ExitCode'] == 0
     def test_container_uni_with_xfer(self, completed_test_job_with_xfer):
             assert completed_test_job_with_xfer['ExitCode'] == 0
+    def test_ssh_to_container_job(self, sif_file_fixture, ssh_to_container_job):
+            assert ssh_to_container_job.returncode == 0
+            assert "hello_from_container" in ssh_to_container_job.stdout

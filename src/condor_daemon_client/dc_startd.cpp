@@ -355,7 +355,7 @@ DCStartd::reactivateClaimCheck(bool & claim_is_closing)
 }
 
 bool
-DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing, bool *still_cleaning, bool final_transfer )
 {
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
@@ -366,7 +366,14 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 
 	setCmdStr( "deactivateClaim" );
 
-	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+	int cmd;
+	if (final_transfer) {
+		cmd = DEACTIVATE_CLAIM_FINAL_XFER;
+	} else if (graceful) {
+		cmd = DEACTIVATE_CLAIM;
+	} else {
+		cmd = DEACTIVATE_CLAIM_FORCIBLY;
+	}
 
 	return deactivateClaim(cmd, got_job_done, claim_is_closing, still_cleaning);
 }
@@ -388,7 +395,7 @@ DCStartd::deactivateClaim(int cmd, bool got_job_done, bool *claim_is_closing, bo
 
 	ClaimIdParser cidp(claim_id.c_str());
 
-	if (got_job_done && (cmd != REACTIVATE_CLAIM_CHECK)) {
+	if (got_job_done && (cmd != REACTIVATE_CLAIM_CHECK) && (cmd != DEACTIVATE_CLAIM_FINAL_XFER)) {
 		CondorVersionInfo cvi = cidp.secSessionInfoVersion();
 		// we need a newish Startd in order to send DEACTIVATE_CLAIM_JOB_DONE
 		if (cvi.getMajorVer() <= 0) {
@@ -927,7 +934,12 @@ DCStartd::vacateClaim( const char* name_vacate, bool fast /*=false*/ )
 {
 	setCmdStr( "vacateClaim" );
 
-	int cmd = fast ? VACATE_CLAIM_FAST : VACATE_CLAIM;
+	int cmd;
+	if (fast) {
+		cmd = VACATE_CLAIM_FAST;
+	} else {
+		cmd = VACATE_CLAIM;
+	}
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCStartd::vacateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());

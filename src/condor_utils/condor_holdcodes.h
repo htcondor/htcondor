@@ -220,6 +220,21 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
 
+BETTER_ENUM(CONDOR_HOLD_SUBCODE, int,
+
+	// These are enums meant to be used as subcodes for the hold codes above.
+	// While each hold code could assign a different meaning to a given subcode, 
+	// there is value to having some standard meanings for subcodes across multiple hold codes.
+	// Recall any subcode less than or equal to -1000 means vacate (by default) instead of hold.
+
+	Unspecified = 0
+	,FileTransferPluginNotFound = -1001
+	,FileTransferPluginNotOperational = -1002
+	,FileTransferPluginExecFailed = -1003
+	,FileTransferPluginNoResultReported = -1004
+
+)
+
 BETTER_ENUM(FILETRANSFER_HOLD_CODE, int,
 
 	// These are two enums are only to be used by the FileTransfer object.
@@ -255,6 +270,10 @@ BETTER_ENUM(JOB_NOT_STARTED_SUB_CODE, int,
 
 	CatalogNameError = 7
 )
+
+// Hold reason subcode for final transfer on remove
+// Used when condor_rm -transfer triggers a vacate with file transfer
+#define HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE 1
 
 /* Helper functions to decipher hold codes and subcodes.
 

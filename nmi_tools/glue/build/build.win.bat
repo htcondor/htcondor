@@ -266,6 +266,12 @@ if "%~3"=="x64" set BUILD_ARCH_TAG=x64
 @echo BUILD_WIN_TAG=%BUILD_WIN_TAG%
 @echo BUILD_ARCH_TAG=%BUILD_ARCH_TAG%
 
+:: In batlab, we build with the MultiTool builder, which by default,
+:: keeps the builder processes running after idle for a few minutes.
+:: This causes a permission failure if the next build is run by
+:: different user as before
+set MSBUILDDISABLENODEREUSE=1
+
 @echo ----  build.win.bat ENVIRONMENT --------------------------------
 set
 @echo ----  end build.win.bat ENVIRONMENT ----------------------------

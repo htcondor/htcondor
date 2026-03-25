@@ -100,6 +100,40 @@ These settings affect the *condor_shadow*.
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as :macro:`MAX_DEFAULT_LOG`.
 
+:macro-def:`SHADOW_LOG_RECONNECT`
+    A boolean that defaults to ``True``. When ``True``, the
+    *condor_shadow* appends a CSV record to the file specified by
+    :macro:`SHADOW_RECONNECT_LOG` each time it successfully reconnects
+    to a disconnected starter, or when it gives up trying to reconnect
+    because the job lease expired. Each record contains the following
+    comma-separated fields: The cluster.proc of the job id,
+    the epoch time the job was activated, the last epoch time the 
+    shadow heard from the starter, whether the reconnect succeeded, 
+    the epoch time of the reconnect attempt, the configured lease 
+    duration in seconds, a timeout version identifier, and whether the 
+    starter process is known to be dead.
+
+:macro-def:`SHADOW_RECONNECT_LOG`
+    The full path and file name of the CSV file where the
+    *condor_shadow* writes reconnect records when
+    :macro:`SHADOW_LOG_RECONNECT` is ``True``. Defaults to
+    ``$(LOG)/ShadowReconnectLog``.
+
+:macro-def:`SHADOW_RECONNECT_LOG_MAX`
+    The maximum size in bytes of the ``ShadowReconnectLog`` file
+    before it is rotated. Defaults to 10485760 (10 MiB).
+
+:macro-def:`SHADOW_RECONNECT_LOG_MAX_NUM`
+    The maximum number of rotated ``ShadowReconnectLog`` files to
+    keep. When more than this many rotated files exist, the oldest
+    are removed. Defaults to 4.
+
+:macro-def:`SHADOW_RECONNECT_TIMEOUT_VERSION`
+    An optional string identifier that is included in each reconnect
+    log record. This can be used to tag records with a version when
+    experimenting with different reconnect timeout values. Defaults
+    to an empty string.
+
 :macro-def:`ALLOW_TRANSFER_REMAP_TO_MKDIR`
     A boolean value that when ``True`` allows the *condor_shadow* to
     create directories in a transfer output remap path when the directory

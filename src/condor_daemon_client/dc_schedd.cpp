@@ -95,6 +95,22 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
+DCSchedd::transferAndRemoveJobs( const char* constraint, const char* reason,
+								 CondorError * errstack,
+								 action_result_type_t result_type )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::transferAndRemoveJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_TRANSFER_AND_REMOVE_JOBS, constraint, NULL,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
+					  errstack );
+}
+
+
+ClassAd*
 DCSchedd::removeXJobs( const char* constraint, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
@@ -157,6 +173,17 @@ DCSchedd::removeXJobs( const std::vector<std::string>& ids, const char* reason,
 					   action_result_type_t result_type )
 {
 	return actOnJobs( JA_REMOVE_X_JOBS, NULL, &ids,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
+					  errstack );
+}
+
+
+ClassAd*
+DCSchedd::transferAndRemoveJobs( const std::vector<std::string>& ids, const char* reason,
+								 CondorError * errstack,
+								 action_result_type_t result_type )
+{
+	return actOnJobs( JA_TRANSFER_AND_REMOVE_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -1449,6 +1476,7 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_HOLD_JOBS:
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
+		case JA_TRANSFER_AND_REMOVE_JOBS:
 		case JA_RELEASE_JOBS:
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
@@ -1576,6 +1604,8 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
 				 (action==JA_REMOVE_X_JOBS)?
 				 "removed locally (remote state unknown)":
+				 (action==JA_TRANSFER_AND_REMOVE_JOBS)?
+				 "marked for removal after file transfer":
 				 (action==JA_HOLD_JOBS)?"held":
 				 (action==JA_RELEASE_JOBS)?"released":
 				 (action==JA_SUSPEND_JOBS)?"suspended":
@@ -1595,10 +1625,11 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 job_id.proc ); 
 		break;
 
-	case AR_PERMISSION_DENIED: 
+	case AR_PERMISSION_DENIED:
 		formatstr( buf, "Permission denied to %s job %d.%d",
 				 (action==JA_REMOVE_JOBS)?"remove":
 				 (action==JA_REMOVE_X_JOBS)?"force removal of":
+				 (action==JA_TRANSFER_AND_REMOVE_JOBS)?"transfer and remove":
 				 (action==JA_HOLD_JOBS)?"hold":
 				 (action==JA_RELEASE_JOBS)?"release":
 				 (action==JA_VACATE_JOBS)?"vacate":
@@ -1638,16 +1669,16 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		if( action == JA_HOLD_JOBS ) {
 			formatstr( buf, "Job %d.%d already held",
 					 job_id.cluster, job_id.proc );
-		} else if( action == JA_REMOVE_JOBS ) { 
+		} else if( action == JA_REMOVE_JOBS || action == JA_TRANSFER_AND_REMOVE_JOBS ) {
 			formatstr( buf, "Job %d.%d already marked for removal",
 					 job_id.cluster, job_id.proc );
-		}else if( action == JA_SUSPEND_JOBS ) { 
+		}else if( action == JA_SUSPEND_JOBS ) {
 			formatstr( buf, "Job %d.%d already suspended",
 					 job_id.cluster, job_id.proc );
-		}else if( action == JA_CONTINUE_JOBS ) { 
+		}else if( action == JA_CONTINUE_JOBS ) {
 			formatstr( buf, "Job %d.%d already running",
 					 job_id.cluster, job_id.proc );
-		} else if( action == JA_REMOVE_X_JOBS ) { 
+		} else if( action == JA_REMOVE_X_JOBS ) {
 				// pfc: due to the immediate nature of a forced
 				// remove, i'm not sure this should ever happen, but
 				// just in case...
@@ -2582,7 +2613,7 @@ DCSchedd::queryOCU(const ClassAd &ocu_ad, CondorError *errstack) {
 int DCSchedd::queryUsers(
 	const classad::ClassAd & query_ad,
 	// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
-	int (*process_func)(void*, ClassAd *ad),
+	std::function<int (void*data, ClassAd *ad)> process_func,
 	void * process_func_data,
 	int connect_timeout,
 	CondorError *errstack,
@@ -2874,17 +2905,19 @@ ClassAd * DCSchedd::removeUsers(
 }
 
 ClassAd * DCSchedd::updateUserAds(
-	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
+	std::vector<ClassAd> & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
 	CondorError * errstack)
 {
 	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
+	if (user_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateUserAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	std::vector<const ClassAd*> ads;
-	ads.reserve(user_ads.Length());
-	user_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(user_ads.size());
+	for (auto& cmdAd: user_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -2894,6 +2927,10 @@ ClassAd * DCSchedd::updateUserAds(
 {
 	const bool is_user{false}; // the converse of is_project
 	int connect_timeout = 20;
+	if (ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateUserAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	return actOnUsers (EDIT_USERREC, is_user, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
@@ -2992,17 +3029,19 @@ ClassAd * DCSchedd::removeProjects(
 }
 
 ClassAd * DCSchedd::updateProjectAds(
-	ClassAdList & project_ads, // ads must have ATTR_NAME attribute at a minimum
+	std::vector<ClassAd> & project_ads, // ads must have ATTR_NAME attribute at a minimum
 	CondorError *errstack)
 {
 	const bool is_project{true};
 	int connect_timeout = 20;
+	if (project_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateProjectAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 
 	std::vector<const ClassAd*> ads;
-	ads.reserve(project_ads.Length());
-	project_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = project_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(project_ads.size());
+	for (auto& cmdAd: project_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -3012,6 +3051,10 @@ ClassAd * DCSchedd::updateProjectAds(
 {
 	const bool is_project{true};
 	int connect_timeout = 20;
+	if (ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::updateProjectAds", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 	return actOnUsers (EDIT_USERREC, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
@@ -3019,15 +3062,17 @@ ClassAd * DCSchedd::updateProjectAds(
 ClassAd * DCSchedd::generalUpdateUserRecs(
 	int cmd,                   // must be ENABLE_USERREC, DISABLE_USERREC, DELETE_USERRED, EDIT_USERREC
 	bool is_project,           // set to true if ads are project ads or mixed user and project ads
-	ClassAdListDoesNotDeleteAds & userrec_ads, // ads must have ATTR_USER or ATTR_NAME and 
+	std::vector<ClassAd> & userrec_ads, // ads must have ATTR_USER or ATTR_NAME
 	CondorError *errstack)
 {
 	int connect_timeout = 20;
+	if (userrec_ads.empty()) {
+		if (errstack) { errstack->pushf("DCSchedd::generalUpdateUserRecs", SC_ERR_BAD_CONSTRAINT, "no update ads provided"); }
+		return nullptr;
+	}
 	std::vector<const ClassAd*> ads;
-	ads.reserve(userrec_ads.Length());
-	userrec_ads.Rewind();
-	const ClassAd * cmdAd;
-	while ((cmdAd = userrec_ads.Next())) { ads.push_back(cmdAd); }
+	ads.reserve(userrec_ads.size());
+	for (auto& cmdAd: userrec_ads) { ads.push_back(&cmdAd); }
 	return actOnUsers (cmd, is_project, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
