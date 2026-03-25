@@ -1739,8 +1739,8 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 	static char pidbuf[cchpid+2 +1 + cchpid+2 +2] = {0}; // room for "()>()" + cchpid digits for each pid plus trailing \0
 
 	static pid_t mypid = 0;
-	static int mycluster = -1;
-	static int myproc = -1;
+	int mycluster = -1;
+	int myproc = -1;
 
 	// DaemonCore doesn't know that its PID has changed after a fork().  This
 	// won't work if the FTO/shadow ever starts clone()ing children, but then
