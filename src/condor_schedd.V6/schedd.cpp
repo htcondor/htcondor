@@ -9304,7 +9304,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	if( status == JOB_STATUS_BLOCKED ) {
 		status = IDLE;
 		SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
-		dprintf( D_ALWAYS, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+		dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
 	}
 
 
