@@ -1820,7 +1820,6 @@ const char * MachAttributes::withinLimitsExpression()
 	if (m_within_limits_expr_str.empty()) {
 			// indention is same is Reqexp.h where code was moved from
 			static const char * climit_full =
-				"("
 				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
 					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
 					"ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
@@ -1838,17 +1837,16 @@ const char * MachAttributes::withinLimitsExpression()
 					"ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
 						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 						"FALSE))"
-				")";
+				;
 
 			// This one assumes job._condor_Request* attributes never present
 			//  and job.Request* is always set to some value.  If 
 			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
 			static const char *climit_simple = 
-			"("
 				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
 				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
 				"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk"
-			")"; 
+				;
 
 			// We can build the WithinResourceLimits expression with or without the
 			// JOB._condor_request* sub expressions.  We did it with them for many years
@@ -1867,7 +1865,6 @@ const char * MachAttributes::withinLimitsExpression()
 			} else {
 				// start by removing the trailing )
 				auto & wrlimit = m_within_limits_expr_str;
-				wrlimit.pop_back();
 
 				// then append the expressions for the user defined resource types
 				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
@@ -1890,16 +1887,12 @@ const char * MachAttributes::withinLimitsExpression()
 							rn, rn, rn);
 					}
 				}
-				// then append the final closing )
-				wrlimit += ")";
 			}
 
 		// add clause for NO_JOB_NETWORKING
 		if (m_no_job_networking_aware) {
-			m_within_limits_expr_str.pop_back(); // remove trailing )
 			m_within_limits_expr_str += " && ";
 			m_within_limits_expr_str += WANT_JOB_NETWORKING_WITHIN_LIMITS_EXPR;
-			m_within_limits_expr_str += ")";
 		}
 
 		dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", m_within_limits_expr_str.c_str());

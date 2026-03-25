@@ -751,6 +751,7 @@
 #define ATTR_STAGE_OUT_START  "StageOutStart"
 #define ATTR_STAGE_OUT_FINISH  "StageOutFinish"
 #define ATTR_START  "Start"
+#define ATTR_HEALTHY "Healthy"
 #define ATTR_START_LOCAL_UNIVERSE  "StartLocalUniverse"
 #define ATTR_START_SCHEDULER_UNIVERSE  "StartSchedulerUniverse"
 #define ATTR_STARTD_IP_ADDR  "StartdIpAddr"
