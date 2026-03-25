@@ -368,8 +368,13 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
                     :const:`ParserType.New` formats.
     '''
     total_offset = 0
+    seekable = True
     if not isinstance(input, str):
-        total_offset = input.tell()
+        try:
+            total_offset = input.tell()
+        except io.UnsupportedOperation:
+            total_offset = None
+            seekable = False
 
     result = ClassAd()
     input_string = "".join(input)
@@ -385,8 +390,9 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
             input_string = input_string[offset:]
 
         if not isinstance(input, str):
-            total_offset += offset
-            input.seek(total_offset, 0)
+            if seekable:
+                total_offset += offset
+                input.seek(total_offset, 0)
 
 
 # In version 1, this never actually returned an iterator, and it only
