@@ -5,6 +5,69 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 
+class Rehome(Verb):
+    """
+    Rehome an execution point, killing all running jobs
+    """
+
+    options = {
+        "ep_name": {
+            "args": ("ep_name",),
+            "help": "Name of the execution point to rehome",
+        },
+        "schedd_name": {
+            "args": ("schedd_name",),
+            "help": "Name of the schedd to rehome to",
+        },
+        "cancel": {
+            "args": ("-cancel",),
+            "action": "store_true",
+            "default": False,
+            "help": "Cancel a previous rehome, unsetting STARTD_DIRECT_ATTACH_SCHEDD",
+        },
+        "timeout": {
+            "args": ("--timeout",),
+            "type": int,
+            "default": 0,
+            "help": "Timeout in seconds for the rehome operation (default: 0)",
+        },
+    }
+
+    def __init__(self, logger, **options):
+        ep_name = options["ep_name"]
+        schedd_name = options["schedd_name"]
+        cancel = options["cancel"]
+        timeout = options["timeout"]
+
+        collector = htcondor2.Collector()
+
+        # Validate the schedd name before sending the rehome command
+        if not cancel:
+            try:
+                schedd_ad = collector.locate(
+                    htcondor2.DaemonType.Schedd,
+                    schedd_name,
+                )
+                htcondor2.ping(schedd_ad)
+            except Exception as e:
+                raise RuntimeError(f"Cannot reach schedd {schedd_name}: {e}")
+
+        location = collector.locate(
+            htcondor2.DaemonType.Startd,
+            ep_name,
+        )
+
+        startd = htcondor2.Startd(location)
+        try:
+            startd.rehome(schedd_name=schedd_name, timeout=timeout, cancel=cancel)
+        except htcondor2.HTCondorException as e:
+            raise RuntimeError(str(e))
+        if cancel:
+            logger.info(f"Sent rehome cancel command to {ep_name}")
+        else:
+            logger.info(f"Sent rehome command to {ep_name}")
+
+
 class Status(Verb):
     """
     Displays the status of all slots on an execution point
@@ -70,9 +133,12 @@ class EP(Noun):
     Run operations on HTCondor execution points
     """
 
+    class rehome(Rehome):
+        pass
+
     class status(Status):
         pass
 
     @classmethod
     def verbs(cls):
-        return [cls.status]
+        return [cls.rehome, cls.status]
