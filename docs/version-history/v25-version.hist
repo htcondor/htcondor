@@ -10,6 +10,13 @@
 - Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
   :jira:`3564`
 
+- Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
+  attribute is the condor version of the :tool:`condor_submit` version or
+  python bindings version used to submit the job.  In the case of a remote 
+  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
+  which represents the version of the *condor_schedd* the job was placed in.
+  :jira:`3413`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
@@ -25,13 +32,6 @@
   :macro:`SHADOW_LOG_RECONNECT` (default ``True``) and
   :macro:`SHADOW_RECONNECT_LOG`.
   :jira:`3593`
-
-- Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
-  attribute is the condor version of the :tool:`condor_submit` version or
-  python bindings version used to submit the job.  In the case of a remote 
-  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
-  which represents the version of the *condor_schedd* the job was placed in.
-  :jira:`3413`
 
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
