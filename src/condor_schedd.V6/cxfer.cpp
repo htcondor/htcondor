@@ -55,6 +55,16 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 		return {CXFER_TYPE::CANT, {}};
 	}
 
+	//
+	// We can't split static slots, so don't even try.
+	//
+	std::string slotType;
+	m_rec->my_match_ad->LookupString(
+		ATTR_SLOT_TYPE, slotType
+	);
+	if( MATCH == strcasecmp(slotType.c_str(), "Static") ) {
+		return {CXFER_TYPE::CANT, {}};
+	}
 
 	// Now we start looking at the job ad.
 	ClassAd * jobAd = GetJobAd(jobID);
