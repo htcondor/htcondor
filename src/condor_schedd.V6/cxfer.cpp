@@ -22,6 +22,13 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 		return {CXFER_TYPE::FORBIDDEN, {}};
 	}
 
+	//
+	// We don't coalesce OCUs, so we shouldn't split them, either.
+	//
+	if( m_rec->is_ocu ) {
+		return {CXFER_TYPE::CANT, {}};
+	}
+
 
 	// The match ad (`m_rec->my_match_ad`) already has the `CondorVersion`
 	// and `HasCommonFilesTransfer` attributes, so we can check capability;
