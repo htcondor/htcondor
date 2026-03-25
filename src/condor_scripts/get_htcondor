@@ -26,6 +26,7 @@ Installation options:
 --channel NAME: Specify version channel to install; NAME can be
        feature: Most recent release with new features [default]
        lts    : Most recent release with only bug-fixes
+       oldlts : Previous release with only bug-fixes
 --password: Set the password used to secure the pool.  Use only if
             nobody else can log into the machine.  Otherwise specify
             in the environment (GET_HTCONDOR_PASSWORD) or interactively.
@@ -687,11 +688,17 @@ while [ $# -gt 0 ]; do
             ;;
         --channel)
             case $2 in
-                lts|stable)
-                    CHANNEL="lts"
+                24.0|oldlts)
+                    CHANNEL_DIR="24.0"
                     ;;
-                feature|current|latest|developer)
-                    CHANNEL="feature"
+                24.x)
+                    CHANNEL_DIR="24.x"
+                    ;;
+                25.0|lts|stable)
+                    CHANNEL_DIR="25.0"
+                    ;;
+                25.x|feature|current|latest|developer)
+                    CHANNEL_DIR="25.x"
                     ;;
                 *)
                     echo "Illegal option $2 for --channel"
@@ -724,15 +731,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-# We have to update this once every LTS release; we don't want
-# to update a symlink, like we do for 'feature', because we don't
-# want to surprise other lts-channel users with new features.
-if [ "${CHANNEL}" = "lts" ]; then
-    CHANNEL_DIR=25.0
-elif [ "${CHANNEL}" = "feature" ]; then
-    CHANNEL_DIR=25.x
-fi
 
 # wrapped up in functions so that we have some protection against only getting
 # half the file during "curl | sh"
