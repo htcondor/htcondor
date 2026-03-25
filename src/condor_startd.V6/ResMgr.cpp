@@ -343,7 +343,7 @@ ResMgr::init_config_classad( void )
 					// when STARTD_HEALTH_EXPRS is a valid list of classad expressions.
 					if (health_checks->size() > 1) {
 						config_classad->Insert("HealthExprs", health_checks->Copy());
-						formatstr(exprstr, "size(HealthExprs) / %u.0", (int)health_checks->size());
+						formatstr(exprstr, "sum(HealthExprs) / %u.0", (int)health_checks->size());
 						config_classad->AssignExpr("HealthFactor", exprstr.c_str());
 					}
 					health_checks->push_back(classad::Literal::MakeInteger(1));
