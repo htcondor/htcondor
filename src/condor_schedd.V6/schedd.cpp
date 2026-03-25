@@ -13922,7 +13922,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// is true in case the expression's cooldown duration is longer.
 		classad::Value val;
 		long long config_cooldown_duration = 0;
-		bool config_cooldown = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(config_cooldown_duration) && ival > 0);
+		bool config_cooldown = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(config_cooldown_duration) && config_cooldown_duration > 0);
 
 		long long cooldown_duration = MAX( code_cooldown_duration, config_cooldown_duration );
 
