@@ -478,6 +478,10 @@ def ce_landing_data():
 @landing_bp.route('/landing.html')
 def ce_admin_landing_page():
     return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
+    
+@landing_bp.route('/landing2.html')
+def ce_admin_landing_page_2():
+    return render_template('landing2.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
 
 @landing_bp.route('/home.html')
 @landing_bp.route('/select.html')
