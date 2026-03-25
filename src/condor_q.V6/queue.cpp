@@ -674,7 +674,13 @@ int main (int argc, const char **argv)
 		/* I couldn't find a local schedd, so dump a message about what
 			happened. */
 
-		fprintf( stderr, "Error: %s\n", schedd.error() );
+		const char *locate_error = schedd.error();
+		// if there's no schedd, locate does not set an error string.
+		if (!locate_error) {
+			locate_error = "Could not find the local condor_schedd"; 
+		}
+
+		fprintf( stderr, "Error: %s\n", locate_error);
 		if (!expert) {
 			fprintf(stderr, "\n");
 			print_wrapped_text("Extra Info: You probably saw this "
