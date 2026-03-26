@@ -19,6 +19,9 @@
 
 #pragma once
 
+#include <array>
+#include <cstddef>
+
 #include "condor_attributes.h"
 
 enum class Throttle {
@@ -66,10 +69,10 @@ public:
 	int operator[](size_t i) const { return values[i]; }
 	int& operator[](size_t i) { return values[i]; }
 
-	// Note: Use bitwise operator to join two Throttles with the
+	// Note: Use bitwise OR (|) operator to join two Throttles with the
 	// this object taking precedence for setting the max/min of a value
 	// otherwise use the right hand sides value
-	// Note: Negative numbers and 0 constitue no limit
+	// Note: Negative numbers and 0 constitute no limit
 	Throttles operator|(const Throttles& rhs) const {
 		Throttles result;
 
@@ -100,5 +103,5 @@ public:
 
 private:
 	// All values default to 0 which means no limit
-	std::array<int, static_cast<size_t>(Throttle::_SIZE)> values;
+	std::array<int, static_cast<size_t>(Throttle::_SIZE)> values{};
 };

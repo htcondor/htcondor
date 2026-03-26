@@ -76,13 +76,13 @@ void Dagman::SetThrottles(Throttles userThrottles) {
 	debug_printf(DEBUG_NORMAL, "Setting DAGMan throttles:\n");
 	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
 		std::string padded(THROTTLE_DISPLAY[i]);
-		padded.append(30 - padded.length(), '-');
+		if (padded.length() < 30) { padded.append(30 - padded.length(), '-'); }
 		debug_printf(DEBUG_NORMAL, "\t%s: %d\n", padded.c_str(), throttles[i]);
 	}
 
 	int limit = throttles[Throttle::MAX_NODES];
 	if (config[conf::b::EnforceNewJobLimits] && limit && limit != oldMaxNodes) {
-		dag->EnforceNewJobsLimit();
+		if (dag) { dag->EnforceNewJobsLimit(); }
 	}
 }
 

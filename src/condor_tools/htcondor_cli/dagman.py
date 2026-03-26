@@ -397,7 +397,7 @@ class Histogram(Verb):
 
 class Throttle(Verb):
     """
-    Change DAGMans throttles.
+    Change DAGMan's throttles.
     """
     options = {
         "dag_id": {

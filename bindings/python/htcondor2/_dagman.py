@@ -153,7 +153,7 @@ class DAGMan():
         :type max_pre: int
         :param max_hold: Set maximum number of executing Hold-Scripts (Optional).
         :type max_hold: int
-        :param max_post: Set maximum number of executing Hold-Scripts (Optional).
+        :param max_post: Set maximum number of executing Post-Scripts (Optional).
         :type max_post: int
         :param max_submits: Set maximum number of job submissions per submit interval (Optional).
         :type max_submits: int

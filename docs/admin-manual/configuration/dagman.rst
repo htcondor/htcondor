@@ -312,9 +312,9 @@ Node job submission/removal
 
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
     An integer value that controls the maximum number of successful node submissions
-    in a single submit interval before do other work such as scanning the ``*.nodes.log``
+    in a single submit interval before doing other work such as scanning the ``*.nodes.log``
     file for new status information. This value has a minimum value of 1 which
-    will be used if any lower value is provided. This value default to 100 but may
+    will be used if any lower value is provided. This value defaults to 100 but may
     be decreased automatically if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value,
 
     .. note::

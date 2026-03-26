@@ -527,10 +527,10 @@ Throttling at DAG Submission
 Editing DAG Throttles
 '''''''''''''''''''''
 
-A running DAGs throttles can be modified via :tool:`htcondor dag throttle` or :meth:`htcondor2.DAGMan.throttle`.
+A running DAG's throttles can be modified via :tool:`htcondor dag throttle` or :meth:`htcondor2.DAGMan.throttle`.
 All throttles will be constrained to the throttles value configured by the administrator unless
-:macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` is set to ``False`` (by the administrator). The
-edited values will persist across crashes but not rerunning a DAG in rescue mode. The values DAGMan
+:macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` is set to ``True`` (by the administrator). The
+edited values will persist across crashes but not when rerunning a DAG in rescue mode. The values DAGMan
 is using for throttling can be found in either the ``*.dagman.out`` debug log or the DAGMan job
 record with the following attributes:
 
@@ -542,6 +542,8 @@ record with the following attributes:
 | :ad-attr:`DAGMan_MaxIdle`              | Maximum number of idle jobs                           |
 +----------------------------------------+-------------------------------------------------------+
 | :ad-attr:`DAGMan_MaxPreScripts`        | Maximum number of running PRE scripts                 |
++----------------------------------------+-------------------------------------------------------+
+| :ad-attr:`DAGMan_MaxHoldScripts`       | Maximum number of running HOLD scripts                |
 +----------------------------------------+-------------------------------------------------------+
 | :ad-attr:`DAGMan_MaxPostScripts`       | Maximum number of running POST scripts                |
 +----------------------------------------+-------------------------------------------------------+
