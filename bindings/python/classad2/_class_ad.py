@@ -349,6 +349,10 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
     read *input* one ad at a time, but note for some types of :class:`IO`, you
     must specify the serialization format.
 
+	Some serializations can represent empty ads, which will be returned by
+	the generator.  You must therefore exhaust the generator to be sure
+	you've read every ad in *input*.
+
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
     :param parser:  Which parser to use (serialization format to assume).  If
@@ -361,7 +365,8 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
 
 def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
-    Parses all of the ads in *input*, merges them into one, and returns it.
+    Parses all of the ads in *input*, merges them into one, and returns it.  If
+    there are no ads in *input*, returns the empty ad.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
@@ -411,7 +416,9 @@ def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
 # to allow strings here at all, actually.
 def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
-    Parses the first ad in *input* and returns it.
+    Reads only the first ad in *input* and returns it.  If there is no ad in
+    *input*, returns the empty ad.  Some serializations can represent the
+    empty ad, so this doesn't necessarily represent the end of *input*.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
