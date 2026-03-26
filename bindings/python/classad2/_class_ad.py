@@ -428,9 +428,10 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
     :raises ClassAdException:  If ``input`` is not a string and can
                                not be rewound.
     '''
+    rv = None
+
     if isinstance(input, str):
-        (firstAd, offset) = _classad_parse_next(input, int(parser))
-        return firstAd
+        (rv, offset) = _classad_parse_next(input, int(parser))
     else:
         if parser is Parser.Auto:
             try:
@@ -449,7 +450,12 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
                 input.seek(location)
             except io.UnsupportedOperation as e:
                 raise ClassAdException("Can not look ahead in stream; you must explicitly specify a parser.") from e
-        return _classad_parse_next_fd(input.fileno(), int(parser))
+        rv = _classad_parse_next_fd(input.fileno(), int(parser))
+
+    if rv is None:
+        return classad2.ClassAd()
+    else:
+        return rv
 
 
 def _quote(input : str) -> str:
