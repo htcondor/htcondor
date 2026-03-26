@@ -9109,15 +9109,20 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated With
-	// them.  Add them into the resource_requests list now.
-	for (const auto &[_,oi]: OwnersInfo) {
-		for (auto &ocu: oi->ocus) {
-			if (ocu.mrec == nullptr) {
-			
-				int ocu_id = ocu.ocu_id;
-				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
-				resource_requests->add(ocu_id, ocu_request);
+	// OCUs represent requests for match_recs (slots) that have no jobs associated with
+	// them.  Add them into the resource_requests list now, but only for the owners
+	// that belong to the submitter currently being negotiated.
+	if (Owner) {
+		for (const std::string &owner_name: Owner->owners) {
+			OwnerInfo *oi = find_ownerinfo(owner_name.c_str());
+			if (oi) {
+				for (auto &ocu: oi->ocus) {
+					if (ocu.mrec == nullptr) {
+						int ocu_id = ocu.ocu_id;
+						PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+						resource_requests->add(ocu_id, ocu_request);
+					}
+				}
 			}
 		}
 	}
