@@ -340,13 +340,13 @@ def _parse_ads_generator(input, parser : Parser = Parser.Auto):
 #
 def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator[ClassAd]:
     '''
-    Returns a generator which will parse each ad in *input(.
+    Returns a generator which will parse each ad in *input*.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
     Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
-    read *input* one ad at a time, but note for some type os :class:`IO`, you
+    read *input* one ad at a time, but note for some types of :class:`IO`, you
     must specify the serialization format.
 
     :param input:  One or more serialized ClassAds.  The serializations must
@@ -361,14 +361,14 @@ def _parseAds(input : Union[str, IO], parser : Parser = Parser.Auto) -> Iterator
 
 def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
-    Parses all of the ads in the input, merges them into one, and returns it.
+    Parses all of the ads in *input*, merges them into one, and returns it.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines;
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
 
     Reads the entirety of *input* before parsing it.  Use :meth:`parseNext` to
     read *input* one ad at a time, (and then :func:`update` the previous
-    result),  but note for some type os :class:`IO`, you must specify the
+    result),  but note for some types of :class:`IO`, you must specify the
     serialization format.
 
     :param input:  One or more serialized ClassAds.  The serializations must
@@ -411,7 +411,7 @@ def _parseOne(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
 # to allow strings here at all, actually.
 def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd:
     '''
-    Parses the first ad in the input and returns it.
+    Parses the first ad in *input* and returns it.
 
     Ads serialized in the :const:`ParserType.Old` format must be separated by blank lines.
     Ads serialized in the :const:`ParserType.New` format may be separated by blank lines.
