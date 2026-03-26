@@ -2569,12 +2569,29 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 			int job_status = 0;
 			if (ad->LookupInteger(ATTR_JOB_STATUS, job_status)) {
+				// Presently, the only reason for a job to be in the blocked
+				// state is because it's waiting for a transfer shadow.  That's
+				// a transient (soft) state and should not have ever been made
+				// permanent (hard) state in the job queue log, but there's
+				// not presently a good way to manage that, AFAICT.  So if we
+				// see a blocked job, it's a mistake; correct it.
+				//
+				// This will have to be updated when anybody else uses the
+				// blocked state for anything; TJ has some ideas about how to
+				// record this information.
+				//
+				// I don't have any worthwhile ideas about how to test this.
+				if( job_status == JOB_STATUS_BLOCKED ) {
+					job_status = JOB_STATUS_IDLE;
+				}
+
 				if (ad->Status() != job_status) {
 					if (clusterad) {
 						clusterad->JobStatusChanged(ad->Status(), job_status);
 					}
 					ad->SetStatus(job_status);
 				}
+
 				IncrementLiveJobCounter(scheduler.liveJobCounts, ad->Universe(), ad->Status(), 1);
 				if (ad->ownerinfo) { IncrementLiveJobCounter(ad->ownerinfo->live, ad->Universe(), ad->Status(), 1); }
 				if (ad->project) { IncrementLiveJobCounter(ad->project->live, ad->Universe(), ad->Status(), 1); }
