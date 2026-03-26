@@ -234,6 +234,9 @@ inline const char * EffectiveUserName(const Sock * sock) {
 
 static bool isOCUSuperUser(ReliSock* sock) {
 	auto * rsock_user = EffectiveUserRec(sock);
+	if ( ! rsock_user) {
+		return false;
+	}
 	if (isQueueSuperUser(rsock_user)) {
 		return true;
 	}
@@ -2796,17 +2799,6 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	ClassAd resultAd;
 	ReliSock* rsock = (ReliSock*)stream;
-	auto * rsock_user = EffectiveUserRec(rsock);
-	// TODO: more fine-grained user check? I think this does nothing when NULL is the first arg...
-	if ( ! UserCheck2(NULL, rsock_user) || ! isQueueSuperUser(rsock_user)) {
-		resultAd.Assign(ATTR_RESULT, EACCES);
-		resultAd.Assign(ATTR_ERROR_STRING, "Permission denied");
-		if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
-			return FALSE;
-		}
-		return TRUE;
-	}
 
 	int rval = 0;
 	int num_ads = 0;
@@ -5029,6 +5021,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				GetAttributeInt(job_id.cluster, job_id.proc, ATTR_HOLD_REASON_SUBCODE, &vacate_subcode);
 				break;
 			case JA_REMOVE_JOBS:
+			case JA_TRANSFER_AND_REMOVE_JOBS:
 				GetAttributeString(job_id.cluster, job_id.proc, ATTR_REMOVE_REASON, vacate_reason);
 				vacate_code = CONDOR_HOLD_CODE::JobRemoved;
 				break;
@@ -5067,6 +5060,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			case JA_REMOVE_JOBS:
 				handler_sig = SIGUSR1;
 				break;
+			case JA_TRANSFER_AND_REMOVE_JOBS:
+				handler_sig = TRANSFER_SANDBOX_AND_RM_JOB;
+				break;
 			case JA_VACATE_JOBS:
 				handler_sig = DC_SIGSOFTKILL;
 				break;
@@ -5103,11 +5099,19 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			const char* shadow_sig_str = "UNKNOWN";
 			switch( action ) {
 			case JA_HOLD_JOBS:
-					// for now, use the same as remove
-			case JA_REMOVE_JOBS:
 				srec->preempt_pending = true;
 				shadow_sig = SIGUSR1;
 				shadow_sig_str = "SIGUSR1";
+				break;
+			case JA_REMOVE_JOBS:
+				srec->preempt_pending = true;
+				shadow_sig = SIGUSR2;
+				shadow_sig_str = "SIGUSR2";
+				break;
+			case JA_TRANSFER_AND_REMOVE_JOBS:
+				srec->preempt_pending = true;
+				shadow_sig = TRANSFER_SANDBOX_AND_RM_JOB;
+				shadow_sig_str = "TRANSFER_SANDBOX_AND_RM_JOB";
 				break;
 			case JA_SUSPEND_JOBS:
 				shadow_sig = DC_SIGSUSPEND;
@@ -5164,6 +5168,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				break;
 
 			case JA_REMOVE_JOBS:
+			case JA_TRANSFER_AND_REMOVE_JOBS:
 				kill_sig = findRmKillSig( job_ad );
 				break;
 
@@ -7454,6 +7459,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		reason_attr_name = ATTR_RELEASE_REASON;
 		break;
 	case JA_REMOVE_JOBS:
+	case JA_TRANSFER_AND_REMOVE_JOBS:
 		new_status = REMOVED;
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
@@ -7522,6 +7528,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			// not doing something invalid
 		switch( action ) {
 		case JA_REMOVE_JOBS:
+		case JA_TRANSFER_AND_REMOVE_JOBS:
 				// Don't remove removed jobs
 			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, REMOVED );
 			break;
@@ -7748,6 +7755,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			new_status = on_release_status;
 			break;
 		case JA_REMOVE_JOBS:
+		case JA_TRANSFER_AND_REMOVE_JOBS:
 			if( status == REMOVED ) {
 				results.record( tmp_id, AR_ALREADY_DONE );
 				jobs[i].cluster = -1;
@@ -7906,6 +7914,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
+		case JA_TRANSFER_AND_REMOVE_JOBS:
 			if (clusterad->factory) {
 				// check to see if we are allowed to pause this factory, but don't actually change it's
 				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
@@ -8082,6 +8091,7 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log )
 
 	if( action == JA_HOLD_JOBS ||
 		action == JA_REMOVE_JOBS ||
+		action == JA_TRANSFER_AND_REMOVE_JOBS ||
 		action == JA_VACATE_JOBS ||
 		action == JA_VACATE_FAST_JOBS ||
 	    action == JA_SUSPEND_JOBS ||
@@ -8169,6 +8179,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 		// shadow TSTCLAIR (tstclair@redhat.com) 
 	case JA_HOLD_JOBS:
 	case JA_REMOVE_JOBS:
+	case JA_TRANSFER_AND_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
 		abort_job_myself( job_id, action, log );
@@ -14414,6 +14425,25 @@ int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_bo
 	return shadow_code;
 }
 
+
+void
+Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
+{
+	if( srec != NULL && !srec->removed && srec->match ) {
+		// Don't delete matches we're trying to use for a now job.
+		if(! srec->match->m_now_job.isJobKey()) {
+			if (!srec->match->is_ocu) {
+				DelMrec(srec->match);
+			} else {
+				// In the OCU case, move claim back to Claimed/Idle
+				srec->match->setStatus(M_CLAIMED);
+				SetMrecJobID(srec->match, -1, -1);
+			}
+		}
+	}
+}
+
+
 //
 // React appropriately to the exit code of the shadow.
 //
@@ -14642,8 +14672,13 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 		check_eviction_transforms = true;
 	} else if (exit_code == JOB_SHOULD_REQUEUE) {
 		int code = 0;
+		int subcode = 0;
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
-		if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode);
+		if (shouldHoldJobBasedOnCodes(code, subcode)) {
+			// even though the shadow is telling us to requeue the job,
+			// the vacate codes say we should hold, so check for
+			// eviction transforms
 			check_eviction_transforms = true;
 		}
 	}
@@ -14698,23 +14733,24 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 		dprintf(D_ALWAYS, "not holding job %d.%d because of successful eviction transform\n", job_id.cluster, job_id.proc);
 	} else
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
-
 		int vacateReasonCode = 0;
 		int vacateReasonSubCode = 0;
+
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &vacateReasonCode);
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &vacateReasonSubCode);
-		bool should_cool_down = shouldCoolJobBasedOnCodes(vacateReasonCode, vacateReasonSubCode);
-		long long cooldown_duration = 20;
 
-		// Don't evaluate m_jobCoolDownExpr unnecessarily.
-		if(! should_cool_down) {
-			long long ival = 0;
-			classad::Value val;
-			should_cool_down = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0);
-			if( ival > 0 ) { cooldown_duration = ival; }
-		}
+		bool code_cooldown = shouldCoolJobBasedOnCodes(vacateReasonCode, vacateReasonSubCode);
+		long long code_cooldown_duration = param_integer( "SYSTEM_COOLDOWN_DURATION", 20 );
 
-		if( should_cool_down ) {
+		// Evaluate the cooldown expression even if shouldCoolJobBasedOnCodes()
+		// is true in case the expression's cooldown duration is longer.
+		classad::Value val;
+		long long config_cooldown_duration = 0;
+		bool config_cooldown = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(config_cooldown_duration) && config_cooldown_duration > 0);
+
+		long long cooldown_duration = MAX( code_cooldown_duration, config_cooldown_duration );
+
+		if( code_cooldown || config_cooldown ) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
 			cnt++;
@@ -14764,18 +14800,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 		case JOB_CKPTED:
 		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
-			if( srec != NULL && !srec->removed && srec->match ) {
-				// Don't delete matches we're trying to use for a now job.
-				if(! srec->match->m_now_job.isJobKey()) {
-					if (!srec->match->is_ocu) {
-						DelMrec(srec->match);
-					} else {
-						// In the OCU case, move claim back to Claimed/Idle
-						srec->match->setStatus(M_CLAIMED);
-						SetMrecJobID(srec->match, -1, -1);
-					}
-				}
-			}
+			CleanupMatchForJobExit(srec);
             switch (exit_code) {
                case JOB_CKPTED:
                   stats.JobsCheckpointed += 1;
@@ -14904,7 +14929,10 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				set_job_status( job_id.cluster, job_id.proc, HELD );
 			}
 			is_badput = true;
-			
+
+			// The startd will have already released the claim, so clean up or reset the match as appropriate
+			CleanupMatchForJobExit(srec);
+
 				// If the job has a CronTab schedule, we will want
 				// to remove cached scheduling object so that if
 				// it is ever released we will always calculate a new
@@ -16341,10 +16369,10 @@ Scheduler::Register()
 
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
 
 	//disable these until we decide permissions
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
@@ -16368,13 +16396,13 @@ Scheduler::Register()
 	// commands for creating/deleting/querying OCUs
 	daemonCore->Register_CommandWithPayload(CREATE_OCU_FOR_USERREC, "CREATE_OCU_FOR_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_ocus", this, WRITE, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(REMOVE_OCU_FROM_USERREC, "REMOVE_OCU_FROM_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+		"command_act_on_ocus", this, WRITE, true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload(QUERY_OCU_FROM_USERREC, "QUERY_OCU_FROM_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_ocus,
-		"command_act_on_user_ads", this, READ, true /*force authentication*/);
+		"command_act_on_ocus", this, READ, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
@@ -18072,18 +18100,19 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 		break;
 
 	case JA_REMOVE_JOBS:
+	case JA_TRANSFER_AND_REMOVE_JOBS:
 		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON,
 					 false );
-		moveIntAttr( job_id, ATTR_HOLD_REASON_CODE, 
+		moveIntAttr( job_id, ATTR_HOLD_REASON_CODE,
 					 ATTR_LAST_HOLD_REASON_CODE, false );
-		moveIntAttr( job_id, ATTR_HOLD_REASON_SUBCODE, 
+		moveIntAttr( job_id, ATTR_HOLD_REASON_SUBCODE,
 					 ATTR_LAST_HOLD_REASON_SUBCODE, false );
 		DeleteAttribute(job_id.cluster,job_id.proc,
 					 ATTR_JOB_STATUS_ON_RELEASE);
 		break;
 
-	//Don't do anything for the items below, here for completeness	
-	//case JA_SUSPEND_JOBS: 
+	//Don't do anything for the items below, here for completeness
+	//case JA_SUSPEND_JOBS:
 	//case JA_CONTINUE_JOBS:
 
 	default:

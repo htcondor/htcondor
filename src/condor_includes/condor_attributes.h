@@ -805,6 +805,7 @@
 #define ATTR_SUBMITTER_GROUP_RESOURCES_IN_USE  "SubmitterGroupResourcesInUse"
 #define ATTR_SUBMITTER_GROUP_QUOTA  "SubmitterGroupQuota"
 #define ATTR_SUBMITTER_NEGOTIATING_GROUP  "SubmitterNegotiatingGroup"
+#define ATTR_SUBMIT_VERSION  "SubmitVersion"
 #define ATTR_SUBNET  "Subnet"
 #define ATTR_SUBNET_MASK  "SubnetMask"
 #define ATTR_SUSPEND  "Suspend"

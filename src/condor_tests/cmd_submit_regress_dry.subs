@@ -363,6 +363,26 @@ success_exit_code = 5
 
 queue
 
+==retry_disk1.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_disk = 10MB
+retry_request_disk = 20MB
+queue
+
+==retry_disk2.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_disk = 10MB
+retry_request_disk = 20MB, 80MB
+queue
+
+==retry_disk3.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+request_disk = 10MB, 20MB, 80 m
+queue
+
 ==retry_mem1.sub
 executable=$Fp(SUBMIT_FILE)basic.cmd
 arguments=10s

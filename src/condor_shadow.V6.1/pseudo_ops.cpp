@@ -1965,7 +1965,14 @@ send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
 	std::vector<ExprTree *> the_list;
 	test_case_list->GetComponents(the_list);
 
+	// Track which ExprList we're iterating so the_index resets when the
+	// shadow is recycled and picks up a new job (with a different list).
+	static classad::ExprList * previous_list = nullptr;
 	static int the_index = 0;
+	if( test_case_list != previous_list ) {
+		previous_list = test_case_list;
+		the_index = 0;
+	}
 	ExprTree * the_guidance = the_list[the_index++];
 	ClassAd * the_classad = dynamic_cast<ClassAd *>(the_guidance);
 	if( the_classad == NULL ) {

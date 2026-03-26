@@ -555,7 +555,7 @@ public:
 	// release non-fungable resource ids back to parent
 	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id);
 	// check for offline changes for non-fungible resource ids
-	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id);
+	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot);
 	// Add broken non-fungible resource ids to this objects mapping
 	void claim_broken_DevIds(MachAttributes* map, int broken_sub_id);
 

@@ -5,20 +5,35 @@ on:
     types: [labeled, pull_request]
 
 jobs:
-  ubuntu_asan_build:
+  resolve-ubunturoot-image:
     # Only run with the "asan" label
     if: github.event.action == 'labeled' && contains(github.event.pull_request.labels.*.name, 'asan')
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.extract.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Extract ubunturoot image from nmi-build-platforms
+        id: extract
+        run: |
+          IMAGE=$(.github/workflows/scripts/extract_ubunturoot_image.py)
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+  ubuntu_asan_build:
+    needs: resolve-ubunturoot-image
     runs-on: ubuntu-latest
 
     # Use htcondor build containers for the real work
     container:
-      image: htcondor/nmi-build:x86_64_Ubuntu24-25060000
+      image: ${{ needs.resolve-ubunturoot-image.outputs.image }}
       env:
         OMP_NUM_THREADS: 4
       options: --cpus 4
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Compile with Address Sanitizer
         run: |
@@ -42,7 +57,7 @@ jobs:
       - name: Upload Artifact with asan output
         # Always upload, even if build or tests fail
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: asan-output
           path: |

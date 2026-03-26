@@ -70,13 +70,16 @@ def the_running_job(test_dir, the_lock_file, the_condor):
 
 @action
 def the_slot_ads(the_condor, the_running_job):
-	# Sleep for the UPDATE_INTERVAL + 1 to make sure the startd has updated
-	# the slot ads in the collector.
-	time.sleep(3)
+    # Wait no more than thirty seconds for the coloring to propagate.
+    # (It is not a set-up error if the coloring does not propagate.)
+	for i in range(0, 30):
+		result = the_condor.status(
+			ad_type=htcondor2.AdType.Slot,
+		)
+		if len(result) > 0 and all(ad.get('colors_of_slot1_1', 0) == 7 for ad in result):
+			break
+		time.sleep(1)
 
-	result = the_condor.status(
-		ad_type=htcondor2.AdType.Slot,
-	)
 	assert(len(result) > 0)
 
 	return result
@@ -107,19 +110,22 @@ def the_cleaned_up_ads(
 	result_ad = the_running_job.remove()
 	# assert something about the result_ad here
 
-	# Make sure the removal has actually happened before
-	# starting the clean-up timer.
+	# Make sure the job has been removed before starting the clean-up timer.
 	assert the_running_job.wait(
 		timeout=20,
 		condition=lambda cs: cs.all_status(JobStatus.REMOVED),
 	)
 
-	# See previous comment about this constant.
-	time.sleep(3)
+    # Wait no more than thirty seconds for the uncoloring to propagate.
+    # (It is not a set-up error if the uncoloring does not propagate.)
+	for i in range(0, 30):
+		result = the_condor.status(
+			ad_type=htcondor2.AdType.Slot,
+		)
+		if len(result) > 0 and all(ad.get('colors_of_slot1_1', -1) == -1 for ad in result):
+			break
+		time.sleep(1)
 
-	result = the_condor.status(
-		ad_type=htcondor2.AdType.Slot,
-	)
 	assert(len(result) > 0)
 
 	return result

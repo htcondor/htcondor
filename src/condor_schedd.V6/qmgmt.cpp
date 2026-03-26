@@ -43,6 +43,7 @@
 #include "env.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 #include "forkwork.h"
 #include "condor_open.h"
 #include "classadHistory.h"
@@ -6916,6 +6917,13 @@ AddSessionAttributes(const std::vector<JobQueueKey> &new_keys, CondorError *errs
 		}
 
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) continue; // ignore non-job records for the remainder
+
+		if (JobQueueBase::IsClusterId(jid)) {
+			// stuff the schedd version into the cluster ad. submit_utils used to do this, but it used the
+			// version of submit. in HTCONDOR-3413, we changed it so that submit sets SubmitVersion and
+			// the Schedd sets CondorVersion.
+			SetAttributeString(jid.cluster, jid.proc, ATTR_VERSION, CondorVersion());
+		}
 
 		if (JobQueueBase::IsClusterId(jid) && !session_project.empty()) {
 			SetSecureAttributeString(jid.cluster, jid.proc, ATTR_PROJECT_NAME, session_project.c_str());

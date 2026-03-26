@@ -661,7 +661,8 @@ Scheduler ClassAd Attributes
 :classad-attribute-def:`VirtualMemory`
     Description is not yet written.
 
-:classad-attribute-def:`WantResAd` causes the *condor_negotiator*
+:classad-attribute-def:`WantResAd`
+    A boolean that when ``True``, causes the *condor_negotiator*
     daemon to send to this *condor_schedd* daemon a full machine
     ClassAd corresponding to a matched job.
 
