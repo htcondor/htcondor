@@ -388,16 +388,20 @@ Contribution of compute capacity from the
 						data_url: "/data/ce_overview?r=week",
                         action_url: "showModal('eps-past-week-modal')",
                         graph_query: urlEscapeGraphQuery(`
-                            vAxis.maxValue=3
-                            filter=Type=R
-                            q=EPsRunning
-                            order=Date
-                            pivot=Date;Project;EPsRunning
-                            legend.position=in
-                            series.0.areaOpacity=0.5
-                            vAxis.format=short
-                            chart=area
-                        `)
+                          vAxis.maxValue=3
+                          filter=Type=R
+                          q=EPsRunning,GlideinsRunning
+                          order=Date
+                          pivot=Date;Project;EPsRunning,GlideinsRunning
+                          unselect=EPsRunning GlideinsRunning,GlideinsRunning EPsRunning
+                          rename=EPsRunning EPsRunning=EPs Reporting
+                          rename=GlideinsRunning GlideinsRunning=Glideins Running
+                          legend.position=in
+                          series.0.areaOpacity=1
+                          series.1.areaOpacity=0.05
+                          vAxis.format=short
+                          chart=area
+                          `)
                     });
                 </script>
             </div>
