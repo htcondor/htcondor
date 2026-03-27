@@ -46,8 +46,8 @@ URL: https://htcondor.org/
 # Do not check .so files in condor's library directory
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
-# Do not provide libfmt
-%global __requires_exclude ^libfmt\\.so.*$
+# # Do not provide libfmt
+# %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
 Source1: %{name}.sysusers.conf
@@ -816,9 +816,9 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/condor/libfmt.so
-%_libdir/condor/libfmt.so.10
-%_libdir/condor/libfmt.so.10.1.0
+# %_libdir/condor/libfmt.so
+# %_libdir/condor/libfmt.so.10
+# %_libdir/condor/libfmt.so.10.1.0
 
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/
