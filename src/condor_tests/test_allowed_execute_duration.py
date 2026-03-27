@@ -52,10 +52,12 @@ logger.setLevel(logging.DEBUG)
 #
 
 #
-# Please don't try to edit the constants to speed this test up.
-#
-# If you must, make sure, among other things, that this job takes
-# longer to complete than twice the specified AllowedExecuteDuration.
+# If you edit the constants to speed this test up, make sure that:
+# 1. Normal step sleep * 5 (steps per checkpoint) < AllowedExecuteDuration
+# 2. Slow step sleep > AllowedExecuteDuration
+# 3. Total job runtime (total_steps * normal sleep) > 2 * AllowedExecuteDuration
+# 4. Job 6: execution time < AllowedExecuteDuration, transfer time > it
+# 5. Job 7: execution time > AllowedExecuteDuration
 #
 
 @action
@@ -85,9 +87,9 @@ def path_to_the_job_script(test_dir):
         print(f"Starting step {num_completed_steps}.")
 
         if num_completed_steps == opt_slow_step:
-            time.sleep(60)
+            time.sleep(30)
         else:
-            time.sleep(3)
+            time.sleep(2)
         num_completed_steps += 1
 
         if num_completed_steps % 5 == 0:
@@ -125,7 +127,7 @@ def the_job_description(path_to_the_job_script):
         "checkpoint_exit_code":         "17",
         "transfer_checkpoint_files":    "saved-state",
 
-        "allowed_execute_duration":       "30",
+        "allowed_execute_duration":       "20",
     }
 
 
@@ -485,7 +487,7 @@ def sleep_job_description(path_to_sleep):
         "should_transfer_files":        "true",
         "when_to_transfer_output":      "ON_EXIT",
 
-        "allowed_execute_duration":       "30",
+        "allowed_execute_duration":       "20",
     }
 
 
@@ -696,12 +698,12 @@ def job_six_handle(default_condor, test_dir, sleep_job_description, path_to_slee
     job_six_description = {
         ** sleep_job_description,
         ** {
-            "arguments":        "15",
+            "arguments":        "10",
             "log":              test_dir / "job_six.log",
             "output":           test_dir / "job_six.out",
             "error":            test_dir / "job_six.err",
             "transfer_plugins": f"sleep={path_to_sleep_transfer_plugin.as_posix()}",
-            "transfer_input_files": "sleep://30",
+            "transfer_input_files": "sleep://25",
         }
     }
 
@@ -737,7 +739,7 @@ def job_seven_handle(default_condor, test_dir, sleep_job_description):
     job_seven_description = {
         ** sleep_job_description,
         ** {
-            "arguments":    "45",
+            "arguments":    "25",
             "log":          test_dir / "job_seven.log",
             "output":       test_dir / "job_seven.out",
             "error":        test_dir / "job_seven.err",
