@@ -101,6 +101,7 @@ Communication uses **Stream** objects from `condor_io.h`:
 **Stream Types:**
 - **ReliSock** - Reliable TCP connections
 - **SafeSock** - UDP datagrams
+-- Use ReliSock and SafeSock where possible instead of raw sockets.
 
 **Critical**: ALWAYS check return values—network operations are async and can fail.
 
@@ -186,7 +187,7 @@ HTCondor uses **C++20 standard**. When writing new code or refactoring, embrace 
 
 ### Safe File I/O (SECURITY-CRITICAL)
 
-**NEVER use `open()` or `fopen()` directly in daemon code**. Always use safe wrappers from `src/safefile/`.
+** Avoid using  `open()` or `fopen()` directly in daemon code if it is possible to use safe wrappers from `src/safefile/`.
 
 **Function Selection Guide:**
 
@@ -260,6 +261,7 @@ HTCondor manual lives in `docs/` (Sphinx RST format).
 - `docs/admin-manual/` - Administrator documentation
 - `docs/apis/` - API documentation (Python, etc.)
 - `docs/man-pages/` - Command-line tool manpages
+-- New man-pages in docs/man-pages should follow the template in docs/man-pages/man-page.template
 
 ### Custom Roles (Semantic Markup)
 
@@ -302,6 +304,7 @@ bindings/
 docs/                           # Sphinx documentation
 ├── users-manual/
 ├── admin-manual/
+├── man-pages/
 └── apis/
 
 build/                          # Build scripts and CMake helpers
@@ -325,6 +328,7 @@ build/                          # Build scripts and CMake helpers
 
 **Style & Process:**
 - `docs/STYLE.md` - Documentation style guide
+- `docs/man-pages/man-page.template` - template for manual pages
 - `.github/copilot-instructions.md` - This file
 
 ## Continuous Learning
