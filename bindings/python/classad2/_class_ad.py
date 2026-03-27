@@ -290,18 +290,19 @@ def _convert_local_datetime_to_utc_ts(dt):
 
 
 def _parse_ads_generator(input, parser : Parser = Parser.Auto):
-    total_offset = 0
+    file_offset = 0
     if not isinstance(input, str):
-        total_offset = input.tell()
+        file_offset = input.tell()
 
     input_string = "".join(input)
+    string_offset = 0
     while True:
-        (ad, offset) = _classad_parse_next(input_string, int(parser))
+        (ad, offset) = _classad_parse_next(input_string, int(parser), string_offset)
 
-        input_string = input_string[offset:]
+        string_offset += offset
         if not isinstance(input, str):
-            total_offset += offset
-            input.seek(total_offset, 0)
+            file_offset += offset
+            input.seek(file_offset, 0)
 
         if ad is None or offset == 0:
             return
