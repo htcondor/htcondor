@@ -14,6 +14,11 @@
 - Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
   :jira:`3564`
 
+- On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
+  memory swap space for jobs.  This can be disabled by setting
+  :macro:`DISABLE_SWAP_FOR_JOB` to false.
+  :jira:`3630`
+
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
