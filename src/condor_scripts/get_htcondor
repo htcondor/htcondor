@@ -335,7 +335,7 @@ EOF
                 # Add our repository.
                 HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
                 $sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/${ID}/htcondor-${CHANNEL_DIR}-${VERSION_CODENAME}.list -o ${HTCONDOR_LIST}"
-                if [ "${REPO_SUFFIX}" ]; then
+                if [ "${REPO_SUFFIX}" ] && [ -f ${HTCONDOR_LIST} ]; then
                     sed -i "/$REPO_SUFFIX/s/^#//" ${HTCONDOR_LIST}
                 fi
 
@@ -611,7 +611,7 @@ do_download() {
 }
 
 # Set global defaults
-CHANNEL="feature"
+CHANNEL_DIR="25.x"
 DOWNLOAD_URL="https://htcss-downloads.chtc.wisc.edu"
 DRY_RUN=1
 sh_c='sh -c'
