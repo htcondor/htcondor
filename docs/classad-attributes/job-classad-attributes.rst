@@ -2216,6 +2216,10 @@ to modify these value will take effect in the DAGMan workflow.
     The maximum number of POST-Scripts DAGMan will execute at a single point
     in time.
 
+:classad-attribute-def:`DAGMan_MaxSubmitsPerInterval`
+    Maximum number of jobs DAGMan will submit to the local *condor_schedd* in
+    a single submit interval.
+
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd
 written to the job's execute directory while the job is running.

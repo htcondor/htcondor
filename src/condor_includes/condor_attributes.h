@@ -181,6 +181,7 @@
 #define ATTR_DAGMAN_MAXPRESCRIPTS "DAGMan_MaxPreScripts"
 #define ATTR_DAGMAN_MAXPOSTSCRIPTS "DAGMan_MaxPostScripts"
 #define ATTR_DAGMAN_MAXHOLDSCRIPTS "DAGMan_MaxHoldScripts"
+#define ATTR_DAGMAN_MAXSUBMITSPERINT "DAGMan_MaxSubmitsPerInterval"
 #define ATTR_DEFERRAL_OFFSET  "DeferralOffset"
 #define ATTR_DEFERRAL_PREP_TIME  "DeferralPrepTime"
 #define ATTR_DEFERRAL_TIME  "DeferralTime"
