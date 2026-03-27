@@ -13,7 +13,7 @@ This file provides guidance to GitHub Copilot when assisting with HTCondor devel
 | **Errors** | `EXCEPT("message")` for fatal errors |
 | **Member vars** | Prefix with `m_` (e.g., `m_count`) |
 | **Indentation** | Tabs (size 4), not spaces |
-| **Warnings** | `-Werror` enabled: all warnings are errors |
+| **Warnings** | Aim for zero warnings; some CI/build configs may enable `-Werror` |
 | **Namespaces** | ClassAd uses `classad::` namespace |
 | **Config** | Use `param()` family, never hardcode paths |
 
@@ -72,7 +72,7 @@ All daemons are built on **DaemonCore** (`src/condor_daemon_core.V6/condor_daemo
 
 Use `dprintf()` (from `condor_debug.h`) **instead of `printf()`** for all output:
 
-**Debug Categories:** Enable fine-grained logging via `TOOL_DEBUG` config parameters. Common categories: `D_ALWAYS`, `D_ERROR`, `D_FULLDEBUG`, `D_NETWORK`, `D_SECURITY`, `D_DAEMONCORE`, `D_COMMAND`, `D_MATCH`.
+**Debug Categories:** For daemons, enable fine-grained logging via `ALL_DEBUG`, `DEFAULT_DEBUG`, and `<SUBSYS>_DEBUG` config parameters; for command-line tools, use `TOOL_DEBUG`. Common categories: `D_ALWAYS`, `D_ERROR`, `D_FULLDEBUG`, `D_NETWORK`, `D_SECURITY`, `D_DAEMONCORE`, `D_COMMAND`, `D_MATCH`.
 
 **Best Practices:**
 - Use `D_ERROR` for errors (not `D_ALWAYS`)
@@ -325,7 +325,6 @@ build/                          # Build scripts and CMake helpers
 
 **Style & Process:**
 - `docs/STYLE.md` - Documentation style guide
-- `CLAUDE.md` - Additional AI agent guidance
 - `.github/copilot-instructions.md` - This file
 
 ## Continuous Learning
