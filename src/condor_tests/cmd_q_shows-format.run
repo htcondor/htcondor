@@ -54,38 +54,48 @@ my $submit = sub {
 	my %info = @_;
 	my $cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\\n\" ClusterId";
 
-	print "Running cmd $cmd - ";
-	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		print "bad\n";
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
-	print "ok\n";
-	my $submitline = "";
+	print "My cluster is: $ClusterId\n";
 
-	print "$ClusterId\n";
-
-	$cmd = "condor_rm $ClusterId";
-
-	print "Looking for owner of cluster - ";
-	foreach my $line (@adarray) {
-		fullchomp($line);
-		CondorTest::debug("$line\n",$debuglevel);
-		if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$ClusterId.*$/) {
-				CondorTest::debug("Bingo: found <$line> shows I am $1\n",$debuglevel);
-				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-				print "ok\n";
-				return(0);
-		} else {
-			CondorTest::debug("<<<$line>>>\n",$debuglevel);
+	# Poll until the job is visible in condor_q output
+	my $found = 0;
+	for my $attempt (1..10) {
+		print "Running cmd $cmd (attempt $attempt) - ";
+		my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$cmdstatus) {
+			print "bad\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			exit(1);
 		}
+		print "ok\n";
+
+		print "Looking for owner of cluster - ";
+		foreach my $line (@adarray) {
+			fullchomp($line);
+			CondorTest::debug("$line\n",$debuglevel);
+			if($line =~ /^\s*([\w\-]+)\s+ClusterId\s+=\s+$ClusterId.*$/) {
+				CondorTest::debug("Bingo: found <$line> shows I am $1\n",$debuglevel);
+				$found = 1;
+				last;
+			}
+		}
+
+		if($found) {
+			print "ok\n";
+			last;
+		}
+
+		print "not yet, retrying...\n";
+		sleep(1);
 	}
 
-	print "bad\n";
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-	exit(1);
+	my $cmdstatus = CondorTest::runCondorTool("condor_rm $ClusterId",\@adarray,8);
+
+	if(!$found) {
+		print "bad - never found owner of cluster\n";
+		exit(1);
+	}
+
+	return(0);
 };
 
 my $aborted = sub {

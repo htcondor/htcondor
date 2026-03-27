@@ -50,41 +50,49 @@ my $on_submit = sub {
 	my %info = @_;
 	my $cmd = "condor_q -cputime -nobatch";
 
-	print "Running $cmd - ";
-	my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$cmdstatus)
-	{
-		print "bad\n";
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		exit(1)
-	}
-	print "ok\n";
-
-	my $submitline = "";
-	my $cluster = "";
-
 	print "My cluster is: $ClusterId\n";
 
-	$cmd = "condor_rm $ClusterId";
-
-	print "Looking for CPU_TIME - ";
-	foreach my $line (@adarray) {
-		chomp($line);
-		if($line =~ /^\s*ID\s+OWNER\s+SUBMITTED\s+CPU_TIME\s+ST\s+PRI\s+SIZE\s+CMD\s*$/) {
-				CondorTest::debug("Bingo\n",$debuglevel);
-				$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-				print "ok - Saw CPU_TIME label\n";
-				return(0);
-		} else {
-			CondorTest::debug("<<<$line>>>\n",$debuglevel);
-			#$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-			#exit(1)
+	# Poll condor_q until the job appears and we see the CPU_TIME header.
+	# The job may not be visible immediately after the submit event.
+	my $found = 0;
+	for my $attempt (1..10) {
+		print "Running $cmd (attempt $attempt) - ";
+		my $cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$cmdstatus) {
+			print "condor_q failed\n";
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			exit(1);
 		}
+		print "ok\n";
+
+		print "Looking for CPU_TIME - ";
+		foreach my $line (@adarray) {
+			chomp($line);
+			if($line =~ /^\s*ID\s+OWNER\s+SUBMITTED\s+CPU_TIME\s+ST\s+PRI\s+SIZE\s+CMD\s*$/) {
+				$found = 1;
+				last;
+			} else {
+				CondorTest::debug("<<<$line>>>\n",$debuglevel);
+			}
+		}
+
+		if($found) {
+			print "ok - Saw CPU_TIME label\n";
+			last;
+		}
+
+		print "not yet, retrying...\n";
+		sleep(1);
 	}
 
-	$cmdstatus = CondorTest::runCondorTool($cmd,\@adarray,8);
-	print "bad\n";
-	exit(1);
+	my $cmdstatus = CondorTest::runCondorTool("condor_rm $ClusterId",\@adarray,8);
+
+	if(!$found) {
+		print "bad - never saw CPU_TIME header\n";
+		exit(1);
+	}
+
+	return(0);
 };
 
 my $aborted = sub {

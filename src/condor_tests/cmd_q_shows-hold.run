@@ -62,42 +62,46 @@ my $submit = sub
 	my $reason = 0;
 
 	print "Job $ClusterId is supposed to be on hold.\n";
-	print "See if condor_q -hold $ClusterId says this -  ";
 	CondorTest::debug("Good. Cluster $ClusterId is supposed to be held.....\n",$debuglevel);
-	my $status = 1;
 	my $cmd = "condor_q -hold $ClusterId";
-	$status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status)
-	{
-		CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
-		print "bad\n";
-		exit(1)
-	}
-	foreach my $line (@adarray)
-	{
-		CondorTest::debug("$line\n",$debuglevel);
-		if( $line =~ /.*HOLD_REASON.*/ )
-		{
-			CondorTest::debug("Got HOLD_REASON header line.......\n",$debuglevel);
-			$header = 1;
+
+	# Poll until the held job is visible in condor_q output
+	for my $attempt (1..10) {
+		$header = 0;
+		$reason = 0;
+		print "See if condor_q -hold $ClusterId says this (attempt $attempt) - ";
+		my $status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		if(!$status) {
+			CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n",$debuglevel);
+			print "bad\n";
+			exit(1);
 		}
-		if( $line =~ /.*submitted on hold.*/ )
-		{
-			CondorTest::debug("Yup reason is submitted on hold.......\n",$debuglevel);
-			$reason = 1;
+		foreach my $line (@adarray) {
+			CondorTest::debug("$line\n",$debuglevel);
+			if( $line =~ /.*HOLD_REASON.*/ ) {
+				CondorTest::debug("Got HOLD_REASON header line.......\n",$debuglevel);
+				$header = 1;
+			}
+			if( $line =~ /.*submitted on hold.*/ ) {
+				CondorTest::debug("Yup reason is submitted on hold.......\n",$debuglevel);
+				$reason = 1;
+			}
 		}
+
+		last if($reason == 1 && $header == 1);
+
+		print "not yet, retrying...\n";
+		sleep(1);
 	}
 
-	print "ok\n";
 	if( $reason == 1 && $header == 1 )
 	{
-		
+		print "ok\n";
 		print "Releasing cluster $ClusterId - ";
 		CondorTest::debug("Good. Cluster $ClusterId needs to be released.....\n",$debuglevel);
 		CondorTest::debug("Releasing cluster $ClusterId\n",$debuglevel);
-		$status = 1;
-		$cmd = "condor_release $ClusterId";
-		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
+		my $cmd = "condor_release $ClusterId";
+		my $status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
 			print "bad\n";
@@ -105,10 +109,10 @@ my $submit = sub
 			exit(1)
 		}
 		print "ok\n";
-		#system("condor_q");
 	}
 	else
 	{
+		print "bad - never found HOLD_REASON header and hold reason\n";
 		CondorTest::debug("Test failed because HOLD header and expected reason were not found\n",$debuglevel);
 		exit(1);
 	}

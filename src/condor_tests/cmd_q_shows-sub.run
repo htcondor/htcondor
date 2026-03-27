@@ -57,30 +57,37 @@ my $submit = sub {
     my @adarray;
     CondorTest::debug("Determining submitter and cluster\n", $debuglevel);
 
-
     my $cmd = "";
 	if($iswindows) {
     	$cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\\n\" ClusterId";
 	} else {
     	$cmd = "condor_q -format \"%s\" Owner -format \" ClusterId = %d\n\" ClusterId";
 	}
-    if(!CondorTest::runCondorTool($cmd, \@adarray, 2,{emit_output=>0})) {
-        CondorTest::debug("ERROR - cannot determine submitted and cluster.", $debuglevel);
-        CondorTest::debug("Command failed: $cmd\n", $debuglevel);
-		FailAndEndTest();
-    }
 
-    foreach (@adarray) {
-        if(/^\s*([\w\-]+)\s+ClusterId\s+=\s+$cluster/) {
-            CondorTest::debug("Matching line -> $_\n", $debuglevel);
-            CondorTest::debug("submitter = $1  -  cluster = $cluster\n", $debuglevel);
-            $whoami = $1;
+    # Poll until the job is visible in condor_q output
+    for my $attempt (1..10) {
+        if(!CondorTest::runCondorTool($cmd, \@adarray, 2,{emit_output=>0})) {
+            CondorTest::debug("ERROR - cannot determine submitted and cluster.", $debuglevel);
+            CondorTest::debug("Command failed: $cmd\n", $debuglevel);
+            FailAndEndTest();
+        }
 
-			print "Determined submiter for cluster:$cluster is:$whoami\n";
+        foreach (@adarray) {
+            if(/^\s*([\w\-]+)\s+ClusterId\s+=\s+$cluster/) {
+                CondorTest::debug("Matching line -> $_\n", $debuglevel);
+                CondorTest::debug("submitter = $1  -  cluster = $cluster\n", $debuglevel);
+                $whoami = $1;
+                print "Determined submiter for cluster:$cluster is:$whoami\n";
+            }
+            else {
+                CondorTest::debug("Non-matching line -> $_\n", $debuglevel);
+            }
         }
-        else {
-            CondorTest::debug("Non-matching line -> $_\n", $debuglevel);
-        }
+
+        last if($whoami);
+
+        print "Job not yet visible in condor_q (attempt $attempt), retrying...\n";
+        sleep(1);
     }
 
     if(!$whoami) {
