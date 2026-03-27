@@ -12,7 +12,8 @@ from math import floor
 import time
 import threading
 import re
-from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
+from datetime import datetime
+from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID, get_cache_file_mtime
 # from . import overview  # Import the overview module
 
 ##########################################
@@ -86,8 +87,11 @@ class ResourceInfo:
     glideinsIdle: int = 0
     glideinsHeld: int = 0
     epsReporting: int = 0
+    glideinEpStatus: str = "Poor"
     cpusContributed: int = 0
     cpusAllocated: int = 0
+    cpusStatus: str = "Poor"
+    lastHeardFrom: str = "Unknown"
     
     def __post_init__(self):
         self.hosted = is_hosted_fqdn(self.fqdn)
@@ -230,7 +234,7 @@ def ce_info_from_collectors(resource_info_by_fqdn):
             if "CollectorHost" in ad:
                 ceColl = htcondor.Collector(ad["CollectorHost"])
                 try:
-                    gridAds = ceColl.query(htcondor.AdTypes.Grid,projection=["GridResourceUnavailableTime","GridResourceUnavailableTimeReason"])
+                    gridAds = ceColl.query(htcondor.AdTypes.Grid,projection=["GridResourceUnavailableTime","GridResourceUnavailableTimeReason", "LastHeardFrom"])
                     canReachCeCollector = True
                 except Exception:
                     canReachCeCollector = False
@@ -249,6 +253,8 @@ def ce_info_from_collectors(resource_info_by_fqdn):
                     info.health="Poor"
                     info.healthInfo=hinfo
                     continue
+                if "LastHeardFrom" in gridAd:
+                    info.lastHeardFrom = datetime.fromtimestamp(gridAd["LastHeardFrom"]).strftime("%Y-%m-%d %H:%M:%S")
         
         # Check for too many held jobs, or idle jobs without anything running, etc.
         totalHeld = ad["TotalHeldJobs"]
@@ -268,6 +274,19 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         info.glideinsRunning = totalRunning
         info.glideinsIdle = totalIdle
         info.glideinsHeld = totalHeld
+        
+        info.cpusStatus = (
+            "Good" if info.cpusContributed and info.cpusAllocated >= 0.9 * info.cpusContributed else
+            "Fair" if info.cpusContributed and info.cpusAllocated >= 0.5 * info.cpusContributed else
+            "Poor"
+        )
+        
+        info.glideinEpStatus = (
+            "Good" if info.glideinsRunning and info.epsReporting >= 0.9 * info.glideinsRunning else
+            "Fair" if info.glideinsRunning and info.epsReporting >= 0.5 * info.glideinsRunning else
+            "Poor"
+        )
+        
 
         status = "Unknown"
         if "Status" in ad:
@@ -481,7 +500,10 @@ def ce_admin_landing_page():
     
 @landing_bp.route('/landing2.html')
 def ce_admin_landing_page_2():
-    return render_template('landing2.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
+    ce_info_mtime = get_cache_file_mtime("ce_info.csv")
+    ce_info_mtime_str = (ce_info_mtime if ce_info_mtime else datetime.now()).strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('landing2.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards",
+                           ce_info_mtime=ce_info_mtime_str)
 
 @landing_bp.route('/home.html')
 @landing_bp.route('/select.html')
