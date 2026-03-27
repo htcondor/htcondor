@@ -2,7 +2,7 @@
 
 - Fixed a performance problem with the classad2 python bindings that
   caused the parseAds methods to run in n-squared time.
-  :jira:`3623`
+  :jira:`3632`
 
 *** 24.0.19 bugs
 
