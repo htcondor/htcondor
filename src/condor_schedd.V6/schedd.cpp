@@ -10776,9 +10776,6 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 	// starter, so this is where we're going to deal with common
 	// file transfer.
 	//
-	// Maintain the invariant that the match record only points to job
-	// shadowrecs by not returning the transfer shadow recs.
-	//
 	auto [cxfer_type, catalogs] = determine_cxfer_type(mrec, job_id);
 	switch(cxfer_type) {
 		// Configuration forbade (this job) from transferring common files.
@@ -10852,7 +10849,6 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				transfer_shadow_rec->cxfer_catalogs = catalogs_to_stage;
 				transfer_shadow_rec->cxfer_state = CXFER_STATE::STAGING;
 
-				// Required for consistency?
 				mrec->shadowRec = transfer_shadow_rec;
 
 				// Otherwise, the schedd won't start the actual job because
