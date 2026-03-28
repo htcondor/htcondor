@@ -361,16 +361,16 @@ def _parseOne(input : Union[str, Iterator[str]], parser : Parser = Parser.Auto) 
 
     result = ClassAd()
     input_string = "".join(input)
+    string_offset = 0
     while True:
-        (firstAd, offset) = _classad_parse_next(input_string, int(parser))
+        (firstAd, offset) = _classad_parse_next(input_string, int(parser), string_offset)
 
         if firstAd is None or offset == 0:
             return result
 
         if firstAd is not None:
             result.update(firstAd)
-        if offset != 0:
-            input_string = input_string[offset:]
+        string_offset += offset
 
         if not isinstance(input, str):
             total_offset += offset
