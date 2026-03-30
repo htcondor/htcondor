@@ -10,8 +10,8 @@
   :macro:`SHADOW_RECONNECT_LOG`.
   :jira:`3593`
 
-- HTCondor now correctly detects and advertises the Nvidia driver version
-  for nvidia gpus which are configued to run in "mig" mode.
+- HTCondor now correctly detects and advertises the NVIDIA driver version
+  for NVIDIA GPUs which are configured to run in "MIG" mode.
   :jira:`3626`
 
 - Jobs that were submitted with spooled data files and have completed will
