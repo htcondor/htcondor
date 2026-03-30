@@ -292,7 +292,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 		if (ad.LookupInteger(ATTR_JOB_ALLOWED_EXECUTE_DURATION, allowedExecuteDuration) &&
 			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting) &&
 			ad.LookupInteger(ATTR_SHADOW_BIRTHDATE, birthday) &&
-			beganExecuting > birthday) {
+			beganExecuting >= birthday) {
 
 			// We use TransferOutFinished because the shadow only sets
 			// ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE at job exit.
