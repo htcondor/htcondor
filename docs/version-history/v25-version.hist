@@ -10,6 +10,10 @@
   :macro:`SHADOW_RECONNECT_LOG`.
   :jira:`3593`
 
+- HTCondor now correctly detects and advertises the Nvidia driver version
+  for nvidia gpus which are configued to run in "mig" mode.
+  :jira:`3626`
+
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
   (e.g. with :tool:`condor_transfer_data`).
