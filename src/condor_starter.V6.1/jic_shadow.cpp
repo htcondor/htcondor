@@ -3222,9 +3222,13 @@ JICShadow::initIOProxy( void )
 		// directory and should be owned by the job user.
 		if( strcmp(starter->GetJobHomeDir(), starter->GetWorkingDir(0)) != 0 ) {
 			TemporaryPrivSentry sentry(PRIV_ROOT);
-			if( chown(io_proxy_config_file.c_str(), get_user_uid(), get_user_gid()) != 0 ) {
-				dprintf(D_ALWAYS, "WARNING: couldn't chown chirp config %s: %s\n",
-						io_proxy_config_file.c_str(), strerror(errno));
+			uid_t user_uid = get_user_uid();
+			gid_t user_gid = get_user_gid();
+			if ((user_uid > 0) && (user_gid > 0)) {
+				if( chown(io_proxy_config_file.c_str(), get_user_uid(), get_user_gid()) != 0 ) {
+					dprintf(D_ALWAYS, "WARNING: couldn't chown chirp config %s: %s\n",
+							io_proxy_config_file.c_str(), strerror(errno));
+				}
 			}
 		}
 		dprintf( D_ALWAYS, "Initialized IO Proxy.\n" );
