@@ -1,5 +1,9 @@
 *** 24.0.19 bugs
 
+- Fixed a performance problem with the classad2 python bindings that
+  caused the parseAds methods to run in n-squared time.
+  :jira:`3632`
+
 - Fixed a bug where an NVIDIA GPU that has been subdivided in MIG sub-devices
   would not properly pass the device names in the various NVIDIA related
   environment variables.
