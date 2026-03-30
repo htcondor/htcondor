@@ -3210,13 +3210,22 @@ JICShadow::initIOProxy( void )
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
-				 starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 starter->GetJobHomeDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
 			dprintf( D_ERROR,
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;
+		}
+		// When using nested scratch, the chirp config lives in the user's
+		// directory and should be owned by the job user.
+		if( strcmp(starter->GetJobHomeDir(), starter->GetWorkingDir(0)) != 0 ) {
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			if( chown(io_proxy_config_file.c_str(), get_user_uid(), get_user_gid()) != 0 ) {
+				dprintf(D_ALWAYS, "WARNING: couldn't chown chirp config %s: %s\n",
+						io_proxy_config_file.c_str(), strerror(errno));
+			}
 		}
 		dprintf( D_ALWAYS, "Initialized IO Proxy.\n" );
 		return true;
