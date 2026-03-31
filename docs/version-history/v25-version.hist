@@ -19,6 +19,12 @@
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`
 
+- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the .chirp.config
+  file no longer pollutes the user's scratch directory, it is located
+  in the slot's "user" directory.  The _CONDOR_CHIRP_CONFIG environment
+  variable still points to the correct place.
+  :jira:`2949`
+
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
