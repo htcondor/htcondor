@@ -1264,175 +1264,176 @@ all attributes.
     a running job is evicted from the machine, and set back to the idle
     state to be schedulable later.
 
-:index:`Starter pre and post scripts`
-
-:classad-attribute-def:`PostArgs`
-    Defines the command-line arguments for the post command using the
-    old argument syntax, as specified in :doc:`/man-pages/condor_submit`.
-    If both :ad-attr:`PostArgs` and :ad-attr:`PostArguments` exists, the former is ignored.
-
-:classad-attribute-def:`PostArguments`
-    Defines the command-line arguments for the post command using the
-    new argument syntax, as specified in
-    :doc:`/man-pages/condor_submit`, excepting that
-    double quotes must be escaped with a backslash instead of another
-    double quote. If both :ad-attr:`PostArgs` and :ad-attr:`PostArguments` exists, the
-    former is ignored.
-    
-:classad-attribute-def:`PostCmd`
-    A job in the vanilla, Docker, Java, or virtual machine universes may
-    specify a command to run after the
-    :subcom:`executable[and attribute PostCmd]` has
-    exited, but before file transfer is started. Unlike a DAGMan POST
-    script command, this command is run on the execute machine; however,
-    it is not run in the same environment as the
-    :subcom:`executable[and attribute PostCmd]`.
-    Instead, its environment is set by :ad-attr:`PostEnv` or
-    :ad-attr:`PostEnvironment`. Like the DAGMan POST script command, this
-    command is not run in the same universe as the
-    :subcom:`executable[and attribute PostCmd]`; in
-    particular, this command is not run in a Docker container, nor in a
-    virtual machine, nor in Java. This command is also not run with any
-    of vanilla universe's features active, including (but not limited
-    to): cgroups, PID namespaces, bind mounts, CPU affinity,
-    Singularity, or job wrappers. This command is not automatically
-    transferred with the job, so if you're using file transfer, you must
-    add it to the
-    :subcom:`transfer_input_files[and attribute PostCmd]`
-    list.
-
-    If the specified command is in the job's execute directory, or any
-    sub-directory, you should not set
-    :subcom:`vm_no_output_vm[and attribute PostCmd]`,
-    as that will delete all the files in the job's execute directory
-    before this command has a chance to run. If you don't want any
-    output back from your VM universe job, but you do want to run a post
-    command, do not set
-    :subcom:`vm_no_output_vm[and attribute PostCmd]`
-    and instead delete the job's execute directory in your post command.
-
-:classad-attribute-def:`PostCmdExitBySignal`
-    If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
-    and the post command has run, this attribute will true if the
-    post command exited on a signal and false if it did not. It is
-    otherwise unset.
-
-:classad-attribute-def:`PostCmdExitCode`
-    If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
-    the post command has run, and the post command did not exit on a
-    signal, then this attribute will be set to the exit code. It is
-    otherwise unset.
-
-:classad-attribute-def:`PostCmdExitSignal`
-    If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
-    the post command has run, and the post command exited on a signal,
-    then this attribute will be set to that signal. It is otherwise
-    unset.
-
-:classad-attribute-def:`PostEnv`
-    Defines the environment for the Postscript using the Old environment
-    syntax. If both :ad-attr:`PostEnv` and :ad-attr:`PostEnvironment` exist, the
-    former is ignored.
-
-:classad-attribute-def:`PostEnvironment`
-    Defines the environment for the Postscript using the New environment
-    syntax. If both :ad-attr:`PostEnv` and :ad-attr:`PostEnvironment` exist, the
-    former is ignored.
-
-:classad-attribute-def:`PreArgs`
-    Defines the command-line arguments for the pre command using the old
-    argument syntax, as specified in :doc:`/man-pages/condor_submit`. If both
-    :ad-attr:`PreArgs` and :ad-attr:`PreArguments` exists, the former is ignored.
-
-:classad-attribute-def:`PreArguments`
-    Defines the command-line arguments for the pre command using the new
-    argument syntax, as specified in
-    :doc:`/man-pages/condor_submit`, excepting that
-    double quotes must be escape with a backslash instead of another
-    double quote. If both :ad-attr:`PreArgs` and :ad-attr:`PreArguments` exists, the
-    former is ignored.
-
-:classad-attribute-def:`PreCmd`
-    A job in the vanilla, Docker, Java, or virtual machine universes may
-    specify a command to run after file transfer (if any) completes but
-    before the
-    :subcom:`executable[and attribute PreCmd]` is
-    started. Unlike a DAGMan PRE script command, this command is run on
-    the execute machine; however, it is not run in the same environment
-    as the :subcom:`executable[and attribute PreCmd]`.
-    Instead, its environment is set by :ad-attr:`PreEnv` or :ad-attr:`PreEnvironment`.
-    Like the DAGMan POST script command, this command is not run in the
-    same universe as the
-    :subcom:`executable[and attribute PreCmd]`; in
-    particular, this command is not run in a Docker container, nor in a
-    virtual machine, nor in Java. This command is also not run with any
-    of vanilla universe's features active, including (but not limited
-    to): cgroups, PID namespaces, bind mounts, CPU affinity,
-    Singularity, or job wrappers. This command is not automatically
-    transferred with the job, so if you're using file transfer, you must
-    add it to the
-    :subcom:`transfer_input_files[and attribute PreCmd]`
-    list. 
-    
-:classad-attribute-def:`PreCmdExitBySignal`
-    If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, and
-    the pre command has run, this attribute will true if the pre
-    command exited on a signal and false if it did not. It is otherwise
-    unset.
-    
-:classad-attribute-def:`PreCmdExitCode`
-    If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, the
-    pre command has run, and the pre command did not exit on a signal,
-    then this attribute will be set to the exit code. It is otherwise
-    unset.
-    
-:classad-attribute-def:`PreCmdExitSignal`
-    If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, the
-    pre command has run, and the pre command exited on a signal, then
-    this attribute will be set to that signal. It is otherwise unset.
-
-:classad-attribute-def:`PreEnv`
-    Defines the environment for the prescript using the Old environment
-    syntax. If both :ad-attr:`PreEnv` and :ad-attr:`PreEnvironment` exist, the former
-    is ignored.
-    
-:classad-attribute-def:`PreEnvironment`
-    Defines the environment for the prescript using the New environment
-    syntax. If both :ad-attr:`PreEnv` and :ad-attr:`PreEnvironment` exist, the former
-    is ignored.
-
-:classad-attribute-def:`PreJobPrio1`
-    An integer value representing a user's priority to affect of choice
-    of jobs to run. A larger value gives higher priority. When not
-    explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered first: before :ad-attr:`PreJobPrio2`,
-    before :ad-attr:`JobPrio`, before :ad-attr:`PostJobPrio1`, before
-    :ad-attr:`PostJobPrio2`, and before :ad-attr:`QDate`.
-
-:classad-attribute-def:`PreJobPrio2`
-    An integer value representing a user's priority to affect of choice
-    of jobs to run. A larger value gives higher priority. When not
-    explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered after :ad-attr:`PreJobPrio1`, but before
-    :ad-attr:`JobPrio`, before :ad-attr:`PostJobPrio1`, before :ad-attr:`PostJobPrio2`, and
-    before :ad-attr:`QDate`.
-
-:classad-attribute-def:`PostJobPrio1`
-    An integer value representing a user's priority to affect of choice
-    of jobs to run. A larger value gives higher priority. When not
-    explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered after :ad-attr:`PreJobPrio1`, after
-    :ad-attr:`PreJobPrio1`, and after :ad-attr:`JobPrio`, but before :ad-attr:`PostJobPrio2`,
-    and before :ad-attr:`QDate`.
-
-:classad-attribute-def:`PostJobPrio2`
-    An integer value representing a user's priority to affect of choice
-    of jobs to run. A larger value gives higher priority. When not
-    explicitly set for a job, 0 is used for comparison purposes. This
-    attribute, when set, is considered after :ad-attr:`PreJobPrio1`, after
-    :ad-attr:`PreJobPrio1`, after :ad-attr:`JobPrio`, and after :ad-attr:`PostJobPrio1`, but
-    before :ad-attr:`QDate`.
-
+..
+  :index:`Starter pre and post scripts`
+  
+  :classad-attribute-def:`PostArgs`
+      Defines the command-line arguments for the post command using the
+      old argument syntax, as specified in :doc:`/man-pages/condor_submit`.
+      If both :ad-attr:`PostArgs` and :ad-attr:`PostArguments` exists, the former is ignored.
+  
+  :classad-attribute-def:`PostArguments`
+      Defines the command-line arguments for the post command using the
+      new argument syntax, as specified in
+      :doc:`/man-pages/condor_submit`, excepting that
+      double quotes must be escaped with a backslash instead of another
+      double quote. If both :ad-attr:`PostArgs` and :ad-attr:`PostArguments` exists, the
+      former is ignored.
+      
+  :classad-attribute-def:`PostCmd`
+      A job in the vanilla, Docker, Java, or virtual machine universes may
+      specify a command to run after the
+      :subcom:`executable[and attribute PostCmd]` has
+      exited, but before file transfer is started. Unlike a DAGMan POST
+      script command, this command is run on the execute machine; however,
+      it is not run in the same environment as the
+      :subcom:`executable[and attribute PostCmd]`.
+      Instead, its environment is set by :ad-attr:`PostEnv` or
+      :ad-attr:`PostEnvironment`. Like the DAGMan POST script command, this
+      command is not run in the same universe as the
+      :subcom:`executable[and attribute PostCmd]`; in
+      particular, this command is not run in a Docker container, nor in a
+      virtual machine, nor in Java. This command is also not run with any
+      of vanilla universe's features active, including (but not limited
+      to): cgroups, PID namespaces, bind mounts, CPU affinity,
+      Singularity, or job wrappers. This command is not automatically
+      transferred with the job, so if you're using file transfer, you must
+      add it to the
+      :subcom:`transfer_input_files[and attribute PostCmd]`
+      list.
+  
+      If the specified command is in the job's execute directory, or any
+      sub-directory, you should not set
+      :subcom:`vm_no_output_vm[and attribute PostCmd]`,
+      as that will delete all the files in the job's execute directory
+      before this command has a chance to run. If you don't want any
+      output back from your VM universe job, but you do want to run a post
+      command, do not set
+      :subcom:`vm_no_output_vm[and attribute PostCmd]`
+      and instead delete the job's execute directory in your post command.
+  
+  :classad-attribute-def:`PostCmdExitBySignal`
+      If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
+      and the post command has run, this attribute will true if the
+      post command exited on a signal and false if it did not. It is
+      otherwise unset.
+  
+  :classad-attribute-def:`PostCmdExitCode`
+      If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
+      the post command has run, and the post command did not exit on a
+      signal, then this attribute will be set to the exit code. It is
+      otherwise unset.
+  
+  :classad-attribute-def:`PostCmdExitSignal`
+      If :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` were set,
+      the post command has run, and the post command exited on a signal,
+      then this attribute will be set to that signal. It is otherwise
+      unset.
+  
+  :classad-attribute-def:`PostEnv`
+      Defines the environment for the Postscript using the Old environment
+      syntax. If both :ad-attr:`PostEnv` and :ad-attr:`PostEnvironment` exist, the
+      former is ignored.
+  
+  :classad-attribute-def:`PostEnvironment`
+      Defines the environment for the Postscript using the New environment
+      syntax. If both :ad-attr:`PostEnv` and :ad-attr:`PostEnvironment` exist, the
+      former is ignored.
+  
+  :classad-attribute-def:`PreArgs`
+      Defines the command-line arguments for the pre command using the old
+      argument syntax, as specified in :doc:`/man-pages/condor_submit`. If both
+      :ad-attr:`PreArgs` and :ad-attr:`PreArguments` exists, the former is ignored.
+  
+  :classad-attribute-def:`PreArguments`
+      Defines the command-line arguments for the pre command using the new
+      argument syntax, as specified in
+      :doc:`/man-pages/condor_submit`, excepting that
+      double quotes must be escape with a backslash instead of another
+      double quote. If both :ad-attr:`PreArgs` and :ad-attr:`PreArguments` exists, the
+      former is ignored.
+  
+  :classad-attribute-def:`PreCmd`
+      A job in the vanilla, Docker, Java, or virtual machine universes may
+      specify a command to run after file transfer (if any) completes but
+      before the
+      :subcom:`executable[and attribute PreCmd]` is
+      started. Unlike a DAGMan PRE script command, this command is run on
+      the execute machine; however, it is not run in the same environment
+      as the :subcom:`executable[and attribute PreCmd]`.
+      Instead, its environment is set by :ad-attr:`PreEnv` or :ad-attr:`PreEnvironment`.
+      Like the DAGMan POST script command, this command is not run in the
+      same universe as the
+      :subcom:`executable[and attribute PreCmd]`; in
+      particular, this command is not run in a Docker container, nor in a
+      virtual machine, nor in Java. This command is also not run with any
+      of vanilla universe's features active, including (but not limited
+      to): cgroups, PID namespaces, bind mounts, CPU affinity,
+      Singularity, or job wrappers. This command is not automatically
+      transferred with the job, so if you're using file transfer, you must
+      add it to the
+      :subcom:`transfer_input_files[and attribute PreCmd]`
+      list. 
+      
+  :classad-attribute-def:`PreCmdExitBySignal`
+      If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, and
+      the pre command has run, this attribute will true if the pre
+      command exited on a signal and false if it did not. It is otherwise
+      unset.
+      
+  :classad-attribute-def:`PreCmdExitCode`
+      If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, the
+      pre command has run, and the pre command did not exit on a signal,
+      then this attribute will be set to the exit code. It is otherwise
+      unset.
+      
+  :classad-attribute-def:`PreCmdExitSignal`
+      If :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` were set, the
+      pre command has run, and the pre command exited on a signal, then
+      this attribute will be set to that signal. It is otherwise unset.
+  
+  :classad-attribute-def:`PreEnv`
+      Defines the environment for the prescript using the Old environment
+      syntax. If both :ad-attr:`PreEnv` and :ad-attr:`PreEnvironment` exist, the former
+      is ignored.
+      
+  :classad-attribute-def:`PreEnvironment`
+      Defines the environment for the prescript using the New environment
+      syntax. If both :ad-attr:`PreEnv` and :ad-attr:`PreEnvironment` exist, the former
+      is ignored.
+  
+  :classad-attribute-def:`PreJobPrio1`
+      An integer value representing a user's priority to affect of choice
+      of jobs to run. A larger value gives higher priority. When not
+      explicitly set for a job, 0 is used for comparison purposes. This
+      attribute, when set, is considered first: before :ad-attr:`PreJobPrio2`,
+      before :ad-attr:`JobPrio`, before :ad-attr:`PostJobPrio1`, before
+      :ad-attr:`PostJobPrio2`, and before :ad-attr:`QDate`.
+  
+  :classad-attribute-def:`PreJobPrio2`
+      An integer value representing a user's priority to affect of choice
+      of jobs to run. A larger value gives higher priority. When not
+      explicitly set for a job, 0 is used for comparison purposes. This
+      attribute, when set, is considered after :ad-attr:`PreJobPrio1`, but before
+      :ad-attr:`JobPrio`, before :ad-attr:`PostJobPrio1`, before :ad-attr:`PostJobPrio2`, and
+      before :ad-attr:`QDate`.
+  
+  :classad-attribute-def:`PostJobPrio1`
+      An integer value representing a user's priority to affect of choice
+      of jobs to run. A larger value gives higher priority. When not
+      explicitly set for a job, 0 is used for comparison purposes. This
+      attribute, when set, is considered after :ad-attr:`PreJobPrio1`, after
+      :ad-attr:`PreJobPrio1`, and after :ad-attr:`JobPrio`, but before :ad-attr:`PostJobPrio2`,
+      and before :ad-attr:`QDate`.
+  
+  :classad-attribute-def:`PostJobPrio2`
+      An integer value representing a user's priority to affect of choice
+      of jobs to run. A larger value gives higher priority. When not
+      explicitly set for a job, 0 is used for comparison purposes. This
+      attribute, when set, is considered after :ad-attr:`PreJobPrio1`, after
+      :ad-attr:`PreJobPrio1`, after :ad-attr:`JobPrio`, and after :ad-attr:`PostJobPrio1`, but
+      before :ad-attr:`QDate`.
+  
 :classad-attribute-def:`PreserveRelativeExecutable`
     When ``True``, the *condor_starter* will not prepend ``Iwd`` to
     :ad-attr:`Cmd`, when :ad-attr:`Cmd` is a relative path name and
@@ -1746,43 +1747,44 @@ all attributes.
     Specifies the signal, if any, by which the ``executable`` exits after
     a successful self-checkpoint.
 
-:classad-attribute-def:`SuccessPreExitBySignal`
-    Specifies if a successful pre command must exit with a signal.
+..
+  :classad-attribute-def:`SuccessPreExitBySignal`
+      Specifies if a successful pre command must exit with a signal.
 
-:classad-attribute-def:`SuccessPreExitCode`
-    Specifies the code with which the pre command must exit to be
-    considered successful. Pre commands which are not successful cause
-    the job to go on hold with :ad-attr:`ExitCode` set to :ad-attr:`PreCmdExitCode`.
-    The exit status of a pre command without one of
-    :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` defined is
-    ignored.
+  :classad-attribute-def:`SuccessPreExitCode`
+      Specifies the code with which the pre command must exit to be
+      considered successful. Pre commands which are not successful cause
+      the job to go on hold with :ad-attr:`ExitCode` set to :ad-attr:`PreCmdExitCode`.
+      The exit status of a pre command without one of
+      :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` defined is
+      ignored.
 
-:classad-attribute-def:`SuccessPreExitSignal`
-    Specifies the signal on which the pre command must exit be
-    considered successful. Pre commands which are not successful cause
-    the job to go on hold with :ad-attr:`ExitSignal` set to
-    :ad-attr:`PreCmdExitSignal`. The exit status of a pre command without one
-    of :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` defined is
-    ignored.
+  :classad-attribute-def:`SuccessPreExitSignal`
+      Specifies the signal on which the pre command must exit be
+      considered successful. Pre commands which are not successful cause
+      the job to go on hold with :ad-attr:`ExitSignal` set to
+      :ad-attr:`PreCmdExitSignal`. The exit status of a pre command without one
+      of :ad-attr:`SuccessPreExitCode` or :ad-attr:`SuccessPreExitSignal` defined is
+      ignored.
 
-:classad-attribute-def:`SuccessPostExitBySignal`
-    Specifies if a successful post command must exit with a signal.
+  :classad-attribute-def:`SuccessPostExitBySignal`
+      Specifies if a successful post command must exit with a signal.
 
-:classad-attribute-def:`SuccessPostExitCode`
-    Specifies the code with which the post command must exit to be
-    considered successful. Post commands which are not successful cause
-    the job to go on hold with :ad-attr:`ExitCode` set to :ad-attr:`PostCmdExitCode`.
-    The exit status of a post command without one of
-    :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
-    ignored.
+  :classad-attribute-def:`SuccessPostExitCode`
+      Specifies the code with which the post command must exit to be
+      considered successful. Post commands which are not successful cause
+      the job to go on hold with :ad-attr:`ExitCode` set to :ad-attr:`PostCmdExitCode`.
+      The exit status of a post command without one of
+      :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
+      ignored.
 
-:classad-attribute-def:`SuccessPostExitSignal`
-    Specifies the signal on which the post command must exit be
-    considered successful. Post commands which are not successful cause
-    the job to go on hold with :ad-attr:`ExitSignal` set to
-    :ad-attr:`PostCmdExitSignal`. The exit status of a post command without one
-    of :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
-    ignored.
+  :classad-attribute-def:`SuccessPostExitSignal`
+      Specifies the signal on which the post command must exit be
+      considered successful. Post commands which are not successful cause
+      the job to go on hold with :ad-attr:`ExitSignal` set to
+      :ad-attr:`PostCmdExitSignal`. The exit status of a post command without one
+      of :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
+      ignored.
 
 :classad-attribute-def:`TotalJobReconnectAttempts`
     The total number of reconnection attempts over the lifetime of the job.
