@@ -48,9 +48,7 @@ def conf_temp_role(name, rawtext, text, lineno, inliner, options={}, content=[])
     indexnode['entries'] = process_index_entry(f"pair: {item}; {index_cat}", targetid)
     set_role_source_info(inliner, lineno, indexnode)
 
-    headerlink_node = make_headerlink_node(targetid, options)
-
-    nodes_list = [headerlink_node, indexnode, node] if info == "" else [indexnode, node, headerlink_node]
+    nodes_list = [indexnode, node]
 
     return nodes_list, []
 

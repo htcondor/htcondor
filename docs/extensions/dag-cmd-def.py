@@ -26,14 +26,12 @@ def dagcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]
     targetid = text
     targetnode = nodes.target('', text, ids=[targetid], classes=["dag-cmd-def"])
 
-    headerlink_node = make_headerlink_node(str(text), options)
-
     # Automatically include an index entry for subcom definitions
     indexnode = addnodes.index()
     indexnode['entries'] = process_index_entry('pair: ' + text + '; DAG Commands', targetid)
     set_role_source_info(inliner, lineno, indexnode)
     textnode = nodes.Text(" ", " ")
-    return [headerlink_node, indexnode, targetnode, textnode], []
+    return [indexnode, targetnode, textnode], []
 
 
 def setup(app):
