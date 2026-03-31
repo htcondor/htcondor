@@ -1,10 +1,10 @@
 *** 24.0.20 bugs
 
+*** 24.0.19 bugs
+
 - Fixed a performance problem with the classad2 python bindings that
   caused the parseAds methods to run in n-squared time.
   :jira:`3632`
-
-*** 24.0.19 bugs
 
 - Fixed a bug where an NVIDIA GPU that has been subdivided in MIG sub-devices
   would not properly pass the device names in the various NVIDIA related
@@ -18,6 +18,10 @@
 - Fixed a bug where some of the values reported for job execution time were
   very large if the Access Point daemons restarted while the job was running.
   :jira:`3592`
+
+- Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
+  respected for jobs that did not do input file transfer.
+  :jira:`3633`
 
 - Fixed a bug where an administrator couldn't query a daemon's configuration
   using :tool:`condor_config_val` when authentication is required for READ
