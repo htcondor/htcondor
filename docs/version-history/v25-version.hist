@@ -30,7 +30,7 @@
 
 *** 25.0.10 bugs
 
-*** 25.8.0 features
+*** 25.8.1 features
 
 - The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
   file each time it successfully reconnects to a disconnected starter or
@@ -41,6 +41,10 @@
   :macro:`SHADOW_LOG_RECONNECT` (default ``True``) and
   :macro:`SHADOW_RECONNECT_LOG`.
   :jira:`3593`
+
+- HTCondor now correctly detects and advertises the NVIDIA driver version
+  for NVIDIA GPUs which are configured to run in "MIG" mode.
+  :jira:`3626`
 
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
@@ -177,7 +181,7 @@
   to version 5.3.8.
   :jira:`3576`
 
-*** 25.8.0 bugs
+*** 25.8.1 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
   promptly if it failed to launch a Singularity job.

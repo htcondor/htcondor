@@ -52,6 +52,11 @@ logger.setLevel(logging.DEBUG)
 #
 
 #
+# 8) Does a job with no form of input file transfer go on hold once
+#    exceeding allowed execute duration?
+#
+
+#
 # If you edit the constants to speed this test up, make sure that:
 # 1. Normal step sleep * 5 (steps per checkpoint) < AllowedExecuteDuration
 # 2. Slow step sleep > AllowedExecuteDuration
@@ -773,6 +778,39 @@ def job_seven_events(final_job_seven_handle):
     return final_job_seven_handle.event_log.events
 
 
+@action
+def job_eight_handle(default_condor, test_dir, path_to_sleep):
+    job_eight_handle = default_condor.submit(
+        description = {
+            "executable":  path_to_sleep,
+            "arguments":   10000000,
+            "log":         test_dir / "job_eight.log",
+            "allowed_execute_duration": 5,
+        },
+        count = 1,
+    )
+
+    yield job_eight_handle
+
+    job_eight_handle.remove()
+
+
+@action
+def final_job_eight_handle(job_eight_handle):
+    assert job_eight_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.any_held,
+        fail_condition = ClusterState.all_complete,
+    )
+
+    return job_eight_handle
+
+
+@action
+def job_eight_events(final_job_eight_handle):
+    return final_job_eight_handle.event_log.events
+
 
 #
 # Utility functions for the tests.
@@ -906,4 +944,18 @@ class TestAllowedExecuteDuration:
                 JobEventType.JOB_HELD,
             ],
             job_seven_events
+        )
+
+    def test_job_eight_held(self, job_eight_events):
+        assert not types_in_events(
+            [JobEventType.JOB_TERMINATED], job_eight_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_HELD,
+            ],
+            job_eight_events,
         )
