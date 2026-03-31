@@ -382,10 +382,14 @@ def extract_details(action: ActionType, details: str) -> dict:
             # Attempt to execute the script. Non-zero exit code is failure
             p = subprocess.run(details.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+            LOG_SCRIPT_OUTPUT_PREFIX = '\t> '
+
             stdout = p.stdout.rstrip().decode()
-            stderr = p.stderr.rstrip().decode()
-            debug(DebugLevel.VERBOSE, f"Script output:\n{textwrap.indent(stdout, '\t> ')}")
-            debug(DebugLevel.VERBOSE, f"Script error:\n{textwrap.indent(stderr, '\t> ')}")
+            stderr = textwrap.indent(p.stderr.rstrip().decode(), LOG_SCRIPT_OUTPUT_PREFIX)
+            stdout_log = textwrap.indent(stdout, LOG_SCRIPT_OUTPUT_PREFIX)
+
+            debug(DebugLevel.VERBOSE, f"Script output:\n{stdout_log}")
+            debug(DebugLevel.VERBOSE, f"Script error:\n{stderr}")
 
             if p.returncode != EXIT_SUCCESS:
                 raise RuntimeError(f"Failed to excute script (exit={p.returncode})")
