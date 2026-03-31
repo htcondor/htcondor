@@ -52,8 +52,9 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
     indexnode = addnodes.index()
     indexnode['entries'] = process_index_entry(f"pair: {knob}; {grouping} Configuration Options", targetid)
     set_role_source_info(inliner, lineno, indexnode)
+    headerlink_node = make_headerlink_node(knob, options)
 
-    return [indexnode, targetnode], []
+    return [indexnode, targetnode, headerlink_node], []
 
 def setup(app):
     app.add_role("macro-def", macro_def_role)

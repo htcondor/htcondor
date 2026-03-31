@@ -19,6 +19,9 @@ def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={},
     # Create the attribute title with the classad attribute name, also containing an anchor
     anchor_title_node = make_inline_literal_node(text)
 
+    # Create a headerlink node, which can be used to link to the anchor
+    headerlink_node = make_headerlink_node(str(text), options)
+
     # Determine the classad type (job, submitted, collector, etc.) by ripping it out of the document title
     attr_type = ""
     type_matches = re.findall(r"/([-\w]*)-classad-attributes", docname)
@@ -39,7 +42,7 @@ def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={},
     index_node['entries'] = process_index_entry(f"pair: {text} ; {attr_type} ClassAd Attribute", text)
     set_role_source_info(inliner, lineno, index_node)
 
-    return [index_node, anchor_title_node], []
+    return [index_node, anchor_title_node, headerlink_node], []
 
 
 def setup(app):

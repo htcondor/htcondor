@@ -3,8 +3,8 @@ nbsphinx>=0.9.3
 ipython==8.10.0
 Jinja2>=3.0
 htcondor>=25.1.0a0,<=25.999.999post999
-Sphinx==5.3.0
+Sphinx>=7.2.0
 sphinx-rtd-theme>=1.2.0
-sphinxcontrib-mermaid==0.9.2
+sphinxcontrib-mermaid>=1.0.0
 sphinx_copybutton>=0.5.0
 sphinx-tabs>=3.4.7

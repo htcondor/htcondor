@@ -39,12 +39,11 @@ def make_version_anchor(inliner, options, tag):
     else:
         parent["ids"] = [tag]
 
-    return None
+    return make_headerlink_node(tag, options)
 
 def vers_hist_anchor_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     tag = "version-history" if text.lower() == "default" else text
-    make_version_anchor(inliner, options, tag)
-    return [], []
+    return [make_version_anchor(inliner, options, tag)], []
 
 def ticket_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     nodes = list()
@@ -59,7 +58,7 @@ def ticket_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
             warn(f"{docname}:{lineno} | Failed to link ticket #{ticket_id_str}: {e}")
 
     if len(nodes) > 0:
-        make_version_anchor(inliner, options, text)
+        nodes.append(make_version_anchor(inliner, options, text))
 
     return nodes, []
 

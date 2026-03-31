@@ -28,12 +28,18 @@ def subcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]
     targetid = text
     targetnode = nodes.target('', text, ids=[targetid], classes=["subcom-def"])
 
+    headerlink_node = make_headerlink_node(str(text), options)
+
     # Automatically include an index entry for subcom definitions
     indexnode = addnodes.index()
     indexnode['entries'] = process_index_entry('pair: ' + text + '; Submit commands', targetid)
     set_role_source_info(inliner, lineno, indexnode)
-    textnode = nodes.Text(text if os.environ.get('MANPAGES') == 'True' else " ", " ")
-    return [indexnode, targetnode, textnode], []
+    if os.environ.get('MANPAGES') == 'True':
+        textnode = nodes.Text(text, " ")
+        return [indexnode, targetnode, textnode], []
+    else:
+        textnode = nodes.Text(" ", " ")
+        return [headerlink_node, indexnode, targetnode, textnode], []
 
 
 def setup(app):

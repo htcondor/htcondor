@@ -32,8 +32,10 @@ def classad_func_def_role(name, rawtext, text, lineno, inliner, options={}, cont
     if func_name in FUNCTION_DEF_COUNT:
         FUNCTION_DEF_COUNT[func_name] += 1
         span_id = f"{func_name}({FUNCTION_DEF_COUNT[func_name]})"
+        headerlink_node = make_headerlink_node(span_id, options)
     else:
         span_id = f"{func_name}()"
+        headerlink_node = make_headerlink_node(span_id, options)
         FUNCTION_DEF_COUNT[func_name] = 0
 
     inline_node = make_inline_literal_node(function, span_id)
@@ -42,7 +44,7 @@ def classad_func_def_role(name, rawtext, text, lineno, inliner, options={}, cont
     index_node['entries'] = process_index_entry(f"pair: {func_name}() ; ClassAd Functions", f"{func_name}()")
     set_role_source_info(inliner, lineno, index_node)
 
-    return [index_node, inline_node], []
+    return [index_node, inline_node, headerlink_node], []
 
 def setup(app):
     app.add_role("classad-function-def", classad_func_def_role)
