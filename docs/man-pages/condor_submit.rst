@@ -1140,8 +1140,54 @@ FILE TRANSFER COMMANDS
     standard error files.  By default these two files go back To
     the access point.  To also send these two to the *output_destination*,
     sent :subcom:`output` and/or :subcom:`error` to the same value
-    as the *output_destination*.  The HTCondor Administrator's manual has full
-    details.
+    as the *output_destination*.  Only one of this command or subcom:`output_directory`
+    may be used. The HTCondor Administrator's manual has full details.
+
+ :subcom-def:`output_directory` = <dir>
+    When present, defines the directory where the entire output sandbox or a
+    subset of output files as specified by the submit command
+    **transfer_output_files** will be transferred to.  Only one of this command
+    or :subcom:`output_destination` may be used.  To specify a separate
+    sub-directory for each job, <dir> can include $() expansions For example:
+
+    .. code-block:: condor-submit
+
+        output_directory = /path/to/output/$INT(ClusterId,%05d)/$(JobId)
+
+    Will transfer the output into a separate directory for each submission,
+    with a seprate subdirectory for each job.  ``$INT(ClusterId,%07d)`` prints
+    the ClusterId with a minimum of 5 digits using leading 0's, so if the
+    ClusterId of the submission is 95, the output directories will be
+
+    .. code-block:: text
+
+        /path/to/output/0000095/95.0/
+        /path/to/output/0000095/95.1/
+        ...
+
+ :subcom-def:`organized_output_directory` = <dir>
+    When present, enables organized output and defines the base directory for
+    generating an :subcom:`output_directory` with a unique value for each job.
+    Causes :subcom:`organized_output` to default to true.  This directory is
+    combined with the pattern specified in :subcom:`organized_output_pattern`
+    or the default pattern set by the configuration variable :macro:`ORGANIZED_OUTPUT_PATTERN`
+    and used to set :subcom:`output_directory`.
+
+ :subcom-def:`organized_output_pattern` = <pattern>
+    When present, enables organized output and defines the pattern to give a
+    unique sub-directory name for each submission and/or each job.  This pattern
+    should use $() expansion of automatic submit variables such as $(JobId), $(ClusterId),
+    and $(ProcId); Or variables specified on the command line such as $(batch_name); Or
+    variables specified in the QUEUE statement such as $(Item).
+
+ :subcom-def:`organized_output` = < true | false >
+    When present and true, enables organized output.  Organized output sets the
+    :subcom:`output_directory` to the combination of a base directory and a pattern
+    that gives a unique subdirectory for the output of each submission and/or each job
+    in the submission.  The base directory will be the current directory of submit
+    or the value of :subcom:`organized_output_base`.  The per-job pattern will be the value
+    of :subcom:`organized_output_pattern` or a default given by the configuration.
+    If no pattern is specified in either location, use of this submit command will generate an error message.
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
     The **should_transfer_files**

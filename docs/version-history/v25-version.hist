@@ -25,6 +25,11 @@
   variable still points to the correct place.
   :jira:`2949`
 
+- Added new submit commands :subcom:`organized_output`, :subcom:`organized_output_directory`
+  and :subcom:`organized_output_pattern` which is a simplified way to put the output
+  of the jobs in a joblist into a separate subdirectory for each job.
+  :jira:`3618`
+
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 

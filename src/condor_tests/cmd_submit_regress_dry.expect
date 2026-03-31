@@ -509,3 +509,10 @@ ProcId=1
 Cmd=/^"/bin/echo"$/
 ProcId=2
 
+==organized1.sub
+OutputDirectory=/^".+aaaa/0"$/
+ProcId=0
+.
+OutputDirectory=/^".+bbbb/1"$/
+ProcId=1
+
