@@ -86,8 +86,6 @@ TestVar3 = "Hello World"
             "TransferSuccess" : False,
             "TransferFileBytes" : 10,
             "TransferTotalBytes" : 9,
-            "TransferStartTime" : 1234,
-            "TransferEndTime" : 1235,
             "ConnectionTimeSeconds" : 1,
             "TestVar1" : True,
         },
@@ -100,8 +98,6 @@ echo 'TestVar1 = True'
 echo 'TransferFileBytes = 10'
 echo 'TransferTotalBytes = 9'
 echo 'ConnectionTimeSeconds = 1'
-echo 'TransferStartTime = 1234'
-echo 'TransferEndTime = 1235'
 """
         ),
     ),
