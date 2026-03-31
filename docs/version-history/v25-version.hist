@@ -19,6 +19,14 @@
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`
 
+- **batch** grid universe jobs are now run in the :ad-attr:`Iwd` or
+  :ad-attr:`RemoteIwd` directory by default. Before, they were run in a
+  temporary directory under the :ad-attr:`Iwd` or :ad-attr:`RemoteIwd`
+  directory.
+  The old behavior can be restored by setting ``blah_run_in_workdir=no``
+  in the ``blah.config`` file.
+  :jira:`2415`
+
 - When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the .chirp.config
   file no longer pollutes the user's scratch directory, it is located
   in the slot's "user" directory.  The _CONDOR_CHIRP_CONFIG environment
