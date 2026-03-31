@@ -1,4 +1,4 @@
-*** 25.8.0 features
+*** 25.8.1 features
 
 - The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
   file each time it successfully reconnects to a disconnected starter or
@@ -149,7 +149,7 @@
   to version 5.3.8.
   :jira:`3576`
 
-*** 25.8.0 bugs
+*** 25.8.1 bugs
 
 - Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
   promptly if it failed to launch a Singularity job.
