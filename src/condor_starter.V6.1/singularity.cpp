@@ -443,7 +443,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	if (job_iwd != execute_dir) {
-		// File xfer off, if image was a relative path, prepend iwd
+		// File xfer off, if image was a relative path, prepend iwd, unless an URL
 		if (image[0] != '/' && image.find("://") == std::string::npos) {
 			image = job_iwd + '/' + image;
 		}
