@@ -33,6 +33,10 @@
   variable still points to the correct place.
   :jira:`2949`
 
+- Container universe jobs whose image is an url (like docker://) now work
+  when file transfer is off.
+  :jira:`3638`
+
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
