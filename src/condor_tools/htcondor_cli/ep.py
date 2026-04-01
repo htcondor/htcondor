@@ -20,7 +20,7 @@ class Rehome(Verb):
             "help": "Name of the schedd to rehome to",
         },
         "cancel": {
-            "args": ("-cancel",),
+            "args": ("--cancel",),
             "action": "store_true",
             "default": False,
             "help": "Cancel a previous rehome, unsetting STARTD_DIRECT_ATTACH_SCHEDD",
