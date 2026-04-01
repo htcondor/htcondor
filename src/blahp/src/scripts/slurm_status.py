@@ -444,7 +444,7 @@ def parse_squeue(output):
         cur_job_id = fields[0];
         cur_job_info = {}
         job_info[cur_job_id] = cur_job_info
-        cur_job_info["BatchJobId"] = cur_job_id
+        cur_job_info["BatchJobId"] = '"%s"' % cur_job_id
         status = status_mapping.get(fields[1], 0)
         if status != 0:
             cur_job_info["JobStatus"] = str(status)
