@@ -236,7 +236,7 @@ The available output data are as follows:
          - Waiting in the input transfer queue
        * - >
          - Actively transferring the output sandbox
-       * - >q
+       * - q>
          - Waiting in the output transfer queue
  PRI
     (Non-batch mode only) User specified priority of the job, displayed
