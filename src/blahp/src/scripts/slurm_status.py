@@ -244,7 +244,7 @@ def call_squeue(jobid="", cluster=""):
     else:
         uid = os.geteuid()
         username = pwd.getpwuid(uid).pw_name
-        command += ('-u', username)
+        command += ('-a', '-u', username)
     squeue_proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     squeue_out, _ = squeue_proc.communicate()
 
