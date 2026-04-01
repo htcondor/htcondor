@@ -10,6 +10,11 @@
   :macro:`SHADOW_RECONNECT_LOG`.
   :jira:`3593`
 
+- :tool:`condor_status` now supports an `-aaf` option, for append
+  autoformat, which displays columns like the `-af` option does, but
+  appends them to the default output.
+  :jira:`3604`
+
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
   (e.g. with :tool:`condor_transfer_data`).
