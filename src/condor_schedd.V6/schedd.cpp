@@ -14486,6 +14486,44 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				}
 				//@fallthrough@
 
+
+			// Likewise, since the transfer shadow doesn't correspond
+			// to a job, all of these exit codes are at best incorrect.
+			// However, I don't know which of them will be generated
+			// under which failure circumstances.  Luckily, we don't
+			// care.
+			case JOB_SHOULD_HOLD:
+				//
+				// (HTCONDOR-3641)  Presently, a transfer shadow should only
+				// generate this exit code if the common transfer failed (as
+				// distinct from any systemic error).  Transfer shadows don't
+				// have job records, so there's no way to execute the usual
+				// mechanisms for managing/limiting transfers.  Instead, we
+				// force this catalog* to fall back on uncommon transfer in
+				// all cases, which will (inefficiently) trigger both those
+				// mechanisms and the usual error reporting.
+				//
+				// *: We also don't have a first-class data structure for
+				//    catalogs/sandboxes (and in this case we'd probably
+				//    like for it to be hard state).  We could add an in-
+				//    memory set of properly name-spaced catalog names
+				//    checked by determine_cxfer_type(), but since we also
+				//    don't have end-of-cluster hooks, it'd be really hard
+				//    to garbage-collect.  Instead, for now, just update the
+				//    cluster ad or DAGMan job ad and check _that_ in
+				//    determine_cxfer_type().
+				//
+				{
+					int clusterID = job_id.cluster;
+					int procID = (-1 * job_id.proc) - 1000;
+					if( GetAttributeInt( job_id.cluster, procID, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
+						procID = 0;
+					}
+
+					SetAttributeInt( clusterID, procID, "CommonTransferFailed", TRUE );
+				}
+    			//@fallthrough@
+
 			// Presently, this should never happen.  Called out
 			// separately because we may support reconnect for
 			// data slots at some point.
@@ -14498,6 +14536,15 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 			case JOB_COREDUMPED:
 			case JOB_EXEC_FAILED:
 			case JOB_NOT_STARTED:
+			case JOB_SHOULD_REMOVE:
+			case JOB_SHOULD_REQUEUE:
+
+			// At some point, we should start tracking transient/systemtic
+			// failures and not retrying them indefinitely.
+			case JOB_CXFER_FAILED_REQUEUE:
+			// As above, except in this case, when we stop retrying, we should
+			// invalidate and evict the corresponding data slot.
+			case JOB_MAPPING_FAILED:
 
 			// (HTCONDOR-3615)  Deferred jobs normally start running and _then_
 			// start transfer; since common file jobs do the opposite, we need
@@ -14506,26 +14553,6 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 			// This should never happen (the transfer shadow's starter should
 			// never attempt to starta job).
 			case JOB_MISSED_DEFERRAL_TIME:
-
-			// Likewise, since the transfer shadow doesn't correspond
-			// to a job, all of these exit codes are at best incorrect.
-			// However, I don't know which of them will be generated
-			// under which failure circumstances.  Luckily, we don't
-			// care.
-			//
-			// FIXME: The machinery to detect that the job _can't_
-			// succeed because of invalid sources in a common catalog
-			// should be identical to that of normal jobs and take
-			// place in this function.  (Even if we have to replace it
-			// with a hack until we've figured out the storage issue,
-			// we need know that it was a transfer issue rather than
-			// any other.)  (An exit code other than JOB_SHOULD_REQUEUE
-			// would be super-helpful here, because we had to throw
-			// away the update from the shadow with the ATTR_VACATE_*
-			// attributes we'd normally check.)
-			case JOB_SHOULD_HOLD:
-			case JOB_SHOULD_REMOVE:
-			case JOB_SHOULD_REQUEUE:
 
 			// As far as I can tell, the shadow no longer generates these.
 			case JOB_CKPTED:

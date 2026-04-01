@@ -1217,7 +1217,7 @@ UniShadow::after_common_file_transfer(
 			this->jobAd->Assign(ATTR_VACATE_REASON, "Starter sent malformed reply when asked to stage common files." );
 			this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, JOB_NOT_STARTED_SUB_CODE::CommonTransferBadReply);
-			remRes->setExitReason(JOB_SHOULD_REQUEUE);
+			remRes->setExitReason(JOB_CXFER_FAILED_REQUEUE);
 			remRes->killStarter(false);
 
 			return false;
@@ -1248,8 +1248,7 @@ UniShadow::after_common_file_transfer(
 
 		// Determine if the _request_ failed.  (If it succeeded, then we
 		// can check to see if the _transfer_ failed.)  If it failed,
-		// reschedule the job FIXME: with a cool-down to avoid re-runnning
-		// on the same slot.
+		// reschedule the job.
 		bool should_cool_down = false;
 
 		int requestResultCode = (int)RequestResult::Invalid;
@@ -1281,7 +1280,7 @@ UniShadow::after_common_file_transfer(
 			// See comment below about which codes we're using here.
 			this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 			this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, JOB_NOT_STARTED_SUB_CODE::CommonTransferFailed);
-			remRes->setExitReason(JOB_SHOULD_REQUEUE);
+			remRes->setExitReason(JOB_CXFER_FAILED_REQUEUE);
 			remRes->killStarter(false);
 		}
 
@@ -1322,9 +1321,17 @@ UniShadow::after_common_file_transfer(
 		}
 
 		// FIXME: Will this be correct for a starter-side failure?
-		dprintf( D_ALWAYS, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
+		dprintf( D_ZKM, "Shadow-side hold reason, code, and subcode: %s, %d, %d\n",
 			info.error_desc.c_str(), info.hold_code, info.hold_subcode
 		);
+
+		//
+		// There's no corresponding job, so exiting with JOB_SHOULD_HOLD
+		// is meaningless for transfer shadows; however, the current
+		// schedd code understands this and reacts as best it can.  In
+		// the future, we should exit with JOB_CXFER_FAILED_REQUEUE or
+		// -- after HTCONDOR-3379 -- with with JOB_CXFER_FAILED_HOLD.
+		//
 
 		// This seems wrong -- improveReasonAttributes() could
 		// have changed the hold code and sub-code even if it
@@ -1370,7 +1377,7 @@ UniShadow::handle_wiring_failure() {
 	this->jobAd->Assign(ATTR_VACATE_REASON, "Failed to map files." );
 	this->jobAd->Assign(ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::JobNotStarted);
 	this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, JOB_NOT_STARTED_SUB_CODE::CommonMappingFailed);
-	remRes->setExitReason(JOB_SHOULD_REQUEUE);
+	remRes->setExitReason(JOB_MAPPING_FAILED);
 	remRes->killStarter(false);
 
 	ClassAd guidance;
@@ -1446,7 +1453,7 @@ UniShadow::vacate_requeue_abort(
 	this->jobAd->Assign(ATTR_VACATE_REASON, holdMessage );
 	this->jobAd->Assign(ATTR_VACATE_REASON_CODE, holdCode);
 	this->jobAd->Assign(ATTR_VACATE_REASON_SUBCODE, holdSubCode);
-	remRes->setExitReason(JOB_SHOULD_REQUEUE);
+	remRes->setExitReason(JOB_CXFER_FAILED_REQUEUE);
 	remRes->killStarter(false);
 
 

@@ -6,7 +6,7 @@
 #include "cxfer.h"
 
 #include "qmgmt.h"
-
+#include "condor_qmgr.h"
 
 extern Scheduler scheduler;
 
@@ -72,6 +72,23 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	if( MATCH == strcasecmp(slotType.c_str(), "Static") ) {
 		return {CXFER_TYPE::CANT, {}};
 	}
+
+
+	//
+	// (HTCODNOR-3641)  See the note in schedd.cpp.
+	//
+	int clusterID = jobID.cluster;
+	int procID = jobID.proc;
+	if( GetAttributeInt( jobID.cluster, jobID.proc, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
+		procID = 0;
+	}
+
+	int commonTransferFailed = FALSE;
+	GetAttributeInt( clusterID, procID, "CommonTransferFailed", & commonTransferFailed );
+	if( commonTransferFailed ) {
+		return {CXFER_TYPE::CANT, {}};
+	}
+
 
 	// Now we start looking at the job ad.
 	ClassAd * jobAd = GetJobAd(jobID);
