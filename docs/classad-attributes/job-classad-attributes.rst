@@ -1264,7 +1264,8 @@ all attributes.
     a running job is evicted from the machine, and set back to the idle
     state to be schedulable later.
 
-..
+.. hidden::
+
   :index:`Starter pre and post scripts`
   
   :classad-attribute-def:`PostArgs`
@@ -1747,7 +1748,8 @@ all attributes.
     Specifies the signal, if any, by which the ``executable`` exits after
     a successful self-checkpoint.
 
-..
+.. hidden::
+
   :classad-attribute-def:`SuccessPreExitBySignal`
       Specifies if a successful pre command must exit with a signal.
 
