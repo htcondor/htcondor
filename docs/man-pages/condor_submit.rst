@@ -1140,7 +1140,7 @@ FILE TRANSFER COMMANDS
     standard error files.  By default these two files go back To
     the access point.  To also send these two to the *output_destination*,
     sent :subcom:`output` and/or :subcom:`error` to the same value
-    as the *output_destination*.  Only one of this command or subcom:`output_directory`
+    as the *output_destination*.  Only one of this command or :subcom:`output_directory`
     may be used. The HTCondor Administrator's manual has full details.
 
  :subcom-def:`output_directory` = <dir>
@@ -1155,14 +1155,14 @@ FILE TRANSFER COMMANDS
         output_directory = /path/to/output/$INT(ClusterId,%05d)/$(JobId)
 
     Will transfer the output into a separate directory for each submission,
-    with a seprate subdirectory for each job.  ``$INT(ClusterId,%07d)`` prints
+    with a seprate subdirectory for each job.  :ad-expr:`$INT(ClusterId,%05d)` prints
     the ClusterId with a minimum of 5 digits using leading 0's, so if the
     ClusterId of the submission is 95, the output directories will be
 
     .. code-block:: text
 
-        /path/to/output/0000095/95.0/
-        /path/to/output/0000095/95.1/
+        /path/to/output/00095/95.0/
+        /path/to/output/00095/95.1/
         ...
 
  :subcom-def:`organized_output_directory` = <dir>
@@ -1185,7 +1185,7 @@ FILE TRANSFER COMMANDS
     :subcom:`output_directory` to the combination of a base directory and a pattern
     that gives a unique subdirectory for the output of each submission and/or each job
     in the submission.  The base directory will be the current directory of submit
-    or the value of :subcom:`organized_output_base`.  The per-job pattern will be the value
+    or the value of :subcom:`organized_output_directory`.  The per-job pattern will be the value
     of :subcom:`organized_output_pattern` or a default given by the configuration.
     If no pattern is specified in either location, use of this submit command will generate an error message.
 
