@@ -673,13 +673,6 @@ section.
     the job is run (they will not show up if :macro:`MOUNT_UNDER_SCRATCH` is
     examined with :tool:`condor_config_val`).
 
-    .. note::
-
-        The MOUNT_UNDER_SCRATCH mounts do not take place until the
-        PreCmd of the job, if any, completes.
-        (See :ref:`classad-attributes/job-classad-attributes:job classad attributes`
-        for information on PreCmd.)
-
     Also note that, if :macro:`MOUNT_UNDER_SCRATCH` is defined, it must
     either be a ClassAd string (with double-quotes) or an expression
     that evaluates to a string.
