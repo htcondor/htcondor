@@ -223,3 +223,8 @@ do not specify their own with:
     The default value is /cvmfs.  When a container universe job lists
     a *condor_image* that is under one of these directories, HTCondor
     knows not to try to transfer the file to the execution point.
+
+:macro-def:`ORGANIZED_OUTPUT_PATTERN`
+    Defines the default value for :subcom:`organized_output_pattern`
+    for when organized output is enabled in a submit file, but the
+    submit file does not specify the pattern.

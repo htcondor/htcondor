@@ -191,6 +191,9 @@
 
 #define SUBMIT_KEY_OutputDestination "output_destination"
 #define SUBMIT_KEY_OutputDirectory "output_directory"
+#define SUBMIT_KEY_OrganizedOutputBase "organized_output_directory"
+#define SUBMIT_KEY_OrganizedOutput "organized_output"
+#define SUBMIT_KEY_OrganizedOutputPattern "organized_output_pattern"
 
 #define SUBMIT_KEY_StreamInput "stream_input"
 #define SUBMIT_KEY_StreamOutput "stream_output"
@@ -854,8 +857,7 @@ protected:
 	int ComputeIWD();
 	int SetIWD();		  /* factory:ok */
 
-
-	int SetExecutable();  /* run once if */ // TODO: split out some functionality
+	int SetExecutable();  /* run once if */
 	int SetArguments();  /* run once if */
 	int SetGridParams();  /* run once if, grid universe only */
 	int SetVMParams();  /* run once if, VM universe only */
@@ -881,7 +883,7 @@ protected:
 	int SetKillSig();  /* run once if */
 	char *fixupKillSigName(char* sig);
 
-	int SetImageSize(); /* run always */ // TODO: , split out request_disk
+	int SetImageSize(); /* run always */
 
 	int SetRequestResources(); /* n attrs, prunable by pattern */
 	int SetConcurrencyLimits();  /* 2 attrs, prunable */
@@ -889,6 +891,7 @@ protected:
 	int SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	int SetSimpleJobExprs(); /* run always */
+	int SetOutputDirSpecial(); /* run always, factory ok */
 	int SetExtendedJobExprs(); /* run always */
 	int SetAutoAttributes(); /* run always */
 	int ReportCommonMistakes(); /* run always */
@@ -946,6 +949,9 @@ private:
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
 	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
 	int SetBuiltInOnEvictCheck(const char * attr, const char * subkey, int scale, const char * line, const char * incr=nullptr);
+
+	// helper for organized output
+	const char* UnexpandedOrganizedOutputDirectory(std::string & buffer, bool ignore_errors=false);
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,

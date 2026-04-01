@@ -554,3 +554,13 @@ queue executable from (
    /bin/echo
 )
 
+==organized1.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+should_transfer_files=YES
+arguments=$(item)
+organized_output_pattern=$(item)/$(ProcId)
+
+queue item from (
+aaaa
+bbbb
+)
