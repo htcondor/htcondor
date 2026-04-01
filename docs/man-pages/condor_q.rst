@@ -602,7 +602,7 @@ Options
        * - %r
          - Prints the unevaluated, or raw values
 
-    An incorrect format will result in undefined behavior. Do not use more than one conversion 
+    An incorrect format will result in undefined behavior. Do not use more than one conversion
     specifier in a given format. More than one conversion specifier will result in undefined
     behavior. To output multiple attributes repeat the **-format**
     option once for each desired attribute. Like ``printf(3)`` style
