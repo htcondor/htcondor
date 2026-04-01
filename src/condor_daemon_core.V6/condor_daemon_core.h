@@ -1632,6 +1632,7 @@ class DaemonCore : public Service
 	bool CheckConfigSecurity( const char* config, Sock* sock );
 	bool CheckConfigAttrSecurity( const char* attr, Sock* sock );
 
+	std::string GetCommandsInAuthLevel(DCpermission perm, bool is_authenticated);
 
     /** Invalidate all session related cache since the configuration
      */
@@ -2016,8 +2017,6 @@ class DaemonCore : public Service
 #endif
 
 	void Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking);
-
-	std::string GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
 	// Returns first command socket in our list. In general, you
 	// probably want to spin over sockTable looking for it->command_sock==true,
