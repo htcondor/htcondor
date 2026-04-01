@@ -581,7 +581,6 @@ Options
     expressions and may refer to attributes in the job ClassAd. If the
     attribute is not present in a given ClassAd and cannot be parsed as
     an expression, then the format option will be silently skipped.
-    
     The conversion specifier must match the type of the attribute or expression:
 
     .. list-table::
