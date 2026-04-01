@@ -162,7 +162,7 @@ get_status(const char *jobDesc, classad_context *cad, char **deleg_parameters, c
 		}
 		fclose(cache_fp);
 	}
-	if (found && cached_status != 4) {
+	if (found && cached_status != 4 && cached_status != 0) {
 		cadstr = make_message("[JobStatus=%d;BatchJobId=\"%s\"]", cached_status, cached_jobid);
 		tmpcad = classad_parse(cadstr);
 		free(cadstr);

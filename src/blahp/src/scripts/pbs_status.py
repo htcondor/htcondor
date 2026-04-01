@@ -461,7 +461,8 @@ def fill_cache(cache_location):
                 str_val = binascii.b2a_hex(pickle.dumps(val))
                 if str is not bytes:
                     str_val = str_val.decode()
-                writer.writerow([key, str_val, val["JobStatus"]])
+                status = val.get("JobStatus", 0)
+                writer.writerow([key, str_val, status])
             os.fsync(fd)
         except:
             os.unlink(filename)
