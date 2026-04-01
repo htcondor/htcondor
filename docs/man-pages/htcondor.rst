@@ -28,6 +28,7 @@ Synopsis
 | **htcondor** **dag** *halt* [**-r/-\-reason** *message*] dagman-job-id
 | **htcondor** **dag** *resume* dagman-job-id
 | **htcondor** **dag** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] dagman-job-id
+| **htcondor** **dag** *throttle* [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] dagman-job-id
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
@@ -381,6 +382,28 @@ DAG Verbs
           Show state transitions per time bucket.
       **-c/-\-cumulative**
           Show cumulative job states over time. This is the default.
+
+  **htcondor dag throttle** [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] **dagman-job-id**
+      Change various throttles applied to an active DAG. At least one throttle option must be provided.
+
+      .. note::
+
+          This tool returns the throttle values that DAGMan will use after applying the
+          specified values. These numbers may be limited by administrator set values if
+          :macro:`DAGMAN_DISABLE_ADMIN_THROTTLE_LIMITING` is ``False``.
+
+      **-\-nodes** *N*
+          Set the maximum number of nodes with jobs submitted to the local *condor_schedd*
+      **-\-idle** *N*
+          Set the maximum number of idle jobs associated with this DAG within the local *condor_schedd*\s queue.
+      **-\-pre** *N*
+          Set the maximum number of executing pre-scripts.
+      **-\-hold** *N*
+          Set the maximum number of executing hold-scripts.
+      **-\-post** *N*
+          Set the maximum number of executing post-scripts.
+      **-\-submissions** *N*
+          Set the maximum number of job list submissions per submit interval.
 
 .. sidebar:: HTCondor CLI System Nouns
 

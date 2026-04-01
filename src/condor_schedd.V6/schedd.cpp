@@ -9109,15 +9109,20 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated With
-	// them.  Add them into the resource_requests list now.
-	for (const auto &[_,oi]: OwnersInfo) {
-		for (auto &ocu: oi->ocus) {
-			if (ocu.mrec == nullptr) {
-			
-				int ocu_id = ocu.ocu_id;
-				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
-				resource_requests->add(ocu_id, ocu_request);
+	// OCUs represent requests for match_recs (slots) that have no jobs associated with
+	// them.  Add them into the resource_requests list now, but only for the owners
+	// that belong to the submitter currently being negotiated.
+	if (Owner) {
+		for (const std::string &owner_name: Owner->owners) {
+			OwnerInfo *oi = find_ownerinfo(owner_name.c_str());
+			if (oi) {
+				for (auto &ocu: oi->ocus) {
+					if (ocu.mrec == nullptr) {
+						int ocu_id = ocu.ocu_id;
+						PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+						resource_requests->add(ocu_id, ocu_request);
+					}
+				}
 			}
 		}
 	}
@@ -13732,6 +13737,23 @@ int TransformOnEvict(JobQueueJob * job, const char * name, const char * xform_bo
 	return shadow_code;
 }
 
+void
+Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
+{
+	if( srec != NULL && !srec->removed && srec->match ) {
+		// Don't delete matches we're trying to use for a now job.
+		if(! srec->match->m_now_job.isJobKey()) {
+			if (!srec->match->is_ocu) {
+				DelMrec(srec->match);
+			} else {
+				// In the OCU case, move claim back to Claimed/Idle
+				srec->match->setStatus(M_CLAIMED);
+				SetMrecJobID(srec->match, -1, -1);
+			}
+		}
+	}
+}
+
 /**
  * Based on the exit status code for a job, we will preform
  * an appropriate action on the job in the queue. If an exception
@@ -13833,8 +13855,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		check_eviction_transforms = true;
 	} else if (exit_code == JOB_SHOULD_REQUEUE) {
 		int code = 0;
+		int subcode = 0;
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &code);
-		if (code > 0 && code < CONDOR_HOLD_CODE::VacateBase) {
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &subcode);
+		if (shouldHoldJobBasedOnCodes(code, subcode)) {
+			// even though the shadow is telling us to requeue the job,
+			// the vacate codes say we should hold, so check for
+			// eviction transforms
 			check_eviction_transforms = true;
 		}
 	}
@@ -13889,14 +13916,27 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		dprintf(D_ALWAYS, "not holding job %d.%d because of successful eviction transform\n", job_id.cluster, job_id.proc);
 	} else
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
-		long long ival = 0;
+		int vacateReasonCode = 0;
+		int vacateReasonSubCode = 0;
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &vacateReasonCode);
+		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &vacateReasonSubCode);
+		bool code_cooldown = shouldCoolJobBasedOnCodes(vacateReasonCode, vacateReasonSubCode);
+		long long code_cooldown_duration = param_integer( "SYSTEM_COOLDOWN_DURATION", 20 );
+
+		// Evaluate the cooldown expression even if shouldCoolJobBasedOnCodes()
+		// is true in case the expression's cooldown duration is longer.
 		classad::Value val;
-		if (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(ival) && ival > 0) {
+		long long config_cooldown_duration = 0;
+		bool config_cooldown = (m_jobCoolDownExpr && job_ad->EvaluateExpr(m_jobCoolDownExpr, val) && val.IsNumber(config_cooldown_duration) && config_cooldown_duration > 0);
+
+		long long cooldown_duration = MAX( code_cooldown_duration, config_cooldown_duration );
+
+		if( code_cooldown || config_cooldown ) {
 			int cnt = 0;
 			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
 			cnt++;
 			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + ival);
+			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + cooldown_duration);
 			stats.JobsCoolDown += 1;
 			OTHER.JobsCoolDown += 1;
 		}
@@ -13941,18 +13981,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_CKPTED:
 		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
-			if( srec != NULL && !srec->removed && srec->match ) {
-				// Don't delete matches we're trying to use for a now job.
-				if(! srec->match->m_now_job.isJobKey()) {
-					if (!srec->match->is_ocu) {
-						DelMrec(srec->match);
-					} else {
-						// In the OCU case, move claim back to Claimed/Idle
-						srec->match->setStatus(M_CLAIMED);
-						SetMrecJobID(srec->match, -1, -1);
-					}
-				}
-			}
+			CleanupMatchForJobExit(srec);
             switch (exit_code) {
                case JOB_CKPTED:
                   stats.JobsCheckpointed += 1;
@@ -14081,6 +14110,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				set_job_status( job_id.cluster, job_id.proc, HELD );
 			}
 			is_badput = true;
+
+			// The startd will have already released the claim, so clean up or reset the match as appropriate
+			CleanupMatchForJobExit(srec);
 			
 				// If the job has a CronTab schedule, we will want
 				// to remove cached scheduling object so that if

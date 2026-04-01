@@ -4084,6 +4084,12 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 bool
 Starter::removeTempExecuteDir([[maybe_unused]] int& exit_code, const char * move_to)
 {
+	int sleep_time = param_integer("STARTER_REMOVE_EXECUTE_DIR_DELAY_TIME", 0);  // Useful for debugging
+	if (sleep_time > 0) {
+		dprintf(D_STATUS, "Sleeping for %d seconds before removing execute directory\n", sleep_time);
+		sleep(sleep_time);
+	}
+
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
 		return true;

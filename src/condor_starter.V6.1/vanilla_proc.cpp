@@ -871,7 +871,7 @@ bool VanillaProc::restartCheckpointedJob() {
 	// equivalent to reactivating a claim, so ask the startd if a claim
 	// reactivation would succeed.
 	//
-	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", false ) )
+	if( param_boolean( "CHECK_REACTIVATE_AFTER_CHECKPOINT", true ) )
 	{
 		DCStartd startd((const char *)nullptr);
 		if(! startd.locate()) {

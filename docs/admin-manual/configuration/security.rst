@@ -534,6 +534,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     bypasses the security authorization settings. The default value is
     ``True``.
 
+:macro-def:`SEC_USE_LOW_DATA_MODE`
+    When this boolean parameter is set to ``True``, daemons will reject
+    large data messages from unauthenticated clients.
+    The default is ``False``.
+
 :macro-def:`SEC_ENABLE_REMOTE_ADMINISTRATION`
     A boolean parameter that controls whether daemons should include a
     secret administration key when they advertise themselves to the

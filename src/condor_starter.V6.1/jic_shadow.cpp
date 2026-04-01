@@ -754,7 +754,8 @@ JICShadow::transferOutputFinish(bool& transient_failure, bool& in_progress)
 			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES,
 							m_ft_info.spooled_files.c_str());
 		} else {
-			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
+			std::string buf;
+			dprintf( D_FULLDEBUG, "Sandbox transfer failed.  m_ft_info: %s\n", m_ft_info.dump(buf));
 			// Failed to transfer.
 			// JICShadow::transferOutputMopUp() will figure out what to do
 			// when you call it after JICShadow::transferOutput() returns.
@@ -3209,7 +3210,7 @@ JICShadow::initIOProxy( void )
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
-				 starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 starter->GetJobHomeDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {

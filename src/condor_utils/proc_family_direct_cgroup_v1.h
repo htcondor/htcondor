@@ -109,6 +109,7 @@ private:
 	time_t start_time;
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
+	uint64_t cgroup_memory_and_swap_limit;
 	uint64_t start_user_cpu_hz = 0;
 	uint64_t start_sys_cpu_hz = 0;
 	int cgroup_cpu_shares;

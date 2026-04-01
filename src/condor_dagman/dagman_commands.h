@@ -24,6 +24,7 @@ enum class DAG_GENERIC_CMD {
 	MIN = 0, // Must be first!
 	HALT,
 	RESUME,
+	SET_THROTTLES,
 	MAX, // Must be last!
 };
 
