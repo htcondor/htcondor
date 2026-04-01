@@ -33,6 +33,10 @@
   variable still points to the correct place.
   :jira:`2949`
 
+- Reduced the number of scripts that the *blahpd* runs for answering queries
+  about job status.
+  :jira:`3634`
+
 - Container universe jobs whose image is an url (like docker://) now work
   when file transfer is off.
   :jira:`3638`
