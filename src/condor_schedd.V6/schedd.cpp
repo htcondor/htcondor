@@ -11970,10 +11970,10 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		std::string commands;
 		formatstr(commands, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(WRITE, true).c_str());
 
-		std::string fqu;
-		if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_USER, fqu) < 0) {
-			dprintf(D_ERROR, "Failed to get %s for scheduler universe job %d.%d!!\n",
-			        ATTR_USER, job_id.cluster, job_id.proc);
+		std::string fqu = userJob->ownerinfo->Name();
+		if (fqu.empty()) {
+			dprintf(D_ERROR, "Failed to get fully qualified username for scheduler universe job %d.%d!!\n",
+			        job_id.cluster, job_id.proc);
 			goto wrapup;
 		}
 
