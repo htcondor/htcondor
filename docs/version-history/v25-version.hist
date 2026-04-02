@@ -34,8 +34,7 @@
   :jira:`2949`
 
 - Improved the *blahpd*'s efficiency in monitoring job status.
-  :jira:`3634`
-  :jira:`3640`
+:jira:`3634,3640`
 
 - Container universe jobs whose image is an url (like docker://) now work
   when file transfer is off.
