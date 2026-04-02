@@ -479,6 +479,20 @@ bool refuseX( Stream* s, CONDOR_HOLD_CODE code, const char * reason, bool retry_
 	return refuse(s, nullptr, retry_ok);
 }
 
+bool caCopyIfDefined(ClassAd & target, ClassAd & source, const char * attr, bool if_not_in_target /*=false*/)
+{
+	const auto *tree = source.Lookup(attr);
+	if (tree) {
+		if (if_not_in_target) {
+			if (target.Lookup(attr)) {
+				return false;
+			}
+		}
+		target.Insert(attr, tree->Copy());
+		return true;
+	}
+	return false;
+}
 
 bool
 caInsert( ClassAd* target, ClassAd* source, const char* attr,
@@ -578,7 +592,8 @@ bool
 configInsert( ClassAd* ad, const char* param_name, 
 			  const char* attr, bool is_fatal, const char *default_value) 
 {
-	char* val = param( param_name );
+	auto_free_ptr val(param(param_name));
+	const char * exprstr = default_value;
 	if( ! val ) {
 		if( is_fatal ) {
 			EXCEPT( "Required attribute \"%s\" is not defined", attr );
@@ -586,14 +601,18 @@ configInsert( ClassAd* ad, const char* param_name,
 		if (default_value == nullptr) {
 			return false;
 		}
-		val = strdup(default_value);
+	} else {
+		exprstr = val.ptr();
 	}
 
-	if ( ! ad->AssignExpr( attr, val ) ) {
-		EXCEPT( "Syntax error in %s expression: '%s'", attr, val );
+	if ( ! ad->AssignExpr( attr, exprstr ) ) {
+		if (is_fatal) { 
+			EXCEPT( "Syntax error in %s expression: '%s'", attr, exprstr );
+		} else {
+			dprintf(D_ERROR, "Invalid expression %s: '%s'\n", attr, exprstr);
+		}
 	}
 
-	free( val );
 	return true;
 }
 

@@ -1327,6 +1327,14 @@ Resource::publish_slot_config_overrides(ClassAd * cad)
 		const char * val = SlotType::type_param(r_attr, attrs[ix]);
 		if (val) cad->AssignExpr(attrs[ix], val);
 	}
+
+	// also publish admin-defined requirements clauses that have slot config overrides
+	for (auto & attr : r_reqexp.normal_clauses) {
+		if (YourStringNoCase(ATTR_START) != attr && YourStringNoCase(ATTR_WITHIN_RESOURCE_LIMITS) != attr) {
+			const char * val = SlotType::type_param(r_attr, attr.c_str());
+			if (val) cad->AssignExpr(attr, val);
+		}
+	}
 }
 
 // this is called on startup AND ON RECONFIG!
@@ -2852,6 +2860,10 @@ Resource::publish_dynamic(ClassAd* cap)
 		reqexp_set_state(r_reqexp.rstate);
 	} else {
 		publish_requirements(cap);
+		// special case for attrs related to ATTR_HEALTHY because these need to be copied
+		// when we are building a new ad (but it isn't necessary that they exist)
+		caCopyIfDefined(*cap, *r_config_classad, "HealthExprs");
+		caCopyIfDefined(*cap, *r_config_classad, "HealthFactor");
 	}
 
 	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );
