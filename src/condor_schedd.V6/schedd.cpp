@@ -11601,6 +11601,14 @@ Scheduler::initLocalStarterDir( void )
 }
 
 
+// Make a named security session id for scheduler universe jobs based on job id
+// i.e. scheduler-universe-<Cluster>.<Proc>
+static std::string
+schedUniverseSecSessionId(const PROC_ID& job_id) {
+	return std::string("scheduler-universe-") + std::to_string(job_id.cluster) + "." + std::to_string(job_id.proc);
+}
+
+
 shadow_rec*
 Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 {
@@ -11637,7 +11645,6 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	std::string cmd_secret;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
-	bool is_daemon_core = false;
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
@@ -11949,17 +11956,59 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		}
 	}
 
-	GetAttributeBool(job_id.cluster, job_id.proc, ATTR_IS_DAEMON_CORE, &is_daemon_core);
-	if (is_daemon_core) {
-		auto opaque = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
-		if ( ! opaque.get()) {
-			dprintf(D_ERROR, "Failed to create secret for scheduler universe Daemon.\n");
+	// Create security session for all scheduler universe jobs to automatically use
+	{ // Scope for variable creation
+		std::string sec_session_id = schedUniverseSecSessionId(job_id);
+		auto sec_session_key = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9), free};
+
+		if ( ! sec_session_key.get()) {
+			dprintf(D_ERROR, "Failed to create security session key for scheduler universe job %d.%d.\n",
+			        job_id.cluster, job_id.proc);
 			goto wrapup;
-		} else {
-			cmd_secret = opaque.get();
-			envobject.SetEnv(ENV_CONDOR_SECRET, cmd_secret.c_str());
 		}
-	}
+
+		std::string commands;
+		formatstr(commands, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(WRITE, true).c_str());
+
+		std::string fqu = userJob->ownerinfo->Name();
+		if (fqu.empty()) {
+			dprintf(D_ERROR, "Failed to get fully qualified username for scheduler universe job %d.%d!!\n",
+			        job_id.cluster, job_id.proc);
+			goto wrapup;
+		}
+
+		bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+			WRITE,
+			sec_session_id.c_str(),
+			sec_session_key.get(),
+			commands.c_str(),
+			AUTH_METHOD_FAMILY,
+			fqu.c_str(),
+			nullptr,
+			0,
+			nullptr,
+			true
+		);
+
+		if ( ! rc) {
+			dprintf(D_ERROR, "Failed to create security session for scheduler universe job %d.%d\n",
+			        job_id.cluster, job_id.proc);
+			goto wrapup;
+		}
+
+		std::string sec_session_info;
+		if ( ! daemonCore->getSecMan()->ExportSecSessionInfo(sec_session_id.c_str(), sec_session_info)) {
+			dprintf(D_ERROR, "Failed to export security session for scheduler universe job %d.%d\n",
+			        job_id.cluster, job_id.proc);
+			goto wrapup;
+		}
+
+		ClaimIdParser session(sec_session_id.c_str(), sec_session_info.c_str(), sec_session_key.get());
+		cmd_secret = session.claimId();
+
+		// Set in scheduler jobs environment to be automatically picked up
+		envobject.SetEnv(ENV_CONDOR_SEC_SESSION, cmd_secret.c_str());
+	} // End Scope
 
 	// Scheduler universe jobs should not be told about the shadow
 	// command socket in the inherit buffer.
@@ -13516,10 +13565,14 @@ Scheduler::child_exit(int pid, int status)
 	// handler methods to take care of it
 	//
 	if (IsSchedulerUniverse(srec)) {
+		// Remove scheduler universe security session from cache
+		daemonCore->getSecMan()->session_cache.erase(schedUniverseSecSessionId(job_id));
+
  		// scheduler universe process
 		daemonCore->Kill_Family( pid );
 		scheduler_univ_job_exit(pid,status,srec);
 		delete_shadow_rec( pid );
+
 		// even though this will get set correctly in
 		// count_jobs(), try to keep it accurate here, too.
 		if( SchedUniverseJobsRunning > 0 ) {

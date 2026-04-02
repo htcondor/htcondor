@@ -21,6 +21,8 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_daemon_core.h"
+#include "authentication.h"
+#include "condor_claimid_parser.h"
 #include "subsystem_info.h"
 #include "basename.h"
 #include "setenv.h"
@@ -386,6 +388,28 @@ void Dagman::LocateSchedd() {
 		debug_printf(DEBUG_QUIET, "WARNING: can't find address of local schedd for ClassAd updates (%s)\n",
 		             errMsg );
 		check_warning_strictness(DAG_STRICT_3);
+	} else {
+		bool sec_session_setup = false;
+		// Setup security session with schedd with provided sec session (note this is also our command secret string)
+		if ( ! dagman.commandSecret.empty()) {
+			ClaimIdParser claimId(dagman.commandSecret.c_str());
+			sec_session_setup = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+				WRITE,
+				claimId.secSessionId(),
+				claimId.secSessionKey(),
+				claimId.secSessionInfo(),
+				AUTH_METHOD_FAMILY,
+				CONDOR_PARENT_FQU,
+				_schedd->addr(),
+				0,
+				nullptr,
+				false
+			);
+		}
+
+		if ( ! sec_session_setup) { // This is fine... just means DAGMan will do lots of authentication
+			debug_printf(DEBUG_NORMAL, "Failed to create non-negotiated security session with schedd %s\n", _schedd->addr());
+		}
 	}
 }
 
@@ -1568,9 +1592,8 @@ int main(int argc, char **argv) {
 		return EXIT_ERROR;
 	}
 
-	// Get and remove command authorization secret from environment
-	GetEnv(ENV_CONDOR_SECRET, dagman.commandSecret);
-	if ( ! dagman.commandSecret.empty()) { UnsetEnv(ENV_CONDOR_SECRET); }
+	// DAGMan uses the scheduler universe security session as the command secret
+	GetEnv(ENV_CONDOR_SEC_SESSION, dagman.commandSecret);
 
 	debug_level = DEBUG_VERBOSE; // Default debug level is verbose output
 

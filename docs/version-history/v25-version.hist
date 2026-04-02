@@ -4,6 +4,10 @@
   :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
   :jira:`3584`
 
+- DAGMan is now born with a security session from its parent *condor_schedd*
+  allowing it to communicate without re-authentication.
+  :jira:`3298`
+
 - Add new submit command :subcom:`retry_request_disk`, which operates
   like :subcom:`retry_request_memory` but for the ``Disk`` resource.
   :jira:`3552`
