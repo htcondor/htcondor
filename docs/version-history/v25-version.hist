@@ -48,6 +48,11 @@
   which represents the version of the *condor_schedd* the job was placed in.
   :jira:`3413`
 
+- :tool:`condor_status` now supports an `-aaf` option, for append
+  autoformat, which displays columns like the `-af` option does, but
+  appends them to the default output.
+  :jira:`3604`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs

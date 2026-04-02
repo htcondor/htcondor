@@ -189,6 +189,7 @@ protected:
 std::vector<GroupByKeyInfo> group_by_keys; // TJ 8.1.5 for future use, ignored for now.
 bool explicit_format = false;
 bool disable_user_print_files = false; // allow command line to defeat use of default user print files.
+std::vector<const char *> append_autoformat_args;
 const char		*DEFAULT= "<default>";
 DCCollector* pool = NULL;
 int			sdo_mode = SDO_NotSet;
@@ -256,6 +257,52 @@ PrettyPrinter mainPP( PP_NOTSET, PP_NOTSET, STD_HEADFOOT );
 void usage 		(const char * opts=NULL);
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
+
+// incorporate the -aaf (append autoformat) columns into the output format.
+static void add_aaf_columns_to_print_mask()
+{
+	if (append_autoformat_args.empty())
+		return;
+
+	// if the last column of the existing format has width 0, set it to a non-zero width
+	// so that the column gets auto-width adjusted to match the data.
+	int lastcol = mainPP.pm.ColCount()-1;
+	mainPP.pm.adjust_formats([](void*pv, int index, Formatter*fmt, [[maybe_unused]] const char *attr) -> int {
+		if (index == *(int*)pv && fmt->width == 0 && !(fmt->options & FormatOptionAutoWidth)) {
+			fmt->width = 3;
+			fmt->options |= FormatOptionLeftAlign | FormatOptionAutoWidth | FormatOptionNoTruncate;
+		}
+		return 1;
+		}, &lastcol);
+
+	int nargs = (int)append_autoformat_args.size();
+	append_autoformat_args.push_back(NULL); // have the last argument be NULL, like argv[argc] is.
+	classad::References refs;
+	const char * pcolon;
+	for (int i = 0; i < nargs; ++i) {
+		if (is_dash_arg_colon_prefix(append_autoformat_args[i], "aaf", &pcolon, 3)) {
+			const char * format_char = nullptr;
+			if (pcolon) {
+				++pcolon;
+				if (*pcolon == 'r') { format_char = "r"; ++pcolon; }
+				else if (*pcolon == 'V') { format_char = "V"; ++pcolon; }
+				if (*pcolon) {
+					fprintf(stderr,"Error: %s is invalid -aaf format qualifier. -aaf:r or -aaf:V are permitted.\n", pcolon);
+					exit(1);
+				}
+			}
+			int ixNext = parse_autoformat_args(nargs, &append_autoformat_args[0], i+1, format_char, mainPP.pm, refs, diagnose, true);
+			if (ixNext < 0) {
+				exit(-ixNext);
+			}
+			if (ixNext > i) {
+				i = ixNext-1;
+			}
+		}
+	}
+	projList.insert(refs.begin(), refs.end());
+	mainPP.wide_display = true;
+}
 
 // prototype for CollectorList:query, CondorQuery::processAds,
 // and CondorQ::fetchQueueFromHostAndProcess callbacks.
@@ -1500,6 +1547,12 @@ main (int argc, char *argv[])
 		const char * constr = NULL;
 		mainPP.prettyPrintInitMask(projList, constr, disable_user_print_files);
 		if (constr) { query->addANDConstraint(constr); }
+		add_aaf_columns_to_print_mask();
+	} else if (mainPP.using_print_format) {
+		add_aaf_columns_to_print_mask();
+	} else if ( ! append_autoformat_args.empty()) {
+		fprintf(stderr, "Error: output formatting options conflict with -aaf options\n");
+		exit(1);
 	}
 
 	// if diagnose was requested, just print the query ad
@@ -2575,6 +2628,8 @@ usage (const char * opts)
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
+		"\t-aaf[:Vr] <attr> [attr2 [...]]\n"
+		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-merge <file>\t\tCompare ads in file and query by sort key\n"
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
 		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
@@ -2696,6 +2751,23 @@ firstPass (int argc, char *argv[])
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
 			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
+		} else
+		if (*argv[i] == '-' &&
+			(is_arg_colon_prefix(argv[i]+1, "aaf", &pcolon, 3))) {
+				// make sure we have at least one more argument
+			if ( !argv[i+1] || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: Argument %s requires "
+						 "at least one attribute parameter\n", argv[i] );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			while (argv[i+1] && *(argv[i+1]) != '-') {
+				++i;
+			}
+			// if list ends in a '-' without any characters after it, just eat the arg and keep going.
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
@@ -3168,7 +3240,26 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		if (*argv[i] == '-' &&
-			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) || 
+			(is_arg_colon_prefix(argv[i]+1, "aaf", &pcolon, 3)) ) {
+				// make sure we have at least one more argument
+			if ( !argv[i+1] || *(argv[i+1]) == '-') {
+				fprintf( stderr, "Error: -aaf requires at least one attribute parameter\n" );
+				exit( 1 );
+			}
+			// process all arguments that don't begin with "-" as part of appendautoformat.
+			append_autoformat_args.push_back(argv[i]);
+			while (argv[i+1] && *(argv[i+1]) != '-') {
+				++i;
+				append_autoformat_args.push_back(argv[i]);
+			}
+			// if list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
+			continue;
+		}
+		if (*argv[i] == '-' &&
+			(is_arg_colon_prefix(argv[i]+1, "autoformat", &pcolon, 5) ||
 			 is_arg_colon_prefix(argv[i]+1, "af", &pcolon, 2)) ) {
 				// make sure we have at least one more argument
 			if ( !argv[i+1] || *(argv[i+1]) == '-') {
