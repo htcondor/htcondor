@@ -55,6 +55,11 @@
   will run without errors on not-yet-released future version of python.
   :jira:`3643`
 
+- The python method :meth:`htcondor2.Schedd.history` has an upper bound on the
+  size in bytes of the constraint and projection argument.  Now return an
+  clear error message when these bounds are exceeded.
+  :jira:`3644` 
+
 - :tool:`condor_status` now supports an `-aaf` option, for append
   autoformat, which displays columns like the `-af` option does, but
   appends them to the default output.
