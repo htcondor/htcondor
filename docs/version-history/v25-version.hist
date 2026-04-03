@@ -11,7 +11,7 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
-- Add new verb to :tool:`htcondor` dag command, "resources", which shows
+- Added new :tool:`htcondor dag resources` command, which shows
   the resource usage for running and historical jobs.
   :jira:`3636`
 
