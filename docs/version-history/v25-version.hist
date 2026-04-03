@@ -53,7 +53,7 @@
 
 - Fixed python deprecation warning in :tool:`condor_top`, so that it
   will run without errors on not-yet-released future version of python.
-  :jira:3643`
+  :jira:`3643`
 
 - :tool:`condor_status` now supports an `-aaf` option, for append
   autoformat, which displays columns like the `-af` option does, but
