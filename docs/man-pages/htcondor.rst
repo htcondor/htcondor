@@ -29,6 +29,7 @@ Synopsis
 | **htcondor** **dag** *resume* dagman-job-id
 | **htcondor** **dag** *histogram* [**-i/-\-instant** | **-c/-\-cumulative**] dagman-job-id
 | **htcondor** **dag** *throttle* [**-\-nodes** *N*] [**-\-idle** *N*] [**-\-pre** *N*] [**-\-hold** *N*] [**-\-post** *N*] [**-\-submissions** *N*] dagman-job-id
+| **htcondor** **dag** *resources* [**-history**] dagman-job-id
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
 | **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
@@ -404,6 +405,17 @@ DAG Verbs
           Set the maximum number of executing post-scripts.
       **-\-submissions** *N*
           Set the maximum number of job list submissions per submit interval.
+
+  **htcondor dag resources** [**-history**] **dagman-job-id**
+      Display resource usage for all jobs managed by a DAG. For each job, shows
+      the node name, job ID, status, current memory usage, requested memory,
+      number of starts, and remote host. A summary line shows the total number
+      of running jobs, idle jobs, and the average memory utilization (the ratio
+      of current memory usage to requested memory) across all jobs that have
+      defined memory usage.
+
+      **-history**
+          Show jobs from the history file instead of the active queue.
 
 .. sidebar:: HTCondor CLI System Nouns
 
