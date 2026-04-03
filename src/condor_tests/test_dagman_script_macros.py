@@ -118,7 +118,7 @@ EXPECTED = {
         f"{CLUSTER_ID}", # Cluster id
         "7", # Num jobs
         "False", # Success
-        {"3","2","1"}, # Return
+        {"3","2","1","-1002"}, # Return
         "1,2,3", # Exit codes
         "1:2,2:1,3:1", # Exit frequencies
         "1,1,2,3,,,", # Exit code list
