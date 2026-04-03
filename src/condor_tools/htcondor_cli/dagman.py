@@ -519,22 +519,37 @@ class Resources(Verb):
         )
         logger.info(header)
 
+        total_running = 0
+        total_idle = 0
+        mem_util_sum = 0.0
+        mem_util_count = 0
+
         for job in jobs:
             node_name = job.get("DAGNodeName", "?")
             if len(node_name) > 20:
                 node_name = node_name[:20]
             job_id = f"{job.get('ClusterId', '?')}.{job.get('ProcId', '?')}"
-            status = job_status.get(job.get("JobStatus", 0), "Unknown")
+            js = job.get("JobStatus", 0)
+            status = job_status.get(js, "Unknown")
+            if js == 2 or js == 6:
+                total_running += 1
+            elif js == 1:
+                total_idle += 1
             if "MemoryUsage" in job:
                 val = job.eval("MemoryUsage") if hasattr(job, "eval") else job["MemoryUsage"]
                 mem_usage = str(int(val)) if val is not None else "-"
             else:
                 mem_usage = "-"
+                val = None
             if "RequestMemory" in job:
-                val = job.eval("RequestMemory") if hasattr(job, "eval") else job["RequestMemory"]
-                req_mem = str(int(val)) if val is not None else "-"
+                req_val = job.eval("RequestMemory") if hasattr(job, "eval") else job["RequestMemory"]
+                req_mem = str(int(req_val)) if req_val is not None else "-"
             else:
                 req_mem = "-"
+                req_val = None
+            if val is not None and req_val is not None and req_val > 0:
+                mem_util_sum += val / req_val
+                mem_util_count += 1
             starts = str(job.get("NumJobStarts", 0))
             host = job.get("RemoteHost", "-")
 
@@ -547,6 +562,15 @@ class Resources(Verb):
                 starts=starts,
                 host=host,
             ))
+
+        # Print summary line
+        total_jobs = len(jobs)
+        parts = [f"Total {total_jobs} jobs; {total_running} running, {total_idle} idle"]
+        if mem_util_count > 0:
+            avg_util = mem_util_sum / mem_util_count * 100.0
+            parts.append(f"avg memory utilization: {avg_util:.1f}%")
+        logger.info("")
+        logger.info("; ".join(parts))
 
 
 class Throttle(Verb):
