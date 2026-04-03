@@ -15,6 +15,10 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
+- Added new :tool:`htcondor dag resources` command, which shows
+  the resource usage for running and historical jobs.
+  :jira:`3636`
+
 - Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
   :jira:`3564`
 

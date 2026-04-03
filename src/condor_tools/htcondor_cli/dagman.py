@@ -395,6 +395,184 @@ class Histogram(Verb):
 
         print_job_event_histogram(log, options["hist_mode"])
 
+class Resources(Verb):
+    """
+    Shows resource usage for all jobs in a DAG
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "help": "DAG ID",
+        },
+        "history": {
+            "args": ("-history",),
+            "action": "store_true",
+            "default": False,
+            "help": "Show jobs from the history file instead of the active queue",
+        },
+    }
+
+    def _query_queue(self, logger, dag_id):
+        """Query the active job queue for DAG node jobs."""
+        schedd = htcondor.Schedd()
+
+        try:
+            dag = schedd.query(
+                constraint=f"ClusterId == {dag_id}",
+                projection=["DAG_NodesTotal", "JobBatchName"]
+            )
+        except Exception as e:
+            raise RuntimeError(f"Error looking up DAG: {str(e)}")
+        if len(dag) == 0:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
+        if "DAG_NodesTotal" not in dag[0]:
+            raise RuntimeError(f"Job {dag_id} is not a DAG")
+
+        batch_name = dag[0].get("JobBatchName", "")
+        constraint = f'JobBatchName == "{batch_name}" && DAG_NodesTotal is undefined'
+
+        try:
+            jobs = schedd.query(
+                constraint=constraint,
+                projection=["ClusterId", "ProcId", "DAGNodeName", "JobStatus",
+                            "MemoryUsage", "RequestMemory", "NumJobStarts", "RemoteHost"]
+            )
+        except Exception as e:
+            raise RuntimeError(f"Error querying DAG jobs: {str(e)}")
+
+        if len(jobs) == 0:
+            logger.info(f"DAG {dag_id} has no jobs in the queue.")
+            return None
+
+        jobs.sort(key=lambda j: (j.get("ClusterId", 0), j.get("ProcId", 0)))
+        return jobs
+
+    def _query_history(self, logger, dag_id):
+        """Query the history file for DAG node jobs."""
+        schedd = htcondor.Schedd()
+
+        # First, verify the DAG exists in history and get its batch name
+        try:
+            dag = list(schedd.history(
+                constraint=f"ClusterId == {dag_id}",
+                projection=["DAG_NodesTotal", "JobBatchName"],
+                match=1,
+            ))
+        except Exception as e:
+            raise RuntimeError(f"Error looking up DAG in history: {str(e)}")
+        if len(dag) == 0:
+            raise RuntimeError(f"No DAG found for ID {dag_id} in history.")
+        if "DAG_NodesTotal" not in dag[0]:
+            raise RuntimeError(f"Job {dag_id} is not a DAG")
+
+        batch_name = dag[0].get("JobBatchName", "")
+        constraint = f'JobBatchName == "{batch_name}" && DAG_NodesTotal is undefined'
+
+        try:
+            jobs = list(schedd.history(
+                constraint=constraint,
+                projection=["ClusterId", "ProcId", "DAGNodeName", "JobStatus",
+                            "MemoryUsage", "RequestMemory", "NumJobStarts", "RemoteHost"],
+            ))
+        except Exception as e:
+            raise RuntimeError(f"Error querying DAG jobs from history: {str(e)}")
+
+        if len(jobs) == 0:
+            logger.info(f"DAG {dag_id} has no jobs in the history.")
+            return None
+
+        jobs.sort(key=lambda j: (j.get("ClusterId", 0), j.get("ProcId", 0)))
+        return jobs
+
+    def __init__(self, logger, dag_id, **options):
+        use_history = options.get("history", False)
+
+        job_status = {
+            1: "Idle",
+            2: "Running",
+            3: "Removed",
+            4: "Completed",
+            5: "Held",
+            6: "Transferring",
+            7: "Suspended",
+        }
+
+        if use_history:
+            jobs = self._query_history(logger, dag_id)
+        else:
+            jobs = self._query_queue(logger, dag_id)
+
+        if jobs is None:
+            return
+
+        # Print header and rows
+        fmt = "{node:<20s}  {job_id:<10s}  {status:<13s}  {mem_usage:>9s}  {req_mem:>7s}  {starts:>6s}  {host}"
+        header = fmt.format(
+            node="NODE_NAME",
+            job_id="JOB_ID",
+            status="STATUS",
+            mem_usage="MEM_USAGE",
+            req_mem="REQ_MEM",
+            starts="STARTS",
+            host="REMOTE_HOST",
+        )
+        logger.info(header)
+
+        total_running = 0
+        total_idle = 0
+        mem_util_sum = 0.0
+        mem_util_count = 0
+
+        for job in jobs:
+            node_name = job.get("DAGNodeName", "?")
+            if len(node_name) > 20:
+                node_name = node_name[:20]
+            job_id = f"{job.get('ClusterId', '?')}.{job.get('ProcId', '?')}"
+            js = job.get("JobStatus", 0)
+            status = job_status.get(js, "Unknown")
+            if js == 2 or js == 6:
+                total_running += 1
+            elif js == 1:
+                total_idle += 1
+            if "MemoryUsage" in job:
+                val = job.eval("MemoryUsage") if hasattr(job, "eval") else job["MemoryUsage"]
+                mem_usage = str(int(val)) if val is not None else "-"
+            else:
+                mem_usage = "-"
+                val = None
+            if "RequestMemory" in job:
+                req_val = job.eval("RequestMemory") if hasattr(job, "eval") else job["RequestMemory"]
+                req_mem = str(int(req_val)) if req_val is not None else "-"
+            else:
+                req_mem = "-"
+                req_val = None
+            if val is not None and req_val is not None and req_val > 0:
+                mem_util_sum += val / req_val
+                mem_util_count += 1
+            starts = str(job.get("NumJobStarts", 0))
+            host = job.get("RemoteHost", "-")
+
+            logger.info(fmt.format(
+                node=node_name,
+                job_id=job_id,
+                status=status,
+                mem_usage=mem_usage,
+                req_mem=req_mem,
+                starts=starts,
+                host=host,
+            ))
+
+        # Print summary line
+        total_jobs = len(jobs)
+        parts = [f"Total {total_jobs} jobs; {total_running} running, {total_idle} idle"]
+        if mem_util_count > 0:
+            avg_util = mem_util_sum / mem_util_count * 100.0
+            parts.append(f"avg memory utilization: {avg_util:.1f}%")
+        logger.info("")
+        logger.info("; ".join(parts))
+
+
 class Throttle(Verb):
     """
     Change DAGMan's throttles.
@@ -509,14 +687,12 @@ class DAG(Noun):
     class throttle(Throttle):
         pass
 
-    """
     class resources(Resources):
         pass
-    """
 
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status, cls.halt, cls.resume, cls.histogram, cls.throttle]
+        return [cls.submit, cls.status, cls.halt, cls.resume, cls.histogram, cls.throttle, cls.resources]
 
 
 class DAGMan:
