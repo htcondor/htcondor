@@ -58,7 +58,7 @@ struct SimpleSubmitKeyword {
 
 const int f_error        = 0x040; // use of this command has been disabled in submit
 const int f_alt_name     = 0x080;
-const int f_special      = 0x20000; // special parseing if the value is required
+const int f_special      = 0x20000; // special parsing if the value is required
 const int f_special_mask = 0x1F000; // mask out the special group id
 
 constexpr const char * f_special_tag[]{
