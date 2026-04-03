@@ -1139,9 +1139,32 @@ FILE TRANSFER COMMANDS
     the files in the sandbox, except for the standard output and
     standard error files.  By default these two files go back To
     the access point.  To also send these two to the *output_destination*,
-    sent :subcom:`output` and/or :subcom:`error` to the same value
-    as the *output_destination*.  The HTCondor Administrator's manual has full
+    set :subcom:`output` and/or :subcom:`error` to the same value
+    as the *output_destination*.  Only one of this command or :subcom:`output_directory`
+    may be used. The HTCondor Administrator's manual has full
     details.
+
+ :subcom-def:`output_directory` = <dir>
+    When present, defines the directory where the entire output sandbox or a
+    subset of output files as specified by the submit command
+    :subcom:`transfer_output_files` will be transferred to.  Only one of this command
+    or :subcom:`output_destination` may be used.  To specify a separate
+    sub-directory for each job, <dir> can include $() expansions For example:
+
+    .. code-block:: condor-submit
+
+        output_directory = /path/to/output/$INT(ClusterId,%05d)/$(JobId)
+
+    Will transfer the output into a separate directory for each submission,
+    with a separate subdirectory for each job.  :ad-expr:`$INT(ClusterId,%05d)` prints
+    the ClusterId with a minimum of 5 digits using leading 0's, so if the
+    ClusterId of the submission is 95, the output directories will be
+
+    .. code-block:: text
+
+        /path/to/output/00095/95.0/
+        /path/to/output/00095/95.1/
+        ...
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
     The **should_transfer_files**
