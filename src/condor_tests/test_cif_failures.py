@@ -82,17 +82,34 @@ def held_cif_job(the_condor, path_to_sleep):
 class TestCIF:
 
     def test_transfer_failure(self, test_dir, the_condor, held_cif_job):
-        expected = [
+        expected_prefix = [
             JobEventType.SUBMIT,
             JobEventType.COMMON_FILES,
             JobEventType.COMMON_FILES,
             JobEventType.FILE_TRANSFER,
             JobEventType.FILE_TRANSFER,
             JobEventType.FILE_TRANSFER,
+        ]
+        optional = [
+            # It's a race condition as to whether or not the output transfer
+            # finished event gets written.  It looks like the parent shadow
+            # process doesn't reap its forked transfer child if the starter's
+            # eviction notice arrives first.
             JobEventType.FILE_TRANSFER,
+        ]
+        expected_suffix = [
             JobEventType.REMOTE_ERROR,
             JobEventType.JOB_EVICTED,
             JobEventType.JOB_HELD,
         ]
+
         actual = [ e.type for e in held_cif_job.event_log.events ]
-        assert expected == actual
+
+        actual_prefix = actual[0:len(expected_prefix)]
+        assert expected_prefix == actual_prefix
+
+        if len(expected_prefix) + len(expected_suffix) != len(actual):
+            assert optional == [actual[len(expected_prefix)]]
+
+        actual_suffix = actual[-1 * len(expected_suffix):]
+        assert expected_suffix == actual_suffix
