@@ -8,6 +8,11 @@
   allowing it to communicate without re-authentication.
   :jira:`3298`
 
+- Scheduler universe jobs, such as *condor_dagman*, will now enter job
+  cool down when they exit with a non-zero exit code. The duration of the
+  cool down in controlled by :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`.
+  :jira:`3067`
+
 - Add new submit command :subcom:`retry_request_disk`, which operates
   like :subcom:`retry_request_memory` but for the ``Disk`` resource.
   :jira:`3552`
@@ -42,7 +47,7 @@
   :jira:`2949`
 
 - Improved the *blahpd*'s efficiency in monitoring job status.
-:jira:`3634,3640`
+  :jira:`3634,3640`
 
 - Container universe jobs whose image is an url (like docker://) now work
   when file transfer is off.
