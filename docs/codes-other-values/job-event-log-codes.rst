@@ -3,7 +3,7 @@ Job Event Log Codes
 
 :index:`event codes for jobs<single: event codes for jobs; log files>`
 
-.. list-table:: Table B.2: Event Codes in a Job Event Log
+.. list-table:: Table: Event Codes in a Job Event Log
    :header-rows: 1
    :widths: 10 25 65
 

@@ -1,7 +1,7 @@
 DaemonCore Daemon Exit Codes
 ============================
 
-Table B.5: DaemonCore Daemon Exit Codes
+Table: DaemonCore Daemon Exit Codes
 
 +-------------+----------------------------------------------------------------------------+
 | Exit Code   | Description                                                                |
