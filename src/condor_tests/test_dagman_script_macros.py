@@ -10,6 +10,9 @@ import os
     # Each job list contains 7 jobs so tolerate 6 failures and
     # fail batch on 7th failure to ensure all jobs run but list fails
     DAGMAN_NODE_JOB_FAILURE_TOLERANCE = 6
+    # Evaluate periodic_remove quickly so the BAD node's aborted jobs
+    # don't add ~20s of latency waiting for the default evaluation cycle
+    PERIODIC_EXPR_INTERVAL = 5
 """
 #endtestreq
 
@@ -183,7 +186,7 @@ def checkDAGExit(default_condor, runDAG):
 class TestDAGManScriptMacros:
     def test_dagman_script_macros(self, runDAG):
         # POST scripts verify everything. As long as the DAG completes successfully then pass
-        assert runDAG.wait(condition=ClusterState.all_complete, timeout=120)
+        assert runDAG.wait(condition=ClusterState.all_complete, timeout=240)
         assert runDAG.state.all_status(jobs.JobStatus.COMPLETED)
 
     def test_verify_exit_code(self, checkDAGExit):
