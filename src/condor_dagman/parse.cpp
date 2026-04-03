@@ -3162,11 +3162,16 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 	}
 
 	std::string desc = cmd->GetSubmit();
+	std::string finalDagHack;
 	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
 		desc += DAG_SUBMIT_FILE_SUFFIX;
 	} else if (strstr(desc.c_str(), DAG_SUBMIT_FILE_SUFFIX)) {
-		debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
-		return false;
+		if (cmd->GetCommand() == DAG::CMD::FINAL) { // Allow this for final nodes (for LSST)
+			finalDagHack = desc.substr(0, desc.find(DAG_SUBMIT_FILE_SUFFIX));
+		} else {
+			debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
+			return false;
+		}
 	} else if (cmd->HasInlineDesc()) {
 		static uint32_t inline_count = 0;
 		desc = name + "-InlineDesc" + std::to_string(inline_count++);
@@ -3204,6 +3209,8 @@ bool DagProcessor::ProcessNode(const NodeCommand* cmd, Dag& dag, int dag_munge_i
 
 	if (cmd->GetCommand() == DAG::CMD::SUBDAG) {
 		node->SetDagFile(cmd->GetSubmit().c_str());
+	} else if ( ! finalDagHack.empty()) {
+		node->SetDagFile(finalDagHack.c_str());
 	}
 
 	if ( ! dag.Add(node.release())) {
