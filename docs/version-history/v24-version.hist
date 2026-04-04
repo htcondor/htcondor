@@ -1,5 +1,11 @@
 *** 24.0.20 bugs
 
+*** 24.0.19 features
+
+- HTCondor tarballs now contain `Pelican 7.24.0 <https://pelicanplatform.org/releases>`_
+
+- The condor package now requires pelican-7.24.0.
+
 *** 24.0.19 bugs
 
 - Fixed a performance problem with the classad2 python bindings that
