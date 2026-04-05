@@ -604,7 +604,7 @@ main(int argc, const char* argv[])
   negotiatorCanDoDirect = true; // Assumes a post version 9.1.1 negotiator, which supports direct query.
  
   // knob to disable negotiator modular direct query, in case this causes problems (the results *are* a bit different)
-  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", false)) {
+  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", true)) {
 	  negotiatorCanDoDirect = false;
   }
 
