@@ -64,6 +64,12 @@
   clear error message when these bounds are exceeded.
   :jira:`3644` 
 
+- When :tool:`condor_userprio` is run with a specific submitter name on
+  the command line, if the submitter is an active submitter in the 
+  *condor_collector* fallback to look again at the non-active 
+  submitters in the negotiator.
+  :jira;`3283`
+
 - :tool:`condor_status` now supports an `-aaf` option, for append
   autoformat, which displays columns like the `-af` option does, but
   appends them to the default output.
