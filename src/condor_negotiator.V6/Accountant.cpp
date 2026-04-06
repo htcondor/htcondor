@@ -1402,6 +1402,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 
 		ClassAd * ad = new ClassAd(*CustomerAd);
 		ad->Assign(ATTR_NAME, CustomerName);
+		ad->Assign(ATTR_LAST_UPDATE, LastUpdateTime);
 		SetMyTypeName(*ad, ACCOUNTING_ADTYPE); // MyType in the accounting log is * (so is target type actually)
 		// SetTargetTypeName(*ad, "none");
 		ad->Assign(PriorityAttr, effectivePriority);
