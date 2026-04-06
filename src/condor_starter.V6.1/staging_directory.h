@@ -2,9 +2,13 @@
 #define   _CONDOR_STAGING_DIRECTORY_H
 
 
-bool convertToStagingDirectory( const std::filesystem::path & location );
-// bool check_permissions( const std::filesystem::path & l, const std::filesystem::perms p );
+int createStagingDirectory(
+    const std::filesystem::path & parentDir,
+    const std::filesystem::path & stagingDir
+);
+bool convertToStagingDirectory( const std::filesystem::path & stagingDir );
 bool mapContentsOfDirectoryInto( const std::filesystem::path & location, const std::filesystem::path & sandbox );
+
 
 #include <memory>
 #include <filesystem>
@@ -15,7 +19,7 @@ class StagingDirectory {
 
         virtual bool create() = 0;
 		virtual bool modify() = 0;
-		virtual bool stage( const std::filesystem::path & s ) = 0;
+		virtual bool map( const std::filesystem::path & s ) = 0;
 
 		virtual ~StagingDirectory() = default;
 
@@ -43,6 +47,7 @@ class StagingDirectoryFactory {
             MIN,
             INVALID,
             Hardlink,
+            BindMount,
             Copy,
             MAX
         };

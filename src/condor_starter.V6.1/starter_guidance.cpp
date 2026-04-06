@@ -494,69 +494,32 @@ Starter::handleJobSetupCommand(
 			// dprintf( D_ZKM, "Will send transfer key '%s'\n", transferKey.c_str() );
 
 			//
-			// Construct the new FileTransfer object.
+			// Create the staging directory.
 			//
 
 			std::filesystem::path executeDir( s->GetSlotDir() );
 			std::filesystem::path parentDir = executeDir / "staging";
 			std::filesystem::path stagingDir = parentDir / cifName;
-			{
-				// We could check STARTER_NESTED_SCRATCH to see if we needed
-				// to create this directory as PRIV_CONDOR instead of PRIV_USER,
-				// but since we'd need to escalate to root to chown afterwards
-				// anyway, let's not duplicate code for now.
-				TemporaryPrivSentry tps(PRIV_ROOT);
 
-				std::error_code errorCode;
-				std::filesystem::create_directories( stagingDir, errorCode );
-				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
-				}
+/*
+			StagingDirectoryFactory sdf;
+			auto staging = sdf.make(stagingDir);
+			if(! staging) {
+				dprintf( D_ALWAYS, "Failed to make() staging directory, reporting failure.\n" );
+				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, -1 );
+			}
+*/
 
-				std::filesystem::permissions(
-					parentDir,
-					perms::owner_read | perms::owner_write | perms::owner_exec,
-					errorCode
-				);
-				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
-				}
-
-				std::filesystem::permissions(
-					stagingDir,
-					perms::owner_read | perms::owner_write | perms::owner_exec,
-					errorCode
-				);
-				if( errorCode ) {
-					dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode.value() );
-				}
-
-#ifdef    WINDOWS
-
-				// Likely, everything in this TemporaryPrivSentry block needs
-				// to be different for Windows, suggesting that this block may
-				// be better refactored as a function.
-				//
-				// Build fix only.
-
-#else
-				int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
-				if( rv != 0 ) {
-					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
-				}
-				rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
-				if( rv != 0 ) {
-					dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
-					REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errno );
-				}
-#endif /* WINDOWS */
+			int errorCode = createStagingDirectory( parentDir, stagingDir );
+			if( errorCode ) {
+				dprintf( D_ALWAYS, "Failed to create() staging directory, reporting failure.\n" );
+				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode );
 			}
 
 
+			//
+			// Transfer the common files.
+			//
 			ClassAd ftAd( guidance );
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
 			// ... blocking, at least for now.
