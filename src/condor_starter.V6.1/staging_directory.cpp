@@ -8,8 +8,64 @@
 
 #include "staging_directory.h"
 
+#include <sys/mount.h>
 
-#ifndef WINDOWS
+
+#if defined(LINUX) || defined(DARWIN)
+
+
+int
+createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
+	using std::filesystem::perms;
+
+	// We could check STARTER_NESTED_SCRATCH to see if we needed
+	// to create this directory as PRIV_CONDOR instead of PRIV_USER,
+	// but since we'd need to escalate to root to chown afterwards
+	// anyway, let's not duplicate code for now.
+	TemporaryPrivSentry tps(PRIV_ROOT);
+
+	std::error_code errorCode;
+	std::filesystem::create_directories( stagingDir, errorCode );
+	if( errorCode ) {
+		dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
+		return errorCode.value();
+	}
+
+	std::filesystem::permissions(
+		parentDir,
+		perms::owner_read | perms::owner_write | perms::owner_exec,
+		errorCode
+	);
+	if( errorCode ) {
+		dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
+		return errorCode.value();
+	}
+
+	std::filesystem::permissions(
+		stagingDir,
+		perms::owner_read | perms::owner_write | perms::owner_exec,
+		errorCode
+	);
+	if( errorCode ) {
+		dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
+		return errorCode.value();
+	}
+
+	int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
+		return errno;
+	}
+
+	rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
+	if( rv != 0 ) {
+		dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
+		return errno;
+	}
+
+	return 0;
+}
+
 
 //
 // Assume ownership is correct, but make each file 0444 and each
@@ -204,59 +260,141 @@ mapContentsOfDirectoryInto(
 }
 
 
-int
-createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
+bool
+bindMountContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
 	using std::filesystem::perms;
+	std::error_code ec;
 
-	// We could check STARTER_NESTED_SCRATCH to see if we needed
-	// to create this directory as PRIV_CONDOR instead of PRIV_USER,
-	// but since we'd need to escalate to root to chown afterwards
-	// anyway, let's not duplicate code for now.
+	dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): begin.\n" );
+
+	// We must be root (or the user the common files were transferred by) to
+	// traverse into the staging directory, which includes listing its
+	// contents, checking the permissions on its files, creating hardlinks
+	// to its files, or even seeing if the directory exists all (if we're
+	// not running in STARTER_NESTED_SCRATCH mode).
 	TemporaryPrivSentry tps(PRIV_ROOT);
 
-	std::error_code errorCode;
-	std::filesystem::create_directories( stagingDir, errorCode );
-	if( errorCode ) {
-		dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
-		return errorCode.value();
+	if(! std::filesystem::is_directory( sandbox, ec )) {
+		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+		return false;
 	}
 
-	std::filesystem::permissions(
-		parentDir,
-		perms::owner_read | perms::owner_write | perms::owner_exec,
-		errorCode
+	if(! std::filesystem::is_directory( location, ec )) {
+		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
+		return false;
+	}
+
+	if(! check_permissions( location, perms::owner_read | perms::owner_exec )) {
+		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+		return false;
+	}
+
+	// To be clear: this recurses into subdirectories for us.
+	std::filesystem::recursive_directory_iterator rdi(
+		location, {}, ec
 	);
-	if( errorCode ) {
-		dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", parentDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-		return errorCode.value();
+	if( ec.value() != 0 ) {
+		dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): Failed to construct recursive_directory_iterator(%s): %s (%d)\n", location.string().c_str(), ec.message().c_str(), ec.value() );
+		return false;
 	}
 
-	std::filesystem::permissions(
-		stagingDir,
-		perms::owner_read | perms::owner_write | perms::owner_exec,
-		errorCode
-	);
-	if( errorCode ) {
-		dprintf( D_ALWAYS, "Unable to set permissions on directory %s, aborting: %s (%d).\n", stagingDir.string().c_str(), errorCode.message().c_str(), errorCode.value() );
-		return errorCode.value();
+	for( const auto & entry : rdi ) {
+		// dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
+		auto relative_path = entry.path().lexically_relative(location);
+		// dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
+		if( entry.is_directory() ) {
+			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
+				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+		} else {
+			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
+				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+		}
+
+		auto target = sandbox / relative_path;
+		if( std::filesystem::exists( target ) ) {
+			dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): ignoring %s because it already exists in the target\n", relative_path.string().c_str() );
+			continue;
+		}
+
+		//
+		// For whatever reason, the man page says that bind mounts can't be
+		// read-only for the first time around; you have to mount it and
+		// then remount it.
+		//
+
+		int rv = mount(
+			entry.path().string().c_str(),
+			target.string().c_str(),
+			NULL, MS_BIND, NULL
+		);
+		if( rv != 0 ) {
+			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_BIND, NULL )\n", entry.path().string().c_str(), target.string().c_str() );
+			return false;
+		}
+
+		rv = mount(
+			entry.path().string().c_str(),
+			target.string().c_str(),
+			NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, NULL
+		);
+		if( rv != 0 ) {
+			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_REMOUNT | MS_BIND MS_READONLY, NULL )\n", entry.path().string().c_str(), target.string().c_str() );
+			return false;
+		}
+
+		if( entry.is_directory() ) {
+			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
+		} else {
+			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
+		}
 	}
 
-	int rv = chown( parentDir.string().c_str(), get_user_uid(), get_user_gid() );
-	if( rv != 0 ) {
-		dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", parentDir.string().c_str(), strerror(errno), errno );
-		return errno;
-	}
-
-	rv = chown( stagingDir.string().c_str(), get_user_uid(), get_user_gid() );
-	if( rv != 0 ) {
-		dprintf( D_ALWAYS, "Unable change owner of directory %s, aborting: %s (%d)\n", stagingDir.string().c_str(), strerror(errno), errno );
-		return errno;
-	}
-
-	return 0;
+	dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): end.\n" );
+	return true;
 }
 
-#else /* WINDOWS */
+
+#else
+
+
+int
+createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
+	return -1;
+}
+
+
+bool
+convertToStagingDirectory(
+	const std::filesystem::path & location
+) {
+	return false;
+}
+
+
+bool
+mapContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+}
+
+
+bool
+bindMountContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+)
+
 
 #endif
 
@@ -291,6 +429,29 @@ class HardlinkStagingDirectory : public StagingDirectory {
 };
 
 
+class BindMountStagingDirectory : public HardlinkStagingDirectory {
+
+	public:
+
+		virtual bool map( const std::filesystem::path & destination );
+
+		virtual ~BindMountStagingDirectory() = default;
+
+	protected:
+
+		BindMountStagingDirectory(
+			const std::filesystem::path & d,
+			const std::string & c
+		) : HardlinkStagingDirectory(d, c) { }
+
+		BindMountStagingDirectory(
+			const std::string & s
+		) : HardlinkStagingDirectory(s) { }
+
+
+	friend class StagingDirectoryFactory;
+};
+
 
 StagingDirectoryFactory::StagingDirectoryFactory() {
 	this->typeToUse = StagingDirectoryType::Hardlink;
@@ -309,7 +470,8 @@ StagingDirectoryFactory::make(
 		} break;
 
 		case StagingDirectoryType::BindMount: {
-			dprintf( D_ALWAYS, "Copy-based staging not yet implemented.\n" );
+			auto * p = new BindMountStagingDirectory( directory, catalogName );
+			return std::unique_ptr<BindMountStagingDirectory>(p);
 			return nullptr;
 		} break;
 
@@ -342,7 +504,8 @@ StagingDirectoryFactory::make(
 		} break;
 
 		case StagingDirectoryType::BindMount: {
-			dprintf( D_ALWAYS, "Copy-based staging not yet implemented.\n" );
+			auto * p = new BindMountStagingDirectory( stagingDirectory );
+			return std::unique_ptr<BindMountStagingDirectory>(p);
 			return nullptr;
 		} break;
 
@@ -385,4 +548,10 @@ HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
 std::filesystem::path
 HardlinkStagingDirectory::path() const {
 	return this->stagingDir;
+}
+
+
+bool
+BindMountStagingDirectory::map( const std::filesystem::path & destination ) {
+	return bindMountContentsOfDirectoryInto( this->path(), destination );
 }
