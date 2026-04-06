@@ -8,8 +8,6 @@
 
 #include "staging_directory.h"
 
-#include <sys/mount.h>
-
 
 #if defined(LINUX) || defined(DARWIN)
 
@@ -260,6 +258,13 @@ mapContentsOfDirectoryInto(
 }
 
 
+#endif /* LINUX || DARWIN */
+
+
+#if defined(LINUX)
+#include <sys/mount.h>
+
+
 bool
 bindMountContentsOfDirectoryInto(
 	const std::filesystem::path & location,
@@ -362,6 +367,19 @@ bindMountContentsOfDirectoryInto(
 
 
 #else
+
+
+bool
+bindMountContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	return false;
+}
+
+
+#endif
+#if defined(WINDOWS)
 
 
 int
