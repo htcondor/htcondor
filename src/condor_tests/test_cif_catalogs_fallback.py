@@ -585,7 +585,10 @@ def SingularityIsWorking():
 # and enough of them.  This is a race, but better to try
 # to test first.
 def UserNamespacesFunctional():
-    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    try:
+        result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    except FileNotFoundError:
+        return False
     if result.returncode == 7:
         print("unshare seems to work correctly, proceeding with test\n")
         return True
