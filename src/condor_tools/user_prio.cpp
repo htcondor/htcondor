@@ -1051,6 +1051,7 @@ main(int argc, const char* argv[])
 			query.addANDConstraint(constraint.c_str());
 		}
 
+		bool queryNegotiator = !fromCollector;
 		if (fromCollector) {
 			CollectorList * collectors = CollectorList::create(pool_name);
 			q = collectors->query(query, accountingAds, &errstack);
@@ -1065,13 +1066,12 @@ main(int argc, const char* argv[])
 			size_t numQueried = full_user_names.size() + (short_user_names.empty() ? 0 : 1 + std::count(short_user_names.begin(), short_user_names.end(), ','));
 			if (accountingAds.size() < numQueried && !forceFromCollector) {
 				fprintf(stderr, "Not all user(s) found in collector, querying negotiator...\n");
-				q = query.fetchAds(accountingAds, negotiator.addr(), &errstack);
-				if (q != Q_OK) {
-					fprintf(stderr, "Can't query negotiator for ads: %s\n", errstack.getFullText().c_str());
-					exit(1);
-				}
+				accountingAds.clear();
+				queryNegotiator = true;
 			}
-		} else {
+		}
+		
+		if (queryNegotiator) {
 			q = query.fetchAds(accountingAds, negotiator.addr(), &errstack);
 			if (q != Q_OK) {
 				fprintf(stderr, "Can't query negotiator for ads: %s\n", errstack.getFullText().c_str());
