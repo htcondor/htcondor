@@ -405,15 +405,6 @@ mapContentsOfDirectoryInto(
 }
 
 
-bool
-bindMountContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return false;
-)
-
-
 #endif
 
 
