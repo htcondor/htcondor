@@ -277,7 +277,14 @@ class HardlinkStagingDirectory : public StagingDirectory {
 		HardlinkStagingDirectory(
 			const std::filesystem::path & d,
 			const std::string & c
-		) : StagingDirectory(d, c) { }
+		) : StagingDirectory(d, c) { stagingDir = d / c; }
+
+		HardlinkStagingDirectory(
+			const std::string & s
+		) : StagingDirectory(s) {
+		    parentDir = stagingDir.parent_path();
+		    catalogName = stagingDir.filename();
+		}
 
 
 	friend class StagingDirectoryFactory;
@@ -324,6 +331,39 @@ StagingDirectoryFactory::make(
 }
 
 
+std::unique_ptr<StagingDirectory>
+StagingDirectoryFactory::make(
+	const std::string & stagingDirectory
+) {
+	switch( this->typeToUse ) {
+		case StagingDirectoryType::Hardlink: {
+			auto * p = new HardlinkStagingDirectory( stagingDirectory );
+			return std::unique_ptr<HardlinkStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::BindMount: {
+			dprintf( D_ALWAYS, "Copy-based staging not yet implemented.\n" );
+			return nullptr;
+		} break;
+
+		case StagingDirectoryType::Copy: {
+			dprintf( D_ALWAYS, "Copy-based staging not yet implemented.\n" );
+			return nullptr;
+		} break;
+
+		case StagingDirectoryType::MIN:
+		case StagingDirectoryType::MAX:
+		case StagingDirectoryType::INVALID: {
+			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::make().\n" );
+			return nullptr;
+		} break;
+	}
+
+	// Why does the compiler think this is necessary?
+	return nullptr;
+}
+
+
 bool
 HardlinkStagingDirectory::create() {
 	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
@@ -344,5 +384,5 @@ HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
 
 std::filesystem::path
 HardlinkStagingDirectory::path() const {
-	return this->parentDir / catalogName;
+	return this->stagingDir;
 }

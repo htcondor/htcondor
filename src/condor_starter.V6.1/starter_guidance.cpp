@@ -661,14 +661,23 @@ Starter::handleJobSetupCommand(
 				}
 			}
 
-			std::filesystem::path location(stagingDir);
-			// s->jic->getCommonFilesLocation( cifName, location );
+			StagingDirectoryFactory sdf;
+			auto staging = sdf.make( stagingDir );
+			if(! staging) {
+				dprintf( D_ALWAYS, "Failed to make() staging directory, reporting failure.\n" );
 
-			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
+				ClassAd context;
+				context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
+				context.InsertAttr( ATTR_RESULT, false );
+				continue_conversation(context);
+				return true;
+			}
+
+			dprintf( D_ZKM, "Will map common files %s at %s\n", cifName.c_str(), stagingDir.c_str() );
 			const bool OUTER = false;
 			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
 			dprintf( D_ALWAYS, "Mapping common files into job's initial working directory...\n" );
-			bool result = mapContentsOfDirectoryInto( location, sandbox );
+			bool result = staging->map( sandbox );
 
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );

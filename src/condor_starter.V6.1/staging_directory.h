@@ -34,8 +34,13 @@ class StagingDirectory {
 			const std::string & c
 		) : parentDir(d), catalogName(c) { }
 
+		StagingDirectory(
+			const std::string & s
+		) : stagingDir(s) { }
+
 		std::filesystem::path parentDir;
 		std::string catalogName;
+		std::filesystem::path stagingDir;
 };
 
 
@@ -48,6 +53,10 @@ class StagingDirectoryFactory {
 		std::unique_ptr<StagingDirectory> make(
 		    const std::filesystem::path & directory,
 		    const std::string & catalogName
+		);
+
+		std::unique_ptr<StagingDirectory> make(
+		    const std::string & stagingDirectory
 		);
 
 	private:
