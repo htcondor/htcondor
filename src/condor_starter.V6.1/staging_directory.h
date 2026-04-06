@@ -2,17 +2,6 @@
 #define   _CONDOR_STAGING_DIRECTORY_H
 
 
-int createStagingDirectory(
-	const std::filesystem::path & parentDir,
-	const std::filesystem::path & stagingDir
-);
-bool convertToStagingDirectory( const std::filesystem::path & stagingDir );
-bool mapContentsOfDirectoryInto(
-	const std::filesystem::path & stagingDir,
-	const std::filesystem::path & sandbox
-);
-
-
 #include <memory>
 #include <filesystem>
 
