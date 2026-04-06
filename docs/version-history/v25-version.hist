@@ -27,6 +27,14 @@
   :macro:`DISABLE_SWAP_FOR_JOB` to false.
   :jira:`3630`
 
+- Change value of :macro:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY` to true.
+  This allows the :tool:`condor_userprio` use a interface to the negotiator
+  to fetch accounting ads in a way that allows constraint and projection.
+  This interface did not exist in pre htcondor 9.1 negotiators, and should
+  be set to false for new :tool:`condor_userprio` to work with such old
+  negotiators.
+  :jira:`3649`
+
 - **batch** grid universe jobs are now run in the :ad-attr:`Iwd` or
   :ad-attr:`RemoteIwd` directory by default. Before, they were run in a
   temporary directory under the :ad-attr:`Iwd` or :ad-attr:`RemoteIwd`
