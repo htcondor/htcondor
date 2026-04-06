@@ -9279,8 +9279,9 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				jobid.proc = -1;
 			}
 
-			// This doesn't resolve the TODO above, but it will at least
-			// prevent the negotiator from seeing an empty submitter string.
+			// This doesn't resolve the TODO below ("handle alternate
+			// submitter names") but it will at least prevent the negotiator
+			// from seeing an empty submitter string.
 			if( slot_submitter.empty() ) {
 				slot_submitter = match->user;
 			}
@@ -11032,7 +11033,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			//
 			// Instead of calling unregister_shadow_catalogs(), set this
 			// shadow's cxfer state to RETIRING, and then treat that as
-			// a non-error abort if determine_cxfer_type().
+			// a non-error abort in determine_cxfer_type().
 
 			(* shadow)->cxfer_state = CXFER_STATE::RETIRING;
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
@@ -11746,6 +11747,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			std::ranges::views::keys( srec->cxfer_catalogs )
 		);
 
+		// In add_shadow_rec(), everywhere we would mutate the job ad for a
+		// transfer shadow, we update `matchInfo` instead.  That gets sent to
+		// the shadow here (and includes things like the claim ID).
 		if( srec->matchInfo != nullptr ) {
 			job_ad->Update( * srec->matchInfo );
 			delete srec->matchInfo;
