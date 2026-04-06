@@ -9,6 +9,8 @@
 #include "staging_directory.h"
 
 
+#ifndef WINDOWS
+
 //
 // Assume ownership is correct, but make each file 0444 and each
 // directory (including the root) 0500.
@@ -99,25 +101,6 @@ check_permissions(
 	auto permissions = status.permissions();
 	return permissions == p;
 }
-
-
-#ifdef    WINDOWS
-
-// The Windows implementation will almost certainly require changes to
-// convertToStagingDirectory() as well.
-//
-// Build fix only.
-
-bool
-mapContentsOfDirectoryInto(
-	const std::filesystem::path & location,
-	const std::filesystem::path & sandbox
-) {
-	return false;
-}
-
-
-#else
 
 
 bool
@@ -221,9 +204,6 @@ mapContentsOfDirectoryInto(
 }
 
 
-#endif /* WINDOWS */
-
-
 int
 createStagingDirectory( const std::filesystem::path & parentDir, const std::filesystem::path & stagingDir ) {
 	using std::filesystem::perms;
@@ -274,4 +254,95 @@ createStagingDirectory( const std::filesystem::path & parentDir, const std::file
 	}
 
 	return 0;
+}
+
+#else /* WINDOWS */
+
+#endif
+
+
+class HardlinkStagingDirectory : public StagingDirectory {
+
+	public:
+
+		virtual bool create();
+		virtual bool modify();
+		virtual bool map( const std::filesystem::path & destination );
+		virtual std::filesystem::path path() const;
+
+		virtual ~HardlinkStagingDirectory() = default;
+
+	protected:
+
+		HardlinkStagingDirectory(
+			const std::filesystem::path & d,
+			const std::string & c
+		) : StagingDirectory(d, c) { }
+
+
+	friend class StagingDirectoryFactory;
+};
+
+
+
+StagingDirectoryFactory::StagingDirectoryFactory() {
+	this->typeToUse = StagingDirectoryType::Hardlink;
+}
+
+
+std::unique_ptr<StagingDirectory>
+StagingDirectoryFactory::make(
+	const std::filesystem::path & directory,
+	const std::string & catalogName
+) {
+	switch( this->typeToUse ) {
+		case StagingDirectoryType::Hardlink: {
+			auto * p = new HardlinkStagingDirectory( directory, catalogName );
+			return std::unique_ptr<HardlinkStagingDirectory>(p);
+		} break;
+
+		case StagingDirectoryType::BindMount: {
+			dprintf( D_ALWAYS, "Copy-based staging not yet implemented.\n" );
+			return nullptr;
+		} break;
+
+		case StagingDirectoryType::Copy: {
+			dprintf( D_ALWAYS, "Copy-based staging not yet implemented.\n" );
+			return nullptr;
+		} break;
+
+		case StagingDirectoryType::MIN:
+		case StagingDirectoryType::MAX:
+		case StagingDirectoryType::INVALID: {
+			dprintf( D_ALWAYS, "Invalid type-to-use in StagingDirectoryFactory::make().\n" );
+			return nullptr;
+		} break;
+	}
+
+	// Why does the compiler think this is necessary?
+	return nullptr;
+}
+
+
+bool
+HardlinkStagingDirectory::create() {
+	return (createStagingDirectory( this->parentDir, this->path() ) != 0);
+}
+
+
+bool
+HardlinkStagingDirectory::modify() {
+	return convertToStagingDirectory( this->path() );
+}
+
+
+bool
+HardlinkStagingDirectory::map( const std::filesystem::path & destination ) {
+	return mapContentsOfDirectoryInto( this->path(), destination );
+}
+
+
+std::filesystem::path
+HardlinkStagingDirectory::path() const {
+	return this->parentDir / catalogName;
 }

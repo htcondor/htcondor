@@ -3,11 +3,14 @@
 
 
 int createStagingDirectory(
-    const std::filesystem::path & parentDir,
-    const std::filesystem::path & stagingDir
+	const std::filesystem::path & parentDir,
+	const std::filesystem::path & stagingDir
 );
 bool convertToStagingDirectory( const std::filesystem::path & stagingDir );
-bool mapContentsOfDirectoryInto( const std::filesystem::path & location, const std::filesystem::path & sandbox );
+bool mapContentsOfDirectoryInto(
+	const std::filesystem::path & stagingDir,
+	const std::filesystem::path & sandbox
+);
 
 
 #include <memory>
@@ -17,17 +20,22 @@ class StagingDirectory {
 
 	public:
 
-        virtual bool create() = 0;
+		virtual bool create() = 0;
 		virtual bool modify() = 0;
-		virtual bool map( const std::filesystem::path & s ) = 0;
+		virtual bool map( const std::filesystem::path & d ) = 0;
+		virtual std::filesystem::path path() const = 0;
 
 		virtual ~StagingDirectory() = default;
 
 	protected:
 
-		StagingDirectory( const std::filesystem::path & d ) : stagingDir(d) { }
+		StagingDirectory(
+			const std::filesystem::path & d,
+			const std::string & c
+		) : parentDir(d), catalogName(c) { }
 
-        std::filesystem::path stagingDir;
+		std::filesystem::path parentDir;
+		std::string catalogName;
 };
 
 
@@ -38,21 +46,22 @@ class StagingDirectoryFactory {
 		StagingDirectoryFactory();
 
 		std::unique_ptr<StagingDirectory> make(
-		    const std::filesystem::path & dir
+		    const std::filesystem::path & directory,
+		    const std::string & catalogName
 		);
 
-    private:
+	private:
 
-        enum class StagingDirectoryType {
-            MIN,
-            INVALID,
-            Hardlink,
-            BindMount,
-            Copy,
-            MAX
-        };
+		enum class StagingDirectoryType {
+			MIN,
+			INVALID,
+			Hardlink,
+			BindMount,
+			Copy,
+			MAX
+		};
 
-        StagingDirectoryType typeToUse = StagingDirectoryType::INVALID;
+		StagingDirectoryType typeToUse = StagingDirectoryType::INVALID;
 };
 
 

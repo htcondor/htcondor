@@ -499,18 +499,15 @@ Starter::handleJobSetupCommand(
 
 			std::filesystem::path executeDir( s->GetSlotDir() );
 			std::filesystem::path parentDir = executeDir / "staging";
-			std::filesystem::path stagingDir = parentDir / cifName;
 
-/*
 			StagingDirectoryFactory sdf;
-			auto staging = sdf.make(stagingDir);
+			auto staging = sdf.make(parentDir, cifName);
 			if(! staging) {
 				dprintf( D_ALWAYS, "Failed to make() staging directory, reporting failure.\n" );
 				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, -1 );
 			}
-*/
 
-			int errorCode = createStagingDirectory( parentDir, stagingDir );
+			int errorCode = staging->create();
 			if( errorCode ) {
 				dprintf( D_ALWAYS, "Failed to create() staging directory, reporting failure.\n" );
 				REPLY_WITH_ERROR( COMMAND_STAGE_COMMON_FILES, RequestResult::InternalError, errorCode );
@@ -521,7 +518,7 @@ Starter::handleJobSetupCommand(
 			// Transfer the common files.
 			//
 			ClassAd ftAd( guidance );
-			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
+			ftAd.Assign( ATTR_JOB_IWD, staging->path().string() );
 			// ... blocking, at least for now.
 			dprintf( D_ALWAYS, "Starting common files transfer.\n" );
 			bool result = s->jic->transferCommonInput( & ftAd );
@@ -532,13 +529,8 @@ Starter::handleJobSetupCommand(
 				// and its contents suitable for mapping before we actually
 				// do the mapping.  This will need to be synchronized with
 				// our mapping implementation.
-				if( convertToStagingDirectory( stagingDir ) ) {
-					// We'll need to do this, or something like it, at some
-					// point in the future -- probably just telling the
-					// startd about it.  When we do, be sure check if it worked.
-					// s->jic->setCommonFilesLocation( cifName, stagingDir );
-				} else {
-					dprintf( D_ALWAYS, "Failed to convert %s to a staging directory.\n", stagingDir.string().c_str() );
+				if(! staging->modify()) {
+					dprintf( D_ALWAYS, "Failed to convert %s to a staging directory.\n", staging->path().string().c_str() );
 				}
 			}
 
@@ -548,7 +540,7 @@ Starter::handleJobSetupCommand(
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 			context.InsertAttr( ATTR_RESULT, result );
-			context.InsertAttr( "StagingDir", stagingDir.string() );
+			context.InsertAttr( "StagingDir", staging->path().string() );
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_COLOR_SLOT ) {
