@@ -86,7 +86,7 @@ if (BUILD_TESTING)
 	endif()
 
     condor_exe( test_starter_guidance.exe
-        "../condor_starter.V6.1/starter_guidance.cpp;test_starter_guidance.cpp"
+        "../condor_starter.V6.1/starter_guidance.cpp;../condor_starter.V6.1/staging_directory.cpp;test_starter_guidance.cpp"
         "${C_LIBEXEC}"
         "${CONDOR_LIBS}"
         OFF
