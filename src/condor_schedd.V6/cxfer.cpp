@@ -49,17 +49,16 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	}
 
 	//
-	// It might be wiser to have the startd not advertise that it
-	// `hasCommonFilesTransfer` if it can't successfully map any
-	// catalog it has thus stored, but since we want to deal with
-	// older startds anyway, we'll just check here for now.
+	// Only in 25.10 and later could we map from staging directories on LVs.
 	//
 	std::string lvmBackingStore;
 	m_rec->my_match_ad->LookupString(
 		ATTR_LVM_BACKING_STORE, lvmBackingStore
 	);
 	if(! lvmBackingStore.empty()) {
-		return {CXFER_TYPE::CANT, {}};
+		if(! cvi.built_since_version(25, 10, 0)) {
+			return {CXFER_TYPE::CANT, {}};
+		}
 	}
 
 	//

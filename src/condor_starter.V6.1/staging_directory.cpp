@@ -2,9 +2,10 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-#include "starter.h"
-
 #include <filesystem>
+
+#include "starter.h"
+#include "safe_open.h"
 
 #include "staging_directory.h"
 
@@ -297,8 +298,10 @@ bindMountContentsOfDirectoryInto(
 		return false;
 	}
 
-	// To be clear: this recurses into subdirectories for us.
-	std::filesystem::recursive_directory_iterator rdi(
+
+	// Like symlinks but not hardlinks, bind mounts can be directories, so
+	// we only need to map the top level of the staging directory.
+	std::filesystem::directory_iterator di(
 		location, {}, ec
 	);
 	if( ec.value() != 0 ) {
@@ -306,27 +309,50 @@ bindMountContentsOfDirectoryInto(
 		return false;
 	}
 
-	for( const auto & entry : rdi ) {
+	for( const auto & entry : di ) {
 		// dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
 		auto relative_path = entry.path().lexically_relative(location);
 		// dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
-		if( entry.is_directory() ) {
-			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
-				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
-			}
-		} else {
-			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
-				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
-				return false;
-			}
-		}
 
 		auto target = sandbox / relative_path;
 		if( std::filesystem::exists( target ) ) {
 			dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): ignoring %s because it already exists in the target\n", relative_path.string().c_str() );
 			continue;
 		}
+
+		// A bind mount is over a particular dirent, just like any other mount.
+		if( entry.is_directory() ) {
+			if(! check_permissions( entry, perms::owner_read | perms::owner_exec )) {
+				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+
+			std::filesystem::create_directory( target, ec );
+			if( ec.value() != 0 ) {
+				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): Failed to create_directory(%s): %s (%d)\n", target.string().c_str(), ec.message().c_str(), ec.value() );
+				return false;
+			}
+
+			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
+		} else {
+			if(! check_permissions( entry, perms::owner_read | perms::group_read | perms::others_read )) {
+				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): '%s' has the wrong permissions, aborting.\n", location.string().c_str() );
+				return false;
+			}
+
+			int fd = safe_create_keep_if_exists(
+				target.string().c_str(),
+				O_RDONLY
+			);
+			if( fd == -1 ) {
+				dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): Failed to touch(%s): %s (%d)\n", target.string().c_str(), strerror(errno), errno );
+				return false;
+			}
+			close(fd);
+
+			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
+		}
+
 
 		//
 		// For whatever reason, the man page says that bind mounts can't be
@@ -340,7 +366,7 @@ bindMountContentsOfDirectoryInto(
 			NULL, MS_BIND, NULL
 		);
 		if( rv != 0 ) {
-			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_BIND, NULL )\n", entry.path().string().c_str(), target.string().c_str() );
+			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_BIND, NULL ): %s (%d)\n", entry.path().string().c_str(), target.string().c_str(), strerror(errno), errno );
 			return false;
 		}
 
@@ -353,13 +379,8 @@ bindMountContentsOfDirectoryInto(
 			dprintf( D_ALWAYS, "bindMountContentsOfDirectoryInto(): failed to mount( %s, %s, NULL, MS_REMOUNT | MS_BIND MS_READONLY, NULL )\n", entry.path().string().c_str(), target.string().c_str() );
 			return false;
 		}
-
-		if( entry.is_directory() ) {
-			dprintf( D_TEST, "Created mapped directory '%s'\n", relative_path.string().c_str() );
-		} else {
-			dprintf( D_TEST, "Mapped common file '%s'\n", relative_path.string().c_str() );
-		}
 	}
+
 
 	dprintf( D_ZKM, "bindMountContentsOfDirectoryInto(): end.\n" );
 	return true;
@@ -462,8 +483,38 @@ class BindMountStagingDirectory : public HardlinkStagingDirectory {
 };
 
 
+bool
+hardlink_usable() {
+#if defined(WINDOWS)
+	return false;
+#endif /* WINDOWS */
+
+	if( param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) ) {
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+bindmount_usable() {
+#if defined(WINDOWS)
+	return false;
+#endif /* WINDOWS */
+
+	return true;
+}
+
+
 StagingDirectoryFactory::StagingDirectoryFactory() {
-	this->typeToUse = StagingDirectoryType::Hardlink;
+	if( hardlink_usable() ) {
+		this->typeToUse = StagingDirectoryType::Hardlink;
+	} else if( bindmount_usable() ) {
+		this->typeToUse = StagingDirectoryType::BindMount;
+	} else {
+		this->typeToUse = StagingDirectoryType::Copy;
+	}
 }
 
 
