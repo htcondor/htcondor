@@ -99,6 +99,7 @@ class Lexer
 
 		// initialize methods
 		bool Initialize(LexerSource *source);
+		bool Initialize(const char *str);
 		bool Reinitialize(void);
         
         bool WasInitialized(void) const;
@@ -138,6 +139,7 @@ class Lexer
         bool        initialized;
 		TokenType	tokenType;             		// the integer id of the token
 		LexerSource *lexSource;
+		CharLexerSource ownedSource{""};		// used by Initialize(const char*)
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
