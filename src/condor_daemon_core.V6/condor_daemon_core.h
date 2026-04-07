@@ -1455,6 +1455,7 @@ class DaemonCore : public Service
 	static const int ERRNO_PID_COLLISION;
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
+	static const int ERRNO_OOM_KILLED_AT_STARTUP;
 
 	const static char* DEFAULT_INDENT;
 

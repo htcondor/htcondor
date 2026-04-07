@@ -683,20 +683,31 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				EXCEPT("Create_Process failed to register the job with the ProcD");
 			}
 
-			std::string err_msg = "Failed to execute '";
-			err_msg += JobName;
-			err_msg += "'";
-			if(!args_string.empty()) {
-				err_msg += " with arguments ";
-				err_msg += args_string;
-			}
-			err_msg += ": ";
-			err_msg += create_process_err_msg;
-			if( !ThisProcRunsAlongsideMainProc() ) {
-				starter->jic->notifyStarterError( err_msg.c_str(),
-			    	                              true,
-			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
-			            	                      create_process_errno );
+			if (create_process_errno == DaemonCore::ERRNO_OOM_KILLED_AT_STARTUP) {
+				std::string err_msg = "Job was OOM killed by cgroup memory limit "
+					"before it could start. Consider requesting more memory.";
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
+			} else {
+				std::string err_msg = "Failed to execute '";
+				err_msg += JobName;
+				err_msg += "'";
+				if(!args_string.empty()) {
+					err_msg += " with arguments ";
+					err_msg += args_string;
+				}
+				err_msg += ": ";
+				err_msg += create_process_err_msg;
+				if( !ThisProcRunsAlongsideMainProc() ) {
+					starter->jic->notifyStarterError( err_msg.c_str(),
+					                                  true,
+					                                  CONDOR_HOLD_CODE::FailedToCreateProcess,
+					                                  create_process_errno );
+				}
 			}
 		}
 
