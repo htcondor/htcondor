@@ -8202,8 +8202,8 @@ int DaemonCore::Create_Process(
 			{
 				dprintf(D_ALWAYS,
 					"Error: Create_Process(%s): child died before exec(): "
-					"rc=%d, errno=%d %s.\n",
-					executable, tracking_gid_rc, errno, strerror(errno));
+					"child status=%d (0x%x).\n",
+					executable, child_status, child_status);
 			}
 
 			close(errorpipe[0]);
