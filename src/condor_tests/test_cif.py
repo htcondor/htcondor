@@ -58,6 +58,7 @@ def the_condor(test_dir, the_lock_dir):
         condor_user='condor',
         local_dir=local_dir,
         config={
+            # "STARTD_ENFORCE_DISK_LIMITS":  True,
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_BACKTRACE D_HOSTNAME",
