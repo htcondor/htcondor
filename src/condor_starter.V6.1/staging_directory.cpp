@@ -430,7 +430,7 @@ class HardlinkStagingDirectory : public StagingDirectory {
 			const std::string & s
 		) : StagingDirectory(s) {
 		    parentDir = stagingDir.parent_path();
-		    catalogName = stagingDir.filename();
+		    catalogName = stagingDir.filename().string();
 		}
 
 
