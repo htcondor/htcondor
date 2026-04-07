@@ -54,7 +54,7 @@ public:
 		    @param status Its status
 		    @return True if our ToolDaemonProc is no longer active, else false.
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 	/** ToolDaemonProcs don't need to send a remote system call to
 	    the shadow to tell it we've exited.  So, we want our own

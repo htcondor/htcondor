@@ -117,7 +117,7 @@ UserProc::initKillSigs( void )
 }
 
 
-bool
+ReapResult
 UserProc::JobReaper(int pid, int status)
 {
 	std::string line;
@@ -167,8 +167,9 @@ UserProc::JobReaper(int pid, int status)
 		if( name == NULL ) {
 			starter->RecordJobExitStatus(status);
 		}
+		return ReapResult::JobDone;
 	}
-	return m_proc_exited;
+	return ReapResult::JobNotFound;
 }
 
 

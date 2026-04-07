@@ -381,7 +381,7 @@ DockerProc::ExecReaper(int pid, int status) {
 	return 1;
 }
 
-bool DockerProc::JobReaper( int pid, int status ) {
+ReapResult DockerProc::JobReaper( int pid, int status ) {
 	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d status is %d wait_for_Create is %d\n", pid, status, waitForCreate);
 
 	if (waitForCreate) {
@@ -469,7 +469,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			if (rv < 0) {
 				dprintf(D_ERROR, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
 					workingDir.c_str(), containerName.c_str(), innerPath.c_str(), rv);
-				return FALSE;
+				return ReapResult::JobDone;
 			}
 		}
 		#endif
@@ -492,20 +492,20 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdin.\n" );
-			return FALSE;
+			return ReapResult::JobDone;
 		}
 
 		if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
 
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdout.\n" );
 			daemonCore->Close_FD( childFDs[0] );
-			return FALSE;
+			return ReapResult::JobDone;
 		}
 		if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stderr.\n" );
 			daemonCore->Close_FD( childFDs[0] );
 			daemonCore->Close_FD( childFDs[1] );
-			return FALSE;
+			return ReapResult::JobDone;
 		}
 		}
 
@@ -519,7 +519,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			formatstr(message, "DockerProc::StartJob(): Image Architecture %s not compatible with this machine.", arch.c_str());
 			dprintf(D_ALWAYS, "%s\n", message.c_str());
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
-			return false;
+			return ReapResult::JobDone;
 		}
 
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
@@ -538,7 +538,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		}
 
 		++num_pids; // Used by OsProc::PublishUpdateAd().
-		return false; // don't exit
+		return ReapResult::JobShouldReExec; // docker create exited, container starting
 	}
 
 
@@ -650,7 +650,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 
 			starter->ShutdownFast();
-			return 0;
+			return ReapResult::JobDone;
 		}
 
 			// See if docker could not run the job
@@ -675,7 +675,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 
 			starter->ShutdownFast();
-			return 0;
+			return ReapResult::JobDone;
 		}
 
 		int dockerStatus;
@@ -695,7 +695,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		return VanillaProc::JobReaper( pid, status );
 	}
 
-	return 0;
+	return ReapResult::JobNotFound;
 }
 
 void
