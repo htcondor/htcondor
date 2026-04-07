@@ -15,6 +15,12 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
+- In the very rare case that a job fails after the *condor_starter* forks
+  it, but before it exec's the job, we now log a much more coherent
+  error message.  Previously, htcondor would log a incorrect message
+  about the "tracking gid".
+  :jira:`3654`
+
 - Added new :tool:`htcondor dag resources` command, which shows
   the resource usage for running and historical jobs.
   :jira:`3636`
