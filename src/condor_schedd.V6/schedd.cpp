@@ -14381,7 +14381,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 		int exit_code = WEXITSTATUS(status);
 		dprintf( D_ALWAYS,
 				 "scheduler universe job (%d.%d) pid %d "
-				 "exited with status %d\n", job_id.cluster,
+				 "exited with code %d\n", job_id.cluster,
 				 job_id.proc, pid, exit_code );
 		exited = true;
 
