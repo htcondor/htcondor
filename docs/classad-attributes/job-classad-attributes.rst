@@ -703,15 +703,13 @@ all attributes.
 
 :classad-attribute-def:`HoldReasonCode`
     An integer value that represents the reason that a job was put on
-    hold.  The below table defines all possible values used by 
-    attributes :ad-attr:`HoldReasonCode`, :ad-attr:`NumHoldsByReason`, and :ad-attr:`HoldReasonSubCode`. 
-
-    .. include:: ../codes-other-values/hold-table.rst
+    hold.
+    See the :ref:`Hold Reason Codes` section for details.
 
 :classad-attribute-def:`HoldReasonSubCode`
     An integer value that represents further information to go along
     with the :ad-attr:`HoldReasonCode`, for some values of :ad-attr:`HoldReasonCode`.
-    See :ad-attr:`HoldReasonCode` for a table of possible values.
+    See the :ref:`Hold Reason Codes` section for a table of possible values.
 
 :classad-attribute-def:`HookKeyword`
     A string that uniquely identifies a set of job hooks, and added to
@@ -1093,9 +1091,8 @@ all attributes.
     The value of this attribute is a (nested) classad containing a count of how many times a job has been placed 
     on  hold grouped by the reason the job went on hold.  It may be undefined until the job has been held
     at least once. Each attribute name in this classad is
-    a NumHoldByReason label; see the table above under 
-    the documentation for job attribute :ad-attr:`HoldReasonCode` for a table of possible values. Each attribute
-    value is an integer stating how many times the job went on hold for that specific reason.  An example:
+    a `NumHoldByReason Label`; see section :ref:`Hold Reason Codes` for a table of all possible values. 
+    The value is an integer stating how many times the job went on hold for that specific reason.  An example:
 
     .. code-block:: condor-classad
 
@@ -1185,8 +1182,7 @@ all attributes.
     vacated (left running state and returned to the idle state) grouped by the reason the job was vacated.
     It may be undefined until the job has been vacated
     at least once. Each attribute name in this classad is
-    a NumVacateByReason label; see the table above under 
-    the documentation for job attribute :ad-attr:`VacateReasonCode` for a table of possible values. Each attribute
+    a `NumVacateByReason Label`; see section :ref:`Vacate Reason Codes` for a table of possible values. Each attribute
     value is an integer stating how many times the job was vacated for that specific reason.
     In addition, if the job was vacated due to TransferInputError or TransferOuputError, an additional
     attribute count is added with the file transfer protocol appended that was responsible for the error.
@@ -1956,17 +1952,13 @@ all attributes.
 
 :classad-attribute-def:`VacateReasonCode`
     An integer value that represents the reason why a job's most
-    recent execution attempt failed. The below table defines values used by
+    recent execution attempt failed. The table in section :ref:`Vacate Reason Codes` defines values used by
     attributes :ad-attr:`VacateReasonCode` and :ad-attr:`VacateReasonSubCode`.
-    Values defined for :ad-attr:`HoldReasonCode` are also valid values for
-    :ad-attr:`VacateReasonCode`.
-
-    .. include:: ../codes-other-values/vacate-code-table.rst
 
 :classad-attribute-def:`VacateReasonSubCode`
     An integer value that represents further information to go along
     with the :ad-attr:`VacateReasonCode`, for some values of :ad-attr:`VacateReasonCode`.
-    See :ad-attr:`VacateReasonCode` for a table of possible values.
+    See :ref:`Vacate Reason Codes` for a table of possible values.
 
 :classad-attribute-def:`WantContainer`
     A boolean that when true, tells HTCondor to run this job in container
