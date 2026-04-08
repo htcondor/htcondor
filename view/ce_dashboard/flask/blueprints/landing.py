@@ -87,10 +87,8 @@ class ResourceInfo:
     glideinsIdle: int = 0
     glideinsHeld: int = 0
     epsReporting: int = 0
-    glideinEpStatus: str = "Poor"
     cpusContributed: int = 0
     cpusAllocated: int = 0
-    cpusStatus: str = "Poor"
     lastHeardFrom: str = "Unknown"
     
     def __post_init__(self):
@@ -275,18 +273,7 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         info.glideinsIdle = totalIdle
         info.glideinsHeld = totalHeld
         
-        info.cpusStatus = (
-            "Good" if info.cpusContributed and info.cpusAllocated >= 0.9 * info.cpusContributed else
-            "Fair" if info.cpusContributed and info.cpusAllocated >= 0.5 * info.cpusContributed else
-            "Poor"
-        )
-        
-        info.glideinEpStatus = (
-            "Good" if info.glideinsRunning and info.epsReporting >= 0.9 * info.glideinsRunning else
-            "Fair" if info.glideinsRunning and info.epsReporting >= 0.5 * info.glideinsRunning else
-            "Poor"
-        )
-        
+
 
         status = "Unknown"
         if "Status" in ad:
