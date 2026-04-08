@@ -11742,7 +11742,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	//    (but not B).  The schedd will spawn two transfer shadows: one
 	//    transferring A and B xor C, and the other C xor B.
 	if( isTransferShadowProcID( job_id.proc ) ) {
-		AssignClassAdStringList(
+		AssignClassAdListOfStrings(
 			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
 			std::ranges::views::keys( srec->cxfer_catalogs )
 		);
