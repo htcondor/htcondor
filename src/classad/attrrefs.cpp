@@ -444,7 +444,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 				}
 			}
 			tree = ExprList::MakeExprList( eVector );
-			state.AddToDeletionCache(tree);
+			// state.AddToDeletionCache(tree);
 		#if 1
 			// TODO: tj make a magic value for empty classad root scope?
 			tree->SetParentScope(nullptr);
