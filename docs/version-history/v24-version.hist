@@ -1,5 +1,10 @@
 *** 24.0.20 bugs
 
+- Fixed bug where Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS` without
+  being explicitly provided a backing store (Volume Group) would fail clean up to
+  clean up the automatically generated backing store on shutdown.
+  :jira:`3657`
+
 *** 24.0.19 features
 
 - HTCondor tarballs now contain `Pelican 7.24.0 <https://pelicanplatform.org/releases>`_
