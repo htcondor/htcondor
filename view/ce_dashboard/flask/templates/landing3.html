@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% import 'utils.jinja' as utils %}
+
+{% block style %}
+    <style>
+        .graph .vizchart {
+            height: 40vh;
+        }
+		#table-now .graph .vizchart {
+			height: 8vh;
+		}
+		#table-now .google-visualization-table {
+			border-style: groove;
+		}
+		#table-now .google-visualization-table-td {
+		    text-align: center;
+			font-size: 125%;
+		}
+		.htcv-col-5 .graph .vizchart {
+			height: 12vh;
+		}
+		
+		.graphs .row:nth-child(even) {
+            background-color: whitesmoke;
+		}
+		
+		svg > rect {
+		    fill: transparent;
+		}
+		.site-name {
+		    font-weight: bold;
+		    padding-bottom: 2px;
+		    padding-top: 2px;
+			margin-bottom: 0;
+		}
+		.ccstar-label {
+		    color: green;
+		    font-weight: bold;
+		}
+    </style>
+{% endblock style %}
+
+{% block js %}
+    {{ super() }}
+    <script src="static/util.js"></script>
+{% endblock js %}
+
+{% block body %}
+
+<div class="graphs">
+    {% for site in sites %}
+    <div class="row">
+        <div class="col-2 htcv-col-2">
+            <p class="site-name">{{ site.site_name }}</p>
+            <p>{{ site.name }} {% if site.isCCStar %}<span class="ccstar-label">(CC*)</span>{% endif %}</p>
+        </div>
+        <div class="col-5 htcv-col-5" id="{{ loop.index }}-cpu">
+            <script>
+            new HTCondorView({
+                dst_id: "{{ loop.index }}-cpu",
+                title: "{{ site.name }} CPUs Past Week",
+                data_url: "/data/landing_graphs?r=week",
+                has_edit_menu: false,
+                graph_query: urlEscapeGraphQuery(`
+                    filter=Site={{ site.fqdn }}
+                    pivot=Date
+                    add=CpusInUse,CpusNotInUse,CpusContributed
+                    rename=CpusInUse=CpusAllocated
+                    unselect=Site,EPsRunning,GlideinsRunning,CpusNotInUse
+                    legend.position=in
+                    series.0.areaOpacity=1
+                    series.1.areaOpacity=0.05
+                    vAxis.format=short
+                    chart=area
+                `)
+            });
+            </script>
+        </div>
+        <div class="col-5 htcv-col-5" id="{{ loop.index }}-glideins">
+            <script>
+            new HTCondorView({
+                dst_id: "{{ loop.index }}-glideins",
+                title: "{{ site.name }} Glideins Past Week",
+                data_url: "/data/landing_graphs?r=week",
+                has_edit_menu: false,
+                graph_query: urlEscapeGraphQuery(`
+                    filter=Site={{ site.fqdn }}
+                    pivot=Date
+                    unselect=Site,CpusInUse,CpusNotInUse
+                    legend.position=in
+                    series.0.areaOpacity=1
+                    series.1.areaOpacity=0.05
+                    vAxis.format=short
+                    chart=area
+                `)
+            });
+            </script>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+			
+
+{% endblock body %}
