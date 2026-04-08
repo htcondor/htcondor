@@ -60,7 +60,7 @@ def the_condor(test_dir, the_lock_dir):
         config={
             "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
-            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST D_BACKTRACE D_HOSTNAME",
+            "SCHEDD_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH": cred_dir.as_posix(),
