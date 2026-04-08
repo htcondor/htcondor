@@ -86,12 +86,19 @@ int main( int argc, char *argv[] )
 	pid_t pid = 0;
 	uid_t uid = 0;
 	gid_t gid = 0;
+	int cmd_start = 0; // index into argv where the command begins, 0 = none
 
 	// parse command line args
 	for( int i=1; i<argc; i++ ) {
 		if(is_arg_prefix(argv[i],"-help")) {
 			usage(argv[0]);
 			exit(1);
+		}
+
+		// "--" ends option parsing; everything after is the command
+		if(strcmp(argv[i], "--") == 0) {
+			if (i + 1 < argc) cmd_start = i + 1;
+			break;
 		}
 
 		// target pid to enter
@@ -273,6 +280,37 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	// For non-interactive commands, skip the pty and just exec directly.
+	// The fds from the ssh client are already on 0/1/2.
+	if (cmd_start > 0) {
+		int childpid = fork();
+		if (childpid == 0) {
+			if (getenv("_CONDOR_SCRATCH_DIR")) {
+				int r = chdir(getenv("_CONDOR_SCRATCH_DIR"));
+				if (r < 0) {
+					fprintf(stderr, "Cannot chdir to %s: %s\n", getenv("_CONDOR_SCRATCH_DIR"), strerror(errno));
+				}
+			}
+			setsid();
+
+			// Build a null-terminated argv for the command
+			std::vector<const char *> cmd_argv;
+			for (int i = cmd_start; i < argc; i++) {
+				cmd_argv.push_back(argv[i]);
+			}
+			cmd_argv.push_back(nullptr);
+
+			execvpe(cmd_argv[0], const_cast<char *const *>(cmd_argv.data()),
+				const_cast<char *const *>(envp.data()));
+			fprintf(stderr, "exec of %s failed: %s\n", cmd_argv[0], strerror(errno));
+			exit(errno);
+		} else {
+			int status;
+			waitpid(childpid, &status, 0);
+		}
+		return 0;
+	}
+
 	struct winsize win;
 	ioctl(0, TIOCGWINSZ, &win);
 
@@ -294,8 +332,8 @@ int main( int argc, char *argv[] )
 	}
 	int childpid = fork();
 	if (childpid == 0) {
-	
-		// in the child -- 
+
+		// in the child --
 
 		close(0);
 		close(1);
@@ -321,13 +359,13 @@ int main( int argc, char *argv[] )
 
 		// and make it the process group leader
 		tcsetpgrp(workerPty, getpid());
- 
+
 		// and set the window size properly
 		ioctl(0, TIOCSWINSZ, &win);
 
 		// Finally, launch the shell
 		execle("/bin/sh", "/bin/sh", "-l", "-i", nullptr, envp.data());
- 
+
 		// Only get here if exec fails
 		fprintf(stderr, "exec failed %d\n", errno);
 		exit(errno);
@@ -350,7 +388,7 @@ int main( int argc, char *argv[] )
 		tio.c_cc[VMIN] = 1;
 		tio.c_cc[VTIME] = 0;
 		tcsetattr(0, TCSAFLUSH, &tio);
-		
+
 		struct sigaction handler;
 		struct sigaction oldhandler;
 		handler.sa_handler = reset_pty_and_exit;
@@ -373,7 +411,7 @@ int main( int argc, char *argv[] )
 			if (FD_ISSET(masterPty, &readfds)) {
 				char buf[4096];
 				int r = read(masterPty, buf, 4096);
-				if (r > 0) {	
+				if (r > 0) {
 					int ret = write(1, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
@@ -386,7 +424,7 @@ int main( int argc, char *argv[] )
 			if (FD_ISSET(0, &readfds)) {
 				char buf[4096];
 				int r = read(0, buf, 4096);
-				if (r > 0) {	
+				if (r > 0) {
 					int ret = write(masterPty, buf, r);
 					if (ret < 0) {
 						reset_pty_and_exit(0);
@@ -397,7 +435,7 @@ int main( int argc, char *argv[] )
 			}
 		}
 		int status;
-		waitpid(childpid, &status, 0);	
+		waitpid(childpid, &status, 0);
 	}
 	return 0;
 }

@@ -65,7 +65,8 @@ class DockerAPI {
 					    const Env &environment,
 					    int *childFDs,
 					    int reaperid,
-					    int &pid);
+					    int &pid,
+					    bool interactive = true);
 
 		/**
 		 * copy files/folders from srcPath to the given path in the container
