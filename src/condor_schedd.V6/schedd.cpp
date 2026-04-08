@@ -1566,7 +1566,7 @@ Scheduler::count_jobs()
 		// set JobsRunning/JobsFlocked for owners
 	for (const auto& [id, rec]: matches) {
 		// Transfer shadows aren't jobs, so ignore the matches they're using.
-		if( rec->shadowRec && rec->shadowRec->job_id.proc <= -1000 ) { continue; }
+		if( rec->shadowRec && isTransferShadowProcID(rec->shadowRec->job_id.proc) ) { continue; }
 		SubmitterData * SubDat;
 		if (user_is_the_new_owner) {
 			SubDat = insert_submitter(rec->user);
@@ -5480,7 +5480,7 @@ condor to the user.  In the future we might allocate a dynamic account here.
 int
 aboutToSpawnJobHandler( int cluster, int proc, void* )
 {
-	if( proc <= -1000 ) { return TRUE; }
+	if( isTransferShadowProcID( proc ) ) { return TRUE; }
 
 	ASSERT(cluster > 0);
 	ASSERT(proc >= 0);
@@ -9260,8 +9260,8 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 			jobid.cluster = match->cluster;
 			jobid.proc = match->proc;
 
-			if( jobid.proc <= -1000 ) {
-				jobid.proc = (-1 * jobid.proc) - 1000;
+			if( isTransferShadowProcID( jobid.proc ) ) {
+				jobid.proc = transferToPromptingProcID( jobid.proc );
 			} else {
 				// This is an alarming logical inconsistency; only the
 				// transfer shadow should be calling this function with
@@ -9356,7 +9356,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	}
 
 
-	PROC_ID transfer_shadow_id( jobid.cluster, (-1 * jobid.proc ) - 1000 );
+	PROC_ID transfer_shadow_id( jobid.cluster, transferToPromptingProcID( jobid.proc  ) );
 	shadow_rec * transfer_shadow_rec = FindSrecByProcID(transfer_shadow_id);
 	if( transfer_shadow_rec != NULL &&
 		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING
@@ -10821,7 +10821,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// schedd requires that a shadow have a corresponding job....
 				PROC_ID transfer_job_id(
 					job_id.cluster,
-					-1 * (job_id.proc + 1000)
+					promptingToTransferProcID( job_id.proc )
 				);
 
 				// This is more than we need, but let's optimize later.
@@ -11358,7 +11358,7 @@ bool Scheduler::evalVanillaStartExpr(VanillaMatchAd &vad)
 bool
 Scheduler::isStillRunnable( int cluster, int proc, int &status )
 {
-	if( proc <= -1000 ) { return true; }
+	if( isTransferShadowProcID( proc ) ) { return true; }
 	ClassAd* job = GetJobAd( cluster, proc );
 	if( ! job ) {
 			// job ad disappeared, definitely not still runnable.
@@ -11691,8 +11691,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 
 	PROC_ID real_job_id = PROC_ID(job_id);
-	if( real_job_id.proc <= -1000 ) {
-		real_job_id.proc = (-1 * real_job_id.proc) - 1000;
+	if( isTransferShadowProcID( real_job_id.proc ) ) {
+		real_job_id.proc = transferToPromptingProcID( real_job_id.proc );
 	}
 
 		// expand $$ stuff and persist expansions so they can be
@@ -11741,7 +11741,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	//    catalog A, but half require B (but not C), and half require C
 	//    (but not B).  The schedd will spawn two transfer shadows: one
 	//    transferring A and B xor C, and the other C xor B.
-	if( job_id.proc <= -1000 ) {
+	if( isTransferShadowProcID( job_id.proc ) ) {
 		AssignClassAdStringList(
 			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
 			std::ranges::views::keys( srec->cxfer_catalogs )
@@ -12925,9 +12925,10 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	// If we're looking at a transfer shadow, store all the changes we
 	// would make to the job log to an in-memory ClassAd, instead.
 	bool transfer_proc = false;
-	if( new_rec->job_id.proc <= -1000 ) {
+	if( isTransferShadowProcID( new_rec->job_id.proc ) ) {
 		transfer_proc = true;
 	}
+
 
 		// To improve performance and to keep our sanity in case we
 		// get killed in the middle of this operation, do all of these
@@ -13239,8 +13240,8 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				// match.  In the usual case, we won't have to do anything,
 				// because the transfer shadow won't exit before the
 				// promping job.
-				if( srec->job_id.proc <= -1000 ) {
-					int prompting_proc = (-1 * srec->job_id.proc) - 1000;
+				if( isTransferShadowProcID( srec->job_id.proc ) ) {
+					int prompting_proc = transferToPromptingProcID( srec->job_id.proc );
 					int status = -1;
 					GetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, &status );
 					if( status == JOB_STATUS_BLOCKED ) {
@@ -13348,7 +13349,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		update_remote_wall_clock(cluster, proc);
 	}
 
-	if( proc <= -1000 ) {
+	if( isTransferShadowProcID( proc ) ) {
 		// Don't even try to do any record-keeping that modifies the job ad
 		// if we're delete the shadow rec of a transfer shadow.
 	} else {
@@ -14460,7 +14461,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 	// "job" state associated with a transfer shadow.
 	bool handleNowClaim = false;
 	bool handleOCUClaim = false;
-	if( job_id.proc <= -1000 ) {
+	if( isTransferShadowProcID( job_id.proc ) ) {
 		switch( exit_code ) {
 			case JOB_NO_MEM:
 				this->swap_space_exhausted();
@@ -14519,7 +14520,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 				//
 				{
 					int clusterID = job_id.cluster;
-					int procID = (-1 * job_id.proc) - 1000;
+					int procID = transferToPromptingProcID( job_id.proc );
 					if( GetAttributeInt( job_id.cluster, procID, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
 						procID = 0;
 					}
@@ -15305,7 +15306,7 @@ Scheduler::kill_zombie(int, const PROC_ID & job_id )
 void
 Scheduler::check_zombie(int pid, const PROC_ID & job_id)
 {
-	if( job_id.proc <= -1000 ) { return; }
+	if( isTransferShadowProcID( job_id.proc ) ) { return; }
 
 	int	  status = -1;
 
@@ -17602,7 +17603,7 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 			// (HTCONDOR-3603)
 			// Of things with cluster.proc IDs, only transfer shadows shouldn't
 			// have a corresponding job record.
-			if( mrec->proc > -1000 ) {
+			if(! isTransferShadowProcID( mrec->proc )) {
 				SetAttributeInt( mrec->cluster, mrec->proc,
 								 ATTR_LAST_JOB_LEASE_RENEWAL, mrec->last_alive );
 			}

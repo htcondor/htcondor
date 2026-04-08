@@ -45,6 +45,7 @@
 #include <algorithm>
 #include "log_rotate.h"
 #include "safe_open.h"
+#include "transfer_proc.h"
 
 #include "cxfer_state.h"
 extern CXFER_STATE cxfer_type;
@@ -1640,7 +1641,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		// on the worker node.
 
 	// Don't waste the schedd's time with an update it can't store.
-	if( getProc() > -1000 ) {
+	if(! isTransferShadowProcID(getProc())) {
 		return job_updater->updateJob( type, 0 );
 	} else {
 		return true;
