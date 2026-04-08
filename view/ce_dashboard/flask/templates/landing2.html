@@ -21,7 +21,7 @@
                 dst_id: "ce-table",
 				data_url: "/data/ce_landing",
 				graph_query: urlEscapeGraphQuery(`
-				  group=facility_name,name,hosted,active,glideinsRunning,epsReporting,glideinEpStatus,cpusContributed,cpusAllocated,cpusStatus,lastHeardFrom;
+				  group=facility_name,name,hosted,active,glideinsRunning,epsReporting,cpusContributed,cpusAllocated,lastHeardFrom;
 				  filter=hosted=1
 				  filter=active=1
 				  unselect=hosted,active
@@ -32,8 +32,7 @@
 				  rename=epsReporting=EPs
 				  rename=cpusContributed=CPU Contrib
 				  rename=cpusAllocated=CPU Alloc
-				  rename=cpusStatus=CPU Usage Ratio
-				  rename=glideinEpStatus=EP Reporting Ratio
+
 				  rename=lastHeardFrom=Last Heard From
 				`)
             });
