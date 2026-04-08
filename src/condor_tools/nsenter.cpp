@@ -211,6 +211,40 @@ int main( int argc, char *argv[] )
 
 	std::string filename;
 
+	// Move into the job's cgroup so that the ssh shell shares the same
+	// resource limits as the job.  We must do this before entering the
+	// mnt namespace, because /sys/fs/cgroup won't be visible after that.
+	// Read /proc/<pid>/cgroup to find the cgroupv2 path, then write our
+	// PID into that cgroup.
+	{
+		std::string cgroupfile;
+		formatstr(cgroupfile, "/proc/%d/cgroup", pid);
+		FILE *f = fopen(cgroupfile.c_str(), "r");
+		if (f) {
+			char line[1024];
+			while (fgets(line, sizeof(line), f)) {
+				// cgroupv2 format: "0::<path>\n"
+				if (strncmp(line, "0::", 3) == 0) {
+					// strip trailing newline
+					char *nl = strchr(line, '\n');
+					if (nl) *nl = '\0';
+					std::string cgroup_procs;
+					formatstr(cgroup_procs, "/sys/fs/cgroup%s/cgroup.procs", line + 3);
+					FILE *cp = fopen(cgroup_procs.c_str(), "w");
+					if (cp) {
+						fprintf(cp, "%d\n", getpid());
+						fclose(cp);
+					} else {
+						fprintf(stderr, "Warning: cannot move into job cgroup %s: %s\n",
+							cgroup_procs.c_str(), strerror(errno));
+					}
+					break;
+				}
+			}
+			fclose(f);
+		}
+	}
+
 	// start changing namespaces.  Note that once we do this, things
 	// get funny in this process
 	formatstr(filename, "/proc/%d/ns/uts", pid);
