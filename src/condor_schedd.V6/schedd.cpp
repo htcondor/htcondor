@@ -10390,6 +10390,13 @@ Scheduler::AddRunnableLocalJobs()
 			continue;
 		}
 
+		// If the local/scheduler universe job has a cooldown set then skip
+		time_t cool_down = 0;
+		job->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+		if (cool_down >= time(nullptr)) {
+			continue;
+		}
+
 		if (job->IsNoopJob()) {
 			continue;
 		}
@@ -10404,7 +10411,7 @@ Scheduler::AddRunnableLocalJobs()
 		if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
 			max_hosts = 1; 
 		}
-	
+
 		//
 		// Before evaluating whether we can run this job, first make 
 		// sure its even eligible to run
@@ -13807,6 +13814,17 @@ Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
 	}
 }
 
+void
+Scheduler::setJobCoolDown(const PROC_ID job_id, const long long duration) {
+	int num_cool_downs = 0;
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &num_cool_downs);
+	num_cool_downs++;
+	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, num_cool_downs);
+	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + duration);
+
+	dprintf(D_ALWAYS, "Putting job %d.%d in cool down.\n", job_id.cluster, job_id.proc);
+}
+
 /**
  * Based on the exit status code for a job, we will preform
  * an appropriate action on the job in the queue. If an exception
@@ -13985,11 +14003,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		long long cooldown_duration = MAX( code_cooldown_duration, config_cooldown_duration );
 
 		if( code_cooldown || config_cooldown ) {
-			int cnt = 0;
-			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
-			cnt++;
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + cooldown_duration);
+			setJobCoolDown(job_id, cooldown_duration);
 			stats.JobsCoolDown += 1;
 			OTHER.JobsCoolDown += 1;
 		}
@@ -14357,18 +14371,29 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			"Scheduler universe job pid %d killed because "
 			"it was hung - will restart\n"
 			,pid);
-		set_job_status( job_id.cluster, job_id.proc, IDLE ); 
+		set_job_status( job_id.cluster, job_id.proc, IDLE );
 		return;
 	}
 
 	bool exited = false;
 
 	if(WIFEXITED(status)) {
+		int exit_code = WEXITSTATUS(status);
 		dprintf( D_ALWAYS,
 				 "scheduler universe job (%d.%d) pid %d "
-				 "exited with status %d\n", job_id.cluster,
-				 job_id.proc, pid, WEXITSTATUS(status) );
+				 "exited with code %d\n", job_id.cluster,
+				 job_id.proc, pid, exit_code );
 		exited = true;
+
+		// Unsuccessful execution so cooldown
+		if (exit_code != 0) {
+			// Note: DisableCoolDown attribute purposely undocumented
+			bool disable_cool_down = false;
+			GetAttributeBool(job_id.cluster, job_id.proc, "DisableCoolDown", &disable_cool_down);
+			if ( ! disable_cool_down) {
+				setJobCoolDown(job_id, SchedUniverseCoolDownDuration);
+			}
+		}
 	} else if(WIFSIGNALED(status)) {
 		dprintf( D_ALWAYS,
 				 "scheduler universe job (%d.%d) pid %d died "
@@ -14993,6 +15018,8 @@ Scheduler::Init()
 		}
 		free(tmp);
 	}
+	// Default scheduler universe failure (non-zero exit code) cool down duration (5 minutes)
+	SchedUniverseCoolDownDuration = param_integer("SCHEDULER_UNIVERSE_COOL_DOWN_DURATION", 300);
 
 	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", 200);
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);

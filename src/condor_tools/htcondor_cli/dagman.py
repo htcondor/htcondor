@@ -21,6 +21,7 @@ from htcondor_cli.verb import Verb
 from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 from htcondor_cli import MutualExclusionArgs
+from htcondor_cli.utils import readable_time
 
 JSM_HTC_DAG_SUBMIT = 4
 
@@ -108,7 +109,7 @@ class Status(Verb):
 
         attributes = [
             # Projection of attributes needed: Basic Job information
-            "JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "JobBatchName",
+            "JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "JobBatchName", "JobCoolDownExpiration",
             # DAG Node information
             "DAG_NodesTotal", "DAG_NodesDone", "DAG_NodesFailed", "DAG_NodesPostrun", "DAG_NodesPrerun", "DAG_NodesQueued", "DAG_NodesReady", "DAG_NodesUnready", "DAG_NodesFutile",
             # DAG job information
@@ -137,6 +138,8 @@ class Status(Verb):
         ad = dag[0]
         dag_file = ad.get("JobBatchName", "UNKNOWN+1").rsplit("+",1)[0]
 
+        cool_down = ad.get("JobCoolDownExpiration")
+
         # Now, produce DAG status
         if JobStatus[dag[0]['JobStatus']] == "RUNNING":
             # Check update time
@@ -158,6 +161,9 @@ class Status(Verb):
         elif JobStatus[dag[0]['JobStatus']] == "COMPLETED":
             completion_date = datetime.fromtimestamp(dag[0]["EnteredCurrentStatus"]).strftime("%Y-%m-%d %H:%M:%S")
             logger.info(f"DAG {dag_id} [{dag_file}] completed {completion_date}")
+        elif JobStatus[dag[0]['JobStatus']] == "IDLE" and cool_down is not None and cool_down >= time.time():
+            remainder = cool_down - time.time()
+            logger.info(f"DAG {dag_id} [{dag_file}] is in cool down. Remaining time: {readable_time(remainder)}")
         else:
             job_status_time = datetime.now() - datetime.fromtimestamp(dag[0]["EnteredCurrentStatus"])
             logger.info(f"DAG {dag_id} [{dag_file}] has been {job_status[dag[0]['JobStatus']]} for {FormatTime(job_status_time.total_seconds())}")
