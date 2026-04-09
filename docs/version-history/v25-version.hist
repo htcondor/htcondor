@@ -255,6 +255,13 @@
   promptly if it failed to launch a Singularity job.
   :jira:`3531`
 
+- Fixed bugs where a job would be placed on hold if there was a problem transferring
+  files via Pelican (OSDF) or HTTP.  Now in several cases where the problem was the
+  fault of HTCSS and not the fault of the job, the job will go back to idle and attempt
+  to be rematched instead of going on hold.  Several additional VacateReasonSubCodes where
+  added in support of this; see section :ref:`Vacate Reason Codes`.
+  :jira:`2952`
+
 - Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
   was off, that caused jobs to start in the users home directory.
   :jira:`3575`
