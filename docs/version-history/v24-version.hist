@@ -1,5 +1,9 @@
 *** 24.12.16 bugs
 
+- Fixed a bug that caused attempts to refresh a job's X.509 proxy file
+  spooled by the AP to fail.
+  :jira:`3660`
+
 *** 24.0.16 bugs
 
 - Removed memory leak from :meth:`htcondor2.JobEventLog.events`.
