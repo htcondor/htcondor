@@ -48,58 +48,100 @@
 
 {% block body %}
 
-<div class="graphs">
-    {% for site in sites %}
-    <div class="row">
-        <div class="col-2 htcv-col-2">
-            <p class="site-name">{{ site.site_name }}</p>
-            <p>{{ site.name }} {% if site.isCCStar %}<span class="ccstar-label">(CC*)</span>{% endif %}</p>
-        </div>
-        <div class="col-5 htcv-col-5" id="{{ loop.index }}-cpu">
-            <script>
-            new HTCondorView({
-                dst_id: "{{ loop.index }}-cpu",
-                title: "{{ site.name }} CPUs Past Week",
-                data_url: "/data/landing_graphs?r=week",
-                has_edit_menu: false,
-                graph_query: urlEscapeGraphQuery(`
-                    filter=Site={{ site.fqdn }}
-                    pivot=Date
-                    add=CpusInUse,CpusNotInUse,CpusContributed
-                    rename=CpusInUse=CpusAllocated
-                    unselect=Site,EPsRunning,GlideinsRunning,CpusNotInUse
-                    legend.position=in
-                    series.0.areaOpacity=1
-                    series.1.areaOpacity=0.05
-                    vAxis.format=short
-                    chart=area
-                `)
-            });
-            </script>
-        </div>
-        <div class="col-5 htcv-col-5" id="{{ loop.index }}-glideins">
-            <script>
-            new HTCondorView({
-                dst_id: "{{ loop.index }}-glideins",
-                title: "{{ site.name }} Glideins Past Week",
-                data_url: "/data/landing_graphs?r=week",
-                has_edit_menu: false,
-                graph_query: urlEscapeGraphQuery(`
-                    filter=Site={{ site.fqdn }}
-                    pivot=Date
-                    unselect=Site,CpusInUse,CpusNotInUse
-                    legend.position=in
-                    series.0.areaOpacity=1
-                    series.1.areaOpacity=0.05
-                    vAxis.format=short
-                    chart=area
-                `)
-            });
-            </script>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-			
+<div class="graphs"></div>
+
+<script>
+const sites = {{ sites | map(attribute='__dict__') | list | tojson }};
+
+const PAGE_SIZE = 10;
+let nextIndex = 0;
+let isLoading = false;
+
+function addRow(site, index) {
+    const $graphs = $('.graphs');
+    const i = index + 1;
+    const cpuId      = i + '-cpu';
+    const glideinsId = i + '-glideins';
+
+    const $row = $('<div class="row"></div>');
+
+    // Label column
+    const ccstarHtml = site.isCCStar ? ' <span class="ccstar-label">(CC*)</span>' : '';
+    $row.append(
+        $('<div class="col-2 htcv-col-2"></div>').append(
+            $('<p class="site-name"></p>').text(site.site_name),
+            $('<p></p>').html(site.name + ccstarHtml)
+        )
+    );
+
+    // CPU graph column
+    $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', cpuId));
+
+    // Glideins graph column
+    $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', glideinsId));
+
+    $graphs.append($row);
+
+    new HTCondorView({
+        dst_id: cpuId,
+        title: site.name + ' CPUs Past Week',
+        data_url: '/data/landing_graphs?r=week',
+        has_edit_menu: false,
+        graph_query: urlEscapeGraphQuery(`
+            filter=Site=${site.fqdn}
+            pivot=Date
+            add=CpusInUse,CpusNotInUse,CpusContributed
+            rename=CpusInUse=CpusAllocated
+            unselect=Site,EPsRunning,GlideinsRunning,CpusNotInUse
+            legend.position=in
+            series.0.areaOpacity=1
+            series.1.areaOpacity=0.05
+            vAxis.format=short
+            chart=area
+        `)
+    });
+
+    new HTCondorView({
+        dst_id: glideinsId,
+        title: site.name + ' Glideins Past Week',
+        data_url: '/data/landing_graphs?r=week',
+        has_edit_menu: false,
+        graph_query: urlEscapeGraphQuery(`
+            filter=Site=${site.fqdn}
+            pivot=Date
+            unselect=Site,CpusInUse,CpusNotInUse
+            legend.position=in
+            series.0.areaOpacity=1
+            series.1.areaOpacity=0.05
+            vAxis.format=short
+            chart=area
+        `)
+    });
+}
+
+function loadNextPage() {
+    if (isLoading || nextIndex >= sites.length) return;
+    isLoading = true;
+    const end = Math.min(nextIndex + PAGE_SIZE, sites.length);
+    for (let i = nextIndex; i < end; i++) {
+        addRow(sites[i], i);
+    }
+    nextIndex = end;
+    isLoading = false;
+}
+
+$(function () {
+    // Load the first page immediately
+    loadNextPage();
+
+    // Append more rows when the user scrolls near the bottom
+    $(window).on('scroll', function () {
+        const distanceFromBottom = $(document).height() - $(window).scrollTop() - $(window).height();
+        if (distanceFromBottom < 200) {
+            loadNextPage();
+        }
+    });
+});
+</script>
 
 {% endblock body %}
