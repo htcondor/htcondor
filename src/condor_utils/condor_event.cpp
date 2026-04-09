@@ -1322,10 +1322,28 @@ SubmitEvent::SubmitEvent(void)
 	eventNumber = ULOG_SUBMIT;
 }
 
+SubmitEvent::~SubmitEvent(void) {
+	delete structuredNotes;
+	structuredNotes = nullptr;
+}
+
 void
 SubmitEvent::setSubmitHost(char const *addr)
 {
 	submitHost = addr ? addr : "";
+}
+
+bool
+SubmitEvent::hasStructuredNotes() const
+{
+	return structuredNotes && structuredNotes->size() > 0;
+}
+
+ClassAd&
+SubmitEvent::setStructuredNotes()
+{
+	if ( ! structuredNotes) { structuredNotes = new ClassAd(); }
+	return *structuredNotes;
 }
 
 bool
@@ -1357,6 +1375,19 @@ SubmitEvent::formatBody( std::string &out )
 	return true;
 }
 
+static SubmitEventLine
+checkSubmitLine(const std::string& line)
+{
+	if (line.size() && line[0] == '[') {
+		return SubmitEventLine::STRUCTURED_NOTE;
+	} else if (starts_with(line, "DAG Node: ")) {
+		return SubmitEventLine::OLD_DAG_NOTE;
+	} else if (starts_with(line, "WARNING: ")) {
+		return SubmitEventLine::WARNING;
+	}
+
+	return SubmitEventLine::RAW;
+}
 
 int
 SubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
@@ -1373,18 +1404,44 @@ SubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 		return 1;
 	}
 
-	// see if the next line contains an optional event notes string
-	if( ! read_optional_line(submitEventLogNotes, file, got_sync_line, true, true) ) {
-		return 1;
-	}
+	classad::ClassAdParser parser;
+	std::string line;
+	// Read all optional lines until sync line
+	while (read_optional_line(line, file, got_sync_line, true, true)) {
+		SubmitEventLine type = checkSubmitLine(line);
 
-	// see if the next line contains an optional user event notes string
-	if ( ! read_optional_line(submitEventUserNotes, file, got_sync_line, true, true) ) {
-		return 1;
-	}
+		switch (type) {
+			// Parse inline classad into structured notes
+			case SubmitEventLine::STRUCTURED_NOTE:
+				// We should never have multiple structured notes lines but just in case
+				if ( ! structuredNotes) {
+					submitEventLogNotes = line;
+					structuredNotes = parser.ParseClassAd(line);
+				}
+				break;
 
-	if ( ! read_optional_line(submitEventWarnings, file, got_sync_line, true, false) ) {
-		return 1;
+			// Parse old DAG notes line into structured notes
+			case SubmitEventLine::OLD_DAG_NOTE:
+				// 'DAG Node: <node name>' -> remove first 10 characters
+				submitEventLogNotes = line;
+				line = line.substr(10);
+				trim(line);
+				setStructuredNotes().InsertAttr(ATTR_DAG_NODE_NAME, line);
+				break;
+
+			// Store warning line
+			case SubmitEventLine::WARNING:
+				submitEventWarnings = line;
+				break;
+
+			// All other lines follow order of: log notes -> user notes (Note: This is the old behavior)
+			default:
+				if (submitEventLogNotes.empty()) {
+					submitEventLogNotes = line;
+				} else if (submitEventUserNotes.empty()) {
+					submitEventUserNotes = line;
+				}
+		}
 	}
 
 	return 1;
@@ -1409,6 +1466,9 @@ SubmitEvent::toClassAd(bool event_time_utc)
 	if( !submitEventWarnings.empty() ) {
 		if( !myad->InsertAttr("Warnings",submitEventWarnings) ) return NULL;
 	}
+	if (hasStructuredNotes()) {
+		myad->Insert(ATTR_SUBMIT_EVENT_STRUCTURED_NOTES, structuredNotes->Copy());
+	}
 
 	return myad;
 }
@@ -1427,6 +1487,12 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupString("UserNotes", submitEventUserNotes);
 
 	ad->LookupString("Warnings", submitEventWarnings);
+
+	ClassAd * notes = nullptr;
+	ExprTree * tree = ad->Lookup(ATTR_SUBMIT_EVENT_STRUCTURED_NOTES);
+	if (tree && tree->isClassad(&notes)) {
+		structuredNotes = static_cast<ClassAd*>(notes->Copy());
+	}
 }
 
 // ----- the GenericEvent class
@@ -5286,6 +5352,24 @@ ClusterSubmitEvent::ClusterSubmitEvent(void)
 	eventNumber = ULOG_CLUSTER_SUBMIT;
 }
 
+ClusterSubmitEvent::~ClusterSubmitEvent(void) {
+	delete structuredNotes;
+	structuredNotes = nullptr;
+}
+
+bool
+ClusterSubmitEvent::hasStructuredNotes() const
+{
+	return structuredNotes && structuredNotes->size() > 0;
+}
+
+ClassAd&
+ClusterSubmitEvent::setStructuredNotes()
+{
+	if ( ! structuredNotes) { structuredNotes = new ClassAd(); }
+	return *structuredNotes;
+}
+
 void
 ClusterSubmitEvent::setSubmitHost(char const *addr)
 {
@@ -5322,14 +5406,39 @@ ClusterSubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 		return 0;
 	}
 
-	// see if the next line contains an optional event notes string,
-	if ( ! read_optional_line(submitEventLogNotes, file, got_sync_line, true, true)) {
-		return 1;
-	}
+	classad::ClassAdParser parser;
+	std::string line;
+	// Read all optional lines until sync line
+	while (read_optional_line(line, file, got_sync_line, true, true)) {
+		SubmitEventLine type = checkSubmitLine(line);
 
-	// see if the next line contains an optional user event notes
-	if ( ! read_optional_line(submitEventUserNotes, file, got_sync_line, true, true)) {
-		return 1;
+		switch (type) {
+			// Parse inline classad into structured notes
+			case SubmitEventLine::STRUCTURED_NOTE:
+				// We should never have multiple structured notes lines but just in case
+				if ( ! structuredNotes) {
+					submitEventLogNotes = line;
+					structuredNotes = parser.ParseClassAd(line);
+				}
+				break;
+
+			// Parse old DAG notes line into structured notes
+			case SubmitEventLine::OLD_DAG_NOTE:
+				// 'DAG Node: <node name>' -> remove first 10 characters
+				submitEventLogNotes = line; // For DAGMan backup
+				line = line.substr(10);
+				trim(line);
+				setStructuredNotes().InsertAttr(ATTR_DAG_NODE_NAME, line);
+				break;
+
+			// All other lines follow order of: log notes -> user notes (Note: This is the old behavior)
+			default:
+				if (submitEventLogNotes.empty()) {
+					submitEventLogNotes = line;
+				} else if (submitEventUserNotes.empty()) {
+					submitEventUserNotes = line;
+				}
+		}
 	}
 
 	return 1;
@@ -5345,6 +5454,10 @@ ClusterSubmitEvent::toClassAd(bool event_time_utc)
 		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
+	if (hasStructuredNotes()) {
+		myad->Insert(ATTR_SUBMIT_EVENT_STRUCTURED_NOTES, structuredNotes->Copy());
+	}
+
 	return myad;
 }
 
@@ -5356,6 +5469,12 @@ ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 	ad->LookupString("SubmitHost", submitHost);
+
+	ClassAd * notes = nullptr;
+	ExprTree * tree = ad->Lookup(ATTR_SUBMIT_EVENT_STRUCTURED_NOTES);
+	if (tree && tree->isClassad(&notes)) {
+		structuredNotes = static_cast<ClassAd*>(notes->Copy());
+	}
 }
 
 // ----- the ClusterRemoveEvent class
