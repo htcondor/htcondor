@@ -156,7 +156,7 @@ function addRow(site, index) {
     $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', cpuId));
 
     $graphs.append($row);
-
+    
     new HTCondorView({
         dst_id: cpuId,
         title: '',
@@ -171,6 +171,8 @@ function addRow(site, index) {
             legend.position=none
             series.0.areaOpacity=1
             series.1.areaOpacity=0.05
+            series.0.color=#66AADD
+            series.1.color=#FF0000
             vAxis.format=short
             chart=area
         `)
@@ -188,12 +190,13 @@ function addRow(site, index) {
             legend.position=none
             series.0.areaOpacity=1
             series.1.areaOpacity=0.025
-            series.0.color=lightskyblue
-            series.1.color=crimson
+            series.0.color=#999999
+            series.1.color=#FF6600
             vAxis.format=short
             chart=area
         `)
     });
+
 }
 
 function loadNextPage(pageSize) {
@@ -217,7 +220,14 @@ $(function () {
         if (distanceFromBottom < 200) {
             loadNextPage(20);
         }
-    });
+    }); 
+    // Automatically incrementally load pages while the user is not scrolling
+    const interval = setInterval(function () {
+        loadNextPage(10);
+        if (nextIndex >= sites.length) {
+            clearInterval(interval);
+        }
+    }, 2000);
 });
 </script>
 
