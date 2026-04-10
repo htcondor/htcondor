@@ -59,6 +59,27 @@ command_resume(Dagman& dm) {
 	}
 }
 
+static void
+command_set_throttles(const ClassAd& request, ClassAd& response, Dagman& dm) {
+	Throttles new_throttles = dm.throttles;
+
+	// Lookup throttles in request ad
+	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
+		int new_value = 0;
+		if (request.LookupInteger(THROTTLE_ATTR[i], new_value)) {
+			new_throttles[i] = new_value;
+		}
+	}
+
+	// Update throttles (with admin limits)
+	dm.SetThrottles(new_throttles);
+
+	// Fill response ad with all set throttles
+	for (size_t i = 0; i < static_cast<size_t>(Throttle::_SIZE); i++) {
+		response.InsertAttr(THROTTLE_ATTR[i], dm.throttles[i]);
+	}
+}
+
 bool
 handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 	int cmd = 0;
@@ -78,6 +99,9 @@ handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 				break;
 			case DAG_GENERIC_CMD::RESUME:
 				command_resume(dm);
+				break;
+			case DAG_GENERIC_CMD::SET_THROTTLES:
+				command_set_throttles(request, response, dm);
 				break;
 			default:
 				formatstr(error, "DAG command (%d) not implemented", cmd);

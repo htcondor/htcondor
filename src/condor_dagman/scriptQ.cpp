@@ -42,25 +42,26 @@ ScriptExecResult ScriptQ::Run(Script *script, ScriptDeferAction act) {
 		deferScript = true;
 	}
 
-	// Defer the script if we've hit the max PRE/POST scripts
-	// running limit.
-	int maxScripts = 20;
+	Throttle throttle = Throttle::_SIZE;
+	// Defer the script if we've hit the max PRE/POST scripts running limit.
 	switch(script->_type) {
 		case ScriptType::PRE:
-			maxScripts = _dag->dagOpts[shallow::i::MaxPre];
+			throttle = Throttle::MAX_PRE;
 			break;
 		case ScriptType::POST:
-			maxScripts = _dag->dagOpts[shallow::i::MaxPost];
+			throttle = Throttle::MAX_POST;
 			break;
 		case ScriptType::HOLD:
-			maxScripts = _dag->dagOpts[shallow::i::MaxHold];
+			throttle = Throttle::MAX_HOLD;
 			break;
+		default:
+			EXCEPT("Unknown script type in script queue");
 	}
 
-	if (maxScripts != 0 && _numScriptsRunning >= maxScripts) {
+	if ( ! _dag->throttles.WithinLimit(throttle, _numScriptsRunning)) {
 		// max scripts already running
 		debug_printf(DEBUG_DEBUG_1, "Max %s scripts (%d) already running; deferring %s script of node %s\n",
-		             prefix, maxScripts, prefix, script->GetNodeName());
+		             prefix, _dag->throttles[throttle], prefix, script->GetNodeName());
 		deferScript = true;
 	}
 

@@ -9119,15 +9119,20 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		endRec = std::upper_bound(firstRec, endRec, owner_str, prio_rec_submitter_ub{});
 	}
 
-	// OCUs represent requests for match_recs (slots) that have no jobs associated With
-	// them.  Add them into the resource_requests list now.
-	for (const auto &[_,oi]: OwnersInfo) {
-		for (auto &ocu: oi->ocus) {
-			if (ocu.mrec == nullptr) {
-			
-				int ocu_id = ocu.ocu_id;
-				PROC_ID ocu_request = {ocu_id, OCU_qkey2};
-				resource_requests->add(ocu_id, ocu_request);
+	// OCUs represent requests for match_recs (slots) that have no jobs associated with
+	// them.  Add them into the resource_requests list now, but only for the owners
+	// that belong to the submitter currently being negotiated.
+	if (Owner) {
+		for (const std::string &owner_name: Owner->owners) {
+			OwnerInfo *oi = find_ownerinfo(owner_name.c_str());
+			if (oi) {
+				for (auto &ocu: oi->ocus) {
+					if (ocu.mrec == nullptr) {
+						int ocu_id = ocu.ocu_id;
+						PROC_ID ocu_request = {ocu_id, OCU_qkey2};
+						resource_requests->add(ocu_id, ocu_request);
+					}
+				}
 			}
 		}
 	}
@@ -10526,6 +10531,13 @@ Scheduler::AddRunnableLocalJobs()
 			continue;
 		}
 
+		// If the local/scheduler universe job has a cooldown set then skip
+		time_t cool_down = 0;
+		job->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+		if (cool_down >= time(nullptr)) {
+			continue;
+		}
+
 		if (job->IsNoopJob()) {
 			continue;
 		}
@@ -10540,7 +10552,7 @@ Scheduler::AddRunnableLocalJobs()
 		if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
 			max_hosts = 1; 
 		}
-	
+
 		//
 		// Before evaluating whether we can run this job, first make 
 		// sure its even eligible to run
@@ -12112,6 +12124,14 @@ Scheduler::initLocalStarterDir( void )
 }
 
 
+// Make a named security session id for scheduler universe jobs based on job id
+// i.e. scheduler-universe-<Cluster>.<Proc>
+static std::string
+schedUniverseSecSessionId(const PROC_ID& job_id) {
+	return std::string("scheduler-universe-") + std::to_string(job_id.cluster) + "." + std::to_string(job_id.proc);
+}
+
+
 shadow_rec*
 Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 {
@@ -12148,7 +12168,6 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 	std::string cmd_secret;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
-	bool is_daemon_core = false;
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
@@ -12460,17 +12479,59 @@ Scheduler::start_sched_universe_job(const PROC_ID & job_id)
 		}
 	}
 
-	GetAttributeBool(job_id.cluster, job_id.proc, ATTR_IS_DAEMON_CORE, &is_daemon_core);
-	if (is_daemon_core) {
-		auto opaque = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
-		if ( ! opaque.get()) {
-			dprintf(D_ERROR, "Failed to create secret for scheduler universe Daemon.\n");
+	// Create security session for all scheduler universe jobs to automatically use
+	{ // Scope for variable creation
+		std::string sec_session_id = schedUniverseSecSessionId(job_id);
+		auto sec_session_key = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9), free};
+
+		if ( ! sec_session_key.get()) {
+			dprintf(D_ERROR, "Failed to create security session key for scheduler universe job %d.%d.\n",
+			        job_id.cluster, job_id.proc);
 			goto wrapup;
-		} else {
-			cmd_secret = opaque.get();
-			envobject.SetEnv(ENV_CONDOR_SECRET, cmd_secret.c_str());
 		}
-	}
+
+		std::string commands;
+		formatstr(commands, "[%s=\"%s\"]", ATTR_SEC_VALID_COMMANDS, daemonCore->GetCommandsInAuthLevel(WRITE, true).c_str());
+
+		std::string fqu = userJob->ownerinfo->Name();
+		if (fqu.empty()) {
+			dprintf(D_ERROR, "Failed to get fully qualified username for scheduler universe job %d.%d!!\n",
+			        job_id.cluster, job_id.proc);
+			goto wrapup;
+		}
+
+		bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+			WRITE,
+			sec_session_id.c_str(),
+			sec_session_key.get(),
+			commands.c_str(),
+			AUTH_METHOD_FAMILY,
+			fqu.c_str(),
+			nullptr,
+			0,
+			nullptr,
+			true
+		);
+
+		if ( ! rc) {
+			dprintf(D_ERROR, "Failed to create security session for scheduler universe job %d.%d\n",
+			        job_id.cluster, job_id.proc);
+			goto wrapup;
+		}
+
+		std::string sec_session_info;
+		if ( ! daemonCore->getSecMan()->ExportSecSessionInfo(sec_session_id.c_str(), sec_session_info)) {
+			dprintf(D_ERROR, "Failed to export security session for scheduler universe job %d.%d\n",
+			        job_id.cluster, job_id.proc);
+			goto wrapup;
+		}
+
+		ClaimIdParser session(sec_session_id.c_str(), sec_session_info.c_str(), sec_session_key.get());
+		cmd_secret = session.claimId();
+
+		// Set in scheduler jobs environment to be automatically picked up
+		envobject.SetEnv(ENV_CONDOR_SEC_SESSION, cmd_secret.c_str());
+	} // End Scope
 
 	// Scheduler universe jobs should not be told about the shadow
 	// command socket in the inherit buffer.
@@ -14205,10 +14266,14 @@ Scheduler::child_exit(int pid, int status)
 	// handler methods to take care of it
 	//
 	if (IsSchedulerUniverse(srec)) {
+		// Remove scheduler universe security session from cache
+		daemonCore->getSecMan()->session_cache.erase(schedUniverseSecSessionId(job_id));
+
  		// scheduler universe process
 		daemonCore->Kill_Family( pid );
 		scheduler_univ_job_exit(pid,status,srec);
 		delete_shadow_rec( pid );
+
 		// even though this will get set correctly in
 		// count_jobs(), try to keep it accurate here, too.
 		if( SchedUniverseJobsRunning > 0 ) {
@@ -14442,6 +14507,21 @@ Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
 			}
 		}
 	}
+}
+
+
+void
+Scheduler::setJobCoolDown(const PROC_ID job_id, const long long duration) {
+	// Only set this if we have a duration
+	if (duration <= 0) { return; }
+
+	int num_cool_downs = 0;
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &num_cool_downs);
+	num_cool_downs++;
+	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, num_cool_downs);
+	SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + duration);
+
+	dprintf(D_ALWAYS, "Putting job %d.%d in cool down.\n", job_id.cluster, job_id.proc);
 }
 
 
@@ -14779,11 +14859,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 		long long cooldown_duration = MAX( code_cooldown_duration, config_cooldown_duration );
 
 		if( code_cooldown || config_cooldown ) {
-			int cnt = 0;
-			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &cnt);
-			cnt++;
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, cnt);
-			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_COOL_DOWN_EXPIRATION, time(nullptr) + cooldown_duration);
+			setJobCoolDown(job_id, cooldown_duration);
 			stats.JobsCoolDown += 1;
 			OTHER.JobsCoolDown += 1;
 		}
@@ -15108,7 +15184,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 		num_excepts++;
 		SetAttributeInt(job_id.cluster, job_id.proc,
 						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts, NONDURABLE);
-		int dummy;
+		int dummy = 0;
 		if (GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &dummy) < 0) {
 			SetAttributeString(job_id.cluster, job_id.proc, ATTR_VACATE_REASON, "Shadow Exception");
 			SetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, CONDOR_HOLD_CODE::ShadowException);
@@ -15151,18 +15227,29 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			"Scheduler universe job pid %d killed because "
 			"it was hung - will restart\n"
 			,pid);
-		set_job_status( job_id.cluster, job_id.proc, IDLE ); 
+		set_job_status( job_id.cluster, job_id.proc, IDLE );
 		return;
 	}
 
 	bool exited = false;
 
 	if(WIFEXITED(status)) {
+		int exit_code = WEXITSTATUS(status);
 		dprintf( D_ALWAYS,
 				 "scheduler universe job (%d.%d) pid %d "
-				 "exited with status %d\n", job_id.cluster,
-				 job_id.proc, pid, WEXITSTATUS(status) );
+				 "exited with code %d\n", job_id.cluster,
+				 job_id.proc, pid, exit_code );
 		exited = true;
+
+		// Unsuccessful execution so cooldown
+		if (exit_code != 0) {
+			// Note: DisableCoolDown attribute purposely undocumented
+			bool disable_cool_down = false;
+			GetAttributeBool(job_id.cluster, job_id.proc, "DisableCoolDown", &disable_cool_down);
+			if ( ! disable_cool_down) {
+				setJobCoolDown(job_id, SchedUniverseCoolDownDuration);
+			}
+		}
 	} else if(WIFSIGNALED(status)) {
 		dprintf( D_ALWAYS,
 				 "scheduler universe job (%d.%d) pid %d died "
@@ -15788,6 +15875,8 @@ Scheduler::Init()
 		}
 		free(tmp);
 	}
+	// Default scheduler universe failure (non-zero exit code) cool down duration (5 minutes)
+	SchedUniverseCoolDownDuration = param_integer("SCHEDULER_UNIVERSE_COOL_DOWN_DURATION", 300);
 
 	MaxRunningSchedulerJobsPerOwner = param_integer("MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER", 200);
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);

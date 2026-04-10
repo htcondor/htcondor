@@ -203,22 +203,39 @@ Expression Operators
 :index:`expression operators<single: expression operators; ClassAd>`
 
 The operators that may be used in ClassAd expressions are similar to
-those available in C. The available operators and their relative
-precedence is shown in the following example:
+those available in C. The available operators and their relative precedence
+are shown in the following table, from highest to lowest:
 
-.. code-block:: text
+.. list-table:: Operator Precedence (highest to lowest)
+   :header-rows: 1
+   :widths: 15 25 60
 
-      - (unary negation)   (high precedence)
-      *  /   %
-      +   - (addition, subtraction)
-      <   <=   >=   >
-      ==  !=  =?=  is  =!=  isnt
-      &&
-      ||                   (low precedence)
+   * - Precedence
+     - Operators
+     - Description
+   * - 1 (highest)
+     - ``-``
+     - Unary negation
+   * - 2
+     - ``*``  ``/``  ``%``
+     - Multiplication, division, modulo
+   * - 3
+     - ``+``  ``-``
+     - Addition, subtraction
+   * - 4
+     - ``<``  ``<=``  ``>=``  ``>``
+     - Comparison
+   * - 5
+     - ``==``  ``!=``  ``=?=``  ``is``  ``=!=``  ``isnt``
+     - Equality and identity comparison
+   * - 6
+     - ``&&``
+     - Logical AND
+   * - 7 (lowest)
+     - ``||``
+     - Logical OR
 
-The operator with the highest precedence is the unary minus operator.
-The only operators which are unfamiliar are the =?=, is, =!= and isnt
-operators, which are discussed in
+The ``=?=``, ``is``, ``=!=``, and ``isnt`` operators are discussed in
 :ref:`classads/classad-mechanism:classad evaluation semantics`.
 
 ClassAd Evaluation Semantics

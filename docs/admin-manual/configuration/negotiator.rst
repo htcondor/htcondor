@@ -624,3 +624,9 @@ The following configuration macros affect negotiation for group users.
     quotas, unless the sum of subgroup quotas is considerably less than
     the group's quota, as scaling is currently based on the number of
     machines available, not assigned quotas (for static quotas).
+
+:macro-def:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY`
+    A boolean that defaults to true.  When true, the :tool:`condor_userprio`
+    uses a interface to the negotiator added in htcondor version 9.1 to
+    fetch accounting ads.  Set this to false when a running a very old
+    negotiator with a much newer :tool:`condor_userprio`

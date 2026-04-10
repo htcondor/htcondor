@@ -867,7 +867,11 @@ bool DBHandler::maybeRecoverStatusAndFiles(FileSet& historyFileSet_, StatusData&
         return false;
     }
 
-    sqlite3_step(stmt);
+    if (sqlite3_step(stmt) != SQLITE_ROW) {
+        dprintf(D_ERROR, "Failed to query database: %s\n", sqlite3_errmsg(db_));
+        sqlite3_finalize(stmt);
+        return false;
+    }
     int count = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
 

@@ -30,6 +30,7 @@ $testname = "job_negotiator_restart";
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
 	NEGOTIATOR_DEBUG = $(NEGOTIATOR_DEBUG) D_COMMAND:1 D_FULLDEBUG
+	SCHEDULER_UNIVERSE_COOL_DOWN_DURATION = 0
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 

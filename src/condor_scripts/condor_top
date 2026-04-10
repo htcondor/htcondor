@@ -792,7 +792,7 @@ def printRuntimeTable(old, new, col_set = COL_SET, sort_col = SORT_COL, lines = 
 
 def printCountdown(delay = DELAY):
     """Prints countdown to the next update to stderr"""
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     refresh_time = now + datetime.timedelta(seconds=delay)
     time_left = refresh_time - now
     while time_left > datetime.timedelta(seconds=0):
@@ -801,7 +801,7 @@ def printCountdown(delay = DELAY):
             time_left.seconds))
         sys.stderr.flush()
         sleep(1)
-        time_left = refresh_time - datetime.datetime.utcnow()
+        time_left = refresh_time - datetime.datetime.now(datetime.timezone.utc)
     sys.stderr.write('\rUpdating ClassAd ' + 10*'.' + '\n\n')
     sys.stderr.flush()
 

@@ -57,6 +57,7 @@ extensions = [
     'hidden',
     'flatten-history',
     'fake-definition',
+    'vacate_combined_table',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load

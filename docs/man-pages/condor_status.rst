@@ -186,32 +186,6 @@ Options
     (Custom option) Show compact form, with a single line per machine
     using information from the partitionable slot.  Some information will
     be incorrect if the machine has static slots.
- **-format** *fmt attr*
-    (Custom option) Display attribute or expression *attr* in format
-    *fmt*. To display the attribute or expression the format must
-    contain a single ``printf(3)``-style conversion specifier.
-    Attributes must be from the resource ClassAd. Expressions are
-    ClassAd expressions and may refer to attributes in the resource
-    ClassAd. If the attribute is not present in a given ClassAd and
-    cannot be parsed as an expression, then the format option will be
-    silently skipped. %r prints the unevaluated, or raw values. The
-    conversion specifier must match the type of the attribute or
-    expression. %s is suitable for strings such as ``Name``, %d for
-    integers such as ``LastHeardFrom``, and %f for floating point
-    numbers such as :ad-attr:`LoadAvg`. %v identifies the type of the
-    attribute, and then prints the value in an appropriate format. %V
-    identifies the type of the attribute, and then prints the value in
-    an appropriate format as it would appear in the **-long** format. As
-    an example, strings used with %V will have quote marks. An incorrect
-    format will result in undefined behavior. Do not use more than one
-    conversion specifier in a given format. More than one conversion
-    specifier will result in undefined behavior. To output multiple
-    attributes repeat the **-format** option once for each desired
-    attribute. Like ``printf(3)``-style formats, one may include other
-    text that will be reproduced directly. A format without any
-    conversion specifiers may be specified, but an attribute is still
-    required. Include a backslash followed by an 'n' to specify a line
-    break.
  **-autoformat[:lhVr,tng]** *attr1 [attr2 ...]* or **-af[:lhVr,tng]** *attr1 [attr2 ...]*
     (Output option) Display attribute(s) or expression(s) formatted in a
     default way according to attribute types. This option takes an
@@ -227,24 +201,28 @@ Options
     character and formatting qualifiers to deviate the output formatting
     from the default:
 
-    **l** label each field,
+    .. list-table::
+       :widths: 15 85
+       :header-rows: 1
 
-    **h** print column headings before the first line of output,
-
-    **V** use %V rather than %v for formatting (string values are
-    quoted),
-
-    **r** print "raw", or unevaluated values,
-
-    **,** add a comma character after each field,
-
-    **t** add a tab character before each field instead of the default
-    space character,
-
-    **n** add a newline character after each field,
-
-    **g** add a newline character between ClassAds, and suppress spaces
-    before each field.
+       * - Qualifier
+         - Description
+       * - l
+         - Label each field
+       * - h
+         - Print column headings before the first line of output
+       * - V
+         - Use %V rather than %v for formatting (string values are quoted)
+       * - r
+         - Print "raw", or unevaluated values
+       * - ,
+         - Add a comma character after each field
+       * - t
+         - Add a tab character before each field instead of the default space character
+       * - n
+         - Add a newline character after each field
+       * - g
+         - Add a newline character between ClassAds, and suppress spaces before each field
 
     Use **-af:h** to get tabular values with headings.
 
@@ -252,6 +230,55 @@ Options
 
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
+
+ **-aaf[:Vr]** *attr1 [attr2 ...]*
+    (output option) Like **-autoformat**, but instead of replacing the
+    standard output columns, appends the specified attribute(s) as
+    additional columns after whatever standard format or **-print-format* file is in
+    effect.
+    Accepts the **-autoformat** V or r format qualifiers which will affect only
+    the appended columns.  This option allows adding extra information to the default
+    *condor_status* output without losing the standard columns. Appended columns will
+    use the column separator and row terminator characters from the format that is appended to.
+ **-format** *fmt attr*
+    (Custom option) Display attribute or expression *attr* in format
+    *fmt*. To display the attribute or expression the format must
+    contain a single ``printf(3)``-style conversion specifier.
+    Attributes must be from the resource ClassAd. Expressions are
+    ClassAd expressions and may refer to attributes in the resource
+    ClassAd. If the attribute is not present in a given ClassAd and
+    cannot be parsed as an expression, then the format option will be
+    silently skipped.
+    The conversion specifier must match the type of the attribute or expression:
+
+    .. list-table::
+       :widths: 15 85
+       :header-rows: 1
+
+       * - Specifier
+         - Description
+       * - %s
+         - Suitable for strings such as ``Name``
+       * - %d
+         - Suitable for integers such as ``LastHeardFrom``
+       * - %f
+         - Suitable for floating point numbers such as :ad-attr:`LoadAvg`
+       * - %v
+         - Identifies the type of the attribute, and then prints the value in an appropriate format
+       * - %V
+         - Identifies the type of the attribute, and then prints the value in an appropriate format as it would appear in the **-long** format. As an example, strings used with %V will have quote marks
+       * - %r
+         - Prints the unevaluated, or raw values
+
+    An incorrect format will result in undefined behavior. Do not use more than one
+    conversion specifier in a given format. More than one conversion
+    specifier will result in undefined behavior. To output multiple
+    attributes repeat the **-format** option once for each desired
+    attribute. Like ``printf(3)``-style formats, one may include other
+    text that will be reproduced directly. A format without any
+    conversion specifiers may be specified, but an attribute is still
+    required. Include a backslash followed by an 'n' to specify a line
+    break.
 
  **-print-format** *file*
     Read output formatting information from the given custom print format file.

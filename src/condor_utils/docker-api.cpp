@@ -609,13 +609,14 @@ DockerAPI::execInContainer( const std::string &containerName,
 			    const Env &environment,
 			    int *childFDs,
 			    int reaperid,
-			    int &pid) {
+			    int &pid,
+			    bool interactive) {
 
 	ArgList execArgs;
 	if ( ! add_docker_arg(execArgs))
 		return -1;
 	execArgs.AppendArg("exec");
-	execArgs.AppendArg("-ti");
+	execArgs.AppendArg(interactive ? "-ti" : "-i");
 
 	if ( ! add_env_to_args_for_docker(execArgs, environment)) {
 		dprintf( D_ALWAYS, "Failed to pass environment to docker.\n" );
@@ -954,6 +955,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
 		} else {
 			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			close(uds);
 			return -1;
 		}
 	}

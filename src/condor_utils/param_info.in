@@ -3489,6 +3489,12 @@ description=expression that, when TRUE allows a Scheduler universe job to start
 type=string
 tags=schedd
 
+[SCHEDULER_UNIVERSE_COOL_DOWN_DURATION]
+default=300
+description=Time in seconds to put scheduler universe job in cool down when exited with non-zero exit code.
+type=int
+tags=schedd
+
 [MAX_JOBS_SUBMITTED]
 default=2147483647
 type=int
