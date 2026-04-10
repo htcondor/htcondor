@@ -30,13 +30,43 @@
 		}
 		.site-name {
 		    font-weight: bold;
-		    padding-bottom: 2px;
-		    padding-top: 2px;
-			margin-bottom: 0;
 		}
 		.ccstar-label {
 		    color: green;
 		    font-weight: bold;
+		}
+		.site-stats {
+		    font-size: 0.8em;
+		    color: #555;
+		    margin-bottom: 0;
+		}
+		
+		.site-info p {
+            padding-bottom: 2px;
+            padding-top: 2px;
+            padding-left: 8px;
+            margin-bottom: 0;
+		}
+		
+		.header-labels {
+            font-weight: bold;
+		}
+		
+		.graph-headers {
+		    position: sticky;
+		    top: 50px; /* height of the Bootstrap navbar */
+		    z-index: 100;
+		    background-color: white;
+		    border-bottom: 1px solid #dee2e6;
+		}
+		
+		.graph-headers p {
+		    margin-bottom: 8px;
+			margin-top: 8px;
+		}
+		
+		.navbar {
+		    margin-bottom: 0;
 		}
     </style>
 {% endblock style %}
@@ -48,6 +78,19 @@
 
 {% block body %}
 
+<div class="graph-headers">
+   <div class="row header-labels">
+       <div class="col-2 htcv-col-2 site-info">
+           <p>Site</p>
+       </div>
+       <div class="col-5 htcv-col-5">
+           <p>Glideins Running vs EPs Reporting</p>
+       </div>
+       <div class="col-5 htcv-col-5">
+           <p>CPUs Contributed vs Allocated</p>
+       </div>
+   </div>
+</div>
 <div class="graphs"></div>
 
 <script>
@@ -56,6 +99,28 @@ const sites = {{ sites | map(attribute='__dict__') | list | tojson }};
 const PAGE_SIZE = 10;
 let nextIndex = 0;
 let isLoading = false;
+
+// latestBySite maps FQDN -> the most recent date string for that site
+let latestBySite = {};
+
+function buildStatsP(date) {
+    return $('<p class="site-stats"></p>').text(date);
+}
+
+// Fetch the latest heard-from time per site FQDN
+$.getJSON('/data/ce_update_times', function (data) {
+    latestBySite = data;
+
+    // Backfill stats onto any rows that were already rendered before this request completed
+    $('[data-fqdn]').each(function () {
+        const $labelCol = $(this);
+        const fqdn = $labelCol.data('fqdn');
+        const date = latestBySite[fqdn];
+        if (date) {
+            $labelCol.find('.site-stats').text(buildStatsP(date).text());
+        }
+    });
+});
 
 function addRow(site, index) {
     const $graphs = $('.graphs');
@@ -67,24 +132,34 @@ function addRow(site, index) {
 
     // Label column
     const ccstarHtml = site.isCCStar ? ' <span class="ccstar-label">(CC*)</span>' : '';
-    $row.append(
-        $('<div class="col-2 htcv-col-2"></div>').append(
-            $('<p class="site-name"></p>').text(site.site_name),
-            $('<p></p>').html(site.name + ccstarHtml)
-        )
+    const $labelCol = $('<div class="col-2 htcv-col-2 site-info"></div>').attr('data-fqdn', site.fqdn).append(
+        $('<p class="site-name"></p>').text(site.site_name),
+        $('<p></p>').html(site.name + ccstarHtml)
     );
 
-    // CPU graph column
-    $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', cpuId));
+    // Always render a placeholder; the $.getJSON callback will replace it when data arrives
+    const $statsP = $('<p class="site-stats"></p>').text('Loading update time...');
+    $labelCol.append($statsP);
+
+    // Replace placeholder immediately if data is already available
+    const date = latestBySite[site.fqdn];
+    if (date) {
+        $statsP.text(buildStatsP(date).text());
+    }
+
+    $row.append($labelCol);
 
     // Glideins graph column
     $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', glideinsId));
+    
+    // CPU graph column
+    $row.append($('<div class="col-5 htcv-col-5"></div>').attr('id', cpuId));
 
     $graphs.append($row);
 
     new HTCondorView({
         dst_id: cpuId,
-        title: site.name + ' CPUs Past Week',
+        title: '',
         data_url: '/data/landing_graphs?r=week',
         has_edit_menu: false,
         graph_query: urlEscapeGraphQuery(`
@@ -93,7 +168,7 @@ function addRow(site, index) {
             add=CpusInUse,CpusNotInUse,CpusContributed
             rename=CpusInUse=CpusAllocated
             unselect=Site,EPsRunning,GlideinsRunning,CpusNotInUse
-            legend.position=in
+            legend.position=none
             series.0.areaOpacity=1
             series.1.areaOpacity=0.05
             vAxis.format=short
@@ -103,26 +178,28 @@ function addRow(site, index) {
 
     new HTCondorView({
         dst_id: glideinsId,
-        title: site.name + ' Glideins Past Week',
+        title: '',
         data_url: '/data/landing_graphs?r=week',
-        has_edit_menu: false,
+        //has_edit_menu: false,
         graph_query: urlEscapeGraphQuery(`
             filter=Site=${site.fqdn}
             pivot=Date
             unselect=Site,CpusInUse,CpusNotInUse
-            legend.position=in
+            legend.position=none
             series.0.areaOpacity=1
-            series.1.areaOpacity=0.05
+            series.1.areaOpacity=0.025
+            series.0.color=lightskyblue
+            series.1.color=crimson
             vAxis.format=short
             chart=area
         `)
     });
 }
 
-function loadNextPage() {
+function loadNextPage(pageSize) {
     if (isLoading || nextIndex >= sites.length) return;
     isLoading = true;
-    const end = Math.min(nextIndex + PAGE_SIZE, sites.length);
+    const end = Math.min(nextIndex + pageSize, sites.length);
     for (let i = nextIndex; i < end; i++) {
         addRow(sites[i], i);
     }
@@ -131,14 +208,14 @@ function loadNextPage() {
 }
 
 $(function () {
-    // Load the first page immediately
-    loadNextPage();
+    // Load the first page immediately - get a smaller amount of data
+    loadNextPage(10);
 
     // Append more rows when the user scrolls near the bottom
     $(window).on('scroll', function () {
         const distanceFromBottom = $(document).height() - $(window).scrollTop() - $(window).height();
         if (distanceFromBottom < 200) {
-            loadNextPage();
+            loadNextPage(20);
         }
     });
 });

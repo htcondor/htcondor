@@ -5,7 +5,11 @@ import functools
 import xml.etree.ElementTree as ET
 from utils import cache_response_to_disk, make_data_response, getOrganizationFromInstitutionID
 import time
-from blueprints.landing import ce_info_from_topology, ce_info_from_collectors, ce_info_from_ganglia
+from blueprints.landing import ce_info_from_topology, ce_info_from_collectors, ce_info_from_ganglia, returnOrAddUnregisteredInfo
+import classad2 as classad
+import htcondor2 as htcondor
+from datetime import datetime
+import json
 import pandas as pd
 
 @cache_response_to_disk()
@@ -56,13 +60,46 @@ def get_landing_graph_ganglia_data():
     
     return response
 
+def ce_last_heard_from(resource_info_by_fqdn):
+    """
+    Augments a resource_info_by_fqdn dict with the lastHeardFrom field taken
+    from each hosted, active CE's grid ads in its own CE collector.
+    """
+    coll = htcondor.Collector("collector.opensciencegrid.org:9619")
+    try:
+        ads = coll.query(htcondor.AdTypes.Schedd, projection=["Name", "CollectorHost"])
+    except Exception as e:
+        print(f"ce_last_heard_from: unable to reach collector.opensciencegrid.org:9619: {e}")
+        return
+
+    for ad in ads:
+        fqdn = ad["Name"]
+        if fqdn not in resource_info_by_fqdn:
+            continue
+        info = resource_info_by_fqdn[fqdn]
+        if not (info.hosted and info.active):
+            continue
+        if "CollectorHost" not in ad:
+            continue
+        try:
+            ce_coll = htcondor.Collector(ad["CollectorHost"])
+            grid_ads = ce_coll.query(htcondor.AdTypes.Grid, projection=["LastHeardFrom"])
+        except Exception as e:
+            print(f"ce_last_heard_from: unable to reach CE collector for {fqdn}: {e}")
+            continue
+        for grid_ad in grid_ads:
+            if "LastHeardFrom" in grid_ad:
+                info.lastHeardFrom = datetime.fromtimestamp(grid_ad["LastHeardFrom"]).strftime("%Y-%m-%d %H:%M:%S")
+
 @cache_response_to_disk()
-def get_site_names_with_data():
+def get_site_names_with_update_time():
     resource_info_by_fqdn = ce_info_from_topology()
-    ce_info_from_ganglia(resource_info_by_fqdn)
-    # Now gather up CE info from the collectors - currently must be done after all other sources
-    ce_info_from_collectors(resource_info_by_fqdn)
-    pass
+    ce_last_heard_from(resource_info_by_fqdn)
+    return json.dumps({
+        fqdn: info.lastHeardFrom
+        for fqdn, info in resource_info_by_fqdn.items()
+        if info.hosted and info.active
+    })
     
 #######################
 # Flask routes
@@ -74,6 +111,11 @@ landing_graphs_linkmap = {
     'Overview': 'overview.html',
     'Contributed': 'contributed.html',
 }
+
+@landing_graphs_bp.route('/data/ce_update_times')
+def ce_update_times():
+    response_body, cached_response = get_site_names_with_update_time()
+    return make_data_response(response_body, cached_response)
 
 @landing_graphs_bp.route('/data/landing_graphs')
 def ce_overview_data():
