@@ -1482,7 +1482,10 @@ File System Authentication
 
 This form of authentication utilizes the ownership of a file in the
 identity verification of a client. A daemon authenticating a client
-requires the client to write a file in a specific location (``/tmp``).
+requires the client to write a file in a specific directory.  By
+default, the directory is ``/tmp``, but the location of the file is
+controlled by the configuration parameter :macro:`FS_LOCAL_DIR`.
+This must be a publicly writable directory with the sticky bit set.
 The daemon then checks the ownership of the file. The file's ownership
 verifies the identity of the client. In this way, the file system
 becomes the trusted authority. This authentication method is only
