@@ -1,6 +1,6 @@
 *** 24.12.19 bugs
 
-- Fixed a bug that would cause the startd to crash if a custom :macro:`DOCKER`
+- Fixed a bug that would cause the *condor_startd* to crash if a custom :macro:`DOCKER`
   docker wrapper emitted unexpected output to the "images" sub-command.
   :jira:`3596`
 
@@ -9,10 +9,9 @@
   being properly aligned when the longest name exceeded 34 characters.
   :jira:`3255`
 
-- When the *condor_collector* responds to a locate query for Startd ads, it will now search
-  both the Startd daemon ad table and the Startd slot ad table to satisfy the locate.  This
-  fixes a bug where :tool:`condor_vacate` would not be able to find the address of the Startd
-  when given a slot name.
+- Fixed a bug where :tool:`condor_vacate` would fail to find the address of the *condor_startd*
+  when provided a slot name. With this change the *condor_collector* now searches through both
+  Startd Daemon Ads and Startd Slot Ads when handling a locate query.
   :jira:`3580`
 
 - Fixed a bug in :tool:`condor_q` match analysis that would always count sub-expressions that
