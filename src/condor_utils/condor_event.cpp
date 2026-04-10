@@ -1378,6 +1378,7 @@ SubmitEvent::formatBody( std::string &out )
 static SubmitEventLine
 checkSubmitLine(const std::string& line)
 {
+	// NOTE: This functions expects the incoming line to be trimmed
 	if (line.size() && line[0] == '[') {
 		return SubmitEventLine::STRUCTURED_NOTE;
 	} else if (starts_with(line, "DAG Node: ")) {
@@ -1406,11 +1407,12 @@ SubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 
 	classad::ClassAdParser parser;
 	std::string line;
+	size_t lineno = 0;
 	// Read all optional lines until sync line
 	while (read_optional_line(line, file, got_sync_line, true, true)) {
-		SubmitEventLine type = checkSubmitLine(line);
+		lineno++;
 
-		switch (type) {
+		switch (checkSubmitLine(line)) {
 			// Parse inline classad into structured notes
 			case SubmitEventLine::STRUCTURED_NOTE:
 				// We should never have multiple structured notes lines but just in case
@@ -1436,9 +1438,9 @@ SubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 
 			// All other lines follow order of: log notes -> user notes (Note: This is the old behavior)
 			default:
-				if (submitEventLogNotes.empty()) {
+				if (lineno == 1) { // Old behavior first line is log notes
 					submitEventLogNotes = line;
-				} else if (submitEventUserNotes.empty()) {
+				} else if (lineno == 2) { // Old behavior second line is user notes
 					submitEventUserNotes = line;
 				}
 		}
@@ -5408,11 +5410,12 @@ ClusterSubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 
 	classad::ClassAdParser parser;
 	std::string line;
+	size_t lineno = 0;
 	// Read all optional lines until sync line
 	while (read_optional_line(line, file, got_sync_line, true, true)) {
-		SubmitEventLine type = checkSubmitLine(line);
+		lineno++;
 
-		switch (type) {
+		switch (checkSubmitLine(line)) {
 			// Parse inline classad into structured notes
 			case SubmitEventLine::STRUCTURED_NOTE:
 				// We should never have multiple structured notes lines but just in case
@@ -5433,9 +5436,9 @@ ClusterSubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 
 			// All other lines follow order of: log notes -> user notes (Note: This is the old behavior)
 			default:
-				if (submitEventLogNotes.empty()) {
+				if (lineno == 1) { // Old behavior first line is log notes
 					submitEventLogNotes = line;
-				} else if (submitEventUserNotes.empty()) {
+				} else if (lineno == 2) { // Old behavior second line is user notes
 					submitEventUserNotes = line;
 				}
 		}
