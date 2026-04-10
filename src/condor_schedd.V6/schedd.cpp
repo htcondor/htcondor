@@ -13666,7 +13666,9 @@ Scheduler::child_exit(int pid, int status)
 	//
 	if ( srec_was_local_universe == true ) {
 		JobQueueJob *job_ad = GetJobAd(job_id);
-		count_a_job( job_ad, job_ad->jid, NULL);
+		if (job_ad) {
+			count_a_job( job_ad, job_ad->jid, NULL);
+		}
 	}
 
 	// If we're not trying to shutdown, now that either an agent
