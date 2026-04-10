@@ -136,9 +136,6 @@ bool getPODClassAd(Stream *sock, classad::ClassAd &ad)
 
 	ad.rehash(numExprs + 5);
 
-	classad::Lexer lexer;
-	lexer.SetOldClassAdLex(true);
-
 	for (int i = 0; i < numExprs; i++) {
 		const char *strptr = nullptr;
 		if (!sock->get_string_ptr(strptr) || !strptr) {
@@ -155,8 +152,10 @@ bool getPODClassAd(Stream *sock, classad::ClassAd &ad)
 			return false;
 		}
 
-		// Use the classad lexer to tokenize the RHS and verify it is
+		// Use a fresh classad lexer to tokenize the RHS and verify it is
 		// a single literal value (no expressions, functions, or references)
+		classad::Lexer lexer;
+		lexer.SetOldClassAdLex(true);
 		lexer.Initialize(rhs);
 		auto token = lexer.ConsumeToken();
 
@@ -179,8 +178,6 @@ bool getPODClassAd(Stream *sock, classad::ClassAd &ad)
 			delete lit;
 			return false;
 		}
-
-		lexer.FinishedParse();
 	}
 
 	// Read and discard the trailing MyType/TargetType strings
