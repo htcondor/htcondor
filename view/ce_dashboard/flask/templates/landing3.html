@@ -133,8 +133,8 @@ function addRow(site, index) {
     // Label column
     const ccstarHtml = site.isCCStar ? ' <span class="ccstar-label">(CC*)</span>' : '';
     const $labelCol = $('<div class="col-2 htcv-col-2 site-info"></div>').attr('data-fqdn', site.fqdn).append(
-        $('<p class="site-name"></p>').text(site.site_name),
-        $('<p></p>').html(site.name + ccstarHtml)
+        $('<p class="site-name"></p>').text(site.name),
+        $('<p></p>').html(site.site_name + ccstarHtml)
     );
 
     // Always render a placeholder; the $.getJSON callback will replace it when data arrives
