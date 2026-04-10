@@ -20,7 +20,7 @@
   :jira:`3581`
 
 - Fixed a bug where some of the values reported for job execution time were
-  very large if the Access Point daemons restarted while the job was running.
+  enormous if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
 - Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
@@ -33,7 +33,7 @@
   :jira:`3572`
 
 - The :meth:`htcondor2.send_command` method no longer incorrectly requires
-  a `target` parameter.
+  a ``target`` parameter.
   :jira:`3597`
 
 *** 24.0.18 features
