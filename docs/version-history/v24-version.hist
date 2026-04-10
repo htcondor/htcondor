@@ -20,7 +20,7 @@
   :jira:`3581`
 
 - Fixed a bug where some of the values reported for job execution time were
-  bloated if the Access Point daemons restarted while the job was running.
+  enormous if the Access Point daemons restarted while the job was running.
   :jira:`3592`
 
 - Fixed a bug where :subcom:`allowed_execute_duration` would possibly not be
