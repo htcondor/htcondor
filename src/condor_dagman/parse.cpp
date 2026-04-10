@@ -848,10 +848,15 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 			submitFileOrSubmitDesc = dagSubmitFile.c_str();
 
 		} else if ( strstr( submitFileOrSubmitDesc, DAG_SUBMIT_FILE_SUFFIX) ) {
-			// Assume JOB commands submit file ending with '.condor.sub' is a DAG
-			// submit file. This is no longer allowed for subdags
-			debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
-			return false;
+			// Assume JOB commands submit file ending with '.condor.sub' is a DAG submit file.
+			if (strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH) {
+				nestedDagFile = submitFileOrSubmitDesc;
+				nestedDagFile.replace(nestedDagFile.find(DAG_SUBMIT_FILE_SUFFIX), sizeof(DAG_SUBMIT_FILE_SUFFIX) - 1, "");
+			} else {
+				// This is no longer allowed for nodes (excluding final for LSST)
+				debug_printf(DEBUG_NORMAL, "Error: The use of the JOB keyword for nested DAGs is prohibited.\n");
+				return false;
+			}
 		}
 	}
 

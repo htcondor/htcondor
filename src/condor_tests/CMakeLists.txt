@@ -288,10 +288,11 @@ if (BUILD_TESTING)
 			condor_pl_test(test_std_pipe_handler "Test Register_Pipe(std::function)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_std_pipe_handlerd")
 
 			condor_pl_test(test_job_spec_hack "Test job_spec_hack()" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_htcondor "Test that the Python htcondor bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
-		if(LINUX OR APPLE)
+		if(LINUX OR APPLE OR WINDOWS)
 			condor_pl_test(test_x509_delegation "Test X.509 delegation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -377,6 +378,7 @@ endif()
 			condor_pl_test(test_custom_machine_resource "Test that a custom machine resource is assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
 			condor_pl_test(test_custom_machine_resources "Test that multiple custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
 			condor_pl_test(test_custom_machine_resource_instances "Test that multiple instances of custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
+			condor_pl_test(test_backfill_gpus "Test if backfill slots have GPUs" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
 			condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_allowed_execute_duration "Test allowed_execute_duration implementation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_736 "Test bugs fixed in HTCONDOR-736" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -995,7 +997,7 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp)
 		add_custom_target(timed_cmd_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp ${CMAKE_CURRENT_BINARY_DIR}/timed_cmd.exe tests)
-set_target_properties(timed_cmd_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
+		set_target_properties(timed_cmd_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/appendmsg.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp
@@ -1009,14 +1011,20 @@ set_target_properties(timed_cmd_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_T
 		add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleep.exe tests)
 		set_target_properties(sleep_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/success.exe
+			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/success.win32.cpp
+			COMMAND cl /O1 /GS- /Fesuccess.exe ${CMAKE_CURRENT_SOURCE_DIR}/success.win32.cpp)
+		add_custom_target(success_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/success.win32.cpp ${CMAKE_CURRENT_BINARY_DIR}/success.exe tests)
+		set_target_properties(success_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
+
 		# Note the additional dependency on sleep.exe [sic] below -- as both executables
 		# share the same source file, if we build them in parallel, we collide on
 		# the sleep.obj file, so add this otherwise unused dependency to serialize 
 		# the builds and avoid the collision
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe
+		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
-			COMMAND cl /O1 /GS- /DNOCONSOLE=1 /Fesleepw.exe ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
-		add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe sleep_exe tests)
+			COMMAND cl /O1 /GS- /DNOCONSOLE=1 /Fesleepw.exe /Fosleepw.obj ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
+		add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe tests)
 		set_target_properties(sleepw_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 	endif(WINDOWS)

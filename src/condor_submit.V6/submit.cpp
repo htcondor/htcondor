@@ -1249,20 +1249,31 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 
 			struct stat si = {};
 			if (stat(ename, &si) != 0) {
-				fprintf ( stderr, "\nERROR: Can't access executable file %s: %s\n", ename, strerror(errno) );
-				return 1; // abort
+				if (sub->getFileChecksAreWarnings()) {
+					fprintf ( stderr, "\nWARNING: Can't access executable file %s: %s\n", ename, strerror(errno) );
+					return 0;
+				} else {
+					fprintf ( stderr, "\nERROR: Can't access executable file %s: %s\n", ename, strerror(errno) );
+					return 1; // abort
+				}
 			}
 
 			if (si.st_size == 0) {
-				fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
-				return 1; // abort
+				if (sub->getFileChecksAreWarnings()) {
+					fprintf ( stderr, "\nWARNING: Executable file %s  has zero length\n", ename );
+					return 0;
+				} else {
+					fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
+					return 1; // abort
+				}
 			}
 
 			if (is_crlf_shebang(ename)) {
+				bool warn = allow_crlf_script || sub->getFileChecksAreWarnings();
 				fprintf( stderr, "\n%s: Executable file %s is a script with "
 					"CRLF (DOS/Windows) line endings.\n",
-					allow_crlf_script ? "WARNING" : "ERROR", ename );
-				if (!allow_crlf_script) {
+					warn ? "WARNING" : "ERROR", ename );
+				if (!warn) {
 					fprintf( stderr, "This generally doesn't work, and you "
 						"should probably run 'dos2unix %s' -- or a similar "
 						"tool -- before you resubmit.\n", ename );

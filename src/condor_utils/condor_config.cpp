@@ -2353,6 +2353,17 @@ param_integer( const char *name, int default_value,
 	return result;
 }
 
+long long
+param_longlong( const char *name, long long default_value,
+			    long long min_value, long long max_value, bool use_param_table )
+{
+	long long result;
+
+	param_longlong( name, result, true, default_value,
+				   true, min_value, max_value, NULL, NULL, use_param_table );
+	return result;
+}
+
 // require that the attribute I'm looking for is defined in the config file.
 char* param_or_except(const char *attr)
 {

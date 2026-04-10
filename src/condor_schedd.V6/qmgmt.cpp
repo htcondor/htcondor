@@ -5887,6 +5887,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 	// In effect, they are making attributes that are set by a submit transform pseudo-immutable. (the root cause of HTCONDOR-1369)
 	// TODO: make it possible to declare only some transforms as cluster-only
 	bool transform_factory_and_job = param_boolean("TRANSFORM_FACTORY_AND_JOB_ADS", true);
+	bool project_is_cluster_attr = scheduler.HasPersistentProjectInfo();
 
 	for(const JobQueueKey jid : new_keys) {
 		if (jid.proc < CLUSTERID_qkey2 || jid.cluster <= 0) {
@@ -5931,6 +5932,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 					// we already transformed the factory cluster ad, disable transforms
 					// for proc ads if ...and_jobs is false
 					do_transforms = transform_factory_and_job;
+					has_job_factory = true; // make sure the transform knows this is a factory job
 				}
 			}
 		}
@@ -5939,7 +5941,7 @@ CheckTransaction( const std::vector<JobQueueKey> &new_keys,
 		// apply job transforms to the procAd.
 		// If the transforms fail, bail on the transaction.
 		if (do_transforms) {
-			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack, has_job_factory);
+			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack, has_job_factory, project_is_cluster_attr);
 			if  (rval < 0) {
 				if ( errorStack ) {
 					errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");

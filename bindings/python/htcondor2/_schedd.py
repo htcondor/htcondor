@@ -371,11 +371,20 @@ class Schedd():
         if isinstance(since, int):
             since = f"ClusterID == {since}"
         elif isinstance(since, str):
-            pattern = re.compile(r'(\d+).(\d+)')
-            matches = pattern.match(since)
-            if matches is None:
-                raise ValueError("since string must be in the form {clusterID}.{procID}")
-            since = f"ClusterID == {matches[0]} && ProcID == {matches[1]}"
+            pattern = re.compile(r'(\d+)\.(\d+)')
+            matches = pattern.fullmatch(since)
+            if matches is not None:
+                since = f"ClusterID == {matches[1]} && ProcID == {matches[2]}"
+            else:
+                pattern = re.compile(r'(\d+)')
+                matches = pattern.fullmatch(r'(\d+)')
+                if matches is not None:
+                    since = f"ClusterID == {matches[1]}"
+                else:
+                    try:
+                        e = classad.ExprTree(since)
+                    except classad.ClassAdException:
+                        raise ValueError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
         elif isinstance(since, classad.ExprTree):
             since = str(since)
         elif since is None:
@@ -694,7 +703,7 @@ class Schedd():
         )
 
 
-    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
+    def refreshGSIProxy(self, cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
         """
         Refresh a (running) job's GSI proxy.
 
@@ -706,7 +715,7 @@ class Schedd():
             ``-1`` to use the value specific by :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`.
         :return:  The remaining lifetime.
         """
-        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proxy), str(proxy_filename), int(lifetime))
+        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proc), str(proxy_filename), int(lifetime))
 
 
     def reschedule(self) -> None:

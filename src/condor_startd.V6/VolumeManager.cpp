@@ -47,6 +47,7 @@ struct LVMReportItem {
     std::string name{}; // Volume Group or LV name
     std::string size{}; // Total size bytes of object
     std::string data{}; // VG free or LV data % used
+    std::string extent{}; // LV extent size (equals minimum disk quantum size)
     bool is_lv{false};  // Is this item an LV or Volume Group
     bool encrypted{false}; // Only normal LVs can be encrypted (non-thinpool)
 };
@@ -977,12 +978,13 @@ static bool
 getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMReportFilter& filter, int timeout, bool query_lvs=true)
 {
     std::string exe = query_lvs ? "lvs" : "vgs";
-    std::string options = query_lvs ? "vg_name,lv_name,pool_lv,lv_tags,lv_size,data_percent" : "vg_name,vg_size,vg_free";
+    std::string options = query_lvs ? "vg_name,lv_name,pool_lv,lv_tags,lv_size,data_percent,vg_extent_size" : "vg_name,vg_size,vg_free,vg_extent_size";
 
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg(exe);
     args.AppendArg("--noheadings");
+    if ( ! query_lvs) { args.AppendArg("--readonly"); }
     args.AppendArg("--nameprefixes");
     args.AppendArg("--separator");
     args.AppendArg(LVM_REPORT_DELIM);
@@ -1019,7 +1021,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
         return true;
     }
 
-    size_t expected_item_count = query_lvs ? 6 : 3;
+    size_t expected_item_count = query_lvs ? 7 : 4;
     for (const auto& line : StringTokenIterator(report.ptr(), "\n")) { // line: LM2_Option1='value'@LVM_Option2='value'@LVM2_Option3=''
         LVMReportItem item(query_lvs);
         auto info = split(line, LVM_REPORT_DELIM);
@@ -1034,7 +1036,7 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
                 !extractReportVal(info[1], item.name) || (!filter.lv_names.empty() && !filter.lv_names.contains(item.name)) ||
                 !extractReportVal(info[2], pool) || (filter.thinpool != item.name && pool != filter.thinpool) || (filter.ignore_thinpool && filter.thinpool == item.name) ||
                 !extractReportVal(info[3], tags) || (filter.thinpool != item.name && !reportWantLV(tags, filter.want_condor)) ||
-                !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data))
+                !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data) || !extractReportVal(info[6], item.extent))
             {
                 continue;
             }
@@ -1043,7 +1045,8 @@ getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMRep
 
         } else {
             if (!extractReportVal(info[0], item.name) || item.name != filter.volume_group ||
-                !extractReportVal(info[1], item.size) || !extractReportVal(info[2], item.data))
+                !extractReportVal(info[1], item.size) || !extractReportVal(info[2], item.data) ||
+                !extractReportVal(info[3], item.extent))
             {
                 continue;
             }
@@ -1133,6 +1136,18 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
             return false;
         }
         used_bytes = total_bytes - vg_bytes_free;
+    }
+
+    // Process and store the extent size to use for disk quantization.
+    // Note: This value can not be changed without recreating the volume group
+    // Note: Default extent size is 4MB.
+    try {
+        m_disk_quantum_kb = std::stoll(provision.extent) / 1024;
+    } catch(...) {
+        // If failure here just warn and use the default extent size
+        dprintf(D_STATUS, "Warning: Failed to convert Volume Group extent size %s: Defaulting disk quantum to 4MB\n",
+                provision.extent.c_str());
+        m_disk_quantum_kb = 4096;
     }
 
     // NOTE: We are querying for associated non-condor LVs rather than
@@ -1303,7 +1318,7 @@ int VolumeManager::CountLVDevices(const std::string& lv) {
 
 
 bool
-VolumeManager::IsSetup() {
+VolumeManager::IsSetup() const {
     bool lvm_setup = true;
 
     CondorError err;
@@ -1363,6 +1378,10 @@ VolumeManager::AdvertiseInfo(ClassAd* ad){
     std::string backing_store = m_volume_group_name;
     if (m_use_thin_provision) { backing_store += "/" + m_pool_lv_name; }
     ad->Assign(ATTR_LVM_BACKING_STORE, backing_store);
+
+    if (m_disk_quantum_kb > 0) {
+        ad->Assign(ATTR_STARTD_DISK_QUANTUM, (long long)m_disk_quantum_kb);
+    }
 }
 
 

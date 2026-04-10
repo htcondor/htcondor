@@ -467,3 +467,21 @@ queue paramset,chunk from (
 216 142
 240 133
 )
+
+==procexe.sub
+skip_filechecks=warn
+executable=$(item)
+queue item from (
+   basic.cmd
+   $Fp(SUBMIT_FILE)cmd_true.cmd
+   /bin/echo
+)
+
+==procitemexe.sub
+skip_filechecks=warn
+queue executable from (
+   basic.cmd
+   $Fp(SUBMIT_FILE)cmd_true.cmd
+   /bin/echo
+)
+

@@ -109,6 +109,20 @@ StartdNamedClassAdList::ClearJob ( StartdCronJob * job )
 	return no_match;
 }
 
+StartdNamedClassAd*
+StartdNamedClassAdList::LookupJob(const char* name)
+{
+	if (!name) {
+		return nullptr;
+	}
+	for (NamedClassAd* nad: m_ads) {
+		StartdNamedClassAd *sad = dynamic_cast<StartdNamedClassAd *>(nad);
+		if (sad && !strcmp(sad->GetName(), name)) {
+			return sad;
+		}
+	}
+	return nullptr;
+}
 
 bool
 StartdNamedClassAdList::Register( StartdNamedClassAd *ad )

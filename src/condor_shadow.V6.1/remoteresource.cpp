@@ -2006,6 +2006,14 @@ RemoteResource::reconnect( void )
 		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
 				ATTR_GLOBAL_JOB_ID );
 	}
+	if (shadow->attemptingReconnectAtStartup) {
+		if (activation.StartTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, activation.StartTime);
+		}
+		if (activation.StartExecutionTime == 0) {
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, activation.StartExecutionTime);
+		}
+	}
 	if( lease_duration < 0 ) { 
 			// if it's our first time, figure out what we've got to
 			// work with...

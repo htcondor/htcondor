@@ -796,6 +796,18 @@ int MachAttributes::RefreshDevIds(
 
 	int num_res = 0;
 	for (const auto & nfr : found->second.ids) {
+#if 1
+		bool available= false;
+		if (nfr.is_assigned_and_available(assign_to, assign_to_sub, available)) {
+			devids.emplace_back(nfr.id); // add to Assigned list
+			if (offline_ids.count(nfr.id)) {
+				// don't count offline ids as Available even though it is assigned
+			} else if (available) {
+				// count as available (at this point we ignore res conflicts)
+				num_res += 1;
+			}
+		}
+#else
 		if (nfr.owner.id == assign_to && (assign_to_sub == 0 || nfr.owner.dyn_id == assign_to_sub)) {
 			devids.emplace_back(nfr.id);
 			if (offline_ids.count(nfr.id)) {
@@ -804,6 +816,7 @@ int MachAttributes::RefreshDevIds(
 				num_res += 1;
 			}
 		}
+#endif
 	}
 	return num_res;
 }
@@ -2202,7 +2215,7 @@ CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, 
 }
 
 void
-CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) // release non-fungable resource ids
+CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot) // release non-fungable resource ids
 {
 	if (! map) return;
 
@@ -2229,6 +2242,8 @@ CpuAttributes::reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id
 		//   Gpus = 1
 
 		j.second = map->RefreshDevIds(j.first, ids->second, slot_id, slot_sub_id);
+		// assigned ids are reversed in backfill slots to reduce collisions with primary slots
+		if (backfill_slot && ids->second.size() > 1) { std::reverse(ids->second.begin(), ids->second.end()); }
 	}
 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {

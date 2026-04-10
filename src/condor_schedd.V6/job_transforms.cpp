@@ -148,7 +148,8 @@ JobTransforms::transformJob(
 	const PROC_ID & jid, // the ad transforms will be written to. (may differ from the ad being transformed)
 	classad::References * xform_attrs,
 	CondorError * /* errorStack */,
-	bool is_late_mat /*= false*/)
+	bool is_late_mat /*= false*/,
+	bool project_is_cluster_attr /*= false*/)
 {
 	int transforms_applied = 0;
 	int transforms_considered = 0;
@@ -207,6 +208,13 @@ JobTransforms::transformJob(
 	// changes to the ad into the transaction by calling SetAttribute() on each
 	// dirty attribute.
 	if (transforms_applied > 0) {
+		// We want to quietly ignore attempts to change cluster-only attributes in the proc ads.
+		// For late mat jobs, the cluster ad is transformed, so we don't allow any proc ads to transform.
+		// For regular jobs we allow only Proc==0 to be transformed.
+		if (jid.proc > (is_late_mat?-1:0)) {
+			// TODO: are there other cluster-only attribute that we should check for here?
+			if (project_is_cluster_attr) ad->MarkAttributeClean(ATTR_PROJECT_NAME);
+		}
 		rval = set_dirty_attributes(ad, jid.cluster, jid.proc, xform_attrs);
 		if ( rval < 0 ) {
 			// TODO errorStack?

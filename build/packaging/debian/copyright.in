@@ -221,6 +221,10 @@ Copyright: 1990-2013, HTCondor Team, Computer Sciences Department,
            1993-2012, NVIDIA Corporation.
 License: Apache-2.0
 
+Files: src/vendor/zip-views-1.0/*
+Copyright: 2020, CommitThis Ltd
+License: Expat
+
 Files: src/vendor/jwt-cpp/*
 Copyright: 2018, Dominik Thalhammer
 License: Expat
@@ -273,8 +277,8 @@ License: Khronos
  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-Files: view/htcondorview.js
-Copyright: 2013 Google Inc
+Files: view/ce_dashboard/flask/static/htcondorview.js
+Copyright: 2012, 2013 Google Inc
 License: Apache-2.0
 
 Files: debian/*

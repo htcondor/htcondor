@@ -218,14 +218,14 @@ Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp >= 0.6.2
+Requires: scitokens-cpp
 Requires: systemd-libs
 %endif
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.21.1 or pelican-debug >= 7.21.1)
-Requires: pelican-osdf-compat >= 7.21.1
+Requires: (pelican >= 7.24.0 or pelican-debug >= 7.24.0)
+Requires: pelican-osdf-compat >= 7.24.0
 
 %if ! 0%{?amzn}
 # Require tested Apptainer
@@ -233,7 +233,7 @@ Requires: pelican-osdf-compat >= 7.21.1
 # Unfortunately, Apptainer is lagging behind in openSUSE
 Requires: apptainer >= 1.3.6
 %else
-Requires: apptainer >= 1.4.4
+Requires: apptainer >= 1.4.5
 %endif
 %endif
 
@@ -1295,6 +1295,41 @@ fi
 # configuration
 
 %changelog
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
+- Improve AMD GPU detection when using RCOM6/HIP libraries
+- Fix for new jobs getting kicked off LVM EP due to quantization mismatch
+- condor_submit now reports an error for circular requirement expressions
+- condor_status now correctly reports offline GPUs
+- Can use a string for 'since' with htcondor.Schedd.history()
+- Fix for backfill GPUs disappearing on reconfig
+
+* Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.18-1
+- Enable use of in-memory SciTokens cache, if disk cache not usable
+- Fix condor_submit using different executables with late materialization
+- HTCondor tarballs now contain Pelican 7.23.0
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Feb 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.17-1
+- Fix the broken htcondor2.Schedd.refreshGPIProxy() Python method
+- Improve condor_history performance on filesystems with I/O rate limits
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.16-1
+- Fix problem specifying scope or audience with a Vault-managed credential
+- Fix late materialization bug when job transform sets immutable attribute
+- Fix problem where a backfill slot would refuse claims
+
+* Thu Jan 29 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.16-1
+- Fix floating point memory or disk request not fitting into some slots
+- Fix condor_rooster crash when unhibernate rank was not constant
+- Fix memory leak in the htcondor2.JobEventLog.events() Python method
+- condor_history -long now prints attributes in alphabetical order
+- Fix LVM setup to not timeout when creating a large volume
+- LVM creation no longer saves meta data which eventually fills the disk
+- HTCondor tarballs now contain Pelican 7.22.0 and Apptainer 1.4.5
+
 * Mon Dec 15 2025 Tim Theisen <tim@cs.wisc.edu> - 24.12.15-1
 - condor_submit checks that output_destination is properly specified
 

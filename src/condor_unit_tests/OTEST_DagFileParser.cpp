@@ -38,6 +38,13 @@ const int SKIP_LINE_TEST = 3;
 const int NO_SUBMIT_DESC_END_TEST = 4;
 const int NO_INLINE_NODE_DESC_END_TEST = 5;
 
+// This expected result needs to be updates on windows to fixup the drive letter.
+#ifdef WIN32
+  static char dag_config_path[] = "CONFIG > C:\\path\\to\\custom\\dag.conf";
+#else
+  static char dag_config_path[] = "CONFIG > /path/to/custom/dag.conf";
+#endif // WIN32
+
 //------------------------------------------------------------------------------------
 std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 	{
@@ -285,11 +292,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"SAVE_POINT_FILE > C ../custom/path/important.save",
 		"CATEGORY > CAT-1 C",
 		"MAXJOBS > CAT-1 2",
-#ifdef WIN32
-		"CONFIG > C:\\path\\to\\custom\\dag.conf",
-#else
-		"CONFIG > /path/to/custom/dag.conf",
-#endif // WIN32
+		dag_config_path,
 		"DOT > visual.dot  F F",
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
@@ -936,6 +939,14 @@ static bool make_dag_files() {
 bool OTEST_DagFileParser() {
 	emit_object("DagFileParser");
 	emit_comment("Testing ranged based compatible DAG file parser.");
+
+#ifdef WIN32
+	char buf[100];
+	char *filepart = nullptr;
+	GetFullPathNameA("\\path\\to\\custom\\dag.conf", sizeof(buf), buf, &filepart);
+	std::string config_path("CONFIG > "); config_path += buf;
+	TEST_EXPECTED_RESULTS[SUCCESS_TEST][33] = config_path;
+#endif
 
 	if ( ! make_dag_files()) { return false; }
 
