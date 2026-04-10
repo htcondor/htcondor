@@ -955,6 +955,7 @@ sendDockerAPIRequest( const std::string & request, std::string & response ) {
 			docker_socket_path = docker_host.substr(sizeof("unix://") - 1);
 		} else {
 			dprintf(D_ALWAYS, "Cannot retrieve docker universe statistics, DOCKER_HOST environment variable (%s) is not set to a unix socket path\n", docker_host.c_str());
+			close(uds);
 			return -1;
 		}
 	}
