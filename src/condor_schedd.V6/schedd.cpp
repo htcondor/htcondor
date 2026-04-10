@@ -13816,6 +13816,9 @@ Scheduler::CleanupMatchForJobExit(const shadow_rec *srec)
 
 void
 Scheduler::setJobCoolDown(const PROC_ID job_id, const long long duration) {
+	// Only set this if we have a duration
+	if (duration <= 0) { return; }
+
 	int num_cool_downs = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_NUM_JOB_COOL_DOWNS, &num_cool_downs);
 	num_cool_downs++;
