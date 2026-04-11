@@ -11785,7 +11785,11 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		} else {
 			dprintf( D_ZKM, "Transfer shadow rec had no matchInfo ad; how did that happen?\n" );
 		}
+	}
 
+	// If we're starting the transfer shadow, we probably don't need to mark
+	// the catalogs live (again), but let's avoid special cases if we can.
+	if( srec->cxfer_catalogs.size() > 0 ) {
 		//
 		// If mark the catalogs live when we start blocking for common transfer
 		// (e.g., CXFER_TYPE::MAPPING), and then mark the catalogs dead when
