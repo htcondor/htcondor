@@ -11021,6 +11021,8 @@ Scheduler::addMatchToSinful( const std::string & sinful, match_rec * match ) {
 
 bool
 Scheduler::mark_catalog_dead( const std::string & catalogName ) {
+	dprintf( D_ZKM, "mark_catalog_dead(%s)\n", catalogName.c_str() );
+
 	if( catalogToTimerMap.contains( catalogName ) ) {
 		dprintf( D_ZKM, "mark_catalog_dead(%s): catalog already dead, ignoring.\n", catalogName.c_str() );
 		return false;
@@ -11058,6 +11060,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 			// shadow's cxfer state to RETIRING, and then treat that as
 			// a non-error abort in determine_cxfer_type().
 
+			dprintf( D_ZKM, "mark_catalog_dead(%s): time expired, marking shadow retiring.\n", catalogName.c_str() );
 			(* shadow)->cxfer_state = CXFER_STATE::RETIRING;
 			send_vacate( (* shadow)->match, RELEASE_CLAIM );
 		},
@@ -11070,6 +11073,8 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 
 bool
 Scheduler::mark_catalog_live( const std::string & catalogName ) {
+	dprintf( D_ZKM, "mark_catalog_live(%s)\n", catalogName.c_str() );
+
 	if(! catalogToTimerMap.contains(catalogName)) {
 	    dprintf( D_ZKM, "mark_catalog_live(%s): catalog not dead, ignoring.\n", catalogName.c_str() );
 		return false;
