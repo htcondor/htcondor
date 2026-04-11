@@ -17,9 +17,6 @@ usage () {
 
 fail () { echo "$@" >&2; exit 1; }
 
-# Disable xz Sandbox (xz fails on RHEL 9 Docker host with old kernel)
-export XZ_DEFAULTS="--no-sandbox"
-
 [[ $dest_dir ]] || dest_dir=$PWD
 
 check_version_string () {
