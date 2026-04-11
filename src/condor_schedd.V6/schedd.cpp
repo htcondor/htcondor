@@ -14618,7 +14618,9 @@ Scheduler::check_zombie(int pid, const PROC_ID & job_id)
 			// calculate the next execution time
 			//
 		ClassAd *job_ad = GetJobAd( job_id.cluster, job_id.proc );
-		this->calculateCronTabSchedule( job_ad, true );
+		if (job_ad) {
+			this->calculateCronTabSchedule( job_ad, true );
+		}
 	}
 
 	dprintf( D_FULLDEBUG, "Exited check_zombie( %d, %d.%d )\n", pid,
