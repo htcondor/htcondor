@@ -10405,10 +10405,21 @@ Scheduler::StartJob(match_rec *rec)
 			// functioning and we don't know why. We might as well get another
 			// match.
 
+		// It would super-cool if we _did_ get another match, but if we don't
+		// rebuild the priorec array, it's entirely possible that we won't
+		// for another twenty minutes.
+		DirtyPrioRecArray();
+		BuildPrioRecArray();
+
 		dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
 				rec->description());
 		DelMrec(rec);
 		mark_job_stopped( id );
+
+		// (HTCONDOR-3668)  We don't actually want to send mail to the
+		// administrator if StartJob() failed because the transfer shadow
+		// was retiring.  The text below is probably out of date because
+		// of the self-draining queue anyway.
 
 			/* We want to send some email to the administrator
 			   about this.  We only want to do it once, though. */
