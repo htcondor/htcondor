@@ -389,6 +389,13 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
+
+        ads = the_container_condor.status(
+            constraint='HasContainer =?= true'
+        )
+        if len(ads) == 0:
+            pytest.skip("The container condor can't run container jobs.")
+
         yield the_container_condor
 
 
