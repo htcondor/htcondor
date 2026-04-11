@@ -6244,7 +6244,7 @@ type=bool
 default=false
 type=bool
 
-[KEEP_COMMON_IDLE]
+[KEEP_DATA_CLAIM_IDLE]
 default=300
 type=int
 description=How long should a common object catalog persiste after its last use?

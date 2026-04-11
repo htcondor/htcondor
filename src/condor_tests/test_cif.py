@@ -170,7 +170,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
             "SLOT1_3_USER":     "kittie",
             "SLOT1_4_USER":     "jrandom",
             "STARTER_NESTED_SCRATCH":   False,
-            "KEEP_COMMON_IDLE": 5,
+            "KEEP_DATA_CLAIM_IDLE": 5,
         },
     ) as the_condor:
         yield the_condor
@@ -264,7 +264,7 @@ def completed_cif_jobs(the_big_condor, user_dir, cif_jobs_script):
 
     #
     # The 'multi' test below verifies that sequential re-use works if
-    # KEEP_COMMON_IDLE doesn't expire, so we'll use this test to verify
+    # KEEP_DATA_CLAIM_IDLE doesn't expire, so we'll use this test to verify
     # that common files work if it does expire.
     #
     # It can take a _long_ time for the last shadow to be reaped after

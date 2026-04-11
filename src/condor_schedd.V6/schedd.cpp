@@ -11035,7 +11035,7 @@ Scheduler::mark_catalog_dead( const std::string & catalogName ) {
 	int shadow_pid = (* shadow)->pid;
 
 	// Why do we use manifest constants for attributes but not config knobs?
-	int keep_common_idle = param_integer( "KEEP_COMMON_IDLE", 300 );
+	int keep_common_idle = param_integer( "KEEP_DATA_CLAIM_IDLE", 300 );
 	catalogToTimerMap[catalogName] = daemonCore->Register_Timer(
 		keep_common_idle, TIMER_NEVER,
 		[this, catalogName, shadow_pid](int /* timerID */) -> void {
