@@ -996,6 +996,7 @@ private:
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
 	bool			shadowExitCode( PROC_ID job_id, int exit_code );
+	bool            transferShadowExitCode( PROC_ID job_id, int exit_code );
 	void			setJobCoolDown(const PROC_ID job_id, const long long duration);
 	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);

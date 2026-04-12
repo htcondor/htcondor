@@ -14545,6 +14545,173 @@ Scheduler::setJobCoolDown(const PROC_ID job_id, const long long duration) {
 	dprintf(D_ALWAYS, "Putting job %d.%d in cool down.\n", job_id.cluster, job_id.proc);
 }
 
+//
+// React appropriately to the exit code of a transfer shadow.
+//
+bool
+Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
+	bool handleNowClaim = false;
+	bool handleOCUClaim = false;
+	shadow_rec *srec = this->FindSrecByProcID( job_id );
+
+	switch( exit_code ) {
+		case JOB_NO_MEM:
+			this->swap_space_exhausted();
+			break;
+
+
+		//
+		// Presently, a transfer shadow can't exit "successfully", only --
+		// at best -- as a result of the schedd deliberately vacating its
+		// match.  At some point, we'll probably have the schedd command
+		// the shadow to die, instead, at which point we can have a specific
+		// "successful" exit code.
+		//
+		// However, that doesn't matter: once we've lost the shadow, the
+		// staged catalogs are gone, and a disk-only slot is useless:
+		// if we claimed the p-slot, we're better off returning the
+		// disk to our p-slot and making a decision based on the complete
+		// set of available resources; if we haven't, since we can't (yet)
+		// make use of disk-only slots, so we want to return the resources
+		// to the negotiator.
+		//
+
+		// Presently, this should never happen.
+		case JOB_EXITED_AND_CLAIM_CLOSING:
+			if( srec != NULL && srec->match ) {
+				 srec->match->needs_release_claim = false;
+			}
+			//@fallthrough@
+
+
+		// Likewise, since the transfer shadow doesn't correspond
+		// to a job, all of these exit codes are at best incorrect.
+		// However, I don't know which of them will be generated
+		// under which failure circumstances.  Luckily, we don't
+		// care.
+		case JOB_SHOULD_HOLD:
+			//
+			// (HTCONDOR-3641)  Presently, a transfer shadow should only
+			// generate this exit code if the common transfer failed (as
+			// distinct from any systemic error).  Transfer shadows don't
+			// have job records, so there's no way to execute the usual
+			// mechanisms for managing/limiting transfers.  Instead, we
+			// force this catalog* to fall back on uncommon transfer in
+			// all cases, which will (inefficiently) trigger both those
+			// mechanisms and the usual error reporting.
+			//
+			// *: We also don't have a first-class data structure for
+			//    catalogs/sandboxes (and in this case we'd probably
+			//    like for it to be hard state).  We could add an in-
+			//    memory set of properly name-spaced catalog names
+			//    checked by determine_cxfer_type(), but since we also
+			//    don't have end-of-cluster hooks, it'd be really hard
+			//    to garbage-collect.  Instead, for now, just update the
+			//    cluster ad or DAGMan job ad and check _that_ in
+			//    determine_cxfer_type().
+			//
+			{
+				int clusterID = job_id.cluster;
+				int procID = transferToPromptingProcID( job_id.proc );
+				if( GetAttributeInt( job_id.cluster, procID, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
+					procID = 0;
+				}
+
+				SetAttributeInt( clusterID, procID, "CommonTransferFailed", TRUE );
+			}
+			//@fallthrough@
+
+		// Presently, this should never happen.  Called out
+		// separately because we may support reconnect for
+		// data slots at some point.
+		case JOB_RECONNECT_FAILED:
+
+		// Since a transfer shadow doesn't _run_ a job,
+		// these should never happen.
+		case JOB_EXITED:
+		case JOB_KILLED:
+		case JOB_COREDUMPED:
+		case JOB_EXEC_FAILED:
+		case JOB_NOT_STARTED:
+		case JOB_SHOULD_REMOVE:
+		case JOB_SHOULD_REQUEUE:
+
+		// At some point, we should start tracking transient/systemtic
+		// failures and not retrying them indefinitely.
+		case JOB_CXFER_FAILED_REQUEUE:
+		// As above, except in this case, when we stop retrying, we should
+		// invalidate and evict the corresponding data slot.
+		case JOB_MAPPING_FAILED:
+
+		// (HTCONDOR-3615)  Deferred jobs normally start running and _then_
+		// start transfer; since common file jobs do the opposite, we need
+		// to handle "late" starts better.
+		//
+		// This should never happen (the transfer shadow's starter should
+		// never attempt to starta job).
+		case JOB_MISSED_DEFERRAL_TIME:
+
+		// As far as I can tell, the shadow no longer generates these.
+		case JOB_CKPTED:
+		case JOB_NO_CKPT_FILE:
+
+			if( exit_code == JOB_CKPTED
+			 || exit_code == JOB_SHOULD_REQUEUE
+			 || exit_code == JOB_NOT_STARTED ) {
+				if( srec != NULL && srec->match ) {
+					if( srec->match->m_now_job.isJobKey() ) { handleNowClaim = true; }
+					if( srec->match->is_ocu ) { handleOCUClaim = true; }
+				}
+			}
+
+			if( (! handleNowClaim) && srec != NULL && srec->match ) {
+				if( handleOCUClaim ) {
+					// (HTCONDOR-3614)  Coalesce split OCU slots.
+					srec->match->setStatus(M_CLAIMED);
+					SetMrecJobID(srec->match, -1, -1);
+				} else {
+					DelMrec( srec->match );
+				}
+			} else {
+				// Not brave enough to make this an EXCEPT()ion.
+				dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing or missing its match.\n" );
+			}
+			break;
+
+
+		case JOB_SHADOW_USAGE:
+			EXCEPT( "Transfer shadow (%d.%d) exited with incorrect usage!", job_id.cluster, job_id.proc );
+			break;
+
+		case JOB_BAD_STATUS:
+			EXCEPT( "Transfer shadow (%d.%d) exited because job status was not RUNNING.", job_id.cluster, job_id.proc );
+			break;
+
+		case DPRINTF_ERROR:
+			dprintf( D_ALWAYS, "Transfer shadow (%d.%d) had fatal error writing to its log!\n", job_id.cluster, job_id.proc );
+			//@fallthrough@
+		case JOB_EXCEPTION:
+			if( exit_code == JOB_EXCEPTION ) {
+				dprintf( D_ALWAYS, "Transfer shadow (%d.%d) exited with an exception code!\n", job_id.cluster, job_id.proc );
+			}
+			//@fallthrough@
+		default:
+			if( exit_code != DPRINTF_ERROR && exit_code != JOB_EXCEPTION ) {
+				dprintf( D_ALWAYS, "Transfer shadow (%d.%d) exited with unknown value %d!\n", job_id.cluster, job_id.proc, exit_code );
+			}
+
+
+			// Does `condor_rm` even work on transfer shadows?
+			if( srec && (! srec->removed) && srec->match ) {
+				// Data slots are deliberately fragile.
+				DelMrec(srec->match);
+			}
+			break;
+	}
+
+	return true;
+}
+
 
 //
 // React appropriately to the exit code of the shadow.
@@ -14552,178 +14719,22 @@ Scheduler::setJobCoolDown(const PROC_ID job_id, const long long duration) {
 bool
 Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 {
-	shadow_rec *srec = this->FindSrecByProcID( job_id );
-
 	// We'll ignore the statistics updates for transfer shadows for now,
 	// since adding the transfer shadows in will confuse their meaning.
 	//
 	// Note that this function (and/or this switch statement) might be
 	// considerably simplified by having some sort of (soft or hard)
 	// "job" state associated with a transfer shadow.
-	bool handleNowClaim = false;
-	bool handleOCUClaim = false;
 	if( isTransferShadowProcID( job_id.proc ) ) {
-		switch( exit_code ) {
-			case JOB_NO_MEM:
-				this->swap_space_exhausted();
-				break;
-
-
-			//
-			// Presently, a transfer shadow can't exit "successfully", only --
-			// at best -- as a result of the schedd deliberately vacating its
-			// match.  At some point, we'll probably have the schedd command
-			// the shadow to die, instead, at which point we can have a specific
-			// "successful" exit code.
-			//
-			// However, that doesn't matter: once we've lost the shadow, the
-			// staged catalogs are gone, and a disk-only slot is useless:
-			// if we claimed the p-slot, we're better off returning the
-			// disk to our p-slot and making a decision based on the complete
-			// set of available resources; if we haven't, since we can't (yet)
-			// make use of disk-only slots, so we want to return the resources
-			// to the negotiator.
-			//
-
-			// Presently, this should never happen.
-			case JOB_EXITED_AND_CLAIM_CLOSING:
-				if( srec != NULL && srec->match ) {
-					 srec->match->needs_release_claim = false;
-				}
-				//@fallthrough@
-
-
-			// Likewise, since the transfer shadow doesn't correspond
-			// to a job, all of these exit codes are at best incorrect.
-			// However, I don't know which of them will be generated
-			// under which failure circumstances.  Luckily, we don't
-			// care.
-			case JOB_SHOULD_HOLD:
-				//
-				// (HTCONDOR-3641)  Presently, a transfer shadow should only
-				// generate this exit code if the common transfer failed (as
-				// distinct from any systemic error).  Transfer shadows don't
-				// have job records, so there's no way to execute the usual
-				// mechanisms for managing/limiting transfers.  Instead, we
-				// force this catalog* to fall back on uncommon transfer in
-				// all cases, which will (inefficiently) trigger both those
-				// mechanisms and the usual error reporting.
-				//
-				// *: We also don't have a first-class data structure for
-				//    catalogs/sandboxes (and in this case we'd probably
-				//    like for it to be hard state).  We could add an in-
-				//    memory set of properly name-spaced catalog names
-				//    checked by determine_cxfer_type(), but since we also
-				//    don't have end-of-cluster hooks, it'd be really hard
-				//    to garbage-collect.  Instead, for now, just update the
-				//    cluster ad or DAGMan job ad and check _that_ in
-				//    determine_cxfer_type().
-				//
-				{
-					int clusterID = job_id.cluster;
-					int procID = transferToPromptingProcID( job_id.proc );
-					if( GetAttributeInt( job_id.cluster, procID, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
-						procID = 0;
-					}
-
-					SetAttributeInt( clusterID, procID, "CommonTransferFailed", TRUE );
-				}
-    			//@fallthrough@
-
-			// Presently, this should never happen.  Called out
-			// separately because we may support reconnect for
-			// data slots at some point.
-			case JOB_RECONNECT_FAILED:
-
-			// Since a transfer shadow doesn't _run_ a job,
-			// these should never happen.
-			case JOB_EXITED:
-			case JOB_KILLED:
-			case JOB_COREDUMPED:
-			case JOB_EXEC_FAILED:
-			case JOB_NOT_STARTED:
-			case JOB_SHOULD_REMOVE:
-			case JOB_SHOULD_REQUEUE:
-
-			// At some point, we should start tracking transient/systemtic
-			// failures and not retrying them indefinitely.
-			case JOB_CXFER_FAILED_REQUEUE:
-			// As above, except in this case, when we stop retrying, we should
-			// invalidate and evict the corresponding data slot.
-			case JOB_MAPPING_FAILED:
-
-			// (HTCONDOR-3615)  Deferred jobs normally start running and _then_
-			// start transfer; since common file jobs do the opposite, we need
-			// to handle "late" starts better.
-			//
-			// This should never happen (the transfer shadow's starter should
-			// never attempt to starta job).
-			case JOB_MISSED_DEFERRAL_TIME:
-
-			// As far as I can tell, the shadow no longer generates these.
-			case JOB_CKPTED:
-			case JOB_NO_CKPT_FILE:
-
-				if( exit_code == JOB_CKPTED
-				 || exit_code == JOB_SHOULD_REQUEUE
-				 || exit_code == JOB_NOT_STARTED ) {
-					if( srec->match->m_now_job.isJobKey() ) { handleNowClaim = true; }
-					if( srec->match->is_ocu ) { handleOCUClaim = true; }
-				}
-
-				if( (! handleNowClaim) && srec != NULL && srec->match ) {
-					if( handleOCUClaim ) {
-						// (HTCONDOR-3614)  Coalesce split OCU slots.
-						srec->match->setStatus(M_CLAIMED);
-						SetMrecJobID(srec->match, -1, -1);
-					} else {
-						DelMrec( srec->match );
-					}
-				} else {
-					// Not brave enough to make this an EXCEPT()ion.
-					dprintf( D_ZKM | D_BACKTRACE, "Transfer shadow record missing or missing its match.\n" );
-				}
-				break;
-
-
-			case JOB_SHADOW_USAGE:
-				EXCEPT( "Transfer shadow (%d.%d) exited with incorrect usage!", job_id.cluster, job_id.proc );
-				break;
-
-			case JOB_BAD_STATUS:
-				EXCEPT( "Transfer shadow (%d.%d) exited because job status was not RUNNING.", job_id.cluster, job_id.proc );
-				break;
-
-			case DPRINTF_ERROR:
-				dprintf( D_ALWAYS, "Transfer shadow (%d.%d) had fatal error writing to its log!\n", job_id.cluster, job_id.proc );
-				//@fallthrough@
-			case JOB_EXCEPTION:
-				if( exit_code == JOB_EXCEPTION ) {
-					dprintf( D_ALWAYS, "Transfer shadow (%d.%d) exited with an exception code!\n", job_id.cluster, job_id.proc );
-				}
-				//@fallthrough@
-			default:
-				if( exit_code != DPRINTF_ERROR && exit_code != JOB_EXCEPTION ) {
-					dprintf( D_ALWAYS, "Transfer shadow (%d.%d) exited with unknown value %d!\n", job_id.cluster, job_id.proc, exit_code );
-				}
-
-
-				// Does `condor_rm` even work on transfer shadows?
-				if( srec && (! srec->removed) && srec->match ) {
-					// Data slots are deliberately fragile.
-					DelMrec(srec->match);
-				}
-				break;
-		}
-		return true;
+		return transferShadowExitCode( job_id, exit_code );
 	}
-
 
 	bool ret = true;
 
 		// Try to get the shadow record.
 		// If we are unable to get the srec, then we need to be careful
 		// down in the logic below
+	shadow_rec *srec = this->FindSrecByProcID( job_id );
 	JobQueueJob * job_ad = GetJobAd( job_id );
 
 		// Get job status.  Note we only except if there is no job status AND the job
@@ -14864,10 +14875,8 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 	if (exit_code == JOB_SHOULD_REQUEUE || exit_code == JOB_NOT_STARTED) {
 		int vacateReasonCode = 0;
 		int vacateReasonSubCode = 0;
-
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_CODE, &vacateReasonCode);
 		GetAttributeInt(job_id.cluster, job_id.proc, ATTR_VACATE_REASON_SUBCODE, &vacateReasonSubCode);
-
 		bool code_cooldown = shouldCoolJobBasedOnCodes(vacateReasonCode, vacateReasonSubCode);
 		long long code_cooldown_duration = param_integer( "SYSTEM_COOLDOWN_DURATION", 20 );
 
@@ -15057,7 +15066,7 @@ Scheduler::shadowExitCode( PROC_ID job_id, int exit_code )
 
 			// The startd will have already released the claim, so clean up or reset the match as appropriate
 			CleanupMatchForJobExit(srec);
-
+			
 				// If the job has a CronTab schedule, we will want
 				// to remove cached scheduling object so that if
 				// it is ever released we will always calculate a new
