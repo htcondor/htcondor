@@ -644,10 +644,8 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, OUT_OF_RESOURCES_SUB_CODE::Memory);
 			DockerAPI::rm( containerName, error );
 
-			if ( starter->Hold( ) ) {
-				starter->allJobsDone();
-				this->JobExit();
-			}
+			starter->jic->allJobsGone();
+			this->JobExit();
 
 			starter->ShutdownFast();
 			return 0;
