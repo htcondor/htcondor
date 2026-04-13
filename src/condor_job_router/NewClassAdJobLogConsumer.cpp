@@ -177,7 +177,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 	if (table == USERREC) {
 		std::string username;
 		UserRecord * userad = dynamic_cast<UserRecord*>(ad);
-		if (userad->is_user && (MATCH == strcasecmp(ATTR_USER, attr))) {
+		if (userad && userad->is_user && (MATCH == strcasecmp(ATTR_USER, attr))) {
 			if (ad->LookupString(ATTR_USER, username)) {
 				m_user_to_userid[username] = userad->userrec_id;
 			}
