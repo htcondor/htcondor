@@ -9361,7 +9361,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	}
 
 
-	PROC_ID transfer_shadow_id( jobid.cluster, transferToPromptingProcID( jobid.proc  ) );
+	PROC_ID transfer_shadow_id( jobid.cluster, promptingToTransferProcID( jobid.proc  ) );
 	shadow_rec * transfer_shadow_rec = FindSrecByProcID(transfer_shadow_id);
 	if( transfer_shadow_rec != NULL &&
 		transfer_shadow_rec->cxfer_state == CXFER_STATE::STAGING
