@@ -1,3 +1,10 @@
+*** 25.0.10 features
+
+- Messages in the StartLog when the *condor_startd* aborts because it
+  cannot detect the amount of physical memory or when the amount of reserved
+  memory leaves no memory for creating slots have been improved.
+  :jira:`3667`
+
 *** 25.0.10 bugs
 
 *** 25.0.9 bugs
