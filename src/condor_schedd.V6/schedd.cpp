@@ -10847,13 +10847,6 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 					promptingToTransferProcID( job_id.proc )
 				);
 
-				// This is more than we need, but let's optimize later.
-				ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
-				ClassAd * transfer_job_ad = new ClassAd(* job_ad);
-				transfer_job_ad->InsertAttr(
-					ATTR_PROC_ID, transfer_job_id.proc
-				);
-
 				shadow_rec * transfer_shadow_rec = add_shadow_rec( 0,
 					transfer_job_id, universe, mrec, -1 , nullptr
 				);
@@ -11770,6 +11763,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	//    (but not B).  The schedd will spawn two transfer shadows: one
 	//    transferring A and B xor C, and the other C xor B.
 	if( isTransferShadowProcID( job_id.proc ) ) {
+		// This `job_ad` has the prompting job's ID.
+		job_ad->InsertAttr( ATTR_PROC_ID, job_id.proc );
+
 		AssignClassAdListOfStrings(
 			* job_ad, ATTR_TRANSFER_THESE_CATALOGS,
 			std::ranges::views::keys( srec->cxfer_catalogs )
