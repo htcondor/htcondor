@@ -16,6 +16,7 @@ class GeneratedDir():
 
         self._type = file_type
         self._path = Path(root) / "_static" / "generated" / self._type.value
+        self._path.mkdir(parents=True, exist_ok=True)
 
     @property
     def path(self):
