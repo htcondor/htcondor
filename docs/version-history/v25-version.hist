@@ -94,6 +94,11 @@
   appends them to the default output.
   :jira:`3604`
 
+- Docker universe jobs that also had a credential being refreshed
+  that also exhausted their :subcom:`RequestMemory` would not go
+  on hold immediately, but only after a 20 minute delay.
+  :jira:`3621`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
