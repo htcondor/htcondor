@@ -9387,29 +9387,34 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 		// match records, because we should have many fewer of those at
 		// any given time -- they represent real resources somewhere --
 		// than we do jobs.
-		auto copy(matchesHeldByBlockedJobs);
 
-		for( auto * mrec : copy ) {
-			shadow_rec * srec = mrec->shadowRec;
+		std::erase_if(
+			matchesHeldByBlockedJobs,
+			[this] (match_rec * mrec) -> bool {
+				shadow_rec * srec = mrec->shadowRec;
 
-			size_t found = 0;
-			for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
-				auto sr = getShadowForCatalog( catalogName );
-				if( sr && (*sr)->cxfer_state == CXFER_STATE::STAGED ) {
-					++found;
+				size_t found = 0;
+				for( const auto & [catalogName, contents] : srec->cxfer_catalogs ) {
+					auto sr = getShadowForCatalog( catalogName );
+					if( sr && (*sr)->cxfer_state == CXFER_STATE::STAGED ) {
+						++found;
+					}
 				}
-			}
 
-			if( found == srec->cxfer_catalogs.size() ) {
-				int status = JOB_STATUS_IDLE;
-				SetAttributeInt(mrec->cluster, mrec->proc, ATTR_JOB_STATUS, status);
-				std::erase( matchesHeldByBlockedJobs, mrec );
+				if( found == srec->cxfer_catalogs.size() ) {
+					int status = JOB_STATUS_IDLE;
+					SetAttributeInt(mrec->cluster, mrec->proc, ATTR_JOB_STATUS, status);
 
-				// Why _are_ these two separate commands?
-				mark_serial_job_running( srec->job_id );
-				addRunnableJob( srec );
+					// Why _are_ these two separate commands?
+					mark_serial_job_running( srec->job_id );
+					addRunnableJob( srec );
+
+					return true;
+				}
+
+				return false;
 			}
-		}
+		);
 	}
 
 
