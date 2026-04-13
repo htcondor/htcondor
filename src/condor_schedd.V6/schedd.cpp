@@ -16823,6 +16823,7 @@ Scheduler::checkClaimLeases( int /* timerID */ )
 				jobExitCode( srec->job_id, JOB_RECONNECT_FAILED );
 				srec->exit_already_handled = true;
 				daemonCore->Send_Signal( srec->pid, SIGKILL );
+				continue;
 			}
 		}
 
