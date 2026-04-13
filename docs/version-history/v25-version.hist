@@ -70,7 +70,7 @@
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
-  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
+  submit, it may be different than the :ad-attr:`CondorVersion[type=Schedd]` of ad,
   which represents the version of the *condor_schedd* the job was placed in.
   :jira:`3413`
 
