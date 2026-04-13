@@ -13,6 +13,11 @@
   spooled by the AP to fail.
   :jira:`3660`
 
+- Messages in the StartLog when the *condor_startd* aborts because it
+  cannot detect the amount of physical memory or when the amount of reserved
+  memory leaves no memory for creating slots have been improved.
+  :jira:`3667`
+
 *** 24.0.20 bugs
 
 - :tool:`condor_ssh_to_job` now properly supports running into
