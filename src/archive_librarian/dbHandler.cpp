@@ -708,7 +708,7 @@ void DBHandler::writeFileInfo(FileInfo &info) {
  * Update LastOffset for the history and epoch files after parsing.
  * Change offset to match progress in reading Epoch + History files
  */
-void DBHandler::updateFileInfo(FileInfo historyFile) {
+void DBHandler::updateFileInfo(const FileInfo &historyFile) {
     const char* updateSQL = R"(
         UPDATE Files
         SET LastOffset = ?
