@@ -116,13 +116,9 @@ MachAttributes::MachAttributes()
 		// telling the user to define MEMORY manually.
 	m_phys_mem = sysapi_phys_memory();
 	if( m_phys_mem <= 0 ) {
-		dprintf( D_ALWAYS, 
-				 "Error computing physical memory with calc_phys_mem().\n" );
-		dprintf( D_ALWAYS | D_NOHEADER, 
-				 "\t\tMEMORY parameter not defined in config file.\n" );
-		dprintf( D_ALWAYS | D_NOHEADER, 
-				 "\t\tTry setting MEMORY to the number of megabytes of RAM.\n"
-				 );
+		long long real_phys_mem = sysapi_phys_memory_raw();
+		long long reserved_mem = param_longlong("RESERVED_MEMORY", 0);
+		dprintf( D_ALWAYS,  "Error: computed MEMORY <= 0. detected_memory=%lld, RESERVED_MEMORY=%lld\n", real_phys_mem, reserved_mem);
 		EXCEPT( "Can't compute physical memory." );
 	}
 
