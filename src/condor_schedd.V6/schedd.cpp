@@ -14609,11 +14609,8 @@ Scheduler::transferShadowExitCode( PROC_ID job_id, int exit_code ) {
 			{
 				int clusterID = job_id.cluster;
 				int procID = transferToPromptingProcID( job_id.proc );
-				if( GetAttributeInt( job_id.cluster, procID, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
-					procID = 0;
-				}
-
-				SetAttributeInt( clusterID, procID, "CommonTransferFailed", TRUE );
+				GetAttributeInt( job_id.cluster, procID, ATTR_DAGMAN_JOB_ID, & clusterID );
+				SetAttributeInt( clusterID, -1, "CommonTransferFailed", TRUE );
 			}
 			//@fallthrough@
 

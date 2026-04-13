@@ -78,13 +78,10 @@ determine_cxfer_type( match_rec * m_rec, const PROC_ID & jobID ) {
 	// (HTCONDOR-3641)  See the note in schedd.cpp.
 	//
 	int clusterID = jobID.cluster;
-	int procID = jobID.proc;
-	if( GetAttributeInt( jobID.cluster, jobID.proc, ATTR_DAGMAN_JOB_ID, & clusterID ) ) {
-		procID = 0;
-	}
+	GetAttributeInt( jobID.cluster, jobID.proc, ATTR_DAGMAN_JOB_ID, & clusterID );
 
 	int commonTransferFailed = FALSE;
-	GetAttributeInt( clusterID, procID, "CommonTransferFailed", & commonTransferFailed );
+	GetAttributeInt( clusterID, -1, "CommonTransferFailed", & commonTransferFailed );
 	if( commonTransferFailed ) {
 		return {CXFER_TYPE::CANT, {}};
 	}
