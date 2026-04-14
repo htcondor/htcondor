@@ -1311,6 +1311,21 @@ fi
 # configuration
 
 %changelog
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.8.2-1
+- Fix detection and reporting of NVIDIA MIG GPU attributes
+- Add '--rocm' flag to Apptainer GPU jobs to support AMD GPUs
+- Can now use 'condor_rm -transfer' to fetch whatever output is available
+- Can now use 'condor_q -aaf' to append columns to the standard output
+- Can now run 'condor_top --history' to get fast response from stored data
+- htcondor dag status now includes information about file transfers
+- htcondor job status and condor_q now report cool down state information
+- condor_run no longer passes 'getenv = true' to the submit file
+- Fix condor_ssh_to_job for setuid Apptainer or Singularity runtimes
+- The negotiator now knows the user's floor to avoid improper preemption
+- The condor_shadow now logs information about reconnect attempts
+- condor_config_val can now report configuration option's default value
+- All changes in 25.0.9
+
 * Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.9-1
 - All changes in 24.12.19
 
