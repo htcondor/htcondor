@@ -148,7 +148,7 @@ bool getPODClassAd(Stream *sock, classad::ClassAd &ad)
 		std::string attr;
 		const char *rhs;
 		if (!SplitLongFormAttrValue(strptr, attr, rhs)) {
-			dprintf(D_ALWAYS, "getPODClassAd: FAILED to split: %s\n", strptr);
+			dprintf(D_ALWAYS, "getPODClassAd: FAILED to split expression, rejecting.\n");
 			return false;
 		}
 
