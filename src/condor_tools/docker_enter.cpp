@@ -28,9 +28,11 @@
 void
 usage( char *cmd )
 {
-	fprintf(stderr,"Usage: %s [options] condor_* ....\n",cmd);
+	fprintf(stderr,"Usage: %s [options] [command ...]\n",cmd);
 	fprintf(stderr,"Where options are:\n");
 	fprintf(stderr,"    -help              Display options\n");
+	fprintf(stderr,"\nIf command is given, run it inside the container.\n");
+	fprintf(stderr,"Otherwise, start an interactive shell.\n");
 }
 
 void
@@ -46,13 +48,10 @@ int main( int argc, char *argv[] )
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	for( i=1; i<argc; i++ ) {
-		if(is_arg_prefix(argv[i],"-help")) {
-			usage(argv[0]);
-			exit(0);
-		}
+	if (argc > 1 && is_arg_prefix(argv[1],"-help")) {
+		usage(argv[0]);
+		exit(0);
 	}
-
 
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
@@ -80,9 +79,31 @@ int main( int argc, char *argv[] )
 	fdpass_send(uds, 1);
 	fdpass_send(uds, 2);
 
+	// Build command string from remaining arguments (if any)
+	std::string command;
+	for (i = 1; i < argc; i++) {
+		if (i > 1) command += ' ';
+		command += argv[i];
+	}
+
+	// Send length-prefixed command string so the starter knows
+	// what to exec inside the container.  Length 0 means interactive shell.
+	uint32_t len = htonl(command.size());
+	int wrc = write(uds, &len, sizeof(len));
+	if (wrc != (int)sizeof(len)) {
+		fprintf(stderr, "Failed to send command length: errno %d\n", errno);
+		exit(1);
+	}
+	if (!command.empty()) {
+		wrc = write(uds, command.data(), command.size());
+		if (wrc != (int)command.size()) {
+			fprintf(stderr, "Failed to send command: errno %d\n", errno);
+			exit(1);
+		}
+	}
+
 	char buf[1];
 	rc = read(uds, buf, 1); // wait until other side hangs up
-	printf("read returned, exiting\n");
 
 	
 	return 0;
