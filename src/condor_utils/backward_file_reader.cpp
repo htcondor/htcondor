@@ -266,7 +266,7 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str, std::deque<std::stri
 		// buffer ended _exactly_ at a newline boundary, so return
 		// the string rather than concatinating it to the newline.
 		if ( ! str.empty()) {
-			if (buf[cb-1] == '\r')
+			if (cb > 0 && buf[cb-1] == '\r')
 				buf[--cb] = 0;
 			buf.setsize(cb);
 #if 1
@@ -276,7 +276,7 @@ bool BackwardFileReader::PrevLineFromBuf(std::string & str, std::deque<std::stri
 		}
 	}
 	// because of windows style \r\n, we also tolerate a \r at the end of the line
-	if (buf[cb-1] == '\r') {
+	if (cb > 0 && buf[cb-1] == '\r') {
 		buf[--cb] = 0;
 	}
 
