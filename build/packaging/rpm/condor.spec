@@ -1295,6 +1295,13 @@ fi
 # configuration
 
 %changelog
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.0.19-1
+- Now properly reports NVIDIA MIG GPU device names
+- Fix performance problem in the htcondor2 Python ClassAd parser
+- Fix AllowedExecuteDuration to be reliably enforced when no file transfer
+- Batch grid universe jobs now tolerate a dot in the username
+- Fix huge reported job execution times when an AP restarts
+
 * Thu Mar 12 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.18-1
 - Improve AMD GPU detection when using RCOM6/HIP libraries
 - Fix for new jobs getting kicked off LVM EP due to quantization mismatch
