@@ -187,6 +187,7 @@ classad_oldnew.h
 classad_usermap.cpp
 classad_visa.cpp
 classad_visa.h
+classy_counted_ptr.cpp
 classy_counted_ptr.h
 command_strings.cpp
 command_strings.h
