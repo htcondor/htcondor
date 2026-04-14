@@ -3,7 +3,7 @@ condor (24.12.19-1) stable; urgency=medium
   * Fix crash when a user provided Docker script produces unexpected output
   * All changes in 24.0.19
 
- -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Mar 2026 14:43:00 -0500
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 14 Apr 2026 14:43:00 -0500
 
 condor (24.0.19-1) stable; urgency=medium
 
