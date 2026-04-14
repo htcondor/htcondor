@@ -237,8 +237,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// initialize the UserPolicy object
-	shadow_user_policy.init( jobAd, this );
-
+	if(cxfer_type != CXFER_STATE::STAGING) {
+		shadow_user_policy.init( jobAd, this );
+	} else {
+		shadow_user_policy.init( NULL, this );
+	}
 		// setup an object to keep our job ad updated to the schedd's
 		// permanent job queue.  this clears all the dirty bits on our
 		// copy of the classad, so anything we touch after this will
