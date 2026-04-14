@@ -582,6 +582,11 @@ all attributes.
     execution is attempted.  Undefined for jobs that have not yet started.
     Not updated after an eviction and restart.
 
+:classad-attribute-def:`Iwd`
+    The path to the directory in which a job does work on the local Access
+    Point. This is used in the context of where to do input and output file
+    transfer and write the :ad-attr:`UserLog`.
+
 :classad-attribute-def:`FirstJobMatchDate`
     The earliest time that any job in a single submission was matched to a slot.
     All jobs that have the same value for the :ad-attr:`ClusterId` are considered a single submission.
@@ -2206,6 +2211,10 @@ to modify these value will take effect in the DAGMan workflow.
 
 :classad-attribute-def:`DAGMan_MaxPreScripts`
     The maximum number of PRE-Scripts DAGMan will execute at a single point
+    in time.
+
+:classad-attribute-def:`DAGMan_MaxHoldScripts`
+    The maximum number of HOLD-Scripts DAGMan will execute at a single point
     in time.
 
 :classad-attribute-def:`DAGMan_MaxPostScripts`

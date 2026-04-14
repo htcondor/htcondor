@@ -50,6 +50,7 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 	rm -rf _static/generated/js/*
+	rm -rf _static/generated/rst/*
 
 auto:
 	# Ignore sphinx build generated static files to prevent infinite build recursion

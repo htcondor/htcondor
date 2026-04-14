@@ -56,3 +56,10 @@ These macros affect :tool:`condor_preen`.
     there's only so long that :tool:`condor_preen` is willing to let clean-up for
     a single job (including all of its checkpoints) take.  This macro
     defines that duration (as an integer number of seconds).
+
+:macro-def:`PREEN_COREFILE_MAX_SIZE`
+    An integer value representing the maximum size in bytes an HTCondor core file
+    can be when considering what to clean up via :tool:`condor_preen`. Any core
+    files greater than this size will be cleaned up. Otherwise, the cleanup of
+    a core file is left to other factors such as how old it is. The default value
+    for this option is ``50,000,000`` i.e. ``50MB``.
