@@ -75,6 +75,13 @@ Initialize(LexerSource *source)
 
 
 bool Lexer::
+Initialize(const char *str)
+{
+	ownedSource.SetNewSource(str);
+	return Initialize(&ownedSource);
+}
+
+bool Lexer::
 Reinitialize(void)
 {
 	ch = EMPTY;
