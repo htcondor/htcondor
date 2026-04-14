@@ -471,19 +471,24 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 
 		if( -1 == (childFDs[0] = openStdFile( SFT_IN, NULL, true, "Input file" )) ) {
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdin.\n" );
+			starter->SetVacateReason("Failed to open stdin for docker job", CONDOR_HOLD_CODE::UnableToOpenInput, errno);
+			starter->ShutdownFast();
 			return ReapResult::JobDone;
 		}
 
 		if( -1 == (childFDs[1] = openStdFile( SFT_OUT, NULL, true, "Output file" )) ) {
-
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stdout.\n" );
 			daemonCore->Close_FD( childFDs[0] );
+			starter->SetVacateReason("Failed to open stdout for docker job", CONDOR_HOLD_CODE::UnableToOpenOutput, errno);
+			starter->ShutdownFast();
 			return ReapResult::JobDone;
 		}
 		if( -1 == (childFDs[2] = openStdFile( SFT_ERR, NULL, true, "Error file" )) ) {
 			dprintf( D_ERROR, "DockerProc::StartJob(): failed to open stderr.\n" );
 			daemonCore->Close_FD( childFDs[0] );
 			daemonCore->Close_FD( childFDs[1] );
+			starter->SetVacateReason("Failed to open stderr for docker job", CONDOR_HOLD_CODE::UnableToOpenOutput, errno);
+			starter->ShutdownFast();
 			return ReapResult::JobDone;
 		}
 		}
