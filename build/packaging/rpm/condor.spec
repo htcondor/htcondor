@@ -1321,6 +1321,9 @@ fi
 # configuration
 
 %changelog
+* Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 25.0.9-1
+- All changes in 24.12.19
+
 * Thu Apr 16 2026 Tim Theisen <tim@cs.wisc.edu> - 24.12.19-1
 - Fix crash when a user provided Docker script produces unexpected output
 - All changes in 24.0.19
