@@ -9323,9 +9323,8 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	int status = -1;
 	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
 	if( status == JOB_STATUS_BLOCKED ) {
-		status = IDLE;
-		SetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, status );
-		dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, status );
+		set_job_status( jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
+		// dprintf( D_ZKM, "%d.%d status = %d\n", jobid.cluster, jobid.proc, JOB_STATUS_IDLE );
 	}
 
 
@@ -9406,8 +9405,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 				}
 
 				if( found == srec->cxfer_catalogs.size() ) {
-					int status = JOB_STATUS_IDLE;
-					SetAttributeInt(mrec->cluster, mrec->proc, ATTR_JOB_STATUS, status);
+					set_job_status( mrec->cluster, mrec->proc, JOB_STATUS_IDLE );
 
 					// Why _are_ these two separate commands?
 					mark_serial_job_running( srec->job_id );
@@ -10895,8 +10893,7 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// transfer shadow.  We'll correct that when the transfer
 				// shadow hands the resources back.
 				//
-				int status = JOB_STATUS_BLOCKED;
-				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, status);
+				set_job_status( job_id.cluster, job_id.proc, JOB_STATUS_BLOCKED );
 
 
 				return true;
@@ -10926,8 +10923,8 @@ Scheduler::StartJob(match_rec* mrec, const PROC_ID & job_id)
 				// blocked, we wouldn't have to rebuild the prio-rec array
 				// when a transfer shadow offered us resources.
 				//
-				int status = JOB_STATUS_BLOCKED;
-				SetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, status );
+				set_job_status( job_id.cluster, job_id.proc, JOB_STATUS_BLOCKED );
+
 				matchesHeldByBlockedJobs.push_back(mrec);
 
 				mrec->shadowRec = job_shadow_rec;
@@ -13331,8 +13328,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 					int status = -1;
 					GetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, &status );
 					if( status == JOB_STATUS_BLOCKED ) {
-						status = JOB_STATUS_IDLE;
-						SetAttributeInt( srec->job_id.cluster, prompting_proc, ATTR_JOB_STATUS, status);
+						set_job_status( srec->job_id.cluster, prompting_proc, JOB_STATUS_IDLE );
 
 						// (HTCONDOR-3610)  At this point, we should check
 						// for matches blocked on these catalogs and choose
@@ -13374,9 +13370,7 @@ Scheduler::unregister_shadow_catalogs( shadow_rec * srec, int shadow_pid ) {
 				if( anyJobCatalogInRemovedCatalogs ) {
 					dprintf( D_ALWAYS, "Unblocking job %d.%d because its catalog was unregistered.\n", sr->job_id.cluster, sr->job_id.proc );
 
-					int status = JOB_STATUS_IDLE;
-					SetAttributeInt( sr->job_id.cluster, sr->job_id.proc, ATTR_JOB_STATUS, status);
-
+                    set_job_status( sr->job_id.cluster, sr->job_id.proc, JOB_STATUS_IDLE );
 					mark_serial_job_running( sr->job_id );
 					addRunnableJob( sr );
 				}
