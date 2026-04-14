@@ -9319,6 +9319,26 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	// completed transfer.  That's OK, because if we do that _after_ we
 	// assign resources, we can start all the unblocked shadowrecs with
 	// assigned matches in one go.
+	//
+	// (HTCONDOR-3675)
+	//
+	// This trip through IDLE is unfortunate because it frobs some
+	// state-transition counts in a useless way, and perhaps more importantly,
+	// because it changes the meaning of entered current state for BLOCKED
+	// from "when the job first became blocked" to "when the second-to-last
+	// catalog completed."
+	//
+	// However, if we _don't_ set the prompting job to IDLE, then two things
+	// happen: first, the next transfer shadow won't start (it may be the
+	// only job that needs it) and second -- because we could maybe code
+	// around the first -- the call to scheduler_handleMatch() below will hand
+	// the prompting job's match off to somebody else.
+	//
+	// It seems like the right thing is for scheduler_handleMatch() to ignore
+	// (if only in this case via a flag) if the job ID it's passed is in the
+	// BLOCKED state, and assign it the split match anyway.  That might cause
+	// all sorts of weirdness in other functions along the route to launching
+	// whichever shadow is appropriate, however.
 
 	int status = -1;
 	GetAttributeInt( jobid.cluster, jobid.proc, ATTR_JOB_STATUS, &status );
