@@ -224,8 +224,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.24.2 or pelican-debug >= 7.24.2)
-Requires: pelican-osdf-compat >= 7.24.2
+Requires: (pelican >= 7.24.0 or pelican-debug >= 7.24.0)
+Requires: pelican-osdf-compat >= 7.24.0
 
 %if ! 0%{?amzn}
 # Require tested Apptainer
