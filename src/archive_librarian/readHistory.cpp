@@ -243,7 +243,7 @@ long readHistoryIncremental(const std::string& historyFilePath, std::vector<JobR
                 firstLineRead = true;  // Set the flag to prevent further checks 
         }
 
-        if(lastOffset == stopOffset) {
+        if(stopOffset && lastOffset == stopOffset) {
             done = true; //We've already processed up to this point
             dprintf(D_FULLDEBUG, "No new entries have been added to this file.\n");
             continue;
