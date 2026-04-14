@@ -5322,6 +5322,10 @@ ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 						// job removed/completed/held, and shadow is gone
 					return 1;
 				}
+			case JOB_STATUS_BLOCKED:
+				// User policy almost certainly shouldn't be allowed to cause
+				// transitions out of blocked state.
+				return 0;
 			default:
 				return 0;
 		}
