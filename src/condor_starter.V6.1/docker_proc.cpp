@@ -454,27 +454,6 @@ ReapResult DockerProc::JobReaper( int pid, int status ) {
 		// for search service (if any) before we actually started the job,
 		// but (understandably) Docker doesn't do that.
 
-	#ifdef WIN32 
-		#ifdef COPY_INPUT_SANDBOX
-		// copy the input sandbox into the container
-		{
-			std::string workingDir = starter->GetWorkingDir(0);
-			std::string innerPath = starter->GetWorkingDir(true);
-			std::vector<std::string> opts{"-a"};
-
-			//TODO: figure out if we need to do this, or to switch to  PRIV_USER
-			//TemporaryPrivSentry sentry(PRIV_ROOT);
-
-			int rv = DockerAPI::copyToContainer(workingDir, containerName, innerPath, &opts);
-			if (rv < 0) {
-				dprintf(D_ERROR, "DockerAPI::copyToContainer( %s, %s, %s ) failed with return value %d\n",
-					workingDir.c_str(), containerName.c_str(), innerPath.c_str(), rv);
-				return ReapResult::JobDone;
-			}
-		}
-		#endif
-	#endif
-
 		// It seems like this should be done _after_ we call start Container().
 		starter->SetJobEnvironmentReady(true);
 
