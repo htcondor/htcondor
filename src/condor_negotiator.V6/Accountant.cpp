@@ -1609,7 +1609,7 @@ ClassAd* Accountant::GetClassAd(AccountantTable table, const std::string& Key)
 std::string Accountant::GetDomain(const std::string& CustomerName)
 {
   std::string S;
-  size_t pos=CustomerName.find('@');
+  size_t pos=CustomerName.find_last_of('@');
   if (pos== std::string::npos) return S;
   S=CustomerName.substr(pos+1);
   return S;

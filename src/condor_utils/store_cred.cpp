@@ -93,7 +93,7 @@ bool store_cred_failed(long long ret, int mode, const char ** errstring /*=NULL*
 static bool username_is_pool_password(const char *user, int * domain_pos = NULL)
 {
 	const int pool_name_len = sizeof(POOL_PASSWORD_USERNAME) - 1;
-	const char *at = strchr(user, '@');
+	const char *at = strrchr(user, '@');
 	int len;
 	if (at) {
 		len = (int)(at - user);
@@ -1156,7 +1156,7 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	char * user = strdup(input_user);
 	
 	// split the domain and the user name for LogonUser
-	dom = strchr(user, '@');
+	dom = strrchr(user, '@');
 
 	if ( dom ) {
 		*dom = '\0';
@@ -1602,7 +1602,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 
 	if ( ! fulluser.empty()) {
 			// ensure that the username has an '@' delimteter
-		size_t ix_at = fulluser.find('@');
+		size_t ix_at = fulluser.find_last_of('@');
 		if (ix_at == std::string::npos || ix_at == 0) {
 			dprintf(D_ALWAYS, "store_cred_handler: user \"%s\" not in user@domain format\n", fulluser.c_str());
 			answer = FAILURE_BAD_ARGS;

@@ -1563,7 +1563,7 @@ Scheduler::count_jobs()
 		if (user_is_the_new_owner) {
 			SubDat = insert_submitter(rec->user);
 		} else {
-			char *at_sign = strchr(rec->user, '@');
+			char *at_sign = strrchr(rec->user, '@');
 			if ( ! at_sign) {
 				SubDat = insert_submitter(rec->user);
 			} else {
@@ -3423,11 +3423,8 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 			dprintf(dpf_level, "%s command %s\n", getCommandStringSafe(cmd),
 				authenticated ? "was authenticated" : "failed to authenticate");
 		}
-		const char * p0wn = rsock->getOwner();
-		if (p0wn && ( ! authenticated || MATCH == strcasecmp(p0wn, "unauthenticated"))) p0wn = NULL;
-		if (user_is_the_new_owner) {
-			p0wn = rsock->getFullyQualifiedUser();
-		}
+		const char * p0wn = rsock->isMappedFQU() ? rsock->getFullyQualifiedUser() : nullptr;
+
 		if (IsDebugCatAndVerbosity(dpf_level)) {
 			dprintf(dpf_level, "QUERY_JOB_ADS detected %s = %s\n", attr_JobUser.c_str(), p0wn ? p0wn : "<null>");
 		}
@@ -9080,8 +9077,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	if (user_is_the_new_owner || scheddsAreSubmitters) {
 		// SubmitterData is keyed by fully qualified names
 	} else {
-		// SubmitterData is keyed by bare names, so truncate owner at '@'
-		char *at_sign = strchr(owner, '@');
+		// SubmitterData is keyed by bare names, so truncate owner at last '@'
+		char *at_sign = strrchr(owner, '@');
 		if (at_sign) *at_sign = '\0';
 	}
 	// find owner in the Submitters array
