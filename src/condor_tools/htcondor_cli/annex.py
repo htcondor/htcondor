@@ -13,7 +13,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token
+from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token, annex_add2, annex_create2
 from htcondor_cli.annex_validate import SYSTEM_TABLE
 
 class Create(Verb):
@@ -144,6 +144,128 @@ class Create(Verb):
         annex_create(logger, **options)
 
 
+class Create2(Verb):
+    """
+    Create an HPC annex.
+    """
+
+    options = {
+        "annex_name": {
+            "args": ("annex_name",),
+            "metavar": "annex-name",
+            "help": "Provide a name for your annex",
+        },
+        "queue_at_system": {
+            "args": ("queue_at_system",),
+            "metavar": "queue@system",
+            "help": "Specify the queue and the HPC system",
+        },
+        "nodes": {
+            "args": ("--nodes",),
+            "help": "Number of HPC nodes to schedule. Defaults to %(default)s",
+            "type": int,
+            "default": 1,
+        },
+        "lifetime": {
+            "args": ("--lifetime",),
+            "help": "Annex lifetime (in seconds). Defaults to %(default)s",
+            "type": int,
+            "default": 3600,
+        },
+        "allocation": {
+            "args": ("--project",),
+            "dest": "allocation",
+            "help": "The project name associated with HPC allocation (may be optional on some HPC systems)",
+            "default": None,
+        },
+        "owners": {
+            "args": ("--owners",),
+            #"help": "List (comma-separated) of annex owners. Defaults to current user (%(default)s)",
+            "help": argparse.SUPPRESS,  # hidden option
+            "default": getpass.getuser(),
+        },
+        "collector": {
+            "args": ("--pool",),
+            "dest": "collector",
+            "help": "Collector that the annex reports to. Defaults to %(default)s",
+            "default": htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io"),
+        },
+        "token_file": {
+            "args": ("--token_file",),
+            "help": "Token file.  Normally obtained automatically.",
+            "type": Path,
+            "default": None,
+        },
+        "password_file": {
+            "args": ("--password_file",),
+            #"help": "Password file. Defaults to %(default)s",
+            "help": argparse.SUPPRESS,  # hidden option
+            "type": Path,
+            "default": Path(htcondor.param.get("ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file")),
+        },
+        "control_path": {
+            "args": ("--tmp_dir",),
+            "dest": "control_path",
+            "help": "Location to store temporary annex control files, probably should not be changed. Defaults to %(default)s",
+            "type": Path,
+            "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
+        },
+        "cpus": {
+            "args": ("--cpus",),
+            "help": "Number of CPUs to request (shared queues only).  Unset by default.",
+            "type": int,
+            "default": None,
+        },
+        "mem_mb": {
+            "args": ("--mem_mb",),
+            # TODO: Parse units instead of requiring this to be a number of MBs
+            "help": "Memory (in MB) to request (shared queues only).  Unset by default.",
+            "type": int,
+            "default": None,
+        },
+        "login_name": {
+            "args": ("--login-name","--login",),
+            "help": "The (SSH) login name to use for this capacity request.  Uses SSH's default.",
+            "default": None,
+        },
+        "login_host": {
+            "args": ("--login-host","--host",),
+            "help": "The (SSH) login host to use for this capacity request.  The default is system-specific.",
+            "default": None,
+        },
+        "startd_noclaim_shutdown": {
+            "args": ("--idle-time", "--startd-noclaim-shutdown"),
+            "metavar": "SECONDS",
+            "dest": "startd_noclaim_shutdown",
+            "help": "The number of seconds to remain idle before shutting down.  Default and suggested minimum is 300 seconds.",
+            "default": 300,
+            "type": int,
+        },
+        "gpus": {
+            "args": ("--gpus",),
+            "help": "Number of GPUs to request (GPU queues only).  Unset by default.",
+            "type": str,
+            "default": None,
+        },
+        "gpu_type": {
+            "args": ("--gpu-type",),
+            "help": "Type of GPU to request (GPU queues only).  Unset by default.",
+            "default": None,
+        },
+        "test": {
+            "args": ("--test",),
+            "help": argparse.SUPPRESS,
+            "type": int,
+            "default": None,
+        },
+    }
+
+    def __init__(self, logger, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
+        annex_create2(logger, **options)
+
+
 class Setup(Verb):
     """
     Run condor_annex -setup.
@@ -212,6 +334,11 @@ class CheckSetup(Verb):
 class Add(Create):
     def __init__(self, logger, **options):
         annex_add(logger, **options)
+
+
+class Add2(Create2):
+    def __init__(self, logger, **options):
+        annex_add2(logger, **options)
 
 
 class Systems(Verb):
@@ -638,8 +765,14 @@ class Annex(Noun):
     class create(Create):
         pass
 
+    class create2(Create2):
+        pass
+
 
     class add(Add):
+        pass
+
+    class add2(Add2):
         pass
 
 
@@ -661,5 +794,5 @@ class Annex(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login, cls.setup, cls.checksetup, cls.create2, cls.add2]
 
