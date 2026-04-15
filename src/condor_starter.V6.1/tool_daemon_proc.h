@@ -52,9 +52,11 @@ public:
 		    application is gone, we can go that here, too.
 		    @param pid The pid that exited.
 		    @param status Its status
-		    @return True if our ToolDaemonProc is no longer active, else false.
+		    @return A ReapResult value, consistent with UserProc::JobReaper(),
+		    indicating whether this ToolDaemonProc has been fully reaped or
+		    remains active after handling the exited pid.
 		*/
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 	/** ToolDaemonProcs don't need to send a remote system call to
 	    the shadow to tell it we've exited.  So, we want our own

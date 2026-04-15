@@ -33,7 +33,7 @@ public:
 
 	virtual bool JobExit( void );
 
-	virtual bool JobReaper(int pid, int status);
+	virtual ReapResult JobReaper(int pid, int status);
 
 	virtual bool PublishUpdateAd( ClassAd* ad );
 

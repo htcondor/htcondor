@@ -319,7 +319,7 @@ ToolDaemonProc::StartJob()
 }
 
 
-bool
+ReapResult
 ToolDaemonProc::JobReaper(int pid, int status)
 {
     dprintf( D_FULLDEBUG, "Inside ToolDaemonProc::JobReaper()\n" );

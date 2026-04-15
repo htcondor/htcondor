@@ -94,6 +94,10 @@
   appends them to the default output.
   :jira:`3604`
 
+- Fixed a spurious error message in the StarterLog about unhandled
+  job exit.
+  :jira:`3653`
+
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
