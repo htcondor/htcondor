@@ -452,9 +452,17 @@ bool Librarian::cleanupDatabaseIfNeeded() {
  * @return true if initialization successful, false on failure
  */
 bool Librarian::initialize() {
-    historyFileSet_.Init(config[conf::str::ArchiveFile]);
+    const std::string& archive = config[conf::str::ArchiveFile];
+    if (archive.empty()) {
+        dprintf(D_ERROR, "Empty archive file provided to librarian\n");
+        return false;
+    }
 
     dprintf(D_FULLDEBUG, "Initializing DBHandler.\n");
+    dprintf(D_STATUS, "Tracking archive file: %s\n", archive.c_str());
+
+    historyFileSet_.Init(archive);
+
     // Construct the DBHandler with provided schema, db path, and cache size.
     if ( ! dbHandler_.initialize()) {
         return false;
@@ -596,4 +604,21 @@ bool Librarian::update() {
     dprintf(D_FULLDEBUG, "Update protocol completed successfully. Inserted %zu job records, %zu epoch records in %ld ms.\n",
             status.TotalJobsRead, status.TotalEpochsRead, status.DurationMs);
     return true;
+}
+
+void Librarian::reconfig(bool startup) {
+    using namespace LibrarianConfigOptions;
+
+    // Configuration options that only change during restart not reconfig
+    if (startup) {
+        config[i::UpdateInterval] = param_integer("LIBRARIAN_UPDATE_INTERVAL", 30);
+    }
+
+    param(config[str::ArchiveFile], "HISTORY");
+    param(config[str::DBPath], "LIBRARIAN_DATABASE");
+
+    config[i::MaxRecordsPerUpdate] = param_integer("LIBRARIAN_MAX_UPDATES_PER_CYCLE", 1'000'000);
+    config[i::DBMaxJobCacheSize] = param_integer("LIBRARIAN_MAX_JOBS_CACHED", 10'000);
+
+    param_longlong("LIBRARIAN_MAX_DATABASE_SIZE", config[i::DBMaxJobCacheSize], true, 2LL * 1024 * 1024 * 1024);
 }

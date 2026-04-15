@@ -40,6 +40,8 @@ public:
     // TODO: Add garbage collection function
     // TODO: Add status table update function
 
+    void reconfig(bool startup = false);
+
     // Configuration manager
     LibrarianConfig config{};
 
