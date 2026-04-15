@@ -10404,7 +10404,6 @@ Scheduler::StartJob(match_rec *rec)
 	default:
 		EXCEPT( "Unknown status in match rec (%d)", rec->status );
 	}
-0435
 	const char * reason = nullptr;
 	runnable_reason_code runnable_code = runnable_reason_code::NotFound;
 	if ( ! Runnable(job, runnable_code) || ! jobCanUseMatch(job, rec->my_match_ad, rec->pool, reason)) {
