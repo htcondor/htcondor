@@ -1520,8 +1520,9 @@ static int DoDeleteAttr(ClassAd * ad, const std::string & attr, struct _parse_ru
 // returns 1  if the rename happened.
 static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * attrNew, struct _parse_rules_args *pra)
 {
-	bool log_errs  = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
-	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
+	if ( ! pra) return 0;
+	bool log_errs  = (pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
+	bool log_steps = (pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
 	if (log_steps) pra->fnlog(*pra, false, "RENAME %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
 		if (log_errs) pra->fnlog(*pra, true, "ERROR: RENAME %s new name %s is not valid\n", attr.c_str(), attrNew);
