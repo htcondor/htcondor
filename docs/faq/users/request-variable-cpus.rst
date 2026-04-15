@@ -10,7 +10,7 @@ resources are available while ensuring it gets enough to run efficiently.
 .. code-block:: condor-submit
 
     # This example comes from
-    # https://htcondor.readthedocs.io/en/latest/faq/users/request-variable-cpus.html
+    # https://htcondor.readthedocs.io/en/latest/auto-redirect.html?category=example&tag=variable-cpu-core-request
 
     ## Execution section. You will need to change these for your job
     executable                  = /bin/sleep
@@ -29,7 +29,7 @@ resources are available while ensuring it gets enough to run efficiently.
 
     ## File transfer section
     should_transfer_files       = true
-    when_to_transfer_outpu      = on_exit
+    when_to_transfer_output     = on_exit
 
     ## Queue section
     queue 1

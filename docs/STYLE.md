@@ -4,6 +4,12 @@
 
 TBD (To be documented)
 
+## Adding Examples
+
+When adding examples it is goo practice to add a link that points back the the examples source for users to
+reference. Given our documentation can change or break links please use stable links described in [Stable Links](STABLE-LINKS.md)
+so that we can easily move example code locations without old copies being broken.
+
 ## Syntax and markup
 
 The current manual, in Sphinx format, with some custom extensions, has been automatically converted from LaTeX sources,
