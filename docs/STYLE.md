@@ -6,7 +6,7 @@ TBD (To be documented)
 
 ## Adding Examples
 
-When adding examples it is goo practice to add a link that points back the the examples source for users to
+When adding examples it is good practice to add a link that points back the the examples source for users to
 reference. Given our documentation can change or break links please use stable links described in [Stable Links](STABLE-LINKS.md)
 so that we can easily move example code locations without old copies being broken.
 
