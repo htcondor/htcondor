@@ -10404,7 +10404,7 @@ Scheduler::StartJob(match_rec *rec)
 	default:
 		EXCEPT( "Unknown status in match rec (%d)", rec->status );
 	}
-
+0435
 	const char * reason = nullptr;
 	runnable_reason_code runnable_code = runnable_reason_code::NotFound;
 	if ( ! Runnable(job, runnable_code) || ! jobCanUseMatch(job, rec->my_match_ad, rec->pool, reason)) {
@@ -10435,8 +10435,17 @@ Scheduler::StartJob(match_rec *rec)
 		// It would super-cool if we _did_ get another match, but if we don't
 		// rebuild the priorec array, it's entirely possible that we won't
 		// for another twenty minutes.
+		//
+		// However, we don't need to (re)build the priorec array right now --
+		// if it's dirty, it will be rebuilt the next time the negotiator
+		// calls, which -- since we're deleting the match right here -- is
+		// as soon as we could possibly actually need it to be rebuilt.
+		//
+		// TODO: Nonetheless, this is more expensive than we need it to be.
+		// Instead, we should be clear the flag in this job's entry in the
+		// priorec array that causes it to be skipped (because we already
+		// added it to the start-a-shadow queue).
 		DirtyPrioRecArray();
-		BuildPrioRecArray();
 
 		dprintf(D_ALWAYS,"Failed to start job for %s; relinquishing\n",
 				rec->description());
