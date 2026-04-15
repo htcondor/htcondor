@@ -2575,6 +2575,7 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 	ad.LookupBool("Cancel", cancel);
 
 	std::string schedd_name;
+	std::string schedd_pool;
 	if( !ad.LookupString("ScheddName", schedd_name) || schedd_name.empty() ) {
 		dprintf(D_ALWAYS, "command_rehome: ScheddName not specified in request from %s\n", s->peer_description());
 		ClassAd response_ad;
@@ -2585,6 +2586,9 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 		s->end_of_message();
 		return FALSE;
 	}
+	
+	// ScheddPool is optional - if not specified, COLLECTOR_HOST will be used
+	ad.LookupString("ScheddPool", schedd_pool);
 
 	if( cancel ) {
 		// Cancel rehome: unset STARTD_DIRECT_ATTACH_SCHEDD_NAME without evicting jobs
@@ -2627,9 +2631,12 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 		return FALSE;
 	}
 
-	// Persist STARTD_DIRECT_ATTACH_SCHEDD_NAME so it survives restarts
+	// Persist STARTD_DIRECT_ATTACH_SCHEDD_NAME and STARTD_DIRECT_ATTACH_SCHEDD_POOL so they survive restarts
 	std::string config_value;
 	formatstr(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		formatstr_cat(config_value, "STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s\n", schedd_pool.c_str());
+	}
 	int rc = set_persistent_config(strdup("rehome"), strdup(config_value.c_str()));
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS, "command_rehome: failed to set persistent config STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
@@ -2642,7 +2649,11 @@ command_rehome(int /*dc_cmd*/, Stream* s)
 		return FALSE;
 	}
 
-	dprintf(D_ALWAYS, "command_rehome: set STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s\n", schedd_name.c_str());
+	dprintf(D_ALWAYS, "command_rehome: set STARTD_DIRECT_ATTACH_SCHEDD_NAME = %s", schedd_name.c_str());
+	if( !schedd_pool.empty() ) {
+		dprintf(D_ALWAYS | D_NOHEADER, ", STARTD_DIRECT_ATTACH_SCHEDD_POOL = %s", schedd_pool.c_str());
+	}
+	dprintf(D_ALWAYS | D_NOHEADER, "\n");
 
 	// Fast-kill all running starters
 	resmgr->killAllClaims("rehome", CONDOR_HOLD_CODE::StartdRehoming, 0);

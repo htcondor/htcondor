@@ -1261,7 +1261,7 @@ DCStartd::drainJobs(int how_fast,const char * reason,int on_completion,char cons
 }
 
 bool
-DCStartd::rehome(const char *schedd_name, int timeout, bool cancel)
+DCStartd::rehome(const char *schedd_name, const char *schedd_pool, int timeout, bool cancel)
 {
 	std::string error_msg;
 	ClassAd request_ad;
@@ -1274,6 +1274,9 @@ DCStartd::rehome(const char *schedd_name, int timeout, bool cancel)
 
 	if( schedd_name ) {
 		request_ad.Assign("ScheddName", schedd_name);
+	}
+	if( schedd_pool ) {
+		request_ad.Assign("ScheddPool", schedd_pool);
 	}
 	request_ad.Assign("RehomeTimeout", timeout);
 	if( cancel ) {

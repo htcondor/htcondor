@@ -19,6 +19,11 @@ class Rehome(Verb):
             "args": ("schedd_name",),
             "help": "Name of the schedd to rehome to",
         },
+        "schedd_pool": {
+            "args": ("--schedd-pool",),
+            "default": None,
+            "help": "Collector pool to use to find the schedd (default: COLLECTOR_HOST)",
+        },
         "cancel": {
             "args": ("--cancel",),
             "action": "store_true",
@@ -36,6 +41,7 @@ class Rehome(Verb):
     def __init__(self, logger, **options):
         ep_name = options["ep_name"]
         schedd_name = options["schedd_name"]
+        schedd_pool = options["schedd_pool"]
         cancel = options["cancel"]
         timeout = options["timeout"]
 
@@ -44,10 +50,18 @@ class Rehome(Verb):
         # Validate the schedd name before sending the rehome command
         if not cancel:
             try:
-                schedd_ad = collector.locate(
-                    htcondor2.DaemonType.Schedd,
-                    schedd_name,
-                )
+                # Use the specified pool if provided, otherwise use default
+                if schedd_pool:
+                    schedd_collector = htcondor2.Collector(schedd_pool)
+                    schedd_ad = schedd_collector.locate(
+                        htcondor2.DaemonType.Schedd,
+                        schedd_name,
+                    )
+                else:
+                    schedd_ad = collector.locate(
+                        htcondor2.DaemonType.Schedd,
+                        schedd_name,
+                    )
                 htcondor2.ping(schedd_ad)
             except Exception as e:
                 raise RuntimeError(f"Cannot reach schedd {schedd_name}: {e}")
@@ -59,7 +73,7 @@ class Rehome(Verb):
 
         startd = htcondor2.Startd(location)
         try:
-            startd.rehome(schedd_name=schedd_name, timeout=timeout, cancel=cancel)
+            startd.rehome(schedd_name=schedd_name, schedd_pool=schedd_pool, timeout=timeout, cancel=cancel)
         except htcondor2.HTCondorException as e:
             raise RuntimeError(str(e))
         if cancel:
