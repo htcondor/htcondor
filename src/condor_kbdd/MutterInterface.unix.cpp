@@ -197,7 +197,7 @@ MutterInterface::GetSessions()
 				  /* Find the DBUS_SESSION_BUS_ADDRESS variable in the
 					 environment, we need it to connect later */
 				  while (std::getline(environ, line, '\0')) {
-					  if (!line.find("DBUS_SESSION_BUS_ADDRESS=")) {
+					  if (line.starts_with("DBUS_SESSION_BUS_ADDRESS=")) {
 						  StatInfo s = StatInfo(dir_entry.path().c_str());
 
 						  /* Remove "DBUS_BUS_SESSION=" from string, we just want

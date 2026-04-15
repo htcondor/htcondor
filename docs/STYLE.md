@@ -200,7 +200,7 @@ Note: Spaces are automatically replaced with hyphens.
 
 Example: **:hist-anchor:\`default\`** -- Create default anchor for entry (*version-history*)
 
-Example: **:hist-anchor:`Release Notes`** -- Create *Release-Notes* anchor for version history entry.
+Example: **:hist-anchor:\`Release Notes\`** -- Create *Release-Notes* anchor for version history entry.
 
 ---
 

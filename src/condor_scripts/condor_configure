@@ -577,9 +577,9 @@ unless ( $opt_disable_env_scripts ) {
 	print SH "PATH=\"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
 	print SH "export PATH\n";
 	print SH "if [ \"X\" != \"X\${PYTHONPATH-}\" ]; then\n";
-	print SH "  PYTHONPATH=\"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print SH "  PYTHONPATH=\"$release_dir/lib/python3:\$PYTHONPATH\"\n";
 	print SH "else\n";
-	print SH "  PYTHONPATH=\"$release_dir/lib/python\"\n";
+	print SH "  PYTHONPATH=\"$release_dir/lib/python3\"\n";
 	print SH "fi\n";
 	print SH "export PYTHONPATH\n";
 	close( SH );
@@ -590,9 +590,9 @@ unless ( $opt_disable_env_scripts ) {
 	print CSH "setenv CONDOR_CONFIG \"$config_file\"\n";
 	print CSH "setenv PATH \"$release_dir/bin:$release_dir/sbin:\$PATH\"\n";
 	print CSH "if (\$?PYTHONPATH) then\n";
-	print CSH "  setenv PYTHONPATH \"$release_dir/lib/python:\$PYTHONPATH\"\n";
+	print CSH "  setenv PYTHONPATH \"$release_dir/lib/python3:\$PYTHONPATH\"\n";
 	print CSH "else\n";
-	print CSH "  setenv PYTHONPATH \"$release_dir/lib/python\"\n";
+	print CSH "  setenv PYTHONPATH \"$release_dir/lib/python3\"\n";
 	print CSH "endif\n";
 	close( CSH );
 
@@ -601,7 +601,7 @@ unless ( $opt_disable_env_scripts ) {
 	print FISH "# The script should be sourced by the fish shell\n";
 	print FISH "set -x CONDOR_CONFIG \"$config_file\"\n";
 	print FISH "set -x -p PATH \"$release_dir/bin\" \"$release_dir/sbin\"\n";
-	print FISH "set -x -p PYTHONPATH \"$release_dir/lib/python\n";
+	print FISH "set -x -p PYTHONPATH \"$release_dir/lib/python3\n";
 	close( FISH );
 
 	if ( $opt_bosco ) {

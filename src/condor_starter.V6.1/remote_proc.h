@@ -28,7 +28,7 @@ class RemoteProc : public UserProc {
 		virtual ~RemoteProc();
 
 		virtual int StartJob();
-		virtual bool JobReaper( int pid, int status );
+		virtual ReapResult JobReaper( int pid, int status );
 		virtual bool JobExit();
 
 		virtual void Suspend();

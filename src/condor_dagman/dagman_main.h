@@ -27,6 +27,7 @@
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 #include "config.hpp"
+#include "throttles.hpp"
 
 extern DagmanUtils dagmanUtils;
 
@@ -97,6 +98,8 @@ public:
 	bool Config();
 	void RemoveRunningJobs(const std::string& reason = "Removed by DAGMan", const bool rm_all = false);
 
+	void SetThrottles(Throttles userThrottles);
+
 	Dag *dag{nullptr};
 	DCSchedd *_schedd{nullptr};
 	MapFile *_protectedUrlMap{nullptr}; // Protected URL Mapfile
@@ -111,9 +114,12 @@ public:
 
 	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs
 
+	Throttles adminThrottles{}; // Admin set throttles
+	Throttles throttles{}; // Actual throttles to use
+
 	std::string workingDir{}; // Directory in which DAGMan was invoked. Recoreded incase daemoncore hijacks
 	std::string rescueFileToRun{}; // Name of rescue DAG being run. Will remain "" if not in rescue mode
-	std::string commandSecret{}; // Secret provided by parent (i.e. Schedd) to verify incoming command is authorized
+	std::string commandSecret{}; // String provided by Schedd to be used for security session and incoming command secret authorization
 	std::string debugLog{}; // Fall path to this DAGMans debug log
 
 	bool paused{false}; // DAG is paused

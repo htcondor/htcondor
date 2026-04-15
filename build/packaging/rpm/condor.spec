@@ -46,8 +46,8 @@ URL: https://htcondor.org/
 # Do not check .so files in condor's library directory
 %global __provides_exclude_from ^%{_libdir}/%{name}/.*\\.so.*$
 
-# Do not provide libfmt
-%global __requires_exclude ^libfmt\\.so.*$
+# # Do not provide libfmt
+# %global __requires_exclude ^libfmt\\.so.*$
 
 Source0: %{name}-%{condor_version}.tar.gz
 Source1: %{name}.sysusers.conf
@@ -239,8 +239,8 @@ Requires: systemd-libs
 Requires: rsync
 
 # Require tested Pelican packages
-Requires: (pelican >= 7.23.0 or pelican-debug >= 7.23.0)
-Requires: pelican-osdf-compat >= 7.23.0
+Requires: (pelican >= 7.24.2 or pelican-debug >= 7.24.2)
+Requires: pelican-osdf-compat >= 7.24.2
 
 %if ! 0%{?amzn} && "%{os_release_id}" != "sles"
 # Require tested Apptainer
@@ -816,9 +816,9 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/condor/libfmt.so
-%_libdir/condor/libfmt.so.10
-%_libdir/condor/libfmt.so.10.1.0
+# %_libdir/condor/libfmt.so
+# %_libdir/condor/libfmt.so.10
+# %_libdir/condor/libfmt.so.10.1.0
 
 %_libdir/condor/libgetpwnam.so
 %dir %_libexecdir/condor/

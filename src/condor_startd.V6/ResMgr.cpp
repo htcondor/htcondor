@@ -305,6 +305,55 @@ ResMgr::init_config_classad( void )
 		}
 	}
 	
+	// insert admin-defined requirements clauses that are STARTD wide
+	// and have STARTD wide expressions into the resmgr config ad.
+	// we will handle slot_type definitions for these knobs later.
+	classad::References clauses;
+	param_and_insert_attrs("SLOT_REQUIREMENTS_CLAUSES", clauses);
+	param_and_insert_attrs("PSLOT_REQUIREMENTS_CLAUSES", clauses);
+	param_and_insert_attrs("DSLOT_REQUIREMENTS_CLAUSES", clauses);
+	clauses.erase(ATTR_WITHIN_RESOURCE_LIMITS); // default for this is generated per-slot
+	clauses.erase(ATTR_START); // handled above with default value
+	for (auto & attr : clauses) {
+		configInsert(config_classad, attr.c_str(), false, nullptr);
+	}
+
+	// if there is a STARTD_HEALTH_EXPRS knob, then use it to set the Healthy expression
+	// If there is more than one expression, also set HealthExprs and HealthFactor
+	auto_free_ptr health_exprs(param("STARTD_HEALTH_EXPRS"));
+	if (health_exprs) {
+		std::string exprstr;
+		formatstr(exprstr, "{%s}", health_exprs.ptr());
+		ExprTree * tree = nullptr;
+		if (0 != ParseClassAdRvalExpr(exprstr.c_str(), tree) && 0 != ParseClassAdRvalExpr(health_exprs, tree)) {
+			dprintf(D_ERROR, "Parse error in STARTD_HEALTH_EXPRS: %s\n", exprstr.c_str());
+		} else {
+			classad::ExprList * health_checks = dynamic_cast<classad::ExprList*>(tree);
+			if ( ! health_checks) {
+				dprintf(D_ERROR, "STARTD_HEALTH_EXPRS: %s is not a list\n", exprstr.c_str());
+			} else {
+				if (health_checks->size() < 1) {
+					delete health_checks;
+					if ( ! config_classad->Lookup(ATTR_HEALTHY)) { config_classad->Assign(ATTR_HEALTHY, true); }
+				} else {
+					// append a literal 1 to the list of health expressions, so that when passed to min
+					// it will evaluate to true when all of the health expressions evaluate to undefined.
+					// then insert that as the argument list for a min function call. In effect, this becomes
+					// Healthy = min({$(STARTD_HEALTH_EXPRS),1})
+					// when STARTD_HEALTH_EXPRS is a valid list of classad expressions.
+					if (health_checks->size() > 1) {
+						config_classad->Insert("HealthExprs", health_checks->Copy());
+						formatstr(exprstr, "sum(HealthExprs) / %u.0", (int)health_checks->size());
+						config_classad->AssignExpr("HealthFactor", exprstr.c_str());
+					}
+					health_checks->push_back(classad::Literal::MakeInteger(1));
+					classad::ArgumentList args; args.push_back(health_checks);
+					config_classad->Insert(ATTR_HEALTHY, classad::FunctionCall::MakeFunctionCall("min", args));
+				}
+			}
+		}
+	}
+
 	// Publish all DaemonCore-specific attributes, which also handles
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
@@ -511,7 +560,11 @@ ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 
 	// gloal dynamic information. offline resources, WINREG values
 	m_attr->publish_common_dynamic(&ad, true);
-	
+
+	// We want ATTR_HEALTHY and related attributes in the daemon ad
+	caCopyIfDefined(ad, *config_classad, ATTR_HEALTHY);
+	caCopyIfDefined(ad, *config_classad, "HealthExprs");
+	caCopyIfDefined(ad, *config_classad, "HealthFactor");
 
 	//PRAGMA_REMIND("TJ: write this")
 	// m_attr->publish_EP_dynamic(&ad);
@@ -1684,6 +1737,7 @@ void ResMgr::compute_static()
 	long long virt_mem = m_attr->virt_mem();
 #else
 #endif
+
 	for(Resource* rip : slots) {
 		if (rip) {
 		#ifdef PROVISION_FRACTIONAL_DISK

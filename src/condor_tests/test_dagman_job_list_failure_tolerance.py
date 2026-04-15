@@ -237,25 +237,39 @@ class TestDAGManJobFailTolerance:
             assert LOG.exists()
 
             START = now()
-            PROCS = {
-                "submitted": 0,
-                "completed": 0,
-            }
+            submitted = 0
+            terminated = set()
+            aborted = set()
 
             with htcondor2.JobEventLog(str(LOG)) as JEL:
                 while True:
                     assert now() - START < TIMEOUT
                     for event in JEL.events(stop_after=1):
                         if event.type == htcondor2.JobEventType.SUBMIT:
-                            PROCS["submitted"] += 1
-                            assert PROCS["submitted"] <= test_num_procs
+                            submitted += 1
+                            assert submitted <= test_num_procs
                         elif event.type == htcondor2.JobEventType.JOB_TERMINATED:
+                            # Procs at or below the tolerance index are the ones
+                            # whose failures DAGMan tolerates (or the last one
+                            # whose failure exceeds the tolerance, triggering
+                            # the abort of the remaining procs).
                             assert event.proc <= test_tolerance
-                            PROCS["completed"] += 1
+                            terminated.add(event.proc)
                         elif event.type == htcondor2.JobEventType.JOB_ABORTED:
-                            assert event.proc > test_tolerance
-                            PROCS["completed"] += 1
+                            # When DAGMan reaches the failure tolerance limit,
+                            # it issues a condor_rm on the whole cluster. That
+                            # condor_rm can race with the terminate event for
+                            # the last failing proc, causing the schedd to emit
+                            # a JOB_ABORTED event for a proc that has already
+                            # terminated. Accept that race: only check the
+                            # proc-index invariant for procs we have not seen
+                            # a terminate event for.
+                            if event.proc not in terminated:
+                                assert event.proc > test_tolerance
+                            aborted.add(event.proc)
 
-                    if PROCS["completed"] == test_num_procs:
+                    # Each proc reaches a terminal state via either a terminate
+                    # or abort event (and possibly both, due to the race above).
+                    if len(terminated | aborted) == test_num_procs:
                         break
 

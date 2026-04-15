@@ -1,5 +1,18 @@
 *** 25.10.0 features
 
+- Added ability to set DAGMan throttles via :tool:`htcondor dag throttle` and
+  :meth:`htcondor2.DAGMan.throttle` while DAGMan is executing.
+  :jira:`3584`
+
+- DAGMan is now born with a security session from its parent *condor_schedd*
+  allowing it to communicate without re-authentication.
+  :jira:`3298`
+
+- Scheduler universe jobs, such as *condor_dagman*, will now enter job
+  cool down when they exit with a non-zero exit code. The duration of the
+  cool down in controlled by :macro:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`.
+  :jira:`3067`
+
 - Add new submit command :subcom:`retry_request_disk`, which operates
   like :subcom:`retry_request_memory` but for the ``Disk`` resource.
   :jira:`3552`
@@ -7,31 +20,102 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
+- In the very rare case that a job fails after the *condor_starter* forks
+  it, but before it execs the job, we now log a much more coherent
+  error message.  Previously, HTCondor would log an incorrect message
+  about the "tracking gid".
+  :jira:`3654`
+
+- Added new :tool:`htcondor dag resources` command, which shows
+  the resource usage for running and historical jobs.
+  :jira:`3636`
+
 - Make :macro:`CHECK_REACTIVATE_AFTER_CHECKPOINT` true by default.
   :jira:`3564`
+
+- On cgroup v1 systems, match cgroup v2 behaviour of disabling virtual
+  memory swap space for jobs.  This can be disabled by setting
+  :macro:`DISABLE_SWAP_FOR_JOB` to false.
+  :jira:`3630`
+
+- Change value of :macro:`USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY` to true.
+  This allows the :tool:`condor_userprio` use a interface to the negotiator
+  to fetch accounting ads in a way that allows constraint and projection.
+  This interface did not exist in pre htcondor 9.1 negotiators, and should
+  be set to false for new :tool:`condor_userprio` to work with such old
+  negotiators.
+  :jira:`3649`
+
+- **batch** grid universe jobs are now run in the :ad-attr:`Iwd` or
+  :ad-attr:`RemoteIwd` directory by default. Before, they were run in a
+  temporary directory under the :ad-attr:`Iwd` or :ad-attr:`RemoteIwd`
+  directory.
+  The old behavior can be restored by setting ``blah_run_in_workdir=no``
+  in the ``blah.config`` file.
+  :jira:`2415`
+
+- When :macro:`STARTER_NESTED_SCRATCH` is true (the default), the .chirp.config
+  file no longer pollutes the user's scratch directory, it is located
+  in the slot's "user" directory.  The _CONDOR_CHIRP_CONFIG environment
+  variable still points to the correct place.
+  :jira:`2949`
+
+- Improved the *blahpd*'s efficiency in monitoring job status.
+  :jira:`3634,3640`
+
+- Container universe jobs whose image is an url (like docker://) now work
+  when file transfer is off.
+  :jira:`3638`
 
 - Added new job ad attribute :ad-attr:`SubmitVersion`.  This string valued
   attribute is the condor version of the :tool:`condor_submit` version or
   python bindings version used to submit the job.  In the case of a remote 
-  submit, it may be different than the :ad-attr:`CondorVersion` of ad,
+  submit, it may be different than the :ad-attr:`CondorVersion[type=Schedd]` of ad,
   which represents the version of the *condor_schedd* the job was placed in.
   :jira:`3413`
+
+- Fixed python deprecation warning in :tool:`condor_top`, so that it
+  will run without errors on not-yet-released future version of python.
+  :jira:`3643`
+
+- The python method :meth:`htcondor2.Schedd.history` has an upper bound on the
+  size in bytes of the constraint and projection argument.  Now return an
+  clear error message when these bounds are exceeded.
+  :jira:`3644` 
+
+- When :tool:`condor_userprio` is run with a specific submitter name on
+  the command line, if the submitter is an active submitter in the 
+  *condor_collector* fallback to look again at the non-active 
+  submitters in the negotiator.
+  :jira;`3283`
+
+- :tool:`condor_status` now supports an `-aaf` option, for append
+  autoformat, which displays columns like the `-af` option does, but
+  appends them to the default output.
+  :jira:`3604`
+
+- Fixed a spurious error message in the StarterLog about unhandled
+  job exit.
+  :jira:`3653`
 
 *** 25.10.0 bugs
 
 *** 25.0.10 bugs
 
-*** 25.8.0 features
+*** 25.8.2 features
 
-- The *condor_shadow* can now log a CSV record to the ``ShadowReconnectLog``
+- The *condor_shadow* can now log a CSV record to the :macro:`SHADOW_RECONNECT_LOG`
   file each time it successfully reconnects to a disconnected starter or
   gives up trying.  Each record contains timing information about when the
   job was activated, the last known contact time, whether the reconnect
   succeeded, the configured lease duration, and whether the starter is
-  known to be dead.  This is controlled by the new configuration knobs
-  :macro:`SHADOW_LOG_RECONNECT` (default ``True``) and
-  :macro:`SHADOW_RECONNECT_LOG`.
+  known to be dead.  This is controlled by :macro:`SHADOW_LOG_RECONNECT`
+  which defaults to ``True``.
   :jira:`3593`
+
+- HTCondor now correctly detects and advertises the NVIDIA driver version
+  for NVIDIA GPUs which are configured to run in "MIG" mode.
+  :jira:`3626`
 
 - Jobs that were submitted with spooled data files and have completed will
   now leave the queue after a successful retrieval of their output files
@@ -59,7 +143,7 @@
   :jira:`3517`
 
 - In the python bindings, functions arguments that used to have a default
-  of the `None` type now take a python Optional.  This is more compliant
+  of the :obj:`None` type now take a python Optional.  This is more compliant
   with PEP 484, and is more in line with what python linting tools
   expect.  There should be no changes needed for clients of the python
   bindings.
@@ -70,7 +154,7 @@
   allow this.
   :jira:`3549`
 
-- Singularity or Apptainer jobs now also pass --rocm to GPU jobs
+- Singularity or Apptainer jobs now also pass ``--rocm`` to GPU jobs
   to support AMD jobs, unless :macro:`SINGULARITY_ADD_ROCM_FLAG` is
   set to false.
   :jira:`3537`
@@ -87,7 +171,7 @@
   two daemons is broken or disconnected.
   :jira:`3547`
 
-- :tool:`condor_top` now supports a `-history` option to read the most
+- :tool:`condor_top` now supports a ``-history`` option to read the most
   recently recorded on disk performance statistics.  Runs much faster,
   and works even when the *condor_schedd* is slow or not running.
   :jira:`3582`
@@ -110,7 +194,7 @@
   in the cooldown state.
   :jira:`3525`
 
-- :tool:`condor_status` `-server` now correctly labels the count of discovered Slots
+- :tool:`condor_status` ``-server`` now correctly labels the count of discovered Slots
   in the summary table.
   :jira:`3535`
 
@@ -120,7 +204,7 @@
   for all job credential types.
   :jira:`3536`
 
-- Added new `histogram` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
+- Added new ``histogram`` option to :tool:`htcondor eventlog` and :tool:`htcondor dag`.
   :jira:`3530`
 
 - Added a new ``-transfer`` option to :tool:`condor_rm`.  When used to remove
@@ -129,8 +213,7 @@
   :jira:`3519`
 
 - The **copy_to_spool** command in :tool:`condor_submit` is no longer
-  supported.
-  This does not affect the ability to spool a job's full input sandbox.
+  supported. This does not affect the ability to spool a job's full input sandbox.
   :jira:`3545`
 
 - No longer warn about configuration knobs with dots in the names if the knob
@@ -168,11 +251,18 @@
   to version 5.3.8.
   :jira:`3576`
 
-*** 25.8.0 bugs
+*** 25.8.2 bugs
 
-- Fixed a bug that caused the *condor_starter* to log many confusing errors and not exit
+- Fixed a bug that caused the *condor_starter* to log confusing errors and not exit
   promptly if it failed to launch a Singularity job.
   :jira:`3531`
+
+- Fixed bugs where a job would be placed on hold if there was a problem transferring
+  files via Pelican (OSDF) or HTTP.  Now in several cases where the problem was the
+  fault of HTCSS and not the fault of the job, the job will go back to idle and attempt
+  to be rematched instead of going on hold.  Several additional VacateReasonSubCodes where
+  added in support of this; see section :ref:`Vacate Reason Codes`.
+  :jira:`2952`
 
 - Fixed a bug in container universe with :subcom:`container_target_dir` when file transfer
   was off, that caused jobs to start in the users home directory.
@@ -180,7 +270,7 @@
 
 - Fixed a minor bug whereby the Access Point is unaware that the Execution Point relinquishes a
   match when the EP's :macro:`WANT_HOLD` is triggered.  This can result in the AP failing to
-  activate the next job in a job list due to VacateReasonCode 1033 ( :ad-attr:`ActivationRefusedUnclaimed` ).
+  activate the next job in a job list due to VacateReasonCode 1033 ``ActivationRefusedUnclaimed``.
   :jira:`3609`
 
 *** 25.0.9 bugs

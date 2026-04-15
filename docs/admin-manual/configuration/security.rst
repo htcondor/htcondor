@@ -218,8 +218,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     that are still using a previously established security session. The
     default is True.
 
+:macro-def:`FS_LOCAL_DIR`
+    The location of a directory visible to both server and client in Local
+    File System authentication. The default when not defined is the
+    directory ``/tmp``.  This directory must be world writable with the
+    sticky bit set (i.e. permissions of 1777) for the FS authentication method to work.
+
 :macro-def:`FS_REMOTE_DIR`
-    The location of a file visible to both server and client in Remote
+    The location of a directory visible to both server and client in Remote
     File System authentication. The default when not defined is the
     directory ``/shared/scratch/tmp``.
 

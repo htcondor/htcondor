@@ -45,7 +45,7 @@ class VMProc : public OsProc
 		// create new vmgahp server and send a VM_START command
 		virtual int StartJob();
 
-		virtual bool JobReaper(int pid, int status);
+		virtual ReapResult JobReaper(int pid, int status);
 
 		virtual bool JobExit(void);
 

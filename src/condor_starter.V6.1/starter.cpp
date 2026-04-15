@@ -3043,7 +3043,7 @@ Starter::Reaper(int pid, int exit_status)
 				 WEXITSTATUS(exit_status) );
 	}
 
-	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {
+	if( pre_script && pre_script->JobReaper(pid, exit_status) == ReapResult::JobDone ) {
 		bool exitStatusSpecified = false;
 		int desiredExitStatus = computeDesiredExitStatus( "Pre", this->jic->jobClassAd(), & exitStatusSpecified );
 		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
@@ -3081,7 +3081,7 @@ Starter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
-	if( post_script && post_script->JobReaper(pid, exit_status) ) {
+	if( post_script && post_script->JobReaper(pid, exit_status) == ReapResult::JobDone ) {
 		bool exitStatusSpecified = false;
 		int desiredExitStatus = computeDesiredExitStatus( "Post", this->jic->jobClassAd(), & exitStatusSpecified );
 		if( exitStatusSpecified && exit_status != desiredExitStatus ) {
@@ -3132,14 +3132,21 @@ Starter::Reaper(int pid, int exit_status)
 	copyProcList( m_job_list, stable_job_list );
 	copyProcList( m_reaped_job_list, stable_reaped_job_list );
 
+	bool pid_matched = false;
 	auto listit = stable_job_list.begin();
 	while (listit != stable_job_list.end()) {
 		auto *job = *listit;
 		all_jobs++;
-		if( job->GetJobPid()==pid && job->JobReaper(pid, exit_status) ) {
-			handled_jobs++;
-			listit = stable_job_list.erase(listit);
-			stable_reaped_job_list.emplace_back(job);
+		if( job->GetJobPid() == pid ) {
+			auto result = job->JobReaper(pid, exit_status);
+			pid_matched = true;
+			if( result == ReapResult::JobDone ) {
+				handled_jobs++;
+				listit = stable_job_list.erase(listit);
+				stable_reaped_job_list.emplace_back(job);
+			} else {
+				listit++;
+			}
 		} else {
 			listit++;
 		}
@@ -3151,7 +3158,7 @@ Starter::Reaper(int pid, int exit_status)
 	dprintf( D_FULLDEBUG, "Reaper: all=%d handled=%d ShuttingDown=%d\n",
 			 all_jobs, handled_jobs, ShuttingDown );
 
-	if( handled_jobs == 0 ) {
+	if( !pid_matched ) {
 		dprintf( D_ALWAYS, "unhandled job exit: pid=%d, status=%d\n",
 				 pid, exit_status );
 	}

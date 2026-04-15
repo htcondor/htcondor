@@ -507,6 +507,7 @@ main( int argc, const char* argv[] )
 	const char * pcolon;
 	const char *name_arg = NULL; // raw argument from -name (before get_daemon_name lookup)
 	const char *addr = NULL;
+	auto_free_ptr name_storage;  // owns the strdup'd result from get_daemon_name
 	const char *name = NULL;     // cooked -name argument after get_daemon_name lookup
 	const char *pool = NULL;
 	const char *local_name = NULL;
@@ -907,7 +908,8 @@ main( int argc, const char* argv[] )
 	
 	// now that we have loaded config, we can safely get do daemon name lookup
 	if (name_arg) {
-		name = get_daemon_name(name_arg);
+		name_storage.set(get_daemon_name(name_arg));
+		name = name_storage.ptr();
 		if ( ! name || ! name[0]) {
 			fprintf(stderr, "%s: unknown host %s\n", MyName, get_host_part(name_arg));
 			my_exit(1);

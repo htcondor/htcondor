@@ -256,6 +256,22 @@ BETTER_ENUM(OUT_OF_RESOURCES_SUB_CODE, int,
 	Disk = 104
 )
 
+// Why didn't the job start?  Except for CatalogNameError, all of these are
+// vacate codes indicating that the job should go into cooldown (to avoid
+// immediately re-running it on the same slot).  CatalogNameError is a hold
+// code: it's unlikely to be the submitter's fault, but trying again with a
+// new shadow or starter likely won't fix the problem.
+BETTER_ENUM(JOB_NOT_STARTED_SUB_CODE, int,
+	CommonTransferBadReply = 1,
+	CommonTransferFailed = 2,
+	CommonMappingFailed = 3,
+	SlotColoringFailed = 4,
+	SlotColoringBadReply = 5,
+	OfferResourcesFailed = 6,
+
+	CatalogNameError = 7
+)
+
 // Hold reason subcode for final transfer on remove
 // Used when condor_rm -transfer triggers a vacate with file transfer
 #define HOLD_SUBCODE_FINAL_TRANSFER_ON_REMOVE 1
@@ -281,8 +297,36 @@ inline bool shouldVacateJobBasedOnCodes(int code, int subcode) {
 	}
 	return false;
 }
+
 inline bool shouldHoldJobBasedOnCodes(int code, int subcode) {
 	return !shouldVacateJobBasedOnCodes(code, subcode);
+}
+
+// Any (code, subcode) tuple which is not known to a cool-down code isn't.
+inline bool shouldCoolJobBasedOnCodes(int vacateCode, int vacateSubCode) {
+	if( vacateCode == CONDOR_HOLD_CODE::JobNotStarted ) {
+		auto jnssc = JOB_NOT_STARTED_SUB_CODE::_from_integral_nothrow(vacateSubCode);
+		if(! jnssc) { return false; }
+
+		switch( * jnssc ) {
+			case JOB_NOT_STARTED_SUB_CODE::CommonTransferBadReply:
+			case JOB_NOT_STARTED_SUB_CODE::CommonTransferFailed:
+			case JOB_NOT_STARTED_SUB_CODE::CommonMappingFailed:
+			case JOB_NOT_STARTED_SUB_CODE::SlotColoringFailed:
+			case JOB_NOT_STARTED_SUB_CODE::SlotColoringBadReply:
+			case JOB_NOT_STARTED_SUB_CODE::OfferResourcesFailed:
+				return true;
+
+			case JOB_NOT_STARTED_SUB_CODE::CatalogNameError:
+				return false;
+
+			// Don't add `default` here, so that if we add a new value to
+			// JOB_NOT_STARTED_SUB_CODE, we have to explicitly decide if
+			// it should default to cooling down or not.
+		}
+	}
+
+	return false;
 }
 
 #endif

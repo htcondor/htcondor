@@ -349,7 +349,7 @@ class Condor:
                 )
             
             self.condor_master = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
 
             logger.debug(
@@ -465,7 +465,7 @@ class Condor:
         killed = False
         while True:
             try:
-                self.condor_master.communicate(timeout=5)
+                self.condor_master.wait(timeout=5)
                 break
             except subprocess.TimeoutExpired:
                 pass

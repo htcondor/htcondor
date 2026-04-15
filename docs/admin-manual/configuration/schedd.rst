@@ -975,6 +975,11 @@ These macros control the *condor_schedd*.
     cool-down state for that number of seconds. During this time, the
     job will not be run again.
 
+:macro-def:`SCHEDULER_UNIVERSE_COOL_DOWN_DURATION`
+    An integer representing the time in seconds that a scheduler universe job,
+    such as *condor_dagman*, will be in the cool down state when it exits
+    with a non-zero exit code. The default value is 300 seconds, i.e. 5 minutes.
+
 :macro-def:`SCHEDD_ASSUME_NEGOTIATOR_GONE`
     This macro determines the period, in seconds, that the
     *condor_schedd* will wait for the *condor_negotiator* to initiate

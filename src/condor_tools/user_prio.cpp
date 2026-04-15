@@ -585,7 +585,12 @@ main(int argc, const char* argv[])
 		}
     }
   }
-      
+
+  // If specific users were requested, show them regardless of last usage time
+  if (!full_user_names.empty() || !short_user_names.empty()) {
+	  MinLastUsageTime = -1;
+  }
+
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
@@ -604,7 +609,7 @@ main(int argc, const char* argv[])
   negotiatorCanDoDirect = true; // Assumes a post version 9.1.1 negotiator, which supports direct query.
  
   // knob to disable negotiator modular direct query, in case this causes problems (the results *are* a bit different)
-  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", false)) {
+  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", true)) {
 	  negotiatorCanDoDirect = false;
   }
 
@@ -1015,7 +1020,8 @@ main(int argc, const char* argv[])
 	ClassAd *ad = NULL;
 	std::vector<ClassAd> accountingAds;
 
-	if (fromCollector || (negotiatorCanDoDirect && ! GroupRollup)) {
+	bool haveUserConstraint = !full_user_names.empty() || !short_user_names.empty();
+	if (fromCollector || (negotiatorCanDoDirect && ! GroupRollup) || haveUserConstraint) {
 		CondorQuery query(ACCOUNTING_AD);
 		CondorError errstack;
 		QueryResult q;
@@ -1045,6 +1051,7 @@ main(int argc, const char* argv[])
 			query.addANDConstraint(constraint.c_str());
 		}
 
+		bool queryNegotiator = !fromCollector;
 		if (fromCollector) {
 			CollectorList * collectors = CollectorList::create(pool_name);
 			q = collectors->query(query, accountingAds, &errstack);
@@ -1053,7 +1060,18 @@ main(int argc, const char* argv[])
 				fprintf(stderr, "Can't query collector for ads: %s\n", errstack.getFullText().c_str());
 				exit(1);
 			}
-		} else {
+			// If the collector returned fewer results than the number of
+			// users we queried for, and the user didn't explicitly force
+			// the collector, fall back to the negotiator which has more data.
+			size_t numQueried = full_user_names.size() + (short_user_names.empty() ? 0 : 1 + std::count(short_user_names.begin(), short_user_names.end(), ','));
+			if (accountingAds.size() < numQueried && !forceFromCollector) {
+				fprintf(stderr, "Not all user(s) found in collector, querying negotiator...\n");
+				accountingAds.clear();
+				queryNegotiator = true;
+			}
+		}
+		
+		if (queryNegotiator) {
 			q = query.fetchAds(accountingAds, negotiator.addr(), &errstack);
 			if (q != Q_OK) {
 				fprintf(stderr, "Can't query negotiator for ads: %s\n", errstack.getFullText().c_str());

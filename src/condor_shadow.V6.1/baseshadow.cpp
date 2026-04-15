@@ -1491,7 +1491,7 @@ BaseShadow::log_except(const char *msg_str)
 	int dummy;
 	if (!job_ad->LookupInteger(ATTR_VACATE_REASON_CODE, dummy)) {
 		std::string vacate_str = "Shadow Exception: ";
-		vacate_str += msg_str;
+		if (msg_str) vacate_str += msg_str;
 		job_ad->Assign(ATTR_JOB_LAST_SHADOW_EXCEPTION, event.getMessage());
 		job_ad->Assign(ATTR_LAST_VACATE_TIME, time(nullptr));
 		job_ad->Assign(ATTR_VACATE_REASON, vacate_str);
@@ -1733,26 +1733,27 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
-// and pid in our log entries. 
+// and pid in our log entries.
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	constexpr int cchpid = 10 * (sizeof(pid_t)/4); // 10 chars for 32 bit pids, 19 chars for 64 bit pids
 	static char pidbuf[cchpid+2 +1 + cchpid+2 +2] = {0}; // room for "()>()" + cchpid digits for each pid plus trailing \0
+
 	static pid_t mypid = 0;
 	int mycluster = -1;
 	int myproc = -1;
 
-	// show the shadow pid when we first start up
-	// then if we fork show the forked pid also
-	if (daemonCore) {
-		pid_t tpid = daemonCore->getpid();
-		if (!pidbuf[0]) {
-			mypid = tpid;
-			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)", mypid);
-		} else if (tpid != mypid) {
-			snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)>(%d)", mypid, tpid);
-		}
+	// DaemonCore doesn't know that its PID has changed after a fork().  This
+	// won't work if the FTO/shadow ever starts clone()ing children, but then
+	// this becomes a problem to fix in DaemonCore->getPid().
+	pid_t current_pid = getpid();
+	if( mypid == 0 ) {
+		mypid = current_pid;
+		snprintf(pidbuf, sizeof(pidbuf)-1, "(%d)", mypid);
+	} else if( mypid != current_pid ) {
+		snprintf(pidbuf, sizeof(pidbuf)-1, "(%d>%d)", mypid, current_pid);
+		mypid = current_pid;
 	}
 
 	if (Shadow) {
