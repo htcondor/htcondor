@@ -575,7 +575,7 @@ class DebugPlugin:
                     debug(DebugLevel.DEBUGGING, f"Changing exit code from {self.exit_code} to {code}")
                     self.exit_code = code
 
-                # Handle inproper plugin exit cases:
+                # Handle improper plugin exit cases:
                 #    1. Produce an unparseable ClassAd by writing a string instead of a dict (i.e. an ad) to the output file
                 #    2. Produce no output at all by returning an empty dict so that no file is created
                 if cmd == "EXITBADAD":
