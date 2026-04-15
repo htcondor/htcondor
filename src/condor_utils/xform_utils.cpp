@@ -1541,8 +1541,9 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 // returns 1  if the copy happened.
 static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrNew, struct _parse_rules_args *pra)
 {
-	// bool log_errs  = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
-	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
+	if ( ! pra) return 0;
+	// bool log_errs  = (pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
+	bool log_steps = (pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
 	if (log_steps) pra->fnlog(*pra, false, "COPY %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
 		if (log_steps) pra->fnlog(*pra, true, "ERROR: COPY %s new name %s is not valid\n", attr.c_str(), attrNew);
