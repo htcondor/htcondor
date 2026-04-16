@@ -20,6 +20,9 @@
 - Added new submit variable ``$(JobListId)`` as an alternate name for ``$(ClusterId)``.
   :jira:`3586`
 
+- Add new verb, **claims** to the :tool:`htcondor ap claims` cli tool.
+  :jira:`3681`
+
 - In the very rare case that a job fails after the *condor_starter* forks
   it, but before it execs the job, we now log a much more coherent
   error message.  Previously, HTCondor would log an incorrect message
