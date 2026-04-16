@@ -14,7 +14,8 @@
 std::optional<ListOfCatalogs>
 computeCommonInputFileCatalogs(
 	ClassAd * jobAd,
-	const std::string & startdAddress
+	const std::string & startdAddress,
+	std::map< std::string, std::string > * internalToSimpleNameMap
 ) {
 	ListOfCatalogs common_file_catalogs;
 
@@ -34,6 +35,10 @@ computeCommonInputFileCatalogs(
 
 		common_file_catalogs.push_back({* internal_catalog_name, commonInputFiles});
 		// dprintf( D_ZKM, "Found common file catalog '%s' = '%s'\n", cifName.c_str(), commonInputFiles.c_str() );
+
+		if( internalToSimpleNameMap != NULL ) {
+		    (*internalToSimpleNameMap)[* internal_catalog_name] = cifName;
+		}
 	}
 
 	return common_file_catalogs;
@@ -45,7 +50,8 @@ computeCommonInputFiles(
 	ClassAd * jobAd,
 	const std::string & startdAddress,
 	ListOfCatalogs & common_file_catalogs,
-	int & required_version
+	int & required_version,
+	std::map< std::string, std::string > * internalToSimpleNameMap
 ) {
 	std::string common_input_files;
 	bool found_htc25_plumbing =
@@ -66,6 +72,10 @@ computeCommonInputFiles(
 			return false;
 		}
 		common_file_catalogs.push_back({* internal_catalog_name, common_input_files});
+
+		if( internalToSimpleNameMap != NULL ) {
+		    (*internalToSimpleNameMap)[* internal_catalog_name] = default_name;
+		}
 	}
 
 	return true;

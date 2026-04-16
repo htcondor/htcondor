@@ -80,7 +80,7 @@ def the_cs_condor(the_cs_local_dir, the_cs_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_cs_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -231,7 +231,7 @@ def the_dagman_condor(the_dagman_local_dir, the_dagman_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_dagman_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -383,7 +383,7 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
         config={
             "FORBID_COMMON_FILE_TRANSFER":          "TRUE",
 
-            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":            "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":             "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":                     the_container_lock_dir.as_posix(),
             "NUM_CPUS":                 4,
@@ -394,6 +394,13 @@ def the_container_condor(the_container_local_dir, the_container_lock_dir, the_co
             "CONTAINER_IMAGES_COMMON_BY_DEFAULT":   True,
         },
     ) as the_container_condor:
+
+        ads = the_container_condor.status(
+            constraint='HasContainer =?= true'
+        )
+        if len(ads) == 0:
+            pytest.skip("The container condor can't run container jobs.")
+
         yield the_container_condor
 
 
@@ -593,7 +600,10 @@ def SingularityIsWorking():
 # and enough of them.  This is a race, but better to try
 # to test first.
 def UserNamespacesFunctional():
-    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    try:
+        result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    except FileNotFoundError:
+        return False
     if result.returncode == 7:
         print("unshare seems to work correctly, proceeding with test\n")
         return True

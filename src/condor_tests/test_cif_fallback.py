@@ -59,7 +59,7 @@ def the_condor(test_dir, the_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_lock_dir.as_posix(),
             "DAEMON_LIST":      "$(DAEMON_LIST) CREDD",
@@ -161,7 +161,7 @@ def the_big_condor(test_dir, the_big_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_big_lock_dir.as_posix(),
             "NUM_CPUS":         4,
@@ -317,7 +317,7 @@ def the_multi_condor(test_dir, the_multi_lock_dir):
         config={
             "FORBID_COMMON_FILE_TRANSFER": "TRUE",
 
-            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_ACCOUNTANT",
+            "STARTER_DEBUG":    "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "SHADOW_DEBUG":     "D_CATEGORY D_SUB_SECOND D_PID D_TEST",
             "LOCK":             the_multi_lock_dir.as_posix(),
             "NUM_CPUS":         4,
