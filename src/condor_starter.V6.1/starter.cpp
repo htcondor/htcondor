@@ -3072,7 +3072,8 @@ Starter::Reaper(int pid, int exit_status)
 			// going to be empty, so don't bother with any of the rest
 			// of this.  instead, the starter is now able to call
 			// SpawnJob() to launch the main job.
-		pre_script = NULL; // done with pre-script
+		delete pre_script;
+		pre_script = nullptr; // done with pre-script
 		if( ! SpawnJob() ) {
 			dprintf( D_ALWAYS, "Failed to start main job, exiting\n" );
 			main_shutdown_fast();
