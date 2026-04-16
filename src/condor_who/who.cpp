@@ -307,19 +307,24 @@ void usage(bool and_exit)
 		"\t-w[ide]\t\t\tdon't truncate fields to fit the screen\n"
 		"\t-f[ormat] <fmt> <attr>\tPrint attribute with a format specifier\n"
 		"\t-autoformat[:lhVr,tng] <attr> [<attr2> [...]]\n"
-		"\t-af[:lhVr,tng] <attr> [attr2 [...]]\n"
+		"\t-af[:jlhVrTY,tng] <attr> [attr2 [...]]\n"
 		"\t    Print attr(s) with automatic formatting\n"
-		"\t    the [lhVr,tng] options modify the formatting\n"
+		"\t    the [jlhVrTY,tng] options modify the formatting\n"
+		"\t        j   Display Job id\n"
 		"\t        l   attribute labels\n"
 		"\t        h   attribute column headings\n"
 		"\t        V   %%V formatting (string values are quoted)\n"
 		"\t        r   %%r formatting (raw/unparsed values)\n"
+		"\t        T   %%T formatting (elapsed time values)\n"
+		"\t        Y   %%Y formatting (time and date values)\n"
 		"\t        ,   comma after each value\n"
 		"\t        t   tab before each value (default is space)\n"
 		"\t        n   newline after each value\n"
 		"\t        g   newline between ClassAds, no space before values\n"
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
+		"\t-aaf[:VrTY] <attr> [attr2 [...]]\n"
+		"\t    Like -af, but appends attr(s) after the standard columns\n"
 		"\t-print-format <file>\tLoad main print format from <file>\n"
 		"\t-banner-format <file>\tLoad banner print format from <file>\n"
 		"\t-ospool\t\t\tUse OSPool glide-in print formats\n"
@@ -475,12 +480,14 @@ void AddPrintColumn(const char * heading, int width, const char * expr) {
 }
 
 
+#if 0 // use PRINTAS TIME now instead.
 // print a utime in human readable form
 static const char *
 format_int_runtime (long long utime, Formatter & /*fmt*/)
 {
 	return format_time(utime);
 }
+#endif
 
 // print out static or dynamic slot id.
 static bool
@@ -1601,6 +1608,20 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 
+// Custom columns that can be used with -af or -aaf
+static const CustomAutoformatColumns CustomAfColumns {
+	{ // map of column name to custom print line
+		{"DIRCMD",  ATTR_JOB_ID  " RENDERAS JOB_DIRCMD"},
+		{"DIR",     ATTR_JOB_ID  " RENDERAS JOB_DIR"},
+		{"PID",     ATTR_JOB_PID " RENDERAS JOB_PID"},
+		{"PROGRAM", ATTR_JOB_ID  " RENDERAS JOB_PROGRAM"},
+		{"RUNTIME", ATTR_TOTAL_JOB_RUN_TIME " PRINTAS TIME"},
+		{"SLOT",    ATTR_SLOT_ID " RENDERAS SLOT_ID"},
+		{"SlotID",  ATTR_SLOT_ID " RENDERAS SLOT_ID"},
+	}
+	, &LocalPrintFormatsTable
+};
+
 static void dump_print_mask(std::string & tmp)
 {
 	App.print_mask.dump(tmp, &LocalPrintFormatsTable);
@@ -1682,8 +1703,10 @@ static int set_print_mask_from_stream(
 #define IsArg is_arg_prefix
 #define IsArgColon is_arg_colon_prefix
 
-void parse_args(int /*argc*/, char *argv[])
+void parse_args(int argc, const char *argv[])
 {
+	std::vector<const char *> aaf_args;
+
 	const char * pcolon;
 	for (int ixArg = 0; argv[ixArg]; ++ixArg)
 	{
@@ -1826,6 +1849,12 @@ void parse_args(int /*argc*/, char *argv[])
 				}
 				App.startd_statistics_opt = argv[++ixArg];
 			} else if (IsArg(parg, "format", 1)) {
+				if( !argv[ixArg+1] || !argv[ixArg+2] ) {
+					fprintf( stderr, "Error: -format requires two other arguments\n");
+					exit(1);
+				}
+				ixArg += 2;
+				App.print_mask.registerFormatF( argv[ixArg+1], argv[ixArg+2], FormatOptionNoTruncate );
 			} else if (IsArgColon(parg, "autoformat", &pcolon, 5) ||
 			           IsArgColon(parg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
@@ -1836,97 +1865,33 @@ void parse_args(int /*argc*/, char *argv[])
 					exit(1);
 				}
 
-
-				bool flabel = false;
-				bool fCapV  = false;
-				bool fRaw = false;
-				bool fheadings = false;
-				const char * prowpre = NULL;
-				const char * pcolpre = " ";
-				const char * pcolsux = NULL;
-				if (pcolon) {
-					++pcolon;
-					while (*pcolon) {
-						switch (*pcolon)
-						{
-							case ',': pcolsux = ","; break;
-							case 'n': pcolsux = "\n"; break;
-							case 'g': pcolpre = NULL; prowpre = "\n"; break;
-							case 't': pcolpre = "\t"; break;
-							case 'l': flabel = true; break;
-							case 'V': fCapV = true; break;
-							case 'r': case 'o': fRaw = true; break;
-							case 'h': fheadings = true; break;
-						}
-						++pcolon;
-					}
+				if (pcolon) ++pcolon; // of there are options, skip over the :
+				int ixNext = parse_autoformat_args(argc, argv, ixArg+1, pcolon,
+					App.print_mask, App.projection, App.diag.basic, false, &CustomAfColumns);
+				if (ixNext < 0) {
+					fprintf(stderr,"ERROR: could not parse -af option\n\n");
+					usage(App.Name);
+					exit(1);
 				}
-				App.print_mask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
-
-				while (argv[ixArg+1] && *(argv[ixArg+1]) != '-') {
+				if (ixNext > ixArg) {
+					ixArg = ixNext-1;
+				}
+			} else
+				if (IsArgColon(parg, "aaf", &pcolon, 3)) {
+					// make sure we have at least one more argument
+					if ( (ixArg+1 >= argc)  || *(argv[ixArg+1]) == '-') {
+						fprintf( stderr, "Error: -aaf requires at least one attribute parameter\n" );
+						exit(1);
+					}
+				// process all arguments that don't begin with "-" as part of appendautoformat.
+				aaf_args.push_back(argv[ixArg]);
+				while (ixArg+1 < argc && *(argv[ixArg+1]) != '-') {
 					++ixArg;
-
-					parg = argv[ixArg];
-					const char * pattr = parg;
-					CustomFormatFn cust_fmt;
-
-					// If the attribute/expression begins with # treat it as a magic
-					// identifier for one of the derived fields that we normally display.
-					if (*parg == '#') {
-						++parg;
-						if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
-							cust_fmt = local_render_slot_id;
-							pattr = ATTR_SLOT_ID;
-							App.projection.insert(pattr);
-							App.projection.insert(ATTR_SLOT_DYNAMIC);
-							App.projection.insert(ATTR_NAME);
-						} else if (MATCH == strcasecmp(parg, "PID")) {
-							cust_fmt = local_render_jobid_pid;
-							pattr = ATTR_JOB_ID;
-							App.projection.insert(pattr);
-							App.projection.insert(ATTR_JOB_PID);
-						} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
-							cust_fmt = local_render_jobid_program;
-							pattr = ATTR_JOB_ID;
-							App.projection.insert(pattr);
-						} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
-							cust_fmt = format_int_runtime; // AS RUNTIME
-							pattr = ATTR_TOTAL_JOB_RUN_TIME;
-							App.projection.insert(pattr);
-						} else {
-							parg = argv[ixArg];
-						}
-					}
-
-					if ( ! cust_fmt) {
-						ClassAd ad;
-						if(!GetExprReferences(parg, ad, NULL, &App.projection)) {
-							fprintf( stderr, "Error:  Parse error of: %s\n", parg);
-							exit(1);
-						}
-					}
-
-					std::string lbl = "";
-					int wid = 0;
-					int opts = FormatOptionNoTruncate;
-					if (fheadings || App.print_mask.has_headings()) {
-						const char * hd = fheadings ? parg : "(expr)";
-						wid = 0 - (int)strlen(hd);
-						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
-						App.print_mask.set_heading(hd);
-					}
-					else if (flabel) { formatstr(lbl,"%s = ", parg); wid = 0; opts = 0; }
-
-					lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
-					if (App.diag.basic) {
-						fprintf (stderr, "Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
-							ixArg, lbl.c_str(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
-					}
-					if (cust_fmt) {
-						App.print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
-					} else {
-						App.print_mask.registerFormat(lbl.c_str(), wid, opts, pattr);
-					}
+					aaf_args.push_back(argv[ixArg]);
+				}
+				// if list ends in a '-' without any characters after it, just eat the arg and keep going.
+				if (ixArg+1 < argc && '-' == (argv[ixArg+1])[0] && 0 == (argv[ixArg+1])[1]) {
+					++ixArg;
 				}
 			} else
 			if (IsArgColon(parg, "print-format", &pcolon, 2)) {
@@ -2009,7 +1974,6 @@ void parse_args(int /*argc*/, char *argv[])
 
 		if (App.print_mask.IsEmpty()) {
 			App.print_mask.SetAutoSep(NULL, " ", NULL, "\n");
-		#if 1
 			const char * table_format = standard_who_table_format;
 			if (App.show_job_ad) {
 				table_format = standard_jobs_table_format;
@@ -2028,43 +1992,33 @@ void parse_args(int /*argc*/, char *argv[])
 				App.projection.insert(ATTR_CONDOR_SCRATCH_DIR);
 			}
 			set_print_mask_from_stream(App.print_mask, table_format, false, App.projection, App.summary_mask);
-		#else
-			if (App.show_job_ad) {
-				AddPFColumn("PID", "%d", 0, AltQuestion, ATTR_JOB_PID);
-				//AddPrintColumn("PID", 0, "JobPid");
-				AddPrintColumn("USER", 0, ATTR_USER);
-				AddPrintColumn("PROGRAM", 0, ATTR_JOB_CMD);
-				AddPrintColumn("MEMORY(MB)", 0, ATTR_MEMORY_USAGE);
-				App.projection.insert("RemoteHost"); // for use by identify_startd
-			} else if (App.startd_daemon_ad) {
-				AddPrintColumn("NAME",    0, ATTR_NAME);
-				AddPrintColumn("ADDRESS", 0, ATTR_MY_ADDRESS);
-			} else {
-				//OWNER  CLIENT SLOT JOB RUNTIME  PID JOB_DIR
-				AddPrintColumn("OWNER", 0, ATTR_REMOTE_OWNER);
-				AddPrintColumn("CLIENT", 0, ATTR_CLIENT_MACHINE);
-				AddPrintColumn("SLOT", 0, ATTR_SLOT_ID, local_render_slot_id);
-				App.projection.insert(ATTR_SLOT_DYNAMIC);
-				App.projection.insert(ATTR_NAME);
-				AddPrintColumn("JOB", -6, ATTR_JOB_ID);
-				AddPrintColumn("  RUNTIME", 12, ATTR_TOTAL_JOB_RUN_TIME, format_int_runtime);
-				AddPrintColumn("PID", -6, ATTR_JOB_ID, format_jobid_pid);
-				App.projection.insert(ATTR_JOB_PID);
-				App.projection.insert(ATTR_CONDOR_SCRATCH_DIR);
-				App.projection.insert(ATTR_CLUSTER_ID);
-				App.projection.insert(ATTR_PROC_ID);
-				//AddPFColumn("PID", "%d", -6, AltQuestion, ATTR_JOB_PID);
-				//AddPrintColumn("PROGRAM", 0, ATTR_JOB_ID, render_jobid_program);
-				//AddPrintColumn("JOB_DIR_OR_CMD", 0, ATTR_JOB_ID, render_jobid_scratch_dir_or_cmd);
-				AddPrintColumn("JOB_DIR", 0, ATTR_JOB_ID, local_render_jobid_cwd);
+		}
 
-				// attributes needed for GLIDEIN identification
-				App.projection.insert("GLIDEIN_SiteWMS");
-				App.projection.insert("GLIDEIN_SiteWMS_JobId");
-				App.projection.insert("GLIDEIN_SiteWMS_Queue");
-				App.projection.insert("GLIDEIN_SiteWMS_Slot");
+		if ( ! aaf_args.empty()) {
+			int nargs = (int)aaf_args.size();
+			aaf_args.push_back(NULL); // have the last argument be NULL, like argv[argc] is.
+			for (int i = 0; i < nargs; ++i) {
+				if (is_dash_arg_colon_prefix(aaf_args[i], "aaf", &pcolon, 3)) {
+					const char * format_char = nullptr;
+					if (pcolon) {
+						++pcolon; // check to see if a valid default column formatting option is given
+						if (strchr("TVYr", *pcolon)) { format_char = pcolon; ++pcolon; }
+						if (*pcolon) {
+							fprintf(stderr,"Error: %s is invalid -aaf format qualifier. only one of V, r, T or Y is permitted.\n", pcolon);
+							exit(1);
+						}
+					}
+					int ixNext = parse_autoformat_args(nargs, &aaf_args[0], i+1, format_char,
+						App.print_mask, App.projection, App.diag.basic, true, &CustomAfColumns);
+					if (ixNext < 0) {
+						exit(1);
+					}
+					if (ixNext > i) {
+						i = ixNext-1;
+					}
+					App.wide = true;
+				}
 			}
-		#endif
 		}
 
 		if (App.banner_mask.IsEmpty()) {
@@ -2273,7 +2227,7 @@ bool do_quick_daemons_query(const std::string &addr, const char * session)
 }
 
 int
-main( int argc, char *argv[] )
+main( int argc, const char *argv[] )
 {
 	time_t begin_time = time(NULL);
 	InitAppGlobals(argv[0]);
