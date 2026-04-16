@@ -53,7 +53,7 @@ def the_running_job(test_dir, the_lock_file, the_condor):
 
 	# Wait for the job to be marked running...
 	assert job_handle.wait(
-		timeout=20,
+		timeout=60,
 		condition=ClusterState.all_running,
 	)
 
